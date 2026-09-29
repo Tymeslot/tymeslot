@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
 
   alias Ecto.UUID
   alias Tymeslot.Bookings.Policy
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Approval
@@ -487,7 +488,11 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   end
 
   defp handle_cancellation(socket, meeting, _refund_action, {:error, reason}) do
-    Logger.error("cancel_meeting_failed", reason: inspect(reason), meeting_id: meeting.id)
+    Logger.error("cancel_meeting_failed",
+      reason: LogFormat.reason(reason),
+      meeting_id: meeting.id
+    )
+
     Flash.error(dgettext("dashboard_bookings", "Failed to cancel meeting. Please try again."))
     {:noreply, assign(socket, :cancelling_meeting, nil)}
   end

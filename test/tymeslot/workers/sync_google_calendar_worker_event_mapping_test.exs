@@ -5,7 +5,9 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerEventMappingTest do
   @moduletag :calendar
 
   use Oban.Testing, repo: Tymeslot.Repo
+  import ExUnit.CaptureLog
   import Mox
+  import Tymeslot.AdminAlertsCaptureHelpers
   import Tymeslot.Factory
 
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -196,6 +198,126 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerEventMappingTest do
                })
 
       refute Repo.get(ProviderCalendarEventSchema, cached.id)
+    end
+
+    test "deletes only the cancelled instance of a recurring series" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_sync_token: "valid-token"
+        )
+
+      cancelled =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          uid: "series-uid@google.com_20260504T080000Z",
+          provider_event_id: "series1234_20260504T080000Z",
+          recurring_event_id: "series1234"
+        )
+
+      sibling =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          uid: "series-uid@google.com_20260511T080000Z",
+          provider_event_id: "series1234_20260511T080000Z",
+          recurring_event_id: "series1234"
+        )
+
+      # The cancellation carries the series' iCalUID but no original start, so
+      # its uid would address neither row; only its own id does.
+      cancelled_event = %{
+        "id" => "series1234_20260504T080000Z",
+        "iCalUID" => "series-uid@google.com",
+        "recurringEventId" => "series1234",
+        "status" => "cancelled"
+      }
+
+      expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+        {:ok, %{events: [cancelled_event], next_sync_token: "new-token"}}
+      end)
+
+      # The series the delta names is listed whole, and still holds the
+      # sibling.
+      expect(GoogleCalendarAPIMock, :list_instances, fn _integration,
+                                                        "primary",
+                                                        "series1234",
+                                                        _start,
+                                                        _end ->
+        {:ok,
+         [
+           %{
+             "id" => "series1234_20260511T080000Z",
+             "iCalUID" => "series-uid@google.com",
+             "recurringEventId" => "series1234",
+             "originalStartTime" => %{"dateTime" => "2026-05-11T08:00:00Z"},
+             "status" => "confirmed",
+             "start" => %{"dateTime" => "2026-05-11T08:00:00Z"},
+             "end" => %{"dateTime" => "2026-05-11T09:00:00Z"}
+           }
+         ]}
+      end)
+
+      assert :ok =
+               perform_job(SyncGoogleCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      refute Repo.get(ProviderCalendarEventSchema, cancelled.id)
+      assert Repo.get(ProviderCalendarEventSchema, sibling.id)
+    end
+  end
+
+  describe "perform/1 - invalid events" do
+    setup :capture_admin_alerts
+
+    test "a run raises one operator alert for every event it skipped, and caches the rest" do
+      integration =
+        insert(:calendar_integration, provider: "google", google_sync_token: "valid-token")
+
+      valid =
+        Enum.map(1..2, fn n ->
+          %{
+            "id" => "google-valid-#{n}",
+            "iCalUID" => "valid-#{n}@google.com",
+            "status" => "confirmed",
+            "start" => %{"dateTime" => "2030-03-1#{n}T10:00:00Z"},
+            "end" => %{"dateTime" => "2030-03-1#{n}T11:00:00Z"}
+          }
+        end)
+
+      # No start or end: `CalendarEvent.new/1` rejects each of these.
+      invalid =
+        Enum.map(1..3, &%{"id" => "google-bad-#{&1}", "status" => "confirmed"})
+
+      expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+        {:ok, %{events: Enum.concat([hd(valid)], invalid ++ tl(valid)), next_sync_token: "t"}}
+      end)
+
+      capture_log(fn ->
+        assert :ok =
+                 perform_job(SyncGoogleCalendarWorker, %{
+                   "calendar_integration_id" => integration.id
+                 })
+      end)
+
+      cached =
+        ProviderCalendarEventSchema
+        |> Repo.all()
+        |> Enum.filter(&(&1.calendar_integration_id == integration.id))
+        |> Enum.map(& &1.provider_event_id)
+        |> Enum.sort()
+
+      assert cached == ["google-valid-1", "google-valid-2"]
+
+      assert_received {:send_alert, :invalid_calendar_event, payload}
+      refute_received {:send_alert, :invalid_calendar_event, _second}
+
+      assert payload.count == 3
+      assert payload.provider == :google
+      assert payload.calendar_integration_id == integration.id
+
+      assert payload.sample_events =~
+               ~r/^google-bad-1 \(.+\); google-bad-2 \(.+\); google-bad-3 \(.+\)$/
     end
   end
 end

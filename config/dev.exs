@@ -157,7 +157,11 @@ config :tymeslot, Oban,
       {"30 4 * * *", Tymeslot.Workers.AnalyticsReconciliationWorker},
       # Run every 15 min to release approval requests whose deadline passed
       # and whose per-meeting expiry job never fired
-      {"*/15 * * * *", Tymeslot.Meetings.Workers.ApprovalSweepWorker}
+      {"*/15 * * * *", Tymeslot.Meetings.Workers.ApprovalSweepWorker},
+      # Run daily at 03:05 UTC to resolve quiet errors and prune old ones
+      {"5 3 * * *", Tymeslot.Workers.ErrorTrackerMaintenanceWorker},
+      # Run daily at 07:00 UTC to email the digest of info-severity admin alerts
+      {"0 7 * * *", Tymeslot.Workers.AdminAlertDigestWorker}
     ]
   ]
 

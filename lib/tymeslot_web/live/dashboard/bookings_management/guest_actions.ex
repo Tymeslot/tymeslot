@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Emails.EmailScheduler.MeetingScheduler
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Guests
   alias TymeslotWeb.Hooks.ModalHook
@@ -183,7 +184,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
       {:error, reason} ->
         Logger.error("Adding guests failed",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         Flash.error(dgettext("dashboard_bookings", "Those guests could not be added."))

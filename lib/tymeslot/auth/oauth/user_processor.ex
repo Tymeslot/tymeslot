@@ -16,6 +16,7 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
   require Logger
 
   alias Tymeslot.Auth.OAuth.{Client, Providers}
+  alias Tymeslot.Infrastructure.Logging.LogFormat
 
   @type provider :: Providers.provider()
   @type identity :: %{
@@ -103,7 +104,7 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
       other ->
         Logger.warning("Could not read the provider's email addresses",
           provider: to_string(provider),
-          reason: inspect(other)
+          reason: LogFormat.reason(other)
         )
 
         vouched(nil, [])

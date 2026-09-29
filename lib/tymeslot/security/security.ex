@@ -6,6 +6,7 @@ defmodule Tymeslot.Security.Security do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Security.FieldValidators.TLDList
   alias Tymeslot.Timezones
 
@@ -46,7 +47,10 @@ defmodule Tymeslot.Security.Security do
 
   @spec validate_timezone(term()) :: {:error, String.t()}
   def validate_timezone(timezone) do
-    Logger.warning("Timezone validation failed: not a string", value_type: inspect(timezone))
+    Logger.warning("Timezone validation failed: not a string",
+      value_type: LogFormat.reason(timezone)
+    )
+
     {:error, "Invalid timezone"}
   end
 

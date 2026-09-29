@@ -12,7 +12,10 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
   `unique: [period: 300, keys: [:calendar_integration_id]]` prevents duplicate
   jobs from accumulating when a sweep worker or external trigger enqueues a job
-  for an integration that already has one queued or running.
+  for an integration that already has one queued or running. A requested full
+  fetch (`enqueue_full_fetch/1`) is the exception that is not absorbed: it
+  upgrades a waiting job, or makes a running one run again, see
+  `Tymeslot.Workers.SyncRequest`.
 
   ## Auth errors (REQ-012)
 
@@ -36,14 +39,59 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Integrations.Calendar.CalDAV.Errors, as: CalDAVErrors
   alias Tymeslot.Integrations.Calendar.CalDAV.Sync
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Workers.SyncHealth
+  alias Tymeslot.Workers.SyncRequest
+
+  @doc """
+  Enqueues a full fetch of the CalDAV integration `integration_id`, the sync
+  the dashboard's Refresh asks for: every calendar is read in full rather
+  than by delta, so a change the delta would not report (or a cached row
+  removed on purpose) comes back. A sync already waiting for the
+  integration runs in its place, as a full fetch; one already running runs
+  again as a full fetch once it finishes, since it may have read the server
+  before the request (see `Tymeslot.Workers.SyncRequest`).
+  """
+  @spec enqueue_full_fetch(pos_integer()) :: {:ok, Oban.Job.t()} | {:error, term()}
+  def enqueue_full_fetch(integration_id) do
+    SyncRequest.insert(__MODULE__, %{
+      "calendar_integration_id" => integration_id,
+      "force_full_fetch" => true
+    })
+  end
+
+  @behaviour ExpectedJobOutcome
+
+  # The integration is gone, or only its owner can fix it by reconnecting.
+  # A server error or a server that never answered is retried by the next sync. The deletion circuit breaker
+  # refusing a sync is recorded.
+  @integration_gone "Integration not found"
+  @credentials_rejected "CalDAV server rejected credentials — reauthentication required"
+  @calendar_gone "CalDAV booking calendar not found — user action required"
+  @no_calendar "CalDAV integration has no calendar selected — user action required"
+  @server_error "CalDAV server returned a server error; the next scheduled sync will retry"
+  @server_unreachable "CalDAV server did not respond; the next scheduled sync will retry"
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason),
+    do:
+      reason in [
+        @integration_gone,
+        @credentials_rejected,
+        @calendar_gone,
+        @no_calendar,
+        @server_error,
+        @server_unreachable
+      ] or reason == ReauthHandling.discard_reason()
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: args}) do
+  def perform(%Oban.Job{args: args} = job) do
     integration_id = Map.fetch!(args, "calendar_integration_id")
     force_full_fetch? = Map.get(args, "force_full_fetch", false) == true
 
@@ -51,17 +99,21 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
     case CalendarIntegrationQueries.get(integration_id) do
       {:ok, integration} ->
-        integration
-        |> Sync.run(force_full_fetch?)
-        |> handle_sync_result(integration)
-        |> tap(&SyncHealth.record_outcome(integration, &1))
+        fn ->
+          integration
+          |> Sync.run(force_full_fetch?)
+          |> handle_sync_result(integration)
+          |> tap(&SyncHealth.record_outcome(integration, &1))
+        end
+        |> InvalidEventReport.collect()
+        |> SyncRequest.rerun_if_requested(job)
 
       {:error, :not_found} ->
         Logger.warning("CalDAV integration not found, discarding sync job",
           calendar_integration_id: integration_id
         )
 
-        {:discard, "Integration not found"}
+        {:discard, @integration_gone}
 
       {:error, :requires_reencryption, integration} ->
         CalendarManagement.handle_reauth_required(integration)
@@ -93,7 +145,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         "dashboard_calendar_providers",
         "CalDAV server rejected the stored credentials. Please reconnect the integration."
       ),
-      "CalDAV server rejected credentials — reauthentication required"
+      @credentials_rejected
     )
   end
 
@@ -111,7 +163,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         "dashboard_calendar_providers",
         "The booking calendar no longer exists on the CalDAV server. Please reconnect the integration and select a different calendar."
       ),
-      "CalDAV booking calendar not found — user action required"
+      @calendar_gone
     )
   end
 
@@ -133,7 +185,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         "dashboard_calendar_providers",
         "No calendar is selected for this integration, so nothing can be synced. Please reconnect the integration and select a calendar."
       ),
-      "CalDAV integration has no calendar selected — user action required"
+      @no_calendar
     )
   end
 
@@ -157,7 +209,22 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # can fix. Discard and let the scheduled sync retry minutes later; the health
   # check is what surfaces a remote that never comes back.
   defp handle_sync_result({:error, :server_error}, _integration) do
-    {:discard, "CalDAV server returned a server error; the next scheduled sync will retry"}
+    {:discard, @server_error}
+  end
+
+  # The remote never answered: a read that timed out, a connection that failed,
+  # or a server that took the connection and then went quiet. Same shape as the
+  # 5xx above (the remote's condition, not the request's), and `Base` has
+  # already retried the transport once with backoff before this. What Oban's
+  # remaining attempts add is the same request against the same unreachable
+  # host inside a single minute, ending in a permanent-failure alert about an
+  # outage no operator here can act on: a host that was down for an hour
+  # produced one such alert per sync cycle. Discard, and let the scheduled
+  # sync pick the server up when it comes back; a server that stays away is
+  # what the health check is for.
+  defp handle_sync_result({:error, reason}, _integration)
+       when reason in [:timeout, :server_unresponsive, :network_error] do
+    {:discard, @server_unreachable}
   end
 
   # A 4xx there is no talking the request out of (415, 400…, and the modelled

@@ -15,7 +15,7 @@ defmodule CredoChecks.NoStringInterpolationInLogger do
 
       # Good — static message, variable data in keyword metadata
       Logger.info("Meeting created", meeting_id: meeting.id, user_id: user_id)
-      Logger.error("OAuth failed", operation: operation, reason: inspect(reason))
+      Logger.error("OAuth failed", operation: operation, reason: LogFormat.reason(reason))
       Logger.debug(fn -> "Slow query" end)
   """
 

@@ -191,7 +191,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventNormaliserTest do
       assert event.recurrence_rule == "FREQ=WEEKLY;BYDAY=MO,WE"
     end
 
-    test "invalid event is skipped with warning and admin alert" do
+    test "invalid event is skipped" do
       # An event with no uid will fail CalendarEvent.new/1 validation
       invalid_raw = %{
         "id" => nil,

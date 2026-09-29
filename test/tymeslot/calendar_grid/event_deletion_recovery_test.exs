@@ -78,7 +78,13 @@ defmodule Tymeslot.CalendarGrid.EventDeletionRecoveryTest do
       end)
 
       assert {:ok, result} = CalendarGrid.delete_event(user.id, event)
-      assert result == %{uid: event.uid, integration_id: caldav.id, linked_meeting: :none}
+
+      assert result == %{
+               uid: event.uid,
+               integration_id: caldav.id,
+               linked_meeting: :none,
+               attendees_notified: :none
+             }
 
       # The row outlives its event until the next sync removes it, which is
       # the cost of not lying to the organiser about the delete.

@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RescheduleRequest do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
   alias TymeslotWeb.Hooks.ModalHook
   alias TymeslotWeb.Live.Shared.Flash
@@ -50,7 +51,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RescheduleRequest do
         emit(user_id, meeting.id, result: :error, reason: inspect(reason))
 
         Logger.error("send_reschedule_request_failed",
-          reason: inspect(reason),
+          reason: LogFormat.reason(reason),
           meeting_id: meeting.id
         )
 

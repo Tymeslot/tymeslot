@@ -6,6 +6,7 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.ThemeCustomizations.Presets
   alias TymeslotWeb.Helpers.UploadConstraints
 
@@ -179,7 +180,7 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
 
   def sanitize_css(other) do
     Logger.error("theme custom CSS sanitize_css received non-binary input",
-      type: inspect(other)
+      type: LogFormat.reason(other)
     )
 
     ""

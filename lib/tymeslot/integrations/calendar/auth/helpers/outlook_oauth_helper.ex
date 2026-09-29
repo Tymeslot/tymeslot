@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.PrimarySelection
@@ -90,7 +91,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
       {:error, reason} ->
         Logger.error("Failed to enqueue initial Outlook Calendar sync",
           integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         :ok
@@ -173,7 +174,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
             Logger.warning(
               "Failed to decode Outlook id_token — account dedup falling back to legacy match",
               user_id: user_id,
-              reason: inspect(reason)
+              reason: LogFormat.reason(reason)
             )
           end
 

@@ -69,6 +69,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Alerting do
 
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.HealthCheck.AvailabilityRefusalQueries
 
@@ -125,7 +126,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Alerting do
       {:error, changeset} ->
         Logger.warning("Could not record availability refusal",
           user_id: user_id,
-          errors: inspect(changeset.errors)
+          errors: LogFormat.reason(changeset.errors)
         )
     end
   rescue

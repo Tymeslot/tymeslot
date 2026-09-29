@@ -94,7 +94,7 @@ defmodule Tymeslot.Bookings.RescheduleCalendarCheckTest do
 
       # The booking as Tymeslot wrote it to the host's calendar: same UID,
       # 14:00-14:15, immediately before the slot the invitee wants.
-      stub_calendar_events([own_event(context, uid: meeting.uid)])
+      stub_calendar_events([own_event(context, uid: meeting.calendar_uid)])
 
       assert "2:15 PM" in slots(context, meeting.uid)
 

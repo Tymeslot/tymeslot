@@ -8,6 +8,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
 
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
@@ -15,6 +16,22 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
+
+  # The meeting is gone, started, or changed state since the email was
+  # scheduled. A partial cancellation delivery is recorded.
+  @meeting_started "Meeting already started"
+  @meeting_cancelled "Meeting cancelled"
+  @meeting_not_cancelled "Meeting not cancelled"
+  @meeting_gone "Meeting not found"
+
+  @doc """
+  Whether `reason`, from a discard this module returned, is an expected end
+  of the email job rather than a fault
+  (see `Tymeslot.Infrastructure.ExpectedJobOutcome`).
+  """
+  @spec expected_discard?(term()) :: boolean()
+  def expected_discard?(reason),
+    do: reason in [@meeting_started, @meeting_cancelled, @meeting_not_cancelled, @meeting_gone]
 
   @spec handle_confirmation_emails(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
@@ -66,7 +83,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
             start_time: meeting.start_time
           )
 
-          {:discard, "Meeting already started"}
+          {:discard, @meeting_started}
 
         true ->
           reminder_value = Map.get(args, "reminder_value", 30)
@@ -94,7 +111,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           meeting_id: meeting_id
         )
 
-        {:discard, "Meeting cancelled"}
+        {:discard, @meeting_cancelled}
       else
         send_reschedule_request_email(meeting)
       end
@@ -113,7 +130,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           status: meeting.status
         )
 
-        {:discard, "Meeting not cancelled"}
+        {:discard, @meeting_not_cancelled}
       end
     end)
   end
@@ -136,7 +153,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           meeting_id: meeting_id
         )
 
-        {:discard, "Meeting not found"}
+        {:discard, @meeting_gone}
     end
   end
 
@@ -170,7 +187,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   end
 
   defp send_participant_cancellations(meeting, appointment_details) do
-    Logger.info("Sending cancellation emails", meeting_id: meeting.id, uid: meeting.uid)
+    Logger.info("Sending cancellation emails", meeting_id: meeting.id)
 
     case Config.email_service_module().send_cancellation_emails(appointment_details) do
       {{:ok, _organizer}, {:ok, _attendee}} ->
@@ -180,8 +197,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
       {organizer_result, attendee_result} ->
         Logger.warning("Some cancellation emails may have failed",
           meeting_id: meeting.id,
-          organizer_result: inspect(organizer_result),
-          attendee_result: inspect(attendee_result)
+          organizer_result: LogFormat.reason(organizer_result),
+          attendee_result: LogFormat.reason(attendee_result)
         )
 
         if match?({:ok, _}, organizer_result) or match?({:ok, _}, attendee_result) do
@@ -212,7 +229,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
 
       :ok
     else
-      Logger.info("Sending confirmation emails", meeting_id: meeting.id, uid: meeting.uid)
+      Logger.info("Sending confirmation emails", meeting_id: meeting.id)
 
       appointment_details = AppointmentBuilder.from_meeting(meeting)
 
@@ -243,7 +260,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
             {:error, reason} ->
               Logger.error("Organizer confirmation step failed",
                 meeting_id: meeting.id,
-                error: inspect(reason)
+                error: LogFormat.reason(reason)
               )
 
               {:error, reason}
@@ -265,7 +282,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
             {:error, reason} ->
               Logger.error("Attendee confirmation step failed",
                 meeting_id: meeting.id,
-                error: inspect(reason)
+                error: LogFormat.reason(reason)
               )
 
               {:error, reason}
@@ -316,7 +333,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           Logger.error("Guest confirmation email failed",
             meeting_id: meeting.id,
             guest_email: guest.email,
-            result: inspect(other)
+            result: LogFormat.reason(other)
           )
       end
     end)
@@ -327,7 +344,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   # the organizer succeeded and the attendee hit an open circuit breaker);
   # without this, a retry would re-email the recipient who already got it.
   defp send_reminder_emails(meeting, reminder_value, reminder_unit) do
-    Logger.info("Sending reminder emails", meeting_id: meeting.id, uid: meeting.uid)
+    Logger.info("Sending reminder emails", meeting_id: meeting.id)
 
     status = reminder_sent_status(meeting, reminder_value, reminder_unit)
     need_organizer? = !status.organizer
@@ -392,14 +409,14 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           Logger.error("Guest reminder email failed",
             meeting_id: meeting.id,
             guest_id: guest.id,
-            result: inspect(other)
+            result: LogFormat.reason(other)
           )
       end
     end)
   end
 
   defp send_reschedule_request_email(meeting) do
-    Logger.info("Sending reschedule request email", meeting_id: meeting.id, uid: meeting.uid)
+    Logger.info("Sending reschedule request email", meeting_id: meeting.id)
 
     case Config.email_service_module().send_reschedule_request(meeting) do
       {:ok, _result} ->
@@ -414,7 +431,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
         Logger.error("Failed to send reschedule request email",
           meeting_id: meeting.id,
           to: meeting.attendee_email,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -527,7 +544,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
             meeting_id: meeting.id,
             reminder_value: reminder_value,
             reminder_unit: reminder_unit,
-            error: inspect(reason)
+            error: LogFormat.reason(reason)
           )
 
           {:error, "Failed to track reminder: #{inspect(reason)}"}

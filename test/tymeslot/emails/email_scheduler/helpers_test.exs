@@ -22,5 +22,13 @@ defmodule Tymeslot.Emails.EmailScheduler.HelpersTest do
       assert Helpers.format_insert_error("raw string") == ~s("raw string")
       assert Helpers.format_insert_error({:error, 404}) == "{:error, 404}"
     end
+
+    test "redacts a credential inside a non-changeset term" do
+      formatted = Helpers.format_insert_error({:error, %{"api_key" => "sk-leak", code: 500}})
+
+      assert formatted =~ "[REDACTED]"
+      assert formatted =~ "500"
+      refute formatted =~ "sk-leak"
+    end
   end
 end

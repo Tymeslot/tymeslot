@@ -15,6 +15,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.CalDAV.Http, as: CalDAVHttp
   alias Tymeslot.Integrations.Calendar.Utils.XmlEscape
@@ -168,11 +169,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
     end
   rescue
     e ->
-      Logger.error("Failed to parse sync-collection response", error: inspect(e))
+      Logger.error("Failed to parse sync-collection response", error: LogFormat.reason(e))
       {:error, :invalid_response}
   catch
     :exit, reason ->
-      Logger.error("Failed to parse sync-collection response", error: inspect(reason))
+      Logger.error("Failed to parse sync-collection response", error: LogFormat.reason(reason))
       {:error, :invalid_response}
   end
 
@@ -198,7 +199,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
           events,
           &Map.merge(&1, %{
             href: response.href,
-            etag: EventProcessor.clean_etag(response.etag)
+            etag: EventProcessor.clean_etag(response.etag),
+            # The whole resource, as the full fetch keeps it: the cached row's
+            # document, which a grid edit patches in place. Without it each
+            # incremental sync cleared the document the row already held.
+            raw_ical: response.calendar_data
           })
         )
 
@@ -283,7 +288,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
     e ->
       Logger.warning("Failed to parse CalDAV property response",
         property: property,
-        error: inspect(e)
+        error: LogFormat.reason(e)
       )
 
       {:ok, nil}
@@ -291,7 +296,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
     :exit, reason ->
       Logger.warning("Failed to parse CalDAV property response",
         property: property,
-        error: inspect(reason)
+        error: LogFormat.reason(reason)
       )
 
       {:ok, nil}

@@ -91,7 +91,7 @@ defmodule Tymeslot.Integrations.Video do
           {:discard, String.t()} | {:error, String.t()}
   def handle_reauth_required(%VideoIntegrationSchema{} = integration, opts \\ []) do
     case flag_for_reauth(integration, opts) do
-      :ok -> {:discard, "Credentials require reauthentication"}
+      :ok -> {:discard, ReauthHandling.discard_reason()}
       {:error, _changeset} -> {:error, "Failed to flag integration for reauth"}
     end
   end

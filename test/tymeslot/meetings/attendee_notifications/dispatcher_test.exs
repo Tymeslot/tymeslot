@@ -52,29 +52,6 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.DispatcherTest do
     end
   end
 
-  describe "schedule_delete/2" do
-    test "coexists as an independent job alongside schedule_update", %{event: event} do
-      {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :provider_calendar_event)
-      {:ok, :scheduled} = Dispatcher.schedule_delete(event.id, :provider_calendar_event)
-
-      jobs = all_enqueued(worker: Worker)
-      assert length(jobs) == 2
-
-      actions = jobs |> Enum.map(& &1.args["action"]) |> Enum.sort()
-      assert actions == ["delete", "update"]
-    end
-
-    test "uniqueness is scoped per action — second delete replaces the first", %{event: event} do
-      {:ok, :scheduled} = Dispatcher.schedule_delete(event.id, :provider_calendar_event)
-      [job1] = all_enqueued(worker: Worker)
-
-      {:ok, :scheduled} = Dispatcher.schedule_delete(event.id, :provider_calendar_event)
-      [job2] = all_enqueued(worker: Worker)
-
-      assert job1.id == job2.id
-    end
-  end
-
   describe "cancel_pending/2" do
     test "removes scheduled update jobs for the event+kind", %{event: event} do
       {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :provider_calendar_event)
@@ -84,9 +61,17 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.DispatcherTest do
       assert all_enqueued(worker: Worker) == []
     end
 
-    test "removes both update and delete jobs for the event+kind", %{event: event} do
+    # Delete jobs are no longer enqueued, but ones enqueued before are still
+    # in the queue after a deploy.
+    test "removes both update and legacy delete jobs for the event+kind", %{event: event} do
       {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :provider_calendar_event)
-      {:ok, :scheduled} = Dispatcher.schedule_delete(event.id, :provider_calendar_event)
+
+      {:ok, _job} =
+        %{"event_id" => event.id, "kind" => "provider_calendar_event", "action" => "delete"}
+        |> Worker.new(schedule_in: 120)
+        |> Oban.insert()
+
+      assert length(all_enqueued(worker: Worker)) == 2
 
       :ok = Dispatcher.cancel_pending(event.id, :provider_calendar_event)
       assert all_enqueued(worker: Worker) == []

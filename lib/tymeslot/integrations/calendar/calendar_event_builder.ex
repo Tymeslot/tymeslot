@@ -36,11 +36,15 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   them, scheduling-aware CalDAV servers (Zimbra, Nextcloud/Sabre, Apple
   iCloud) inject their own ORGANIZER and fire the iTIP pipeline, which
   duplicates the invitation email Tymeslot already sends.
+
+  The event's `:uid` is the meeting's `calendar_uid`, never its `uid`: the
+  `uid` is the bearer capability behind the cancel and reschedule links, and
+  anyone able to read the organiser's calendar would otherwise hold it.
   """
   @spec build_event_data(map()) :: map()
   def build_event_data(meeting) do
     %{
-      uid: meeting.uid,
+      uid: meeting.calendar_uid,
       summary: meeting.title,
       description: build_event_description(meeting),
       start_time: meeting.start_time,

@@ -37,7 +37,7 @@ defmodule Tymeslot.Emails.EmailServiceAdminAlertTest do
 
       assert_received {:email, email}
       assert email.to == [{"Tymeslot Operator", "ops@example.com"}]
-      assert email.subject == "⚠️ Tymeslot Admin Alert: Webhook"
+      assert email.subject == "[WARNING] Tymeslot: Webhook"
       assert email.text_body =~ "Category: Webhook"
       assert email.text_body =~ "Unhandled webhook event received"
       assert email.text_body =~ "event_id: evt_001"
@@ -60,6 +60,30 @@ defmodule Tymeslot.Emails.EmailServiceAdminAlertTest do
       end
     end
 
+    # The severity leads the subject so an inbox rule can file or page on it;
+    # only an error keeps the warning sign.
+    test "an error alert's subject starts with its severity and carries the warning sign" do
+      assert {:ok, _response} =
+               EmailService.send_admin_alert(
+                 "ops@example.com",
+                 "Payment",
+                 :error,
+                 "Dispute lost",
+                 %{}
+               )
+
+      assert_received {:email, email}
+      assert email.subject == "[ERROR] ⚠️ Tymeslot: Payment"
+    end
+
+    test "an info alert's subject names its severity without the warning sign" do
+      assert {:ok, _response} =
+               EmailService.send_admin_alert("ops@example.com", "Payment", :info, "Refund", %{})
+
+      assert_received {:email, email}
+      assert email.subject == "[INFO] Tymeslot: Payment"
+    end
+
     test "marks the context section as empty when there is no metadata" do
       assert {:ok, _response} =
                EmailService.send_admin_alert(
@@ -71,7 +95,7 @@ defmodule Tymeslot.Emails.EmailServiceAdminAlertTest do
                )
 
       assert_received {:email, email}
-      assert email.subject == "⚠️ Tymeslot Admin Alert: General"
+      assert email.subject == "[WARNING] Tymeslot: General"
       assert email.text_body =~ "Alert with no metadata"
       assert email.text_body =~ "(none)"
     end

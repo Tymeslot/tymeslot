@@ -217,7 +217,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
   end
 
   describe "the synthesised uid" do
-    test "never cancels a Tymeslot meeting whose uid collides with it", %{
+    test "never cancels a Tymeslot meeting whose calendar uid collides with it", %{
       integration: integration,
       user: user
     } do
@@ -230,7 +230,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
         insert(:meeting,
           organizer_user: user,
           calendar_integration_id: integration.id,
-          uid: busy.uid,
+          calendar_uid: busy.uid,
           provider_event_id: nil,
           status: "confirmed"
         )
@@ -361,7 +361,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
     end
 
     # `sync_error` reaches only an owner who opens the dashboard, and a discard
-    # is invisible to `ObanFailureAlerter` by design. The failure streak is
+    # is never recorded by error tracking, by design. The failure streak is
     # what raises the badge on a mailbox that has stopped answering.
     test "counts each failed cycle against the integration's health, and a snooze against none",
          %{integration: integration} do

@@ -14,6 +14,9 @@ defmodule Tymeslot.Infrastructure.RetryLogic do
   - Selective retry based on error types
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Infrastructure.Tasks
+
   require Logger
 
   @default_opts [
@@ -79,7 +82,7 @@ defmodule Tymeslot.Infrastructure.RetryLogic do
   def with_retry_async(fun, opts \\ []) when is_function(fun, 0) do
     await_timeout = Keyword.get(opts, :await_timeout, :infinity)
 
-    Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+    Tasks.async(Tymeslot.TaskSupervisor, fn ->
       with_retry(
         fn ->
           task = fun.()
@@ -189,7 +192,7 @@ defmodule Tymeslot.Infrastructure.RetryLogic do
         attempt: attempt + 1,
         max_retries: max_retries,
         delay_ms: delay,
-        error: inspect(reason)
+        error: LogFormat.reason(reason)
       )
 
       Process.sleep(delay)
@@ -198,7 +201,7 @@ defmodule Tymeslot.Infrastructure.RetryLogic do
       if attempt > 0 do
         Logger.error("Retry exhausted",
           attempts: attempt + 1,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
       end
 

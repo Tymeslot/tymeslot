@@ -40,11 +40,10 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
   setup do
     user = insert(:user)
 
-    # Google, so that the repeating fixture below stays editable: a CalDAV
-    # series is written through its master VEVENT and every edit of one
-    # occurrence is refused (`CalendarGrid.ensure_editable/1`, pinned in its
-    # own describe below). The tests that need CalDAV's offline queue bring
-    # their own integration.
+    # Google, so that the repeating fixture below takes the ordinary write: an
+    # occurrence of a CalDAV series is written as an override of its own
+    # (`Tymeslot.CalendarGrid.SeriesEdit`, pinned in `EventEditRecurringTest`).
+    # The tests that need CalDAV's offline queue bring their own integration.
     integration = insert(:calendar_integration, user: user, provider: "google")
 
     %{user: user, integration: integration}
@@ -289,18 +288,6 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
 
       assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
       assert captured_payload().status == nil
-    end
-
-    test "forwards the recurrence scope", %{user: user, integration: integration} do
-      event = insert_event(integration, %{})
-      expect_provider_update()
-
-      assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, event, %{summary: "Renamed"},
-                 recurrence_scope: "all"
-               )
-
-      assert captured_payload().recurrence_scope == "all"
     end
   end
 

@@ -15,6 +15,7 @@ defmodule Tymeslot.Payments.Webhooks.TrialWillEndHandler do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Payments.Config
   alias Tymeslot.Payments.PubSub
   alias Tymeslot.Payments.Webhooks.WebhookUtils
@@ -63,7 +64,7 @@ defmodule Tymeslot.Payments.Webhooks.TrialWillEndHandler do
       _other ->
         Logger.error("Trial ending - invalid timestamp",
           subscription_id: subscription_id,
-          trial_end: inspect(trial_end)
+          trial_end: LogFormat.reason(trial_end)
         )
 
         {:error, :invalid_timestamp, "Invalid trial_end timestamp: #{inspect(trial_end)}"}

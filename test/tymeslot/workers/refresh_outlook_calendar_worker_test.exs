@@ -9,6 +9,7 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorkerTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
 
@@ -268,9 +269,9 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorkerTest do
 
     test "discards once the retry ladder is spent, rather than alerting an operator",
          %{integration: integration} do
-      # A discard reaches Oban as `job:stop`, which ObanFailureAlerter never
-      # sees; only an unhandled `{:error, _}` on the last attempt raises the
-      # permanent-failure admin alert. FallbackSyncSweepWorker re-enqueues this
+      # A discard reaches Oban as `job:stop`, which error tracking never
+      # records; only an unhandled `{:error, _}` is recorded and can alert an
+      # operator. FallbackSyncSweepWorker re-enqueues this
       # integration within 15 minutes, and a remote that never recovers is the
       # health check's job to report.
       assert {:discard, message} =
@@ -308,6 +309,76 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorkerTest do
                  attempt: 5,
                  max_attempts: 5
                )
+    end
+  end
+
+  describe "perform/1 when a series cached as its master arrives as occurrences" do
+    # A series the grid created with a video was cached as its master row,
+    # the one place the video is recorded; the sync never writes a row's
+    # video, so the occurrences replacing that row must be given it.
+    test "gives the occurrences the master row's video before dropping the row" do
+      integration =
+        outlook_integration(
+          graph_delta_link:
+            "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=old"
+        )
+
+      video = insert(:video_integration, user: integration.user, provider: "mirotalk")
+      link = "https://video.example.com/join/weekly"
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        provider: "outlook",
+        uid: "040000008200E00074C5B7101A82E008",
+        provider_event_id: "master-1",
+        recurrence_rule: "FREQ=WEEKLY;BYDAY=MO",
+        video_link: link,
+        video_integration_id: video.id
+      )
+
+      occurrence = fn id, day ->
+        %{
+          "id" => id,
+          "iCalUId" => "040000008200E00074C5B7101A82E008-#{id}",
+          "type" => "occurrence",
+          "seriesMasterId" => "master-1",
+          "subject" => "Weekly",
+          "isAllDay" => false,
+          "start" => %{"dateTime" => "2026-11-#{day}T08:00:00.0000000", "timeZone" => "UTC"},
+          "end" => %{"dateTime" => "2026-11-#{day}T09:00:00.0000000", "timeZone" => "UTC"}
+        }
+      end
+
+      delta_response_body =
+        Jason.encode!(%{
+          "value" => [occurrence.("occ-1", "02"), occurrence.("occ-2", "09")],
+          "@odata.deltaLink" =>
+            "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=fresh"
+        })
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %{status: 200, body: delta_response_body}}
+      end)
+
+      assert :ok =
+               perform_job(RefreshOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert ProviderCalendarEventQueries.get_by_uid(
+               integration.id,
+               "040000008200E00074C5B7101A82E008"
+             ) == {:error, :not_found}
+
+      for id <- ["occ-1", "occ-2"] do
+        assert {:ok, row} =
+                 ProviderCalendarEventQueries.get_by_uid(
+                   integration.id,
+                   "040000008200E00074C5B7101A82E008-#{id}"
+                 )
+
+        assert {row.video_integration_id, row.video_link} == {video.id, link}
+      end
     end
   end
 end

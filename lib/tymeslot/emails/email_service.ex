@@ -209,4 +209,7 @@ defmodule Tymeslot.Emails.EmailService do
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_admin_alert(recipient, category, severity, message, metadata),
     to: IntegrationEmails
+
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_admin_alert_digest(recipient, digest), to: IntegrationEmails
 end

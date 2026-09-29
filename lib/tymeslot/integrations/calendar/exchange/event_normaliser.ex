@@ -10,9 +10,10 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
 
   One unusable item costs that item rather than the whole batch, matching the
   posture the CalDAV and ICS paths take: a single malformed event must not
-  empty an organiser's diary. Dropping it is still data loss, so it raises the
-  same `:invalid_calendar_event` operator alert those paths raise, which is
-  the only thing that makes a quietly missing meeting visible.
+  empty an organiser's diary. Dropping it is still data loss, so it is
+  recorded with `InvalidEventReport` like those paths' skips, and the sync run
+  raises the `:invalid_calendar_event` operator alert for it, which is the
+  only thing that makes a quietly missing meeting visible.
 
   ## All-day events and the item's time zone
 
@@ -41,9 +42,9 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
   # EWS namespace prefixes onto the spec and onto every subspec.
   import SweetXml, only: [sigil_x: 2]
 
-  alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
+  alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Timezones
 
   require Logger
@@ -145,8 +146,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
       {:error, reason} ->
         # `attrs.uid` is nil exactly when the item carried neither a UID nor an
         # item id, which is itself one of the reasons an item is rejected.
-        # `AlertTypes` renders this value straight into the operator's email,
-        # so a blank one would arrive as "(event_id: )".
+        # The alert renders this value straight into the operator's email, so
+        # a blank one would name nothing at all.
         uid = attrs.uid || "unknown"
 
         # A skipped item is silent data loss in the organiser's diary, so it
@@ -160,12 +161,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
           reason: reason
         )
 
-        AdminAlerts.send_alert(:invalid_calendar_event, %{
-          provider: :exchange,
-          event_uid: uid,
-          reason: reason,
-          calendar_integration_id: context.calendar_integration_id
-        })
+        InvalidEventReport.record(:exchange, context, uid, reason)
 
         nil
     end

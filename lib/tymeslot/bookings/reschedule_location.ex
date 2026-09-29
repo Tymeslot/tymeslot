@@ -46,6 +46,7 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Workers.{VideoRoomWorker, VideoSyncWorker}
@@ -105,7 +106,7 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
           meeting_id: original.id,
           provider: original.video_provider,
           video_room_id: room_id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok
@@ -151,7 +152,7 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
         # The announcement cannot wait for that sweep.
         Logger.warning("Failed to schedule a video room for a rescheduled meeting",
           meeting_id: updated.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :not_scheduled

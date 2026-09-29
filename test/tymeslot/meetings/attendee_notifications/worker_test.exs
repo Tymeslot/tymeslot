@@ -108,24 +108,30 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.WorkerTest do
     end
   end
 
-  describe "perform/1 for provider_calendar_event deletes" do
-    test "bumps sequence and persists new baseline", %{event: event} do
+  # Deletes are no longer enqueued here; these are the id-only jobs already in
+  # the queue when that changed.
+  describe "perform/1 for a legacy delete job" do
+    test "sends nothing once the event's row is gone", %{event: event} do
+      Repo.delete!(event)
+
+      assert :ok = perform_job(Worker, legacy_delete_args(event))
+      assert all_enqueued(worker: EmailWorker) == []
+    end
+
+    # The row survives only a delete that did not happen (failed, or queued
+    # for a retry), so the event is still in the calendar.
+    test "sends nothing and leaves the row alone while the event still exists", %{event: event} do
       {:ok, event} =
         event
         |> Changeset.change(summary: "about to delete")
         |> Repo.update()
 
-      args = %{
-        "event_id" => event.id,
-        "kind" => "provider_calendar_event",
-        "action" => "delete"
-      }
+      assert :ok = perform_job(Worker, legacy_delete_args(event))
 
-      assert :ok = perform_job(Worker, args)
-
+      assert all_enqueued(worker: EmailWorker) == []
       reloaded = Repo.get!(ProviderCalendarEventSchema, event.id)
-      assert reloaded.ical_sequence == 1
-      assert reloaded.last_notified_state["title"] == "about to delete"
+      assert reloaded.ical_sequence == 0
+      assert reloaded.last_notified_state == event.last_notified_state
     end
   end
 
@@ -504,4 +510,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.WorkerTest do
     |> all_enqueued()
     |> Enum.filter(&(&1.args["action"] == "send_event_update_notification"))
   end
+
+  defp legacy_delete_args(event),
+    do: %{"event_id" => event.id, "kind" => "provider_calendar_event", "action" => "delete"}
 end

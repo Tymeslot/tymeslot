@@ -27,6 +27,7 @@ defmodule Tymeslot.Workers.VideoRoom.Announcement do
   to the start time the reschedule moved the meeting to.
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Notifications.Events
 
@@ -132,7 +133,7 @@ defmodule Tymeslot.Workers.VideoRoom.Announcement do
       {:error, reason} ->
         Logger.warning("Failed to send reschedule notifications from the video room job",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
     end
   end

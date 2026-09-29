@@ -21,6 +21,7 @@ defmodule Tymeslot.Integrations.Video.Reconnect do
   room is a link with nothing to update or delete.
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
@@ -91,7 +92,7 @@ defmodule Tymeslot.Integrations.Video.Reconnect do
           meeting_id: meeting_id,
           integration_id: integration_id,
           action: action,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
     end
   end

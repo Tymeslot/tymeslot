@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Common.ErrorHandler do
   require Logger
 
   alias Tymeslot.Infrastructure.Common.ErrorTranslator
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
 
   @doc """
@@ -87,7 +88,7 @@ defmodule Tymeslot.Integrations.Common.ErrorHandler do
           Logger.warning("Unexpected return value from integration operation",
             operation: operation,
             provider: provider,
-            value: inspect(other)
+            value: LogFormat.reason(other)
           )
 
           other

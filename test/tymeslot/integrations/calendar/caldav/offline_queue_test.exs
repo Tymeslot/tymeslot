@@ -192,7 +192,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
         Keyword.merge(
           [
             calendar_integration_id: integration.id,
-            uid: row.uid,
+            calendar_uid: row.uid,
             start_time: @future_start,
             end_time: @future_end
           ],

@@ -32,16 +32,21 @@ defmodule Tymeslot.Infrastructure.AdminAlerts do
           | :integration_health_recovery
           | :oban_queue_stuck
           | :oban_jobs_accumulating
-          | :oban_job_failure
+          | :oban_jobs_force_discarded
+          | :circuit_breaker_open
+          | :database_pool_pressure
+          | :stripe_webhook_secret_missing
+          | :new_error
+          | :error_regression
           | :pubsub_broadcast_failed
           | :dispute_created
           | :dispute_lost
           | :reconciliation_discrepancies
           | :subscription_not_in_database
           | :payment_event_enqueue_failed
+          | :payment_event_orphaned
           | :dunning_stalled
           | :analytics_tracking_anomaly
-          | :unhandled_crash
           | atom()
 
   @callback send_alert(alert_type(), map()) :: :ok | {:error, any()}
@@ -123,6 +128,50 @@ defmodule Tymeslot.Infrastructure.AdminAlerts do
   end
 
   def valid_email?(_other), do: false
+
+  @doc """
+  Logs one `:error` when admin alerts are enabled but no valid recipient is
+  configured, so that every alert email would be dropped. Logs nothing
+  otherwise. Never raises.
+
+  Called at boot, once DB-backed settings have been applied, and after each
+  admin settings save.
+  """
+  @spec check_config() :: :ok
+  def check_config do
+    if enabled?() and not valid_email?(recipient()) do
+      log_missing_recipient()
+    end
+
+    :ok
+  end
+
+  @doc """
+  Logs, at `:error`, that admin alerts are enabled without a valid recipient,
+  naming both places the recipient can be set. `metadata` is passed through to
+  the log call.
+  """
+  @spec log_missing_recipient(keyword()) :: :ok
+  def log_missing_recipient(metadata \\ []) do
+    Logger.error(
+      "Admin alerts are enabled but no valid recipient is configured, so alert emails are " <>
+        "dropped: set the ADMIN_ALERT_EMAIL environment variable or the " <>
+        "\"Admin alert recipient\" admin setting",
+      metadata
+    )
+  end
+
+  @doc """
+  Whether admin alert emails are switched on (`:admin_alerts_enabled`).
+  """
+  @spec enabled?() :: boolean()
+  def enabled?, do: Application.get_env(:tymeslot, :admin_alerts_enabled, false) == true
+
+  @doc """
+  The configured admin alert recipient (`:admin_alert_email`), unvalidated.
+  """
+  @spec recipient() :: term()
+  def recipient, do: Application.get_env(:tymeslot, :admin_alert_email)
 
   defp impl do
     Application.get_env(

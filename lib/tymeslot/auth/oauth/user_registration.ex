@@ -8,6 +8,7 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   alias Tymeslot.Auth.OAuth.{Providers, TransactionalUserCreation}
   alias Tymeslot.Auth.{UserQueries, UserSchema, UserTokenQueries}
   alias Tymeslot.Infrastructure.{Config, PubSub}
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Repo
   alias Tymeslot.Security.FieldValidators.EmailValidator
 
@@ -79,7 +80,7 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
         {:ok, user}
 
       {:error, reason} ->
-        Logger.error("OAuth user creation failed", reason: inspect(reason))
+        Logger.error("OAuth user creation failed", reason: LogFormat.reason(reason))
         {:error, reason}
     end
   end

@@ -25,6 +25,7 @@ defmodule Tymeslot.Meetings.Workers.ApprovalSweepWorker do
   require Logger
 
   alias Tymeslot.Clock
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
 
@@ -60,11 +61,7 @@ defmodule Tymeslot.Meetings.Workers.ApprovalSweepWorker do
     end
   rescue
     exception ->
-      Logger.error("Approval sweep could not release a request",
-        meeting_id: meeting.id,
-        error: Exception.format(:error, exception, __STACKTRACE__)
-      )
-
+      ErrorTracking.report_error(exception, __STACKTRACE__, %{meeting_id: meeting.id})
       :failed
   end
 
