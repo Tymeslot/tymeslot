@@ -88,6 +88,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
     end
   end
 
+  @spec check_quick_add_meeting_rate_limit(Phoenix.LiveView.Socket.t()) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def check_quick_add_meeting_rate_limit(socket) do
+    user_id = socket.assigns.current_user.id
+
+    case RateLimiter.check_dashboard_quick_add_meeting_rate_limit(user_id) do
+      :ok -> :ok
+      {:error, :rate_limited, message} -> {:error, :rate_limited, message}
+    end
+  end
+
   @spec valid_email?(binary()) :: boolean()
   @spec valid_email?(term()) :: false
   def valid_email?(email) when is_binary(email) do
