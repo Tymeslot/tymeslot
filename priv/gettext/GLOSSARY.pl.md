@@ -30,6 +30,9 @@ Termbase for the Polish catalogues. Settle a term here before using a new one.
   Microsoft, Microsoft Teams, Zoom, Stripe, Nextcloud, Radicale, Zimbra, Baikal, mailbox.org,
   CalDAV, iCloud, Fastmail, Slack, Telegram, MiroTalk, Jitsi, OAuth, SSO, plan names (Cloud Free,
   Cloud Pro, Self-Hosted) and theme names (Quill, Rhythm). Environment variables stay verbatim.
+- "X via %{brand}" is "X · %{brand}"; "via" is not "przez".
+- After "przez" or "w", give a provider or calendar placeholder a declined head noun:
+  "przez konto %{provider}", "w kalendarzu %{calendar}", "Podłączono usługę %{service}".
 - Example addresses use the reserved domains: "jan.kowalski@example.com", never a real
   Polish domain such as "przyklad.pl".
 
@@ -147,6 +150,29 @@ fragment: read how the code uses it.
 | permissive / strict | mniej / bardziej restrykcyjny |
 | browser notification | powiadomienie w przeglądarce |
 | test (a connection) | przetestuj |
+| trigger (webhook) | wyzwalacz; "Last triggered" = "Ostatnie wywołanie" |
+| endpoint | punkt końcowy |
+| mailbox | skrzynka |
+| calendar feed / free-busy feed | kanał kalendarza / kanał zajętości |
+| busy times | zajęte terminy |
+| conflict checking | sprawdzanie konfliktów |
+| booking calendar (where bookings are written) | kalendarz rezerwacji |
+| app password / app-specific password | hasło aplikacji / hasło dla aplikacji |
+| occurrence (recurrence) | wystąpienie; in summaries "łącznie %{count} razy" |
+| 12h / 24h clock | 12 h / 24 h |
+| RSVP: going / declined / no reply | weźmie udział / nie weźmie udziału / bez odpowiedzi |
+| outstanding refund | zaległy zwrot |
+| payment of %{amount} | płatność w kwocie %{amount} |
+| request received (booker's side) | prośba wysłana |
+| security notification / alert | powiadomienie / ostrzeżenie dotyczące bezpieczeństwa |
+| fingerprint (analytics) | odcisk cyfrowy |
+| referrer | strona odsyłająca |
+| preset (image, video) | z kolekcji |
+| custom (preset value) | własna wartość |
+| mark as done / not done | oznacz jako wykonane / niewykonane |
+| toggle menu | otwórz lub zamknij menu |
+| Slack workspace | przestrzeń robocza Slack |
+| time-of-day buckets | wczesny ranek, przedpołudnie, popołudnie, wieczór, późny wieczór |
 | retry / try again | spróbuj ponownie |
 | loading | wczytywanie |
 | failed | nie powiodło się |
