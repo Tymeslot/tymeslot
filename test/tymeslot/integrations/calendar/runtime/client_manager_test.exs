@@ -17,12 +17,27 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManagerTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
+  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
 
   setup do
     user = insert(:user)
     %{user: user}
+  end
+
+  defp insert_two_calendar_integration(user, provider) do
+    insert(:calendar_integration,
+      user: user,
+      provider: provider,
+      base_url: "https://cal.example.com",
+      calendar_paths: ["/cal/bookings/", "/cal/projects/"],
+      default_booking_calendar_id: "/cal/bookings/",
+      calendar_list: [
+        %{id: "/cal/bookings/", path: "/cal/bookings/", name: "Bookings", selected: true},
+        %{id: "/cal/projects/", path: "/cal/projects/", name: "Projects", selected: true}
+      ]
+    )
   end
 
   describe "booking_client/1" do
@@ -50,6 +65,32 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManagerTest do
 
       assert %{provider_type: :caldav, client: _c, provider_module: _m} =
                ClientManager.booking_client(user.id)
+    end
+
+    # Every CalDAV-family `new/1` rebuilds its config, and each used to drop
+    # the writable paths on the way, so a grid write to any calendar but the
+    # booking one landed in the booking one.
+    for provider <- ~w(caldav nextcloud radicale apple baikal mailbox_org zimbra) do
+      test "gives the #{provider} booking client every writable calendar", %{user: user} do
+        integration = insert_two_calendar_integration(user, unquote(provider))
+
+        assert %{client: client} = ClientManager.booking_client({integration.id, user.id})
+        assert client.writable_calendar_paths == ["/cal/bookings/", "/cal/projects/"]
+      end
+    end
+
+    # `EventOperations` merges the booking client into the read clients and
+    # de-duplicates by value; a booking client that differs from the read
+    # client of its own collection gets that collection visited twice.
+    test "answers the same client as the read client of the booking calendar", %{user: user} do
+      inserted = insert_two_calendar_integration(user, "caldav")
+      {:ok, integration} = CalendarManagement.fetch_integration_for_user(inserted.id, user.id)
+
+      booking = ClientManager.booking_client({integration.id, user.id})
+      reads = ClientManager.clients_for_integration(integration)
+
+      assert length(reads) == 2
+      assert booking in reads
     end
 
     test "returns a client using the Meeting's explicit integration when active", %{user: user} do

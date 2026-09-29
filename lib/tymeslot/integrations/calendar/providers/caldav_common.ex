@@ -30,10 +30,35 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   end
 
   @doc """
+  Builds a provider's client from the config its `new/1` is given, with the
+  base URL and calendar paths already put into that provider's own form.
+
+  The credentials and `:writable_calendar_paths` are carried over as given.
+  A provider that rebuilt the config by hand used to drop the writable paths,
+  and the client then wrote every event to its booking calendar, whichever
+  calendar the organiser had picked.
+  """
+  @spec build_provider_client(map(), atom(), String.t() | nil, [String.t()]) :: caldav_client()
+  def build_provider_client(config, provider, base_url, calendar_paths) do
+    build_client(
+      %{
+        base_url: base_url,
+        username: config[:username],
+        password: config[:password],
+        calendar_paths: calendar_paths,
+        writable_calendar_paths: config[:writable_calendar_paths],
+        verify_ssl: true
+      },
+      provider: provider
+    )
+  end
+
+  @doc """
   Builds the client struct downstream Base.* functions run on.
 
   Accepts atom- or string-keyed config with `:base_url`, `:username`,
-  `:password`, `:calendar_paths` and `:verify_ssl`; takes the provider from
+  `:password`, `:calendar_paths`, `:writable_calendar_paths` and
+  `:verify_ssl`; takes the provider from
   `opts`. This is the only place a `Client` is constructed, which is what
   makes the password's inspect-time redaction hold for every CalDAV-family
   provider.

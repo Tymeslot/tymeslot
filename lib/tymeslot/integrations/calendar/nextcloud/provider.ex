@@ -133,6 +133,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
       username: config[:username],
       password: config[:password],
       calendar_paths: build_nextcloud_calendar_paths(config),
+      writable_calendar_paths: config[:writable_calendar_paths],
       verify_ssl: true,
       provider: :nextcloud
     }

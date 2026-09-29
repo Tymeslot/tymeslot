@@ -102,18 +102,11 @@ defmodule Tymeslot.Integrations.Calendar.MailboxOrg.Provider do
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def new(config) do
-    CaldavCommon.build_client(
-      %{
-        base_url: normalize_base_url(config[:base_url] || @default_base_url),
-        username: config[:username],
-        password: config[:password],
-        calendar_paths: config[:calendar_paths] || [],
-        verify_ssl: true,
-        connection_timeout: config[:connection_timeout] || 10_000,
-        request_timeout: config[:request_timeout] || 30_000,
-        discovery_timeout: config[:discovery_timeout] || 15_000
-      },
-      provider: :mailbox_org
+    CaldavCommon.build_provider_client(
+      config,
+      :mailbox_org,
+      normalize_base_url(config[:base_url] || @default_base_url),
+      config[:calendar_paths] || []
     )
   end
 
