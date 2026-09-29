@@ -30,12 +30,43 @@ defmodule Tymeslot.Workers.TelegramWorker do
 
   alias Tymeslot.Features
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
   alias Tymeslot.Notifications.Recipients
   alias Tymeslot.Telegram
   alias Tymeslot.Telegram.{API, MessageBuilder, TelegramIntegrationSchema, TelegramQueries}
   alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.SnoozePolicy
+
+  @behaviour ExpectedJobOutcome
+
+  # The work no longer applies, or only the user can fix their bot or chat. A
+  # rejected shared bot token raises its own alert. Missing parameters, a
+  # missing shared token and endless rate limiting are recorded.
+  @gone "Integration or meeting not found"
+  @disabled "Integration is disabled"
+  @insufficient_plan "Insufficient plan"
+  @token_missing "Bot token missing"
+  @unauthorized "Unauthorized"
+  @bot_blocked "Bot blocked"
+  @bot_kicked "Bot kicked"
+  @chat_unreachable "Chat unreachable"
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason),
+    do:
+      reason in [
+        @gone,
+        @disabled,
+        @insufficient_plan,
+        @token_missing,
+        @unauthorized,
+        @bot_blocked,
+        @bot_kicked,
+        @chat_unreachable
+      ]
 
   @impl Oban.Worker
   def perform(
@@ -51,7 +82,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
     Logger.metadata(job_id: job.id, attempt: attempt)
 
     with {:ok, integration} <- TelegramQueries.get_integration(integration_id),
-         :ok = Logger.metadata(user_id: integration.user_id),
+         :ok = ErrorTracking.put_context(user_id: integration.user_id),
          :ok <- check_feature_access(integration.user_id),
          :ok <- check_active(integration),
          {:ok, meeting} <- Meetings.get_meeting(meeting_id),
@@ -65,13 +96,13 @@ defmodule Tymeslot.Workers.TelegramWorker do
       end)
     else
       {:error, :not_found} ->
-        {:discard, "Integration or meeting not found"}
+        {:discard, @gone}
 
       {:error, :disabled} ->
-        {:discard, "Integration is disabled"}
+        {:discard, @disabled}
 
       {:error, :insufficient_plan} ->
-        {:discard, "Insufficient plan"}
+        {:discard, @insufficient_plan}
 
       {:error, :feature_access_checker_failed} ->
         {:error, :feature_access_checker_failed}
@@ -80,7 +111,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
         {:discard, "Shared bot token not configured"}
 
       {:error, :no_token} ->
-        {:discard, "Bot token missing"}
+        {:discard, @token_missing}
     end
   end
 
@@ -177,7 +208,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
         :ok
 
       {:error, reason} ->
-        Logger.warning("Failed to create Telegram delivery log", error: inspect(reason))
+        Logger.warning("Failed to create Telegram delivery log", error: LogFormat.reason(reason))
     end
   end
 
@@ -222,7 +253,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
   # to the operator instead and leave the integration active.
   defp handle_unauthorized(%TelegramIntegrationSchema{bot_mode: "own"} = integration) do
     auto_disable(integration, "invalid_token")
-    {:discard, "Unauthorized"}
+    {:discard, @unauthorized}
   end
 
   # Always reported, regardless of which attempt this is: this path always
@@ -240,7 +271,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
       context: %{integration_id: integration.id, bot_mode: "shared"}
     )
 
-    {:discard, "Unauthorized"}
+    {:discard, @unauthorized}
   end
 
   defp auto_disable(integration, reason) do
@@ -251,7 +282,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
       {:error, changeset} ->
         Logger.warning("Failed to auto-disable Telegram integration",
           integration_id: integration.id,
-          reason: inspect(changeset)
+          reason: LogFormat.reason(changeset)
         )
     end
   end
@@ -262,18 +293,18 @@ defmodule Tymeslot.Workers.TelegramWorker do
     cond do
       String.contains?(description, "bot was blocked by the user") ->
         auto_disable(integration, "bot_blocked")
-        {:discard, "Bot blocked"}
+        {:discard, @bot_blocked}
 
       String.contains?(description, "bot was kicked") ->
         auto_disable(integration, "bot_kicked")
-        {:discard, "Bot kicked"}
+        {:discard, @bot_kicked}
 
       migrate_to_chat_id = extract_migrate_to_chat_id(body) ->
         migrate_chat_id(integration, migrate_to_chat_id)
 
       permanently_unreachable?(description) ->
         auto_disable(integration, "chat_unreachable")
-        {:discard, "Chat unreachable"}
+        {:discard, @chat_unreachable}
 
       true ->
         if executions == 1,
@@ -305,7 +336,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
       {:error, reason} ->
         Logger.warning("Failed to migrate Telegram chat id after supergroup upgrade",
           integration_id: integration.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
     end
 

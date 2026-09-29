@@ -7,32 +7,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
   alias Tymeslot.CalendarGrid
   alias TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventWrites
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
+  @doc """
+  Takes a failed write's change back off the grid. A write the grid queued
+  (`:write` names it) is settled through `EventWrites`, which decides what the
+  row shows; anything else reverts the row to `:original_event`.
+  """
   @spec handle_revert_event(map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
-  def handle_revert_event(%{original_event: original} = assigns, socket) do
-    socket = assign(socket, Map.drop(assigns, [:action, :original_event]))
+  def handle_revert_event(%{write: {_key, _seq} = write}, socket),
+    do: {:ok, EventWrites.settle(socket, write, :failed)}
 
-    reverted_events =
-      Enum.map(socket.assigns.events, fn e ->
-        if e.id == original.id, do: original, else: e
-      end)
+  def handle_revert_event(%{original_event: original}, socket),
+    do: {:ok, EventWrites.show(socket, original)}
 
-    selected = socket.assigns.selected_event
-
-    socket =
-      socket
-      |> assign(:events, reverted_events)
-      |> then(fn s ->
-        if selected && selected.id == original.id,
-          do: assign(s, :selected_event, original),
-          else: s
-      end)
-      |> Helpers.precompute_derived()
-
-    {:ok, socket}
-  end
+  @doc "Records that a write the grid queued has answered without failing."
+  @spec handle_event_write_settled(map(), Phoenix.LiveView.Socket.t()) ::
+          {:ok, Phoenix.LiveView.Socket.t()}
+  def handle_event_write_settled(%{write: write, outcome: outcome}, socket),
+    do: {:ok, EventWrites.settle(socket, write, outcome)}
 
   @spec handle_refresh_events(map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
@@ -129,6 +124,38 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
       end)
 
     {:ok, assign(socket, :selected_event, new_event)}
+  end
+
+  @doc """
+  Reloads the grid once a whole series has moved to another calendar, as
+  after any write to a whole series (see `EventWrites.series_moved/2`): the
+  series' rows are gone from the source, and its rows on the destination
+  arrive with that calendar's sync.
+  """
+  @spec handle_series_moved(map(), Phoenix.LiveView.Socket.t()) ::
+          {:ok, Phoenix.LiveView.Socket.t()}
+  def handle_series_moved(%{moved_event: event} = assigns, socket) do
+    socket =
+      socket
+      |> assign(Map.drop(assigns, [:action, :moved_event]))
+      |> EventWrites.series_moved(event)
+
+    {:ok, socket}
+  end
+
+  @doc """
+  Makes the changes held while a whole series was moving, once the move
+  has failed and left the series where it was.
+  """
+  @spec handle_series_move_failed(map(), Phoenix.LiveView.Socket.t()) ::
+          {:ok, Phoenix.LiveView.Socket.t()}
+  def handle_series_move_failed(%{moved_event: event} = assigns, socket) do
+    socket =
+      socket
+      |> assign(Map.drop(assigns, [:action, :moved_event]))
+      |> EventWrites.series_move_failed(event)
+
+    {:ok, socket}
   end
 
   @spec handle_event_deleted(map(), Phoenix.LiveView.Socket.t()) ::
@@ -232,7 +259,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
   """
   @spec handle_video_link_updated(map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
-  def handle_video_link_updated(%{original_event: original, updated_event: updated}, socket) do
+  def handle_video_link_updated(
+        %{original_event: original, updated_event: updated} = assigns,
+        socket
+      ) do
     video = Map.take(updated, [:video_link, :video_integration_id, :description])
 
     updated_events =
@@ -250,6 +280,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
           do: assign(s, :selected_event, Map.merge(selected, video)),
           else: s
       end)
+      |> settle_video_write(assigns[:write], updated)
 
     {:ok,
      EditWorkflow.apply_notify_result(
@@ -259,6 +290,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
        EditWorkflow.video_changed_message(updated.video_link)
      )}
   end
+
+  defp settle_video_write(socket, nil, _updated), do: socket
+
+  defp settle_video_write(socket, write, updated),
+    do: EventWrites.settle(socket, write, {:ok, updated})
 
   @spec handle_initial(map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()}

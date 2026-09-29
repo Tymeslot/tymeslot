@@ -16,6 +16,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
   alias Tymeslot.Auth.{AdminBootstrap, UserQueries, UserSchema}
   alias Tymeslot.Auth.OAuth.Providers
   alias Tymeslot.Availability.Schedules
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
 
@@ -62,7 +63,11 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
         recover_from_concurrent_insert(provider, provider_uid, changeset)
 
       {:error, {operation, reason}} ->
-        Logger.error("OAuth find_or_create failed", operation: operation, reason: inspect(reason))
+        Logger.error("OAuth find_or_create failed",
+          operation: operation,
+          reason: LogFormat.reason(reason)
+        )
+
         {:error, reason}
     end
   end
@@ -80,7 +85,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
       {:error, :not_found} ->
         Logger.error("OAuth find_or_create failed",
           operation: :find_or_create,
-          reason: inspect(changeset)
+          reason: LogFormat.reason(changeset)
         )
 
         {:error, changeset}
@@ -121,13 +126,17 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
       {:ok, profile}
     else
       {:error, %Ecto.Changeset{} = changeset} ->
-        Logger.error("Profile insert failed", user_id: user.id, reason: inspect(changeset))
+        Logger.error("Profile insert failed",
+          user_id: user.id,
+          reason: LogFormat.reason(changeset)
+        )
+
         {:error, {:create_profile, changeset}}
 
       {:error, reason} ->
         Logger.error("Default schedule creation failed",
           user_id: user.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         {:error, {:create_profile, reason}}

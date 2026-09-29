@@ -2,6 +2,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   @moduledoc "Schedules meeting-related emails via Oban."
 
   alias Tymeslot.Emails.EmailScheduler.Helpers
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Jobs
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Utils.ReminderUtils
@@ -307,7 +308,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
       {:error, reason} ->
         Logger.error("Failed to queue reschedule request email",
           meeting_id: meeting_id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}

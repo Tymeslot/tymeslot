@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dev.AnnouncementsPreviewLive do
 
   use TymeslotWeb, :live_view
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias TymeslotWeb.Components.AnnouncementModalComponent
 
   require Logger
@@ -98,8 +99,8 @@ defmodule TymeslotWeb.Dev.AnnouncementsPreviewLive do
   rescue
     error ->
       Logger.warning("Announcement catalog failed to list its entries",
-        catalog: inspect(catalog),
-        error: inspect(error)
+        catalog: LogFormat.reason(catalog),
+        error: LogFormat.reason(error)
       )
 
       []

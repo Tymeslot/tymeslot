@@ -21,6 +21,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.StripeAdapter
@@ -93,7 +94,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments do
       {:error, reason} ->
         Logger.error("ReconcileAwaitingPayments handler failed",
           booking_payment_id: payment.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok
@@ -111,7 +112,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments do
     Logger.warning("ReconcileAwaitingPayments could not retrieve Stripe session",
       booking_payment_id: payment.id,
       stripe_checkout_session_id: payment.stripe_checkout_session_id,
-      reason: inspect(reason)
+      reason: LogFormat.reason(reason)
     )
 
     :error

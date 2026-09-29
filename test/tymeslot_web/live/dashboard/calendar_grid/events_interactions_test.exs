@@ -89,9 +89,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
       assert html =~ "Recurring Meeting"
     end
 
-    # No provider write honours a scope, so the prompt must not offer one: the
-    # edit lands on the occurrence that was dragged and nowhere else.
-    test "offers the edit for this event only", %{conn: conn, event: event} do
+    test "offers this event, this and following, and all events", %{conn: conn, event: event} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       tomorrow_iso = Date.to_iso8601(Date.add(Date.utc_today(), 1))
 
@@ -106,10 +104,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
         "new-end-minute" => "0"
       })
 
-      assert has_element?(lv, "#recurrence-prompt-modal [phx-value-scope='this_only']")
-      refute has_element?(lv, "#recurrence-prompt-modal [phx-value-scope='all']")
-      refute has_element?(lv, "#recurrence-prompt-modal [phx-value-scope='this_and_following']")
-      assert render(lv) =~ "Your change applies to this event only"
+      for scope <- ~w(this_only following all) do
+        assert has_element?(lv, "#recurrence-prompt-modal [phx-value-scope='#{scope}']")
+      end
     end
 
     test "confirm 'this_only' scope dismisses the prompt", %{conn: conn, event: event} do
@@ -133,6 +130,38 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
         |> render_click()
 
       refute html =~ "Edit recurring event"
+    end
+
+    test "a scope the prompt never offered writes nothing", %{conn: conn, event: event} do
+      test_pid = self()
+
+      Mox.stub(Tymeslot.CalendarMock, :update_event, fn uid, _data, _context ->
+        send(test_pid, {:provider_update, uid})
+        :ok
+      end)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      tomorrow_iso = Date.to_iso8601(Date.add(Date.utc_today(), 1))
+
+      lv
+      |> element("#calendar-drag-zone")
+      |> render_hook("event_dropped", %{
+        "event-id" => to_string(event.id),
+        "new-date" => tomorrow_iso,
+        "new-hour" => "10",
+        "new-minute" => "0",
+        "new-end-hour" => "11",
+        "new-end-minute" => "0"
+      })
+
+      html =
+        lv
+        |> element("[phx-click='confirm_recurrence_scope'][phx-value-scope='this_only']")
+        |> render_click(%{"scope" => "everything"})
+
+      refute html =~ "Edit recurring event"
+      assert render(lv) =~ "That choice is not available for this event, so nothing was changed."
+      refute_receive {:provider_update, _uid}, 200
     end
   end
 

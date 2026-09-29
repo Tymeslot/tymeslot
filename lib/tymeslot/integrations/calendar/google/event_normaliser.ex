@@ -8,10 +8,10 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliser do
 
   require Logger
 
-  alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.EventColour
+  alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Timezones
 
   @spec normalise_events(list(map()), map()) :: {:ok, list(CalendarEvent.t())}
@@ -30,12 +30,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliser do
               calendar_integration_id: context.calendar_integration_id
             )
 
-            AdminAlerts.send_alert(:invalid_calendar_event, %{
-              provider: :google,
-              event_id: raw["id"],
-              reason: reason,
-              calendar_integration_id: context.calendar_integration_id
-            })
+            InvalidEventReport.record(:google, context, raw["id"], reason)
 
             acc
         end
@@ -45,10 +40,48 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliser do
     {:ok, events}
   end
 
+  @doc """
+  The uid a Google event is cached under.
+
+  Sync asks Google for single events, so a recurring series arrives as its
+  instances, and every instance carries the series' `iCalUID`. The cache is
+  keyed on the uid, so an instance is cached as `<iCalUID>_<original start>`:
+  the UTC stamp `YYYYMMDDTHHMMSSZ`, or `YYYYMMDD` for an all-day series, the
+  same shape Google puts on the instance id. An instance without an original
+  start falls back to its own id, which is unique too. Anything else keeps its
+  `iCalUID`.
+  """
+  @spec cache_uid(map()) :: String.t() | nil
+  def cache_uid(%{"recurringEventId" => series_id} = raw) when is_binary(series_id) do
+    case original_start_stamp(raw["originalStartTime"]) do
+      nil -> raw["id"]
+      stamp -> "#{raw["iCalUID"] || series_id}_#{stamp}"
+    end
+  end
+
+  def cache_uid(raw), do: raw["iCalUID"] || raw["id"]
+
+  # `DateTime.from_iso8601/1` already returns the instant in UTC.
+  defp original_start_stamp(%{"dateTime" => value}) when is_binary(value) do
+    case DateTime.from_iso8601(value) do
+      {:ok, datetime, _offset} -> Calendar.strftime(datetime, "%Y%m%dT%H%M%SZ")
+      {:error, _reason} -> nil
+    end
+  end
+
+  defp original_start_stamp(%{"date" => value}) when is_binary(value) do
+    case Date.from_iso8601(value) do
+      {:ok, date} -> Calendar.strftime(date, "%Y%m%d")
+      {:error, _reason} -> nil
+    end
+  end
+
+  defp original_start_stamp(_other), do: nil
+
   defp build_calendar_event(raw, context) do
     attrs =
       %{
-        uid: raw["iCalUID"] || raw["id"],
+        uid: cache_uid(raw),
         provider: :google,
         calendar_integration_id: context.calendar_integration_id,
         provider_calendar_id: context.provider_calendar_id,

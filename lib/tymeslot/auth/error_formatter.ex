@@ -15,6 +15,7 @@ defmodule Tymeslot.Auth.ErrorFormatter do
   require Logger
 
   alias Ecto.Changeset
+  alias Tymeslot.Infrastructure.Logging.LogFormat
 
   @doc """
   The message shown for a failed sign-in, sign-up or password-flow policy
@@ -69,7 +70,7 @@ defmodule Tymeslot.Auth.ErrorFormatter do
 
   def format_password_reset_error(other) do
     Logger.error("Unmapped auth error reason",
-      reason: inspect(other),
+      reason: LogFormat.reason(other),
       event: :auth_error_unmapped
     )
 

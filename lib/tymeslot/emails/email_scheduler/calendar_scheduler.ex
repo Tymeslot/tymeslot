@@ -14,6 +14,11 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
   DateTimes are passed as ISO 8601 strings for JSON serialisation. An all-day
   event passes `all_day: true` with ISO 8601 `event_start_date` and exclusive
   `event_end_date` instead of the two instants, which it does not have.
+
+  `method: :cancel` makes it a cancellation instead, and `series: true` a
+  cancellation of every occurrence of a recurring event. The job carries all
+  it says, so it does not depend on the event still being cached when it
+  runs.
   """
   @spec schedule_calendar_invitation(map()) :: :ok | {:error, String.t()}
   def schedule_calendar_invitation(params) do
@@ -35,7 +40,8 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
         "event_location" => params[:event_location],
         "event_description" => params[:event_description],
         "method" => Atom.to_string(method),
-        "sequence" => sequence
+        "sequence" => sequence,
+        "event_series" => Map.get(params, :series, false)
       }
       |> EmailWorker.new(
         queue: :emails,
@@ -86,6 +92,13 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
   baseline. `first_notification: true` marks an event that was never
   notified before, whose `before_*` values are therefore unknown rather than
   empty; the handler states the current details instead of diffing.
+
+  `event`, the event as the update left it (string keys, ISO 8601 values),
+  makes the job carry everything it says, like an invitation: the handler
+  describes that instead of reading the cached event, which a write to a
+  whole series drops. Such a job is sent at once and never coalesced, since
+  the organiser confirmed that one change; `series` (`:following` or `:all`)
+  says how much of the series it changed.
   """
   @spec schedule_event_update_notification(map()) :: :ok | {:error, String.t()}
   def schedule_event_update_notification(params) do
@@ -111,23 +124,15 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
         "method" => Atom.to_string(method),
         "sequence" => sequence
       }
-      |> EmailWorker.new(
-        queue: :emails,
-        priority: 1,
-        scheduled_at: DateTime.add(DateTime.utc_now(), 120, :second),
-        unique: [
-          period: 300,
-          fields: [:args, :queue],
-          keys: [:action, :event_uid, :method]
-        ]
-      )
+      |> Map.merge(snapshot_args(params))
+      |> EmailWorker.new(update_job_opts(params))
       |> Oban.insert()
 
     case result do
       {:ok, _job} ->
         Logger.info("Event update notification job scheduled",
           event_uid: params.event_uid,
-          scheduled_in: "2 minutes"
+          scheduled_in: if(params[:event], do: "now", else: "2 minutes")
         )
 
         :ok
@@ -147,5 +152,25 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
 
         {:error, "Failed to schedule job"}
     end
+  end
+
+  defp snapshot_args(%{event: %{} = event, series: series}) when series in [:following, :all],
+    do: %{"event" => event, "series" => Atom.to_string(series)}
+
+  defp snapshot_args(_params), do: %{}
+
+  defp update_job_opts(%{event: %{}}), do: [queue: :emails, priority: 1]
+
+  defp update_job_opts(_params) do
+    [
+      queue: :emails,
+      priority: 1,
+      scheduled_at: DateTime.add(DateTime.utc_now(), 120, :second),
+      unique: [
+        period: 300,
+        fields: [:args, :queue],
+        keys: [:action, :event_uid, :method]
+      ]
+    ]
   end
 end

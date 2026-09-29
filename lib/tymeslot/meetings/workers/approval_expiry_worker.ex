@@ -33,15 +33,38 @@ defmodule Tymeslot.Meetings.Workers.ApprovalExpiryWorker do
   require Logger
 
   alias Tymeslot.Clock
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
+
+  @behaviour ExpectedJobOutcome
+
+  # The meeting was deleted, or the host answered the request before or as it
+  # expired: a stale job with nothing left to do. A request not yet due means
+  # the replacement of an earlier expiry job lost its delete (see
+  # `expire_if_held/1`), which the operator should hear about, so it is
+  # recorded. Each reason keeps its variable detail after `": "`, so every
+  # meeting shares one error group.
+  @meeting_gone "Meeting not found"
+  @already_answered "Request already answered"
+  @answered_while_expiring "Request answered while expiring"
+  @not_due "Request not due yet"
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(@answered_while_expiring), do: true
+
+  def expected_outcome?(reason) when is_binary(reason),
+    do: String.starts_with?(reason, [@meeting_gone <> ": ", @already_answered <> ": "])
+
+  def expected_outcome?(_reason), do: false
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"meeting_id" => meeting_id}}) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} -> expire_if_held(meeting)
-      {:error, :not_found} -> {:discard, "Meeting #{meeting_id} not found"}
+      {:error, :not_found} -> {:discard, "#{@meeting_gone}: #{meeting_id}"}
     end
   end
 
@@ -50,7 +73,7 @@ defmodule Tymeslot.Meetings.Workers.ApprovalExpiryWorker do
       not MeetingState.awaiting_approval?(meeting) ->
         # The host answered before the deadline, and the cancellation of this
         # job lost the race with its own execution. Nothing is wrong.
-        {:discard, "Request already #{meeting.status}"}
+        {:discard, "#{@already_answered}: #{meeting.status}"}
 
       deadline_in_future?(meeting) ->
         # `ApprovalJobs.schedule_expiry/1` deletes a meeting's existing expiry
@@ -60,7 +83,7 @@ defmodule Tymeslot.Meetings.Workers.ApprovalExpiryWorker do
         # behind a request that was re-armed with a later one. Comparing the
         # deadline here, not just the status, is what stops that stale job
         # from releasing a request that is still legitimately live.
-        {:discard, "Request not due until #{meeting.approval_deadline_at}"}
+        {:discard, "#{@not_due}: #{meeting.approval_deadline_at}"}
 
       true ->
         release(meeting)
@@ -76,14 +99,13 @@ defmodule Tymeslot.Meetings.Workers.ApprovalExpiryWorker do
     case Approval.expire(meeting) do
       {:ok, expired} ->
         Logger.info("Booking request expired at its deadline",
-          meeting_id: expired.id,
-          uid: expired.uid
+          meeting_id: expired.id
         )
 
         :ok
 
       {:error, :not_awaiting_approval} ->
-        {:discard, "Request answered while expiring"}
+        {:discard, @answered_while_expiring}
     end
   rescue
     # Unlike `ApprovalSweepWorker`, this job has no rescue of its own to fall
@@ -95,7 +117,8 @@ defmodule Tymeslot.Meetings.Workers.ApprovalExpiryWorker do
     exception ->
       Logger.error("Approval expiry could not release a request",
         meeting_id: meeting.id,
-        error: Exception.format(:error, exception, __STACKTRACE__)
+        error: LogFormat.reason(exception),
+        stacktrace: LogFormat.stacktrace(__STACKTRACE__)
       )
 
       {:error, exception}

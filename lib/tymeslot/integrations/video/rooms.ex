@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   """
 
   require Logger
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Infrastructure.Metrics
   alias Tymeslot.Integrations.Video
@@ -61,7 +62,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
         result
 
       {:error, reason} = error ->
-        Logger.error("Failed to get provider configuration", reason: inspect(reason))
+        Logger.error("Failed to get provider configuration", reason: LogFormat.reason(reason))
         error
     end
   end
@@ -90,7 +91,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
       {:error, reason} = error ->
         Logger.error("Failed to create meeting room",
           provider: provider_type,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         error
@@ -293,7 +294,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
               role: role,
               room_ref: room_ref,
               provider: meeting_context.provider_type,
-              reason: inspect(reason)
+              reason: LogFormat.reason(reason)
             )
 
             error
@@ -326,7 +327,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
         Logger.error("Failed to handle meeting event",
           event: event,
           provider: meeting_context.provider_type,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         error

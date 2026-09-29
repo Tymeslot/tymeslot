@@ -16,8 +16,11 @@ defmodule Tymeslot.Emails.AppointmentBuilderTest do
 
       result = AppointmentBuilder.from_meeting(meeting)
 
-      # Base meeting details
-      assert result.uid == meeting.uid
+      # Base meeting details. `uid` is the calendar event's UID, which the
+      # attendee's `.ics` must share with the organiser's event; the booking's
+      # own uid only travels inside the action links.
+      assert result.uid == meeting.calendar_uid
+      refute result.uid == meeting.uid
       assert result.title == meeting.title
       assert result.start_time == meeting.start_time
       assert result.end_time == meeting.end_time

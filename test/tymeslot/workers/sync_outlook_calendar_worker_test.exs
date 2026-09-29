@@ -304,7 +304,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerTest do
       assert health(integration).consecutive_sync_failures == 0
     end
 
-    # A 401 is discarded, and `ObanFailureAlerter` ignores a discard by design,
+    # A 401 is discarded, and error tracking never records a discard,
     # so the streak is the only thing that reports an account Graph has stopped
     # accepting. Reporting it as a completed sync would have cleared one.
     test "counts a discarded auth failure rather than clearing the streak" do

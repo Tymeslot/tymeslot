@@ -21,12 +21,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
   import Tymeslot.Factory
 
   alias Plug.Test
+  alias Tymeslot.CalendarGrid.EventVideoRoomQueries
+  alias Tymeslot.CalendarGrid.EventVideoRoomSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Meetings.AttendeeNotifications.Worker
+  alias Tymeslot.Repo
   alias Tymeslot.Workers.EmailWorker
+  alias Tymeslot.Workers.SeriesVideoWorker
 
   # Video room and provider writes run in a Task; allow for a busy test machine.
   @task_timeout 5_000
+
+  @talk_link "https://cloud.example.com/index.php/call/room-weekly-sync"
 
   setup :verify_on_exit!
 
@@ -468,7 +474,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
           video_integration_id: nil
         })
 
-      insert(:meeting, calendar_integration_id: integration.id, uid: event.uid)
+      insert(:meeting, calendar_integration_id: integration.id, calendar_uid: event.uid)
 
       # Neither the video provider nor the calendar may be reached.
       expect(Tymeslot.HTTPClientMock, :post, 0, fn _url, _body, _headers, _opts -> :ok end)
@@ -487,6 +493,102 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
 
       {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
       assert {row.video_link, row.video_integration_id} == {link, nil}
+    end
+  end
+
+  describe "a recurring event whose rows a sync brought back" do
+    # A Google series with a Talk room recorded for it, whose occurrence the
+    # sync cached again without the series' video, as after an edit of every
+    # occurrence (see `Tymeslot.CalendarGrid.SeriesCarry`).
+    setup %{user: user} do
+      integration = insert(:calendar_integration, user: user, provider: "google", is_active: true)
+      talk = insert(:video_integration, user: user, provider: "nextcloud_talk", is_active: true)
+      start_at = DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC")
+
+      {:ok, _room} =
+        EventVideoRoomQueries.insert(%{
+          user_id: user.id,
+          video_integration_id: talk.id,
+          provider: "nextcloud_talk",
+          calendar_integration_id: integration.id,
+          event_uid: "series1@google.com",
+          provider_event_id: "series1",
+          room_id: "room-weekly-sync",
+          lobby_opens_at: DateTime.add(start_at, -900, :second),
+          ends_at: DateTime.add(start_at, 90, :day)
+        })
+
+      occurrence =
+        insert_event(integration, %{
+          uid: "series1@google.com_#{Calendar.strftime(start_at, "%Y%m%dT%H%M%SZ")}",
+          provider: "google",
+          provider_event_id: "series1_occurrence",
+          recurring_event_id: "series1",
+          summary: "Weekly sync",
+          description: "Join video call: #{@talk_link}",
+          start_at: start_at,
+          end_at: DateTime.add(start_at, 3600, :second),
+          all_day: false,
+          video_link: nil,
+          video_integration_id: nil
+        })
+
+      {:ok, integration: integration, talk: talk, occurrence: occurrence}
+    end
+
+    test "shows the series' video once it is carried to the synced rows", %{
+      conn: conn,
+      integration: integration,
+      talk: talk,
+      occurrence: occurrence
+    } do
+      assert :ok =
+               perform_job(SeriesVideoWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "address" => ["master", "series1"],
+                 "series_uid" => nil,
+                 "video_integration_id" => talk.id,
+                 "video_link" => @talk_link
+               })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{occurrence.id}-']") |> render_click()
+
+      assert has_element?(
+               lv,
+               ~s|button[phx-value-video_integration_id="#{talk.id}"].border-turquoise-400|
+             )
+    end
+
+    # Under `verify_on_exit!` a room created or a calendar write would fail
+    # the test: neither is expected.
+    test "choosing the series' video again makes no second room", %{
+      conn: conn,
+      integration: integration,
+      talk: talk,
+      occurrence: occurrence
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{occurrence.id}-']") |> render_click()
+      :erlang.trace(lv.pid, true, [:receive])
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("update_edit_video", %{"video_integration_id" => to_string(talk.id)})
+
+      assert_receive {:trace, _pid, :receive, {:event_video_result, {:unchanged, _result}}},
+                     @task_timeout
+
+      refute render(lv) =~ "Video room created."
+
+      assert has_element?(
+               lv,
+               ~s|button[phx-value-video_integration_id="#{talk.id}"].border-turquoise-400|
+             )
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, occurrence.uid)
+      assert row.video_integration_id == talk.id
+      assert [_one_room] = Repo.all(EventVideoRoomSchema)
     end
   end
 

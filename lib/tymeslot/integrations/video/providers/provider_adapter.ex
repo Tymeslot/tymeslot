@@ -19,6 +19,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
 
   require Logger
   alias Tymeslot.Infrastructure.CircuitBreakerHelpers
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Infrastructure.Metrics
   alias Tymeslot.Infrastructure.VideoCircuitBreaker
@@ -62,7 +63,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
         {:error, _reason} = error ->
           Logger.error("Failed to create meeting room",
             provider: provider_type,
-            reason: inspect(error)
+            reason: LogFormat.reason(error)
           )
 
           error
@@ -113,7 +114,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
             provider: provider_type,
             role: role,
             room_ref: Redactor.fingerprint(room_data.room_id),
-            reason: inspect(reason)
+            reason: LogFormat.reason(reason)
           )
 
           error
@@ -263,7 +264,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
       {:error, reason} = error ->
         Logger.error("Connection test failed",
           provider: provider_type,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         error
@@ -374,7 +375,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
         Logger.error("Failed to handle meeting event",
           provider: provider_type,
           event: event,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         error

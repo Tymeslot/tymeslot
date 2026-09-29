@@ -81,6 +81,8 @@ defmodule Tymeslot.Meetings.Approval do
   alias Tymeslot.Bookings.CalendarJobs
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
@@ -228,7 +230,7 @@ defmodule Tymeslot.Meetings.Approval do
            approval_resolved_at: DateTime.truncate(now, :second)
          ) do
       {:ok, confirmed} ->
-        Logger.info("Booking request approved", meeting_id: confirmed.id, uid: confirmed.uid)
+        Logger.info("Booking request approved", meeting_id: confirmed.id)
         AvailabilityCache.invalidate_for_user(confirmed.organizer_user_id)
         activate_confirmed(confirmed)
 
@@ -392,7 +394,6 @@ defmodule Tymeslot.Meetings.Approval do
       {:ok, released} ->
         Logger.info("Booking request released",
           meeting_id: released.id,
-          uid: released.uid,
           status: released.status
         )
 
@@ -422,10 +423,10 @@ defmodule Tymeslot.Meetings.Approval do
   # "update": whether there is anything to flip is `CalendarEventSync`'s call,
   # not a pre-check made here. There used to be one — "has an event to flip"
   # tested for a present `provider_event_id` or a `uid` that didn't look like
-  # a plain UUID — but CalDAV addresses its event by `uid` alone, and that
-  # `uid` *is* the meeting's own id until CalDAV's own create job overwrites
-  # it (`CalendarEventSync.put_provider_mapping/2`), so the check passed the
-  # UUID test and the gate was permanently false for every CalDAV host: their
+  # a plain UUID — but CalDAV addresses its event by that UID alone (now the
+  # meeting's `calendar_uid`), which is a Tymeslot-minted UUID until CalDAV's
+  # own create job confirms it (`CalendarEventSync.put_provider_mapping/2`),
+  # so the check passed the UUID test and the gate was permanently false for every CalDAV host: their
   # calendars kept showing TENTATIVE forever regardless of approval. The
   # "update" job this schedules already falls back to uid-addressing, recreates
   # the event on a missing-event 404, and errors out gracefully when there is
@@ -446,7 +447,7 @@ defmodule Tymeslot.Meetings.Approval do
       {:error, reason} ->
         Logger.error("Failed to schedule calendar update after approval",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok
@@ -500,7 +501,7 @@ defmodule Tymeslot.Meetings.Approval do
       {:error, reason} ->
         Logger.warning("Failed to enqueue provider video deletion on request release",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok
@@ -594,16 +595,14 @@ defmodule Tymeslot.Meetings.Approval do
         # module docs on ordering). The approval window can run up to 336
         # hours, so an expired request can plausibly fall outside Stripe's own
         # refund window; that, and any other Stripe-side failure, ends up
-        # here rather than crashing the caller. Logged only: no entry in
-        # `AdminAlerts.AlertTypes`'s registry describes a refund attempt that
-        # failed rather than one Stripe already completed, so this is
-        # reported to whoever reviews the logs until the registry gains one.
-        Logger.error("Failed to refund a released booking request",
+        # here rather than crashing the caller. The attendee has paid for a
+        # booking that will not happen, so it is recorded for the operator
+        # to refund by hand; a new error raises an admin alert.
+        ErrorTracking.report_error(reason, nil, %{
           meeting_id: meeting.id,
-          reason: inspect(reason)
-        )
-
-        :ok
+          payment_id: payment.id,
+          amount_cents: remaining_cents
+        })
     end
   end
 
@@ -638,12 +637,6 @@ defmodule Tymeslot.Meetings.Approval do
     fun.()
   rescue
     exception ->
-      Logger.error("Post-transition step failed",
-        step: step,
-        meeting_id: meeting.id,
-        error: Exception.format(:error, exception, __STACKTRACE__)
-      )
-
-      :ok
+      ErrorTracking.report_error(exception, __STACKTRACE__, %{step: step, meeting_id: meeting.id})
   end
 end

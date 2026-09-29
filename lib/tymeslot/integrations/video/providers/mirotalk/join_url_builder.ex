@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
   require Logger
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers
   alias Tymeslot.Integrations.Video.Providers.SsrfOptions
@@ -180,7 +181,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
       {:ok, response["join"]}
     else
       Logger.error("MiroTalk API response missing 'join' field",
-        response: inspect(response)
+        response: LogFormat.reason(response)
       )
 
       {:error, :missing_join_url}

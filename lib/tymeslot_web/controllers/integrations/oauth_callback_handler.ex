@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Integrations.OAuthCallbackHandler do
   alias Phoenix.Controller
   alias Plug.Conn
   alias Tymeslot.Auth.ErrorFormatter
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Security.RateLimiter
@@ -112,7 +113,7 @@ defmodule TymeslotWeb.Integrations.OAuthCallbackHandler do
   defp handle_params(conn, params, config) do
     Logger.warning("Invalid OAuth callback params",
       provider: config.name,
-      params: inspect(OAuthStateGuard.redact_callback_params(params))
+      params: LogFormat.reason(OAuthStateGuard.redact_callback_params(params))
     )
 
     flash_and_redirect(
@@ -171,7 +172,7 @@ defmodule TymeslotWeb.Integrations.OAuthCallbackHandler do
   end
 
   defp log_failure(reason, config) do
-    Logger.error("OAuth callback failed", provider: config.name, reason: inspect(reason))
+    Logger.error("OAuth callback failed", provider: config.name, reason: LogFormat.reason(reason))
   end
 
   defp failure_message(:calendar_scope_missing, config) do

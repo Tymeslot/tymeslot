@@ -6,6 +6,8 @@ defmodule Tymeslot.Notifications.Events do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Slack.Dispatcher, as: SlackDispatcher
@@ -203,11 +205,10 @@ defmodule Tymeslot.Notifications.Events do
     fun.()
   rescue
     exception ->
-      Logger.error("Notification emails failed",
+      ErrorTracking.report_error(exception, __STACKTRACE__, %{
         event: event,
-        meeting_id: Map.get(meeting, :id),
-        error: Exception.format(:error, exception, __STACKTRACE__)
-      )
+        meeting_id: Map.get(meeting, :id)
+      })
 
       {:error, {:notifications_failed, exception}}
   end
@@ -252,12 +253,11 @@ defmodule Tymeslot.Notifications.Events do
     dispatch_fun(channel).(event, meeting)
   rescue
     exception ->
-      Logger.error("Channel dispatch failed",
+      ErrorTracking.report_error(exception, __STACKTRACE__, %{
         channel: channel,
         event: event,
-        meeting_id: Map.get(meeting, :id),
-        error: Exception.format(:error, exception, __STACKTRACE__)
-      )
+        meeting_id: Map.get(meeting, :id)
+      })
 
       {:error, {:dispatch_failed, exception}}
   end
@@ -278,7 +278,7 @@ defmodule Tymeslot.Notifications.Events do
       {:error, reason} ->
         Logger.warning("Failed to cancel reminder jobs",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok
@@ -296,7 +296,7 @@ defmodule Tymeslot.Notifications.Events do
       {:error, reason} ->
         Logger.warning("Failed to schedule reminder jobs",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok

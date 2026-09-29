@@ -5,7 +5,8 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
   1. Cleans up stuck jobs in "executing" state
   2. Deletes delivery claims (`Tymeslot.Workers.DeliveryClaims`) whose job
      Oban has pruned
-  3. Provides metrics and logging for job health monitoring
+  3. Provides metrics and logging for job health monitoring, and raises an
+     `:oban_jobs_force_discarded` admin alert for the jobs it discards
 
   This worker runs every 30 minutes to ensure job queue health.
 
@@ -33,6 +34,7 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes
   alias Tymeslot.Infrastructure.ObanRescue
   alias Tymeslot.Jobs
   alias Tymeslot.Workers.DeliveryClaims
@@ -73,12 +75,11 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
     # Find stuck executing jobs
     stuck_jobs = Jobs.get_stuck_executing_jobs(threshold)
 
-    # Clean up each stuck job
-    cleaned_count =
-      Enum.reduce(stuck_jobs, 0, fn job, count ->
+    discarded =
+      Enum.filter(stuck_jobs, fn job ->
         case transition_stuck_job_to_discarded(job) do
           {:ok, _result} ->
-            count + 1
+            true
 
           {:error, reason} ->
             Logger.error("Failed to clean stuck job",
@@ -86,9 +87,11 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
               reason: reason
             )
 
-            count
+            false
         end
       end)
+
+    cleaned_count = length(discarded)
 
     if cleaned_count > 0 do
       Logger.warning("Cleaned up stuck jobs",
@@ -96,6 +99,10 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
         threshold_hours: @stuck_job_threshold_hours
       )
     end
+
+    # A job moved straight to `discarded` emits no job telemetry, so nothing
+    # else would tell the operator that its work was dropped.
+    ObanOutcomes.report_force_discarded(discarded, __MODULE__)
 
     {:ok, cleaned_count}
   end

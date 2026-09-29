@@ -23,6 +23,7 @@ defmodule Tymeslot.Auth.SocialAuthentication do
   alias Tymeslot.Auth.{RateLimit, Registration, Validation, Verification}
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Security.{RateLimiter, SecurityLogger}
 
   @type provider :: Providers.provider()
@@ -198,7 +199,7 @@ defmodule Tymeslot.Auth.SocialAuthentication do
 
         Logger.error("OAuth authentication error",
           provider: to_string(provider),
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         audit(provider, false, %{error_reason: Atom.to_string(error)}, opts)

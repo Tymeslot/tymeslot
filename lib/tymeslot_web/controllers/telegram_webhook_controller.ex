@@ -3,6 +3,7 @@ defmodule TymeslotWeb.TelegramWebhookController do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Telegram
   alias TymeslotWeb.Helpers.ClientIP
@@ -52,7 +53,7 @@ defmodule TymeslotWeb.TelegramWebhookController do
           {:error, reason} ->
             Logger.warning("Failed to link Telegram account",
               chat_id: chat_id,
-              reason: inspect(reason)
+              reason: LogFormat.reason(reason)
             )
 
             json(conn, %{ok: true})

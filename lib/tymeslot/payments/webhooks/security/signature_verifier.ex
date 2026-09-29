@@ -6,6 +6,7 @@ defmodule Tymeslot.Payments.Webhooks.Security.SignatureVerifier do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Payments.Config
   alias Tymeslot.Payments.Errors.WebhookError
 
@@ -53,7 +54,7 @@ defmodule Tymeslot.Payments.Webhooks.Security.SignatureVerifier do
         {:ok, event}
 
       {:error, reason} ->
-        Logger.error("Stripe signature verification failed", reason: inspect(reason))
+        Logger.error("Stripe signature verification failed", reason: LogFormat.reason(reason))
 
         {:error,
          %WebhookError.SignatureError{

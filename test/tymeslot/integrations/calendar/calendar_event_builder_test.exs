@@ -6,7 +6,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderTest do
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
 
   @base_meeting %{
-    uid: "abc-123",
+    uid: "booking-capability-uid",
+    calendar_uid: "abc-123",
     title: "Team Sync",
     description: "Quarterly review",
     start_time: ~U[2026-05-01 10:00:00Z],
@@ -50,6 +51,17 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderTest do
   end
 
   defp held_meeting, do: Map.put(@base_meeting, :status, "awaiting_approval")
+
+  describe "build_event_data/1 event identity" do
+    # The meeting's uid authorises cancelling and rescheduling the booking, so
+    # it must not reach a calendar anyone else can read.
+    test "keys the event by the meeting's calendar uid, never its uid" do
+      event = CalendarEventBuilder.build_event_data(@base_meeting)
+
+      assert event.uid == "abc-123"
+      refute event |> inspect(limit: :infinity) |> String.contains?("booking-capability-uid")
+    end
+  end
 
   describe "build_event_data/1" do
     test "maps all standard fields from the meeting" do

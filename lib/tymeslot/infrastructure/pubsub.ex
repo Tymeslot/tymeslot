@@ -12,6 +12,8 @@ defmodule Tymeslot.Infrastructure.PubSub do
   silently orphan a subscriber.
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+
   require Logger
 
   # The topic every user-registration event is published on.
@@ -36,7 +38,9 @@ defmodule Tymeslot.Infrastructure.PubSub do
         Logger.info("Broadcasted user_registered event", user_id: user.id)
 
       {:error, reason} ->
-        Logger.warning("Failed to broadcast user_registered event", reason: inspect(reason))
+        Logger.warning("Failed to broadcast user_registered event",
+          reason: LogFormat.reason(reason)
+        )
     end
 
     :ok

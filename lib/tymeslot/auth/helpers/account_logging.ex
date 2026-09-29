@@ -11,6 +11,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
   value from a raw one.
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Security.SecurityLogger
 
   require Logger
@@ -106,7 +107,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
         [
           {:operation, operation},
           {:identifier_masked, mask_identifier(identifier)},
-          {:errors, inspect(errors)},
+          {:errors, LogFormat.reason(errors)},
           {:event, "#{operation}_validation_failure"}
         ],
         context

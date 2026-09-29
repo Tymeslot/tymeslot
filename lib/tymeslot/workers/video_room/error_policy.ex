@@ -66,6 +66,16 @@ defmodule Tymeslot.Workers.VideoRoom.ErrorPolicy do
     video_meeting_not_enabled: "Account cannot host video meetings"
   }
 
+  # The terminal failures that are an expected end of the job rather than a
+  # fault: the meeting is gone, or only the user can give it a video room.
+  @expected_terminal [
+    :meeting_not_found,
+    :video_integration_missing,
+    :video_integration_inactive,
+    :video_meeting_not_enabled
+  ]
+  @expected_discard_reasons @terminal |> Map.take(@expected_terminal) |> Map.values()
+
   @doc """
   Normalises a raw failure into `{:error, reason}` with a known reason where one
   is recognised, passing anything else through untouched for a plain retry.
@@ -107,6 +117,14 @@ defmodule Tymeslot.Workers.VideoRoom.ErrorPolicy do
   """
   @spec discard_reason(reason()) :: String.t()
   def discard_reason(reason), do: Map.fetch!(@terminal, reason)
+
+  @doc """
+  Whether a `discard_reason/1` is an expected end of the job (the meeting is
+  gone, or only the user can fix it) rather than a fault. Workers declare
+  these through `Tymeslot.Infrastructure.ExpectedJobOutcome`.
+  """
+  @spec expected_discard?(term()) :: boolean()
+  def expected_discard?(reason), do: reason in @expected_discard_reasons
 
   @doc """
   Turns a categorised failure into the value Oban should receive.

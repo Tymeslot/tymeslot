@@ -11,6 +11,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.Telemetry
@@ -71,7 +72,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated do
       {:error, reason} ->
         Logger.warning("Failed to enqueue dispute email",
           booking_payment_id: payment.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok

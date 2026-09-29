@@ -15,6 +15,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.State do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
 
   @doc """
@@ -34,7 +35,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.State do
       {:error, changeset} ->
         Logger.warning("Failed to persist CalDAV sync tier",
           calendar_integration_id: integration.id,
-          error: inspect(changeset)
+          error: LogFormat.reason(changeset)
         )
 
         %{integration | caldav_sync_tier: tier}
@@ -77,7 +78,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.State do
       {:error, changeset} ->
         Logger.warning("Failed to persist CalDAV sync state",
           calendar_integration_id: integration.id,
-          error: inspect(changeset)
+          error: LogFormat.reason(changeset)
         )
 
         :ok

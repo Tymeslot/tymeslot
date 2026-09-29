@@ -14,6 +14,15 @@ defmodule Tymeslot.Emails.Templates.AdminAlert do
   @intent :alert
 
   @doc """
+  The alert email's subject: `"[<SEVERITY>] Tymeslot: <category>"`, so an
+  inbox rule can file or page on the severity. Only an error carries the
+  warning sign.
+  """
+  @spec subject(String.t(), :info | :warning | :error) :: String.t()
+  def subject(category, :error), do: "[ERROR] ⚠️ Tymeslot: #{category}"
+  def subject(category, severity), do: "[#{severity_label(severity)}] Tymeslot: #{category}"
+
+  @doc """
   Renders the HTML body for an admin alert email.
   """
   @spec render(
@@ -83,6 +92,8 @@ defmodule Tymeslot.Emails.Templates.AdminAlert do
   defp severity_to_intent(:warning), do: :alert
   defp severity_to_intent(:error), do: :cancelled
   defp severity_to_intent(_other), do: :alert
+
+  defp severity_label(severity), do: severity |> to_string() |> String.upcase()
 
   # --- Metadata rendering ---------------------------------------------------
 

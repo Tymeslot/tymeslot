@@ -212,31 +212,169 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
     end
   end
 
-  describe "event_deleted/2" do
+  describe "event_deleted/3" do
     test "returns {:ok, :no_attendees} when there is nobody to notify" do
       event = insert(:provider_calendar_event)
-      assert {:ok, :no_attendees} = AttendeeNotifications.event_deleted(event, [])
+      user = event.calendar_integration.user
+      assert {:ok, :no_attendees} = AttendeeNotifications.event_deleted(event, [], user.id)
     end
 
     test "returns {:needs_confirmation, N} with the attendee count" do
       event = insert(:provider_calendar_event)
+      user = event.calendar_integration.user
       attendees = [%{email: "a@x.com"}, %{email: "b@x.com"}, %{email: "c@x.com"}]
 
-      assert {:needs_confirmation, 3} = AttendeeNotifications.event_deleted(event, attendees)
+      assert {:needs_confirmation, 3} =
+               AttendeeNotifications.event_deleted(event, attendees, user.id)
+    end
+
+    test "asks the organiser, known by their own address, the integration's or the calendar's" do
+      user = insert(:user, email: "Me@Example.com")
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          provider_account_email: "me@work.example"
+        )
+
+      attendees = [%{email: "a@x.com"}]
+
+      for {organiser, calendar_id} <- [
+            {" me@example.com ", "primary"},
+            {"ME@WORK.EXAMPLE", "primary"},
+            {"team123@group.calendar.google.com", "team123@group.calendar.google.com"},
+            {nil, "primary"}
+          ] do
+        event =
+          insert(:provider_calendar_event,
+            calendar_integration: integration,
+            provider_calendar_id: calendar_id,
+            organiser: organiser && %{"email" => organiser}
+          )
+
+        assert {:needs_confirmation, 1} =
+                 AttendeeNotifications.event_deleted(event, attendees, user.id),
+               "expected #{inspect(organiser)} to count as the user's own address"
+      end
+    end
+
+    test "returns {:ok, :not_organiser} for an event someone else organises" do
+      event = insert(:provider_calendar_event, organiser: %{"email" => "boss@elsewhere.example"})
+      user = event.calendar_integration.user
+
+      assert {:ok, :not_organiser} =
+               AttendeeNotifications.event_deleted(event, [%{email: "a@x.com"}], user.id)
     end
   end
 
-  describe "event_deleted_confirm/2" do
-    test "delegates to Dispatcher.schedule_delete/2" do
-      event = insert(:provider_calendar_event)
+  describe "event_deleted_confirm/3" do
+    test "enqueues one cancellation per attendee at once, carrying the event" do
+      user = insert(:user)
+
+      event =
+        insert(:provider_calendar_event,
+          summary: "Standup",
+          ical_sequence: 4,
+          attendees: [%{"email" => "a@x.com"}, %{"email" => "b@x.com"}]
+        )
+
+      assert {:ok, :sent} = AttendeeNotifications.event_deleted_confirm(event, user.id, :series)
+
+      jobs = all_enqueued(worker: EmailWorker)
+
+      assert jobs |> Enum.map(& &1.args["attendee_email"]) |> Enum.sort() == [
+               "a@x.com",
+               "b@x.com"
+             ]
+
+      for job <- jobs do
+        assert %{
+                 "action" => "send_calendar_invitation",
+                 "user_id" => user_id,
+                 "event_title" => "Standup",
+                 "event_uid" => uid,
+                 "method" => "cancel",
+                 "sequence" => 5,
+                 "event_series" => true
+               } = job.args
+
+        assert user_id == user.id
+        assert uid == event.uid
+        refute job.scheduled_at > DateTime.utc_now()
+      end
+
+      assert all_enqueued(worker: Worker) == []
+    end
+
+    test "sends nothing for an event someone else organises" do
+      event =
+        insert(:provider_calendar_event,
+          organiser: %{"email" => "boss@elsewhere.example"},
+          attendees: [%{"email" => "boss@elsewhere.example"}, %{"email" => "b@x.com"}]
+        )
+
+      user = event.calendar_integration.user
+
+      assert {:ok, :noop} = AttendeeNotifications.event_deleted_confirm(event, user.id, :series)
+      assert all_enqueued(worker: EmailWorker) == []
+    end
+  end
+
+  describe "series_updated_confirm/4" do
+    test "enqueues one update at once, carrying the event before and after the edit" do
+      user = insert(:user, email: "owner@x.com")
+      integration = insert(:calendar_integration, user: user)
+
+      original =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          summary: "Weekly sync",
+          ical_sequence: 2,
+          all_day: false,
+          start_at: ~U[2026-06-01 09:00:00.000000Z],
+          end_at: ~U[2026-06-01 10:00:00.000000Z],
+          attendees: [
+            %{"email" => "a@x.com"},
+            %{"email" => "owner@x.com"},
+            %{"email" => "no@x.com", "response_status" => "declined"}
+          ]
+        )
+
+      updated = %{
+        original
+        | start_at: ~U[2026-06-01 14:00:00.000000Z],
+          end_at: ~U[2026-06-01 15:00:00.000000Z]
+      }
 
       assert {:ok, :sent} =
-               AttendeeNotifications.event_deleted_confirm(event, [%{email: "a@x.com"}])
+               AttendeeNotifications.series_updated_confirm(original, updated, user.id, :all)
 
-      assert_enqueued(
-        worker: Worker,
-        args: %{"event_id" => event.id, "kind" => "provider_calendar_event", "action" => "delete"}
-      )
+      assert [job] = all_enqueued(worker: EmailWorker)
+
+      assert %{
+               "action" => "send_event_update_notification",
+               "attendee_emails" => ["a@x.com"],
+               "before_start_at" => "2026-06-01T09:00:00.000000Z",
+               "method" => "request",
+               "sequence" => 3,
+               "series" => "all",
+               "event" => %{"start_at" => "2026-06-01T14:00:00.000000Z", "uid" => uid}
+             } = job.args
+
+      assert uid == original.uid
+      refute job.scheduled_at > DateTime.utc_now()
+      assert all_enqueued(worker: Worker) == []
+    end
+
+    test "returns {:ok, :noop} when nobody is left to tell" do
+      event = insert(:provider_calendar_event, attendees: [])
+      user = event.calendar_integration.user
+
+      assert {:ok, :noop} =
+               AttendeeNotifications.series_updated_confirm(event, event, user.id, :following)
+
+      assert all_enqueued(worker: EmailWorker) == []
     end
   end
 
@@ -252,7 +390,6 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
     test "cancel_pending/1 removes scheduled jobs for the event" do
       event = insert(:provider_calendar_event)
       {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :provider_calendar_event)
-      {:ok, :scheduled} = Dispatcher.schedule_delete(event.id, :provider_calendar_event)
 
       :ok = AttendeeNotifications.cancel_pending(event)
 

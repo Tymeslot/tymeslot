@@ -1,4 +1,32 @@
 
+[1.19.0]
+* themes: Centre the icons in Quill's booking confirmation rows
+* calendar: Notify attendees of recurring event time changes after saving
+* calendar: Stop exposing booking cancel links in calendar events
+* calendar: Never send a cancellation for someone else's event on delete
+* calendar: Stop showing events already deleted in Google Calendar
+* calendar: Send attendees a cancellation when an event is deleted
+* calendar: Apply quick successive edits of one event in order
+* calendar: Show every occurrence of a Google series changed after setup
+* calendar: Stop a moved CalDAV occurrence also showing at its old time
+* calendar: Keep CalDAV event details the grid does not show when editing
+* calendar: Show every occurrence of a Google recurring event
+* calendar: Address Google recurring instances by their own id
+* calendar: Stop a CalDAV outage alerting once per sync cycle
+* Keep provider logos sharp at every size and screen density
+* alerts: Log an error when admin alerts are on but have no recipient
+* alerts: Keep retrying admin alerts until the mail server recovers
+* alerts: Keep calendar owners' email addresses out of admin alerts
+* alerts: Show the real reason in dispute and calendar sync alerts
+* Keep meeting links and poll tokens out of the request log
+* alerts: Send a burst of new-error alerts as one roll-up email
+* observability: Add ERROR_TRACKING_ENABLED to switch error tracking off
+* calendar: Move a recurring event to another calendar
+* calendar: Edit this, following or all occurrences of a recurring event
+* calendar: Edit one occurrence of a CalDAV recurring event from the grid
+* calendar: Delete one occurrence or a whole recurring series from the grid
+
+
 [1.18.1]
 * calendar: Stop a large CalDAV change from exhausting memory during sync
 * calendar: Stop a large CalDAV calendar's first sync running out of memory

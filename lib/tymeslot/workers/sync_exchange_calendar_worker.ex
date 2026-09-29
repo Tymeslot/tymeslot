@@ -169,6 +169,8 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalDAV.Errors, as: CalDAVErrors
   alias Tymeslot.Integrations.Calendar.CalendarEventQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
@@ -176,10 +178,12 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   alias Tymeslot.Integrations.Calendar.Exchange.IntervalNormaliser
   alias Tymeslot.Integrations.Calendar.Exchange.ItemCache
   alias Tymeslot.Integrations.Calendar.Exchange.Provider
+  alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Workers.SyncHealth
 
   @busy_only EventRole.busy_only()
@@ -190,23 +194,45 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   # breaker that will at least let it probe rather than to a second refusal.
   @circuit_open_snooze_seconds 130
 
+  @behaviour ExpectedJobOutcome
+
+  # The integration is gone, or only its owner can fix it by reconnecting.
+  # A server error is retried by the next sync, and a refusal is the
+  # owner's server configuration.
+  @integration_gone "Integration not found"
+  @credentials_rejected "Exchange server rejected credentials — reauthentication required"
+  @no_mailbox "Exchange integration has no addressable mailbox"
+  @server_refused "Exchange server refused the sync request"
+  @server_error "Exchange server returned a server error; the next scheduled sync will retry"
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason) when is_binary(reason) do
+    reason in [@integration_gone, @credentials_rejected, @no_mailbox, @server_error] or
+      reason == ReauthHandling.discard_reason() or
+      String.starts_with?(reason, @server_refused <> ": ")
+  end
+
+  def expected_outcome?(_reason), do: false
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id}}) do
     Logger.metadata(calendar_integration_id: integration_id)
 
     case CalendarIntegrationQueries.get(integration_id) do
       {:ok, integration} ->
-        integration
-        |> sync()
-        |> handle_result(integration)
-        |> tap(&SyncHealth.record_outcome(integration, &1))
+        InvalidEventReport.collect(fn ->
+          integration
+          |> sync()
+          |> handle_result(integration)
+          |> tap(&SyncHealth.record_outcome(integration, &1))
+        end)
 
       {:error, :not_found} ->
         Logger.warning("Exchange integration not found, discarding sync job",
           calendar_integration_id: integration_id
         )
 
-        {:discard, "Integration not found"}
+        {:discard, @integration_gone}
 
       {:error, :requires_reencryption, integration} ->
         CalendarManagement.handle_reauth_required(integration)
@@ -349,7 +375,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
         "dashboard_calendar_providers",
         "The Exchange server rejected the stored credentials. Please reconnect the integration."
       ),
-      "Exchange server rejected credentials — reauthentication required"
+      @credentials_rejected
     )
   end
 
@@ -363,7 +389,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
         "dashboard_calendar_providers",
         "Tymeslot needs the mailbox's email address to read its free/busy time. Please reconnect the integration and provide it."
       ),
-      "Exchange integration has no addressable mailbox"
+      @no_mailbox
     )
   end
 
@@ -389,15 +415,14 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   defp handle_result({:error, :server_error}, integration) do
     record_failure(integration, :server_error)
 
-    {:discard, "Exchange server returned a server error; the next scheduled sync will retry"}
+    {:discard, @server_error}
   end
 
   defp handle_result({:error, reason} = result, integration) do
     record_failure(integration, reason)
 
     if CalDAVErrors.terminal_error?(reason) do
-      {:discard,
-       "Exchange server refused the sync request: #{CalDAVErrors.describe_error(reason)}"}
+      {:discard, "#{@server_refused}: #{CalDAVErrors.describe_error(reason)}"}
     else
       result
     end
@@ -430,7 +455,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
       {:error, changeset} ->
         Logger.warning("Failed to persist Exchange sync state",
           calendar_integration_id: integration.id,
-          error: inspect(changeset)
+          error: LogFormat.reason(changeset)
         )
 
         :ok
@@ -447,7 +472,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   defp record_failure(integration, reason) do
     Logger.error("Exchange calendar sync failed",
       calendar_integration_id: integration.id,
-      error: inspect(reason)
+      error: LogFormat.reason(reason)
     )
 
     CalendarIntegrationQueries.mark_sync_error(integration, error_message(reason))

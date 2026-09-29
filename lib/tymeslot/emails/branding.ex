@@ -28,6 +28,7 @@ defmodule Tymeslot.Emails.Branding do
   """
 
   alias Tymeslot.AppSettings
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Utils.Colour
   alias Tymeslot.Utils.MediaValidator
   alias TymeslotWeb.Helpers.FileOperations
@@ -289,7 +290,7 @@ defmodule Tymeslot.Emails.Branding do
         {:ok, Path.join(@logo_dir, filename)}
 
       {:error, reason} ->
-        Logger.error("Failed to store email logo", reason: inspect(reason))
+        Logger.error("Failed to store email logo", reason: LogFormat.reason(reason))
         {:error, :write_failed}
     end
   end

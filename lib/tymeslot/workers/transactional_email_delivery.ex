@@ -17,10 +17,10 @@ defmodule Tymeslot.Workers.TransactionalEmailDelivery do
 
   A permanently rejected recipient is discarded for the matching reason: no
   number of retries can reach a dead address, and exhausting the attempts
-  would raise a permanent-failure alert for what is a recipient problem, not
-  an outage. The discard is reported to `AdminAlerts` directly instead, since
-  a discard never reaches `ObanFailureAlerter` (it emits `job:stop`, not
-  `job:exception`) and a dead recipient — a host's payouts restricted, a
+  would record every failed attempt as an error for what is a recipient
+  problem, not an outage. The discard is reported to `AdminAlerts` directly
+  instead, since a discard is never recorded by error tracking (it emits
+  `job:stop`, not `job:exception`) and a dead recipient — a host's payouts restricted, a
   dispute opened — is exactly the kind of silence an operator needs to know
   about.
   """
@@ -30,6 +30,7 @@ defmodule Tymeslot.Workers.TransactionalEmailDelivery do
   alias Tymeslot.Emails.Delivery
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.CircuitBreakerSupervisor
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Workers.SnoozePolicy
 
   @circuit_open_jitter_seconds 30
@@ -46,8 +47,20 @@ defmodule Tymeslot.Workers.TransactionalEmailDelivery do
   @circuit_open_max_snoozes 12
   @rate_limited_max_snoozes 10
 
+  @recipient_rejected_reason "Recipient permanently undeliverable"
+
   @typedoc "An Oban `perform/1` return value."
   @type outcome :: :ok | {:error, term()} | {:snooze, pos_integer()} | {:discard, String.t()}
+
+  @doc """
+  Returns true for the discard `handle_failure/3` returns for a permanently
+  rejected recipient. That discard already raises its own
+  `:recipient_email_rejected` alert, so the workers delivering through this
+  module declare it an expected outcome
+  (`Tymeslot.Infrastructure.ExpectedJobOutcome`).
+  """
+  @spec recipient_rejected?(term()) :: boolean()
+  def recipient_rejected?(reason), do: reason == @recipient_rejected_reason
 
   @doc """
   Delivers `email`, logging `failure_message` with `metadata` when the failure
@@ -131,7 +144,7 @@ defmodule Tymeslot.Workers.TransactionalEmailDelivery do
   def handle_failure({:recipient_rejected, reason}, _failure_message, metadata) do
     Logger.warning(
       "Recipient permanently undeliverable, discarding job",
-      Keyword.put(metadata, :reason, inspect(reason))
+      Keyword.put(metadata, :reason, LogFormat.reason(reason))
     )
 
     AdminAlerts.report(:recipient_email_rejected,
@@ -140,11 +153,11 @@ defmodule Tymeslot.Workers.TransactionalEmailDelivery do
       context: Map.new(metadata)
     )
 
-    {:discard, "Recipient permanently undeliverable"}
+    {:discard, @recipient_rejected_reason}
   end
 
   def handle_failure(reason, failure_message, metadata) do
-    Logger.error(failure_message, Keyword.put(metadata, :reason, inspect(reason)))
+    Logger.error(failure_message, Keyword.put(metadata, :reason, LogFormat.reason(reason)))
     {:error, reason}
   end
 end

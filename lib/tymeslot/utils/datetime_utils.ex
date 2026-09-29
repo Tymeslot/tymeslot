@@ -14,6 +14,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
   require Logger
 
   alias Tymeslot.Clock
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Timezones
 
   @doc """
@@ -201,7 +202,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
       {:error, reason} ->
         Logger.error("Failed to shift timezone to UTC",
           reason: reason,
-          datetime: inspect(dt)
+          datetime: LogFormat.reason(dt)
         )
 
         {:error, reason}
@@ -273,7 +274,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
         Logger.warning("Unknown timezone when parsing external datetime; falling back to UTC",
           timezone: clean,
           original_timezone: original,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         convert_to_utc(naive_dt, nil)
@@ -289,7 +290,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
         Logger.warning("Failed to shift DateTime to UTC; falling back to naive UTC",
           timezone: clean,
           original_timezone: original,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         convert_to_utc(naive_dt, nil)

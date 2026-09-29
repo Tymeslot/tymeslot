@@ -14,6 +14,7 @@ defmodule Tymeslot.Bookings.ScheduleCheck do
   require Logger
 
   alias Tymeslot.Availability.Calculate
+  alias Tymeslot.Infrastructure.Logging.LogFormat
 
   @doc """
   Returns `:ok` when the schedule described by `config` offers
@@ -77,7 +78,7 @@ defmodule Tymeslot.Bookings.ScheduleCheck do
           date: Date.to_iso8601(date),
           start_datetime: DateTime.to_iso8601(start_datetime),
           organizer_user_id: organizer_user_id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         {:error, :slot_availability_unverifiable}

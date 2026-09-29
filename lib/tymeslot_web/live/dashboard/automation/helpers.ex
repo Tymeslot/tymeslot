@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Slack
   alias Tymeslot.Telegram
@@ -260,7 +261,9 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
   end
 
   def handle_feature_access_error(socket, other) do
-    Logger.warning("handle_feature_access_error: unhandled reason", reason: inspect(other))
+    Logger.warning("handle_feature_access_error: unhandled reason",
+      reason: LogFormat.reason(other)
+    )
 
     Flash.error(
       dgettext("dashboard_automation", "Unable to perform this action. Please try again.")

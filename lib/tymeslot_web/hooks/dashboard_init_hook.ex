@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.Dashboard.ExtensionSchema
   alias Tymeslot.Features
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
@@ -96,12 +97,12 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
   defp fetch_profile_and_integration_status(user) do
     # Load profile and integration status concurrently — they are independent
     profile_task =
-      Task.Supervisor.async_nolink(Tymeslot.TaskSupervisor, fn ->
+      Tasks.async_nolink(Tymeslot.TaskSupervisor, fn ->
         profile_or_placeholder(user)
       end)
 
     integration_task =
-      Task.Supervisor.async_nolink(Tymeslot.TaskSupervisor, fn ->
+      Tasks.async_nolink(Tymeslot.TaskSupervisor, fn ->
         DashboardContext.get_integration_status(user.id)
       end)
 

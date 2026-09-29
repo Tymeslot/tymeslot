@@ -397,7 +397,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchemaTest do
           assert decrypted.api_key == nil
         end)
 
-      assert logs =~ "Failed to decrypt video integration field"
+      assert logs =~ "Handled an unexpected error"
     end
   end
 

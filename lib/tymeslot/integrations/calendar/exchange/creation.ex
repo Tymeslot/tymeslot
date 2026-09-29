@@ -26,6 +26,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Creation do
   notice anyway.
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
@@ -208,7 +209,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Creation do
       {:error, reason} ->
         Logger.warning("Failed to enqueue initial Exchange sync",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         :ok

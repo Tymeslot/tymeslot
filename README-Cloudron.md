@@ -421,6 +421,9 @@ cloudron logs --app tymeslot.yourdomain.com
 cloudron logs --app tymeslot.yourdomain.com --follow
 ```
 
+### Error Tracking
+Tymeslot records every unexpected error, process crash and failed background job in the app's own database, with the user id and the request, LiveView or job it happened in (request path, parameters, headers and client IP included; credentials, tokens, cookies and email addresses are redacted first). Records of an error not seen for 30 days are resolved, and deleted 30 days later. To store nothing, add `ERROR_TRACKING_ENABLED=false` to `/app/data/.env` (or the Environment tab) and restart; errors are then only logged. The `ERROR TRACKING` section of `.env.example` lists exactly what is kept.
+
 ### Health Monitoring
 - Cloudron automatically monitors app health via `/healthcheck` endpoint
 - Automatic restart on failure

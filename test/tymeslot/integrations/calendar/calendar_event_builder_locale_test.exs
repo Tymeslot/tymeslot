@@ -15,6 +15,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderLocaleTest do
 
   @meeting %{
     uid: "abc-123",
+    calendar_uid: "calendar-abc-123",
     title: "Team Sync",
     description: "Quarterly review",
     start_time: ~U[2026-05-01 10:00:00Z],
