@@ -684,3 +684,9 @@ msgstr "%{email} n’est pas une adresse e-mail valide."
 #, elixir-autogen, elixir-format
 msgid "No more guests can be added to this meeting."
 msgstr "Vous ne pouvez plus ajouter d’invités à cette réunion."
+
+#: lib/tymeslot_web/components/dashboard/meetings/reminders_section.ex
+#, elixir-autogen, elixir-format
+msgctxt "reminder status"
+msgid "Not scheduled"
+msgstr "Non planifié"
