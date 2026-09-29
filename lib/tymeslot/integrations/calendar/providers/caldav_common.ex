@@ -14,6 +14,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ICalNormaliser
+  alias Tymeslot.Integrations.Calendar.Shared.EventSearch
   alias Tymeslot.Utils.UriUtils
 
   require Logger
@@ -453,25 +454,50 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
     # identifier (a Google or Outlook id) does not address a resource here.
     href = if is_binary(href) and String.starts_with?(href, ["/", "http"]), do: href
 
-    with {:ok, raw_events} <-
-           Events.fetch_calendar_event(
-             client,
-             primary_calendar_path(client),
-             Map.get(event_ref, :uid),
-             href
-           ) do
-      provider = Map.get(client, :provider, :caldav)
+    path = primary_calendar_path(client)
 
-      ICalNormaliser.normalise_events(
-        raw_events,
-        %{
-          calendar_integration_id: Map.get(event_ref, :calendar_integration_id),
-          provider_calendar_id: primary_calendar_path(client) || "",
-          synced_at: DateTime.utc_now()
-        },
-        provider
-      )
+    with {:ok, raw_events} <-
+           Events.fetch_calendar_event(client, path, Map.get(event_ref, :uid), href) do
+      normalise_fetched(client, raw_events, path, event_ref)
     end
+  end
+
+  @doc """
+  Looks for an event in every calendar of the account (see the provider
+  behaviour's `find_moved_event/2`), by its iCalendar UID in `uid`: a move
+  between calendars changes the event's href, and the client that moved it
+  need not keep the resource's name. Every calendar discovery finds is asked,
+  those `fetch_event/2` already asked included, since it asked them by the
+  old href.
+  """
+  @spec find_moved_event(caldav_client(), map()) ::
+          {:ok, list()} | {:error, :not_found} | {:error, term()}
+  def find_moved_event(client, %{uid: uid} = event_ref) when is_binary(uid) and uid != "" do
+    with {:ok, calendars} <- discover_calendars(client) do
+      calendars
+      |> Enum.map(& &1.path)
+      |> Enum.reject(&(&1 in [nil, ""]))
+      |> Enum.uniq()
+      |> EventSearch.first_found(fn path ->
+        with {:ok, raw_events} <- Events.find_calendar_event(client, path, uid) do
+          normalise_fetched(client, raw_events, path, event_ref)
+        end
+      end)
+    end
+  end
+
+  def find_moved_event(_client, _event_ref), do: {:error, :unaddressable}
+
+  defp normalise_fetched(client, raw_events, path, event_ref) do
+    ICalNormaliser.normalise_events(
+      raw_events,
+      %{
+        calendar_integration_id: Map.get(event_ref, :calendar_integration_id),
+        provider_calendar_id: path || "",
+        synced_at: DateTime.utc_now()
+      },
+      Map.get(client, :provider, :caldav)
+    )
   end
 
   # Helpers

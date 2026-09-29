@@ -179,6 +179,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
   def fetch_event(client, event_ref), do: CaldavCommon.fetch_event(client, event_ref)
 
   @impl Tymeslot.Integrations.Calendar.Provider
+  def find_moved_event(client, event_ref), do: CaldavCommon.find_moved_event(client, event_ref)
+
+  @impl Tymeslot.Integrations.Calendar.Provider
   def list_events(client, opts), do: CaldavCommon.list_events(client, opts)
 
   @impl Tymeslot.Integrations.Calendar.Provider

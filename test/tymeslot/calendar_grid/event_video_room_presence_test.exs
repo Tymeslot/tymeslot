@@ -7,8 +7,10 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
   Each test runs the real nightly worker and drains the room jobs it queues.
   An event is judged gone only once it has been seen in the calendar cache,
   then missed by every sync for two days, and then denied by the calendar
-  provider itself; anything short of that keeps the conversation, and so
-  does another event still carrying its link, which takes it over. Nextcloud
+  provider itself, in every calendar of the organiser's account, since the
+  event may have moved to one the organiser did not select; anything short
+  of that keeps the conversation, and so does another event still carrying
+  its link, which takes it over. Nextcloud
   (Talk and CalDAV) is played by the HTTP client, Google at its API boundary.
   """
 
@@ -27,22 +29,19 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.CalDAVAccountStub
   alias Tymeslot.Workers.ExpiredVideoRoomCleanupWorker
 
   @day 86_400
   @talk_rooms "/ocs/v2.php/apps/spreed/api/v4/room"
+  @team_calendar "team@group.calendar.google.com"
 
   setup :verify_on_exit!
 
   setup do
     user = insert(:user)
     talk_host = "talk-#{System.unique_integer([:positive])}.example.com"
-    test = self()
-
-    stub(HTTPClientMock, :request, fn :delete, url, _body, _headers, _opts ->
-      send(test, {:talk_deleted, url})
-      {:ok, %Req.Response{status: 200, body: ocs(nil)}}
-    end)
+    answer_requests(%{})
 
     %{user: user, talk: insert_talk_integration(user, talk_host), talk_host: talk_host}
   end
@@ -63,7 +62,35 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
       run_nightly_scan()
 
       assert_received {:dav_get, ^url}
+      # Nor has any calendar of the account, the unselected one included.
+      assert_received {:dav_report, "/calendars/alice/private/", "grid-series-1"}
       assert_talk_deleted(ctx, room)
+    end
+
+    # Moved in the calendar client to a calendar the organiser did not select,
+    # under a resource name of the client's choosing.
+    test "keeps the conversation of a series moved to another calendar", ctx do
+      room = series_room(ctx, "grid-series-4")
+      occurrence = cache_occurrence(ctx, "grid-series-4")
+      run_nightly_scan()
+
+      deleted_in_client(occurrence, room, ctx.calendar)
+      url = expect_dav_get(ctx, "grid-series-4", {404, ""})
+      start = DateTime.add(DateTime.utc_now(:second), 2 * @day, :second)
+
+      answer_requests(
+        Map.put(ctx.account, :resources, %{
+          "/calendars/alice/private/" => [
+            {"/calendars/alice/private/0A9C.ics", ical_event("grid-series-4", start)}
+          ]
+        })
+      )
+
+      run_nightly_scan()
+
+      assert_received {:dav_get, ^url}
+      assert_kept(room)
+      assert DateTime.diff(DateTime.utc_now(), Repo.reload!(room).event_seen_at) < 60
     end
 
     test "keeps the conversation while the server cannot answer", ctx do
@@ -86,7 +113,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
       run_nightly_scan()
 
       deleted_in_client(occurrence, room, ctx.calendar)
-      # Moved to a calendar the organiser did not select.
+      # Still in its calendar, where the cache does not reach.
       start = DateTime.add(DateTime.utc_now(:second), 2 * @day, :second)
       url = expect_dav_get(ctx, "grid-series-3", {200, ical_event("grid-series-3", start)})
 
@@ -249,7 +276,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
     end
   end
 
-  describe "a one-off event on a Google calendar" do
+  describe "an event on a Google calendar" do
     setup %{user: user} do
       calendar =
         insert(:calendar_integration,
@@ -266,32 +293,78 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
     # Its end is still ahead, so the ended-room clean-up never reaches it.
     test "deletes the conversation of an upcoming event deleted in the calendar client", ctx do
       room = upcoming_room(ctx, provider_event_id: "googlehex9", provider_calendar_id: "primary")
+      seen_then_deleted(ctx, room)
 
-      row =
-        insert(:provider_calendar_event,
-          calendar_integration: ctx.calendar,
-          provider: "google",
-          uid: "googlehex9@google.com",
-          provider_event_id: "googlehex9",
-          start_at: room.lobby_opens_at,
-          end_at: room.ends_at
-        )
-
-      run_nightly_scan()
-      assert %{event_ical_uid: "googlehex9@google.com"} = Repo.reload!(room)
-
-      deleted_in_client(row, room, ctx.calendar)
-      test = self()
-
-      expect(GoogleCalendarAPIMock, :get_event, fn _integration, calendar_id, event_id ->
-        send(test, {:asked, calendar_id, event_id})
-        {:ok, %{"id" => event_id, "status" => "cancelled"}}
-      end)
+      answer_google(%{"primary" => :cancelled, @team_calendar => :not_found})
 
       run_nightly_scan()
 
       assert_received {:asked, "primary", "googlehex9"}
+      assert_received {:asked, @team_calendar, "googlehex9"}
+      # The primary calendar is asked once, under its alias.
+      refute_received {:asked, "alice@example.com", _event_id}
       assert_talk_deleted(ctx, room)
+    end
+
+    test "keeps the conversation of an event moved to another calendar", ctx do
+      room = upcoming_room(ctx, provider_event_id: "googlehex8", provider_calendar_id: "primary")
+      seen_then_deleted(ctx, room)
+
+      answer_google(%{
+        "primary" => :not_found,
+        @team_calendar => google_event("googlehex8", room.lobby_opens_at)
+      })
+
+      run_nightly_scan()
+
+      assert_received {:asked, @team_calendar, "googlehex8"}
+      assert_kept(room)
+      assert DateTime.diff(DateTime.utc_now(), Repo.reload!(room).event_seen_at) < 60
+    end
+
+    # A series keeps its master's id when it moves.
+    test "keeps the conversation of a series moved to another calendar", ctx do
+      room =
+        upcoming_room(ctx,
+          provider_event_id: "googleseries7",
+          provider_calendar_id: "primary",
+          ends_at: nil
+        )
+
+      seen_then_deleted(ctx, room)
+
+      series =
+        "googleseries7"
+        |> google_event(room.lobby_opens_at)
+        |> Map.put("recurrence", ["RRULE:FREQ=WEEKLY"])
+
+      answer_google(%{"primary" => :cancelled, @team_calendar => series})
+
+      run_nightly_scan()
+
+      assert_received {:asked, @team_calendar, "googleseries7"}
+      assert_kept(room)
+      assert DateTime.diff(DateTime.utc_now(), Repo.reload!(room).event_seen_at) < 60
+    end
+
+    test "keeps the conversation while the account's calendars cannot be listed", ctx do
+      room = upcoming_room(ctx, provider_event_id: "googlehex7", provider_calendar_id: "primary")
+      seen_then_deleted(ctx, room)
+      test = self()
+
+      expect(GoogleCalendarAPIMock, :get_event, fn _integration, calendar_id, event_id ->
+        send(test, {:asked, calendar_id, event_id})
+        {:error, :not_found, "Not Found"}
+      end)
+
+      expect(GoogleCalendarAPIMock, :list_calendars, fn _integration ->
+        {:error, :network_error, "Network error: :timeout"}
+      end)
+
+      run_nightly_scan()
+
+      assert_received {:asked, "primary", "googlehex7"}
+      assert_kept(room)
     end
   end
 
@@ -318,8 +391,79 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
       {:ok, %Req.Response{status: 404, body: ""}}
     end)
 
-    %{calendar: calendar, dav_host: host}
+    # The account also holds a calendar the organiser did not select.
+    account = %{
+      calendars: ["/calendars/alice/work/", "/calendars/alice/private/"],
+      notify: test
+    }
+
+    answer_requests(account)
+
+    %{calendar: calendar, dav_host: host, account: account}
   end
+
+  # Plays the organiser's Nextcloud: every conversation deleted reaches the
+  # test, and the CalDAV account answers the search for a moved event.
+  defp answer_requests(account) do
+    test = self()
+
+    stub(HTTPClientMock, :request, fn
+      :delete, url, _body, _headers, _opts ->
+        send(test, {:talk_deleted, url})
+        {:ok, %Req.Response{status: 200, body: ocs(nil)}}
+
+      method, url, body, _headers, _opts ->
+        CalDAVAccountStub.answer(account, method, url, body)
+    end)
+  end
+
+  # A Google event the scan has seen in the cache, then missed for two days.
+  defp seen_then_deleted(ctx, room) do
+    row =
+      insert(:provider_calendar_event,
+        calendar_integration: ctx.calendar,
+        provider: "google",
+        uid: room.provider_event_id <> "@google.com",
+        provider_event_id: room.provider_event_id,
+        start_at: room.lobby_opens_at,
+        end_at: DateTime.add(room.lobby_opens_at, 1800, :second)
+      )
+
+    run_nightly_scan()
+    assert %{event_seen_at: %DateTime{}} = Repo.reload!(room)
+    deleted_in_client(row, room, ctx.calendar)
+  end
+
+  # Google's answer for the event in each calendar of an account whose
+  # primary calendar is alice@example.com: `:not_found`, `:cancelled`, or the
+  # event itself.
+  defp answer_google(answers) do
+    test = self()
+
+    stub(GoogleCalendarAPIMock, :list_calendars, fn _integration ->
+      {:ok, [%{"id" => "alice@example.com", "primary" => true}, %{"id" => @team_calendar}]}
+    end)
+
+    stub(GoogleCalendarAPIMock, :get_event, fn _integration, calendar_id, event_id ->
+      send(test, {:asked, calendar_id, event_id})
+
+      case Map.get(answers, calendar_id, :not_found) do
+        :not_found -> {:error, :not_found, "Not Found"}
+        :cancelled -> {:ok, %{"id" => event_id, "status" => "cancelled"}}
+        %{"id" => ^event_id} = event -> {:ok, event}
+      end
+    end)
+  end
+
+  defp google_event(id, start),
+    do: %{
+      "id" => id,
+      "iCalUID" => id <> "@google.com",
+      "status" => "confirmed",
+      "summary" => "Planning",
+      "start" => %{"dateTime" => DateTime.to_iso8601(start)},
+      "end" => %{"dateTime" => DateTime.to_iso8601(DateTime.add(start, 1800, :second))}
+    }
 
   defp run_nightly_scan do
     assert :ok = perform_job(ExpiredVideoRoomCleanupWorker, %{})

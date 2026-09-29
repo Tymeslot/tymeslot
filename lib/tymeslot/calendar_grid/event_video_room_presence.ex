@@ -29,9 +29,11 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresence do
   `confirm/1` is the job's, run just before it deletes. It repeats the cache
   check, then asks the calendar provider:
 
-    * Not found (a 404 or 410, or for Google and Outlook a cancelled event;
-      Outlook also looks the event up by its iCalendar UID across the
-      mailbox's calendars, since a move changes its id): gone, unless another
+    * Not found (a 404 or 410, or for Google and Outlook a cancelled event)
+      in every calendar of the organiser's account, those the organiser did
+      not select included, since the event may have moved to one of them
+      (`Provider.find_moved_event/2`; Outlook looks it up by its iCalendar
+      UID across the mailbox, since a move changes its id): gone, unless another
       cached event of the organiser's calendars still carries the join link
       the event was seen with, such as the earlier half of a split series.
       The room is then handed to that event

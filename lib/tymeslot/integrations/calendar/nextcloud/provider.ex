@@ -274,6 +274,9 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
   @impl Tymeslot.Integrations.Calendar.Provider
   def fetch_event(client, event_ref), do: CalDAVProvider.fetch_event(client, event_ref)
 
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def find_moved_event(client, event_ref), do: CalDAVProvider.find_moved_event(client, event_ref)
+
   # Private helper functions
 
   defp valid_nextcloud_url?(url) when is_binary(url) do
