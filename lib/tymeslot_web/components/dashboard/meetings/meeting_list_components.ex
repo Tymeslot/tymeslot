@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingActions
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingStatusBadge
+  alias TymeslotWeb.Components.Dashboard.Meetings.RemindersSection
 
   # Filter Tabs
   attr :active, :string, required: true
@@ -297,6 +298,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
               </div>
             </dl>
           </div>
+          <RemindersSection.reminders_section meeting={@meeting} />
         </div>
 
         <MeetingActions.action_bar
