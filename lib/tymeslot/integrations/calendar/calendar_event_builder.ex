@@ -131,6 +131,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
       parts = [
         attendee_identity_line(meeting),
         meeting.description,
+        organizer_note_section(meeting),
         attendee_message_section(meeting),
         custom_answers_section(meeting),
         attachments_section(meeting),
@@ -212,6 +213,19 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   end
 
   defp attendee_identity_line(_meeting), do: nil
+
+  # `Map.get/2`: the builder is also handed plain maps that predate the field.
+  defp organizer_note_section(meeting) do
+    case Map.get(meeting, :organizer_note) do
+      note when is_binary(note) and note != "" ->
+        "\n\n" <>
+          dgettext("emails", "Message from %{name}:", name: meeting.organizer_name) <>
+          "\n#{note}"
+
+      _none ->
+        nil
+    end
+  end
 
   defp attendee_message_section(meeting) do
     case meeting.attendee_message do

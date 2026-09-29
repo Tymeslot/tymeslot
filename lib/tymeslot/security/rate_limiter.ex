@@ -547,6 +547,29 @@ defmodule Tymeslot.Security.RateLimiter do
   def check_dashboard_reschedule_rate_limit(user_id), do: Dashboard.check_reschedule(user_id)
 
   @doc """
+  Rate limit the host inviting guests to an existing booking from the dashboard.
+  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+
+  Limit: 20 invitation batches per 10 minutes per user.
+  """
+  @spec check_dashboard_add_guests_rate_limit(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_dashboard_add_guests_rate_limit(user_id), do: Dashboard.check_add_guests(user_id)
+
+  @doc """
+  Rate limit creating an ad-hoc meeting from the calendar grid's quick add.
+  Each save emails the main guest and up to ten extra guests, so it gets the
+  same budget as inviting guests to an existing booking, in its own bucket.
+  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+
+  Limit: 20 meetings per 10 minutes per user.
+  """
+  @spec check_dashboard_quick_add_meeting_rate_limit(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_dashboard_quick_add_meeting_rate_limit(user_id),
+    do: Dashboard.check_quick_add_meeting(user_id)
+
+  @doc """
   Rate limit payment initiation attempts.
   Returns :ok if allowed, {:error, :rate_limited} if exceeded.
 

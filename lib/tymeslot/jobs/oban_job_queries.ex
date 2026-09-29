@@ -191,6 +191,37 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   end
 
   @doc """
+  Returns `{meeting_id, reminder_value, reminder_unit}` for every reminder
+  email job of `worker_module` still to run for one of `meeting_ids`, in one
+  query however many meetings are asked about.
+
+  "Still to run" is every non-terminal state, `executing` and `suspended`
+  included: such a job has not finished, so its reminder is still coming.
+  """
+  @spec pending_reminder_jobs(module(), [term()]) :: [{term(), term(), term()}]
+  def pending_reminder_jobs(_worker_module, []), do: []
+
+  def pending_reminder_jobs(worker_module, meeting_ids) when is_list(meeting_ids) do
+    worker_name = normalize_worker_name(worker_module)
+    meeting_ids = Enum.map(meeting_ids, &to_string/1)
+
+    Repo.all(
+      from(j in Job,
+        where: j.worker == ^worker_name,
+        where: j.queue == "emails",
+        where: j.state in ["available", "scheduled", "executing", "retryable", "suspended"],
+        where: fragment("?->>'action' = 'send_reminder_emails'", j.args),
+        where: fragment("?->>'meeting_id' = ANY(?)", j.args, ^meeting_ids),
+        select: {
+          fragment("?->'meeting_id'", j.args),
+          fragment("?->'reminder_value'", j.args),
+          fragment("?->'reminder_unit'", j.args)
+        }
+      )
+    )
+  end
+
+  @doc """
   Deletes pending poll email jobs (deadline reminders and host nudges) for a poll.
 
   Used when a poll is confirmed or cancelled, so no reminder or nudge fires for a

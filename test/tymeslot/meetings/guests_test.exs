@@ -1,10 +1,12 @@
 defmodule Tymeslot.Meetings.GuestsTest do
   use Tymeslot.DataCase, async: true
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :meetings
 
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Workers.EmailWorker
 
   describe "sanitize_emails/2" do
     test "trims, downcases and de-duplicates" do
@@ -59,6 +61,221 @@ defmodule Tymeslot.Meetings.GuestsTest do
     test "is a no-op for an empty list" do
       meeting = insert(:meeting)
       assert {:ok, []} = Guests.create_for_meeting(meeting.id, [])
+    end
+
+    test "records who invited the guests, the booker unless told otherwise" do
+      meeting = insert(:meeting)
+
+      {:ok, [booked]} = Guests.create_for_meeting(meeting.id, ["booked@example.com"])
+
+      {:ok, [hosted]} =
+        Guests.create_for_meeting(meeting.id, ["hosted@example.com"], :organizer)
+
+      assert [%{invited_by: :booker}, %{invited_by: :organizer}] =
+               Enum.sort_by(GuestQueries.list_for_meeting(meeting.id), & &1.email)
+
+      assert booked.invited_by == :booker
+      assert hosted.invited_by == :organizer
+    end
+  end
+
+  describe "valid_email?/1" do
+    # The forms that collect guest addresses ask this, so it has to agree with
+    # what `sanitize_emails/2` keeps: an address the form accepted and the
+    # booking then dropped would vanish without a word.
+    test "agrees with sanitize_emails/2 on every address" do
+      candidates = [
+        "ok@example.com",
+        "not-an-email",
+        "two@",
+        "a..b@example.com",
+        "someone@example.invalidtld",
+        "someone@example.test",
+        "someone@example.con"
+      ]
+
+      kept = Guests.sanitize_emails(candidates, nil)
+
+      assert Enum.filter(candidates, &Guests.valid_email?/1) == kept
+      assert "ok@example.com" in kept
+      refute "someone@example.invalidtld" in kept
+    end
+
+    test "is false for anything that is not a string" do
+      refute Guests.valid_email?(nil)
+      refute Guests.valid_email?(42)
+    end
+  end
+
+  describe "invite_for_organizer/3" do
+    setup do
+      host = insert(:user)
+
+      meeting =
+        insert(:meeting, organizer_user_id: host.id, attendee_email: "primary@example.com")
+
+      %{host: host, meeting: meeting}
+    end
+
+    test "adds the guests a host names and queues one invitation job for exactly them", %{
+      host: host,
+      meeting: meeting
+    } do
+      {:ok, added} = Guests.invite_for_organizer(meeting.id, host.id, ["Colleague@Example.com"])
+
+      assert [
+               %{
+                 id: guest_id,
+                 email: "colleague@example.com",
+                 status: "pending",
+                 invited_by: :organizer
+               }
+             ] = added
+
+      assert [%{email: "colleague@example.com"}] = GuestQueries.list_for_meeting(meeting.id)
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_guest_invitations",
+          "meeting_id" => meeting.id,
+          "guest_ids" => [guest_id]
+        }
+      )
+    end
+
+    test "refuses a meeting the user does not organise, and adds nothing", %{meeting: meeting} do
+      stranger = insert(:user)
+
+      assert {:error, :not_found} =
+               Guests.invite_for_organizer(meeting.id, stranger.id, ["intruder@example.com"])
+
+      assert GuestQueries.list_for_meeting(meeting.id) == []
+      refute_enqueued(worker: EmailWorker)
+    end
+
+    test "refuses a meeting id that is not a UUID", %{host: host} do
+      assert {:error, :not_found} =
+               Guests.invite_for_organizer("not-a-uuid", host.id, ["a@example.com"])
+    end
+
+    for {label, attrs} <- [
+          {"cancelled", %{status: "cancelled"}},
+          {"awaiting approval", %{status: "awaiting_approval"}},
+          {"being rescheduled", %{status: "reschedule_requested"}}
+        ] do
+      test "refuses a meeting that is #{label}", %{host: host} do
+        # A different slot from the setup's meeting, which would otherwise
+        # collide with it on the one-booking-per-slot constraint.
+        start_time = DateTime.add(DateTime.utc_now(:second), 3, :day)
+
+        meeting =
+          insert(
+            :meeting,
+            Map.merge(unquote(Macro.escape(attrs)), %{
+              organizer_user_id: host.id,
+              start_time: start_time,
+              end_time: DateTime.add(start_time, 60, :minute)
+            })
+          )
+
+        assert {:error, :closed} =
+                 Guests.invite_for_organizer(meeting.id, host.id, ["late@example.com"])
+
+        assert GuestQueries.list_for_meeting(meeting.id) == []
+        refute_enqueued(worker: EmailWorker)
+      end
+    end
+
+    test "refuses a meeting that has already started", %{host: host} do
+      now = DateTime.utc_now(:second)
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: host.id,
+          start_time: DateTime.add(now, -10, :minute),
+          end_time: DateTime.add(now, 50, :minute)
+        )
+
+      assert {:error, :closed} =
+               Guests.invite_for_organizer(meeting.id, host.id, ["late@example.com"])
+    end
+
+    test "leaves a guest who is already invited alone, so no second invitation goes out", %{
+      host: host,
+      meeting: meeting
+    } do
+      {:ok, [first]} = Guests.create_for_meeting(meeting.id, ["colleague@example.com"])
+      stamped_at = DateTime.utc_now(:second)
+      {:ok, _sent} = GuestQueries.mark_confirmation_sent(first, stamped_at)
+
+      assert {:ok, []} =
+               Guests.invite_for_organizer(meeting.id, host.id, [
+                 "COLLEAGUE@example.com",
+                 "colleague@example.com"
+               ])
+
+      # One row still, carrying the very stamp it already had, and no job: the
+      # guest was not re-queued, which is what would mail them a second time.
+      assert [%{email: "colleague@example.com", confirmation_sent_at: ^stamped_at}] =
+               GuestQueries.list_for_meeting(meeting.id)
+
+      refute_enqueued(worker: EmailWorker)
+    end
+
+    test "adds only the new address when some are already there", %{
+      host: host,
+      meeting: meeting
+    } do
+      {:ok, _existing} = Guests.create_for_meeting(meeting.id, ["one@example.com"])
+
+      {:ok, added} =
+        Guests.invite_for_organizer(meeting.id, host.id, ["one@example.com", "two@example.com"])
+
+      assert [%{email: "two@example.com"}] = added
+    end
+
+    test "drops the attendee's own address and anything unusable", %{
+      host: host,
+      meeting: meeting
+    } do
+      assert {:ok, []} =
+               Guests.invite_for_organizer(meeting.id, host.id, [
+                 "primary@example.com",
+                 "not-an-email",
+                 "  "
+               ])
+    end
+
+    test "counts the cap across the guests already on the meeting", %{
+      host: host,
+      meeting: meeting
+    } do
+      full = for n <- 1..Guests.max_guests(), do: "guest#{n}@example.com"
+      {:ok, _existing} = Guests.create_for_meeting(meeting.id, full)
+
+      assert {:error, :full} =
+               Guests.invite_for_organizer(meeting.id, host.id, ["late@example.com"])
+
+      assert length(GuestQueries.list_for_meeting(meeting.id)) == Guests.max_guests()
+    end
+
+    test "fills the remaining room and stops there rather than overshooting the cap", %{
+      host: host,
+      meeting: meeting
+    } do
+      taken = for n <- 1..(Guests.max_guests() - 2), do: "guest#{n}@example.com"
+      {:ok, _existing} = Guests.create_for_meeting(meeting.id, taken)
+
+      {:ok, added} =
+        Guests.invite_for_organizer(meeting.id, host.id, [
+          "a@example.com",
+          "b@example.com",
+          "c@example.com"
+        ])
+
+      assert length(added) == 2
+      assert length(GuestQueries.list_for_meeting(meeting.id)) == Guests.max_guests()
     end
   end
 

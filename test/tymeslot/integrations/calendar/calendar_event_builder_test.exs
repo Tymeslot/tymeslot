@@ -117,6 +117,21 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderTest do
       assert result.description =~ "Looking forward to it!"
     end
 
+    test "credits the organiser's note to the organiser by name" do
+      meeting = Map.put(@base_meeting, :organizer_note, "Bring the Q3 numbers.")
+
+      description = CalendarEventBuilder.build_event_description(meeting)
+
+      assert description =~ "Message from Bob:\nBring the Q3 numbers."
+      refute description =~ "Message from attendee:"
+    end
+
+    test "writes no note section for a meeting without one" do
+      for meeting <- [@base_meeting, Map.put(@base_meeting, :organizer_note, nil)] do
+        refute CalendarEventBuilder.build_event_description(meeting) =~ "Message from Bob:"
+      end
+    end
+
     test "carries the meeting_url through as conference_url" do
       meeting = %{@base_meeting | meeting_url: "https://meet.example.com/room"}
 

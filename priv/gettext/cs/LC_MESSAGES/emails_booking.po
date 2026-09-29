@@ -689,11 +689,6 @@ msgstr "Připomínka"
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
-msgid "Reminder: Our meeting is %{time_until}"
-msgstr "Připomínka: schůzka za %{time_until}"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
 msgid "Reminder: the meeting with %{name} is in %{time_until}"
 msgstr "Připomenutí: schůzka s %{name} začíná za %{time_until}"
 
@@ -746,11 +741,6 @@ msgstr "Uvidíme se %{time_until}!"
 #, elixir-autogen, elixir-format
 msgid "Start Meeting"
 msgstr "Zahájit schůzku"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Starting %{time_until}"
-msgstr "Začíná za %{time_until}"
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
@@ -1070,3 +1060,38 @@ msgstr "Uživatel %{name} upravil všechny výskyty opakované události, které
 #, elixir-autogen, elixir-format
 msgid "%{name} has updated this and every following occurrence of a repeating event you're attending."
 msgstr "Uživatel %{name} upravil tento a všechny následující výskyty opakované události, které se účastníte."
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder: Our meeting is in %{time_until}"
+msgstr "Připomínka: schůzka za %{time_until}"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "%{organizer} has invited you as a guest to this meeting."
+msgstr "Jako hosta vás na tuto schůzku zve %{organizer}."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{guest} - %{organizer} has invited you as a guest to this meeting."
+msgstr "Dobrý den, %{guest}, jako hosta vás na tuto schůzku zve %{organizer}."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{guest} - the meeting %{organizer} invited you to has been cancelled."
+msgstr "Dobrý den, %{guest}, schůzka, na kterou vás zve %{organizer}, byla zrušena."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{guest} - the meeting %{organizer} invited you to has been moved to a new time."
+msgstr "Dobrý den, %{guest}, schůzka, na kterou vás zve %{organizer}, byla přesunuta na nový čas."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting %{organizer} invited you to has been cancelled."
+msgstr "Schůzka, na kterou vás zve %{organizer}, byla zrušena."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting %{organizer} invited you to has been moved to a new time."
+msgstr "Schůzka, na kterou vás zve %{organizer}, byla přesunuta na nový čas."

@@ -29,13 +29,19 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresence do
   `confirm/1` is the job's, run just before it deletes. It repeats the cache
   check, then asks the calendar provider:
 
-    * Not found (a 404 or 410, or for Google and Outlook a cancelled event;
-      Outlook also looks the event up by its iCalendar UID across the
-      mailbox's calendars, since a move changes its id): gone, unless another
-      cached event of the organiser's calendars still carries the join link
-      the event was seen with, such as the earlier half of a split series.
-      The room is then handed to that event
-      (`EventVideoRooms.hand_to_link_holder/1`) and kept.
+    * Not found (a 404 or 410, or a cancelled event: for CalDAV, a resource
+      whose every component is `STATUS:CANCELLED`) in every calendar of the
+      organiser's account they can write to, those they did not select
+      included, since the event may have moved to one of them
+      (`Provider.find_moved_event/2`; Outlook looks it up by its iCalendar
+      UID across the mailbox, since a move changes its id). A calendar the
+      organiser can only read, such as a colleague's shared one, is never
+      asked: nothing can have been moved into it, and its refusal would keep
+      the room for ever. Gone, unless another cached event of the
+      organiser's calendars still carries the join link the event was seen
+      with, such as the earlier half of a split series. The room is then
+      handed to that event (`EventVideoRooms.hand_to_link_holder/1`) and
+      kept.
     * Found: kept, and marked seen, so it is not asked again for a while.
     * Any error, timeout, refused credentials, or a provider that cannot
       fetch one event: kept, and the next scan asks again.

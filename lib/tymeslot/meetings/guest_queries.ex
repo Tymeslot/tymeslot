@@ -63,6 +63,19 @@ defmodule Tymeslot.Meetings.GuestQueries do
   end
 
   @doc """
+  Lists the guests among `guest_ids` on `meeting_id` whose confirmation email
+  has not yet been sent.
+  """
+  @spec list_unsent_by_ids(binary(), [binary()]) :: [Guest.t()]
+  def list_unsent_by_ids(meeting_id, guest_ids) when is_list(guest_ids) do
+    Guest
+    |> where([g], g.meeting_id == ^meeting_id and g.id in ^guest_ids)
+    |> where([g], is_nil(g.confirmation_sent_at))
+    |> order_by([g], asc: g.inserted_at, asc: g.email)
+    |> Repo.all()
+  end
+
+  @doc """
   Clears everything a meeting's guests were told about, or answered for, its
   previous time: their RSVPs, and the reminder offsets already emailed.
 
@@ -96,6 +109,39 @@ defmodule Tymeslot.Meetings.GuestQueries do
     guest
     |> Guest.confirmation_sent_changeset(sent_at)
     |> Repo.update()
+  end
+
+  @doc """
+  Claims the right to send `guest` their invitation by stamping
+  `confirmation_sent_at` with `sent_at`, but only while it is still unset.
+
+  One conditional update, so of two jobs racing for the same guest (the
+  booking's confirmation and an invitation job for a guest added meanwhile)
+  exactly one gets `:claimed` and the other `:already_claimed`. The claim is
+  taken before the send; `release_confirmation_claim/2` hands it back when the
+  send fails, so a retry can try again.
+  """
+  @spec claim_confirmation(Guest.t(), DateTime.t()) :: :claimed | :already_claimed
+  def claim_confirmation(%Guest{id: id}, sent_at) do
+    {count, _rows} =
+      Guest
+      |> where([g], g.id == ^id and is_nil(g.confirmation_sent_at))
+      |> Repo.update_all(set: [confirmation_sent_at: sent_at, updated_at: sent_at])
+
+    if count == 1, do: :claimed, else: :already_claimed
+  end
+
+  @doc """
+  Releases a claim taken by `claim_confirmation/2` with the same `sent_at`,
+  leaving the guest unsent. A stamp that has since changed is left alone.
+  """
+  @spec release_confirmation_claim(Guest.t(), DateTime.t()) :: :ok
+  def release_confirmation_claim(%Guest{id: id}, sent_at) do
+    Guest
+    |> where([g], g.id == ^id and g.confirmation_sent_at == ^sent_at)
+    |> Repo.update_all(set: [confirmation_sent_at: nil, updated_at: DateTime.utc_now(:second)])
+
+    :ok
   end
 
   @doc """

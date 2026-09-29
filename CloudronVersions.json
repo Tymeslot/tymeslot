@@ -3928,6 +3928,53 @@
       },
       "publishState": "published",
       "ts": "Tue, 29 Sep 2026 08:51:19 GMT"
+    },
+    "1.20.0": {
+      "creationDate": "Tue, 29 Sep 2026 17:01:51 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "Hosts can now add guests to existing bookings and to meetings made with quick add, and booking cards show their reminder emails. Also fixes for choosing a CalDAV calendar, video rooms on moved events, and reminders nobody asked for.\n* Hosts can add guests to an existing booking from the bookings dashboard, and each guest gets an invitation email\n* Quick add in the dashboard calendar can include a note to the guest and invite extra guests in a language you pick\n* Booking cards in the dashboard list each reminder email and whether it has been sent\n* Events created in the dashboard calendar on a CalDAV account are saved to the calendar you picked, not the default one\n* Moving a dashboard calendar event to another calendar no longer deletes its video room\n* Meetings made with quick add or confirmed from a poll no longer send a reminder their confirmation said was not scheduled\n* Attendee reminder emails now read “Our meeting is in 30 minutes” instead of missing the “in”",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:1.20.0",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!\n\nSet PHX_HOST to your app domain, either on the Environment tab or by editing /app/data/.env, which is pre-filled with every supported variable, commented out (cloudron exec --app <domain> -- vi /app/data/.env). Values set on the Environment tab take precedence over that file. Restart the app after editing it.\n\nThe first user to register becomes the admin.",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "1.20.0",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Tue, 29 Sep 2026 17:01:51 GMT"
     }
   }
 }

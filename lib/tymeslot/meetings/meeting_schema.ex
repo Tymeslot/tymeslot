@@ -37,6 +37,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           attendee_name: String.t() | nil,
           attendee_email: String.t() | nil,
           attendee_message: String.t() | nil,
+          organizer_note: String.t() | nil,
           attendee_phone: String.t() | nil,
           attendee_company: String.t() | nil,
           attendee_timezone: String.t() | nil,
@@ -129,6 +130,9 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     field(:organizer_name, :string)
     field(:organizer_email, :string)
     field(:organizer_title, :string)
+    # What the organiser wrote to the guest on a meeting they created
+    # themselves. Never the attendee's words: those are `attendee_message`.
+    field(:organizer_note, :string)
 
     belongs_to(:organizer_user, Tymeslot.Auth.UserSchema,
       foreign_key: :organizer_user_id,
@@ -302,6 +306,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :video_integration_id,
     :calendar_path,
     :attendee_message,
+    :organizer_note,
     :attendee_phone,
     :attendee_company,
     :attendee_timezone,
@@ -355,6 +360,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :visitor_hash
   ]
 
+  @organizer_note_max_length 2000
+
   @valid_statuses [
     "pending",
     # Held pending the host's manual approval. Occupies its slot like
@@ -367,6 +374,13 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     "awaiting_payment",
     "expired"
   ]
+
+  @doc """
+  The longest note an organiser may leave for the guest. Anything that
+  becomes one (a poll's description) is held to the same limit.
+  """
+  @spec organizer_note_max_length() :: pos_integer()
+  def organizer_note_max_length, do: @organizer_note_max_length
 
   @doc false
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
@@ -390,6 +404,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     |> validate_length(:utm_term, max: 255)
     |> validate_length(:referrer_host, max: 255)
     |> validate_length(:decline_reason, max: 500)
+    |> validate_length(:organizer_note, max: @organizer_note_max_length)
     |> validate_length(:visitor_hash, max: 64)
     # Google Calendar's documented maximum event id length.
     |> validate_length(:provider_event_id, max: 1024)

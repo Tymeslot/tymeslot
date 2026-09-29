@@ -105,6 +105,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
       username: MapKeys.get(config, :username),
       password: MapKeys.get(config, :password),
       calendar_paths: MapKeys.get(config, :calendar_paths) || [],
+      writable_calendar_paths: MapKeys.get(config, :writable_calendar_paths),
       verify_ssl: true
     }
 
@@ -176,6 +177,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def fetch_event(client, event_ref), do: CaldavCommon.fetch_event(client, event_ref)
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def find_moved_event(client, event_ref), do: CaldavCommon.find_moved_event(client, event_ref)
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def list_events(client, opts), do: CaldavCommon.list_events(client, opts)

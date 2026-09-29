@@ -91,6 +91,7 @@ msgstr "MESSAGE DU PARTICIPANT :"
 msgid "Meeting"
 msgstr "Réunion"
 
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
 #, elixir-autogen, elixir-format
 msgid "Message from %{name}:"
@@ -526,3 +527,13 @@ msgstr "Annulé : %{title} le %{date}"
 #, elixir-autogen, elixir-format
 msgid "Event Cancelled"
 msgstr "Événement annulé"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "NOTE FROM THE ORGANISER:"
+msgstr "NOTE DE L’ORGANISATEUR :"
+
+#: lib/tymeslot/emails/shared/meeting/notes.ex
+#, elixir-autogen, elixir-format
+msgid "Note from the organiser"
+msgstr "Note de l’organisateur"

@@ -312,6 +312,25 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   end
 
   @doc """
+  Looks for an event in every calendar of the account (see the provider's
+  `find_moved_event/2`). A provider that cannot answers `{:error, :not_found}`,
+  since `fetch_event/2` has already said so for every calendar it reaches.
+  """
+  @spec find_moved_event(adapter_client(), map()) ::
+          {:ok, list()} | {:error, :not_found} | {:error, term()}
+  def find_moved_event(%{provider_module: module} = adapter_client, event_ref) do
+    if Code.ensure_loaded?(module) and function_exported?(module, :find_moved_event, 2) do
+      Metrics.time_operation(
+        :calendar_find_moved_event,
+        %{provider: adapter_client.provider_type},
+        fn -> module.find_moved_event(adapter_client.client, event_ref) end
+      )
+    else
+      {:error, :not_found}
+    end
+  end
+
+  @doc """
   Deletes an event from the calendar.
   """
   @spec delete_event(adapter_client(), String.t(), keyword()) ::

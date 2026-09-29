@@ -22,6 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
+  alias Tymeslot.Integrations.Calendar.Shared.EventSearch
   alias Tymeslot.Integrations.Calendar.Utils.EventValidator
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Meetings.MeetingSchema
@@ -171,9 +172,15 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   provider, bypassing the sync cache.
 
   Every calendar of the integration a client reaches is asked in turn, since
-  the event may live in any of them. The answer is `{:ok, events}` as soon as
-  one finds it, `{:error, :not_found}` only when every one of them says it
-  does not exist, `{:error, :unsupported}` when the provider cannot fetch a
+  the event may live in any of them. Those are the selected calendars the
+  organiser can write to, and the booking calendar: a CalDAV calendar
+  selected read-only gets no client (`ProviderCommon.caldav_writable_paths/1`),
+  so its refusal cannot leave the event's absence unproven. When every one of
+  them says it does not exist, the provider looks for it in the account's
+  other writable calendars, where the organiser may have moved it
+  (`Provider.find_moved_event/2`). A cancelled event counts as none. The
+  answer is `{:ok, events}` as soon as one finds it, `{:error, :not_found}`
+  only when no writable calendar of the account has it, `{:error, :unsupported}` when the provider cannot fetch a
   single event, and any other error when it could not be told. An integration
   that is not the user's, or no longer active, is
   `{:error, :no_calendar_integration}`.
@@ -184,9 +191,12 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
       when is_integer(integration_id) and is_integer(user_id) do
     case CalendarManagement.fetch_integration_for_user(integration_id, user_id) do
       {:ok, integration} ->
-        integration
-        |> event_clients()
-        |> fetch_from_clients(Map.put(event_ref, :calendar_integration_id, integration_id))
+        event_ref = Map.put(event_ref, :calendar_integration_id, integration_id)
+        clients = event_clients(integration)
+
+        clients
+        |> fetch_from_clients(event_ref)
+        |> unless_moved(clients, event_ref)
 
       {:error, _reason} ->
         {:error, :no_calendar_integration}
@@ -203,20 +213,14 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
 
   defp fetch_from_clients([], _event_ref), do: {:error, :no_calendar_client}
 
-  defp fetch_from_clients(clients, event_ref) do
-    Enum.reduce_while(clients, {:error, :not_found}, fn client, acc ->
-      case ProviderAdapter.fetch_event(client, event_ref) do
-        {:ok, _events} = found -> {:halt, found}
-        {:error, :not_found} -> {:cont, acc}
-        # One calendar that could not answer leaves the event's absence
-        # unproven, whatever the others say, unless another one finds it.
-        {:error, _reason} = error -> {:cont, unproven(acc, error)}
-      end
-    end)
-  end
+  defp fetch_from_clients(clients, event_ref),
+    do: EventSearch.first_found(clients, &ProviderAdapter.fetch_event(&1, event_ref))
 
-  defp unproven({:error, :not_found}, error), do: error
-  defp unproven(earlier_error, _error), do: earlier_error
+  # Every client belongs to the same account, so any one of them can search it.
+  defp unless_moved({:error, :not_found}, [client | _rest], event_ref),
+    do: ProviderAdapter.find_moved_event(client, event_ref)
+
+  defp unless_moved(result, _clients, _event_ref), do: result
 
   # --- Private Helpers ---
 

@@ -499,6 +499,41 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
     end
   end
 
+  @doc """
+  Looks up one event by its iCalendar UID in `calendar_path`, whatever the
+  name of the resource that holds it: a calendar client that moves or writes
+  an event need not name it after its UID. Answers as
+  `fetch_calendar_event/4` does, `{:error, :not_found}` when no resource of
+  the calendar holds the event or the calendar itself is gone.
+  """
+  @spec find_calendar_event(Base.client(), String.t(), String.t()) ::
+          {:ok, [map()]} | {:error, :not_found} | {:error, term()}
+  def find_calendar_event(client, calendar_path, uid) do
+    url = UrlBuilder.build_calendar_url(client.base_url, calendar_path)
+
+    # As in `fetch_calendar_event/4`, a missing calendar travels back through
+    # the breaker as a success.
+    result =
+      with_events_breaker(client, [], fn ->
+        case Http.report(url, client.username, client.password, XmlHandler.build_uid_query(uid)) do
+          {:ok, %Req.Response{body: body}} -> XmlHandler.parse_calendar_query(body)
+          {:error, reason} when reason in [:not_found, :gone] -> {:ok, []}
+          {:error, reason} -> {:error, reason}
+        end
+      end)
+
+    case result do
+      {:ok, events} ->
+        case Enum.filter(events, &(&1.uid == uid)) do
+          [] -> {:error, :not_found}
+          found -> {:ok, found}
+        end
+
+      error ->
+        error
+    end
+  end
+
   defp get_event_resource(client, url, href) do
     case Http.get_event(url, client.username, client.password) do
       {:ok, %Req.Response{body: body, headers: headers}} ->

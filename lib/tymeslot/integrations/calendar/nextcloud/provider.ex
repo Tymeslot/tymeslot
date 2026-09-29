@@ -133,6 +133,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
       username: config[:username],
       password: config[:password],
       calendar_paths: build_nextcloud_calendar_paths(config),
+      writable_calendar_paths: config[:writable_calendar_paths],
       verify_ssl: true,
       provider: :nextcloud
     }
@@ -272,6 +273,9 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def fetch_event(client, event_ref), do: CalDAVProvider.fetch_event(client, event_ref)
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def find_moved_event(client, event_ref), do: CalDAVProvider.find_moved_event(client, event_ref)
 
   # Private helper functions
 
