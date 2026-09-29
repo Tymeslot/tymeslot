@@ -11,16 +11,6 @@ msgstr ""
 "Language: cs\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "%{label} before"
-msgstr "%{label} předem"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "1 hour before"
-msgstr "1 hodinu předem"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
 msgid "1. Select Calendar Account"
@@ -30,21 +20,6 @@ msgstr "1. Vyberte účet kalendáře"
 #, elixir-autogen, elixir-format
 msgid "2. Select Specific Calendar"
 msgstr "2. Vyberte konkrétní kalendář"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "30 min. before"
-msgstr "30 min předem"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "Add"
-msgstr "Přidat"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "Add Custom"
-msgstr "Přidat vlastní"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #, elixir-autogen, elixir-format
@@ -61,11 +36,6 @@ msgstr "Přidat možnost"
 #, elixir-autogen, elixir-format
 msgid "Add question"
 msgstr "Přidat otázku"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex
-#, elixir-autogen, elixir-format
-msgid "Added %{label} before"
-msgstr "Přidáno: %{label} předem"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/autosave.ex
 #, elixir-autogen, elixir-format
@@ -108,11 +78,6 @@ msgstr "Dostupnost v kalendáři"
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Zrušit"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "Cancel Custom"
-msgstr "Zrušit vlastní"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -174,11 +139,6 @@ msgstr "Vlastní otázky"
 #, elixir-autogen, elixir-format
 msgid "Date"
 msgstr "Datum"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "Days"
-msgstr "Dny"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
@@ -268,11 +228,6 @@ msgstr "Nápověda (nepovinné)"
 msgid "Highest value the booker may enter."
 msgstr "Nejvyšší hodnota, kterou lze zadat."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "Hours"
-msgstr "Hodiny"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
 msgid "Icon"
@@ -334,11 +289,6 @@ msgstr "Min."
 msgid "Minimum %{amount}."
 msgstr "Minimálně %{amount}."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "Minutes"
-msgstr "Minuty"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -364,11 +314,6 @@ msgstr "Pro tento účet nebyl nalezen žádný kalendář."
 #, elixir-autogen, elixir-format
 msgid "No custom questions yet"
 msgstr "Zatím žádné vlastní otázky"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "No reminders configured."
-msgstr "Nejsou nastaveny žádné připomínky."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
@@ -434,17 +379,6 @@ msgstr "Připojit znovu"
 msgid "Refreshing calendars..."
 msgstr "Obnovování kalendářů…"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/validation.ex
-#, elixir-autogen, elixir-format
-msgid "Reminder value is required"
-msgstr "Hodnota připomínky je povinná"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/validation.ex
-#, elixir-autogen, elixir-format
-msgid "Reminder value must be a positive number"
-msgstr "Hodnota připomínky musí být kladné číslo"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
 msgid "Reminders"
@@ -454,11 +388,6 @@ msgstr "Připomínky"
 #, elixir-autogen, elixir-format
 msgid "Remove option"
 msgstr "Odebrat možnost"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "Remove reminder"
-msgstr "Odebrat připomínku"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
@@ -484,11 +413,6 @@ msgstr "Ukládání…"
 #, elixir-autogen, elixir-format
 msgid "Select Video Provider"
 msgstr "Vyberte poskytovatele videa"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/validation.ex
-#, elixir-autogen, elixir-format
-msgid "Select a valid reminder unit"
-msgstr "Vyberte platnou jednotku připomínky"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
@@ -537,11 +461,6 @@ msgstr "Upozornění, které je nutné si před pokračováním přečíst a po
 #, elixir-autogen, elixir-format
 msgid "The question shown to the booker."
 msgstr "Otázka, která se zobrazí při rezervaci."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/validation.ex
-#, elixir-autogen, elixir-format
-msgid "This reminder already exists"
-msgstr "Tato připomínka již existuje"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
@@ -852,26 +771,13 @@ msgstr "Podle délky schůzky budou časy začátku nabízeny každých %{minute
 msgid "Times will be offered every %{minutes} minutes: %{examples}…"
 msgstr "Časy začátku budou nabízeny každých %{minutes} min: %{examples}…"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/validation.ex
-#, elixir-autogen, elixir-format
-msgid "Reminders cannot be set for more than 1 year in advance"
-msgstr "Připomínky nelze nastavit více než 1 rok předem"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
 msgid "Add up to %{count} reminder email for this meeting type. We recommend using only one."
 msgid_plural "Add up to %{count} reminder emails for this meeting type. We recommend using only one."
 msgstr[0] "Pro tento typ schůzky můžete přidat až %{count} e-mail s připomínkou. Doporučujeme používat jen jeden."
 msgstr[1] "Pro tento typ schůzky můžete přidat až %{count} e-maily s připomínkou. Doporučujeme používat jen jeden."
 msgstr[2] "Pro tento typ schůzky můžete přidat až %{count} e-mailů s připomínkou. Doporučujeme používat jen jeden."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "Maximum of %{count} reminder allowed"
-msgid_plural "Maximum of %{count} reminders allowed"
-msgstr[0] "Nastavit lze nejvýše %{count} připomínku"
-msgstr[1] "Nastavit lze nejvýše %{count} připomínky"
-msgstr[2] "Nastavit lze nejvýše %{count} připomínek"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
@@ -882,14 +788,6 @@ msgstr "Kalendář, do kterého tento typ schůzky rezervuje, už v tomto účt
 #, elixir-autogen, elixir-format
 msgid "The calendar this meeting type books into is now read-only. Choose another calendar."
 msgstr "Kalendář, do kterého tento typ schůzky rezervuje, je nyní jen pro čtení. Zvolte jiný kalendář."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/validation.ex
-#, elixir-autogen, elixir-format
-msgid "You can configure up to %{count} reminder"
-msgid_plural "You can configure up to %{count} reminders"
-msgstr[0] "Můžete nastavit až %{count} připomínku"
-msgstr[1] "Můžete nastavit až %{count} připomínky"
-msgstr[2] "Můžete nastavit až %{count} připomínek"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
@@ -1039,27 +937,3 @@ msgstr "Voláte vy. Nechte vypnuté, chcete-li místo toho zveřejnit číslo, n
 #, elixir-autogen, elixir-format
 msgid "e.g., Our London office"
 msgstr "např. Naše pražská kancelář"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} day"
-msgid_plural "%{count} days"
-msgstr[0] "%{count} den"
-msgstr[1] "%{count} dny"
-msgstr[2] "%{count} dní"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} hour"
-msgid_plural "%{count} hours"
-msgstr[0] "%{count} hodinu"
-msgstr[1] "%{count} hodiny"
-msgstr[2] "%{count} hodin"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} minute"
-msgid_plural "%{count} minutes"
-msgstr[0] "%{count} minutu"
-msgstr[1] "%{count} minuty"
-msgstr[2] "%{count} minut"
