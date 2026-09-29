@@ -23,7 +23,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   conventions, given a bare (unpadded) day number. Shared by `format_date/2`
   and callers that build their own day/month/year pieces (e.g. date ranges).
   Matches `format_date/2`'s per-locale padding: `en`/unknown locales
-  zero-pad the day; `de`/`cs`/`uk`/`fr`/`it` do not.
+  zero-pad the day; `de`/`cs`/`uk`/`fr`/`it`/`pl` do not.
   - en: April 05, 2026
   - de/cs: 5. April 2026 / 5. dubna 2026
   - uk/fr/it/pl: 5 квітня 2026 (day before month, no period)
