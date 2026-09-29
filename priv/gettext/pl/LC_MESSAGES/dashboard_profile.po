@@ -1,0 +1,282 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: tymeslot\n"
+"Language: pl\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to delete your profile picture? This action cannot be undone."
+msgstr "Na pewno chcesz usunąć swoje zdjęcie profilowe? Tej operacji nie można cofnąć."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Available"
+msgstr "Dostępna"
+
+#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Avatar deleted successfully"
+msgstr "Awatar usunięty"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
+#, elixir-autogen, elixir-format
+msgid "Avatar updated successfully"
+msgstr "Awatar zaktualizowany"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Basic Information"
+msgstr "Podstawowe informacje"
+
+#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Anuluj"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a unique username for your personal booking page."
+msgstr "Wybierz niepowtarzalną nazwę użytkownika dla swojej strony rezerwacji."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Custom URL"
+msgstr "Własny adres URL"
+
+#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Avatar"
+msgstr "Usuń awatar"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Photo"
+msgstr "Usuń zdjęcie"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Display Name"
+msgstr "Nazwa wyświetlana"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Display name updated"
+msgstr "Nazwa wyświetlana zaktualizowana"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Enter your full name"
+msgstr "Wpisz swoje imię i nazwisko"
+
+#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to delete avatar: %{reason}"
+msgstr "Nie udało się usunąć awatara: %{reason}"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to update display name"
+msgstr "Nie udało się zmienić nazwy wyświetlanej"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to update timezone"
+msgstr "Nie udało się zmienić strefy czasowej"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid"
+msgstr "Nieprawidłowa"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
+#, elixir-autogen, elixir-format
+msgid "JPG, PNG, GIF or WebP. Max 10MB."
+msgstr "JPG, PNG, GIF lub WebP. Maks. 10MB."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Live at:"
+msgstr "Dostępna pod adresem:"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
+#, elixir-autogen, elixir-format
+msgid "Processing..."
+msgstr "Przetwarzanie..."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
+#, elixir-autogen, elixir-format
+msgid "Profile Picture"
+msgstr "Zdjęcie profilowe"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Profile Settings"
+msgstr "Ustawienia profilu"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Saving..."
+msgstr "Zapisywanie..."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Taken"
+msgstr "Zajęta"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "This name will appear to visitors when they book meetings with you. Changes are saved automatically."
+msgstr "Tę nazwę zobaczą goście rezerwujący u Ciebie spotkania. Zmiany zapisują się automatycznie."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Timezone"
+msgstr "Strefa czasowa"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Timezone updated to %{timezone}"
+msgstr "Strefa czasowa zmieniona na %{timezone}"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Update URL"
+msgstr "Zmień adres URL"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
+#, elixir-autogen, elixir-format
+msgid "Upload"
+msgstr "Wgraj"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
+#, elixir-autogen, elixir-format
+msgid "Upload New"
+msgstr "Wgraj nowe"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
+#, elixir-autogen, elixir-format
+msgid "Upload failed"
+msgstr "Wgrywanie nie powiodło się"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
+#, elixir-autogen, elixir-format
+msgid "Upload failed: %{reason}"
+msgstr "Wgrywanie nie powiodło się: %{reason}"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
+#, elixir-autogen, elixir-format
+msgid "Uploading..."
+msgstr "Wgrywanie..."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Username updated! Your booking page: %{url}"
+msgstr "Nazwa użytkownika zmieniona! Twoja strona rezerwacji: %{url}"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Your Custom URL"
+msgstr "Twój własny adres URL"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "yourname"
+msgstr "twojanazwa"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Unknown timezone"
+msgstr "Nieznana strefa czasowa"
+
+#: lib/tymeslot/profiles.ex
+#, elixir-autogen, elixir-format
+msgid "Too many username change attempts. Please try again later."
+msgstr "Zbyt wiele prób zmiany nazwy użytkownika. Spróbuj ponownie później."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "12h (AM/PM)"
+msgstr "12h (AM/PM)"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "24h"
+msgstr "24h"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Controls how times are shown on your dashboard and in the emails you receive. Your booking page follows each visitor's own language."
+msgstr "Decyduje o tym, jak godziny są pokazywane w panelu i w e-mailach, które dostajesz. Twoja strona rezerwacji podąża za językiem każdego odwiedzającego."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to update time format"
+msgstr "Nie udało się zmienić formatu godziny"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Time Format"
+msgstr "Format godziny"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Time format updated"
+msgstr "Format godziny zmieniony"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} poll still waiting on votes"
+msgid_plural "%{count} polls still waiting on votes"
+msgstr[0] "%{count} ankieta wciąż czeka na głosy"
+msgstr[1] "%{count} ankiety wciąż czekają na głosy"
+msgstr[2] "%{count} ankiet wciąż czeka na głosy"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{url} will stop working immediately. Links that already point there cannot be recovered."
+msgstr "%{url} przestanie działać natychmiast. Linków, które już tam prowadzą, nie da się odzyskać."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Change URL"
+msgstr "Zmień adres URL"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Change your URL to %{username}?"
+msgstr "Zmienić Twój adres URL na %{username}?"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Once released, %{username} can be claimed by anyone else."
+msgstr "Po zwolnieniu %{username} może zająć ktoś inny."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This breaks:"
+msgstr "To zepsuje:"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "links inside confirmation and reminder emails already sent"
+msgstr "linki w już wysłanych e-mailach z potwierdzeniami i przypomnieniami"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "your booking page and every event link on it"
+msgstr "Twoją stronę rezerwacji i wszystkie linki do spotkań na niej"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "This username is already taken"
+msgstr "Ta nazwa użytkownika jest już zajęta"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "This username is reserved"
+msgstr "Ta nazwa użytkownika jest zarezerwowana"

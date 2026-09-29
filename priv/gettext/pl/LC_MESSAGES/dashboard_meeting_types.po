@@ -1,0 +1,198 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: tymeslot\n"
+"Language: pl\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Anuluj"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Change booking link"
+msgstr "Zmień link rezerwacji"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Changing this link will stop any links you have already shared for this meeting type from working."
+msgstr "Zmiana tego linku sprawi, że udostępnione wcześniej linki do tego typu spotkania przestaną działać."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Hidden from your public booking page; reachable only by its direct link"
+msgstr "Ukryty na publicznej stronie rezerwacji; dostępny tylko przez bezpośredni link"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Link address"
+msgstr "Adres linku"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Randomise"
+msgstr "Losuj"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Save link"
+msgstr "Zapisz link"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Unlisted"
+msgstr "Niepubliczny"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Use lowercase letters, numbers and hyphens. Randomise creates an unguessable link."
+msgstr "Używaj małych liter, cyfr i myślników. Losowanie tworzy link nie do odgadnięcia."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "%{minutes} min"
+msgstr "%{minutes} min"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "+%{count} custom question"
+msgid_plural "+%{count} custom questions"
+msgstr[0] "+%{count} pytanie własne"
+msgstr[1] "+%{count} pytania własne"
+msgstr[2] "+%{count} pytań własnych"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Add Meeting Type"
+msgstr "Dodaj typ spotkania"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar"
+msgstr "Kalendarz"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Create meeting types to offer different appointment options"
+msgstr "Utwórz typy spotkań, aby oferować różne opcje umawiania"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Delete"
+msgstr "Usuń"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Meeting Type"
+msgstr "Usuń typ spotkania"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Edit"
+msgstr "Edytuj"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "In-person"
+msgstr "Na miejscu"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Types"
+msgstr "Typy spotkań"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "No meeting types configured yet"
+msgstr "Nie skonfigurowano jeszcze żadnego typu spotkania"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This action cannot be undone and will permanently remove this meeting type from your account."
+msgstr "Tej operacji nie można cofnąć — ten typ spotkania zostanie trwale usunięty z Twojego konta."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Toggle %{name} availability"
+msgstr "Przełącz dostępność: %{name}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Video"
+msgstr "Wideo"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to delete the meeting type \"%{name}\"?"
+msgstr "Czy na pewno chcesz usunąć typ spotkania „%{name}”?"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking Limits"
+msgstr "Limity rezerwacji"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking limit must be between 1 and 500"
+msgstr "Limit rezerwacji musi mieścić się w przedziale od 1 do 500"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking limit removed"
+msgstr "Limit rezerwacji usunięty"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking limit updated to %{limit} bookings"
+msgstr "Limit rezerwacji zmieniony na %{limit}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Maximum number of bookings you accept across all meeting types. Days at their cap disappear from your booking page. Leave a field empty for no limit."
+msgstr "Maksymalna liczba rezerwacji, jakie przyjmujesz łącznie we wszystkich typach spotkań. Dni, które osiągną limit, znikają ze strony rezerwacji. Zostaw pole puste, aby nie ustawiać limitu."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
+#, elixir-autogen, elixir-format
+msgid "No limit"
+msgstr "Bez limitu"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Per day"
+msgstr "Dziennie"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Per month"
+msgstr "Miesięcznie"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Per week"
+msgstr "Tygodniowo"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar gone"
+msgstr "Brak kalendarza"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Read-only"
+msgstr "Tylko do odczytu"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "The calendar this meeting type books into is no longer on the connected account. Edit it and choose another calendar."
+msgstr "Kalendarza, w którym ten typ spotkania rezerwuje terminy, nie ma już na podłączonym koncie. Edytuj go i wybierz inny kalendarz."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type books into a calendar you can no longer write to. Edit it and choose another calendar."
+msgstr "Ten typ spotkania rezerwuje terminy w kalendarzu, do którego nie masz już prawa zapisu. Edytuj go i wybierz inny kalendarz."

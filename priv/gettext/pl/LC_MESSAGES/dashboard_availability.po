@@ -1,0 +1,824 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: tymeslot\n"
+"Language: pl\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{day_name} settings cleared"
+msgstr "Wyczyszczono ustawienia: %{day_name}"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{day} availability updated"
+msgstr "Zaktualizowano dostępność: %{day}"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{day} hours updated"
+msgstr "Zaktualizowano godziny: %{day}"
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Add"
+msgstr "Dodaj"
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Add Break"
+msgstr "Dodaj przerwę"
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Apply to All Days"
+msgstr "Zastosuj do wszystkich dni"
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Apply to Workdays"
+msgstr "Zastosuj do dni roboczych"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to delete this break%{label}?"
+msgstr "Na pewno chcesz usunąć tę przerwę%{label}?"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Availability"
+msgstr "Dostępność"
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Break"
+msgstr "Przerwa"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Break added"
+msgstr "Dodano przerwę"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Break deleted"
+msgstr "Usunięto przerwę"
+
+#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex
+#: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex
+#: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
+#: lib/tymeslot_web/components/dashboard/availability/delete_time_off_modal.ex
+#: lib/tymeslot_web/components/dashboard/availability/schedule_form_modal.ex
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Anuluj"
+
+#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Clear All Settings"
+msgstr "Wyczyść wszystkie ustawienia"
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Clear Day"
+msgstr "Wyczyść dzień"
+
+#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Clear Day Settings"
+msgstr "Wyczyść ustawienia dnia"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Break"
+msgstr "Usuń przerwę"
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "End"
+msgstr "Koniec"
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "End Time"
+msgstr "Godzina zakończenia"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to clear day settings"
+msgstr "Nie udało się wyczyścić ustawień dnia"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to copy settings"
+msgstr "Nie udało się skopiować ustawień"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to delete break"
+msgstr "Nie udało się usunąć przerwy"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to update availability"
+msgstr "Nie udało się zaktualizować dostępności"
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "From"
+msgstr "Od"
+
+#: lib/tymeslot/availability/input_validation.ex
+#: lib/tymeslot_web/live/dashboard/availability/list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid time format"
+msgstr "Nieprawidłowy format godziny"
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Label"
+msgstr "Etykieta"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Quick break added"
+msgstr "Dodano szybką przerwę"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Settings copied to %{day_names}"
+msgstr "Skopiowano ustawienia do: %{day_names}"
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Start"
+msgstr "Początek"
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Start Time"
+msgstr "Godzina rozpoczęcia"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex
+#: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This action cannot be undone."
+msgstr "Tej operacji nie można cofnąć."
+
+#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This will remove all availability hours and breaks for this day. This action cannot be undone."
+msgstr "Spowoduje to usunięcie wszystkich godzin dostępności i przerw w tym dniu. Tej operacji nie można cofnąć."
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Unavailable"
+msgstr "Niedostępny"
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Until"
+msgstr "Do"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Weekly Schedule"
+msgstr "Harmonogram tygodniowy"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component.ex
+#, elixir-autogen, elixir-format
+msgid "You're adding breaks too quickly. Please wait a bit."
+msgstr "Dodajesz przerwy zbyt szybko. Odczekaj chwilę."
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "e.g. Lunch"
+msgstr "np. Lunch"
+
+#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to clear all settings for %{day}?"
+msgstr "Na pewno chcesz wyczyścić wszystkie ustawienia dla %{day}?"
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Break label must be 50 characters or less"
+msgstr "Etykieta przerwy może mieć najwyżej 50 znaków"
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Break label must be text"
+msgstr "Etykieta przerwy musi być tekstem"
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Duration cannot exceed 8 hours (480 minutes)"
+msgstr "Czas trwania nie może przekraczać 8 godzin (480 minut)"
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Duration must be a valid number of minutes"
+msgstr "Czas trwania musi być prawidłową liczbą minut"
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Duration must be greater than 0 minutes"
+msgstr "Czas trwania musi być większy niż 0 minut"
+
+#: lib/tymeslot/availability/input_validation.ex
+#: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "End time must be after start time"
+msgstr "Godzina zakończenia musi być późniejsza niż godzina rozpoczęcia"
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid day selection format"
+msgstr "Nieprawidłowy format wyboru dni"
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "No valid days selected"
+msgstr "Nie wybrano prawidłowych dni"
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Time must be a string"
+msgstr "Godzina musi być tekstem"
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Time must be in HH:MM format (e.g., 09:30)"
+msgstr "Godzina musi być w formacie HH:MM (np. 09:30)"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "%{minutes} min"
+msgstr "%{minutes} min"
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} (default)"
+msgstr "%{name} (domyślny)"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "1 day"
+msgstr "1 dzień"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "1 hour"
+msgstr "1 godzina"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "1 month"
+msgstr "1 miesiąc"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "1 week"
+msgstr "1 tydzień"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "2 days"
+msgstr "2 dni"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "2 months"
+msgstr "2 miesiące"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "2 weeks"
+msgstr "2 tygodnie"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "3 months"
+msgstr "3 miesiące"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "4 hours"
+msgstr "4 godziny"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "6 months"
+msgstr "6 miesięcy"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Advance booking set to custom value"
+msgstr "Ustawiono własne wyprzedzenie rezerwacji"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Advance booking window updated to %{days} days"
+msgstr "Okno rezerwacji zmienione na %{days} dni"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to delete %{name}?"
+msgstr "Na pewno chcesz usunąć %{name}?"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer Between Appointments"
+msgstr "Bufor między spotkaniami"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer time set to custom value"
+msgstr "Ustawiono własny czas bufora"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer time updated to %{minutes} minutes"
+msgstr "Bufor zmieniony na %{minutes} min"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Custom"
+msgstr "Własne"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Default schedule updated"
+msgstr "Zaktualizowano domyślny harmonogram"
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Delete"
+msgstr "Usuń"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Schedule"
+msgstr "Usuń harmonogram"
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Duplicate"
+msgstr "Duplikuj"
+
+#: lib/tymeslot_web/components/dashboard/availability/schedule_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Each meeting type can be booked against one of your schedules."
+msgstr "Każdy typ spotkania może korzystać z jednego z Twoich harmonogramów."
+
+#: lib/tymeslot_web/components/dashboard/availability/schedule_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "For example: Consulting hours"
+msgstr "Na przykład: Godziny konsultacji"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "How Far in Advance Can People Book"
+msgstr "Jak długo naprzód można rezerwować"
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Make default"
+msgstr "Ustaw jako domyślny"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Maximum number of days into the future that appointments can be booked."
+msgstr "Maksymalna liczba dni naprzód, na które można rezerwować spotkania."
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Minimum Booking Notice"
+msgstr "Minimalne wyprzedzenie rezerwacji"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Minimum booking notice updated to %{hours} hours"
+msgstr "Minimalne wyprzedzenie zmienione na %{hours} godz."
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Minimum hours of notice required before an appointment can be booked."
+msgstr "Minimalna liczba godzin wyprzedzenia wymagana przed zarezerwowaniem spotkania."
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Minimum notice set to custom value"
+msgstr "Ustawiono własne minimalne wyprzedzenie"
+
+#: lib/tymeslot_web/components/dashboard/availability/schedule_form_modal.ex
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "New schedule"
+msgstr "Nowy harmonogram"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "No buffer"
+msgstr "Bez bufora"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
+#, elixir-autogen, elixir-format
+msgid "No meeting type uses this schedule. This action cannot be undone."
+msgstr "Żaden typ spotkania nie korzysta z tego harmonogramu. Tej operacji nie można cofnąć."
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Rename"
+msgstr "Zmień nazwę"
+
+#: lib/tymeslot_web/components/dashboard/availability/schedule_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Rename schedule"
+msgstr "Zmień nazwę harmonogramu"
+
+#: lib/tymeslot_web/components/dashboard/availability/schedule_form_modal.ex
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Save"
+msgstr "Zapisz"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule created"
+msgstr "Utworzono harmonogram"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule deleted"
+msgstr "Usunięto harmonogram"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule duplicated"
+msgstr "Zduplikowano harmonogram"
+
+#: lib/tymeslot_web/components/dashboard/availability/schedule_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule name"
+msgstr "Nazwa harmonogramu"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule renamed"
+msgstr "Zmieniono nazwę harmonogramu"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Scheduling Preferences"
+msgstr "Preferencje rezerwacji"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Something went wrong. Please try again."
+msgstr "Coś poszło nie tak. Spróbuj ponownie."
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
+#, elixir-autogen, elixir-format
+msgid "These meeting types will fall back to your default schedule:"
+msgstr "Te typy spotkań przejdą na Twój domyślny harmonogram:"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "These rules apply to every meeting type booked against this schedule."
+msgstr "Te reguły dotyczą każdego typu spotkania korzystającego z tego harmonogramu."
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Time to block after each appointment for preparation, travel, or breaks."
+msgstr "Czas blokowany po każdym spotkaniu na przygotowanie, dojazd lub przerwę."
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Your default schedule cannot be deleted. Make another schedule the default first."
+msgstr "Nie można usunąć domyślnego harmonogramu. Najpierw ustaw jako domyślny inny harmonogram."
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "days"
+msgstr "dni"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "hours"
+msgstr "godz."
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "instant"
+msgstr "natychmiast"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "min"
+msgstr "min"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component.ex
+#: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Break could not be saved"
+msgstr "Nie udało się zapisać przerwy"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Break must end within this day's working hours"
+msgstr "Przerwa musi kończyć się w godzinach pracy tego dnia"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Break must start within this day's working hours"
+msgstr "Przerwa musi zaczynać się w godzinach pracy tego dnia"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "This break overlaps an existing break"
+msgstr "Ta przerwa nakłada się na istniejącą przerwę"
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "You have reached the limit of %{count} schedules. Delete one to add another."
+msgstr "Osiągnięto limit %{count} harmonogramów. Usuń jeden, aby dodać kolejny."
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Manage this schedule"
+msgstr "Zarządzaj tym harmonogramem"
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "No meeting type uses these hours yet. Pick this schedule under a meeting type's booking rules."
+msgstr "Żaden typ spotkania nie korzysta jeszcze z tych godzin. Wybierz ten harmonogram w regułach rezerwacji typu spotkania."
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Used by %{meeting_types}."
+msgstr "Używany przez: %{meeting_types}."
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Used by every meeting type that has no schedule of its own."
+msgstr "Używany przez każdy typ spotkania, który nie ma własnego harmonogramu."
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "More actions for %{day}"
+msgstr "Więcej działań: %{day}"
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Stop taking bookings on %{day}"
+msgstr "Nie przyjmuj rezerwacji: %{day}"
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Take bookings on %{day}"
+msgstr "Przyjmuj rezerwacje: %{day}"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule duplicated. Its date overrides were not copied."
+msgstr "Zduplikowano harmonogram. Wyjątki dla konkretnych dat nie zostały skopiowane."
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Used by %{meeting_types}, and by every meeting type that has no schedule of its own."
+msgstr "Używany przez: %{meeting_types}, a także przez każdy typ spotkania, który nie ma własnego harmonogramu."
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "1 year"
+msgstr "1 rok"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "12 hours"
+msgstr "12 godzin"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "3 hours"
+msgstr "3 godziny"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "6 hours"
+msgstr "6 godzin"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "%{from} to %{to}"
+msgstr "%{from} – %{to}"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "%{range}, from %{time}"
+msgstr "%{range}, od %{time}"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "%{range}, until %{time}"
+msgstr "%{range}, do %{time}"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Add a period and those days stop being offered, without touching your calendars."
+msgstr "Dodaj okres, a te dni przestaną być oferowane – bez zmian w Twoich kalendarzach."
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Add time off"
+msgstr "Dodaj wolne"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "All day"
+msgstr "Cały dzień"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Any day between the first and the last is blocked in full."
+msgstr "Każdy dzień między pierwszym a ostatnim jest zablokowany w całości."
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Could not remove your time off"
+msgstr "Nie udało się usunąć wolnego"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Could not save your time off"
+msgstr "Nie udało się zapisać wolnego"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Days you are away. These apply to every schedule and every meeting type, and nobody booking you sees why those days are closed."
+msgstr "Dni Twojej nieobecności. Dotyczą każdego harmonogramu i każdego typu spotkania, a osoby rezerwujące nie widzą, dlaczego te dni są zamknięte."
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Edit time off"
+msgstr "Edytuj wolne"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "First day away"
+msgstr "Pierwszy dzień nieobecności"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Holiday"
+msgstr "Urlop"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Last day away"
+msgstr "Ostatni dzień nieobecności"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "No time off booked"
+msgstr "Brak zaplanowanego wolnego"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Note (only you see this)"
+msgstr "Notatka (widzisz ją tylko Ty)"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_time_off_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Remove"
+msgstr "Usuń"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_time_off_modal.ex
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Remove time off"
+msgstr "Usuń wolne"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_time_off_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Remove your time off for %{range}?"
+msgstr "Usunąć wolne w terminie %{range}?"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "That time off no longer exists"
+msgstr "To wolne już nie istnieje"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_time_off_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Those days become bookable again straight away."
+msgstr "Te dni od razu znów będą dostępne do rezerwacji."
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Time Off"
+msgstr "Wolne"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Time off added"
+msgstr "Dodano wolne"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Time off removed"
+msgstr "Usunięto wolne"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Time off updated"
+msgstr "Zaktualizowano wolne"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "You already have the maximum of %{count} time off periods"
+msgstr "Masz już maksymalną liczbę okresów wolnego: %{count}"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Away from (first day)"
+msgstr "Nieobecność od (pierwszy dzień)"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Back at (last day)"
+msgstr "Nieobecność do (ostatni dzień)"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Past"
+msgstr "Minione"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Time off that ended in the last %{count} days. It no longer affects your availability."
+msgstr "Wolne, które skończyło się w ciągu ostatnich %{count} dni. Nie wpływa już na Twoją dostępność."
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Current and upcoming"
+msgstr "Trwające i nadchodzące"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "No upcoming time off. Anything you add appears here."
+msgstr "Brak nadchodzącego wolnego. Wszystko, co dodasz, pojawi się tutaj."
+
+#: lib/tymeslot/availability/schedules.ex
+#, elixir-autogen, elixir-format
+msgid "(copy)"
+msgstr "(kopia)"
+
+#: lib/tymeslot/availability/schedules.ex
+#, elixir-autogen, elixir-format
+msgid "(copy) %{number}"
+msgstr "(kopia) %{number}"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "1 booking already sits inside these dates"
+msgid_plural "%{count} bookings already sit inside these dates"
+msgstr[0] "1 rezerwacja mieści się już w tych datach"
+msgstr[1] "%{count} rezerwacje mieszczą się już w tych datach"
+msgstr[2] "%{count} rezerwacji mieści się już w tych datach"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "1 booking sits inside this time off. It stays in your diary until you move or cancel it."
+msgid_plural "%{count} bookings sit inside this time off. They stay in your diary until you move or cancel them."
+msgstr[0] "1 rezerwacja przypada na to wolne. Zostaje w Twoim terminarzu, dopóki jej nie przeniesiesz lub nie odwołasz."
+msgstr[1] "%{count} rezerwacje przypadają na to wolne. Zostają w Twoim terminarzu, dopóki ich nie przeniesiesz lub nie odwołasz."
+msgstr[2] "%{count} rezerwacji przypada na to wolne. Zostają w Twoim terminarzu, dopóki ich nie przeniesiesz lub nie odwołasz."
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Open your bookings in a new tab"
+msgstr "Otwórz swoje rezerwacje w nowej karcie"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Time off only stops new bookings. These keep their times until you move or cancel them."
+msgstr "Wolne blokuje tylko nowe rezerwacje. Te zachowują swoje terminy, dopóki ich nie przeniesiesz lub nie odwołasz."
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "and 1 more"
+msgid_plural "and %{count} more"
+msgstr[0] "i jeszcze 1"
+msgstr[1] "i jeszcze %{count}"
+msgstr[2] "i jeszcze %{count}"
