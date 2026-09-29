@@ -821,7 +821,7 @@ msgstr "Wyślij"
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "with %{name}"
-msgstr "(organizator: %{name})"
+msgstr "z organizatorem %{name}"
 
 #: lib/tymeslot_web/themes/shared/guest_booking.ex
 #, elixir-autogen, elixir-format
