@@ -16,12 +16,25 @@ defmodule Tymeslot.Notifications.ReminderSchedule do
   reminder such a booking actually receives.
   """
 
+  alias Tymeslot.Clock
+  alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Notifications.SchedulingRules
   alias Tymeslot.Utils.ReminderUtils
 
   @legacy_default "30 minutes"
 
   @type reminder :: %{value: pos_integer(), unit: String.t()}
-  @type status :: %{value: pos_integer(), unit: String.t(), sent?: boolean()}
+  @type status :: %{
+          value: pos_integer(),
+          unit: String.t(),
+          status:
+            :sent
+            | :not_sent
+            | :after_approval
+            | :after_payment
+            | :after_rescheduling
+            | :upcoming
+        }
 
   @doc """
   The reminders a meeting is scheduled with, in the order they were configured.
@@ -35,23 +48,47 @@ defmodule Tymeslot.Notifications.ReminderSchedule do
   end
 
   @doc """
-  The same reminders, each carrying whether its email has already gone out.
+  The same reminders, each carrying where it stands at `now`.
 
-  A reminder counts as sent once `reminders_sent` records it reaching the
-  organiser or the attendee. Guests are stamped per guest rather than on the
-  meeting, so a reminder shown as sent says nothing about whether every guest
-  was reached — only that the reminder fired.
+  - `:sent`: `reminders_sent` records it reaching the organiser or the
+    attendee. Guests are stamped per guest rather than on the meeting, so this
+    says the reminder fired, not that every guest was reached.
+  - `:not_sent`: its moment has passed without it going out, typically
+    because the booking was made too late for it, or it was held until then.
+  - `:after_approval`, `:after_payment`, `:after_rescheduling`: the booking is
+    held, so no reminder job exists yet; one is scheduled once the hold ends.
+  - `:upcoming`: scheduled, and still to come.
+
+  A booking released without taking place (cancelled, or a request that
+  expired) has none left: its pending reminder jobs went with it.
   """
-  @spec with_status(%{atom() => term()}) :: [status()]
-  def with_status(meeting) do
-    sent = meeting |> Map.get(:reminders_sent) |> List.wrap()
+  @spec with_status(%{atom() => term()}, DateTime.t()) :: [status()]
+  def with_status(meeting, now \\ Clock.utc_now()) do
+    if MeetingState.released_status?(meeting.status) do
+      []
+    else
+      sent = meeting |> Map.get(:reminders_sent) |> List.wrap()
 
-    Enum.map(configured(meeting), fn reminder ->
-      Map.put(reminder, :sent?, sent?(sent, reminder))
-    end)
+      Enum.map(configured(meeting), fn reminder ->
+        Map.put(reminder, :status, status(meeting, reminder, sent, now))
+      end)
+    end
   end
 
   # --- Private helpers ---
+
+  defp status(meeting, %{value: value, unit: unit} = reminder, sent, now) do
+    fires_at = SchedulingRules.calculate_reminder_time(meeting.start_time, value, unit)
+
+    cond do
+      sent?(sent, reminder) -> :sent
+      DateTime.compare(fires_at, now) != :gt -> :not_sent
+      MeetingState.awaiting_approval?(meeting) -> :after_approval
+      MeetingState.awaiting_payment?(meeting) -> :after_payment
+      MeetingState.awaiting_new_time?(meeting) -> :after_rescheduling
+      true -> :upcoming
+    end
+  end
 
   defp legacy_reminder(meeting) do
     label =

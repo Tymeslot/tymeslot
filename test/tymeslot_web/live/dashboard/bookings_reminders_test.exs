@@ -51,6 +51,30 @@ defmodule TymeslotWeb.Dashboard.BookingsRemindersTest do
       assert html =~ "Not yet sent"
     end
 
+    test "a reminder the booking came too late for reads as not sent", %{
+      conn: conn,
+      user: user
+    } do
+      # Booked an hour ahead, so the two-hour reminder was never scheduled.
+      start_time = DateTime.utc_now() |> DateTime.add(1, :hour) |> DateTime.truncate(:second)
+
+      insert(:meeting,
+        organizer_user: user,
+        organizer_email: user.email,
+        attendee_name: "Ada Lovelace",
+        start_time: start_time,
+        end_time: DateTime.add(start_time, 30, :minute),
+        reminders: [%{"value" => 2, "unit" => "hours"}]
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+      html = render(view)
+
+      assert html =~ "2 hours before"
+      assert html =~ "Not sent"
+      refute html =~ "Not yet sent"
+    end
+
     test "a booking that asked for none shows no reminder section", %{conn: conn, user: user} do
       insert(:meeting,
         organizer_user: user,

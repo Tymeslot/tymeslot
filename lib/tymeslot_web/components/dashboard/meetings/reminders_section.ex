@@ -12,7 +12,6 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RemindersSection do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Notifications.ReminderSchedule
   alias TymeslotWeb.Components.CoreComponents
 
@@ -20,13 +19,13 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RemindersSection do
 
   @spec reminders_section(map()) :: Phoenix.LiveView.Rendered.t()
   def reminders_section(assigns) do
-    assigns = assign(assigns, :reminders, reminders(assigns.meeting))
+    assigns = assign(assigns, :reminders, ReminderSchedule.with_status(assigns.meeting))
 
     ~H"""
     <%!-- When this booking reminds. Its own list, copied from the meeting type
           when it was booked, so it stays right for a booking made before that
-          setting changed. Cancelled bookings are left out: their reminders
-          were dropped with the booking. --%>
+          setting changed. Released bookings (cancelled, expired) have none
+          left: their reminders were dropped with the booking. --%>
     <div
       :if={@reminders != []}
       class="mt-8 p-5 bg-tymeslot-50/50 rounded-token-2xl border-2 border-tymeslot-50"
@@ -45,7 +44,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RemindersSection do
             {reminder_label(reminder)}
           </span>
           <span class="text-token-xs font-bold text-tymeslot-500">
-            {reminder_status_label(reminder, @meeting)}
+            {reminder_status_label(reminder.status)}
           </span>
         </li>
       </ul>
@@ -54,12 +53,6 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RemindersSection do
   end
 
   # --- Private helpers ---
-
-  # The reminders shown for a booking. A cancelled one has none left: cancelling
-  # deletes the pending reminder jobs, so listing them would promise emails that
-  # will never be sent.
-  defp reminders(%{status: "cancelled"}), do: []
-  defp reminders(meeting), do: ReminderSchedule.with_status(meeting)
 
   defp reminder_label(%{value: value, unit: "hours"}),
     do:
@@ -88,23 +81,25 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RemindersSection do
         value
       )
 
-  # A reminder that has gone out says so. One that has not is only waiting for
-  # its moment when the booking is settled — a request still held for approval
-  # has no reminder jobs yet, and saying "scheduled" there would be a promise
-  # the approval has not made.
   # Said as "not yet sent" rather than "scheduled": the card's own status badge
   # already uses that word for the booking itself, and one card carrying it
-  # twice for two different things reads as a contradiction — a booking badged
-  # "Awaiting payment" above a reminder badged "Scheduled". The context keeps a
-  # translator free to word the two apart as well.
-  defp reminder_status_label(%{sent?: true}, _meeting),
+  # twice for two different things reads as a contradiction. The context keeps
+  # a translator free to word the two apart as well.
+  defp reminder_status_label(:sent),
     do: dpgettext("dashboard_bookings", "reminder status", "Sent")
 
-  defp reminder_status_label(_reminder, meeting) do
-    if MeetingState.awaiting_approval?(meeting) do
-      dpgettext("dashboard_bookings", "reminder status", "After approval")
-    else
-      dpgettext("dashboard_bookings", "reminder status", "Not yet sent")
-    end
-  end
+  defp reminder_status_label(:not_sent),
+    do: dpgettext("dashboard_bookings", "reminder status", "Not sent")
+
+  defp reminder_status_label(:after_approval),
+    do: dpgettext("dashboard_bookings", "reminder status", "After approval")
+
+  defp reminder_status_label(:after_payment),
+    do: dpgettext("dashboard_bookings", "reminder status", "After payment")
+
+  defp reminder_status_label(:after_rescheduling),
+    do: dpgettext("dashboard_bookings", "reminder status", "After rescheduling")
+
+  defp reminder_status_label(:upcoming),
+    do: dpgettext("dashboard_bookings", "reminder status", "Not yet sent")
 end
