@@ -6,7 +6,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
   consulted: that setting governs the public booking form. `Bookings.CreateAdHoc`
   makes the same distinction when a host books on someone's behalf.
 
-  Mail is left to `Meetings.Guests` and the email job: every guest carries its
+  Ownership, the meeting's state and the cap are all enforced again by
+  `Guests.invite_for_organizer/3` when the host confirms; the checks here only
+  decide what the dialog offers. Mail is left to `Meetings.Guests` and the
+  email job: every guest carries its
   own `confirmation_sent_at`, so a guest added now is invited and the guests
   already there are not written to again.
   """
@@ -15,10 +18,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
 
   import Phoenix.Component, only: [assign: 3]
 
-  alias Tymeslot.Emails.EmailScheduler.MeetingScheduler
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Hooks.ModalHook
   alias TymeslotWeb.Live.Shared.Flash
 
@@ -44,26 +47,32 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
   end
 
   @doc """
-  Opens the dialog for the booking `meeting_id` names.
+  Opens the dialog for the booking `meeting_id` names, if the signed-in user
+  organises it and it still takes guests.
 
   The meeting is read fresh rather than taken from the list, so the guests it
   shows are the guests it has — a card rendered before someone else added one
-  would otherwise offer a stale count. A booking that has since disappeared
-  simply reloads the list.
+  would otherwise offer a stale count. A booking that has since disappeared,
+  or that the user does not organise, simply reloads the list.
   """
   @spec open(Phoenix.LiveView.Socket.t(), binary(), (Phoenix.LiveView.Socket.t() ->
                                                        Phoenix.LiveView.Socket.t())) ::
           Phoenix.LiveView.Socket.t()
   def open(socket, meeting_id, reload) when is_function(reload, 1) do
-    case Meetings.get_meeting(meeting_id) do
-      {:ok, meeting} ->
-        # The guest list is fetched rather than taken off the meeting: this row
-        # is read fresh, and nothing preloads its guests, which silently read
-        # as "none" — and so as a full meeting with no room left.
-        socket
-        |> assign(:staged_guests, [])
-        |> assign(:add_guests_existing, Guests.list_for_meeting(meeting.id))
-        |> ModalHook.show_modal(:add_guests, meeting)
+    with {:ok, meeting} <-
+           Meetings.get_meeting_for_organizer(meeting_id, socket.assigns.current_user.id),
+         true <- Guests.invitations_open?(meeting) do
+      # The guest list is fetched rather than taken off the meeting: this row
+      # is read fresh, and nothing preloads its guests, which silently read
+      # as "none" — and so as a full meeting with no room left.
+      socket
+      |> assign(:staged_guests, [])
+      |> assign(:add_guests_existing, Guests.list_for_meeting(meeting.id))
+      |> ModalHook.show_modal(:add_guests, meeting)
+    else
+      false ->
+        Flash.error(closed_message())
+        reload.(socket)
 
       {:error, :not_found} ->
         reload.(socket)
@@ -82,21 +91,20 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
   An address already on the meeting, or already staged, is refused rather than
   added twice, and the list stops at the meeting's remaining room.
   """
-  @spec stage(Phoenix.LiveView.Socket.t(), String.t() | nil) :: Phoenix.LiveView.Socket.t()
-  def stage(socket, raw_email) do
-    ModalHook.with_modal_data(socket, :add_guests, fn meeting ->
-      staged = staged(socket)
-      existing = existing(socket)
-      known = MapSet.new(Enum.map(existing, &String.downcase(&1.email)))
+  @spec stage(Phoenix.LiveView.Socket.t(), map(), String.t() | nil) ::
+          Phoenix.LiveView.Socket.t()
+  def stage(socket, meeting, raw_email) do
+    staged = staged(socket)
+    existing = existing(socket)
+    known = MapSet.new(Enum.map(existing, &String.downcase(&1.email)))
 
-      additions =
-        raw_email
-        |> parse_emails()
-        |> Guests.sanitize_emails(meeting.attendee_email)
-        |> Enum.reject(&(&1 in staged or MapSet.member?(known, &1)))
+    additions =
+      raw_email
+      |> parse_emails()
+      |> Guests.sanitize_emails(meeting.attendee_email)
+      |> Enum.reject(&(&1 in staged or MapSet.member?(known, &1)))
 
-      assign(socket, :staged_guests, Enum.take(staged ++ additions, room(existing)))
-    end) || socket
+    assign(socket, :staged_guests, Enum.take(staged ++ additions, room(existing)))
   end
 
   @doc "Takes an address back off the list before it is sent."
@@ -114,30 +122,36 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
 
   @doc """
   Handles the dialog's submission: closes it, invites, and reloads the list so
-  the card shows the new guests.
+  the card shows the new guests. Rate limited per host, since every address
+  entered here is sent an email.
 
-  A duplicate submit — a double click, or Enter twice before the button
-  disables — finds the modal data already cleared and does nothing, which is
-  `ModalHook.with_modal_data/3`'s guarantee.
+  The caller reaches this through `ModalHook.with_modal_data/3`, so a
+  duplicate submit (a double click, or Enter twice before the button
+  disables) finds the modal data already cleared and never gets here.
   """
-  @spec confirm(Phoenix.LiveView.Socket.t(), (Phoenix.LiveView.Socket.t() ->
-                                                Phoenix.LiveView.Socket.t())) ::
+  @spec confirm(Phoenix.LiveView.Socket.t(), map(), (Phoenix.LiveView.Socket.t() ->
+                                                       Phoenix.LiveView.Socket.t())) ::
           Phoenix.LiveView.Socket.t()
-  def confirm(socket, reload) when is_function(reload, 1) do
-    ModalHook.with_modal_data(socket, :add_guests, fn meeting ->
-      staged = staged(socket)
+  def confirm(socket, meeting, reload) when is_function(reload, 1) do
+    case RateLimiter.check_dashboard_add_guests_rate_limit(socket.assigns.current_user.id) do
+      {:error, :rate_limited, message} ->
+        Flash.error(message)
+        socket
 
-      socket
-      |> ModalHook.hide_modal(:add_guests)
-      |> assign(:staged_guests, [])
-      |> assign(:add_guests_existing, [])
-      |> invite(meeting, staged)
-      |> reload.()
-    end) || socket
+      :ok ->
+        staged = staged(socket)
+
+        socket
+        |> ModalHook.hide_modal(:add_guests)
+        |> assign(:staged_guests, [])
+        |> assign(:add_guests_existing, [])
+        |> invite(meeting, staged)
+        |> reload.()
+    end
   end
 
   @doc """
-  Adds `raw_emails` to `meeting` and schedules the invitations.
+  Invites `candidates` to `meeting` on behalf of the signed-in user.
 
   Returns the socket with a flash describing what happened. Nothing is sent
   synchronously: the email job does the work, so a slow mail server cannot
@@ -146,14 +160,14 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
   @spec invite(Phoenix.LiveView.Socket.t(), map(), [String.t()]) ::
           Phoenix.LiveView.Socket.t()
   def invite(socket, meeting, candidates) do
-    case Guests.add_to_meeting(meeting.id, candidates, meeting.attendee_email) do
+    user_id = socket.assigns.current_user.id
+
+    case Guests.invite_for_organizer(meeting.id, user_id, candidates) do
       {:ok, []} ->
         Flash.info(nothing_added_message(candidates))
         socket
 
       {:ok, added} ->
-        MeetingScheduler.schedule_guest_invitations(meeting.id)
-
         Logger.info("Guests added to meeting",
           meeting_id: meeting.id,
           added: length(added)
@@ -181,6 +195,13 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
 
         socket
 
+      {:error, :closed} ->
+        Flash.error(closed_message())
+        socket
+
+      {:error, :not_found} ->
+        socket
+
       {:error, reason} ->
         Logger.error("Adding guests failed",
           meeting_id: meeting.id,
@@ -190,6 +211,13 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
         Flash.error(dgettext("dashboard_bookings", "Those guests could not be added."))
         socket
     end
+  end
+
+  defp closed_message do
+    dgettext(
+      "dashboard_bookings",
+      "Guests can no longer be added to this meeting: it has started, been cancelled, or is being rescheduled."
+    )
   end
 
   # An empty result is not a failure: either nothing was a usable address, or

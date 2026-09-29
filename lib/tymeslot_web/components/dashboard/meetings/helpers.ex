@@ -25,22 +25,21 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
   end
 
   @doc """
-  Whether the host may still add guests to this booking.
+  Whether the host may still add guests to this booking: the meeting takes
+  guests (`Guests.invitations_open?/1`) and has room for another.
 
-  Only capacity is asked about here: the action sits in the branch of the card
-  that already excludes cancelled, past and unanswered bookings. The meeting
-  type's `allow_guests` is deliberately not consulted — it governs what the
-  person booking may do on the public form, not whom the host may invite to
-  their own meeting afterwards.
+  The meeting type's `allow_guests` is deliberately not consulted — it governs
+  what the person booking may do on the public form, not whom the host may
+  invite to their own meeting afterwards.
 
   Counted from the guests preloaded onto the card, so a list of bookings does
   not turn into one query per row.
   """
   @spec can_add_guests?(Ecto.Schema.t() | map()) :: boolean()
-  def can_add_guests?(%{guests: guests}) when is_list(guests),
-    do: length(guests) < Guests.max_guests()
+  def can_add_guests?(%{guests: guests} = meeting) when is_list(guests),
+    do: Guests.invitations_open?(meeting) and length(guests) < Guests.max_guests()
 
-  def can_add_guests?(_meeting), do: true
+  def can_add_guests?(meeting), do: Guests.invitations_open?(meeting)
 
   @spec can_reschedule?(Ecto.Schema.t()) :: boolean()
   def can_reschedule?(meeting) do

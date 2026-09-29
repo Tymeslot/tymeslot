@@ -16,6 +16,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
+  alias Tymeslot.Workers.EmailWorkerHandlers.GuestEmails
 
   # The meeting is gone, started, or changed state since the email was
   # scheduled. A partial cancellation delivery is recorded.
@@ -37,22 +38,6 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_confirmation_emails(%{"meeting_id" => meeting_id}) do
     with_meeting(meeting_id, "confirmation emails", &send_confirmation_emails/1)
-  end
-
-  @doc """
-  Invites the guests a host added after the booking was made.
-
-  `invite_missed_guests/1` sends to whoever has no `confirmation_sent_at`, so
-  the guests already on the meeting are left alone: adding one colleague does
-  not mail the rest a second invitation.
-  """
-  @spec handle_guest_invitations(%{String.t() => term()}) ::
-          :ok | {:error, term()} | {:discard, String.t()}
-  def handle_guest_invitations(%{"meeting_id" => meeting_id}) do
-    with_meeting(meeting_id, "guest invitations", fn meeting ->
-      invite_missed_guests(meeting)
-      :ok
-    end)
   end
 
   @spec handle_reminder_emails(%{String.t() => term()}) ::
@@ -322,21 +307,9 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   defp send_guest_confirmations(meeting, appointment_details, email_service) do
     meeting.id
     |> GuestQueries.list_unsent_for_meeting()
-    |> Enum.each(fn guest ->
-      details = GuestNotifications.guest_details(appointment_details, guest)
+    |> GuestEmails.send_to_guests(meeting, appointment_details, email_service)
 
-      case email_service.send_guest_confirmation(guest.email, details) do
-        {:ok, _result} ->
-          GuestQueries.mark_confirmation_sent(guest, DateTime.utc_now(:second))
-
-        other ->
-          Logger.error("Guest confirmation email failed",
-            meeting_id: meeting.id,
-            guest_email: guest.email,
-            result: LogFormat.reason(other)
-          )
-      end
-    end)
+    :ok
   end
 
   # Sends only to the recipient(s) not yet recorded as sent for this specific

@@ -17,9 +17,13 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementAddGuestsTest do
   import Tymeslot.AuthTestHelpers
   import Mox
 
+  import Ecto.Query
+
   alias Plug.Test
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Repo
 
   setup :verify_on_exit!
 
@@ -71,7 +75,11 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementAddGuestsTest do
       # on a mail server.
       assert_enqueued(
         worker: Tymeslot.Workers.EmailWorker,
-        args: %{"action" => "send_guest_invitations", "meeting_id" => meeting.id}
+        args: %{
+          "action" => "send_guest_invitations",
+          "meeting_id" => meeting.id,
+          "guest_ids" => meeting.id |> GuestQueries.list_for_meeting() |> Enum.map(& &1.id)
+        }
       )
     end
 
@@ -89,7 +97,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementAddGuestsTest do
       # later, so there is nothing to send and the button stays disabled.
       html = stage(view, "already@example.com")
 
-      refute html =~ ~s(id="stage-guest-chip")
+      refute html =~ ~s(phx-value-email="already@example.com")
       assert length(GuestQueries.list_for_meeting(meeting.id)) == 1
 
       refute_enqueued(
@@ -133,6 +141,30 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementAddGuestsTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
 
       assert has_element?(view, "#add-guests-#{meeting.id}")
+    end
+
+    test "refuses a meeting cancelled after the list was loaded", %{conn: conn, user: user} do
+      meeting = upcoming_meeting(user)
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+      Repo.update_all(from(m in MeetingSchema, where: m.id == ^meeting.id),
+        set: [status: "cancelled"]
+      )
+
+      view |> element("#add-guests-#{meeting.id}") |> render_click()
+
+      refute has_element?(view, "#stage-guest-form")
+      assert render(view) =~ "Guests can no longer be added to this meeting"
+    end
+
+    test "withholds the button on a meeting that is being rescheduled", %{
+      conn: conn,
+      user: user
+    } do
+      meeting = upcoming_meeting(user, %{status: "reschedule_requested"})
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+      refute has_element?(view, "#add-guests-#{meeting.id}")
     end
 
     test "withholds the button once the meeting is full", %{conn: conn, user: user} do

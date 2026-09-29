@@ -597,3 +597,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Remove %{email}"
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/guest_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Guests can no longer be added to this meeting: it has started, been cancelled, or is being rescheduled."
+msgstr ""

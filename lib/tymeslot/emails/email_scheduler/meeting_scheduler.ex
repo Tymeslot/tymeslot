@@ -31,31 +31,18 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   end
 
   @doc """
-  Schedules the invitations for guests added to a meeting after it was booked.
+  Schedules the invitations for guests a host added to a meeting after it was
+  booked.
 
-  Sending is driven by each guest's own `confirmation_sent_at`, so this job
-  only ever writes to guests who have not been invited yet, and running it
-  twice is harmless.
-
-  `:executing` is deliberately absent from the unique states. A job already
-  running has read the guest list; a guest added a moment later would be
-  collapsed into it and never hear anything. A job that is merely *queued*
-  has not read the list yet and will pick the new guest up by itself, so
-  collapsing into that one is right.
+  The job names the guests it is for, so each addition gets a job of its own
+  and no two jobs ever send to the same guest, however they overlap. A retry
+  sends only to those of its guests still without `confirmation_sent_at`.
   """
-  @spec schedule_guest_invitations(term()) :: :ok | {:error, String.t()}
-  def schedule_guest_invitations(meeting_id) do
-    %{"action" => "send_guest_invitations", "meeting_id" => meeting_id}
-    |> EmailWorker.new(
-      queue: :emails,
-      priority: 0,
-      unique: [
-        period: 300,
-        fields: [:args, :queue],
-        keys: [:action, :meeting_id],
-        states: [:available, :scheduled, :retryable]
-      ]
-    )
+  @spec schedule_guest_invitations(binary(), [binary()]) :: :ok | {:error, String.t()}
+  def schedule_guest_invitations(meeting_id, guest_ids)
+      when is_list(guest_ids) and guest_ids != [] do
+    %{"action" => "send_guest_invitations", "meeting_id" => meeting_id, "guest_ids" => guest_ids}
+    |> EmailWorker.new(queue: :emails, priority: 0)
     |> insert_job("Guest invitations", meeting_id)
   end
 

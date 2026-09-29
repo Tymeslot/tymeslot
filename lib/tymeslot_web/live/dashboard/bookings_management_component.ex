@@ -330,7 +330,9 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   end
 
   def handle_event("stage_guest", %{"email" => email}, socket) do
-    {:noreply, GuestActions.stage(socket, email)}
+    ModalHook.with_modal_data(socket, :add_guests, fn meeting ->
+      {:noreply, GuestActions.stage(socket, meeting, email)}
+    end)
   end
 
   def handle_event("unstage_guest", %{"email" => email}, socket) do
@@ -338,7 +340,9 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   end
 
   def handle_event("confirm_add_guests", _params, socket) do
-    {:noreply, GuestActions.confirm(socket, &load_meetings/1)}
+    ModalHook.with_modal_data(socket, :add_guests, fn meeting ->
+      {:noreply, GuestActions.confirm(socket, meeting, &load_meetings/1)}
+    end)
   end
 
   def handle_event("hide_decline_modal", _params, socket) do

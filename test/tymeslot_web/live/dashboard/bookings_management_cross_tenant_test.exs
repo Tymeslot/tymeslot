@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCrossTenantTest do
   alias Plug.Test
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
 
@@ -283,6 +284,41 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCrossTenantTest do
 
       refute cancel_modal_open?(view)
       assert reload(theirs).status == "confirmed"
+    end
+  end
+
+  describe "adding guests to somebody else's meeting" do
+    # The input only renders once the dialog has a meeting to add to.
+    defp add_guests_modal_open?(view), do: has_element?(view, "#stage-guest-form")
+
+    test "the host's own meeting opens the add-guests dialog", %{conn: conn, host: host} do
+      mine = meeting_for(host)
+
+      view = open_meetings(conn)
+      push_to_component(view, "show_add_guests_modal", %{"id" => mine.id})
+
+      assert add_guests_modal_open?(view),
+             "the control must open, or the refusals below prove nothing"
+    end
+
+    test "a meeting id belonging to another host is refused, and its guests stay private", %{
+      conn: conn,
+      stranger: stranger
+    } do
+      theirs = meeting_for(stranger)
+      {:ok, _guests} = Guests.create_for_meeting(theirs.id, ["private-guest@example.com"])
+
+      view = open_meetings(conn)
+      push_to_component(view, "show_add_guests_modal", %{"id" => theirs.id})
+
+      refute add_guests_modal_open?(view)
+      refute render(view) =~ "private-guest@example.com"
+
+      # Even with the dialog refused, a forged confirm has nothing to act on.
+      push_to_component(view, "confirm_add_guests", %{})
+
+      assert ["private-guest@example.com"] =
+               theirs.id |> Guests.list_for_meeting() |> Enum.map(& &1.email)
     end
   end
 end
