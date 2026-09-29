@@ -7,9 +7,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
 
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Meetings
-  alias Tymeslot.Meetings.MeetingState
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
+  alias TymeslotWeb.Components.Dashboard.Meetings.MeetingActions
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingStatusBadge
 
   # Filter Tabs
@@ -299,111 +299,46 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
           </div>
         </div>
 
-        <div class="flex lg:flex-col gap-3 shrink-0 lg:w-[160px]">
-          <%!-- A held request offers exactly two actions. Join, Reschedule and
-                Cancel all presuppose a meeting that is happening, and offering
-                them here is what let a host "reschedule" a booking they had
-                never agreed to. --%>
-          <div :if={MeetingState.awaiting_approval?(@meeting)} class="contents">
-            <button
-              id={"approve-request-#{@meeting.id}"}
-              phx-click="approve_request"
-              phx-value-id={@meeting.id}
-              phx-target={@target}
-              disabled={@answering_request == @meeting.id}
-              data-testid="approve-request"
-              class="btn-primary py-3 px-4 text-token-sm w-full flex items-center justify-center whitespace-nowrap disabled:opacity-50"
-            >
-              <CoreComponents.spinner :if={@answering_request == @meeting.id} class="h-4 w-4 mr-2" />
-              <CoreComponents.icon
-                :if={@answering_request != @meeting.id}
-                name="hero-check"
-                class="w-4 h-4 mr-2 shrink-0"
-              />
-              {dgettext("dashboard_bookings", "Approve")}
-            </button>
-
-            <button
-              phx-click="show_decline_modal"
-              phx-value-id={@meeting.id}
-              phx-target={@target}
-              disabled={@answering_request == @meeting.id}
-              data-testid="decline-request"
-              class="btn-danger py-3 px-4 text-token-sm w-full flex items-center justify-center whitespace-nowrap disabled:opacity-50"
-            >
-              <CoreComponents.icon name="hero-x-mark" class="w-4 h-4 mr-2 shrink-0" />
-              {dgettext("dashboard_bookings", "Decline")}
-            </button>
-          </div>
-
-          <div
-            :if={
-              @meeting.status != "cancelled" && !MeetingState.awaiting_approval?(@meeting) &&
-                !Helpers.past_meeting?(@meeting)
-            }
-            class="contents"
-          >
-            <a
-              :if={@meeting.meeting_url}
-              href={@meeting.meeting_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="btn-primary py-3 px-4 text-token-sm w-full flex items-center justify-center whitespace-nowrap"
-            >
-              <CoreComponents.icon name="hero-video-camera" class="w-4 h-4 mr-2 shrink-0" />
-              {dgettext("dashboard_bookings", "Join Meeting")}
-            </a>
-
-            <button
-              phx-click="show_reschedule_modal"
-              phx-value-id={@meeting.id}
-              phx-target={@target}
-              disabled={!Helpers.can_reschedule?(@meeting)}
-              class={[
-                "btn-secondary py-3 px-4 text-token-sm w-full flex items-center justify-center whitespace-nowrap",
-                if(!Helpers.can_reschedule?(@meeting), do: "opacity-50 cursor-not-allowed", else: "")
-              ]}
-            >
-              <CoreComponents.icon name="hero-arrows-right-left" class="w-4 h-4 mr-2 shrink-0" />
-              {dgettext("dashboard_bookings", "Reschedule")}
-            </button>
-
-            <button
-              id={"cancel-meeting-#{@meeting.id}"}
-              phx-click="show_cancel_modal"
-              phx-value-id={@meeting.id}
-              phx-target={@target}
-              disabled={@cancelling_meeting == @meeting.id || !Helpers.can_cancel?(@meeting)}
-              class={[
-                "btn-danger py-3 px-4 text-token-sm w-full flex items-center justify-center whitespace-nowrap",
-                if(!Helpers.can_cancel?(@meeting), do: "opacity-50 cursor-not-allowed", else: "")
-              ]}
-            >
-              <span :if={@cancelling_meeting == @meeting.id} class="flex items-center">
-                <CoreComponents.spinner class="h-4 w-4 mr-2" /> {dgettext(
-                  "dashboard_bookings",
-                  "Processing..."
-                )}
-              </span>
-              <span :if={@cancelling_meeting != @meeting.id} class="flex items-center">
-                <CoreComponents.icon name="hero-x-mark" class="w-4 h-4 mr-2 shrink-0" /> {dgettext(
-                  "dashboard_bookings",
-                  "Cancel"
-                )}
-              </span>
-            </button>
-          </div>
-          <div
-            :if={
-              (@meeting.status == "cancelled" or Helpers.past_meeting?(@meeting)) and
-                not MeetingState.awaiting_approval?(@meeting)
-            }
-            class="hidden lg:block"
-          >
-            &nbsp;
-          </div>
-        </div>
+        <MeetingActions.action_bar
+          meeting={@meeting}
+          target={@target}
+          answering_request={@answering_request}
+          cancelling_meeting={@cancelling_meeting}
+        />
       </div>
+    </div>
+    """
+  end
+
+  attr :has_more, :boolean, required: true
+  attr :loading_more, :boolean, required: true
+  attr :target, :any, required: true
+
+  @doc """
+  The button that pages further into the list.
+
+  Lives here rather than in the dashboard component's own `render/1` so that
+  everything the meetings list draws is in one module — and so that module
+  stays inside the project's size limit.
+  """
+  @spec load_more(map()) :: Phoenix.LiveView.Rendered.t()
+  def load_more(assigns) do
+    ~H"""
+    <div :if={@has_more} class="mt-10 text-center">
+      <button
+        class="btn-secondary px-10 py-4"
+        phx-click="load_more"
+        phx-target={@target}
+        disabled={@loading_more}
+      >
+        <span :if={@loading_more}>
+          <CoreComponents.spinner class="h-5 w-5 mr-3 inline-block" /> {dgettext(
+            "dashboard_bookings",
+            "Loading..."
+          )}
+        </span>
+        <span :if={!@loading_more}>{dgettext("dashboard_bookings", "Load more meetings")}</span>
+      </button>
     </div>
     """
   end
