@@ -23,6 +23,7 @@ defmodule Tymeslot.Workers.GroupConversionWorker do
 
   use Oban.Worker, queue: :default, max_attempts: 5
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.GroupConversion
 
   require Logger
@@ -57,7 +58,7 @@ defmodule Tymeslot.Workers.GroupConversionWorker do
       {:error, reason} ->
         Logger.warning("Group conversion batch failed, retrying",
           meeting_type_id: meeting_type_id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         {:error, reason}

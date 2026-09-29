@@ -35,6 +35,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingSchema
@@ -56,6 +58,19 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
   # whole retry story depends on.
   @dispatch_max_concurrency 20
   @dispatch_task_timeout_ms 5_000
+
+  # The seat was cancelled, or its participant row is gone, between the job
+  # being scheduled and it running.
+  @participant_gone "Participant not found or cancelled"
+  @participant_missing "Participant not found"
+
+  @doc """
+  Whether `reason`, from a discard this module returned, is an expected end
+  of the email job rather than a fault
+  (see `Tymeslot.Infrastructure.ExpectedJobOutcome`).
+  """
+  @spec expected_discard?(term()) :: boolean()
+  def expected_discard?(reason), do: reason in [@participant_gone, @participant_missing]
 
   @doc """
   One live participant's copy of a whole-meeting cancellation. Dispatched by
@@ -120,7 +135,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
         true ->
           case find_live_recipient(meeting, participant_id) do
             nil ->
-              {:discard, "Participant not found or cancelled"}
+              {:discard, @participant_gone}
 
             recipient ->
               send_seat_reminder_email(meeting, recipient, reminder_value, reminder_unit)
@@ -292,7 +307,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
   defp dispatch_seat_jobs(participants, schedule_fun) do
     results =
       Tymeslot.TaskSupervisor
-      |> Task.Supervisor.async_stream_nolink(participants, schedule_fun,
+      |> Tasks.async_stream_nolink(participants, schedule_fun,
         max_concurrency: @dispatch_max_concurrency,
         timeout: @dispatch_task_timeout_ms,
         on_timeout: :kill_task
@@ -325,7 +340,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
       label: label,
       meeting_id: meeting_id,
       participant_id: participant_id,
-      error: inspect(reason)
+      error: LogFormat.reason(reason)
     )
 
     DeliveryOutcome.from_error(reason, "Failed to send seat #{label} email")
@@ -339,7 +354,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
   defp with_meeting_and_participant(meeting_id, participant_id, action, fun) do
     MeetingEmails.with_meeting(meeting_id, action, fn meeting ->
       case find_live_recipient(meeting, participant_id) do
-        nil -> {:discard, "Participant not found or cancelled"}
+        nil -> {:discard, @participant_gone}
         recipient -> fun.(meeting, recipient)
       end
     end)
@@ -353,7 +368,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
       }) do
     MeetingEmails.with_meeting(meeting_id, "seat confirmation emails", fn meeting ->
       case find_live_recipient(meeting, participant_id) do
-        nil -> {:discard, "Participant not found or cancelled"}
+        nil -> {:discard, @participant_gone}
         recipient -> send_seat_confirmation_emails(meeting, recipient)
       end
     end)
@@ -371,7 +386,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
           send_seat_cancellation_emails(meeting, participant, notify_organizer?)
 
         {:error, :not_found} ->
-          {:discard, "Participant not found"}
+          {:discard, @participant_missing}
       end
     end)
   end
@@ -386,7 +401,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
            {:ok, old_event} <- parse_old_event(args) do
         send_seat_reschedule_emails(meeting, participant, old_event)
       else
-        {:error, :not_found} -> {:discard, "Participant not found"}
+        {:error, :not_found} -> {:discard, @participant_missing}
         {:error, :invalid_snapshot} -> {:discard, "Invalid old-event snapshot"}
       end
     end)

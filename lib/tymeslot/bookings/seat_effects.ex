@@ -23,6 +23,7 @@ defmodule Tymeslot.Bookings.SeatEffects do
   alias Tymeslot.Bookings.Activation
   alias Tymeslot.Bookings.CalendarJobs
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Workers.VideoRoomWorker
@@ -140,7 +141,7 @@ defmodule Tymeslot.Bookings.SeatEffects do
       {:error, reason} ->
         Logger.error("Failed to schedule reminder jobs for a new group slot",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok

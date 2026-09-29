@@ -26,6 +26,7 @@ defmodule Tymeslot.Bookings.SeatRelease do
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -71,7 +72,7 @@ defmodule Tymeslot.Bookings.SeatRelease do
         # alone is easy to miss in the noise; the admin alert is not.
         Logger.error("Failed to cancel emptied group meeting",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         AdminAlerts.report(:group_meeting_release_failed,

@@ -10,6 +10,8 @@ defmodule Tymeslot.Meetings.SeatBroadcast do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+
   @doc "The PubSub topic carrying seat updates for a meeting type."
   @spec topic(integer()) :: String.t()
   def topic(meeting_type_id), do: "group_seats:#{meeting_type_id}"
@@ -33,7 +35,7 @@ defmodule Tymeslot.Meetings.SeatBroadcast do
 
       {:error, reason} ->
         Logger.warning("Seat update broadcast failed",
-          reason: inspect(reason),
+          reason: LogFormat.reason(reason),
           meeting_type_id: meeting_type_id
         )
 

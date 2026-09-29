@@ -39,6 +39,7 @@ defmodule Tymeslot.Meetings.GroupConversion do
 
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingQueries
@@ -139,7 +140,7 @@ defmodule Tymeslot.Meetings.GroupConversion do
         # booking converted alongside it in the same batch.
         Logger.error("Skipping unconvertible solo booking",
           meeting_id: meeting.id,
-          errors: inspect(changeset.errors)
+          errors: LogFormat.reason(changeset.errors)
         )
 
         {:ok, :skipped_poison}
@@ -164,7 +165,7 @@ defmodule Tymeslot.Meetings.GroupConversion do
         Logger.error("Failed to schedule the converted seat's management link email",
           meeting_id: meeting.id,
           participant_id: participant.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok
@@ -189,7 +190,7 @@ defmodule Tymeslot.Meetings.GroupConversion do
       {:error, changeset} ->
         Logger.error("Failed to snapshot capacity on converted booking",
           meeting_id: meeting.id,
-          errors: inspect(changeset.errors)
+          errors: LogFormat.reason(changeset.errors)
         )
 
         :ok

@@ -36,6 +36,7 @@ defmodule Tymeslot.Bookings.CancelSeat do
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Bookings.SeatRelease
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.ParticipantQueries
@@ -103,7 +104,7 @@ defmodule Tymeslot.Bookings.CancelSeat do
         Logger.error("Failed to cancel seat",
           meeting_id: meeting.id,
           participant_id: participant.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         {:error, reason}

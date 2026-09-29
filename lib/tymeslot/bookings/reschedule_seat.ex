@@ -30,6 +30,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   alias Tymeslot.Bookings.SeatEffects
   alias Tymeslot.Bookings.SeatRelease
   alias Tymeslot.Bookings.Validation
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingQueries
@@ -156,7 +157,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     Logger.error("Failed to reschedule seat",
       meeting_id: old_meeting.id,
       participant_id: participant.id,
-      reason: inspect(reason)
+      reason: LogFormat.reason(reason)
     )
 
     {:error, error}

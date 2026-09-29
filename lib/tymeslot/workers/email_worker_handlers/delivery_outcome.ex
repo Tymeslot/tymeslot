@@ -26,6 +26,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+
   @spec from_error(term(), String.t()) :: {:error, term()}
   def from_error(:circuit_open, _message), do: {:error, :circuit_open}
 
@@ -56,8 +58,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome do
       metadata ++
         [
           label: label,
-          organizer_result: inspect(organizer_result),
-          attendee_result: inspect(attendee_result)
+          organizer_result: LogFormat.reason(organizer_result),
+          attendee_result: LogFormat.reason(attendee_result)
         ]
     )
 

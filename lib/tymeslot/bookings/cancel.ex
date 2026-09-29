@@ -166,7 +166,7 @@ defmodule Tymeslot.Bookings.Cancel do
       {:error, reason} ->
         Logger.error("Failed to finalise cancellation of emptied group meeting",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok

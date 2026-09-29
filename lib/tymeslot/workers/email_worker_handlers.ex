@@ -78,6 +78,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   @declaring_handlers [
     AuthEmails,
     BookingApprovalEmails,
+    GroupMeetingEmails,
     GuestEmails,
     IntegrationEmails,
     MeetingEmails,
