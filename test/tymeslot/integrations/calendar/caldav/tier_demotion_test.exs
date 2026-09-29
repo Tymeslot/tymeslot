@@ -36,6 +36,15 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.TierDemotionTest do
                       ~s(xmlns:cs="http://calendarserver.org/ns/"><response><propstat><prop>) <>
                       ~s(<cs:getctag>ctag-1</cs:getctag></prop></propstat></response></multistatus>)
 
+  # How a server without RFC 6578 answers a PROPFIND for `sync-token`: the
+  # property is echoed back, empty, under a 404 propstat. The tier detector's
+  # presence check reads that as support.
+  @no_sync_token_multistatus ~s(<?xml version="1.0"?><multistatus xmlns="DAV:">) <>
+                               ~s(<response><href>/calendars/alice/default/</href>) <>
+                               ~s(<propstat><prop><sync-token/></prop>) <>
+                               ~s(<status>HTTP/1.1 404 Not Found</status></propstat>) <>
+                               ~s(</response></multistatus>)
+
   setup :set_req_test_to_shared
 
   setup do
@@ -52,8 +61,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.TierDemotionTest do
         provider_account_id: "http://localhost:65432||alice",
         is_active: true,
         needs_reauth: false,
-        # Detection has already run and believed the server's advertisement.
-        caldav_sync_tier: 1
+        # Detection has already run and believed the server's advertisement,
+        # and an earlier cycle stored a token, so this one asks for a delta.
+        caldav_sync_tier: 1,
+        caldav_sync_tokens: %{"/calendars/alice/default/" => "token-1"}
       )
 
     %{integration: integration}
@@ -156,7 +167,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.TierDemotionTest do
 
       integration =
         integration
-        |> Changeset.change(calendar_paths: [primary, extra])
+        |> Changeset.change(
+          calendar_paths: [primary, extra],
+          caldav_sync_tokens: %{primary => "token-1", extra => "token-2"}
+        )
         |> Repo.update!()
 
       ReqTest.stub(:tymeslot_http, fn conn ->
@@ -178,6 +192,52 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.TierDemotionTest do
       # unsynced: the demoted tier's full fetch reached both calendars.
       assert_received {:request, ^primary, false}
       assert_received {:request, ^extra, false}
+    end
+  end
+
+  describe "a server that has no sync token to give" do
+    setup %{integration: integration} do
+      # A path with no token yet reads one as a property before its first
+      # fetch, rather than sending the initial REPORT that used to expose the
+      # refusal. The demotion has to come from that probe instead.
+      integration =
+        integration
+        |> Changeset.change(caldav_sync_tokens: %{})
+        |> Repo.update!()
+
+      %{integration: integration}
+    end
+
+    test "demotes to the CTag tier instead of fetching the whole window every cycle",
+         %{integration: integration} do
+      test_pid = self()
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        {:ok, body, conn} = Conn.read_body(conn)
+
+        cond do
+          String.contains?(body, "getctag") ->
+            respond(conn, @ctag_multistatus)
+
+          conn.method == "PROPFIND" and String.contains?(body, "sync-token") ->
+            respond(conn, @no_sync_token_multistatus)
+
+          conn.method == "REPORT" ->
+            send(test_pid, {:report, String.contains?(body, "sync-collection")})
+            respond(conn, @empty_multistatus)
+
+          true ->
+            respond(conn, @empty_multistatus)
+        end
+      end)
+
+      assert :ok = run_sync(integration)
+
+      # Demoted, and the same cycle still fetched the calendar: a demotion
+      # that skipped the fetch would leave this cycle with nothing.
+      assert stored_tier(integration) == 2
+      assert_received {:report, false}
+      refute_received {:report, true}
     end
   end
 

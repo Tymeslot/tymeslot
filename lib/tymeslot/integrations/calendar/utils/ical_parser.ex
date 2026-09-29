@@ -5,6 +5,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   """
 
   require Logger
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Metrics
   alias Tymeslot.Integrations.Calendar.VTimezone
   alias Tymeslot.Timezones
@@ -51,7 +52,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     result
   rescue
     error ->
-      Logger.error("Failed to parse iCal content", error: inspect(error))
+      Logger.error("Failed to parse iCal content", error: LogFormat.reason(error))
       {:error, "Parse error: #{inspect(error)}"}
   end
 

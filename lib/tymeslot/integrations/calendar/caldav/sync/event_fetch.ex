@@ -22,6 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalDAV.Events, as: CalDAVEvents
   alias Tymeslot.Integrations.Calendar.CalDAV.Sync.State
   alias Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler
@@ -84,9 +85,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
 
   Options:
 
-    * `:new_ctag` — a `getctag` value to store as the path's sync token once
-      the events have been reconciled. Only written on success: a failed
-      reconciliation must not advance the token past changes it never applied.
+    * `:new_ctag` — a `getctag` value (Tier 2) to store as the path's sync
+      token once the events have been reconciled.
+    * `:new_sync_token` — a `DAV:sync-token` (Tier 1) to store the same way.
+
+  Either is written only on success: a failed reconciliation must not advance
+  the token past changes it never applied.
   """
   @spec fetch_path(struct(), map(), String.t(), keyword()) :: result() | :not_found
   def fetch_path(integration, client, calendar_path, opts) do
@@ -117,7 +121,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
           calendar_integration_id: integration.id,
           phase: "full fetch",
           calendar_path: calendar_path,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -141,7 +145,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
         Logger.error("CalDAV full fetch event processing failed; sync token NOT updated",
           calendar_integration_id: integration.id,
           calendar_path: calendar_path,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -149,9 +153,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
   end
 
   defp sync_token_opt(calendar_path, opts) do
-    case Keyword.get(opts, :new_ctag) do
+    case opts[:new_ctag] || opts[:new_sync_token] do
       nil -> []
-      ctag -> [sync_token: {calendar_path, ctag}]
+      token -> [sync_token: {calendar_path, token}]
     end
   end
 
@@ -179,7 +183,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
       {:error, changeset} ->
         Logger.error("Failed to remove missing CalDAV calendar paths",
           calendar_integration_id: integration.id,
-          error: inspect(changeset.errors)
+          error: LogFormat.reason(changeset.errors)
         )
 
         :ok

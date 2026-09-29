@@ -1302,3 +1302,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "This change was made to one occurrence of a repeating event, and the calendar server would have applied it to every occurrence, so it was not sent."
 msgstr ""
+
+#: lib/tymeslot/integrations/calendar/caldav/errors.ex
+#, elixir-autogen, elixir-format
+msgid "The calendar server returned more data than Tymeslot can process at once."
+msgstr ""

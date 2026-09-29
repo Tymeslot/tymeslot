@@ -9,7 +9,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.HTTP
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPIBehaviour
+  alias Tymeslot.Integrations.Calendar.Outlook.CreatableEvent
   alias Tymeslot.Integrations.Calendar.Outlook.EventMapper
+  alias Tymeslot.Integrations.Calendar.Outlook.GraphStatus
   alias Tymeslot.Integrations.Calendar.Outlook.GraphSubscription
   alias Tymeslot.Integrations.Calendar.Outlook.TymeslotFingerprint
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
@@ -29,7 +31,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @token_url "https://login.microsoftonline.com/common/oauth2/v2.0/token"
 
   # Fields the event-driven sync workers need to normalise a single event.
-  @event_sync_select_fields "id,subject,start,end,iCalUId,location,bodyPreview,attendees,recurrence,seriesMasterId,type,isAllDay,showAs"
+  @event_sync_select_fields "id,subject,start,end,iCalUId,location,bodyPreview,attendees,recurrence,seriesMasterId,type,originalStart,isAllDay,showAs"
 
   @type calendar_event :: %{
           id: String.t(),
@@ -180,16 +182,142 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   end
 
   @doc """
+  Patches the event `event_id` of the signed-in user, whichever calendar
+  holds it, with `body` exactly as given: a Graph event body carrying only
+  the keys to change, which Graph merges into the event. Unlike
+  `update_event/3,4`, nothing is added to the body, so a key it leaves out
+  keeps its value on the event.
+  """
+  @impl CalendarAPIBehaviour
+  @spec patch_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
+          {:ok, calendar_event()} | api_error()
+  def patch_event(%CalendarIntegrationSchema{} = integration, event_id, body) do
+    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      with {:ok, response} <-
+             make_request_with_body(:patch, "/me/events/#{event_id}", token, body,
+               headers: @silent_event_headers
+             ) do
+        {:ok, List.first(convert_to_common_format([response]))}
+      end
+    end)
+  end
+
+  @doc """
+  Creates `body`, a Graph event body written as it is, in the calendar
+  `calendar_id`. Unlike `create_event/2,3`, nothing is mapped or added, and
+  the event is answered as Graph returned it, with its `id` and `iCalUId`.
+  """
+  @impl CalendarAPIBehaviour
+  @spec insert_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
+          {:ok, map()} | api_error()
+  def insert_event(%CalendarIntegrationSchema{} = integration, calendar_id, body)
+      when is_binary(calendar_id) do
+    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      make_request_with_body(:post, "/me/calendars/#{calendar_id}/events", token, body,
+        headers: @silent_event_headers
+      )
+    end)
+  end
+
+  @doc """
+  The id of the calendar that holds the event `event_id` of the signed-in
+  user, as Graph states it. An answer without one is
+  `{:error, :unknown_calendar}`.
+  """
+  @impl CalendarAPIBehaviour
+  @spec get_event_calendar_id(CalendarIntegrationSchema.t(), String.t()) ::
+          {:ok, String.t()} | {:error, :unknown_calendar} | api_error()
+  def get_event_calendar_id(%CalendarIntegrationSchema{} = integration, event_id) do
+    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      case make_request(:get, "/me/events/#{event_id}/calendar", token, %{"$select" => "id"}) do
+        {:ok, %{"id" => id}} when is_binary(id) and id != "" -> {:ok, id}
+        {:ok, _no_id} -> {:error, :unknown_calendar}
+        error -> error
+      end
+    end)
+  end
+
+  @doc """
   Fetches one event of the signed-in user by its Graph event id, whichever
   calendar holds it. A deleted event answers 404; a cancelled meeting can
   still come back with `"isCancelled" => true`.
+
+  Its `body` comes as plain text, unless `body: :stored` asks for it in the
+  format it is stored in (HTML, as Outlook writes it), for a copy of the
+  event that keeps it as it is.
   """
   @impl CalendarAPIBehaviour
-  @spec get_event(CalendarIntegrationSchema.t(), String.t()) :: {:ok, map()} | api_error()
-  def get_event(%CalendarIntegrationSchema{} = integration, event_id) do
+  @spec get_event(CalendarIntegrationSchema.t(), String.t(), keyword()) ::
+          {:ok, map()} | api_error()
+  def get_event(%CalendarIntegrationSchema{} = integration, event_id, opts \\ []) do
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      make_request(:get, "/me/events/#{event_id}", token, %{})
+      make_request(:get, "/me/events/#{event_id}", token, %{}, opts)
     end)
+  end
+
+  @doc """
+  The occurrences of the series master `master_id` changed on their own:
+  `exceptionOccurrences`, the edited ones as events, and
+  `cancelledOccurrences`, the occurrence ids of the cancelled ones. Graph
+  answers an expanded exception with the `$select`ed fields only, so it
+  selects every field a copy takes (`Outlook.CreatableEvent`) and the
+  timing, and each `body` comes in the format it is stored in.
+  """
+  @impl CalendarAPIBehaviour
+  @spec get_series_exceptions(CalendarIntegrationSchema.t(), String.t()) ::
+          {:ok, map()} | api_error()
+  def get_series_exceptions(%CalendarIntegrationSchema{} = integration, master_id) do
+    params = %{
+      "$select" =>
+        Enum.join(
+          ~w(id cancelledOccurrences exceptionOccurrences originalStart start end attendees) ++
+            CreatableEvent.copied_fields(),
+          ","
+        ),
+      "$expand" => "exceptionOccurrences"
+    }
+
+    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      make_request(:get, "/me/events/#{master_id}", token, params, body: :stored)
+    end)
+  end
+
+  @doc """
+  The occurrences of the series master `event_id` between `start_time` and
+  `end_time`, as Graph expands them (cancelled ones left out).
+  """
+  @impl CalendarAPIBehaviour
+  @spec list_instances(CalendarIntegrationSchema.t(), String.t(), DateTime.t(), DateTime.t()) ::
+          {:ok, [calendar_event()]} | api_error()
+  def list_instances(%CalendarIntegrationSchema{} = integration, event_id, start_time, end_time) do
+    params = build_events_query_params(start_time, end_time)
+    list_events_for_path(integration, "/me/events/#{event_id}/instances", params)
+  end
+
+  @doc """
+  Finds the signed-in user's events carrying the iCalendar UID `ical_uid`, in
+  every calendar of the mailbox. An event keeps its iCalendar UID when it
+  moves to another calendar, where its Graph id changes, so this finds an
+  event that `get_event/2` no longer does. Answers `{:ok, []}` only when every
+  calendar was asked and none holds it.
+  """
+  @impl CalendarAPIBehaviour
+  @spec find_events_by_ical_uid(CalendarIntegrationSchema.t(), String.t()) ::
+          {:ok, [map()]} | api_error()
+  def find_events_by_ical_uid(%CalendarIntegrationSchema{} = integration, ical_uid) do
+    params = %{
+      "$filter" => "iCalUId eq '#{String.replace(ical_uid, "'", "''")}'",
+      "$select" => "id,iCalUId,isCancelled"
+    }
+
+    with {:ok, calendars} <- list_calendars(integration) do
+      Enum.reduce_while(calendars, {:ok, []}, fn %{"id" => calendar_id}, {:ok, found} ->
+        case list_events_for_path(integration, "/me/calendars/#{calendar_id}/events", params) do
+          {:ok, events} -> {:cont, {:ok, found ++ events}}
+          error -> {:halt, error}
+        end
+      end)
+    end
   end
 
   @doc """
@@ -365,13 +493,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
 
   # HTTP plumbing — used internally and by GraphSubscription
 
+  # Reads ask for UTC, and for bodies as plain text unless `body: :stored`.
   @doc false
-  @spec make_request(atom(), String.t(), String.t(), map()) ::
+  @spec make_request(atom(), String.t(), String.t(), map(), keyword()) ::
           {:ok, map()} | api_error()
-  def make_request(method, path, token, params) do
+  def make_request(method, path, token, params, opts \\ []) do
     headers = [
       {"Content-Type", "application/json"},
-      {"Prefer", "outlook.timezone=\"UTC\", outlook.body-content-type=\"text\""}
+      {"Prefer", read_preference(Keyword.get(opts, :body, :text))}
     ]
 
     HTTP.request(method, @base_url, path, token,
@@ -395,37 +524,18 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
     )
   end
 
+  defp read_preference(:text), do: ~s(outlook.timezone="UTC", outlook.body-content-type="text")
+  defp read_preference(:stored), do: ~s(outlook.timezone="UTC")
+
   # Response handling and error classification
 
   defp handle_response(response, path) do
-    ApiResponse.handle(response, path, label: "Outlook Calendar", custom: &graph_status/1)
+    ApiResponse.handle(response, path, label: "Outlook Calendar", custom: &GraphStatus.classify/1)
   end
 
   defp handle_response(response) do
-    ApiResponse.handle(response, label: "Outlook Calendar", custom: &graph_status/1)
+    ApiResponse.handle(response, label: "Outlook Calendar", custom: &GraphStatus.classify/1)
   end
-
-  # The statuses Graph answers differently from the shared envelope: a 403
-  # carrying its classification in `error.code`, and throttling reported as a
-  # bare 429. Both may carry a `Retry-After` the caller should honour.
-  defp graph_status({:ok, %{status: 403, body: body} = resp}) do
-    ApiResponse.with_error_object(body, fn msg, decoded ->
-      code = String.downcase(to_string(get_in(decoded, ["error", "code"]) || ""))
-      handle_403_reason(classify_outlook_403(msg, code), msg, parse_retry_after(resp))
-    end)
-  end
-
-  defp graph_status({:ok, %{status: 429} = resp}) do
-    case parse_retry_after(resp) do
-      retry_after when is_integer(retry_after) ->
-        {:error, :rate_limited, "retry_after:" <> Integer.to_string(retry_after)}
-
-      nil ->
-        {:error, :rate_limited, "Too many requests"}
-    end
-  end
-
-  defp graph_status(_response), do: :default
 
   # Delta queries share the standard response handling but additionally map
   # 410 Gone — Graph's signal that the delta token is no longer valid and the
@@ -436,54 +546,6 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
 
   defp handle_delta_response(response), do: handle_response(response)
 
-  defp classify_outlook_403(msg, code) do
-    m = msg |> to_string() |> String.downcase()
-    c = code |> to_string() |> String.downcase()
-
-    cond do
-      throttled_or_quota?(m, c) -> :rate_limited
-      permission_denied?(m, c) -> :unauthorized
-      true -> :network_error
-    end
-  end
-
-  defp throttled_or_quota?(message, code) do
-    String.contains?(code, "throttled") or
-      String.contains?(message, "throttle") or
-      String.contains?(message, "rate") or
-      String.contains?(message, "quota")
-  end
-
-  defp permission_denied?(message, code) do
-    String.contains?(code, "accessdenied") or
-      String.contains?(code, "permission") or
-      String.contains?(message, "permission") or
-      String.contains?(message, "insufficient")
-  end
-
-  defp parse_retry_after(resp) do
-    headers = Map.get(resp, :headers, %{})
-
-    case Map.get(headers, "retry-after") do
-      [value | _rest] ->
-        case Integer.parse(value) do
-          {n, _remainder} -> n
-          _parse_error -> nil
-        end
-
-      _no_header ->
-        nil
-    end
-  end
-
-  defp handle_403_reason(:rate_limited, _msg, retry_after) when is_integer(retry_after) do
-    {:error, :rate_limited, "retry_after:" <> Integer.to_string(retry_after)}
-  end
-
-  defp handle_403_reason(:rate_limited, msg, _retry_after), do: {:error, :rate_limited, msg}
-  defp handle_403_reason(:unauthorized, msg, _retry_after), do: {:error, :unauthorized, msg}
-  defp handle_403_reason(_other_reason, msg, _retry_after), do: {:error, :network_error, msg}
-
   # Query helpers
 
   defp build_events_query_params(start_time, end_time) do
@@ -493,7 +555,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
       "$orderby" => "start/dateTime",
       "$top" => "1000",
       "$select" =>
-        "id,iCalUId,subject,body,location,start,end,showAs,sensitivity,isCancelled,responseStatus,isAllDay,organizer,attendees,reminderMinutesBeforeStart,recurrence,seriesMasterId,originalStartTimeZone,originalEndTimeZone",
+        "id,iCalUId,subject,body,location,start,end,showAs,sensitivity,isCancelled,responseStatus,isAllDay,organizer,attendees,reminderMinutesBeforeStart,recurrence,seriesMasterId,type,originalStart,originalStartTimeZone,originalEndTimeZone",
       "$expand" =>
         "singleValueExtendedProperties($filter=id eq '#{TymeslotFingerprint.property_id()}')"
     }

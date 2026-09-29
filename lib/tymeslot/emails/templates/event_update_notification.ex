@@ -51,6 +51,10 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
       - `:first_notification`: true when no previous state was ever
         recorded; the changes then carry nil old values and render as the
         event's current details rather than a before/after diff (optional)
+      - `:series`: `:all` or `:following` for the update of every
+        occurrence of a repeating event, or of this and every following
+        one, whose details are then those of the occurrence edited
+        (optional)
       - `:attendee_locale`: optional locale string (default: `"en"`)
   """
   @spec render(String.t(), map()) :: Swoosh.Email.t()
@@ -86,12 +90,9 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
       organizer_details =
         TemplateHelper.build_organizer_details(details_for_organizer,
           intent: @intent,
-          eyebrow: dgettext("emails", "Updated"),
-          stage_title: dgettext("emails", "Event updated"),
-          stage_subtitle:
-            dgettext("emails", "%{name} has updated an event you're attending.",
-              name: details.organizer_name
-            )
+          eyebrow: dgettext("emails_booking", "Updated"),
+          stage_title: dgettext("emails_booking", "Event updated"),
+          stage_subtitle: updated_line(details)
         )
 
       html_body = TemplateHelper.compile_template(mjml_content, organizer_details)
@@ -117,7 +118,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
       |> to(attendee_email)
       |> subject(
         Sanitise.sanitize_for_header(
-          dgettext("emails", "Updated: %{title} - %{date}",
+          dgettext("emails_booking", "Updated: %{title} - %{date}",
             title: details.event_title,
             date: date_short
           )
@@ -176,11 +177,11 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
             """
           end)
 
-        change_section(dgettext("emails", "What changed"), """
+        change_section(dgettext("emails_booking", "What changed"), """
         <tr>
-          <th style="padding: 6px 12px 6px 0; font-size: 10px; font-weight: 700; color: #{Styles.ink_whisper()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails", "Field")}</th>
-          <th style="padding: 6px 12px; font-size: 10px; font-weight: 700; color: #{Styles.ink_whisper()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails", "Before")}</th>
-          <th style="padding: 6px 12px 6px 0; font-size: 10px; font-weight: 700; color: #{Styles.ink_whisper()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails", "After")}</th>
+          <th style="padding: 6px 12px 6px 0; font-size: 10px; font-weight: 700; color: #{Styles.ink_whisper()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails_booking", "Field")}</th>
+          <th style="padding: 6px 12px; font-size: 10px; font-weight: 700; color: #{Styles.ink_whisper()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails_booking", "Before")}</th>
+          <th style="padding: 6px 12px 6px 0; font-size: 10px; font-weight: 700; color: #{Styles.ink_whisper()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails_booking", "After")}</th>
         </tr>
         #{body_rows}
         """)
@@ -221,12 +222,36 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
 
   defp first_notification?(details), do: Map.get(details, :first_notification) == true
 
+  # The details shown are those of the occurrence the organiser edited, so an
+  # update of more of the series says how much more it changed.
+  defp updated_line(%{series: :all} = details) do
+    dgettext(
+      "emails_booking",
+      "%{name} has updated every occurrence of a repeating event you're attending.",
+      name: details.organizer_name
+    )
+  end
+
+  defp updated_line(%{series: :following} = details) do
+    dgettext(
+      "emails_booking",
+      "%{name} has updated this and every following occurrence of a repeating event you're attending.",
+      name: details.organizer_name
+    )
+  end
+
+  defp updated_line(details) do
+    dgettext("emails_booking", "%{name} has updated an event you're attending.",
+      name: details.organizer_name
+    )
+  end
+
   # The first-notification variant of the change table: the event's current
   # details, one row per populated field, with no "before" column, because
   # nothing was ever recorded to put in it.
   defp build_details_table(changes, locale) do
     rows = Enum.map_join(changes, "\n", &detail_row(&1, locale))
-    change_section(dgettext("emails", "Current details"), rows)
+    change_section(dgettext("emails_booking", "Current details"), rows)
   end
 
   defp detail_row(change, locale) do
@@ -241,46 +266,48 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
     """
   end
 
-  defp detail_cells({:title, _from, to}, _locale), do: {dgettext("emails", "Title"), escape(to)}
+  defp detail_cells({:title, _from, to}, _locale),
+    do: {dgettext("emails_booking", "Title"), escape(to)}
 
   defp detail_cells({:location, _from, to}, _locale),
-    do: {dgettext("emails", "Location"), escape(to)}
+    do: {dgettext("emails_booking", "Location"), escape(to)}
 
   defp detail_cells({:description, _from, to}, _locale),
-    do: {dgettext("emails", "Description"), escape(Formatting.plain_excerpt(to))}
+    do: {dgettext("emails_booking", "Description"), escape(Formatting.plain_excerpt(to))}
 
   defp detail_cells({:time, _from, to}, locale),
-    do: {dgettext("emails", "Time"), escape(Formatting.format_time_short(to, locale))}
+    do: {dgettext("emails_booking", "Time"), escape(Formatting.format_time_short(to, locale))}
 
   defp change_to_row({:title, from, to}, _locale),
-    do: {dgettext("emails", "Title"), escape(from), escape(to)}
+    do: {dgettext("emails_booking", "Title"), escape(from), escape(to)}
 
   defp change_to_row({:location, from, to}, _locale),
-    do: {dgettext("emails", "Location"), escape(from), escape(to)}
+    do: {dgettext("emails_booking", "Location"), escape(from), escape(to)}
 
   defp change_to_row({:description, _from, _to}, _locale),
     do:
-      {dgettext("emails", "Description"), dgettext("emails", "(previous)"),
-       dgettext("emails", "(updated)")}
+      {dgettext("emails_booking", "Description"), dgettext("emails_booking", "(previous)"),
+       dgettext("emails_booking", "(updated)")}
 
   defp change_to_row({:time, from_start, to_start}, locale),
     do:
-      {dgettext("emails", "Time"), escape(Formatting.format_time_short(from_start, locale)),
+      {dgettext("emails_booking", "Time"),
+       escape(Formatting.format_time_short(from_start, locale)),
        escape(Formatting.format_time_short(to_start, locale))}
 
   defp change_to_row(_other, _locale), do: nil
 
-  defp escape(nil), do: dgettext("emails", "(none)")
+  defp escape(nil), do: dgettext("emails_booking", "(none)")
   defp escape(val), do: val |> to_string() |> Sanitise.sanitize_for_email()
 
   defp build_text_body(details, locale) do
     {changes_heading, changes_text} =
       if first_notification?(details),
         do:
-          {dgettext("emails", "Current Details"),
+          {dgettext("emails_booking", "Current Details"),
            TextBodyHelper.format_event_details(details.changes, locale)},
         else:
-          {dgettext("emails", "What Changed"),
+          {dgettext("emails_booking", "What Changed"),
            TextBodyHelper.format_event_changes(details.changes, locale)}
 
     meeting_details =
@@ -295,11 +322,11 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
       })
 
     """
-    #{dgettext("emails", "Event Updated")}
+    #{dgettext("emails_booking", "Event Updated")}
 
-    #{dgettext("emails", "%{name} has updated an event you're attending.", name: details.organizer_name)}
+    #{updated_line(details)}
 
-    #{dgettext("emails", "MEETING DETAILS:")}
+    #{dgettext("emails_booking", "MEETING DETAILS:")}
     #{TextBodyHelper.format_meeting_details(meeting_details, locale)}
 
     #{changes_heading}

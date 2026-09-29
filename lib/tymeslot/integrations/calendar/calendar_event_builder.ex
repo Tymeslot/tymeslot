@@ -36,11 +36,15 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   them, scheduling-aware CalDAV servers (Zimbra, Nextcloud/Sabre, Apple
   iCloud) inject their own ORGANIZER and fire the iTIP pipeline, which
   duplicates the invitation email Tymeslot already sends.
+
+  The event's `:uid` is the meeting's `calendar_uid`, never its `uid`: the
+  `uid` is the bearer capability behind the cancel and reschedule links, and
+  anyone able to read the organiser's calendar would otherwise hold it.
   """
   @spec build_event_data(map()) :: map()
   def build_event_data(meeting) do
     %{
-      uid: meeting.uid,
+      uid: meeting.calendar_uid,
       summary: meeting.title,
       description: build_event_description(meeting),
       start_time: meeting.start_time,
@@ -127,6 +131,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
       parts = [
         attendee_identity_line(meeting),
         meeting.description,
+        organizer_note_section(meeting),
         attendee_message_section(meeting),
         custom_answers_section(meeting),
         attachments_section(meeting),
@@ -208,6 +213,19 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   end
 
   defp attendee_identity_line(_meeting), do: nil
+
+  # `Map.get/2`: the builder is also handed plain maps that predate the field.
+  defp organizer_note_section(meeting) do
+    case Map.get(meeting, :organizer_note) do
+      note when is_binary(note) and note != "" ->
+        "\n\n" <>
+          dgettext("emails", "Message from %{name}:", name: meeting.organizer_name) <>
+          "\n#{note}"
+
+      _none ->
+        nil
+    end
+  end
 
   defp attendee_message_section(meeting) do
     case meeting.attendee_message do

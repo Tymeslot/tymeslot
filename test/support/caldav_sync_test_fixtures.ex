@@ -133,6 +133,27 @@ defmodule Tymeslot.CalDAVSyncTestFixtures do
   end
 
   @doc """
+  A Depth 0 PROPFIND answer carrying a collection's `DAV:sync-token`
+  property, as a Tier 1 path with no stored token asks for.
+  """
+  @spec sync_token_propfind_xml(String.t()) :: String.t()
+  def sync_token_propfind_xml(sync_token) do
+    """
+    <?xml version="1.0" encoding="UTF-8"?>
+    <D:multistatus xmlns:D="DAV:">
+      <D:response>
+        <D:propstat>
+          <D:prop>
+            <D:sync-token>#{sync_token}</D:sync-token>
+          </D:prop>
+          <D:status>HTTP/1.1 200 OK</D:status>
+        </D:propstat>
+      </D:response>
+    </D:multistatus>
+    """
+  end
+
+  @doc """
   Stub responder for tests that configure two calendar paths and expect the
   worker to issue a REPORT against each. Returns a canned 207 Multi-Status
   payload for each known path and 404 for anything else.

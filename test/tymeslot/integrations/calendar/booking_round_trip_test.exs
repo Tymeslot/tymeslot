@@ -74,7 +74,7 @@ defmodule Tymeslot.Integrations.Calendar.BookingRoundTripTest do
 
   # A CalDAV booking as the write path leaves it: no provider event id on the
   # meeting, because the server addresses the event by href and only the uid
-  # links the two sides.
+  # (the meeting's calendar_uid) links the two sides.
   defp booking do
     integration = insert(:calendar_integration, provider: "caldav")
     start_time = DateTime.add(DateTime.utc_now(:second), 7, :day)
@@ -98,13 +98,13 @@ defmodule Tymeslot.Integrations.Calendar.BookingRoundTripTest do
     ical =
       meeting
       |> CalendarEventBuilder.build_event_data()
-      |> then(&ICalBuilder.build_simple_event(meeting.uid, &1))
+      |> then(&ICalBuilder.build_simple_event(&1.uid, &1))
 
     {:ok, [raw]} = ICalParser.parse(ical)
 
     raw =
       Map.merge(raw, %{
-        href: "/cal/primary/#{meeting.uid}.ics",
+        href: "/cal/primary/#{meeting.calendar_uid}.ics",
         etag: "etag-#{System.unique_integer([:positive])}"
       })
 

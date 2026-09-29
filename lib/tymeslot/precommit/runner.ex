@@ -75,6 +75,8 @@ defmodule Tymeslot.Precommit.Runner do
   is what lets another repository's suite use that one at the same time.
   """
 
+  alias Tymeslot.Infrastructure.Tasks
+
   @barrier_prefix "compile"
   @result_prefix "precommit: "
   @dialyzer_schedulers 8
@@ -153,7 +155,7 @@ defmodule Tymeslot.Precommit.Runner do
     ])
 
     steps
-    |> Task.async_stream(fn {name, args, env} -> {name, args, capture_fun.(args, env, [])} end,
+    |> Tasks.async_stream(fn {name, args, env} -> {name, args, capture_fun.(args, env, [])} end,
       max_concurrency: length(steps),
       ordered: false,
       timeout: :infinity
@@ -197,7 +199,7 @@ defmodule Tymeslot.Precommit.Runner do
     ])
 
     task =
-      Task.async(fn ->
+      Tasks.async(fn ->
         {_output, code} = result = capture_suite(args, env, capture_fun, plan)
         announce(status(name, code))
         result
@@ -222,7 +224,7 @@ defmodule Tymeslot.Precommit.Runner do
     partition_args = args ++ ["--partitions", Integer.to_string(count)]
 
     1..count
-    |> Task.async_stream(
+    |> Tasks.async_stream(
       fn index ->
         capture_fun.(partition_args, env, [
           {"MIX_TEST_PARTITION", Integer.to_string(index)},

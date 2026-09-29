@@ -255,7 +255,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       disabled={@submitting}
                       class="flex-1"
                     >
-                      ← {dgettext("booking", "back")}
+                      ← {dgettext("booking", "Back")}
                     </.action_button>
 
                     <.loading_button
@@ -293,7 +293,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
     BookingLabels.submit_label(
       is_rescheduling,
       meeting_type,
-      dgettext("booking", "book_meeting")
+      dgettext("booking", "Book Meeting")
     )
   end
 

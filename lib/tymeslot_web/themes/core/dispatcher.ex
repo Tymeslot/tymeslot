@@ -8,6 +8,8 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
   """
   use TymeslotWeb, :live_view
 
+  alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
 
   alias TymeslotWeb.Themes.Core.{
@@ -168,14 +170,14 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
         rescue
           e in UndefinedFunctionError ->
             Logger.error("render_poll_action not implemented in theme module",
-              module: inspect(module),
-              error: inspect(e)
+              module: LogFormat.reason(module),
+              error: LogFormat.reason(e)
             )
 
             render_error(assigns, "Poll voting rendering not implemented for this theme")
 
           e ->
-            Logger.error("Error rendering poll voting", theme_id: theme_id, error: inspect(e))
+            ErrorTracking.report_error(e, __STACKTRACE__, %{theme_id: theme_id})
             render_error(assigns, "Poll voting rendering failed")
         end
     end
@@ -194,19 +196,14 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
         rescue
           e in UndefinedFunctionError ->
             Logger.error("render_meeting_action not implemented in theme module",
-              module: inspect(module),
-              error: inspect(e)
+              module: LogFormat.reason(module),
+              error: LogFormat.reason(e)
             )
 
             render_error(assigns, "Meeting action rendering not implemented for this theme")
 
           e ->
-            Logger.error("Error rendering meeting action",
-              action: action,
-              theme_id: theme_id,
-              error: inspect(e)
-            )
-
+            ErrorTracking.report_error(e, __STACKTRACE__, %{theme_id: theme_id, action: action})
             render_error(assigns, "Meeting action rendering failed")
         end
     end
@@ -225,14 +222,14 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
         rescue
           e in UndefinedFunctionError ->
             Logger.error("Render function not implemented in theme module",
-              module: inspect(module),
-              error: inspect(e)
+              module: LogFormat.reason(module),
+              error: LogFormat.reason(e)
             )
 
             render_error(assigns, "Theme render function not found")
 
           e ->
-            Logger.error("Error rendering theme", theme_id: theme_id, error: inspect(e))
+            ErrorTracking.report_error(e, __STACKTRACE__, %{theme_id: theme_id})
             render_error(assigns, "Theme rendering failed")
         end
     end

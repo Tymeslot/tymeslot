@@ -22,6 +22,7 @@ defmodule Tymeslot.Bookings.Activation do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviderConfig
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -83,7 +84,7 @@ defmodule Tymeslot.Bookings.Activation do
       {:error, reason} ->
         Logger.error("Failed to schedule booking request emails",
           meeting_id: meeting.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         :ok
@@ -121,7 +122,7 @@ defmodule Tymeslot.Bookings.Activation do
       {:error, reason} ->
         Logger.error("Failed to schedule confirmation emails for meeting",
           meeting_id: meeting.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         :ok

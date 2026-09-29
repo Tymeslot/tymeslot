@@ -52,7 +52,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
         <p
           class="poll-voting-timezone"
           data-testid="poll-timezone"
-          aria-label={dgettext("booking", "Times shown in %{timezone}", timezone: tz(@poll))}
+          aria-label={dgettext("booking_polls", "Times shown in %{timezone}", timezone: tz(@poll))}
         >
           <.icon name="hero-globe-alt" class="poll-voting-timezone-icon" />
           <span>{tz(@poll)}</span>
@@ -65,7 +65,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
         <% :voting_ended -> %>
           <div class="poll-voting-ended" data-testid="poll-voting-ended">
             <p class="poll-voting-notice">
-              {dgettext("booking", "Voting has closed. Here are the final responses.")}
+              {dgettext("booking_polls", "Voting has closed. Here are the final responses.")}
             </p>
             <.slot_grid
               poll={@poll}
@@ -81,7 +81,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
         <% :vote -> %>
           <.deadline_banner poll={@poll} />
           <p class="poll-voting-greeting" data-testid="poll-participant-name">
-            {dgettext("booking", "Voting as %{name}", name: @participant.name)}
+            {dgettext("booking_polls", "Voting as %{name}", name: @participant.name)}
           </p>
           <.slot_grid
             poll={@poll}
@@ -107,7 +107,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
     ~H"""
     <div class="poll-deadline-banner" data-testid="poll-deadline">
       <.icon name="hero-clock" class="poll-deadline-icon" />
-      <span>{dgettext("booking", "Voting closes %{deadline}", deadline: @deadline)}</span>
+      <span>{dgettext("booking_polls", "Voting closes %{deadline}", deadline: @deadline)}</span>
     </div>
     """
   end
@@ -167,7 +167,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
       />
 
       <div class="poll-field">
-        <label class="poll-field-label" for="poll-name">{dgettext("booking", "Your name")}</label>
+        <label class="poll-field-label" for="poll-name">{dgettext("booking_polls", "Your name")}</label>
         <input
           id="poll-name"
           class="poll-field-input"
@@ -180,7 +180,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
       </div>
 
       <div class="poll-field">
-        <label class="poll-field-label" for="poll-email">{dgettext("booking", "Your email")}</label>
+        <label class="poll-field-label" for="poll-email">{dgettext("booking_polls", "Your email")}</label>
         <input
           id="poll-email"
           class="poll-field-input"
@@ -193,7 +193,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
       </div>
 
       <button type="submit" class="poll-submit-button" data-testid="poll-register-submit">
-        {dgettext("booking", "Continue to vote")}
+        {dgettext("booking_polls", "Continue to vote")}
       </button>
 
       <SecurityFields.recaptcha_notice_block />
@@ -235,7 +235,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
           />
         </div>
         <button type="submit" class="poll-submit-button" data-testid="poll-save-votes">
-          {dgettext("booking", "Save my responses")}
+          {dgettext("booking_polls", "Save my responses")}
         </button>
       </form>
     <% else %>
@@ -264,9 +264,9 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
       <.icon name="hero-check-circle" class="poll-closed-icon poll-closed-icon--success" />
       <p class="poll-closed-message">
         <%= if @scheduled do %>
-          {dgettext("booking", "Scheduled for %{time}", time: @scheduled)}
+          {dgettext("booking_polls", "Scheduled for %{time}", time: @scheduled)}
         <% else %>
-          {dgettext("booking", "This poll has been scheduled.")}
+          {dgettext("booking_polls", "This poll has been scheduled.")}
         <% end %>
       </p>
     </div>
@@ -278,7 +278,10 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
     <div class="poll-closed poll-closed--cancelled" data-testid="poll-cancelled">
       <.icon name="hero-x-circle" class="poll-closed-icon poll-closed-icon--danger" />
       <p class="poll-closed-message">
-        {dgettext("booking", "This poll has been cancelled and is no longer accepting responses.")}
+        {dgettext(
+          "booking_polls",
+          "This poll has been cancelled and is no longer accepting responses."
+        )}
       </p>
     </div>
     """
@@ -385,7 +388,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   defp tally_icon(:if_need_be), do: "hero-question-mark-circle-solid"
   defp tally_icon(:no), do: "hero-x-circle-solid"
 
-  defp tally_label(:yes), do: dgettext("booking", "Yes")
-  defp tally_label(:if_need_be), do: dgettext("booking", "If need be")
-  defp tally_label(:no), do: dgettext("booking", "No")
+  defp tally_label(:yes), do: dgettext("booking_polls", "Yes")
+  defp tally_label(:if_need_be), do: dgettext("booking_polls", "If need be")
+  defp tally_label(:no), do: dgettext("booking_polls", "No")
 end

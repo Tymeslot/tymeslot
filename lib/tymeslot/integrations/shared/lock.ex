@@ -5,6 +5,8 @@ defmodule Tymeslot.Integrations.Shared.Lock do
   """
 
   use GenServer
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+
   require Logger
 
   @table :integration_operation_locks
@@ -212,8 +214,8 @@ defmodule Tymeslot.Integrations.Shared.Lock do
             :ets.delete(@table, key)
 
             Logger.debug("Released lock because process died",
-              key: inspect(key),
-              pid: inspect(pid)
+              key: LogFormat.reason(key),
+              pid: LogFormat.reason(pid)
             )
 
           _different_holder ->

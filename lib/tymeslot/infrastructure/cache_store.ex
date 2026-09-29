@@ -262,6 +262,12 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   # the failure value the callers actually receive in production were reached
   # by no test at all; the warning below carries the exception message, so a
   # test whose cached computation blows up still says so in the log.
+  #
+  # Not recorded through `ErrorTracking.report_error/3`: modules `use` this one,
+  # so anything it references becomes a compile-time dependency of each of
+  # them, and ErrorTracking would pull its queries and the Repo in with it.
+  # For the same reason the key and reason are rendered by `render/1` below
+  # rather than `LogFormat.reason/1`.
   @spec compute_and_store(atom(), any(), (-> any()), integer(), keyword()) :: any()
   def compute_and_store(table_name, key, fun, ttl, opts \\ []) do
     result =
@@ -283,8 +289,8 @@ defmodule Tymeslot.Infrastructure.CacheStore do
       {:raised, exception, stacktrace} ->
         Logger.warning("Cache computation raised an exception",
           table: table_name,
-          key: inspect(key),
-          exception: Exception.message(exception)
+          key: render(key),
+          exception: exception |> Exception.message() |> redact()
         )
 
         Logger.debug("Cache computation stacktrace",
@@ -296,9 +302,9 @@ defmodule Tymeslot.Infrastructure.CacheStore do
       {:caught, kind, reason, stacktrace} ->
         Logger.warning("Cache computation failed",
           table: table_name,
-          key: inspect(key),
+          key: render(key),
           kind: kind,
-          reason: inspect(reason)
+          reason: render(reason)
         )
 
         Logger.debug("Cache computation stacktrace",
@@ -308,6 +314,22 @@ defmodule Tymeslot.Infrastructure.CacheStore do
         {:error, :computation_failed}
     end
   end
+
+  # A bounded `inspect/2` standing in for `LogFormat.reason/1`, which would
+  # put LogFormat and the redaction modules behind it on the compile-time
+  # graph of every cache (see `compute_and_store/5`). Cache keys are built from
+  # ids and dates, not credentials; a thrown or exited reason is the one term
+  # here that is not, so the rendering is capped and then scrubbed of what
+  # shows up in text (bearer headers, query-string tokens, quoted secrets).
+  defp render(term), do: term |> inspect(limit: 20, printable_limit: 256) |> redact()
+
+  # `Logging.Redactor.redact/1`, called through a module atom returned at
+  # runtime rather than an alias: xref records an alias as a reference, and
+  # every module that `use`s this one would then count the redactor on its
+  # compile-connected graph. The regex-only redactor is the one piece of log
+  # scrubbing that needs nothing else from the application.
+  defp redact(text), do: redactor().redact(text)
+  defp redactor, do: :"Elixir.Tymeslot.Infrastructure.Logging.Redactor"
 
   @doc false
   @spec cleanup_expired(atom()) :: integer()

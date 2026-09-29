@@ -23,6 +23,7 @@ defmodule TymeslotWeb.AdminLive do
   alias Tymeslot.AppSettings
   alias Tymeslot.Auth
   alias Tymeslot.Emails.Branding
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Locales
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
@@ -160,7 +161,7 @@ defmodule TymeslotWeb.AdminLive do
          |> load_data()}
 
       {:error, reason} ->
-        Logger.warning("Failed to remove email logo", reason: inspect(reason))
+        Logger.warning("Failed to remove email logo", reason: LogFormat.reason(reason))
 
         {:noreply,
          put_flash(socket, :error, dgettext("dashboard_admin", "Could not remove the logo."))}
@@ -220,7 +221,7 @@ defmodule TymeslotWeb.AdminLive do
         )
 
       {:error, reason} ->
-        Logger.warning("Failed to store email logo", reason: inspect(reason))
+        Logger.warning("Failed to store email logo", reason: LogFormat.reason(reason))
         put_flash(socket, :error, dgettext("dashboard_admin", "Could not save the logo."))
     end
   end

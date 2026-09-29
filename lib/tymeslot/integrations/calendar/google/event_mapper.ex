@@ -75,6 +75,11 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
     })
   end
 
+  # A recurring instance's id is its series id plus the original start,
+  # `<id>_YYYYMMDD` or `<id>_YYYYMMDDTHHMMSSZ`. It is already a Google id, and
+  # it is case-sensitive, so it must reach the API exactly as Google sent it.
+  @instance_id ~r/\A[a-v0-9]{5,1024}_\d{8}(T\d{6}Z)?\z/
+
   @doc """
   Converts a UID to a Google Calendar compatible event ID.
 
@@ -82,9 +87,16 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
   stripped. UUIDs may contain hyphens — those are stripped too. The result
   must be 5-1024 characters of lowercase a-v and 0-9 (base32hex). When the
   input does not satisfy that constraint a SHA-256 hash is used as fallback.
+  A recurring instance id (`<id>_YYYYMMDD[THHMMSSZ]`, produced by syncing
+  with `singleEvents=true`) is already a valid, case-sensitive Google id and
+  is passed through untouched rather than hashed.
   """
   @spec uuid_to_google_event_id(String.t()) :: String.t()
   def uuid_to_google_event_id(uid) when is_binary(uid) do
+    if Regex.match?(@instance_id, uid), do: uid, else: to_google_event_id(uid)
+  end
+
+  defp to_google_event_id(uid) do
     # Strip @domain only for the base32hex fast-path check (Google's own iCalUIDs
     # use the format "{event_id}@google.com"). The full UID is always used for
     # the hash fallback so that different UIDs sharing a local-part never collide.

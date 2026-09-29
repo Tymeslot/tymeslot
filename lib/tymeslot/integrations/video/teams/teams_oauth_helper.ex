@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
   @behaviour Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperBehaviour
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Infrastructure.Retry
   alias Tymeslot.Integrations.Common.OAuth.ErrorParser
@@ -95,7 +96,7 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
           Logger.warning(
             "Failed to decode Teams id_token — account dedup falling back to profile data",
             user_id: user_id,
-            reason: inspect(reason)
+            reason: LogFormat.reason(reason)
           )
         end
 

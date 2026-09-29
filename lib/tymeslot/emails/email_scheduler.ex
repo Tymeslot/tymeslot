@@ -83,6 +83,8 @@ defmodule Tymeslot.Emails.EmailScheduler do
   defdelegate schedule_admin_alert(recipient, category, severity, message, metadata, opts \\ []),
     to: IntegrationScheduler
 
+  defdelegate schedule_admin_alert_digest(recipient, digest), to: IntegrationScheduler
+
   # --- Changeset validation (used by EmailWorker's Oban callback) ---
 
   @fields_by_action %{
@@ -150,7 +152,8 @@ defmodule Tymeslot.Emails.EmailScheduler do
       "message",
       "metadata",
       "alert_hash"
-    ]
+    ],
+    "send_admin_alert_digest" => ["recipient", "entries"]
   }
 
   @doc """

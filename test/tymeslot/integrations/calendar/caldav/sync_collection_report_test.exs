@@ -5,8 +5,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReportTest do
   The network round-trip is already covered by `CalDAV.Http` tests; this
   module focuses on the pure building/parsing logic:
 
-    * `build_report/1` produces an initial-sync body for `nil` and a
-      delta body that embeds (and properly escapes) the stored token.
+    * `build_report/1` produces a delta body that embeds (and properly
+      escapes) the stored token.
     * `parse_response/1` splits 207 Multi-Status responses into changed
       events and the hrefs the server reported as removed, surfaces the new
       sync token, and refuses a delta whose event data the server withheld
@@ -27,18 +27,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReportTest do
   alias Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport
 
   describe "build_report/1" do
-    test "nil token produces an initial-sync body with an empty sync-token element" do
-      body = SyncCollectionReport.build_report(nil)
-
-      assert body =~ "<d:sync-collection"
-      assert body =~ "<d:sync-token/>"
-      assert body =~ "<d:sync-level>1</d:sync-level>"
-    end
-
     test "binary token embeds the token value" do
       body = SyncCollectionReport.build_report("https://example.com/sync/token-42")
 
+      assert body =~ "<d:sync-collection"
       assert body =~ "<d:sync-token>https://example.com/sync/token-42</d:sync-token>"
+      assert body =~ "<d:sync-level>1</d:sync-level>"
     end
 
     test "a token containing XML special characters is escaped" do
@@ -50,9 +44,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReportTest do
   end
 
   describe "parse_response/1 — a resource holding more than one VEVENT" do
-    # The incremental sync dropped everything after the first VEVENT, exactly
-    # as the full fetch did, so a changed series arrived as one event.
-    test "returns every VEVENT of a changed resource" do
+    defp series_response do
       ical = """
       BEGIN:VCALENDAR
       VERSION:2.0
@@ -90,6 +82,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReportTest do
       </d:multistatus>
       """
 
+      body
+    end
+
+    # The incremental sync dropped everything after the first VEVENT, exactly
+    # as the full fetch did, so a changed series arrived as one event.
+    test "returns every VEVENT of a changed resource" do
+      body = series_response()
+
       assert {:ok, {[master, override], [], _token}} = SyncCollectionReport.parse_response(body)
 
       assert master.recurrence_id == nil
@@ -99,6 +99,18 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReportTest do
       assert master.href == "/calendars/alice/cal/standup.ics"
       assert override.href == "/calendars/alice/cal/standup.ics"
       assert override.etag == "etag-standup"
+    end
+
+    # Every VEVENT carries the resource it came from, as the full fetch does.
+    # Without it the cached row lost its document on each incremental sync,
+    # and a grid edit could no longer patch the event in place.
+    test "carries the whole resource document on every VEVENT" do
+      assert {:ok, {[master, override], [], _token}} =
+               SyncCollectionReport.parse_response(series_response())
+
+      assert master.raw_ical =~ "RRULE:FREQ=WEEKLY;COUNT=3"
+      assert master.raw_ical =~ "RECURRENCE-ID:20261012T090000Z"
+      assert override.raw_ical == master.raw_ical
     end
   end
 

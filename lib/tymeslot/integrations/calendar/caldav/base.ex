@@ -78,6 +78,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
           | :rate_limited
           | :network_error
           | :invalid_response
+          # The response body outgrew the request's byte budget and was
+          # abandoned mid-transfer.
+          | :response_too_large
           | :server_error
           | :server_unresponsive
           | :sync_token_expired

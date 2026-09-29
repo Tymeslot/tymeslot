@@ -9,9 +9,16 @@ defmodule Tymeslot.Notifications.Orchestrator do
   alias Tymeslot.Clock
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.ApprovalJobs
-  alias Tymeslot.Notifications.{ContentBuilder, GuestNotifications, Recipients, SchedulingRules}
-  alias Tymeslot.Utils.ReminderUtils
+
+  alias Tymeslot.Notifications.{
+    ContentBuilder,
+    GuestNotifications,
+    Recipients,
+    ReminderSchedule,
+    SchedulingRules
+  }
 
   @doc """
   Schedules all notifications for a newly created meeting.
@@ -31,7 +38,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
       {:error, reason} = error ->
         Logger.error("Failed to schedule meeting notifications",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         error
@@ -76,7 +83,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
         Logger.error("Failed to schedule booking request notification step",
           meeting_id: meeting.id,
           step: step,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         {step, reason}
@@ -161,20 +168,10 @@ defmodule Tymeslot.Notifications.Orchestrator do
   @spec schedule_reminder_notifications(%{atom() => term()}) ::
           :ok | {:ok, atom()} | {:error, term()}
   def schedule_reminder_notifications(meeting) do
-    reminders =
-      case Map.get(meeting, :reminders) do
-        nil ->
-          # Legacy meetings without reminders field - derive from legacy fields
-          legacy_label = meeting.reminder_time || meeting.default_reminder_time || "30 minutes"
-          value = ReminderUtils.parse_reminder_value(legacy_label)
-          unit = ReminderUtils.normalize_reminder_unit(legacy_label)
-          [%{value: value, unit: unit}]
-
-        reminder_list ->
-          normalized = normalize_reminders(reminder_list)
-          # Respect empty list as "no reminders" - only default when nil
-          normalized
-      end
+    # `ReminderSchedule` is the single reader of the meeting's reminder column,
+    # legacy shapes included, so what a surface shows a booking reminds with is
+    # what is scheduled here.
+    reminders = ReminderSchedule.configured(meeting)
 
     recipients = Recipients.determine_recipients(meeting, :reminder)
     content = ContentBuilder.build_reminder_details(meeting)
@@ -390,8 +387,8 @@ defmodule Tymeslot.Notifications.Orchestrator do
 
       {organizer_result, attendee_result} ->
         Logger.warning("Some reschedule emails may have failed",
-          organizer_result: inspect(organizer_result),
-          attendee_result: inspect(attendee_result)
+          organizer_result: LogFormat.reason(organizer_result),
+          attendee_result: LogFormat.reason(attendee_result)
         )
 
         {:ok, :reschedules_partially_sent}
@@ -401,10 +398,6 @@ defmodule Tymeslot.Notifications.Orchestrator do
   # Module getters for dependency injection in tests
   defp get_email_worker_module do
     Application.get_env(:tymeslot, :email_worker_module, Tymeslot.Emails.EmailScheduler)
-  end
-
-  defp normalize_reminders(reminders) do
-    ReminderUtils.normalize_reminders(reminders)
   end
 
   defp schedule_reminders(meeting, reminders) do

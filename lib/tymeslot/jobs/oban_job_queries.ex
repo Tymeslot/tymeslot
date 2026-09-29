@@ -24,6 +24,27 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   def get_current_args(%Job{}), do: nil
 
   @doc """
+  Counts the jobs of `worker` whose args contain `args` (JSON containment,
+  served by Oban's GIN index on `args`) inserted at or after `since`, in any
+  state. Returns the count and the oldest such job's `inserted_at`, `nil`
+  when there is none.
+  """
+  @spec count_inserted_since(module(), map(), DateTime.t()) ::
+          {non_neg_integer(), DateTime.t() | nil}
+  def count_inserted_since(worker, args, %DateTime{} = since) when is_map(args) do
+    worker_name = normalize_worker_name(worker)
+
+    Repo.one(
+      from(j in Job,
+        where: j.worker == ^worker_name,
+        where: fragment("? @> ?", j.args, ^args),
+        where: j.inserted_at >= ^since,
+        select: {count(j.id), min(j.inserted_at)}
+      )
+    )
+  end
+
+  @doc """
   Counts maintenance worker jobs in active states.
 
   `suspended` is treated as active: a suspended job has not reached a terminal
@@ -87,6 +108,19 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
       )
 
     Repo.all(query)
+  end
+
+  @doc """
+  Returns the worker of each job in `ids` whose row still exists, as a map of
+  job id to worker name. Ids without a row are left out.
+  """
+  @spec workers_by_id([integer()]) :: %{integer() => String.t()}
+  def workers_by_id([]), do: %{}
+
+  def workers_by_id(ids) when is_list(ids) do
+    from(j in Job, where: j.id in ^ids, select: {j.id, j.worker})
+    |> Repo.all()
+    |> Map.new()
   end
 
   @doc """

@@ -1303,3 +1303,8 @@ msgstr "Osobní nastavení → Zabezpečení"
 #, elixir-autogen, elixir-format
 msgid "This change was made to one occurrence of a repeating event, and the calendar server would have applied it to every occurrence, so it was not sent."
 msgstr "Tato změna se týká jednoho opakování opakované události, ale kalendářový server by ji použil na všechna opakování, a proto nebyla odeslána."
+
+#: lib/tymeslot/integrations/calendar/caldav/errors.ex
+#, elixir-autogen, elixir-format
+msgid "The calendar server returned more data than Tymeslot can process at once."
+msgstr "Kalendářový server vrátil více dat, než dokáže Tymeslot najednou zpracovat."

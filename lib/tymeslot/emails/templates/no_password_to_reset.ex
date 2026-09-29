@@ -23,9 +23,9 @@ defmodule Tymeslot.Emails.Templates.NoPasswordToReset do
 
     #{Text.centered_text(explanation(provider), padding: "0 0 20px 0")}
 
-    #{Buttons.action_button(@intent, dgettext("emails", "Sign In to Tymeslot"), sign_in_url, full_width: true, size: :large)}
+    #{Buttons.action_button(@intent, dgettext("emails_account", "Sign In to Tymeslot"), sign_in_url, full_width: true, size: :large)}
 
-    #{Text.system_footer_note(dgettext("emails", "If you didn't ask to reset your password, you can ignore this email. Nothing about your account has changed."))}
+    #{Text.system_footer_note(dgettext("emails_account", "If you didn't ask to reset your password, you can ignore this email. Nothing about your account has changed."))}
 
     #{Text.divider(margin: "28px 0 16px 0")}
 
@@ -34,12 +34,13 @@ defmodule Tymeslot.Emails.Templates.NoPasswordToReset do
 
     TemplateHelper.compile_system_template(
       mjml_content,
-      dgettext("emails", "Account Security"),
-      dgettext("emails", "Your Tymeslot account has no password to reset."),
+      dgettext("emails_account", "Account Security"),
+      dgettext("emails_account", "Your Tymeslot account has no password to reset."),
       intent: @intent,
-      eyebrow: dgettext("emails", "Security"),
-      stage_title: dgettext("emails", "No password to reset"),
-      stage_subtitle: dgettext("emails", "You sign in with %{provider}.", provider: provider)
+      eyebrow: dgettext("emails_account", "Security"),
+      stage_title: dgettext("emails_account", "No password to reset"),
+      stage_subtitle:
+        dgettext("emails_account", "You sign in with %{provider}.", provider: provider)
     )
   end
 
@@ -48,22 +49,22 @@ defmodule Tymeslot.Emails.Templates.NoPasswordToReset do
     provider = SignInProvider.display_name(user)
 
     """
-    #{dgettext("emails", "No password to reset")}
+    #{dgettext("emails_account", "No password to reset")}
 
     #{Greeting.text(user)}
 
     #{explanation(provider)}
 
-    #{dgettext("emails", "Sign In to Tymeslot:")}
+    #{dgettext("emails_account", "Sign In to Tymeslot:")}
     #{sign_in_url}
 
-    #{dgettext("emails", "If you didn't ask to reset your password, you can ignore this email. Nothing about your account has changed.")}
+    #{dgettext("emails_account", "If you didn't ask to reset your password, you can ignore this email. Nothing about your account has changed.")}
     """
   end
 
   defp explanation(provider) do
     dgettext(
-      "emails",
+      "emails_account",
       "Someone asked to reset the password for your Tymeslot account, but your account signs in with %{provider}, so it has no password to reset. Use the button below and choose %{provider} to sign in.",
       provider: provider
     )

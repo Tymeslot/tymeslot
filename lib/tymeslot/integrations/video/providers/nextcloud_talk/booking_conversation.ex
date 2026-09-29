@@ -149,7 +149,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversatio
   def room_name(summary) when is_binary(summary) and summary != "",
     do: String.slice(summary, 0, @max_room_name_length)
 
-  def room_name(_summary), do: dgettext("dashboard_integrations", "Meeting")
+  def room_name(_summary), do: dgettext("dashboard_video", "Meeting")
 
   defp find(credentials, reference, wanted, config) do
     case Client.list_rooms(credentials) do
@@ -281,7 +281,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversatio
   defp description_params(reference) do
     %{
       "description" =>
-        dgettext("dashboard_integrations", "Booked through Tymeslot.") <>
+        dgettext("dashboard_video", "Booked through Tymeslot.") <>
           "\n\n" <> @reference_label <> reference
     }
   end

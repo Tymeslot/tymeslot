@@ -9,6 +9,7 @@ defmodule Tymeslot.Payments.Stripe do
 
   alias Ecto.UUID
   alias Stripe.{BillingPortal, Checkout.Session, Customer, Subscription, Webhook}
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Payments.Behaviours.StripeProvider
   alias Tymeslot.Payments.RetryHelper
   alias Tymeslot.Security.SecurityLogger
@@ -265,7 +266,7 @@ defmodule Tymeslot.Payments.Stripe do
   @impl StripeProvider
   @spec list_subscriptions(map()) :: stripe_result()
   def list_subscriptions(params) when is_map(params) do
-    Logger.info("Listing Stripe subscriptions", params: inspect(params))
+    Logger.info("Listing Stripe subscriptions", params: LogFormat.reason(params))
 
     RetryHelper.execute_with_retry(fn ->
       subscription_mod().list(params, api_key_opts())

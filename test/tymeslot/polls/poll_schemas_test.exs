@@ -5,6 +5,7 @@ defmodule Tymeslot.Polls.PollSchemasTest do
   @moduletag :polls
 
   alias Ecto.UUID
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Polls.{PollParticipantSchema, PollSchema, PollTimeSlotSchema, PollVoteSchema}
 
   describe "PollSchema.creation_changeset/2" do
@@ -44,15 +45,26 @@ defmodule Tymeslot.Polls.PollSchemasTest do
                "rejected a #{duration}-minute poll"
       end
     end
+
+    test "caps the description at the length of the organiser note it becomes" do
+      max = MeetingSchema.organizer_note_max_length()
+
+      at_limit = poll_changeset(30, description: String.duplicate("a", max))
+      over_limit = poll_changeset(30, description: String.duplicate("a", max + 1))
+
+      assert at_limit.valid?
+      assert %{description: _errors} = errors_on(over_limit)
+    end
   end
 
-  defp poll_changeset(duration_minutes) do
-    PollSchema.creation_changeset(%PollSchema{}, %{
-      user_id: 1,
-      title: "x",
-      duration_minutes: duration_minutes,
-      timezone: "Etc/UTC"
-    })
+  defp poll_changeset(duration_minutes, extra \\ []) do
+    PollSchema.creation_changeset(
+      %PollSchema{},
+      Map.merge(
+        %{user_id: 1, title: "x", duration_minutes: duration_minutes, timezone: "Etc/UTC"},
+        Map.new(extra)
+      )
+    )
   end
 
   describe "PollTimeSlotSchema.changeset/2" do

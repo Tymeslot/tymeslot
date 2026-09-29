@@ -2,11 +2,11 @@ defmodule Tymeslot.AdminAlertsCaptureHelpers do
   @moduledoc """
   Test helpers for capturing admin alerts raised from out-of-process callers.
 
-  `CrashReporter` (a Logger handler) and `ObanFailureAlerter` (a telemetry
-  handler) both raise admin alerts from processes other than the test process,
-  so `send(self(), …)` from the notifier cannot reach the test. This helper
-  installs a notifier that forwards every alert to a pid stored in application
-  env, and a setup that points that pid at the calling test process.
+  Telemetry handlers such as `ErrorTracking.Alerter` raise admin alerts from
+  processes other than the test process, so `send(self(), …)` from the
+  notifier cannot reach the test. This helper installs a notifier that
+  forwards every alert to a pid stored in application env, and a setup that
+  points that pid at the calling test process.
 
   ## Usage
 

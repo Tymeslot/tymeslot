@@ -29,21 +29,21 @@ defmodule Tymeslot.Emails.Templates.SignupAttemptNotice do
 
     #{Text.centered_text(explanation(user), padding: "0 0 20px 0")}
 
-    #{Buttons.action_button(@intent, dgettext("emails", "Sign In to Tymeslot"), sign_in_url, full_width: true, size: :large)}
+    #{Buttons.action_button(@intent, dgettext("emails_account", "Sign In to Tymeslot"), sign_in_url, full_width: true, size: :large)}
 
     #{reset_section(user, reset_url)}
 
-    #{Text.system_footer_note(dgettext("emails", "If it wasn't you, you can ignore this email. No new account was created and nothing about your account has changed."))}
+    #{Text.system_footer_note(dgettext("emails_account", "If it wasn't you, you can ignore this email. No new account was created and nothing about your account has changed."))}
     """
 
     TemplateHelper.compile_system_template(
       mjml_content,
-      dgettext("emails", "Account Security"),
-      dgettext("emails", "Someone tried to sign up with your email address."),
+      dgettext("emails_account", "Account Security"),
+      dgettext("emails_account", "Someone tried to sign up with your email address."),
       intent: @intent,
-      eyebrow: dgettext("emails", "Security"),
-      stage_title: dgettext("emails", "You already have an account"),
-      stage_subtitle: dgettext("emails", "Sign in instead of signing up.")
+      eyebrow: dgettext("emails_account", "Security"),
+      stage_title: dgettext("emails_account", "You already have an account"),
+      stage_subtitle: dgettext("emails_account", "Sign in instead of signing up.")
     )
   end
 
@@ -51,16 +51,16 @@ defmodule Tymeslot.Emails.Templates.SignupAttemptNotice do
           String.t()
   def render_text(user, sign_in_url, reset_url) do
     """
-    #{dgettext("emails", "You already have an account")}
+    #{dgettext("emails_account", "You already have an account")}
 
     #{Greeting.text(user)}
 
     #{explanation(user)}
 
-    #{dgettext("emails", "Sign In to Tymeslot:")}
+    #{dgettext("emails_account", "Sign In to Tymeslot:")}
     #{sign_in_url}
     #{reset_text(user, reset_url)}
-    #{dgettext("emails", "If it wasn't you, you can ignore this email. No new account was created and nothing about your account has changed.")}
+    #{dgettext("emails_account", "If it wasn't you, you can ignore this email. No new account was created and nothing about your account has changed.")}
     """
   end
 
@@ -69,13 +69,13 @@ defmodule Tymeslot.Emails.Templates.SignupAttemptNotice do
   defp explanation(user) do
     if SignInProvider.social?(user) do
       dgettext(
-        "emails",
+        "emails_account",
         "Someone just tried to create a new Tymeslot account with this email address, which already has an account. If it was you, sign in with %{provider} below.",
         provider: SignInProvider.display_name(user)
       )
     else
       dgettext(
-        "emails",
+        "emails_account",
         "Someone just tried to create a new Tymeslot account with this email address, which already has an account. If it was you, sign in below, or reset your password if you can't remember it."
       )
     end
@@ -93,7 +93,7 @@ defmodule Tymeslot.Emails.Templates.SignupAttemptNotice do
     else
       """
 
-      #{dgettext("emails", "Reset your password:")}
+      #{dgettext("emails_account", "Reset your password:")}
       #{reset_url}
       """
     end
@@ -105,7 +105,9 @@ defmodule Tymeslot.Emails.Templates.SignupAttemptNotice do
     safe_url = Sanitise.sanitize_url(reset_url)
 
     safe_label =
-      Sanitise.sanitize_for_email(dgettext("emails", "Forgot your password? Reset it here."))
+      Sanitise.sanitize_for_email(
+        dgettext("emails_account", "Forgot your password? Reset it here.")
+      )
 
     ~s(<a href="#{safe_url}" style="color: #{Styles.component_color(:link)}; text-decoration: underline;">#{safe_label}</a>)
   end

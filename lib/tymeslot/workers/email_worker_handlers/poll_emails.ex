@@ -15,6 +15,19 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.PollEmails do
   alias Tymeslot.Utils.UrlBuilder
   alias Tymeslot.Workers.DeliveryClaims
 
+  # The poll is gone or closed, or its host has no public page to link to.
+  @no_username "host has no username"
+  @poll_gone "poll not found"
+  @poll_closed "poll not open"
+
+  @doc """
+  Whether `reason`, from a discard this module returned, is an expected end
+  of the email job rather than a fault
+  (see `Tymeslot.Infrastructure.ExpectedJobOutcome`).
+  """
+  @spec expected_discard?(term()) :: boolean()
+  def expected_discard?(reason), do: reason in [@no_username, @poll_gone, @poll_closed]
+
   @spec handle_deadline_reminders(%{String.t() => term()}, DeliveryClaims.job_id()) ::
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_deadline_reminders(%{"poll_id" => poll_id}, job_id) do
@@ -28,7 +41,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.PollEmails do
             poll_id: poll_id
           )
 
-          {:discard, "host has no username"}
+          {:discard, @no_username}
 
         username ->
           deliver_deadline_reminders(poll, username, job_id)
@@ -77,7 +90,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.PollEmails do
           poll_id: poll_id
         )
 
-        {:discard, "poll not found"}
+        {:discard, @poll_gone}
 
       %{status: :open} = poll ->
         fun.(poll)
@@ -89,7 +102,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.PollEmails do
           status: poll.status
         )
 
-        {:discard, "poll not open"}
+        {:discard, @poll_closed}
     end
   end
 

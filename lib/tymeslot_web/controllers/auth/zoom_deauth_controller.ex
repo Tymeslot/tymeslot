@@ -19,6 +19,7 @@ defmodule TymeslotWeb.ZoomDeauthController do
 
   alias Plug.Conn
   alias Plug.Crypto
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Shared.ZoomConfig
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Security.RateLimiter
@@ -89,7 +90,7 @@ defmodule TymeslotWeb.ZoomDeauthController do
       remove_integrations(zoom_user_id)
     else
       Logger.warning("Zoom deauth event client_id mismatch — ignoring",
-        received_client_id: inspect(payload["client_id"])
+        received_client_id: LogFormat.reason(payload["client_id"])
       )
     end
 

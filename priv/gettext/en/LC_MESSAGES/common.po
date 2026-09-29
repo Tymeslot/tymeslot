@@ -14,17 +14,17 @@ msgstr ""
 #: lib/tymeslot/custom_fields/answer_renderer.ex
 #, elixir-autogen, elixir-format
 msgid "No"
-msgstr "No"
+msgstr ""
 
 #: lib/tymeslot/custom_fields/answer_renderer.ex
 #, elixir-autogen, elixir-format
 msgid "Yes"
-msgstr "Yes"
+msgstr ""
 
 #: lib/tymeslot/custom_fields/answer_renderer.ex
 #, elixir-autogen, elixir-format
 msgid "✓ Acknowledged (%{at})"
-msgstr "✓ Acknowledged (%{at})"
+msgstr ""
 
 #: lib/tymeslot_web/components/core_components/flash.ex
 #, elixir-autogen, elixir-format
@@ -37,6 +37,7 @@ msgid "Browser Not Supported"
 msgstr ""
 
 #: lib/tymeslot_web/components/confirmation_modal.ex
+#: lib/tymeslot_web/components/dashboard/meetings/add_guests_modal.ex
 #: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
 #, elixir-autogen, elixir-format

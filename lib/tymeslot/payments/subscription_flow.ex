@@ -4,6 +4,7 @@ defmodule Tymeslot.Payments.SubscriptionFlow do
   require Logger
 
   alias Ecto.UUID
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Payments.PaymentQueries
 
   alias Tymeslot.Payments.{
@@ -135,7 +136,7 @@ defmodule Tymeslot.Payments.SubscriptionFlow do
           {:error, reason} ->
             Logger.error(
               "Failed to persist subscription checkout session, returning URL anyway",
-              error: inspect(reason)
+              error: LogFormat.reason(reason)
             )
 
             {:ok, %{checkout_url: checkout_url}}
@@ -210,7 +211,10 @@ defmodule Tymeslot.Payments.SubscriptionFlow do
         :ok
 
       {:error, error} ->
-        Logger.error("Failed to mark subscription transaction as failed", error: inspect(error))
+        Logger.error("Failed to mark subscription transaction as failed",
+          error: LogFormat.reason(error)
+        )
+
         {:error, :transaction_update_failed}
     end
   end

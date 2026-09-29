@@ -7,6 +7,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Ecto.UUID
+
   alias Tymeslot.ChangesetValidators.Email, as: EmailChangeset
   alias Tymeslot.ChangesetValidators.TimeOrder
   alias Tymeslot.ChangesetValidators.TrackingParams
@@ -15,6 +17,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   @type t :: %__MODULE__{
           id: binary() | nil,
           uid: String.t() | nil,
+          calendar_uid: String.t() | nil,
           title: String.t() | nil,
           summary: String.t() | nil,
           description: String.t() | nil,
@@ -34,6 +37,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           attendee_name: String.t() | nil,
           attendee_email: String.t() | nil,
           attendee_message: String.t() | nil,
+          organizer_note: String.t() | nil,
           attendee_phone: String.t() | nil,
           attendee_company: String.t() | nil,
           attendee_timezone: String.t() | nil,
@@ -98,7 +102,14 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   @foreign_key_type :binary_id
 
   schema "meetings" do
+    # `uid` is the booking's bearer capability: the cancel and reschedule links
+    # are built from it, so it must never leave Tymeslot except in those links.
+    # `calendar_uid` is what the booking is called in external calendars (the
+    # event UID written to the organiser's calendar and to the attendee's
+    # `.ics`), and grants nothing. Every calendar create, match, update and
+    # delete goes by `calendar_uid`; see `ensure_calendar_uid/1`.
     field(:uid, :string)
+    field(:calendar_uid, :string)
     field(:title, :string)
     field(:summary, :string)
     field(:description, :string)
@@ -119,6 +130,9 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     field(:organizer_name, :string)
     field(:organizer_email, :string)
     field(:organizer_title, :string)
+    # What the organiser wrote to the guest on a meeting they created
+    # themselves. Never the attendee's words: those are `attendee_message`.
+    field(:organizer_note, :string)
 
     belongs_to(:organizer_user, Tymeslot.Auth.UserSchema,
       foreign_key: :organizer_user_id,
@@ -277,6 +291,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   ]
 
   @optional_fields [
+    :calendar_uid,
     :summary,
     :description,
     :duration,
@@ -291,6 +306,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :video_integration_id,
     :calendar_path,
     :attendee_message,
+    :organizer_note,
     :attendee_phone,
     :attendee_company,
     :attendee_timezone,
@@ -344,6 +360,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :visitor_hash
   ]
 
+  @organizer_note_max_length 2000
+
   @valid_statuses [
     "pending",
     # Held pending the host's manual approval. Occupies its slot like
@@ -357,12 +375,20 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     "expired"
   ]
 
+  @doc """
+  The longest note an organiser may leave for the guest. Anything that
+  becomes one (a poll's description) is held to the same limit.
+  """
+  @spec organizer_note_max_length() :: pos_integer()
+  def organizer_note_max_length, do: @organizer_note_max_length
+
   @doc false
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(meeting, attrs) do
     meeting
     |> cast(attrs, @required_fields ++ @optional_fields)
-    |> validate_required(@required_fields)
+    |> ensure_calendar_uid()
+    |> validate_required([:calendar_uid | @required_fields])
     |> EmailChangeset.validate_email(:organizer_email)
     |> EmailChangeset.validate_email(:attendee_email)
     |> validate_inclusion(:status, @valid_statuses)
@@ -378,17 +404,33 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     |> validate_length(:utm_term, max: 255)
     |> validate_length(:referrer_host, max: 255)
     |> validate_length(:decline_reason, max: 500)
+    |> validate_length(:organizer_note, max: @organizer_note_max_length)
     |> validate_length(:visitor_hash, max: 64)
     # Google Calendar's documented maximum event id length.
     |> validate_length(:provider_event_id, max: 1024)
     |> TrackingParams.validate_tracking_params(:tracking_params)
     |> calculate_duration()
     |> unique_constraint(:uid)
+    |> unique_constraint(:calendar_uid)
     |> unique_constraint([:organizer_user_id, :start_time],
       name: :unique_confirmed_meeting_per_organizer_at_time,
       message: "You already have a confirmed meeting at this time."
     )
     |> check_constraint(:end_time, name: :meetings_end_after_start)
+  end
+
+  # A new meeting gets its own calendar identity, generated independently of
+  # `uid` so that nothing readable in a calendar leads back to the capability.
+  # A UUID, like `uid`, because callers tell a Tymeslot-minted identifier from
+  # one a provider assigned by that shape (`CalendarEventSync`'s legacy
+  # mapping check, the Exchange busy-interval namespace). An existing meeting
+  # already has one and keeps it: its event is keyed by it, and a new value
+  # would orphan that event.
+  defp ensure_calendar_uid(changeset) do
+    case get_field(changeset, :calendar_uid) do
+      nil -> put_change(changeset, :calendar_uid, UUID.generate())
+      _present -> changeset
+    end
   end
 
   defp calculate_duration(changeset) do

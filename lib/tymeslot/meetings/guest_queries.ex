@@ -63,6 +63,19 @@ defmodule Tymeslot.Meetings.GuestQueries do
   end
 
   @doc """
+  Lists the guests among `guest_ids` on `meeting_id` whose confirmation email
+  has not yet been sent.
+  """
+  @spec list_unsent_by_ids(binary(), [binary()]) :: [Guest.t()]
+  def list_unsent_by_ids(meeting_id, guest_ids) when is_list(guest_ids) do
+    Guest
+    |> where([g], g.meeting_id == ^meeting_id and g.id in ^guest_ids)
+    |> where([g], is_nil(g.confirmation_sent_at))
+    |> order_by([g], asc: g.inserted_at, asc: g.email)
+    |> Repo.all()
+  end
+
+  @doc """
   Clears everything a meeting's guests were told about, or answered for, its
   previous time: their RSVPs, and the reminder offsets already emailed.
 

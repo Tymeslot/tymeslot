@@ -8,6 +8,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomQueries do
   import Ecto.Query
 
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Repo
@@ -59,7 +60,8 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomQueries do
 
   @doc """
   Records where the calendar provider put an event written under `event_uid`:
-  `attrs` carries `:provider_event_id` and `:provider_calendar_id`.
+  `attrs` carries `:provider_event_id`, `:provider_calendar_id` and
+  `:event_ical_uid`.
   """
   @spec set_event_location(pos_integer(), String.t(), map()) :: non_neg_integer()
   def set_event_location(calendar_integration_id, event_uid, attrs) do
@@ -71,6 +73,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomQueries do
         set: [
           provider_event_id: attrs.provider_event_id,
           provider_calendar_id: attrs.provider_calendar_id,
+          event_ical_uid: attrs.event_ical_uid,
           updated_at: now()
         ]
       )
@@ -98,7 +101,8 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomQueries do
   @doc """
   Points rooms at the identity their event was given in another calendar
   integration: `identity` carries `:calendar_integration_id`, `:event_uid`,
-  `:provider_event_id` and `:provider_calendar_id`.
+  `:provider_event_id`, `:provider_calendar_id` and `:event_ical_uid`. The
+  event has not been seen under its new identity yet.
   """
   @spec move_to_event([pos_integer()], map()) :: non_neg_integer()
   def move_to_event(room_ids, identity) do
@@ -111,6 +115,8 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomQueries do
           event_uid: identity.event_uid,
           provider_event_id: identity.provider_event_id,
           provider_calendar_id: identity.provider_calendar_id,
+          event_ical_uid: identity.event_ical_uid,
+          event_seen_at: nil,
           updated_at: now()
         ]
       )
@@ -141,18 +147,54 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomQueries do
   @spec list_ended([String.t()], DateTime.t(), DateTime.t(), pos_integer()) ::
           [EventVideoRoomSchema.t()]
   def list_ended(providers, ended_before, ended_after, limit \\ 500) do
-    EventVideoRoomSchema
-    |> join(:left, [r], vi in assoc(r, :video_integration))
-    |> where([r], r.provider in ^providers)
-    |> where(
-      [r, vi],
-      is_nil(r.video_integration_id) or (not vi.needs_reauth and is_nil(vi.deleted_at))
-    )
+    providers
+    |> reachable_rooms()
     |> where([r], r.ends_at < ^ended_before and r.ends_at >= ^ended_after)
     |> order_by([r], asc: r.ends_at)
     |> limit(^limit)
     |> preload(:calendar_integration)
     |> Repo.all()
+  end
+
+  @doc """
+  Rooms on one of `providers` whose event the nightly scan looks for in its
+  calendar's cache, with their calendar integration loaded: every room with a
+  calendar integration that has not ended before `ended_after`, which is as
+  far back as the cache reaches. Rooms whose video integration cannot be
+  reached are left out, as in `list_ended/4`. Those not looked for longest
+  come first, so a room past `limit` is reached on a later night.
+  """
+  @spec list_watched([String.t()], DateTime.t(), pos_integer()) :: [EventVideoRoomSchema.t()]
+  def list_watched(providers, ended_after, limit \\ 1000) do
+    providers
+    |> reachable_rooms()
+    |> where([r], not is_nil(r.calendar_integration_id))
+    |> where([r], is_nil(r.ends_at) or r.ends_at >= ^ended_after)
+    |> order_by([r], asc_nulls_first: r.event_seen_at, asc: r.id)
+    |> limit(^limit)
+    |> preload(:calendar_integration)
+    |> Repo.all()
+  end
+
+  @doc """
+  Records that a room's event was found at `seen_at`, and the iCalendar UID
+  its cached row carries and the join link it carries, when either was
+  learnt; a nil one leaves its column as it is. A room deleted meanwhile is
+  left deleted.
+  """
+  @spec mark_seen(EventVideoRoomSchema.t(), DateTime.t(), String.t() | nil, String.t() | nil) ::
+          :ok
+  def mark_seen(%EventVideoRoomSchema{id: id}, seen_at, ical_uid \\ nil, join_link \\ nil) do
+    changes =
+      Enum.reject(
+        [event_seen_at: seen_at, event_ical_uid: ical_uid, join_link: join_link],
+        &match?({_key, nil}, &1)
+      )
+
+    {_count, _rows} =
+      EventVideoRoomSchema |> where([r], r.id == ^id) |> Repo.update_all(set: changes)
+
+    :ok
   end
 
   @doc """
@@ -202,22 +244,58 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomQueries do
   def list_cached_events(_calendar_integration_id, [], []), do: []
 
   def list_cached_events(calendar_integration_id, identifiers, series_uids) do
-    addressed =
-      dynamic(
-        [e],
-        e.uid in ^identifiers or e.provider_event_id in ^identifiers or
-          e.recurring_event_id in ^identifiers
-      )
-
-    addressed_or_occurrence =
-      Enum.reduce(series_uids, addressed, fn uid, acc ->
-        dynamic([e], ^acc or like(e.uid, ^(escape_like(uid) <> "\\_%")))
-      end)
-
     ProviderCalendarEventSchema
     |> where([e], e.calendar_integration_id == ^calendar_integration_id)
-    |> where(^addressed_or_occurrence)
+    |> where(^addressed(identifiers, series_uids))
     |> Repo.all()
+  end
+
+  @doc """
+  A cached event of any calendar integration of the user `user_id` that
+  carries one of the join links `links`, as its cached video link or
+  anywhere in its description, other than the events of the integration
+  `calendar_integration_id` that `identifiers` and `series_uids` address (as
+  in `list_cached_events/3`); `nil` when there is none.
+
+  The search spans the user's integrations because a series moved to
+  another one keeps the link. It reads only that user's cached events, the
+  description through a substring match, which is what bounds its cost.
+  """
+  @spec find_link_holder(
+          pos_integer(),
+          pos_integer(),
+          [String.t()],
+          [String.t()],
+          [String.t()]
+        ) :: ProviderCalendarEventSchema.t() | nil
+  def find_link_holder(_user_id, _calendar_integration_id, [], _identifiers, _series_uids),
+    do: nil
+
+  def find_link_holder(user_id, calendar_integration_id, links, identifiers, series_uids) do
+    carries =
+      Enum.reduce(links, dynamic([e], e.video_link in ^links), fn link, acc ->
+        dynamic([e], ^acc or like(e.description, ^("%" <> escape_like(link) <> "%")))
+      end)
+
+    own =
+      dynamic(
+        [e],
+        e.calendar_integration_id == ^calendar_integration_id and
+          ^addressed(identifiers, series_uids)
+      )
+
+    ProviderCalendarEventSchema
+    |> where(
+      [e],
+      e.calendar_integration_id in subquery(
+        from(ci in CalendarIntegrationSchema, where: ci.user_id == ^user_id, select: ci.id)
+      )
+    )
+    |> where(^carries)
+    |> where(^dynamic([e], not (^own)))
+    |> order_by([e], asc: e.id)
+    |> limit(1)
+    |> Repo.one()
   end
 
   @doc """
@@ -237,6 +315,39 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomQueries do
     |> where([e], e.video_integration_id == ^video_integration_id and e.video_link == ^video_link)
     |> where([e], not (e.calendar_integration_id == ^calendar_integration_id and e.uid == ^uid))
     |> Repo.exists?()
+  end
+
+  # An event's own rows, and those of its occurrences: a row whose parent is
+  # one of `identifiers`, or whose uid is one of `series_uids` followed by the
+  # occurrence suffix CalDAV occurrences are cached under. A row with none of
+  # the columns set is not addressed.
+  defp addressed(identifiers, series_uids) do
+    own =
+      dynamic(
+        [e],
+        coalesce(
+          e.uid in ^identifiers or e.provider_event_id in ^identifiers or
+            e.recurring_event_id in ^identifiers,
+          false
+        )
+      )
+
+    Enum.reduce(series_uids, own, fn uid, acc ->
+      dynamic([e], ^acc or like(e.uid, ^(escape_like(uid) <> "\\_%")))
+    end)
+  end
+
+  # Rooms on one of `providers` whose video integration can take a delete: not
+  # waiting to be reconnected or being disconnected, or gone altogether, when
+  # the organiser's current integration for the provider is used instead.
+  defp reachable_rooms(providers) do
+    EventVideoRoomSchema
+    |> join(:left, [r], vi in assoc(r, :video_integration))
+    |> where([r], r.provider in ^providers)
+    |> where(
+      [r, vi],
+      is_nil(r.video_integration_id) or (not vi.needs_reauth and is_nil(vi.deleted_at))
+    )
   end
 
   defp for_integration(integration_id, providers, scope, %DateTime{} = now) do

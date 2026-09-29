@@ -262,4 +262,15 @@ defmodule Tymeslot.Emails.EmailScheduler.IntegrationScheduler do
   defdelegate schedule_admin_alert(recipient, category, severity, message, metadata, opts \\ []),
     to: Tymeslot.Workers.EmailWorker.AdminAlertScheduler,
     as: :schedule
+
+  @doc """
+  Schedules the daily digest email of info-severity admin alerts.
+
+  Delegates to `Tymeslot.Workers.EmailWorker.AdminAlertScheduler.schedule_digest/2`.
+  """
+  @spec schedule_admin_alert_digest(recipient :: String.t(), digest :: map()) ::
+          :ok | {:error, term()}
+  defdelegate schedule_admin_alert_digest(recipient, digest),
+    to: Tymeslot.Workers.EmailWorker.AdminAlertScheduler,
+    as: :schedule_digest
 end

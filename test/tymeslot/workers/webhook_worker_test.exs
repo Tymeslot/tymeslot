@@ -385,11 +385,11 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
   end
 
   # A subscriber's endpoint that is gone or rejects our credentials returns the
-  # same status on every attempt. Retrying it burns the job's five tries and
-  # ends in `Oban.PerformError`, which `ObanFailureAlerter` turns into an admin
-  # email — paging an operator about a subscriber's own misconfiguration. Only
-  # `{:discard, _}` avoids that, because an intentional discard emits `job:stop`
-  # rather than the `job:exception` the alerter listens for.
+  # same status on every attempt. Retrying it burns the job's five tries, each
+  # recorded by error tracking as an `Oban.PerformError` that can alert an
+  # operator about a subscriber's own misconfiguration. Only `{:discard, _}`
+  # avoids that, because an intentional discard emits `job:stop` rather than
+  # the `job:exception` error tracking records.
   describe "perform/1 - retryability of HTTP failures" do
     setup do
       %{meeting: insert(:meeting), webhook: insert(:webhook, failure_count: 0)}

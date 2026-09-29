@@ -24,11 +24,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiringTest do
     insert(:calendar_integration, provider: "google", calendar_paths: [])
   end
 
-  defp build_meeting(integration, uid) do
-    %{
-      uid: uid,
+  # A meeting's cache row is keyed by its `calendar_uid`; the booking's own
+  # `uid` is deliberately different so a row keyed by it is noticed.
+  defp build_meeting(integration, calendar_uid) do
+    build(:meeting,
+      uid: "booking-" <> calendar_uid,
+      calendar_uid: calendar_uid,
       calendar_integration_id: integration.id
-    }
+    )
   end
 
   defp event_data do
@@ -43,6 +46,29 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiringTest do
   end
 
   describe "tag/3" do
+    test "keys the row by the meeting's calendar uid, never its uid" do
+      integration = caldav_integration()
+      meeting = build_meeting(integration, "calendar-identity")
+
+      assert :ok = QueueWiring.tag(meeting, :create, event_data())
+
+      assert {:ok, _row} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "calendar-identity")
+
+      assert {:error, :not_found} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, meeting.uid)
+    end
+
+    test "keys a calendar grid event target by its own uid" do
+      integration = caldav_integration()
+      target = %{uid: "grid-event-uid", calendar_integration_id: integration.id}
+
+      assert :ok = QueueWiring.tag(target, :update, event_data())
+
+      assert {:ok, %{sync_state: "locally_modified"}} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "grid-event-uid")
+    end
+
     test "writes locally_created with summary/times for :create" do
       integration = caldav_integration()
       meeting = build_meeting(integration, "new-uid")

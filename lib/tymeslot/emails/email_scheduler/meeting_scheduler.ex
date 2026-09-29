@@ -2,6 +2,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   @moduledoc "Schedules meeting-related emails via Oban."
 
   alias Tymeslot.Emails.EmailScheduler.Helpers
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Jobs
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Utils.ReminderUtils
@@ -27,6 +28,22 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
       ]
     )
     |> insert_job("Confirmation emails", meeting_id)
+  end
+
+  @doc """
+  Schedules the invitations for guests a host added to a meeting after it was
+  booked.
+
+  The job names the guests it is for, so each addition gets a job of its own
+  and no two jobs ever send to the same guest, however they overlap. A retry
+  sends only to those of its guests still without `confirmation_sent_at`.
+  """
+  @spec schedule_guest_invitations(binary(), [binary()]) :: :ok | {:error, String.t()}
+  def schedule_guest_invitations(meeting_id, guest_ids)
+      when is_list(guest_ids) and guest_ids != [] do
+    %{"action" => "send_guest_invitations", "meeting_id" => meeting_id, "guest_ids" => guest_ids}
+    |> EmailWorker.new(queue: :emails, priority: 0)
+    |> insert_job("Guest invitations", meeting_id)
   end
 
   @doc """
@@ -307,7 +324,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
       {:error, reason} ->
         Logger.error("Failed to queue reschedule request email",
           meeting_id: meeting_id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}

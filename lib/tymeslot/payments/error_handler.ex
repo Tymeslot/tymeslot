@@ -2,6 +2,8 @@ defmodule Tymeslot.Payments.ErrorHandler do
   @moduledoc """
   Handles payment-related errors and provides logging and notification capabilities.
   """
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+
   require Logger
 
   @doc """
@@ -9,7 +11,12 @@ defmodule Tymeslot.Payments.ErrorHandler do
   """
   @spec handle_payment_error(String.t(), any(), pos_integer()) :: {:ok, :error_handled}
   def handle_payment_error(stripe_id, error, user_id) do
-    Logger.error("Payment error", user_id: user_id, stripe_id: stripe_id, error: inspect(error))
+    Logger.error("Payment error",
+      user_id: user_id,
+      stripe_id: stripe_id,
+      error: LogFormat.reason(error)
+    )
+
     # In a real app, you might send an email or a notification here
     {:ok, :error_handled}
   end
@@ -22,7 +29,7 @@ defmodule Tymeslot.Payments.ErrorHandler do
     Logger.error("Subscription error",
       user_id: user_id,
       subscription_id: subscription_id,
-      error: inspect(error)
+      error: LogFormat.reason(error)
     )
 
     # In a real app, you might send an email or a notification here

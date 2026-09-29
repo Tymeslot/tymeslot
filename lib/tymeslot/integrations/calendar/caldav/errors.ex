@@ -96,6 +96,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Errors do
         "The calendar server returned a response Tymeslot could not understand."
       )
 
+  def describe_error(:response_too_large),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "The calendar server returned more data than Tymeslot can process at once."
+      )
+
   def describe_error(:server_error),
     do:
       dgettext(

@@ -95,9 +95,13 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     end
   end
 
+  # `uid` here is the calendar event's UID (the `.ics` UID and the attachment
+  # filename), so it is the meeting's `calendar_uid`: the attendee's copy has to
+  # match the organiser's event, and the booking's own `uid` is the capability
+  # behind the cancel and reschedule links, which travel as their own fields.
   defp base_details(meeting) do
     %{
-      uid: meeting.uid,
+      uid: meeting.calendar_uid,
       title: meeting.title,
       summary: meeting.summary || meeting.title,
       description: meeting.description || "",
@@ -141,6 +145,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       attendee_name: meeting.attendee_name,
       attendee_email: meeting.attendee_email,
       attendee_message: meeting.attendee_message,
+      organizer_note: meeting.organizer_note,
       attendee_phone: meeting.attendee_phone,
       attendee_company: meeting.attendee_company
     }

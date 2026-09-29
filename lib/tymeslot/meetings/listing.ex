@@ -11,6 +11,7 @@ defmodule Tymeslot.Meetings.Listing do
   require Logger
 
   alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Pagination.CursorPage
 
@@ -117,7 +118,7 @@ defmodule Tymeslot.Meetings.Listing do
     error ->
       Logger.error("Exception while listing meetings by filter",
         user_id: user_id,
-        error: inspect(error),
+        error: LogFormat.reason(error),
         stacktrace: __STACKTRACE__
       )
 

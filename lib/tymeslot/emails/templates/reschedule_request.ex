@@ -39,42 +39,42 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
         duration: meeting.duration,
         location: meeting.location,
         location_type: BookingRequestLocation.type(meeting),
-        meeting_type: meeting.meeting_type || dgettext("emails", "Meeting"),
+        meeting_type: meeting.meeting_type || dgettext("emails_booking_requests", "Meeting"),
         timezone: meeting.attendee_timezone || "UTC"
       }
 
       mjml_content = """
-      #{Text.section_title(dgettext("emails", "Cancelled Appointment Details"))}
+      #{Text.section_title(dgettext("emails_booking_requests", "Cancelled Appointment Details"))}
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 
       <mj-text font-size="16px" color="#{Styles.ink_soft()}" line-height="24px" padding="16px 0">
-        #{dgettext("emails", "I apologise for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience.")}
+        #{dgettext("emails_booking_requests", "I apologise for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience.")}
       </mj-text>
 
-      #{Buttons.action_button(@intent, dgettext("emails", "Choose a New Time"), meeting.reschedule_url, full_width: true, size: :large)}
+      #{Buttons.action_button(@intent, dgettext("emails_booking_requests", "Choose a New Time"), meeting.reschedule_url, full_width: true, size: :large)}
 
       <mj-text font-size="14px" color="#{Styles.ink_muted()}" line-height="20px" padding="16px 0 0 0">
-        #{dgettext("emails", "Once you select a new slot, you'll receive a confirmation email with the updated details. If you have any questions or need to discuss alternative options, please don't hesitate to reach out.")}
+        #{dgettext("emails_booking_requests", "Once you select a new slot, you'll receive a confirmation email with the updated details. If you have any questions or need to discuss alternative options, please don't hesitate to reach out.")}
       </mj-text>
 
-      #{Text.centered_text(dgettext("emails", "Thank you for your understanding and flexibility."), color: Styles.ink_muted(), font_size: "14px")}
+      #{Text.centered_text(dgettext("emails_booking_requests", "Thank you for your understanding and flexibility."), color: Styles.ink_muted(), font_size: "14px")}
       """
 
       html_body =
         TemplateHelper.compile_system_template(
           mjml_content,
-          dgettext("emails", "Reschedule Request"),
+          dgettext("emails_booking_requests", "Reschedule Request"),
           dgettext(
-            "emails",
+            "emails_booking_requests",
             "Hi %{name}, I need to reschedule our upcoming meeting. Could you please select a new time that works for you?",
             name: meeting.attendee_name
           ),
           intent: @intent,
-          eyebrow: dgettext("emails", "Reschedule"),
-          stage_title: dgettext("emails", "Let's find a new time"),
+          eyebrow: dgettext("emails_booking_requests", "Reschedule"),
+          stage_title: dgettext("emails_booking_requests", "Let's find a new time"),
           stage_subtitle:
             dgettext(
-              "emails",
+              "emails_booking_requests",
               "Hi %{name}, I need to reschedule our upcoming meeting.",
               name: meeting.attendee_name
             )
@@ -85,7 +85,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
       |> from({meeting.organizer_name, MjmlEmail.fetch_from_email()})
       |> subject(
         Sanitise.sanitize_for_header(
-          dgettext("emails", "Reschedule Request: %{title} - %{date}",
+          dgettext("emails_booking_requests", "Reschedule Request: %{title} - %{date}",
             title: meeting.title,
             date: Formatting.format_date_short(attendee_time, locale)
           )
@@ -98,27 +98,27 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
 
   defp build_text_body(meeting, details, locale) do
     """
-    #{dgettext("emails", "Reschedule Request")}
+    #{dgettext("emails_booking_requests", "Reschedule Request")}
 
-    #{dgettext("emails", "Hi %{name},", name: meeting.attendee_name)}
+    #{dgettext("emails_booking_requests", "Hi %{name},", name: meeting.attendee_name)}
 
-    #{dgettext("emails", "I need to reschedule our upcoming meeting. Could you please select a new time that works for you?")}
+    #{dgettext("emails_booking_requests", "I need to reschedule our upcoming meeting. Could you please select a new time that works for you?")}
 
-    #{dgettext("emails", "CANCELLED APPOINTMENT DETAILS:")}
-    #{dgettext("emails", "Date:")} #{Formatting.format_date_short(details.date, locale)}
-    #{dgettext("emails", "Duration:")} #{Formatting.format_duration(details.duration, locale)}
-    #{dgettext("emails", "Location:")} #{Formatting.format_location(details)}
-    #{dgettext("emails", "Type:")} #{details.meeting_type}
-    #{dgettext("emails", "Timezone:")} #{details.timezone}
+    #{dgettext("emails_booking_requests", "CANCELLED APPOINTMENT DETAILS:")}
+    #{dgettext("emails_booking_requests", "Date:")} #{Formatting.format_date_short(details.date, locale)}
+    #{dgettext("emails_booking_requests", "Duration:")} #{Formatting.format_duration(details.duration, locale)}
+    #{dgettext("emails_booking_requests", "Location:")} #{Formatting.format_location(details)}
+    #{dgettext("emails_booking_requests", "Type:")} #{details.meeting_type}
+    #{dgettext("emails_booking_requests", "Timezone:")} #{details.timezone}
 
-    #{dgettext("emails", "I apologize for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience.")}
+    #{dgettext("emails_booking_requests", "I apologize for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience.")}
 
-    #{dgettext("emails", "Choose a New Time:")}
+    #{dgettext("emails_booking_requests", "Choose a New Time:")}
     #{meeting.reschedule_url}
 
-    #{dgettext("emails", "Once you select a new slot, you'll receive a confirmation email with the updated details. If you have any questions or need to discuss alternative options, please don't hesitate to reach out.")}
+    #{dgettext("emails_booking_requests", "Once you select a new slot, you'll receive a confirmation email with the updated details. If you have any questions or need to discuss alternative options, please don't hesitate to reach out.")}
 
-    #{dgettext("emails", "Thank you for your understanding and flexibility.")}
+    #{dgettext("emails_booking_requests", "Thank you for your understanding and flexibility.")}
     """
   end
 end

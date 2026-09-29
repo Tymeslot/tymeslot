@@ -60,10 +60,10 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                     class="text-3xl font-bold mb-2"
                     style="color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.1);"
                   >
-                    {dgettext("booking", "Meeting Confirmed")}
+                    {dgettext("booking_manage", "Meeting Confirmed")}
                   </h1>
                   <p class="text-lg" style="color: rgba(255,255,255,0.9);">
-                    {dgettext("booking", "Great! Your meeting is still scheduled as planned.")}
+                    {dgettext("booking_manage", "Great! Your meeting is still scheduled as planned.")}
                   </p>
                 </div>
 
@@ -74,7 +74,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                   <div class="p-6">
                     <div class="flex items-center justify-between mb-4">
                       <h3 class="text-lg font-semibold" style="color: rgba(255,255,255,0.95);">
-                        {dgettext("booking", "Meeting Details")}
+                        {dgettext("booking_manage", "Meeting Details")}
                       </h3>
                       <span
                         class="px-3 py-1 rounded-full text-sm font-medium"
@@ -96,11 +96,14 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
 
                 <div class="text-center">
                   <p class="mb-6" style="color: rgba(255,255,255,0.85);">
-                    {dgettext("booking", "We look forward to seeing you at the scheduled time.")}
+                    {dgettext(
+                      "booking_manage",
+                      "We look forward to seeing you at the scheduled time."
+                    )}
                   </p>
 
                   <.action_button type="button" phx-click={JS.navigate("/")} variant={:primary}>
-                    {dgettext("booking", "Done")}
+                    {dgettext("booking_manage", "Done")}
                   </.action_button>
                 </div>
               <% else %>
@@ -126,10 +129,10 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                     class="text-3xl font-bold mb-2"
                     style="color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.1);"
                   >
-                    {dgettext("booking", "Cancel Appointment")}
+                    {dgettext("booking_manage", "Cancel Appointment")}
                   </h1>
                   <p class="text-lg" style="color: rgba(255,255,255,0.9);">
-                    {dgettext("booking", "Are you sure you want to cancel this appointment?")}
+                    {dgettext("booking_manage", "Are you sure you want to cancel this appointment?")}
                   </p>
                 </div>
 
@@ -140,7 +143,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                   <div class="p-6">
                     <div class="flex items-center justify-between mb-4">
                       <h3 class="text-lg font-semibold" style="color: rgba(255,255,255,0.95);">
-                        {dgettext("booking", "Meeting Details")}
+                        {dgettext("booking_manage", "Meeting Details")}
                       </h3>
                       <span
                         class="px-3 py-1 rounded-full text-sm font-medium"
@@ -177,7 +180,10 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                     />
                   </svg>
                   <div class="text-sm" style="color: rgba(255,255,255,0.85);">
-                    {dgettext("booking", "A cancellation email will be sent to all participants")}
+                    {dgettext(
+                      "booking_manage",
+                      "A cancellation email will be sent to all participants"
+                    )}
                   </div>
                 </div>
 
@@ -186,12 +192,12 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                     type="button"
                     phx-click="cancel_meeting"
                     loading={@loading}
-                    loading_text={dgettext("booking", "Cancelling...")}
+                    loading_text={dgettext("booking_manage", "Cancelling...")}
                     variant={:danger}
                     data-testid="cancel-meeting"
                     class="flex-1"
                   >
-                    {dgettext("booking", "Yes, Cancel Meeting")}
+                    {dgettext("booking_manage", "Yes, Cancel Meeting")}
                   </.loading_button>
 
                   <.action_button
@@ -202,7 +208,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                     disabled={@loading}
                     class="flex-1"
                   >
-                    {dgettext("booking", "Keep Meeting")}
+                    {dgettext("booking_manage", "Keep Meeting")}
                   </.action_button>
                 </div>
               <% end %>

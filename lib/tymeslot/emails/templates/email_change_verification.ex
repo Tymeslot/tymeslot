@@ -26,22 +26,22 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerification do
     color: Styles.ink(),
     padding: "8px 0 4px 0")}
 
-    #{Text.centered_text(dgettext("emails", "You asked to change the email address on your Tymeslot account. Confirm the new address below to finish the switch."),
+    #{Text.centered_text(dgettext("emails_account", "You asked to change the email address on your Tymeslot account. Confirm the new address below to finish the switch."),
     font_size: "15px",
     color: Styles.ink_soft(),
     padding: "0 0 22px 0")}
 
     #{new_email_card(new_email)}
 
-    #{Buttons.action_button(@intent, dgettext("emails", "Verify New Email Address"), verification_url, full_width: true, size: :large)}
+    #{Buttons.action_button(@intent, dgettext("emails_account", "Verify New Email Address"), verification_url, full_width: true, size: :large)}
 
     #{Callouts.alert_box(@intent,
-    dgettext("emails", "This link expires in 24 hours. Once confirmed, you'll sign in with your new email address."),
-    title: dgettext("emails", "Heads up"))}
+    dgettext("emails_account", "This link expires in 24 hours. Once confirmed, you'll sign in with your new email address."),
+    title: dgettext("emails_account", "Heads up"))}
 
     #{Text.divider(margin: "24px 0 16px 0")}
 
-    #{Text.centered_text(dgettext("emails", "Didn't request this change? You can safely ignore this email - nothing will happen to your account."),
+    #{Text.centered_text(dgettext("emails_account", "Didn't request this change? You can safely ignore this email - nothing will happen to your account."),
     font_size: "13px",
     color: Styles.ink_muted(),
     padding: "0 0 14px 0")}
@@ -51,12 +51,12 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerification do
 
     TemplateHelper.compile_system_template(
       mjml_content,
-      dgettext("emails", "Verify your new email address"),
-      dgettext("emails", "Confirm the new email address on your Tymeslot account."),
+      dgettext("emails_account", "Verify your new email address"),
+      dgettext("emails_account", "Confirm the new email address on your Tymeslot account."),
       intent: @intent,
-      eyebrow: dgettext("emails", "Verify"),
-      stage_title: dgettext("emails", "Confirm your new email"),
-      stage_subtitle: dgettext("emails", "One click and the switch is done.")
+      eyebrow: dgettext("emails_account", "Verify"),
+      stage_title: dgettext("emails_account", "Confirm your new email"),
+      stage_subtitle: dgettext("emails_account", "One click and the switch is done.")
     )
   end
 
@@ -80,7 +80,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerification do
           padding="0 0 10px 0"
           css-class="mobile-eyebrow"
         >
-          #{dgettext("emails", "New email address")}
+          #{dgettext("emails_account", "New email address")}
         </mj-text>
         <mj-text
           align="center"
@@ -97,18 +97,18 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerification do
   @spec render_text(Tymeslot.Emails.EmailService.user_map(), String.t(), String.t()) :: String.t()
   def render_text(user, new_email, verification_url) do
     """
-    #{dgettext("emails", "Verify your new email address")}
+    #{dgettext("emails_account", "Verify your new email address")}
 
     #{Greeting.text(user)}
 
-    #{dgettext("emails", "You asked to change the email address on your Tymeslot account to %{new_email}.", new_email: new_email)}
+    #{dgettext("emails_account", "You asked to change the email address on your Tymeslot account to %{new_email}.", new_email: new_email)}
 
-    #{dgettext("emails", "To confirm this change, visit the link below:")}
+    #{dgettext("emails_account", "To confirm this change, visit the link below:")}
     #{verification_url}
 
-    #{dgettext("emails", "This link expires in 24 hours. Once confirmed, you'll sign in with your new email address.")}
+    #{dgettext("emails_account", "This link expires in 24 hours. Once confirmed, you'll sign in with your new email address.")}
 
-    #{dgettext("emails", "Didn't request this change? You can safely ignore this email - nothing will happen to your account.")}
+    #{dgettext("emails_account", "Didn't request this change? You can safely ignore this email - nothing will happen to your account.")}
     """
   end
 end

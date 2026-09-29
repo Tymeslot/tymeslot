@@ -242,8 +242,9 @@ defmodule TymeslotWeb.Live.MultilingualBookingTest do
 
       # Second navigation carries NO locale param, so the Dispatcher LiveView's own
       # `handle_params` locale sync (which only fires when `params["locale"]` is
-      # present) is a no-op — resolution falls entirely to LocaleHook reading the
-      # session. This is what isolates the hook's own acceptance check.
+      # present) is a no-op: resolution falls entirely to LocaleHook reading what
+      # the dead render resolved from the remembered choice. This is what isolates
+      # the hook's own acceptance check.
       conn = get(recycle(conn), "/#{username}")
       {:ok, view, _html} = live(conn)
 

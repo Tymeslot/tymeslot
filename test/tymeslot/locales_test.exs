@@ -52,6 +52,29 @@ defmodule Tymeslot.LocalesTest do
     end
   end
 
+  describe "guest_default_locale/1" do
+    setup do
+      Application.put_env(:tymeslot, :locales,
+        default: "en",
+        supported: [%{code: "en"}, %{code: "de"}, %{code: "fr"}]
+      )
+
+      Application.put_env(:tymeslot, :admin_default_locale, "de")
+      Application.put_env(:tymeslot, :booking_default_locale, "fr")
+      :ok
+    end
+
+    test "is the host's own language when it is supported" do
+      assert Locales.guest_default_locale(%{locale: "de"}) == "de"
+    end
+
+    test "falls back to the booking pages' language, not the dashboard's" do
+      for host <- [%{locale: nil}, %{locale: "kl"}, nil] do
+        assert Locales.guest_default_locale(host) == "fr"
+      end
+    end
+  end
+
   describe "admin_default_locale/0 and booking_default_locale/0" do
     setup do
       Application.put_env(:tymeslot, :locales,
@@ -230,6 +253,24 @@ defmodule Tymeslot.LocalesTest do
     test "defaults to false when the flag is absent" do
       Application.delete_env(:tymeslot, :pseudo_locale_enabled)
       refute Locales.pseudo_enabled?()
+    end
+  end
+
+  describe "resolve/2" do
+    doctest Tymeslot.Locales, only: [resolve: 2]
+
+    test "takes the first acceptable candidate in priority order" do
+      assert Locales.resolve(["fr", "de"], "en") == "fr"
+      assert Locales.resolve(["de", "fr"], "en") == "de"
+    end
+
+    test "skips absent and unsupported candidates instead of stopping at them" do
+      assert Locales.resolve([nil, "es", "", "it"], "en") == "it"
+    end
+
+    test "returns the fallback when nothing is acceptable" do
+      assert Locales.resolve([nil, "xx"], "uk") == "uk"
+      assert Locales.resolve([], "uk") == "uk"
     end
   end
 end

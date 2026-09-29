@@ -18,10 +18,12 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomExpiryTest do
 
   import Mox
 
+  alias Ecto.Changeset
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.CalDAVAccountStub
   alias Tymeslot.Workers.VideoSyncWorker
 
   @day 86_400
@@ -35,10 +37,20 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomExpiryTest do
     test = self()
 
     # Plays the organiser's Nextcloud server: every conversation deleted
-    # reaches the test.
-    stub(HTTPClientMock, :request, fn :delete, url, _body, _headers, _opts ->
-      send(test, {:talk_deleted, url})
-      {:ok, %Req.Response{status: 200, body: ocs(nil)}}
+    # reaches the test, and the CalDAV account, holding no calendar beyond
+    # the organiser's one, answers the search for a moved event.
+    stub(HTTPClientMock, :request, fn
+      :delete, url, _body, _headers, _opts ->
+        send(test, {:talk_deleted, url})
+        {:ok, %Req.Response{status: 200, body: ocs(nil)}}
+
+      method, url, body, _headers, _opts ->
+        CalDAVAccountStub.answer(%{calendars: ["/calendars/alice/work/"]}, method, url, body)
+    end)
+
+    # A Google account holding no calendar beyond its primary one.
+    stub(GoogleCalendarAPIMock, :list_calendars, fn _integration ->
+      {:ok, [%{"id" => "alice@example.com", "primary" => true}]}
     end)
 
     %{user: user, talk: insert_talk_integration(user, talk_host), talk_host: talk_host}
@@ -170,7 +182,11 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomExpiryTest do
     end
 
     test "deletes the conversation of an event Outlook no longer has", ctx do
-      room = ended_room(ctx, provider_event_id: "outlookid2")
+      room =
+        ctx
+        |> ended_room(provider_event_id: "outlookid2")
+        |> Changeset.change(event_ical_uid: "outlookid2-ical")
+        |> Repo.update!()
 
       test = self()
 
@@ -179,10 +195,58 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomExpiryTest do
         {:error, :not_found, "Event not found"}
       end)
 
+      expect(OutlookCalendarAPIMock, :find_events_by_ical_uid, fn _integration, ical_uid ->
+        send(test, {:searched, ical_uid})
+        {:ok, []}
+      end)
+
       assert :ok = expire(room)
       assert_received {:asked, "outlookid2"}
+      assert_received {:searched, "outlookid2-ical"}
 
       assert_talk_deleted(ctx, room)
+    end
+
+    # A 404 by id is also what an event moved to another calendar answers.
+    test "keeps and follows the conversation of an event moved to another calendar", ctx do
+      room =
+        ctx
+        |> ended_room(provider_event_id: "outlookid4")
+        |> Changeset.change(event_ical_uid: "outlookid4-ical")
+        |> Repo.update!()
+
+      new_start = DateTime.add(DateTime.utc_now(:second), 400 * @day, :second)
+
+      expect(OutlookCalendarAPIMock, :get_event, fn _integration, "outlookid4" ->
+        {:error, :not_found, "Event not found"}
+      end)
+
+      expect(OutlookCalendarAPIMock, :find_events_by_ical_uid, fn _integration,
+                                                                  "outlookid4-ical" ->
+        {:ok, [%{"id" => "outlookid4-moved", "iCalUId" => "outlookid4-ical"}]}
+      end)
+
+      expect(OutlookCalendarAPIMock, :get_event, fn _integration, "outlookid4-moved" ->
+        {:ok, outlook_event("outlookid4-moved", new_start)}
+      end)
+
+      assert :ok = expire(room)
+
+      refute_received {:talk_deleted, _url}
+      assert Repo.reload!(room).ends_at == DateTime.add(new_start, 1800, :second)
+    end
+
+    test "keeps the conversation when the event's iCalendar UID is unknown", ctx do
+      room = ended_room(ctx, provider_event_id: "outlookid5")
+
+      expect(OutlookCalendarAPIMock, :get_event, fn _integration, "outlookid5" ->
+        {:error, :not_found, "Event not found"}
+      end)
+
+      assert :ok = expire(room)
+
+      refute_received {:talk_deleted, _url}
+      assert Repo.get(EventVideoRoomSchema, room.id)
     end
 
     test "keeps the conversation when Outlook refuses the credentials", ctx do

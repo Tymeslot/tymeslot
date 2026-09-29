@@ -19,16 +19,54 @@ defmodule TymeslotWeb.Components.Icons.ProviderIconTest do
       refute html =~ "debug.png"
     end
 
-    test "branded providers still resolve to their per-size WebP logos" do
+    test "branded providers without a vector logo resolve to their per-size WebP logos" do
       html =
         render_component(&ProviderIcon.provider_icon/1,
-          provider: "caldav",
+          provider: "zimbra",
           type: "calendar",
           size: "mini"
         )
 
       # mini maps to the compact icon set.
-      assert html =~ ~s(src="/icons/providers/calendar/compact/caldav.webp")
+      assert html =~ ~s(src="/icons/providers/calendar/compact/zimbra.webp")
+    end
+
+    test "vector-logo providers resolve to one SVG at every size, aliases included" do
+      for {provider, type, file} <- [
+            {"caldav", "calendar", "calendar/caldav.svg"},
+            {"outlook_calendar", "calendar", "calendar/outlook.svg"},
+            {"teams", "video", "video/teams.svg"}
+          ],
+          size <- ~w(mini compact medium large) do
+        html =
+          render_component(&ProviderIcon.provider_icon/1,
+            provider: provider,
+            type: type,
+            size: size
+          )
+
+        assert html =~ ~s(src="/icons/providers/#{file}")
+      end
+    end
+
+    test "every vector logo the component points at exists on disk" do
+      providers = [
+        {"caldav", "calendar"},
+        {"radicale", "calendar"},
+        {"baikal", "calendar"},
+        {"outlook", "calendar"},
+        {"teams", "video"},
+        {"kmeet", "video"}
+      ]
+
+      missing =
+        Enum.reject(providers, fn {provider, type} ->
+          html = render_component(&ProviderIcon.provider_icon/1, provider: provider, type: type)
+          [_attr, src] = Regex.run(~r/src="([^"]+)"/, html)
+          File.exists?(Path.join(:code.priv_dir(:tymeslot), "static" <> src))
+        end)
+
+      assert missing == []
     end
 
     test "Nextcloud Talk shows the neutral video icon and is named in text, not by a logo" do

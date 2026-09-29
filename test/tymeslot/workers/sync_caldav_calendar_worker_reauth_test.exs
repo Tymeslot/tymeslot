@@ -86,11 +86,11 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
     end
 
     setup do
-      # Pre-set caldav_sync_tier to 1 so maybe_detect_tier/2 bypasses the
-      # tier-detection PROPFIND entirely and jumps straight into sync_tier1/2.
-      # The first request the worker makes is the sync-collection REPORT, which
-      # returns 401 — exercising the mid-sync flag_reauth_required/1 branch in
-      # do_sync_tier1/3 rather than the tier-detection branch.
+      # Pre-set caldav_sync_tier to 1 so tier detection is skipped and the
+      # sync goes straight into Tier 1. With no stored token, the first request
+      # the worker makes is the sync-token PROPFIND, which returns 401 —
+      # exercising the mid-sync reauth branch rather than the tier-detection
+      # one.
       integration =
         insert(:calendar_integration,
           provider: "caldav",
@@ -108,9 +108,9 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
     end
 
     test "flags needs_reauth and discards the job", %{integration: integration} do
-      # Every request the worker makes returns 401 — the sync REPORT that fires
-      # after tier detection was skipped hits the :unauthorized branch inside
-      # do_sync_tier1/3, which calls flag_reauth_required/1.
+      # Every request the worker makes returns 401 — the Tier 1 sync-token
+      # PROPFIND that fires after tier detection was skipped returns
+      # :unauthorized, and the worker flags the integration for reauth.
       assert_flags_reauth_on_401(integration)
     end
   end

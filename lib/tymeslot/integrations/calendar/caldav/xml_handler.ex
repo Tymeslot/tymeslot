@@ -1,6 +1,8 @@
 defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.ICalParser
+  alias Tymeslot.Integrations.Calendar.Utils.XmlEscape
 
   @moduledoc """
   Secure XML parsing and building for CalDAV operations using SweetXML.
@@ -56,6 +58,33 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
         #{prop_elements}
       </d:prop>
     </d:propfind>
+    """
+  end
+
+  @doc """
+  Builds a calendar-query REPORT request for the resources whose VEVENT
+  carries `uid` (RFC 4791, Section 7.8.6). `text-match` is a substring match,
+  so the caller keeps only the events whose UID is `uid` itself.
+  """
+  @spec build_uid_query(String.t()) :: String.t()
+  def build_uid_query(uid) do
+    """
+    <?xml version="1.0" encoding="UTF-8"?>
+    <c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+      <d:prop>
+        <d:getetag/>
+        <c:calendar-data/>
+      </d:prop>
+      <c:filter>
+        <c:comp-filter name="VCALENDAR">
+          <c:comp-filter name="VEVENT">
+            <c:prop-filter name="UID">
+              <c:text-match collation="i;octet">#{XmlEscape.escape(uid)}</c:text-match>
+            </c:prop-filter>
+          </c:comp-filter>
+        </c:comp-filter>
+      </c:filter>
+    </c:calendar-query>
     """
   end
 
@@ -150,7 +179,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
     {:ok, calendars}
   rescue
     e ->
-      Logger.error("XML parsing error", error: inspect(e))
+      Logger.error("XML parsing error", error: LogFormat.reason(e))
       {:error, "Failed to parse calendar discovery response"}
   end
 
@@ -202,7 +231,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
     {:ok, events}
   rescue
     e ->
-      Logger.error("XML parsing error", error: inspect(e))
+      Logger.error("XML parsing error", error: LogFormat.reason(e))
       {:error, "Failed to parse calendar query response"}
   end
 
@@ -229,7 +258,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
     end
   rescue
     e ->
-      Logger.error("XML parsing error in current-user-principal", error: inspect(e))
+      Logger.error("XML parsing error in current-user-principal", error: LogFormat.reason(e))
       {:error, "Failed to parse current-user-principal response"}
   end
 
@@ -256,7 +285,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
     end
   rescue
     e ->
-      Logger.error("XML parsing error in calendar-home-set", error: inspect(e))
+      Logger.error("XML parsing error in calendar-home-set", error: LogFormat.reason(e))
       {:error, "Failed to parse calendar-home-set response"}
   end
 

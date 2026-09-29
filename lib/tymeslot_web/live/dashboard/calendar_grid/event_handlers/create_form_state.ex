@@ -1,9 +1,15 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   @moduledoc "Event creation form-field handlers for the calendar grid (presentation layer)."
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Clock
+  alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Locales
+  alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
@@ -81,6 +87,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
 
   defp iso_date(at), do: at |> DateTime.to_date() |> Date.to_iso8601()
 
+  defp writable?(socket) do
+    Calendar.writable_integrations(socket.assigns.integrations) != []
+  end
+
   # Builds a `creating_event` map, filling defaults for any field the caller omits.
   defp base_creating(socket, overrides) do
     default_int_id = EditWorkflow.default_integration_id(socket)
@@ -95,11 +105,21 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
       end_minute: 0,
       all_day: false,
       title: "",
-      # With no calendar connected there is nothing a provider event could be
-      # written to, so the form opens straight in meeting mode.
-      mode: if(socket.assigns.integrations == [], do: :meeting, else: :event),
+      # With no calendar that can be written to there is nothing a provider
+      # event could go into, so the form opens straight in meeting mode. A
+      # subscription counts as no calendar here: it can be read and never
+      # written.
+      mode: if(writable?(socket), do: :event, else: :meeting),
       guest_name: "",
       guest_email: "",
+      # The note field stays hidden until the organiser asks for it.
+      note_open: false,
+      organizer_note: "",
+      guest_emails: [],
+      guest_email_input: "",
+      # Which language the guests are written to. Defaults to the host's own
+      # (they know whom they are inviting) and is theirs to change per meeting.
+      locale: Locales.guest_default_locale(Map.get(socket.assigns, :current_user)),
       integration_id: default_int_id,
       calendar_id: EditWorkflow.default_calendar_id(socket.assigns.integrations, default_int_id),
       attendees: [],
@@ -121,8 +141,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
       is_nil(creating) or mode not in ~w(event meeting) ->
         {:noreply, socket}
 
-      # Event mode needs a connected calendar to write to.
-      mode == "event" and socket.assigns.integrations == [] ->
+      # Event mode needs a calendar that can be written to.
+      mode == "event" and not writable?(socket) ->
         {:noreply, socket}
 
       true ->
@@ -153,6 +173,145 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
           {:error, _reason} ->
             {:noreply, socket}
         end
+    end
+  end
+
+  @spec handle_toggle_create_note(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_toggle_create_note(_params, socket) do
+    case socket.assigns.creating_event do
+      nil ->
+        {:noreply, socket}
+
+      # Removing the note discards what was typed, so a hidden field can never
+      # send a note the organiser no longer sees.
+      %{note_open: true} = creating ->
+        {:noreply,
+         assign(socket, :creating_event, %{creating | note_open: false, organizer_note: ""})}
+
+      creating ->
+        {:noreply, assign(socket, :creating_event, Map.put(creating, :note_open, true))}
+    end
+  end
+
+  @spec handle_update_create_note(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_update_create_note(%{"value" => note}, socket) do
+    case socket.assigns.creating_event do
+      nil ->
+        {:noreply, socket}
+
+      creating ->
+        case UniversalSanitizer.sanitize_and_validate(note,
+               mode: :plain_text,
+               max_length: MeetingSchema.organizer_note_max_length()
+             ) do
+          {:ok, sanitised} ->
+            {:noreply,
+             assign(socket, :creating_event, Map.put(creating, :organizer_note, sanitised))}
+
+          {:error, _reason} ->
+            {:noreply, socket}
+        end
+    end
+  end
+
+  @doc """
+  Adds one more guest to an ad-hoc meeting.
+
+  Capped at `Guests.max_guests/0`, the same number a booker may bring. An
+  invalid address, the main guest's own and repeats are refused here with a
+  flash saying why, rather than silently dropped later.
+  """
+  @spec handle_add_create_guest(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_add_create_guest(%{"email" => raw_email}, socket) do
+    email = raw_email |> String.trim() |> String.downcase()
+
+    case socket.assigns.creating_event do
+      %{} = creating ->
+        case check_extra_guest(creating, email) do
+          :ok ->
+            {:noreply,
+             assign(socket, :creating_event, %{
+               creating
+               | guest_emails: creating.guest_emails ++ [email],
+                 guest_email_input: ""
+             })}
+
+          {:error, message} ->
+            send(self(), {:flash, {:error, message}})
+            {:noreply, socket}
+        end
+
+      nil ->
+        {:noreply, socket}
+    end
+  end
+
+  @spec handle_remove_create_guest(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_remove_create_guest(%{"email" => email}, socket) do
+    case socket.assigns.creating_event do
+      %{} = creating ->
+        put_field(socket, :guest_emails, List.delete(creating.guest_emails, email))
+
+      nil ->
+        {:noreply, socket}
+    end
+  end
+
+  @spec handle_update_create_guest_input(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_update_create_guest_input(%{"email" => value}, socket),
+    do: put_field(socket, :guest_email_input, value)
+
+  @spec handle_update_create_locale(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_update_create_locale(%{"locale" => locale}, socket) do
+    case Locales.acceptable(locale) do
+      nil -> {:noreply, socket}
+      code -> put_field(socket, :locale, code)
+    end
+  end
+
+  @doc """
+  Whether `email` (already trimmed and downcased) can join the meeting's extra
+  guests, or the reason it cannot. Save runs the same check over an address
+  still sitting in the input, so the two cannot disagree.
+  """
+  @spec check_extra_guest(map(), String.t()) :: :ok | {:error, String.t()}
+  def check_extra_guest(creating, email) do
+    cond do
+      not Shared.valid_email?(email) ->
+        {:error,
+         dgettext("dashboard_calendar_events", "%{email} is not a valid email address.",
+           email: email
+         )}
+
+      email == creating.guest_email |> String.trim() |> String.downcase() ->
+        {:error,
+         dgettext("dashboard_calendar_events", "%{email} is already the main guest.",
+           email: email
+         )}
+
+      email in creating.guest_emails ->
+        {:error,
+         dgettext("dashboard_calendar_events", "%{email} is already invited.", email: email)}
+
+      length(creating.guest_emails) >= Guests.max_guests() ->
+        {:error,
+         dgettext("dashboard_calendar_events", "No more guests can be added to this meeting.")}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp put_field(socket, key, value) do
+    case socket.assigns.creating_event do
+      nil -> {:noreply, socket}
+      creating -> {:noreply, assign(socket, :creating_event, Map.put(creating, key, value))}
     end
   end
 

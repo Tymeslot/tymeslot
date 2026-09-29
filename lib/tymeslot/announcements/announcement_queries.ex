@@ -9,6 +9,7 @@ defmodule Tymeslot.Announcements.AnnouncementQueries do
   require Logger
 
   alias Tymeslot.Announcements.UserSeenAnnouncementSchema
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Repo
 
   @spec seen_keys_for(integer()) :: [String.t()]
@@ -54,7 +55,7 @@ defmodule Tymeslot.Announcements.AnnouncementQueries do
         Logger.warning("Failed to mark announcement seen; ignoring.",
           user_id: user_id,
           announcement_key: announcement_key,
-          errors: inspect(changeset.errors)
+          errors: LogFormat.reason(changeset.errors)
         )
 
         :ok

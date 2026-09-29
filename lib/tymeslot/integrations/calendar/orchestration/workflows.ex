@@ -9,6 +9,8 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
   """
 
   require Logger
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.Discovery
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.CalendarManagement
@@ -32,7 +34,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
       user_id: user_id
     )
 
-    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+    Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
       case CalendarManagement.get_calendar_integration(integration_id, user_id) do
         {:ok, integration} ->
           case Discovery.discover_calendars_for_integration(integration) do
@@ -59,7 +61,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
                 {:error, reason} ->
                   Logger.error("Failed to persist calendar list",
                     integration_id: integration_id,
-                    error: inspect(reason)
+                    error: LogFormat.reason(reason)
                   )
 
                   send(
@@ -72,7 +74,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
             {:error, reason} ->
               Logger.error("Failed to discover calendars",
                 integration_id: integration_id,
-                error: inspect(reason)
+                error: LogFormat.reason(reason)
               )
 
               send(
@@ -85,7 +87,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
         {:error, reason} ->
           Logger.error("Failed to find integration for calendar refresh",
             integration_id: integration_id,
-            error: inspect(reason)
+            error: LogFormat.reason(reason)
           )
 
           send(parent, {:calendar_list_refreshed, component_id, integration_id, []})

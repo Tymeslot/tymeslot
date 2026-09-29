@@ -231,6 +231,10 @@ defmodule Tymeslot.Integrations.Calendar do
   @spec writable_calendars([CalendarEntry.t()] | nil) :: [CalendarEntry.t()]
   defdelegate writable_calendars(calendar_list), to: Selection
 
+  @doc "Keeps the integrations that can take a new event. See `Selection.writable_integrations/1`."
+  @spec writable_integrations([map()]) :: [map()]
+  defdelegate writable_integrations(integrations), to: Selection
+
   @doc """
   Drops cached events from calendars the user has deselected. See
   `Tymeslot.Integrations.Calendar.Selection.visible_events/2`.

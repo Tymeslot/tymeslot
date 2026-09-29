@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingLabels do
         dgettext("booking", "Request meeting")
 
       is_rescheduling ->
-        dgettext("booking", "reschedule_meeting")
+        dgettext("booking", "Reschedule Meeting")
 
       true ->
         ungated_label

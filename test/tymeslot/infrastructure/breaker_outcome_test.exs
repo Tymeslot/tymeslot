@@ -161,4 +161,32 @@ defmodule Tymeslot.Infrastructure.BreakerOutcomeTest do
       assert BreakerOutcome.error_tokens(<<0xFF, 0xFE>>) == []
     end
   end
+
+  describe "failure_summary/1" do
+    test "names a transport reason" do
+      assert BreakerOutcome.failure_summary({:error, :econnrefused}) == "econnrefused"
+      assert BreakerOutcome.failure_summary({:error, :timeout, "gave up"}) == "timeout"
+    end
+
+    test "names an HTTP status and never the response body" do
+      assert BreakerOutcome.failure_summary({:error, {:http_error, 503, "token=abc"}}) ==
+               "HTTP 503"
+
+      assert BreakerOutcome.failure_summary({:error, {:http_error, 429}}) == "HTTP 429"
+    end
+
+    test "names an exception by module and its atom reason, never its message" do
+      error = %Req.TransportError{reason: :nxdomain}
+
+      assert BreakerOutcome.failure_summary({:error, error}) == "Req.TransportError (nxdomain)"
+    end
+
+    test "tags an explicit provider error, but drops free text that may carry credentials" do
+      assert BreakerOutcome.failure_summary({:provider_error, :rate_limited}) ==
+               "provider error: rate_limited"
+
+      assert BreakerOutcome.failure_summary({:provider_error, "Bearer sk_live_abc failed"}) ==
+               "provider error: unclassified"
+    end
+  end
 end

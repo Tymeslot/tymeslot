@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Navigation do
   require Logger
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.MiniMonth
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
@@ -45,7 +46,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Navigation do
           :ok
 
         {:error, reason} ->
-          Logger.warning("Failed to save view preference", error: inspect(reason))
+          Logger.warning("Failed to save view preference", error: LogFormat.reason(reason))
       end
     end
 

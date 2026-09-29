@@ -235,9 +235,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   """
   @spec caldav_build_client_configs(map()) :: [map()]
   def caldav_build_client_configs(integration) do
-    integration
-    |> caldav_selected_paths()
-    |> Enum.map(&caldav_path_config(integration, &1))
+    writable_paths = caldav_writable_paths(integration)
+    Enum.map(writable_paths, &caldav_path_config(integration, &1, writable_paths))
   end
 
   @doc """
@@ -252,13 +251,17 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
         nil
 
       path ->
-        integration
-        |> caldav_path_config(path)
-        |> Map.put(:writable_calendar_paths, caldav_selected_paths(integration))
+        caldav_path_config(integration, path, caldav_writable_paths(integration))
     end
   end
 
-  defp caldav_selected_paths(integration) do
+  @doc """
+  The collections of a CalDAV-family integration a write may be aimed at:
+  its selected calendars that are not read-only, or its stored paths when it
+  predates calendar selection.
+  """
+  @spec caldav_writable_paths(map()) :: [String.t()]
+  def caldav_writable_paths(integration) do
     if integration.calendar_list && integration.calendar_list != [] do
       integration.calendar_list
       |> Selection.writable_calendars()
@@ -269,13 +272,19 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
     end
   end
 
-  defp caldav_path_config(integration, path) do
+  # Every client of an integration carries the same writable paths, the booking
+  # client and the per-calendar read clients alike. `EventOperations` merges
+  # the two sets and de-duplicates them by value, so a booking client that
+  # alone knew its writable paths would no longer match the read client of the
+  # same collection, and that collection would be visited twice.
+  defp caldav_path_config(integration, path, writable_paths) do
     %{
       base_url: integration.base_url,
       username: integration.username,
       password: integration.password,
       calendar_path: path,
       calendar_paths: [path],
+      writable_calendar_paths: writable_paths,
       verify_ssl: true
     }
   end

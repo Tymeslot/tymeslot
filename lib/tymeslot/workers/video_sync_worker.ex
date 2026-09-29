@@ -25,10 +25,8 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   `Tymeslot.CalendarGrid.EventVideoRooms` and enqueued with
   `enqueue_event_room/2`; a delete removes the record once the room is gone.
   Such a room's integration is resolved as a meeting's is, from its recorded
-  provider when the link is gone. An `"expire"` job asks the calendar again
-  whether the event is really over before deleting
-  (`Tymeslot.CalendarGrid.check_event_video_room_expired/1`), since the event
-  may have moved in between.
+  provider when the link is gone. An `"expire"` or `"orphan"` job first asks
+  the calendar whether the event is really over, or gone: it may have moved.
 
   A room no record holds at all is deleted by its provider id through
   `enqueue_room_delete/3`: the Zoom meeting a calendar grid event's video
@@ -58,6 +56,8 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
     priority: 2
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Integrations.Video
@@ -66,6 +66,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Workers.SnoozePolicy
   alias Tymeslot.Workers.VideoRoom.ErrorPolicy
+  alias Tymeslot.Workers.VideoSync.Discards
 
   require Logger
 
@@ -98,12 +99,13 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   id of its `Tymeslot.CalendarGrid.EventVideoRoomSchema` record.
 
   `action` is `"update"` (the event moved), `"delete"` (the event was
-  deleted) or `"expire"` (the room seems to have outlived its event, which the
-  job confirms before deleting it).
+  deleted), `"expire"` (the room seems to have outlived its event) or
+  `"orphan"` (the event seems deleted in a calendar client); the job confirms
+  either before deleting the room.
   """
   @spec enqueue_event_room(pos_integer(), String.t()) :: {:ok, atom()} | {:error, term()}
   def enqueue_event_room(room_id, action)
-      when is_integer(room_id) and action in ["update", "delete", "expire"],
+      when is_integer(room_id) and action in ["update", "delete", "expire", "orphan"],
       do: insert_job(%{"event_room_id" => room_id, "action" => action}, [:event_room_id, :action])
 
   @doc """
@@ -204,6 +206,11 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
     end
   end
 
+  @behaviour ExpectedJobOutcome
+
+  @impl ExpectedJobOutcome
+  defdelegate expected_outcome?(reason), to: Discards, as: :expected?
+
   @impl Oban.Worker
   def backoff(%Oban.Job{attempt: attempt}) do
     # Progressive backoff: 30s, 60s, 120s, 180s, then 180s.
@@ -239,7 +246,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
           calendar_event_video_room_id: room_id
         )
 
-        {:discard, "Calendar event video room not found"}
+        Discards.discard(:room_gone)
     end
   end
 
@@ -277,7 +284,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
           room_ref: Redactor.fingerprint(room_id)
         )
 
-        {:discard, "Video integration not found"}
+        Discards.discard(:integration_gone)
     end
   end
 
@@ -290,7 +297,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
 
       {:error, :not_found} ->
         Logger.info("Meeting gone before video sync, discarding", meeting_id: meeting_id)
-        {:discard, "Meeting not found"}
+        {:discard, ErrorPolicy.discard_reason(:meeting_not_found)}
     end
   end
 
@@ -374,21 +381,22 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
         snooze
 
       :exhausted ->
-        discard_unreachable(target, "release", reason)
+        Discards.unreachable(target, "release", reason)
     end
   end
 
-  defp dispatch_event_room("expire", room, executions) do
-    case CalendarGrid.confirm_event_video_room_expired(room) do
-      :expired ->
-        dispatch_event_room("delete", room, executions)
+  defp dispatch_event_room(action, room, executions) when action in ["expire", "orphan"] do
+    confirmed =
+      if action == "expire",
+        do: CalendarGrid.confirm_event_video_room_expired(room),
+        else: CalendarGrid.confirm_event_video_room_gone(room)
 
-      :kept ->
-        Logger.info("Calendar event still uses its video room, keeping it",
-          calendar_event_video_room_id: room.id
-        )
-
-        :ok
+    if confirmed == :kept do
+      Logger.info("Calendar event still uses its video room, keeping it",
+        calendar_event_video_room_id: room.id
+      )
+    else
+      dispatch_event_room("delete", room, executions)
     end
   end
 
@@ -417,15 +425,15 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
           reason: reason
         )
 
-        {:discard, "No video integration can reach the provider room"}
+        Discards.discard(:unreachable)
     end
   end
 
   # Clause order matters: a meeting with no room at all is an ordinary no-op and
   # stays silent, whereas a meeting that holds a room nothing can reach is a
   # problem worth surfacing. Testing for the room first keeps the two apart.
-  defp dispatch(_action, %{video_room_id: nil}, _executions), do: discard_no_room()
-  defp dispatch(_action, %{organizer_user_id: nil}, _executions), do: discard_no_room()
+  defp dispatch(_action, %{video_room_id: nil}, _executions), do: Discards.discard(:no_room)
+  defp dispatch(_action, %{organizer_user_id: nil}, _executions), do: Discards.discard(:no_room)
 
   # A room that is the booking's own calendar event moves and goes with that
   # event, through calendar sync. Updating it here would race the calendar's
@@ -444,7 +452,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
         perform_action(action, meeting_target(meeting), integration_id, executions)
 
       {:error, reason} ->
-        discard_unreachable(meeting_target(meeting), action, reason)
+        Discards.unreachable(meeting_target(meeting), action, reason)
     end
   end
 
@@ -485,33 +493,6 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   defp room_changes(%{kind: :event_room, record: room}),
     do: [start_time: room.lobby_opens_at, end_time: room.ends_at]
 
-  defp discard_no_room, do: {:discard, "No provider video room to sync"}
-
-  # The meeting holds a live provider room but nothing can authenticate against
-  # it: the integration was disconnected and never replaced, or the row predates
-  # `meetings.video_provider`. Retrying cannot help — only the user reconnecting
-  # can — so the job is discarded, but loudly. A silent :ok here is exactly what
-  # let orphaned Zoom meetings accumulate unnoticed. A released room reaches
-  # this only once it has waited out its snoozes.
-  #
-  # Only a fingerprint of the room id goes into the line: the id is the join
-  # link for every link-based provider, and `meeting_id` already leads to the
-  # row that holds the real one (or, for a release, to the meeting that did).
-  defp discard_unreachable(target, action, reason) do
-    Logger.warning(
-      "Meeting holds a provider video room but no video integration can reach it",
-      target.log ++
-        [
-          action: action,
-          provider: target.provider,
-          room_ref: Redactor.fingerprint(target.room_id),
-          reason: reason
-        ]
-    )
-
-    {:discard, "No video integration can reach the provider room"}
-  end
-
   # The provider treats a missing remote meeting as success, so :ok and the
   # idempotent not-found cases both arrive here as :ok. Anything else is a
   # genuine failure worth retrying via Oban's backoff.
@@ -545,7 +526,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
       target.log ++ [action: action]
     )
 
-    {:discard, "Video provider scope insufficient — reconnect required"}
+    Discards.discard(:scope_insufficient)
   end
 
   # The provider refused the stored credentials and has flagged the integration
@@ -558,7 +539,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
       target.log ++ [action: action]
     )
 
-    {:discard, "Video provider refused the stored credentials: reconnect required"}
+    Discards.discard(:credentials_refused)
   end
 
   # The provider refused the change for a reason that repeats on every attempt,
@@ -572,7 +553,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
        ) do
     Logger.error(
       "Video provider refused the change for good, discarding job",
-      target.log ++ [action: action, reason: inspect(reason)]
+      target.log ++ [action: action, reason: LogFormat.reason(reason)]
     )
 
     {:error, categorized} = ErrorPolicy.categorize(reason)
@@ -598,7 +579,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   defp handle_result({:error, reason}, action, target, _executions) do
     Logger.warning(
       "Provider video sync failed, will retry",
-      target.log ++ [action: action, reason: inspect(reason)]
+      target.log ++ [action: action, reason: LogFormat.reason(reason)]
     )
 
     {:error, reason}
@@ -639,7 +620,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
         # harmlessly.
         Logger.warning("Failed to clear video room marker after provider delete",
           meeting_id: meeting.id,
-          errors: inspect(changeset.errors)
+          errors: LogFormat.reason(changeset.errors)
         )
 
         :ok
