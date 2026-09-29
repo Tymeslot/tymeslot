@@ -20,6 +20,7 @@ defmodule Tymeslot.Meetings do
     Guests,
     Listing,
     MeetingAccess,
+    MeetingAnalyticsQueries,
     MeetingCalendarQueries,
     MeetingListQueries,
     MeetingQueries,
@@ -518,23 +519,24 @@ defmodule Tymeslot.Meetings do
 
   @doc "Counts all bookings (any status) for an organizer in the window; analytics volume primitive."
   @spec count_bookings(integer(), DateTime.t(), DateTime.t()) :: non_neg_integer()
-  defdelegate count_bookings(organizer_user_id, from, to), to: MeetingQueries
+  defdelegate count_bookings(organizer_user_id, from, to), to: MeetingAnalyticsQueries
 
   @doc "Booking counts grouped by `utm_source` (set rows only); primitive for `Analytics.attribution_table/3`."
   @spec bookings_by_utm_source(integer(), DateTime.t(), DateTime.t()) :: [
           %{utm_source: String.t(), bookings: non_neg_integer()}
         ]
   defdelegate bookings_by_utm_source(organizer_user_id, from, to),
-    to: MeetingQueries,
+    to: MeetingAnalyticsQueries,
     as: :count_by_utm_source
 
   @doc "Counts distinct converting visitors (bookings carrying a `visitor_hash`) in the window."
   @spec count_converting_visitors(integer(), DateTime.t(), DateTime.t()) :: non_neg_integer()
-  defdelegate count_converting_visitors(organizer_user_id, from, to), to: MeetingQueries
+  defdelegate count_converting_visitors(organizer_user_id, from, to), to: MeetingAnalyticsQueries
 
   @doc "Distinct converting-visitor counts grouped by `utm_source`; primitive for `Analytics.attribution_table/3`."
   @spec converting_visitors_by_utm_source(integer(), DateTime.t(), DateTime.t()) :: [
           %{utm_source: String.t(), converting_visitors: non_neg_integer()}
         ]
-  defdelegate converting_visitors_by_utm_source(organizer_user_id, from, to), to: MeetingQueries
+  defdelegate converting_visitors_by_utm_source(organizer_user_id, from, to),
+    to: MeetingAnalyticsQueries
 end
