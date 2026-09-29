@@ -689,11 +689,6 @@ msgstr "Rappel"
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
-msgid "Reminder: Our meeting is %{time_until}"
-msgstr "Rappel : Notre réunion est dans %{time_until}"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
 msgid "Reminder: the meeting with %{name} is in %{time_until}"
 msgstr "Rappel : la réunion avec %{name} commence dans %{time_until}"
 
@@ -746,11 +741,6 @@ msgstr "Rendez-vous %{time_until} !"
 #, elixir-autogen, elixir-format
 msgid "Start Meeting"
 msgstr "Démarrer la réunion"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Starting %{time_until}"
-msgstr "Commence dans %{time_until}"
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
@@ -1070,3 +1060,8 @@ msgstr "%{name} a mis à jour toutes les occurrences d'un événement récurrent
 #, elixir-autogen, elixir-format
 msgid "%{name} has updated this and every following occurrence of a repeating event you're attending."
 msgstr "%{name} a mis à jour cette occurrence et toutes les suivantes d'un événement récurrent auquel vous participez."
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder: Our meeting is in %{time_until}"
+msgstr "Rappel : Notre réunion est dans %{time_until}"
