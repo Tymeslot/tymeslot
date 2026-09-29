@@ -159,7 +159,7 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
 #, elixir-autogen, elixir-format
 msgid "Between %{min} and %{max} participants per slot."
-msgstr "Between %{min} and %{max} participants per slot."
+msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
