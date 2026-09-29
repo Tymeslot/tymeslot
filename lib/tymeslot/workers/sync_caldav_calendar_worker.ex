@@ -69,13 +69,14 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   @behaviour ExpectedJobOutcome
 
   # The integration is gone, or only its owner can fix it by reconnecting.
-  # A server error is retried by the next sync. The deletion circuit breaker
+  # A server error or a server that never answered is retried by the next sync. The deletion circuit breaker
   # refusing a sync is recorded.
   @integration_gone "Integration not found"
   @credentials_rejected "CalDAV server rejected credentials — reauthentication required"
   @calendar_gone "CalDAV booking calendar not found — user action required"
   @no_calendar "CalDAV integration has no calendar selected — user action required"
   @server_error "CalDAV server returned a server error; the next scheduled sync will retry"
+  @server_unreachable "CalDAV server did not respond; the next scheduled sync will retry"
 
   @impl ExpectedJobOutcome
   def expected_outcome?(reason),
@@ -85,7 +86,8 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         @credentials_rejected,
         @calendar_gone,
         @no_calendar,
-        @server_error
+        @server_error,
+        @server_unreachable
       ] or reason == ReauthHandling.discard_reason()
 
   @impl Oban.Worker
@@ -212,7 +214,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
   # The remote never answered: a read that timed out, a connection that failed,
   # or a server that took the connection and then went quiet. Same shape as the
-  # 5xx above — the remote's condition, not the request's — and `Base` has
+  # 5xx above (the remote's condition, not the request's), and `Base` has
   # already retried the transport once with backoff before this. What Oban's
   # remaining attempts add is the same request against the same unreachable
   # host inside a single minute, ending in a permanent-failure alert about an
@@ -222,7 +224,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # what the health check is for.
   defp handle_sync_result({:error, reason}, _integration)
        when reason in [:timeout, :server_unresponsive, :network_error] do
-    {:discard, "CalDAV server did not respond; the next scheduled sync will retry"}
+    {:discard, @server_unreachable}
   end
 
   # A 4xx there is no talking the request out of (415, 400…, and the modelled

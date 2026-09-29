@@ -188,7 +188,8 @@ defmodule Tymeslot.Workers.ExpectedJobOutcomesTest do
        "CalDAV server rejected credentials — reauthentication required",
        "CalDAV booking calendar not found — user action required",
        "CalDAV integration has no calendar selected — user action required",
-       "CalDAV server returned a server error; the next scheduled sync will retry"
+       "CalDAV server returned a server error; the next scheduled sync will retry",
+       "CalDAV server did not respond; the next scheduled sync will retry"
      ],
      recorded: ["CalDAV deletion circuit breaker refused a suspicious bulk deletion"]},
     {Workers.SyncExchangeCalendarWorker,
