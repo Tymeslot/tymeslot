@@ -14,7 +14,7 @@ msgstr ""
 #: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} asked to move their confirmed booking to this time, and the request wasn't answered before its deadline. The previous time had already been given up for it, so the booking has been cancelled. %{name} has been told and can book a new time."
-msgstr ""
+msgstr "Prośba o przeniesienie potwierdzonej rezerwacji na ten termin nie doczekała się odpowiedzi w wyznaczonym czasie (uczestnik: %{name}). Poprzedni termin został już na jej potrzeby zwolniony, więc rezerwacja została odwołana. %{name} ma już tę informację i może zarezerwować nowy termin."
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
@@ -34,7 +34,7 @@ msgstr "%{name} prosi o rezerwację: %{type}."
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} would like to move their confirmed booking to a new time."
-msgstr ""
+msgstr "%{name} prosi o przeniesienie potwierdzonej rezerwacji na nowy termin."
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
@@ -44,7 +44,7 @@ msgstr "%{organizer} potwierdza każdą rezerwację osobiście, więc to jeszcze
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "%{organizer} confirms each change personally, so the new time isn't final yet."
-msgstr ""
+msgstr "%{organizer} potwierdza każdą zmianę osobiście, więc nowy termin nie jest jeszcze ostateczny."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
@@ -54,12 +54,12 @@ msgstr "Na twoją prośbę nie odpowiedziano na czas (organizator: %{organizer})
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "%{organizer} didn't get to your reschedule request in time. Your previous time had already been given up for it, so your booking has been cancelled. The attached calendar file removes it from your calendar."
-msgstr ""
+msgstr "Na twoją prośbę o zmianę terminu nie odpowiedziano na czas (organizator: %{organizer}). Poprzedni termin został już na jej potrzeby zwolniony, więc rezerwacja została odwołana. Załączony plik kalendarza usunie ją z twojego kalendarza."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "%{organizer} wasn't able to accept the new time. Your previous time had already been given up for it, so your booking has been cancelled. The attached calendar file removes it from your calendar."
-msgstr ""
+msgstr "%{organizer} nie może przyjąć nowego terminu. Poprzedni termin został już na potrzeby tej prośby zwolniony, więc rezerwacja została odwołana. Załączony plik kalendarza usunie ją z twojego kalendarza."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
@@ -206,7 +206,7 @@ msgstr "Cześć, %{name},"
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name}, %{organizer} can't make the new time."
-msgstr ""
+msgstr "Cześć, %{name}, %{organizer} nie może w nowym terminie."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
@@ -221,7 +221,7 @@ msgstr "Cześć, %{name}, %{organizer} potwierdza każdą rezerwację osobiście
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name}, %{organizer} confirms each change personally, so the new time isn't final yet."
-msgstr ""
+msgstr "Cześć, %{name}, %{organizer} potwierdza każdą zmianę osobiście, więc nowy termin nie jest jeszcze ostateczny."
 
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
@@ -246,7 +246,7 @@ msgstr "Cześć, %{name}, przekazaliśmy twoją prośbę – teraz decyduje %{or
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name}, your reschedule request wasn't answered in time."
-msgstr ""
+msgstr "Cześć, %{name}, prośba o zmianę terminu nie doczekała się odpowiedzi na czas."
 
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
@@ -330,7 +330,7 @@ msgstr "Wybierz inny termin:"
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "Previously scheduled for %{time}."
-msgstr ""
+msgstr "Poprzedni termin: %{time}."
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
@@ -348,7 +348,7 @@ msgstr "Przypomnienie – prośba o rezerwację: %{name} – %{date}"
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
 msgid "Reminder - reschedule request: %{name} - %{date}"
-msgstr ""
+msgstr "Przypomnienie – prośba o zmianę terminu: %{name} – %{date}"
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
@@ -376,7 +376,7 @@ msgstr "Prośba wysłana: %{title} – %{date}"
 #: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "Requested New Time"
-msgstr ""
+msgstr "Proponowany nowy termin"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
@@ -393,7 +393,7 @@ msgstr "Zmień termin"
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule Declined"
-msgstr ""
+msgstr "Zmiana terminu odrzucona"
 
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
@@ -404,12 +404,12 @@ msgstr "Prośba o zmianę terminu"
 #: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule Request Expired"
-msgstr ""
+msgstr "Prośba o zmianę terminu wygasła"
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule Request Received"
-msgstr ""
+msgstr "Prośba o zmianę terminu wysłana"
 
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
@@ -419,42 +419,42 @@ msgstr "Prośba o zmianę terminu: %{title} – %{date}"
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule declined, booking cancelled: %{title} - %{date}"
-msgstr ""
+msgstr "Zmiana terminu odrzucona, rezerwacja odwołana: %{title} – %{date}"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule request"
-msgstr ""
+msgstr "Prośba o zmianę terminu"
 
 #: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule request expired, booking cancelled: %{name} - %{date}"
-msgstr ""
+msgstr "Prośba o zmianę terminu wygasła, rezerwacja odwołana: %{name} – %{date}"
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule request expired, booking cancelled: %{title} - %{date}"
-msgstr ""
+msgstr "Prośba o zmianę terminu wygasła, rezerwacja odwołana: %{title} – %{date}"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule request still waiting"
-msgstr ""
+msgstr "Prośba o zmianę terminu wciąż czeka"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule request: %{name} - %{date}"
-msgstr ""
+msgstr "Prośba o zmianę terminu: %{name} – %{date}"
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule requested"
-msgstr ""
+msgstr "Prośba o zmianę terminu wysłana"
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule requested: %{title} - %{date}"
-msgstr ""
+msgstr "Prośba o zmianę terminu wysłana: %{title} – %{date}"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
@@ -469,7 +469,7 @@ msgstr "Dziękuję za wyrozumiałość i elastyczność."
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "The new time is held for you in the meantime, so nobody else can take it. You'll get an email with the updated calendar entry as soon as %{organizer} accepts."
-msgstr ""
+msgstr "Nowy termin jest w tym czasie zablokowany dla ciebie, więc nikt inny go nie zajmie. E-mail z zaktualizowanym wpisem w kalendarzu otrzymasz, gdy tylko %{organizer} zaakceptuje zmianę."
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
@@ -526,7 +526,7 @@ msgstr "Wycofaj prośbę:"
 #: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "Your booking with %{name} has been cancelled."
-msgstr ""
+msgstr "Rezerwacja została odwołana (uczestnik: %{name})."
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format

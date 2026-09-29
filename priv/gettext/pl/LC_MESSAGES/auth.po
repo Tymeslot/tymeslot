@@ -839,101 +839,101 @@ msgid "If an account exists with this email address, password reset instructions
 msgstr "Jeśli konto z tym adresem e-mail istnieje, instrukcja resetowania hasła została wysłana."
 
 #: lib/tymeslot_web/controllers/auth/session_controller.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Confirm your email address"
-msgstr "Potwierdź nowe hasło"
+msgstr "Potwierdź adres e-mail"
 
 #: lib/tymeslot_web/controllers/auth/session_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Press the button below to finish verifying your email address."
-msgstr ""
+msgstr "Kliknij przycisk poniżej, aby dokończyć potwierdzanie adresu e-mail."
 
 #: lib/tymeslot_web/controllers/auth/session_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Verify email address"
-msgstr ""
+msgstr "Potwierdź adres e-mail"
 
 #: lib/tymeslot_web/controllers/email_change_controller.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Confirm your new email address"
-msgstr "Potwierdź nowe hasło"
+msgstr "Potwierdź nowy adres e-mail"
 
 #: lib/tymeslot_web/controllers/email_change_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Press the button below to switch your account to this email address."
-msgstr ""
+msgstr "Kliknij przycisk poniżej, aby przypisać do konta ten adres e-mail."
 
 #: lib/tymeslot_web/controllers/email_change_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm email change"
-msgstr ""
+msgstr "Potwierdź zmianę adresu e-mail"
 
 #: lib/tymeslot/security/field_validators/password_validator.ex
 #, elixir-autogen, elixir-format
 msgid "Password must be at most %{count} bytes long. Accented letters and emoji count as more than one byte."
-msgstr ""
+msgstr "Maksymalna długość hasła w bajtach: %{count}. Litery ze znakami diakrytycznymi (np. ą, ę) i emoji zajmują więcej niż jeden bajt."
 
 #: lib/tymeslot_web/live/auth_live/verification_events.ex
 #, elixir-autogen, elixir-format
 msgid "Sign in to receive a new verification link."
-msgstr ""
+msgstr "Zaloguj się, aby otrzymać nowy link potwierdzający."
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Please verify your email address before signing in. We could not send a new verification link; please try again later."
-msgstr ""
+msgstr "Przed zalogowaniem potwierdź adres e-mail. Nie udało się wysłać nowego linku potwierdzającego; spróbuj ponownie później."
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Please verify your email address before signing in. We've sent you a new verification link."
-msgstr "Potwierdź swój adres e-mail przed zalogowaniem."
+msgstr "Przed zalogowaniem potwierdź adres e-mail. Wysłaliśmy ci nowy link potwierdzający."
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Your sign-up session has expired. Please sign in again."
-msgstr ""
+msgstr "Sesja rejestracji wygasła. Zaloguj się ponownie."
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid email or password. If you signed up recently, check your inbox for the verification link."
-msgstr ""
+msgstr "Nieprawidłowy adres e-mail lub hasło. Jeśli konto zostało założone niedawno, poszukaj linku potwierdzającego w skrzynce odbiorczej."
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Check your email: we've sent a link to finish signing up with %{provider}."
-msgstr ""
+msgstr "Sprawdź skrzynkę e-mail: wysłaliśmy link do dokończenia rejestracji przez konto %{provider}."
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Create my account"
 msgstr "Załóż konto"
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Finish signing up"
-msgstr ""
+msgstr "Dokończ rejestrację"
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Press the button below to confirm your email address and create your account."
-msgstr ""
+msgstr "Kliknij przycisk poniżej, aby potwierdzić adres e-mail i założyć konto."
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "This link is no longer valid. Please sign in to continue."
-msgstr ""
+msgstr "Ten link jest już nieważny. Zaloguj się, żeby kontynuować."
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "We couldn't send the link to finish signing up just now. Please try again later."
-msgstr ""
+msgstr "Nie udało się teraz wysłać linku do dokończenia rejestracji. Spróbuj ponownie później."
 
 #: lib/tymeslot/auth/validation.ex
 #, elixir-autogen, elixir-format
 msgid "Password is too long"
-msgstr ""
+msgstr "Hasło jest za długie"
 
 #: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "An account with this email address already exists. Sign in with your password or with the service you originally signed up with. If you have forgotten your password, you can reset it from the sign-in page."
-msgstr ""
+msgstr "Konto z tym adresem e-mail już istnieje. Zaloguj się hasłem albo przez usługę, której użyto przy rejestracji. Jeśli nie pamiętasz hasła, możesz je zresetować na stronie logowania."

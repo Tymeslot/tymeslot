@@ -82,12 +82,12 @@ msgstr "Data zmiany:"
 #: lib/tymeslot/emails/templates/social_signup_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm Email & Finish Signing Up"
-msgstr ""
+msgstr "Potwierdź e-mail i dokończ rejestrację"
 
 #: lib/tymeslot/emails/templates/social_signup_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm Email & Finish Signing Up:"
-msgstr ""
+msgstr "Potwierdź e-mail i dokończ rejestrację:"
 
 #: lib/tymeslot/emails/templates/email_verification.ex
 #, elixir-autogen, elixir-format
@@ -107,12 +107,12 @@ msgstr "Potwierdź nowy adres e-mail na koncie Tymeslot."
 #: lib/tymeslot/emails/templates/social_signup_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm your email and your account is ready."
-msgstr ""
+msgstr "Potwierdź e-mail, a konto będzie gotowe."
 
 #: lib/tymeslot/emails/templates/social_signup_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm your email to finish signing up for Tymeslot."
-msgstr ""
+msgstr "Potwierdź e-mail, aby dokończyć rejestrację w Tymeslot."
 
 #: lib/tymeslot/emails/templates/email_change_verification.ex
 #, elixir-autogen, elixir-format
@@ -187,7 +187,7 @@ msgstr "Dla bezpieczeństwa ten link wygasa po 24 godzinach. Jeśli konto w Tyme
 #: lib/tymeslot/emails/templates/signup_attempt_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Forgot your password? Reset it here."
-msgstr ""
+msgstr "Nie pamiętasz hasła? Zresetuj je tutaj."
 
 #: lib/tymeslot/emails/templates/email_change_verification.ex
 #, elixir-autogen, elixir-format
@@ -197,7 +197,7 @@ msgstr "Uwaga"
 #: lib/tymeslot/emails/templates/signup_attempt_notice.ex
 #, elixir-autogen, elixir-format
 msgid "If it wasn't you, you can ignore this email. No new account was created and nothing about your account has changed."
-msgstr ""
+msgstr "Jeśli to nie ty, zignoruj tę wiadomość. Nie założono nowego konta, a na twoim koncie nic się nie zmieniło."
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex
 #, elixir-autogen, elixir-format
@@ -212,7 +212,7 @@ msgstr "Jeśli ta zmiana nie została zgłoszona przez ciebie, twoje konto może
 #: lib/tymeslot/emails/templates/no_password_to_reset.ex
 #, elixir-autogen, elixir-format
 msgid "If you didn't ask to reset your password, you can ignore this email. Nothing about your account has changed."
-msgstr ""
+msgstr "Jeśli prośba o zresetowanie hasła nie pochodzi od ciebie, zignoruj tę wiadomość. Na twoim koncie nic się nie zmieniło."
 
 #: lib/tymeslot/emails/templates/password_reset.ex
 #, elixir-autogen, elixir-format
@@ -265,7 +265,7 @@ msgstr "Nowy adres e-mail:"
 #: lib/tymeslot/emails/templates/no_password_to_reset.ex
 #, elixir-autogen, elixir-format
 msgid "No password to reset"
-msgstr ""
+msgstr "Brak hasła do zresetowania"
 
 #: lib/tymeslot/emails/templates/email_change_verification.ex
 #, elixir-autogen, elixir-format
@@ -275,7 +275,7 @@ msgstr "Jedno kliknięcie i zmiana gotowa."
 #: lib/tymeslot/emails/templates/social_signup_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "One step to go"
-msgstr ""
+msgstr "Został jeden krok"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex
 #, elixir-autogen, elixir-format
@@ -325,7 +325,7 @@ msgstr "Zresetuj hasło"
 #: lib/tymeslot/emails/templates/signup_attempt_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Reset your password:"
-msgstr ""
+msgstr "Zresetuj hasło:"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex
 #: lib/tymeslot/emails/templates/no_password_to_reset.ex
@@ -354,38 +354,38 @@ msgstr "Ustaw nowe hasło:"
 #: lib/tymeslot/emails/templates/signup_attempt_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Sign In to Tymeslot"
-msgstr ""
+msgstr "Zaloguj się do Tymeslot"
 
 #: lib/tymeslot/emails/templates/no_password_to_reset.ex
 #: lib/tymeslot/emails/templates/signup_attempt_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Sign In to Tymeslot:"
-msgstr ""
+msgstr "Zaloguj się do Tymeslot:"
 
 #: lib/tymeslot/emails/templates/signup_attempt_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Sign in instead of signing up."
-msgstr ""
+msgstr "Zamiast zakładać konto, zaloguj się."
 
 #: lib/tymeslot/emails/templates/no_password_to_reset.ex
 #, elixir-autogen, elixir-format
 msgid "Someone asked to reset the password for your Tymeslot account, but your account signs in with %{provider}, so it has no password to reset. Use the button below and choose %{provider} to sign in."
-msgstr ""
+msgstr "Ktoś poprosił o zresetowanie hasła do twojego konta Tymeslot, ale logujesz się na nie przez konto %{provider}, więc nie ma ono hasła do zresetowania. Kliknij przycisk poniżej i wybierz logowanie przez konto %{provider}."
 
 #: lib/tymeslot/emails/templates/signup_attempt_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Someone just tried to create a new Tymeslot account with this email address, which already has an account. If it was you, sign in below, or reset your password if you can't remember it."
-msgstr ""
+msgstr "Ktoś właśnie próbował założyć nowe konto Tymeslot z tym adresem e-mail, choć konto z tym adresem już istnieje. Jeśli to ty, zaloguj się poniżej albo zresetuj hasło, jeśli go nie pamiętasz."
 
 #: lib/tymeslot/emails/templates/signup_attempt_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Someone just tried to create a new Tymeslot account with this email address, which already has an account. If it was you, sign in with %{provider} below."
-msgstr ""
+msgstr "Ktoś właśnie próbował założyć nowe konto Tymeslot z tym adresem e-mail, choć konto z tym adresem już istnieje. Jeśli to ty, zaloguj się poniżej przez konto %{provider}."
 
 #: lib/tymeslot/emails/templates/signup_attempt_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Someone tried to sign up with your email address."
-msgstr ""
+msgstr "Ktoś próbował założyć konto z twoim adresem e-mail."
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex
 #: lib/tymeslot/emails/templates/email_change_notification.ex
@@ -422,7 +422,7 @@ msgstr "Wysyłamy to powiadomienie, aby chronić twoje konto. Jeśli masz jakiek
 #: lib/tymeslot/emails/templates/social_signup_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "This link expires in 24 hours. If you didn't sign up for Tymeslot, you can ignore this email and no account will be created."
-msgstr ""
+msgstr "Ten link wygasa po 24 godzinach. Jeśli rejestracja w Tymeslot nie pochodzi od ciebie, zignoruj tę wiadomość – konto nie zostanie założone."
 
 #: lib/tymeslot/emails/templates/email_change_verification.ex
 #, elixir-autogen, elixir-format
@@ -518,7 +518,7 @@ msgstr "Co warto wiedzieć"
 #: lib/tymeslot/emails/templates/signup_attempt_notice.ex
 #, elixir-autogen, elixir-format
 msgid "You already have an account"
-msgstr ""
+msgstr "Masz już konto"
 
 #: lib/tymeslot/emails/templates/email_change_verification.ex
 #, elixir-autogen, elixir-format
@@ -538,12 +538,12 @@ msgstr "Na innych urządzeniach może być konieczne ponowne zalogowanie"
 #: lib/tymeslot/emails/templates/no_password_to_reset.ex
 #, elixir-autogen, elixir-format
 msgid "You sign in with %{provider}."
-msgstr ""
+msgstr "Logujesz się przez konto %{provider}."
 
 #: lib/tymeslot/emails/templates/social_signup_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "You're signing up for Tymeslot with %{provider}. Confirm this email address to create your account and sign in."
-msgstr ""
+msgstr "Rejestrujesz się w Tymeslot przez konto %{provider}. Potwierdź ten adres e-mail, aby założyć konto i się zalogować."
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex
 #, elixir-autogen, elixir-format
@@ -558,7 +558,7 @@ msgstr "Adres e-mail konta Tymeslot został zmieniony. To potwierdzenie wysyłam
 #: lib/tymeslot/emails/templates/no_password_to_reset.ex
 #, elixir-autogen, elixir-format
 msgid "Your Tymeslot account has no password to reset."
-msgstr ""
+msgstr "Konto Tymeslot nie ma hasła do zresetowania."
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex
 #, elixir-autogen, elixir-format

@@ -439,12 +439,12 @@ msgid "Important notification from %{brand}"
 msgstr "Ważne powiadomienie – %{brand}"
 
 #: lib/tymeslot/emails/shared/formatting.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "%{count} day"
 msgid_plural "%{count} days"
-msgstr[0] "Zapłacono %{amount}"
-msgstr[1] "Zapłacono %{amount}"
-msgstr[2] "Zapłacono %{amount}"
+msgstr[0] "%{count} dzień"
+msgstr[1] "%{count} dni"
+msgstr[2] "%{count} dni"
 
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
@@ -454,62 +454,62 @@ msgstr "Cały dzień"
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgid "All day, until %{date}"
-msgstr ""
+msgstr "Cały dzień, do %{date}"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Description:"
-msgstr "Opis"
+msgstr "Opis:"
 
 #: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Additional details:"
-msgstr "Dodatkowe informacje"
+msgstr "Dodatkowe informacje:"
 
 #: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
 #, elixir-autogen, elixir-format
 msgid "Attachments:"
-msgstr ""
+msgstr "Załączniki:"
 
 #: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee: %{attendee}"
-msgstr ""
+msgstr "Uczestnik: %{attendee}"
 
 #: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Message from attendee:"
-msgstr "Wiadomość od uczestnika"
+msgstr "Wiadomość od uczestnika:"
 
 #: lib/tymeslot/emails/email_service/auth_emails.ex
 #, elixir-autogen, elixir-format
 msgid "You already have a Tymeslot account"
-msgstr ""
+msgstr "Masz już konto Tymeslot"
 
 #: lib/tymeslot/emails/email_service/auth_emails.ex
 #, elixir-autogen, elixir-format
 msgid "Your Tymeslot account has no password"
-msgstr ""
+msgstr "Konto Tymeslot nie ma hasła"
 
 #: lib/tymeslot/emails/shared/sign_in_provider.ex
 #, elixir-autogen, elixir-format
 msgid "single sign-on"
-msgstr ""
+msgstr "SSO"
 
 #: lib/tymeslot/emails/email_service/auth_emails.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm your email to finish signing up"
-msgstr ""
+msgstr "Potwierdź adres e-mail, aby dokończyć rejestrację"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} has cancelled a recurring event you were invited to. Every occurrence is cancelled."
-msgstr ""
+msgstr "%{name} odwołuje cykliczne wydarzenie, na które masz zaproszenie. Odwołane są wszystkie wystąpienia."
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "%{name} has cancelled an event you were invited to."
-msgstr "%{name} zaktualizował(a) wydarzenie, w którym bierzesz udział."
+msgstr "%{name} odwołuje wydarzenie, na które masz zaproszenie."
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
@@ -519,24 +519,24 @@ msgstr "Odwołane"
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "Cancelled - %{title} (every occurrence)"
-msgstr ""
+msgstr "Odwołane – %{title} (wszystkie wystąpienia)"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "Cancelled - %{title} on %{date}"
-msgstr ""
+msgstr "Odwołane – %{title}, %{date}"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Event Cancelled"
-msgstr "Spotkanie odwołane"
+msgstr "Wydarzenie odwołane"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
 msgid "NOTE FROM THE ORGANISER:"
-msgstr ""
+msgstr "NOTATKA OD ORGANIZATORA:"
 
 #: lib/tymeslot/emails/shared/meeting/notes.ex
 #, elixir-autogen, elixir-format
 msgid "Note from the organiser"
-msgstr ""
+msgstr "Notatka od organizatora"

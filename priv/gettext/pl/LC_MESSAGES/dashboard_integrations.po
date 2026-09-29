@@ -427,21 +427,21 @@ msgstr "Podaj pełny adres zaczynający się od https://, na przykład https://c
 #, elixir-autogen, elixir-format
 msgid "%{count} conversation from this integration is still on your Nextcloud server, even if its meeting is over. It stays there unless you delete it here."
 msgid_plural "%{count} conversations from this integration are still on your Nextcloud server, including those of past meetings. They stay there unless you delete them here."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "%{count} rozmowa z tej integracji nadal znajduje się na serwerze Nextcloud, nawet jeśli jej spotkanie już się odbyło. Pozostanie tam, dopóki jej tutaj nie usuniesz."
+msgstr[1] "%{count} rozmowy z tej integracji nadal znajdują się na serwerze Nextcloud, łącznie z rozmowami minionych spotkań. Pozostaną tam, dopóki ich tutaj nie usuniesz."
+msgstr[2] "%{count} rozmów z tej integracji nadal znajduje się na serwerze Nextcloud, łącznie z rozmowami minionych spotkań. Pozostaną tam, dopóki ich tutaj nie usuniesz."
 
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{name}: new bookings get no video link."
-msgstr ""
+msgstr "%{name}: nowe rezerwacje nie otrzymują linku wideo."
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Also delete these conversations from your Nextcloud server. Attendees of upcoming meetings will find their join link no longer works."
-msgstr ""
+msgstr "Usuń też te rozmowy z serwera Nextcloud. Uczestnikom nadchodzących spotkań przestanie działać link do dołączenia."
 
 #: lib/tymeslot/integrations/shared/input_validators.ex
 #, elixir-autogen, elixir-format
 msgid "Enter the address on its own and put the username and password in their own fields."
-msgstr ""
+msgstr "Wpisz sam adres, a nazwę użytkownika i hasło podaj w osobnych polach."

@@ -622,9 +622,9 @@ msgstr "Zapisz zmiany"
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "This time falls within your time off, so it can't be confirmed while that stays in place."
-msgstr ""
+msgstr "Ten termin przypada w czasie twojej nieobecności, więc nie można go potwierdzić, dopóki ta nieobecność obowiązuje."
 
 #: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "This time falls within your time off. Change or remove the time off to confirm it."
-msgstr ""
+msgstr "Ten termin przypada w czasie twojej nieobecności. Aby go potwierdzić, zmień lub usuń nieobecność."

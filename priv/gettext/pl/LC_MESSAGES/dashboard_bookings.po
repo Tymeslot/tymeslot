@@ -524,68 +524,68 @@ msgstr "Ten termin został już w międzyczasie zarezerwowany, więc nie można 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Add guest"
-msgstr ""
+msgstr "Dodaj gościa"
 
 #: lib/tymeslot_web/components/dashboard/meetings/add_guests_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Already invited"
-msgstr ""
+msgstr "Już zaproszeni"
 
 #: lib/tymeslot_web/components/dashboard/meetings/add_guests_modal.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Awaiting reply"
-msgstr "Oczekuje na płatność"
+msgstr "Bez odpowiedzi"
 
 #: lib/tymeslot_web/components/dashboard/meetings/add_guests_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Email addresses"
-msgstr ""
+msgstr "Adresy e-mail"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/guest_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Enter at least one email address."
-msgstr ""
+msgstr "Podaj co najmniej jeden adres e-mail."
 
 #: lib/tymeslot_web/components/dashboard/meetings/add_guests_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Everyone you add receives the invitation with the calendar file, and can accept or decline. The guests already invited hear nothing."
-msgstr ""
+msgstr "Każda dodana osoba otrzyma zaproszenie z plikiem kalendarza i będzie mogła je przyjąć lub odrzucić. Wcześniej zaproszeni goście nie dostaną żadnej wiadomości."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/guest_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Guest invited."
 msgid_plural "%{count} guests invited."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Zaproszono gościa."
+msgstr[1] "Zaproszono %{count} gości."
+msgstr[2] "Zaproszono %{count} gości."
 
 #: lib/tymeslot_web/components/dashboard/meetings/add_guests_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Room for one more guest."
 msgid_plural "Room for %{count} more guests."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Można dodać jeszcze jednego gościa."
+msgstr[1] "Można dodać jeszcze %{count} gości."
+msgstr[2] "Można dodać jeszcze %{count} gości."
 
 #: lib/tymeslot_web/components/dashboard/meetings/add_guests_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Send invitation"
-msgstr ""
+msgstr "Wyślij zaproszenie"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/guest_actions.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting already has the maximum of %{count} guests."
-msgstr ""
+msgstr "To spotkanie ma już maksymalną liczbę gości (%{count})."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/guest_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Those addresses are already invited, or are not valid."
-msgstr ""
+msgstr "Osoby o tych adresach są już zaproszone albo adresy są nieprawidłowe."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/guest_actions.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Those guests could not be added."
-msgstr "Nie udało się odrzucić tej prośby."
+msgstr "Nie udało się dodać tych gości."
 
 #: lib/tymeslot_web/components/dashboard/meetings/add_guests_modal.ex
 #, elixir-autogen, elixir-format
@@ -600,15 +600,15 @@ msgstr "Usuń %{email}"
 #: lib/tymeslot_web/live/dashboard/bookings_management/guest_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Guests can no longer be added to this meeting: it has started, been cancelled, or is being rescheduled."
-msgstr ""
+msgstr "Do tego spotkania nie można już dodawać gości: już się rozpoczęło, zostało odwołane albo trwa zmiana jego terminu."
 
 #: lib/tymeslot_web/components/dashboard/meetings/reminders_section.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} day before"
 msgid_plural "%{count} days before"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "%{count} dzień wcześniej"
+msgstr[1] "%{count} dni wcześniej"
+msgstr[2] "%{count} dni wcześniej"
 
 #: lib/tymeslot_web/components/dashboard/meetings/reminders_section.ex
 #, elixir-autogen, elixir-format
@@ -635,34 +635,34 @@ msgstr "Przypomnienia"
 #, elixir-autogen, elixir-format
 msgctxt "reminder status"
 msgid "After approval"
-msgstr ""
+msgstr "Po zatwierdzeniu"
 
 #: lib/tymeslot_web/components/dashboard/meetings/reminders_section.ex
 #, elixir-autogen, elixir-format
 msgctxt "reminder status"
 msgid "Sent"
-msgstr ""
+msgstr "Wysłane"
 
 #: lib/tymeslot_web/components/dashboard/meetings/reminders_section.ex
 #, elixir-autogen, elixir-format
 msgctxt "reminder status"
 msgid "Not yet sent"
-msgstr ""
+msgstr "Jeszcze niewysłane"
 
 #: lib/tymeslot_web/components/dashboard/meetings/reminders_section.ex
 #, elixir-autogen, elixir-format
 msgctxt "reminder status"
 msgid "After payment"
-msgstr ""
+msgstr "Po opłaceniu"
 
 #: lib/tymeslot_web/components/dashboard/meetings/reminders_section.ex
 #, elixir-autogen, elixir-format
 msgctxt "reminder status"
 msgid "After rescheduling"
-msgstr ""
+msgstr "Po zmianie terminu"
 
 #: lib/tymeslot_web/components/dashboard/meetings/reminders_section.ex
 #, elixir-autogen, elixir-format
 msgctxt "reminder status"
 msgid "Not sent"
-msgstr ""
+msgstr "Niewysłane"

@@ -1298,9 +1298,9 @@ msgstr "Ustawienia osobiste → Bezpieczeństwo"
 #: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex
 #, elixir-autogen, elixir-format
 msgid "This change was made to one occurrence of a repeating event, and the calendar server would have applied it to every occurrence, so it was not sent."
-msgstr ""
+msgstr "Ta zmiana dotyczyła jednego wystąpienia wydarzenia cyklicznego, a serwer kalendarza zastosowałby ją do wszystkich wystąpień, więc nie została wysłana."
 
 #: lib/tymeslot/integrations/calendar/caldav/errors.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "The calendar server returned more data than Tymeslot can process at once."
-msgstr "Serwer kalendarza zwrócił odpowiedź, której Tymeslot nie rozpoznał."
+msgstr "Serwer kalendarza zwrócił więcej danych, niż Tymeslot może przetworzyć naraz."

@@ -10,12 +10,12 @@ msgstr ""
 #: lib/tymeslot_web/themes/shared/components/error_component.ex
 #, elixir-autogen
 msgid "We can't show this scheduling page yet"
-msgstr ""
+msgstr "Nie możemy jeszcze wyświetlić tej strony rezerwacji"
 
 #: lib/tymeslot_web/themes/shared/components/error_component.ex
 #, elixir-autogen
 msgid "If you are the organizer, please connect a calendar in your dashboard."
-msgstr ""
+msgstr "Jeśli organizujesz te spotkania, podłącz kalendarz w panelu."
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
@@ -317,69 +317,69 @@ msgstr "sprawdzeń serwera wideo"
 #: lib/tymeslot/security/rate_limiter/bookings.ex
 #, elixir-autogen, elixir-format
 msgid "bookings"
-msgstr ""
+msgstr "rezerwacji"
 
 #: lib/tymeslot/security/rate_limiter/calendar.ex
 #, elixir-autogen, elixir-format
 msgid "calendar event moves"
-msgstr ""
+msgstr "przeniesień wydarzeń w kalendarzu"
 
 #: lib/tymeslot/security/rate_limiter/auth.ex
 #, elixir-autogen, elixir-format
 msgid "password reset requests"
-msgstr ""
+msgstr "próśb o zresetowanie hasła"
 
 #: lib/tymeslot/security/rate_limiter/auth.ex
 #, elixir-autogen, elixir-format
 msgid "signup attempts"
-msgstr ""
+msgstr "prób rejestracji"
 
 #: lib/tymeslot/security/rate_limiter/auth.ex
 #, elixir-autogen, elixir-format
 msgid "verification emails"
-msgstr ""
+msgstr "e-maili potwierdzających"
 
 #: lib/tymeslot/security/rate_limiter/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "1 day"
 msgid_plural "%{count} days"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "%{count} dzień"
+msgstr[1] "%{count} dni"
+msgstr[2] "%{count} dni"
 
 #: lib/tymeslot/security/rate_limiter/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "1 hour"
 msgid_plural "%{count} hours"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "%{count} godzinę"
+msgstr[1] "%{count} godziny"
+msgstr[2] "%{count} godzin"
 
 #: lib/tymeslot/security/rate_limiter/helpers.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "You've reached the limit of %{limit} %{action} per %{window}. Please try again in %{wait}."
-msgstr "Osiągnięto limit %{limit} %{action} na %{window_minutes} minut. Spróbuj ponownie za %{wait}."
+msgstr "Osiągnięto limit %{limit} %{action} w ciągu %{window}. Spróbuj ponownie za %{wait}."
 
 #: lib/tymeslot/security/rate_limiter/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "day"
 msgid_plural "%{count} days"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "dnia"
+msgstr[1] "%{count} dni"
+msgstr[2] "%{count} dni"
 
 #: lib/tymeslot/security/rate_limiter/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "hour"
 msgid_plural "%{count} hours"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "godziny"
+msgstr[1] "%{count} godzin"
+msgstr[2] "%{count} godzin"
 
 #: lib/tymeslot/security/rate_limiter/helpers.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "minute"
 msgid_plural "%{count} minutes"
-msgstr[0] "%{count} minutę"
-msgstr[1] "%{count} minuty"
+msgstr[0] "minuty"
+msgstr[1] "%{count} minut"
 msgstr[2] "%{count} minut"

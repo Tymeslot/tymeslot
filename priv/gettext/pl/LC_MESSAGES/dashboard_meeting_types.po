@@ -191,6 +191,6 @@ msgstr "Rezerwacje tego typu spotkania trafiają do kalendarza, do którego nie 
 #, elixir-autogen, elixir-format
 msgid "%{count} location"
 msgid_plural "%{count} locations"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "%{count} lokalizacja"
+msgstr[1] "%{count} lokalizacje"
+msgstr[2] "%{count} lokalizacji"

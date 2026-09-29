@@ -668,9 +668,9 @@ msgstr "Wyzwalany przy tym zdarzeniu"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Delivery ID"
-msgstr ""
+msgstr "ID wysyłki"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "The delivery ID is the same on every retry of one delivery and different for every other delivery. A failed or timed-out delivery can be retried, so your endpoint may receive the same event twice: record the delivery ID and ignore a request whose ID you have already processed."
-msgstr ""
+msgstr "ID wysyłki jest takie samo przy każdej ponownej próbie tej samej wysyłki i inne dla każdej innej wysyłki. Wysyłkę, która się nie powiodła lub przekroczyła limit czasu, można ponowić, więc punkt końcowy może otrzymać to samo zdarzenie dwukrotnie: zapisuj ID wysyłki i ignoruj żądania o ID, które już zostało przetworzone."

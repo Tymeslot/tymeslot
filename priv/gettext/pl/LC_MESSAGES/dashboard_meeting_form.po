@@ -895,106 +895,106 @@ msgstr "Cena %{amount} zostaje zachowana i zacznie obowiązywać ponownie po pod
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "12 High Street, London EC1A 1BB"
-msgstr ""
+msgstr "ul. Długa 12, 00-238 Warszawa"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Add location"
-msgstr "Dodaj opcję"
+msgstr "Dodaj lokalizację"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Address"
-msgstr "Dodaj"
+msgstr "Adres"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Anything the booker needs to know to get there"
-msgstr ""
+msgstr "Wszystko, co osoba rezerwująca musi wiedzieć, żeby tu dotrzeć"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Ask the booker for their number"
-msgstr ""
+msgstr "Poproś osobę rezerwującą o numer telefonu"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "Bookers will be asked to choose one of these."
-msgstr ""
+msgstr "Osoba rezerwująca wybierze jedną z tych lokalizacji."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Decides what happens when a booker picks this."
-msgstr ""
+msgstr "Określa, co się stanie, gdy osoba rezerwująca wybierze tę opcję."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Details (optional)"
-msgstr ""
+msgstr "Szczegóły (opcjonalnie)"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Edit location"
-msgstr ""
+msgstr "Edytuj lokalizację"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/init.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "In person"
-msgstr "Na miejscu"
+msgstr "Spotkanie osobiste"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "No details"
-msgstr "Szczegóły"
+msgstr "Brak szczegółów"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Number to call"
-msgstr "Liczba"
+msgstr "Numer, pod który należy zadzwonić"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Phone call"
-msgstr "Telefon"
+msgstr "Rozmowa telefoniczna"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "Phone call: the booker gives their number"
-msgstr ""
+msgstr "Rozmowa telefoniczna: osoba rezerwująca podaje swój numer"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Pick one or more. With several, the booker chooses which one the room is created on."
-msgstr ""
+msgstr "Wybierz co najmniej jednego. Jeśli wybierzesz kilku, osoba rezerwująca zdecyduje, u którego zostanie utworzony pokój spotkania."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Save location"
-msgstr ""
+msgstr "Zapisz lokalizację"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Shown to the booker and written into the calendar invitation."
-msgstr ""
+msgstr "Widoczne dla osoby rezerwującej i wpisywane do zaproszenia w kalendarzu."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Something else"
-msgstr ""
+msgstr "Coś innego"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Somewhere else"
-msgstr ""
+msgstr "Inne miejsce"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "The booker picks: %{providers}"
-msgstr ""
+msgstr "Osoba rezerwująca wybiera: %{providers}"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -1004,37 +1004,37 @@ msgstr "Spotkanie wideo"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "Video call: integration no longer available"
-msgstr ""
+msgstr "Spotkanie wideo: integracja nie jest już dostępna"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Video provider"
-msgstr ""
+msgstr "Dostawca wideo"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Video providers"
-msgstr ""
+msgstr "Dostawcy wideo"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "What the booker sees in the list of locations."
-msgstr ""
+msgstr "Nazwa widoczna dla osoby rezerwującej na liście lokalizacji."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "Where this meeting is held. Add a second location and bookers will be asked to choose."
-msgstr ""
+msgstr "Miejsce spotkania. Dodaj drugą lokalizację, a osoba rezerwująca będzie mogła wybrać."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "You call them. Leave this off to publish a number for them to call instead."
-msgstr ""
+msgstr "To ty dzwonisz. Pozostaw wyłączone, aby zamiast tego podać numer, pod który zadzwoni osoba rezerwująca."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "e.g., Our London office"
-msgstr ""
+msgstr "np. Biuro w Warszawie"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
 #, elixir-autogen, elixir-format
@@ -1056,6 +1056,6 @@ msgstr[2] "%{count} godzin"
 #, elixir-autogen, elixir-format
 msgid "%{count} minute"
 msgid_plural "%{count} minutes"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "%{count} minuta"
+msgstr[1] "%{count} minuty"
+msgstr[2] "%{count} minut"

@@ -300,7 +300,7 @@ msgstr "Termin odpowiedzi na tę prośbę minął, więc nie można jej już pot
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "The meeting has already taken place, or it was cancelled or not confirmed. Please contact the meeting host."
-msgstr ""
+msgstr "Spotkanie już się odbyło, zostało odwołane albo nie zostało potwierdzone. Skontaktuj się z organizatorem spotkania."
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
@@ -315,12 +315,12 @@ msgstr "Ten link jest już nieaktualny. Mógł wygasnąć albo prośba została 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "This link is not valid"
-msgstr ""
+msgstr "Ten link jest nieprawidłowy"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting is no longer taking responses"
-msgstr ""
+msgstr "To spotkanie nie przyjmuje już odpowiedzi"
 
 #: lib/tymeslot_web/live/meeting_request_live.ex
 #, elixir-autogen, elixir-format
@@ -365,7 +365,7 @@ msgstr "Typ"
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "We couldn't find an invitation for this link. Please check that you copied the whole link from your email, or contact the meeting host."
-msgstr ""
+msgstr "Nie znaleziono zaproszenia dla tego linku. Sprawdź, czy link z e-maila został skopiowany w całości, albo skontaktuj się z organizatorem spotkania."
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex

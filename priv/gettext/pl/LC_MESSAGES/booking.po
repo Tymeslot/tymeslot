@@ -741,15 +741,15 @@ msgstr "Twoja strefa czasowa"
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Add any details..."
-msgstr ""
+msgstr "Dodaj szczegóły…"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Book Meeting"
-msgstr "Spotkanie"
+msgstr "Zarezerwuj spotkanie"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Email"
 msgstr "E-mail"
 
@@ -774,17 +774,17 @@ msgid "meeting"
 msgstr "Spotkanie"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Meeting Confirmed!"
-msgstr "Spotkanie potwierdzone"
+msgstr "Spotkanie potwierdzone!"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Message (optional)"
 msgstr "Wiadomość (opcjonalnie)"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Name"
 msgstr "Imię i nazwisko"
 
@@ -793,19 +793,19 @@ msgstr "Imię i nazwisko"
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Next"
 msgstr "Dalej"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Next Step"
-msgstr ""
+msgstr "Następny krok"
 
 #: lib/tymeslot_web/themes/shared/booking_labels.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule Meeting"
-msgstr "Zmień termin"
+msgstr "Zmień termin spotkania"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #, elixir-autogen, elixir-format
@@ -813,9 +813,9 @@ msgid "same day only"
 msgstr "tylko tego samego dnia"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Submit"
-msgstr "Zarezerwuj"
+msgstr "Wyślij"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
@@ -1377,12 +1377,12 @@ msgstr "Ta rezerwacja nie została przyjęta, więc spotkanie się nie odbędzie
 #: lib/tymeslot_web/themes/shared/booking_location.ex
 #, elixir-autogen, elixir-format
 msgid "Enter the number we should call you on."
-msgstr ""
+msgstr "Podaj numer, pod który mamy zadzwonić."
 
 #: lib/tymeslot/meeting_types/location_selection.ex
 #, elixir-autogen, elixir-format
 msgid "In person"
-msgstr ""
+msgstr "Spotkanie osobiste"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
@@ -1398,19 +1398,19 @@ msgstr "Spotkanie wideo"
 #: lib/tymeslot_web/themes/shared/components/location_field.ex
 #, elixir-autogen, elixir-format
 msgid "We'll call you"
-msgstr ""
+msgstr "Zadzwonimy do ciebie"
 
 #: lib/tymeslot_web/themes/shared/components/location_field.ex
 #, elixir-autogen, elixir-format
 msgid "Where shall we meet?"
-msgstr ""
+msgstr "Gdzie się spotkamy?"
 
 #: lib/tymeslot_web/themes/shared/components/location_field.ex
 #, elixir-autogen, elixir-format
 msgid "Which video service?"
-msgstr ""
+msgstr "Która usługa wideo?"
 
 #: lib/tymeslot_web/themes/shared/components/location_field.ex
 #, elixir-autogen, elixir-format
 msgid "Your phone number"
-msgstr ""
+msgstr "Numer telefonu"
