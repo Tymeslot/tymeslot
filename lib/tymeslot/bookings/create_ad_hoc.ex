@@ -31,7 +31,8 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
           optional(:calendar_path) => String.t() | nil,
           optional(:video_integration_id) => pos_integer() | nil,
           optional(:guest_emails) => [String.t()],
-          optional(:organizer_note) => String.t() | nil
+          optional(:organizer_note) => String.t() | nil,
+          optional(:attendee_locale) => String.t() | nil
         }
 
   @spec execute(params()) ::
@@ -135,7 +136,10 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
       # sends one anyway. An empty list is honoured as the answer it is.
       reminders: [],
       attendee_timezone: params[:attendee_timezone] || "Etc/UTC",
-      attendee_locale: Locales.booking_default_locale(),
+      # The organiser chooses which language the guests are written to; a
+      # missing or unsupported choice falls back to the booking default.
+      attendee_locale:
+        Locales.acceptable(params[:attendee_locale]) || Locales.booking_default_locale(),
       status: "confirmed",
       view_url: build_meeting_url(uid, "", org_username),
       reschedule_url: build_meeting_url(uid, "/reschedule", org_username),

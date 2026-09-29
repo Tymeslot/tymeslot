@@ -128,7 +128,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
       calendar_integration_id: creating[:integration_id],
       calendar_id: creating[:calendar_id],
       video_integration_id: creating[:video_integration_id],
-      organizer_note: creating[:organizer_note]
+      organizer_note: creating[:organizer_note],
+      guest_emails: creating[:guest_emails] || [],
+      attendee_locale: creating[:locale]
     }
   end
 

@@ -5,6 +5,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
 
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Locales
+  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
@@ -113,6 +115,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
       # The note field stays hidden until the organiser asks for it.
       note_open: false,
       organizer_note: "",
+      guest_emails: [],
+      guest_email_input: "",
+      # Which language the guests are written to. Defaults to the host's own
+      # (they know whom they are inviting) and is theirs to change per meeting.
+      locale: Locales.guest_default_locale(Map.get(socket.assigns, :current_user)),
       integration_id: default_int_id,
       calendar_id: EditWorkflow.default_calendar_id(socket.assigns.integrations, default_int_id),
       attendees: [],
@@ -206,6 +213,76 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
           {:error, _reason} ->
             {:noreply, socket}
         end
+    end
+  end
+
+  @doc """
+  Adds one more guest to an ad-hoc meeting.
+
+  Capped at `Guests.max_guests/0`, the same number a booker may bring. The main
+  guest's own address and repeats are refused here rather than silently dropped
+  later, so the host can see why nothing happened.
+  """
+  @spec handle_add_create_guest(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_add_create_guest(%{"email" => raw_email}, socket) do
+    email = raw_email |> String.trim() |> String.downcase()
+
+    case socket.assigns.creating_event do
+      %{} = creating ->
+        if addable_guest?(creating, email) do
+          {:noreply,
+           assign(socket, :creating_event, %{
+             creating
+             | guest_emails: creating.guest_emails ++ [email],
+               guest_email_input: ""
+           })}
+        else
+          {:noreply, socket}
+        end
+
+      nil ->
+        {:noreply, socket}
+    end
+  end
+
+  @spec handle_remove_create_guest(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_remove_create_guest(%{"email" => email}, socket) do
+    case socket.assigns.creating_event do
+      %{} = creating ->
+        put_field(socket, :guest_emails, List.delete(creating.guest_emails, email))
+
+      nil ->
+        {:noreply, socket}
+    end
+  end
+
+  @spec handle_update_create_guest_input(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_update_create_guest_input(%{"email" => value}, socket),
+    do: put_field(socket, :guest_email_input, value)
+
+  @spec handle_update_create_locale(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_update_create_locale(%{"locale" => locale}, socket) do
+    case Locales.acceptable(locale) do
+      nil -> {:noreply, socket}
+      code -> put_field(socket, :locale, code)
+    end
+  end
+
+  defp addable_guest?(creating, email) do
+    Shared.valid_email?(email) and
+      email not in creating.guest_emails and
+      email != creating.guest_email |> String.trim() |> String.downcase() and
+      length(creating.guest_emails) < Guests.max_guests()
+  end
+
+  defp put_field(socket, key, value) do
+    case socket.assigns.creating_event do
+      nil -> {:noreply, socket}
+      creating -> {:noreply, assign(socket, :creating_event, Map.put(creating, key, value))}
     end
   end
 

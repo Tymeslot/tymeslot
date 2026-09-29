@@ -13,6 +13,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
   defdelegate handle_update_create_guest_email(params, socket), to: CreateFormState
   defdelegate handle_toggle_create_note(params, socket), to: CreateFormState
   defdelegate handle_update_create_note(params, socket), to: CreateFormState
+  defdelegate handle_add_create_guest(params, socket), to: CreateFormState
+  defdelegate handle_remove_create_guest(params, socket), to: CreateFormState
+  defdelegate handle_update_create_guest_input(params, socket), to: CreateFormState
+  defdelegate handle_update_create_locale(params, socket), to: CreateFormState
   defdelegate handle_close_create_form(params, socket), to: CreateFormState
   defdelegate handle_update_create_title(params, socket), to: CreateFormState
   defdelegate handle_update_create_time(params, socket), to: CreateFormState

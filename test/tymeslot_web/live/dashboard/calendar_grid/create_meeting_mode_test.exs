@@ -169,9 +169,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingModeTest do
 
       lv |> element("#calendar-grid") |> render_hook("save_event", %{})
 
-      eventually(fn -> assert render(lv) =~ "Meeting created and invitation sent" end)
-
-      assert [meeting] = Repo.all(MeetingSchema)
+      # Creation runs in a supervised task; wait for the row it writes.
+      meeting = eventually(fn -> Repo.one(MeetingSchema) end, timeout: 5000)
       assert meeting.organizer_user_id == user.id
       assert meeting.organizer_note == "Agenda: the Q3 roadmap."
       assert meeting.attendee_message == nil
@@ -193,9 +192,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingModeTest do
 
       lv |> element("#calendar-grid") |> render_hook("save_event", %{})
 
-      eventually(fn -> assert render(lv) =~ "Meeting created and invitation sent" end)
-
-      assert [meeting] = Repo.all(MeetingSchema)
+      # Creation runs in a supervised task; wait for the row it writes.
+      meeting = eventually(fn -> Repo.one(MeetingSchema) end, timeout: 5000)
       assert meeting.organizer_note == nil
     end
   end

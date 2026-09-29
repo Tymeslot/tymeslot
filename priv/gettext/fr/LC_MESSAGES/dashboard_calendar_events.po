@@ -1297,3 +1297,23 @@ msgstr "Note pour l’invité"
 #, elixir-autogen, elixir-format
 msgid "Remove note"
 msgstr "Supprimer la note"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Each one is invited by email and can accept or decline."
+msgstr "Chacun reçoit une invitation par e-mail et peut accepter ou décliner."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Language of the invitation"
+msgstr "Langue de l’invitation"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "More guests (optional)"
+msgstr "Autres invités (facultatif)"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The language every email about this meeting is written in, for the guest and anyone else invited."
+msgstr "La langue de tous les e-mails concernant cette réunion, pour l’invité comme pour les autres personnes conviées."
