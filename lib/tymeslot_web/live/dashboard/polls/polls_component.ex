@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Ecto.Changeset
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Meetings
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Polls
@@ -371,7 +372,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   defp request_slot_health(socket, poll) do
     parent = self()
 
-    Task.Supervisor.start_child(@task_supervisor, fn ->
+    Tasks.start_child(@task_supervisor, fn ->
       send(parent, {:poll_slot_health, poll.id, bounded_slot_health(poll)})
     end)
 
@@ -379,7 +380,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   end
 
   defp bounded_slot_health(poll) do
-    task = Task.Supervisor.async_nolink(@task_supervisor, fn -> SlotHealth.check(poll) end)
+    task = Tasks.async_nolink(@task_supervisor, fn -> SlotHealth.check(poll) end)
 
     case Task.yield(task, @health_timeout) || Task.shutdown(task) do
       {:ok, health} -> health

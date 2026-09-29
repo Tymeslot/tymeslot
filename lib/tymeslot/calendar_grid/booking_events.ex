@@ -43,7 +43,8 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
     %BookingEvent{
       id: "booking-#{meeting.id}",
       meeting_id: meeting.id,
-      uid: meeting.uid,
+      # The event-shaped identity, matching the provider copy's `uid`.
+      uid: meeting.calendar_uid,
       summary: presence(meeting.title) || "Meeting",
       location: presence(meeting.location),
       start_at: meeting.start_time,

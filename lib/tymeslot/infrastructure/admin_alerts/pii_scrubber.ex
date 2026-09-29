@@ -77,6 +77,13 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.PIIScrubber do
     end)
   end
 
+  @doc """
+  Masks every email address embedded in `string` (`jane@example.com` becomes
+  `j***@example.com`), leaving the rest of the text as it was. Idempotent.
+  """
+  @spec mask_emails(String.t()) :: String.t()
+  def mask_emails(string) when is_binary(string), do: sweep_string(string)
+
   defp sweep_string(string) do
     Regex.replace(@email_regex, string, fn _full, first_char, domain ->
       "#{first_char}***#{domain}"

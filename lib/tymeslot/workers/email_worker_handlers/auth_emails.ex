@@ -9,8 +9,31 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Emails.EmailScheduler.LinkArg
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Utils.UrlBuilder
   alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
+
+  # A newer request replaced the token, or the user is gone. An unreadable link
+  # is recorded.
+  @verification_superseded "Verification token superseded by a newer request"
+  @reset_superseded "Reset token superseded by a newer request"
+  @email_change_superseded "Email change token superseded or revoked"
+  @user_gone "User not found"
+
+  @doc """
+  Whether `reason`, from a discard this module returned, is an expected end
+  of the email job rather than a fault
+  (see `Tymeslot.Infrastructure.ExpectedJobOutcome`).
+  """
+  @spec expected_discard?(term()) :: boolean()
+  def expected_discard?(reason),
+    do:
+      reason in [
+        @verification_superseded,
+        @reset_superseded,
+        @email_change_superseded,
+        @user_gone
+      ]
 
   @spec handle_email_verification(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
@@ -19,7 +42,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
          {:ok, user} <- fetch_user(user_id, "email verification") do
       if token_superseded?(args, user.verification_token) do
         Logger.info("Skipping superseded email verification job", user_id: user_id)
-        {:discard, "Verification token superseded by a newer request"}
+        {:discard, @verification_superseded}
       else
         deliver_email_verification(user, verification_url)
       end
@@ -35,7 +58,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
       {:error, reason} ->
         Logger.error("Failed to send email verification",
           user_id: user.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         DeliveryOutcome.from_error(reason, "Failed to send email verification")
@@ -49,7 +72,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
          {:ok, user} <- fetch_user(user_id, "password reset email") do
       if token_superseded?(args, user.reset_token_hash) do
         Logger.info("Skipping superseded password reset job", user_id: user_id)
-        {:discard, "Reset token superseded by a newer request"}
+        {:discard, @reset_superseded}
       else
         deliver_password_reset(user, reset_url)
       end
@@ -65,7 +88,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
       {:error, reason} ->
         Logger.error("Failed to send password reset email",
           user_id: user.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         DeliveryOutcome.from_error(reason, "Failed to send password reset email")
@@ -112,7 +135,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
           :ok
 
         {:error, reason} ->
-          Logger.error("Failed to send sign-up confirmation", error: inspect(reason))
+          Logger.error("Failed to send sign-up confirmation", error: LogFormat.reason(reason))
           DeliveryOutcome.from_error(reason, "Failed to send sign-up confirmation")
       end
     end
@@ -129,7 +152,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
     Logger.error("Failed to send account notice",
       notice: label,
       user_id: user.id,
-      error: inspect(reason)
+      error: LogFormat.reason(reason)
     )
 
     DeliveryOutcome.from_error(reason, "Failed to send #{label}")
@@ -142,7 +165,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
          {:ok, user} <- fetch_user(user_id, "email change verification") do
       if token_superseded?(args, user.email_change_token_hash) do
         Logger.info("Skipping superseded email change verification job", user_id: user_id)
-        {:discard, "Email change token superseded or revoked"}
+        {:discard, @email_change_superseded}
       else
         deliver_email_change_verification(user, new_email, verification_url)
       end
@@ -167,7 +190,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
         Logger.error("Failed to send email change verification",
           user_id: user.id,
           new_email: new_email,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         DeliveryOutcome.from_error(reason, "Failed to send email change verification")
@@ -192,7 +215,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
             Logger.error("Failed to send email change notification",
               user_id: user_id,
               new_email: new_email,
-              error: inspect(reason)
+              error: LogFormat.reason(reason)
             )
 
             DeliveryOutcome.from_error(reason, "Failed to send email change notification")
@@ -200,7 +223,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
 
       {:error, :not_found} ->
         Logger.warning("User not found for email change notification", user_id: user_id)
-        {:discard, "User not found"}
+        {:discard, @user_gone}
     end
   end
 
@@ -235,7 +258,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
     else
       {:error, :not_found} ->
         Logger.warning("User not found for email change confirmations", user_id: user_id)
-        {:discard, "User not found"}
+        {:discard, @user_gone}
     end
   end
 
@@ -263,7 +286,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
 
       {:error, :not_found} ->
         Logger.warning("User not found for auth email", email: label, user_id: user_id)
-        {:discard, "User not found"}
+        {:discard, @user_gone}
     end
   end
 

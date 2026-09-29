@@ -23,18 +23,35 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
   require Logger
 
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Workers.RetryHelpers
   alias Tymeslot.Workers.SyncHealth
 
   # CalendarGrid enqueues Outlook jobs with only calendar_integration_id (no graph_resource_id).
   # Outlook syncs are event-driven via Microsoft Graph webhooks — there is no full-sync path yet.
   # Discard these jobs gracefully rather than crashing.
+  @behaviour ExpectedJobOutcome
+
+  # The integration is gone, or only its owner can fix it by reconnecting.
+  # A sync without a Graph resource id is a bug, and is recorded.
+  @integration_gone "Integration not found"
+  @credentials_rejected "Microsoft Graph rejected credentials — reauthentication required"
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason),
+    do:
+      reason in [@integration_gone, @credentials_rejected] or
+        reason == ReauthHandling.discard_reason()
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id} = args})
       when not is_map_key(args, "graph_resource_id") do
@@ -59,14 +76,14 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
 
     case CalendarIntegrationQueries.get(integration_id) do
       {:ok, integration} ->
-        sync_event(integration, graph_resource_id)
+        InvalidEventReport.collect(fn -> sync_event(integration, graph_resource_id) end)
 
       {:error, :not_found} ->
         Logger.warning("Calendar integration not found, discarding sync job",
           calendar_integration_id: integration_id
         )
 
-        {:discard, "Integration not found"}
+        {:discard, @integration_gone}
 
       {:error, :requires_reencryption, integration} ->
         CalendarManagement.handle_reauth_required(integration)
@@ -140,7 +157,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
       {:error, reason} ->
         Logger.error("Outlook Calendar sync failed",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -163,7 +180,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
         "dashboard_calendar_providers",
         "Microsoft rejected the stored credentials. Please reconnect the integration."
       ),
-      "Microsoft Graph rejected credentials — reauthentication required"
+      @credentials_rejected
     )
   end
 
@@ -212,7 +229,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
       {:error, changeset} ->
         Logger.warning("Failed to persist Outlook Calendar sync state",
           calendar_integration_id: integration.id,
-          error: inspect(changeset)
+          error: LogFormat.reason(changeset)
         )
 
         :ok

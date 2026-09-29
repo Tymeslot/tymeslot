@@ -306,7 +306,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
 
       meeting =
         insert(:meeting,
-          uid: uid,
+          calendar_uid: uid,
           calendar_integration_id: integration.id,
           provider_event_id: nil
         )
@@ -323,7 +323,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
 
       meeting =
         insert(:meeting,
-          uid: uid,
+          calendar_uid: uid,
           calendar_integration_id: integration.id,
           provider_event_id: nil
         )
@@ -403,6 +403,40 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
 
       assert {:error, :not_found} =
                ProviderCalendarEventQueries.get_by_uid(integration.id, "del-uid-2")
+    end
+
+    test "a deleted series master takes its occurrences' cache rows with it" do
+      integration = insert(:calendar_integration)
+
+      for {uid, instance_id} <- [
+            {"series@google.com_20260504T080000Z", "master1_20260504T080000Z"},
+            {"series@google.com_20260511T080000Z", "master1_20260511T080000Z"}
+          ] do
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          uid: uid,
+          provider_event_id: instance_id,
+          recurring_event_id: "master1"
+        )
+      end
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        uid: "single@google.com",
+        provider_event_id: "single1"
+      )
+
+      assert :ok =
+               Sync.reconcile_deletions(integration, [
+                 %{provider_event_id: "master1", uid: "series@google.com"}
+               ])
+
+      for uid <- ["series@google.com_20260504T080000Z", "series@google.com_20260511T080000Z"] do
+        assert {:error, :not_found} = ProviderCalendarEventQueries.get_by_uid(integration.id, uid)
+      end
+
+      assert {:ok, _single} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "single@google.com")
     end
 
     test "delete_cache: false reconciles without touching the cache row" do
@@ -486,7 +520,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
         insert(:meeting,
           calendar_integration_id: integration.id,
           provider_event_id: nil,
-          uid: "caldav-uid-1"
+          calendar_uid: "caldav-uid-1"
         )
 
       assert :ok =
@@ -514,7 +548,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
         insert(:meeting,
           calendar_integration_id: integration.id,
           provider_event_id: "dup-evt-1",
-          uid: "dup-uid-1"
+          calendar_uid: "dup-uid-1"
         )
 
       assert :ok =

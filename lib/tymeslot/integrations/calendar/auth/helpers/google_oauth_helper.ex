@@ -11,6 +11,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
   require Logger
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Google.Provider, as: GoogleProvider
@@ -118,13 +121,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
     :ok
   rescue
     error ->
-      Logger.warning(
-        "Failed to enqueue pending video room retries after calendar reconnect",
-        user_id: user_id,
-        error: inspect(error)
-      )
-
-      :ok
+      ErrorTracking.report_error(error, __STACKTRACE__, %{user_id: user_id})
   end
 
   @doc """
@@ -280,7 +277,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
         )
 
       _url ->
-        Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+        Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
           case Config.google_calendar_api_module().register_push_channel(integration) do
             {:ok, _updated} ->
               Logger.info("Google push channel registered",
@@ -300,7 +297,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
   defp log_push_channel_failure(integration, reason) do
     Logger.error("Google push channel registration failed",
       integration_id: integration.id,
-      reason: inspect(reason)
+      reason: LogFormat.reason(reason)
     )
   end
 
@@ -317,7 +314,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
       {:error, reason} ->
         Logger.error("Failed to enqueue initial Google Calendar sync",
           integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         :ok

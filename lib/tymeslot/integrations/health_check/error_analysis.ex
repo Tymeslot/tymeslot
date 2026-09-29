@@ -7,6 +7,8 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysis do
   about error patterns and backoff strategies.
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+
   require Logger
 
   @type error_class :: :transient | :hard
@@ -139,7 +141,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysis do
 
   defp log_error(reason, :transient, health_state) do
     Logger.warning("Integration health check transient failure",
-      reason: inspect(reason),
+      reason: LogFormat.reason(reason),
       backoff_ms: calculate_next_backoff(health_state, :transient),
       error_class: :transient
     )
@@ -149,7 +151,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysis do
     failures = health_state.failures + 1
 
     Logger.warning("Integration health check failed",
-      reason: inspect(reason),
+      reason: LogFormat.reason(reason),
       failures: failures,
       error_class: :hard
     )

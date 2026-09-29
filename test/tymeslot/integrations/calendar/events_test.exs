@@ -131,7 +131,7 @@ defmodule Tymeslot.Integrations.Calendar.EventsTest do
 
       insert(:meeting,
         calendar_integration_id: integration.id,
-        uid: "meeting-uid",
+        calendar_uid: "meeting-uid",
         provider_event_id: nil
       )
 

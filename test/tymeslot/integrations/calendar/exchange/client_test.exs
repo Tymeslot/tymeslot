@@ -260,6 +260,29 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
 
       assert {:ok, _doc} = Client.call(config(request_timeout: 5_000), "<m:FindFolder/>")
     end
+
+    test "redacts a credential carried in a transport error's reason before logging it" do
+      LogCapture.attach()
+
+      expect(HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:error, %Req.TransportError{reason: {:closed, %{"password" => "struct-leak"}}}}
+      end)
+
+      assert {:error, :network_error} = Client.call(config(), "<m:FindFolder/>")
+
+      expect(HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:error, %{"access_token" => "term-leak"}}
+      end)
+
+      assert {:error, :network_error} = Client.call(config(), "<m:FindFolder/>")
+
+      logged = Enum.map_join(LogCapture.drain(), "\n", &LogCapture.dump/1)
+
+      assert logged =~ "Exchange EWS request failed"
+      assert logged =~ "Req.TransportError"
+      refute logged =~ "struct-leak"
+      refute logged =~ "term-leak"
+    end
   end
 
   describe "credential handling" do

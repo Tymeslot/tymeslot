@@ -22,7 +22,11 @@ defmodule Tymeslot.Workers.EmailWorker do
 
   alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Tasks
+  alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Workers.EmailWorker.AdminAlertScheduler
   alias Tymeslot.Workers.EmailWorkerHandlers
   alias Tymeslot.Workers.SnoozePolicy
   alias Tymeslot.Workers.TransactionalEmailDelivery
@@ -40,15 +44,36 @@ defmodule Tymeslot.Workers.EmailWorker do
   @headroom_deadlines 1
   # 1 second base for exponential backoff
   @backoff_base_ms 1_000
+  # The actions that deliver admin alerts (`AdminAlertScheduler.actions/0`),
+  # as a literal for use in guards.
+  @admin_alert_actions ["send_admin_alert", "send_admin_alert_digest"]
 
   @doc """
   Performs the email job based on the action specified in the args.
   Implements exponential backoff for retries.
   """
+  @behaviour ExpectedJobOutcome
+
+  # The meeting is gone or cancelled, a handler declares the discard expected,
+  # the recipient already raised its own alert, or only the owner can fix the
+  # integration the email was about. Timeouts, invalid addresses and missing
+  # actions are recorded.
+  @meeting_gone "Meeting not found"
+  @meeting_cancelled "Meeting cancelled"
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason),
+    do:
+      reason in [@meeting_gone, @meeting_cancelled] or
+        EmailWorkerHandlers.expected_discard?(reason) or
+        TransactionalEmailDelivery.recipient_rejected?(reason) or
+        reason == ReauthHandling.discard_reason()
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"action" => action} = args, attempt: attempt} = job) do
+    # `user_id` in the args is already Logger metadata and error context:
+    # `Tymeslot.Infrastructure.ObanLogger` sets it at job start.
     Logger.metadata(job_id: job.id, attempt: attempt)
-    if user_id = args["user_id"], do: Logger.metadata(user_id: user_id)
 
     execute_email_job_with_timeout(action, args, job)
   end
@@ -112,12 +137,12 @@ defmodule Tymeslot.Workers.EmailWorker do
 
   defp handle_email_error(:meeting_not_found, _job) do
     Logger.error("Meeting not found, discarding job")
-    {:discard, "Meeting not found"}
+    {:discard, @meeting_gone}
   end
 
   defp handle_email_error(:meeting_cancelled, _job) do
     Logger.info("Meeting cancelled, discarding job")
-    {:discard, "Meeting cancelled"}
+    {:discard, @meeting_cancelled}
   end
 
   defp handle_email_error(reason, _job) when is_binary(reason) do
@@ -139,7 +164,7 @@ defmodule Tymeslot.Workers.EmailWorker do
     timeout_ms = email_timeout_ms()
 
     task =
-      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+      Tasks.async(Tymeslot.TaskSupervisor, fn ->
         EmailWorkerHandlers.execute_email_action(action, args, job.id)
       end)
 
@@ -148,18 +173,39 @@ defmodule Tymeslot.Workers.EmailWorker do
         handle_result(result, job)
 
       nil ->
-        # A hard timeout is ambiguous — the message may already be on the wire.
-        # Discard rather than letting Oban retry, which would re-send a possibly
-        # delivered email. A genuinely lost mail can be re-requested by the user.
-        Logger.warning("Email job timed out; discarding to avoid duplicate sends",
-          action: action,
-          timeout_ms: timeout_ms,
-          job_id: job.id,
-          attempt: job.attempt
-        )
-
-        {:discard, "Email sending timed out"}
+        handle_timeout(action, timeout_ms, job)
     end
+  end
+
+  # An admin alert, or the daily digest of them, is the one email where a
+  # duplicate costs nothing and a loss costs the operator the incident. An
+  # SMTP outage often shows as a hang rather than a refusal, so a discard here
+  # would defeat the long retry schedule `AdminAlertScheduler` gives the
+  # alert: retry instead.
+  defp handle_timeout(action, timeout_ms, job)
+       when action in @admin_alert_actions do
+    Logger.warning("Admin alert email timed out; retrying",
+      action: action,
+      timeout_ms: timeout_ms,
+      job_id: job.id,
+      attempt: job.attempt
+    )
+
+    {:error, "Email sending timed out"}
+  end
+
+  # A hard timeout is ambiguous: the message may already be on the wire.
+  # Discard rather than letting Oban retry, which would re-send a possibly
+  # delivered email. A genuinely lost mail can be re-requested by the user.
+  defp handle_timeout(action, timeout_ms, job) do
+    Logger.warning("Email job timed out; discarding to avoid duplicate sends",
+      action: action,
+      timeout_ms: timeout_ms,
+      job_id: job.id,
+      attempt: job.attempt
+    )
+
+    {:discard, "Email sending timed out"}
   end
 
   defp email_timeout_ms do
@@ -173,7 +219,13 @@ defmodule Tymeslot.Workers.EmailWorker do
     round(min(@backoff_base_ms * :math.pow(2, attempt - 1), 16_000))
   end
 
+  # Admin alerts and their daily digest retry on their own, much longer
+  # schedule; see `AdminAlertScheduler` for why.
   @impl Oban.Worker
+  def backoff(%Oban.Job{args: %{"action" => action}} = job)
+      when action in @admin_alert_actions,
+      do: AdminAlertScheduler.backoff(job)
+
   def backoff(%Oban.Job{attempt: attempt}) do
     # convert ms to seconds for Oban backoff
     div(calculate_backoff(attempt), 1_000)

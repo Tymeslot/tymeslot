@@ -337,7 +337,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
       assert Enum.all?(event.recurrence_exceptions, &match?(%Date{}, &1))
     end
 
-    test "skips event with invalid data and sends admin alert" do
+    test "skips event with invalid data and logs it" do
       valid_raw = %{
         uid: "good-001@example.com",
         summary: "Good Event",

@@ -17,6 +17,7 @@ defmodule Tymeslot.Infrastructure.CacheStoreTest do
   import Tymeslot.TestHelpers.Eventually
 
   alias Tymeslot.Infrastructure.CacheStore
+  alias Tymeslot.Test.LogCapture
 
   @moduletag :infrastructure
 
@@ -100,6 +101,30 @@ defmodule Tymeslot.Infrastructure.CacheStoreTest do
 
     assert TestCache.get_or_compute(key, fn -> :first end) == :first
     assert CacheStore.lookup(:test_cache, key) == {:ok, :first}
+  end
+
+  describe "a failing computation's log line" do
+    test "redacts a credential in a thrown reason" do
+      LogCapture.with_capture([logger_level: :warning], fn ->
+        assert TestCache.get_or_compute("throws", fn -> throw({:denied, "Bearer bt-leak"}) end) ==
+                 {:error, :computation_failed}
+
+        %{meta: meta} = LogCapture.await_log("Cache computation failed")
+        assert meta.reason =~ ":denied"
+        refute meta.reason =~ "bt-leak"
+      end)
+    end
+
+    test "redacts a credential in a raised exception's message" do
+      LogCapture.with_capture([logger_level: :warning], fn ->
+        assert TestCache.get_or_compute("raises", fn -> raise "upstream token=tk-leak" end) ==
+                 {:error, :computation_failed}
+
+        %{meta: meta} = LogCapture.await_log("Cache computation raised an exception")
+        assert meta.exception =~ "upstream"
+        refute meta.exception =~ "tk-leak"
+      end)
+    end
   end
 
   test "a raising computation resolves to :computation_failed for leader and waiters" do

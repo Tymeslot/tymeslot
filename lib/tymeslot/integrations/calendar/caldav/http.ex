@@ -18,6 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   """
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.ResponseTooLargeError
   alias Tymeslot.Infrastructure.RetryLogic
   # Aliased as CalDAVBase to avoid shadowing Elixir's built-in Base module,
@@ -214,6 +215,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   Performs a DELETE request to remove a calendar event.
 
   A 404 response is treated as success — deletes are idempotent.
+
+  Pass `if_match: etag` to delete only the version that ETag names; a
+  resource changed since is left in place and answered with
+  `{:error, :precondition_failed}`.
   """
   @spec delete_event(String.t(), String.t(), String.t(), keyword()) ::
           {:ok, Req.Response.t()} | {:error, CalDAVBase.error_reason()}
@@ -221,8 +226,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     # Matches put_event — see the note there for rationale.
     timeout = Keyword.get(opts, :timeout, 45_000)
 
+    extra_headers =
+      case Keyword.get(opts, :if_match) do
+        nil -> []
+        etag -> [{"If-Match", if_match_value(etag)}]
+      end
+
     result =
-      authed_request("DELETE", url, username, password, [], fn headers ->
+      authed_request("DELETE", url, username, password, extra_headers, fn headers ->
         Config.http_client_module().delete(url, headers,
           receive_timeout: timeout,
           ssrf_protect: true
@@ -232,7 +243,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     case result do
       {:ok, response} ->
         # 404 counts as success — the event may already be gone.
-        classify(response, :delete, url, success: [200, 204, 404])
+        classify(response, :delete, url,
+          success: [200, 204, 404],
+          status_overrides: %{412 => :precondition_failed}
+        )
 
       {:error, reason} ->
         handle_write_transport_error(reason)
@@ -458,7 +472,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     do: {:error, :response_too_large}
 
   defp handle_read_transport_error(reason, method) do
-    Logger.debug("CalDAV read network error", method: method, reason: inspect(reason))
+    Logger.debug("CalDAV read network error", method: method, reason: LogFormat.reason(reason))
     {:error, :network_error}
   end
 
@@ -472,7 +486,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     do: write_timeout_error()
 
   defp handle_write_transport_error(reason) do
-    Logger.debug("CalDAV PUT/DELETE network error", reason: inspect(reason))
+    Logger.debug("CalDAV PUT/DELETE network error", reason: LogFormat.reason(reason))
     {:error, :network_error}
   end
 

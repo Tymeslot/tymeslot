@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
   """
 
   alias Tymeslot.Clock
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CreatedEvent
 
   require Logger
@@ -128,7 +129,7 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
   defp log_typed_error(type, message) do
     Logger.warning("Calendar provider API call failed",
       error_type: type,
-      reason: inspect(message)
+      reason: LogFormat.reason(message)
     )
 
     {:error, type}
@@ -188,11 +189,16 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
         )
       end
 
+      # A split series answers with the new series it made, which is not an
+      # event of the provider's to convert.
       @impl Tymeslot.Integrations.Calendar.Provider
       def update_event(integration, event_id, event_attrs) do
         OAuthBase.handle_api_call(
           fn -> call_update_event(integration, event_id, event_attrs) end,
-          &convert_event/1
+          fn
+            %{tail: _tail} = split -> split
+            updated -> convert_event(updated)
+          end
         )
       end
 

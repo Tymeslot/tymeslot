@@ -174,9 +174,8 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerHealthTest do
   describe "perform/1 when the credentials are rejected" do
     test "counts the discarded cycle, which nothing else would report",
          %{integration: integration} do
-      # A discard emits `job:stop`, which `ObanFailureAlerter` ignores by
-      # design. The streak is the only thing that makes that quietness
-      # temporary.
+      # A discard emits `job:stop`, which error tracking does not record.
+      # The streak is the only thing that makes that quietness temporary.
       expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
         {:error, :unauthorized, "Token revoked"}
       end)

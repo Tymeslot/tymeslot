@@ -8,31 +8,56 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModalTest do
 
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModal
 
-  defp base_assigns(overrides \\ %{}) do
-    Map.merge(
-      %{
-        recurrence_prompt: %{event_id: "evt-123"},
-        myself: %Phoenix.LiveComponent.CID{cid: 1}
-      },
-      overrides
-    )
+  defp render_prompt(prompt) do
+    render_component(&RecurrencePromptModal.recurrence_prompt_modal/1, %{
+      recurrence_prompt: prompt,
+      myself: %Phoenix.LiveComponent.CID{cid: 1}
+    })
   end
 
-  # The scoped choices come back once a provider write honours a scope; until
-  # then offering them would promise a change that does not happen.
-  test "offers the edit for this event only" do
-    html = render_component(&RecurrencePromptModal.recurrence_prompt_modal/1, base_assigns())
+  defp scope_buttons(html) do
+    html
+    |> LazyHTML.from_fragment()
+    |> LazyHTML.query("button[phx-value-scope]")
+    |> Enum.map(fn button ->
+      [scope] = LazyHTML.attribute(button, "phx-value-scope")
+      {scope, String.trim(LazyHTML.text(button))}
+    end)
+  end
+
+  test "a change of time offers this event, this and following, and all events, in order" do
+    html = render_prompt(%{event_id: "evt-123"})
 
     assert html =~ "Edit recurring event"
-    assert html =~ ~s(phx-value-scope="this_only")
-    assert html =~ "Update this event"
-    refute html =~ ~s(phx-value-scope="this_and_following")
-    refute html =~ ~s(phx-value-scope="all")
+
+    assert scope_buttons(html) == [
+             {"this_only", "This event"},
+             {"following", "This and following events"},
+             {"all", "All events"}
+           ]
+  end
+
+  test "says what each choice changes" do
+    html = render_prompt(%{event_id: "evt-123"})
+
+    assert html =~ "only this occurrence changes"
+    assert html =~ "this occurrence and every later one change"
+    assert html =~ "every occurrence in the series changes"
+  end
+
+  # One occurrence cannot take a repeat rule of its own.
+  test "a change of repeat rule is not offered for this event alone" do
+    html = render_prompt(%{kind: :recurrence_rule})
+
+    assert scope_buttons(html) == [
+             {"following", "This and following events"},
+             {"all", "All events"}
+           ]
+
+    refute html =~ "only this occurrence changes"
   end
 
   test "renders cancel button" do
-    html = render_component(&RecurrencePromptModal.recurrence_prompt_modal/1, base_assigns())
-
-    assert html =~ "Cancel"
+    assert render_prompt(%{event_id: "evt-123"}) =~ "Cancel"
   end
 end

@@ -55,6 +55,7 @@ defmodule Tymeslot.Integrations.Video.OAuthTokenManager do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Shared.Lock
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
@@ -218,7 +219,7 @@ defmodule Tymeslot.Integrations.Video.OAuthTokenManager do
       {:error, reason} ->
         Logger.error("Video OAuth token validation failed",
           provider: label,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         {:error, "Token validation failed: #{reason}"}
@@ -269,7 +270,7 @@ defmodule Tymeslot.Integrations.Video.OAuthTokenManager do
         Logger.error("Failed to persist video OAuth tokens",
           provider: label,
           integration_id: integration_id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         {:error, reason}

@@ -18,11 +18,14 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   require Logger
 
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarEventQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarSeriesQueries
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Meetings
 
@@ -161,12 +164,11 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
     CalendarEventQueries.full_refresh_for_role(integration.id, role, calendar_events)
   rescue
     e ->
-      Logger.error("Calendar event cache role refresh raised an exception",
+      ErrorTracking.report_error(e, __STACKTRACE__, %{
         calendar_integration_id: integration.id,
         role: role,
-        event_count: length(calendar_events),
-        reason: Exception.message(e)
-      )
+        event_count: length(calendar_events)
+      })
 
       {:error, Exception.message(e)}
   end
@@ -200,23 +202,57 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
       |> flag_tymeslot_owned(calendar_events)
       |> Enum.map(&ProviderCalendarEventSchema.from_calendar_event/1)
 
-    ProviderCalendarEventQueries.upsert_batch(attrs_list)
+    with {:ok, count} <- ProviderCalendarEventQueries.upsert_batch(attrs_list) do
+      drop_replaced_masters(integration.id, calendar_events)
+      {:ok, count}
+    end
   rescue
     e ->
-      Logger.error("Calendar event cache upsert raised an exception",
+      ErrorTracking.report_error(e, __STACKTRACE__, %{
         calendar_integration_id: integration.id,
-        event_count: length(calendar_events),
-        reason: Exception.message(e)
-      )
+        event_count: length(calendar_events)
+      })
 
       {:error, Exception.message(e)}
+  end
+
+  # Google and Outlook are listed as single occurrences, each naming its
+  # series' master in `recurring_event_id`. A row cached for the master itself
+  # (the grid caches a series it created that way) stands in for the whole
+  # series and would show its first occurrence twice beside them, so it goes
+  # once they arrive. CalDAV occurrences name no master, so this is inert there.
+  #
+  # The master's row may be the only place the series' video is recorded, as
+  # it is for a series the grid created with one, and a sync never writes a
+  # row's video; so before the row goes, its video is given to the
+  # occurrences just cached that have none of their own.
+  defp drop_replaced_masters(integration_id, calendar_events) do
+    master_ids =
+      calendar_events
+      |> Enum.map(& &1.recurring_event_id)
+      |> Enum.filter(&(is_binary(&1) and &1 != ""))
+      |> Enum.uniq()
+
+    integration_id
+    |> ProviderCalendarSeriesQueries.list_master_videos(master_ids)
+    |> Enum.each(fn {master_id, video_integration_id, video_link} ->
+      ProviderCalendarSeriesQueries.put_video(
+        integration_id,
+        {:master, master_id},
+        nil,
+        video_integration_id,
+        video_link
+      )
+    end)
+
+    ProviderCalendarEventQueries.delete_by_provider_event_ids(integration_id, master_ids)
   end
 
   @doc """
   Invalidates all cached availability data for a user after any sync mutation.
 
   Best-effort — if the cache GenServer is mid-restart and the ETS table is
-  temporarily absent, the error is logged as a warning and `:ok` is returned.
+  temporarily absent, the failure is recorded and `:ok` is returned.
   A committed sync transaction must not be unwound because of a transient
   cache state.
   """
@@ -226,13 +262,10 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
     :ok
   rescue
     e ->
-      Logger.warning("Availability cache invalidation failed — cache may be mid-restart",
+      ErrorTracking.report_error(e, __STACKTRACE__, %{
         calendar_integration_id: integration.id,
-        user_id: integration.user_id,
-        reason: Exception.message(e)
-      )
-
-      :ok
+        user_id: integration.user_id
+      })
   end
 
   @doc """
@@ -386,6 +419,14 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
     |> Enum.filter(&is_binary/1)
     |> then(&ProviderCalendarEventQueries.delete_by_provider_event_ids(integration_id, &1))
 
+    # A deleted series master takes its occurrences with it: Google and
+    # Outlook cache each occurrence under its own uid, naming the master in
+    # `recurring_event_id`. CalDAV rows never carry one, so this is inert there.
+    refs
+    |> Enum.map(&Map.get(&1, :provider_event_id))
+    |> Enum.filter(&is_binary/1)
+    |> then(&ProviderCalendarEventQueries.delete_by_recurring_event_ids(integration_id, &1))
+
     :ok
   end
 
@@ -421,8 +462,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
           calendar_integration_id: integration.id,
           meeting_id: meeting.id,
           provider_event_id: meeting.provider_event_id,
-          uid: meeting.uid,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
     end
   end

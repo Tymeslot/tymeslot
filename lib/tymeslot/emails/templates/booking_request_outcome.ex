@@ -288,10 +288,12 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
     attachment(
       email,
       IcsGenerator.generate_ics_cancel_attachment(
-        Map.from_struct(meeting),
+        # The `.ics` UID is the calendar identity, never the booking's
+        # capability-bearing `uid`.
+        meeting |> Map.from_struct() |> Map.put(:uid, meeting.calendar_uid),
         meeting.ical_sequence + 1,
         locale,
-        "appointment-#{meeting.uid}.ics"
+        "appointment-#{meeting.calendar_uid}.ics"
       )
     )
   end

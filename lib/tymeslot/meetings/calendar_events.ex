@@ -6,6 +6,7 @@ defmodule Tymeslot.Meetings.CalendarEvents do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
 
   @doc """
@@ -18,35 +19,22 @@ defmodule Tymeslot.Meetings.CalendarEvents do
   @spec cancel_calendar_event(Ecto.Schema.t()) :: :ok
   def cancel_calendar_event(meeting) do
     Logger.info("Scheduling calendar event cancellation",
-      meeting_id: meeting.id,
-      uid: meeting.uid
+      meeting_id: meeting.id
     )
 
     case CalendarEventScheduler.schedule_calendar_deletion(meeting.id) do
       {:ok, _job} ->
         Logger.info("Calendar event deletion scheduled successfully",
-          meeting_id: meeting.id,
-          uid: meeting.uid
+          meeting_id: meeting.id
         )
 
         :ok
 
       {:error, reason} ->
-        Logger.error("Failed to schedule calendar event deletion",
-          meeting_id: meeting.id,
-          uid: meeting.uid,
-          reason: inspect(reason)
-        )
-
-        :ok
+        ErrorTracking.report_error(reason, nil, %{meeting_id: meeting.id})
     end
   rescue
     error ->
-      Logger.warning("Exception while scheduling calendar event cancellation",
-        meeting_id: meeting.id,
-        error: inspect(error)
-      )
-
-      :ok
+      ErrorTracking.report_error(error, __STACKTRACE__, %{meeting_id: meeting.id})
   end
 end

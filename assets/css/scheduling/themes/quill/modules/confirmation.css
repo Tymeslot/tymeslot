@@ -126,10 +126,16 @@
   gap: var(--space-xs);
 }
 
-/* confirmation-icon-wrapper: replaces w-7 h-7 */
+/* confirmation-icon-wrapper: replaces w-7 h-7 flex items-center justify-center.
+   The centring lives here rather than in a `center-content` class: Quill has
+   no such rule (only Rhythm defines one), so the markup's class did nothing
+   and each icon sat in the top-left corner of its circle. */
 .confirmation-icon-wrapper {
   width: 1.75rem;
   height: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* confirmation-actions: replaces mt-3 sm:mt-4 flex flex-col sm:flex-row gap-2 sm:gap-3 */

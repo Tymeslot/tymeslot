@@ -14,6 +14,7 @@ defmodule Tymeslot.AppSettingsTest do
   alias Tymeslot.Infrastructure.AdminAlerts.EmailNotifier
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Locales
+  alias Tymeslot.Test.LogCapture
   alias TymeslotWeb.Helpers.ClientIP
 
   setup :restore_app_settings_env
@@ -308,7 +309,7 @@ defmodule Tymeslot.AppSettingsTest do
       )
     end
 
-    test "admin_alerts_enabled true with no admin_alert_email still drops the email" do
+    test "admin_alerts_enabled true with no admin_alert_email warns on save and drops the email" do
       # The dev shell may export ADMIN_ALERT_EMAIL, in which case runtime.exs
       # bakes that value into the AppSettings baseline at boot — and a plain
       # `Application.delete_env` here would be overwritten by the baseline
@@ -335,9 +336,18 @@ defmodule Tymeslot.AppSettingsTest do
         end
       end)
 
-      {:ok, _settings} = AppSettings.update(%{admin_alerts_enabled: true})
+      save_events =
+        LogCapture.with_capture(fn ->
+          {:ok, _settings} = AppSettings.update(%{admin_alerts_enabled: true})
+          LogCapture.drain()
+        end)
 
-      EmailNotifier.send_alert(:calendar_sync_error, %{summary: "Sync failed"})
+      assert [%{level: :error}] =
+               Enum.filter(save_events, &(LogCapture.message_text(&1.msg) =~ "ADMIN_ALERT_EMAIL"))
+
+      LogCapture.with_capture(fn ->
+        EmailNotifier.send_alert(:calendar_sync_error, %{summary: "Sync failed"})
+      end)
 
       refute_enqueued(
         worker: Tymeslot.Workers.EmailWorker,

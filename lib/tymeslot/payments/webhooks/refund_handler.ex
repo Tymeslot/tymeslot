@@ -27,6 +27,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   require Logger
 
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Payments.CustomerLookup
   alias Tymeslot.Payments.PubSub
   alias Tymeslot.Payments.Webhooks.WebhookUtils
@@ -329,7 +330,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
         Logger.error("Refund error - failed to revoke access",
           user_id: subscription.user_id,
           charge_id: charge_id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, :retry_later, "Subscription revocation failed"}

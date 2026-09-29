@@ -33,6 +33,7 @@ defmodule Tymeslot.Mailer.HealthCheck do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Mailer.{ApiProbe, Providers, SmtpProbe}
 
   @type mailer_config :: keyword()
@@ -130,7 +131,7 @@ defmodule Tymeslot.Mailer.HealthCheck do
 
   defp log_unknown_adapter(adapter) do
     Logger.warning("Mailer adapter is not in the provider registry; skipping validation",
-      adapter: inspect(adapter)
+      adapter: LogFormat.reason(adapter)
     )
 
     :ok

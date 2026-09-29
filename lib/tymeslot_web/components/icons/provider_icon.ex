@@ -21,6 +21,13 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
     caldav radicale zimbra mailbox_org apple baikal ics_url exchange
   )
 
+  # Providers whose logo ships as one SVG, which stays sharp at every size and
+  # pixel density, instead of the per-size WebP exports the others still use.
+  # A list of logo files rather than of the CalDAV provider family, so the
+  # CalDAV-list check does not apply.
+  # credo:disable-for-next-line CredoChecks.NoInlineCaldavList
+  @vector_logos ~w(caldav radicale baikal outlook teams kmeet)
+
   @doc """
   Renders a provider icon for calendar, video, and OAuth providers.
 
@@ -113,14 +120,17 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
 
     # Ensure we have all required parameters
     if provider && provider_type && actual_size do
-      # Build the path to the WebP file
-      filename = normalize_provider_filename(provider)
-      "/icons/providers/#{provider_type}/#{actual_size}/#{filename}.webp"
+      icon_file(provider_type, actual_size, normalize_provider_filename(provider))
     else
       # Return nil if any parameter is missing
       nil
     end
   end
+
+  defp icon_file(type, _size, filename) when filename in @vector_logos,
+    do: "/icons/providers/#{type}/#{filename}.svg"
+
+  defp icon_file(type, size, filename), do: "/icons/providers/#{type}/#{size}/#{filename}.webp"
 
   # Some providers are referenced by aliases (e.g. "google_calendar") but their
   # icon files are stored under the shorter base name ("google").

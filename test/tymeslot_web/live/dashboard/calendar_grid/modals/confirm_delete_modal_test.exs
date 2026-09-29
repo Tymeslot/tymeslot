@@ -65,4 +65,35 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDeleteModalTest do
 
     assert html =~ "(No title)"
   end
+
+  describe "scopes" do
+    test "a series member offers this event or all events" do
+      html =
+        render_component(
+          &ConfirmDeleteModal.confirm_delete_modal/1,
+          base_assigns(%{scopes: :series})
+        )
+
+      assert html =~ "Delete recurring event"
+      assert html =~ "Team Standup"
+      assert scope_values(html) == ["occurrence", "series"]
+      assert html =~ "Delete this event"
+      assert html =~ "Delete all events"
+      assert html =~ "Cancel"
+    end
+
+    test "a single event offers one Delete without a scope" do
+      html = render_component(&ConfirmDeleteModal.confirm_delete_modal/1, base_assigns())
+
+      assert scope_values(html) == []
+      refute html =~ "Delete all events"
+    end
+  end
+
+  defp scope_values(html) do
+    html
+    |> LazyHTML.from_fragment()
+    |> LazyHTML.query("[phx-click='confirm_delete_event']")
+    |> LazyHTML.attribute("phx-value-scope")
+  end
 end

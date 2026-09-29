@@ -8,6 +8,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
 
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Common.OAuth.LogContext
 
@@ -93,7 +94,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
         end
 
       {:error, reason} ->
-        Logger.error("Network error during token exchange", reason: inspect(reason))
+        Logger.error("Network error during token exchange", reason: LogFormat.reason(reason))
         {:error, "Network error during token exchange: #{inspect(reason)}"}
     end
   end
@@ -158,7 +159,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
       {:error, reason} ->
         Logger.error(
           "Network error during token refresh",
-          log_context ++ [reason: inspect(reason)]
+          log_context ++ [reason: LogFormat.reason(reason)]
         )
 
         {:error, {:network_error, reason}}
