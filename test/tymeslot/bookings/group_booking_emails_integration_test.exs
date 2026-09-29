@@ -474,7 +474,7 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
                "action" => "send_seat_reschedule_emails",
                "meeting_id" => meeting.id,
                "participant_id" => participant_id,
-               "old_uid" => meeting.uid,
+               "old_uid" => meeting.calendar_uid,
                "old_ical_sequence" => 0,
                "old_start_time" => DateTime.to_iso8601(meeting.start_time),
                "old_end_time" => DateTime.to_iso8601(meeting.end_time)

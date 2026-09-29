@@ -126,15 +126,16 @@ defmodule Tymeslot.Availability.GroupSlots do
     |> event_uid_set()
   end
 
-  # A meeting's own calendar event is reported back under its iCal uid by
-  # CalDAV, but under the provider's own event id by Google and Outlook,
-  # which is what `provider_event_id` snapshots at creation time. Both forms
-  # go into the set, so the meeting sheds its own event whichever provider
-  # holds it; matching only on `uid` silently never fires on Google or
-  # Outlook and leaves every joinable group slot blocked.
+  # A meeting's own calendar event is reported back under its iCal uid (the
+  # meeting's `calendar_uid`, never its `uid`) by CalDAV, but under the
+  # provider's own event id by Google and Outlook, which is what
+  # `provider_event_id` snapshots at creation time. Both forms go into the
+  # set, so the meeting sheds its own event whichever provider holds it;
+  # matching only on the iCal uid silently never fires on Google or Outlook
+  # and leaves every joinable group slot blocked.
   defp event_uid_set(meetings) do
     meetings
-    |> Enum.flat_map(&[&1.uid, &1.provider_event_id])
+    |> Enum.flat_map(&[&1.calendar_uid, &1.provider_event_id])
     |> Enum.reject(&is_nil/1)
     |> MapSet.new()
   end

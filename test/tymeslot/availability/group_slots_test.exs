@@ -72,7 +72,7 @@ defmodule Tymeslot.Availability.GroupSlotsTest do
   end
 
   defp own_event(meeting) do
-    %{uid: meeting.uid, start_time: meeting.start_time, end_time: meeting.end_time}
+    %{uid: meeting.calendar_uid, start_time: meeting.start_time, end_time: meeting.end_time}
   end
 
   defp base_slots(date, events, config) do

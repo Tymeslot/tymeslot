@@ -28,15 +28,15 @@ defmodule Tymeslot.Meetings.GroupBookingUidsTest do
     meeting = meeting_for(user, capacity: 2)
     insert(:participant, meeting: meeting)
 
-    assert MapSet.member?(Meetings.group_booking_uids_for_user(user.id), meeting.uid)
-    assert Meetings.group_booking_uid?(meeting.uid)
+    assert MapSet.member?(Meetings.group_booking_uids_for_user(user.id), meeting.calendar_uid)
+    assert Meetings.group_booking_uid?(meeting.calendar_uid)
   end
 
   test "a solo booking is not", %{user: user} do
     meeting = meeting_for(user)
 
-    refute MapSet.member?(Meetings.group_booking_uids_for_user(user.id), meeting.uid)
-    refute Meetings.group_booking_uid?(meeting.uid)
+    refute MapSet.member?(Meetings.group_booking_uids_for_user(user.id), meeting.calendar_uid)
+    refute Meetings.group_booking_uid?(meeting.calendar_uid)
   end
 
   # The row stays a group slot even while nobody currently holds a seat on
@@ -46,26 +46,26 @@ defmodule Tymeslot.Meetings.GroupBookingUidsTest do
     meeting = meeting_for(user, capacity: 2)
     insert(:participant, meeting: meeting, cancelled_at: DateTime.utc_now(:second))
 
-    assert MapSet.member?(Meetings.group_booking_uids_for_user(user.id), meeting.uid)
-    assert Meetings.group_booking_uid?(meeting.uid)
+    assert MapSet.member?(Meetings.group_booking_uids_for_user(user.id), meeting.calendar_uid)
+    assert Meetings.group_booking_uid?(meeting.calendar_uid)
   end
 
   test "a group slot with no participants yet is still locked", %{user: user} do
     meeting = meeting_for(user, capacity: 2)
 
-    assert MapSet.member?(Meetings.group_booking_uids_for_user(user.id), meeting.uid)
-    assert Meetings.group_booking_uid?(meeting.uid)
+    assert MapSet.member?(Meetings.group_booking_uids_for_user(user.id), meeting.calendar_uid)
+    assert Meetings.group_booking_uid?(meeting.calendar_uid)
   end
 
   test "another organiser's group booking is not in this user's set", %{user: user} do
     other = insert(:user)
     meeting = meeting_for(other, capacity: 2)
 
-    refute MapSet.member?(Meetings.group_booking_uids_for_user(user.id), meeting.uid)
+    refute MapSet.member?(Meetings.group_booking_uids_for_user(user.id), meeting.calendar_uid)
 
     # The guard is per event, not per user: ownership is already established
     # by the time it runs.
-    assert Meetings.group_booking_uid?(meeting.uid)
+    assert Meetings.group_booking_uid?(meeting.calendar_uid)
   end
 
   test "several seats on one meeting yield one entry", %{user: user} do

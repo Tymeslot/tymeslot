@@ -62,7 +62,7 @@ defmodule Tymeslot.Meetings do
     to: Tymeslot.Meetings.GuestQueries,
     as: :rsvp_summaries_for_user
 
-  @doc "Returns the `uid`s of a user's meetings that are group bookings."
+  @doc "Returns the calendar identities (`calendar_uid`s) of a user's group bookings."
   defdelegate group_booking_uids_for_user(user_id),
     to: Tymeslot.Meetings.GroupMeetingQueries
 

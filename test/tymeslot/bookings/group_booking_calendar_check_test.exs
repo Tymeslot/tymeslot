@@ -64,13 +64,13 @@ defmodule Tymeslot.Bookings.GroupBookingCalendarCheckTest do
 
   describe "the group meeting's own entry in the host's calendar" do
     test "keeps the slot offered with the seats it has left", context do
-      stub_calendar_events([ten_oclock_event(context, uid: context.meeting.uid)])
+      stub_calendar_events([ten_oclock_event(context, uid: context.meeting.calendar_uid)])
 
       assert %{seats_left: 2, capacity: 3} = ten_oclock_slot(context)
     end
 
     test "lets a second booker join through the fresh calendar check", context do
-      stub_calendar_events([ten_oclock_event(context, uid: context.meeting.uid)])
+      stub_calendar_events([ten_oclock_event(context, uid: context.meeting.calendar_uid)])
 
       assert {:ok, joined} =
                Create.execute(context.meeting_params, form_data("second@example.com"))

@@ -82,8 +82,10 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   defp move_seat(old_meeting, participant, new_times, meeting_type) do
     max_participants = max_participants_for(old_meeting, meeting_type)
 
+    # The old event's identity in the participant's calendar is the meeting's
+    # `calendar_uid`, never its `uid` (the booking's bearer capability).
     old_snapshot = %{
-      uid: old_meeting.uid,
+      uid: old_meeting.calendar_uid,
       ical_sequence: old_meeting.ical_sequence,
       start_time: old_meeting.start_time,
       end_time: old_meeting.end_time

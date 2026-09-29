@@ -133,10 +133,10 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
                                                                       appointment_details,
                                                                       old_event ->
       assert participant_email == "mover@example.com"
-      assert appointment_details.uid == new_meeting.uid
+      assert appointment_details.uid == new_meeting.calendar_uid
       assert appointment_details.attendee_name == "Mover"
       assert String.contains?(appointment_details.cancel_url, moved.management_token)
-      assert old_event.uid == old_meeting.uid
+      assert old_event.uid == old_meeting.calendar_uid
       assert old_event.ical_sequence == old_meeting.ical_sequence
       assert old_event.start_time == old_meeting.start_time
       assert old_event.end_time == old_meeting.end_time
@@ -159,7 +159,7 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
                "action" => "send_seat_reschedule_emails",
                "meeting_id" => new_meeting.id,
                "participant_id" => moved.id,
-               "old_uid" => old_meeting.uid,
+               "old_uid" => old_meeting.calendar_uid,
                "old_ical_sequence" => old_meeting.ical_sequence,
                "old_start_time" => DateTime.to_iso8601(old_meeting.start_time),
                "old_end_time" => DateTime.to_iso8601(old_meeting.end_time)

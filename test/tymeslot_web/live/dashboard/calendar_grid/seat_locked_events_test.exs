@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
     event =
       insert(:provider_calendar_event,
         calendar_integration: integration,
-        uid: meeting.uid,
+        uid: meeting.calendar_uid,
         summary: "Group Workshop",
         start_at: DateTime.new!(today, ~T[10:00:00], "Etc/UTC"),
         end_at: DateTime.new!(today, ~T[11:00:00], "Etc/UTC"),

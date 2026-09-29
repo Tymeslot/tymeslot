@@ -77,7 +77,7 @@ defmodule Tymeslot.Availability.GroupDisplayBookingConsistencyTest do
   end
 
   defp own_event(meeting) do
-    %{uid: meeting.uid, start_time: meeting.start_time, end_time: meeting.end_time}
+    %{uid: meeting.calendar_uid, start_time: meeting.start_time, end_time: meeting.end_time}
   end
 
   test "a joinable group slot shown by the display is bookable despite its own event", ctx do
