@@ -179,6 +179,26 @@ defmodule Tymeslot.Meetings.GuestsTest do
       end
     end
 
+    test "refuses a group meeting, whose guests take seats through a participant", %{
+      host: host
+    } do
+      start_time = DateTime.add(DateTime.utc_now(:second), 4, :day)
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: host.id,
+          capacity: 3,
+          start_time: start_time,
+          end_time: DateTime.add(start_time, 60, :minute)
+        )
+
+      assert {:error, :closed} =
+               Guests.invite_for_organizer(meeting.id, host.id, ["extra@example.com"])
+
+      assert GuestQueries.list_for_meeting(meeting.id) == []
+      refute_enqueued(worker: EmailWorker)
+    end
+
     test "refuses a meeting that has already started", %{host: host} do
       now = DateTime.utc_now(:second)
 

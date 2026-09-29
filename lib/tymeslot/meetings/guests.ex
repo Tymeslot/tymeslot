@@ -98,7 +98,10 @@ defmodule Tymeslot.Meetings.Guests do
 
   Scoped to the organiser: a meeting `organizer_user_id` does not own is
   `{:error, :not_found}`, exactly as one that does not exist. The meeting must
-  still be open to guests (`invitations_open?/1`), or `{:error, :closed}`.
+  still be open to guests (`invitations_open?/1`), or `{:error, :closed}`. A
+  group meeting is always `{:error, :closed}` here: its guests belong to the
+  participant who brought them and each takes one of the slot's seats, so a
+  guest the host adds with no participant would bypass the seat count.
 
   This is the host's own path. The meeting type's `allow_guests` decides what
   the *booker* may do on the public form, and says nothing about whom the host
@@ -146,8 +149,17 @@ defmodule Tymeslot.Meetings.Guests do
       DateTime.after?(meeting.start_time, Clock.utc_now())
   end
 
+  @doc """
+  Whether the host may add guests to this meeting (`invite_for_organizer/3`):
+  it is open to guests and is not a group meeting, whose guests are brought by
+  its participants and counted against its seats.
+  """
+  @spec host_can_invite?(MeetingSchema.t()) :: boolean()
+  def host_can_invite?(meeting),
+    do: not MeetingSchema.group?(meeting) and invitations_open?(meeting)
+
   defp ensure_open(meeting) do
-    if invitations_open?(meeting), do: :ok, else: {:error, :closed}
+    if host_can_invite?(meeting), do: :ok, else: {:error, :closed}
   end
 
   defp add_to_meeting(meeting, emails) do
