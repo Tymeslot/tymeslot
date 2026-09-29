@@ -22,12 +22,19 @@ defmodule TymeslotWeb.AdminLiveLocaleDefaultsTest do
   # its locale code ("" for the instance-default option), or :none if that
   # surface highlights nothing at all.
   defp active_locale_button(html, key) do
-    regex = ~r/phx-value-key="#{key}"\s+phx-value-locale="([a-z]*)"[^>]*aria-pressed="true"/
-
-    case Regex.run(regex, html) do
-      [_all, code] -> code
-      nil -> :none
-    end
+    # Read each button tag whole, so the attributes may come in any order.
+    ~r/<button\b[^>]*>/
+    |> Regex.scan(html)
+    |> List.flatten()
+    |> Enum.find_value(:none, fn tag ->
+      with true <- tag =~ ~s(phx-value-key="#{key}"),
+           true <- tag =~ ~s(aria-pressed="true"),
+           [_all, code] <- Regex.run(~r/phx-value-locale="([a-z]*)"/, tag) do
+        code
+      else
+        _no_match -> nil
+      end
+    end)
   end
 
   describe "the Localisation section" do

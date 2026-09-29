@@ -4,6 +4,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  import TymeslotWeb.Components.UI.LocaleButton
+
   alias Phoenix.LiveView.JS
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Locales
@@ -186,22 +188,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
         </div>
 
         <div>
-          <%!-- Wrapped in a form because `phx-change` is a form binding: on a
-                bare select the change never arrives as the named field. --%>
-          <form
-            id="create-meeting-locale-form"
-            phx-change="update_create_locale"
-            phx-target={@myself}
+          <p
+            id="create-meeting-locale-label"
+            class="text-token-xs font-medium text-tymeslot-400 mb-1.5"
           >
-            <.input
-              type="select"
-              name="locale"
-              value={@creating_event[:locale]}
-              options={language_options()}
-              label={dgettext("dashboard_calendar_events", "Language of the invitation")}
-              id="create-meeting-locale"
+            {dgettext("dashboard_calendar_events", "Language of the invitation")}
+          </p>
+          <div
+            id="create-meeting-locale"
+            role="group"
+            aria-labelledby="create-meeting-locale-label"
+            class="inline-flex flex-wrap items-center p-1 bg-white border-2 border-tymeslot-100 rounded-token-xl shadow-sm gap-1 max-w-full"
+          >
+            <.locale_button
+              :for={locale <- Locales.supported()}
+              locale={locale}
+              active={@creating_event[:locale] == locale.code}
+              phx-click="update_create_locale"
+              phx-value-locale={locale.code}
+              phx-target={@myself}
             />
-          </form>
+          </div>
           <p class="text-token-xs text-tymeslot-400 mt-1">
             {dgettext(
               "dashboard_calendar_events",
@@ -455,12 +462,5 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       </:footer>
     </.modal>
     """
-  end
-
-  # `{label, value}` pairs, the shape `<.input type="select">` expects. Same
-  # source as every other language picker, so a locale added to the config
-  # appears here without a second list to remember.
-  defp language_options do
-    Enum.map(Locales.supported(), fn %{code: code, name: name} -> {name, code} end)
   end
 end

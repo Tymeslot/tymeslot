@@ -167,6 +167,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingExtrasTest do
       open_form(lv)
       fill_guest(lv)
 
+      assert has_element?(
+               lv,
+               ~s(#create-meeting-locale button[phx-value-locale="de"][aria-pressed="true"])
+             )
+
       assert save_and_fetch(lv).attendee_locale == "de"
     end
 
@@ -175,7 +180,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingExtrasTest do
       open_form(lv)
       fill_guest(lv)
 
-      lv |> element("#create-meeting-locale-form") |> render_change(%{"locale" => "fr"})
+      lv |> element(~s(#create-meeting-locale button[phx-value-locale="fr"])) |> render_click()
 
       assert save_and_fetch(lv).attendee_locale == "fr"
     end
