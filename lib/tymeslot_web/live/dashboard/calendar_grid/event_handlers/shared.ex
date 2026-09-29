@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
 
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
+  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
@@ -99,13 +100,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
     end
   end
 
-  @spec valid_email?(binary()) :: boolean()
-  @spec valid_email?(term()) :: false
-  def valid_email?(email) when is_binary(email) do
-    Regex.match?(~r/^[^\s@]+@[^\s@]+\.[^\s@]+$/, email)
-  end
-
-  def valid_email?(_other), do: false
+  # The domain's rule rather than a copy of it: an address the form accepts
+  # has to be one `Meetings.Guests` keeps, or it is dropped after the host was
+  # told it was fine.
+  @spec valid_email?(term()) :: boolean()
+  def valid_email?(email), do: Guests.valid_email?(email)
 
   # Allowed reminder lead times (minutes before the event start) offered as
   # presets in the editor. Values outside this set are rejected so the UI

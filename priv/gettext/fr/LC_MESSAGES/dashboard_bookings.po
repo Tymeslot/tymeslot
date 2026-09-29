@@ -664,3 +664,23 @@ msgstr "Après report"
 msgctxt "reminder status"
 msgid "Not sent"
 msgstr "Non envoyé"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/guest_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{email} booked this meeting and is already invited."
+msgstr "%{email} a réservé cette réunion et est déjà invité."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/guest_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{email} is already invited."
+msgstr "%{email} est déjà invité."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/guest_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{email} is not a valid email address."
+msgstr "%{email} n’est pas une adresse e-mail valide."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/guest_actions.ex
+#, elixir-autogen, elixir-format
+msgid "No more guests can be added to this meeting."
+msgstr "Vous ne pouvez plus ajouter d’invités à cette réunion."

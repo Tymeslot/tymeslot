@@ -154,8 +154,10 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
         # Guests are inserted after the meeting exists and before notifications
         # fire, so a guest changeset failure rolls the whole booking back. The
         # caller pre-validates the list, so emails are passed through as-is.
+        # The host is the one inviting them, whatever brought them here (Quick
+        # Add, or a poll the host confirmed), and their invitation says so.
         with {:ok, meeting} <- create_meeting(meeting_attrs),
-             {:ok, _guests} <- Guests.create_for_meeting(meeting.id, guest_emails),
+             {:ok, _guests} <- Guests.create_for_meeting(meeting.id, guest_emails, :organizer),
              {:ok, _job} <- schedule_calendar_job(meeting) do
           handle_side_effects(meeting)
           meeting

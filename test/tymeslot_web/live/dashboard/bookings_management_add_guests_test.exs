@@ -177,4 +177,71 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementAddGuestsTest do
       refute has_element?(view, "#add-guests-#{meeting.id}")
     end
   end
+
+  describe "refusing an address" do
+    setup %{conn: conn, user: user} do
+      meeting = upcoming_meeting(user)
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+      view |> element("#add-guests-#{meeting.id}") |> render_click()
+      %{view: view, meeting: meeting}
+    end
+
+    test "says why an invalid address was not added", %{view: view} do
+      refute stage(view, "not-an-email") =~ ~s(phx-value-email="not-an-email")
+      assert render(view) =~ "not-an-email is not a valid email address."
+    end
+
+    # The form used to take anything shaped like an address and let the
+    # domain drop what it did not accept on confirm, so the host was told the
+    # guest was invited and nobody was. The dialog now asks the same rule.
+    test "refuses an address the invitation itself would drop", %{view: view} do
+      refute stage(view, "someone@example.invalidtld") =~
+               ~s(phx-value-email="someone@example.invalidtld")
+
+      assert render(view) =~ "someone@example.invalidtld is not a valid email address."
+    end
+
+    test "says the booker is already invited", %{view: view} do
+      stage(view, "John@Example.com")
+
+      assert render(view) =~ "john@example.com booked this meeting and is already invited."
+    end
+
+    test "says an address is already invited, on the meeting or on the list", %{
+      view: view,
+      meeting: meeting
+    } do
+      {:ok, _guests} = Guests.create_for_meeting(meeting.id, ["there@example.com"])
+      # The dialog lists the guests it was opened with, so it is reopened to
+      # see the one just added.
+      view |> element("#add-guests-#{meeting.id}") |> render_click()
+
+      stage(view, "there@example.com")
+      assert render(view) =~ "there@example.com is already invited."
+
+      stage(view, "listed@example.com")
+      stage(view, "Listed@example.com")
+      html = render(view)
+
+      assert html =~ "listed@example.com is already invited."
+      assert length(Regex.scan(~r/phx-value-email="listed@example.com"/, html)) == 1
+    end
+
+    test "says there is no more room for a list pasted past the cap", %{
+      view: view,
+      meeting: meeting
+    } do
+      room = Guests.max_guests() - 1
+      {:ok, _guests} = Guests.create_for_meeting(meeting.id, ["first@example.com"])
+      view |> element("#add-guests-#{meeting.id}") |> render_click()
+
+      pasted = Enum.map_join(1..(room + 1), ", ", &"guest#{&1}@example.com")
+      stage(view, pasted)
+      html = render(view)
+
+      assert html =~ "No more guests can be added to this meeting."
+      assert html =~ ~s(phx-value-email="guest#{room}@example.com")
+      refute html =~ ~s(phx-value-email="guest#{room + 1}@example.com")
+    end
+  end
 end

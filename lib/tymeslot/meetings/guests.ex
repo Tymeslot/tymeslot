@@ -62,20 +62,37 @@ defmodule Tymeslot.Meetings.Guests do
   def sanitize_emails(_emails, _primary_email), do: []
 
   @doc """
+  Whether `email` is an address a guest can be invited at: the same rule
+  `sanitize_emails/2` applies, so a form that checks an address with this
+  never offers one the booking would then drop.
+  """
+  @spec valid_email?(term()) :: boolean()
+  def valid_email?(email), do: EmailValidator.validate(email) == :ok
+
+  @doc """
   Inserts the given sanitised guest emails for a meeting.
+
+  `invited_by` records who is inviting them (`:booker` for the person booking
+  on the public page, `:organizer` for the host), so their invitation names
+  the right person.
 
   Intended to be called inside the booking-creation transaction so that a
   failure rolls the whole booking back. Returns `{:ok, guests}` with the
   inserted rows, or `{:error, changeset}` on the first failure.
   """
-  @spec create_for_meeting(binary(), [String.t()]) ::
+  @spec create_for_meeting(binary(), [String.t()], GuestSchema.inviter()) ::
           {:ok, [GuestSchema.t()]} | {:error, Ecto.Changeset.t()}
-  def create_for_meeting(_meeting_id, []), do: {:ok, []}
+  def create_for_meeting(meeting_id, emails, invited_by \\ :booker)
 
-  def create_for_meeting(meeting_id, emails) when is_binary(meeting_id) and is_list(emails) do
+  def create_for_meeting(_meeting_id, [], _invited_by), do: {:ok, []}
+
+  def create_for_meeting(meeting_id, emails, invited_by)
+      when is_binary(meeting_id) and is_list(emails) and invited_by in [:booker, :organizer] do
     result =
       Enum.reduce_while(emails, {:ok, []}, fn email, {:ok, acc} ->
-        case GuestQueries.insert_guest(%{meeting_id: meeting_id, email: email}) do
+        attrs = %{meeting_id: meeting_id, email: email, invited_by: invited_by}
+
+        case GuestQueries.insert_guest(attrs) do
           {:ok, guest} -> {:cont, {:ok, [guest | acc]}}
           {:error, changeset} -> {:halt, {:error, changeset}}
         end
@@ -157,7 +174,7 @@ defmodule Tymeslot.Meetings.Guests do
     cond do
       additions == [] -> {:ok, []}
       room <= 0 -> {:error, :full}
-      true -> create_for_meeting(meeting.id, Enum.take(additions, room))
+      true -> create_for_meeting(meeting.id, Enum.take(additions, room), :organizer)
     end
   end
 
@@ -238,8 +255,6 @@ defmodule Tymeslot.Meetings.Guests do
   defp broadcast_rsvp_update(_meeting), do: :ok
 
   defp rsvp_topic(user_id), do: "guest_rsvps:#{user_id}"
-
-  defp valid_email?(email), do: EmailValidator.validate(email) == :ok
 
   defp normalize(nil), do: ""
   defp normalize(value) when is_binary(value), do: value |> String.trim() |> String.downcase()
