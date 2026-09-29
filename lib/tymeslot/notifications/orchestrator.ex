@@ -9,6 +9,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
   alias Tymeslot.Clock
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.ApprovalJobs
 
   alias Tymeslot.Notifications.{
@@ -37,7 +38,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
       {:error, reason} = error ->
         Logger.error("Failed to schedule meeting notifications",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         error
@@ -82,7 +83,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
         Logger.error("Failed to schedule booking request notification step",
           meeting_id: meeting.id,
           step: step,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         {step, reason}
@@ -386,8 +387,8 @@ defmodule Tymeslot.Notifications.Orchestrator do
 
       {organizer_result, attendee_result} ->
         Logger.warning("Some reschedule emails may have failed",
-          organizer_result: inspect(organizer_result),
-          attendee_result: inspect(attendee_result)
+          organizer_result: LogFormat.reason(organizer_result),
+          attendee_result: LogFormat.reason(attendee_result)
         )
 
         {:ok, :reschedules_partially_sent}

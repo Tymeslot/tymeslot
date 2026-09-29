@@ -70,7 +70,7 @@ defmodule Tymeslot.Meetings.MeetingCalendarQueries do
         |> where(
           [m],
           m.calendar_integration_id == ^calendar_integration_id and
-            (m.provider_event_id in ^ids or m.uid in ^ids)
+            (m.provider_event_id in ^ids or m.calendar_uid in ^ids)
         )
         |> Repo.all()
         |> Enum.flat_map(fn meeting ->
@@ -81,18 +81,20 @@ defmodule Tymeslot.Meetings.MeetingCalendarQueries do
   end
 
   @doc """
-  Finds a meeting by its UID and calendar integration.
+  Finds a meeting by the UID its calendar event carries (`calendar_uid`) and
+  its calendar integration.
 
   Returns `{:ok, meeting}` if found, `{:error, :not_found}` otherwise.
   """
-  @spec get_by_uid_and_integration(integer(), String.t()) ::
+  @spec get_by_calendar_uid_and_integration(integer(), String.t()) ::
           {:ok, Meeting.t()} | {:error, :not_found}
-  def get_by_uid_and_integration(calendar_integration_id, uid) do
+  def get_by_calendar_uid_and_integration(calendar_integration_id, calendar_uid) do
     result =
       Meeting
       |> where(
         [m],
-        m.calendar_integration_id == ^calendar_integration_id and m.uid == ^uid
+        m.calendar_integration_id == ^calendar_integration_id and
+          m.calendar_uid == ^calendar_uid
       )
       |> limit(1)
       |> Repo.one()

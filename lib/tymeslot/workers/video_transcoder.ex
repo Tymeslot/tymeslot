@@ -17,6 +17,7 @@ defmodule Tymeslot.Workers.VideoTranscoder do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Jobs
   alias Tymeslot.Media.Transcoder
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationQueries
@@ -30,6 +31,16 @@ defmodule Tymeslot.Workers.VideoTranscoder do
     |> new(replace: [:args, :scheduled_at])
     |> Oban.insert()
   end
+
+  @behaviour ExpectedJobOutcome
+
+  # The upload was removed before it was transcoded. A missing ffmpeg is the
+  # operator's to fix, and is recorded.
+  @source_gone "Video source no longer present"
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason),
+    do: reason in [@source_gone]
 
   @impl Oban.Worker
   def perform(
@@ -121,7 +132,7 @@ defmodule Tymeslot.Workers.VideoTranscoder do
           theme_customization_id: id
         )
 
-        {:cancel, "Video source no longer present"}
+        {:cancel, @source_gone}
     end
   end
 

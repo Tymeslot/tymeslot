@@ -5,6 +5,7 @@ defmodule Tymeslot.Payments.Webhooks.CheckoutSessionExpiredHandler do
   use Tymeslot.Payments.Behaviours.WebhookHandler
 
   require Logger
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Payments
 
   @impl Tymeslot.Payments.Behaviours.WebhookHandler
@@ -31,7 +32,7 @@ defmodule Tymeslot.Payments.Webhooks.CheckoutSessionExpiredHandler do
       {:error, reason} ->
         Logger.error("Failed to process expired session",
           session_id: session_id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, :processing_failed, "Failed to process expired session: #{inspect(reason)}"}

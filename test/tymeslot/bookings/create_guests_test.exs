@@ -8,8 +8,11 @@ defmodule Tymeslot.Bookings.CreateGuestsTest do
   @moduletag :bookings
   @moduletag :integration
 
+  import ExUnit.CaptureLog
   import Mox
+  import Tymeslot.ConfigTestHelpers
 
+  alias ErrorTracker.Error
   alias Tymeslot.Bookings.Create
   alias Tymeslot.Meetings.Guests
 
@@ -81,5 +84,48 @@ defmodule Tymeslot.Bookings.CreateGuestsTest do
 
     assert {:ok, meeting} = Create.execute(meeting_params, form_data, skip_calendar_check: true)
     assert Guests.list_for_meeting(meeting.id) == []
+  end
+
+  describe "when the database refuses a sanitised guest" do
+    # A guest that passed sanitising can only be refused by the database for
+    # a reason nobody planned for; here the trigger stands in for an rsvp
+    # token collision. The trigger is created inside the test's sandbox
+    # transaction, so it is rolled back with it.
+    setup do
+      Repo.query!("""
+      CREATE FUNCTION refuse_meeting_guest() RETURNS trigger AS $$
+      BEGIN
+        RAISE EXCEPTION 'token collision'
+          USING ERRCODE = 'unique_violation', CONSTRAINT = 'meeting_guests_rsvp_token_index';
+      END;
+      $$ LANGUAGE plpgsql
+      """)
+
+      Repo.query!("""
+      CREATE TRIGGER refuse_meeting_guest BEFORE INSERT ON meeting_guests
+      FOR EACH ROW EXECUTE FUNCTION refuse_meeting_guest()
+      """)
+
+      with_config(:error_tracker, enabled: true)
+      :ok
+    end
+
+    test "fails the booking and records the failure with the host and meeting type" do
+      %{meeting_params: meeting_params, form_data: form_data} =
+        booking_setup(allow_guests: true)
+
+      capture_log(fn ->
+        assert {:error, :booking_failed} =
+                 Create.execute(meeting_params, form_data, skip_calendar_check: true)
+      end)
+
+      assert [%Error{kind: "Elixir.Tymeslot.Infrastructure.ErrorTracking.HandledError"} = error] =
+               Error |> Repo.all() |> Repo.preload(:occurrences)
+
+      assert error.reason == "%Ecto.Changeset{}"
+      assert [%{context: context}] = error.occurrences
+      assert context["organizer_user_id"] == meeting_params.organizer_user_id
+      assert context["meeting_type_id"] == meeting_params.meeting_type_id
+    end
   end
 end

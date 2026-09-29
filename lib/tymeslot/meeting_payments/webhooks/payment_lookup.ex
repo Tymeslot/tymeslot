@@ -25,6 +25,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.StripeAdapter
@@ -59,7 +60,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
       {:error, reason} ->
         Logger.warning("payment lookup: could not retrieve payment intent for metadata match",
           payment_intent_id: intent_id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         nil

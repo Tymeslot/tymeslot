@@ -5,6 +5,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandler do
   use Tymeslot.Payments.Behaviours.WebhookHandler
 
   require Logger
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Payments.ChangesetHelpers
   alias Tymeslot.Payments.DatabaseOperations
   alias Tymeslot.Payments.SubscriptionInvoices
@@ -202,7 +203,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandler do
       {:error, reason} ->
         Logger.error("Failed to process invoice failure",
           subscription_id: subscription_id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, :processing_failed, "Failed to process invoice failure: #{inspect(reason)}"}

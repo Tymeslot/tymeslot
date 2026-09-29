@@ -13,11 +13,14 @@ defmodule Tymeslot.Meetings.ApprovalSweepTest do
   use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
 
+  import ExUnit.CaptureLog
+  import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
 
   @moduletag :bookings
   @moduletag :meetings
 
+  alias ErrorTracker.Error
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.Workers.ApprovalExpiryWorker
@@ -77,6 +80,22 @@ defmodule Tymeslot.Meetings.ApprovalSweepTest do
                perform_job(ApprovalSweepWorker, %{})
 
       assert reload(meeting).status == "awaiting_approval"
+    end
+
+    # The job itself succeeds, so ErrorTracker's Oban integration never sees
+    # the failure: the sweep records it.
+    test "is recorded with the meeting it could not release" do
+      with_config(:error_tracker, enabled: true)
+      meeting = overdue_meeting()
+      mock_expire_raise()
+
+      capture_log(fn -> perform_job(ApprovalSweepWorker, %{}) end)
+
+      assert [%Error{kind: "Elixir.RuntimeError", reason: "boom"} = error] =
+               Error |> Repo.all() |> Repo.preload(:occurrences)
+
+      assert [%{context: %{"meeting_id" => meeting_id}}] = error.occurrences
+      assert meeting_id == meeting.id
     end
   end
 end

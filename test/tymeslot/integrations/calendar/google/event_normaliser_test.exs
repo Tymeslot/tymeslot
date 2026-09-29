@@ -53,7 +53,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliserTest do
       assert {:ok, [event]} = EventNormaliser.normalise_events(raw_events, @context)
 
       assert %CalendarEvent{} = event
-      assert event.uid == "ical-uid-123@google.com"
+      # An instance without its original start is cached under its own id.
+      assert event.uid == "event-id-123"
       assert event.provider == :google
       assert event.calendar_integration_id == 42
       assert event.provider_calendar_id == "primary"
@@ -278,5 +279,58 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliserTest do
       assert {:ok, [event]} = EventNormaliser.normalise_events(raw_events, @context)
       assert event.colour == nil
     end
+  end
+
+  describe "normalise_events/2 - recurring instances" do
+    test "gives each instance of a series its own uid" do
+      {:ok, events} =
+        EventNormaliser.normalise_events(
+          [
+            instance(%{"dateTime" => "2026-05-04T10:00:00+02:00"}, "20260504T080000Z"),
+            instance(%{"dateTime" => "2026-05-11T10:00:00+02:00"}, "20260511T080000Z")
+          ],
+          @context
+        )
+
+      assert Enum.map(events, & &1.uid) == [
+               "series-uid@google.com_20260504T080000Z",
+               "series-uid@google.com_20260511T080000Z"
+             ]
+    end
+
+    test "stamps an all-day instance with its date" do
+      {:ok, [event]} =
+        EventNormaliser.normalise_events(
+          [instance(%{"date" => "2026-05-04"}, "20260504")],
+          @context
+        )
+
+      assert event.uid == "series-uid@google.com_20260504"
+    end
+
+    test "falls back to the instance id when the original start is missing" do
+      raw = Map.delete(instance(nil, "20260504T080000Z"), "originalStartTime")
+      {:ok, [event]} = EventNormaliser.normalise_events([raw], @context)
+      assert event.uid == "series1234_20260504T080000Z"
+    end
+
+    test "a single event keeps its iCalUID" do
+      raw = Map.drop(instance(nil, "x"), ["recurringEventId", "originalStartTime"])
+      {:ok, [event]} = EventNormaliser.normalise_events([raw], @context)
+      assert event.uid == "series-uid@google.com"
+    end
+  end
+
+  defp instance(original_start, id_suffix) do
+    %{
+      "iCalUID" => "series-uid@google.com",
+      "id" => "series1234_#{id_suffix}",
+      "recurringEventId" => "series1234",
+      "originalStartTime" => original_start,
+      "status" => "confirmed",
+      "summary" => "Weekly",
+      "start" => %{"dateTime" => "2026-05-04T10:00:00+02:00"},
+      "end" => %{"dateTime" => "2026-05-04T11:00:00+02:00"}
+    }
   end
 end

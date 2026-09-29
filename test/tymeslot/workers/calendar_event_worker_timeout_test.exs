@@ -10,6 +10,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTimeoutTest do
   import Mox
   import Tymeslot.Factory
 
+  alias ExUnit.CaptureLog
   alias Tymeslot.Workers.CalendarEventWorker
 
   setup :verify_on_exit!
@@ -43,6 +44,46 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTimeoutTest do
         Application.put_env(:tymeslot, :test_mode, original_test_mode)
         Application.delete_env(:tymeslot, :calendar_timeout_ms)
       end
+    end
+  end
+
+  describe "perform/1 - a crashed calendar operation" do
+    # The job's error is stored in `oban_jobs.errors` and logged by Oban, so
+    # the crash reason in it must not carry the credentials a CalDAV client
+    # holds, such as its basic-auth header.
+    test "returns an error with credentials redacted" do
+      meeting = insert(:meeting)
+
+      Mox.stub(Tymeslot.CalendarMock, :create_event, fn _event_data, _user_id ->
+        exit({:request_failed, %{"authorization" => "Basic c2VjcmV0LWNhbGRhdg=="}})
+      end)
+
+      original_test_mode = Application.get_env(:tymeslot, :test_mode, false)
+      Application.put_env(:tymeslot, :test_mode, false)
+
+      # The task is linked, so its exit would kill this process before the
+      # worker reads it; trapping exits is what lets the crash reach the
+      # worker's `{:exit, reason}` branch.
+      Process.flag(:trap_exit, true)
+
+      try do
+        CaptureLog.capture_log(fn ->
+          assert {:error, message} =
+                   perform_job(CalendarEventWorker, %{
+                     "action" => "create",
+                     "meeting_id" => meeting.id
+                   })
+
+          send(self(), {:message, message})
+        end)
+      after
+        Application.put_env(:tymeslot, :test_mode, original_test_mode)
+      end
+
+      assert_received {:message, message}
+      assert message =~ "Calendar operation crashed"
+      assert message =~ "request_failed"
+      refute message =~ "c2VjcmV0LWNhbGRhdg"
     end
   end
 end

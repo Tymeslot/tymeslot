@@ -26,6 +26,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingState
   alias TymeslotWeb.Live.Shared.Flash
@@ -62,7 +64,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
     socket
     |> assign(:answering_request, meeting.id)
     |> assign(:answering_opts, Map.put(socket.assigns.answering_opts, meeting.id, opts))
-    |> start_async({:answer_request, meeting.id}, fn -> action.(meeting) end)
+    |> start_async({:answer_request, meeting.id}, Tasks.with_context(fn -> action.(meeting) end))
   end
 
   @doc """
@@ -127,7 +129,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
   defp apply_answer_result(socket, meeting_id, {:ok, {:error, reason}}, opts) do
     Logger.error("Failed to answer booking request from dashboard",
       meeting_id: meeting_id,
-      reason: inspect(reason)
+      reason: LogFormat.reason(reason)
     )
 
     Flash.error(Keyword.fetch!(opts, :failure))
@@ -137,7 +139,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
   defp apply_answer_result(socket, meeting_id, {:exit, reason}, _opts) do
     Logger.error("Booking request answer task crashed",
       meeting_id: meeting_id,
-      reason: inspect(reason)
+      reason: LogFormat.reason(reason)
     )
 
     Flash.error(dgettext("dashboard_bookings", "That request could not be answered."))

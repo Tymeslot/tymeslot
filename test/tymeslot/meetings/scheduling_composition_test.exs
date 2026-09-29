@@ -12,9 +12,12 @@ defmodule Tymeslot.Meetings.SchedulingCompositionTest do
   @moduletag :meetings
   @moduletag :integration
 
+  import ExUnit.CaptureLog
+  import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
 
   alias Ecto.UUID
+  alias ErrorTracker.Error
   alias Tymeslot.Meetings.Scheduling
 
   setup do
@@ -25,6 +28,36 @@ defmodule Tymeslot.Meetings.SchedulingCompositionTest do
   end
 
   describe "create_meeting_with_conflict_check/1" do
+    test "records a database failure and returns :database_error", %{user: user} do
+      # Stands in for an outage: every insert into meetings fails. Created in
+      # the sandbox transaction, so rolled back with the test.
+      Repo.query!("""
+      CREATE FUNCTION fail_meeting_insert() RETURNS trigger AS $$
+      BEGIN RAISE EXCEPTION 'meetings unavailable'; END;
+      $$ LANGUAGE plpgsql
+      """)
+
+      Repo.query!("""
+      CREATE TRIGGER fail_meeting_insert BEFORE INSERT ON meetings
+      FOR EACH ROW EXECUTE FUNCTION fail_meeting_insert()
+      """)
+
+      with_config(:error_tracker, enabled: true)
+
+      capture_log(fn ->
+        assert {:error, :database_error} =
+                 Scheduling.create_meeting_with_conflict_check(attrs(user, future_time(2, :day)))
+      end)
+
+      assert [%Error{kind: "Elixir.Postgrex.Error"} = error] =
+               Error |> Repo.all() |> Repo.preload(:occurrences)
+
+      assert [%{context: %{"operation" => "create", "organizer_user_id" => user_id}}] =
+               error.occurrences
+
+      assert user_id == user.id
+    end
+
     test "creates meeting when no conflicts exist", %{user: user} do
       start_time = future_time(2, :day)
 

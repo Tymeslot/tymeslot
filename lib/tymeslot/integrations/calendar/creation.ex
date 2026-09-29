@@ -4,6 +4,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   enforcing primary-integration invariants.
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
@@ -170,7 +171,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
       {:error, reason} ->
         Logger.warning("Failed to enqueue initial subscription sync",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         :ok
@@ -486,8 +487,19 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
           {:error, %{discovery: message}}
       end
     else
-      # If provider validation/lookup fails, skip pre-validation and allow creation to proceed
-      {:error, _error} -> {:ok, attrs}
+      # A CalDAV-family provider the operator has switched off fails
+      # validation, so there is nothing to probe with; creation goes ahead
+      # unprobed, as it always has, but no longer silently. `provider` is one
+      # of the fixed CalDAV-family names (the clause's guard), never
+      # arbitrary input.
+      {:error, _error} ->
+        Logger.warning(
+          "Skipped the connection probe for a calendar provider that is switched off",
+          provider: provider,
+          user_id: attrs[:user_id]
+        )
+
+        {:ok, attrs}
     end
   end
 

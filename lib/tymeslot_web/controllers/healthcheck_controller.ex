@@ -3,9 +3,12 @@ defmodule TymeslotWeb.HealthcheckController do
   Serves `GET /healthcheck`, the probe container orchestrators poll.
 
   Answers 200 with `"status": "ok"` when every check in
-  `Tymeslot.Infrastructure.Health` passes, and 503 with
-  `"status": "unhealthy"` otherwise; the per-check results are in `checks`.
-  Rate-limited per client IP.
+  `Tymeslot.Infrastructure.Health` passes, 200 with `"status": "degraded"`
+  when the instance is serving but some work is on hold (a paused job
+  queue), and 503 with `"status": "unhealthy"` when it cannot do its job.
+  Orchestrators act on the status code alone, so only `unhealthy` makes them
+  restart the app; the per-check results are in `checks`. Rate-limited per
+  client IP.
   """
 
   use TymeslotWeb, :controller
@@ -25,7 +28,7 @@ defmodule TymeslotWeb.HealthcheckController do
         %{status: status, checks: checks} = Health.check()
 
         conn
-        |> put_status(if status == :ok, do: 200, else: 503)
+        |> put_status(http_status(status))
         |> json(%{status: status, timestamp: DateTime.utc_now(), checks: checks})
 
       {:error, :rate_limited} ->
@@ -41,4 +44,7 @@ defmodule TymeslotWeb.HealthcheckController do
         })
     end
   end
+
+  defp http_status(:unhealthy), do: 503
+  defp http_status(status) when status in [:ok, :degraded], do: 200
 end

@@ -9,6 +9,7 @@ defmodule Tymeslot.AppSettings.AppSettingsQueries do
 
   alias Ecto.Changeset
   alias Tymeslot.AppSettings.AppSettingsSchema
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Repo
 
   @singleton_id 1
@@ -32,7 +33,7 @@ defmodule Tymeslot.AppSettings.AppSettingsQueries do
     # this rescue — it returns the seeded row above).
     error in [DBConnection.ConnectionError, Postgrex.Error] ->
       Logger.warning("app_settings read failed; falling back to config defaults",
-        reason: inspect(error)
+        reason: LogFormat.reason(error)
       )
 
       %AppSettingsSchema{id: @singleton_id}

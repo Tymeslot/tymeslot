@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsController do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
 
   @spec connect(Plug.Conn.t(), map()) :: Plug.Conn.t()
@@ -25,7 +26,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsController do
       {:error, reason} ->
         Logger.warning("Stripe Connect onboarding could not be started",
           user_id: user.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         conn

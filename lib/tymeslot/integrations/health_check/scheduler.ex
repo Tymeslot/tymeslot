@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
   require Logger
 
   alias Tymeslot.Clock
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
@@ -17,6 +18,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
   alias Tymeslot.Infrastructure.{
     CalendarCircuitBreaker,
     CircuitBreakerHelpers,
+    ErrorTracking,
     VideoCircuitBreaker
   }
 
@@ -78,14 +80,11 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
     do_schedule_if_due(type, integration, now, force)
   rescue
     e ->
-      Logger.error("Failed to schedule integration health check, skipping row",
+      ErrorTracking.report_error(e, __STACKTRACE__, %{
         type: type,
         integration_id: integration.id,
-        provider: integration.provider,
-        error: Exception.format(:error, e, __STACKTRACE__)
-      )
-
-      :ok
+        provider: integration.provider
+      })
   end
 
   defp do_schedule_if_due(type, integration, now, force) do
@@ -188,7 +187,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
           Logger.error("Circuit breaker status check failed",
             type: type,
             provider: integration.provider,
-            error: inspect(e)
+            error: LogFormat.reason(e)
           )
 
           {:error, :status_check_failed}
@@ -237,7 +236,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
           type: type,
           provider: integration.provider,
           integration_id: integration.id,
-          status: inspect(unknown)
+          status: LogFormat.reason(unknown)
         )
 
         false

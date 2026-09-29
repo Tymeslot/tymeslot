@@ -20,6 +20,7 @@ defmodule TymeslotWeb.OAuthFlow do
 
   alias Tymeslot.Auth
   alias Tymeslot.Auth.OAuth.Providers
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.OAuthFlow.State
   alias TymeslotWeb.UserAuth
@@ -174,7 +175,7 @@ defmodule TymeslotWeb.OAuthFlow do
       {:error, reason, _message} ->
         Logger.error("Failed to create session after OAuth auth",
           provider: to_string(provider),
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         log_social_auth(provider, false, conn, %{

@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Assessor do
   configurations, and record telemetry.
   """
 
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
@@ -54,6 +55,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Assessor do
       {:error, :module_unavailable}
 
     e ->
+      report_exception(:calendar, integration, e, __STACKTRACE__)
       {:error, {:exception, safe_exception_message(e)}}
   end
 
@@ -68,6 +70,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Assessor do
       {:error, :module_unavailable}
 
     e ->
+      report_exception(:video, integration, e, __STACKTRACE__)
       {:error, {:exception, safe_exception_message(e)}}
   end
 
@@ -87,6 +90,17 @@ defmodule Tymeslot.Integrations.HealthCheck.Assessor do
   # failure to a transient one so the user is never told to reconnect.
   # Truncation additionally bounds an inspected response body.
   defp safe_exception_message(e), do: Redactor.redact_and_truncate(Exception.message(e))
+
+  # A raise out of a connection test is a bug, not the provider's answer. It
+  # is recorded by its module alone, for the reason above: the message can
+  # carry a decrypted credential.
+  defp report_exception(type, integration, exception, stacktrace) do
+    ErrorTracking.report_error({:raised, exception.__struct__}, stacktrace, %{
+      type: type,
+      integration_id: integration.id,
+      provider: integration.provider
+    })
+  end
 
   # A missing provider module turns every health check for that integration
   # into a generic failure, so record which provider lost its module rather

@@ -26,6 +26,7 @@ defmodule Tymeslot.Auth.AdminBootstrap do
 
   alias Tymeslot.AppSettings.AppSettingsQueries
   alias Tymeslot.Auth.{AdminUserQueries, UserSchema}
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Repo
 
   @doc """
@@ -101,7 +102,7 @@ defmodule Tymeslot.Auth.AdminBootstrap do
     :ok
   rescue
     error ->
-      Logger.error("Admin bootstrap check failed", reason: inspect(error))
+      Logger.error("Admin bootstrap check failed", reason: LogFormat.reason(error))
       :ok
   end
 end

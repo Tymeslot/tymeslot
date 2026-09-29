@@ -9,6 +9,7 @@ defmodule Tymeslot.Notifications.EventsTest do
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
 
+  alias ErrorTracker.Error
   alias Oban.Job
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
@@ -368,6 +369,20 @@ defmodule Tymeslot.Notifications.EventsTest do
           "meeting_id" => meeting.id
         }
       )
+    end
+
+    test "meeting_created/1 records the email failure with the meeting", %{meeting: meeting} do
+      with_config(:error_tracker, enabled: true)
+
+      assert {:error, {:notifications_failed, _exception}} = Events.meeting_created(meeting)
+
+      assert [%Error{kind: "Elixir.RuntimeError", reason: "email pipeline down"} = error] =
+               Error |> Repo.all() |> Repo.preload(:occurrences)
+
+      assert [%{context: %{"event" => "meeting_created", "meeting_id" => meeting_id}}] =
+               error.occurrences
+
+      assert meeting_id == meeting.id
     end
   end
 end

@@ -10,6 +10,8 @@ defmodule Tymeslot.Emails.Delivery do
 
   alias Tymeslot.Infrastructure.CircuitBreaker
   alias Tymeslot.Infrastructure.CircuitBreakerSupervisor
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Mailer
 
   # Postmark reports an API-level rejection as `{422, %{"ErrorCode" => code}}`.
@@ -86,7 +88,7 @@ defmodule Tymeslot.Emails.Delivery do
   # the caller before the breaker has seen it.
   defp deliver_within_deadline(email) do
     deadline_ms = send_deadline_ms()
-    task = Task.Supervisor.async_nolink(Tymeslot.TaskSupervisor, fn -> Mailer.deliver(email) end)
+    task = Tasks.async_nolink(Tymeslot.TaskSupervisor, fn -> Mailer.deliver(email) end)
 
     case Task.yield(task, deadline_ms) || Task.shutdown(task, :brutal_kill) do
       {:ok, result} ->
@@ -131,7 +133,7 @@ defmodule Tymeslot.Emails.Delivery do
     Logger.warning("Email permanently undeliverable — recipient rejected by the provider",
       to: email.to,
       subject: email.subject,
-      reason: inspect(reason)
+      reason: LogFormat.reason(reason)
     )
 
     {:error, {:recipient_rejected, reason}}
@@ -146,7 +148,7 @@ defmodule Tymeslot.Emails.Delivery do
     Logger.warning("Email delivery timed out; assuming delivered to avoid duplicate sends",
       to: email.to,
       subject: email.subject,
-      reason: inspect(reason)
+      reason: LogFormat.reason(reason)
     )
 
     {:ok, :assumed_delivered}
