@@ -1417,3 +1417,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Your phone number"
 msgstr ""
+
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "The address will be arranged with you after booking."
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "Which location?"
+msgstr ""

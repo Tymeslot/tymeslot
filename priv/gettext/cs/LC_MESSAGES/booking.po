@@ -1418,3 +1418,13 @@ msgstr "Která videoslužba?"
 #, elixir-autogen, elixir-format
 msgid "Your phone number"
 msgstr "Vaše telefonní číslo"
+
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "The address will be arranged with you after booking."
+msgstr "Adresu s vámi domluvíme po rezervaci."
+
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "Which location?"
+msgstr "Které místo?"

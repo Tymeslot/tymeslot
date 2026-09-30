@@ -1419,3 +1419,13 @@ msgstr "Quale servizio video?"
 #, elixir-autogen, elixir-format
 msgid "Your phone number"
 msgstr "Il tuo numero di telefono"
+
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "The address will be arranged with you after booking."
+msgstr "L'indirizzo verrà concordato con te dopo la prenotazione."
+
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "Which location?"
+msgstr "Quale sede?"

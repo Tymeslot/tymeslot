@@ -172,7 +172,11 @@ defmodule Tymeslot.Venues do
   `"Name (description)"`, with the description's line breaks folded to
   `", "` so a calendar's LOCATION field stays on one line.
   """
-  @spec display(%{name: String.t(), description: String.t() | nil}) :: String.t()
+  @spec display(%{
+          :name => String.t(),
+          :description => String.t() | nil,
+          optional(atom()) => any()
+        }) :: String.t()
   def display(%{name: name, description: description}) do
     case fold_lines(description) do
       "" -> name
