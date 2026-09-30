@@ -225,6 +225,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
       phx-submit="reconnect_caldav_discover"
       phx-target={@target}
       class="space-y-5"
+      novalidate
     >
       <p class="text-sm text-tymeslot-500">
         {dgettext(

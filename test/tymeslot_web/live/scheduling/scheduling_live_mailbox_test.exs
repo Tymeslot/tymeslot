@@ -57,7 +57,7 @@ defmodule TymeslotWeb.Live.Scheduling.SchedulingLiveMailboxTest do
 
     rendered = render(view)
 
-    refute rendered =~ "Theme Error"
+    refute rendered =~ "theme-error-retry-button"
     assert rendered =~ "Intro"
   end
 end

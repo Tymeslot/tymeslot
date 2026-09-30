@@ -72,6 +72,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
         phx-change="form_change"
         phx-target={@myself}
         class="space-y-4"
+        novalidate
       >
         <.input
           name="poll[title]"

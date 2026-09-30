@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
   independence while maintaining a consistent interface.
   """
   use TymeslotWeb, :live_view
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
@@ -122,19 +123,17 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     end
 
     cond do
-      msg = assigns[:error] ->
-        render_error(assigns, msg)
-
-      error_context = assigns[:theme_error] ->
-        # Use theme_error_message if available, fallback to format_error
-        msg = assigns[:theme_error_message] || ErrorBoundary.format_error(error_context)
-        render_error(assigns, msg)
+      # A theme that could not be loaded (`:error`) or that raised inside a
+      # callback (`:theme_error`, from `ErrorBoundary`). The cause is already
+      # logged and reported; the visitor gets the same generic card for both.
+      assigns[:error] || assigns[:theme_error] ->
+        render_error(assigns)
 
       # An organiser who has not connected a calendar yet is a configuration
       # state, not a crash, so it goes to the theme, which shows it in the
       # organiser's own branding via `Shared.Components.ErrorComponent`. The
       # notice replaces the whole booker, poll route included, so it is decided
-      # here rather than per action. `render_error/2` stays reserved for a theme
+      # here rather than per action. `render_error/1` stays reserved for a theme
       # that could not be loaded or that raised inside a callback.
       assigns[:scheduling_error_message] ->
         render_scheduling_component(assigns)
@@ -162,7 +161,8 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
 
     case ThemeInfo.get_theme_module(theme_id) do
       nil ->
-        render_error(assigns, "Theme not found for poll voting")
+        Logger.error("Theme module not found", theme_id: theme_id)
+        render_error(assigns)
 
       module ->
         try do
@@ -174,11 +174,11 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
               error: LogFormat.reason(e)
             )
 
-            render_error(assigns, "Poll voting rendering not implemented for this theme")
+            render_error(assigns)
 
           e ->
             ErrorTracking.report_error(e, __STACKTRACE__, %{theme_id: theme_id})
-            render_error(assigns, "Poll voting rendering failed")
+            render_error(assigns)
         end
     end
   end
@@ -188,7 +188,8 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
 
     case ThemeInfo.get_theme_module(theme_id) do
       nil ->
-        render_error(assigns, "Theme not found for meeting management")
+        Logger.error("Theme module not found", theme_id: theme_id)
+        render_error(assigns)
 
       module ->
         try do
@@ -200,11 +201,11 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
               error: LogFormat.reason(e)
             )
 
-            render_error(assigns, "Meeting action rendering not implemented for this theme")
+            render_error(assigns)
 
           e ->
             ErrorTracking.report_error(e, __STACKTRACE__, %{theme_id: theme_id, action: action})
-            render_error(assigns, "Meeting action rendering failed")
+            render_error(assigns)
         end
     end
   end
@@ -214,7 +215,8 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
 
     case ThemeInfo.get_live_view_module(theme_id) do
       nil ->
-        render_error(assigns, "Theme not found")
+        Logger.error("Theme module not found", theme_id: theme_id)
+        render_error(assigns)
 
       module ->
         try do
@@ -226,11 +228,11 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
               error: LogFormat.reason(e)
             )
 
-            render_error(assigns, "Theme render function not found")
+            render_error(assigns)
 
           e ->
             ErrorTracking.report_error(e, __STACKTRACE__, %{theme_id: theme_id})
-            render_error(assigns, "Theme rendering failed")
+            render_error(assigns)
         end
     end
   end
@@ -290,39 +292,36 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
   end
 
   defp handle_theme_error(:mount, [_params, _session, socket]) do
-    {:ok, assign(socket, :error, "Theme loading failed")}
+    {:ok, assign(socket, :error, :theme_not_found)}
   end
 
-  defp handle_theme_error(:handle_params, [_params, _url, socket]) do
-    {:noreply, assign(socket, :error, "Theme navigation failed")}
-  end
-
-  defp handle_theme_error(:handle_event, [_event, _params, socket]) do
-    {:noreply, assign(socket, :error, "Theme event handling failed")}
+  defp handle_theme_error(callback, [_first, _second, socket])
+       when callback in [:handle_params, :handle_event] do
+    {:noreply, assign(socket, :error, :theme_not_found)}
   end
 
   defp handle_theme_error(:handle_info, [_msg, socket]) do
-    {:noreply, assign(socket, :error, "Theme message handling failed")}
+    {:noreply, assign(socket, :error, :theme_not_found)}
   end
 
-  defp handle_theme_error(_unknown_function, _unknown_args), do: {:error, "Unknown theme error"}
-
-  defp render_error(assigns, message) do
-    assigns = assign(assigns, :error_message, message)
-
+  defp render_error(assigns) do
     ~H"""
     <div class="min-h-screen bg-tymeslot-100 flex items-center justify-center">
       <div class="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
         <div class="text-center">
           <div class="text-red-500 text-6xl mb-4">⚠️</div>
-          <h1 class="text-xl font-bold text-tymeslot-900 mb-2">Theme Error</h1>
-          <p class="text-tymeslot-600 mb-4">{@error_message}</p>
+          <h1 class="text-xl font-bold text-tymeslot-900 mb-2">
+            {dgettext("booking", "Something went wrong")}
+          </h1>
+          <p class="text-tymeslot-600 mb-4">
+            {dgettext("booking", "This page could not be loaded. Please try again.")}
+          </p>
           <button
             id="theme-error-retry-button"
             phx-hook="PageReload"
             class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
           >
-            Retry
+            {dgettext("booking", "Reload page")}
           </button>
         </div>
       </div>

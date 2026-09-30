@@ -175,6 +175,46 @@ defmodule TymeslotWeb.Plugs.EmbedTokenPlugTest do
       refute conn.assigns[:embed_token]
     end
 
+    test "a top-level navigation (Sec-Fetch-Dest: document) is served as a normal page", %{
+      conn: conn
+    } do
+      # The embed URL opened in its own tab connects over /live, which needs the
+      # session's CSRF state; ignoring the session write left it reloading for ever.
+      response =
+        conn
+        |> put_req_header("sec-fetch-dest", "document")
+        |> Map.put(:request_path, "/sarah")
+        |> Map.put(:query_string, "embed=1")
+        |> run_session_pipeline(csrf_state: "fresh-csrf-state")
+
+      refute response.assigns[:embed_token]
+      assert Map.has_key?(response.resp_cookies, @session_key)
+    end
+
+    test "an iframe request (Sec-Fetch-Dest: iframe) is still embedded", %{conn: conn} do
+      response =
+        conn
+        |> put_req_header("sec-fetch-dest", "iframe")
+        |> Map.put(:request_path, "/sarah")
+        |> Map.put(:query_string, "embed=1")
+        |> run_session_pipeline(csrf_state: "fresh-csrf-state")
+
+      assert {:ok, {"sarah", nil}} = Token.verify(response.assigns.embed_token)
+      refute Map.has_key?(response.resp_cookies, @session_key)
+    end
+
+    test "a request without Sec-Fetch-Dest is still embedded", %{conn: conn} do
+      # Browsers without Fetch Metadata send no header; a real iframe must keep working.
+      response =
+        conn
+        |> Map.put(:request_path, "/sarah")
+        |> Map.put(:query_string, "embed=1")
+        |> run_session_pipeline(csrf_state: "fresh-csrf-state")
+
+      assert {:ok, {"sarah", nil}} = Token.verify(response.assigns.embed_token)
+      refute Map.has_key?(response.resp_cookies, @session_key)
+    end
+
     test "handles extra query params alongside embed=1", %{conn: conn} do
       conn =
         conn
@@ -192,10 +232,18 @@ defmodule TymeslotWeb.Plugs.EmbedTokenPlugTest do
   # before_send callback, so these run the request through the real session
   # plug and assert on the response cookies rather than on conn internals.
 
-  defp run_session_pipeline(conn) do
+  # `:csrf_state` stands in for the CSRF token the root layout generates after
+  # this plug has run, which is what the session cookie must carry.
+  defp run_session_pipeline(conn, opts \\ []) do
     conn
     |> start_session()
     |> EmbedTokenPlug.call([])
+    |> then(fn conn ->
+      case opts[:csrf_state] do
+        nil -> conn
+        state -> put_session(conn, "_csrf_token", state)
+      end
+    end)
     |> send_resp(200, "ok")
   end
 
