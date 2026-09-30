@@ -3,7 +3,8 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
   Covers `format_meeting_datetime/2`, which renders a meeting's start time on
   the payment return pages in the attendee's own timezone rather than raw UTC,
   and its compact sibling used by lists that repeat the date on every row, plus
-  the month form a date takes versus a standalone month heading.
+  the month form a date takes versus a standalone month heading, and the label
+  a slot key gets on the visitor's clock.
   """
 
   use ExUnit.Case, async: true
@@ -172,6 +173,28 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
       Gettext.put_locale(TymeslotWeb.Gettext, "uk")
 
       assert LocalizationHelpers.get_month_year_display(2026, 6) == "Червень 2026"
+    end
+  end
+
+  describe "format_slot_label/1" do
+    test "labels a slot key on a 24-hour clock for a German visitor" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+
+      assert LocalizationHelpers.format_slot_label("5:30 PM") == "17:30"
+    end
+
+    test "labels a slot key on a 12-hour clock for an English visitor" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "en")
+
+      assert LocalizationHelpers.format_slot_label("5:30 PM") == "05:30 PM"
+    end
+
+    test "shows a key that does not parse as it stands, never another time" do
+      assert LocalizationHelpers.format_slot_label("soon") == "soon"
+    end
+
+    test "passes nil through so a template can supply its own placeholder" do
+      assert LocalizationHelpers.format_slot_label(nil) == nil
     end
   end
 end
