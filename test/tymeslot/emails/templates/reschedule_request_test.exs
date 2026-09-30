@@ -222,7 +222,11 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
       note = "The address will be arranged with you after booking."
 
       meeting =
-        insert(:meeting, location_kind: "in_person", venue_id: nil, location: "In person")
+        insert(:meeting,
+          location_kind: "in_person",
+          address_to_arrange: true,
+          location: "In person"
+        )
 
       email = RescheduleRequest.render(meeting)
 

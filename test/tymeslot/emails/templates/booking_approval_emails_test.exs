@@ -424,7 +424,7 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalEmailsTest do
     @note "The address will be arranged with you after booking."
 
     defp to_arrange,
-      do: meeting(%{location_kind: "in_person", venue_id: nil, location: "In person"})
+      do: meeting(%{location_kind: "in_person", address_to_arrange: true, location: "In person"})
 
     test "each request email notes it under the location, in HTML and text" do
       for email <- [

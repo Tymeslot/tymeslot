@@ -53,6 +53,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
           location_option_id: String.t() | nil,
           video_integration_id: integer() | nil,
           venue_id: integer() | nil,
+          address_to_arrange: boolean(),
           attendee_phone: String.t() | nil
         }
 
@@ -138,7 +139,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
   `preferred` that they include wins: the booker's pick, then, on a
   reschedule, the meeting's current venue. Otherwise the option's first
   venue. With no venues the resolution is returned unchanged: the option's
-  label, and no venue.
+  label, no venue, and the address to be arranged.
   """
   @spec place_at_venue(resolution(), [Venues.choice()], [integer() | String.t() | nil]) ::
           resolution()
@@ -151,7 +152,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
         Enum.find(venues, &(&1.id == chosen))
       end) || first
 
-    %{resolution | venue_id: venue.id, location: Venues.display(venue)}
+    %{resolution | venue_id: venue.id, location: Venues.display(venue), address_to_arrange: false}
   end
 
   @doc """
@@ -179,6 +180,9 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
       location_option_id: option.id,
       video_integration_id: video_integration_for(option, video_integration_id),
       venue_id: nil,
+      # Until `place_at_venue/3` places it, an in-person booking has no
+      # address yet.
+      address_to_arrange: option.kind == "in_person",
       attendee_phone: collected_phone(option, guest_phone)
     }
   end
@@ -190,6 +194,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
       location_option_id: nil,
       video_integration_id: nil,
       venue_id: nil,
+      address_to_arrange: false,
       attendee_phone: nil
     }
   end

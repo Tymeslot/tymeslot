@@ -22,7 +22,9 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Emails.Templates.AppointmentConfirmation
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.LocationOption
+  alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.VideoRoomWorker
 
@@ -109,6 +111,25 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
       assert meeting.video_integration_id == nil
 
       refute_enqueued(worker: VideoRoomWorker)
+    end
+
+    test "offering no venue records that the address is arranged after booking", ctx do
+      assert {:ok, meeting} =
+               book(ctx.meeting_type, ctx.user, %{location_option_id: "loc-office"})
+
+      assert Repo.get!(MeetingSchema, meeting.id).address_to_arrange == true
+
+      details = AppointmentBuilder.from_meeting(meeting)
+      email = AppointmentConfirmation.render(:attendee, meeting.attendee_email, details)
+
+      assert email.html_body =~ "The address will be arranged with you after booking."
+      assert email.text_body =~ "The address will be arranged with you after booking."
+    end
+
+    test "a location that is not in person has no address to arrange", ctx do
+      assert {:ok, meeting} = book(ctx.meeting_type, ctx.user, %{location_option_id: "loc-video"})
+
+      assert Repo.get!(MeetingSchema, meeting.id).address_to_arrange == false
     end
   end
 
@@ -296,7 +317,28 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
       assert meeting.venue_id == ctx.munich.id
       assert meeting.location == "Munich office (Marienplatz 8)"
       assert meeting.location_kind == "in_person"
+      assert Repo.get!(MeetingSchema, meeting.id).address_to_arrange == false
       refute_enqueued(worker: VideoRoomWorker)
+    end
+
+    test "deleting the booked venue does not make its address one to arrange", ctx do
+      assert {:ok, meeting} =
+               book(ctx.venue_type, ctx.user, %{
+                 location_option_id: "loc-offices",
+                 location_venue_id: ctx.munich.id
+               })
+
+      Repo.delete!(ctx.munich)
+      reloaded = Repo.get!(MeetingSchema, meeting.id)
+
+      assert reloaded.venue_id == nil
+      assert reloaded.address_to_arrange == false
+
+      details = AppointmentBuilder.from_meeting(reloaded)
+      email = AppointmentConfirmation.render(:attendee, reloaded.attendee_email, details)
+
+      assert email.text_body =~ "Munich office (Marienplatz 8)"
+      refute email.text_body =~ "arranged with you after booking"
     end
 
     test "a venue the location does not offer books its first venue instead", ctx do

@@ -155,7 +155,12 @@ defmodule Tymeslot.MeetingTypes.LocationVenuesTest do
     end
 
     test "a location with no venues books its label with no venue", ctx do
-      assert %{venue_id: nil, location: "In person", location_option_id: "loc-arranged"} =
+      assert %{
+               venue_id: nil,
+               location: "In person",
+               location_option_id: "loc-arranged",
+               address_to_arrange: true
+             } =
                resolve(ctx.meeting_type, %{option_id: "loc-arranged", venue_id: ctx.berlin.id})
     end
 

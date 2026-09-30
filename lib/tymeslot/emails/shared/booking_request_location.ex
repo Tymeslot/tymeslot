@@ -20,9 +20,13 @@ defmodule Tymeslot.Emails.Shared.BookingRequestLocation do
   # first precisely because it is the only one that cannot be wrong.
   def type(%Meeting{location_kind: "video"}), do: :video
   def type(%Meeting{location_kind: "phone"}), do: :phone
-  # An in-person booking with no saved venue is one whose address the host
-  # arranges after booking, which the emails say in so many words.
-  def type(%Meeting{location_kind: "in_person", venue_id: nil}), do: :in_person_to_arrange
+  # An in-person booking made on a location offering no venue is one whose
+  # address the host arranges after booking, which the emails say in so many
+  # words. A nil `venue_id` alone does not mean that: it is also what a venue
+  # deleted after booking leaves.
+  def type(%Meeting{location_kind: "in_person", address_to_arrange: true}),
+    do: :in_person_to_arrange
+
   def type(%Meeting{location_kind: "in_person"}), do: :in_person
   def type(%Meeting{location_kind: "custom"}), do: :custom
 

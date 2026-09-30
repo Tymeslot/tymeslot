@@ -360,6 +360,27 @@ defmodule Tymeslot.Migrations.CreateVenuesTest do
     assert meeting_venue_id(to_arrange) == {nil, "In person"}
   end
 
+  # Only a booking made after this migration can state that its address is
+  # to be arranged; an existing one keeps reading as it always has.
+  test "existing meetings are not marked as having an address to arrange" do
+    meeting =
+      insert(:meeting,
+        location: "In person",
+        location_kind: "in_person",
+        location_option_id: "loc-none",
+        address_to_arrange: true
+      )
+
+    # `rerun!` rolls the migration back first, so the column is added afresh
+    # over a row that already exists.
+    MigrationRunner.rerun!(@version)
+
+    assert %{rows: [[false]]} =
+             Repo.query!("SELECT address_to_arrange FROM meetings WHERE id = $1", [
+               UUID.dump!(meeting.id)
+             ])
+  end
+
   test "rolling back puts each address back on its location" do
     user = insert(:user)
     meeting_type = insert(:meeting_type, user: user)

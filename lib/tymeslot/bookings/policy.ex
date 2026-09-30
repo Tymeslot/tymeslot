@@ -98,6 +98,7 @@ defmodule Tymeslot.Bookings.Policy do
           required(:calendar_path) => String.t() | nil,
           required(:video_integration_id) => integer() | nil,
           required(:venue_id) => integer() | nil,
+          required(:address_to_arrange) => boolean(),
           required(:attendee_name) => String.t(),
           required(:attendee_email) => String.t(),
           required(:attendee_message) => String.t() | nil,
@@ -248,7 +249,8 @@ defmodule Tymeslot.Bookings.Policy do
       location_option_id: location.location_option_id,
       attendee_phone: location.attendee_phone,
       video_integration_id: video_integration_for(location, fallback_video_id),
-      venue_id: location.venue_id
+      venue_id: location.venue_id,
+      address_to_arrange: location.address_to_arrange
     }
   end
 

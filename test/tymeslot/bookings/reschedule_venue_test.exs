@@ -213,4 +213,52 @@ defmodule Tymeslot.Bookings.RescheduleVenueTest do
     assert updated.video_integration_id == ctx.mirotalk.id
     assert updated.venue_id == nil
   end
+
+  describe "the address to be arranged" do
+    setup do
+      arranged = in_person_location([], id: "loc-arranged", label: "In person", position: 1)
+      %{arranged: arranged}
+    end
+
+    defp booked_to_arrange do
+      %{
+        location: "In person",
+        location_kind: "in_person",
+        location_option_id: "loc-arranged",
+        venue_id: nil,
+        address_to_arrange: true
+      }
+    end
+
+    test "is settled by moving to a location with a venue", ctx do
+      meeting = meeting_on(ctx.user, [ctx.offices, ctx.arranged], booked_to_arrange())
+
+      updated =
+        reschedule(meeting, %{
+          location_option_id: "loc-offices",
+          location_venue_id: ctx.munich.id
+        })
+
+      assert updated.venue_id == ctx.munich.id
+      assert updated.address_to_arrange == false
+    end
+
+    test "is recorded by moving from a venue to a location offering none", ctx do
+      meeting = meeting_on(ctx.user, [ctx.offices, ctx.arranged], booked_in_berlin(ctx.berlin))
+
+      updated = reschedule(meeting, %{location_option_id: "loc-arranged"})
+
+      assert updated.venue_id == nil
+      assert updated.location == "In person"
+      assert updated.address_to_arrange == true
+    end
+
+    test "stays recorded on a time-only reschedule", ctx do
+      meeting = meeting_on(ctx.user, [ctx.offices, ctx.arranged], booked_to_arrange())
+
+      updated = reschedule(meeting, %{location_option_id: "loc-arranged"})
+
+      assert updated.address_to_arrange == true
+    end
+  end
 end

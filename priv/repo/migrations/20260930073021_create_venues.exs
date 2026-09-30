@@ -10,6 +10,12 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
   can open on it. It is nullable and nilified when the venue goes: the
   meeting's `location` text is the record of where it was booked.
 
+  `meetings.address_to_arrange` records that an in-person booking was made
+  on a location offering no venue, so its address is arranged afterwards.
+  It is stated rather than read off a nil `venue_id`, which a deleted venue
+  also leaves. Existing meetings keep `false`, so their emails read as they
+  always have.
+
   Until now an in-person location carried its address as free text in its
   `details`, retyped on every meeting type. This migration moves every
   address into a venue:
@@ -31,9 +37,8 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
       cleared. In-person locations without an address get an empty list and
       keep meaning "the address is arranged after booking";
     * meetings booked on a location that became a venue record it in
-      `venue_id`, so their reminders do not say the address is still to be
-      arranged, and a reschedule opens on it. Their `location` text is never
-      rewritten.
+      `venue_id`, so a reschedule opens on it. Their `location` text is
+      never rewritten.
 
   Rolling back writes each location's first venue's description back into
   `details` before the table is dropped.
@@ -51,6 +56,8 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
   # foreign key and index are added is acceptable. The raw SQL is the backfill
   # and its rollback; the column and table removals are confined to `down/0`.
   # `position`'s default is part of CREATE TABLE, so it rewrites no rows.
+  # `meetings.address_to_arrange` has a constant default, which PostgreSQL
+  # 11 and later store in the catalogue without rewriting the table.
   # excellent_migrations:safety-assured-for-this-file column_reference_added
   # excellent_migrations:safety-assured-for-this-file index_not_concurrently
   # excellent_migrations:safety-assured-for-this-file column_added_with_default
@@ -78,6 +85,7 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
 
     alter table(:meetings) do
       add(:venue_id, references(:venues, on_delete: :nilify_all))
+      add(:address_to_arrange, :boolean, null: false, default: false)
     end
 
     create(index(:meetings, [:venue_id]))
@@ -89,6 +97,7 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
     execute(fn -> restore_details() end)
 
     alter table(:meetings) do
+      remove(:address_to_arrange)
       remove(:venue_id)
     end
 

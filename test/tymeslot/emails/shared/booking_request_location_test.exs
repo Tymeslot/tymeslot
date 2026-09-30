@@ -28,7 +28,7 @@ defmodule Tymeslot.Emails.Shared.BookingRequestLocationTest do
             location_kind: kind,
             meeting_url: nil,
             location: "Anywhere",
-            venue_id: 7
+            address_to_arrange: false
           )
 
         assert BookingRequestLocation.type(meeting) == expected
@@ -41,7 +41,7 @@ defmodule Tymeslot.Emails.Shared.BookingRequestLocationTest do
       meeting =
         build(:meeting,
           location_kind: "in_person",
-          venue_id: 7,
+          address_to_arrange: false,
           video_integration_id: 1,
           meeting_url: nil,
           location: "Our office"
@@ -50,11 +50,28 @@ defmodule Tymeslot.Emails.Shared.BookingRequestLocationTest do
       assert BookingRequestLocation.type(meeting) == :in_person
     end
 
-    test "an in-person meeting with no venue is one whose address is still to be arranged" do
+    test "an in-person meeting booked with no venue is one whose address is still to be arranged" do
       meeting =
-        build(:meeting, location_kind: "in_person", venue_id: nil, location: "In person")
+        build(:meeting,
+          location_kind: "in_person",
+          venue_id: nil,
+          address_to_arrange: true,
+          location: "In person"
+        )
 
       assert BookingRequestLocation.type(meeting) == :in_person_to_arrange
+    end
+
+    test "an in-person meeting whose venue was deleted after booking still has its address" do
+      meeting =
+        build(:meeting,
+          location_kind: "in_person",
+          venue_id: nil,
+          address_to_arrange: false,
+          location: "Berlin office (Friedrichstrasse 1)"
+        )
+
+      assert BookingRequestLocation.type(meeting) == :in_person
     end
   end
 

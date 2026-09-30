@@ -111,6 +111,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
                location_kind: "in_person",
                location_option_id: "loc-office",
                video_integration_id: nil,
+               address_to_arrange: true,
                attendee_phone: nil
              } = LocationSelection.resolve(type, "loc-office")
     end
@@ -155,7 +156,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
     test "ignores a number submitted against a location that never asked for one" do
       type = %{locations: [office(), zoom()]}
 
-      assert %{location: "Zoom", attendee_phone: nil} =
+      assert %{location: "Zoom", attendee_phone: nil, address_to_arrange: false} =
                LocationSelection.resolve(type, "loc-zoom", "+44 7700 900123")
     end
 
@@ -190,6 +191,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
                location_kind: nil,
                location_option_id: nil,
                video_integration_id: nil,
+               address_to_arrange: false,
                attendee_phone: nil
              } = LocationSelection.resolve(nil, nil)
     end
@@ -220,8 +222,11 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
       do: [venue(1, "Berlin office"), venue(2, "Munich office", "Marienplatz 8")]
 
     test "places the booking at the venue the booker picked" do
-      assert %{venue_id: 2, location: "Munich office (Marienplatz 8)"} =
-               LocationSelection.place_at_venue(at_the_office(), two_offices(), [2])
+      assert %{
+               venue_id: 2,
+               location: "Munich office (Marienplatz 8)",
+               address_to_arrange: false
+             } = LocationSelection.place_at_venue(at_the_office(), two_offices(), [2])
     end
 
     test "accepts the pick as the string the form posts" do
@@ -240,7 +245,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
     end
 
     test "leaves a location with no venues as its label, with no venue" do
-      assert %{venue_id: nil, location: "The office"} =
+      assert %{venue_id: nil, location: "The office", address_to_arrange: true} =
                LocationSelection.place_at_venue(at_the_office(), [], [1])
     end
   end
