@@ -612,3 +612,78 @@
   font-size: var(--theme-font-size-sm);
   color: var(--theme-error-light);
 }
+
+/* ===== Saved venues ===== */
+/* The venues an in-person location offers, one per line so each can carry
+   its address beneath its name. The radio inside reuses
+   `.location-option__radio`, and a single venue or the arranged-later note
+   sits where an option's detail would. A venue's address may run over
+   several lines, which `pre-line` keeps. */
+
+.rhythm-theme-wrapper .location-venues {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  margin: 0;
+  padding: var(--space-3xs);
+  background: var(--surface-subtle);
+  border: var(--border-width-thin) solid var(--border-light);
+  border-radius: var(--radius-lg);
+}
+.rhythm-theme-wrapper .location-venue {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  padding: var(--space-2xs) var(--space-sm);
+  border-radius: var(--radius-md);
+  color: var(--theme-text-secondary);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.rhythm-theme-wrapper .location-venue:hover {
+  background: var(--surface-light);
+  color: var(--theme-text);
+}
+.rhythm-theme-wrapper .location-venue:has(.location-option__radio:focus-visible) {
+  outline: var(--border-width-thick) solid var(--theme-primary);
+  outline-offset: var(--space-3xs);
+}
+.rhythm-theme-wrapper .location-venue--selected,
+.rhythm-theme-wrapper .location-venue--selected:hover {
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+}
+.rhythm-theme-wrapper .location-venue__name {
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+.rhythm-theme-wrapper .location-venue__description,
+.rhythm-theme-wrapper .location-field__venue-description {
+  font-size: var(--theme-font-size-xs);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.rhythm-theme-wrapper .location-field__venue {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+}
+.rhythm-theme-wrapper .location-field__venue-name {
+  font-weight: var(--font-weight-medium);
+  color: var(--theme-text);
+}
+.rhythm-theme-wrapper .location-field__note {
+  margin: var(--space-2xs) 0 0;
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-text-secondary);
+}
+.rhythm-theme-wrapper .location-stated__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  margin: 0;
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--theme-text);
+}
