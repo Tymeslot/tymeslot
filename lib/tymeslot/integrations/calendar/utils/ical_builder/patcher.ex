@@ -54,6 +54,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
     * An `ATTENDEE` whose address is not a `mailto:` URI (a room, a group, a
       `urn:uuid:` principal) cannot be named by the payload's list, which the
       sync builds from `mailto:` addresses only, and is kept.
+    * In `:organiser_attendee` mode the `ATTENDEE` naming the event's
+      `ORGANIZER` is kept whatever the list says, and in Tymeslot's own block
+      is added when missing: that server adds its calendar's owner back
+      under their primary address the moment the line goes (issue #151).
 
   Tymeslot's own block, told apart by the `X-TYMESLOT-ATTENDEES` marker
   `build_simple_event/3` emits beside it or by the absence of any `ATTENDEE`
@@ -217,7 +221,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
     do: {@rewritten_attendee_properties, Properties.build_attendee_lines(event_data, :contact)}
 
   defp attendee_entry(properties, attendees, _event_data, mode, ours) do
-    wanted = MapSet.new(attendees, &attendee_address/1)
+    organiser = organiser_address(properties, mode)
+    wanted = MapSet.new([organiser | Enum.map(attendees, &attendee_address/1)])
 
     kept =
       Enum.filter(properties, fn line ->
@@ -228,10 +233,12 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
 
     added =
       attendees
-      |> Enum.reject(&(is_nil(attendee_address(&1)) or attendee_address(&1) in present))
+      |> Enum.reject(
+        &(attendee_address(&1) in [nil, organiser] or attendee_address(&1) in present)
+      )
       |> Enum.uniq_by(&attendee_address/1)
 
-    lines = kept ++ added_lines(added, mode, ours)
+    lines = kept ++ added_lines(added, missing_organiser(organiser, present, ours), mode, ours)
 
     {replaced_attendee_properties(ours), join_lines(lines ++ marker(lines, mode, ours))}
   end
@@ -243,17 +250,41 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
     end
   end
 
+  # Read from the document rather than the payload, which names the organiser
+  # only when it rebuilds the event: `ORGANIZER` is never patched, so the
+  # stored one is the event's.
+  defp organiser_address(properties, :organiser_attendee) do
+    Enum.find_value(properties, fn line ->
+      if ContentLines.property_name(line) == "ORGANIZER", do: line_address(line)
+    end)
+  end
+
+  defp organiser_address(_properties, _mode), do: nil
+
+  # Only Tymeslot's own block gains the organiser's line. An event someone
+  # else organised, synced into the grid, is theirs to describe.
+  defp missing_organiser(nil, _present, _ours), do: nil
+  defp missing_organiser(_organiser, _present, false = _ours), do: nil
+
+  defp missing_organiser(organiser, present, true = _ours),
+    do: if(organiser in present, do: nil, else: organiser)
+
   # See the moduledoc: a `CONTACT` is only ever added where this module owns
   # the `CONTACT` lines, so a later removal can take it away again.
-  defp added_lines(_added, :contact, false = _ours), do: []
+  defp added_lines(_added, _organiser, :contact, false = _ours), do: []
 
-  defp added_lines(added, mode, _ours),
-    do: content_lines(Properties.build_attendee_lines(%{attendees: added}, mode))
+  defp added_lines(added, organiser, mode, _ours) do
+    %{attendees: added, organizer_email: organiser}
+    |> Properties.build_attendee_lines(mode)
+    |> content_lines()
+  end
 
   defp replaced_attendee_properties(true = _ours), do: @rewritten_attendee_properties
   defp replaced_attendee_properties(false = _ours), do: ["ATTENDEE"]
 
-  defp marker(lines, :attendee, true = _ours) do
+  defp marker(_lines, :contact, _ours), do: []
+
+  defp marker(lines, _mode, true = _ours) do
     if Enum.any?(lines, &(ContentLines.property_name(&1) == "ATTENDEE")),
       do: [ICalBuilder.attendee_marker()],
       else: []
