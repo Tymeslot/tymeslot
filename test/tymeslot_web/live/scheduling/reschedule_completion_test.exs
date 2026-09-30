@@ -95,7 +95,7 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
 
     # Issue #76: the reschedule notification payload didn't fit the email
     # template it was rendered by, so the send raised, the raise reached this
-    # LiveView, and the booker got the theme error boundary — "Theme Error" —
+    # LiveView, and the booker got the theme error boundary (its error card)
     # instead of a confirmation, on a reschedule that had already succeeded.
     # Every other test here mocks the email service away, which is exactly what
     # kept the templates from ever running; this one uses the real service.
@@ -133,7 +133,7 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
 
       rendered = render(view)
 
-      refute rendered =~ "Theme Error"
+      refute rendered =~ "theme-error-retry-button"
       assert rendered =~ ~s(data-testid="confirmation-heading")
     end
 

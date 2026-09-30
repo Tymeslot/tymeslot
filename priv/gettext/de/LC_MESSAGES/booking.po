@@ -1419,3 +1419,18 @@ msgstr "Welcher Videodienst?"
 #, elixir-autogen, elixir-format
 msgid "Your phone number"
 msgstr "Ihre Telefonnummer"
+
+#: lib/tymeslot_web/themes/core/dispatcher.ex
+#, elixir-autogen, elixir-format
+msgid "Reload page"
+msgstr "Seite neu laden"
+
+#: lib/tymeslot_web/themes/core/dispatcher.ex
+#, elixir-autogen, elixir-format
+msgid "Something went wrong"
+msgstr "Etwas ist schiefgelaufen"
+
+#: lib/tymeslot_web/themes/core/dispatcher.ex
+#, elixir-autogen, elixir-format
+msgid "This page could not be loaded. Please try again."
+msgstr "Diese Seite konnte nicht geladen werden. Bitte versuchen Sie es erneut."
