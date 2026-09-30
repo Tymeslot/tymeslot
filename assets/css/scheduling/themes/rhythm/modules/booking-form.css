@@ -645,9 +645,12 @@
   background: var(--surface-light);
   color: var(--theme-text);
 }
+/* Drawn in the text colour, not the primary: the focused venue is the
+   selected one, filled with the primary. No offset keeps the ring inside the
+   list's padding, clear of its border. */
 .rhythm-theme-wrapper .location-venue:has(.location-option__radio:focus-visible) {
-  outline: var(--border-width-thick) solid var(--theme-primary);
-  outline-offset: var(--space-3xs);
+  outline: var(--border-width-thick) solid var(--theme-text);
+  outline-offset: 0;
 }
 .rhythm-theme-wrapper .location-venue--selected,
 .rhythm-theme-wrapper .location-venue--selected:hover {
