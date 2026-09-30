@@ -17,7 +17,8 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
     * each in-person location with a non-blank address becomes a venue owned
       by the meeting type's owner, named after the location's label, with the
       address as its description;
-    * locations with the same owner, label and address share one venue;
+    * locations with the same owner, label (ignoring case) and address share
+      one venue, named with the label's casing as first seen;
     * each owner's venues are numbered (`position`) in the order their
       addresses were first seen: oldest meeting type first, then its
       locations in their stored order;
@@ -34,9 +35,8 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
       arranged, and a reschedule opens on it. Their `location` text is never
       rewritten.
 
-  A location that already lists venues is left alone, so the backfill is
-  safe to run again. Rolling back writes each location's first venue's
-  description back into `details` before the table is dropped.
+  Rolling back writes each location's first venue's description back into
+  `details` before the table is dropped.
 
   The data steps are plain SQL driven from Elixir rather than the schemas,
   so the migration keeps meaning what it means today whatever the schemas
@@ -97,8 +97,8 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
 
   defp backfill do
     rows = load_in_person_rows()
-    keys = address_keys(rows)
-    venue_ids = keys |> name_venues() |> insert_venues(positions(keys))
+    addresses = addresses(rows)
+    venue_ids = addresses |> name_venues() |> insert_venues(positions(addresses))
 
     Enum.each(rows, &rewrite_locations(&1, venue_ids))
     link_meetings()
@@ -121,25 +121,28 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
     end)
   end
 
-  # One `{owner, label, address}` key per venue to create, in the order the
-  # addresses were first seen.
-  defp address_keys(rows) do
+  # One `{key, label}` per venue to create, in the order the addresses were
+  # first seen. The key is `{owner, lowercased label, address}`, so labels
+  # differing only in case share a venue; the label is the casing first seen,
+  # which becomes the venue's name.
+  defp addresses(rows) do
     rows
-    |> Enum.flat_map(fn row -> Enum.flat_map(row.locations, &address_key(row.user_id, &1)) end)
-    |> Enum.uniq()
+    |> Enum.flat_map(fn row -> Enum.flat_map(row.locations, &address(row.user_id, &1)) end)
+    |> Enum.uniq_by(fn {key, _label} -> key end)
   end
 
-  defp address_key(user_id, %{"kind" => "in_person"} = location) do
-    case {has_venues?(location), trimmed(location["details"])} do
-      {false, address} when address != "" -> [{user_id, label(location), address}]
-      _nothing_to_move -> []
+  defp address(user_id, %{"kind" => "in_person"} = location) do
+    case address_key(user_id, location) do
+      {_user_id, _folded, ""} -> []
+      key -> [{key, label(location)}]
     end
   end
 
-  defp address_key(_user_id, _location), do: []
+  defp address(_user_id, _location), do: []
 
-  defp has_venues?(%{"venue_ids" => [_first | _rest]}), do: true
-  defp has_venues?(_location), do: false
+  defp address_key(user_id, location) do
+    {user_id, String.downcase(label(location)), trimmed(location["details"])}
+  end
 
   defp label(location) do
     case trimmed(location["label"]) do
@@ -157,41 +160,38 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
     string |> String.codepoints() |> Enum.take(max_length) |> Enum.join()
   end
 
-  # `{key, name}` for every key. Within one owner, the first key with a given
-  # label keeps the label itself; every later key with that label gets the
-  # lowest free numeric suffix. Labels are compared ignoring case, as the
-  # unique index compares names.
-  defp name_venues(keys) do
-    keys
-    |> Enum.group_by(fn {user_id, _label, _address} -> user_id end)
-    |> Enum.flat_map(fn {_user_id, owner_keys} -> name_owner_keys(owner_keys) end)
+  # `{key, label, name}` for every address. Within one owner, the first
+  # address with a given label keeps the label itself; every later one with
+  # that label gets the lowest free numeric suffix. Labels are compared
+  # ignoring case, as the unique index compares names.
+  defp name_venues(addresses) do
+    addresses
+    |> Enum.group_by(fn {{user_id, _folded, _address}, _label} -> user_id end)
+    |> Enum.flat_map(fn {_user_id, owner_addresses} -> name_owner_addresses(owner_addresses) end)
   end
 
-  defp name_owner_keys(keys) do
-    {firsts, rest} = split_first_per_label(keys)
-    taken = MapSet.new(firsts, fn {_user_id, label, _address} -> String.downcase(label) end)
+  defp name_owner_addresses(addresses) do
+    {firsts, rest} = split_first_per_label(addresses)
+    taken = MapSet.new(firsts, fn {{_user_id, folded, _address}, _label} -> folded end)
 
     {suffixed, _taken} =
-      Enum.map_reduce(rest, taken, fn {_user_id, label, _address} = key, taken ->
+      Enum.map_reduce(rest, taken, fn {key, label}, taken ->
         name = free_name(label, 2, taken)
-        {{key, name}, MapSet.put(taken, String.downcase(name))}
+        {{key, label, name}, MapSet.put(taken, String.downcase(name))}
       end)
 
-    Enum.map(firsts, fn {_user_id, label, _address} = key -> {key, label} end) ++ suffixed
+    Enum.map(firsts, fn {key, label} -> {key, label, label} end) ++ suffixed
   end
 
-  defp split_first_per_label(keys) do
-    {firsts, rest, _seen} =
-      Enum.reduce(keys, {[], [], MapSet.new()}, fn {_user_id, label, _address} = key,
-                                                     {firsts, rest, seen} ->
-        folded = String.downcase(label)
-
-        if MapSet.member?(seen, folded),
-          do: {firsts, [key | rest], seen},
-          else: {[key | firsts], rest, MapSet.put(seen, folded)}
-      end)
-
+  defp split_first_per_label(addresses) do
+    {firsts, rest, _seen} = Enum.reduce(addresses, {[], [], MapSet.new()}, &split_address/2)
     {Enum.reverse(firsts), Enum.reverse(rest)}
+  end
+
+  defp split_address({{_user_id, folded, _address}, _label} = entry, {firsts, rest, seen}) do
+    if MapSet.member?(seen, folded),
+      do: {firsts, [entry | rest], seen},
+      else: {[entry | firsts], rest, MapSet.put(seen, folded)}
   end
 
   defp free_name(label, n, taken) do
@@ -207,17 +207,18 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
     truncate(label, @name_max_length - String.length(suffix)) <> suffix
   end
 
-  # `%{key => position}`: each owner's keys numbered from 0 in the order
-  # `address_keys/1` saw them, which is deterministic because the rows are
-  # read by meeting type id and each row's locations in stored order.
-  defp positions(keys) do
-    keys
-    |> Enum.group_by(fn {user_id, _label, _address} -> user_id end)
+  # `%{key => position}`: each owner's addresses numbered from 0 in the order
+  # `addresses/1` saw them, which is deterministic because the rows are read
+  # by meeting type id and each row's locations in stored order.
+  defp positions(addresses) do
+    addresses
+    |> Enum.map(fn {key, _label} -> key end)
+    |> Enum.group_by(fn {user_id, _folded, _address} -> user_id end)
     |> Enum.flat_map(fn {_user_id, owner_keys} -> Enum.with_index(owner_keys) end)
     |> Map.new()
   end
 
-  # `{key, name}` pairs in, `%{key => venue_id}` out.
+  # `{key, label, name}` triples in, `%{key => venue_id}` out.
   defp insert_venues(named, positions) do
     named
     |> Enum.chunk_every(@insert_batch)
@@ -231,10 +232,10 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
   # rather than failing the whole migration, and placed under the next
   # suffix the database accepts.
   defp insert_batch(named, positions) do
-    user_ids = Enum.map(named, fn {{user_id, _label, _address}, _name} -> user_id end)
-    names = Enum.map(named, fn {_key, name} -> name end)
-    addresses = Enum.map(named, fn {{_user_id, _label, address}, _name} -> address end)
-    orders = Enum.map(named, fn {key, _name} -> Map.fetch!(positions, key) end)
+    user_ids = Enum.map(named, fn {{user_id, _folded, _address}, _label, _name} -> user_id end)
+    names = Enum.map(named, fn {_key, _label, name} -> name end)
+    addresses = Enum.map(named, fn {{_user_id, _folded, address}, _label, _name} -> address end)
+    orders = Enum.map(named, fn {key, _label, _name} -> Map.fetch!(positions, key) end)
 
     %{rows: rows} =
       repo().query!(
@@ -253,7 +254,7 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
 
     ids = Map.new(rows, fn [id, user_id, name] -> {{user_id, name}, id} end)
 
-    Enum.map(named, fn {{user_id, label, _address} = key, name} ->
+    Enum.map(named, fn {{user_id, _folded, _address} = key, label, name} ->
       case Map.fetch(ids, {user_id, name}) do
         {:ok, id} -> {key, id}
         :error -> {key, insert_suffixed(key, label, 2, Map.fetch!(positions, key))}
@@ -261,7 +262,7 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
     end)
   end
 
-  defp insert_suffixed({user_id, _label, address} = key, label, n, position) do
+  defp insert_suffixed({user_id, _folded, address} = key, label, n, position) do
     %{rows: rows} =
       repo().query!(
         """
@@ -294,13 +295,9 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
 
   defp rewrite_location(%{"kind" => "in_person"} = location, user_id, venue_ids) do
     ids =
-      if has_venues?(location) do
-        location["venue_ids"]
-      else
-        case Map.fetch(venue_ids, {user_id, label(location), trimmed(location["details"])}) do
-          {:ok, venue_id} -> [venue_id]
-          :error -> []
-        end
+      case Map.fetch(venue_ids, address_key(user_id, location)) do
+        {:ok, venue_id} -> [venue_id]
+        :error -> []
       end
 
     location
@@ -350,7 +347,7 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
   defp restore_location(%{"venue_ids" => ids} = location, descriptions) do
     details =
       case ids do
-        [first | _rest] -> Map.get(descriptions, first)
+        [first | _rest] -> Map.get(descriptions, first, location["details"])
         _none -> location["details"]
       end
 

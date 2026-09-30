@@ -127,9 +127,26 @@ defmodule Tymeslot.Migrations.CreateVenuesTest do
     assert [%{"venue_ids" => [^market_square]}] = locations(second)
   end
 
+  test "the same address under labels differing only in case shares one venue" do
+    user = insert(:user)
+    first = insert(:meeting_type, user: user)
+    second = insert(:meeting_type, user: user)
+    put_raw_locations(first, [in_person("Office", "12 High Street")])
+    put_raw_locations(second, [in_person("office", "12 High Street")])
+
+    MigrationRunner.rerun!(@version)
+
+    assert [%{id: venue_id, name: "Office", description: "12 High Street"}] = venues(user)
+    assert [%{"venue_ids" => [^venue_id]}] = locations(first)
+    assert [%{"venue_ids" => [^venue_id]}] = locations(second)
+  end
+
   # Elixir lowercases "İ" to "i" plus a combining dot, while PostgreSQL's
   # `lower/1` (which the unique index uses) gives a plain "i" under most
-  # collations, so the two disagree on whether these names collide.
+  # collations, so the two disagree on whether these names collide. The
+  # retry after a skipped insert is only reached on a database whose
+  # `lower/1` folds "İ" (C.UTF-8 or another libc UTF-8 locale); elsewhere
+  # both names are kept as typed and this test passes without it.
   test "names the database folds together still get distinct venues" do
     user = insert(:user)
     first = insert(:meeting_type, user: user)
@@ -248,7 +265,44 @@ defmodule Tymeslot.Migrations.CreateVenuesTest do
            ] = locations(meeting_type)
   end
 
-  test "other kinds of location are left exactly as they were" do
+  test "other kinds of location are left exactly as they were, in place" do
+    user = insert(:user)
+    meeting_type = insert(:meeting_type, user: user)
+
+    phone = %{
+      "id" => "loc-call",
+      "kind" => "phone",
+      "label" => "Ring us",
+      "details" => "+44 20 7946 0000",
+      "position" => 0
+    }
+
+    video = %{
+      "id" => "loc-video",
+      "kind" => "video",
+      "label" => "Video call",
+      "details" => "Link sent on booking",
+      "video_integration_ids" => [7],
+      "position" => 2
+    }
+
+    office = Map.put(in_person("Office", "12 High Street"), "position", 1)
+
+    # The row is rewritten because of the in-person element, so every other
+    # element, malformed ones included, goes through the rewrite too.
+    put_raw_locations(meeting_type, [phone, office, video, 42, nil])
+
+    MigrationRunner.rerun!(@version)
+
+    assert [%{id: venue_id}] = venues(user)
+
+    assert [^phone, rewritten_office, ^video, 42, nil] = locations(meeting_type)
+
+    assert rewritten_office ==
+             office |> Map.put("venue_ids", [venue_id]) |> Map.put("details", nil)
+  end
+
+  test "a row with no in-person location is not touched" do
     user = insert(:user)
     meeting_type = insert(:meeting_type, user: user)
 
