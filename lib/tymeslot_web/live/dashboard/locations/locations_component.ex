@@ -77,6 +77,11 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
 
       {:error, %Changeset{} = changeset} ->
         {:noreply, assign(socket, :venue_form, to_form(changeset, as: :venue))}
+
+      # Deleted since the form opened, most likely from another tab.
+      {:error, :not_found} ->
+        Flash.error(dgettext("dashboard_meeting_types", "This location no longer exists"))
+        {:noreply, socket |> close_form() |> load_venues()}
     end
   end
 

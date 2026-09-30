@@ -214,6 +214,14 @@ defmodule Tymeslot.VenuesTest do
       assert {:ok, updated} = Venues.update_venue(venue, %{"user_id" => other.id})
       assert updated.user_id == venue.user_id
     end
+
+    test "reports a venue deleted since it was loaded as not found" do
+      venue = insert(:venue, name: "Studio")
+      {:ok, _deleted} = Venues.delete_venue(venue)
+
+      assert {:error, :not_found} = Venues.update_venue(venue, %{"name" => "The studio"})
+      assert Venues.list_venues(venue.user_id) == []
+    end
   end
 
   describe "delete_venue/1" do

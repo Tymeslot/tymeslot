@@ -321,3 +321,8 @@ msgstr[2] "Використовується в %{count} типах зустрі�
 #, elixir-autogen, elixir-format
 msgid "e.g., Berlin office"
 msgstr "напр., Офіс у Києві"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "This location no longer exists"
+msgstr "Цього місця більше не існує"

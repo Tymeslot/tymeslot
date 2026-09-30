@@ -318,3 +318,8 @@ msgstr[1] ""
 #, elixir-autogen, elixir-format
 msgid "e.g., Berlin office"
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "This location no longer exists"
+msgstr ""

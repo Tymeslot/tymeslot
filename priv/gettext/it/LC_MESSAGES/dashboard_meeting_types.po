@@ -318,3 +318,8 @@ msgstr[1] "Usata da %{count} tipi di riunione"
 #, elixir-autogen, elixir-format
 msgid "e.g., Berlin office"
 msgstr "es. Ufficio di Milano"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "This location no longer exists"
+msgstr "Questa sede non esiste più"

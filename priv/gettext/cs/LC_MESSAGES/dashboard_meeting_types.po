@@ -321,3 +321,8 @@ msgstr[2] "Používá ho %{count} typů schůzek"
 #, elixir-autogen, elixir-format
 msgid "e.g., Berlin office"
 msgstr "např. Kancelář Praha"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "This location no longer exists"
+msgstr "Toto místo už neexistuje"

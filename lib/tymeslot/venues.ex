@@ -79,14 +79,29 @@ defmodule Tymeslot.Venues do
     VenueQueries.reorder(user_id, ids)
   end
 
-  @doc "Renames or re-describes a venue. Past meetings keep their snapshot."
+  @doc """
+  Renames or re-describes a venue. Past meetings keep their snapshot.
+
+  `{:error, :not_found}` when the venue was deleted since it was loaded, say
+  from another tab while its edit form was open.
+  """
   @spec update_venue(VenueSchema.t(), map()) ::
-          {:ok, VenueSchema.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, VenueSchema.t()} | {:error, :not_found | Ecto.Changeset.t()}
   def update_venue(%VenueSchema{} = venue, attrs) do
     venue
     |> VenueSchema.changeset(attrs)
     |> VenueQueries.update_venue()
+    |> not_found_if_stale()
   end
+
+  defp not_found_if_stale({:error, %Ecto.Changeset{errors: errors} = changeset}) do
+    case Keyword.get(errors, :id) do
+      {_message, opts} -> if opts[:stale], do: {:error, :not_found}, else: {:error, changeset}
+      nil -> {:error, changeset}
+    end
+  end
+
+  defp not_found_if_stale(result), do: result
 
   @doc """
   Deletes a venue, even while meeting types list it.

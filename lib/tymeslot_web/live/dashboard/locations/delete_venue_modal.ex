@@ -33,9 +33,10 @@ defmodule TymeslotWeb.Dashboard.Locations.DeleteVenueModal do
       size={:medium}
     >
       <:header>
-        <span class="text-token-xl font-black tracking-tight">
-          {dgettext("dashboard_meeting_types", "Delete location")}
-        </span>
+        <div class="flex items-center gap-2">
+          <.icon name="hero-exclamation-triangle" class="w-5 h-5 text-red-500" />
+          <span>{dgettext("dashboard_meeting_types", "Delete location")}</span>
+        </div>
       </:header>
 
       <%= if @in_use == [] do %>

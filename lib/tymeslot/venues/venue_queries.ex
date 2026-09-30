@@ -90,9 +90,12 @@ defmodule Tymeslot.Venues.VenueQueries do
   @spec insert_venue(Ecto.Changeset.t()) :: {:ok, VenueSchema.t()} | {:error, Ecto.Changeset.t()}
   def insert_venue(changeset), do: Repo.insert(changeset)
 
-  @doc "Updates a venue changeset."
+  @doc """
+  Updates a venue changeset. A venue deleted since it was loaded comes back
+  as a changeset with a stale error on `:id` rather than raising.
+  """
   @spec update_venue(Ecto.Changeset.t()) :: {:ok, VenueSchema.t()} | {:error, Ecto.Changeset.t()}
-  def update_venue(changeset), do: Repo.update(changeset)
+  def update_venue(changeset), do: Repo.update(changeset, stale_error_field: :id)
 
   @doc """
   Deletes a venue, matched by its id and owner. `{:error, :not_found}` when

@@ -71,6 +71,17 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponentTest do
     end
   end
 
+  describe "validating a location" do
+    test "shows a blank name as an error while the form stays open", %{conn: conn} do
+      view = open(conn)
+      view |> element("[data-testid='add-venue']") |> render_click()
+
+      view |> form("#venue-form", %{"venue" => %{"name" => ""}}) |> render_change()
+
+      assert has_element?(view, "#venue-form", "can't be blank")
+    end
+  end
+
   describe "editing a location" do
     test "saves the new name and address", %{conn: conn, user: user} do
       venue = insert(:venue, user: user, name: "Studio", description: "Old Street 1")
@@ -92,6 +103,37 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponentTest do
                Venues.get_venue(user.id, venue.id)
 
       assert has_element?(view, "[data-testid='venue-card']", "The studio")
+    end
+
+    test "does not open for a location that is not the organiser's", %{conn: conn} do
+      foreign = insert(:venue, name: "Somebody else's office")
+      view = open(conn)
+
+      view
+      |> with_target("[data-testid='locations-page']")
+      |> render_click("edit_venue", %{"id" => to_string(foreign.id)})
+
+      refute has_element?(view, "#venue-form")
+    end
+
+    test "closes the form when the location was deleted meanwhile, say in another tab",
+         %{conn: conn, user: user} do
+      venue = insert(:venue, user: user, name: "Studio")
+      view = open(conn)
+
+      view |> element("[phx-click='edit_venue'][phx-value-id='#{venue.id}']") |> render_click()
+      {:ok, _deleted} = Venues.delete_venue(venue)
+
+      view
+      |> form("#venue-form", %{"venue" => %{"name" => "The studio"}})
+      |> render_submit()
+
+      drain(view)
+
+      assert Process.alive?(view.pid)
+      refute has_element?(view, "#venue-form")
+      refute has_element?(view, "[data-testid='venue-card']")
+      assert Venues.list_venues(user.id) == []
     end
   end
 
