@@ -95,6 +95,15 @@ defmodule Tymeslot.Bookings.RescheduleVenueTest do
     }
   end
 
+  defp booked_in_munich(munich) do
+    %{
+      location: "Munich office (Marienplatz 8)",
+      location_kind: "in_person",
+      location_option_id: "loc-offices",
+      venue_id: munich.id
+    }
+  end
+
   test "moves the meeting to the venue the booker picked", ctx do
     meeting = meeting_on(ctx.user, [ctx.offices], booked_in_berlin(ctx.berlin))
 
@@ -113,14 +122,29 @@ defmodule Tymeslot.Bookings.RescheduleVenueTest do
     refute_enqueued(worker: VideoRoomWorker)
   end
 
+  # Booked at the option's second venue, so falling back to the first one
+  # would be visible.
   test "an unknown venue id keeps the meeting where it is", ctx do
-    meeting = meeting_on(ctx.user, [ctx.offices], booked_in_berlin(ctx.berlin))
+    meeting = meeting_on(ctx.user, [ctx.offices], booked_in_munich(ctx.munich))
 
     updated =
       reschedule(meeting, %{location_option_id: "loc-offices", location_venue_id: 987_654_321})
 
-    assert updated.venue_id == ctx.berlin.id
-    assert updated.location == "Berlin office (Friedrichstrasse 1)"
+    assert updated.venue_id == ctx.munich.id
+    assert updated.location == "Munich office (Marienplatz 8)"
+  end
+
+  # The picker sends no venue today, only the option. The venue is renamed
+  # first, so an unchanged location text shows the reschedule left the
+  # location alone rather than resolving it afresh.
+  test "a time-only reschedule keeps the venue and its booked text", ctx do
+    meeting = meeting_on(ctx.user, [ctx.offices], booked_in_munich(ctx.munich))
+    {:ok, _renamed} = Venues.update_venue(ctx.munich, %{"name" => "Munich HQ"})
+
+    updated = reschedule(meeting, %{location_option_id: "loc-offices"})
+
+    assert updated.venue_id == ctx.munich.id
+    assert updated.location == "Munich office (Marienplatz 8)"
   end
 
   test "staying at the same venue keeps the booked text, even after the venue was edited",
