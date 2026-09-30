@@ -287,6 +287,82 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   def format_weekday_name(_invalid_weekday, _locale, _format), do: ""
 
   @doc """
+  Formats a date led by its full weekday name, in the locale's order and
+  punctuation. The weekday keeps the case the locale gives it, so French and
+  Italian start lowercase.
+  - en: Monday, February 5, 2026
+  - de: Montag, 5. Februar 2026
+  - cs: pondělí 5. února 2026
+  - fr: lundi 5 février 2026
+  - pl: poniedziałek, 5 lutego 2026
+  """
+  @spec format_weekday_date(Calendar.date(), String.t()) :: String.t()
+  def format_weekday_date(date, locale) do
+    weekday_prefix(date, locale) <>
+      with_year(day_month(date, format_month_name(date.month, locale), locale), date.year, locale)
+  end
+
+  @doc """
+  Formats a date led by its full weekday name, without the year.
+  - en: Monday, February 5
+  - de: Montag, 5. Februar
+  - cs: pondělí 5. února
+  - fr: lundi 5 février
+  """
+  @spec format_weekday_day_month(Calendar.date(), String.t()) :: String.t()
+  def format_weekday_day_month(date, locale) do
+    weekday_prefix(date, locale) <>
+      day_month(date, format_month_name(date.month, locale), locale)
+  end
+
+  @doc """
+  Formats a compact day and abbreviated month, without the year.
+  - en: Feb 5
+  - de: 5. Feb
+  - cs: 5. úno
+  - fr: 5 févr.
+  """
+  @spec format_short_date(Calendar.date(), String.t()) :: String.t()
+  def format_short_date(date, locale) do
+    day_month(date, format_month_name(date.month, locale, :short), locale)
+  end
+
+  @doc """
+  `format_short_date/2` led by the abbreviated weekday.
+  - en: Mon Feb 5
+  - de: Mo 5. Feb
+  - fr: lun 5 févr.
+  """
+  @spec format_short_weekday_date(Calendar.date(), String.t()) :: String.t()
+  def format_short_weekday_date(date, locale) do
+    "#{format_weekday_name(Date.day_of_week(date), locale, :short)} " <>
+      format_short_date(date, locale)
+  end
+
+  # Day-and-month order, unpadded, shared by the weekday and short shapes.
+  # Mirrors `order_date_parts/4`'s locale groups.
+  defp day_month(date, month_name, locale) when locale in ["de", "cs"],
+    do: "#{date.day}. #{month_name}"
+
+  defp day_month(date, month_name, locale) when locale in ["uk", "fr", "it", "pl"],
+    do: "#{date.day} #{month_name}"
+
+  defp day_month(date, month_name, _other_locale), do: "#{month_name} #{date.day}"
+
+  defp with_year(day_month, year, locale) when locale in ["de", "cs", "uk", "fr", "it", "pl"],
+    do: "#{day_month} #{year}"
+
+  defp with_year(day_month, year, _other_locale), do: "#{day_month}, #{year}"
+
+  # French, Italian and Czech run the weekday straight into the date; the
+  # others set it off with a comma.
+  defp weekday_prefix(date, locale) do
+    weekday = format_weekday_name(Date.day_of_week(date), locale, :full)
+
+    if locale in ["fr", "it", "cs"], do: "#{weekday} ", else: "#{weekday}, "
+  end
+
+  @doc """
   Formats a datetime as a full weekday-led date beside its clock time:
   "Monday, 5 April 2026 · 14:30".
 

@@ -168,6 +168,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
       assert PreferenceHelpers.period_label(assigns) == "January 26 – February 1, 2026"
     end
 
+    test "day view reads in the locale's own date order" do
+      on_exit(fn -> Gettext.put_locale(TymeslotWeb.Gettext, "en") end)
+      assigns = %{view: :day, date: ~D[2026-02-05]}
+
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+      assert PreferenceHelpers.period_label(assigns) == "Donnerstag, 5. Februar 2026"
+
+      Gettext.put_locale(TymeslotWeb.Gettext, "en")
+      assert PreferenceHelpers.period_label(assigns) == "Thursday, February 5, 2026"
+    end
+
     test "month view heads with the capitalised standalone month" do
       on_exit(fn -> Gettext.put_locale(TymeslotWeb.Gettext, "en") end)
       assigns = %{view: :month, date: ~D[2026-01-15]}

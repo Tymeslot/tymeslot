@@ -144,5 +144,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.MiniMonthTest do
         assert headings == [unquote(heading), unquote(heading)]
       end
     end
+
+    test "labels each day for screen readers in the locale's date order" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+
+      html =
+        render_component(&MiniMonthPopover.mini_month_popover/1,
+          open: true,
+          view: :month,
+          date: ~D[2026-02-15],
+          user_timezone: "Etc/UTC",
+          myself: %Phoenix.LiveComponent.CID{cid: 1}
+        )
+
+      [label] =
+        html
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query(~s(button[phx-value-date="2026-02-05"]))
+        |> LazyHTML.attribute("aria-label")
+
+      assert label == "Donnerstag, 5. Februar 2026"
+    end
   end
 end

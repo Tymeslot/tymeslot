@@ -574,4 +574,32 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       assert LocaleFormat.capitalize_first("") == ""
     end
   end
+
+  describe "weekday and short date shapes" do
+    # 2026-02-05 is a Thursday.
+    @date ~D[2026-02-05]
+
+    for {locale, weekday_date, weekday_day_month, short, short_weekday} <- [
+          {"en", "Thursday, February 5, 2026", "Thursday, February 5", "Feb 5", "Thu Feb 5"},
+          {"de", "Donnerstag, 5. Februar 2026", "Donnerstag, 5. Februar", "5. Feb", "Do 5. Feb"},
+          {"fr", "jeudi 5 février 2026", "jeudi 5 février", "5 févr.", "jeu 5 févr."},
+          {"it", "giovedì 5 febbraio 2026", "giovedì 5 febbraio", "5 feb", "gio 5 feb"},
+          {"cs", "čtvrtek 5. února 2026", "čtvrtek 5. února", "5. úno", "čt 5. úno"},
+          {"uk", "Четвер, 5 лютого 2026", "Четвер, 5 лютого", "5 лют", "Чт 5 лют"},
+          {"pl", "czwartek, 5 lutego 2026", "czwartek, 5 lutego", "5 lut", "czw 5 lut"}
+        ] do
+      test "#{locale}: orders the date parts the way the language writes them" do
+        locale = unquote(locale)
+
+        assert LocaleFormat.format_weekday_date(@date, locale) == unquote(weekday_date)
+        assert LocaleFormat.format_weekday_day_month(@date, locale) == unquote(weekday_day_month)
+        assert LocaleFormat.format_short_date(@date, locale) == unquote(short)
+        assert LocaleFormat.format_short_weekday_date(@date, locale) == unquote(short_weekday)
+      end
+    end
+
+    test "an unknown locale falls back to English order" do
+      assert LocaleFormat.format_weekday_date(@date, "xx") == "Thursday, February 5, 2026"
+    end
+  end
 end

@@ -122,10 +122,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormatting do
   defp format_datetime(dt, time_format), do: TimeFormat.format(dt, time_format)
 
   defp format_datetime_with_date(dt, time_format) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-    month = LocaleFormat.format_month_name(dt.month, locale, :short)
+    date = LocaleFormat.format_short_date(dt, Gettext.get_locale(TymeslotWeb.Gettext))
 
-    "#{TimeFormat.format(dt, time_format)} #{month} #{dt.day}"
+    "#{date}, #{TimeFormat.format(dt, time_format)}"
   end
 
   defdelegate time_format(assigns), to: PreferenceHelpers
