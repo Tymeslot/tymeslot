@@ -82,7 +82,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
             <.icon name="hero-chevron-left" class="w-4 h-4" />
           </button>
           <div class="text-token-sm font-semibold text-tymeslot-800">
-            {"#{LocaleFormat.format_month_name(@cursor.month, @locale)} #{@cursor.year}"}
+            {LocaleFormat.format_month_year(@cursor.month, @cursor.year, @locale)}
           </div>
           <button
             type="button"
@@ -130,7 +130,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
               phx-value-date={Date.to_iso8601(day)}
               phx-target={@myself}
               class={day_class(day, @cursor, @date, @today)}
-              aria-label={"#{LocaleFormat.format_weekday_name(Date.day_of_week(day), @locale, :full)}, #{LocaleFormat.format_month_name(day.month, @locale)} #{day.day}, #{day.year}"}
+              aria-label={LocaleFormat.format_weekday_date(day, @locale)}
               aria-current={Date.compare(day, @date) == :eq && "date"}
             >{day.day}</button>
           <% end %>

@@ -217,6 +217,60 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   @spec format_month_name(integer(), String.t(), :full | :short) :: String.t()
   def format_month_name(_invalid_month, _locale, _format), do: ""
 
+  # The standalone (nominative) month, for a heading that names a month without
+  # a day. Only the locales whose standalone form differs from the in-date one
+  # in `@month_names` are listed; the rest share it (fr, it, de) or are English.
+  # Stored lowercase except where the language capitalises the noun itself
+  # (en, de); `format_month_year/3` capitalises the start of the heading.
+  @standalone_month_names %{
+    "uk" =>
+      ~w(січень лютий березень квітень травень червень липень серпень вересень жовтень листопад грудень),
+    "cs" => ~w(leden únor březen duben květen červen červenec srpen září říjen listopad prosinec),
+    "pl" =>
+      ~w(styczeń luty marzec kwiecień maj czerwiec lipiec sierpień wrzesień październik listopad grudzień)
+  }
+
+  @doc """
+  The standalone month name for a heading without a day, as it reads mid-sentence:
+  lowercase in the languages that do not capitalise month names ("září",
+  "octobre"). Unlike `format_month_name/3`, never the genitive a date uses.
+
+  Headings starting with it go through `capitalize_first/1`, which
+  `format_month_year/3` already does.
+  """
+  @spec format_standalone_month_name(1..12, String.t()) :: String.t()
+  def format_standalone_month_name(month_num, locale) when month_num in 1..12 do
+    case Map.fetch(@standalone_month_names, locale) do
+      {:ok, names} -> Enum.at(names, month_num - 1)
+      :error -> format_month_name(month_num, locale, :full)
+    end
+  end
+
+  @doc """
+  A month-and-year heading, capitalised as a heading in the locale:
+  - en: September 2026
+  - fr: Septembre 2026
+  - cs: Leden 2026 (nominative, never the in-date "ledna")
+  """
+  @spec format_month_year(1..12, integer(), String.t()) :: String.t()
+  def format_month_year(month_num, year, locale) do
+    capitalize_first("#{format_standalone_month_name(month_num, locale)} #{year}")
+  end
+
+  @doc """
+  Upper-cases the first grapheme only, leaving the rest as it is.
+
+  `String.capitalize/1` is wrong for headings: it lowercases everything after
+  the first letter, turning German "Januar – Februar" into "Januar – februar".
+  """
+  @spec capitalize_first(String.t()) :: String.t()
+  def capitalize_first(string) do
+    case String.next_grapheme(string) do
+      {first, rest} -> String.upcase(first) <> rest
+      nil -> string
+    end
+  end
+
   @doc """
   Formats a weekday name based on weekday number (1=Monday, 7=Sunday) and locale.
   """
@@ -231,6 +285,82 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
 
   @spec format_weekday_name(integer(), String.t(), :full | :short | :narrow) :: String.t()
   def format_weekday_name(_invalid_weekday, _locale, _format), do: ""
+
+  @doc """
+  Formats a date led by its full weekday name, in the locale's order and
+  punctuation. The weekday keeps the case the locale gives it, so French and
+  Italian start lowercase.
+  - en: Monday, February 5, 2026
+  - de: Montag, 5. Februar 2026
+  - cs: pondělí 5. února 2026
+  - fr: lundi 5 février 2026
+  - pl: poniedziałek, 5 lutego 2026
+  """
+  @spec format_weekday_date(Calendar.date(), String.t()) :: String.t()
+  def format_weekday_date(date, locale) do
+    weekday_prefix(date, locale) <>
+      with_year(day_month(date, format_month_name(date.month, locale), locale), date.year, locale)
+  end
+
+  @doc """
+  Formats a date led by its full weekday name, without the year.
+  - en: Monday, February 5
+  - de: Montag, 5. Februar
+  - cs: pondělí 5. února
+  - fr: lundi 5 février
+  """
+  @spec format_weekday_day_month(Calendar.date(), String.t()) :: String.t()
+  def format_weekday_day_month(date, locale) do
+    weekday_prefix(date, locale) <>
+      day_month(date, format_month_name(date.month, locale), locale)
+  end
+
+  @doc """
+  Formats a compact day and abbreviated month, without the year.
+  - en: Feb 5
+  - de: 5. Feb
+  - cs: 5. úno
+  - fr: 5 févr.
+  """
+  @spec format_short_date(Calendar.date(), String.t()) :: String.t()
+  def format_short_date(date, locale) do
+    day_month(date, format_month_name(date.month, locale, :short), locale)
+  end
+
+  @doc """
+  `format_short_date/2` led by the abbreviated weekday.
+  - en: Mon Feb 5
+  - de: Mo 5. Feb
+  - fr: lun 5 févr.
+  """
+  @spec format_short_weekday_date(Calendar.date(), String.t()) :: String.t()
+  def format_short_weekday_date(date, locale) do
+    "#{format_weekday_name(Date.day_of_week(date), locale, :short)} " <>
+      format_short_date(date, locale)
+  end
+
+  # Day-and-month order, unpadded, shared by the weekday and short shapes.
+  # Mirrors `order_date_parts/4`'s locale groups.
+  defp day_month(date, month_name, locale) when locale in ["de", "cs"],
+    do: "#{date.day}. #{month_name}"
+
+  defp day_month(date, month_name, locale) when locale in ["uk", "fr", "it", "pl"],
+    do: "#{date.day} #{month_name}"
+
+  defp day_month(date, month_name, _other_locale), do: "#{month_name} #{date.day}"
+
+  defp with_year(day_month, year, locale) when locale in ["de", "cs", "uk", "fr", "it", "pl"],
+    do: "#{day_month} #{year}"
+
+  defp with_year(day_month, year, _other_locale), do: "#{day_month}, #{year}"
+
+  # French, Italian and Czech run the weekday straight into the date; the
+  # others set it off with a comma.
+  defp weekday_prefix(date, locale) do
+    weekday = format_weekday_name(Date.day_of_week(date), locale, :full)
+
+    if locale in ["fr", "it", "cs"], do: "#{weekday} ", else: "#{weekday}, "
+  end
 
   @doc """
   Formats a datetime as a full weekday-led date beside its clock time:
