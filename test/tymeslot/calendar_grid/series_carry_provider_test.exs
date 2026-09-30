@@ -22,6 +22,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarryProviderTest do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
+  alias Tymeslot.CalendarGrid.SeriesCarry
   alias Tymeslot.CalendarGrid.SeriesTransfer
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.ColourOverrideQueries
@@ -467,6 +468,70 @@ defmodule Tymeslot.CalendarGrid.SeriesCarryProviderTest do
 
       assert [:ok] = run_video_jobs()
       assert video_of(destination, moved.uid) == {teams.id, teams_link}
+    end
+  end
+
+  describe "plan/3 when the video was not carried back before a second write" do
+    # A first series-wide write's sync can land before its
+    # `SeriesVideoWorker` job runs: every row is cached with the join line
+    # the earlier write put on the calendar, but none carries the video
+    # columns a sync never writes (`Tymeslot.Workers.SeriesVideoWorker`'s
+    # moduledoc). A second write inside that window must still find the
+    # video, from the recorded room and the description, rather than reading
+    # it as gone.
+    test "still carries the video, recovered from the recorded room and the description", %{
+      user: user
+    } do
+      integration = insert_integration(user, "google", "https://www.googleapis.com/auth/calendar")
+      talk = insert(:video_integration, user: user, provider: "nextcloud_talk")
+
+      stored =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          provider: "google",
+          provider_calendar_id: "team-calendar",
+          uid: "series1@google.com_20260601T070000Z",
+          provider_event_id: "series1",
+          recurring_event_id: "series1",
+          summary: "Weekly sync",
+          description: "Join video call: #{@link}",
+          start_at: ~U[2026-06-01 07:00:00Z],
+          end_at: ~U[2026-06-01 08:00:00Z],
+          all_day: false,
+          timezone: "Europe/Berlin",
+          video_link: nil,
+          video_integration_id: nil,
+          sync_state: "synced"
+        )
+
+      {:ok, _room} =
+        EventVideoRoomQueries.insert(%{
+          user_id: user.id,
+          video_integration_id: talk.id,
+          provider: "nextcloud_talk",
+          calendar_integration_id: integration.id,
+          event_uid: "series1@google.com",
+          provider_event_id: "series1",
+          room_id: "room-weekly",
+          lobby_opens_at: ~U[2026-06-01 08:45:00Z],
+          ends_at: ~U[2026-12-01 08:00:00Z]
+        })
+
+      plan =
+        SeriesCarry.plan(user.id, stored, {:edited, %{start_at: ~U[2026-06-01 09:00:00Z]}})
+
+      assert plan.video == {talk.id, @link}
+
+      assert :ok = SeriesCarry.carry(plan)
+
+      assert_enqueued(
+        worker: SeriesVideoWorker,
+        args: %{
+          "calendar_integration_id" => integration.id,
+          "video_integration_id" => talk.id,
+          "video_link" => @link
+        }
+      )
     end
   end
 end
