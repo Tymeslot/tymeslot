@@ -666,3 +666,29 @@ msgstr "Po zmianie terminu"
 msgctxt "reminder status"
 msgid "Not sent"
 msgstr "Niewysłane"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/guest_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{email} booked this meeting and is already invited."
+msgstr "Osoba o adresie %{email} zarezerwowała to spotkanie i jest już zaproszona."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/guest_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{email} is already invited."
+msgstr "Osoba o adresie %{email} jest już zaproszona."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/guest_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{email} is not a valid email address."
+msgstr "%{email} nie jest prawidłowym adresem e-mail."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/guest_actions.ex
+#, elixir-autogen, elixir-format
+msgid "No more guests can be added to this meeting."
+msgstr "Do tego spotkania nie można dodać więcej gości."
+
+#: lib/tymeslot_web/components/dashboard/meetings/reminders_section.ex
+#, elixir-autogen, elixir-format
+msgctxt "reminder status"
+msgid "Not scheduled"
+msgstr "Niezaplanowane"

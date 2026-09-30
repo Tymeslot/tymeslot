@@ -1065,3 +1065,33 @@ msgstr "%{name} wprowadza zmiany w tym i wszystkich kolejnych wystąpieniach cyk
 #, elixir-autogen, elixir-format
 msgid "Reminder: Our meeting is in %{time_until}"
 msgstr "Przypomnienie: nasze spotkanie za %{time_until}"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "%{organizer} has invited you as a guest to this meeting."
+msgstr "%{organizer} zaprasza cię jako gościa na to spotkanie."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{guest} - %{organizer} has invited you as a guest to this meeting."
+msgstr "Cześć, %{guest} – %{organizer} zaprasza cię jako gościa na to spotkanie."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{guest} - the meeting %{organizer} invited you to has been cancelled."
+msgstr "Cześć, %{guest} – spotkanie, na które zaprasza cię %{organizer}, zostało odwołane."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{guest} - the meeting %{organizer} invited you to has been moved to a new time."
+msgstr "Cześć, %{guest} – spotkanie, na które zaprasza cię %{organizer}, zostało przeniesione na nowy termin."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting %{organizer} invited you to has been cancelled."
+msgstr "Spotkanie, na które zaprasza cię %{organizer}, zostało odwołane."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting %{organizer} invited you to has been moved to a new time."
+msgstr "Spotkanie, na które zaprasza cię %{organizer}, zostało przeniesione na nowy termin."
