@@ -665,7 +665,15 @@ oauth_token_url =
 oauth_userinfo_url =
   System.get_env("OAUTH_USERINFO_URL") || System.get_env("CLOUDRON_OIDC_PROFILE_ENDPOINT")
 
+# The label on the sign-in button. Only Cloudron supplies one (the name the
+# Cloudron admin gave its identity provider), and it applies only when the
+# credentials are Cloudron's too; otherwise the button reads "SSO".
+oauth_provider_name =
+  if System.get_env("OAUTH_CLIENT_ID") == nil,
+    do: System.get_env("CLOUDRON_OIDC_PROVIDER_NAME")
+
 config :tymeslot, :oauth_provider,
+  name: oauth_provider_name,
   client_id: oauth_client_id,
   client_secret: oauth_client_secret,
   site: oauth_provider_url,

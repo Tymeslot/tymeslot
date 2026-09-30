@@ -48,6 +48,28 @@ defmodule Tymeslot.Auth.OAuth.ProvidersTest do
     end
   end
 
+  describe "name/1" do
+    test "names the generic provider after its configured name" do
+      put_sso_config(name: "  Beaver Cloud ")
+
+      assert Providers.name(:oauth) == "Beaver Cloud"
+    end
+
+    test "falls back to SSO when no name is configured" do
+      put_sso_config(name: nil)
+      assert Providers.name(:oauth) == "SSO"
+
+      put_sso_config(name: "   ")
+      assert Providers.name(:oauth) == "SSO"
+    end
+
+    test "leaves the named providers alone" do
+      put_sso_config(name: "Beaver Cloud")
+
+      assert Providers.name(:github) == "GitHub"
+    end
+  end
+
   defp put_sso_config(overrides) do
     Application.put_env(
       :tymeslot,

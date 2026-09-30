@@ -507,6 +507,29 @@ defmodule TymeslotWeb.AuthLiveTest do
       assert has_element?(view, ~s(a.btn-oauth[href="/auth/oauth"]), "SSO")
       refute has_element?(view, ~s(a.btn-oauth[href="/auth/google"]))
     end
+
+    test "name the SSO provider when its configuration carries a name", %{conn: conn} do
+      social_auth = Application.get_env(:tymeslot, :social_auth, [])
+      oauth_provider = Application.get_env(:tymeslot, :oauth_provider, [])
+
+      Application.put_env(:tymeslot, :social_auth, Keyword.put(social_auth, :oauth_enabled, true))
+
+      Application.put_env(
+        :tymeslot,
+        :oauth_provider,
+        Keyword.put(oauth_provider, :name, "Beaver Cloud")
+      )
+
+      on_exit(fn ->
+        Application.put_env(:tymeslot, :social_auth, social_auth)
+        Application.put_env(:tymeslot, :oauth_provider, oauth_provider)
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/auth/login")
+
+      assert has_element?(view, ~s(a.btn-oauth[href="/auth/oauth"]), "Beaver Cloud")
+      refute has_element?(view, ~s(a.btn-oauth[href="/auth/oauth"]), "SSO")
+    end
   end
 
   describe "OAuth Completion" do
