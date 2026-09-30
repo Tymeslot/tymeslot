@@ -17,6 +17,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetector do
     - Returns `:baikal_legacy` for older installations with `/cal.php`
   - **SabreDAV**: Detected via hostname "sabre" or path `/server.php`
   - **Zimbra**: Detected via hostname "zimbra" or paths `/dav/`, `/principals/users/`, `/home/` (legacy)
+  - **mailbox.org**: Detected via hostname "mailbox.org"
+  - **Open-Xchange**: Detected via a calendar collection segment in the path
+    (see `open_xchange_path?/1`), which is how an Open-Xchange server other
+    than mailbox.org is recognised
   - **Generic**: Fallback for unrecognized CalDAV servers
   """
 
@@ -29,6 +33,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetector do
           | :sabredav
           | :zimbra
           | :mailbox_org
+          | :open_xchange
           | :apple
           | :generic
 
@@ -110,12 +115,53 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetector do
       php_server = detect_php_based_servers(url_lower) ->
         php_server
 
+      # Checked before Zimbra, whose `/principals/users/` pattern an
+      # Open-Xchange principal URL would otherwise match
+      open_xchange_path?(url) ->
+        :open_xchange
+
       # Zimbra-specific patterns
       zimbra_pattern = detect_zimbra_patterns(url_lower) ->
         zimbra_pattern
 
       true ->
         nil
+    end
+  end
+
+  @doc """
+  Whether `path_or_url` addresses an Open-Xchange calendar collection.
+
+  Open-Xchange (the server behind mailbox.org, and behind many hosted mail
+  suites under their own domain) names each calendar collection after its
+  folder id, `cal://0/<n>`, base64url-encoded without padding:
+  `/caldav/Y2FsOi8vMC8zMg/` is `cal://0/32`. A path segment that decodes to a
+  `cal://` id is therefore that server's own naming. It holds whatever the
+  hostname, and costs no request, because every connected integration already
+  carries the collection paths discovery returned.
+
+  ## Examples
+
+      iex> ServerDetector.open_xchange_path?("/caldav/Y2FsOi8vMC8zMg/")
+      true
+
+      iex> ServerDetector.open_xchange_path?("/remote.php/dav/calendars/user/personal/")
+      false
+  """
+  @spec open_xchange_path?(String.t()) :: boolean()
+  def open_xchange_path?(path_or_url) when is_binary(path_or_url) do
+    path_or_url
+    |> URI.parse()
+    |> Map.get(:path)
+    |> Kernel.||("")
+    |> String.split("/", trim: true)
+    |> Enum.any?(&open_xchange_folder_segment?/1)
+  end
+
+  defp open_xchange_folder_segment?(segment) do
+    case Base.url_decode64(String.trim_trailing(segment, "="), padding: false) do
+      {:ok, "cal://" <> _folder} -> true
+      _other -> false
     end
   end
 
