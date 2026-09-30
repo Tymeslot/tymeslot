@@ -7,8 +7,9 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
   Each test runs the real nightly worker and drains the room jobs it queues.
   An event is judged gone only once it has been seen in the calendar cache,
   then missed by every sync for two days, and then denied by the calendar
-  provider itself, in every calendar of the organiser's account, since the
-  event may have moved to one the organiser did not select; anything short
+  provider itself, in every calendar of the organiser's account it can write
+  to, since the event may have moved to one the organiser did not select
+  (a cancelled copy of the event counts for nothing); anything short
   of that keeps the conversation, and so does another event still carrying
   its link, which takes it over. Nextcloud
   (Talk and CalDAV) is played by the HTTP client, Google at its API boundary.
@@ -35,6 +36,8 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
   @day 86_400
   @talk_rooms "/ocs/v2.php/apps/spreed/api/v4/room"
   @team_calendar "team@group.calendar.google.com"
+  @colleague_dav "/calendars/bob/team/"
+  @colleague "bob@example.com"
 
   setup :verify_on_exit!
 
@@ -62,8 +65,33 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
       run_nightly_scan()
 
       assert_received {:dav_get, ^url}
-      # Nor has any calendar of the account, the unselected one included.
+      # Nor has any calendar of the account, the unselected one included. The
+      # colleague's, which it can only read, cannot have been moved into.
       assert_received {:dav_report, "/calendars/alice/private/", "grid-series-1"}
+      refute_received {:dav_report, @colleague_dav, _uid}
+      assert_talk_deleted(ctx, room)
+    end
+
+    test "deletes the conversation of a series cancelled in the calendar client", ctx do
+      room = series_room(ctx, "grid-series-5")
+      occurrence = cache_occurrence(ctx, "grid-series-5")
+      run_nightly_scan()
+
+      deleted_in_client(occurrence, room, ctx.calendar)
+      start = DateTime.add(DateTime.utc_now(:second), 2 * @day, :second)
+
+      cancelled =
+        String.replace(
+          ical_event("grid-series-5", start),
+          "END:VEVENT",
+          "STATUS:CANCELLED\r\nEND:VEVENT"
+        )
+
+      url = expect_dav_get(ctx, "grid-series-5", {200, cancelled})
+
+      run_nightly_scan()
+
+      assert_received {:dav_get, ^url}
       assert_talk_deleted(ctx, room)
     end
 
@@ -301,8 +329,11 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
 
       assert_received {:asked, "primary", "googlehex9"}
       assert_received {:asked, @team_calendar, "googlehex9"}
-      # The primary calendar is asked once, under its alias.
+      # The primary calendar is asked once, under its alias, and the
+      # colleague's calendars, which refuse, cannot have been moved into.
       refute_received {:asked, "alice@example.com", _event_id}
+      refute_received {:asked, @colleague, _event_id}
+      refute_received {:asked, "carol@example.com", _event_id}
       assert_talk_deleted(ctx, room)
     end
 
@@ -391,9 +422,12 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
       {:ok, %Req.Response{status: 404, body: ""}}
     end)
 
-    # The account also holds a calendar the organiser did not select.
+    # The account also holds a calendar the organiser did not select, and a
+    # colleague's shared read-only, which refuses a search.
     account = %{
-      calendars: ["/calendars/alice/work/", "/calendars/alice/private/"],
+      calendars: ["/calendars/alice/work/", "/calendars/alice/private/", @colleague_dav],
+      read_only: [@colleague_dav],
+      failing: %{@colleague_dav => 403},
       notify: test
     }
 
@@ -436,13 +470,22 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
 
   # Google's answer for the event in each calendar of an account whose
   # primary calendar is alice@example.com: `:not_found`, `:cancelled`, or the
-  # event itself.
+  # event itself. Colleagues' calendars it can only read, or only see as
+  # busy, refuse.
   defp answer_google(answers) do
     test = self()
 
     stub(GoogleCalendarAPIMock, :list_calendars, fn _integration ->
-      {:ok, [%{"id" => "alice@example.com", "primary" => true}, %{"id" => @team_calendar}]}
+      {:ok,
+       [
+         %{"id" => "alice@example.com", "primary" => true, "accessRole" => "owner"},
+         %{"id" => @team_calendar, "accessRole" => "writer"},
+         %{"id" => @colleague, "accessRole" => "reader"},
+         %{"id" => "carol@example.com", "accessRole" => "freeBusyReader"}
+       ]}
     end)
+
+    answers = Map.merge(%{@colleague => :forbidden, "carol@example.com" => :forbidden}, answers)
 
     stub(GoogleCalendarAPIMock, :get_event, fn _integration, calendar_id, event_id ->
       send(test, {:asked, calendar_id, event_id})
@@ -450,6 +493,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
       case Map.get(answers, calendar_id, :not_found) do
         :not_found -> {:error, :not_found, "Not Found"}
         :cancelled -> {:ok, %{"id" => event_id, "status" => "cancelled"}}
+        :forbidden -> {:error, :unauthorized, "Forbidden"}
         %{"id" => ^event_id} = event -> {:ok, event}
       end
     end)

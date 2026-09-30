@@ -78,8 +78,13 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
     date_str = Date.to_string(target_date)
 
     # Quill starts on the current month; Rhythm on the current week. Advance
-    # once if tomorrow is not yet selectable in the rendered strip/grid.
-    unless has_element?(view, "button.calendar-day[phx-value-date='#{date_str}']") do
+    # once if tomorrow is not yet selectable in the rendered strip/grid. On the
+    # last day of a month Quill already renders tomorrow, but as a disabled
+    # trailing other-month cell, so presence alone is not enough.
+    unless has_element?(
+             view,
+             "button.calendar-day[phx-value-date='#{date_str}']:not(.calendar-day--other-month)"
+           ) do
       nav =
         if has_element?(view, "button[phx-click='next_month']"),
           do: "button[phx-click='next_month']",

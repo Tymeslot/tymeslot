@@ -190,6 +190,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
         {:ok, []}
       end)
 
+      # The move is written to the provider from a background Task. Left
+      # unanswered, that write crashes and reverts the grid, racing the
+      # assertion below; answering it also proves the move reached the
+      # calendar rather than only the screen.
+      test_pid = self()
+
+      Mox.stub(Tymeslot.CalendarMock, :update_event, fn uid, _data, _context ->
+        send(test_pid, {:provider_update, uid})
+        :ok
+      end)
+
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
       html =
@@ -198,6 +209,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
         |> render_hook("event_dropped", drop_params(event))
 
       assert html =~ "Group Workshop"
+      assert_receive {:provider_update, uid}
+      assert uid == event.uid
       assert event_block(lv, event.id) =~ ~s(data-start-minutes="#{@moved_start_minutes}")
     end
   end

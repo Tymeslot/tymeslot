@@ -3,7 +3,8 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
   Covers `format_meeting_datetime/2`, which renders a meeting's start time on
   the payment return pages in the attendee's own timezone rather than raw UTC,
   and its compact sibling used by lists that repeat the date on every row, plus
-  the month form a date takes versus a standalone month heading.
+  the month form a date takes versus a standalone month heading, and the label
+  a slot key gets on the visitor's clock.
   """
 
   use ExUnit.Case, async: true
@@ -196,6 +197,68 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
       Gettext.put_locale(TymeslotWeb.Gettext, "uk")
 
       assert LocalizationHelpers.get_month_year_display(2026, 6) == "Червень 2026"
+    end
+  end
+
+  describe "format_slot_label/1" do
+    test "labels a slot key on a 24-hour clock for a German visitor" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+
+      assert LocalizationHelpers.format_slot_label("5:30 PM") == "17:30"
+    end
+
+    test "labels a slot key on a 12-hour clock for an English visitor" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "en")
+
+      assert LocalizationHelpers.format_slot_label("5:30 PM") == "05:30 PM"
+    end
+
+    test "shows a key that does not parse as it stands, never another time" do
+      assert LocalizationHelpers.format_slot_label("soon") == "soon"
+    end
+
+    test "passes nil through so a template can supply its own placeholder" do
+      assert LocalizationHelpers.format_slot_label(nil) == nil
+    end
+  end
+
+  describe "get_week_display/1" do
+    # 2026-09-07 is a Monday whose week stays in September; 2026-09-28 runs
+    # into October; 2025-12-29 runs into 2026.
+    @same_month ~D[2026-09-07]
+    @two_months ~D[2026-09-28]
+    @year_crossing ~D[2025-12-29]
+
+    for {locale, same, two, crossing} <- [
+          {"en", "September 2026", "September - October 2026", "December 2025 - January 2026"},
+          {"de", "September 2026", "September – Oktober 2026", "Dezember 2025 – Januar 2026"},
+          {"fr", "Septembre 2026", "Septembre – octobre 2026", "Décembre 2025 – janvier 2026"},
+          {"it", "Settembre 2026", "Settembre - ottobre 2026", "Dicembre 2025 - gennaio 2026"},
+          {"uk", "Вересень 2026", "Вересень - жовтень 2026", "Грудень 2025 - січень 2026"},
+          {"cs", "Září 2026", "Září – říjen 2026", "Prosinec 2025 – leden 2026"},
+          {"pl", "Wrzesień 2026", "Wrzesień – październik 2026", "Grudzień 2025 – styczeń 2026"}
+        ] do
+      test "#{locale}: capitalises only the start of the heading, in the nominative" do
+        Gettext.put_locale(TymeslotWeb.Gettext, unquote(locale))
+
+        assert LocalizationHelpers.get_week_display(@same_month) == unquote(same)
+        assert LocalizationHelpers.get_week_display(@two_months) == unquote(two)
+        assert LocalizationHelpers.get_week_display(@year_crossing) == unquote(crossing)
+      end
+    end
+  end
+
+  describe "get_month_year_display/2" do
+    test "Czech January is the capitalised nominative, not the genitive" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "cs")
+
+      assert LocalizationHelpers.get_month_year_display(2026, 1) == "Leden 2026"
+    end
+
+    test "French starts the heading with a capital" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "fr")
+
+      assert LocalizationHelpers.get_month_year_display(2026, 9) == "Septembre 2026"
     end
   end
 end

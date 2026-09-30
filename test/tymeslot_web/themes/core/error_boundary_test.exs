@@ -85,7 +85,7 @@ defmodule TymeslotWeb.Themes.Core.ErrorBoundaryTest do
 
       assert %RuntimeError{message: "boom mount"} = socket.assigns.theme_error.error
       assert socket.assigns.theme_error.theme_id == "buggy"
-      assert socket.assigns.theme_error_message == "Failed to load theme"
+      assert socket.assigns.theme_error.function == :mount
     end
 
     test "handle_params that raises returns noreply with theme_error assigned" do
@@ -97,10 +97,11 @@ defmodule TymeslotWeb.Themes.Core.ErrorBoundaryTest do
                  [%{}, "/", socket()]
                )
 
-      assert socket.assigns.theme_error_message == "Navigation error in theme"
+      assert %RuntimeError{message: "boom params"} = socket.assigns.theme_error.error
+      assert socket.assigns.theme_error.function == :handle_params
     end
 
-    test "handle_event that raises is caught with the right error message" do
+    test "handle_event that raises is caught and records the failing callback" do
       assert {:noreply, socket} =
                ErrorBoundary.wrap_callback(
                  "buggy",
@@ -109,17 +110,19 @@ defmodule TymeslotWeb.Themes.Core.ErrorBoundaryTest do
                  ["click", %{}, socket()]
                )
 
-      assert socket.assigns.theme_error_message == "Event handling error in theme"
+      assert %RuntimeError{message: "boom event"} = socket.assigns.theme_error.error
+      assert socket.assigns.theme_error.function == :handle_event
     end
 
-    test "handle_info that raises is caught with the right error message" do
+    test "handle_info that raises is caught and records the failing callback" do
       assert {:noreply, socket} =
                ErrorBoundary.wrap_callback("buggy", RaisingTheme, :handle_info, [
                  :ping,
                  socket()
                ])
 
-      assert socket.assigns.theme_error_message == "Message handling error in theme"
+      assert %RuntimeError{message: "boom info"} = socket.assigns.theme_error.error
+      assert socket.assigns.theme_error.function == :handle_info
     end
   end
 
@@ -128,7 +131,8 @@ defmodule TymeslotWeb.Themes.Core.ErrorBoundaryTest do
       assert {:ok, socket} =
                ErrorBoundary.wrap_callback("buggy", ThrowingTheme, :mount, [%{}, %{}, socket()])
 
-      assert socket.assigns.theme_error_message == "Failed to load theme"
+      assert socket.assigns.theme_error.error == {:throw, :thrown_mount}
+      assert socket.assigns.theme_error.function == :mount
     end
 
     test "a thrown value during handle_event is caught" do
@@ -139,14 +143,8 @@ defmodule TymeslotWeb.Themes.Core.ErrorBoundaryTest do
                  socket()
                ])
 
-      assert socket.assigns.theme_error_message == "Event handling error in theme"
-    end
-  end
-
-  describe "format_error/1" do
-    test "falls back to a generic message" do
-      assert ErrorBoundary.format_error(%{function: :something_else}) ==
-               "An error occurred in the theme"
+      assert socket.assigns.theme_error.error == {:throw, :thrown_event}
+      assert socket.assigns.theme_error.function == :handle_event
     end
   end
 end

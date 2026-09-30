@@ -10,8 +10,12 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.HandledError do
   every other value is replaced by `_`. `{:http_error, 503, "Service
   Unavailable"}` reads `{:http_error, _, _}`, and a later `{:http_error, 500,
   "Internal"}` from the same call site is recognisably the same failure. The
-  full reason, bounded, is kept in `reason` for the occurrence's context.
+  full reason, bounded and with the values of sensitive keys redacted, is kept
+  in `reason` for the occurrence's context: once inspected it is a string, in
+  which the Filter can no longer see keys.
   """
+
+  alias Tymeslot.Infrastructure.Logging.MetadataRedactor
 
   defexception [:reason, :message]
 
@@ -24,7 +28,10 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.HandledError do
 
   @impl Exception
   def exception(reason) do
-    %__MODULE__{reason: bounded_inspect(reason), message: shape(reason, @shape_depth)}
+    %__MODULE__{
+      reason: reason |> MetadataRedactor.redact() |> bounded_inspect(),
+      message: shape(reason, @shape_depth)
+    }
   end
 
   @doc """

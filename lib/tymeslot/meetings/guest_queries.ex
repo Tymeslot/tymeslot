@@ -172,6 +172,39 @@ defmodule Tymeslot.Meetings.GuestQueries do
   end
 
   @doc """
+  Claims the right to send `guest` their invitation by stamping
+  `confirmation_sent_at` with `sent_at`, but only while it is still unset.
+
+  One conditional update, so of two jobs racing for the same guest (the
+  booking's confirmation and an invitation job for a guest added meanwhile)
+  exactly one gets `:claimed` and the other `:already_claimed`. The claim is
+  taken before the send; `release_confirmation_claim/2` hands it back when the
+  send fails, so a retry can try again.
+  """
+  @spec claim_confirmation(Guest.t(), DateTime.t()) :: :claimed | :already_claimed
+  def claim_confirmation(%Guest{id: id}, sent_at) do
+    {count, _rows} =
+      Guest
+      |> where([g], g.id == ^id and is_nil(g.confirmation_sent_at))
+      |> Repo.update_all(set: [confirmation_sent_at: sent_at, updated_at: sent_at])
+
+    if count == 1, do: :claimed, else: :already_claimed
+  end
+
+  @doc """
+  Releases a claim taken by `claim_confirmation/2` with the same `sent_at`,
+  leaving the guest unsent. A stamp that has since changed is left alone.
+  """
+  @spec release_confirmation_claim(Guest.t(), DateTime.t()) :: :ok
+  def release_confirmation_claim(%Guest{id: id}, sent_at) do
+    Guest
+    |> where([g], g.id == ^id and g.confirmation_sent_at == ^sent_at)
+    |> Repo.update_all(set: [confirmation_sent_at: nil, updated_at: DateTime.utc_now(:second)])
+
+    :ok
+  end
+
+  @doc """
   Guests to send the reminder for one configured offset to.
 
   Excludes guests whose group-booking participant has cancelled or moved

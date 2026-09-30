@@ -28,6 +28,7 @@ defmodule TymeslotWeb.DashboardLive do
   use TymeslotWeb, :live_view
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.CalendarGrid.WriteGuardian
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.Meetings
   alias Tymeslot.Onboarding
@@ -123,6 +124,10 @@ defmodule TymeslotWeb.DashboardLive do
 
   defp handle_dashboard_params(params, socket) do
     action = socket.assigns.live_action
+
+    # Leaving the calendar unmounts the grid while this process lives on,
+    # so the writes it still has queued are handed to their guardian.
+    if action != :calendar, do: WriteGuardian.detach()
 
     socket =
       if connected?(socket) && action == :calendar &&

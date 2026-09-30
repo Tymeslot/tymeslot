@@ -3,22 +3,30 @@ defmodule Tymeslot.Infrastructure.Logging.Redactor do
   Provides utilities for redacting sensitive information from logs.
   """
 
+  # Key names whose value is a credential, matched anywhere in the name as
+  # MetadataRedactor matches them, so `webhook_secret`, `bot_token`,
+  # `secret_key` and `password_confirmation` are all covered. A bare `*_key`
+  # is not: `cache_key`, `dedup_key` and `idempotency_key` are logged for
+  # diagnosis and carry no secret, so only the key names that do are listed.
+  @secret_name "[a-z0-9_]*(?:secret|token|password|passcode|api_?key|private_key|encryption_key|signing_key)[a-z0-9_]*"
+
   @sensitive_patterns [
     {~r/Bearer\s+[a-zA-Z0-9\-\._~+\/]+=*/i, "Bearer [REDACTED]"},
     {~r/Basic\s+[a-zA-Z0-9\-\._~+\/]+=*/i, "Basic [REDACTED]"},
-    {~r/token=[a-zA-Z0-9\-\._~+\/]+=*/i, "token=[REDACTED]"},
+    # A query parameter (`?token=`, `&client_secret=`), up to the next
+    # parameter, whitespace or quote.
+    {~r/\b(#{@secret_name})=(?!>)[^&\s"']+/i, "\\1=[REDACTED]"},
     # A bare query string ("code=abc&state=xyz") starts with its first
     # parameter, with no `?` in front of it.
     {~r/(^|[&\?])code=[^&\s"]+/i, "\\1code=[REDACTED]"},
     {~r/(^|[&\?])state=[^&\s"]+/i, "\\1state=[REDACTED]"},
-    {~r/"?access_token"?[^a-zA-Z0-9]+"[^"]+"/i, "access_token: \"[REDACTED]\""},
-    {~r/"?refresh_token"?[^a-zA-Z0-9]+"[^"]+"/i, "refresh_token: \"[REDACTED]\""},
-    {~r/"?client_secret"?[^a-zA-Z0-9]+"[^"]+"/i, "client_secret: \"[REDACTED]\""},
-    {~r/"?api_key"?[^a-zA-Z0-9]+"[^"]+"/i, "api_key: \"[REDACTED]\""},
-    # `password[a-z_]*` so `password_confirmation`, `new_password` and friends
-    # are covered too — an alphanumeric suffix would otherwise break the match
-    # and leave the value in the clear.
-    {~r/"?password[a-z_]*"?[^a-zA-Z0-9]+"[^"]+"/i, "password: \"[REDACTED]\""}
+    # A quoted value under a secret key name: `api_key: "…"` in an inspected
+    # keyword list or atom-keyed map, `"api_key" => "…"`, JSON's
+    # `"api_key":"…"`. The key must be followed by `:`, `=>` or `,` and not
+    # preceded by `:`, so an atom such as `{:invalid_token, "Token expired"}`
+    # keeps its message.
+    {~r/(?<![:\w])"?(#{@secret_name})"?\s*(?::|=>|,)\s*"(?:[^"\\]++|\\.)*+"/i,
+     "\\1: \"[REDACTED]\""}
   ]
 
   @doc """

@@ -7,11 +7,18 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RemindersSection do
   them after the fact — the meeting type shows its *current* setting, which a
   booking made before a change no longer follows, and a quick-added meeting has
   no meeting type at all.
+
+  A stateful component only so that `update_many/1` can batch: whether a
+  reminder is "not yet sent" depends on a job existing for it, and every card
+  on the page is answered by one query rather than one each.
+  `reminders_section/1` is the entry point, so callers render it like any other
+  function component.
   """
 
-  use Phoenix.Component
+  use Phoenix.LiveComponent
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Phoenix.LiveComponent
   alias Tymeslot.Notifications.ReminderSchedule
   alias TymeslotWeb.Components.CoreComponents
 
@@ -19,35 +26,59 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RemindersSection do
 
   @spec reminders_section(map()) :: Phoenix.LiveView.Rendered.t()
   def reminders_section(assigns) do
-    assigns = assign(assigns, :reminders, ReminderSchedule.with_status(assigns.meeting))
-
     ~H"""
-    <%!-- When this booking reminds. Its own list, copied from the meeting type
-          when it was booked, so it stays right for a booking made before that
-          setting changed. Released bookings (cancelled, expired) have none
-          left: their reminders were dropped with the booking. --%>
-    <div
-      :if={@reminders != []}
-      class="mt-8 p-5 bg-tymeslot-50/50 rounded-token-2xl border-2 border-tymeslot-50"
-    >
-      <div class="flex gap-4 items-start mb-4">
-        <div class="w-8 h-8 rounded-token-lg bg-white shadow-sm flex items-center justify-center shrink-0 border border-tymeslot-100">
-          <CoreComponents.icon name="hero-bell" class="w-4 h-4 text-tymeslot-400" />
+    <.live_component module={__MODULE__} id={"meeting-reminders-#{@meeting.id}"} meeting={@meeting} />
+    """
+  end
+
+  @impl LiveComponent
+  def update_many(assigns_sockets) do
+    scheduled =
+      assigns_sockets
+      |> Enum.map(fn {assigns, _socket} -> assigns.meeting end)
+      |> ReminderSchedule.scheduled_by_meeting()
+
+    Enum.map(assigns_sockets, fn {%{meeting: meeting} = assigns, socket} ->
+      reminders =
+        ReminderSchedule.with_status(meeting, Map.get(scheduled, meeting.id, MapSet.new()))
+
+      socket
+      |> assign(assigns)
+      |> assign(:reminders, reminders)
+    end)
+  end
+
+  @impl LiveComponent
+  def render(assigns) do
+    ~H"""
+    <div id={@id}>
+      <%!-- When this booking reminds. Its own list, copied from the meeting type
+            when it was booked, so it stays right for a booking made before that
+            setting changed. Released bookings (cancelled, expired) have none
+            left: their reminders were dropped with the booking. --%>
+      <div
+        :if={@reminders != []}
+        class="mt-8 p-5 bg-tymeslot-50/50 rounded-token-2xl border-2 border-tymeslot-50"
+      >
+        <div class="flex gap-4 items-start mb-4">
+          <div class="w-8 h-8 rounded-token-lg bg-white shadow-sm flex items-center justify-center shrink-0 border border-tymeslot-100">
+            <CoreComponents.icon name="hero-bell" class="w-4 h-4 text-tymeslot-400" />
+          </div>
+          <p class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest mt-2">
+            {dgettext("dashboard_bookings", "Reminders")}
+          </p>
         </div>
-        <p class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest mt-2">
-          {dgettext("dashboard_bookings", "Reminders")}
-        </p>
+        <ul class="space-y-2.5">
+          <li :for={reminder <- @reminders} class="flex items-center justify-between gap-3">
+            <span class="text-token-sm font-medium text-tymeslot-700">
+              {reminder_label(reminder)}
+            </span>
+            <span class="text-token-xs font-bold text-tymeslot-500">
+              {reminder_status_label(reminder.status)}
+            </span>
+          </li>
+        </ul>
       </div>
-      <ul class="space-y-2.5">
-        <li :for={reminder <- @reminders} class="flex items-center justify-between gap-3">
-          <span class="text-token-sm font-medium text-tymeslot-700">
-            {reminder_label(reminder)}
-          </span>
-          <span class="text-token-xs font-bold text-tymeslot-500">
-            {reminder_status_label(reminder.status)}
-          </span>
-        </li>
-      </ul>
     </div>
     """
   end
@@ -102,4 +133,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RemindersSection do
 
   defp reminder_status_label(:upcoming),
     do: dpgettext("dashboard_bookings", "reminder status", "Not yet sent")
+
+  # Still ahead, yet nothing is queued to send it. Not "Not sent", which reads
+  # as a moment already missed.
+  defp reminder_status_label(:not_scheduled),
+    do: dpgettext("dashboard_bookings", "reminder status", "Not scheduled")
 end

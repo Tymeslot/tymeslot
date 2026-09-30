@@ -63,6 +63,49 @@ defmodule Tymeslot.Meetings.GuestsTest do
       meeting = insert(:meeting)
       assert {:ok, []} = Guests.create_for_meeting(meeting.id, [])
     end
+
+    test "records who invited the guests, the booker unless told otherwise" do
+      meeting = insert(:meeting)
+
+      {:ok, [booked]} = Guests.create_for_meeting(meeting.id, ["booked@example.com"])
+
+      {:ok, [hosted]} =
+        Guests.create_for_meeting(meeting.id, ["hosted@example.com"], :organizer)
+
+      assert [%{invited_by: :booker}, %{invited_by: :organizer}] =
+               Enum.sort_by(GuestQueries.list_for_meeting(meeting.id), & &1.email)
+
+      assert booked.invited_by == :booker
+      assert hosted.invited_by == :organizer
+    end
+  end
+
+  describe "valid_email?/1" do
+    # The forms that collect guest addresses ask this, so it has to agree with
+    # what `sanitize_emails/2` keeps: an address the form accepted and the
+    # booking then dropped would vanish without a word.
+    test "agrees with sanitize_emails/2 on every address" do
+      candidates = [
+        "ok@example.com",
+        "not-an-email",
+        "two@",
+        "a..b@example.com",
+        "someone@example.invalidtld",
+        "someone@example.test",
+        "someone@example.con"
+      ]
+
+      kept = Guests.sanitize_emails(candidates, nil)
+
+      assert Enum.filter(candidates, &Guests.valid_email?/1) == kept
+      assert "ok@example.com" in kept
+      refute "someone@example.invalidtld" in kept
+    end
+
+    test "is false for anything that is not a string" do
+      refute Guests.valid_email?(nil)
+      refute Guests.valid_email?(42)
+    end
   end
 
   describe "create_for_participant/3" do
@@ -123,7 +166,15 @@ defmodule Tymeslot.Meetings.GuestsTest do
     } do
       {:ok, added} = Guests.invite_for_organizer(meeting.id, host.id, ["Colleague@Example.com"])
 
-      assert [%{id: guest_id, email: "colleague@example.com", status: "pending"}] = added
+      assert [
+               %{
+                 id: guest_id,
+                 email: "colleague@example.com",
+                 status: "pending",
+                 invited_by: :organizer
+               }
+             ] = added
+
       assert [%{email: "colleague@example.com"}] = GuestQueries.list_for_meeting(meeting.id)
 
       assert_enqueued(

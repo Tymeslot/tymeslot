@@ -88,24 +88,64 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
   because a host copying a line out of an email should not have to take it
   apart by hand.
 
-  An address already on the meeting, or already staged, is refused rather than
-  added twice, and the list stops at the meeting's remaining room.
+  An address that is not valid, the booker's own, one already on the meeting
+  or already staged, and any past the meeting's remaining room are refused,
+  and a flash says why, as Quick Add does, rather than leaving the host to
+  wonder where the address went. Validity is `Guests.valid_email?/1`, the rule
+  `Guests.invite_for_organizer/3` applies, so an address staged here is never
+  dropped on confirm.
   """
   @spec stage(Phoenix.LiveView.Socket.t(), map(), String.t() | nil) ::
           Phoenix.LiveView.Socket.t()
   def stage(socket, meeting, raw_email) do
-    staged = staged(socket)
     existing = existing(socket)
-    known = MapSet.new(Enum.map(existing, &String.downcase(&1.email)))
+    taken = Enum.map(existing, &normalize(&1.email))
 
-    additions =
+    {staged, refusals} =
       raw_email
       |> parse_emails()
-      |> Guests.sanitize_emails(meeting.attendee_email)
-      |> Enum.reject(&(&1 in staged or MapSet.member?(known, &1)))
+      |> Enum.map(&normalize/1)
+      |> Enum.reduce({staged(socket), []}, fn email, {staged, refusals} ->
+        case check_guest(email, meeting, taken ++ staged, room(existing) - length(staged)) do
+          :ok -> {staged ++ [email], refusals}
+          {:error, message} -> {staged, [message | refusals]}
+        end
+      end)
 
-    assign(socket, :staged_guests, Enum.take(staged ++ additions, room(existing)))
+    if refusals != [],
+      do: refusals |> Enum.reverse() |> Enum.uniq() |> Enum.join(" ") |> Flash.error()
+
+    assign(socket, :staged_guests, staged)
   end
+
+  # The reasons, and their wording, follow Quick Add's
+  # (`CreateFormState.check_extra_guest/2`), so the host is told the same
+  # thing wherever they invite someone.
+  defp check_guest(email, meeting, taken, room) do
+    cond do
+      not Guests.valid_email?(email) ->
+        {:error,
+         dgettext("dashboard_bookings", "%{email} is not a valid email address.", email: email)}
+
+      email == normalize(meeting.attendee_email) ->
+        {:error,
+         dgettext("dashboard_bookings", "%{email} booked this meeting and is already invited.",
+           email: email
+         )}
+
+      email in taken ->
+        {:error, dgettext("dashboard_bookings", "%{email} is already invited.", email: email)}
+
+      room <= 0 ->
+        {:error, dgettext("dashboard_bookings", "No more guests can be added to this meeting.")}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp normalize(nil), do: ""
+  defp normalize(email), do: email |> String.trim() |> String.downcase()
 
   @doc "Takes an address back off the list before it is sent."
   @spec unstage(Phoenix.LiveView.Socket.t(), String.t()) :: Phoenix.LiveView.Socket.t()

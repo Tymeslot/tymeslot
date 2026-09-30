@@ -136,4 +136,48 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GuestInvitationTest do
       assert reloaded.attendee_email_sent
     end
   end
+
+  describe "a guest added while the booking's confirmation is still going out" do
+    # The confirmation job lists every unsent guest, and the host's invitation
+    # job names the guest it added; both can hold the same guest at once. The
+    # invitation job is run from inside the confirmation's first guest send,
+    # which is the moment the two jobs overlap: the confirmation has already
+    # listed the late guest as unsent, and has not reached them yet.
+    test "is invited once, by whichever job claims them first" do
+      meeting = insert(:meeting, organizer_email_sent: false, attendee_email_sent: false)
+      {:ok, [_booked]} = Guests.create_for_meeting(meeting.id, ["a-booked@example.com"])
+      {:ok, [late]} = Guests.create_for_meeting(meeting.id, ["late@example.com"], :organizer)
+
+      stub(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn _to, _details ->
+        {:ok, "sent"}
+      end)
+
+      stub(EmailServiceMock, :send_appointment_confirmation_to_attendee, fn _to, _details ->
+        {:ok, "sent"}
+      end)
+
+      test_pid = self()
+
+      stub(EmailServiceMock, :send_guest_confirmation, fn
+        "a-booked@example.com", _details ->
+          send(test_pid, {:invitation_job, run(meeting, [late])})
+          send(test_pid, {:guest_sent, "a-booked@example.com"})
+          {:ok, "sent"}
+
+        email, _details ->
+          send(test_pid, {:guest_sent, email})
+          {:ok, "sent"}
+      end)
+
+      EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
+        "meeting_id" => meeting.id
+      })
+
+      assert_received {:invitation_job, :ok}
+      assert_received {:guest_sent, "a-booked@example.com"}
+      assert_received {:guest_sent, "late@example.com"}
+      refute_received {:guest_sent, "late@example.com"}
+      assert GuestQueries.list_unsent_for_meeting(meeting.id) == []
+    end
+  end
 end

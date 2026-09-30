@@ -19,7 +19,7 @@ defmodule Tymeslot.Workers.SyncRequestTest do
   import Req.Test, only: [set_req_test_to_shared: 1]
   import Tymeslot.CalDAVSyncTestFixtures
   import Tymeslot.ConfigTestHelpers
-  import Tymeslot.WorkerTestHelpers, only: [running_job: 2]
+  import Tymeslot.WorkerTestHelpers, only: [persisted_job: 2, running_job: 2]
 
   alias Ecto.Changeset
   alias Oban.Worker
@@ -150,6 +150,69 @@ defmodule Tymeslot.Workers.SyncRequestTest do
       Repo.update_all(from(j in Oban.Job, where: j.id == ^running.id),
         set: [inserted_at: DateTime.add(DateTime.utc_now(), -3600, :second)]
       )
+
+      {:ok, _job} = SyncGoogleCalendarWorker.enqueue(integration.id)
+
+      assert [%{id: id}] = live_jobs(SyncGoogleCalendarWorker, integration.id)
+      assert id == running.id
+    end
+  end
+
+  describe "a request against a retryable sync" do
+    test "brings a backed-off retry forward instead of waiting out its backoff" do
+      integration =
+        insert(:calendar_integration, provider: "google", google_sync_token: "token-1")
+
+      retryable =
+        persisted_job(SyncGoogleCalendarWorker, %{"calendar_integration_id" => integration.id})
+
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^retryable.id),
+        set: [
+          state: "retryable",
+          scheduled_at: DateTime.add(DateTime.utc_now(), 240, :second),
+          attempt: 1
+        ]
+      )
+
+      {:ok, _job} = SyncGoogleCalendarWorker.enqueue(integration.id)
+
+      assert [%{id: id, scheduled_at: scheduled_at, args: args}] =
+               live_jobs(SyncGoogleCalendarWorker, integration.id)
+
+      assert id == retryable.id
+      assert DateTime.before?(scheduled_at, DateTime.add(DateTime.utc_now(), 5, :second))
+      assert Map.has_key?(args, "requested_at")
+    end
+  end
+
+  describe "a request against an orphaned executing job" do
+    test "gets a job of its own instead of waiting for the Lifeline" do
+      integration =
+        insert(:calendar_integration, provider: "google", google_sync_token: "token-1")
+
+      orphaned =
+        running_job(SyncGoogleCalendarWorker, %{"calendar_integration_id" => integration.id})
+
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^orphaned.id),
+        set: [attempted_at: DateTime.add(DateTime.utc_now(), -3600, :second)]
+      )
+
+      {:ok, job} = SyncGoogleCalendarWorker.enqueue(integration.id)
+
+      assert job.id != orphaned.id
+      assert job.state in ["available", "scheduled"]
+
+      ids = Enum.map(live_jobs(SyncGoogleCalendarWorker, integration.id), & &1.id)
+      assert orphaned.id in ids
+      assert job.id in ids
+    end
+
+    test "a still-running job within the threshold is folded into as usual" do
+      integration =
+        insert(:calendar_integration, provider: "google", google_sync_token: "token-1")
+
+      running =
+        running_job(SyncGoogleCalendarWorker, %{"calendar_integration_id" => integration.id})
 
       {:ok, _job} = SyncGoogleCalendarWorker.enqueue(integration.id)
 

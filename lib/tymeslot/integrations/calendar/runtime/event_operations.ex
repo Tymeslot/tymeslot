@@ -172,11 +172,15 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   provider, bypassing the sync cache.
 
   Every calendar of the integration a client reaches is asked in turn, since
-  the event may live in any of them. When every one of them says it does not
-  exist, the provider looks for it in the account's other calendars, where
-  the organiser may have moved it (`Provider.find_moved_event/2`). The answer
-  is `{:ok, events}` as soon as one finds it, `{:error, :not_found}` only when
-  no calendar of the account has it, `{:error, :unsupported}` when the provider cannot fetch a
+  the event may live in any of them. Those are the selected calendars the
+  organiser can write to, and the booking calendar: a CalDAV calendar
+  selected read-only gets no client (`ProviderCommon.caldav_writable_paths/1`),
+  so its refusal cannot leave the event's absence unproven. When every one of
+  them says it does not exist, the provider looks for it in the account's
+  other writable calendars, where the organiser may have moved it
+  (`Provider.find_moved_event/2`). A cancelled event counts as none. The
+  answer is `{:ok, events}` as soon as one finds it, `{:error, :not_found}`
+  only when no writable calendar of the account has it, `{:error, :unsupported}` when the provider cannot fetch a
   single event, and any other error when it could not be told. An integration
   that is not the user's, or no longer active, is
   `{:error, :no_calendar_integration}`.
@@ -220,16 +224,18 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
 
   # --- Private Helpers ---
 
-  # A whole event goes with `:ok`; one occurrence of a series with the
-  # document the rest of the series now lives in, which the caller needs to
-  # refresh its cache.
-  # A whole event is written with `:ok`; one occurrence of a CalDAV series
-  # with the document the series now lives in.
+  # A whole event is written with `:ok`; one CalDAV occurrence of a series
+  # with the document the series now lives in; a Google/Outlook split (the
+  # occurrence detached into its own event, the rest of the series re-created
+  # after it) with the document the tail now lives in.
   defp written(:ok), do: {:written, :ok}
   defp written({:ok, %{document: _document}} = occurrence), do: {:written, occurrence}
   defp written({:ok, %{tail: _tail}} = split), do: {:written, split}
   defp written(error), do: error
 
+  # A whole event goes with `:ok`; one CalDAV occurrence of a series with the
+  # document the rest of the series now lives in, which the caller needs to
+  # refresh its cache.
   defp deleted(:ok), do: {:deleted, :ok}
   defp deleted({:ok, %{document: _document}} = occurrence), do: {:deleted, occurrence}
   defp deleted(error), do: error

@@ -119,6 +119,23 @@ defmodule Tymeslot.Workers.ErrorTrackerMaintenanceWorkerTest do
     end
   end
 
+  describe "re-masking" do
+    # Rows inserted directly never reach the telemetry handler that masks
+    # them, as when its rewrite fails.
+    test "masks a reason stored unmasked in the last two days" do
+      raw = "sync failed for jane@example.com"
+      error = insert_error(last_seen_days_ago: 0, reason: raw)
+      recent = insert_occurrence(error, days_ago: 1, reason: raw)
+      old = insert_occurrence(error, days_ago: 3, reason: raw)
+
+      assert :ok = perform_job()
+
+      assert Repo.get!(Error, error.id).reason == "sync failed for j***@example.com"
+      assert Repo.get!(Occurrence, recent.id).reason == "sync failed for j***@example.com"
+      assert Repo.get!(Occurrence, old.id).reason == raw
+    end
+  end
+
   describe "regression after auto-resolve" do
     setup do
       with_config(:error_tracker, enabled: true)
@@ -189,7 +206,7 @@ defmodule Tymeslot.Workers.ErrorTrackerMaintenanceWorkerTest do
   defp insert_error(opts) do
     Repo.insert!(%Error{
       kind: "Elixir.RuntimeError",
-      reason: "boom",
+      reason: Keyword.get(opts, :reason, "boom"),
       source_line: "lib/example.ex:#{System.unique_integer([:positive])}",
       source_function: "Example.run/0",
       fingerprint: Base.encode16(:crypto.strong_rand_bytes(16)),
@@ -199,14 +216,14 @@ defmodule Tymeslot.Workers.ErrorTrackerMaintenanceWorkerTest do
     })
   end
 
-  defp insert_occurrence(%Error{} = error, days_ago: days) do
+  defp insert_occurrence(%Error{} = error, opts) do
     Repo.insert!(%Occurrence{
       error_id: error.id,
-      reason: "boom",
+      reason: Keyword.get(opts, :reason, "boom"),
       context: %{},
       breadcrumbs: [],
       stacktrace: %ErrorTracker.Stacktrace{lines: []},
-      inserted_at: days_ago(days)
+      inserted_at: days_ago(Keyword.fetch!(opts, :days_ago))
     })
   end
 

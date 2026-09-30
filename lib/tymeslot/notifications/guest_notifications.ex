@@ -37,6 +37,7 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.GuestQueries
+  alias Tymeslot.Meetings.GuestSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
 
@@ -146,7 +147,8 @@ defmodule Tymeslot.Notifications.GuestNotifications do
 
   @doc """
   The appointment details for one guest: the shared payload plus the guest's
-  name and personal RSVP links.
+  name, personal RSVP links, and who invited them (`:guest_invited_by`,
+  `:booker` or `:organizer`), which decides whom their emails name.
 
   A group-booking guest was invited by their own participant, not by whoever
   the meeting row names as its attendee, so when the guest arrives with its
@@ -161,6 +163,7 @@ defmodule Tymeslot.Notifications.GuestNotifications do
     |> Map.put(:guest_name, guest.name || guest.email)
     |> Map.put(:guest_accept_url, urls.accept_url)
     |> Map.put(:guest_decline_url, urls.decline_url)
+    |> Map.put(:guest_invited_by, GuestSchema.inviter(guest))
   end
 
   defp put_inviting_participant(details, %{participant: %ParticipantSchema{} = participant}),

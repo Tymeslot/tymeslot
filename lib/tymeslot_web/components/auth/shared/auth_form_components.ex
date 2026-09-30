@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Shared.Auth.FormComponents do
       |> assign_new(:class, fn -> "space-y-4 mb-6" end)
       |> assign_new(:id, fn -> nil end)
       |> assign_new(:loading, fn -> false end)
+      |> assign_new(:novalidate, fn -> false end)
       |> assign_new(:csrf_token, fn -> Controller.get_csrf_token() end)
       |> assign_new(:rest, fn -> %{} end)
 
@@ -33,6 +34,7 @@ defmodule TymeslotWeb.Shared.Auth.FormComponents do
       phx-submit={assigns[:"phx-submit"]}
       phx-change={assigns[:"phx-change"]}
       data-loading={@loading}
+      novalidate={@novalidate}
       {@rest}
     >
       <%= if @action || assigns[:"phx-submit"] do %>

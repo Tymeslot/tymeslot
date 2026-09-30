@@ -107,7 +107,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
             :for={day <- @visible_days}
             class={"text-center py-2 border-l border-tymeslot-200 #{Helpers.day_header_class(day, @user_timezone)}"}
           >
-            <span :if={@view == :day} class="text-token-sm font-medium hidden sm:inline">{full_day_label(
+            <span :if={@view == :day} class="text-token-sm font-medium hidden sm:inline">{LocaleFormat.format_weekday_date(
               day,
               @locale
             )}</span>
@@ -363,12 +363,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
     not (Helpers.booking?(event) or EventBadges.seat_locked?(group_booking_uids, event))
   end
 
-  # Localised day-column header labels (weekday/month rendered in the active locale).
-  defp full_day_label(day, locale) do
-    "#{LocaleFormat.format_weekday_name(Date.day_of_week(day), locale, :full)}, " <>
-      "#{LocaleFormat.format_month_name(day.month, locale)} #{day.day}, #{day.year}"
-  end
-
+  # Localised short day-column header label, for narrow screens.
   defp short_day_label(day, locale) do
     "#{LocaleFormat.format_weekday_name(Date.day_of_week(day), locale, :short)} #{day.day}"
   end

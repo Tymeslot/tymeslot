@@ -25,6 +25,7 @@ defmodule Tymeslot.Meetings.GuestSchema do
           rsvp_token: String.t() | nil,
           responded_at: DateTime.t() | nil,
           confirmation_sent_at: DateTime.t() | nil,
+          invited_by: inviter() | nil,
           reminders_sent: [map()] | nil,
           meeting: MeetingSchema.t() | Ecto.Association.NotLoaded.t() | nil,
           inserted_at: DateTime.t() | nil,
@@ -42,12 +43,21 @@ defmodule Tymeslot.Meetings.GuestSchema do
     field(:responded_at, :utc_datetime)
     field(:confirmation_sent_at, :utc_datetime)
     field(:reminders_sent, {:array, :map}, default: nil)
+    # Who put this guest on the meeting. Nil on rows from before the column,
+    # which read as the booker (see `inviter/1`).
+    field(:invited_by, Ecto.Enum, values: [:booker, :organizer])
 
     belongs_to(:meeting, MeetingSchema, type: :binary_id)
     belongs_to(:participant, ParticipantSchema, type: :binary_id)
 
     timestamps(type: :utc_datetime)
   end
+
+  @typedoc """
+  Who invited a guest: the person booking, on the public page, or the host,
+  from their dashboard.
+  """
+  @type inviter :: :booker | :organizer
 
   @valid_statuses ~w(pending accepted declined)
   @token_bytes 24
@@ -62,7 +72,7 @@ defmodule Tymeslot.Meetings.GuestSchema do
   @spec creation_changeset(t(), map()) :: Ecto.Changeset.t()
   def creation_changeset(guest, attrs) do
     guest
-    |> cast(attrs, [:email, :name, :meeting_id, :participant_id, :status])
+    |> cast(attrs, [:email, :name, :meeting_id, :participant_id, :status, :invited_by])
     |> update_change(:email, &normalize_email/1)
     |> validate_required([:email, :meeting_id])
     |> EmailChangeset.validate_email(:email)
@@ -114,6 +124,14 @@ defmodule Tymeslot.Meetings.GuestSchema do
   def reminders_sent_changeset(guest, reminders_sent) do
     cast(guest, %{reminders_sent: reminders_sent}, [:reminders_sent])
   end
+
+  @doc """
+  Who invited `guest`. A row from before `invited_by` existed carries nil and
+  reads as the booker, the wording those guests were already sent.
+  """
+  @spec inviter(t() | map()) :: inviter()
+  def inviter(%{invited_by: :organizer}), do: :organizer
+  def inviter(_guest), do: :booker
 
   @typedoc "Aggregate RSVP counts for a list of guests."
   @type summary :: %{

@@ -161,6 +161,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
         phx-submit={submit_event(@mode)}
         phx-target={@parent_component}
         class="space-y-8"
+        novalidate
       >
         <%!-- Details --%>
         <div class="card-glass">

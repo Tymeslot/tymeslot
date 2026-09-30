@@ -29,11 +29,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   # Meeting mode books an ad-hoc Tymeslot meeting instead of writing a bare
   # provider event. A calendar integration is optional here: the booking is
   # native, and the provider copy is written back only when one is connected.
+  #
+  # Every save emails the main guest and any extra guests, so it is rate
+  # limited like inviting guests to an existing booking. The check comes last
+  # so that a form still being corrected does not spend the budget.
   defp handle_save_event_with(%{mode: :meeting} = creating, socket) do
     with :ok <- authorize_optional_integration(socket, creating[:integration_id]),
          {:ok, start_at, end_at} <- resolve_timed_range(creating, socket),
          :ok <- validate_meeting_fields(creating, socket.assigns.current_user.email),
-         {:ok, guest_emails} <- extra_guest_emails(creating) do
+         {:ok, guest_emails} <- extra_guest_emails(creating),
+         :ok <- Shared.check_quick_add_meeting_rate_limit(socket) do
       params =
         creating
         |> ad_hoc_params(socket, start_at, end_at)
@@ -45,6 +50,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
     else
       {:error, message} when is_binary(message) ->
         send(self(), {:flash, {:error, message}})
+        {:noreply, socket}
+
+      {:error, :rate_limited, _message} ->
+        send(
+          self(),
+          {:flash,
+           {:warning,
+            dgettext(
+              "dashboard_calendar_events",
+              "Too many new meetings. Please wait a moment."
+            )}}
+        )
+
         {:noreply, socket}
 
       {:error, :unauthorized} ->
@@ -155,19 +173,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
 
       {:noreply, socket}
     else
-      send(
-        self(),
-        {:execute_create_event,
-         %{
-           creating: creating,
-           user_id: socket.assigns.current_user.id,
-           all_day: true,
-           start_at: start_date,
-           end_at: Date.add(end_date, 1)
-         }}
-      )
-
-      {:noreply, assign(socket, :saving_event, true)}
+      dispatch_create(socket, creating, true, start_date, Date.add(end_date, 1))
     end
   end
 
@@ -187,24 +193,38 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
 
         {:noreply, socket}
       else
+        dispatch_create(socket, creating, false, start_at, end_at)
+      end
+    else
+      {:error, _reason} ->
+        send(self(), {:flash, {:error, dgettext("dashboard_calendar_events", "Invalid time")}})
+        {:noreply, socket}
+    end
+  end
+
+  # A provider event can carry attendees the provider invites by email, and
+  # every create is a provider write, so it spends the same budget as an edit.
+  # The check sits here, after validation, so a form still being corrected
+  # does not spend it.
+  defp dispatch_create(socket, creating, all_day, start_at, end_at) do
+    case Shared.check_edit_rate_limit(socket) do
+      :ok ->
         send(
           self(),
           {:execute_create_event,
            %{
              creating: creating,
              user_id: socket.assigns.current_user.id,
-             all_day: false,
+             all_day: all_day,
              start_at: start_at,
              end_at: end_at
            }}
         )
 
         {:noreply, assign(socket, :saving_event, true)}
-      end
-    else
-      {:error, _reason} ->
-        send(self(), {:flash, {:error, dgettext("dashboard_calendar_events", "Invalid time")}})
-        {:noreply, socket}
+
+      {:error, :rate_limited, _message} = error ->
+        Shared.flash_guard_error(socket, error)
     end
   end
 
