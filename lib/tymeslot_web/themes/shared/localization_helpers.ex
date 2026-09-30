@@ -287,6 +287,25 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   end
 
   @doc """
+  Labels a slot key ("5:30 PM") on the visitor's clock.
+
+  The key is the slot's identity: the URL `time` param, slot matching and the
+  booking submission all read it verbatim, so it is formatted here, at render
+  time, and never stored formatted. A key that does not parse is shown as it
+  stands rather than replaced by some other time; `nil` passes through so a
+  template can fall back to its own placeholder.
+  """
+  @spec format_slot_label(String.t() | nil) :: String.t() | nil
+  def format_slot_label(nil), do: nil
+
+  def format_slot_label(slot_key) when is_binary(slot_key) do
+    case DateTimeUtils.parse_time_string(slot_key) do
+      {:ok, time} -> format_time_by_locale(time)
+      {:error, _reason} -> slot_key
+    end
+  end
+
+  @doc """
   Gets month and year display string.
   """
   @spec get_month_year_display(integer(), integer()) :: String.t()

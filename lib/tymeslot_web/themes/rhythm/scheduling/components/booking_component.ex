@@ -125,7 +125,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                   <div>
                     <div class="summary-value">{LocalizationHelpers.format_date(@selected_date)}</div>
                     <div class="summary-label">
-                      {@selected_time || dgettext("booking", "No time selected")}
+                      {LocalizationHelpers.format_slot_label(@selected_time) ||
+                        dgettext("booking", "No time selected")}
                     </div>
                   </div>
                 </div>
