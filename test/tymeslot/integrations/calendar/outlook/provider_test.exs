@@ -451,6 +451,27 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
                Provider.call_update_event(integration, "event123", %{summary: "Updated"})
     end
 
+    test "call_update_event refuses a following-split of a series the account was only invited to" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, provider: "outlook")
+
+      expect(OutlookCalendarAPIMock, :get_event, fn _int, "master-1", body: :stored ->
+        {:ok, %{"isOrganizer" => false, "recurrence" => %{"pattern" => %{}, "range" => %{}}}}
+      end)
+
+      edit = %{
+        scope: :following,
+        master_id: "master-1",
+        slot: ~U[2026-11-02 08:00:00Z],
+        start: ~U[2026-11-02 08:00:00Z],
+        end: ~U[2026-11-02 09:00:00Z],
+        changes: %{}
+      }
+
+      assert Provider.call_update_event(integration, "event-1", %{occurrence: edit}) ==
+               {:error, :not_organiser}
+    end
+
     test "call_delete_event uses calendar ID when available" do
       user = insert(:user)
 

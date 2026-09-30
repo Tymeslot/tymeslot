@@ -322,6 +322,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
       when reason in [:unaddressable_series, :not_recurring, :unreadable_timing],
       do: unmatched_series_message()
 
+  def series_move_failed_message(:not_organiser), do: not_organiser_message()
+
   def series_move_failed_message(:same_calendar),
     do: dgettext("dashboard_calendar_events", "The series is already on that calendar.")
 
@@ -336,6 +338,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
     dgettext(
       "dashboard_calendar_events",
       "Could not move the series. It is still on its original calendar."
+    )
+  end
+
+  @doc """
+  The message shown when a write to a series is refused because someone
+  else organises it: moving or splitting a series re-creates it, which only
+  its organiser may do.
+  """
+  @spec not_organiser_message() :: String.t()
+  def not_organiser_message do
+    dgettext(
+      "dashboard_calendar_events",
+      "Someone else organises this meeting, so Tymeslot can't move or split a series you were only invited to."
     )
   end
 

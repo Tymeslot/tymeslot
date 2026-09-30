@@ -526,6 +526,21 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferOutlookTest do
       assert_series_cached(source, [occurrence])
     end
 
+    test "a series the account was only invited to is refused before anything is written", %{
+      user: user,
+      source: source,
+      destination: destination,
+      occurrence: occurrence
+    } do
+      serve(graph(%{master: {200, Map.put(@master, "isOrganizer", false)}}))
+
+      assert move(user, occurrence, destination, @destination_calendar) ==
+               {:error, :not_organiser}
+
+      assert [%{method: :get}] = requests()
+      assert_series_cached(source, [occurrence])
+    end
+
     test "a series whose zone cannot be read is refused before anything is written", %{
       user: user,
       destination: destination,
