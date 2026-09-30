@@ -101,15 +101,15 @@ defmodule Tymeslot.Emails.Shared.TemplateHelper do
   organiser, so the organiser's clock travels under `:organizer_time_format`
   where an attendee render cannot mistake it for its own. Promoting it to the
   generic `:time_format` key here marks the point where the audience is known,
-  and is the only place that promotion happens.
+  and is the only place that promotion happens. It also marks the render as
+  the host's (`audience: :host`), which words the details for them.
   """
   @spec as_organizer_view(map()) :: map()
   def as_organizer_view(appointment_details) do
-    Map.put(
-      appointment_details,
-      :time_format,
-      Map.get(appointment_details, :organizer_time_format)
-    )
+    Map.merge(appointment_details, %{
+      time_format: Map.get(appointment_details, :organizer_time_format),
+      audience: :host
+    })
   end
 
   @doc """
@@ -130,7 +130,8 @@ defmodule Tymeslot.Emails.Shared.TemplateHelper do
       location: appointment_details.location,
       location_type: Map.get(appointment_details, :location_type),
       meeting_type: appointment_details.meeting_type,
-      time_format: Map.get(appointment_details, :organizer_time_format)
+      time_format: Map.get(appointment_details, :organizer_time_format),
+      audience: :host
     }
   end
 

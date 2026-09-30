@@ -283,6 +283,11 @@ defmodule Tymeslot.VenuesTest do
                Repo.reload!(meeting_type).locations
     end
 
+    test "a venue already deleted is not found", ctx do
+      assert {:ok, _deleted} = Venues.delete_venue(ctx.berlin)
+      assert {:error, :not_found} = Venues.delete_venue(ctx.berlin)
+    end
+
     test "never touches another owner's meeting types", ctx do
       stranger = insert(:user)
       # A forged or stale id: another owner's location naming this venue.

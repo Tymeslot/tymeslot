@@ -232,10 +232,21 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   @doc """
   The line shown under the location of an in-person meeting whose address is
   arranged after booking, or nil for any other location.
+
+  Worded for whoever reads the email: `audience: :host` (set by the
+  organiser renders, see `Tymeslot.Emails.Shared.TemplateHelper`) is told to
+  arrange it with the booker; anyone else, the default, that it will be
+  arranged with them.
   Must be called within a `Gettext.with_locale` block.
   """
-  @spec location_note(%{optional(:location_type) => atom() | nil, optional(atom()) => term()}) ::
-          String.t() | nil
+  @spec location_note(%{
+          optional(:location_type) => atom() | nil,
+          optional(:audience) => :host | :guest,
+          optional(atom()) => term()
+        }) :: String.t() | nil
+  def location_note(%{location_type: :in_person_to_arrange, audience: :host}),
+    do: dgettext("emails", "The address is to be arranged with the booker.")
+
   def location_note(%{location_type: :in_person_to_arrange}),
     do: dgettext("emails", "The address will be arranged with you after booking.")
 

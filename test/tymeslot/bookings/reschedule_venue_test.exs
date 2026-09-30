@@ -288,12 +288,21 @@ defmodule Tymeslot.Bookings.RescheduleVenueTest do
       assert updated.address_to_arrange == true
     end
 
+    # The booked text differs from the location's label, so an unchanged text
+    # shows the reschedule left the location alone rather than resolving it
+    # afresh, which would also record the address as to be arranged.
     test "stays recorded on a time-only reschedule", ctx do
-      meeting = meeting_on(ctx.user, [ctx.offices, ctx.arranged], booked_to_arrange())
+      meeting =
+        meeting_on(
+          ctx.user,
+          [ctx.offices, ctx.arranged],
+          %{booked_to_arrange() | location: "In person (as booked)"}
+        )
 
       updated = reschedule(meeting, %{location_option_id: "loc-arranged"})
 
       assert updated.address_to_arrange == true
+      assert updated.location == "In person (as booked)"
     end
   end
 end

@@ -62,8 +62,8 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestExpiredTest do
            )
   end
 
-  test "notes an in-person address still to be arranged, in HTML and text" do
-    note = "The address will be arranged with you after booking."
+  test "notes an in-person address still to be arranged, worded for the host" do
+    note = "The address is to be arranged with the booker."
 
     email =
       meeting()
@@ -72,5 +72,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestExpiredTest do
 
     assert email.html_body =~ note
     assert email.text_body =~ "Location: In person\n#{note}"
+    refute email.html_body =~ "arranged with you"
+    refute email.text_body =~ "arranged with you"
   end
 end

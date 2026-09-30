@@ -94,7 +94,17 @@ defmodule Tymeslot.Venues.VenueQueries do
   @spec update_venue(Ecto.Changeset.t()) :: {:ok, VenueSchema.t()} | {:error, Ecto.Changeset.t()}
   def update_venue(changeset), do: Repo.update(changeset)
 
-  @doc "Deletes a venue."
-  @spec delete_venue(VenueSchema.t()) :: {:ok, VenueSchema.t()} | {:error, Ecto.Changeset.t()}
-  def delete_venue(venue), do: Repo.delete(venue)
+  @doc """
+  Deletes a venue, matched by its id and owner. `{:error, :not_found}` when
+  it is already gone, say deleted from another tab.
+  """
+  @spec delete_venue(VenueSchema.t()) :: {:ok, VenueSchema.t()} | {:error, :not_found}
+  def delete_venue(%VenueSchema{id: id, user_id: user_id}) do
+    query = from(v in VenueSchema, where: v.id == ^id and v.user_id == ^user_id, select: v)
+
+    case Repo.delete_all(query) do
+      {1, [deleted]} -> {:ok, deleted}
+      {0, []} -> {:error, :not_found}
+    end
+  end
 end

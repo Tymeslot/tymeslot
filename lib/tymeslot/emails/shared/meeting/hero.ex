@@ -19,6 +19,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
           optional(:last_date) => Date.t() | nil,
           optional(:location) => String.t() | nil,
           optional(:location_type) => atom() | nil,
+          optional(:audience) => :host | :guest,
           optional(:meeting_type) => String.t() | nil,
           optional(:timezone) => String.t() | nil,
           optional(:time_format) => String.t() | nil,

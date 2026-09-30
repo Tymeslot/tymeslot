@@ -526,3 +526,8 @@ msgstr "Evento annullato"
 #, elixir-autogen, elixir-format
 msgid "The address will be arranged with you after booking."
 msgstr "L'indirizzo verrà concordato con te dopo la prenotazione."
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "The address is to be arranged with the booker."
+msgstr "L'indirizzo è da concordare con la persona che ha prenotato."

@@ -125,6 +125,15 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
 
       assert email.html_body =~ "The address will be arranged with you after booking."
       assert email.text_body =~ "The address will be arranged with you after booking."
+      refute email.html_body =~ "arranged with the booker"
+      refute email.text_body =~ "arranged with the booker"
+
+      host_email = AppointmentConfirmation.render(:organizer, "organiser@example.com", details)
+
+      assert host_email.html_body =~ "The address is to be arranged with the booker."
+      assert host_email.text_body =~ "The address is to be arranged with the booker."
+      refute host_email.html_body =~ "arranged with you"
+      refute host_email.text_body =~ "arranged with you"
     end
 
     test "a location that is not in person has no address to arrange", ctx do

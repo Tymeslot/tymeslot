@@ -302,24 +302,27 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   @doc """
   Takes `venue_id` off the in-person locations of the owner's meeting types
   that list it (`MeetingTypeSchema.without_venue_changeset/2`), returning how
-  many were rewritten. The rows are locked first, so an edit of the same
-  meeting type saved meanwhile is not overwritten with the list read here;
-  run it in the transaction that deletes the venue.
+  many were rewritten. The rows are locked for the transaction it runs in
+  (its own, or the caller's when nested in one, as the venue delete does),
+  so an edit of the same meeting type saved meanwhile is not overwritten
+  with the list read here. All or none are rewritten.
   """
   @spec remove_venue_from_locations(integer(), integer()) ::
           {:ok, non_neg_integer()} | {:error, Ecto.Changeset.t()}
   def remove_venue_from_locations(user_id, venue_id) do
-    user_id
-    |> using_venue_query(venue_id)
-    |> lock("FOR UPDATE")
-    |> Repo.all()
-    |> Enum.reduce_while({:ok, 0}, fn meeting_type, {:ok, count} ->
-      case meeting_type
-           |> MeetingTypeSchema.without_venue_changeset(venue_id)
-           |> Repo.update() do
-        {:ok, _updated} -> {:cont, {:ok, count + 1}}
-        {:error, changeset} -> {:halt, {:error, changeset}}
-      end
+    Repo.transaction(fn ->
+      user_id
+      |> using_venue_query(venue_id)
+      |> lock("FOR UPDATE")
+      |> Repo.all()
+      |> Enum.reduce(0, fn meeting_type, count ->
+        case meeting_type
+             |> MeetingTypeSchema.without_venue_changeset(venue_id)
+             |> Repo.update() do
+          {:ok, _updated} -> count + 1
+          {:error, changeset} -> Repo.rollback(changeset)
+        end
+      end)
     end)
   end
 

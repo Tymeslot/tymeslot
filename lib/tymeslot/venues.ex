@@ -100,15 +100,18 @@ defmodule Tymeslot.Venues do
 
   Meetings already booked there keep their `location` text and their
   `address_to_arrange` flag; the foreign key clears their `venue_id`.
+
+  `{:error, :not_found}` when the venue is already gone.
   """
-  @spec delete_venue(VenueSchema.t()) :: {:ok, VenueSchema.t()} | {:error, Ecto.Changeset.t()}
+  @spec delete_venue(VenueSchema.t()) ::
+          {:ok, VenueSchema.t()} | {:error, :not_found | Ecto.Changeset.t()}
   def delete_venue(%VenueSchema{id: id, user_id: user_id} = venue) do
     Repo.transaction(fn ->
       with {:ok, _rewritten} <- MeetingTypes.remove_venue_from_locations(user_id, id),
            {:ok, deleted} <- VenueQueries.delete_venue(venue) do
         deleted
       else
-        {:error, changeset} -> Repo.rollback(changeset)
+        {:error, reason} -> Repo.rollback(reason)
       end
     end)
   end

@@ -414,12 +414,18 @@ defmodule Tymeslot.Migrations.CreateVenuesTest do
     assert address_to_arrange(elsewhere) == false
   end
 
-  test "a meeting not on a location without an address keeps false" do
+  test "a meeting on a location with an address keeps false" do
+    user = insert(:user)
+    meeting_type = insert(:meeting_type, user: user)
+    put_raw_locations(meeting_type, [in_person("Office", "12 High Street", "loc-office")])
+
     meeting =
       insert(:meeting,
-        location: "In person",
+        organizer_user_id: user.id,
+        meeting_type_id: meeting_type.id,
+        location: "Office (12 High Street)",
         location_kind: "in_person",
-        location_option_id: "loc-none",
+        location_option_id: "loc-office",
         address_to_arrange: true
       )
 

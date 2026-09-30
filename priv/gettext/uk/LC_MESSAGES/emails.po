@@ -538,3 +538,8 @@ msgstr "Подію скасовано"
 #, elixir-autogen, elixir-format
 msgid "The address will be arranged with you after booking."
 msgstr "Адресу погодять з вами після бронювання."
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "The address is to be arranged with the booker."
+msgstr "Адресу потрібно погодити з тим, хто бронював."
