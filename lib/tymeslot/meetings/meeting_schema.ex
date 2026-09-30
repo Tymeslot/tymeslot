@@ -410,6 +410,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
       message: "You already have a confirmed meeting at this time."
     )
     |> check_constraint(:end_time, name: :meetings_end_after_start)
+    |> foreign_key_constraint(:venue_id)
   end
 
   # A new meeting gets its own calendar identity, generated independently of

@@ -50,7 +50,8 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
   @doc """
   The location the meeting being rescheduled was booked at, as the picker
   records a choice: the option id, the booker's own number if the option
-  asked for one, and the video provider the meeting is on.
+  asked for one, the video provider the meeting is on, and the saved venue
+  it is at.
 
   Returns `nil` when this is not a reschedule or the meeting is not the
   organiser's, which leaves the picker opening on the host's first option.
@@ -59,7 +60,8 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
           %{
             option_id: String.t() | nil,
             phone: String.t() | nil,
-            video_integration_id: integer() | nil
+            video_integration_id: integer() | nil,
+            venue_id: integer() | nil
           }
           | nil
   def reschedule_location_choice(meeting_uid, organizer_user_id)
@@ -69,7 +71,8 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
         %{
           option_id: meeting.location_option_id,
           phone: meeting.attendee_phone,
-          video_integration_id: meeting.video_integration_id
+          video_integration_id: meeting.video_integration_id,
+          venue_id: meeting.venue_id
         }
 
       {:error, _reason} ->

@@ -1,0 +1,192 @@
+defmodule Tymeslot.Bookings.RescheduleVenueTest do
+  @moduledoc """
+  A reschedule of an in-person meeting held at a saved venue, through
+  `Tymeslot.Bookings.Reschedule.execute/4`: the booker may switch venue
+  within the location, the meeting otherwise stays at its own venue wherever
+  the new location offers it, and a venue switch has no provider side.
+
+  The provider-room side of location moves is pinned in
+  `Tymeslot.Bookings.RescheduleLocationTest`.
+  """
+
+  # Not async, like `RescheduleLocationTest`: a reschedule goes through the
+  # application-wide circuit breakers, which DataCase only resets between
+  # non-async modules.
+  use Tymeslot.DataCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
+
+  @moduletag :bookings
+  @moduletag :integration
+
+  import Tymeslot.AvailabilityTestHelpers
+  import Tymeslot.MeetingTestHelpers
+
+  alias Tymeslot.Bookings.Reschedule
+  alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.MeetingTypes.LocationOption
+  alias Tymeslot.Repo
+  alias Tymeslot.TestMocks
+  alias Tymeslot.Venues
+  alias Tymeslot.Workers.{VideoRoomWorker, VideoSyncWorker}
+
+  setup do
+    TestMocks.setup_email_mocks()
+    TestMocks.stub_no_calendar_events()
+
+    %{user: user} = create_always_bookable_profile()
+    mirotalk = insert(:video_integration, user: user, provider: "mirotalk", is_active: true)
+    berlin = insert(:venue, user: user, name: "Berlin office", description: "Friedrichstrasse 1")
+    munich = insert(:venue, user: user, name: "Munich office", description: "Marienplatz 8")
+    offices = in_person_location([berlin, munich], id: "loc-offices", label: "Our offices")
+
+    %{user: user, mirotalk: mirotalk, berlin: berlin, munich: munich, offices: offices}
+  end
+
+  defp video_on(integration) do
+    %LocationOption{
+      id: "loc-video",
+      kind: "video",
+      label: "Video call",
+      video_integration_ids: [integration.id],
+      position: 1
+    }
+  end
+
+  defp meeting_on(user, locations, meeting_attrs) do
+    meeting_type =
+      insert(:meeting_type,
+        user: user,
+        user_id: user.id,
+        duration_minutes: 60,
+        locations: locations
+      )
+
+    insert_meeting_for_user(
+      user,
+      Map.merge(%{meeting_type_id: meeting_type.id, status: "confirmed"}, meeting_attrs)
+    )
+  end
+
+  defp reschedule(meeting, choice) do
+    params =
+      Map.merge(
+        %{
+          date: Date.to_string(Date.add(Date.utc_today(), 2)),
+          time: "2:00 PM",
+          duration: "60min",
+          user_timezone: "America/New_York"
+        },
+        choice
+      )
+
+    assert {:ok, _updated} =
+             Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+
+    # Read back, so every assertion is about what was persisted.
+    Repo.get!(MeetingSchema, meeting.id)
+  end
+
+  defp booked_in_berlin(berlin) do
+    %{
+      location: "Berlin office (Friedrichstrasse 1)",
+      location_kind: "in_person",
+      location_option_id: "loc-offices",
+      venue_id: berlin.id
+    }
+  end
+
+  test "moves the meeting to the venue the booker picked", ctx do
+    meeting = meeting_on(ctx.user, [ctx.offices], booked_in_berlin(ctx.berlin))
+
+    updated =
+      reschedule(meeting, %{
+        location_option_id: "loc-offices",
+        location_venue_id: to_string(ctx.munich.id)
+      })
+
+    assert updated.venue_id == ctx.munich.id
+    assert updated.location == "Munich office (Marienplatz 8)"
+    assert updated.location_kind == "in_person"
+
+    # A venue switch has no provider side at all.
+    refute_enqueued(worker: VideoSyncWorker)
+    refute_enqueued(worker: VideoRoomWorker)
+  end
+
+  test "an unknown venue id keeps the meeting where it is", ctx do
+    meeting = meeting_on(ctx.user, [ctx.offices], booked_in_berlin(ctx.berlin))
+
+    updated =
+      reschedule(meeting, %{location_option_id: "loc-offices", location_venue_id: 987_654_321})
+
+    assert updated.venue_id == ctx.berlin.id
+    assert updated.location == "Berlin office (Friedrichstrasse 1)"
+  end
+
+  test "staying at the same venue keeps the booked text, even after the venue was edited",
+       ctx do
+    meeting = meeting_on(ctx.user, [ctx.offices], booked_in_berlin(ctx.berlin))
+    {:ok, _renamed} = Venues.update_venue(ctx.berlin, %{"name" => "Berlin HQ"})
+
+    updated =
+      reschedule(meeting, %{
+        location_option_id: "loc-offices",
+        location_venue_id: ctx.berlin.id
+      })
+
+    assert updated.venue_id == ctx.berlin.id
+    assert updated.location == "Berlin office (Friedrichstrasse 1)"
+  end
+
+  test "a meeting whose venue has since gone moves to the location's first remaining one",
+       ctx do
+    meeting = meeting_on(ctx.user, [ctx.offices], booked_in_berlin(ctx.berlin))
+    Repo.delete!(ctx.berlin)
+
+    updated = reschedule(meeting, %{location_option_id: "loc-offices"})
+
+    assert updated.venue_id == ctx.munich.id
+    assert updated.location == "Munich office (Marienplatz 8)"
+  end
+
+  test "moving to another location that also lists the meeting's venue keeps that venue",
+       ctx do
+    # Berlin comes first on the other location too, so without the
+    # meeting's own venue as a preference the move would land there.
+    branches =
+      in_person_location([ctx.berlin, ctx.munich],
+        id: "loc-branches",
+        label: "Branches",
+        position: 1
+      )
+
+    meeting =
+      meeting_on(ctx.user, [ctx.offices, branches], %{
+        location: "Munich office (Marienplatz 8)",
+        location_kind: "in_person",
+        location_option_id: "loc-offices",
+        venue_id: ctx.munich.id
+      })
+
+    updated = reschedule(meeting, %{location_option_id: "loc-branches"})
+
+    assert updated.location_option_id == "loc-branches"
+    assert updated.venue_id == ctx.munich.id
+    assert updated.location == "Munich office (Marienplatz 8)"
+  end
+
+  test "moving to a video location leaves the venue behind", ctx do
+    meeting =
+      meeting_on(
+        ctx.user,
+        [ctx.offices, video_on(ctx.mirotalk)],
+        booked_in_berlin(ctx.berlin)
+      )
+
+    updated = reschedule(meeting, %{location_option_id: "loc-video"})
+
+    assert updated.location_kind == "video"
+    assert updated.video_integration_id == ctx.mirotalk.id
+    assert updated.venue_id == nil
+  end
+end

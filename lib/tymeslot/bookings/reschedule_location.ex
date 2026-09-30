@@ -41,7 +41,9 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
   host's own meeting type (`MeetingTypes.resolve_location/2`). Unlike a new
   booking, an id the meeting type does not offer is ignored rather than
   resolved to the first option: a reschedule already has a location, and a
-  stale or forged id must not move it anywhere.
+  stale or forged id must not move it anywhere. The same goes for a venue:
+  an unknown venue id keeps the meeting at its current venue, and choosing
+  another venue within an in-person option never touches a video room.
   """
 
   require Logger
@@ -70,8 +72,9 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
   meeting where it is.
 
   `params` carries the booker's `:location_option_id` and, for a phone option
-  that asks for it, `:location_phone`, or for a video option offering several
-  providers, `:location_video_integration_id`. An ad-hoc meeting (no
+  that asks for it, `:location_phone`, for a video option offering several
+  providers, `:location_video_integration_id`, or for an in-person option
+  offering several venues, `:location_venue_id`. An ad-hoc meeting (no
   `meeting_type_id`) never changes location: the meeting type a reschedule
   resolves for it is matched by duration, and its locations were never the
   ones this meeting was booked against.
@@ -81,7 +84,7 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
   def attributes(%Meeting{}, nil, _params), do: %{}
 
   def attributes(%Meeting{} = meeting, meeting_type, params) do
-    case chosen(meeting_type, params) do
+    case chosen(meeting, meeting_type, params) do
       nil -> %{}
       resolution -> changes(meeting, resolution)
     end
@@ -161,27 +164,40 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
 
   def create_room(%Meeting{}, %Meeting{}), do: :not_scheduled
 
-  defp chosen(meeting_type, %{location_option_id: option_id} = params)
+  defp chosen(%Meeting{} = meeting, meeting_type, %{location_option_id: option_id} = params)
        when is_binary(option_id) do
     if Enum.any?(MeetingTypes.location_options(meeting_type), &(&1.id == option_id)) do
       MeetingTypes.resolve_location(meeting_type, %{
         option_id: option_id,
         phone: Map.get(params, :location_phone),
-        video_integration_id: Map.get(params, :location_video_integration_id)
+        video_integration_id: Map.get(params, :location_video_integration_id),
+        venue_id: Map.get(params, :location_venue_id),
+        current_venue_id: meeting.venue_id
       })
     end
   end
 
-  defp chosen(_meeting_type, _params), do: nil
+  defp chosen(_meeting, _meeting_type, _params), do: nil
 
-  # The same option with the same number, on the same provider, is the booker
-  # leaving the picker where it opened. Rewriting it would still not be a
-  # no-op: a video meeting's `location` holds its join URL, which re-resolving
-  # would replace with the option's label. A different provider within the
+  # The same option with the same number, on the same provider and at the
+  # same venue, is the booker leaving the picker where it opened. Rewriting
+  # it would still not be a no-op: a video meeting's `location` holds its
+  # join URL, and an in-person one the venue as it read when booked, which
+  # re-resolving would replace. A different provider or venue within the
   # same option is a move, and falls through to the clauses below.
   defp changes(
-         %Meeting{location_option_id: id, attendee_phone: phone, video_integration_id: video_id},
-         %{location_option_id: id, attendee_phone: phone, video_integration_id: video_id}
+         %Meeting{
+           location_option_id: id,
+           attendee_phone: phone,
+           video_integration_id: video_id,
+           venue_id: venue_id
+         },
+         %{
+           location_option_id: id,
+           attendee_phone: phone,
+           video_integration_id: video_id,
+           venue_id: venue_id
+         }
        ),
        do: %{}
 
