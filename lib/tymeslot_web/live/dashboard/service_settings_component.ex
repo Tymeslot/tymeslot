@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
      |> assign(:form_errors, %{})
      |> assign(:saving, false)
      |> assign(:video_integrations, [])
+     |> assign(:venues, [])
      |> assign(:toggling_type_id, nil)
      |> assign(:custom_questions_allowed, true)
      |> assign(:show_slug_modal, false)
@@ -51,6 +52,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
       socket
       |> assign(:meeting_types, data.meeting_types)
       |> assign(:video_integrations, data.video_integrations)
+      |> assign(:venues, data.venues)
       |> assign(:calendar_integrations, data.calendar_integrations)
       |> assign(:payment_currency, host_currency(data.meeting_types, user_id))
 

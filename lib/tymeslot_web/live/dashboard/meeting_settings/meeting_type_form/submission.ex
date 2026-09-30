@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
 
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.InputValidation
+  alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Utils.SanitizeMerge
 
   @doc """
@@ -44,7 +45,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
       "slot_interval" => Map.get(form_data, "slot_interval", ""),
       "description" => Map.get(form_data, "description", ""),
       "is_active" => active_param(Map.get(assigns, :type)),
-      "locations" => Enum.map(Map.get(assigns, :locations) || [], &location_param/1),
+      "locations" =>
+        Enum.map(
+          Map.get(assigns, :locations) || [],
+          &location_param(&1, Map.get(assigns, :venues) || [])
+        ),
       "calendar_integration_id" => to_param(assigns.selected_calendar_integration_id),
       "target_calendar_id" => to_param(assigns.selected_target_calendar_id),
       "availability_schedule_id" =>
@@ -149,7 +154,24 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
   defp put_optional(map, _key, nil), do: map
   defp put_optional(map, key, value), do: Map.put(map, key, to_string(value))
 
-  defp location_param(location) do
+  @doc """
+  The venue ids an in-person location posts: the ones it lists that are
+  still among the organiser's saved venues, in the location's order.
+
+  A venue deleted from the Locations page leaves its id behind in every
+  meeting type that offered it until that meeting type is next saved. The
+  context refuses an id the organiser does not own, so posting it would make
+  every later save of the meeting type fail; dropping it here lets the save
+  go through without it.
+  """
+  @spec venue_ids_param(LocationOption.t(), [%{id: integer()}]) :: [String.t()]
+  def venue_ids_param(location, venues) do
+    known = MapSet.new(venues, & &1.id)
+
+    for id <- location.venue_ids, MapSet.member?(known, id), do: to_string(id)
+  end
+
+  defp location_param(location, venues) do
     %{
       "id" => location.id,
       "kind" => location.kind,
@@ -157,6 +179,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
       "details" => location.details || "",
       "collect_from_guest" => to_string(location.collect_from_guest),
       "video_integration_ids" => Enum.map(location.video_integration_ids, &to_string/1),
+      "venue_ids" => venue_ids_param(location, venues),
       "position" => to_string(location.position)
     }
   end

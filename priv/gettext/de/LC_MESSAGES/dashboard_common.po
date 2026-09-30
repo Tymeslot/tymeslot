@@ -627,6 +627,7 @@ msgstr "Dieser Termin fällt in Ihre Abwesenheit und kann nicht bestätigt werde
 msgid "This time falls within your time off. Change or remove the time off to confirm it."
 msgstr "Dieser Termin fällt in Ihre Abwesenheit. Ändern oder entfernen Sie die Abwesenheit, um ihn zu bestätigen."
 
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Locations"

@@ -12,9 +12,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.HiddenFields do
 
   use TymeslotWeb, :html
 
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission
+
   attr :type, :any, default: nil
   attr :selected_icon, :string, required: true
   attr :locations, :list, required: true
+  attr :venues, :list, required: true, doc: "the organiser's saved venues"
   attr :selected_calendar_integration_id, :any, default: nil
   attr :selected_target_calendar_id, :any, default: nil
   attr :selected_availability_schedule_id, :any, default: nil
@@ -137,6 +140,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.HiddenFields do
           type="hidden"
           name={"meeting_type[locations][#{li}][video_integration_ids][]"}
           value={video_id}
+        />
+        <input
+          :for={venue_id <- Submission.venue_ids_param(location, @venues)}
+          type="hidden"
+          name={"meeting_type[locations][#{li}][venue_ids][]"}
+          value={venue_id}
         />
         <input
           type="hidden"

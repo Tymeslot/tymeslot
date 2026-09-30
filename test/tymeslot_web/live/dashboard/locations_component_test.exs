@@ -294,4 +294,12 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponentTest do
       assert {:ok, _untouched} = Venues.get_venue(foreign.user_id, foreign.id)
     end
   end
+
+  describe "the sidebar" do
+    test "links to the page from the scheduling group", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      assert has_element?(view, "a[href='/dashboard/locations']", "Locations")
+    end
+  end
 end
