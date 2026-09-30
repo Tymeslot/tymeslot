@@ -533,11 +533,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
       view |> element("[data-testid='new-venue-toggle']") |> render_click()
 
       message =
-        Stream.repeatedly(fn -> RateLimiter.check_meeting_type_write_rate_limit(user.id) end)
-        |> Enum.find_value(fn
-          {:error, :rate_limited, message} -> message
-          :ok -> nil
-        end)
+        Enum.find_value(
+          Stream.repeatedly(fn -> RateLimiter.check_meeting_type_write_rate_limit(user.id) end),
+          fn
+            {:error, :rate_limited, message} -> message
+            :ok -> nil
+          end
+        )
 
       view |> form("#new-venue-form", %{"venue" => %{"name" => "Studio"}}) |> render_submit()
       _drain = :sys.get_state(view.pid)
