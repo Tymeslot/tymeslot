@@ -211,30 +211,19 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
   # A month named inside a date takes a different form from a standalone one in
   # several locales: Ukrainian and Czech use the genitive ("15 червня 2026"),
-  # French and Italian lowercase it. `get_month_name/1` is the standalone form
-  # for "%{month} %{year}" headings; this is the in-date form.
+  # French and Italian lowercase it. The headings below use the standalone form
+  # (`LocaleFormat.format_standalone_month_name/2`); this is the in-date form.
   @spec month_in_date(integer()) :: String.t()
   defp month_in_date(month) do
-    LocaleFormat.format_month_name(month, Gettext.get_locale(TymeslotWeb.Gettext))
+    LocaleFormat.format_month_name(month, current_locale())
   end
 
-  @spec get_month_name(integer()) :: String.t()
-  defp get_month_name(month) do
-    case month do
-      1 -> dgettext("booking", "January")
-      2 -> dgettext("booking", "February")
-      3 -> dgettext("booking", "March")
-      4 -> dgettext("booking", "April")
-      5 -> dgettext("booking", "May")
-      6 -> dgettext("booking", "June")
-      7 -> dgettext("booking", "July")
-      8 -> dgettext("booking", "August")
-      9 -> dgettext("booking", "September")
-      10 -> dgettext("booking", "October")
-      11 -> dgettext("booking", "November")
-      12 -> dgettext("booking", "December")
-    end
+  @spec standalone_month(integer()) :: String.t()
+  defp standalone_month(month) do
+    LocaleFormat.format_standalone_month_name(month, current_locale())
   end
+
+  defp current_locale, do: Gettext.get_locale(TymeslotWeb.Gettext)
 
   @spec get_weekday_name(integer()) :: String.t()
   defp get_weekday_name(day) do
@@ -283,16 +272,15 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   """
   @spec format_time_by_locale(Calendar.time()) :: String.t()
   def format_time_by_locale(time) do
-    LocaleFormat.format_time(time, Gettext.get_locale(TymeslotWeb.Gettext))
+    LocaleFormat.format_time(time, current_locale())
   end
 
   @doc """
-  Gets month and year display string.
+  Gets month and year display string: "September 2026", "Leden 2026".
   """
   @spec get_month_year_display(integer(), integer()) :: String.t()
   def get_month_year_display(year, month) do
-    month_name = get_month_name(month)
-    dgettext("booking", "%{month} %{year}", month: month_name, year: year)
+    LocaleFormat.format_month_year(month, year, current_locale())
   end
 
   @doc """
@@ -301,6 +289,9 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   Returns "March 2026" when the week falls within a single month,
   "March - April 2026" when it spans two months in the same year,
   or "December 2025 - January 2026" when it spans a year boundary.
+
+  Months are the standalone form, and only the heading's first letter is
+  capitalised: French reads "Septembre – octobre 2026".
   """
   @spec get_week_display(Date.t()) :: String.t()
   def get_week_display(week_start) do
@@ -308,24 +299,25 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
     cond do
       week_start.month == week_end.month ->
-        dgettext("booking", "%{month} %{year}",
-          month: get_month_name(week_start.month),
-          year: week_start.year
-        )
+        get_month_year_display(week_start.year, week_start.month)
 
       week_start.year == week_end.year ->
-        dgettext("booking", "%{start_month} - %{end_month} %{year}",
-          start_month: get_month_name(week_start.month),
-          end_month: get_month_name(week_end.month),
-          year: week_start.year
+        LocaleFormat.capitalize_first(
+          dgettext("booking", "%{start_month} - %{end_month} %{year}",
+            start_month: standalone_month(week_start.month),
+            end_month: standalone_month(week_end.month),
+            year: week_start.year
+          )
         )
 
       true ->
-        dgettext("booking", "%{start_month} %{start_year} - %{end_month} %{end_year}",
-          start_month: get_month_name(week_start.month),
-          start_year: week_start.year,
-          end_month: get_month_name(week_end.month),
-          end_year: week_end.year
+        LocaleFormat.capitalize_first(
+          dgettext("booking", "%{start_month} %{start_year} - %{end_month} %{end_year}",
+            start_month: standalone_month(week_start.month),
+            start_year: week_start.year,
+            end_month: standalone_month(week_end.month),
+            end_year: week_end.year
+          )
         )
     end
   end

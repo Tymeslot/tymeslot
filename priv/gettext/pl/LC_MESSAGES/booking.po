@@ -52,11 +52,6 @@ msgstr "do %{months} mies. naprzód"
 msgid "%{month} %{day}, %{year}"
 msgstr "%{day} %{month} %{year}"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "%{month} %{year}"
-msgstr "%{month} %{year}"
-
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{name}, your meeting %{organizer} has been rescheduled."
@@ -152,16 +147,6 @@ msgstr "Popołudnie"
 msgid "Appointment host"
 msgstr "Organizator spotkania"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "April"
-msgstr "Kwiecień"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "August"
-msgstr "Sierpień"
-
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
@@ -223,11 +208,6 @@ msgstr "Dalej"
 msgid "Date"
 msgstr "Data"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "December"
-msgstr "Grudzień"
-
 #: lib/tymeslot_web/themes/shared/components/awaiting_payment.ex
 #, elixir-autogen, elixir-format
 msgid "Did the new tab not open?"
@@ -268,11 +248,6 @@ msgstr "Wieczór"
 msgid "FRI"
 msgstr "PT"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "February"
-msgstr "Luty"
-
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Fri"
@@ -299,25 +274,10 @@ msgstr "Przyjmuję powyższe do wiadomości"
 msgid "Invalid date/time"
 msgstr "Nieprawidłowa data lub godzina"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "January"
-msgstr "Styczeń"
-
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "John Doe"
 msgstr "Jan Kowalski"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "July"
-msgstr "Lipiec"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "June"
-msgstr "Czerwiec"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
@@ -344,16 +304,6 @@ msgstr "Wczytywanie dostępnych terminów…"
 #, elixir-autogen, elixir-format
 msgid "MON"
 msgstr "PN"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "March"
-msgstr "Marzec"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "May"
-msgstr "Maj"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
@@ -410,16 +360,6 @@ msgstr "Brak dostępnych typów spotkań"
 #, elixir-autogen, elixir-format
 msgid "No time selected"
 msgstr "Nie wybrano terminu"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "November"
-msgstr "Listopad"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "October"
-msgstr "Październik"
 
 #: lib/tymeslot_web/themes/shared/components/awaiting_payment.ex
 #, elixir-autogen, elixir-format
@@ -569,11 +509,6 @@ msgstr "Wybierz…"
 #, elixir-autogen, elixir-format
 msgid "Sent to"
 msgstr "Wysłano na adres"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "September"
-msgstr "Wrzesień"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format

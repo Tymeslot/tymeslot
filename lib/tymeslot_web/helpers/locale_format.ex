@@ -217,6 +217,60 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   @spec format_month_name(integer(), String.t(), :full | :short) :: String.t()
   def format_month_name(_invalid_month, _locale, _format), do: ""
 
+  # The standalone (nominative) month, for a heading that names a month without
+  # a day. Only the locales whose standalone form differs from the in-date one
+  # in `@month_names` are listed; the rest share it (fr, it, de) or are English.
+  # Stored lowercase except where the language capitalises the noun itself
+  # (en, de); `format_month_year/3` capitalises the start of the heading.
+  @standalone_month_names %{
+    "uk" =>
+      ~w(січень лютий березень квітень травень червень липень серпень вересень жовтень листопад грудень),
+    "cs" => ~w(leden únor březen duben květen červen červenec srpen září říjen listopad prosinec),
+    "pl" =>
+      ~w(styczeń luty marzec kwiecień maj czerwiec lipiec sierpień wrzesień październik listopad grudzień)
+  }
+
+  @doc """
+  The standalone month name for a heading without a day, as it reads mid-sentence:
+  lowercase in the languages that do not capitalise month names ("září",
+  "octobre"). Unlike `format_month_name/3`, never the genitive a date uses.
+
+  Headings starting with it go through `capitalize_first/1`, which
+  `format_month_year/3` already does.
+  """
+  @spec format_standalone_month_name(1..12, String.t()) :: String.t()
+  def format_standalone_month_name(month_num, locale) when month_num in 1..12 do
+    case Map.fetch(@standalone_month_names, locale) do
+      {:ok, names} -> Enum.at(names, month_num - 1)
+      :error -> format_month_name(month_num, locale, :full)
+    end
+  end
+
+  @doc """
+  A month-and-year heading, capitalised as a heading in the locale:
+  - en: September 2026
+  - fr: Septembre 2026
+  - cs: Leden 2026 (nominative, never the in-date "ledna")
+  """
+  @spec format_month_year(1..12, integer(), String.t()) :: String.t()
+  def format_month_year(month_num, year, locale) do
+    capitalize_first("#{format_standalone_month_name(month_num, locale)} #{year}")
+  end
+
+  @doc """
+  Upper-cases the first grapheme only, leaving the rest as it is.
+
+  `String.capitalize/1` is wrong for headings: it lowercases everything after
+  the first letter, turning German "Januar – Februar" into "Januar – februar".
+  """
+  @spec capitalize_first(String.t()) :: String.t()
+  def capitalize_first(string) do
+    case String.next_grapheme(string) do
+      {first, rest} -> String.upcase(first) <> rest
+      nil -> string
+    end
+  end
+
   @doc """
   Formats a weekday name based on weekday number (1=Monday, 7=Sunday) and locale.
   """

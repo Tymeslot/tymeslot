@@ -526,4 +526,52 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       assert LocaleFormat.format_date(nye, "en") == "December 31, 2026"
     end
   end
+
+  describe "format_month_year/3" do
+    test "names the month in the nominative, not the in-date genitive" do
+      assert LocaleFormat.format_month_year(1, 2026, "cs") == "Leden 2026"
+      assert LocaleFormat.format_month_year(9, 2026, "uk") == "Вересень 2026"
+      assert LocaleFormat.format_month_year(10, 2026, "pl") == "Październik 2026"
+    end
+
+    test "capitalises the heading in languages that lowercase month names" do
+      assert LocaleFormat.format_month_year(9, 2026, "fr") == "Septembre 2026"
+      assert LocaleFormat.format_month_year(9, 2026, "it") == "Settembre 2026"
+    end
+
+    test "keeps English and German as they are" do
+      assert LocaleFormat.format_month_year(9, 2026, "en") == "September 2026"
+      assert LocaleFormat.format_month_year(3, 2026, "de") == "März 2026"
+    end
+
+    test "leaves the in-date month names untouched" do
+      assert LocaleFormat.format_date(~D[2026-01-05], "cs") == "5. ledna 2026"
+      assert LocaleFormat.format_date(~D[2026-09-05], "uk") == "5 вересня 2026"
+    end
+  end
+
+  describe "format_standalone_month_name/2" do
+    test "is lowercase where the language does not capitalise months" do
+      assert LocaleFormat.format_standalone_month_name(10, "fr") == "octobre"
+      assert LocaleFormat.format_standalone_month_name(10, "it") == "ottobre"
+      assert LocaleFormat.format_standalone_month_name(10, "uk") == "жовтень"
+      assert LocaleFormat.format_standalone_month_name(10, "cs") == "říjen"
+      assert LocaleFormat.format_standalone_month_name(10, "pl") == "październik"
+    end
+
+    test "falls back to English for an unknown locale" do
+      assert LocaleFormat.format_standalone_month_name(10, "xx") == "October"
+    end
+  end
+
+  describe "capitalize_first/1" do
+    test "upper-cases only the first letter, keeping later capitals and lowercase alike" do
+      assert LocaleFormat.capitalize_first("září – říjen 2026") == "Září – říjen 2026"
+      assert LocaleFormat.capitalize_first("Januar – Februar 2026") == "Januar – Februar 2026"
+    end
+
+    test "returns an empty string unchanged" do
+      assert LocaleFormat.capitalize_first("") == ""
+    end
+  end
 end

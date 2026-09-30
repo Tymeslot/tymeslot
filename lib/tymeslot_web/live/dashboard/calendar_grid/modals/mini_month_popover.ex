@@ -82,7 +82,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
             <.icon name="hero-chevron-left" class="w-4 h-4" />
           </button>
           <div class="text-token-sm font-semibold text-tymeslot-800">
-            {"#{LocaleFormat.format_month_name(@cursor.month, @locale)} #{@cursor.year}"}
+            {LocaleFormat.format_month_year(@cursor.month, @cursor.year, @locale)}
           </div>
           <button
             type="button"
