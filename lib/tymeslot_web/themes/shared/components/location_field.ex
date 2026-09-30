@@ -29,6 +29,11 @@ defmodule TymeslotWeb.Themes.Shared.Components.LocationField do
   booking-step component via `phx-target`, which relays them to the
   LiveView.
 
+  A venue's description may run over several lines, which themes keep with
+  `white-space: pre-line`. It is therefore rendered flush against its
+  `<span>` tags: any whitespace the template put around it would survive as
+  a blank line above and below the address.
+
   The markup is theme-agnostic and ships no styling of its own. Each theme
   styles the `location-*` classes in its own `booking-form.css`, scoped to
   its wrapper, exactly as it does for `guest-*`.
@@ -165,9 +170,10 @@ defmodule TymeslotWeb.Themes.Shared.Components.LocationField do
               phx-target={@target}
             />
             <span class="location-venue__name">{venue.name}</span>
-            <span :if={venue.description} class="location-venue__description">
-              {venue.description}
-            </span>
+            <span
+              :if={venue.description}
+              class="location-venue__description"
+            >{venue.description}</span>
           </label>
         </div>
       </fieldset>
@@ -260,9 +266,10 @@ defmodule TymeslotWeb.Themes.Shared.Components.LocationField do
     ~H"""
     <div class="location-field__detail location-field__venue" data-testid="location-detail">
       <span class="location-field__venue-name">{@venue.name}</span>
-      <span :if={@venue.description} class="location-field__venue-description">
-        {@venue.description}
-      </span>
+      <span
+        :if={@venue.description}
+        class="location-field__venue-description"
+      >{@venue.description}</span>
     </div>
     """
   end

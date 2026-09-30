@@ -695,3 +695,78 @@
   font-size: var(--theme-font-size-sm);
   color: var(--theme-error-light);
 }
+
+/* ===== Saved venues ===== */
+/* The venues an in-person location offers, one per line so each can carry
+   its address beneath its name. The radio inside reuses
+   `.location-option__radio`, and a single venue or the arranged-later note
+   sits where an option's detail would. A venue's address may run over
+   several lines, which `pre-line` keeps. */
+
+.quill-theme-wrapper .location-venues {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  margin: 0;
+  padding: var(--space-3xs);
+  background: var(--option-tile-bg);
+  border: var(--border-width-thin) solid var(--option-tile-border);
+  border-radius: var(--input-border-radius);
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+}
+.quill-theme-wrapper .location-venue {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  padding: var(--space-2xs) var(--space-sm);
+  border-radius: var(--radius-md);
+  color: var(--option-tile-text);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.quill-theme-wrapper .location-venue:hover {
+  background: var(--option-tile-bg-hover);
+}
+.quill-theme-wrapper .location-venue:has(.location-option__radio:focus-visible) {
+  box-shadow: 0 0 0 3px var(--theme-primary-focus);
+}
+.quill-theme-wrapper .location-venue--selected,
+.quill-theme-wrapper .location-venue--selected:hover {
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+}
+.quill-theme-wrapper .location-venue__name {
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+.quill-theme-wrapper .location-venue__description,
+.quill-theme-wrapper .location-field__venue-description {
+  font-size: var(--theme-font-size-xs);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.quill-theme-wrapper .location-field__venue {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+}
+.quill-theme-wrapper .location-field__venue-name {
+  font-weight: var(--font-weight-medium);
+  color: var(--text-opacity-medium-high);
+}
+.quill-theme-wrapper .location-field__note {
+  margin: var(--space-2xs) 0 0;
+  font-size: var(--theme-font-size-sm);
+  color: var(--text-opacity-subtle);
+}
+.quill-theme-wrapper .location-stated__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  margin: 0;
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-opacity-medium-high);
+}
