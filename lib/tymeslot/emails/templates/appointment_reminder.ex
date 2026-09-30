@@ -69,7 +69,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
           eyebrow: dgettext("emails_booking", "Reminder"),
           stage_title: dgettext("emails_booking", "Our meeting is coming up"),
           stage_subtitle:
-            dgettext("emails_booking", "Starting %{time_until}",
+            dgettext("emails_booking", "Starting in %{time_until}",
               time_until: appointment_details.time_until
             )
         )
@@ -80,7 +80,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
       |> to({appointment_details.attendee_name, attendee_email})
       |> subject(
         Sanitise.sanitize_for_header(
-          dgettext("emails_booking", "Reminder: Our meeting is %{time_until}",
+          dgettext("emails_booking", "Reminder: Our meeting is in %{time_until}",
             time_until: appointment_details.time_until
           )
         )

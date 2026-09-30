@@ -174,4 +174,47 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationGuestTest do
       refute email.subject =~ "\n"
     end
   end
+
+  describe "render/3 as guest, naming who invited them" do
+    defp named(overrides),
+      do:
+        guest_details(
+          Map.merge(%{attendee_name: "Bella Booker", organizer_name: "Olive Host"}, overrides)
+        )
+
+    test "names the booker for a guest brought on the booking page" do
+      email =
+        AppointmentConfirmation.render(
+          :guest,
+          "greg@example.com",
+          named(%{guest_invited_by: :booker})
+        )
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "Bella Booker has invited you as a guest to this meeting with Olive Host."
+      end
+    end
+
+    # A guest the host added (the Add Guests dialog, a Quick Add meeting, a
+    # confirmed poll) was not invited by the person the meeting is with.
+    test "names the host for a guest the host added" do
+      email =
+        AppointmentConfirmation.render(
+          :guest,
+          "greg@example.com",
+          named(%{guest_invited_by: :organizer})
+        )
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "Olive Host has invited you as a guest to this meeting."
+        refute body =~ "Bella Booker has invited you"
+      end
+    end
+
+    test "names the booker when the payload does not say who invited the guest" do
+      email = AppointmentConfirmation.render(:guest, "greg@example.com", named(%{}))
+
+      assert email.text_body =~ "Bella Booker has invited you as a guest"
+    end
+  end
 end

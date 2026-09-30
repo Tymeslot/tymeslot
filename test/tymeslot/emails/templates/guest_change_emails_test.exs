@@ -155,4 +155,51 @@ defmodule Tymeslot.Emails.Templates.GuestChangeEmailsTest do
     [_match, value] = Regex.run(~r/^SEQUENCE:(\d+)/m, ics.data)
     String.to_integer(value)
   end
+
+  describe "naming who invited the guest" do
+    defp named(invited_by),
+      do:
+        guest_details(%{
+          attendee_name: "Bella Booker",
+          organizer_name: "Olive Host",
+          guest_invited_by: invited_by
+        })
+
+    test "a reschedule names the booker for a guest brought on the booking page" do
+      email = AppointmentRescheduled.render(:guest, "greg@example.com", named(:booker))
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "meeting with Olive Host that Bella Booker invited you to"
+      end
+    end
+
+    test "a reschedule names the host for a guest the host added" do
+      email = AppointmentRescheduled.render(:guest, "greg@example.com", named(:organizer))
+
+      assert email.html_body =~
+               "the meeting Olive Host invited you to has been moved to a new time."
+
+      assert email.text_body =~
+               "The meeting Olive Host invited you to has been moved to a new time."
+
+      for body <- [email.html_body, email.text_body], do: refute(body =~ "Bella Booker")
+    end
+
+    test "a cancellation names the booker for a guest brought on the booking page" do
+      email = AppointmentCancellation.render(:guest, "greg@example.com", named(:booker))
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "meeting with Olive Host that Bella Booker invited you to"
+      end
+    end
+
+    test "a cancellation names the host for a guest the host added" do
+      email = AppointmentCancellation.render(:guest, "greg@example.com", named(:organizer))
+
+      assert email.html_body =~ "the meeting Olive Host invited you to has been cancelled."
+      assert email.text_body =~ "The meeting Olive Host invited you to has been cancelled."
+
+      for body <- [email.html_body, email.text_body], do: refute(body =~ "Bella Booker")
+    end
+  end
 end

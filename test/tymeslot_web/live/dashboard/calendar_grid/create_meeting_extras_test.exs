@@ -93,6 +93,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingExtrasTest do
       assert render(lv) =~ "not-an-email ist keine gültige E-Mail-Adresse."
     end
 
+    # The form used to accept anything shaped like an address, which the
+    # booking then dropped without a word; it now asks the domain's rule.
+    test "refuses an address the invitation itself would drop", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_form(lv)
+      fill_guest(lv)
+
+      refute add_guest(lv, "someone@example.invalidtld") =~
+               ~s(phx-value-email="someone@example.invalidtld")
+
+      assert render(lv) =~ "someone@example.invalidtld ist keine gültige E-Mail-Adresse."
+    end
+
     test "invites an address typed into the field but never added", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard")
       open_form(lv)

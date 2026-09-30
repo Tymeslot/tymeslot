@@ -75,6 +75,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarry do
 
   require Logger
 
+  alias Tymeslot.CalendarGrid.EventVideo
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.Infrastructure.Logging.LogFormat
@@ -404,7 +405,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarry do
   defp stamp_prefix(uid), do: @stamped |> Regex.run(uid) |> Enum.at(1)
 
   defp carried_video(user_id, stored, source, rows, write) do
-    video = series_video(rows, source)
+    video = series_video(rows, source) || series_video_fallback(stored, rows)
     if video && carried?(user_id, stored, video, write), do: video, else: nil
   end
 
@@ -434,6 +435,32 @@ defmodule Tymeslot.CalendarGrid.SeriesCarry do
        do: {id, link}
 
   defp video(_row), do: nil
+
+  # What `series_video/2` falls back to when no row's cached columns carry a
+  # video: a sync that outran `SeriesVideoWorker` for a video this series is
+  # already carrying leaves every row's cached `video_link`/
+  # `video_integration_id` nil, but the calendar's own description, which the
+  # sync copied down verbatim, still carries the join line the earlier write
+  # put there, and the room it made is still recorded
+  # (`EventVideoRooms.rooms_of_series/1`). Without this, a second series-wide
+  # write inside that window (see `Tymeslot.Workers.SeriesVideoWorker`'s
+  # moduledoc) would read the video as gone and drop it.
+  defp series_video_fallback(stored, rows) do
+    with [%{video_integration_id: id} | _rest] when is_integer(id) <-
+           EventVideoRooms.rooms_of_series(stored),
+         link when is_binary(link) <- Enum.find_value(rows, &description_link/1) do
+      {id, link}
+    else
+      _none -> nil
+    end
+  end
+
+  defp description_link(row) do
+    case EventVideo.join_links(Map.get(row, :description)) do
+      [link | _rest] -> link
+      [] -> nil
+    end
+  end
 
   # An Outlook series moved to another calendar is a copy, which a Teams
   # meeting switched on for the original does not follow. A Teams meeting

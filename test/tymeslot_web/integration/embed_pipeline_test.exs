@@ -119,6 +119,36 @@ defmodule TymeslotWeb.Integration.EmbedPipelineTest do
       assert csp =~ "frame-ancestors 'self' https://trusted.com"
     end
 
+    test "?embed=1 opened top-level gets a session cookie and no embed token", %{conn: conn} do
+      # Without the cookie the page's CSRF state is lost, the /live mount is
+      # rejected as stale and the page reloads for ever.
+      user = insert(:user)
+      insert(:profile, user: user, username: "toplevel", allowed_embed_domains: [])
+
+      conn =
+        conn
+        |> put_req_header("sec-fetch-dest", "document")
+        |> get("/toplevel?embed=1")
+
+      assert html_response(conn, 200)
+      refute conn.assigns[:embed_token]
+      assert Map.has_key?(conn.resp_cookies, "_tymeslot_key")
+    end
+
+    test "?embed=1 loaded in an iframe gets an embed token and no session cookie", %{conn: conn} do
+      user = insert(:user)
+      insert(:profile, user: user, username: "framed", allowed_embed_domains: [])
+
+      conn =
+        conn
+        |> put_req_header("sec-fetch-dest", "iframe")
+        |> get("/framed?embed=1")
+
+      assert html_response(conn, 200)
+      assert {:ok, {"framed", _parent_origin}} = Token.verify(conn.assigns.embed_token)
+      refute Map.has_key?(conn.resp_cookies, "_tymeslot_key")
+    end
+
     test "scheduling_session/1 passes embed_token from conn.assigns to session map", %{
       conn: conn
     } do

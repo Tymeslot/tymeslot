@@ -20,6 +20,7 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
   alias Tymeslot.Integrations.Calendar.Exchange.FreeBusy
   alias Tymeslot.Integrations.Calendar.Exchange.Provider, as: ExchangeProvider
   alias Tymeslot.Integrations.Calendar.Exchange.Writes, as: ExchangeWrites
+  alias Tymeslot.Integrations.Calendar.MailboxOrg.Provider, as: MailboxOrgProvider
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.{CaldavCommon, ProviderAdapter}
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
@@ -218,22 +219,76 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
           required(:password) => String.t(),
           required(:calendar_path) => String.t()
         }) :: CalendarIntegrationSchema.t()
-  def build_ephemeral_baikal_integration(%{
-        url: url,
-        username: username,
-        password: password,
-        calendar_path: calendar_path
-      }) do
+  def build_ephemeral_baikal_integration(%{calendar_path: calendar_path} = config) do
+    ephemeral_caldav_integration(:baikal, config, calendar_path)
+  end
+
+  @doc """
+  Builds an unpersisted `CalendarIntegrationSchema` struct for an ephemeral
+  mailbox.org audit target, the Baikal builder's counterpart for a hosted
+  account.
+
+  A mailbox.org collection is named by an opaque, server-issued folder id
+  (`/caldav/Y2FsOi8vMC8zMg/`), so there is no path to default to the way a
+  Baikal one is built from the username. Without `:calendar_path` the account
+  is asked: the first writable calendar discovery returns, its primary one
+  when it marks one.
+
+  `:organiser`, when given, becomes `provider_account_email`, the address the
+  account is known by beside its login. An audit books with it as the
+  organiser, which is how an alias or a custom domain on the account is
+  exercised (issue #151).
+
+  Performs I/O when it discovers, so unlike the other builders it answers
+  `{:ok, integration}` or `{:error, reason}`.
+  """
+  @spec build_ephemeral_mailbox_org_integration(%{
+          required(:url) => String.t(),
+          required(:username) => String.t(),
+          required(:password) => String.t(),
+          optional(:calendar_path) => String.t() | nil,
+          optional(:organiser) => String.t() | nil
+        }) :: {:ok, CalendarIntegrationSchema.t()} | {:error, term()}
+  def build_ephemeral_mailbox_org_integration(config) do
+    integration =
+      :mailbox_org
+      |> ephemeral_caldav_integration(config, Map.get(config, :calendar_path))
+      |> Map.put(:provider_account_email, Map.get(config, :organiser))
+
+    case integration.calendar_paths do
+      [_path] -> {:ok, integration}
+      [] -> with_discovered_calendar(integration)
+    end
+  end
+
+  defp with_discovered_calendar(integration) do
+    with {:ok, calendars} <- MailboxOrgProvider.discover_calendars_for_integration(integration),
+         %{path: path} when is_binary(path) <- booking_calendar(calendars) do
+      {:ok, %{integration | calendar_paths: [path], default_booking_calendar_id: path}}
+    else
+      {:error, reason} -> {:error, reason}
+      _none -> {:error, :no_writable_calendar}
+    end
+  end
+
+  defp booking_calendar(calendars) do
+    writable = Enum.reject(calendars, & &1.read_only)
+    Enum.find(writable, & &1.primary) || List.first(writable)
+  end
+
+  defp ephemeral_caldav_integration(provider, config, calendar_path) do
+    %{url: url, username: username, password: password} = config
+
     %CalendarIntegrationSchema{
       id: 0,
-      provider: "baikal",
-      name: "#{ProviderConfig.display_name(:baikal)} (#{URI.parse(url).host})",
+      provider: Atom.to_string(provider),
+      name: "#{ProviderConfig.display_name(provider)} (#{URI.parse(url).host})",
       base_url: url,
       username_encrypted: Encryption.encrypt(username),
       password_encrypted: Encryption.encrypt(password),
       username: username,
       password: password,
-      calendar_paths: [calendar_path],
+      calendar_paths: List.wrap(calendar_path),
       calendar_list: [],
       default_booking_calendar_id: calendar_path,
       verify_ssl: true,

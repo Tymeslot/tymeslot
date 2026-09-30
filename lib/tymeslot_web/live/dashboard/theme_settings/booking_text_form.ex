@@ -111,6 +111,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
           phx-submit="save"
           phx-target={@myself}
           class="card-glass p-8 space-y-6"
+          novalidate
         >
           <div class="flex items-start justify-between gap-6">
             <div>

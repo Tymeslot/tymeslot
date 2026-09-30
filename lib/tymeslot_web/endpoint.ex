@@ -256,6 +256,10 @@ defmodule TymeslotWeb.Endpoint do
   @spec remote_ip_clients() :: [String.t()]
   def remote_ip_clients, do: ClientIP.remote_ip_clients()
 
+  # After telemetry, so the redirect is logged under the same suppression
+  # rules as the page it points at.
+  plug TymeslotWeb.Plugs.TrailingSlashRedirectPlug
+
   # Use custom body reader to cache raw body for webhooks needed for signature verification
   # Length reduced to 5MB for security; webhooks are typically much smaller.
   plug Plug.Parsers,

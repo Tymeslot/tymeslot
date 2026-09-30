@@ -34,6 +34,7 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.GuestQueries
+  alias Tymeslot.Meetings.GuestSchema
 
   @doc """
   Resets the guests' answers and reminder history, and sends each guest the
@@ -134,7 +135,8 @@ defmodule Tymeslot.Notifications.GuestNotifications do
 
   @doc """
   The appointment details for one guest: the shared payload plus the guest's
-  name and personal RSVP links.
+  name, personal RSVP links, and who invited them (`:guest_invited_by`,
+  `:booker` or `:organizer`), which decides whom their emails name.
   """
   @spec guest_details(map(), map()) :: map()
   def guest_details(appointment_details, guest) do
@@ -144,6 +146,7 @@ defmodule Tymeslot.Notifications.GuestNotifications do
     |> Map.put(:guest_name, guest.name || guest.email)
     |> Map.put(:guest_accept_url, urls.accept_url)
     |> Map.put(:guest_decline_url, urls.decline_url)
+    |> Map.put(:guest_invited_by, GuestSchema.inviter(guest))
   end
 
   defp send_to_guests(guests, appointment_details, meeting_id, kind, send_fun) do

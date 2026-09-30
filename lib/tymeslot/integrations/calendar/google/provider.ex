@@ -261,7 +261,10 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   @doc """
   Looks for an event in the account's other calendars, by the same Google
   event id: Google keeps an event's id, a recurring event's included, when it
-  moves to another calendar.
+  moves to another calendar. Only the calendars the organiser can write to
+  are asked, since an event cannot be moved into any other, and a reader's
+  or free/busy reader's answer (a 403 on a colleague's calendar) would
+  otherwise leave the event's absence unproven for ever.
   """
   @impl Tymeslot.Integrations.Calendar.Provider
   def find_moved_event(integration, %{calendar_id: calendar_id} = ref)
@@ -269,7 +272,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
     case api_module().list_calendars(integration) do
       {:ok, calendars} ->
         calendars
-        |> Enum.reject(&already_asked?(&1, calendar_id))
+        |> Enum.filter(&still_to_ask?(&1, calendar_id))
         |> Enum.map(& &1["id"])
         |> Enum.reject(&(&1 in [nil, ""]))
         |> EventSearch.first_found(&fetch_event(integration, %{ref | calendar_id: &1}))
@@ -283,6 +286,12 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   end
 
   def find_moved_event(_integration, _ref), do: {:error, :unaddressable}
+
+  # A calendar the organiser can write to, other than the one already asked.
+  defp still_to_ask?(calendar, calendar_id),
+    do:
+      not read_only_access_role?(calendar["accessRole"]) and
+        not already_asked?(calendar, calendar_id)
 
   # The calendar list names the primary calendar by its address, never by
   # the "primary" alias an event may have been recorded under.

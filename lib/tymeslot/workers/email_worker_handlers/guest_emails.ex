@@ -57,29 +57,59 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GuestEmails do
   @doc """
   Sends each of `guests` their invitation and returns each send's result.
 
-  A guest is stamped with `confirmation_sent_at` only once their invitation
-  has gone, so whatever failed is still unsent for the next run.
+  Each guest is claimed before it is sent to (`GuestQueries.claim_confirmation/2`
+  stamps `confirmation_sent_at` only while it is unset), because two jobs can
+  hold the same unsent guest: the booking's confirmation job, still pending or
+  retrying, and the invitation job for a guest the host added meanwhile. Only
+  the job that wins the claim sends; the other gets `{:ok, :already_sent}` for
+  that guest. A send that fails releases the claim, so the guest is unsent
+  again for the next retry.
+
+  As with `Tymeslot.Workers.DeliveryClaims`, a node stopping between the claim
+  and the send loses that one invitation rather than risking two.
   """
   @spec send_to_guests(list(), map(), map(), module()) :: [term()]
   def send_to_guests(guests, meeting, appointment_details, email_service) do
     Enum.map(guests, fn guest ->
-      details = GuestNotifications.guest_details(appointment_details, guest)
+      claimed_at = DateTime.utc_now(:second)
 
-      case email_service.send_guest_confirmation(guest.email, details) do
-        {:ok, _result} = sent ->
-          GuestQueries.mark_confirmation_sent(guest, DateTime.utc_now(:second))
-          sent
+      case GuestQueries.claim_confirmation(guest, claimed_at) do
+        :claimed ->
+          send_claimed(guest, claimed_at, meeting, appointment_details, email_service)
 
-        other ->
-          Logger.error("Guest confirmation email failed",
-            meeting_id: meeting.id,
-            guest_email: guest.email,
-            result: LogFormat.reason(other)
-          )
-
-          other
+        :already_claimed ->
+          {:ok, :already_sent}
       end
     end)
+  end
+
+  defp send_claimed(guest, claimed_at, meeting, appointment_details, email_service) do
+    details = GuestNotifications.guest_details(appointment_details, guest)
+
+    result =
+      try do
+        email_service.send_guest_confirmation(guest.email, details)
+      catch
+        kind, reason ->
+          GuestQueries.release_confirmation_claim(guest, claimed_at)
+          :erlang.raise(kind, reason, __STACKTRACE__)
+      end
+
+    case result do
+      {:ok, _result} = sent ->
+        sent
+
+      other ->
+        GuestQueries.release_confirmation_claim(guest, claimed_at)
+
+        Logger.error("Guest confirmation email failed",
+          meeting_id: meeting.id,
+          guest_email: guest.email,
+          result: LogFormat.reason(other)
+        )
+
+        other
+    end
   end
 
   defp invite_added_guests(meeting, guest_ids) do

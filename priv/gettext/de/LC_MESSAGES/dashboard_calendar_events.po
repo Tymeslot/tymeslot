@@ -174,7 +174,6 @@ msgid "Cancel"
 msgstr "Abbrechen"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_recurrence.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex
 #, elixir-autogen, elixir-format
@@ -1105,6 +1104,7 @@ msgid "Events of a repeating series cannot be switched between all-day and timed
 msgstr "Ereignisse einer Serie können hier nicht zwischen ganztägig und zeitgebunden umgestellt werden. Bitte nehmen Sie diese Änderung in Ihrer Kalender-App vor."
 
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex
 #, elixir-autogen, elixir-format
 msgid "That change cannot be made to the events you chose. A repeat rule can only be changed for all events, or this and following events, and cannot be removed here."
 msgstr "Diese Änderung ist für die gewählten Ereignisse nicht möglich. Eine Wiederholungsregel kann nur für alle Ereignisse oder für dieses und alle folgenden geändert und hier nicht entfernt werden."
@@ -1337,3 +1337,13 @@ msgstr "%{email} ist keine gültige E-Mail-Adresse."
 #, elixir-autogen, elixir-format
 msgid "No more guests can be added to this meeting."
 msgstr "Diesem Meeting können keine weiteren Gäste hinzugefügt werden."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
+#, elixir-autogen, elixir-format
+msgid "Too many new meetings. Please wait a moment."
+msgstr "Zu viele neue Termine. Bitte warten Sie einen Moment."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "Someone else organises this meeting, so Tymeslot can't move or split a series you were only invited to."
+msgstr "Diese Besprechung wird von jemand anderem organisiert. Tymeslot kann eine Serie, zu der Sie nur eingeladen wurden, nicht verschieben oder aufteilen."

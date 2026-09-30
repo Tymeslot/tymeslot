@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.MiniMonthTest do
   import Tymeslot.Factory
 
   alias Plug.Test
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
@@ -108,6 +109,61 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.MiniMonthTest do
         |> render_click()
 
       assert html =~ Calendar.strftime(next_month, "%B %Y")
+    end
+  end
+
+  describe "picker month header" do
+    setup do
+      on_exit(fn -> Gettext.put_locale(TymeslotWeb.Gettext, "en") end)
+    end
+
+    for {locale, heading} <- [
+          {"fr", "Janvier 2026"},
+          {"uk", "Січень 2026"},
+          {"cs", "Leden 2026"},
+          {"pl", "Styczeń 2026"}
+        ] do
+      test "#{locale}: names the month in the capitalised nominative" do
+        Gettext.put_locale(TymeslotWeb.Gettext, unquote(locale))
+
+        html =
+          render_component(&MiniMonthPopover.mini_month_popover/1,
+            open: true,
+            view: :month,
+            date: ~D[2026-01-15],
+            user_timezone: "Etc/UTC",
+            myself: %Phoenix.LiveComponent.CID{cid: 1}
+          )
+
+        headings =
+          html
+          |> LazyHTML.from_fragment()
+          |> LazyHTML.query("#calendar-period-label, #mini-month-popover-panel div.font-semibold")
+          |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
+
+        assert headings == [unquote(heading), unquote(heading)]
+      end
+    end
+
+    test "labels each day for screen readers in the locale's date order" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+
+      html =
+        render_component(&MiniMonthPopover.mini_month_popover/1,
+          open: true,
+          view: :month,
+          date: ~D[2026-02-15],
+          user_timezone: "Etc/UTC",
+          myself: %Phoenix.LiveComponent.CID{cid: 1}
+        )
+
+      [label] =
+        html
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query(~s(button[phx-value-date="2026-02-05"]))
+        |> LazyHTML.attribute("aria-label")
+
+      assert label == "Donnerstag, 5. Februar 2026"
     end
   end
 end

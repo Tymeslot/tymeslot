@@ -226,7 +226,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
               </span>
             </p>
             <p class="text-token-xs text-tymeslot-400 mt-0.5">
-              {full_date_label(Helpers.event_display_date(@selected_event, @user_timezone), @locale)}
+              {LocaleFormat.format_weekday_day_month(
+                Helpers.event_display_date(@selected_event, @user_timezone),
+                @locale
+              )}
             </p>
           </div>
         </div>
@@ -506,12 +509,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
       _none ->
         nil
     end
-  end
-
-  # Localised "Weekday, Month Day" label for the event's display date.
-  defp full_date_label(date, locale) do
-    "#{LocaleFormat.format_weekday_name(Date.day_of_week(date), locale, :full)}, " <>
-      "#{LocaleFormat.format_month_name(date.month, locale)} #{date.day}"
   end
 
   # Cached attendees come back from JSONB string-keyed, while one the organiser

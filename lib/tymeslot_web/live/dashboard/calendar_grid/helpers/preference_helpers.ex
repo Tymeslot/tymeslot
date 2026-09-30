@@ -51,15 +51,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
   end
 
   def period_label(%{view: :day, date: date}) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-    weekday = LocaleFormat.format_weekday_name(Date.day_of_week(date), locale, :full)
-    month = LocaleFormat.format_month_name(date.month, locale)
-    "#{weekday}, #{LocaleFormat.order_date_parts(date.day, month, date.year, locale)}"
+    LocaleFormat.format_weekday_date(date, Gettext.get_locale(TymeslotWeb.Gettext))
   end
 
   def period_label(%{view: :month, date: date}) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-    "#{LocaleFormat.format_month_name(date.month, locale)} #{date.year}"
+    LocaleFormat.format_month_year(date.month, date.year, Gettext.get_locale(TymeslotWeb.Gettext))
   end
 
   def period_label(%{view: :agenda, date: date} = assigns) do

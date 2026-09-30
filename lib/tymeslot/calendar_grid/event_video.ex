@@ -93,9 +93,12 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
     * `{:ok, :unchanged}` too when `event` belongs to a series that already
       has a recorded room on that integration but its row holds no link, as
       when a sync brought the series back before its video was carried
-      (`Tymeslot.CalendarGrid.SeriesCarry`). The series keeps that room and
-      the row is given the integration back: a second room would put a
-      second join link on the series;
+      (`Tymeslot.CalendarGrid.SeriesCarry`): its description still carries
+      the join line the earlier write put there. The series keeps that room
+      and the row is given the integration and that link back: a second room
+      would put a second join link on the series. An occurrence whose join
+      line was deliberately removed (set to "None") carries no such line, so
+      it is not this case, and a real room is provisioned for it instead;
     * `{:error, :not_found}` when the video integration is not the organiser's;
     * `{:error, :linked_to_booking}` when the event is the calendar copy of a
       Tymeslot booking (see `ensure_video_changeable/1`). Nothing is changed;
@@ -131,18 +134,33 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
     end
   end
 
-  # A row of a series that has lost track of its link, while the series has
-  # a room on the chosen integration (see `change_event_video/3`).
+  # A row of a series that has lost track of its link while a sync brought it
+  # back before `SeriesCarry` could give it back the video: the calendar's own
+  # description, which the sync copied down, still carries the join line for
+  # the room the series has on the chosen integration (see
+  # `change_event_video/3`). A row whose join line was deliberately removed
+  # (this occurrence set to "None") carries no such line, so it is not this
+  # case: it falls to `apply_video_change/3` to give the occurrence a real
+  # room again, rather than a no-op that leaves it without one.
   defp series_room?(%{video_link: link} = event, video_integration_id)
        when link in [nil, ""] and is_integer(video_integration_id),
        do:
          Series.member?(event) and
-           EventVideoRooms.rooms_on_integration(event, video_integration_id) != []
+           EventVideoRooms.rooms_on_integration(event, video_integration_id) != [] and
+           recorded_link(event) != nil
 
   defp series_room?(_event, _video_integration_id), do: false
 
+  defp recorded_link(event) do
+    case join_links(event.description) do
+      [link | _rest] -> link
+      [] -> nil
+    end
+  end
+
   defp keep_series_room(event, video_integration_id) do
-    with :ok <- cache_link(event, video_integration_id, nil), do: {:ok, :unchanged}
+    with :ok <- cache_link(event, video_integration_id, recorded_link(event)),
+         do: {:ok, :unchanged}
   end
 
   @doc """

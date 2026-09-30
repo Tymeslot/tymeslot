@@ -31,6 +31,12 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesTransfer do
   for them. Neither can be suppressed beyond the header every write here
   sends.
 
+  A series the account was only invited to, never a series it organises, is
+  refused with `:not_organiser` before anything is written: the copy would
+  carry its attendees from this account, so Graph would invite them all
+  afresh and leave the real organiser off the new meeting, and the delete
+  that follows sends no cancellation to anyone.
+
   A move to the calendar the series is already on is refused with
   `:same_calendar` before anything is written. The cache records most
   Outlook rows as on `"primary"`, whichever calendar holds them, so the
@@ -113,10 +119,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesTransfer do
   end
 
   # A master Graph still answers for, but as cancelled, is not a series to
-  # copy.
+  # copy. Nor is one the account was only invited to: the copy would carry
+  # its attendees, so Graph would invite them all afresh from this account
+  # and drop the real organiser, and the delete that follows sends no
+  # cancellation to anyone.
   defp read_master(api, source) do
     case reason(api.get_event(source.integration, source.master_id, body: :stored)) do
       {:ok, %{"isCancelled" => true}} -> {:error, :not_found}
+      {:ok, %{"isOrganizer" => false}} -> {:error, :not_organiser}
       other -> other
     end
   end

@@ -227,6 +227,41 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
     end
   end
 
+  describe "booking form validation" do
+    # Validation is the app's: its own messages and clear-on-type behaviour
+    # must not be pre-empted by the browser blocking an empty submission.
+    for {theme_id, meta} <- @themes do
+      @tag :capture_log
+      test "#{meta.name} booking form leaves validation to the app", %{conn: conn} do
+        %{profile: profile} =
+          seed_booking_account(unquote(theme_id), "novalidate-#{unquote(meta.name)}", "UTC")
+
+        {:ok, view, _html} = live(conn, ~p"/#{profile.username}?timezone=UTC")
+        advance_to_booking_form(view, unquote(meta.name))
+
+        assert has_element?(view, "form[data-testid='booking-form'][novalidate]")
+      end
+    end
+
+    @tag :capture_log
+    test "quill marks name and email required for assistive technology", %{conn: conn} do
+      %{profile: profile} = seed_booking_account("1", "required-quill", "UTC")
+
+      {:ok, view, _html} = live(conn, ~p"/#{profile.username}?timezone=UTC")
+      advance_to_booking_form(view, "quill")
+
+      assert has_element?(
+               view,
+               "form[data-testid='booking-form'] input[name='booking[name]'][required]"
+             )
+
+      assert has_element?(
+               view,
+               "form[data-testid='booking-form'] input[name='booking[email]'][required]"
+             )
+    end
+  end
+
   describe "booking edge cases" do
     @tag :capture_log
     test "blocks booking on a past date via URL manipulation", %{conn: conn} do

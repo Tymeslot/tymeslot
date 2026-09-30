@@ -144,14 +144,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
         meeting_type: appointment_details.meeting_type
       }
 
-      intro_copy =
-        dgettext(
-          "emails_booking",
-          "Hi %{guest} - %{booker} has invited you as a guest to this meeting with %{organizer}.",
-          guest: guest_name,
-          booker: appointment_details.attendee_name,
-          organizer: appointment_details.organizer_name
-        )
+      intro_copy = guest_intro(appointment_details, guest_name)
 
       mjml_content = """
       #{Text.centered_text(intro_copy, padding: "8px 0 16px 0")}
@@ -310,6 +303,43 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
     """
   end
 
+  # Whoever put the guest on the meeting is the one named as inviting them:
+  # the booker for a guest brought on the public page, the host for one they
+  # added themselves (see `Tymeslot.Meetings.GuestSchema.inviter/1`).
+  defp guest_intro(%{guest_invited_by: :organizer} = appointment_details, guest_name) do
+    dgettext(
+      "emails_booking",
+      "Hi %{guest} - %{organizer} has invited you as a guest to this meeting.",
+      guest: guest_name,
+      organizer: appointment_details.organizer_name
+    )
+  end
+
+  defp guest_intro(appointment_details, guest_name) do
+    dgettext(
+      "emails_booking",
+      "Hi %{guest} - %{booker} has invited you as a guest to this meeting with %{organizer}.",
+      guest: guest_name,
+      booker: appointment_details.attendee_name,
+      organizer: appointment_details.organizer_name
+    )
+  end
+
+  defp guest_invited_line(%{guest_invited_by: :organizer} = appointment_details) do
+    dgettext("emails_booking", "%{organizer} has invited you as a guest to this meeting.",
+      organizer: appointment_details.organizer_name
+    )
+  end
+
+  defp guest_invited_line(appointment_details) do
+    dgettext(
+      "emails_booking",
+      "%{booker} has invited you as a guest to this meeting with %{organizer}.",
+      booker: appointment_details.attendee_name,
+      organizer: appointment_details.organizer_name
+    )
+  end
+
   defp build_guest_text_body(appointment_details, guest_name, locale) do
     meeting_details = TextBodyHelper.format_meeting_details(appointment_details, locale)
 
@@ -321,7 +351,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
     #{dgettext("emails_booking", "Hi %{guest},", guest: guest_name)}
 
-    #{dgettext("emails_booking", "%{booker} has invited you as a guest to this meeting with %{organizer}.", booker: appointment_details.attendee_name, organizer: appointment_details.organizer_name)}
+    #{guest_invited_line(appointment_details)}
 
     #{dgettext("emails_booking", "MEETING DETAILS:")}
     #{meeting_details}#{TextBodyHelper.format_organizer_note(appointment_details, locale)}#{video_section}

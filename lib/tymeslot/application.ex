@@ -10,6 +10,7 @@ defmodule Tymeslot.Application do
   alias Tymeslot.Analytics.Telemetry, as: AnalyticsTelemetry
   alias Tymeslot.AppSettings
   alias Tymeslot.Auth.AdminBootstrap
+  alias Tymeslot.CalendarGrid.WriteGuardianSupervisor
 
   alias Tymeslot.Infrastructure.{
     AdminAlerts,
@@ -102,7 +103,10 @@ defmodule Tymeslot.Application do
       # Bounded, so a crash storm cannot spawn one database writer per crash
       {Task.Supervisor,
        name: ErrorTracking.task_supervisor(),
-       max_children: Application.get_env(:tymeslot, :error_tracking_max_concurrent_reports, 10)}
+       max_children: Application.get_env(:tymeslot, :error_tracking_max_concurrent_reports, 10)},
+      # Guardians that finish the calendar grid's queued writes when the
+      # grid's LiveView is gone
+      WriteGuardianSupervisor
     ]
 
     # Additional children for non-test environments

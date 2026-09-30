@@ -2,11 +2,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeLiveViewTest do
   @moduledoc """
   Moving one occurrence of a repeating event on the grid and choosing, in
   the recurrence prompt, which occurrences the move applies to: this event,
-  this and following, or all events, on Google, Outlook and CalDAV.
+  this and following, or all events, on Google and Outlook. CalDAV's own
+  occurrence choices, and a rule change whose split a CalDAV series cannot
+  follow, are covered by the sibling `RecurringScopeCalDavLiveViewTest`.
 
   As in the domain's end-to-end tests (`EventEditProviderSeriesTest`,
-  `EventEditProviderSplitTest`, `EventEditCalDAVWriteTest`,
-  `EventEditCalDAVSplitTest`), the `:calendar_module` seam and the provider
+  `EventEditProviderSplitTest`), the `:calendar_module` seam and the provider
   API modules point back at the runtime modules, so only the HTTP client is
   mocked and each choice is pinned by the request that tells it apart. Those
   modules pin the whole of each request; this one pins that the prompt's
@@ -31,16 +32,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeLiveViewTest do
   import Tymeslot.Factory
   import Tymeslot.TestHelpers.Eventually
 
-  alias Ecto.Changeset
   alias Plug.Test
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleAPI
-  alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
   alias Tymeslot.Integrations.Calendar.Operations
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookAPI
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
-  alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
-  alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
 
   setup :set_mox_global
@@ -251,202 +248,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeLiveViewTest do
     end
   end
 
-  describe "an occurrence of a CalDAV series" do
-    @series_url "https://caldav.example.com/cal/weekly-standup.ics"
-
-    setup %{user: user} do
-      integration =
-        insert(:calendar_integration,
-          user: user,
-          provider: "caldav",
-          base_url: "https://caldav.example.com",
-          calendar_paths: ["/cal/"]
-        )
-
-      key = Calendar.strftime(today(), "%Y%m%dT090000")
-
-      start_at =
-        today()
-        |> DateTime.new!(~T[09:00:00], "Europe/Berlin")
-        |> DateTime.shift_zone!("Etc/UTC")
-
-      event =
-        insert(:provider_calendar_event,
-          calendar_integration: integration,
-          uid: "weekly-standup_#{key}",
-          provider: "caldav",
-          provider_calendar_id: "/cal/",
-          provider_event_id: "/cal/weekly-standup.ics",
-          summary: "Weekly standup",
-          start_at: start_at,
-          end_at: DateTime.add(start_at, 1, :hour),
-          all_day: false,
-          timezone: "Europe/Berlin",
-          recurrence_rule: "FREQ=WEEKLY",
-          provider_metadata: %{"uid" => "weekly-standup"},
-          etag: "\"etag-1\"",
-          raw_ical: caldav_series(),
-          sync_state: "synced"
-        )
-
-      %{integration: integration, event: event, key: key}
-    end
-
-    test "the prompt is offered for it", %{conn: conn, event: event} do
-      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      drop(lv, event, 14)
-
-      for scope <- ~w(this_only following all) do
-        assert has_element?(lv, "#recurrence-prompt-modal [phx-value-scope='#{scope}']")
-      end
-    end
-
-    test "this event writes an override of the occurrence into the series", %{
-      conn: conn,
-      event: event,
-      key: key
-    } do
-      expect_puts(1)
-      move_and_choose(conn, event, "this_only")
-
-      assert [{@series_url, body, headers}] = await_puts(1)
-      assert {"If-Match", "\"etag-1\""} in headers
-      assert "RECURRENCE-ID;TZID=Europe/Berlin:#{key}" in LineFolder.unfold_lines(body)
-    end
-
-    test "all events rewrites the series' master", %{conn: conn, event: event} do
-      expect_puts(1)
-      lv = move_and_choose(conn, event, "all")
-
-      assert [{@series_url, body, _headers}] = await_puts(1)
-      lines = LineFolder.unfold_lines(body)
-      refute Enum.any?(lines, &String.starts_with?(&1, "RECURRENCE-ID"))
-      refute first_start_line() in lines
-      assert_series_reloaded(lv, event)
-    end
-
-    test "this and following creates the tail beside the series, then ends the series", %{
-      conn: conn,
-      integration: integration,
-      event: event
-    } do
-      expect_puts(2)
-      lv = move_and_choose(conn, event, "following")
-
-      assert [{tail_url, _tail, tail_headers}, {@series_url, _head, head_headers}] =
-               await_puts(2)
-
-      assert tail_url != @series_url
-      assert {"If-None-Match", "*"} in tail_headers
-      assert {"If-Match", "\"etag-1\""} in head_headers
-      assert_series_reloaded(lv, event)
-
-      assert_enqueued(
-        worker: SyncCalDavCalendarWorker,
-        args: %{"calendar_integration_id" => integration.id, "force_full_fetch" => true}
-      )
-    end
-
-    test "this and following of a count it cannot follow is refused as on Google", %{
-      conn: conn,
-      event: event
-    } do
-      # A count over days of the month: the following occurrences' share of
-      # it cannot be counted, so no tail is made and nothing is written.
-      rule = "FREQ=MONTHLY;BYMONTHDAY=#{first_day().day},#{today().day};COUNT=24"
-
-      event
-      |> Changeset.change(
-        recurrence_rule: rule,
-        raw_ical: String.replace(caldav_series(), "RRULE:FREQ=WEEKLY", "RRULE:" <> rule)
-      )
-      |> Repo.update!()
-
-      lv = move_and_choose(conn, event, "following")
-
-      eventually(
-        fn -> assert render(lv) =~ "repeat rule cannot be split here" end,
-        timeout: @task_timeout
-      )
-
-      refute render(lv) =~ "Failed to update event - changes reverted"
-    end
-
-    test "a change of rule opens the prompt, without this event alone", %{
-      conn: conn,
-      event: event
-    } do
-      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-
-      lv
-      |> element("#calendar-grid")
-      |> render_hook("show_event", %{"event-id" => to_string(event.id)})
-
-      lv
-      |> element("#calendar-grid")
-      |> render_hook("update_event_recurrence", %{
-        "freq" => "daily",
-        "interval" => "1",
-        "end_type" => "never"
-      })
-
-      assert has_element?(lv, "#recurrence-prompt-modal [phx-value-scope='all']")
-      refute has_element?(lv, "#recurrence-prompt-modal [phx-value-scope='this_only']")
-
-      # A CalDAV split keeps every override and exclusion.
-      assert has_element?(lv, "#recurrence-prompt-modal [phx-value-scope='following']")
-      refute has_element?(lv, "#recurrence-following-notes")
-    end
-
-    # A rename made while the series was being moved was made against the
-    # occurrence as it was; the move dropped its row, so it is not run.
-    test "a change made while the whole series is saving is dropped and reported", %{
-      conn: conn,
-      event: event
-    } do
-      test_pid = self()
-
-      expect(Tymeslot.HTTPClientMock, :put, fn url, body, headers, _opts ->
-        send(test_pid, {:blocked, self()})
-        assert_receive :release, @task_timeout
-        send(test_pid, {:put, url, body, headers})
-        {:ok, %Req.Response{status: 204, body: "", headers: %{}}}
-      end)
-
-      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-
-      lv
-      |> element("#calendar-grid")
-      |> render_hook("show_event", %{"event-id" => to_string(event.id)})
-
-      drop(lv, event, 14)
-      confirm_scope(lv, "all")
-
-      assert_receive {:blocked, writer}, @task_timeout
-
-      lv
-      |> element("#calendar-grid")
-      |> render_hook("update_event_title", %{"value" => "Daily standup"})
-
-      ref = Process.monitor(writer)
-      send(writer, :release)
-      assert_receive {:DOWN, ^ref, :process, ^writer, _reason}, @task_timeout
-
-      eventually(
-        fn ->
-          assert render(lv) =~
-                   "The series was updated, but a change you made while it was saving was not applied."
-        end,
-        timeout: @task_timeout
-      )
-
-      # One write only, the series'; `verify_on_exit!` fails a second PUT.
-      assert [{@series_url, body, _headers}] = await_puts(1)
-      refute body =~ "Daily standup"
-      assert_series_reloaded(lv, event)
-    end
-  end
-
   defp oauth_integration(user, provider, scope) do
     insert(:calendar_integration,
       user: user,
@@ -509,30 +310,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeLiveViewTest do
     }
   end
 
-  defp first_start_line,
-    do: "DTSTART;TZID=Europe/Berlin:#{Calendar.strftime(first_day(), "%Y%m%dT090000")}"
-
-  defp caldav_series do
-    first = Calendar.strftime(first_day(), "%Y%m%d")
-
-    Enum.join(
-      [
-        "BEGIN:VCALENDAR",
-        "VERSION:2.0",
-        "BEGIN:VEVENT",
-        "UID:weekly-standup",
-        "DTSTAMP:20260901T090000Z",
-        first_start_line(),
-        "DTEND;TZID=Europe/Berlin:#{first}T100000",
-        "RRULE:FREQ=WEEKLY",
-        "SUMMARY:Weekly standup",
-        "END:VEVENT",
-        "END:VCALENDAR"
-      ],
-      "\r\n"
-    ) <> "\r\n"
-  end
-
   # Answers every Google or Outlook request with the series' master, or a
   # new series for a create, and records it, in order.
   defp serve(master) do
@@ -555,22 +332,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeLiveViewTest do
     for _request <- 1..count do
       assert_receive {:request, method, url, body}, @task_timeout
       {method, url, body}
-    end
-  end
-
-  defp expect_puts(count) do
-    test_pid = self()
-
-    expect(Tymeslot.HTTPClientMock, :put, count, fn url, body, headers, _opts ->
-      send(test_pid, {:put, url, body, headers})
-      {:ok, %Req.Response{status: 204, body: "", headers: %{}}}
-    end)
-  end
-
-  defp await_puts(count) do
-    for _put <- 1..count do
-      assert_receive {:put, url, body, headers}, @task_timeout
-      {url, body, headers}
     end
   end
 
