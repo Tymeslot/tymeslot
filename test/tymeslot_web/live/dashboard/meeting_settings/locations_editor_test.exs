@@ -52,6 +52,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
     MeetingTypes.get_meeting_type(meeting_type.id, user.id)
   end
 
+  defp change_duration(view, minutes) do
+    view |> element("[phx-click='switch_tab'][phx-value-tab='details']") |> render_click()
+
+    view
+    |> element(~s|input[name="meeting_type[duration]"]|)
+    |> render_change(%{"meeting_type" => %{"duration" => minutes}})
+  end
+
   defp office do
     %LocationOption{
       id: "loc-office",
@@ -334,6 +342,79 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
       assert [offices, call] = reload(view, meeting_type, user).locations
       assert call.label == "Call us"
       assert offices.venue_ids == [berlin.id]
+    end
+
+    test "an open form keeps saving after a location it offers is deleted elsewhere",
+         %{user: user} = ctx do
+      berlin = insert(:venue, user: user, name: "Berlin office")
+      munich = insert(:venue, user: user, name: "Munich office")
+      {view, meeting_type} = open_editor(ctx, [%{office() | venue_ids: [berlin.id, munich.id]}])
+
+      # From the Locations page in another tab, while this form stays open.
+      {:ok, _deleted} = Venues.delete_venue(berlin)
+
+      change_duration(view, "45")
+
+      reloaded = reload(view, meeting_type, user)
+      assert reloaded.duration_minutes == 45
+      assert [%{venue_ids: [munich_id]}] = reloaded.locations
+      assert munich_id == munich.id
+      assert has_element?(view, "span", "All changes saved")
+
+      view |> element("[phx-click='switch_tab'][phx-value-tab='location']") |> render_click()
+      assert has_element?(view, "[data-testid='location-row']", "Munich office")
+      refute render(view) =~ "Berlin office"
+    end
+
+    test "an open form keeps saving after the only location it offers is deleted elsewhere",
+         %{user: user} = ctx do
+      berlin = insert(:venue, user: user, name: "Berlin office")
+      {view, meeting_type} = open_editor(ctx, [%{office() | venue_ids: [berlin.id]}])
+
+      {:ok, _deleted} = Venues.delete_venue(berlin)
+
+      change_duration(view, "45")
+
+      reloaded = reload(view, meeting_type, user)
+      assert reloaded.duration_minutes == 45
+      assert [%{venue_ids: []}] = reloaded.locations
+
+      view |> element("[phx-click='switch_tab'][phx-value-tab='location']") |> render_click()
+      assert has_element?(view, "[data-testid='location-row']", "Address arranged after booking")
+    end
+
+    test "creating a meeting type goes through after a location it offers is deleted elsewhere",
+         %{conn: conn, user: user} do
+      berlin = insert(:venue, user: user, name: "Berlin office")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      view |> element("button", "Add Meeting Type") |> render_click()
+      # The default reminder's hidden inputs cannot be re-encoded by
+      # `form/3`; see the creation test in `MeetingSettingsTest`.
+      view |> element("button[aria-label='Remove reminder']") |> render_click()
+      view |> element("[phx-click='edit_location']") |> render_click()
+
+      view
+      |> form("#location-editor-form", %{
+        "location" => %{"venue_ids" => ["", to_string(berlin.id)]}
+      })
+      |> render_submit()
+
+      _drain = :sys.get_state(view.pid)
+      {:ok, _deleted} = Venues.delete_venue(berlin)
+
+      view
+      |> form("form[phx-submit='save_meeting_type']", %{
+        "meeting_type" => %{"name" => "Site visit", "duration" => "20"}
+      })
+      |> render_submit()
+
+      assert render(view) =~ "Meeting type created"
+
+      assert [%{locations: [%{venue_ids: []}]}] =
+               user.id
+               |> MeetingTypes.get_all_meeting_types()
+               |> Enum.filter(&(&1.name == "Site visit"))
     end
 
     test "says when no address is selected", %{user: user} = ctx do
