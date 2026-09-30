@@ -30,12 +30,6 @@ defmodule Tymeslot.MeetingTypes do
   @spec location_options(map() | nil) :: [LocationOption.t()]
   defdelegate location_options(meeting_type), to: LocationSelection, as: :options
 
-  @doc "Whether the booking page must ask the booker to choose a location."
-  @spec location_choice_required?(map() | nil) :: boolean()
-  defdelegate location_choice_required?(meeting_type),
-    to: LocationSelection,
-    as: :choice_required?
-
   @doc """
   Resolves the location option id a booker submitted, with the provider
   they picked within a video option, into the meeting fields that follow

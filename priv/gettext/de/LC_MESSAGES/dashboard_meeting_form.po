@@ -278,11 +278,6 @@ msgstr "Stunden"
 msgid "Icon"
 msgstr "Symbol"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
-#, elixir-autogen, elixir-format
-msgid "In-Person"
-msgstr "Vor Ort"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -370,7 +365,6 @@ msgstr "Noch keine benutzerdefinierten Fragen"
 msgid "No reminders configured."
 msgstr "Keine Erinnerungen konfiguriert."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "No video integrations configured."
@@ -480,17 +474,11 @@ msgstr "Frage speichern"
 msgid "Saving..."
 msgstr "Wird gespeichert…"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
-#, elixir-autogen, elixir-format
-msgid "Select Video Provider"
-msgstr "Videoanbieter auswählen"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/validation.ex
 #, elixir-autogen, elixir-format
 msgid "Select a valid reminder unit"
 msgstr "Wählen Sie eine gültige Erinnerungseinheit"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Set up video integration"
@@ -570,11 +558,6 @@ msgstr "Abonnementstatus konnte nicht überprüft werden. Bitte versuchen Sie es
 #, elixir-autogen, elixir-format
 msgid "Unsaved changes"
 msgstr "Nicht gespeicherte Änderungen"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
-#, elixir-autogen, elixir-format
-msgid "Video Meeting"
-msgstr "Video-Meeting"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
@@ -717,7 +700,6 @@ msgstr "Details"
 msgid "Hide from public booking page"
 msgstr "Auf der öffentlichen Buchungsseite ausblenden"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "Location"

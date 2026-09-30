@@ -286,21 +286,6 @@ defmodule Tymeslot.Integrations.Calendar do
   defdelegate booking_target(integration), to: Defaults
 
   @doc """
-  Finds the calendar entry with the given id. See
-  `Tymeslot.Integrations.Calendar.Selection.find_calendar_by_id/2`.
-  """
-  @spec find_calendar_by_id([CalendarEntry.t()], String.t() | nil) :: CalendarEntry.t() | nil
-  defdelegate find_calendar_by_id(calendar_list, id), to: Selection
-
-  @doc """
-  Finds the calendar entry whose `path` is a prefix of the given
-  provider-side identifier. See
-  `Tymeslot.Integrations.Calendar.Selection.find_calendar_by_path/2`.
-  """
-  @spec find_calendar_by_path([CalendarEntry.t()], String.t() | nil) :: CalendarEntry.t() | nil
-  defdelegate find_calendar_by_path(calendar_list, path), to: Selection
-
-  @doc """
   Resolves the calendar entry an event was synced from. See
   `Tymeslot.Integrations.Calendar.Selection.calendar_for_event/2`.
   """

@@ -1,5 +1,5 @@
 defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
-  @moduledoc "Booking destination and mode components for meeting type forms."
+  @moduledoc "Icon picker and booking destination components for meeting type forms."
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -89,113 +89,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
       </p>
       <%= for error <- FormValidationHelpers.field_errors(@form_errors, :icon) do %>
         <p class="form-error">{Helpers.format_errors(error)}</p>
-      <% end %>
-    </section>
-    """
-  end
-
-  @doc """
-  Section for selecting meeting mode (Personal vs Video).
-  """
-  attr :meeting_mode, :string, required: true
-  attr :video_integrations, :list, required: true
-  attr :selected_video_integration_id, :any, required: true
-  attr :form_errors, :map, required: true
-  attr :myself, :any, required: true
-  attr :icon_size, :string, default: "compact", values: ["compact", "medium", "large", "mini"]
-
-  @spec meeting_mode_section(map()) :: Phoenix.LiveView.Rendered.t()
-  def meeting_mode_section(assigns) do
-    ~H"""
-    <section class="space-y-3">
-      <div class="flex items-center gap-2">
-        <Icons.icon name="hero-map-pin" class="w-5 h-5 text-turquoise-500" />
-        <h3 class="text-token-base font-semibold text-tymeslot-800">
-          {dgettext("dashboard_meeting_form", "Location")}
-        </h3>
-      </div>
-      <div class="flex items-center space-x-4">
-        <button
-          type="button"
-          phx-click={JS.push("toggle_meeting_mode", value: %{mode: "personal"}, target: @myself)}
-          class={[
-            "glass-selector",
-            if(@meeting_mode == "personal", do: "glass-selector--active")
-          ]}
-        >
-          <div class="flex items-center justify-center">
-            <Icons.icon name="hero-user" class="selector-icon" />
-            <span class="font-medium">{dgettext("dashboard_meeting_form", "In-Person")}</span>
-          </div>
-        </button>
-
-        <button
-          type="button"
-          phx-click={JS.push("toggle_meeting_mode", value: %{mode: "video"}, target: @myself)}
-          class={[
-            "glass-selector",
-            if(@meeting_mode == "video", do: "glass-selector--active")
-          ]}
-        >
-          <div class="flex items-center justify-center">
-            <Icons.icon name="hero-video-camera" class="selector-icon" />
-            <span class="font-medium">{dgettext("dashboard_meeting_form", "Video Meeting")}</span>
-          </div>
-        </button>
-      </div>
-
-      <%= if @meeting_mode == "video" do %>
-        <div class="mt-4">
-          <label class="label text-token-sm">
-            {dgettext("dashboard_meeting_form", "Select Video Provider")}
-          </label>
-          <%= if @video_integrations == [] do %>
-            <div class="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-token-lg">
-              <p class="text-token-sm text-yellow-700">
-                {dgettext("dashboard_meeting_form", "No video integrations configured.")}
-                <a
-                  href={~p"/dashboard/integrations?tab=video"}
-                  class="underline hover:text-yellow-800"
-                >
-                  {dgettext("dashboard_meeting_form", "Set up video integration")}
-                </a>
-              </p>
-            </div>
-          <% else %>
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              <%= for integration <- @video_integrations do %>
-                <button
-                  type="button"
-                  phx-click={
-                    JS.push("select_video_integration",
-                      value: %{id: integration.id},
-                      target: @myself
-                    )
-                  }
-                  class={[
-                    "glass-selector h-20!",
-                    if(@selected_video_integration_id == integration.id, do: "glass-selector--active")
-                  ]}
-                  title={integration.name}
-                >
-                  <div class="flex flex-col items-center justify-center space-y-1">
-                    <.provider_icon provider={integration.provider} size={@icon_size} />
-                    <span class="text-token-sm font-medium truncate max-w-full">{integration.name}</span>
-                    <span
-                      :if={integration.provider_account_email}
-                      class="text-token-xs text-muted truncate max-w-full"
-                    >
-                      {integration.provider_account_email}
-                    </span>
-                  </div>
-                </button>
-              <% end %>
-            </div>
-            <%= for error <- FormValidationHelpers.field_errors(@form_errors, :video_integration) do %>
-              <p class="form-error mt-2">{Helpers.format_errors(error)}</p>
-            <% end %>
-          <% end %>
-        </div>
       <% end %>
     </section>
     """

@@ -84,24 +84,6 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
     end
   end
 
-  describe "choice_required?/1" do
-    test "is false for a single location, which is stated rather than chosen" do
-      refute LocationSelection.choice_required?(%{locations: [office()]})
-    end
-
-    test "is true once there is more than one" do
-      assert LocationSelection.choice_required?(%{locations: [office(), zoom()]})
-    end
-
-    test "is false for a meeting type falling back to its derived single location" do
-      refute LocationSelection.choice_required?(%{
-               locations: [],
-               allow_video: true,
-               video_integration_id: 42
-             })
-    end
-  end
-
   describe "resolve/3" do
     test "resolves the chosen option into the meeting's location fields" do
       type = %{locations: [office(), zoom()]}

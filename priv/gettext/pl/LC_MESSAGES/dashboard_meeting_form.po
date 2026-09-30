@@ -274,11 +274,6 @@ msgstr "Godziny"
 msgid "Icon"
 msgstr "Ikona"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
-#, elixir-autogen, elixir-format
-msgid "In-Person"
-msgstr "Na miejscu"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -366,7 +361,6 @@ msgstr "Brak pytań własnych"
 msgid "No reminders configured."
 msgstr "Nie skonfigurowano przypomnień."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "No video integrations configured."
@@ -476,17 +470,11 @@ msgstr "Zapisz pytanie"
 msgid "Saving..."
 msgstr "Zapisywanie…"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
-#, elixir-autogen, elixir-format
-msgid "Select Video Provider"
-msgstr "Wybierz dostawcę wideo"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/validation.ex
 #, elixir-autogen, elixir-format
 msgid "Select a valid reminder unit"
 msgstr "Wybierz prawidłową jednostkę przypomnienia"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Set up video integration"
@@ -566,11 +554,6 @@ msgstr "Nie udało się sprawdzić statusu subskrypcji. Spróbuj ponownie."
 #, elixir-autogen, elixir-format
 msgid "Unsaved changes"
 msgstr "Niezapisane zmiany"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
-#, elixir-autogen, elixir-format
-msgid "Video Meeting"
-msgstr "Spotkanie wideo"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
@@ -713,7 +696,6 @@ msgstr "Szczegóły"
 msgid "Hide from public booking page"
 msgstr "Ukryj na publicznej stronie rezerwacji"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "Location"
