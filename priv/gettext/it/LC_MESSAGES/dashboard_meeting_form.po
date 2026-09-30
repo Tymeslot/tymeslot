@@ -1056,3 +1056,8 @@ msgid "%{count} minute"
 msgid_plural "%{count} minutes"
 msgstr[0] "%{count} minuto"
 msgstr[1] "%{count} minuti"
+
+#: lib/tymeslot/utils/form_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "A selected location is not one of yours"
+msgstr "Una sede selezionata non è tua"

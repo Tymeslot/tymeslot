@@ -223,6 +223,65 @@ defmodule Tymeslot.VenuesTest do
     end
   end
 
+  describe "delete_venue/1 while meeting types offer the venue" do
+    test "is refused, naming the meeting types" do
+      user = insert(:user)
+      venue = insert(:venue, user: user)
+
+      insert(:meeting_type,
+        user: user,
+        name: "Consultation",
+        locations: [in_person_location([venue])]
+      )
+
+      assert {:error, {:in_use, [%{name: "Consultation"}]}} = Venues.delete_venue(venue)
+      assert {:ok, _still_there} = Venues.get_venue(user.id, venue.id)
+    end
+  end
+
+  describe "usage_counts/1 and meeting_types_using/1" do
+    test "count each meeting type once, however many of its locations list the venue" do
+      user = insert(:user)
+      berlin = insert(:venue, user: user)
+      munich = insert(:venue, user: user)
+      unused = insert(:venue, user: user)
+
+      insert(:meeting_type,
+        user: user,
+        name: "Consultation",
+        locations: [
+          in_person_location([berlin, munich]),
+          in_person_location([berlin], position: 1)
+        ]
+      )
+
+      insert(:meeting_type,
+        user: user,
+        name: "Workshop",
+        locations: [in_person_location([berlin])]
+      )
+
+      counts = Venues.usage_counts(user.id)
+
+      assert counts[berlin.id] == 2
+      assert counts[munich.id] == 1
+      refute Map.has_key?(counts, unused.id)
+
+      assert ["Consultation", "Workshop"] =
+               berlin |> Venues.meeting_types_using() |> Enum.map(& &1.name)
+
+      assert Venues.meeting_types_using(unused) == []
+    end
+
+    test "never count another owner's meeting types" do
+      venue = insert(:venue)
+      insert(:meeting_type, user: insert(:user), locations: [in_person_location([venue])])
+
+      assert Venues.usage_counts(venue.user_id) == %{}
+      assert Venues.meeting_types_using(venue) == []
+    end
+  end
+
   describe "owns_all?/2" do
     test "is true for none at all and for the owner's own venues" do
       user = insert(:user)

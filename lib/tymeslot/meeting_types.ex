@@ -330,6 +330,11 @@ defmodule Tymeslot.MeetingTypes do
   defdelegate generate_random_slug(user_id), to: Slugs
   defdelegate update_slug(meeting_type, slug), to: Slugs
 
+  # Which meeting types offer a saved venue, asked by `Tymeslot.Venues`
+  # before a venue is deleted and for the Locations page's usage counts.
+  defdelegate list_using_venue(user_id, venue_id), to: MeetingTypeQueries
+  defdelegate venue_usage_counts(user_id), to: MeetingTypeQueries
+
   # Duration parsing, normalisation, and booking-flow validation live in the
   # focused sibling module Tymeslot.MeetingTypes.Duration; these delegations
   # keep the context's public API stable.

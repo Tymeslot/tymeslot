@@ -103,7 +103,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
       view
       |> form("#location-editor-form", %{
         "location" => %{
-          "kind" => "in_person",
+          "kind" => "custom",
           "label" => "The workshop",
           "details" => "Unit 4, Mill Lane"
         }
@@ -271,11 +271,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
 
       view
       |> form("#location-editor-form", %{
-        "location" => %{
-          "kind" => "in_person",
-          "label" => "Our new office",
-          "details" => "1 Market Square"
-        }
+        "location" => %{"kind" => "in_person", "label" => "Our new office"}
       })
       |> render_submit()
 
@@ -283,7 +279,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
       assert updated.id == "loc-office"
       assert updated.position == 0
       assert updated.label == "Our new office"
-      assert updated.details == "1 Market Square"
+      # The address the fixture stored inline is dropped: venues carry it now.
+      assert updated.details == nil
     end
   end
 

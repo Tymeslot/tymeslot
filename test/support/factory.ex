@@ -192,6 +192,27 @@ defmodule Tymeslot.Factory do
     )
   end
 
+  @doc """
+  An in-person location for a meeting type, listing `venues` in the order
+  given; the first is the one a booker who changes nothing gets. With no
+  venues it is the "address arranged after booking" location.
+
+      insert(:meeting_type, user: user, locations: [in_person_location([office])])
+  """
+  @spec in_person_location([map()], keyword()) :: LocationOption.t()
+  def in_person_location(venues \\ [], attrs \\ []) do
+    struct!(
+      %LocationOption{
+        id: UUID.generate(),
+        kind: "in_person",
+        label: "In person",
+        venue_ids: Enum.map(venues, & &1.id),
+        position: 0
+      },
+      attrs
+    )
+  end
+
   @spec venue_factory() :: Tymeslot.Venues.VenueSchema.t()
   def venue_factory do
     %VenueSchema{

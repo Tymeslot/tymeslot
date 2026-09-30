@@ -287,4 +287,53 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
       end
     end)
   end
+
+  @doc """
+  The owner's meeting types that list `venue_id` in any of their locations,
+  by name. The venue ids live inside the `locations` jsonb array, so this is
+  a containment test on each element.
+  """
+  @spec list_using_venue(integer(), integer()) :: [MeetingTypeSchema.t()]
+  def list_using_venue(user_id, venue_id) do
+    Repo.all(
+      from(mt in MeetingTypeSchema,
+        where: mt.user_id == ^user_id,
+        where:
+          fragment(
+            "EXISTS (SELECT 1 FROM unnest(?) AS loc WHERE loc -> 'venue_ids' @> jsonb_build_array(?::bigint))",
+            mt.locations,
+            ^venue_id
+          ),
+        order_by: [asc: mt.name]
+      )
+    )
+  end
+
+  @doc """
+  For each venue the owner's meeting types list, how many meeting types list
+  it. A meeting type listing a venue on two of its locations counts once.
+  Venues no meeting type lists are absent.
+  """
+  @spec venue_usage_counts(integer()) :: %{integer() => pos_integer()}
+  def venue_usage_counts(user_id) do
+    %{rows: rows} =
+      Repo.query!(
+        """
+        SELECT venue.id::bigint, count(DISTINCT mt.id)
+        FROM meeting_types AS mt
+        CROSS JOIN LATERAL unnest(mt.locations) AS loc
+        CROSS JOIN LATERAL jsonb_array_elements_text(
+          CASE WHEN jsonb_typeof(loc -> 'venue_ids') = 'array'
+            THEN loc -> 'venue_ids'
+            ELSE '[]'::jsonb
+          END
+        ) AS venue(id)
+        WHERE mt.user_id = $1
+        GROUP BY venue.id
+        """,
+        [user_id]
+      )
+
+    Map.new(rows, fn [venue_id, count] -> {venue_id, count} end)
+  end
 end

@@ -14,6 +14,8 @@ defmodule Tymeslot.Venues do
   Every function acting on a venue is scoped to its owner.
   """
 
+  alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Venues.VenueQueries
   alias Tymeslot.Venues.VenueSchema
 
@@ -85,9 +87,35 @@ defmodule Tymeslot.Venues do
     |> VenueQueries.update_venue()
   end
 
-  @doc "Deletes a venue."
-  @spec delete_venue(VenueSchema.t()) :: {:ok, VenueSchema.t()} | {:error, Ecto.Changeset.t()}
-  def delete_venue(%VenueSchema{} = venue), do: VenueQueries.delete_venue(venue)
+  @doc """
+  Deletes a venue, unless any of the owner's meeting types lists it.
+
+  Dropping it from their locations instead could leave a location the owner
+  believes offers an address with none, so the refusal names the meeting
+  types for the owner to change first.
+  """
+  @spec delete_venue(VenueSchema.t()) ::
+          {:ok, VenueSchema.t()}
+          | {:error, {:in_use, [MeetingTypeSchema.t()]}}
+          | {:error, Ecto.Changeset.t()}
+  def delete_venue(%VenueSchema{} = venue) do
+    case meeting_types_using(venue) do
+      [] -> VenueQueries.delete_venue(venue)
+      meeting_types -> {:error, {:in_use, meeting_types}}
+    end
+  end
+
+  @doc "The owner's meeting types whose locations list `venue`, by name."
+  @spec meeting_types_using(VenueSchema.t()) :: [MeetingTypeSchema.t()]
+  def meeting_types_using(%VenueSchema{id: id, user_id: user_id}),
+    do: MeetingTypes.list_using_venue(user_id, id)
+
+  @doc """
+  Venue id to the number of the owner's meeting types listing it, for the
+  Locations page. Venues no meeting type lists are absent.
+  """
+  @spec usage_counts(integer()) :: %{integer() => pos_integer()}
+  def usage_counts(user_id) when is_integer(user_id), do: MeetingTypes.venue_usage_counts(user_id)
 
   @doc """
   Whether every id in `ids` is one of the owner's venues. Ids may arrive as
