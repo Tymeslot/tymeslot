@@ -249,21 +249,25 @@ defmodule Tymeslot.Integrations.Calendar.Provider do
 
   Returns the event as the sync would cache it (a recurring series expands
   into its occurrences). `{:error, :not_found}` is returned only when the
-  provider says the event does not exist, or for Google and Outlook that it is
-  cancelled; any failure to find out (a transport error, refused credentials,
+  provider says the event does not exist, or that it is cancelled (for
+  CalDAV, every component of its resource `STATUS:CANCELLED`); any failure to find out (a transport error, refused credentials,
   an event `event_ref` cannot address) is some other error.
   """
   @callback fetch_event(client :: any(), event_ref :: event_ref()) ::
               {:ok, [CalendarEvent.t()]} | {:error, :not_found} | {:error, term()}
 
   @doc """
-  Looks for an event in every calendar of the account, once `fetch_event/2`
-  has been told by every calendar the integration reaches that it does not
-  exist there: the organiser may have moved it to a calendar Tymeslot does
-  not read. `client` is any one of the integration's clients.
+  Looks for an event in every calendar of the account the organiser can
+  write to, once `fetch_event/2` has been told by every calendar the
+  integration reaches that it does not exist there: the organiser may have
+  moved it to a calendar Tymeslot does not read. A calendar the organiser can
+  only read is never asked, since nothing can have been moved into it and its
+  refusal would leave the event's absence unproven. `client` is any one of
+  the integration's clients.
 
   Answers as `fetch_event/2` does, `{:error, :not_found}` only when no
-  calendar of the account has the event. Optional: a provider without it
+  writable calendar of the account has the event, a cancelled copy counting
+  as none. Optional: a provider without it
   takes `fetch_event/2`'s answer as final, as Outlook may, whose
   `fetch_event/2` already searches the whole mailbox.
   """

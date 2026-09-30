@@ -15,6 +15,7 @@ defmodule Tymeslot.Integrations.Calendar.SingleEventFetchTest do
   import Mox
 
   alias Tymeslot.HTTPClientMock
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleAPI
   alias Tymeslot.Integrations.Calendar.Operations
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookAPI
@@ -194,6 +195,139 @@ defmodule Tymeslot.Integrations.Calendar.SingleEventFetchTest do
       refute reason == :not_found
     end
 
+    # A colleague's calendar shared read-only cannot hold the moved event, and
+    # its 403 would otherwise leave the event's absence unproven for ever.
+    test "does not search a calendar the account can only read", ctx do
+      answer_gets(ctx, %{
+        "/calendars/alice/home/grid-10.ics" => {404, ""},
+        "/calendars/alice/work/grid-10.ics" => {404, ""}
+      })
+
+      shared = "/calendars/bob/team/"
+
+      answer_account(
+        Map.merge(ctx.account, %{
+          calendars: ctx.account.calendars ++ [shared],
+          read_only: [shared],
+          failing: %{shared => 403}
+        })
+      )
+
+      assert {:error, :not_found} =
+               Operations.fetch_event(%{uid: "grid-10"}, {ctx.integration.id, ctx.user.id})
+
+      assert_received {:dav_report, "/calendars/alice/private/", "grid-10"}
+      refute_received {:dav_report, ^shared, _uid}
+    end
+
+    # A colleague's calendar the organiser selected to see their availability
+    # cannot hold the organiser's event, and its refusal would otherwise
+    # leave the event's absence unproven for ever.
+    test "does not ask a selected calendar the account can only read", ctx do
+      shared = "/calendars/bob/team/"
+
+      integration =
+        insert(:calendar_integration,
+          user: ctx.user,
+          provider: "caldav",
+          base_url: ctx.base,
+          username_encrypted: Encryption.encrypt("alice"),
+          password_encrypted: Encryption.encrypt("s3cret"),
+          calendar_paths: ["/calendars/alice/home/"],
+          default_booking_calendar_id: "/calendars/alice/home/",
+          calendar_list: [
+            %CalendarEntry{
+              id: "/calendars/alice/home/",
+              path: "/calendars/alice/home/",
+              selected: true
+            },
+            %CalendarEntry{id: shared, path: shared, selected: true, read_only: true}
+          ]
+        )
+
+      answer_gets(ctx, %{
+        "/calendars/alice/home/grid-14.ics" => {404, ""},
+        "/calendars/bob/team/grid-14.ics" => {403, "Forbidden"}
+      })
+
+      assert {:error, :not_found} =
+               Operations.fetch_event(%{uid: "grid-14"}, {integration.id, ctx.user.id})
+    end
+
+    # The organiser's own resource, cancelled in a calendar client rather than
+    # deleted, holds no live event.
+    test "does not count the event's own resource as found when it is cancelled", ctx do
+      answer_gets(ctx, %{
+        "/calendars/alice/home/grid-15.ics" => {404, ""},
+        "/calendars/alice/work/grid-15.ics" => {200, ical("grid-15", "STATUS:CANCELLED")}
+      })
+
+      assert {:error, :not_found} =
+               Operations.fetch_event(%{uid: "grid-15"}, {ctx.integration.id, ctx.user.id})
+    end
+
+    # What an attendee's calendar keeps of a cancelled invitation is not the
+    # organiser's event.
+    test "does not count a cancelled copy of the event as found", ctx do
+      answer_gets(ctx, %{
+        "/calendars/alice/home/grid-11.ics" => {404, ""},
+        "/calendars/alice/work/grid-11.ics" => {404, ""}
+      })
+
+      answer_account(
+        Map.put(ctx.account, :resources, %{
+          "/calendars/alice/private/" => [
+            {"/calendars/alice/private/invite.ics", ical("grid-11", "STATUS:CANCELLED")}
+          ]
+        })
+      )
+
+      assert {:error, :not_found} =
+               Operations.fetch_event(%{uid: "grid-11"}, {ctx.integration.id, ctx.user.id})
+    end
+
+    test "finds the live event past a cancelled copy in an earlier calendar", ctx do
+      answer_gets(ctx, %{
+        "/calendars/alice/home/grid-12.ics" => {404, ""},
+        "/calendars/alice/work/grid-12.ics" => {404, ""}
+      })
+
+      answer_account(
+        Map.put(ctx.account, :resources, %{
+          "/calendars/alice/home/" => [
+            {"/calendars/alice/home/invite.ics", ical("grid-12", "STATUS:CANCELLED")}
+          ],
+          "/calendars/alice/private/" => [
+            {"/calendars/alice/private/moved.ics", ical("grid-12", "STATUS:CONFIRMED")}
+          ]
+        })
+      )
+
+      assert {:ok, [%{uid: "grid-12", provider_calendar_id: "/calendars/alice/private/"}]} =
+               Operations.fetch_event(%{uid: "grid-12"}, {ctx.integration.id, ctx.user.id})
+    end
+
+    # One cancelled occurrence leaves the rest of the series live.
+    test "finds a series with one cancelled occurrence", ctx do
+      answer_gets(ctx, %{
+        "/calendars/alice/home/grid-13.ics" => {404, ""},
+        "/calendars/alice/work/grid-13.ics" => {404, ""}
+      })
+
+      answer_account(
+        Map.put(ctx.account, :resources, %{
+          "/calendars/alice/private/" => [
+            {"/calendars/alice/private/series.ics", series_with_cancelled_occurrence("grid-13")}
+          ]
+        })
+      )
+
+      assert {:ok, [_first | _rest] = events} =
+               Operations.fetch_event(%{uid: "grid-13"}, {ctx.integration.id, ctx.user.id})
+
+      assert Enum.any?(events, &(&1.status != :cancelled))
+    end
+
     # One calendar that could not answer leaves the event's absence unproven.
     test "is not not-found when a calendar could not answer", ctx do
       answer_gets(ctx, %{
@@ -263,7 +397,7 @@ defmodule Tymeslot.Integrations.Calendar.SingleEventFetchTest do
     end)
   end
 
-  defp ical(uid),
+  defp ical(uid, status \\ nil),
     do:
       Enum.join(
         [
@@ -275,6 +409,33 @@ defmodule Tymeslot.Integrations.Calendar.SingleEventFetchTest do
           "DTSTAMP:20260901T000000Z",
           "DTSTART:20261005T090000Z",
           "DTEND:20261005T093000Z",
+          "SUMMARY:Planning"
+        ] ++ List.wrap(status) ++ ["END:VEVENT", "END:VCALENDAR", ""],
+        "\r\n"
+      )
+
+  defp series_with_cancelled_occurrence(uid),
+    do:
+      Enum.join(
+        [
+          "BEGIN:VCALENDAR",
+          "VERSION:2.0",
+          "PRODID:-//Tymeslot//EN",
+          "BEGIN:VEVENT",
+          "UID:#{uid}",
+          "DTSTAMP:20260901T000000Z",
+          "DTSTART:20261005T090000Z",
+          "DTEND:20261005T093000Z",
+          "RRULE:FREQ=WEEKLY;COUNT=4",
+          "SUMMARY:Planning",
+          "END:VEVENT",
+          "BEGIN:VEVENT",
+          "UID:#{uid}",
+          "DTSTAMP:20260901T000000Z",
+          "RECURRENCE-ID:20261012T090000Z",
+          "DTSTART:20261012T090000Z",
+          "DTEND:20261012T093000Z",
+          "STATUS:CANCELLED",
           "SUMMARY:Planning",
           "END:VEVENT",
           "END:VCALENDAR",

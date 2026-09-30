@@ -1336,3 +1336,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "No more guests can be added to this meeting."
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
+#, elixir-autogen, elixir-format
+msgid "Too many new meetings. Please wait a moment."
+msgstr ""
