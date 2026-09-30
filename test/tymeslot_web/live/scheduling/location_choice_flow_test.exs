@@ -44,6 +44,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.Themes.Shared.BookingLocation
 
   setup :verify_on_exit!
 
@@ -520,7 +521,10 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
 
       view = navigate_to_booking_form(conn, profile, nil, reschedule_meeting_uid: meeting.uid)
 
-      assert :sys.get_state(view.pid).socket.assigns.selected_venue_id == munich.id
+      assigns = :sys.get_state(view.pid).socket.assigns
+
+      assert assigns.selected_venue_id == munich.id
+      assert BookingLocation.submitted_venue_id(assigns) == munich.id
 
       moved = submit_reschedule(view, meeting, start)
 

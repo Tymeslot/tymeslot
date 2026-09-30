@@ -47,7 +47,8 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocationTest do
         selected_location_id: "loc-offices",
         selected_video_id: nil,
         selected_venue_id: 1,
-        venue_picked?: false,
+        venue_picked: false,
+        reschedule_location: nil,
         location_phone: "",
         is_rescheduling: false
       },
@@ -97,7 +98,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocationTest do
       socket = BookingLocation.apply_event(socket(), :select_venue, "99")
 
       assert socket.assigns.selected_venue_id == 1
-      refute socket.assigns.venue_picked?
+      refute socket.assigns.venue_picked
     end
   end
 
@@ -123,41 +124,73 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocationTest do
   end
 
   describe "submitted_venue_id/1 on a reschedule" do
+    # A meeting booked at the offices location, at a venue (99) the location
+    # no longer offers, so the picker falls back to its first venue.
+    defp rescheduling(overrides \\ %{}) do
+      Map.merge(
+        %{
+          is_rescheduling: true,
+          reschedule_location: %{option_id: "loc-offices", venue_id: 99},
+          location_options: [offices(), arranged(), hq()],
+          location_venue_choices: %{"loc-offices" => [@berlin, @munich], "loc-hq" => [@munich]}
+        },
+        overrides
+      )
+    end
+
+    defp hq,
+      do: %LocationOption{
+        id: "loc-hq",
+        kind: "in_person",
+        label: "Headquarters",
+        venue_ids: [2],
+        position: 3
+      }
+
     test "is nil while the picker only defaulted to the location's first venue" do
-      assert BookingLocation.submitted_venue_id(assigns(%{is_rescheduling: true})) == nil
+      assert BookingLocation.submitted_venue_id(assigns(rescheduling())) == nil
     end
 
     test "is the venue the booker then picks, the default included" do
       picked =
-        %{is_rescheduling: true}
+        rescheduling()
         |> socket()
         |> BookingLocation.apply_event(:select_venue, "1")
 
       assert BookingLocation.submitted_venue_id(picked.assigns) == 1
     end
 
-    test "survives a move to another location offering the same venue, and no other" do
-      munich_only = %LocationOption{
-        id: "loc-munich",
-        kind: "in_person",
-        label: "Munich",
-        venue_ids: [2],
-        position: 3
-      }
+    test "is the venue shown on another location, since choosing it is a move" do
+      moved = rescheduling() |> socket() |> BookingLocation.choose("loc-hq")
 
+      assert BookingLocation.submitted_venue_id(moved.assigns) == 2
+      assert BookingLocation.chosen_display(moved.assigns) == "Munich office"
+    end
+
+    test "returns to the meeting's own venue, as picked, when the booker comes back" do
+      # The picker opened on the meeting's venue, which the location offers.
+      opened =
+        %{reschedule_location: %{option_id: "loc-offices", venue_id: 2}}
+        |> rescheduling()
+        |> Map.merge(%{selected_venue_id: 2, venue_picked: true})
+        |> socket()
+
+      for detour <- ["loc-arranged", "loc-hq"] do
+        back = opened |> BookingLocation.choose(detour) |> BookingLocation.choose("loc-offices")
+
+        assert back.assigns.selected_venue_id == 2
+        assert back.assigns.venue_picked
+        assert BookingLocation.submitted_venue_id(back.assigns) == 2
+      end
+    end
+
+    test "keeps a picked venue across a move to another location offering it, and no other" do
       picked =
-        %{
-          is_rescheduling: true,
-          location_options: [offices(), arranged(), munich_only],
-          location_venue_choices: %{
-            "loc-offices" => [@berlin, @munich],
-            "loc-munich" => [@munich]
-          }
-        }
+        rescheduling()
         |> socket()
         |> BookingLocation.apply_event(:select_venue, "2")
 
-      assert BookingLocation.choose(picked, "loc-munich").assigns.venue_picked?
+      assert BookingLocation.choose(picked, "loc-hq").assigns.venue_picked
 
       back =
         picked |> BookingLocation.choose("loc-arranged") |> BookingLocation.choose("loc-offices")
@@ -179,7 +212,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocationTest do
     end
 
     test "is nil on a reschedule whose venue the booker did not pick, which the meeting keeps" do
-      assert BookingLocation.chosen_display(assigns(%{is_rescheduling: true})) == nil
+      assert BookingLocation.chosen_display(assigns(rescheduling())) == nil
     end
   end
 

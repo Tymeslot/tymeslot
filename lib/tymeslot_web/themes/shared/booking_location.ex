@@ -37,11 +37,13 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
   have meant "move it", even when the host has since replaced the location
   the meeting was booked against.
 
-  The venue follows the same rule within a location. When the meeting's
-  venue is no longer offered (deleted, or dropped from its location), the
-  picker opens on the location's first venue, but that default is not
-  submitted until the booker picks a venue (`:venue_picked?`): a time-only
-  reschedule keeps the meeting at the address it was booked for.
+  The venue follows the same rule within the meeting's own location
+  (`:reschedule_location`). When the meeting's venue is no longer offered
+  (deleted, or dropped from its location), the picker opens on the
+  location's first venue, but that default is not submitted until the
+  booker picks a venue (`:venue_picked`): a time-only reschedule keeps the
+  meeting at the address it was booked for. Choosing another location is
+  itself a move, so there the venue the picker shows is submitted.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -63,7 +65,8 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
     |> assign(:selected_location_id, nil)
     |> assign(:selected_video_id, nil)
     |> assign(:selected_venue_id, nil)
-    |> assign(:venue_picked?, false)
+    |> assign(:venue_picked, false)
+    |> assign(:reschedule_location, nil)
     |> assign(:location_phone, "")
     |> assign(:location_error, nil)
   end
@@ -102,13 +105,17 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
     |> assign(:selected_location_id, selected)
     |> assign(:location_phone, seeded_phone(socket.assigns[:location_phone], current))
     |> assign(:location_error, nil)
+    |> assign(:reschedule_location, reschedule_location(current))
     |> assign_selected_video([socket.assigns[:selected_video_id], current[:video_integration_id]])
-    |> assign_selected_venue(
-      [socket.assigns[:selected_venue_id], current[:venue_id]],
-      socket.assigns,
-      current[:venue_id]
-    )
+    |> assign_selected_venue(socket.assigns)
   end
+
+  # The meeting's own option and venue on a reschedule, which the venue
+  # picker returns to and `submitted_venue_id/1` compares against.
+  defp reschedule_location(%{} = current),
+    do: %{option_id: current[:option_id], venue_id: current[:venue_id]}
+
+  defp reschedule_location(nil), do: nil
 
   # The provider the video picker opens on: the first of `preferred` the
   # chosen option offers (the booker's own earlier pick, then the meeting's
@@ -119,24 +126,25 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
     assign(socket, :selected_video_id, Enum.find(preferred, &(&1 in ids)) || List.first(ids))
   end
 
-  # The venue the venue picker opens on, chosen exactly as the provider is.
-  # Nil when the chosen option offers no venue.
+  # The venue the venue picker opens on, among those the chosen option
+  # offers: the venue the booker picked (`before` is the assigns being
+  # replaced), then the meeting's own on a reschedule, then the one shown
+  # before, else the option's first. Nil when the option offers no venue.
   #
-  # It counts as picked (see `submitted_venue_id/1`) when it is still the
-  # venue the booker picked before (`before` is the assigns it replaces) or
-  # the meeting's own venue on a reschedule; a fallback to the first venue
-  # never does.
-  defp assign_selected_venue(socket, preferred, before, meeting_venue_id \\ nil) do
+  # It counts as picked (see `submitted_venue_id/1`) when it is the booker's
+  # pick or the meeting's own venue; a fallback never does.
+  defp assign_selected_venue(socket, before) do
+    picked = if before[:venue_picked] == true, do: before[:selected_venue_id]
+    meeting_venue_id = socket.assigns[:reschedule_location][:venue_id]
     ids = Enum.map(venue_choices(socket.assigns), & &1.id)
-    selected = Enum.find(preferred, &(&1 in ids)) || List.first(ids)
-    still_picked = before[:venue_picked?] == true and selected == before[:selected_venue_id]
+
+    selected =
+      Enum.find([picked, meeting_venue_id, before[:selected_venue_id]], &(&1 in ids)) ||
+        List.first(ids)
 
     socket
     |> assign(:selected_venue_id, selected)
-    |> assign(
-      :venue_picked?,
-      not is_nil(selected) and (still_picked or selected == meeting_venue_id)
-    )
+    |> assign(:venue_picked, not is_nil(selected) and selected in [picked, meeting_venue_id])
   end
 
   # A number the booker has typed this session wins over the one on the
@@ -165,7 +173,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
       |> assign(:selected_location_id, id)
       |> assign(:location_error, nil)
       |> assign_selected_video([socket.assigns[:selected_video_id]])
-      |> assign_selected_venue([socket.assigns[:selected_venue_id]], socket.assigns)
+      |> assign_selected_venue(socket.assigns)
     else
       socket
     end
@@ -192,7 +200,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
       choice ->
         socket
         |> assign(:selected_venue_id, choice.id)
-        |> assign(:venue_picked?, true)
+        |> assign(:venue_picked, true)
     end
   end
 
@@ -275,18 +283,26 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
   option, or nil when the option offers no venue or nothing was submitted
   for it. The server honours it only if the option still offers it.
 
-  On a new booking that is whatever the picker shows, its default included.
-  On a reschedule it is only a venue the booker picked, or the meeting's own
-  that the picker opened on: the default the picker fell back to, when the
-  meeting's venue is no longer offered, would otherwise move the meeting to
-  a venue nobody chose. See the module doc.
+  On a new booking that is whatever the picker shows, its default included,
+  and so it is on a reschedule to another location, which is a move the
+  booker made. Within the meeting's own location it is only a venue the
+  booker picked, or the meeting's own that the picker opened on: the
+  default the picker fell back to, when the meeting's venue is no longer
+  offered, would otherwise move the meeting to a venue nobody chose. See the
+  module doc.
   """
   @spec submitted_venue_id(map()) :: integer() | nil
   def submitted_venue_id(assigns) do
-    if submitted_option_id(assigns) && venue_choices(assigns) != [] &&
-         (assigns[:is_rescheduling] != true or assigns[:venue_picked?] == true),
-       do: assigns[:selected_venue_id]
+    if submitted_option_id(assigns) && venue_choices(assigns) != [] && venue_chosen?(assigns),
+      do: assigns[:selected_venue_id]
   end
+
+  defp venue_chosen?(%{is_rescheduling: true} = assigns) do
+    assigns[:venue_picked] == true or
+      assigns[:selected_location_id] != assigns[:reschedule_location][:option_id]
+  end
+
+  defp venue_chosen?(_assigns), do: true
 
   @doc "The option currently chosen, or nil when there is nothing to choose."
   @spec selected(map()) :: LocationOption.t() | nil
