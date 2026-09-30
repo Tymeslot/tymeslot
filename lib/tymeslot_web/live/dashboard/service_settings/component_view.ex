@@ -144,6 +144,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
               show_add_form={@show_add_form}
               editing_type={@editing_type}
               currency={@payment_currency}
+              venues={@venues}
               parent_myself={@myself}
             />
           </div>
