@@ -13,6 +13,8 @@ msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
 #: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Annulla"
@@ -84,6 +86,7 @@ msgstr "Calendario"
 msgid "Create meeting types to offer different appointment options"
 msgstr "Crea tipi di riunione per offrire diverse opzioni di appuntamento"
 
+#: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
 msgid "Delete"
@@ -94,6 +97,7 @@ msgstr "Elimina"
 msgid "Delete Meeting Type"
 msgstr "Elimina tipo di riunione"
 
+#: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
 msgid "Edit"
@@ -196,3 +200,121 @@ msgid "%{count} location"
 msgid_plural "%{count} locations"
 msgstr[0] "%{count} sede"
 msgstr[1] "%{count} sedi"
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} is offered by these meeting types. Deleting it removes it from them:"
+msgstr "%{name} è offerta da questi tipi di riunione. Eliminandola verrà rimossa da tutti:"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Add an office, a studio or any other place you meet people. In-person meeting types can then offer it to bookers."
+msgstr "Aggiungi un ufficio, uno studio o qualsiasi altra sede in cui incontri le persone. I tipi di riunione di persona potranno poi offrirla a chi prenota."
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Add location"
+msgstr "Aggiungi sede"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Address and directions (optional)"
+msgstr "Indirizzo e indicazioni (facoltativo)"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not delete the location"
+msgstr "Impossibile eliminare la sede"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not reorder the locations"
+msgstr "Impossibile riordinare le sedi"
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}? This cannot be undone."
+msgstr "Eliminare %{name}? L'operazione non può essere annullata."
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete location"
+msgstr "Elimina sede"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Edit location"
+msgstr "Modifica sede"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Location deleted"
+msgstr "Sede eliminata"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Location saved"
+msgstr "Sede salvata"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Locations"
+msgstr "Sedi"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Locations reordered"
+msgstr "Ordine delle sedi salvato"
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Meetings already booked there keep their address. This cannot be undone."
+msgstr "Le riunioni già prenotate lì mantengono il loro indirizzo. L'operazione non può essere annullata."
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr "Nome"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "No saved locations yet"
+msgstr "Nessuna sede salvata"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
+#, elixir-autogen, elixir-format
+msgid "Not used by any meeting type yet"
+msgstr "Non ancora usata da alcun tipo di riunione"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Save location"
+msgstr "Salva sede"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Save the places you meet people once, then offer them on any in-person meeting type."
+msgstr "Salva una volta le sedi in cui incontri le persone, poi offrile in qualsiasi tipo di riunione di persona."
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Street, postcode and city, plus anything that helps bookers find you: 3rd floor, ring the bell."
+msgstr "Via, CAP e città, più tutto ciò che aiuta chi prenota a trovarti: 3º piano, suona il campanello."
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "These are then left with an in-person option that has no address, so their bookers will be told the address is arranged after booking:"
+msgstr "A questi resterà un'opzione di persona senza indirizzo, quindi a chi prenota verrà detto che l'indirizzo sarà concordato dopo la prenotazione:"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
+#, elixir-autogen, elixir-format
+msgid "Used by %{count} meeting type"
+msgid_plural "Used by %{count} meeting types"
+msgstr[0] "Usata da %{count} tipo di riunione"
+msgstr[1] "Usata da %{count} tipi di riunione"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "e.g., Berlin office"
+msgstr "es. Ufficio di Milano"

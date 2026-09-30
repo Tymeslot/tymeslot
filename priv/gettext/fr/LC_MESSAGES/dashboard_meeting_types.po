@@ -13,6 +13,8 @@ msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
 #: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Annuler"
@@ -84,6 +86,7 @@ msgstr "Calendrier"
 msgid "Create meeting types to offer different appointment options"
 msgstr "Créez des types de réunion pour proposer différentes options de rendez-vous"
 
+#: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
 msgid "Delete"
@@ -94,6 +97,7 @@ msgstr "Supprimer"
 msgid "Delete Meeting Type"
 msgstr "Supprimer le type de réunion"
 
+#: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
 msgid "Edit"
@@ -196,3 +200,121 @@ msgid "%{count} location"
 msgid_plural "%{count} locations"
 msgstr[0] "%{count} lieu"
 msgstr[1] "%{count} lieux"
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} is offered by these meeting types. Deleting it removes it from them:"
+msgstr "%{name} est proposé par ces types de réunion. Le supprimer le retire de chacun d'eux :"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Add an office, a studio or any other place you meet people. In-person meeting types can then offer it to bookers."
+msgstr "Ajoutez un bureau, un studio ou tout autre lieu où vous recevez. Les types de réunion en personne pourront ensuite le proposer aux personnes qui réservent."
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Add location"
+msgstr "Ajouter un lieu"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Address and directions (optional)"
+msgstr "Adresse et indications (facultatif)"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not delete the location"
+msgstr "Impossible de supprimer le lieu"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not reorder the locations"
+msgstr "Impossible de réorganiser les lieux"
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}? This cannot be undone."
+msgstr "Voulez-vous vraiment supprimer %{name} ? Cette action est irréversible."
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete location"
+msgstr "Supprimer le lieu"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Edit location"
+msgstr "Modifier le lieu"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Location deleted"
+msgstr "Lieu supprimé"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Location saved"
+msgstr "Lieu enregistré"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Locations"
+msgstr "Lieux"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Locations reordered"
+msgstr "Ordre des lieux enregistré"
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Meetings already booked there keep their address. This cannot be undone."
+msgstr "Les réunions déjà réservées à cet endroit conservent leur adresse. Cette action est irréversible."
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr "Nom"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "No saved locations yet"
+msgstr "Aucun lieu enregistré pour l'instant"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
+#, elixir-autogen, elixir-format
+msgid "Not used by any meeting type yet"
+msgstr "Utilisé par aucun type de réunion pour l'instant"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Save location"
+msgstr "Enregistrer le lieu"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Save the places you meet people once, then offer them on any in-person meeting type."
+msgstr "Enregistrez une fois les lieux où vous recevez, puis proposez-les dans n'importe quel type de réunion en personne."
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Street, postcode and city, plus anything that helps bookers find you: 3rd floor, ring the bell."
+msgstr "Rue, code postal et ville, ainsi que tout ce qui aide à vous trouver : 3e étage, sonnez à la porte."
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "These are then left with an in-person option that has no address, so their bookers will be told the address is arranged after booking:"
+msgstr "Leur option en personne n'aura alors plus d'adresse ; les personnes qui réservent seront informées que l'adresse sera convenue après la réservation :"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
+#, elixir-autogen, elixir-format
+msgid "Used by %{count} meeting type"
+msgid_plural "Used by %{count} meeting types"
+msgstr[0] "Utilisé par %{count} type de réunion"
+msgstr[1] "Utilisé par %{count} types de réunion"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "e.g., Berlin office"
+msgstr "ex. : Bureau de Paris"

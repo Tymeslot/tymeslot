@@ -13,6 +13,8 @@ msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
 #: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Zrušit"
@@ -85,6 +87,7 @@ msgstr "Kalendář"
 msgid "Create meeting types to offer different appointment options"
 msgstr "Vytvořte typy schůzek a nabídněte různé varianty setkání"
 
+#: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
 msgid "Delete"
@@ -95,6 +98,7 @@ msgstr "Smazat"
 msgid "Delete Meeting Type"
 msgstr "Smazat typ schůzky"
 
+#: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
 msgid "Edit"
@@ -198,3 +202,122 @@ msgid_plural "%{count} locations"
 msgstr[0] "%{count} místo"
 msgstr[1] "%{count} místa"
 msgstr[2] "%{count} míst"
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} is offered by these meeting types. Deleting it removes it from them:"
+msgstr "%{name} nabízejí tyto typy schůzek. Smazáním ho z nich odeberete:"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Add an office, a studio or any other place you meet people. In-person meeting types can then offer it to bookers."
+msgstr "Přidejte kancelář, studio nebo jiné místo, kde se s lidmi scházíte. Typy osobních schůzek ho pak mohou nabízet rezervujícím."
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Add location"
+msgstr "Přidat místo"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Address and directions (optional)"
+msgstr "Adresa a popis cesty (nepovinné)"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not delete the location"
+msgstr "Místo se nepodařilo smazat"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not reorder the locations"
+msgstr "Pořadí míst se nepodařilo změnit"
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}? This cannot be undone."
+msgstr "Smazat %{name}? Tuto akci nelze vrátit zpět."
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete location"
+msgstr "Smazat místo"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Edit location"
+msgstr "Upravit místo"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Location deleted"
+msgstr "Místo smazáno"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Location saved"
+msgstr "Místo uloženo"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Locations"
+msgstr "Místa"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Locations reordered"
+msgstr "Pořadí míst uloženo"
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Meetings already booked there keep their address. This cannot be undone."
+msgstr "Schůzky, které tam už jsou zarezervované, si adresu ponechají. Tuto akci nelze vrátit zpět."
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr "Název"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "No saved locations yet"
+msgstr "Zatím žádná uložená místa"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
+#, elixir-autogen, elixir-format
+msgid "Not used by any meeting type yet"
+msgstr "Zatím ho nepoužívá žádný typ schůzky"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Save location"
+msgstr "Uložit místo"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Save the places you meet people once, then offer them on any in-person meeting type."
+msgstr "Uložte si jednou místa, kde se s lidmi scházíte, a pak je nabízejte u libovolného typu osobní schůzky."
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Street, postcode and city, plus anything that helps bookers find you: 3rd floor, ring the bell."
+msgstr "Ulice, PSČ a město a cokoli, co rezervujícím pomůže vás najít: 3. patro, zazvoňte."
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "These are then left with an in-person option that has no address, so their bookers will be told the address is arranged after booking:"
+msgstr "U těchto pak zůstane osobní možnost bez adresy, takže rezervujícím sdělíme, že se adresa domluví po rezervaci:"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
+#, elixir-autogen, elixir-format
+msgid "Used by %{count} meeting type"
+msgid_plural "Used by %{count} meeting types"
+msgstr[0] "Používá ho %{count} typ schůzky"
+msgstr[1] "Používají ho %{count} typy schůzek"
+msgstr[2] "Používá ho %{count} typů schůzek"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "e.g., Berlin office"
+msgstr "např. Kancelář Praha"

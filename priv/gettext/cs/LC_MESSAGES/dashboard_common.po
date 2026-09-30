@@ -632,3 +632,8 @@ msgstr "Tento čas spadá do vaší nepřítomnosti, takže ho nelze potvrdit, d
 #, elixir-autogen, elixir-format
 msgid "This time falls within your time off. Change or remove the time off to confirm it."
 msgstr "Tento čas spadá do vaší nepřítomnosti. Upravte nebo odeberte nepřítomnost, abyste ho mohli potvrdit."
+
+#: lib/tymeslot_web/helpers/page_titles.ex
+#, elixir-autogen, elixir-format
+msgid "Locations"
+msgstr "Místa"

@@ -1,0 +1,255 @@
+defmodule TymeslotWeb.Dashboard.Locations.LocationsComponentTest do
+  @moduledoc """
+  The Locations page: the organiser's saved in-person locations, added,
+  edited, reordered and deleted from the dashboard. Driven through the real
+  dashboard LiveView and read back through `Tymeslot.Venues`.
+  """
+  use TymeslotWeb.LiveCase, async: false
+
+  @moduletag :meeting_types
+  @moduletag :live
+
+  import Tymeslot.DashboardTestHelpers
+  import Tymeslot.Factory
+
+  alias Tymeslot.MeetingTypes
+  alias Tymeslot.Venues
+
+  setup :setup_dashboard_user
+
+  defp open(conn) do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/locations")
+    view
+  end
+
+  # Saving and deleting flash through the parent LiveView; draining its
+  # mailbox makes the reload they trigger observable.
+  defp drain(view), do: :sys.get_state(view.pid)
+
+  describe "with no saved locations" do
+    test "explains the page and offers to add one", %{conn: conn} do
+      view = open(conn)
+
+      assert has_element?(view, "[data-testid='locations-empty']", "No saved locations yet")
+
+      view |> element("[data-testid='add-venue']") |> render_click()
+
+      assert has_element?(view, "#venue-form")
+    end
+  end
+
+  describe "adding a location" do
+    test "saves it and lists it", %{conn: conn, user: user} do
+      view = open(conn)
+      view |> element("[data-testid='add-venue']") |> render_click()
+
+      view
+      |> form("#venue-form", %{
+        "venue" => %{"name" => "Berlin office", "description" => "Friedrichstrasse 1\n3rd floor"}
+      })
+      |> render_submit()
+
+      drain(view)
+
+      assert [venue] = Venues.list_venues(user.id)
+      assert venue.name == "Berlin office"
+      assert venue.description == "Friedrichstrasse 1\n3rd floor"
+      assert has_element?(view, "[data-testid='venue-card']", "Berlin office")
+      refute has_element?(view, "#venue-form")
+    end
+
+    test "keeps the form open with the error for a name already used", %{conn: conn, user: user} do
+      insert(:venue, user: user, name: "Studio")
+      view = open(conn)
+      view |> element("[data-testid='add-venue']") |> render_click()
+
+      html = view |> form("#venue-form", %{"venue" => %{"name" => "Studio"}}) |> render_submit()
+
+      assert html =~ "has already been taken"
+      assert has_element?(view, "#venue-form")
+      assert [_only] = Venues.list_venues(user.id)
+    end
+  end
+
+  describe "editing a location" do
+    test "saves the new name and address", %{conn: conn, user: user} do
+      venue = insert(:venue, user: user, name: "Studio", description: "Old Street 1")
+      view = open(conn)
+
+      view |> element("[phx-click='edit_venue'][phx-value-id='#{venue.id}']") |> render_click()
+
+      assert has_element?(view, "#venue-form input[value='Studio']")
+
+      view
+      |> form("#venue-form", %{
+        "venue" => %{"name" => "The studio", "description" => "New Street 2"}
+      })
+      |> render_submit()
+
+      drain(view)
+
+      assert {:ok, %{name: "The studio", description: "New Street 2"}} =
+               Venues.get_venue(user.id, venue.id)
+
+      assert has_element?(view, "[data-testid='venue-card']", "The studio")
+    end
+  end
+
+  describe "the list" do
+    test "shows only the organiser's own locations, with how many meeting types use each",
+         %{conn: conn, user: user} do
+      used = insert(:venue, user: user, name: "Berlin office")
+      insert(:venue, user: user, name: "Munich office")
+      insert(:venue, name: "Somebody else's office")
+
+      insert(:meeting_type,
+        user: user,
+        name: "Consultation",
+        locations: [in_person_location([used])]
+      )
+
+      view = open(conn)
+
+      assert has_element?(
+               view,
+               "[data-venue-id='#{used.id}'] [data-testid='venue-usage']",
+               "Used by 1 meeting type"
+             )
+
+      assert has_element?(view, "[data-testid='venue-card']", "Munich office")
+      assert has_element?(view, "[data-testid='venue-card']", "Not used by any meeting type yet")
+      refute has_element?(view, "[data-testid='venue-card']", "Somebody else's office")
+    end
+  end
+
+  describe "reordering locations" do
+    test "dragging saves the new order, which the page then shows", %{conn: conn, user: user} do
+      berlin = insert(:venue, user: user, name: "Berlin office", position: 0)
+      munich = insert(:venue, user: user, name: "Munich office", position: 1)
+      hamburg = insert(:venue, user: user, name: "Hamburg office", position: 2)
+      view = open(conn)
+
+      view
+      |> element("#locations-list")
+      |> render_hook("reorder", %{"ids" => [hamburg.id, berlin.id, munich.id]})
+
+      drain(view)
+
+      assert ["Hamburg office", "Berlin office", "Munich office"] =
+               user.id |> Venues.list_venues() |> Enum.map(& &1.name)
+
+      shown =
+        view
+        |> render()
+        |> Floki.parse_document!()
+        |> Floki.attribute("[data-testid='venue-card']", "data-venue-id")
+
+      assert shown == Enum.map([hamburg, berlin, munich], &to_string(&1.id))
+    end
+
+    test "an id that is not the organiser's changes nothing of theirs or anyone's",
+         %{conn: conn, user: user} do
+      berlin = insert(:venue, user: user, name: "Berlin office", position: 0)
+      munich = insert(:venue, user: user, name: "Munich office", position: 1)
+      foreign = insert(:venue, name: "Somebody else's office", position: 3)
+      view = open(conn)
+
+      view
+      |> element("#locations-list")
+      |> render_hook("reorder", %{"ids" => [foreign.id, berlin.id, munich.id]})
+
+      drain(view)
+
+      assert ["Berlin office", "Munich office"] =
+               user.id |> Venues.list_venues() |> Enum.map(& &1.name)
+
+      assert [%{position: 3}] = Venues.list_venues(foreign.user_id)
+    end
+  end
+
+  describe "deleting a location" do
+    test "asks first, then removes one no meeting type offers", %{conn: conn, user: user} do
+      venue = insert(:venue, user: user, name: "Studio")
+      view = open(conn)
+
+      view |> element("[phx-click='delete_venue'][phx-value-id='#{venue.id}']") |> render_click()
+
+      assert has_element?(view, "#delete-venue-modal", "Delete Studio?")
+      refute has_element?(view, "[data-testid='venue-in-use']")
+
+      view |> element("[data-testid='confirm-delete-venue']") |> render_click()
+      drain(view)
+
+      assert {:error, :not_found} = Venues.get_venue(user.id, venue.id)
+      refute has_element?(view, "[data-testid='venue-card']")
+      refute has_element?(view, "#delete-venue-modal")
+    end
+
+    test "cancelling keeps the location", %{conn: conn, user: user} do
+      venue = insert(:venue, user: user, name: "Studio")
+      view = open(conn)
+
+      view |> element("[phx-click='delete_venue'][phx-value-id='#{venue.id}']") |> render_click()
+      view |> element("#delete-venue-modal [phx-click='close_delete_venue']") |> render_click()
+
+      refute has_element?(view, "#delete-venue-modal")
+      assert {:ok, _still_there} = Venues.get_venue(user.id, venue.id)
+    end
+
+    test "warns before deleting one a meeting type offers, and deleting it removes it from that meeting type",
+         %{conn: conn, user: user} do
+      venue = insert(:venue, user: user, name: "Studio")
+      other = insert(:venue, user: user, name: "Berlin office")
+
+      only_here =
+        insert(:meeting_type,
+          user: user,
+          name: "Consultation",
+          locations: [in_person_location([venue])]
+        )
+
+      also_elsewhere =
+        insert(:meeting_type,
+          user: user,
+          name: "Workshop",
+          locations: [in_person_location([venue, other])]
+        )
+
+      view = open(conn)
+
+      view |> element("[phx-click='delete_venue'][phx-value-id='#{venue.id}']") |> render_click()
+
+      assert has_element?(view, "[data-testid='venue-in-use']", "Consultation")
+      assert has_element?(view, "[data-testid='venue-in-use']", "Workshop")
+      assert has_element?(view, "[data-testid='venue-left-without']", "Consultation")
+      refute has_element?(view, "[data-testid='venue-left-without']", "Workshop")
+      assert {:ok, _still_there} = Venues.get_venue(user.id, venue.id)
+
+      view |> element("[data-testid='confirm-delete-venue']") |> render_click()
+      drain(view)
+
+      assert {:error, :not_found} = Venues.get_venue(user.id, venue.id)
+      assert [%{name: "Berlin office"}] = Venues.list_venues(user.id)
+
+      assert [%{venue_ids: []}] =
+               MeetingTypes.get_meeting_type(only_here.id, user.id).locations
+
+      assert [%{venue_ids: [other_id]}] =
+               MeetingTypes.get_meeting_type(also_elsewhere.id, user.id).locations
+
+      assert other_id == other.id
+    end
+
+    test "does not open for a location that is not the organiser's", %{conn: conn} do
+      foreign = insert(:venue, name: "Somebody else's office")
+      view = open(conn)
+
+      view
+      |> with_target("[data-testid='locations-page']")
+      |> render_click("delete_venue", %{"id" => to_string(foreign.id)})
+
+      refute has_element?(view, "#delete-venue-modal")
+      assert {:ok, _untouched} = Venues.get_venue(foreign.user_id, foreign.id)
+    end
+  end
+end

@@ -626,3 +626,8 @@ msgstr "Questo orario rientra nella tua assenza, quindi non può essere conferma
 #, elixir-autogen, elixir-format
 msgid "This time falls within your time off. Change or remove the time off to confirm it."
 msgstr "Questo orario rientra nella tua assenza. Modifica o rimuovi l'assenza per confermarlo."
+
+#: lib/tymeslot_web/helpers/page_titles.ex
+#, elixir-autogen, elixir-format
+msgid "Locations"
+msgstr "Sedi"
