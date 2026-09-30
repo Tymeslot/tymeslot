@@ -57,7 +57,7 @@ defmodule Tymeslot.Venues.VenueSchema do
     |> validate_required([:name])
     |> validate_length(:name, max: @name_max_length)
     |> validate_length(:description, max: @description_max_length)
-    |> unique_constraint([:user_id, :name], error_key: :name)
+    |> unique_constraint(:name, name: :venues_user_id_lower_name_index)
     |> foreign_key_constraint(:user_id)
   end
 

@@ -17,6 +17,10 @@ defmodule Tymeslot.Venues do
   alias Tymeslot.Venues.VenueQueries
   alias Tymeslot.Venues.VenueSchema
 
+  # The largest value a PostgreSQL bigint id can hold; a larger one cannot
+  # even be sent as a query parameter.
+  @max_id 9_223_372_036_854_775_807
+
   @typedoc "A venue as the booking page and the location resolver see it."
   @type choice :: %{id: integer(), name: String.t(), description: String.t() | nil}
 
@@ -86,15 +90,22 @@ defmodule Tymeslot.Venues do
   def delete_venue(%VenueSchema{} = venue), do: VenueQueries.delete_venue(venue)
 
   @doc """
-  Whether every id in `ids` is one of the owner's venues. True for no ids at
-  all: an in-person location listing none is valid.
+  Whether every id in `ids` is one of the owner's venues. Ids may arrive as
+  strings; one that is not a valid id makes the answer false. True for no
+  ids at all: an in-person location listing none is valid.
   """
-  @spec owns_all?(integer(), [integer()]) :: boolean()
+  @spec owns_all?(integer(), [integer() | String.t()]) :: boolean()
   def owns_all?(_user_id, []), do: true
 
   def owns_all?(user_id, ids) when is_integer(user_id) and is_list(ids) do
-    unique = Enum.uniq(ids)
-    VenueQueries.count_owned(user_id, unique) == length(unique)
+    parsed = Enum.map(ids, &parse_id/1)
+
+    if Enum.member?(parsed, nil) do
+      false
+    else
+      unique = Enum.uniq(parsed)
+      VenueQueries.count_owned(user_id, unique) == length(unique)
+    end
   end
 
   @doc "A venue as the booking page and the resolver see it."
@@ -128,11 +139,11 @@ defmodule Tymeslot.Venues do
     |> Enum.join(", ")
   end
 
-  defp parse_id(id) when is_integer(id) and id > 0, do: id
+  defp parse_id(id) when is_integer(id) and id > 0 and id <= @max_id, do: id
 
   defp parse_id(id) when is_binary(id) do
     case Integer.parse(String.trim(id)) do
-      {parsed, ""} when parsed > 0 -> parsed
+      {parsed, ""} when parsed > 0 and parsed <= @max_id -> parsed
       _other -> nil
     end
   end

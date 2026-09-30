@@ -35,7 +35,9 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
       timestamps(type: :utc_datetime)
     end
 
-    create(unique_index(:venues, [:user_id, :name]))
+    # Names are unique per owner regardless of case, so "Studio" and
+    # "studio" cannot both appear in the owner's picker.
+    create(unique_index(:venues, [:user_id, "lower(name)"], name: :venues_user_id_lower_name_index))
 
     alter table(:meetings) do
       add(:venue_id, references(:venues, on_delete: :nilify_all))

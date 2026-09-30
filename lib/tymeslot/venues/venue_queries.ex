@@ -20,6 +20,8 @@ defmodule Tymeslot.Venues.VenueQueries do
 
   @doc "The position a new venue of the owner takes: after all the others."
   @spec next_position(integer()) :: non_neg_integer()
+  # Concurrent creates may tie on position, which is harmless (ties break by
+  # id), so there is no unique index on position.
   def next_position(user_id) do
     highest =
       Repo.one(from(v in VenueSchema, where: v.user_id == ^user_id, select: max(v.position)))
@@ -44,22 +46,31 @@ defmodule Tymeslot.Venues.VenueQueries do
     now = DateTime.utc_now(:second)
 
     Repo.transaction(fn ->
+      # Lock the owner's rows in one fixed order first, so two concurrent
+      # reorders queue behind each other instead of deadlocking.
+      Repo.all(
+        from(v in VenueSchema,
+          where: v.user_id == ^user_id,
+          order_by: v.id,
+          lock: "FOR UPDATE",
+          select: v.id
+        )
+      )
+
       current = user_id |> list_for_user() |> Enum.map(& &1.id)
       listed = Enum.filter(venue_ids, &(&1 in current))
       ordered = listed ++ (current -- listed)
 
       ordered
       |> Enum.with_index()
-      |> Enum.map(fn {venue_id, index} ->
-        {count, _returned} =
-          Repo.update_all(
-            from(v in VenueSchema, where: v.id == ^venue_id and v.user_id == ^user_id),
-            set: [position: index, updated_at: now]
-          )
-
-        count
+      |> Enum.each(fn {venue_id, index} ->
+        Repo.update_all(
+          from(v in VenueSchema, where: v.id == ^venue_id and v.user_id == ^user_id),
+          set: [position: index, updated_at: now]
+        )
       end)
-      |> Enum.sum()
+
+      length(ordered)
     end)
   end
 

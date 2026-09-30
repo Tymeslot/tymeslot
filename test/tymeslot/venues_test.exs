@@ -60,6 +60,14 @@ defmodule Tymeslot.VenuesTest do
       assert %{name: ["has already been taken"]} = errors_on(changeset)
     end
 
+    test "refuses a second venue whose name differs only in case" do
+      user = insert(:user)
+
+      assert {:ok, _first} = Venues.create_venue(user.id, %{"name" => "Studio"})
+      assert {:error, changeset} = Venues.create_venue(user.id, %{"name" => "studio"})
+      assert %{name: ["has already been taken"]} = errors_on(changeset)
+    end
+
     test "lets two owners each have a venue with the same name" do
       assert {:ok, _first} = Venues.create_venue(insert(:user).id, %{"name" => "Studio"})
       assert {:ok, _second} = Venues.create_venue(insert(:user).id, %{"name" => "Studio"})
@@ -140,6 +148,7 @@ defmodule Tymeslot.VenuesTest do
       assert {:ok, 3} = Venues.reorder_venues(ctx.user.id, [ctx.hamburg.id, "not-an-id"])
 
       assert names(ctx.user) == ["Hamburg office", "Berlin office", "Munich office"]
+      assert ctx.user.id |> Venues.list_venues() |> Enum.map(& &1.position) == [0, 1, 2]
     end
   end
 
@@ -160,6 +169,13 @@ defmodule Tymeslot.VenuesTest do
     test "does not get a venue from an id that is not a number" do
       assert {:error, :not_found} = Venues.get_venue(insert(:user).id, "office")
     end
+
+    test "does not get a venue from an id beyond the database's range" do
+      user = insert(:user)
+
+      assert {:error, :not_found} = Venues.get_venue(user.id, "99999999999999999999")
+      assert {:error, :not_found} = Venues.get_venue(user.id, 99_999_999_999_999_999_999)
+    end
   end
 
   describe "update_venue/2" do
@@ -171,6 +187,22 @@ defmodule Tymeslot.VenuesTest do
 
       assert updated.name == "The studio"
       assert updated.description == nil
+    end
+
+    test "refuses a blank name" do
+      venue = insert(:venue)
+
+      assert {:error, changeset} = Venues.update_venue(venue, %{"name" => "  "})
+      assert %{name: ["can't be blank"]} = errors_on(changeset)
+    end
+
+    test "refuses a name another of the owner's venues has" do
+      user = insert(:user)
+      insert(:venue, user: user, name: "Studio")
+      venue = insert(:venue, user: user, name: "Office")
+
+      assert {:error, changeset} = Venues.update_venue(venue, %{"name" => "Studio"})
+      assert %{name: ["has already been taken"]} = errors_on(changeset)
     end
 
     test "cannot move a venue to another owner" do
@@ -208,6 +240,32 @@ defmodule Tymeslot.VenuesTest do
 
       refute Venues.owns_all?(user.id, [own.id, foreign.id])
       refute Venues.owns_all?(user.id, [own.id, foreign.id + 1_000_000])
+    end
+
+    test "accepts an owned venue's id given as a string" do
+      venue = insert(:venue)
+
+      assert Venues.owns_all?(venue.user_id, [to_string(venue.id)])
+    end
+
+    test "is false for an id that is not a valid id" do
+      venue = insert(:venue)
+
+      refute Venues.owns_all?(venue.user_id, ["abc"])
+      refute Venues.owns_all?(venue.user_id, [venue.id, "99999999999999999999"])
+      refute Venues.owns_all?(venue.user_id, [venue.id, 99_999_999_999_999_999_999])
+    end
+  end
+
+  describe "to_choice/1" do
+    test "is the venue's id, name and description" do
+      venue = insert(:venue, name: "Studio", description: "Old Street 1")
+
+      assert Venues.to_choice(venue) == %{
+               id: venue.id,
+               name: "Studio",
+               description: "Old Street 1"
+             }
     end
   end
 
