@@ -46,6 +46,7 @@ defmodule TymeslotWeb.Session.LoginComponent do
         <:form>
           <.auth_form
             id="login-form"
+            novalidate
             action="/auth/session"
             method="POST"
             loading={@loading}

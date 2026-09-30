@@ -147,6 +147,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
           phx-submit="save"
           phx-target={@myself}
           class="space-y-4"
+          novalidate
         >
           <.choice_toggle
             id="location_kind"

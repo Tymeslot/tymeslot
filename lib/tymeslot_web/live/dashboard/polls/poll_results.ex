@@ -199,6 +199,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
       phx-target={@myself}
       class="space-y-4"
       data-testid="poll-details-form"
+      novalidate
     >
       <Forms.input
         type="text"

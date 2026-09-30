@@ -104,6 +104,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
         }
         phx-target={@parent_component}
         class="space-y-8"
+        novalidate
       >
         <%!-- Name Field --%>
         <div class="card-glass">
