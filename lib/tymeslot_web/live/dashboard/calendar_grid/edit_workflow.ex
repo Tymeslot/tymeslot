@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.RecurrenceScope
+  alias Tymeslot.CalendarGrid.WriteGuardian
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar
@@ -153,15 +154,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   If `fun` raises, throws or exits, `{tag, crash_result}` is sent instead, so
   the handler for `tag` still hears back and an optimistic update on screen is
   never left standing without an answer.
+
+  With `report_to_guardian: true` in `opts`, `{tag, result}` goes first to
+  this LiveView's `Tymeslot.CalendarGrid.WriteGuardian`, looked up once
+  `fun` returns, which finishes the grid's queued writes should this
+  LiveView, or its grid, be gone by then.
   """
-  @spec run_async(Phoenix.LiveView.Socket.t(), atom(), (-> term()), term()) ::
+  @spec run_async(Phoenix.LiveView.Socket.t(), atom(), (-> term()), term(), keyword()) ::
           Phoenix.LiveView.Socket.t()
-  def run_async(socket, tag, fun, crash_result) when is_atom(tag) and is_function(fun, 0) do
+  def run_async(socket, tag, fun, crash_result, opts \\ [])
+      when is_atom(tag) and is_function(fun, 0) do
     lv_pid = self()
+    report_to_guardian? = Keyword.get(opts, :report_to_guardian, false)
 
     {:ok, _pid} =
       Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
-        send(lv_pid, {tag, run_guarded(tag, fun, crash_result)})
+        message = {tag, run_guarded(tag, fun, crash_result)}
+
+        if report_to_guardian?,
+          do: WriteGuardian.report(lv_pid, message),
+          else: send(lv_pid, message)
       end)
 
     socket
@@ -262,7 +274,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
             move_failure(event, reason, series)
         end
       end,
-      move_failure(event, :crashed, series)
+      move_failure(event, :crashed, series),
+      # A whole-series move holds the series' other writes until it
+      # answers (see `EventWrites.series_moving/2`), so its answer goes to
+      # their guardian too.
+      report_to_guardian: series != []
     )
   end
 
