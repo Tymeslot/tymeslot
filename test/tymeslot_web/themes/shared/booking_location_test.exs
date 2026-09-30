@@ -125,12 +125,18 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocationTest do
 
   describe "submitted_venue_id/1 on a reschedule" do
     # A meeting booked at the offices location, at a venue (99) the location
-    # no longer offers, so the picker falls back to its first venue.
+    # no longer offers, so the picker opens with no venue chosen.
     defp rescheduling(overrides \\ %{}) do
       Map.merge(
         %{
           is_rescheduling: true,
-          reschedule_location: %{option_id: "loc-offices", venue_id: 99},
+          selected_venue_id: nil,
+          reschedule_location: %{
+            option_id: "loc-offices",
+            venue_id: 99,
+            location: "Hamburg office (Jungfernstieg 3)",
+            address_to_arrange: false
+          },
           location_options: [offices(), arranged(), hq()],
           location_venue_choices: %{"loc-offices" => [@berlin, @munich], "loc-hq" => [@munich]}
         },
@@ -195,7 +201,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocationTest do
       back =
         picked |> BookingLocation.choose("loc-arranged") |> BookingLocation.choose("loc-offices")
 
-      assert back.assigns.selected_venue_id == 1
+      assert back.assigns.selected_venue_id == nil
       assert BookingLocation.submitted_venue_id(back.assigns) == nil
     end
   end
@@ -211,8 +217,9 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocationTest do
                "In person"
     end
 
-    test "is nil on a reschedule whose venue the booker did not pick, which the meeting keeps" do
-      assert BookingLocation.chosen_display(assigns(rescheduling())) == nil
+    test "is the meeting's own address on a reschedule whose venue the booker did not pick" do
+      assert BookingLocation.chosen_display(assigns(rescheduling())) ==
+               "Hamburg office (Jungfernstieg 3)"
     end
   end
 
@@ -237,6 +244,60 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocationTest do
                  is_rescheduling: true
                })
              )
+    end
+  end
+
+  describe "kept_location/1" do
+    # A time-only reschedule on the meeting's own location: nothing about the
+    # location is submitted, so the meeting keeps what it stores.
+    test "is the meeting's stored location while the booker has picked no venue" do
+      assert BookingLocation.kept_location(assigns(rescheduling())) ==
+               %{location: "Hamburg office (Jungfernstieg 3)", address_to_arrange: false}
+
+      refute BookingLocation.arranged_after_booking?(assigns(rescheduling()))
+    end
+
+    test "keeps a meeting to be arranged even when its location now offers a venue" do
+      to_arrange =
+        rescheduling(%{
+          reschedule_location: %{
+            option_id: "loc-hq",
+            venue_id: nil,
+            location: "Headquarters",
+            address_to_arrange: true
+          },
+          selected_location_id: "loc-hq"
+        })
+
+      assert BookingLocation.kept_location(assigns(to_arrange)).address_to_arrange
+      assert BookingLocation.arranged_after_booking?(assigns(to_arrange))
+      assert BookingLocation.chosen_display(assigns(to_arrange)) == "Headquarters"
+    end
+
+    test "shows no venue chosen on the meeting's location, and yields once the booker picks one" do
+      # Back from another location, the picker does not fall back to the
+      # first venue: nothing is chosen until the booker picks.
+      back =
+        rescheduling(%{selected_venue_id: 1})
+        |> socket()
+        |> BookingLocation.choose("loc-arranged")
+        |> BookingLocation.choose("loc-offices")
+
+      assert back.assigns.selected_venue_id == nil
+      assert BookingLocation.kept_location(back.assigns)
+
+      picked = BookingLocation.apply_event(back, :select_venue, "2")
+
+      assert BookingLocation.kept_location(picked.assigns) == nil
+      assert BookingLocation.chosen_display(picked.assigns) == "Munich office"
+    end
+
+    test "is nil on another location, and on a new booking" do
+      moved = rescheduling() |> socket() |> BookingLocation.choose("loc-arranged")
+
+      assert BookingLocation.kept_location(moved.assigns) == nil
+      assert BookingLocation.arranged_after_booking?(moved.assigns)
+      assert BookingLocation.kept_location(assigns()) == nil
     end
   end
 

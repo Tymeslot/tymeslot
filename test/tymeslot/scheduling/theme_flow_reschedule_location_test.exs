@@ -30,6 +30,23 @@ defmodule Tymeslot.Scheduling.ThemeFlowRescheduleLocationTest do
     assert venue_id == venue.id
   end
 
+  test "carries the location the meeting stores, which a time-only reschedule keeps" do
+    user = insert(:user)
+
+    meeting =
+      insert(:meeting,
+        organizer_user_id: user.id,
+        organizer_email: user.email,
+        location: "Our offices",
+        location_kind: "in_person",
+        location_option_id: "loc-offices",
+        address_to_arrange: true
+      )
+
+    assert %{location: "Our offices", address_to_arrange: true, venue_id: nil} =
+             ThemeFlow.reschedule_location_choice(meeting.uid, user.id)
+  end
+
   test "is nil for a meeting that is not the organiser's" do
     meeting = insert(:meeting, organizer_user_id: insert(:user).id)
 

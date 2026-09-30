@@ -12,7 +12,9 @@ defmodule TymeslotWeb.SavedLocationsJourneyTest do
     3. An in-person location without a venue tells the booker the address
        will be arranged: on the booking step, on the confirmation and in the
        email, while the host's email words it for the host. On every theme.
-    4. A reschedule moves the meeting to another venue.
+    4. A reschedule moves the meeting to another venue, and a time-only one
+       keeps it where it is, as the booking step and confirmation say. On
+       every theme.
     5. Deleting a location a meeting type offers, and a meeting is booked at:
        the Locations page warns first, the booked meeting keeps its address,
        and the next booker is told the address will be arranged.
@@ -164,6 +166,26 @@ defmodule TymeslotWeb.SavedLocationsJourneyTest do
     assert [meeting] = Repo.all_by(MeetingSchema, attendee_email: email)
     meeting
   end
+
+  # Reschedules `meeting` to the first free slot without touching the
+  # location picker: the booking step as rendered, the confirmation, and the
+  # meeting as the reschedule left it.
+  defp reschedule_time_only(ctx, meeting) do
+    view =
+      navigate_to_booking_form(ctx.conn, ctx.profile, nil, reschedule_meeting_uid: meeting.uid)
+
+    booking_step = render(view)
+    submit(view, meeting.attendee_email)
+
+    wait_until(fn ->
+      Repo.get!(MeetingSchema, meeting.id).start_time != ctx.original_start
+    end)
+
+    {booking_step, render(view), Repo.get!(MeetingSchema, meeting.id)}
+  end
+
+  defp within(html, selector),
+    do: html |> Floki.parse_document!() |> Floki.find(selector) |> Floki.text()
 
   defp confirmation_email(meeting, :attendee) do
     AppointmentConfirmation.render(
@@ -403,6 +425,147 @@ defmodule TymeslotWeb.SavedLocationsJourneyTest do
 
       # Moved, not rebooked.
       assert [_only] = Repo.all_by(MeetingSchema, attendee_email: "rebook@example.com")
+    end
+  end
+
+  for {theme_name, theme_id} <- @themes do
+    describe "#{theme_name}: journey 4, a time-only reschedule keeps the meeting where it is" do
+      setup %{user: user} do
+        berlin =
+          insert(:venue, user: user, name: "Berlin office", description: "Friedrichstrasse 1")
+
+        munich = insert(:venue, user: user, name: "Munich office", description: "Marienplatz 8")
+
+        integration =
+          insert(:video_integration,
+            user: user,
+            name: "Zoom",
+            provider: "mirotalk",
+            is_active: true
+          )
+
+        start = DateTime.utc_now() |> DateTime.add(7, :day) |> DateTime.truncate(:second)
+
+        # The location now offers `venues`; the meeting was booked there
+        # with `meeting_attrs`, and a video option makes the picker show.
+        book = fn venues, meeting_attrs ->
+          meeting_type =
+            insert(:meeting_type,
+              user: user,
+              duration_minutes: 30,
+              name: "Consultation",
+              is_active: true,
+              allow_video: true,
+              video_integration: integration,
+              locations: [
+                in_person_location(venues, id: "loc-offices", label: "Our offices"),
+                video_location(integration, id: "loc-video", label: "Video call", position: 1)
+              ]
+            )
+
+          insert(
+            :meeting,
+            Map.merge(
+              %{
+                organizer_user_id: user.id,
+                meeting_type_id: meeting_type.id,
+                attendee_name: "Booker",
+                attendee_email: "kept@example.com",
+                attendee_timezone: "America/New_York",
+                start_time: start,
+                end_time: DateTime.add(start, 30, :minute),
+                duration: 30,
+                status: "confirmed",
+                location_kind: "in_person",
+                location_option_id: "loc-offices"
+              },
+              meeting_attrs
+            )
+          )
+        end
+
+        %{
+          profile: bookable_profile(user, unquote(theme_id)),
+          berlin: berlin,
+          munich: munich,
+          book: book,
+          original_start: start
+        }
+      end
+
+      @tag :capture_log
+      test "a meeting whose venue was deleted keeps its address, as the page says", ctx do
+        # Booked at a venue since deleted: the location now lists none.
+        meeting =
+          ctx.book.([], %{location: "Hamburg office (Jungfernstieg 3)", venue_id: nil})
+
+        {booking_step, confirmation, kept} = reschedule_time_only(ctx, meeting)
+
+        assert within(booking_step, "[data-testid='location-kept']") =~
+                 "Hamburg office (Jungfernstieg 3)"
+
+        refute booking_step =~ @note
+
+        assert within(confirmation, "[data-testid='confirmation-location']") =~
+                 "Hamburg office (Jungfernstieg 3)"
+
+        refute confirmation =~ @note
+
+        assert kept.location == "Hamburg office (Jungfernstieg 3)"
+        assert kept.address_to_arrange == false
+      end
+
+      @tag :capture_log
+      test "a meeting whose venue the location dropped opens with no venue chosen", ctx do
+        # The location now offers two other venues.
+        meeting =
+          ctx.book.([ctx.berlin, ctx.munich], %{
+            location: "Hamburg office (Jungfernstieg 3)",
+            venue_id: nil
+          })
+
+        {booking_step, confirmation, kept} = reschedule_time_only(ctx, meeting)
+
+        assert within(booking_step, "[data-testid='venue-field']") =~ "Berlin office"
+
+        assert booking_step
+               |> Floki.parse_document!()
+               |> Floki.find("[data-testid='venue-option'] input[checked]") ==
+                 []
+
+        assert within(booking_step, "[data-testid='location-kept']") =~
+                 "Hamburg office (Jungfernstieg 3)"
+
+        assert within(confirmation, "[data-testid='confirmation-location']") =~
+                 "Hamburg office (Jungfernstieg 3)"
+
+        assert kept.location == "Hamburg office (Jungfernstieg 3)"
+        assert kept.venue_id == nil
+      end
+
+      @tag :capture_log
+      test "a meeting booked without an address stays to be arranged after its location gains one",
+           ctx do
+        meeting =
+          ctx.book.([ctx.berlin], %{
+            location: "Our offices",
+            venue_id: nil,
+            address_to_arrange: true
+          })
+
+        {booking_step, confirmation, kept} = reschedule_time_only(ctx, meeting)
+
+        assert within(booking_step, "[data-testid='location-arranged-note']") =~ @note
+        refute within(booking_step, "[data-testid='location-field']") =~ "Friedrichstrasse 1"
+
+        assert within(confirmation, "[data-testid='confirmation-location']") =~ "Our offices"
+        assert within(confirmation, "[data-testid='location-arranged-note']") =~ @note
+        refute confirmation =~ "Friedrichstrasse 1"
+
+        assert kept.address_to_arrange == true
+        assert kept.venue_id == nil
+        assert kept.location == "Our offices"
+      end
     end
   end
 

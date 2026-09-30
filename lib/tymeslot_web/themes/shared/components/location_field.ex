@@ -14,7 +14,9 @@ defmodule TymeslotWeb.Themes.Shared.Components.LocationField do
 
   An in-person location's detail is its one venue's name and address, or,
   with no venue, the note that the address is arranged after booking
-  (`arranged_note/1`). `stated_location/1` renders the same for a meeting
+  (`arranged_note/1`). A reschedule that keeps the meeting where it is
+  (`kept_location`) states the meeting's own location instead: its address,
+  or the note when its address is still to be arranged. `stated_location/1` renders the same for a meeting
   type whose single in-person location asks nothing, so the booker still
   learns where the meeting is.
 
@@ -58,6 +60,13 @@ defmodule TymeslotWeb.Themes.Shared.Components.LocationField do
   attr :selected_video_id, :integer, default: nil
   attr :venue_choices, :list, default: [], doc: "the chosen option's venues, when in person"
   attr :selected_venue_id, :integer, default: nil
+
+  attr :kept_location, :map,
+    default: nil,
+    doc:
+      "on a reschedule that keeps the meeting where it is, its stored " <>
+        "`%{location: …, address_to_arrange: …}`"
+
   attr :location_phone, :string, default: ""
   attr :location_error, :string, default: nil
   attr :phone_required, :boolean, default: false
@@ -67,10 +76,17 @@ defmodule TymeslotWeb.Themes.Shared.Components.LocationField do
   def location_field(assigns) do
     selected = Enum.find(assigns.location_options, &(&1.id == assigns.selected_location_id))
 
+    in_person = match?(%LocationOption{kind: "in_person"}, selected)
+    kept = if in_person, do: assigns.kept_location
+
     assigns =
-      assigns
-      |> assign(:detail, detail_line(selected))
-      |> assign(:in_person, match?(%LocationOption{kind: "in_person"}, selected))
+      assign(assigns,
+        detail: detail_line(selected),
+        in_person: in_person,
+        kept: kept,
+        arranged:
+          if(kept, do: kept.address_to_arrange, else: in_person and assigns.venue_choices == [])
+      )
 
     ~H"""
     <div class="location-field" data-testid="location-field">
@@ -178,8 +194,18 @@ defmodule TymeslotWeb.Themes.Shared.Components.LocationField do
         </div>
       </fieldset>
 
-      <.venue_detail :if={@in_person and match?([_], @venue_choices)} venue={hd(@venue_choices)} />
-      <.arranged_note :if={@in_person and @venue_choices == []} />
+      <.venue_detail
+        :if={@in_person and is_nil(@kept) and match?([_], @venue_choices)}
+        venue={hd(@venue_choices)}
+      />
+      <p
+        :if={@kept && !@kept.address_to_arrange && @kept.location}
+        class="location-field__detail"
+        data-testid="location-kept"
+      >
+        {@kept.location}
+      </p>
+      <.arranged_note :if={@arranged} />
 
       <p :if={@detail} class="location-field__detail" data-testid="location-detail">
         {@detail}

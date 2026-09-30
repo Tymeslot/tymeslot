@@ -39,11 +39,14 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
 
   The venue follows the same rule within the meeting's own location
   (`:reschedule_location`). When the meeting's venue is no longer offered
-  (deleted, or dropped from its location), the picker opens on the
-  location's first venue, but that default is not submitted until the
-  booker picks a venue (`:venue_picked`): a time-only reschedule keeps the
-  meeting at the address it was booked for. Choosing another location is
-  itself a move, so there the venue the picker shows is submitted.
+  (deleted, or dropped from its location), or it was booked without one,
+  the picker opens with no venue chosen and nothing is submitted until the
+  booker picks one (`:venue_picked`): a time-only reschedule keeps the
+  meeting at the address it was booked for. Until then the page states that
+  kept location, as the meeting stores it (`kept_location/1`), rather than
+  whatever the location now offers, so it never promises an address the
+  reschedule will not write. Choosing another location is itself a move, so
+  there the venue the picker shows is submitted.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -112,8 +115,14 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
 
   # The meeting's own option and venue on a reschedule, which the venue
   # picker returns to and `submitted_venue_id/1` compares against.
-  defp reschedule_location(%{} = current),
-    do: %{option_id: current[:option_id], venue_id: current[:venue_id]}
+  defp reschedule_location(%{} = current) do
+    %{
+      option_id: current[:option_id],
+      venue_id: current[:venue_id],
+      location: current[:location],
+      address_to_arrange: current[:address_to_arrange] == true
+    }
+  end
 
   defp reschedule_location(nil), do: nil
 
@@ -132,7 +141,9 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
   # before, else the option's first. Nil when the option offers no venue.
   #
   # It counts as picked (see `submitted_venue_id/1`) when it is the booker's
-  # pick or the meeting's own venue; a fallback never does.
+  # pick or the meeting's own venue; a fallback never does. Within the
+  # meeting's own location on a reschedule a fallback is not even shown: the
+  # meeting stays where it is until the booker picks a venue.
   defp assign_selected_venue(socket, before) do
     picked = if before[:venue_picked] == true, do: before[:selected_venue_id]
     meeting_venue_id = socket.assigns[:reschedule_location][:venue_id]
@@ -142,10 +153,26 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
       Enum.find([picked, meeting_venue_id, before[:selected_venue_id]], &(&1 in ids)) ||
         List.first(ids)
 
+    venue_picked = not is_nil(selected) and selected in [picked, meeting_venue_id]
+
     socket
-    |> assign(:selected_venue_id, selected)
-    |> assign(:venue_picked, not is_nil(selected) and selected in [picked, meeting_venue_id])
+    |> assign(
+      :selected_venue_id,
+      if(venue_picked or not own_location?(socket.assigns), do: selected)
+    )
+    |> assign(:venue_picked, venue_picked)
   end
+
+  # Whether a reschedule's picker is on the location the meeting is at.
+  defp own_location?(%{
+         is_rescheduling: true,
+         reschedule_location: %{option_id: id},
+         selected_location_id: id
+       })
+       when is_binary(id),
+       do: true
+
+  defp own_location?(_assigns), do: false
 
   # A number the booker has typed this session wins over the one on the
   # meeting, for the same reason the selection does.
@@ -326,13 +353,43 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
   Whether this booking's in-person location has no venue, so the page says
   the address will be arranged after booking. False when nothing is being
   submitted, as on a reschedule that asked nothing: that meeting keeps the
-  location it has.
+  location it has. On a reschedule that keeps the meeting where it is
+  (`kept_location/1`), it is whatever the meeting records.
   """
   @spec arranged_after_booking?(map()) :: boolean()
   def arranged_after_booking?(assigns) do
-    not is_nil(submitted_option_id(assigns)) and in_person?(assigns) and
-      venue_choices(assigns) == []
+    case kept_location(assigns) do
+      %{address_to_arrange: arranged} ->
+        arranged
+
+      nil ->
+        not is_nil(submitted_option_id(assigns)) and in_person?(assigns) and
+          venue_choices(assigns) == []
+    end
   end
+
+  @doc """
+  The location a reschedule keeps, as the meeting stores it
+  (`%{location: …, address_to_arrange: …}`), or nil when the submission
+  places the meeting afresh.
+
+  That is a reschedule on the meeting's own in-person location with no venue
+  submitted: the server writes nothing about the location then
+  (`Tymeslot.Bookings.RescheduleLocation`), so the meeting keeps its address,
+  its venue and its arranged-after-booking flag, whatever the location offers
+  today.
+  """
+  @spec kept_location(map()) :: %{location: String.t() | nil, address_to_arrange: boolean()} | nil
+  def kept_location(
+        %{is_rescheduling: true, reschedule_location: %{option_id: id} = kept} = assigns
+      )
+      when is_binary(id) do
+    if submitted_option_id(assigns) == id and in_person?(assigns) and
+         is_nil(submitted_venue_id(assigns)),
+       do: %{location: kept[:location], address_to_arrange: kept[:address_to_arrange] == true}
+  end
+
+  def kept_location(_assigns), do: nil
 
   @doc """
   Whether the booking step states a single in-person location that asks
@@ -351,15 +408,18 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
   venue's `Tymeslot.Venues.display/1` for an in-person location with one,
   otherwise the option's own line.
 
+  A reschedule that keeps the meeting where it is shows the location the
+  meeting stores (`kept_location/1`).
+
   Nil when there is nothing to show: an ad-hoc booking with no meeting type,
-  a reschedule that asked nothing, whose location is the original meeting's
-  and not this session's picker state, or a reschedule whose venue the booker
-  did not pick, which the server resolves rather than the picker.
+  or a reschedule that asked nothing, whose location is the original
+  meeting's and not this session's picker state.
   """
   @spec chosen_display(map()) :: String.t() | nil
   def chosen_display(assigns) do
     cond do
       is_nil(submitted_option_id(assigns)) -> nil
+      kept = kept_location(assigns) -> kept.location
       venue_choices(assigns) != [] -> submitted_venue_display(assigns)
       option = selected(assigns) -> with_provider(option, assigns)
       true -> nil

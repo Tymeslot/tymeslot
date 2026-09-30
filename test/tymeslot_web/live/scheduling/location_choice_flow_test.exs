@@ -534,14 +534,14 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
 
     @tag :capture_log
     test "a venue no longer offered stays put when the booker only changes the time",
-         %{conn: conn, profile: profile, book: book, berlin: berlin, hamburg: hamburg} = ctx do
+         %{conn: conn, profile: profile, book: book, hamburg: hamburg} = ctx do
       meeting = book.(hamburg)
 
       view = navigate_to_booking_form(conn, profile, nil, reschedule_meeting_uid: meeting.uid)
 
-      # The picker falls back to the location's first venue, which the
-      # booker never chose, so it must not move the meeting there.
-      assert :sys.get_state(view.pid).socket.assigns.selected_venue_id == berlin.id
+      # The picker opens with no venue chosen: the location's first venue
+      # was never the booker's choice, so it must not move the meeting there.
+      assert :sys.get_state(view.pid).socket.assigns.selected_venue_id == nil
 
       moved = submit_reschedule(view, meeting, ctx.original_start)
 

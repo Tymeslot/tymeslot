@@ -167,6 +167,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
               selected_video_id={@selected_video_id}
               venue_choices={BookingLocation.venue_choices(assigns)}
               selected_venue_id={@selected_venue_id}
+              kept_location={BookingLocation.kept_location(assigns)}
               location_phone={@location_phone}
               location_error={@location_error}
               phone_required={BookingLocation.phone_required?(assigns)}
