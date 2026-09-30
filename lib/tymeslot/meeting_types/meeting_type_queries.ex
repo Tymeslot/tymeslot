@@ -289,9 +289,10 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   end
 
   @doc """
-  The owner's meeting types that list `venue_id` in any of their locations,
-  by name. The venue ids live inside the `locations` jsonb array, so this is
-  a containment test on each element.
+  The owner's meeting types that list `venue_id` in any of their in-person
+  locations, by name. The venue ids live inside the `locations` jsonb array,
+  so this is a containment test on each element; it matches JSON numbers
+  only, as `venue_usage_counts/1` counts them.
   """
   @spec list_using_venue(integer(), integer()) :: [MeetingTypeSchema.t()]
   def list_using_venue(user_id, venue_id) do
@@ -300,7 +301,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
         where: mt.user_id == ^user_id,
         where:
           fragment(
-            "EXISTS (SELECT 1 FROM unnest(?) AS loc WHERE loc -> 'venue_ids' @> jsonb_build_array(?::bigint))",
+            "EXISTS (SELECT 1 FROM unnest(?) AS loc WHERE loc ->> 'kind' = 'in_person' AND loc -> 'venue_ids' @> jsonb_build_array(?::bigint))",
             mt.locations,
             ^venue_id
           ),
@@ -310,25 +311,31 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   end
 
   @doc """
-  For each venue the owner's meeting types list, how many meeting types list
-  it. A meeting type listing a venue on two of its locations counts once.
-  Venues no meeting type lists are absent.
+  For each venue the owner's meeting types list on an in-person location, how
+  many meeting types list it. A meeting type listing a venue on two of its
+  locations counts once. Only ids stored as JSON numbers count, the same ones
+  `list_using_venue/2` matches. Venues no meeting type lists are absent.
   """
   @spec venue_usage_counts(integer()) :: %{integer() => pos_integer()}
   def venue_usage_counts(user_id) do
     %{rows: rows} =
       Repo.query!(
         """
-        SELECT venue.id::bigint, count(DISTINCT mt.id)
+        SELECT venue.id::text::bigint, count(DISTINCT mt.id)
         FROM meeting_types AS mt
         CROSS JOIN LATERAL unnest(mt.locations) AS loc
-        CROSS JOIN LATERAL jsonb_array_elements_text(
+        CROSS JOIN LATERAL jsonb_array_elements(
           CASE WHEN jsonb_typeof(loc -> 'venue_ids') = 'array'
             THEN loc -> 'venue_ids'
             ELSE '[]'::jsonb
           END
         ) AS venue(id)
         WHERE mt.user_id = $1
+          AND loc ->> 'kind' = 'in_person'
+          AND jsonb_typeof(venue.id) = 'number'
+          -- A fractional or oversized number is no venue id and would fail
+          -- the bigint cast.
+          AND venue.id::text ~ '^[0-9]{1,18}$'
         GROUP BY venue.id
         """,
         [user_id]

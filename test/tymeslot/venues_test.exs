@@ -9,6 +9,7 @@ defmodule Tymeslot.VenuesTest do
 
   import Tymeslot.Factory
 
+  alias Tymeslot.Repo
   alias Tymeslot.Venues
   alias Tymeslot.Venues.VenueSchema
 
@@ -280,6 +281,52 @@ defmodule Tymeslot.VenuesTest do
       assert Venues.usage_counts(venue.user_id) == %{}
       assert Venues.meeting_types_using(venue) == []
     end
+
+    test "tolerate a stored in-person location with no venue_ids key at all" do
+      user = insert(:user)
+      venue = insert(:venue, user: user)
+      meeting_type = insert(:meeting_type, user: user, name: "Legacy")
+
+      store_raw_locations(meeting_type, [
+        %{"id" => "loc-1", "kind" => "in_person", "label" => "In person", "position" => 0}
+      ])
+
+      assert Venues.usage_counts(user.id) == %{}
+      assert Venues.meeting_types_using(venue) == []
+    end
+
+    test "ignore venue_ids stored on a location that is not in person" do
+      user = insert(:user)
+      venue = insert(:venue, user: user)
+      meeting_type = insert(:meeting_type, user: user, name: "Stray")
+
+      store_raw_locations(meeting_type, [
+        %{"id" => "loc-1", "kind" => "video", "label" => "Video", "venue_ids" => [venue.id]},
+        %{"id" => "loc-2", "kind" => "custom", "label" => "Other", "venue_ids" => [venue.id]}
+      ])
+
+      assert Venues.usage_counts(user.id) == %{}
+      assert Venues.meeting_types_using(venue) == []
+      assert {:ok, _deleted} = Venues.delete_venue(venue)
+    end
+
+    test "count only numeric venue ids, as the delete check matches them" do
+      user = insert(:user)
+      venue = insert(:venue, user: user)
+      meeting_type = insert(:meeting_type, user: user, name: "Strings")
+
+      store_raw_locations(meeting_type, [
+        %{
+          "id" => "loc-1",
+          "kind" => "in_person",
+          "label" => "In person",
+          "venue_ids" => [to_string(venue.id), "office", 7.5]
+        }
+      ])
+
+      assert Venues.usage_counts(user.id) == %{}
+      assert Venues.meeting_types_using(venue) == []
+    end
   end
 
   describe "owns_all?/2" do
@@ -339,5 +386,14 @@ defmodule Tymeslot.VenuesTest do
 
       assert Venues.display(venue) == "Berlin office (Friedrichstrasse 1, 3rd floor)"
     end
+  end
+
+  # Writes the `locations` jsonb as given, bypassing the embedded schema, to
+  # stand in for rows an older or forged write left behind.
+  defp store_raw_locations(meeting_type, locations) do
+    Repo.query!("UPDATE meeting_types SET locations = $1::jsonb[] WHERE id = $2", [
+      locations,
+      meeting_type.id
+    ])
   end
 end
