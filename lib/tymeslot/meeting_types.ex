@@ -19,6 +19,7 @@ defmodule Tymeslot.MeetingTypes do
   alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Utils.UriUtils
+  alias Tymeslot.Venues
   require Logger
 
   @doc """
@@ -36,9 +37,27 @@ defmodule Tymeslot.MeetingTypes do
     to: LocationSelection,
     as: :choice_required?
 
+  @typedoc """
+  What a booker submitted about where to meet. Every key is optional, and
+  each is honoured only where the host's own meeting type offers it:
+
+    * `:option_id`, the location option chosen
+    * `:phone`, the booker's number, for a phone option that asks for it
+    * `:video_integration_id`, the provider picked within a video option
+    * `:venue_id`, the venue picked within an in-person option
+    * `:current_venue_id`, on a reschedule the meeting's own venue, kept
+      when `:venue_id` is not one the option offers
+  """
+  @type location_choice :: %{
+          optional(:option_id) => String.t() | nil,
+          optional(:phone) => String.t() | nil,
+          optional(:video_integration_id) => integer() | String.t() | nil,
+          optional(:venue_id) => integer() | String.t() | nil,
+          optional(:current_venue_id) => integer() | nil
+        }
+
   @doc """
-  Resolves the location option id a booker submitted, with the provider
-  they picked within a video option, into the meeting fields that follow
+  Resolves a booker's location choice into the meeting fields that follow
   from it.
 
   A video location can outlive an integration it names: the host
@@ -48,17 +67,34 @@ defmodule Tymeslot.MeetingTypes do
   none, and is booked without a room, just as a booking on a deactivated
   integration is. A deactivated integration still resolves: the room job
   checks it when it runs, and it may be switched back on by then.
+
+  An in-person location can likewise list a venue that has since gone. Only
+  venues that still exist are offered (`location_venue_choices/1`), so the
+  meeting lands on the one the booker picked while it is offered, otherwise
+  on the location's first remaining venue, or on none, as a booking whose
+  address is arranged afterwards.
   """
-  @spec resolve_location(
-          map() | nil,
-          String.t() | nil,
-          String.t() | nil,
-          integer() | String.t() | nil
-        ) :: LocationSelection.resolution()
-  def resolve_location(meeting_type, option_id, guest_phone, video_integration_id \\ nil) do
-    meeting_type
-    |> without_removed_video_integrations()
-    |> LocationSelection.resolve(option_id, guest_phone, video_integration_id)
+  @spec resolve_location(map() | nil, location_choice()) :: LocationSelection.resolution()
+  def resolve_location(meeting_type, choice) when is_map(choice) do
+    meeting_type = without_removed_video_integrations(meeting_type)
+
+    resolution =
+      LocationSelection.resolve(
+        meeting_type,
+        choice[:option_id],
+        choice[:phone],
+        choice[:video_integration_id]
+      )
+
+    venues =
+      meeting_type
+      |> location_venue_choices()
+      |> Map.get(resolution.location_option_id, [])
+
+    LocationSelection.place_at_venue(resolution, venues, [
+      choice[:venue_id],
+      choice[:current_venue_id]
+    ])
   end
 
   # Only a stored list can name a removed integration: the option a meeting
@@ -122,6 +158,40 @@ defmodule Tymeslot.MeetingTypes do
   end
 
   def location_video_choices(_meeting_type), do: %{}
+
+  @doc """
+  The venues the booker can pick between, per in-person location: a map
+  from option id to the owner's venues that option lists, as
+  `Tymeslot.Venues.choice/0` maps, in the organiser's library order (the
+  order dragged on the Locations page), so reordering the library reorders
+  every picker. The first is the one the picker opens on.
+
+  A venue that no longer exists, or is not the owner's, is left out, and a
+  location left with none is absent from the map: its address is arranged
+  after booking. Loaded once when the booking page mounts, next to
+  `location_video_choices/1`, so rendering runs no query.
+  """
+  @spec location_venue_choices(map() | nil) :: %{String.t() => [Venues.choice()]}
+  def location_venue_choices(%{user_id: user_id} = meeting_type) when is_integer(user_id) do
+    in_person =
+      meeting_type
+      |> LocationSelection.options()
+      |> Enum.filter(&(&1.kind == "in_person" and &1.venue_ids != []))
+
+    if in_person == [] do
+      %{}
+    else
+      library = user_id |> Venues.list_venues() |> Enum.map(&Venues.to_choice/1)
+
+      for option <- in_person,
+          choices = Enum.filter(library, &(&1.id in option.venue_ids)),
+          choices != [],
+          into: %{},
+          do: {option.id, choices}
+    end
+  end
+
+  def location_venue_choices(_meeting_type), do: %{}
 
   @doc """
   Gets all active meeting types for a user, creating defaults if none exist.

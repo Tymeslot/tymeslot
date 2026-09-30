@@ -38,7 +38,7 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
   ## The booker submits an id, never a location
 
   As on a new booking, everything the choice means is re-derived from the
-  host's own meeting type (`MeetingTypes.resolve_location/3`). Unlike a new
+  host's own meeting type (`MeetingTypes.resolve_location/2`). Unlike a new
   booking, an id the meeting type does not offer is ignored rather than
   resolved to the first option: a reschedule already has a location, and a
   stale or forged id must not move it anywhere.
@@ -164,12 +164,11 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
   defp chosen(meeting_type, %{location_option_id: option_id} = params)
        when is_binary(option_id) do
     if Enum.any?(MeetingTypes.location_options(meeting_type), &(&1.id == option_id)) do
-      MeetingTypes.resolve_location(
-        meeting_type,
-        option_id,
-        Map.get(params, :location_phone),
-        Map.get(params, :location_video_integration_id)
-      )
+      MeetingTypes.resolve_location(meeting_type, %{
+        option_id: option_id,
+        phone: Map.get(params, :location_phone),
+        video_integration_id: Map.get(params, :location_video_integration_id)
+      })
     end
   end
 

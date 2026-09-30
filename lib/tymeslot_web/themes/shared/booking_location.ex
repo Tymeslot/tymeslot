@@ -14,11 +14,11 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
   there. Only those ids cross the wire: everything
   the choice means (the location string, its kind, which video integration
   the room is created on) is derived server-side from the host's own stored
-  option by `Tymeslot.MeetingTypes.resolve_location/3`, so a forged id
+  option by `Tymeslot.MeetingTypes.resolve_location/2`, so a forged id
   resolves to a location the host already offers rather than one the booker
   invented.
 
-  The client-side check here is for fast feedback only. `resolve_location/3`
+  The client-side check here is for fast feedback only. `resolve_location/2`
   re-derives everything from the meeting type on submission regardless of
   what these assigns say.
 

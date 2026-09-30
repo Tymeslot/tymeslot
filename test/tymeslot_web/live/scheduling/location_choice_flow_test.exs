@@ -231,7 +231,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
       assert submit(view, "default@example.com") =~ "Meeting Confirmed"
 
       assert [meeting] = Repo.all_by(MeetingSchema, attendee_email: "default@example.com")
-      assert meeting.location == "Our office (12 High Street)"
+      assert meeting.location == "Our office"
       assert meeting.location_option_id == "loc-office"
     end
   end
@@ -354,7 +354,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
       assert submit(view, "single@example.com") =~ "Meeting Confirmed"
 
       assert [meeting] = Repo.all_by(MeetingSchema, attendee_email: "single@example.com")
-      assert meeting.location == "Our office (12 High Street)"
+      assert meeting.location == "Our office"
       assert meeting.location_kind == "in_person"
     end
   end
@@ -440,7 +440,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
 
       moved = submit_reschedule(view, meeting, original_start)
 
-      assert moved.location == "Our office (12 High Street)"
+      assert moved.location == "Our office"
       assert moved.location_option_id == "loc-office"
       assert moved.location_kind == "in_person"
       assert moved.attendee_phone == nil

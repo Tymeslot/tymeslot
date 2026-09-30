@@ -194,4 +194,54 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
              } = LocationSelection.resolve(nil, nil)
     end
   end
+
+  describe "in-person locations" do
+    test "resolve to their label alone, whatever details an old row carries" do
+      office =
+        option(
+          id: "loc-office",
+          kind: "in_person",
+          label: "Our office",
+          details: "12 High Street",
+          position: 0
+        )
+
+      assert %{location: "Our office", venue_id: nil} =
+               LocationSelection.resolve(%{locations: [office]}, "loc-office")
+    end
+  end
+
+  describe "place_at_venue/3" do
+    defp venue(id, name, description \\ nil), do: %{id: id, name: name, description: description}
+
+    defp at_the_office, do: LocationSelection.resolve(%{locations: [office()]}, "loc-office")
+
+    defp two_offices,
+      do: [venue(1, "Berlin office"), venue(2, "Munich office", "Marienplatz 8")]
+
+    test "places the booking at the venue the booker picked" do
+      assert %{venue_id: 2, location: "Munich office (Marienplatz 8)"} =
+               LocationSelection.place_at_venue(at_the_office(), two_offices(), [2])
+    end
+
+    test "accepts the pick as the string the form posts" do
+      assert %{venue_id: 2} =
+               LocationSelection.place_at_venue(at_the_office(), two_offices(), ["2"])
+    end
+
+    test "falls back to the first venue for an id the location does not offer" do
+      assert %{venue_id: 1, location: "Berlin office"} =
+               LocationSelection.place_at_venue(at_the_office(), two_offices(), [99])
+    end
+
+    test "takes the next preference when the first is not offered" do
+      assert %{venue_id: 2} =
+               LocationSelection.place_at_venue(at_the_office(), two_offices(), [99, 2])
+    end
+
+    test "leaves a location with no venues as its label, with no venue" do
+      assert %{venue_id: nil, location: "The office"} =
+               LocationSelection.place_at_venue(at_the_office(), [], [1])
+    end
+  end
 end

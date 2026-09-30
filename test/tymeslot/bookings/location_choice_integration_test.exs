@@ -59,7 +59,6 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
             id: "loc-office",
             kind: "in_person",
             label: "Our office",
-            details: "12 High Street",
             position: 0
           },
           video_location(integration, id: "loc-video", label: "Zoom", position: 1),
@@ -104,7 +103,7 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
       assert {:ok, meeting} =
                book(ctx.meeting_type, ctx.user, %{location_option_id: "loc-office"})
 
-      assert meeting.location == "Our office (12 High Street)"
+      assert meeting.location == "Our office"
       assert meeting.location_kind == "in_person"
       assert meeting.location_option_id == "loc-office"
       assert meeting.video_integration_id == nil
@@ -228,32 +227,89 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
       assert meeting.attendee_phone == nil
       assert meeting.location == "Zoom"
     end
+
+    test "a venue submitted against a location that is not in person is ignored", ctx do
+      venue = insert(:venue, user: ctx.user)
+
+      assert {:ok, meeting} =
+               book(ctx.meeting_type, ctx.user, %{
+                 location_option_id: "loc-video",
+                 location_venue_id: venue.id
+               })
+
+      assert meeting.venue_id == nil
+      assert meeting.location == "Zoom"
+    end
   end
 
   describe "a location as long as the host is allowed to write" do
     test "reaches the meeting intact rather than failing at the column", ctx do
-      details = String.duplicate("a", 500)
-      label = String.duplicate("b", 120)
+      name = String.duplicate("b", 120)
+      description = String.duplicate("a", 500)
+      venue = insert(:venue, user: ctx.user, name: name, description: description)
 
       long =
         insert(:meeting_type,
           user: ctx.user,
           name: "Long Address",
-          locations: [
-            %LocationOption{
-              id: "loc-long",
-              kind: "in_person",
-              label: label,
-              details: details,
-              position: 0
-            }
-          ]
+          locations: [in_person_location([venue], id: "loc-long", label: "Our office")]
         )
 
       assert {:ok, meeting} = book(long, ctx.user, %{location_option_id: "loc-long"})
 
-      assert meeting.location == "#{label} (#{details})"
+      assert meeting.location == "#{name} (#{description})"
       assert String.length(meeting.location) > 255
+    end
+  end
+
+  describe "an in-person location offering saved venues" do
+    setup %{user: user} do
+      berlin =
+        insert(:venue,
+          user: user,
+          name: "Berlin office",
+          description: "Friedrichstrasse 1\n3rd floor"
+        )
+
+      munich = insert(:venue, user: user, name: "Munich office", description: "Marienplatz 8")
+
+      venue_type =
+        insert(:meeting_type,
+          user: user,
+          name: "Office Visit",
+          duration_minutes: 30,
+          locations: [
+            in_person_location([berlin, munich], id: "loc-offices", label: "Our offices")
+          ]
+        )
+
+      %{berlin: berlin, munich: munich, venue_type: venue_type}
+    end
+
+    test "books the venue the booker picked and pins it on the meeting", ctx do
+      assert {:ok, meeting} =
+               book(ctx.venue_type, ctx.user, %{
+                 location_option_id: "loc-offices",
+                 location_venue_id: to_string(ctx.munich.id)
+               })
+
+      assert meeting.venue_id == ctx.munich.id
+      assert meeting.location == "Munich office (Marienplatz 8)"
+      assert meeting.location_kind == "in_person"
+      refute_enqueued(worker: VideoRoomWorker)
+    end
+
+    test "a venue the location does not offer books its first venue instead", ctx do
+      stranger = insert(:venue)
+
+      assert {:ok, meeting} =
+               book(ctx.venue_type, ctx.user, %{
+                 location_option_id: "loc-offices",
+                 location_venue_id: stranger.id
+               })
+
+      assert meeting.venue_id == ctx.berlin.id
+      assert meeting.location == "Berlin office (Friedrichstrasse 1, 3rd floor)"
     end
   end
 
