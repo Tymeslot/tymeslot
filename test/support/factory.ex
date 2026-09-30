@@ -36,6 +36,7 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Telegram.TelegramIntegrationSchema
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
   alias Tymeslot.Utils.UnguessableToken
+  alias Tymeslot.Venues.VenueSchema
   alias Tymeslot.Webhooks.WebhookDeliverySchema
   alias Tymeslot.Webhooks.WebhookSchema
 
@@ -189,6 +190,15 @@ defmodule Tymeslot.Factory do
       },
       attrs
     )
+  end
+
+  @spec venue_factory() :: Tymeslot.Venues.VenueSchema.t()
+  def venue_factory do
+    %VenueSchema{
+      name: sequence(:venue_name, &"Office #{&1}"),
+      description: "12 High Street",
+      user: build(:user)
+    }
   end
 
   @spec calendar_integration_factory() ::
