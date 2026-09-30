@@ -305,7 +305,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
          %{user: user} = ctx do
       berlin = insert(:venue, user: user, name: "Berlin office")
       gone = insert(:venue, user: user, name: "Closed office")
-      # Removed behind the meeting type's back, so its id is still listed.
+      # Deleting through `Venues` would also rewrite the meeting type, so this
+      # removes the row directly: it guards a mismatch between the library and
+      # a location's ids, not a path the product takes.
       Repo.delete!(gone)
 
       {view, meeting_type} =
@@ -387,6 +389,35 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
       assert location.venue_ids == [studio.id]
       # The page's own venue list has the new one too, so it is named here.
       assert render(view) =~ "Studio (Canal Street 5)"
+    end
+
+    test "+ New location does not make later edits to the meeting type go unsaved",
+         %{user: user} = ctx do
+      {view, meeting_type} = open_editor(ctx, [office()])
+      duration = ~s|input[name="meeting_type[duration]"]|
+
+      view |> element("[phx-click='switch_tab'][phx-value-tab='details']") |> render_click()
+      view |> element(duration) |> render_change(%{"meeting_type" => %{"duration" => "45"}})
+      assert reload(view, meeting_type, user).duration_minutes == 45
+
+      view |> element("[phx-click='switch_tab'][phx-value-tab='location']") |> render_click()
+
+      view
+      |> element("[phx-click='edit_location'][phx-value-id='loc-office']")
+      |> render_click()
+
+      view |> element("[data-testid='new-venue-toggle']") |> render_click()
+      view |> form("#new-venue-form", %{"venue" => %{"name" => "Studio"}}) |> render_submit()
+      _drain = :sys.get_state(view.pid)
+      view |> element("button[phx-click='cancel']", "Cancel") |> render_click()
+
+      # Back to the value the editor was opened with: the page reloaded when
+      # the location was created, and must not have handed the form that
+      # older version to save against.
+      view |> element("[phx-click='switch_tab'][phx-value-tab='details']") |> render_click()
+      view |> element(duration) |> render_change(%{"meeting_type" => %{"duration" => "30"}})
+
+      assert reload(view, meeting_type, user).duration_minutes == 30
     end
 
     test "+ New location keeps the form open with the error for a name already used",

@@ -51,6 +51,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     socket =
       socket
       |> assign(:meeting_types, data.meeting_types)
+      |> refresh_editing_type(data.meeting_types)
       |> assign(:video_integrations, data.video_integrations)
       |> assign(:venues, data.venues)
       |> assign(:calendar_integrations, data.calendar_integrations)
@@ -58,6 +59,19 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
 
     {:ok, socket}
   end
+
+  # The open editor is handed `editing_type` on every render, and it saves
+  # against whatever it was handed last. A reload must therefore hand it the
+  # type as now stored, or its next save would diff against the version from
+  # when the editor opened and skip a change back to that version's value.
+  defp refresh_editing_type(%{assigns: %{editing_type: %{id: id}}} = socket, meeting_types) do
+    case Enum.find(meeting_types, &(&1.id == id)) do
+      nil -> socket
+      fresh -> assign(socket, :editing_type, fresh)
+    end
+  end
+
+  defp refresh_editing_type(socket, _meeting_types), do: socket
 
   # The host's pricing currency, used only to format the price token on paid
   # meeting type cards. Resolved only when at least one meeting type is

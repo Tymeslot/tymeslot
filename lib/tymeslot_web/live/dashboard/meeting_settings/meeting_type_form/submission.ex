@@ -158,11 +158,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
   The venue ids an in-person location posts: the ones it lists that are
   still among the organiser's saved venues, in the location's order.
 
-  A venue deleted from the Locations page leaves its id behind in every
-  meeting type that offered it until that meeting type is next saved. The
-  context refuses an id the organiser does not own, so posting it would make
-  every later save of the meeting type fail; dropping it here lets the save
-  go through without it.
+  Deleting a venue already removes it from every meeting type that offered
+  it, so the two lists normally agree. This is a defence against them
+  disagreeing anyway: the context refuses an id that is not among the
+  organiser's venues, and one such id would make every save of the meeting
+  type fail, so an id missing from `venues` is left out instead of posted.
   """
   @spec venue_ids_param(LocationOption.t(), [%{id: integer()}]) :: [String.t()]
   def venue_ids_param(location, venues) do

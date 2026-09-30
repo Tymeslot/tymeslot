@@ -141,6 +141,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.HiddenFields do
           name={"meeting_type[locations][#{li}][video_integration_ids][]"}
           value={video_id}
         />
+        <%!-- No input at all for an empty list is fine: `LocationOption` has
+              `@primary_key false`, so each posted location is cast onto a
+              fresh struct and a missing key takes the default `[]`. --%>
         <input
           :for={venue_id <- Submission.venue_ids_param(location, @venues)}
           type="hidden"
