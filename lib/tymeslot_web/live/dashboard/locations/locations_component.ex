@@ -8,7 +8,8 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
   which, while meeting types offer the venue, first warns which of them it
   will be taken off and which will be left with no address. Everything goes
   through `Tymeslot.Venues`, which scopes every read and write to the
-  organiser.
+  organiser. Saving and deleting count against the organiser's meeting-type
+  write rate limit, as reordering does.
 
   The cards are dragged into the organiser's order the way meeting types are
   on the Meeting Types list: a sortable hook (`QuestionsSortable`, the
@@ -70,19 +71,21 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
     do: {:noreply, socket}
 
   def handle_event("save_venue", %{"venue" => params}, socket) do
-    case save(socket.assigns.editing_venue, socket.assigns.current_user.id, params) do
-      {:ok, _venue} ->
-        Flash.info(dgettext("dashboard_meeting_types", "Location saved"))
-        {:noreply, socket |> close_form() |> load_venues()}
+    with_write_limit(socket, fn ->
+      case save(socket.assigns.editing_venue, socket.assigns.current_user.id, params) do
+        {:ok, _venue} ->
+          Flash.info(dgettext("dashboard_meeting_types", "Location saved"))
+          {:noreply, socket |> close_form() |> load_venues()}
 
-      {:error, %Changeset{} = changeset} ->
-        {:noreply, assign(socket, :venue_form, to_form(changeset, as: :venue))}
+        {:error, %Changeset{} = changeset} ->
+          {:noreply, assign(socket, :venue_form, to_form(changeset, as: :venue))}
 
-      # Deleted since the form opened, most likely from another tab.
-      {:error, :not_found} ->
-        Flash.error(dgettext("dashboard_meeting_types", "This location no longer exists"))
-        {:noreply, socket |> close_form() |> load_venues()}
-    end
+        # Deleted since the form opened, most likely from another tab.
+        {:error, :not_found} ->
+          Flash.error(dgettext("dashboard_meeting_types", "This location no longer exists"))
+          {:noreply, socket |> close_form() |> load_venues()}
+      end
+    end)
   end
 
   def handle_event("close_venue_form", _params, socket), do: {:noreply, close_form(socket)}
@@ -108,20 +111,22 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
     do: {:noreply, socket}
 
   def handle_event("confirm_delete_venue", _params, socket) do
-    case Venues.delete_venue(socket.assigns.deleting_venue) do
-      {:ok, _deleted} ->
-        Flash.info(dgettext("dashboard_meeting_types", "Location deleted"))
+    with_write_limit(socket, fn ->
+      case Venues.delete_venue(socket.assigns.deleting_venue) do
+        {:ok, _deleted} ->
+          Flash.info(dgettext("dashboard_meeting_types", "Location deleted"))
 
-      # Already gone, most likely from another tab: the reloaded list says so.
-      {:error, :not_found} ->
-        :ok
+        # Already gone, most likely from another tab: the reloaded list says so.
+        {:error, :not_found} ->
+          :ok
 
-      {:error, reason} ->
-        Logger.error("Failed to delete location", reason: LogFormat.reason(reason))
-        Flash.error(dgettext("dashboard_meeting_types", "Could not delete the location"))
-    end
+        {:error, reason} ->
+          Logger.error("Failed to delete location", reason: LogFormat.reason(reason))
+          Flash.error(dgettext("dashboard_meeting_types", "Could not delete the location"))
+      end
 
-    {:noreply, socket |> close_delete() |> load_venues()}
+      {:noreply, socket |> close_delete() |> load_venues()}
+    end)
   end
 
   # Mirrors `ServiceSettingsComponent`'s "reorder_meeting_types": the same
@@ -146,6 +151,23 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
   end
 
   def handle_event("reorder", _params, socket), do: {:noreply, socket}
+
+  # Saving and deleting a venue are meeting-type writes too: deleting one
+  # rewrites every meeting type offering it. Refused, the form or the
+  # confirmation stays open, so the organiser can try again.
+  defp with_write_limit(socket, write) do
+    case RateLimiter.check_meeting_type_write_rate_limit(socket.assigns.current_user.id) do
+      :ok ->
+        write.()
+
+      {:error, :rate_limited, message} ->
+        Flash.error(message)
+        {:noreply, socket}
+
+      {:error, :invalid_user_id} ->
+        {:noreply, socket}
+    end
+  end
 
   @impl Phoenix.LiveComponent
   def render(assigns) do

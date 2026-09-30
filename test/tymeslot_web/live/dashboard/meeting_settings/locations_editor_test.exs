@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Repo
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Venues
 
   setup :setup_dashboard_user
@@ -520,6 +521,30 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
       assert html =~ "has already been taken"
       assert has_element?(view, "#new-venue-form")
       assert [_only] = Venues.list_venues(user.id)
+    end
+
+    test "+ New location is refused over the meeting-type write limit", %{user: user} = ctx do
+      {view, _meeting_type} = open_editor(ctx, [office()])
+
+      view
+      |> element("[phx-click='edit_location'][phx-value-id='loc-office']")
+      |> render_click()
+
+      view |> element("[data-testid='new-venue-toggle']") |> render_click()
+
+      message =
+        Stream.repeatedly(fn -> RateLimiter.check_meeting_type_write_rate_limit(user.id) end)
+        |> Enum.find_value(fn
+          {:error, :rate_limited, message} -> message
+          :ok -> nil
+        end)
+
+      view |> form("#new-venue-form", %{"venue" => %{"name" => "Studio"}}) |> render_submit()
+      _drain = :sys.get_state(view.pid)
+
+      assert Venues.list_venues(user.id) == []
+      assert has_element?(view, "#new-venue-form")
+      assert has_element?(view, "#app-flash-group-error", message)
     end
   end
 

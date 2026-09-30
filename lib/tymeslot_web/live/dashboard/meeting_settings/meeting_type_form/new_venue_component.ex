@@ -14,10 +14,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.NewVenueComponen
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Venues
   alias Tymeslot.Venues.VenueSchema
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorComponent
+  alias TymeslotWeb.Live.Shared.Flash
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
@@ -34,8 +36,26 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.NewVenueComponen
     {:noreply, assign(socket, :form, to_form(changeset, as: :venue))}
   end
 
+  # Under the meeting-type write limit, like saving a venue on the
+  # Locations page. Refused, the form keeps what was typed.
   def handle_event("save", %{"venue" => params}, socket) do
-    case Venues.create_venue(socket.assigns.current_user.id, params) do
+    user_id = socket.assigns.current_user.id
+
+    case RateLimiter.check_meeting_type_write_rate_limit(user_id) do
+      :ok ->
+        create(socket, user_id, params)
+
+      {:error, :rate_limited, message} ->
+        Flash.error(message)
+        {:noreply, socket}
+
+      {:error, :invalid_user_id} ->
+        {:noreply, socket}
+    end
+  end
+
+  defp create(socket, user_id, params) do
+    case Venues.create_venue(user_id, params) do
       {:ok, venue} ->
         LiveView.send_update(LocationEditorComponent,
           id: socket.assigns.editor_id,

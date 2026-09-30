@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponentTest do
   import Tymeslot.Factory
 
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Venues
 
   setup :setup_dashboard_user
@@ -292,6 +293,48 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponentTest do
 
       refute has_element?(view, "#delete-venue-modal")
       assert {:ok, _untouched} = Venues.get_venue(foreign.user_id, foreign.id)
+    end
+  end
+
+  describe "the meeting-type write limit" do
+    # Spends the organiser's meeting-type write allowance, returning the
+    # message the next refused write flashes.
+    defp exhaust_write_limit(user) do
+      Stream.repeatedly(fn -> RateLimiter.check_meeting_type_write_rate_limit(user.id) end)
+      |> Enum.find_value(fn
+        {:error, :rate_limited, message} -> message
+        :ok -> nil
+      end)
+    end
+
+    test "refuses saving a location, keeping the form open", %{conn: conn, user: user} do
+      view = open(conn)
+      view |> element("[data-testid='add-venue']") |> render_click()
+      message = exhaust_write_limit(user)
+
+      view
+      |> form("#venue-form", %{"venue" => %{"name" => "Berlin office"}})
+      |> render_submit()
+
+      drain(view)
+
+      assert Venues.list_venues(user.id) == []
+      assert has_element?(view, "#venue-form")
+      assert has_element?(view, "#app-flash-group-error", message)
+    end
+
+    test "refuses deleting a location, keeping it", %{conn: conn, user: user} do
+      venue = insert(:venue, user: user, name: "Studio")
+      view = open(conn)
+      view |> element("[phx-click='delete_venue'][phx-value-id='#{venue.id}']") |> render_click()
+      message = exhaust_write_limit(user)
+
+      view |> element("[data-testid='confirm-delete-venue']") |> render_click()
+      drain(view)
+
+      assert [%{id: id}] = Venues.list_venues(user.id)
+      assert id == venue.id
+      assert has_element?(view, "#app-flash-group-error", message)
     end
   end
 
