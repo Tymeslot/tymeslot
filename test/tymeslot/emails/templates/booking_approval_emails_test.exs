@@ -419,4 +419,28 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalEmailsTest do
       assert html =~ ~s(href="#")
     end
   end
+
+  describe "an in-person meeting whose address is arranged after booking" do
+    @note "The address will be arranged with you after booking."
+
+    defp to_arrange,
+      do: meeting(%{location_kind: "in_person", venue_id: nil, location: "In person"})
+
+    test "each request email notes it under the location, in HTML and text" do
+      for email <- [
+            BookingApprovalRequest.render(:request, to_arrange(), @urls, "en"),
+            BookingRequestReceived.render(to_arrange()),
+            BookingRequestOutcome.render(:declined, to_arrange())
+          ] do
+        assert email.html_body =~ @note
+        assert email.text_body =~ "Location: In person\n#{@note}"
+      end
+    end
+
+    test "a meeting at a saved venue carries no note" do
+      at_venue = meeting(%{location_kind: "in_person", venue_id: 7, location: "Office"})
+
+      refute BookingRequestReceived.render(at_venue).text_body =~ @note
+    end
+  end
 end

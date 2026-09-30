@@ -16,6 +16,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
     Styles,
     TemplateHelper,
     Text,
+    TextBodyHelper,
     TimezoneHelper
   }
 
@@ -107,7 +108,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
     #{dgettext("emails_booking_requests", "CANCELLED APPOINTMENT DETAILS:")}
     #{dgettext("emails_booking_requests", "Date:")} #{Formatting.format_date_short(details.date, locale)}
     #{dgettext("emails_booking_requests", "Duration:")} #{Formatting.format_duration(details.duration, locale)}
-    #{dgettext("emails_booking_requests", "Location:")} #{Formatting.format_location(details)}
+    #{dgettext("emails_booking_requests", "Location:")} #{Formatting.format_location(details)}#{TextBodyHelper.location_note_line(details)}
     #{dgettext("emails_booking_requests", "Type:")} #{details.meeting_type}
     #{dgettext("emails_booking_requests", "Timezone:")} #{details.timezone}
 

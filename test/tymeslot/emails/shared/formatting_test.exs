@@ -295,6 +295,26 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
     end
   end
 
+  describe "location_note/1" do
+    test "says the address will be arranged for an in-person meeting without one" do
+      assert Formatting.location_note(%{location_type: :in_person_to_arrange}) ==
+               "The address will be arranged with you after booking."
+    end
+
+    test "is nothing for any other location" do
+      assert Formatting.location_note(%{location_type: :in_person}) == nil
+      assert Formatting.location_note(%{location_type: :video}) == nil
+      assert Formatting.location_note(%{}) == nil
+    end
+
+    test "shows the location itself unchanged" do
+      assert Formatting.format_location(%{
+               location_type: :in_person_to_arrange,
+               location: "In person"
+             }) == "In person"
+    end
+  end
+
   describe "format_currency/2" do
     test "formats standard currencies in cents" do
       assert Formatting.format_currency(1000, "eur") == "€10.00"

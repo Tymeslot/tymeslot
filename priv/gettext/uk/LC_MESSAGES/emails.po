@@ -533,3 +533,8 @@ msgstr "Скасовано - %{title}, %{date}"
 #, elixir-autogen, elixir-format
 msgid "Event Cancelled"
 msgstr "Подію скасовано"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "The address will be arranged with you after booking."
+msgstr "Адресу погодять з вами після бронювання."

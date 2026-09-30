@@ -526,3 +526,8 @@ msgstr "Annulé : %{title} le %{date}"
 #, elixir-autogen, elixir-format
 msgid "Event Cancelled"
 msgstr "Événement annulé"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "The address will be arranged with you after booking."
+msgstr "L'adresse sera convenue avec vous après la réservation."

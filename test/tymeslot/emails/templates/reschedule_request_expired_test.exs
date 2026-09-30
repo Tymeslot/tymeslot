@@ -61,4 +61,16 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestExpiredTest do
              end
            )
   end
+
+  test "notes an in-person address still to be arranged, in HTML and text" do
+    note = "The address will be arranged with you after booking."
+
+    email =
+      meeting()
+      |> struct!(location_kind: "in_person", venue_id: nil, location: "In person")
+      |> RescheduleRequestExpired.render("en")
+
+    assert email.html_body =~ note
+    assert email.text_body =~ "Location: In person\n#{note}"
+  end
 end

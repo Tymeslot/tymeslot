@@ -298,7 +298,7 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
     #{dgettext("emails_booking_requests", "Date:")} #{Formatting.format_date_short(details.date, locale)}
     #{dgettext("emails_booking_requests", "Time:")} #{Formatting.format_time(details.start_time, locale)}
     #{dgettext("emails_booking_requests", "Duration:")} #{Formatting.format_duration(details.duration, locale)}
-    #{dgettext("emails_booking_requests", "Location:")} #{Formatting.format_location(details)}
+    #{dgettext("emails_booking_requests", "Location:")} #{Formatting.format_location(details)}#{TextBodyHelper.location_note_line(details)}
     #{dgettext("emails_booking_requests", "Timezone:")} #{details.timezone}
     #{previous || ""}
 

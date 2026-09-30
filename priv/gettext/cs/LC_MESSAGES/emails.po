@@ -533,3 +533,8 @@ msgstr "Zrušeno: %{title} – %{date}"
 #, elixir-autogen, elixir-format
 msgid "Event Cancelled"
 msgstr "Událost byla zrušena"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "The address will be arranged with you after booking."
+msgstr "Adresu s vámi domluvíme po rezervaci."
