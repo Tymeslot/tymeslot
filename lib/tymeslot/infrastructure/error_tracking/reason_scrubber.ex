@@ -38,6 +38,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber do
 
   @handler_id "tymeslot-error-tracking-reason-scrubber"
   @event [:error_tracker, :occurrence, :new]
+  @rescrub_batch_size 500
 
   @doc """
   Attaches the telemetry handler. Idempotent, so safe to call on
@@ -147,13 +148,85 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber do
   def handle_event(_event, _measurements, _metadata, _config), do: :ok
 
   defp scrub_row(%{id: id, reason: reason}, replace) when is_binary(reason) do
-    case scrub(reason) do
-      ^reason -> :ok
-      scrubbed -> replace.(id, reason, scrubbed)
-    end
+    _rewritten = rescrub(id, reason, replace)
+    :ok
   end
 
   defp scrub_row(_row, _replace), do: :ok
+
+  @doc """
+  Masks the stored reasons the telemetry handler should have masked but did
+  not, and returns how many it rewrote: those of every error last seen at or
+  after `since`, and of each such error's occurrences inserted since then.
+
+  The handler's rewrite is a second write after the insert, and nothing
+  retries it should it fail, so an unmasked reason would otherwise be kept
+  for as long as the row. Run daily over a window longer than a day, this
+  bounds that to the next run. Errors and occurrences are both walked, since
+  each occurrence stores its own reason and an error's is its first
+  occurrence's.
+
+  Reads a page at a time (`:batch_size`, default #{@rescrub_batch_size}) and
+  writes only the rows whose reason changes, through the same conditional
+  update the handler uses. How many occurrences an error has in the window
+  is bounded by `ReportThrottle`'s budget and, once the daily trim has run,
+  by its per-error cap.
+  """
+  @spec rescrub_since(DateTime.t(), keyword()) :: non_neg_integer()
+  def rescrub_since(%DateTime{} = since, opts \\ []) do
+    rescrub_errors(since, Keyword.get(opts, :batch_size, @rescrub_batch_size), 0, 0)
+  end
+
+  defp rescrub_errors(since, batch_size, after_id, total) do
+    case ErrorTrackingQueries.error_reasons_seen_since(since, after_id, batch_size) do
+      [] ->
+        total
+
+      errors ->
+        total =
+          Enum.reduce(errors, total, fn {id, reason}, total ->
+            total + rescrub(id, reason, &ErrorTrackingQueries.replace_error_reason/3) +
+              rescrub_occurrences(id, since, batch_size, 0, 0)
+          end)
+
+        {last_id, _reason} = List.last(errors)
+        rescrub_errors(since, batch_size, last_id, total)
+    end
+  end
+
+  defp rescrub_occurrences(error_id, since, batch_size, after_id, total) do
+    occurrences =
+      ErrorTrackingQueries.occurrence_reasons_since(error_id, since, after_id, batch_size)
+
+    total =
+      total +
+        Enum.sum_by(occurrences, fn {id, reason} ->
+          rescrub(id, reason, &ErrorTrackingQueries.replace_occurrence_reason/3)
+        end)
+
+    case occurrences do
+      page when length(page) < batch_size ->
+        total
+
+      page ->
+        {last_id, _reason} = List.last(page)
+        rescrub_occurrences(error_id, since, batch_size, last_id, total)
+    end
+  end
+
+  # 1 when the reason needed masking and the conditional update was issued.
+  defp rescrub(id, reason, replace) when is_binary(reason) do
+    case scrub(reason) do
+      ^reason ->
+        0
+
+      scrubbed ->
+        :ok = replace.(id, reason, scrubbed)
+        1
+    end
+  end
+
+  defp rescrub(_id, _reason, _replace), do: 0
 
   defp log_failure(error) do
     Logger.error("Failed to mask a stored error message", error: error)

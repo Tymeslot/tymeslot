@@ -97,6 +97,65 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ReasonScrubberTest do
     end
   end
 
+  describe "rescrub_since/2" do
+    defp insert_error(reason, last_seen) do
+      Repo.insert!(%Error{
+        kind: "Elixir.RuntimeError",
+        reason: reason,
+        source_line: "lib/example.ex:#{System.unique_integer([:positive])}",
+        source_function: "Example.run/0",
+        fingerprint: Base.encode16(:crypto.strong_rand_bytes(16)),
+        status: :unresolved,
+        last_occurrence_at: last_seen
+      })
+    end
+
+    # Inserted directly, so the telemetry handler never sees them: the state
+    # a failed rewrite leaves behind.
+    defp insert_occurrence(error, reason, inserted_at) do
+      Repo.insert!(%Occurrence{
+        error_id: error.id,
+        reason: reason,
+        context: %{},
+        breadcrumbs: [],
+        stacktrace: %ErrorTracker.Stacktrace{lines: []},
+        inserted_at: inserted_at
+      })
+    end
+
+    defp hours_ago(hours), do: DateTime.add(DateTime.utc_now(), -hours, :hour)
+
+    defp stored_reason(schema, id), do: Repo.get!(schema, id).reason
+
+    test "masks the unmasked reasons of recent errors and occurrences, across pages" do
+      recent = insert_error(@raw, hours_ago(1))
+      inside = for hours <- 1..5, do: insert_occurrence(recent, @raw, hours_ago(hours))
+      clean = insert_occurrence(recent, "plain failure", hours_ago(1))
+      outside = insert_occurrence(recent, @raw, hours_ago(72))
+
+      quiet = insert_error(@raw, hours_ago(72))
+      quiet_occurrence = insert_occurrence(quiet, @raw, hours_ago(72))
+
+      # A page of 2 makes both walks turn several pages.
+      assert ReasonScrubber.rescrub_since(hours_ago(48), batch_size: 2) == 6
+
+      masked = ReasonScrubber.scrub(@raw)
+      assert stored_reason(Error, recent.id) == masked
+      assert Enum.reject(inside, &(stored_reason(Occurrence, &1.id) == masked)) == []
+      assert stored_reason(Occurrence, clean.id) == "plain failure"
+      assert stored_reason(Occurrence, outside.id) == @raw
+      assert stored_reason(Error, quiet.id) == @raw
+      assert stored_reason(Occurrence, quiet_occurrence.id) == @raw
+    end
+
+    test "writes nothing when every reason is already masked" do
+      error = insert_error("plain failure", hours_ago(1))
+      insert_occurrence(error, ReasonScrubber.scrub(@raw), hours_ago(1))
+
+      assert ReasonScrubber.rescrub_since(hours_ago(48)) == 0
+    end
+  end
+
   describe "handle_event/4" do
     test "never raises on metadata it does not recognise" do
       assert ReasonScrubber.handle_event([:error_tracker, :occurrence, :new], %{}, %{}, nil) ==
