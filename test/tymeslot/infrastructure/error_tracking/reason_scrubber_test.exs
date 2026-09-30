@@ -69,6 +69,34 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ReasonScrubberTest do
     end
   end
 
+  describe "scrub_exception/2" do
+    test "renders an exit payload as ErrorTracker would, with its sensitive values masked" do
+      payload = {:timeout, %{"access_token" => "tok-secret-123", "owner" => "jane@example.com"}}
+
+      assert {:exit, text} = ReasonScrubber.scrub_exception({:exit, payload}, [])
+      assert text =~ "timeout"
+      refute text =~ "tok-secret-123"
+      refute text =~ "jane@example.com"
+      assert text =~ "j***@example.com"
+    end
+
+    test "leaves a payload with nothing to mask rendered exactly as ErrorTracker renders it" do
+      assert ReasonScrubber.scrub_exception({:throw, {:halt, 3}}, []) == {:throw, "{:halt, 3}"}
+      assert ReasonScrubber.scrub_exception({:exit, "plain"}, []) == {:exit, "plain"}
+    end
+
+    test "turns an error payload into the exception ErrorTracker would record, scrubbed" do
+      assert %ErlangError{} = exception = ReasonScrubber.scrub_exception({:error, :oops}, [])
+      assert Exception.message(exception) == "Erlang error: :oops"
+
+      assert %RuntimeError{message: "failed for j***@example.com"} =
+               ReasonScrubber.scrub_exception(
+                 %RuntimeError{message: "failed for jane@example.com"},
+                 []
+               )
+    end
+  end
+
   describe "handle_event/4" do
     test "never raises on metadata it does not recognise" do
       assert ReasonScrubber.handle_event([:error_tracker, :occurrence, :new], %{}, %{}, nil) ==
