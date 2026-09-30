@@ -9,6 +9,7 @@ defmodule Tymeslot.VenuesTest do
 
   import Tymeslot.Factory
 
+  alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Repo
   alias Tymeslot.Venues
   alias Tymeslot.Venues.VenueSchema
@@ -225,18 +226,110 @@ defmodule Tymeslot.VenuesTest do
   end
 
   describe "delete_venue/1 while meeting types offer the venue" do
-    test "is refused, naming the meeting types" do
+    setup do
       user = insert(:user)
-      venue = insert(:venue, user: user)
+      berlin = insert(:venue, user: user, name: "Berlin")
+      munich = insert(:venue, user: user, name: "Munich")
+      hamburg = insert(:venue, user: user, name: "Hamburg")
+      %{user: user, berlin: berlin, munich: munich, hamburg: hamburg}
+    end
+
+    test "takes it off every location listing it, keeping everything else", ctx do
+      phone = %LocationOption{
+        id: "loc-call",
+        kind: "phone",
+        label: "Phone call",
+        details: "+44 20 7946 0000",
+        position: 0
+      }
+
+      offices =
+        in_person_location([ctx.berlin, ctx.munich, ctx.hamburg],
+          id: "loc-offices",
+          label: "Our offices",
+          position: 1
+        )
+
+      consultation =
+        insert(:meeting_type, user: ctx.user, name: "Consultation", locations: [phone, offices])
+
+      workshop =
+        insert(:meeting_type,
+          user: ctx.user,
+          name: "Workshop",
+          locations: [in_person_location([ctx.munich, ctx.hamburg], id: "loc-hall")]
+        )
+
+      assert {:ok, _deleted} = Venues.delete_venue(ctx.munich)
+
+      assert {:error, :not_found} = Venues.get_venue(ctx.user.id, ctx.munich.id)
+
+      assert [^phone, rewritten] = Repo.reload!(consultation).locations
+      assert rewritten == %{offices | venue_ids: [ctx.berlin.id, ctx.hamburg.id]}
+
+      assert [%LocationOption{id: "loc-hall", venue_ids: [hamburg_id]}] =
+               Repo.reload!(workshop).locations
+
+      assert hamburg_id == ctx.hamburg.id
+    end
+
+    test "leaves a location whose only venue it was with none", ctx do
+      meeting_type =
+        insert(:meeting_type, user: ctx.user, locations: [in_person_location([ctx.berlin])])
+
+      assert {:ok, _deleted} = Venues.delete_venue(ctx.berlin)
+
+      assert [%LocationOption{kind: "in_person", venue_ids: []}] =
+               Repo.reload!(meeting_type).locations
+    end
+
+    test "never touches another owner's meeting types", ctx do
+      stranger = insert(:user)
+      # A forged or stale id: another owner's location naming this venue.
+      theirs = in_person_location([ctx.berlin], id: "loc-theirs")
+      other = insert(:meeting_type, user: stranger, locations: [theirs])
+      stamp = Repo.reload!(other).updated_at
+
+      assert {:ok, _deleted} = Venues.delete_venue(ctx.berlin)
+
+      reloaded = Repo.reload!(other)
+      assert reloaded.locations == [theirs]
+      assert reloaded.updated_at == stamp
+    end
+  end
+
+  describe "meeting_types_left_without/1" do
+    test "names the meeting types that would be left with an in-person location and no venue" do
+      user = insert(:user)
+      berlin = insert(:venue, user: user)
+      munich = insert(:venue, user: user)
 
       insert(:meeting_type,
         user: user,
-        name: "Consultation",
-        locations: [in_person_location([venue])]
+        name: "Only Berlin",
+        locations: [in_person_location([berlin])]
       )
 
-      assert {:error, {:in_use, [%{name: "Consultation"}]}} = Venues.delete_venue(venue)
-      assert {:ok, _still_there} = Venues.get_venue(user.id, venue.id)
+      insert(:meeting_type,
+        user: user,
+        name: "Berlin and Munich",
+        locations: [in_person_location([berlin, munich])]
+      )
+
+      insert(:meeting_type,
+        user: user,
+        name: "Berlin on one location of two",
+        locations: [
+          in_person_location([munich]),
+          in_person_location([berlin], position: 1)
+        ]
+      )
+
+      assert ["Berlin on one location of two", "Only Berlin"] =
+               berlin |> Venues.meeting_types_left_without() |> Enum.map(& &1.name)
+
+      assert ["Berlin on one location of two"] =
+               munich |> Venues.meeting_types_left_without() |> Enum.map(& &1.name)
     end
   end
 
@@ -310,7 +403,7 @@ defmodule Tymeslot.VenuesTest do
       assert {:ok, _deleted} = Venues.delete_venue(venue)
     end
 
-    test "count only numeric venue ids, as the delete check matches them" do
+    test "count only numeric venue ids, the ones a delete takes off" do
       user = insert(:user)
       venue = insert(:venue, user: user)
       meeting_type = insert(:meeting_type, user: user, name: "Strings")

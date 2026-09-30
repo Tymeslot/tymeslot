@@ -26,6 +26,7 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
+  alias Tymeslot.Venues
   alias Tymeslot.Workers.VideoRoomWorker
 
   setup do
@@ -328,7 +329,9 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
                  location_venue_id: ctx.munich.id
                })
 
-      Repo.delete!(ctx.munich)
+      # Deleted while the location still lists it, so the location is
+      # rewritten too; the meeting keeps what it was booked at.
+      assert {:ok, _deleted} = Venues.delete_venue(ctx.munich)
       reloaded = Repo.get!(MeetingSchema, meeting.id)
 
       assert reloaded.venue_id == nil
@@ -337,8 +340,32 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
       details = AppointmentBuilder.from_meeting(reloaded)
       email = AppointmentConfirmation.render(:attendee, reloaded.attendee_email, details)
 
+      assert reloaded.location == "Munich office (Marienplatz 8)"
       assert email.text_body =~ "Munich office (Marienplatz 8)"
       refute email.text_body =~ "arranged with you after booking"
+    end
+
+    test "deleting a location's only venue makes its next booking one to arrange", ctx do
+      solo =
+        insert(:meeting_type,
+          user: ctx.user,
+          name: "Berlin Visit",
+          duration_minutes: 30,
+          locations: [in_person_location([ctx.berlin], id: "loc-berlin", label: "Berlin")]
+        )
+
+      assert {:ok, _deleted} = Venues.delete_venue(ctx.berlin)
+
+      assert {:ok, meeting} =
+               book(solo, ctx.user, %{
+                 location_option_id: "loc-berlin",
+                 location_venue_id: ctx.berlin.id
+               })
+
+      reloaded = Repo.get!(MeetingSchema, meeting.id)
+      assert reloaded.venue_id == nil
+      assert reloaded.location == "Berlin"
+      assert reloaded.address_to_arrange == true
     end
 
     test "a venue the location does not offer books its first venue instead", ctx do

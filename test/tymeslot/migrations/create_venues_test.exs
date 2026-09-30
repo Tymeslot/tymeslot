@@ -360,9 +360,61 @@ defmodule Tymeslot.Migrations.CreateVenuesTest do
     assert meeting_venue_id(to_arrange) == {nil, "In person"}
   end
 
-  # Only a booking made after this migration can state that its address is
-  # to be arranged; an existing one keeps reading as it always has.
-  test "existing meetings are not marked as having an address to arrange" do
+  defp address_to_arrange(meeting) do
+    %{rows: [[flag]]} =
+      Repo.query!("SELECT address_to_arrange FROM meetings WHERE id = $1", [
+        UUID.dump!(meeting.id)
+      ])
+
+    flag
+  end
+
+  # An existing booking on an in-person location without an address was, and
+  # is, to have its address arranged; saying so is what the flag is for. Every
+  # other existing meeting keeps reading as it always has.
+  test "existing in-person meetings on a location without an address are to be arranged" do
+    user = insert(:user)
+    meeting_type = insert(:meeting_type, user: user)
+
+    put_raw_locations(meeting_type, [
+      in_person("Office", "12 High Street", "loc-office"),
+      in_person("In person", "  ", "loc-none"),
+      %{"id" => "loc-video", "kind" => "video", "label" => "Video", "position" => 2}
+    ])
+
+    at = fn days ->
+      start = DateTime.utc_now() |> DateTime.add(days, :day) |> DateTime.truncate(:second)
+      [start_time: start, end_time: DateTime.add(start, 60, :minute)]
+    end
+
+    meeting = fn option_id, kind, days ->
+      insert(
+        :meeting,
+        [
+          organizer_user_id: user.id,
+          meeting_type_id: meeting_type.id,
+          location: "Somewhere",
+          location_kind: kind,
+          location_option_id: option_id
+        ] ++ at.(days)
+      )
+    end
+
+    to_arrange = meeting.("loc-none", "in_person", 1)
+    at_office = meeting.("loc-office", "in_person", 2)
+    on_video = meeting.("loc-video", "video", 3)
+    # A stale option id: the location it was booked on has since gone.
+    elsewhere = meeting.("loc-gone", "in_person", 4)
+
+    MigrationRunner.rerun!(@version)
+
+    assert address_to_arrange(to_arrange) == true
+    assert address_to_arrange(at_office) == false
+    assert address_to_arrange(on_video) == false
+    assert address_to_arrange(elsewhere) == false
+  end
+
+  test "a meeting not on a location without an address keeps false" do
     meeting =
       insert(:meeting,
         location: "In person",
@@ -375,10 +427,7 @@ defmodule Tymeslot.Migrations.CreateVenuesTest do
     # over a row that already exists.
     MigrationRunner.rerun!(@version)
 
-    assert %{rows: [[false]]} =
-             Repo.query!("SELECT address_to_arrange FROM meetings WHERE id = $1", [
-               UUID.dump!(meeting.id)
-             ])
+    assert address_to_arrange(meeting) == false
   end
 
   test "rolling back puts each address back on its location" do

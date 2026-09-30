@@ -296,17 +296,43 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   """
   @spec list_using_venue(integer(), integer()) :: [MeetingTypeSchema.t()]
   def list_using_venue(user_id, venue_id) do
-    Repo.all(
-      from(mt in MeetingTypeSchema,
-        where: mt.user_id == ^user_id,
-        where:
-          fragment(
-            "EXISTS (SELECT 1 FROM unnest(?) AS loc WHERE loc ->> 'kind' = 'in_person' AND loc -> 'venue_ids' @> jsonb_build_array(?::bigint))",
-            mt.locations,
-            ^venue_id
-          ),
-        order_by: [asc: mt.name]
-      )
+    user_id |> using_venue_query(venue_id) |> Repo.all()
+  end
+
+  @doc """
+  Takes `venue_id` off the in-person locations of the owner's meeting types
+  that list it (`MeetingTypeSchema.without_venue_changeset/2`), returning how
+  many were rewritten. The rows are locked first, so an edit of the same
+  meeting type saved meanwhile is not overwritten with the list read here;
+  run it in the transaction that deletes the venue.
+  """
+  @spec remove_venue_from_locations(integer(), integer()) ::
+          {:ok, non_neg_integer()} | {:error, Ecto.Changeset.t()}
+  def remove_venue_from_locations(user_id, venue_id) do
+    user_id
+    |> using_venue_query(venue_id)
+    |> lock("FOR UPDATE")
+    |> Repo.all()
+    |> Enum.reduce_while({:ok, 0}, fn meeting_type, {:ok, count} ->
+      case meeting_type
+           |> MeetingTypeSchema.without_venue_changeset(venue_id)
+           |> Repo.update() do
+        {:ok, _updated} -> {:cont, {:ok, count + 1}}
+        {:error, changeset} -> {:halt, {:error, changeset}}
+      end
+    end)
+  end
+
+  defp using_venue_query(user_id, venue_id) do
+    from(mt in MeetingTypeSchema,
+      where: mt.user_id == ^user_id,
+      where:
+        fragment(
+          "EXISTS (SELECT 1 FROM unnest(?) AS loc WHERE loc ->> 'kind' = 'in_person' AND loc -> 'venue_ids' @> jsonb_build_array(?::bigint))",
+          mt.locations,
+          ^venue_id
+        ),
+      order_by: [asc: mt.name]
     )
   end
 

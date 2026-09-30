@@ -2,8 +2,10 @@ defmodule Tymeslot.Bookings.RescheduleVenueTest do
   @moduledoc """
   A reschedule of an in-person meeting held at a saved venue, through
   `Tymeslot.Bookings.Reschedule.execute/4`: the booker may switch venue
-  within the location, the meeting otherwise stays at its own venue wherever
-  the new location offers it, and a venue switch has no provider side.
+  within the location, a time-only reschedule never moves the meeting (not
+  even when its venue has been deleted or dropped from the location), a move
+  to another location keeps the meeting's venue wherever that location
+  offers it, and a venue switch has no provider side.
 
   The provider-room side of location moves is pinned in
   `Tymeslot.Bookings.RescheduleLocationTest`.
@@ -21,9 +23,11 @@ defmodule Tymeslot.Bookings.RescheduleVenueTest do
   import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.MeetingTestHelpers
 
+  alias Ecto.Changeset
   alias Tymeslot.Bookings.Reschedule
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.LocationOption
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias Tymeslot.Venues
@@ -162,12 +166,43 @@ defmodule Tymeslot.Bookings.RescheduleVenueTest do
     assert updated.location == "Berlin office (Friedrichstrasse 1)"
   end
 
-  test "a meeting whose venue has since gone moves to the location's first remaining one",
+  # The location still offers another venue, so falling back to it would be
+  # visible.
+  test "a time-only reschedule of a meeting whose venue was deleted leaves it where it was",
        ctx do
     meeting = meeting_on(ctx.user, [ctx.offices], booked_in_berlin(ctx.berlin))
-    Repo.delete!(ctx.berlin)
+    {:ok, _deleted} = Venues.delete_venue(ctx.berlin)
 
     updated = reschedule(meeting, %{location_option_id: "loc-offices"})
+
+    assert updated.venue_id == nil
+    assert updated.location == "Berlin office (Friedrichstrasse 1)"
+    assert updated.address_to_arrange == false
+  end
+
+  test "a time-only reschedule keeps a venue the location no longer lists", ctx do
+    meeting = meeting_on(ctx.user, [ctx.offices], booked_in_berlin(ctx.berlin))
+
+    MeetingTypeSchema
+    |> Repo.get!(meeting.meeting_type_id)
+    |> Changeset.change(
+      locations: [in_person_location([ctx.munich], id: "loc-offices", label: "Our offices")]
+    )
+    |> Repo.update!()
+
+    updated = reschedule(meeting, %{location_option_id: "loc-offices"})
+
+    assert updated.venue_id == ctx.berlin.id
+    assert updated.location == "Berlin office (Friedrichstrasse 1)"
+  end
+
+  test "picking a venue the location offers still moves a meeting whose venue was deleted",
+       ctx do
+    meeting = meeting_on(ctx.user, [ctx.offices], booked_in_berlin(ctx.berlin))
+    {:ok, _deleted} = Venues.delete_venue(ctx.berlin)
+
+    updated =
+      reschedule(meeting, %{location_option_id: "loc-offices", location_venue_id: ctx.munich.id})
 
     assert updated.venue_id == ctx.munich.id
     assert updated.location == "Munich office (Marienplatz 8)"

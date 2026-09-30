@@ -42,7 +42,9 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
   booking, an id the meeting type does not offer is ignored rather than
   resolved to the first option: a reschedule already has a location, and a
   stale or forged id must not move it anywhere. The same goes for a venue:
-  an unknown venue id keeps the meeting at its current venue, and choosing
+  within the meeting's own option, only a venue the option offers, picked
+  explicitly, moves the meeting. Anything else keeps it where it is, even
+  when its venue has since been deleted or dropped from the option. Choosing
   another venue within an in-person option never touches a video room.
   """
 
@@ -85,8 +87,13 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
 
   def attributes(%Meeting{} = meeting, meeting_type, params) do
     case chosen(meeting, meeting_type, params) do
-      nil -> %{}
-      resolution -> changes(meeting, resolution)
+      nil ->
+        %{}
+
+      resolution ->
+        if stays?(meeting, resolution, Map.get(params, :location_venue_id)),
+          do: %{},
+          else: changes(meeting, resolution)
     end
   end
 
@@ -179,27 +186,39 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
 
   defp chosen(_meeting, _meeting_type, _params), do: nil
 
-  # The same option with the same number, on the same provider and at the
-  # same venue, is the booker leaving the picker where it opened. Rewriting
-  # it would still not be a no-op: a video meeting's `location` holds its
-  # join URL, and an in-person one the venue as it read when booked, which
-  # re-resolving would replace. A different provider or venue within the
-  # same option is a move, and falls through to the clauses below.
-  defp changes(
-         %Meeting{
-           location_option_id: id,
-           attendee_phone: phone,
-           video_integration_id: video_id,
-           venue_id: venue_id
-         },
-         %{
-           location_option_id: id,
-           attendee_phone: phone,
-           video_integration_id: video_id,
-           venue_id: venue_id
-         }
+  # The same option with the same number, on the same provider, is the
+  # booker leaving the picker where it opened: a time-only reschedule, which
+  # never moves the meeting. Rewriting it would still not be a no-op: a video
+  # meeting's `location` holds its join URL, and an in-person one the venue
+  # as it read when booked, which re-resolving would replace. That holds even
+  # when the meeting's venue has since been deleted or dropped from the
+  # option, where re-resolving would land on another venue the booker never
+  # chose. Only a venue the booker picked, which the option offers and which
+  # is not the meeting's own, is a move within the option; so is a different
+  # provider, and both fall through to `changes/2`.
+  defp stays?(
+         %Meeting{location_option_id: id, attendee_phone: phone, video_integration_id: video_id} =
+           meeting,
+         %{location_option_id: id, attendee_phone: phone, video_integration_id: video_id} =
+           resolution,
+         submitted_venue_id
        ),
-       do: %{}
+       do:
+         not venue_picked?(resolution, submitted_venue_id) or
+           resolution.venue_id == meeting.venue_id
+
+  defp stays?(_meeting, _resolution, _submitted_venue_id), do: false
+
+  # `resolve_location/2` places the meeting at the submitted venue exactly
+  # when the option offers it, so the resolved venue being the submitted one
+  # is the booker having picked it.
+  defp venue_picked?(%{venue_id: venue_id}, venue_id) when is_integer(venue_id), do: true
+
+  defp venue_picked?(%{venue_id: venue_id}, submitted)
+       when is_integer(venue_id) and is_binary(submitted),
+       do: Integer.parse(submitted) == {venue_id, ""}
+
+  defp venue_picked?(_resolution, _submitted), do: false
 
   # A different option on the integration that already owns the room: the
   # room serves the new option as well as it served the old one.

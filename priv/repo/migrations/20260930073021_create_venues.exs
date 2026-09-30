@@ -13,8 +13,7 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
   `meetings.address_to_arrange` records that an in-person booking was made
   on a location offering no venue, so its address is arranged afterwards.
   It is stated rather than read off a nil `venue_id`, which a deleted venue
-  also leaves. Existing meetings keep `false`, so their emails read as they
-  always have.
+  also leaves.
 
   Until now an in-person location carried its address as free text in its
   `details`, retyped on every meeting type. This migration moves every
@@ -38,7 +37,10 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
       keep meaning "the address is arranged after booking";
     * meetings booked on a location that became a venue record it in
       `venue_id`, so a reschedule opens on it. Their `location` text is
-      never rewritten.
+      never rewritten;
+    * in-person meetings booked on a location left listing no venue (it
+      had no address) get `address_to_arrange`, which is what they were.
+      Every other existing meeting keeps `false`.
 
   Rolling back writes each location's first venue's description back into
   `details` before the table is dropped.
@@ -111,6 +113,7 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
 
     Enum.each(rows, &rewrite_locations(&1, venue_ids))
     link_meetings()
+    mark_addresses_to_arrange()
   end
 
   # Meeting types with an in-person location, oldest first, so an owner's
@@ -329,6 +332,22 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
       AND loc ->> 'kind' = 'in_person'
       AND jsonb_typeof(loc -> 'venue_ids') = 'array'
       AND (loc -> 'venue_ids' ->> 0) IS NOT NULL
+    """)
+  end
+
+  # Only a location the backfill rewrote carries `venue_ids`, and an empty
+  # list there is exactly an in-person location without an address.
+  defp mark_addresses_to_arrange do
+    repo().query!("""
+    UPDATE meetings AS m
+    SET address_to_arrange = true
+    FROM meeting_types AS mt
+    CROSS JOIN LATERAL unnest(mt.locations) AS loc
+    WHERE m.meeting_type_id = mt.id
+      AND m.location_kind = 'in_person'
+      AND m.location_option_id = loc ->> 'id'
+      AND loc ->> 'kind' = 'in_person'
+      AND loc -> 'venue_ids' = '[]'::jsonb
     """)
   end
 

@@ -16,6 +16,7 @@ defmodule Tymeslot.Venues do
 
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.Repo
   alias Tymeslot.Venues.VenueQueries
   alias Tymeslot.Venues.VenueSchema
 
@@ -88,27 +89,46 @@ defmodule Tymeslot.Venues do
   end
 
   @doc """
-  Deletes a venue, unless any of the owner's meeting types lists it.
+  Deletes a venue, even while meeting types list it.
 
-  Dropping it from their locations instead could leave a location the owner
-  believes offers an address with none, so the refusal names the meeting
-  types for the owner to change first.
+  In one transaction, the venue is first taken off every in-person location
+  of the owner's meeting types that lists it (the other venues keep their
+  order, and nothing else about the location changes), then deleted. A
+  location whose only venue it was is left listing none, and so means "the
+  address is arranged after booking" from then on; the Locations page warns
+  about those first (`meeting_types_left_without/1`).
+
+  Meetings already booked there keep their `location` text and their
+  `address_to_arrange` flag; the foreign key clears their `venue_id`.
   """
-  @spec delete_venue(VenueSchema.t()) ::
-          {:ok, VenueSchema.t()}
-          | {:error, {:in_use, [MeetingTypeSchema.t()]}}
-          | {:error, Ecto.Changeset.t()}
-  def delete_venue(%VenueSchema{} = venue) do
-    case meeting_types_using(venue) do
-      [] -> VenueQueries.delete_venue(venue)
-      meeting_types -> {:error, {:in_use, meeting_types}}
-    end
+  @spec delete_venue(VenueSchema.t()) :: {:ok, VenueSchema.t()} | {:error, Ecto.Changeset.t()}
+  def delete_venue(%VenueSchema{id: id, user_id: user_id} = venue) do
+    Repo.transaction(fn ->
+      with {:ok, _rewritten} <- MeetingTypes.remove_venue_from_locations(user_id, id),
+           {:ok, deleted} <- VenueQueries.delete_venue(venue) do
+        deleted
+      else
+        {:error, changeset} -> Repo.rollback(changeset)
+      end
+    end)
   end
 
-  @doc "The owner's meeting types whose locations list `venue`, by name."
+  @doc """
+  The owner's meeting types whose locations list `venue`, by name: the ones
+  a delete changes.
+  """
   @spec meeting_types_using(VenueSchema.t()) :: [MeetingTypeSchema.t()]
   def meeting_types_using(%VenueSchema{id: id, user_id: user_id}),
     do: MeetingTypes.list_using_venue(user_id, id)
+
+  @doc """
+  Of `meeting_types_using/1`, those a delete would leave with an in-person
+  location listing no venue, by name, because `venue` is that location's
+  only one.
+  """
+  @spec meeting_types_left_without(VenueSchema.t()) :: [MeetingTypeSchema.t()]
+  def meeting_types_left_without(%VenueSchema{id: id, user_id: user_id}),
+    do: MeetingTypes.left_without_venue(user_id, id)
 
   @doc """
   Venue id to the number of the owner's meeting types listing it, for the

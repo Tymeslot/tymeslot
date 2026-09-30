@@ -400,10 +400,29 @@ defmodule Tymeslot.MeetingTypes do
   defdelegate generate_random_slug(user_id), to: Slugs
   defdelegate update_slug(meeting_type, slug), to: Slugs
 
-  # Which meeting types offer a saved venue, asked by `Tymeslot.Venues`
-  # before a venue is deleted and for the Locations page's usage counts.
+  # Which meeting types offer a saved venue, asked by `Tymeslot.Venues` for
+  # the Locations page, and the rewrite that takes a deleted venue off them.
   defdelegate list_using_venue(user_id, venue_id), to: MeetingTypeQueries
   defdelegate venue_usage_counts(user_id), to: MeetingTypeQueries
+  defdelegate remove_venue_from_locations(user_id, venue_id), to: MeetingTypeQueries
+
+  @doc """
+  The owner's meeting types, by name, that deleting `venue_id` would leave
+  with an in-person location listing no venue: those with a location whose
+  only venue it is. Such a location then means "the address is arranged
+  after booking", which the Locations page warns about before a delete.
+  """
+  @spec left_without_venue(integer(), integer()) :: [MeetingTypeSchema.t()]
+  def left_without_venue(user_id, venue_id) do
+    user_id
+    |> list_using_venue(venue_id)
+    |> Enum.filter(fn meeting_type ->
+      Enum.any?(meeting_type.locations, &only_venue?(&1, venue_id))
+    end)
+  end
+
+  defp only_venue?(%LocationOption{kind: "in_person", venue_ids: [venue_id]}, venue_id), do: true
+  defp only_venue?(_location, _venue_id), do: false
 
   # Duration parsing, normalisation, and booking-flow validation live in the
   # focused sibling module Tymeslot.MeetingTypes.Duration; these delegations
