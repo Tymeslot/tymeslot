@@ -351,9 +351,16 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
     """)
   end
 
+  # A location goes back to the address of the first venue it lists. A
+  # venue saved with a name and no description has only its name to go by,
+  # and dropping it would leave the location with no address at all.
   defp restore_details do
-    %{rows: venue_rows} = repo().query!("SELECT id, description FROM venues")
-    descriptions = Map.new(venue_rows, fn [id, description] -> {id, description} end)
+    %{rows: venue_rows} = repo().query!("SELECT id, name, description FROM venues")
+
+    addresses =
+      Map.new(venue_rows, fn [id, name, description] ->
+        {id, restored_address(name, description)}
+      end)
 
     %{rows: rows} =
       repo().query!("""
@@ -363,7 +370,7 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
       """)
 
     Enum.each(rows, fn [id, locations] ->
-      restored = Enum.map(locations, &restore_location(&1, descriptions))
+      restored = Enum.map(locations, &restore_location(&1, addresses))
 
       repo().query!("UPDATE meeting_types SET locations = $2::jsonb[] WHERE id = $1", [
         id,
@@ -372,10 +379,10 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
     end)
   end
 
-  defp restore_location(%{"venue_ids" => ids} = location, descriptions) do
+  defp restore_location(%{"venue_ids" => ids} = location, addresses) do
     details =
       case ids do
-        [first | _rest] -> Map.get(descriptions, first, location["details"])
+        [first | _rest] -> Map.get(addresses, first, location["details"])
         _none -> location["details"]
       end
 
@@ -384,5 +391,9 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
     |> Map.put("details", details)
   end
 
-  defp restore_location(location, _descriptions), do: location
+  defp restore_location(location, _addresses), do: location
+
+  defp restored_address(name, description) do
+    if is_binary(description) and String.trim(description) != "", do: description, else: name
+  end
 end

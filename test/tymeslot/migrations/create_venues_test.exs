@@ -448,4 +448,31 @@ defmodule Tymeslot.Migrations.CreateVenuesTest do
     assert location["details"] == "12 High Street"
     refute Map.has_key?(location, "venue_ids")
   end
+
+  test "rolling back gives a location whose venue has only a name that name as its address" do
+    user = insert(:user)
+    meeting_type = insert(:meeting_type, user: user)
+
+    MigrationRunner.rerun!(@version)
+
+    # Saved after the migration, as the Locations page allows: a name and
+    # no description.
+    studio = insert(:venue, user: user, name: "Studio", description: nil)
+
+    put_raw_locations(meeting_type, [
+      %{
+        "id" => "loc-studio",
+        "kind" => "in_person",
+        "label" => "Our studio",
+        "venue_ids" => [studio.id],
+        "position" => 0
+      }
+    ])
+
+    MigrationRunner.down!(@version)
+
+    assert [location] = locations(meeting_type)
+    assert location["details"] == "Studio"
+    refute Map.has_key?(location, "venue_ids")
+  end
 end
