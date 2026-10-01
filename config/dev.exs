@@ -111,7 +111,8 @@ config :phoenix_live_view,
   debug_heex_annotations: true,
   enable_expensive_runtime_checks: true
 
-# Configure the database
+# Configure the database. DEV_DB_POOL_SIZE lowers the pool when several dev
+# servers share one Postgres and would together exceed its max_connections.
 config :tymeslot, Tymeslot.Repo,
   username: "postgres",
   password: "postgres",
@@ -119,7 +120,7 @@ config :tymeslot, Tymeslot.Repo,
   database: "tymeslot_dev#{System.get_env("DB_SUFFIX")}",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
-  pool_size: 80
+  pool_size: String.to_integer(System.get_env("DEV_DB_POOL_SIZE") || "80")
 
 # Configure Oban for development
 # Queue definitions in config.exs are loaded at runtime by application.ex
