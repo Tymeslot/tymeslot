@@ -19,3 +19,22 @@
 .folio-card--page .manage-page__notice {
   border-radius: var(--folio-radius-panel);
 }
+
+/* The payment return pages: centred, as the meeting pages' headers are,
+   their heading at the cancel and reschedule titles' size, and the way
+   back a compact button in the middle rather than a full-width bar. */
+.folio-card--page .manage-page--payment-processing,
+.folio-card--page .manage-page--payment-cancelled {
+  text-align: center;
+}
+
+.folio-card--page .payment-page-heading {
+  font-size: var(--theme-font-size-2xl);
+}
+
+.folio-card--page .payment-page-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+}
