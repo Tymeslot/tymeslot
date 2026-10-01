@@ -76,6 +76,7 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
   alias Tymeslot.CalendarGrid.QueuedWrite
   alias Tymeslot.CalendarGrid.WriteHandOver
   alias Tymeslot.CalendarGrid.WriteQueue
+  alias Tymeslot.CalendarGrid.WriteResults
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
 
@@ -253,7 +254,7 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
   @impl GenServer
   def handle_cast({:mirror, queue}, %{driving?: false} = state) do
     state = release_drained(%{state | queue: queue}, state.queue, state.results)
-    results = Enum.filter(state.results, &WriteQueue.awaits?(queue, &1))
+    results = Enum.filter(state.results, &WriteResults.awaits?(queue, &1))
     {:noreply, %{state | results: results}}
   end
 
@@ -326,7 +327,7 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
 
       # A release is kept even before the queue waiting for it has arrived,
       # since a guardian may lend the event as soon as `adopt/2` has asked.
-      tag == :event_writes_released or WriteQueue.awaits?(state.queue, message) ->
+      tag == :event_writes_released or WriteResults.awaits?(state.queue, message) ->
         {:noreply, %{state | results: state.results ++ [message]}}
 
       true ->
@@ -400,7 +401,7 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
   end
 
   defp apply_result(state, message) do
-    {queue, effects} = WriteQueue.apply_result(state.queue, message)
+    {queue, effects} = WriteResults.apply_result(state.queue, message)
     Enum.each(effects, &start_write(&1, state))
     release_drained(%{state | queue: queue}, state.queue, [message])
   end

@@ -351,6 +351,41 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeriesHoldLiveViewTest do
   end
 
   describe "when another grid of the organiser waits for its events" do
+    # The other tab borrowed the held occurrence and kept an edit of it. The
+    # held edit is dropped once the series write succeeds, so the kept one,
+    # made against the occurrence as it was, is dropped as well rather than
+    # written over the series-wide change.
+    test "an edit kept for an occurrence held behind a write to all events is dropped once that succeeds",
+         %{conn: conn, event: event, other: other} do
+      hold_puts()
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      write_all(lv, event)
+      assert_receive {:held, :edit, writer}, @task_timeout
+
+      show(lv, other)
+      rename(lv, "Daily standup")
+
+      {:ok, other_tab, _html} = live(conn, ~p"/dashboard/calendar")
+      show(other_tab, other)
+      rename(other_tab, "Remote standup")
+      refute_receive {:held, :edit, _editor}, 200
+
+      release(writer, 204)
+      assert_receive {:put, @series_url, series_body}, @task_timeout
+      refute series_body =~ "Remote standup"
+
+      eventually(
+        fn ->
+          assert render(other_tab) =~
+                   "The series was updated, but a change you made while it was saving was not applied."
+        end,
+        timeout: @task_timeout
+      )
+
+      refute_receive {:held, :edit, _editor}, 300
+    end
+
     # The grid mounted again finds the occurrence it holds an edit for lent
     # out to the other tab; waiting for that tab in turn would leave each
     # waiting for the other.
