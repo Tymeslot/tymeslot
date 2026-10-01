@@ -139,7 +139,7 @@
   --approval-notice-gap: var(--space-xs);
   --approval-notice-font-size: var(--theme-font-size-sm);
   --approval-notice-ink: var(--theme-text-secondary);
-  --approval-notice-max-width: 36rem;
+  --approval-notice-max-width: none; /* the column's full width, as on the booking step */
 
   /* Poll voting page (shared/components/polls.css). */
   --poll-voting-padding: var(--space-lg);
