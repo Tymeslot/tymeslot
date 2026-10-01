@@ -10,7 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsEtagProbeTest do
   use Tymeslot.HttpTransportCase, async: false
   @moduletag :integrations
 
-  alias Tymeslot.Integrations.Calendar.CalDAV.Events
+  alias Tymeslot.Integrations.Calendar.CalDAV.{ConditionalWrite, Events}
 
   @caldav_client %{
     base_url: "https://caldav.example.com",
@@ -101,6 +101,63 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsEtagProbeTest do
       assert :ok = update_without_etag("head-refused-uid")
     end
 
+    # A server too slow to answer HEAD is too slow to answer a GET: the
+    # probe gives up and the write goes out without an ETag.
+    for {label, error} <- [{"times out", :timeout}, {"fails in transport", :econnrefused}] do
+      test "writes without an ETag and sends no GET when HEAD #{label}" do
+        error = unquote(error)
+
+        stub_ordered([
+          fn conn ->
+            assert conn.method == "HEAD"
+            ReqTest.transport_error(conn, error)
+          end,
+          fn conn ->
+            assert conn.method == "PUT"
+            assert Conn.get_req_header(conn, "if-match") == ["*"]
+            Conn.send_resp(conn, 204, "")
+          end
+        ])
+
+        assert :ok = update_without_etag("head-#{error}-uid")
+      end
+    end
+
+    test "sends no GET when HEAD reports the event gone" do
+      stub_ordered([
+        fn conn ->
+          assert conn.method == "HEAD"
+          Conn.send_resp(conn, 410, "")
+        end,
+        fn conn ->
+          assert conn.method == "PUT"
+          assert Conn.get_req_header(conn, "if-match") == ["*"]
+          Conn.send_resp(conn, 204, "")
+        end
+      ])
+
+      assert :ok = update_without_etag("head-gone-uid")
+    end
+
+    # HEAD and GET share the probe's time. The HEAD here answers after all of
+    # it is spent, so no GET follows.
+    test "sends no GET when a refused HEAD has used up the probe's time" do
+      stub_ordered([
+        fn conn ->
+          assert conn.method == "HEAD"
+          receive after: (60 -> :ok)
+          Conn.send_resp(conn, 400, "")
+        end,
+        fn conn ->
+          assert conn.method == "PUT"
+          assert Conn.get_req_header(conn, "if-match") == ["*"]
+          Conn.send_resp(conn, 204, "")
+        end
+      ])
+
+      assert :ok = update_without_etag("slow-refusal-uid", head_timeout: 50)
+    end
+
     # iCloud also refuses `If-Match: *` with 412 on an event it holds, which
     # used to be read as absence and sent the update into a recreate.
     test "writes under the server's ETag when If-Match: * is refused on an existing event" do
@@ -164,6 +221,50 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsEtagProbeTest do
     end
   end
 
+  # Every request of one update shares a deadline, so the chain ends inside
+  # the calendar worker's time limit rather than being killed there.
+  describe "update_calendar_event/5 under a deadline" do
+    test "sends nothing further once the deadline has passed" do
+      stub_ordered([
+        fn conn ->
+          assert conn.method == "HEAD"
+          Conn.send_resp(conn, 404, "")
+        end,
+        fn conn ->
+          assert conn.method == "PUT"
+          receive after: (60 -> :ok)
+          Conn.send_resp(conn, 412, "")
+        end
+      ])
+
+      deadline = System.monotonic_time(:millisecond) + 50
+
+      assert {:error, :timeout} = update_without_etag("late-uid", deadline: deadline)
+    end
+
+    test "starts no request at all with no time left" do
+      stub_ordered([])
+
+      deadline = System.monotonic_time(:millisecond)
+
+      assert {:error, :timeout} = update_without_etag("expired-uid", deadline: deadline)
+    end
+  end
+
+  describe "ConditionalWrite.with_deadline/1" do
+    test "gives the update less than the calendar worker's 90 seconds" do
+      before = System.monotonic_time(:millisecond)
+      deadline = Keyword.fetch!(ConditionalWrite.with_deadline([]), :deadline)
+
+      assert deadline - before >= 60_000
+      assert deadline - before < 90_000
+    end
+
+    test "keeps a deadline the caller already started" do
+      assert ConditionalWrite.with_deadline(deadline: 123)[:deadline] == 123
+    end
+  end
+
   # Answers each request with the next handler, and fails on any request
   # beyond the last, so a test pins the whole exchange rather than its start.
   defp stub_ordered(handlers) do
@@ -182,7 +283,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsEtagProbeTest do
     on_exit(fn -> assert :counters.get(counter, 1) == length(handlers) end)
   end
 
-  defp update_without_etag(uid) do
+  defp update_without_etag(uid, opts \\ []) do
     Events.update_calendar_event(
       @caldav_client,
       "/calendars/user/personal/",
@@ -192,7 +293,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsEtagProbeTest do
         start_time: ~U[2026-02-24 12:00:00Z],
         end_time: ~U[2026-02-24 13:00:00Z]
       },
-      skip_breaker: true
+      Keyword.put(opts, :skip_breaker, true)
     )
   end
 end

@@ -205,6 +205,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
           :ok | {:error, Base.error_reason()}
   def update_calendar_event(client, calendar_path, uid, event_data, opts) do
     policy = Keyword.get(opts, :conflict_resolution, ConflictResolution.default())
+    opts = ConditionalWrite.with_deadline(opts)
 
     if ConflictResolution.valid?(policy) do
       with_events_breaker(client, opts, fn ->
@@ -343,6 +344,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
 
   defp do_update_event_colour(client, calendar_path, uid, colour, raw_ical, opts) do
     policy = Keyword.get(opts, :conflict_resolution, ConflictResolution.default())
+    opts = ConditionalWrite.with_deadline(opts)
 
     if ConflictResolution.valid?(policy) do
       with_events_breaker(client, opts, fn ->

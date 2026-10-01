@@ -9,12 +9,36 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ConditionalWrite do
   `409` instead of `412` follows the same policy when a real ETag was sent;
   when only `If-Match: *` was sent the write is simply replayed
   unconditionally, since that condition guarded nothing.
+
+  An update can take several requests: a probe for the ETag, a refused
+  conditional PUT, a re-read and a second PUT. `with_deadline/1` gives them
+  one shared deadline, so the whole chain ends inside the calendar worker's
+  time limit instead of being killed there with its last write in flight.
   """
 
   alias Tymeslot.Infrastructure.RetryLogic
   alias Tymeslot.Integrations.Calendar.CalDAV.{Base, ConflictResolution, Http}
 
   require Logger
+
+  # The calendar worker abandons an operation after 90 s
+  # (`CalendarEventWorker`), so the chain is given less than that: one retry
+  # delay and the work around the requests still fit in the margin.
+  @chain_budget_ms 80_000
+
+  # `Http.put_event/5`'s own default, which a deadline can only shorten.
+  @write_timeout_ms 45_000
+
+  @doc """
+  Starts the deadline every request of one update shares, unless `opts`
+  already carries one. Each request then waits at most what is left of it,
+  and none is sent once it has passed; that request answers
+  `{:error, :timeout}` instead. Without a deadline in `opts` each request
+  keeps its own timeout.
+  """
+  @spec with_deadline(keyword()) :: keyword()
+  def with_deadline(opts),
+    do: Keyword.put_new_lazy(opts, :deadline, fn -> now() + @chain_budget_ms end)
 
   @doc """
   Reads the resource at `url`: its iCalendar document and the ETag it came
@@ -24,9 +48,17 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ConditionalWrite do
   @spec fetch_document(Base.client(), String.t(), keyword()) ::
           {:ok, String.t(), String.t() | nil} | {:error, Base.error_reason()}
   def fetch_document(client, url, opts) do
-    get_opts = Keyword.put(opts, :timeout, Keyword.get(opts, :read_timeout, 30_000))
+    result =
+      within_deadline(opts, Keyword.get(opts, :read_timeout, 30_000), fn timeout ->
+        Http.get_event(
+          url,
+          client.username,
+          client.password,
+          Keyword.put(opts, :timeout, timeout)
+        )
+      end)
 
-    case Http.get_event(url, client.username, client.password, get_opts) do
+    case result do
       {:ok, %Req.Response{body: body, headers: headers}} when is_binary(body) and body != "" ->
         {:ok, body, etag_from_headers(headers)}
 
@@ -58,10 +90,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ConditionalWrite do
     base_put_opts =
       if etag, do: [operation: :update, if_match: etag], else: [operation: :update]
 
-    put_opts = Keyword.merge(base_put_opts, Keyword.take(opts, [:timeout]))
-
+    # The time left is read on every attempt, so a retry gets only what the
+    # first attempt left of the deadline.
     put_fun = fn ->
-      Http.put_event(url, client.username, client.password, ical_data, put_opts)
+      within_deadline(opts, Keyword.get(opts, :timeout, @write_timeout_ms), fn timeout ->
+        put_opts = Keyword.put(base_put_opts, :timeout, timeout)
+        Http.put_event(url, client.username, client.password, ical_data, put_opts)
+      end)
     end
 
     # If-Match PUTs (with a specific ETag or with *) are safe to retry: the
@@ -158,9 +193,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ConditionalWrite do
   # substitute: it still asserts the resource exists, so a server is entitled
   # to refuse it.
   defp force_put(client, url, ical_data, opts) do
-    put_opts = Keyword.merge([operation: :force_update], Keyword.take(opts, [:timeout]))
+    result =
+      within_deadline(opts, Keyword.get(opts, :timeout, @write_timeout_ms), fn timeout ->
+        put_opts = [operation: :force_update, timeout: timeout]
+        Http.put_event(url, client.username, client.password, ical_data, put_opts)
+      end)
 
-    case Http.put_event(url, client.username, client.password, ical_data, put_opts) do
+    case result do
       {:ok, %Req.Response{status: status}} when status in [200, 201, 204] ->
         :ok
 
@@ -185,31 +224,62 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ConditionalWrite do
 
   # HEAD is the cheap probe, but not every server answers it on an event
   # resource: iCloud returns 400 to the same URL it serves a GET on. A HEAD
-  # that fails, or succeeds without an ETag, is followed by a GET, whose
-  # response carries the ETag on those servers. Only a 404 or 410 settles that
-  # there is nothing to read. Short timeout since the ETag is optional: a
-  # probe that times out leaves the write to proceed without one.
+  # the server answered with an error status, or with no ETag, is followed by
+  # a GET, whose response carries the ETag on those servers. Only a 404 or 410
+  # settles that there is nothing to read.
+  #
+  # A HEAD that got no answer at all (a timeout or a transport failure) is not
+  # followed up: a server too slow for HEAD is too slow for GET, and the ETag
+  # is optional, so the write proceeds without one. For the same reason the
+  # probe as a whole, HEAD and GET together, gets `head_timeout`: it runs
+  # under a deadline of its own, never later than the update's.
   defp fetch_current_etag(url, client, opts) do
     head_timeout = Keyword.get(opts, :head_timeout, 15_000)
-    head_opts = Keyword.put(opts, :timeout, head_timeout)
+    probe_deadline = now() + head_timeout
+    probe_opts = Keyword.update(opts, :deadline, probe_deadline, &min(&1, probe_deadline))
 
-    case Http.head_event(url, client.username, client.password, head_opts) do
-      {:ok, %{headers: headers}} -> etag_from_headers(headers) || etag_from_get(url, client, opts)
-      {:error, reason} when reason in [:not_found, :gone] -> nil
-      {:error, _reason} -> etag_from_get(url, client, opts)
+    head =
+      within_deadline(probe_opts, head_timeout, fn timeout ->
+        Http.head_event(url, client.username, client.password, timeout: timeout)
+      end)
+
+    case head do
+      {:ok, %{headers: headers}} ->
+        etag_from_headers(headers) || etag_from_get(url, client, probe_opts)
+
+      {:error, reason} when reason in [:not_found, :gone, :network_error, :timeout] ->
+        nil
+
+      {:error, _status_reason} ->
+        etag_from_get(url, client, probe_opts)
     end
   end
 
   defp etag_from_get(url, client, opts) do
-    case fetch_document(
-           client,
-           url,
-           Keyword.put(opts, :read_timeout, Keyword.get(opts, :head_timeout, 15_000))
-         ) do
+    case fetch_document(client, url, opts) do
       {:ok, _document, etag} -> etag
       {:error, _reason} -> nil
     end
   end
+
+  # Runs `request` with `nominal` cut to what is left of the deadline, or
+  # sends nothing once the deadline has passed. A write is never started
+  # without time to finish it; one cut short times out as any slow write
+  # does, instead of being killed by the worker after it.
+  defp within_deadline(opts, nominal, request) do
+    case Keyword.get(opts, :deadline) do
+      nil ->
+        request.(nominal)
+
+      deadline ->
+        case deadline - now() do
+          left when left > 0 -> request.(min(nominal, left))
+          _passed -> {:error, :timeout}
+        end
+    end
+  end
+
+  defp now, do: System.monotonic_time(:millisecond)
 
   @doc "The raw `ETag` response header, or `nil` when the server sent none."
   @spec etag_from_headers(map()) :: String.t() | nil
