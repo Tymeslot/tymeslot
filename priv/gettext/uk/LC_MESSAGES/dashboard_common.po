@@ -619,6 +619,7 @@ msgid "Poll updated"
 msgstr "Опитування оновлено"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Save changes"
 msgstr "Зберегти зміни"
