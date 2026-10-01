@@ -285,6 +285,111 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
     end
   end
 
+  describe "when the connection drops and the grid mounts in a new LiveView" do
+    setup %{integration: integration} do
+      {:ok, event: standup(integration, "Team Standup", "Room 101")}
+    end
+
+    # The old LiveView's guardian is still writing its queue; the new grid
+    # takes it over, so an edit made there waits behind the older ones
+    # rather than racing them to the calendar.
+    test "a new edit of the event waits behind the older ones still saving", %{
+      conn: conn,
+      event: event
+    } do
+      old_lv = open_event(conn, event)
+
+      edit(old_lv, "update_event_title", "First title")
+      edit(old_lv, "update_event_location", "Room 9")
+      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, 1_000
+
+      old_guardian = WriteGuardian.whereis(old_lv.pid)
+      guardian_ref = Process.monitor(old_guardian)
+      kill(old_lv)
+
+      lv = open_event(conn, event)
+      edit(lv, "update_event_title", "Third title")
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+
+      answer(first, :ok)
+
+      assert_receive {:write_started, second, _uid, payload}, 1_000
+      assert %{summary: "First title", location: "Room 9"} = payload
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+
+      # Taken over, the old guardian stops once its running write answered.
+      assert_receive {:DOWN, ^guardian_ref, :process, ^old_guardian, :normal}, 1_000
+
+      answer(second, :ok)
+
+      assert_receive {:write_started, third, _uid, payload}, 1_000
+      assert %{summary: "Third title", location: "Room 9"} = payload
+      answer(third, :ok)
+
+      assert settled(lv) =~ "Third title"
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+    end
+
+    test "the writes of every LiveView gone are taken over", %{
+      conn: conn,
+      integration: integration,
+      event: event
+    } do
+      review = standup(integration, "Design Review", "Room 202", ~T[14:00:00])
+
+      tab_one = open_event(conn, event)
+      edit(tab_one, "update_event_title", "Standup renamed")
+      assert_receive {:write_started, standup_write, _uid, %{summary: "Standup renamed"}}, 1_000
+
+      tab_two = open_event(conn, review)
+      edit(tab_two, "update_event_title", "Review renamed")
+      assert_receive {:write_started, review_write, _uid, %{summary: "Review renamed"}}, 1_000
+
+      kill(tab_one)
+      kill(tab_two)
+
+      lv = open_event(conn, event)
+      edit(lv, "update_event_location", "Room 9")
+      lv |> element("[id^='event-#{review.id}-']") |> render_click()
+      edit(lv, "update_event_location", "Room 8")
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+
+      answer(standup_write, :ok)
+      assert_receive {:write_started, next, _uid, %{location: "Room 9"}}, 1_000
+      answer(next, :ok)
+
+      answer(review_write, :ok)
+      assert_receive {:write_started, next, _uid, %{location: "Room 8"}}, 1_000
+      answer(next, :ok)
+
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+    end
+
+    # A LiveView still alive, another tab of the same organiser, drives its
+    # own queue; nothing of it is taken.
+    test "the queue of another open tab is left to it", %{conn: conn, event: event} do
+      other_tab = open_event(conn, event)
+
+      edit(other_tab, "update_event_title", "First title")
+      edit(other_tab, "update_event_location", "Room 9")
+      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, 1_000
+
+      lv = open_event(conn, event)
+      edit(lv, "update_event_title", "This tab")
+      assert_receive {:write_started, this_tab, _uid, %{summary: "This tab"}}, 1_000
+
+      answer(first, :ok)
+
+      # Started once, by the other tab, and not by this one too.
+      assert_receive {:write_started, second, _uid, %{location: "Room 9"}}, 1_000
+      answer(second, :ok)
+      answer(this_tab, :ok)
+
+      assert settled(other_tab) =~ "Room 9"
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+    end
+  end
+
   defp standup(integration, summary, location, time \\ ~T[10:00:00]) do
     today = Date.utc_today()
 

@@ -34,8 +34,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   also handed to a `Tymeslot.CalendarGrid.WriteGuardian` after every
   change, and each write's result is sent to it as well; should the
   LiveView go, or the grid be taken off the page, before the queue drains,
-  the guardian finishes it, and a grid mounted again takes it back
-  (`adopt/1`).
+  the guardian finishes it, and a grid mounted again, in this LiveView or
+  in a new one after the connection came back, takes it over (`adopt/1`).
 
   ## Results
 
@@ -141,17 +141,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
     do: WriteQueue.series_busy?(socket.assigns.event_writes, event)
 
   @doc """
-  Takes back the writes a guardian is still making for this LiveView, when
-  the grid mounts again after the organiser left the calendar for another
-  dashboard page (see `Tymeslot.CalendarGrid.WriteGuardian.adopt/0`), so
-  that a new edit of an event still being written waits behind it.
+  Takes over the writes guardians are still making for this organiser, when
+  the grid mounts: this LiveView's own, after the organiser left the
+  calendar for another dashboard page, and those of a LiveView that is gone,
+  after the connection dropped and came back (see
+  `Tymeslot.CalendarGrid.WriteGuardian.adopt/2`), so that a new edit of an
+  event still being written waits behind it. The queue taken over is handed
+  straight to this LiveView's guardian.
   """
   @spec adopt(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def adopt(socket) do
-    case WriteGuardian.adopt() do
-      nil -> socket
-      queue -> assign(socket, :event_writes, queue)
-    end
+    user_id = socket.assigns.current_user.id
+    drive(socket, &{WriteGuardian.adopt(&1, user_id), []})
   end
 
   @doc """
