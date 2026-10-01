@@ -202,6 +202,14 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
       assert mjml =~ ~s(<mj-all font-family="-apple-system)
       refute mjml =~ "<mj-font"
       refute mjml =~ "'Inter'"
+
+      # MJML adds a Google Fonts link of its own for a default web font the
+      # stack names, so only the compiled HTML shows what an open fetches.
+      html = MjmlEmail.compile_mjml(mjml)
+
+      assert html =~ "Roboto"
+      refute html =~ "googleapis"
+      refute html =~ "gstatic"
     end
 
     test "escapes ampersand in organizer name exactly once when stage_title is absent" do
