@@ -62,6 +62,12 @@
   color: var(--theme-primary);
 }
 
+/* The approval notice under the form keeps the form's block spacing from
+   the last field (the shared notice only spaces itself below). */
+.paper-theme-wrapper .approval-notice-before {
+  margin-top: var(--space-lg);
+}
+
 /* --- Guests --- */
 
 .paper-theme-wrapper .guest-field__toggle {
