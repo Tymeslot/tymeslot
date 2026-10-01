@@ -112,6 +112,7 @@
 
   /* Sizes. */
   --icon-sm: 1.25rem;
+  --icon-md: 1.75rem;
   --folio-column: 46rem;
   --folio-gutter: clamp(var(--space-md), 6cqi, var(--space-2xl));
   --folio-control-height: 2.75rem;

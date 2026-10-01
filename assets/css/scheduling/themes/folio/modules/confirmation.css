@@ -24,9 +24,10 @@
   color: var(--theme-warning);
 }
 
+/* Half the badge's width, so the check or clock reads at a glance. */
 .folio-badge__icon {
-  width: var(--icon-sm);
-  height: var(--icon-sm);
+  width: var(--icon-md);
+  height: var(--icon-md);
 }
 
 .folio-details,
