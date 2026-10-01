@@ -12,10 +12,10 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   one, and silently ships `02:30 PM` into a German email. Callers that genuinely
   want English (admin alerts) pass `"en"` and say so.
 
-  The one exception is `format_location/1`, which resolves through `dgettext/2`
-  and so reads the ambient Gettext locale. It must be called inside a
-  `Gettext.with_locale/3` block. The rule: **pure formatters take a locale,
-  gettext-backed helpers read the ambient one.**
+  The exceptions are `format_location/1` and `location_note/1`, which resolve
+  through `dgettext/2` and so read the ambient Gettext locale. They must be
+  called inside a `Gettext.with_locale/3` block. The rule: **pure formatters
+  take a locale, gettext-backed helpers read the ambient one.**
   """
 
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
@@ -228,6 +228,46 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   end
 
   def format_location(details), do: details[:location] || dgettext("emails", "TBD")
+
+  @doc """
+  The line shown under the location of an in-person meeting whose address is
+  arranged after booking, or nil for any other location.
+
+  Worded for whoever reads the email: `audience: :host` (set by the
+  organiser renders, see `Tymeslot.Emails.Shared.TemplateHelper`) is told to
+  arrange it with the booker; `audience: :guest` (a guest the booker
+  invited, who arranges nothing) only that it will be arranged; the booker,
+  the default, that it will be arranged with them.
+  Must be called within a `Gettext.with_locale` block.
+  """
+  @spec location_note(%{
+          optional(:location_type) => atom() | nil,
+          optional(:audience) => :host | :guest,
+          optional(atom()) => term()
+        }) :: String.t() | nil
+  def location_note(%{location_type: :in_person_to_arrange, audience: :host}),
+    do: dgettext("emails", "The address is to be arranged with the booker.")
+
+  def location_note(%{location_type: :in_person_to_arrange, audience: :guest}),
+    do: dgettext("emails", "The address will be arranged after booking.")
+
+  def location_note(%{location_type: :in_person_to_arrange}),
+    do: dgettext("emails", "The address will be arranged with you after booking.")
+
+  def location_note(_details), do: nil
+
+  @doc """
+  `details` without the arranged-after-booking note: an in-person meeting
+  whose address was still to be arranged reads as a plain in-person one.
+
+  For the details of a meeting that is not going ahead, such as a
+  cancellation, where there is no longer an address to arrange.
+  """
+  @spec without_location_note(map()) :: map()
+  def without_location_note(%{location_type: :in_person_to_arrange} = details),
+    do: %{details | location_type: :in_person}
+
+  def without_location_note(details), do: details
 
   @doc """
   Formats currency based on cents (or raw units for zero-decimal currencies) and currency code.

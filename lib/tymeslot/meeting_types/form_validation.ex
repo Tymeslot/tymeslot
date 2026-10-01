@@ -18,7 +18,9 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
       provider of every video location is checked, not just the one the
       schema projects onto `video_integration_id`: a meeting type may offer
       several, and an unchecked one would book rooms on someone else's
-      account.
+      account. Every venue an in-person location lists must be the host's
+      own for the same reason: a foreign one would put someone else's
+      address on this host's bookings.
 
   Both gates deliberately restrict only the *permissive* direction. Turning
   payment off, or saving no questions, is always allowed, so a host who has
@@ -33,12 +35,14 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.UriUtils
+  alias Tymeslot.Venues
 
   @typedoc "Why a write was refused."
   @type error ::
           :video_integration_required
           | :invalid_video_integration
           | :invalid_location
+          | :invalid_venue
           | :calendar_integration_required
           | :calendar_integration_invalid
           | :target_calendar_required
@@ -62,15 +66,25 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
   end
 
   # Each video location must name at least one integration, and every one it
-  # names must be this host's and active. The list arrives as raw form input, so it can be either a list
-  # (the auto-save path, which builds params from socket assigns) or the
-  # index-keyed map Plug parses `locations[0][kind]` into; the values are
-  # likewise string- or atom-keyed. Both shapes are normalised before the
-  # lookup, because a shape this function fails to recognise would silently
-  # skip the check rather than fail it.
+  # names must be this host's and active; every venue an in-person location
+  # lists must be this host's own. The list arrives as raw form input, so it
+  # can be either a list (the auto-save path, which builds params from socket
+  # assigns) or the index-keyed map Plug parses `locations[0][kind]` into; the
+  # values are likewise string- or atom-keyed. Both shapes are normalised
+  # before the lookup, because a shape this function fails to recognise would
+  # silently skip the check rather than fail it.
   defp validate_locations(%{locations: locations}, user_id) do
+    locations = location_list(locations)
+
+    with :ok <- validate_video_locations(locations, user_id) do
+      validate_venues(locations, user_id)
+    end
+  end
+
+  defp validate_locations(_attrs, _user_id), do: :ok
+
+  defp validate_video_locations(locations, user_id) do
     locations
-    |> location_list()
     |> Enum.filter(&(location_field(&1, "kind") == "video"))
     |> Enum.flat_map(&video_integration_ids/1)
     |> Enum.reduce_while(:ok, fn id, :ok ->
@@ -81,7 +95,19 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
     end)
   end
 
-  defp validate_locations(_attrs, _user_id), do: :ok
+  # An in-person location listing no venue is valid: it is the "address
+  # arranged after booking" location. Any id it does list has to be owned;
+  # `Venues.owns_all?/2` parses the ids itself and refuses one that is not a
+  # valid id.
+  defp validate_venues(locations, user_id) do
+    ids =
+      locations
+      |> Enum.filter(&(location_field(&1, "kind") == "in_person"))
+      |> Enum.flat_map(&(&1 |> location_field("venue_ids") |> List.wrap()))
+      |> Enum.reject(&(&1 in [nil, ""]))
+
+    if Venues.owns_all?(user_id, ids), do: :ok, else: {:error, :invalid_venue}
+  end
 
   defp location_list(locations) when is_list(locations), do: locations
 

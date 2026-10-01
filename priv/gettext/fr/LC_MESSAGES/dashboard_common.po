@@ -626,3 +626,9 @@ msgstr "Ce créneau tombe pendant votre absence : il ne pourra pas être confirm
 #, elixir-autogen, elixir-format
 msgid "This time falls within your time off. Change or remove the time off to confirm it."
 msgstr "Ce créneau tombe pendant votre absence. Modifiez ou supprimez l'absence pour le confirmer."
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
+#, elixir-autogen, elixir-format
+msgid "Locations"
+msgstr "Lieux"

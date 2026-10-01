@@ -27,6 +27,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           location: String.t() | nil,
           location_kind: String.t() | nil,
           location_option_id: String.t() | nil,
+          venue_id: integer() | nil,
+          address_to_arrange: boolean(),
           meeting_type: String.t() | nil,
           organizer_name: String.t() | nil,
           organizer_email: String.t() | nil,
@@ -92,6 +94,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           organizer_user: any() | Ecto.Association.NotLoaded.t() | nil,
           calendar_integration: any() | Ecto.Association.NotLoaded.t() | nil,
           video_integration: any() | Ecto.Association.NotLoaded.t() | nil,
+          venue: any() | Ecto.Association.NotLoaded.t() | nil,
           meeting_type_ref: any() | Ecto.Association.NotLoaded.t() | nil,
           guests: [Tymeslot.Meetings.GuestSchema.t()] | Ecto.Association.NotLoaded.t(),
           inserted_at: DateTime.t() | nil,
@@ -145,6 +148,17 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     )
 
     belongs_to(:video_integration, Tymeslot.Integrations.Video.VideoIntegrationSchema, type: :id)
+
+    # The saved venue an in-person booking was made at, so a reschedule can
+    # open on it. `location` keeps the text snapshot: the venue may be edited
+    # or deleted later without rewriting what this booking agreed to.
+    belongs_to(:venue, Tymeslot.Venues.VenueSchema, type: :id)
+
+    # Set when an in-person booking was made on a location offering no venue,
+    # so the host arranges the address afterwards and the emails say so.
+    # Recorded rather than read off a nil `venue_id`, which also means a
+    # venue deleted after booking.
+    field(:address_to_arrange, :boolean, default: false)
 
     belongs_to(:meeting_type_ref, Tymeslot.MeetingTypes.MeetingTypeSchema,
       foreign_key: :meeting_type_id,
@@ -304,6 +318,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :organizer_user_id,
     :calendar_integration_id,
     :video_integration_id,
+    :venue_id,
+    :address_to_arrange,
     :calendar_path,
     :attendee_message,
     :organizer_note,
@@ -417,6 +433,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
       message: "You already have a confirmed meeting at this time."
     )
     |> check_constraint(:end_time, name: :meetings_end_after_start)
+    |> foreign_key_constraint(:venue_id)
   end
 
   # A new meeting gets its own calendar identity, generated independently of

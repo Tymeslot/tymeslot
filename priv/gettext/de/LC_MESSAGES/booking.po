@@ -1369,3 +1369,13 @@ msgstr "Etwas ist schiefgelaufen"
 #, elixir-autogen, elixir-format
 msgid "This page could not be loaded. Please try again."
 msgstr "Diese Seite konnte nicht geladen werden. Bitte versuchen Sie es erneut."
+
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "The address will be arranged with you after booking."
+msgstr "Die Adresse wird nach der Buchung mit Ihnen abgestimmt."
+
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "Which location?"
+msgstr "Welcher Ort?"

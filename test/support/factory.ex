@@ -36,6 +36,7 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Telegram.TelegramIntegrationSchema
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
   alias Tymeslot.Utils.UnguessableToken
+  alias Tymeslot.Venues.VenueSchema
   alias Tymeslot.Webhooks.WebhookDeliverySchema
   alias Tymeslot.Webhooks.WebhookSchema
 
@@ -189,6 +190,36 @@ defmodule Tymeslot.Factory do
       },
       attrs
     )
+  end
+
+  @doc """
+  An in-person location for a meeting type, listing `venues` in the order
+  given; the first is the one a booker who changes nothing gets. With no
+  venues it is the "address arranged after booking" location.
+
+      insert(:meeting_type, user: user, locations: [in_person_location([office])])
+  """
+  @spec in_person_location([map()], keyword()) :: LocationOption.t()
+  def in_person_location(venues \\ [], attrs \\ []) do
+    struct!(
+      %LocationOption{
+        id: UUID.generate(),
+        kind: "in_person",
+        label: "In person",
+        venue_ids: Enum.map(venues, & &1.id),
+        position: 0
+      },
+      attrs
+    )
+  end
+
+  @spec venue_factory() :: Tymeslot.Venues.VenueSchema.t()
+  def venue_factory do
+    %VenueSchema{
+      name: sequence(:venue_name, &"Office #{&1}"),
+      description: "12 High Street",
+      user: build(:user)
+    }
   end
 
   @spec calendar_integration_factory() ::

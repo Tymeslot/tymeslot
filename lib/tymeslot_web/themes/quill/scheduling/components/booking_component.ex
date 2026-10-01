@@ -70,6 +70,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   end
 
   @impl Phoenix.LiveComponent
+  def handle_event("select_venue", %{"id" => id}, socket) do
+    send(self(), {:step_event, :booking, :select_venue, id})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
   def handle_event("location_phone_change", params, socket) do
     send(self(), {:step_event, :booking, :location_phone, params["location_phone"] || ""})
     {:noreply, socket}
@@ -163,10 +169,19 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                     selected_location_id={@selected_location_id}
                     video_choices={BookingLocation.video_choices(assigns)}
                     selected_video_id={@selected_video_id}
+                    venue_choices={BookingLocation.venue_choices(assigns)}
+                    selected_venue_id={@selected_venue_id}
+                    kept_location={BookingLocation.kept_location(assigns)}
                     location_phone={@location_phone}
                     location_error={@location_error}
                     phone_required={BookingLocation.phone_required?(assigns)}
                     target={@myself}
+                  />
+
+                  <LocationField.stated_location
+                    :if={BookingLocation.stated_location?(assigns)}
+                    option={BookingLocation.selected(assigns)}
+                    venue_choices={BookingLocation.venue_choices(assigns)}
                   />
 
                   <.form

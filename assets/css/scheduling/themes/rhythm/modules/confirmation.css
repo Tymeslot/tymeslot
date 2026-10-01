@@ -449,6 +449,21 @@ html.rhythm-theme[data-embedded] .ticket-info {
   align-items: baseline;
 }
 
+/* The arranged-address note takes its own line under the inline value, and
+   its row takes only the space the other rows leave, so the sentence wraps
+   there instead of squeezing them. */
+html.rhythm-theme[data-embedded] .ticket-row:has(.location-field__note) {
+  flex: 1 1 0;
+  min-width: 0;
+}
+html.rhythm-theme[data-embedded] .ticket-info:has(.location-field__note) {
+  flex-wrap: wrap;
+}
+html.rhythm-theme[data-embedded] .ticket-info .location-field__note {
+  flex-basis: 100%;
+  margin-top: 0;
+}
+
 html.rhythm-theme[data-embedded] .ticket-sublabel::before {
   content: "· ";
 }

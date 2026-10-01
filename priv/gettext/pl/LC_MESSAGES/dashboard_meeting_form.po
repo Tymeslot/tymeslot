@@ -100,6 +100,7 @@ msgstr "Dostępność w kalendarzu"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/new_venue_component.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
@@ -337,6 +338,7 @@ msgid "Multiple choice"
 msgstr "Wielokrotny wybór"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/new_venue_component.ex
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr "Nazwa"
@@ -874,21 +876,17 @@ msgstr[2] "Możesz skonfigurować maksymalnie %{count} przypomnień"
 msgid "The price of %{amount} is kept and applies again once Stripe is connected."
 msgstr "Cena %{amount} zostaje zachowana i zacznie obowiązywać ponownie po podłączeniu Stripe."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/new_venue_component.ex
 #, elixir-autogen, elixir-format
 msgid "12 High Street, London EC1A 1BB"
 msgstr "ul. Długa 12, 00-238 Warszawa"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/new_venue_component.ex
 #, elixir-autogen, elixir-format
 msgid "Add location"
 msgstr "Dodaj lokalizację"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Address"
-msgstr "Adres"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -922,7 +920,6 @@ msgstr "Edytuj lokalizację"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/init.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "In person"
 msgstr "Spotkanie osobiste"
@@ -1041,3 +1038,53 @@ msgid_plural "%{count} minutes"
 msgstr[0] "%{count} minuta"
 msgstr[1] "%{count} minuty"
 msgstr[2] "%{count} minut"
+
+#: lib/tymeslot/utils/form_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "A selected location is not one of yours"
+msgstr "Wybrana lokalizacja nie należy do twojego konta"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/venue_picker.ex
+#, elixir-autogen, elixir-format
+msgid "+ New location"
+msgstr "+ Nowa lokalizacja"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/new_venue_component.ex
+#, elixir-autogen, elixir-format
+msgid "Address and directions (optional)"
+msgstr "Adres i wskazówki dojazdu (opcjonalne)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
+#, elixir-autogen, elixir-format
+msgid "Address arranged after booking"
+msgstr "Adres ustalany po rezerwacji"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/venue_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Locations"
+msgstr "Lokalizacje"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/new_venue_component.ex
+#, elixir-autogen, elixir-format
+msgid "New location"
+msgstr "Nowa lokalizacja"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/venue_picker.ex
+#, elixir-autogen, elixir-format
+msgid "No address selected: bookers are told it will be arranged after booking."
+msgstr "Nie wybrano adresu: osoby rezerwujące dowiedzą się, że zostanie ustalony po rezerwacji."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/venue_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Pick one or more. With several, the booker chooses where to meet."
+msgstr "Wybierz co najmniej jedną. Jeśli wybierzesz kilka, osoba rezerwująca zdecyduje, gdzie się spotkacie."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/venue_picker.ex
+#, elixir-autogen, elixir-format
+msgid "You have no saved locations yet. Add one here, or leave this empty to arrange the address after booking."
+msgstr "Nie masz jeszcze zapisanych lokalizacji. Dodaj nową tutaj lub zostaw to pole puste, aby ustalić adres po rezerwacji."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/new_venue_component.ex
+#, elixir-autogen, elixir-format
+msgid "e.g., Berlin office"
+msgstr "np. biuro w Berlinie"

@@ -21,9 +21,13 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
   alias Tymeslot.Bookings.Create
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Emails.Templates.AppointmentConfirmation
+  alias Tymeslot.Emails.Templates.AppointmentReminder
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.LocationOption
+  alias Tymeslot.Repo
   alias Tymeslot.TestMocks
+  alias Tymeslot.Venues
   alias Tymeslot.Workers.VideoRoomWorker
 
   setup do
@@ -59,7 +63,6 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
             id: "loc-office",
             kind: "in_person",
             label: "Our office",
-            details: "12 High Street",
             position: 0
           },
           video_location(integration, id: "loc-video", label: "Zoom", position: 1),
@@ -104,12 +107,40 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
       assert {:ok, meeting} =
                book(ctx.meeting_type, ctx.user, %{location_option_id: "loc-office"})
 
-      assert meeting.location == "Our office (12 High Street)"
+      assert meeting.location == "Our office"
       assert meeting.location_kind == "in_person"
       assert meeting.location_option_id == "loc-office"
       assert meeting.video_integration_id == nil
 
       refute_enqueued(worker: VideoRoomWorker)
+    end
+
+    test "offering no venue records that the address is arranged after booking", ctx do
+      assert {:ok, meeting} =
+               book(ctx.meeting_type, ctx.user, %{location_option_id: "loc-office"})
+
+      assert Repo.get!(MeetingSchema, meeting.id).address_to_arrange == true
+
+      details = AppointmentBuilder.from_meeting(meeting)
+      email = AppointmentConfirmation.render(:attendee, meeting.attendee_email, details)
+
+      assert email.html_body =~ "The address will be arranged with you after booking."
+      assert email.text_body =~ "The address will be arranged with you after booking."
+      refute email.html_body =~ "arranged with the booker"
+      refute email.text_body =~ "arranged with the booker"
+
+      host_email = AppointmentConfirmation.render(:organizer, "organiser@example.com", details)
+
+      assert host_email.html_body =~ "The address is to be arranged with the booker."
+      assert host_email.text_body =~ "The address is to be arranged with the booker."
+      refute host_email.html_body =~ "arranged with you"
+      refute host_email.text_body =~ "arranged with you"
+    end
+
+    test "a location that is not in person has no address to arrange", ctx do
+      assert {:ok, meeting} = book(ctx.meeting_type, ctx.user, %{location_option_id: "loc-video"})
+
+      assert Repo.get!(MeetingSchema, meeting.id).address_to_arrange == false
     end
   end
 
@@ -228,32 +259,149 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
       assert meeting.attendee_phone == nil
       assert meeting.location == "Zoom"
     end
+
+    test "a venue submitted against a location that is not in person is ignored", ctx do
+      venue = insert(:venue, user: ctx.user)
+
+      assert {:ok, meeting} =
+               book(ctx.meeting_type, ctx.user, %{
+                 location_option_id: "loc-video",
+                 location_venue_id: venue.id
+               })
+
+      assert meeting.venue_id == nil
+      assert meeting.location == "Zoom"
+    end
   end
 
   describe "a location as long as the host is allowed to write" do
     test "reaches the meeting intact rather than failing at the column", ctx do
-      details = String.duplicate("a", 500)
-      label = String.duplicate("b", 120)
+      name = String.duplicate("b", 120)
+      description = String.duplicate("a", 500)
+      venue = insert(:venue, user: ctx.user, name: name, description: description)
 
       long =
         insert(:meeting_type,
           user: ctx.user,
           name: "Long Address",
-          locations: [
-            %LocationOption{
-              id: "loc-long",
-              kind: "in_person",
-              label: label,
-              details: details,
-              position: 0
-            }
-          ]
+          locations: [in_person_location([venue], id: "loc-long", label: "Our office")]
         )
 
       assert {:ok, meeting} = book(long, ctx.user, %{location_option_id: "loc-long"})
 
-      assert meeting.location == "#{label} (#{details})"
+      assert meeting.location == "#{name} (#{description})"
       assert String.length(meeting.location) > 255
+    end
+  end
+
+  describe "an in-person location offering saved venues" do
+    setup %{user: user} do
+      berlin =
+        insert(:venue,
+          user: user,
+          name: "Berlin office",
+          description: "Friedrichstrasse 1\n3rd floor"
+        )
+
+      munich = insert(:venue, user: user, name: "Munich office", description: "Marienplatz 8")
+
+      venue_type =
+        insert(:meeting_type,
+          user: user,
+          name: "Office Visit",
+          duration_minutes: 30,
+          locations: [
+            in_person_location([berlin, munich], id: "loc-offices", label: "Our offices")
+          ]
+        )
+
+      %{berlin: berlin, munich: munich, venue_type: venue_type}
+    end
+
+    test "books the venue the booker picked and pins it on the meeting", ctx do
+      assert {:ok, meeting} =
+               book(ctx.venue_type, ctx.user, %{
+                 location_option_id: "loc-offices",
+                 location_venue_id: to_string(ctx.munich.id)
+               })
+
+      assert meeting.venue_id == ctx.munich.id
+      assert meeting.location == "Munich office (Marienplatz 8)"
+      assert meeting.location_kind == "in_person"
+      assert Repo.get!(MeetingSchema, meeting.id).address_to_arrange == false
+      refute_enqueued(worker: VideoRoomWorker)
+    end
+
+    test "deleting the booked venue does not make its address one to arrange", ctx do
+      assert {:ok, meeting} =
+               book(ctx.venue_type, ctx.user, %{
+                 location_option_id: "loc-offices",
+                 location_venue_id: ctx.munich.id
+               })
+
+      # Deleted while the location still lists it, so the location is
+      # rewritten too; the meeting keeps what it was booked at.
+      assert {:ok, _deleted} = Venues.delete_venue(ctx.munich)
+      reloaded = Repo.get!(MeetingSchema, meeting.id)
+
+      assert reloaded.venue_id == nil
+      assert reloaded.address_to_arrange == false
+
+      details = AppointmentBuilder.from_meeting(reloaded)
+      email = AppointmentConfirmation.render(:attendee, reloaded.attendee_email, details)
+
+      assert reloaded.location == "Munich office (Marienplatz 8)"
+      assert email.text_body =~ "Munich office (Marienplatz 8)"
+      refute email.text_body =~ "arranged with you after booking"
+
+      # The reminders still to come name it too, for the booker and the host.
+      for {role, recipient} <- [
+            attendee: details.attendee_email,
+            organizer: details.organizer_email
+          ] do
+        reminder = AppointmentReminder.render(role, recipient, details)
+
+        assert reminder.html_body =~ "Munich office"
+        assert reminder.text_body =~ "Munich office (Marienplatz 8)"
+        refute reminder.text_body =~ "to be arranged"
+        refute reminder.text_body =~ "arranged with you after booking"
+      end
+    end
+
+    test "deleting a location's only venue makes its next booking one to arrange", ctx do
+      solo =
+        insert(:meeting_type,
+          user: ctx.user,
+          name: "Berlin Visit",
+          duration_minutes: 30,
+          locations: [in_person_location([ctx.berlin], id: "loc-berlin", label: "Berlin")]
+        )
+
+      assert {:ok, _deleted} = Venues.delete_venue(ctx.berlin)
+
+      assert {:ok, meeting} =
+               book(solo, ctx.user, %{
+                 location_option_id: "loc-berlin",
+                 location_venue_id: ctx.berlin.id
+               })
+
+      reloaded = Repo.get!(MeetingSchema, meeting.id)
+      assert reloaded.venue_id == nil
+      assert reloaded.location == "Berlin"
+      assert reloaded.address_to_arrange == true
+    end
+
+    test "a venue the location does not offer books its first venue instead", ctx do
+      stranger = insert(:venue)
+
+      assert {:ok, meeting} =
+               book(ctx.venue_type, ctx.user, %{
+                 location_option_id: "loc-offices",
+                 location_venue_id: stranger.id
+               })
+
+      assert meeting.venue_id == ctx.berlin.id
+      assert meeting.location == "Berlin office (Friedrichstrasse 1, 3rd floor)"
     end
   end
 

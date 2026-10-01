@@ -554,3 +554,18 @@ msgstr "%{meeting_type} з %{name}"
 #, elixir-autogen, elixir-format
 msgid "Meeting with %{name}"
 msgstr "Зустріч із %{name}"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "The address is to be arranged with the booker."
+msgstr "Адресу потрібно погодити з тим, хто бронював."
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "The address will be arranged after booking."
+msgstr "Адресу погодять після бронювання."
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "The address will be arranged with you after booking."
+msgstr "Адресу погодять з вами після бронювання."

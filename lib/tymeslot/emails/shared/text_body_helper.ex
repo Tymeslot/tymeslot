@@ -18,6 +18,7 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
         "#{dgettext("emails", "Date:")} #{Formatting.format_date(appointment_details.date, locale)}",
         format_time_line(appointment_details, locale),
         format_location_line(appointment_details),
+        Formatting.location_note(appointment_details),
         format_meeting_type_line(appointment_details.meeting_type)
       ]
 
@@ -25,6 +26,20 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
       |> Enum.filter(& &1)
       |> Enum.join("\n")
     end)
+  end
+
+  @doc """
+  The note under an in-person location whose address is arranged after
+  booking, as a line of its own to append straight to a text body's location
+  line; empty for any other location.
+  Must be called within a `Gettext.with_locale` block.
+  """
+  @spec location_note_line(map()) :: String.t()
+  def location_note_line(details) do
+    case Formatting.location_note(details) do
+      nil -> ""
+      note -> "\n" <> note
+    end
   end
 
   @doc """

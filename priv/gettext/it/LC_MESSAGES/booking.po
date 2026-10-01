@@ -1369,3 +1369,13 @@ msgstr "Si è verificato un errore"
 #, elixir-autogen, elixir-format
 msgid "This page could not be loaded. Please try again."
 msgstr "Impossibile caricare questa pagina. Riprova."
+
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "The address will be arranged with you after booking."
+msgstr "L'indirizzo verrà concordato con te dopo la prenotazione."
+
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "Which location?"
+msgstr "Quale sede?"

@@ -207,6 +207,30 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   end
 
   @doc """
+  A changeset taking `venue_id` off every in-person location that lists it,
+  for a venue being deleted. The remaining venues keep their order, and
+  every other location, and every other field of the rewritten ones, is
+  kept exactly as stored. The meeting type's own validation does not run:
+  nothing it checks changes, and a location listing no venue is valid.
+  """
+  @spec without_venue_changeset(t(), integer()) :: Ecto.Changeset.t()
+  def without_venue_changeset(%__MODULE__{locations: locations} = meeting_type, venue_id)
+      when is_integer(venue_id) do
+    locations =
+      Enum.map(locations, fn
+        %LocationOption{kind: "in_person", venue_ids: ids} = location ->
+          %{location | venue_ids: Enum.reject(ids, &(&1 == venue_id))}
+
+        location ->
+          location
+      end)
+
+    meeting_type
+    |> change()
+    |> put_embed(:locations, locations)
+  end
+
+  @doc """
   Simple changeset for toggling active status.
   Only validates the is_active field without checking video integration requirements.
   """

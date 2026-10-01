@@ -4,11 +4,26 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
   over the location being created or updated.
 
   On a valid save, the component merges the updated location into the
-  existing `locations` list and pushes both `locations` and
+  existing `locations` list and pushes `locations` and
   `editing_location: nil` into the parent `MeetingTypeForm` via
-  `Phoenix.LiveView.send_update/2` — the same single-hop round-trip
+  `Phoenix.LiveView.send_update/2`, the same single-hop round-trip
   `QuestionEditorComponent` uses, which keeps `LiveViewTest` helpers
   deterministic.
+
+  An in-person location picks from the organiser's saved venues
+  (`VenuePicker`). "+ New location" opens `NewVenueComponent` below the
+  form; it saves the venue and sends it back here as `venue_created`, which
+  adds it to the choices and ticks it without leaving the editor. The inline
+  form is a sibling of this component's `<form>`, never nested in it, so the
+  Save button sits after both and names its form explicitly.
+
+  The venue list itself belongs to the meeting settings page
+  (`parent_myself`), which loads it with the rest of its data and hands it
+  down. A new venue therefore also asks that page to reload, or its next
+  render would hand down the list from before the venue existed and the
+  meeting type would lose it on the following save. Because the page can
+  re-render this editor at any time, an update keeps the changeset for as
+  long as it is the same location being edited.
 
   The `mode` assign (`:add` or `:edit`) controls the modal header. It is set
   by `LocationsSection` and forwarded through `MeetingTypeForm`; do not
@@ -24,29 +39,58 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.NewVenueComponent
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.VenuePicker
   alias TymeslotWeb.Helpers.LocationIcons
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
-  @allowed_error_fields ~w(label details video_integration_ids)
+  import TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ChoiceToggle,
+    only: [choice_toggle: 1]
 
+  @allowed_error_fields ~w(label details video_integration_ids venue_ids)
+
+  # Multi-select pickers post a leading blank (see `ChoiceToggle`).
+  @id_list_fields ~w(video_integration_ids venue_ids)
+
+  # A venue made with "+ New location" joins the choices and is ticked, on
+  # top of whatever the organiser has already ticked or typed. A new venue is
+  # last in the organiser's order, so it is appended, as it is in the
+  # library, and ticked last.
   @impl Phoenix.LiveComponent
-  def update(assigns, socket) do
-    location = assigns[:location] || %LocationOption{}
+  def update(%{venue_created: venue}, socket) do
+    changeset = socket.assigns.changeset
+    ids = (Changeset.get_field(changeset, :venue_ids) || []) ++ [venue.id]
+    params = Map.put(changeset.params || %{}, "venue_ids", Enum.map(ids, &to_string/1))
+    venues = socket.assigns.venues ++ [venue]
+
+    LiveView.send_update(socket.assigns.parent_myself, %{})
 
     {:ok,
      socket
-     |> assign(assigns)
+     |> assign(:venues, venues)
+     |> assign(:changeset, LocationOption.changeset(socket.assigns.location, params))
+     |> assign(:creating_venue, false)}
+  end
+
+  def update(assigns, socket) do
+    socket = assign(socket, assigns)
+    location = socket.assigns[:location] || %LocationOption{}
+
+    {:ok,
+     socket
      |> assign(:location, location)
-     |> assign(:changeset, LocationOption.changeset(location, %{}))
+     |> start_changeset(location)
+     |> assign_new(:venues, fn -> [] end)
      |> assign_new(:mode, fn -> :add end)
-     |> assign_new(:field_errors, fn -> %{} end)}
+     |> assign_new(:field_errors, fn -> %{} end)
+     |> assign_new(:creating_venue, fn -> false end)}
   end
 
   @impl Phoenix.LiveComponent
   def handle_event("validate", %{"location" => params} = event_params, socket) do
     params =
       params
-      |> normalise_video_integration_ids()
+      |> normalise_id_lists()
       |> default_label_for_kind(socket.assigns.changeset)
 
     field_errors =
@@ -64,11 +108,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
 
   @impl Phoenix.LiveComponent
   def handle_event("save", %{"location" => params}, socket) do
-    changeset =
-      LocationOption.changeset(
-        socket.assigns.location,
-        normalise_video_integration_ids(params)
-      )
+    changeset = LocationOption.changeset(socket.assigns.location, normalise_id_lists(params))
 
     if changeset.valid? do
       location = Changeset.apply_changes(changeset)
@@ -104,6 +144,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
     )
 
     {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("toggle_new_venue", _params, socket) do
+    {:noreply, assign(socket, :creating_venue, !socket.assigns.creating_venue)}
   end
 
   @impl Phoenix.LiveComponent
@@ -187,6 +232,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
                 field_errors={@field_errors}
                 myself={@myself}
               />
+            <% "in_person" -> %>
+              <VenuePicker.venue_picker
+                changeset={@changeset}
+                venues={@venues}
+                field_errors={@field_errors}
+                myself={@myself}
+              />
             <% "phone" -> %>
               <CoreComponents.input
                 name="location[collect_from_guest]"
@@ -223,8 +275,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
                 value={field_value(@changeset, :details)}
                 id="location_details"
                 type="textarea"
-                label={details_label(field_value(@changeset, :kind))}
-                placeholder={details_placeholder(field_value(@changeset, :kind))}
+                label={dgettext("dashboard_meeting_form", "Details (optional)")}
+                placeholder={
+                  dgettext(
+                    "dashboard_meeting_form",
+                    "Anything the booker needs to know to get there"
+                  )
+                }
                 rows={3}
                 phx-blur="field_blur"
                 phx-value-field="details"
@@ -248,21 +305,35 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
             name="location[position]"
             value={field_value(@changeset, :position)}
           />
-
-          <div class="flex justify-end gap-2 pt-2">
-            <CoreComponents.action_button
-              type="button"
-              variant={:secondary}
-              phx-click="cancel"
-              phx-target={@myself}
-            >
-              {dgettext("dashboard_meeting_form", "Cancel")}
-            </CoreComponents.action_button>
-            <CoreComponents.action_button type="submit" variant={:primary}>
-              {dgettext("dashboard_meeting_form", "Save location")}
-            </CoreComponents.action_button>
-          </div>
         </.form>
+
+        <%!-- Outside the form above: HTML forms cannot nest. --%>
+        <.live_component
+          :if={@creating_venue and field_value(@changeset, :kind) == "in_person"}
+          module={NewVenueComponent}
+          id={"new-venue-#{@id}"}
+          editor_id={@id}
+          editor={@myself}
+          current_user={@current_user}
+        />
+
+        <div class="flex justify-end gap-2 pt-4">
+          <CoreComponents.action_button
+            type="button"
+            variant={:secondary}
+            phx-click="cancel"
+            phx-target={@myself}
+          >
+            {dgettext("dashboard_meeting_form", "Cancel")}
+          </CoreComponents.action_button>
+          <CoreComponents.action_button
+            type="submit"
+            form="location-editor-form"
+            variant={:primary}
+          >
+            {dgettext("dashboard_meeting_form", "Save location")}
+          </CoreComponents.action_button>
+        </div>
       </CoreComponents.modal>
     </div>
     """
@@ -312,85 +383,24 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
     """
   end
 
-  attr :id, :string, required: true
-  attr :name, :string, required: true
-  attr :value, :any, default: nil
-  attr :label, :string, required: true
-  attr :options, :list, required: true, doc: "maps with :value, :label, :icon and optional :title"
-  attr :multiple, :boolean, default: false, doc: "checkboxes instead of radios; `value` is a list"
-  attr :required, :boolean, default: false
-  attr :errors, :list, default: []
-  slot :description
-
-  # A choice from a short, closed set, drawn as the row of pill toggles the
-  # admin settings use rather than a select, so every option is visible at
-  # once. Each pill wraps a visually hidden native radio (or checkbox, with
-  # `multiple`): the choice then travels with the form's `phx-change` like any
-  # other field, and the browser keeps the keyboard behaviour and group
-  # semantics of the native control.
-  #
-  # With `multiple`, a blank entry is always posted first. Unticking the last
-  # box would otherwise send no key at all, which the changeset reads as
-  # "unchanged" rather than "none"; `normalise_video_integration_ids/1`
-  # strips the blank again.
-  defp choice_toggle(assigns) do
-    ~H"""
-    <fieldset id={@id} class="form-field-wrapper">
-      <legend class="label mb-2 block">
-        {@label}
-        <span :if={@required} class="text-red-500 ml-0.5">*</span>
-      </legend>
-      <p
-        :if={@description != []}
-        class="text-token-xs text-tymeslot-500 font-medium normal-case tracking-normal -mt-1 mb-2"
-      >
-        {render_slot(@description)}
-      </p>
-      <input :if={@multiple} type="hidden" name={@name} value="" />
-      <div class="inline-flex flex-wrap items-center max-w-full p-1 bg-white border-2 border-tymeslot-100 rounded-token-xl shadow-sm gap-1">
-        <label
-          :for={option <- @options}
-          title={option[:title]}
-          data-testid={"#{@id}-option"}
-          data-value={option.value}
-          class={[
-            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-token-lg text-token-xs font-black uppercase tracking-wider transition-all cursor-pointer",
-            "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-turquoise-400 has-[:focus-visible]:ring-offset-1",
-            if(selected?(option.value, @value, @multiple),
-              do: "bg-turquoise-600 text-white shadow-md shadow-turquoise-200/40",
-              else: "text-tymeslot-500 hover:bg-tymeslot-50 hover:text-tymeslot-900"
-            )
-          ]}
-        >
-          <input
-            type={if @multiple, do: "checkbox", else: "radio"}
-            name={@name}
-            value={option.value}
-            checked={selected?(option.value, @value, @multiple)}
-            class="sr-only"
-          />
-          <CoreComponents.icon name={option.icon} class="w-4 h-4 shrink-0" />
-          <span>{option.label}</span>
-        </label>
-      </div>
-      <Forms.field_error errors={@errors} id={@errors != [] && "#{@id}-error"} />
-    </fieldset>
-    """
+  # A fresh changeset only for a location not already being edited: a
+  # re-render from the page above must not discard what has been ticked or
+  # typed so far.
+  defp start_changeset(socket, %LocationOption{id: id} = location) do
+    case socket.assigns[:changeset] do
+      %Changeset{data: %LocationOption{id: ^id}} -> socket
+      _other -> assign(socket, :changeset, LocationOption.changeset(location, %{}))
+    end
   end
 
-  # The changeset holds integration ids as integers and a kind as a string;
-  # the inputs' values are strings either way.
-  defp selected?(option_value, values, true = _multiple),
-    do: Enum.any?(List.wrap(values), &selected?(option_value, &1, false))
-
-  defp selected?(option_value, value, false = _multiple),
-    do: to_string(option_value) == to_string(value)
-
-  defp normalise_video_integration_ids(%{"video_integration_ids" => ids} = params)
-       when is_list(ids),
-       do: Map.put(params, "video_integration_ids", Enum.reject(ids, &(&1 == "")))
-
-  defp normalise_video_integration_ids(params), do: params
+  defp normalise_id_lists(params) do
+    Enum.reduce(@id_list_fields, params, fn field, acc ->
+      case acc do
+        %{^field => ids} when is_list(ids) -> Map.put(acc, field, Enum.reject(ids, &(&1 == "")))
+        _other -> acc
+      end
+    end)
+  end
 
   # A location's label is the one field the host must write, and every kind
   # has an obvious name for itself. Filling it in when the kind changes on a
@@ -412,15 +422,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
   defp default_label("phone"), do: dgettext("dashboard_meeting_form", "Phone call")
   defp default_label("in_person"), do: dgettext("dashboard_meeting_form", "In person")
   defp default_label(_kind), do: dgettext("dashboard_meeting_form", "Somewhere else")
-
-  defp details_label("in_person"), do: dgettext("dashboard_meeting_form", "Address")
-  defp details_label(_kind), do: dgettext("dashboard_meeting_form", "Details (optional)")
-
-  defp details_placeholder("in_person"),
-    do: dgettext("dashboard_meeting_form", "12 High Street, London EC1A 1BB")
-
-  defp details_placeholder(_kind),
-    do: dgettext("dashboard_meeting_form", "Anything the booker needs to know to get there")
 
   # A pill shows the integration's name, with the account in its tooltip. Two
   # integrations sharing a name (two Zoom accounts, say) would be two

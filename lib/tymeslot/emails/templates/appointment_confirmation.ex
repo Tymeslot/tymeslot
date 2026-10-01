@@ -127,6 +127,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
   end
 
   def render(:guest, guest_email, appointment_details) do
+    appointment_details = TemplateHelper.as_guest_view(appointment_details)
+
     # Guests have no per-guest locale field; they intentionally inherit the
     # booker's locale (`:attendee_locale`) set when the booking was created.
     locale = Map.get(appointment_details, :attendee_locale, "en")
@@ -141,7 +143,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
         duration: appointment_details.duration,
         location: appointment_details.location,
         location_type: Map.get(appointment_details, :location_type),
-        meeting_type: appointment_details.meeting_type
+        meeting_type: appointment_details.meeting_type,
+        audience: :guest
       }
 
       intro_copy = guest_intro(appointment_details, guest_name)

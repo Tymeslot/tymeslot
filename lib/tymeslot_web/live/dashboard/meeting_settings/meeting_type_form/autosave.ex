@@ -32,8 +32,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
   require Logger
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.FormHelpers
+  alias Tymeslot.Venues
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission
 
@@ -83,6 +85,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
   defp apply_result({:ok, updated}, socket) do
     socket
     |> assign(:type, updated)
+    |> follow_dropped_venues(updated)
     |> assign(:form_errors, %{})
     |> assign(:save_status, :saved)
   end
@@ -142,6 +145,28 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
     socket
     |> assign(:form_errors, FormHelpers.format_context_error(reason))
     |> assign(:save_status, :error)
+  end
+
+  # A save can go through without venues the form still listed, when they
+  # were deleted elsewhere meanwhile (see `Submission.persist/4`). The form
+  # then takes the venue ids that were stored, and the organiser's current
+  # venues, so it stops naming and offering the deleted ones.
+  defp follow_dropped_venues(socket, updated) do
+    stored = Map.new(MeetingTypes.location_options(updated), &{&1.id, &1.venue_ids})
+
+    locations =
+      Enum.map(socket.assigns.locations, fn location ->
+        %{location | venue_ids: Map.get(stored, location.id, location.venue_ids)}
+      end)
+
+    if locations == socket.assigns.locations do
+      socket
+    else
+      assign(socket,
+        locations: locations,
+        venues: Venues.list_venues(socket.assigns.current_user.id)
+      )
+    end
   end
 
   @doc """
