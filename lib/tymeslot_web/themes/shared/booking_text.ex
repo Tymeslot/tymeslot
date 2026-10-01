@@ -26,7 +26,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
 
   It also owns the meeting-length label every step shows, `duration_label/1`, so
   the themes cannot disagree about which duration wins, and a paid meeting
-  type's price, `price_label/2`.
+  type's price, `price_label/3`.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -132,14 +132,15 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
 
   @doc """
   A paid meeting type's price in the organiser's currency (`@host_currency`,
-  which the page holds from mount), or `nil` for a free type, for a paid one
-  without a price, and when the currency is unknown. A demo persona's meeting
-  type is a plain map without the fields, and is `nil` too.
+  which the page holds from mount), written the way the guest's `locale`
+  writes amounts ("€45.00", "45,00 €"), or `nil` for a free type, for a paid
+  one without a price, and when the currency is unknown. A demo persona's
+  meeting type is a plain map without the fields, and is `nil` too.
   """
-  @spec price_label(map() | nil, String.t() | nil) :: String.t() | nil
-  def price_label(%{payment_required: true, price_cents: cents}, currency)
+  @spec price_label(map() | nil, String.t() | nil, String.t()) :: String.t() | nil
+  def price_label(%{payment_required: true, price_cents: cents}, currency, locale)
       when is_integer(cents) and cents > 0 and is_binary(currency),
-      do: PaymentHelpers.format_amount(cents, currency)
+      do: PaymentHelpers.format_amount(cents, currency, locale)
 
-  def price_label(_meeting_type, _currency), do: nil
+  def price_label(_meeting_type, _currency, _locale), do: nil
 end

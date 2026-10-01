@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
   end
 
   # The currency the organiser's paid meeting types are priced in, for the
-  # steps that show a price (`BookingText.price_label/2`). Looked up only when
+  # steps that show a price (`BookingText.price_label/3`). Looked up only when
   # one of them is paid, so a page without a paid type costs no query. A demo
   # persona's meeting types are plain maps without the field.
   defp host_currency(%{user_id: user_id, meeting_types: meeting_types}) do

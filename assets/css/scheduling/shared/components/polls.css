@@ -148,11 +148,13 @@ html.scheduling-app .poll-slot-grid {
 html.scheduling-app .poll-slot-row {
   /* Time, tallies and controls on one line. They wrap onto their own lines
      only when the card is too narrow to hold them, which is what keeps a
-     forty-slot poll from running to several screens. */
+     forty-slot poll from running to several screens. The tallies' auto
+     start margin keeps them and the controls together at the end, so each
+     row's tallies line up with the next row's. */
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: var(--space-sm);
   margin: 0;
   padding: var(--space-sm) var(--space-md);
@@ -162,15 +164,15 @@ html.scheduling-app .poll-slot-row {
 }
 
 html.scheduling-app .poll-slot-time {
-  /* Sized to its own content, never grown: with flex-grow the time swallows
-     the row and pushes the tallies onto a second line. It may still shrink, so
-     a long localised date wraps inside the row rather than forcing the
-     controls out of it. */
-  flex: 0 1 auto;
+  /* A fixed 10rem basis, not the date's own width, decides when the row
+     wraps, so every row wraps at the same card width whatever its date's
+     length: the time then takes the whole first line and the tallies and
+     controls the second. Above that width the time grows into the free
+     space, and a long localised date wraps inside it (min-width: 0). */
+  flex: 1 1 10rem;
   min-width: 0;
   /* One step down from base so the date and its tallies fit on a single line
-     at the card's default width. A longer locale still wraps, which the row's
-     flex-wrap handles; this only decides where the common case lands. */
+     at the card's default width. */
   font-size: var(--theme-font-size-sm);
   font-weight: 600;
   color: var(--theme-text);
@@ -180,6 +182,7 @@ html.scheduling-app .poll-slot-tallies {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-sm);
+  margin-inline-start: auto;
 }
 
 html.scheduling-app .poll-tally {
@@ -188,6 +191,12 @@ html.scheduling-app .poll-tally {
   gap: var(--space-3xs);
   font-size: var(--theme-font-size-sm);
   color: var(--theme-text-secondary);
+}
+
+html.scheduling-app .poll-tally-count {
+  /* Equal-width digits, so a 1 and an 8 take the same room and the tallies
+     stay aligned from row to row. */
+  font-variant-numeric: tabular-nums;
 }
 
 html.scheduling-app .poll-tally-icon {

@@ -1,7 +1,8 @@
 /* Custom questions: the yes/no tile pair and the option-card stack the shared
    question inputs render (Shared.CustomQuestions.Inputs: yes_no.ex,
    option_card.ex, used by single-select, multi-select and the note
-   acknowledgement), and the note body.
+   acknowledgement), the note body, and the chevron on the dropdown a
+   single-select with more than five options falls back to.
 
    Tokens, each optional (the fallback in brackets):
      --option-tile-border        tile and card border        (--line-2)
@@ -14,6 +15,7 @@
      --option-indicator-idle     radio/check ring            (--theme-text-secondary)
      --option-indicator-hover    radio/check ring on hover   (--theme-text)
      --option-card-min-height    option card height          (3.25rem)
+     --select-chevron-ink        dropdown chevron            (--ink-2)
    A treatment a theme adds (a glass blur, a glow on the selected tile) goes
    in the theme's own module under the same selector, after this file. */
 
@@ -197,4 +199,35 @@
 .custom-question-option-label {
   font-size: var(--theme-font-size-base);
   line-height: 1.35;
+}
+
+/* ===== Dropdown chevron: a single-select with more than five options =====
+
+   The select is appearance-none, so nothing draws its arrow. The
+   .custom-question-select wrapper (single_select.ex) holds the select
+   alone, so a chevron centred on the wrapper is centred on the select. The
+   mask takes the chevron's shape from the SVG and its colour from the
+   token, so the SVG's own stroke colour never shows. The select's padding
+   rule outranks each theme's `.<theme>-wrapper select.input` padding. */
+
+.scheduling-app .custom-question-select {
+  position: relative;
+}
+
+.scheduling-app .custom-question-select::after {
+  content: "";
+  position: absolute;
+  inset-inline-end: var(--space-sm);
+  top: 50%;
+  translate: 0 -50%;
+  width: 1rem;
+  height: 1rem;
+  background: var(--select-chevron-ink, var(--ink-2));
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+  pointer-events: none;
+}
+
+.scheduling-app .custom-question-select select.input {
+  padding-inline-end: calc(var(--space-sm) * 2 + 1rem);
 }

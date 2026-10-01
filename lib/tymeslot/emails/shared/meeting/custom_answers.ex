@@ -12,7 +12,9 @@ defmodule Tymeslot.Emails.Shared.Meeting.CustomAnswers do
 
   @doc """
   Renders a table of snapshotted custom-field answers for display in
-  appointment emails. Returns an empty string when there are no fields.
+  appointment emails. A field whose answer renders empty (left blank, or
+  a note the booker did not tick) gets no row, as in the text email and on
+  the dashboard; returns an empty string when no row is left.
 
   `appointment_details` must carry `:custom_fields_snapshot` (list of field
   definition maps) and `:custom_field_answers` (string-keyed map of answers).
@@ -22,15 +24,18 @@ defmodule Tymeslot.Emails.Shared.Meeting.CustomAnswers do
     snapshot = Map.get(appointment_details, :custom_fields_snapshot) || []
     answers = Map.get(appointment_details, :custom_field_answers) || %{}
 
-    if snapshot == [] do
+    rows =
+      snapshot
+      |> Enum.map(&{&1, AnswerRenderer.render(&1, answers[&1["id"]])})
+      |> Enum.reject(fn {_field, rendered} -> rendered == "" end)
+
+    if rows == [] do
       ""
     else
-      rows =
-        Enum.map_join(snapshot, "\n", fn field ->
+      row_html =
+        Enum.map_join(rows, "\n", fn {field, rendered} ->
           label = Sanitise.sanitize_for_email(field["label"] || "")
-
-          value =
-            Sanitise.sanitize_for_email(AnswerRenderer.render(field, answers[field["id"]]))
+          value = Sanitise.sanitize_for_email(rendered)
 
           """
           <tr style="#{Styles.table_row_style()}">
@@ -54,7 +59,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.CustomAnswers do
             #{dgettext("emails", "Additional details")}
           </mj-text>
           <mj-table #{Styles.table_attributes()} css-class="responsive-table">
-            #{rows}
+            #{row_html}
           </mj-table>
         </mj-column>
       </mj-section>

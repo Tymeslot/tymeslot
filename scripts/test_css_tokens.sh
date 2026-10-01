@@ -172,6 +172,7 @@ REQUIRED_SHARED_IMPORTS=(
   "shared/embed.css"
   "shared/components/language-switcher.css"
   "shared/components/preview-notice.css"
+  "shared/components/flash.css"
   "shared/components/approval-notice.css"
   "shared/components/booking-fields.css"
   "shared/components/custom-questions.css"

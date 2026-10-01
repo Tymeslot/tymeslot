@@ -208,8 +208,8 @@ defmodule TymeslotWeb.BookingRecaptchaTest do
     |> form("form[data-testid='booking-form']", %{"booking" => params})
     |> render_submit()
 
-    # Honeypot triggers before reCAPTCHA check
-    eventually(fn -> assert render(view) =~ "Booking submitted successfully" end)
+    # Honeypot triggers before reCAPTCHA check and fakes the confirmation
+    eventually(fn -> assert render(view) =~ "Meeting Confirmed!" end)
     # Honeypot: no booking created
     assert Repo.aggregate(MeetingSchema, :count, :id) == 0
   end

@@ -3,10 +3,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
   Shared booking orchestration for all scheduling themes.
   """
 
-  use Gettext, backend: TymeslotWeb.Gettext
-
   import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [put_flash: 3]
 
   alias Phoenix.Component
   alias Tymeslot.Security.InputProcessor
@@ -69,16 +66,10 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
       {:slot_taken, socket} ->
         {:noreply, return_to_schedule_for_new_slot(socket, transition_fun)}
 
+      # A bot must not be able to tell the honeypot from a real booking, so
+      # it lands on the same confirmation step, with no flash, as a real one.
       {:honeypot, socket} ->
-        {:noreply,
-         put_flash(
-           socket,
-           :info,
-           dgettext(
-             "booking",
-             "Booking submitted successfully! You'll receive a confirmation email shortly."
-           )
-         )}
+        {:noreply, transition_fun.(socket, :confirmation, %{})}
 
       {:error, socket} ->
         {:noreply, assign(socket, :submitting, false)}

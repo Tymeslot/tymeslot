@@ -70,4 +70,16 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelectTest do
 
     assert html =~ ~s(<option value="">)
   end
+
+  test "the select fallback sits in the wrapper that draws its chevron, with nothing else" do
+    d = %{"id" => "q9", "type" => "single_select", "label" => "Pick", "options" => options(6)}
+    doc = d |> render_input() |> Floki.parse_fragment!()
+
+    # The chevron is centred on the wrapper, so the wrapper must hold the
+    # select alone: a label or an error inside it would pull the chevron off
+    # the select's middle.
+    assert [wrapper] = Floki.find(doc, "form#cq-form-q9 .custom-question-select")
+    assert [_select] = Floki.find(wrapper, "select[name='value']")
+    assert Floki.find(wrapper, "label, .form-field-error, p") == []
+  end
 end

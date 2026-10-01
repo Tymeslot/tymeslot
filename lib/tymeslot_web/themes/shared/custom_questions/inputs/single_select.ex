@@ -6,6 +6,11 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelect do
   options, otherwise falls back to the global `<.input type="select">` for
   compactness, inside a form: LiveView's client sends `phx-change` only from
   an input that has a form, so a bare select would never commit the answer.
+
+  The select is `appearance-none`, so its chevron is drawn by the
+  `custom-question-select` wrapper (`shared/components/custom-questions.css`).
+  The wrapper holds the select alone (the input gets no label and no
+  errors here), so the chevron centres on the select itself.
   """
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -49,15 +54,17 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelect do
       phx-submit="next_step"
       phx-target={@myself}
     >
-      <.input
-        id={"cq-input-#{@definition["id"]}"}
-        type="select"
-        name="value"
-        value={@value}
-        options={Enum.map(@definition["options"], &{&1["label"], &1["key"]})}
-        prompt={dgettext("booking", "Select…")}
-        aria-label={@definition["label"]}
-      />
+      <div class="custom-question-select">
+        <.input
+          id={"cq-input-#{@definition["id"]}"}
+          type="select"
+          name="value"
+          value={@value}
+          options={Enum.map(@definition["options"], &{&1["label"], &1["key"]})}
+          prompt={dgettext("booking", "Select…")}
+          aria-label={@definition["label"]}
+        />
+      </div>
     </form>
     """
   end

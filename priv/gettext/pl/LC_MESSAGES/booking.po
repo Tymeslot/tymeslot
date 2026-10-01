@@ -162,11 +162,6 @@ msgstr "Dostępne terminy"
 msgid "Booking confirmed"
 msgstr "Rezerwacja potwierdzona"
 
-#: lib/tymeslot_web/themes/shared/booking_flow.ex
-#, elixir-autogen, elixir-format
-msgid "Booking submitted successfully! You'll receive a confirmation email shortly."
-msgstr "Rezerwacja wysłana. Za chwilę dostaniesz e-mail z potwierdzeniem."
-
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Bookings available up to %{advance}"
@@ -948,11 +943,6 @@ msgstr "Wybierz opcję poniżej."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex
 #, elixir-autogen, elixir-format
-msgid "Booking submitted successfully!"
-msgstr "Rezerwacja wysłana."
-
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex
-#, elixir-autogen, elixir-format
 msgid "Demo: Booking submitted successfully! (Using the app, you would receive a confirmation email)"
 msgstr "Demo: rezerwacja wysłana. (W aplikacji przyszedłby e-mail z potwierdzeniem)"
 
@@ -960,11 +950,6 @@ msgstr "Demo: rezerwacja wysłana. (W aplikacji przyszedłby e-mail z potwierdze
 #, elixir-autogen, elixir-format
 msgid "Demo: Meeting rescheduled successfully! (Using the app, you would receive a confirmation email)"
 msgstr "Demo: termin spotkania zmieniony. (W aplikacji przyszedłby e-mail z potwierdzeniem)"
-
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting rescheduled successfully!"
-msgstr "Termin spotkania zmieniony."
 
 #: lib/tymeslot_web/components/layouts/scheduling_root.html.heex
 #, elixir-autogen, elixir-format

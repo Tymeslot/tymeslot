@@ -35,10 +35,30 @@ defmodule TymeslotWeb.Themes.Shared.Components.CustomAnswersTest do
     assert column(doc, "dd.custom-answers__value") == ["Acme", "Yes"]
   end
 
-  test "tolerates answers not yet assigned" do
+  test "tolerates answers not yet assigned, skipping the empty ones" do
     doc = render_answers(%{snapshot: @snapshot, answers: nil})
 
-    assert column(doc, "dd.custom-answers__value") == ["", "No"]
+    assert column(doc, "dt.custom-answers__label") == ["Newsletter?"]
+    assert column(doc, "dd.custom-answers__value") == ["No"]
+  end
+
+  @note %{"id" => "q3", "label" => "I have read the terms", "type" => "note"}
+
+  test "gives an unticked note no row" do
+    doc = render_answers(%{snapshot: @snapshot ++ [@note], answers: %{"q1" => "Acme"}})
+
+    assert column(doc, "dt.custom-answers__label") == ["Company", "Newsletter?"]
+  end
+
+  test "lists a ticked note" do
+    answers = %{"q3" => %{"confirmed" => true, "confirmed_at" => "2026-10-01"}}
+    doc = render_answers(%{snapshot: [@note], answers: answers})
+
+    assert column(doc, "dt.custom-answers__label") == ["I have read the terms"]
+  end
+
+  test "renders nothing when every answer is empty" do
+    assert Floki.find(render_answers(%{snapshot: [@note], answers: %{}}), ".custom-answers") == []
   end
 
   test "renders nothing for a meeting type without questions" do
