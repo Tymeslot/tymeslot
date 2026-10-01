@@ -73,7 +73,11 @@
 }
 
 /* The identity row: the portrait half over the band, the name to its
-   right, the bio below across the whole row. */
+   right, the bio below across the whole row. The portrait is pinned to the
+   row's top, so its centre stays on the band's lower edge however tall the
+   text beside it is; the text sits at the row's bottom, level with the
+   portrait's foot while it is shorter than the portrait's lower half and
+   growing downwards past it when it is taller. */
 .folio-identity {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -85,6 +89,7 @@
 
 .folio-portrait {
   position: relative;
+  align-self: start;
   width: var(--folio-portrait-size);
   height: var(--folio-portrait-size);
   margin-top: calc(var(--folio-portrait-size) / -2);
