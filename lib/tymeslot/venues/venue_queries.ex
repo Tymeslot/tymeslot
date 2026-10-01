@@ -74,6 +74,22 @@ defmodule Tymeslot.Venues.VenueQueries do
     end)
   end
 
+  @doc """
+  Whether the venue with `id` exists, holding it, when it does, until the
+  caller's transaction ends.
+
+  `FOR KEY SHARE` is the lock a foreign key check itself takes: it blocks a
+  delete until the transaction holding it commits, and waits out a delete
+  already under way, after which the venue is found gone. Unscoped, for
+  writing a meeting whose venue the owner's own meeting type resolved.
+  """
+  @spec hold(integer()) :: boolean()
+  def hold(id) do
+    from(v in VenueSchema, where: v.id == ^id, select: v.id, lock: "FOR KEY SHARE")
+    |> Repo.one()
+    |> is_integer()
+  end
+
   @doc "One of the owner's venues, or nil when it is missing or someone else's."
   @spec get_for_user(integer(), integer()) :: VenueSchema.t() | nil
   def get_for_user(user_id, id), do: Repo.get_by(VenueSchema, id: id, user_id: user_id)

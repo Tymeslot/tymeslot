@@ -435,6 +435,22 @@ defmodule Tymeslot.VenuesTest do
     end
   end
 
+  describe "hold_for_meeting/1" do
+    test "is the venue while it exists" do
+      venue = insert(:venue, user: insert(:user))
+
+      assert Venues.hold_for_meeting(venue.id) == venue.id
+    end
+
+    test "is nil for a venue deleted since, and for no venue" do
+      venue = insert(:venue, user: insert(:user))
+      {:ok, _deleted} = Venues.delete_venue(venue)
+
+      assert Venues.hold_for_meeting(venue.id) == nil
+      assert Venues.hold_for_meeting(nil) == nil
+    end
+  end
+
   describe "owns_all?/2" do
     test "is true for none at all and for the owner's own venues" do
       user = insert(:user)

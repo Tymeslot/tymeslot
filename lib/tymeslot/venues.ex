@@ -132,6 +132,19 @@ defmodule Tymeslot.Venues do
   end
 
   @doc """
+  The venue a meeting about to be written refers to, or nil when it has
+  been deleted since the booking was resolved.
+
+  Called inside the transaction that writes the meeting, and holds the
+  venue until that transaction ends (`VenueQueries.hold/1`), so a delete
+  cannot slip in between this answer and the write. Unscoped: the venue id
+  comes from the organiser's own meeting type, resolved for this booking.
+  """
+  @spec hold_for_meeting(integer() | nil) :: integer() | nil
+  def hold_for_meeting(nil), do: nil
+  def hold_for_meeting(id) when is_integer(id), do: if(VenueQueries.hold(id), do: id)
+
+  @doc """
   The owner's meeting types whose locations list `venue`, by name: the ones
   a delete changes.
   """

@@ -201,6 +201,71 @@ defmodule Tymeslot.Meetings.SchedulingCompositionTest do
     DateTime.utc_now() |> DateTime.add(amount, unit) |> DateTime.truncate(:second)
   end
 
+  describe "a venue deleted between resolving the booker's choice and the write" do
+    # The venue the booking resolved to, deleted before the meeting is
+    # written: the write must not fail on its foreign key.
+    defp deleted_venue(user) do
+      venue = insert(:venue, user: user, name: "Berlin office", description: "Friedrichstrasse 1")
+      Repo.delete!(venue)
+      venue
+    end
+
+    @at_venue %{
+      location: "Berlin office (Friedrichstrasse 1)",
+      location_kind: "in_person",
+      address_to_arrange: false
+    }
+
+    test "books the meeting without it, keeping the address it resolved to", %{user: user} do
+      venue = deleted_venue(user)
+
+      attrs =
+        user
+        |> attrs(future_time(2, :day))
+        |> Map.merge(@at_venue)
+        |> Map.put(:venue_id, venue.id)
+
+      assert {:ok, meeting} = Scheduling.create_meeting_with_conflict_check(attrs)
+
+      assert meeting.venue_id == nil
+      assert meeting.location == "Berlin office (Friedrichstrasse 1)"
+      assert meeting.address_to_arrange == false
+    end
+
+    test "moves the meeting without it, keeping the address it resolved to", %{user: user} do
+      venue = deleted_venue(user)
+      meeting = insert_meeting(user, future_time(2, :day))
+      new_start = future_time(5, :day)
+
+      assert {:ok, moved} =
+               Scheduling.update_meeting_with_conflict_check(
+                 meeting,
+                 Map.merge(@at_venue, %{
+                   start_time: new_start,
+                   end_time: DateTime.add(new_start, 30, :minute),
+                   venue_id: venue.id
+                 })
+               )
+
+      assert moved.venue_id == nil
+      assert moved.location == "Berlin office (Friedrichstrasse 1)"
+      assert DateTime.compare(moved.start_time, new_start) == :eq
+    end
+
+    test "keeps a venue that still exists", %{user: user} do
+      venue = insert(:venue, user: user, name: "Munich office")
+
+      attrs =
+        user
+        |> attrs(future_time(2, :day))
+        |> Map.merge(%{@at_venue | location: "Munich office"})
+        |> Map.put(:venue_id, venue.id)
+
+      assert {:ok, meeting} = Scheduling.create_meeting_with_conflict_check(attrs)
+      assert meeting.venue_id == venue.id
+    end
+  end
+
   defp attrs(user, start_time) do
     %{
       uid: UUID.generate(),
