@@ -77,17 +77,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ConditionalWrite do
         :ok
 
       # With no ETag all we sent was `If-Match: *`, which asserts nothing but
-      # that the resource exists (RFC 7232 §3.1). A 412 against it therefore
-      # means the event is absent from the server, not that someone else
-      # changed it — so report it as such. `CalendarEventSync` recreates a
-      # missing event on `:not_found`, whereas none of the conflict policies
-      # can: each assumes a server copy to reconcile against. Without this a
-      # booking whose event never landed (or was deleted in the organiser's
-      # client) could never be restored — every later update re-sent the same
-      # doomed conditional PUT and the calendar stayed empty.
+      # that the resource exists (RFC 7232 §3.1), so a 412 against it should
+      # mean the event is absent. Not every server keeps to that: iCloud
+      # refuses `If-Match: *` on an event it holds. The server is asked
+      # before the event is reported missing, since a wrong `:not_found` sends
+      # `CalendarEventSync` to recreate an event that is still there.
       {:error, :precondition_failed} when is_nil(etag) ->
-        Logger.info("CalDAV event absent on conditional update, reporting as not found")
-        {:error, :not_found}
+        put_after_refused_wildcard(client, url, ical_data, policy, opts)
 
       {:error, :precondition_failed} ->
         handle_precondition_failed(client, url, ical_data, policy, opts)
@@ -106,6 +102,39 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ConditionalWrite do
       # configured policy decide.
       {:error, :conditional_not_supported} ->
         handle_precondition_failed(client, url, ical_data, policy, opts)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  # Absence is reported as `:not_found`, which is what lets `CalendarEventSync`
+  # recreate an event that never landed or was deleted in the organiser's
+  # client; none of the conflict policies can, since each assumes a server
+  # copy to reconcile against. An event that is there after all is written
+  # under the ETag the read returned, and so stays a conditional write. One
+  # that comes back with no ETag has nothing to condition on, and the refused
+  # `If-Match: *` guarded nothing, so it is replayed unconditionally as a 409
+  # against the same header is.
+  defp put_after_refused_wildcard(client, url, ical_data, policy, opts) do
+    case fetch_document(client, url, opts) do
+      {:ok, _document, etag} when is_binary(etag) and etag != "" ->
+        Logger.info(
+          "CalDAV server refused If-Match: * on an existing event, retrying under its ETag"
+        )
+
+        put(client, url, ical_data, etag, policy, opts)
+
+      {:ok, _document, _no_etag} ->
+        Logger.warning(
+          "CalDAV server refused If-Match: * on an existing event, retrying unconditionally"
+        )
+
+        force_put(client, url, ical_data, opts)
+
+      {:error, reason} when reason in [:not_found, :gone] ->
+        Logger.info("CalDAV event absent on conditional update, reporting as not found")
+        {:error, :not_found}
 
       {:error, reason} ->
         {:error, reason}
@@ -143,8 +172,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ConditionalWrite do
   @doc """
   The ETag to write under: the caller's cached one (`opts[:etag]`, from
   `provider_calendar_events.etag`), else whatever a HEAD probe finds, else
-  `nil`. The probe is only for callers that do not know the current ETag,
-  typically legacy paths or ad-hoc scripts.
+  the one a GET returns, else `nil`. The probe is for callers that do not
+  know the current ETag, which includes every booking update.
   """
   @spec resolve_etag(String.t(), Base.client(), keyword()) :: String.t() | nil
   def resolve_etag(url, client, opts) do
@@ -154,15 +183,31 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ConditionalWrite do
     end
   end
 
-  # HEAD → extract ETag for conditional PUT. Short timeout since ETag is optional:
-  # if HEAD times out we proceed without it rather than failing the entire update.
+  # HEAD is the cheap probe, but not every server answers it on an event
+  # resource: iCloud returns 400 to the same URL it serves a GET on. A HEAD
+  # that fails, or succeeds without an ETag, is followed by a GET, whose
+  # response carries the ETag on those servers. Only a 404 or 410 settles that
+  # there is nothing to read. Short timeout since the ETag is optional: a
+  # probe that times out leaves the write to proceed without one.
   defp fetch_current_etag(url, client, opts) do
     head_timeout = Keyword.get(opts, :head_timeout, 15_000)
     head_opts = Keyword.put(opts, :timeout, head_timeout)
 
     case Http.head_event(url, client.username, client.password, head_opts) do
-      {:ok, %{headers: headers}} -> etag_from_headers(headers)
-      _error -> nil
+      {:ok, %{headers: headers}} -> etag_from_headers(headers) || etag_from_get(url, client, opts)
+      {:error, reason} when reason in [:not_found, :gone] -> nil
+      {:error, _reason} -> etag_from_get(url, client, opts)
+    end
+  end
+
+  defp etag_from_get(url, client, opts) do
+    case fetch_document(
+           client,
+           url,
+           Keyword.put(opts, :read_timeout, Keyword.get(opts, :head_timeout, 15_000))
+         ) do
+      {:ok, _document, etag} -> etag
+      {:error, _reason} -> nil
     end
   end
 

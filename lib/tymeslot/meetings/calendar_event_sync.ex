@@ -12,7 +12,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   - persistence of the resulting calendar UID / provider event-id mapping back
     onto the meeting (via `Tymeslot.Meetings.MeetingQueries`),
   - sending an error notification to the calendar owner on persistent create
-    failures.
+    failures, and on an update the provider can neither apply nor recover.
 
   Each entry point returns a tagged tuple that the calling Oban worker
   (`Tymeslot.Workers.CalendarEventWorker`) maps to a retry/error outcome:
@@ -82,7 +82,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   provider reports it no longer exists.
   """
   @spec update(term(), pos_integer()) :: :ok | {:error, term()}
-  def update(meeting_id, _attempt) do
+  def update(meeting_id, attempt) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
         ErrorTracking.put_context(user_id: meeting.organizer_user_id)
@@ -93,7 +93,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
         )
 
         event_data = CalendarEventBuilder.build_event_data(meeting)
-        update_or_create_calendar_event(meeting, event_data)
+        update_or_create_calendar_event(meeting, event_data, attempt)
 
       {:error, :not_found} ->
         {:error, :meeting_not_found}
@@ -308,9 +308,9 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
     end
   end
 
-  defp update_or_create_calendar_event(meeting, event_data) do
+  defp update_or_create_calendar_event(meeting, event_data, attempt) do
     case update_existing_event(meeting, event_data) do
-      {:error, :not_found} -> handle_missing_event(meeting.id, event_data, meeting)
+      {:error, :not_found} -> handle_missing_event(meeting.id, event_data, meeting, attempt)
       result -> result
     end
   end
@@ -335,7 +335,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
     :ok
   end
 
-  defp handle_missing_event(meeting_id, event_data, meeting) do
+  defp handle_missing_event(meeting_id, event_data, meeting, attempt) do
     Logger.info("Calendar event not found, creating new one", meeting_id: meeting_id)
 
     # Use the organizer_user_id to create in the correct calendar
@@ -355,10 +355,33 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
           meeting_id: meeting_id
         )
 
-        update_existing_event(meeting, event_data)
+        retry_update_after_recovery(meeting, event_data, attempt)
 
       error ->
         error
+    end
+  end
+
+  # The create has just proved the event exists, so an update that still
+  # reports it missing is not the absence the worker may count as done: the
+  # booking moved and its calendar event did not. It is returned as its own
+  # error, so the job retries and the owner hears of it once retries run out,
+  # rather than the job succeeding over an event left at the old time.
+  defp retry_update_after_recovery(meeting, event_data, attempt) do
+    case update_existing_event(meeting, event_data) do
+      {:error, :not_found} ->
+        Logger.error("Calendar event exists but cannot be updated",
+          meeting_id: meeting.id
+        )
+
+        if attempt >= 5 do
+          send_calendar_error_notification(meeting, :calendar_event_not_updatable)
+        end
+
+        {:error, :calendar_event_not_updatable}
+
+      result ->
+        result
     end
   end
 
