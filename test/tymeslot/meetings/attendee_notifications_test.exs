@@ -301,7 +301,7 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
 
         assert user_id == user.id
         assert uid == event.uid
-        refute job.scheduled_at > DateTime.utc_now()
+        refute DateTime.after?(job.scheduled_at, DateTime.utc_now())
       end
 
       assert all_enqueued(worker: Worker) == []
@@ -363,7 +363,7 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
              } = job.args
 
       assert uid == original.uid
-      refute job.scheduled_at > DateTime.utc_now()
+      refute DateTime.after?(job.scheduled_at, DateTime.utc_now())
       assert all_enqueued(worker: Worker) == []
     end
 
