@@ -47,6 +47,19 @@ defmodule Tymeslot.VenuesTest do
              } = errors_on(changeset)
     end
 
+    test "counts the name in code points, as the column does" do
+      # 60 flags are 60 graphemes but 120 code points: within the column.
+      assert {:ok, _venue} =
+               Venues.create_venue(insert(:user).id, %{"name" => String.duplicate("🇩🇪", 60)})
+
+      # 61 flags are 61 graphemes but 122 code points, which the column
+      # would refuse with a database error instead of a changeset error.
+      assert {:error, changeset} =
+               Venues.create_venue(insert(:user).id, %{"name" => String.duplicate("🇩🇪", 61)})
+
+      assert %{name: ["should be at most 120 character(s)"]} = errors_on(changeset)
+    end
+
     test "stores a blank description as none" do
       {:ok, venue} =
         Venues.create_venue(insert(:user).id, %{"name" => "Studio", "description" => "  "})
