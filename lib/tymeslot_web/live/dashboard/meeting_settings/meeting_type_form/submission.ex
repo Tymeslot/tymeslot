@@ -123,11 +123,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
   # organiser's venues. Locations arrive as a list from `build_params/1` and
   # as an index-keyed map from the rendered form.
   defp drop_deleted_venues(%{"locations" => locations} = params, user_id) do
-    known = MapSet.new(Venues.list_venues(user_id), &to_string(&1.id))
+    venues = Venues.list_venues(user_id)
 
     keep_known = fn
       %{"venue_ids" => ids} = location when is_list(ids) ->
-        %{location | "venue_ids" => Enum.filter(ids, &MapSet.member?(known, to_string(&1)))}
+        %{location | "venue_ids" => known_venue_ids(ids, venues)}
 
       location ->
         location
@@ -213,9 +213,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
   """
   @spec venue_ids_param(LocationOption.t(), [%{id: integer()}]) :: [String.t()]
   def venue_ids_param(location, venues) do
-    known = MapSet.new(venues, & &1.id)
+    location.venue_ids |> known_venue_ids(venues) |> Enum.map(&to_string/1)
+  end
 
-    for id <- location.venue_ids, MapSet.member?(known, id), do: to_string(id)
+  # The ids among `ids` that name one of `venues`, in their order. Compared
+  # as strings, so a posted id and a stored one match alike.
+  defp known_venue_ids(ids, venues) do
+    known = MapSet.new(venues, &to_string(&1.id))
+
+    Enum.filter(ids, &MapSet.member?(known, to_string(&1)))
   end
 
   defp location_param(location, venues) do
