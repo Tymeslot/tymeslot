@@ -537,3 +537,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Note from the organiser"
 msgstr ""
+
+#: lib/tymeslot/bookings/policy.ex
+#, elixir-autogen, elixir-format
+msgid "%{meeting_type} with %{name}"
+msgstr ""
