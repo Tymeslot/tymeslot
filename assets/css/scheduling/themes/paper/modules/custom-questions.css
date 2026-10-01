@@ -56,6 +56,18 @@
   margin-top: var(--space-xs);
 }
 
+/* While the question shows its error, its field takes the danger edge the
+   booking form's fields take (controls.css, .input.input-error), and so
+   do the yes/no tiles' and option cards' edges and their idle markers. */
+.paper-question__input--invalid {
+  --option-tile-border: var(--theme-danger);
+  --option-indicator-idle: var(--theme-danger);
+}
+
+.paper-theme-wrapper .paper-question__input--invalid .input {
+  border-color: var(--theme-danger);
+}
+
 .paper-question__error {
   margin: var(--space-sm) 0 0;
   color: var(--theme-danger);

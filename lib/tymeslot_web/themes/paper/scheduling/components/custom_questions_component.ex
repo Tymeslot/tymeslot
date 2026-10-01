@@ -37,7 +37,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.CustomQuestionsComponen
       <h1 class="paper-heading">{@definition["label"]}</h1>
       <p :if={@definition["help_text"]} class="paper-question__help">{@definition["help_text"]}</p>
 
-      <div class="paper-question__input">
+      <div class={["paper-question__input", @error && "paper-question__input--invalid"]}>
         <InputRenderer.render definition={@definition} value={@value} myself={@myself} />
       </div>
 
