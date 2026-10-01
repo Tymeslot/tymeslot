@@ -23,12 +23,15 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Phoenix.PubSub
+  alias Tymeslot.Demo
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
+  alias Tymeslot.ThemeCustomizations
   alias TymeslotWeb.Themes.Core.Registry, as: ThemeRegistry
+  alias TymeslotWeb.Themes.Shared.EventHandlers
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   @type ctx :: %{
@@ -43,9 +46,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
           session_id :: String.t() | nil
         ) :: {:ok, ctx()} | {:error, atom()}
   defp authorize(meeting_id, theme_slug, session_id) do
-    with {:ok, meeting} <- get_meeting(meeting_id),
-         {:ok, profile} <- get_profile(meeting),
-         :ok <- validate_theme(profile, theme_slug),
+    with {:ok, meeting, profile} <- organizer(meeting_id, theme_slug),
          {:ok, payment} <- get_payment(meeting_id),
          :ok <- validate_session(session_id, payment) do
       {:ok, %{meeting: meeting, payment: payment, profile: profile}}
@@ -62,15 +63,93 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   when the host has no public username).
   """
   @spec lookup_for_cancel(meeting_id :: String.t(), theme_slug :: String.t()) ::
-          {:ok, %{meeting: Tymeslot.Meetings.MeetingSchema.t(), rebook_path: String.t()}}
+          {:ok,
+           %{
+             meeting: Tymeslot.Meetings.MeetingSchema.t(),
+             profile: Tymeslot.Profiles.ProfileSchema.t(),
+             rebook_path: String.t()
+           }}
           | {:error, atom()}
   def lookup_for_cancel(meeting_id, theme_slug) do
-    with {:ok, meeting} <- get_meeting(meeting_id),
-         {:ok, profile} <- get_profile(meeting),
-         :ok <- validate_theme(profile, theme_slug) do
-      {:ok, %{meeting: meeting, rebook_path: rebook_path(profile, meeting)}}
+    with {:ok, meeting, profile} <- organizer(meeting_id, theme_slug) do
+      {:ok, %{meeting: meeting, profile: profile, rebook_path: rebook_path(profile, meeting)}}
     end
   end
+
+  @doc """
+  Assigns the organiser's customisation for the page's theme, as the booking
+  page loads it (`Customization.Helpers.assign_theme_customization/3`):
+  `:theme_tokens`, the `%Tokens{}` the theme's spec builds from the saved
+  customisation or from its defaults, and `:theme_customized`, whether the
+  organiser saved one. A theme with a `page_shell:` hands the tokens to its
+  shell; Quill and Rhythm, whose own payment cards never showed the booking
+  page's defaults, write them only when `:theme_customized` is true.
+
+  Called on the connected mount, once the meeting's organiser is known: the
+  dead render reads no data, so it has no customisation
+  (`no_customization/1`).
+  """
+  @spec assign_customization(LiveView.Socket.t(), Tymeslot.Profiles.ProfileSchema.t()) ::
+          LiveView.Socket.t()
+  def assign_customization(socket, profile) do
+    theme_id = socket.assigns.theme_id
+    customization = Demo.get_theme_customization(profile.id, theme_id)
+
+    Component.assign(socket,
+      theme_tokens: ThemeCustomizations.tokens(theme_id, customization),
+      theme_customized: customization != nil
+    )
+  end
+
+  @doc "Assigns no customisation: the dead render's, before any data is read."
+  @spec no_customization(LiveView.Socket.t()) :: LiveView.Socket.t()
+  def no_customization(socket),
+    do: Component.assign(socket, theme_tokens: nil, theme_customized: false)
+
+  @doc """
+  Assigns the language switcher's state: `:language_dropdown_open`, which a
+  theme shell needs to draw the switcher, and the page's own address (its
+  `path` and the `query` it must keep, such as `session_id`), which a locale
+  change redirects back to (`build_path_with_locale/2`). Both renders get
+  it, so the switcher is there from the first paint.
+  """
+  @spec assign_language_switcher(LiveView.Socket.t(), String.t(), map()) :: LiveView.Socket.t()
+  def assign_language_switcher(socket, path, query) do
+    Component.assign(socket, language_dropdown_open: false, locale_return: {path, query})
+  end
+
+  @doc """
+  The language switcher's events (`toggle_language_dropdown`,
+  `close_language_dropdown`, `change_locale`), as the booking pages handle
+  them (`EventHandlers`): a locale change is a full redirect to this page.
+  """
+  @spec handle_language_event(String.t(), map(), LiveView.Socket.t()) ::
+          {:noreply, LiveView.Socket.t()}
+  def handle_language_event("toggle_language_dropdown", _params, socket),
+    do: EventHandlers.handle_toggle_language_dropdown(socket)
+
+  def handle_language_event("close_language_dropdown", _params, socket),
+    do: EventHandlers.handle_close_language_dropdown(socket)
+
+  def handle_language_event("change_locale", %{"locale" => locale}, socket),
+    do: EventHandlers.handle_change_locale(socket, locale, __MODULE__)
+
+  def handle_language_event(_event, _params, socket), do: {:noreply, socket}
+
+  @doc "This page's address with `?locale=` set, for a locale change's redirect."
+  @spec build_path_with_locale(LiveView.Socket.t(), String.t()) :: String.t()
+  def build_path_with_locale(socket, locale) do
+    {path, query} = socket.assigns.locale_return
+    path <> "?" <> URI.encode_query(Map.put(query, "locale", locale))
+  end
+
+  @doc "A page's path from its URL segments, each escaped."
+  @spec page_path(String.t(), String.t(), String.t()) :: String.t()
+  def page_path(theme_slug, page, meeting_id) do
+    "/" <> Enum.map_join(["themes", theme_slug, page, meeting_id], "/", &escape_segment/1)
+  end
+
+  defp escape_segment(segment), do: URI.encode(segment, &URI.char_unreserved?/1)
 
   defp rebook_path(%{username: username}, meeting)
        when is_binary(username) and username != "" do
@@ -131,8 +210,9 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   @doc """
   Mounts the payment-processing page. Authorises the meeting,
   subscribes to the payment topic, then reads meeting/payment state and
-  assigns `:meeting`, `:payment` and `:rebook_path` (where a failed checkout
-  can start again) on success. On failure the socket is
+  assigns `:meeting`, `:payment`, `:rebook_path` (where a failed checkout
+  can start again) and the organiser's customisation (`assign_customization/2`)
+  on success. On failure the socket is
   redirected to `/` with a generic flash so we never leak the failure mode
   to the attendee.
 
@@ -147,13 +227,22 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
           theme_slug :: String.t()
         ) :: {:ok, LiveView.Socket.t()}
   def mount_payment_processing(%{"meeting_id" => meeting_id} = params, socket, theme_slug) do
+    socket =
+      assign_language_switcher(
+        socket,
+        page_path(theme_slug, "payment-processing", meeting_id),
+        Map.take(params, ["session_id"])
+      )
+
     if LiveView.connected?(socket) do
       PubSub.subscribe(Tymeslot.PubSub, topic(meeting_id))
 
       case authorize(meeting_id, theme_slug, params["session_id"]) do
         {:ok, %{meeting: meeting, payment: payment, profile: profile}} ->
           socket =
-            Component.assign(socket,
+            socket
+            |> assign_customization(profile)
+            |> Component.assign(
               loading: false,
               meeting: meeting,
               payment: payment,
@@ -166,7 +255,12 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
           {:ok, reject(socket)}
       end
     else
-      {:ok, Component.assign(socket, loading: true, meeting: nil, payment: nil, rebook_path: nil)}
+      socket =
+        socket
+        |> no_customization()
+        |> Component.assign(loading: true, meeting: nil, payment: nil, rebook_path: nil)
+
+      {:ok, socket}
     end
   end
 
@@ -234,6 +328,14 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   end
 
   def approval_deadline_text(_meeting), do: nil
+
+  defp organizer(meeting_id, theme_slug) do
+    with {:ok, meeting} <- get_meeting(meeting_id),
+         {:ok, profile} <- get_profile(meeting),
+         :ok <- validate_theme(profile, theme_slug) do
+      {:ok, meeting, profile}
+    end
+  end
 
   defp get_meeting(id) do
     case Meetings.get_meeting(id) do

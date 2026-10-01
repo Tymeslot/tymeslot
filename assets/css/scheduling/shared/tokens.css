@@ -9,7 +9,7 @@
         --theme-primary  --theme-primary-hover  --theme-secondary
         --theme-accent   --theme-on-primary     --theme-primary-solid
         --theme-primary-solid-hover  --theme-on-accent  --theme-accent-solid
-        --theme-text     --theme-text-secondary
+        --theme-text     --theme-text-secondary  --theme-canvas
         --theme-success  --theme-warning  --theme-danger  --theme-info
         --shadow-geometry-sm  --shadow-geometry-md  --shadow-geometry-lg
           (offset and blur only; the colour is mixed below)
@@ -47,8 +47,8 @@
       on the theme (border widths, font weights, line heights, motion, the
       dropdown's layer and height, the flag height, the readiness card's
       width), relations between
-      tokens (--line-1/2, --surface-1, --notice-warning, the solid pairs),
-      the chrome over a background photo or video, and the print rule
+      tokens (--line-1/2, --surface-1, --notice-warning, the solid pairs,
+      the poll's "yes" ink --poll-yes-ink), the chrome over a background photo or video, and the print rule
       colour. A theme may set any of them in variables.css; its :root rule
       outranks the zero-specificity :where(:root) whatever the order.
 
@@ -119,6 +119,8 @@
   --theme-primary-solid: var(--theme-primary);
   --theme-primary-solid-hover: var(--theme-primary-hover);
   --theme-accent-solid: var(--theme-accent);
+
+  --poll-yes-ink: var(--theme-accent);
 
   --chrome-surface: rgba(0, 0, 0, 0.45);
   --chrome-surface-hover: rgba(0, 0, 0, 0.65);

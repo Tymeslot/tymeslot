@@ -1,5 +1,8 @@
 /* Polls: public voting page. Structure from the shared PollVotingComponents
-   classes; colours from the --poll-* tokens each theme defines. */
+   classes; colours from the --poll-* tokens each theme defines, and
+   --poll-yes-ink, the "yes" colour (the yes tally's icon, the checked yes
+   option's border, the closed poll's success icon), which shared/tokens.css
+   defaults to --theme-accent: a theme sets it only to change it. */
 
 html.scheduling-app .poll-voting {
   display: flex;
@@ -205,7 +208,7 @@ html.scheduling-app .poll-tally-icon {
 }
 
 html.scheduling-app .poll-tally--yes .poll-tally-icon {
-  color: var(--theme-accent);
+  color: var(--poll-yes-ink);
 }
 
 html.scheduling-app .poll-tally--if_need_be .poll-tally-icon {
@@ -242,7 +245,7 @@ html.scheduling-app .poll-vote-option:has(input:checked) {
 }
 
 html.scheduling-app .poll-vote-option--yes:has(input:checked) {
-  border-color: var(--theme-accent);
+  border-color: var(--poll-yes-ink);
 }
 
 html.scheduling-app .poll-vote-option--no:has(input:checked) {
@@ -265,7 +268,7 @@ html.scheduling-app .poll-closed-icon {
 }
 
 html.scheduling-app .poll-closed-icon--success {
-  color: var(--theme-accent);
+  color: var(--poll-yes-ink);
 }
 
 html.scheduling-app .poll-closed-icon--danger {

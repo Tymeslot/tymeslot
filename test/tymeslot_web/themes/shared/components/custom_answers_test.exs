@@ -57,6 +57,25 @@ defmodule TymeslotWeb.Themes.Shared.Components.CustomAnswersTest do
     assert column(doc, "dt.custom-answers__label") == ["I have read the terms"]
   end
 
+  @time %{"id" => "q4", "label" => "Preferred time of day", "type" => "time"}
+
+  test "writes a time answer on the visitor's clock" do
+    answers = %{"q4" => "14:30"}
+
+    en =
+      Gettext.with_locale(TymeslotWeb.Gettext, "en", fn ->
+        render_answers(%{snapshot: [@time], answers: answers})
+      end)
+
+    de =
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        render_answers(%{snapshot: [@time], answers: answers})
+      end)
+
+    assert column(en, "dd.custom-answers__value") == ["02:30 PM"]
+    assert column(de, "dd.custom-answers__value") == ["14:30"]
+  end
+
   test "renders nothing when every answer is empty" do
     assert Floki.find(render_answers(%{snapshot: [@note], answers: %{}}), ".custom-answers") == []
   end

@@ -5,6 +5,8 @@ defmodule Tymeslot.Utils.AvatarUtils do
 
   require Logger
 
+  alias Tymeslot.Utils.Colour
+
   @spec generate_fallback_svg(map(), non_neg_integer()) :: String.t()
   defp generate_fallback_svg(profile, size) do
     initials = get_initials(profile)
@@ -24,7 +26,7 @@ defmodule Tymeslot.Utils.AvatarUtils do
             font-family="system-ui, -apple-system, sans-serif"
             font-size="#{size / 3}"
             font-weight="600"
-            fill="white">#{initials}</text>
+            fill="#{color.ink}">#{initials}</text>
     </svg>
     """
   rescue
@@ -88,47 +90,68 @@ defmodule Tymeslot.Utils.AvatarUtils do
       "U"
   end
 
-  @spec get_consistent_color(map()) :: %{start: String.t(), end: String.t()}
+  # Predefined gradients that work well for avatars.
+  @gradients [
+    # Purple-blue
+    %{start: "#667eea", end: "#764ba2"},
+    # Pink-red
+    %{start: "#f093fb", end: "#f5576c"},
+    # Blue-cyan
+    %{start: "#4facfe", end: "#00f2fe"},
+    # Green-teal
+    %{start: "#43e97b", end: "#38f9d7"},
+    # Pink-yellow
+    %{start: "#fa709a", end: "#fee140"},
+    # Light teal-pink
+    %{start: "#a8edea", end: "#fed6e3"},
+    # Soft pink
+    %{start: "#ff9a9e", end: "#fecfef"},
+    # Purple-pink
+    %{start: "#a18cd1", end: "#fbc2eb"},
+    # Peach-pink
+    %{start: "#fad0c4", end: "#ffd1ff"},
+    # Light orange
+    %{start: "#ffecd2", end: "#fcb69f"},
+    # Coral-orange
+    %{start: "#ff8a80", end: "#ffb74d"},
+    # Light blue-green
+    %{start: "#8fd3f4", end: "#84fab0"},
+    # Purple-yellow
+    %{start: "#d299c2", end: "#fef9d7"},
+    # Cyan-blue
+    %{start: "#89f7fe", end: "#66a6ff"},
+    # Yellow-teal
+    %{start: "#fdbb2d", end: "#22c1c3"}
+  ]
+
+  # The initials are large text, so 3:1 (WCAG 1.4.3) against both stops
+  # keeps them legible across the whole circle.
+  @minimum_contrast 3.0
+  @light_ink "#ffffff"
+  @dark_ink "#1f2937"
+
+  @doc """
+  The fallback avatar's gradients, each with the ink its initials are drawn
+  in: white where it reaches 3:1 against both stops, a dark slate on the
+  paler gradients, where white would all but vanish.
+  """
+  @spec gradients() :: [%{start: String.t(), end: String.t(), ink: String.t()}]
+  def gradients, do: Enum.map(@gradients, &Map.put(&1, :ink, ink(&1)))
+
+  defp ink(%{start: start, end: stop}) do
+    if Enum.all?([start, stop], &(Colour.contrast_ratio(@light_ink, &1) >= @minimum_contrast)),
+      do: @light_ink,
+      else: @dark_ink
+  end
+
+  @spec get_consistent_color(map()) :: %{start: String.t(), end: String.t(), ink: String.t()}
   defp get_consistent_color(profile) do
     # Use profile ID to generate consistent colors
     profile_id = Map.get(profile, :id, 0)
     hash = :erlang.phash2(profile_id, 1000)
+    gradient = Enum.at(@gradients, rem(hash, length(@gradients)))
 
-    # Predefined color schemes that work well for avatars
-    color_schemes = [
-      # Purple-blue
-      %{start: "#667eea", end: "#764ba2"},
-      # Pink-red
-      %{start: "#f093fb", end: "#f5576c"},
-      # Blue-cyan
-      %{start: "#4facfe", end: "#00f2fe"},
-      # Green-teal
-      %{start: "#43e97b", end: "#38f9d7"},
-      # Pink-yellow
-      %{start: "#fa709a", end: "#fee140"},
-      # Light teal-pink
-      %{start: "#a8edea", end: "#fed6e3"},
-      # Soft pink
-      %{start: "#ff9a9e", end: "#fecfef"},
-      # Purple-pink
-      %{start: "#a18cd1", end: "#fbc2eb"},
-      # Peach-pink
-      %{start: "#fad0c4", end: "#ffd1ff"},
-      # Light orange
-      %{start: "#ffecd2", end: "#fcb69f"},
-      # Coral-orange
-      %{start: "#ff8a80", end: "#ffb74d"},
-      # Light blue-green
-      %{start: "#8fd3f4", end: "#84fab0"},
-      # Purple-yellow
-      %{start: "#d299c2", end: "#fef9d7"},
-      # Cyan-blue
-      %{start: "#89f7fe", end: "#66a6ff"},
-      # Yellow-teal
-      %{start: "#fdbb2d", end: "#22c1c3"}
-    ]
-
-    Enum.at(color_schemes, rem(hash, length(color_schemes)))
+    Map.put(gradient, :ink, ink(gradient))
   end
 
   @spec generate_generic_fallback_svg(non_neg_integer()) :: String.t()

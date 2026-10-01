@@ -6,7 +6,8 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.Processing do
   `Tymeslot.MeetingPayments.CheckoutSessions` gives Stripe. The slug selects
   the theme: `PaymentReturn.assign_theme/2` assigns `:theme_id` (so the root
   layout loads that theme's stylesheet) and `:theme_module`, whose
-  `render_payment_page/2` draws the theme's shell around the shared body.
+  `render_payment_page/2` draws the theme's shell around the shared body, in
+  the organiser's customisation (`PaymentReturn.assign_customization/2`).
 
   The attendee lands here while the webhook is still in flight. The page
   subscribes to PubSub and re-reads the meeting on `:paid` or `:expired`
@@ -27,6 +28,10 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.Processing do
       {:error, :unknown_theme} -> {:ok, PaymentReturn.reject(socket)}
     end
   end
+
+  @impl Phoenix.LiveView
+  def handle_event(event, params, socket),
+    do: PaymentReturn.handle_language_event(event, params, socket)
 
   @impl Phoenix.LiveView
   def handle_info(message, socket) when message in [:paid, :expired] do

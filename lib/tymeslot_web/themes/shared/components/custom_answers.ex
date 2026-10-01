@@ -8,13 +8,15 @@ defmodule TymeslotWeb.Themes.Shared.Components.CustomAnswers do
   its own CSS. A question whose answer renders empty (one left blank, or a
   note the guest did not tick) gets no row, as on the dashboard and in the
   emails, and the section renders nothing when no row is left, including
-  when the meeting type asked no questions.
+  when the meeting type asked no questions. A time answer reads on the
+  visitor's clock, as the meeting's own time above it does.
   """
 
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.CustomFields.AnswerRenderer
+  alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   attr :snapshot, :list, default: nil, doc: "the booking's `custom_fields_snapshot`"
   attr :answers, :map, default: nil, doc: "answers keyed by question id"
@@ -40,7 +42,12 @@ defmodule TymeslotWeb.Themes.Shared.Components.CustomAnswers do
 
   defp rows(snapshot, answers) do
     snapshot
-    |> Enum.map(&{&1, AnswerRenderer.render(&1, answers[&1["id"]])})
+    |> Enum.map(&{&1, render_answer(&1, answers[&1["id"]])})
     |> Enum.reject(fn {_question, rendered} -> rendered == "" end)
   end
+
+  defp render_answer(%{"type" => "time"}, answer) when is_binary(answer) and answer != "",
+    do: LocalizationHelpers.format_slot_label(answer)
+
+  defp render_answer(question, answer), do: AnswerRenderer.render(question, answer)
 end

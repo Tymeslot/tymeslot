@@ -7,22 +7,24 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
 
   The shell is a function component. It receives `page` (`:reschedule`,
   `:cancel`, `:cancel_confirmed`, `:poll`, `:payment_processing`,
-  `:payment_cancelled`), the page's `theme_tokens`, `locale` and
-  `language_dropdown_open` (all `nil` on the payment pages), and the body
-  as its inner block; it draws the theme's wrapper and card (with the
+  `:payment_cancelled`), the page's `theme_tokens` (`nil` on a payment
+  page's dead render, which reads no data), `locale` and
+  `language_dropdown_open`, and the body as its inner block; it draws the theme's wrapper and card (with the
   `booker-card` hook class) around it.
 
   Every body sits in `<div class="manage-page manage-page--<page>"
   data-testid="<theme key>-<page>">`, so the payment pages carry the
   `<key>-payment-processing` and `<key>-payment-cancelled` ids the payment
-  return suite tells themes apart by.
+  return suite tells themes apart by. Like the meeting pages, the payment
+  pages open with a status icon (`MeetingPageBodies.status_icon/1`), and
+  `manage-pages.css` gives their heading the meeting pages' centred title.
   """
 
   use Phoenix.Component
 
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Themes.Shared.Components.MeetingPageBodies
-  alias TymeslotWeb.Themes.Shared.{PaymentReturnComponents, PollVotingComponents}
+  alias TymeslotWeb.Themes.Shared.{PaymentReturn, PaymentReturnComponents, PollVotingComponents}
 
   @type shell :: (map() -> Phoenix.LiveView.Rendered.t())
 
@@ -100,7 +102,11 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
   end
 
   defp body(%{page: :payment_processing} = assigns) do
+    outcome = PaymentReturn.outcome(assigns.loading, assigns.payment, assigns.meeting)
+    assigns = assign(assigns, :status, payment_status(outcome))
+
     ~H"""
+    <MeetingPageBodies.status_icon icon={elem(@status, 0)} tone={elem(@status, 1)} />
     <PaymentReturnComponents.processing_body
       loading={@loading}
       payment={@payment}
@@ -112,9 +118,19 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
 
   defp body(%{page: :payment_cancelled} = assigns) do
     ~H"""
+    <MeetingPageBodies.status_icon icon="hero-x-circle" tone="danger" />
     <PaymentReturnComponents.cancelled_body rebook_path={@rebook_path} />
     """
   end
+
+  # The processing page's icon follows its outcome: a clock while the
+  # booking waits (on the payment, or on the organiser's approval), a tick
+  # once it is confirmed, a cross when it will not go ahead.
+  defp payment_status(outcome) when outcome in [:loading, :awaiting_approval],
+    do: {"hero-clock", "primary"}
+
+  defp payment_status(:confirmed), do: {"hero-check-circle", "success"}
+  defp payment_status(_failed_or_ended), do: {"hero-x-circle", "danger"}
 
   defp testid(theme_id, slug) when is_binary(theme_id) do
     case Catalog.id_to_key(theme_id) do

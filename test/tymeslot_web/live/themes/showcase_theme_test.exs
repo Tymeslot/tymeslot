@@ -287,10 +287,10 @@ defmodule TymeslotWeb.Live.Themes.ShowcaseThemeTest do
       end
     end
 
-    test "the palette panel lists the tones the showcase offers", %{conn: conn} do
+    test "the palette panel lists the tones the showcase offers, in its order", %{conn: conn} do
       {:ok, view, _html} = customise(conn)
 
-      assert choices(view, "palette", "scheme") == ~w(cool neutral warm)
+      assert choices(view, "palette", "scheme") == ~w(neutral cool warm)
     end
   end
 

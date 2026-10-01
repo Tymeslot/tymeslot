@@ -357,8 +357,10 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   Gets a display string for a week starting on `week_start`.
 
   Returns "March 2026" when the week falls within a single month,
-  "March - April 2026" when it spans two months in the same year,
-  or "December 2025 - January 2026" when it spans a year boundary.
+  "March – April 2026" when it spans two months in the same year,
+  or "December 2025 – January 2026" when it spans a year boundary: an en
+  dash with a space either side, as `LocaleFormat`'s date ranges join
+  their words.
 
   Months are the standalone form, and only the heading's first letter is
   capitalised: French reads "Septembre – octobre 2026".
@@ -373,7 +375,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
       week_start.year == week_end.year ->
         LocaleFormat.capitalize_first(
-          dgettext("booking", "%{start_month} - %{end_month} %{year}",
+          dgettext("booking", "%{start_month} – %{end_month} %{year}",
             start_month: standalone_month(week_start.month),
             end_month: standalone_month(week_end.month),
             year: week_start.year
@@ -382,7 +384,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
       true ->
         LocaleFormat.capitalize_first(
-          dgettext("booking", "%{start_month} %{start_year} - %{end_month} %{end_year}",
+          dgettext("booking", "%{start_month} %{start_year} – %{end_month} %{end_year}",
             start_month: standalone_month(week_start.month),
             start_year: week_start.year,
             end_month: standalone_month(week_end.month),

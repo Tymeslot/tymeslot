@@ -14,9 +14,10 @@
    the booking root layout puts on <html>, so the dashboard's toast is
    untouched.
 
-   The surface is --dropdown-surface, the opaque floating surface every
-   theme defines: a toast sits over the page's own content, so the
-   translucent card surfaces would leave it unreadable. Each kind tints
+   The surface is --dropdown-surface, the floating surface every theme
+   defines, over --theme-canvas, so it is opaque even where that surface
+   is slightly translucent: a toast sits over the page's own content, so
+   the translucent card surfaces would leave it unreadable. Each kind tints
    the border and the icon with its status input, and an error tints the
    surface too, so it stays error-coloured in every theme.
 
@@ -28,7 +29,7 @@
    viewport the toast spans the top between side gutters instead of a
    fixed 20rem box.
 
-   Reads --dropdown-surface, --line-1, --ink-1, --radius-card,
+   Reads --dropdown-surface, --theme-canvas, --line-1, --ink-1, --radius-card,
    --radius-control, --status-shadow, --theme-font-family,
    --theme-font-size-sm, --theme-primary, --theme-danger, --theme-warning,
    --border-width-thin, --space-xs and --space-sm.
@@ -40,18 +41,37 @@
   padding: var(--space-sm);
   border: var(--border-width-thin) solid color-mix(in srgb, var(--flash-tone) 35%, var(--line-1));
   border-radius: var(--radius-card);
-  background: var(--dropdown-surface);
+  background: var(--theme-canvas);
   box-shadow: var(--status-shadow);
   color: var(--ink-1);
   font-family: var(--theme-font-family);
   font-size: var(--theme-font-size-sm);
+  isolation: isolate;
+}
+
+/* The surface, laid over the canvas: a theme's --dropdown-surface may be a
+   slightly translucent gradient (Quill's and Rhythm's are 96 to 98% opaque),
+   through which the language switcher showed. It sits in a layer of its
+   own, not in a second background layer, because a background's colour may
+   only be its last layer and a theme's surface may be a plain colour. Core
+   lifts the toast's content above it (its one inner row is z-10). */
+.scheduling-app #app-flash-group [role="alert"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--dropdown-surface);
 }
 
 /* Through the group's id too, to outrank the base rule above. */
 .scheduling-app #app-flash-group #app-flash-group-error,
 .scheduling-app #app-flash-group #app-flash-group-disconnected {
   --flash-tone: var(--theme-danger);
+}
 
+.scheduling-app #app-flash-group #app-flash-group-error::before,
+.scheduling-app #app-flash-group #app-flash-group-disconnected::before {
   background:
     linear-gradient(
       color-mix(in srgb, var(--flash-tone) 16%, transparent),

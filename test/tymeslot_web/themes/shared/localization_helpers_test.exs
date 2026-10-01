@@ -245,11 +245,11 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
     @year_crossing ~D[2025-12-29]
 
     for {locale, same, two, crossing} <- [
-          {"en", "September 2026", "September - October 2026", "December 2025 - January 2026"},
+          {"en", "September 2026", "September – October 2026", "December 2025 – January 2026"},
           {"de", "September 2026", "September – Oktober 2026", "Dezember 2025 – Januar 2026"},
           {"fr", "Septembre 2026", "Septembre – octobre 2026", "Décembre 2025 – janvier 2026"},
-          {"it", "Settembre 2026", "Settembre - ottobre 2026", "Dicembre 2025 - gennaio 2026"},
-          {"uk", "Вересень 2026", "Вересень - жовтень 2026", "Грудень 2025 - січень 2026"},
+          {"it", "Settembre 2026", "Settembre – ottobre 2026", "Dicembre 2025 – gennaio 2026"},
+          {"uk", "Вересень 2026", "Вересень – жовтень 2026", "Грудень 2025 – січень 2026"},
           {"cs", "Září 2026", "Září – říjen 2026", "Prosinec 2025 – leden 2026"},
           {"pl", "Wrzesień 2026", "Wrzesień – październik 2026", "Grudzień 2025 – styczeń 2026"}
         ] do

@@ -12,8 +12,8 @@ defmodule Tymeslot.ThemeCustomizations.RhythmSpec do
 
   # Every shipped preset. A preset added to the catalogue reaches this theme
   # only when listed here. The schemes are in the order the onboarding wizard
-  # shows them (the dashboard sorts its own); the background lists are sorted,
-  # the order their pickers have always shown.
+  # and the dashboard show them; the background lists are sorted, the order
+  # their pickers have always shown.
   @schemes ~w(default turquoise purple sunset ocean forest rose monochrome)
   @gradients ~w(gradient_1 gradient_2 gradient_3 gradient_4 gradient_5 gradient_6 gradient_7 gradient_8)
   @images ~w(preset:artistic-studio preset:elegant-still-life preset:ocean-sunset preset:rustic-farmhouse preset:space-satellite)

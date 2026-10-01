@@ -76,6 +76,7 @@ REQUIRED_TOKENS=(
   "--theme-on-accent"
   "--theme-text"
   "--theme-text-secondary"
+  "--theme-canvas"
   "--theme-success"
   "--theme-warning"
   "--theme-danger"

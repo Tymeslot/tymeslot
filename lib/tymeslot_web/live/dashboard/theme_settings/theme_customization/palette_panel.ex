@@ -83,12 +83,12 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PalettePanel do
         <% active_scheme_id =
           if is_nil(@customization.settings["custom_palette_seed"]),
             do: @customization.settings["color_scheme"] %>
-        <%!-- Sorted by id, the order the dashboard has always shown; the group's
-        own order is onboarding's.
+        <%!-- In the group's order, the theme's own (its default first where
+        the spec puts it), as onboarding shows them.
         The param is named `choice` rather than `value`, because LiveView's
         client serialisation reads a button's native `value` IDL property and
         would overwrite `phx-value-value` with the empty string. --%>
-        <%= for {scheme_id, scheme} <- Enum.sort_by(Palette.schemes(@group), &elem(&1, 0)) do %>
+        <%= for {scheme_id, scheme} <- Palette.schemes(@group) do %>
           <button
             type="button"
             class={[
@@ -104,7 +104,15 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PalettePanel do
             phx-value-choice={scheme_id}
             phx-target={@myself}
           >
-            <div class="flex items-center gap-2 mb-4 bg-tymeslot-50/50 p-2 rounded-token-xl group-hover/scheme:scale-110 transition-transform">
+            <% backing = swatch_backing(scheme, @group) %>
+            <div
+              class={[
+                "flex items-center gap-2 mb-4 p-2 rounded-token-xl group-hover/scheme:scale-110 transition-transform",
+                if(backing, do: "ring-1 ring-tymeslot-100", else: "bg-tymeslot-50/50")
+              ]}
+              {backing_style(backing)}
+              data-testid="scheme-swatches"
+            >
               <div
                 :for={colour <- swatches(scheme, @group)}
                 class="w-6 h-6 rounded-full shadow-sm border border-white"
@@ -116,7 +124,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PalettePanel do
               "text-token-sm font-black uppercase tracking-widest transition-colors",
               if(active_scheme_id == scheme_id,
                 do: "text-turquoise-700",
-                else: "text-tymeslot-400 group-hover/scheme:text-tymeslot-600"
+                else: "text-tymeslot-500 group-hover/scheme:text-tymeslot-600"
               )
             ]}>
               {scheme_name(scheme)}
@@ -180,6 +188,18 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PalettePanel do
        do: [colors.background, colors.text_secondary, dark_background]
 
   defp swatches(scheme, _group), do: primary_swatches(scheme)
+
+  # The ground a scheme card's dots sit on. A tone's swatches already show its
+  # grounds, so it keeps the panel's neutral backing; any other scheme's dots
+  # sit on its own background, so a dark scheme reads dark.
+  defp swatch_backing(%{dark_colors: %{background: _dark}}, %{follow_os: true}), do: nil
+  defp swatch_backing(%{colors: %{background: background}}, _group), do: background
+  defp swatch_backing(_scheme, _group), do: nil
+
+  # No `style` attribute at all without a backing, rather than the empty one
+  # HEEx renders for `style={nil}`.
+  defp backing_style(nil), do: []
+  defp backing_style(background), do: [style: "background-color: #{background}"]
 
   defp primary_swatches(%{colors: colors}),
     do: [colors.primary, colors.secondary, colors.accent]
