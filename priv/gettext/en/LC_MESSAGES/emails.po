@@ -542,3 +542,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "%{meeting_type} with %{name}"
 msgstr ""
+
+#: lib/tymeslot/bookings/demo_orchestrator.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting with %{name}"
+msgstr ""
