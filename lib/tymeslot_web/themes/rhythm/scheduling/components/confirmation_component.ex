@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Availability.Offer
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
@@ -93,7 +94,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                   <span class="ticket-label">{dgettext("booking", "Meeting Details")}</span>
                   <span class="ticket-badge">
                     {dgettext("booking", "%{minutes} min",
-                      minutes: if(@meeting_type, do: @meeting_type.duration_minutes, else: @duration)
+                      minutes: Offer.duration_minutes(@meeting_type, @duration)
                     )}
                   </span>
                 </div>
