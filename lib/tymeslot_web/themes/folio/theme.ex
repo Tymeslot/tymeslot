@@ -4,7 +4,8 @@ defmodule TymeslotWeb.Themes.Folio.Theme do
   and bio in serif type, then the meeting types as cards; from the schedule
   step on, a slim cover band above a single-column booker. Its meeting, poll
   and payment pages are the shared defaults inside Folio's card
-  (`page_shell:`).
+  (`page_shell:`). Its onboarding preview is
+  `TymeslotWeb.Themes.Folio.OnboardingPreview`.
   """
   alias TymeslotWeb.Themes.Folio.Pages
 
@@ -17,4 +18,9 @@ defmodule TymeslotWeb.Themes.Folio.Theme do
         "An editorial page that introduces you, with a cover image, your portrait, headline and bio, and serif headings."
       ),
     page_shell: &Pages.page_shell/1
+
+  @impl TymeslotWeb.Themes.Core.Behaviour
+  defdelegate onboarding_preview(assigns),
+    to: TymeslotWeb.Themes.Folio.OnboardingPreview,
+    as: :render
 end
