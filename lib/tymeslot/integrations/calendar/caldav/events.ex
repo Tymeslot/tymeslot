@@ -194,6 +194,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   An event with no `:raw_ical` is **rebuilt**, which is the right writer for a
   booking Tymeslot authored and the only one available before the first sync.
 
+  A patched write replaces the event's `VALARM`s with the payload's
+  `:reminders`, unless the payload sets `keep_stored_alarms: true`, as a
+  booking update does (see `CalDAV.BookingDocument`): then the stored alarms
+  stay, and only a rebuild writes `:reminders`.
+
   A patched write is only ever applied to a document whose ETag we hold: the
   cached pair when the caller supplies both, otherwise the server's current
   copy, read first. A rejected precondition re-reads the event and patches
@@ -301,11 +306,24 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   # full instead.
   defp document_to_put(client, raw_ical, uid, event_data) do
     if String.contains?(raw_ical, "BEGIN:VEVENT") do
-      ICalBuilder.patch_event_properties(raw_ical, event_data, Scheduling.attendee_mode(client))
+      ICalBuilder.patch_event_properties(
+        raw_ical,
+        patch_payload(event_data),
+        Scheduling.attendee_mode(client)
+      )
     else
       rebuild_document(client, uid, event_data)
     end
   end
+
+  # The patcher replaces every `VALARM` whenever `:reminders` is present, so a
+  # payload that must leave the stored alarms alone drops the key here, and
+  # only here: a rebuild has no alarms of its own to keep and still writes
+  # the payload's.
+  defp patch_payload(%{keep_stored_alarms: true} = event_data),
+    do: Map.delete(event_data, :reminders)
+
+  defp patch_payload(event_data), do: event_data
 
   defp rebuild_document(client, uid, event_data) do
     ICalBuilder.build_simple_event(
