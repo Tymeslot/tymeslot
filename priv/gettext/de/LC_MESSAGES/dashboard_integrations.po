@@ -108,11 +108,6 @@ msgstr "Authentifizierung fehlgeschlagen. Bitte versuchen Sie es erneut."
 msgid "Authentication session mismatch. Please sign in and try again."
 msgstr "Authentifizierungssitzung stimmt nicht überein. Bitte melden Sie sich an und versuchen Sie es erneut."
 
-#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
-#, elixir-autogen, elixir-format
-msgid "Authorization was denied. Please try again."
-msgstr "Die Autorisierung wurde verweigert. Bitte versuchen Sie es erneut."
-
 #: lib/tymeslot_web/components/dashboard/integrations/shared/provider_picker_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Back to providers"
@@ -446,3 +441,8 @@ msgstr "Diese Unterhaltungen auch von Ihrem Nextcloud-Server löschen. Teilnehme
 #, elixir-autogen, elixir-format
 msgid "Enter the address on its own and put the username and password in their own fields."
 msgstr "Geben Sie nur die Adresse ein und tragen Sie Benutzername und Passwort in die dafür vorgesehenen Felder ein."
+
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
+#, elixir-autogen, elixir-format
+msgid "Authorisation was denied. Please try again."
+msgstr "Die Autorisierung wurde verweigert. Bitte versuchen Sie es erneut."

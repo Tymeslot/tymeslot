@@ -49,7 +49,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.FormHandlers do
           Flash.error(
             dgettext(
               "dashboard_automation_chat",
-              "Failed to initialize integration. Please try again."
+              "Failed to initialise integration. Please try again."
             )
           )
 

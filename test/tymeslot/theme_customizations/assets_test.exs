@@ -219,7 +219,7 @@ defmodule Tymeslot.ThemeCustomizations.AssetsTest do
     end
 
     test "deletes the image it stored", %{profile: profile} do
-      assert {:error, "Could not save your theme customization. Please try again."} =
+      assert {:error, "Could not save your theme customisation. Please try again."} =
                ThemeCustomizations.attach_asset(
                  profile.id,
                  "1",
@@ -233,7 +233,7 @@ defmodule Tymeslot.ThemeCustomizations.AssetsTest do
     test "deletes the video it stored and queues nothing", %{profile: profile} do
       stub(Tymeslot.Media.TranscoderMock, :available?, fn -> true end)
 
-      assert {:error, "Could not save your theme customization. Please try again."} =
+      assert {:error, "Could not save your theme customisation. Please try again."} =
                ThemeCustomizations.attach_asset(
                  profile.id,
                  "1",

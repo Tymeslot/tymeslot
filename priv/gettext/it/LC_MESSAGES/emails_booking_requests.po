@@ -251,11 +251,6 @@ msgstr "Ciao %{name}, la tua richiesta di spostamento non ha ricevuto risposta i
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
 msgid "I apologise for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience."
-msgstr "Mi scuso per l'eventuale disagio. Il tuo appuntamento attuale è stato annullato e vorrei aiutarti a riprogrammarlo non appena ti sarà possibile."
-
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#, elixir-autogen, elixir-format
-msgid "I apologize for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience."
 msgstr "Mi scuso per l'eventuale disagio. L'appuntamento attuale è stato annullato; vorrei aiutarti a riprogrammarlo non appena ti sarà possibile."
 
 #: lib/tymeslot/emails/templates/reschedule_request.ex

@@ -258,11 +258,6 @@ msgstr "Scollegamento di Slack non riuscito"
 msgid "Failed to generate link. Please try again."
 msgstr "Generazione del link non riuscita. Riprova."
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram/form_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to initialize integration. Please try again."
-msgstr "Inizializzazione dell'integrazione non riuscita. Riprova."
-
 #: lib/tymeslot_web/live/dashboard/automation/slack/state_handlers.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex
 #, elixir-autogen, elixir-format
@@ -841,3 +836,8 @@ msgstr "L'URL del webhook è stato revocato in Slack. Generane uno nuovo."
 #, elixir-autogen, elixir-format
 msgid "Slack error: %{error}"
 msgstr "Errore Slack: %{error}"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram/form_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to initialise integration. Please try again."
+msgstr "Inizializzazione dell'integrazione non riuscita. Riprova."

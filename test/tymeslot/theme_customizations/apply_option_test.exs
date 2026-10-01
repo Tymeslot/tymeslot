@@ -8,7 +8,7 @@ defmodule Tymeslot.ThemeCustomizations.ApplyOptionTest do
   alias Tymeslot.ThemeCustomizations.Storage
 
   @unavailable "This option is not available for this theme."
-  @not_saved "Could not save your theme customization. Please try again."
+  @not_saved "Could not save your theme customisation. Please try again."
 
   setup do
     upload_root =

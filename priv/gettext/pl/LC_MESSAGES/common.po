@@ -17,11 +17,6 @@ msgstr "Nie"
 msgid "Yes"
 msgstr "Tak"
 
-#: lib/tymeslot/custom_fields/answer_renderer.ex
-#, elixir-autogen, elixir-format
-msgid "✓ Acknowledged (%{at})"
-msgstr "✓ Potwierdzono (%{at})"
-
 #: lib/tymeslot_web/components/core_components/flash.ex
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
@@ -251,3 +246,8 @@ msgstr "Odtwórz wideo w tle"
 #, elixir-autogen, elixir-format
 msgid "Search timezones"
 msgstr "Szukaj stref czasowych"
+
+#: lib/tymeslot/custom_fields/answer_renderer.ex
+#, elixir-autogen, elixir-format
+msgid "✓ Acknowledged"
+msgstr "✓ Potwierdzono"

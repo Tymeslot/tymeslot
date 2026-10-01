@@ -87,11 +87,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
       view
-      |> element("button[phx-value-theme='1']", "Customize Style")
+      |> element("button[phx-value-theme='1']", "Customise Style")
       |> render_click()
 
-      assert render(view) =~ "Customize Style"
-      assert render(view) =~ "Color Palette"
+      assert render(view) =~ "Customise Style"
+      assert render(view) =~ "Colour Palette"
       assert render(view) =~ "Background Design"
 
       view
@@ -99,14 +99,14 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       |> render_click()
 
       assert render(view) =~ "Choose Your Style"
-      refute render(view) =~ "Color Palette"
+      refute render(view) =~ "Colour Palette"
     end
 
     test "navigates directly to the customize URL without going through the selection screen",
          %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard/theme/customize/1")
 
-      assert html =~ "Color Palette"
+      assert html =~ "Colour Palette"
       assert html =~ "Background Design"
     end
 
@@ -126,7 +126,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
       view
-      |> element("button[phx-value-theme='1']", "Customize Style")
+      |> element("button[phx-value-theme='1']", "Customise Style")
       |> render_click()
 
       # The Current badge (span.text-tymeslot-700) shows the loaded scheme's display name.
@@ -139,7 +139,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
       view
-      |> element("button[phx-value-theme='1']", "Customize Style")
+      |> element("button[phx-value-theme='1']", "Customise Style")
       |> render_click()
 
       view
@@ -159,31 +159,31 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
       view
-      |> element("button[phx-value-theme='1']", "Customize Style")
+      |> element("button[phx-value-theme='1']", "Customise Style")
       |> render_click()
 
       view
-      |> element("button", "Solid Color")
+      |> element("button", "Solid Colour")
       |> render_click()
 
-      assert render(view) =~ "Select a solid color"
+      assert render(view) =~ "Select a solid colour"
 
       view
       |> element("button", "Gradient")
       |> render_click()
 
-      refute render(view) =~ "Select a solid color"
+      refute render(view) =~ "Select a solid colour"
     end
 
     test "selects a solid color background and persists it", %{conn: conn, profile: profile} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
       view
-      |> element("button[phx-value-theme='1']", "Customize Style")
+      |> element("button[phx-value-theme='1']", "Customise Style")
       |> render_click()
 
       view
-      |> element("button", "Solid Color")
+      |> element("button", "Solid Colour")
       |> render_click()
 
       view
@@ -201,7 +201,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
       view
-      |> element("button[phx-value-theme='1']", "Customize Style")
+      |> element("button[phx-value-theme='1']", "Customise Style")
       |> render_click()
 
       view
@@ -273,7 +273,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
       view
-      |> element("button[phx-value-theme='1']", "Customize Style")
+      |> element("button[phx-value-theme='1']", "Customise Style")
       |> render_click()
 
       view
@@ -322,15 +322,15 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
       view
-      |> element("button[phx-value-theme='1']", "Customize Style")
+      |> element("button[phx-value-theme='1']", "Customise Style")
       |> render_click()
 
       html_solid =
         view
-        |> element("button", "Solid Color")
+        |> element("button", "Solid Colour")
         |> render_click()
 
-      assert html_solid =~ "Select a solid color"
+      assert html_solid =~ "Select a solid colour"
 
       html_gradient =
         view
@@ -341,7 +341,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       image_hint = "JPG, PNG or WebP. Max #{UploadConstraints.max_file_size_mb(:image)} MB."
       video_hint = "MP4, WebM or MOV. Max #{UploadConstraints.max_file_size_mb(:video)} MB."
 
-      refute html_gradient =~ "Select a solid color"
+      refute html_gradient =~ "Select a solid colour"
       refute html_gradient =~ image_hint
       refute html_gradient =~ video_hint
 
@@ -433,9 +433,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
          %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
 
-      # Switch to Solid Color tab first so the picker button is visible
+      # Switch to Solid Colour tab first so the picker button is visible
       view
-      |> element("button", "Solid Color")
+      |> element("button", "Solid Colour")
       |> render_click()
 
       html_before = render(view)
@@ -452,9 +452,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
          %{conn: conn, profile: profile} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
 
-      # Switch to Solid Color tab and open the custom picker
+      # Switch to Solid Colour tab and open the custom picker
       view
-      |> element("button", "Solid Color")
+      |> element("button", "Solid Colour")
       |> render_click()
 
       view
@@ -479,7 +479,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
          %{conn: conn, profile: profile} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
 
-      view |> element("button", "Solid Color") |> render_click()
+      view |> element("button", "Solid Colour") |> render_click()
       view |> element("button[phx-click='theme:toggle_custom_picker']") |> render_click()
 
       view

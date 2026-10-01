@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.ErrorComponent do
         <p class="readiness-notice-hint">
           {dgettext(
             "errors",
-            "If you are the organizer, please connect a calendar in your dashboard."
+            "If you are the organiser, please connect a calendar in your dashboard."
           )}
         </p>
       </div>

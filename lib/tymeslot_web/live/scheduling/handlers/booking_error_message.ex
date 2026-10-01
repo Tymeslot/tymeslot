@@ -40,7 +40,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
   end
 
   def message(:organizer_required) do
-    dgettext("booking", "Organizer is required for booking")
+    dgettext("booking", "Organiser is required for booking")
   end
 
   def message(:booking_failed) do

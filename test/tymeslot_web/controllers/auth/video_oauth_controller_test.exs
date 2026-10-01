@@ -398,7 +398,7 @@ defmodule TymeslotWeb.VideoOAuthControllerTest do
       conn = get(conn, ~p"/auth/google/video/callback", %{"error" => "access_denied"})
 
       assert redirected_to(conn) == "/dashboard/integrations?tab=video"
-      assert Flash.get(conn.assigns.flash, :error) =~ "Authorization was denied"
+      assert Flash.get(conn.assigns.flash, :error) =~ "Authorisation was denied"
     end
 
     test "teams_callback surfaces admin consent message when AADSTS code is present", %{
@@ -427,7 +427,7 @@ defmodule TymeslotWeb.VideoOAuthControllerTest do
         })
 
       assert redirected_to(conn) == "/dashboard/integrations?tab=video"
-      assert Flash.get(conn.assigns.flash, :error) =~ "Authorization was denied"
+      assert Flash.get(conn.assigns.flash, :error) =~ "Authorisation was denied"
     end
 
     test "teams_callback handles creation failure", %{conn: conn} do

@@ -62,7 +62,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
       description:
         dgettext_noop(
           "dashboard_video",
-          "Enterprise OAuth integration with organizational accounts"
+          "Enterprise OAuth integration with organisational accounts"
         ),
       button_text: "Connect Teams",
       click_event: "connect_teams",

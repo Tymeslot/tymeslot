@@ -49,7 +49,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
 
       <div :if={@meeting_types == []} class="paper-empty">
         <p class="paper-empty__title">{dgettext("booking", "No meeting types available")}</p>
-        <p class="paper-empty__text">{dgettext("booking", "Please contact the organizer")}</p>
+        <p class="paper-empty__text">{dgettext("booking", "Please contact the organiser")}</p>
       </div>
 
       <ul :if={@meeting_types != []} class="paper-types" role="list">

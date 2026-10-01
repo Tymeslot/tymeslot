@@ -157,14 +157,14 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       |> element("button[phx-click='show_customization'][phx-value-theme='1']")
       |> render_click()
 
-      assert render(view) =~ "Customize Style"
+      assert render(view) =~ "Customise Style"
       assert has_element?(view, "#theme-customization-uploads")
 
       view
       |> element("button[phx-click='theme:set_browsing_type'][phx-value-type='color']")
       |> render_click()
 
-      assert render(view) =~ "Select a solid color"
+      assert render(view) =~ "Select a solid colour"
 
       view
       |> element("button[phx-click='theme:set_browsing_type'][phx-value-type='image']")

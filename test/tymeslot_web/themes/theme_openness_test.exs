@@ -155,7 +155,7 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
       {:ok, view, html} = live(conn, ~p"/dashboard/theme/customize/#{@theme_id}")
 
       assert has_element?(view, "[data-testid='fixture-emblem-panel']")
-      assert html =~ "Color Palette"
+      assert html =~ "Colour Palette"
       refute html =~ "Background Design"
     end
 

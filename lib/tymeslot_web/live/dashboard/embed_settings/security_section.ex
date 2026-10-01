@@ -62,14 +62,14 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection do
               <p class="text-blue-800">
                 {dgettext(
                   "dashboard_embed",
-                  "By default, embedding is disabled to prevent unauthorized use of your booking page. To enable embedding, you must specify the domains you trust."
+                  "By default, embedding is disabled to prevent unauthorised use of your booking page. To enable embedding, you must specify the domains you trust."
                 )}
               </p>
               <p class="text-blue-800">
                 {raw(
                   dgettext(
                     "dashboard_embed",
-                    "For security, %{emphasis} to only specific domains you trust. This prevents your booking page from appearing on unauthorized websites.",
+                    "For security, %{emphasis} to only specific domains you trust. This prevents your booking page from appearing on unauthorised websites.",
                     emphasis:
                       ~s(<strong>) <>
                         dgettext("dashboard_embed", "you must restrict embedding") <> ~s(</strong>)

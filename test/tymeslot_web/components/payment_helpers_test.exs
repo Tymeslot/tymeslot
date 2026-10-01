@@ -1,6 +1,8 @@
 defmodule TymeslotWeb.Components.PaymentHelpersTest do
   use ExUnit.Case, async: true
 
+  @moduletag :payments
+
   alias TymeslotWeb.Components.PaymentHelpers
 
   @nbsp " "

@@ -53,11 +53,6 @@ msgstr "Scegli dalla nostra collezione"
 msgid "Close"
 msgstr "Chiudi"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/palette_panel.ex
-#, elixir-autogen, elixir-format
-msgid "Color Palette"
-msgstr "Tavolozza dei colori"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Connect Calendar to Preview"
@@ -79,12 +74,6 @@ msgstr "Stile attuale"
 #, elixir-autogen, elixir-format
 msgid "Custom"
 msgstr "Personalizzato"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Customize Style"
-msgstr "Personalizza lo stile"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -150,31 +139,10 @@ msgstr "Seleziona immagine"
 msgid "Select Video"
 msgstr "Seleziona video"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/color_picker.ex
-#, elixir-autogen, elixir-format
-msgid "Select a solid color"
-msgstr "Seleziona una tinta unita"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Select the interface that best represents your personal brand and creates the best experience for your clients."
 msgstr "Seleziona l'interfaccia che rappresenta al meglio il tuo marchio personale e offre la migliore esperienza ai tuoi clienti."
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/palette_panel.ex
-#, elixir-autogen, elixir-format
-msgid "Select the primary colors for your booking page interface."
-msgstr "Seleziona i colori primari per l'interfaccia della tua pagina di prenotazione."
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/background_panel.ex
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/color_picker.ex
-#, elixir-autogen, elixir-format
-msgid "Solid Color"
-msgstr "Tinta unita"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex
-#, elixir-autogen, elixir-format
-msgid "Theme Customization"
-msgstr "Personalizzazione del tema"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_preview.ex
 #, elixir-autogen, elixir-format
@@ -231,12 +199,6 @@ msgstr "Design glass morphism con eleganti effetti di trasparenza e un flusso di
 #, elixir-autogen, elixir-format
 msgid "Modern sliding design with video background and a 4-slide booking flow."
 msgstr "Design moderno a scorrimento con sfondo video e un flusso di prenotazione in 4 slide."
-
-#: lib/tymeslot/theme_customizations.ex
-#: lib/tymeslot/theme_customizations/assets.ex
-#, elixir-autogen, elixir-format
-msgid "Could not save your theme customization. Please try again."
-msgstr "Impossibile salvare la personalizzazione del tema. Riprova."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
@@ -649,6 +611,44 @@ msgstr "Avorio"
 #, elixir-autogen, elixir-format
 msgid "Sage"
 msgstr "Salvia"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/palette_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Colour Palette"
+msgstr "Tavolozza dei colori"
+
+#: lib/tymeslot/theme_customizations.ex
+#: lib/tymeslot/theme_customizations/assets.ex
+#, elixir-autogen, elixir-format
+msgid "Could not save your theme customisation. Please try again."
+msgstr "Impossibile salvare la personalizzazione del tema. Riprova."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Customise Style"
+msgstr "Personalizza lo stile"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/color_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Select a solid colour"
+msgstr "Seleziona una tinta unita"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/palette_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Select the primary colours for your booking page interface."
+msgstr "Seleziona i colori primari per l'interfaccia della tua pagina di prenotazione."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/background_panel.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/color_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Solid Colour"
+msgstr "Tinta unita"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex
+#, elixir-autogen, elixir-format
+msgid "Theme Customisation"
+msgstr "Personalizzazione del tema"
 
 #: lib/tymeslot_web/themes/paper/theme.ex
 #, elixir-autogen, elixir-format

@@ -145,4 +145,17 @@ defmodule TymeslotWeb.Themes.Shared.Components.BookingFormTest do
     wrapped_count = wrapped |> Floki.find("form#booking-form > *") |> length()
     assert plain |> Floki.find("form#booking-form > *") |> length() == wrapped_count + 1
   end
+
+  test "suggests a Czech name and a matching address in Czech" do
+    doc =
+      Gettext.with_locale(TymeslotWeb.Gettext, "cs", fn ->
+        Floki.parse_document!(render_form())
+      end)
+
+    assert ["Jan Novák"] =
+             doc |> Floki.find("[name='booking[name]']") |> Floki.attribute("placeholder")
+
+    assert ["jan@example.com"] =
+             doc |> Floki.find("[name='booking[email]']") |> Floki.attribute("placeholder")
+  end
 end

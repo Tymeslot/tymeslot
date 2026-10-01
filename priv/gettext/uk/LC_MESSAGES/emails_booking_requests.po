@@ -251,11 +251,6 @@ msgstr "Вітаю, %{name}! Ваш запит на перенесення не 
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
 msgid "I apologise for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience."
-msgstr "Перепрошую за можливі незручності. Вашу поточну зустріч скасовано, і я радо допоможу вам перенести її на найближчий зручний час."
-
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#, elixir-autogen, elixir-format
-msgid "I apologize for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience."
 msgstr "Перепрошую за незручності. Вашу поточну зустріч скасовано, і я радо допоможу вам перенести її на найближчий зручний час."
 
 #: lib/tymeslot/emails/templates/reschedule_request.ex
