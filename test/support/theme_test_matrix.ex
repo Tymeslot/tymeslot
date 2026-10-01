@@ -86,6 +86,18 @@ defmodule TymeslotWeb.ThemeTestMatrix do
       selected_duration_selector: ".duration-card.selected [data-testid='duration-option']",
       fixture: false
     },
+    "4" => %{
+      id: "4",
+      key: :folio,
+      slug: "folio",
+      name: "Folio",
+      wrapper_class: "folio-theme-wrapper",
+      video_background: false,
+      pins_schedule_actions: false,
+      schedule_view: :calendar,
+      selected_duration_selector: "[data-testid='duration-option'][aria-pressed='true']",
+      fixture: false
+    },
     "97" => %{
       id: "97",
       key: :showcase,

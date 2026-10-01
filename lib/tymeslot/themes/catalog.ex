@@ -65,6 +65,14 @@ defmodule Tymeslot.Themes.Catalog do
         heading_style: :named,
         customization_spec: Tymeslot.ThemeCustomizations.RhythmSpec,
         status: :active
+      },
+      folio: %{
+        id: "4",
+        key: :folio,
+        name: "Folio",
+        heading_style: :named,
+        customization_spec: Tymeslot.ThemeCustomizations.FolioSpec,
+        status: :beta
       }
     }
   end

@@ -649,3 +649,8 @@ msgstr "Ivoire"
 #, elixir-autogen, elixir-format
 msgid "Sage"
 msgstr "Sauge"
+
+#: lib/tymeslot_web/themes/folio/theme.ex
+#, elixir-autogen, elixir-format
+msgid "An editorial page that introduces you, with a cover image, your portrait, headline and bio, and serif headings."
+msgstr "Une page éditoriale qui vous présente, avec une image de couverture, votre portrait, votre accroche, votre biographie et des titres à empattements."

@@ -645,3 +645,8 @@ msgstr "Kość słoniowa"
 #, elixir-autogen, elixir-format
 msgid "Sage"
 msgstr "Szałwia"
+
+#: lib/tymeslot_web/themes/folio/theme.ex
+#, elixir-autogen, elixir-format
+msgid "An editorial page that introduces you, with a cover image, your portrait, headline and bio, and serif headings."
+msgstr "Strona w stylu magazynu, która cię przedstawia: zdjęcie tytułowe, twój portret, nagłówek i biogram oraz tytuły krojem szeryfowym."

@@ -649,3 +649,8 @@ msgstr "Elfenbein"
 #, elixir-autogen, elixir-format
 msgid "Sage"
 msgstr "Salbei"
+
+#: lib/tymeslot_web/themes/folio/theme.ex
+#, elixir-autogen, elixir-format
+msgid "An editorial page that introduces you, with a cover image, your portrait, headline and bio, and serif headings."
+msgstr "Eine Seite im Magazinstil, die Sie vorstellt: mit Titelbild, Ihrem Porträt, Überschrift und Kurzbiografie und Titeln in Serifenschrift."

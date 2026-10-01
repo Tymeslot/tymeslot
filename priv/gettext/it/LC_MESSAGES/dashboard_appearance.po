@@ -649,3 +649,8 @@ msgstr "Avorio"
 #, elixir-autogen, elixir-format
 msgid "Sage"
 msgstr "Salvia"
+
+#: lib/tymeslot_web/themes/folio/theme.ex
+#, elixir-autogen, elixir-format
+msgid "An editorial page that introduces you, with a cover image, your portrait, headline and bio, and serif headings."
+msgstr "Una pagina in stile editoriale che ti presenta, con immagine di copertina, il tuo ritratto, titolo, biografia e titoli con grazie."

@@ -649,3 +649,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Sage"
 msgstr ""
+
+#: lib/tymeslot_web/themes/folio/theme.ex
+#, elixir-autogen, elixir-format
+msgid "An editorial page that introduces you, with a cover image, your portrait, headline and bio, and serif headings."
+msgstr ""

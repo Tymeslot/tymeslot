@@ -1,0 +1,23 @@
+/* Folio: the organiser's page. A cover band and portrait on every card,
+   serif headings, one column on the scheme's canvas. */
+
+/* Tailwind, the shared primitives, the LiveView loading variants and the
+   content sources, shared by every theme. */
+@import "../../shared/entry.css";
+
+@import "./modules/variables.css";
+@import "../../shared/tokens.css";
+@import "./modules/base.css";
+@import "./modules/typography.css";
+@import "../../shared/components/approval-notice.css";
+@import "../../shared/components/preview-notice.css";
+@import "../../shared/components/language-switcher.css";
+@import "../../shared/components/timezone-picker.css";
+@import "../../shared/components/slot-list.css";
+@import "../../shared/components/custom-questions.css";
+@import "../../shared/components/booking-fields.css";
+@import "../../shared/components/manage-pages.css";
+@import "../../shared/components/polls.css";
+@import "../../shared/components/payment-pages.css";
+@import "../../shared/embed.css";
+@import "./modules/iframe.css";
