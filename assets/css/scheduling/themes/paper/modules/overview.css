@@ -87,11 +87,21 @@
   min-width: 0;
 }
 
+/* The name and its approval pill: side by side while they fit, the pill
+   under the name, flush with it, when they do not. */
 .paper-type__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3xs) var(--space-xs);
   font-size: var(--theme-font-size-md);
   font-weight: var(--font-weight-semibold);
   line-height: var(--theme-line-height-snug);
   overflow-wrap: anywhere;
+}
+
+.paper-type__name .approval-pill {
+  margin-left: 0;
 }
 
 .paper-type__description {
