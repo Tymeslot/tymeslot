@@ -16,4 +16,9 @@ defmodule TymeslotWeb.Themes.Paper.Theme do
         "A calm, neutral booking page: everything on one screen, light and dark modes and your own accent colour."
       ),
     page_shell: &Pages.page_shell/1
+
+  @impl TymeslotWeb.Themes.Core.Behaviour
+  defdelegate onboarding_preview(assigns),
+    to: TymeslotWeb.Themes.Paper.OnboardingPreview,
+    as: :render
 end
