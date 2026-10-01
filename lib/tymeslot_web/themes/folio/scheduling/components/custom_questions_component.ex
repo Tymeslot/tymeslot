@@ -56,9 +56,8 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.CustomQuestionsComponen
 
         <div class="folio-question">
           <InputRenderer.render definition={@definition} value={@value} myself={@myself} />
+          <p :if={@error} class="folio-error" role="alert">{@error}</p>
         </div>
-
-        <p :if={@error} class="folio-error" role="alert">{@error}</p>
 
         <div class="folio-actions">
           <button
