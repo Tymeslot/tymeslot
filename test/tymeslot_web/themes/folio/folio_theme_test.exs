@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Themes.Folio.FolioThemeTest do
   @moduletag :integration
 
   import Mox
+  import Tymeslot.Factory
   import Tymeslot.ThemeBookingFlowHelpers
 
   alias Tymeslot.Profiles
@@ -21,6 +22,7 @@ defmodule TymeslotWeb.Themes.Folio.FolioThemeTest do
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.Presets
   alias Tymeslot.ThemeCustomizations.Tokens
+  alias TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent
   alias TymeslotWeb.Themes.Folio.Scheduling.Wrapper
 
   @theme_id "4"
@@ -187,6 +189,36 @@ defmodule TymeslotWeb.Themes.Folio.FolioThemeTest do
                view,
                "[data-testid='schedule-actions'] [data-testid='next-step'][disabled]"
              )
+    end
+  end
+
+  describe "the confirmation" do
+    # The details read minutes, never the duration slug the flow carries.
+    test "without a meeting type, the duration shows minutes" do
+      html =
+        render_component(ConfirmationComponent, %{
+          id: "confirmation-step",
+          locale: "en",
+          duration: "30-minutes",
+          username_context: "hostuser",
+          selected_date: "2026-09-10",
+          selected_time: "10:00",
+          user_timezone: "UTC",
+          email: "guest@example.com",
+          guest_emails: [],
+          name: "Alice",
+          organizer_profile: build(:profile, full_name: "Jane Organizer"),
+          meeting_type: nil,
+          meeting_status: "confirmed",
+          meeting_uid: "abc123",
+          custom_fields_snapshot: [],
+          custom_field_answers: %{},
+          is_rescheduling: false,
+          theme_tokens: nil
+        })
+
+      assert html =~ ~r/<dd>\s*30 min\s*<\/dd>/
+      refute html =~ "30-minutes"
     end
   end
 end

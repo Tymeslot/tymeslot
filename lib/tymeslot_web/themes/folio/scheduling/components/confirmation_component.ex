@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Availability.Offer
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Folio.Components.Masthead
@@ -77,7 +78,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
               <dt>{dgettext("booking", "Duration")}</dt>
               <dd>
                 {dgettext("booking", "%{minutes} min",
-                  minutes: if(@meeting_type, do: @meeting_type.duration_minutes, else: @duration)
+                  minutes: Offer.duration_minutes(@meeting_type, @duration)
                 )}
               </dd>
             </div>
