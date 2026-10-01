@@ -3,7 +3,8 @@ defmodule TymeslotWeb.Themes.Paper.ComponentsTest do
   Paper's own pieces, rendered alone: the brand row only when there is a
   logo, the avatar at its sizes, a meeting fact, and the overview's list of
   meeting types with each type's length, price and approval pill, the
-  choice marked by `aria-pressed`, and Next held back until one is chosen.
+  choice marked by `aria-pressed`, and Next held back until one is chosen;
+  and the confirmation's duration badge.
   """
   use ExUnit.Case, async: true
 
@@ -16,6 +17,7 @@ defmodule TymeslotWeb.Themes.Paper.ComponentsTest do
 
   alias Tymeslot.ThemeCustomizations.Tokens
   alias TymeslotWeb.Themes.Paper.Components
+  alias TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent
   alias TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent
 
   setup do
@@ -168,6 +170,36 @@ defmodule TymeslotWeb.Themes.Paper.ComponentsTest do
 
       assert [_logo] = Floki.find(with_logo, ".paper-brand img.paper-logo")
       assert Floki.find(with_logo, ".paper-intro img.paper-avatar") == []
+    end
+  end
+
+  describe "the confirmation" do
+    # The badge reads minutes, never the duration slug the flow carries.
+    test "without a meeting type, the duration badge shows minutes" do
+      html =
+        render_component(ConfirmationComponent, %{
+          id: "confirmation-step",
+          locale: "en",
+          duration: "30-minutes",
+          username_context: "hostuser",
+          selected_date: "2026-09-10",
+          selected_time: "10:00",
+          user_timezone: "UTC",
+          email: "guest@example.com",
+          guest_emails: [],
+          name: "Alice",
+          organizer_profile: build(:profile, full_name: "Jane Organizer"),
+          meeting_type: nil,
+          meeting_status: "confirmed",
+          meeting_uid: "abc123",
+          custom_fields_snapshot: [],
+          custom_field_answers: %{},
+          is_rescheduling: false,
+          theme_tokens: nil
+        })
+
+      assert text(doc(html), ".paper-badge") == "30 min"
+      refute html =~ "30-minutes"
     end
   end
 end

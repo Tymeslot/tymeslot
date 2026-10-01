@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Availability.Offer
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Paper.Components
@@ -35,11 +36,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
         held: ApprovalDisplay.awaiting_approval?(assigns),
         location: BookingLocation.chosen_display(assigns),
         calendar_path: PathHandlers.calendar_ics_path(assigns),
-        minutes:
-          if(assigns.meeting_type,
-            do: assigns.meeting_type.duration_minutes,
-            else: assigns.duration
-          )
+        minutes: Offer.duration_minutes(assigns.meeting_type, assigns.duration)
       )
 
     ~H"""
