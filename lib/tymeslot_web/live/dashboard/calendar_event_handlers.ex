@@ -117,6 +117,24 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     end
   end
 
+  @doc """
+  Hands the grid an event another LiveView's writes have finished with, so
+  that the edits it kept for it start (see
+  `Tymeslot.CalendarGrid.WriteGuardian`, "A grid mounted in another
+  LiveView").
+  """
+  @spec handle_event_writes_released(tuple(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_event_writes_released(release, socket) do
+    send_update(CalendarGridComponent,
+      id: "calendar",
+      action: :event_writes_released,
+      release: release
+    )
+
+    {:noreply, socket}
+  end
+
   defp settle_write(write, outcome) do
     send_update(CalendarGridComponent,
       id: "calendar",

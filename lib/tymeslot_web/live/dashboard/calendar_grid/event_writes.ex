@@ -50,6 +50,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.CalendarGrid.QueuedWrite
   alias Tymeslot.CalendarGrid.WriteGuardian
   alias Tymeslot.CalendarGrid.WriteQueue
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
@@ -94,6 +95,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   @spec settle(Phoenix.LiveView.Socket.t(), WriteQueue.ref(), WriteQueue.outcome()) ::
           Phoenix.LiveView.Socket.t()
   def settle(socket, ref, outcome), do: drive(socket, &WriteQueue.settle(&1, ref, outcome))
+
+  @doc """
+  Starts the edits kept for an event another LiveView was still writing,
+  once it has finished with it, applied to the event as its writes left it
+  (see `Tymeslot.CalendarGrid.WriteQueue.resume/2`).
+  """
+  @spec resume(Phoenix.LiveView.Socket.t(), WriteQueue.release()) :: Phoenix.LiveView.Socket.t()
+  def resume(socket, release), do: drive(socket, &WriteQueue.resume(&1, release))
 
   @doc """
   Holds every write to an event of the series `event` belongs to while
@@ -184,9 +193,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
 
     EditWorkflow.run_async(
       socket,
-      WriteQueue.result_tag(write),
-      fn -> WriteQueue.perform(user_id, write, event) end,
-      WriteQueue.crash_result(write, event),
+      QueuedWrite.result_tag(write),
+      fn -> QueuedWrite.perform(user_id, write, event) end,
+      QueuedWrite.crash_result(write, event),
       report_to_guardian: true
     )
   end

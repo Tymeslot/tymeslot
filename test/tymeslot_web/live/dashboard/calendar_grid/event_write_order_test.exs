@@ -291,8 +291,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
     end
 
     # The old LiveView's guardian is still writing its queue; the new grid
-    # takes it over, so an edit made there waits behind the older ones
-    # rather than racing them to the calendar.
+    # waits for the event until it has finished, so an edit made there runs
+    # after the older ones rather than racing them to the calendar.
     test "a new edit of the event waits behind the older ones still saving", %{
       conn: conn,
       event: event
@@ -317,11 +317,47 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
       assert %{summary: "First title", location: "Room 9"} = payload
       refute_receive {:write_started, _pid, _uid, _payload}, 200
 
-      # Taken over, the old guardian stops once its running write answered.
+      answer(second, :ok)
+
+      assert_receive {:write_started, third, _uid, payload}, 1_000
+      assert %{summary: "Third title", location: "Room 9"} = payload
+
+      # Its queue written, the old guardian stops.
       assert_receive {:DOWN, ^guardian_ref, :process, ^old_guardian, :normal}, 1_000
+
+      answer(third, :ok)
+
+      assert settled(lv) =~ "Third title"
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+    end
+
+    # After a short drop the server often notices the old connection only at
+    # the heartbeat timeout, so the old LiveView still lives when the grid
+    # mounts again, and goes on writing its queue until it is gone.
+    test "an edit made while the old LiveView still lives never lands before its older edits", %{
+      conn: conn,
+      event: event
+    } do
+      old_lv = open_event(conn, event)
+
+      edit(old_lv, "update_event_title", "First title")
+      edit(old_lv, "update_event_location", "Room 9")
+      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, 1_000
+
+      lv = open_event(conn, event)
+      edit(lv, "update_event_title", "Third title")
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+
+      kill(old_lv)
+      answer(first, :ok)
+
+      assert_receive {:write_started, second, _uid, payload}, 1_000
+      assert %{summary: "First title", location: "Room 9"} = payload
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
 
       answer(second, :ok)
 
+      # Made onto the event as the older edits left it.
       assert_receive {:write_started, third, _uid, payload}, 1_000
       assert %{summary: "Third title", location: "Room 9"} = payload
       answer(third, :ok)
@@ -330,7 +366,39 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
       refute_receive {:write_started, _pid, _uid, _payload}, 200
     end
 
-    test "the writes of every LiveView gone are taken over", %{
+    test "an edit kept by a new grid that is gone before the old one is still made last", %{
+      conn: conn,
+      event: event
+    } do
+      old_lv = open_event(conn, event)
+
+      edit(old_lv, "update_event_title", "First title")
+      edit(old_lv, "update_event_location", "Room 9")
+      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, 1_000
+
+      lv = open_event(conn, event)
+      edit(lv, "update_event_title", "Third title")
+
+      # The new grid goes first; the old guardian, which lent it the event,
+      # then finishes its own queue.
+      kill(lv)
+      kill(old_lv)
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+
+      answer(first, :ok)
+
+      assert_receive {:write_started, second, _uid, %{location: "Room 9"}}, 1_000
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+      answer(second, :ok)
+
+      assert_receive {:write_started, third, _uid, payload}, 1_000
+      assert %{summary: "Third title", location: "Room 9"} = payload
+      answer(third, :ok)
+
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+    end
+
+    test "the writes of every LiveView gone are waited for", %{
       conn: conn,
       integration: integration,
       event: event
@@ -365,9 +433,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
       refute_receive {:write_started, _pid, _uid, _payload}, 200
     end
 
-    # A LiveView still alive, another tab of the same organiser, drives its
-    # own queue; nothing of it is taken.
-    test "the queue of another open tab is left to it", %{conn: conn, event: event} do
+    # A LiveView still alive may be another open tab of the same organiser:
+    # it goes on writing its own queue, and this tab's edit of the same
+    # event waits until it has.
+    test "another open tab writes its own queue, and an edit here waits for it", %{
+      conn: conn,
+      event: event
+    } do
       other_tab = open_event(conn, event)
 
       edit(other_tab, "update_event_title", "First title")
@@ -376,16 +448,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
 
       lv = open_event(conn, event)
       edit(lv, "update_event_title", "This tab")
-      assert_receive {:write_started, this_tab, _uid, %{summary: "This tab"}}, 1_000
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
 
       answer(first, :ok)
 
       # Started once, by the other tab, and not by this one too.
       assert_receive {:write_started, second, _uid, %{location: "Room 9"}}, 1_000
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
       answer(second, :ok)
+      assert settled(other_tab) =~ "Room 9"
+
+      assert_receive {:write_started, this_tab, _uid, payload}, 1_000
+      assert %{summary: "This tab", location: "Room 9"} = payload
       answer(this_tab, :ok)
 
-      assert settled(other_tab) =~ "Room 9"
+      # The other tab still owns its grid's writes.
+      edit(other_tab, "update_event_location", "Room 10")
+      assert_receive {:write_started, later, _uid, %{location: "Room 10"}}, 1_000
+      answer(later, :ok)
+
       refute_receive {:write_started, _pid, _uid, _payload}, 200
     end
   end

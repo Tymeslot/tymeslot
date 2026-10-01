@@ -449,6 +449,9 @@ defmodule TymeslotWeb.DashboardLive do
   def handle_info({:event_video_result, result}, socket),
     do: CalendarEventHandlers.handle_event_video_result(result, socket)
 
+  def handle_info({:event_writes_released, release}, socket),
+    do: CalendarEventHandlers.handle_event_writes_released(release, socket)
+
   def handle_info({:execute_create_event, payload}, socket),
     do: CalendarEventHandlers.handle_execute_create_event(payload, socket)
 

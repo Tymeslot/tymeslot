@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
 
   Parent-to-component messages travel through `send_update/2` with an `:action` key.
   These bypass attr validation and are dispatched in the `update/2` clauses below:
-  `:revert_event`, `:event_write_settled`, `:refresh_events`, `:reload_events`,
+  `:revert_event`, `:event_write_settled`, `:event_writes_released`, `:refresh_events`, `:reload_events`,
   `:ad_hoc_meeting_created`, `:ad_hoc_meeting_failed`, `:event_created`,
   `:event_create_failed`, `:event_moved`, `:series_moved`, `:series_move_failed`,
   `:event_deleted`,
@@ -105,6 +105,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   @impl Phoenix.LiveComponent
   def update(%{action: :event_write_settled} = assigns, socket),
     do: UpdateHandlers.handle_event_write_settled(assigns, socket)
+
+  @impl Phoenix.LiveComponent
+  def update(%{action: :event_writes_released} = assigns, socket),
+    do: UpdateHandlers.handle_event_writes_released(assigns, socket)
 
   @impl Phoenix.LiveComponent
   def update(%{action: :refresh_events} = assigns, socket),

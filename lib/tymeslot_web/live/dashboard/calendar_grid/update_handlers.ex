@@ -29,6 +29,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
   def handle_event_write_settled(%{write: write, outcome: outcome}, socket),
     do: {:ok, EventWrites.settle(socket, write, outcome)}
 
+  @doc """
+  Starts the edits kept for an event another LiveView has finished writing.
+  """
+  @spec handle_event_writes_released(map(), Phoenix.LiveView.Socket.t()) ::
+          {:ok, Phoenix.LiveView.Socket.t()}
+  def handle_event_writes_released(%{release: release}, socket),
+    do: {:ok, EventWrites.resume(socket, release)}
+
   @spec handle_refresh_events(map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
   def handle_refresh_events(assigns, socket) do
