@@ -538,7 +538,7 @@ msgstr "NOTIZ VOM ORGANISATOR:"
 msgid "Note from the organiser"
 msgstr "Notiz vom Organisator"
 
-#: lib/tymeslot/bookings/policy.ex
+#: lib/tymeslot/bookings/booking_title.ex
 #, elixir-autogen, elixir-format
 msgid "%{meeting_type} with %{name}"
 msgstr "%{meeting_type} mit %{name}"

@@ -11,9 +11,8 @@ defmodule Tymeslot.Bookings.Policy do
   `meeting_is_past?/1` also read the clock but do no database access and no
   logging.
   """
-  use Gettext, backend: TymeslotWeb.Gettext
-
   alias Tymeslot.Availability.Schedules
+  alias Tymeslot.Bookings.BookingTitle
   alias Tymeslot.Bookings.BuildParams
   alias Tymeslot.Clock
   alias Tymeslot.Emails.RecipientLocale
@@ -223,14 +222,12 @@ defmodule Tymeslot.Bookings.Policy do
 
   # The title is stored once and becomes the organiser's calendar event and
   # dashboard entry, so it is rendered in the organiser's language, matching
-  # the event description `CalendarEventBuilder` writes alongside it.
+  # the event description `CalendarEventBuilder` writes alongside it. Mail to
+  # the booker renders it again in theirs (`BookingTitle.localise/1`).
   defp title_attributes(%BuildParams{} = params, meeting_type_name) do
     title =
       RecipientLocale.with_user_id_locale(params.organizer_user_id, fn ->
-        dgettext("emails", "%{meeting_type} with %{name}",
-          meeting_type: meeting_type_name,
-          name: params.form_data["name"]
-        )
+        BookingTitle.render(meeting_type_name, params.form_data["name"])
       end)
 
     %{title: title, summary: title}
