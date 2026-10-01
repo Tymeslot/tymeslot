@@ -328,7 +328,7 @@ defmodule Tymeslot.Meetings do
         meeting
         |> ContentBuilder.build_appointment_details()
         |> Map.merge(%{
-          title: BookingTitle.localise(meeting, meeting.attendee_locale || "en"),
+          title: BookingTitle.localise(meeting, meeting.attendee_locale),
           description: meeting.description,
           custom_fields_snapshot: meeting.custom_fields_snapshot,
           custom_field_answers: meeting.custom_field_answers,
