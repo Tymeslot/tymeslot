@@ -60,8 +60,8 @@ jobs:
     env:
       MIX_ENV: test
       TEST_DB_POOL_SIZE: "10"
-      ELIXIR_VERSION: "1.20.3"
-      OTP_VERSION: "28.5.0.5"
+      ELIXIR_VERSION: "1.20.4"
+      OTP_VERSION: "28.5.0.7"
       # Empty on a scheduled run, so the nightly gets the default. One run of
       # this suite measured 284s on a 9-core machine and 407s on a contended
       # one; the runner here has 4 vCPUs, so size on the latter. 12 runs is

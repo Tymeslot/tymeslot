@@ -56,11 +56,6 @@ msgstr "%{months} міс."
 msgid "%{month} %{day}, %{year}"
 msgstr "%{day} %{month} %{year}"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "%{month} %{year}"
-msgstr "%{month} %{year}"
-
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{name}, your meeting %{organizer} has been rescheduled."
@@ -156,16 +151,6 @@ msgstr "День"
 msgid "Appointment host"
 msgstr "Організатор зустрічі"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "April"
-msgstr "Квітень"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "August"
-msgstr "Серпень"
-
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
@@ -227,11 +212,6 @@ msgstr "Продовжити"
 msgid "Date"
 msgstr "Дата"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "December"
-msgstr "Грудень"
-
 #: lib/tymeslot_web/themes/shared/components/awaiting_payment.ex
 #, elixir-autogen, elixir-format
 msgid "Did the new tab not open?"
@@ -272,11 +252,6 @@ msgstr "Вечір"
 msgid "FRI"
 msgstr "Пт"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "February"
-msgstr "Лютий"
-
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Fri"
@@ -303,25 +278,10 @@ msgstr "Я підтверджую вищезазначене"
 msgid "Invalid date/time"
 msgstr "Некоректна дата або час"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "January"
-msgstr "Січень"
-
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "John Doe"
 msgstr "Іван Петренко"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "July"
-msgstr "Липень"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "June"
-msgstr "Червень"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
@@ -348,16 +308,6 @@ msgstr "Завантаження доступного часу…"
 #, elixir-autogen, elixir-format
 msgid "MON"
 msgstr "Пн"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "March"
-msgstr "Березень"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "May"
-msgstr "Травень"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
@@ -414,16 +364,6 @@ msgstr "Немає доступних типів зустрічей"
 #, elixir-autogen, elixir-format
 msgid "No time selected"
 msgstr "Час не обрано"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "November"
-msgstr "Листопад"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "October"
-msgstr "Жовтень"
 
 #: lib/tymeslot_web/themes/shared/components/awaiting_payment.ex
 #, elixir-autogen, elixir-format
@@ -573,11 +513,6 @@ msgstr "Виберіть…"
 #, elixir-autogen, elixir-format
 msgid "Sent to"
 msgstr "Надіслано на"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "September"
-msgstr "Вересень"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
@@ -1440,3 +1375,18 @@ msgstr "Який відеосервіс?"
 #, elixir-autogen, elixir-format
 msgid "Your phone number"
 msgstr "Ваш номер телефону"
+
+#: lib/tymeslot_web/themes/core/dispatcher.ex
+#, elixir-autogen, elixir-format
+msgid "Reload page"
+msgstr "Перезавантажити сторінку"
+
+#: lib/tymeslot_web/themes/core/dispatcher.ex
+#, elixir-autogen, elixir-format
+msgid "Something went wrong"
+msgstr "Щось пішло не так"
+
+#: lib/tymeslot_web/themes/core/dispatcher.ex
+#, elixir-autogen, elixir-format
+msgid "This page could not be loaded. Please try again."
+msgstr "Не вдалося завантажити цю сторінку. Спробуйте ще раз."

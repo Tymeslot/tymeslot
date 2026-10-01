@@ -60,6 +60,7 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
 
   alias String.Chars
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber
   alias Tymeslot.Infrastructure.ErrorTracking.UnmatchedEvent
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
@@ -307,7 +308,10 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
   defp report_fun(kind, reason, stacktrace, context) do
     fn ->
       try do
-        ErrorTracker.report(exception(kind, reason), stacktrace, context)
+        kind
+        |> exception(reason)
+        |> ReasonScrubber.scrub_exception(stacktrace)
+        |> ErrorTracker.report(stacktrace, context)
       rescue
         exception ->
           # Logged under our own domain, which attach/0's own_logs filter

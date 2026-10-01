@@ -271,6 +271,85 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeriesHoldLiveViewTest do
     end
   end
 
+  describe "when the grid is gone before a held edit has started" do
+    # The held edit lives only in the LiveView; its guardian makes it once
+    # the series write it waits for has failed and left the series as it was.
+    test "an edit held behind a write to all events is made once that fails", %{
+      conn: conn,
+      event: event,
+      other: other
+    } do
+      hold_puts()
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      write_all(lv, event)
+      assert_receive {:held, :edit, writer}, @task_timeout
+
+      show(lv, other)
+      rename(lv, "Daily standup")
+
+      kill(lv)
+      refute_receive {:held, :edit, _editor}, 200
+
+      release(writer, 403)
+
+      assert_receive {:held, :edit, editor}, @task_timeout
+      release(editor, 204)
+      assert_receive {:put, @series_url, body}, @task_timeout
+      assert body =~ "SUMMARY:Daily standup"
+    end
+
+    test "an edit held while the series moved is made once the move fails", %{
+      conn: conn,
+      destination: destination,
+      event: event,
+      other: other
+    } do
+      hold_puts()
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      move_series(lv, event, destination)
+      assert_receive {:held, :copy, mover}, @task_timeout
+
+      show(lv, other)
+      rename(lv, "Daily standup")
+
+      kill(lv)
+      refute_receive {:held, :edit, _editor}, 200
+
+      release(mover, 403)
+
+      assert_receive {:held, :edit, editor}, @task_timeout
+      release(editor, 204)
+      assert_receive {:put, @series_url, body}, @task_timeout
+      assert body =~ "SUMMARY:Daily standup"
+    end
+
+    # As with the grid in place: made against the series as it was, so it
+    # is dropped, not written over the series-wide change.
+    test "an edit held behind a write to all events is still dropped once that succeeds", %{
+      conn: conn,
+      event: event,
+      other: other
+    } do
+      hold_puts()
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      write_all(lv, event)
+      assert_receive {:held, :edit, writer}, @task_timeout
+
+      show(lv, other)
+      rename(lv, "Daily standup")
+
+      kill(lv)
+      release(writer, 204)
+
+      assert_receive {:put, @series_url, series_body}, @task_timeout
+      refute series_body =~ "Daily standup"
+      refute_receive {:held, :edit, _editor}, 300
+    end
+  end
+
   defp occurrence(integration, date, start_at) do
     key = Calendar.strftime(date, "%Y%m%dT090000")
 
@@ -345,6 +424,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeriesHoldLiveViewTest do
     expect(Tymeslot.HTTPClientMock, :delete, fn _url, _headers, _opts ->
       {:ok, %Req.Response{status: status, body: "", headers: %{}}}
     end)
+  end
+
+  defp kill(lv) do
+    Process.flag(:trap_exit, true)
+    ref = Process.monitor(lv.pid)
+    Process.exit(lv.pid, :kill)
+    assert_receive {:DOWN, ^ref, :process, _pid, :killed}, @task_timeout
   end
 
   defp release(pid, status) do

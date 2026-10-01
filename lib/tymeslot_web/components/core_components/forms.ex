@@ -105,6 +105,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
         |> error_aria(error_id)
         |> Map.merge(html_constraints(assigns))
         |> disabled_attr(assigns.disabled)
+        |> required_attr(assigns.required)
         |> Map.merge(assigns.rest)
       )
 
@@ -143,7 +144,6 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
           value={@value}
           checked={@checked}
           placeholder={@placeholder}
-          required={@required}
           errors={@errors}
           has_leading_icon={@icon || render_slot(@leading_icon)}
           has_trailing_icon={render_slot(@trailing_icon)}
@@ -291,6 +291,14 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   # `disabled={false}` must leave no attribute behind at all.
   defp disabled_attr(rest, true), do: Map.put(rest, :disabled, true)
   defp disabled_attr(rest, _disabled), do: rest
+
+  # `required` is declared for the label's `*`, so it needs the same threading
+  # as `disabled`. Rendering it switches on native browser validation: a form
+  # that shows its own server-side errors for empty fields must carry
+  # `novalidate`, which keeps the attribute for assistive technology while
+  # leaving the error messages to the app.
+  defp required_attr(rest, true), do: Map.put(rest, :required, true)
+  defp required_attr(rest, _required), do: rest
 
   defp html_constraints(assigns) do
     Map.reject(

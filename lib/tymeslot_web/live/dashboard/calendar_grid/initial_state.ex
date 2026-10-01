@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InitialState do
   defaults so the template never reads an unset assign.
   """
 
+  alias Tymeslot.CalendarGrid.WriteQueue
   alias Tymeslot.Timezones
 
   @doc "The default assigns applied in the component's `mount/1`."
@@ -47,11 +48,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InitialState do
       confirm_delete_scopes: :single,
       confirm_delete_linked_to_booking: false,
       saving_event: false,
-      # Writes to existing events, serialised per event; see `EventWrites`.
-      event_writes: %{},
-      event_write_seq: 0,
-      # Series held while written whole or moved; see `EventWrites`.
-      series_holds: %{},
+      # Writes to existing events, serialised per event, and the series
+      # held while written whole or moved; see `EventWrites`.
+      event_writes: WriteQueue.new(),
       deleting_event: false,
       video_integrations: [],
       confirm_remove_attendee: nil,

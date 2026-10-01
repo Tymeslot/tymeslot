@@ -240,9 +240,9 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
       # Inline scripts are authorised by a per-request nonce; reCAPTCHA +
       # Stripe require their external origins.
       "script-src #{script_src}",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https:",
-      "font-src 'self' data: https://fonts.gstatic.com",
+      "font-src 'self' data:",
       # Allow connections to reCAPTCHA, Google services, and Stripe
       "connect-src #{connect_src}",
       # Allow reCAPTCHA and Stripe frames

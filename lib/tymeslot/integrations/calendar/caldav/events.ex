@@ -6,9 +6,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
 
   - **ETag-conditional updates**: callers pass the cached ETag via `:etag`
     in `opts` for a direct conditional PUT with `If-Match`. When no cached
-    ETag is available, the module falls back to a HEAD probe, and finally
-    to `If-Match: *` if HEAD also fails. Prevents lost updates on
-    concurrent edits.
+    ETag is available, the module falls back to a HEAD probe, then a GET
+    for servers that refuse HEAD, and finally to `If-Match: *`. Prevents
+    lost updates on concurrent edits.
   - **Conflict resolution policy**: on `412 Precondition Failed`, the
     caller chooses one of `:fail | :keep_server | :keep_local` via
     `:conflict_resolution` in `opts`. See `ConflictResolution` for the
@@ -157,7 +157,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   # The ETag is genuinely optional. RFC 4791 §5.3.4 only says a server SHOULD
   # return one, and a server that normalised the submitted document must not,
   # so its absence is an ordinary create: the update path still falls back to
-  # a HEAD probe and then to `If-Match: *` exactly as it did before.
+  # the probe (HEAD, then GET) and then to `If-Match: *`.
   defp created_event(uid, calendar_path, url, headers) do
     CreatedEvent.new(uid,
       provider_event_id: href_path(url),
@@ -179,7 +179,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   Uses a conditional `If-Match` write to prevent lost updates when two
   parties edit the same event concurrently. The caller should supply the
   cached ETag via `opts[:etag]`; when absent, the function falls back to a
-  HEAD probe, and finally to `If-Match: *` if HEAD also fails.
+  HEAD probe, then a GET, and finally to `If-Match: *` if neither finds one.
 
   ## Patched versus rebuilt
 
@@ -205,6 +205,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
           :ok | {:error, Base.error_reason()}
   def update_calendar_event(client, calendar_path, uid, event_data, opts) do
     policy = Keyword.get(opts, :conflict_resolution, ConflictResolution.default())
+    opts = ConditionalWrite.with_deadline(opts)
 
     if ConflictResolution.valid?(policy) do
       with_events_breaker(client, opts, fn ->
@@ -343,6 +344,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
 
   defp do_update_event_colour(client, calendar_path, uid, colour, raw_ical, opts) do
     policy = Keyword.get(opts, :conflict_resolution, ConflictResolution.default())
+    opts = ConditionalWrite.with_deadline(opts)
 
     if ConflictResolution.valid?(policy) do
       with_events_breaker(client, opts, fn ->

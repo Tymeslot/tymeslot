@@ -5,6 +5,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   """
 
   require Logger
+  alias Tymeslot.Bookings.BookingTitle
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Shared.BookingRequestLocation
@@ -99,11 +100,17 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   # filename), so it is the meeting's `calendar_uid`: the attendee's copy has to
   # match the organiser's event, and the booking's own `uid` is the capability
   # behind the cancel and reschedule links, which travel as their own fields.
+  #
+  # The title is the attendee's: this payload is built in their locale, and
+  # the attendee and guest copies carry it into the `.ics` they import. The
+  # organiser's copies do not render it.
   defp base_details(meeting) do
+    title = BookingTitle.localise(meeting)
+
     %{
       uid: meeting.calendar_uid,
-      title: meeting.title,
-      summary: meeting.summary || meeting.title,
+      title: title,
+      summary: if(meeting.summary in [nil, meeting.title], do: title, else: meeting.summary),
       description: meeting.description || "",
       start_time: meeting.start_time,
       end_time: meeting.end_time,

@@ -68,17 +68,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventRecurrence do
 
   # The scope prompt gates two kinds of edit on a recurring series: a timing
   # change (a drag, a resize or an inline time) and a recurrence-rule change.
+  #
+  # Neither flashes success up front: a refusal or a failure answers with its
+  # own flash once the write settles (see `CalendarEventHandlers`), and
+  # flashing "Changes saved." before that would contradict it.
   defp replay_with_scope(%{kind: :recurrence_rule} = prompt, scope, socket) do
-    socket =
-      EditWorkflow.update_event_async(
-        socket,
-        prompt.event,
-        %{recurrence_rule: prompt.recurrence_rule},
-        recurrence_scope: scope
-      )
-
-    send(self(), {:flash, {:info, dgettext("dashboard_calendar_events", "Changes saved.")}})
-    socket
+    EditWorkflow.update_event_async(
+      socket,
+      prompt.event,
+      %{recurrence_rule: prompt.recurrence_rule},
+      recurrence_scope: scope
+    )
   end
 
   # Whether to tell the attendees is asked once the write in `scope` has

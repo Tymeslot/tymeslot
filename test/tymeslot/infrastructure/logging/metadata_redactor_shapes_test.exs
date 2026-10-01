@@ -3,11 +3,17 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactorShapesTest do
 
   @moduletag :infrastructure
 
+  alias Ecto.Changeset
   alias Tymeslot.Infrastructure.Logging.MetadataRedactor
 
   defmodule Options do
     @moduledoc false
     defstruct [:client_secret, :timeout]
+  end
+
+  defmodule RequestError do
+    @moduledoc false
+    defexception [:request, message: "request failed"]
   end
 
   defp event(meta), do: %{level: :info, msg: {:string, "test"}, meta: meta}
@@ -91,6 +97,58 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactorShapesTest do
 
       assert {{:invalid_token, %{"refresh_token" => "[REDACTED]"}}, ^stacktrace} =
                meta.crash_reason
+    end
+  end
+
+  describe "crash_reason carrying an exception with a struct inside" do
+    setup do
+      {:current_stacktrace, stacktrace} = Process.info(self(), :current_stacktrace)
+      %{stacktrace: stacktrace}
+    end
+
+    # Ecto.InvalidChangesetError's message walks its changeset, and quotes its
+    # changes: a changeset rendered to a string made the message raise, and
+    # the crash was recorded under a garbled message.
+    test "keeps an invalid changeset a changeset, with the password redacted", %{
+      stacktrace: stacktrace
+    } do
+      changeset =
+        {%{}, %{password: :string, name: :string}}
+        |> Changeset.cast(%{"password" => "hunter2-secret", "name" => "ab"}, [
+          :password,
+          :name
+        ])
+        |> Changeset.validate_length(:name, min: 3)
+
+      exception = %Ecto.InvalidChangesetError{action: :insert, changeset: changeset}
+
+      assert {%Ecto.InvalidChangesetError{changeset: %Changeset{}} = redacted, ^stacktrace} =
+               meta_after_filter(%{crash_reason: {exception, stacktrace}}).crash_reason
+
+      message = Exception.message(redacted)
+      assert message =~ "could not perform insert because changeset is invalid"
+      assert message =~ "should be at least %{count} character(s)"
+      refute message =~ "hunter2-secret"
+      refute Exception.format(:error, redacted, stacktrace) =~ "hunter2-secret"
+    end
+
+    test "keeps a struct its own inspection can render a struct", %{stacktrace: stacktrace} do
+      request = %Req.Request{options: %{client_secret: "cs-secret"}}
+
+      assert {%RequestError{request: %Req.Request{} = kept}, ^stacktrace} =
+               meta_after_filter(%{crash_reason: {%RequestError{request: request}, stacktrace}}).crash_reason
+
+      assert kept.options.client_secret == "[REDACTED]"
+    end
+
+    test "redacts whole a struct its own inspection cannot render", %{stacktrace: stacktrace} do
+      request = %Req.Request{
+        headers: %{"authorization" => ["Bearer header-secret"]},
+        options: %{auth: "Bearer option-secret"}
+      }
+
+      assert {%RequestError{request: "#Req.Request<[REDACTED]>"}, ^stacktrace} =
+               meta_after_filter(%{crash_reason: {%RequestError{request: request}, stacktrace}}).crash_reason
     end
   end
 

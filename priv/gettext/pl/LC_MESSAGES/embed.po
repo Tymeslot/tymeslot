@@ -1,0 +1,23 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: tymeslot\n"
+"Language: pl\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+#: lib/tymeslot_web/controllers/embed_blocked_html.ex
+#, elixir-autogen, elixir-format
+msgid "Booking unavailable"
+msgstr "Rezerwacja niedostępna"
+
+#: lib/tymeslot_web/controllers/embed_blocked_html.ex
+#, elixir-autogen, elixir-format
+msgid "The organiser hasn’t authorised this website to show their booking page."
+msgstr "Organizator nie zezwolił tej witrynie na wyświetlanie swojej strony rezerwacji."
+
+#: lib/tymeslot_web/controllers/embed_blocked_html.ex
+#, elixir-autogen, elixir-format
+msgid "This booking page can’t be embedded here"
+msgstr "Tej strony rezerwacji nie można tutaj osadzić"

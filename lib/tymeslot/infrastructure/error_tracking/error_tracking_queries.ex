@@ -51,6 +51,44 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ErrorTrackingQueries do
   end
 
   @doc """
+  One page of the errors last seen at or after `since`, as `{id, reason}` in
+  id order: at most `limit` of them, with ids above `after_id`. Filters on
+  the `last_occurrence_at` index.
+  """
+  @spec error_reasons_seen_since(DateTime.t(), non_neg_integer(), pos_integer()) ::
+          [{pos_integer(), String.t()}]
+  def error_reasons_seen_since(%DateTime{} = since, after_id, limit) do
+    Repo.all(
+      from e in Error,
+        where: e.last_occurrence_at >= ^since and e.id > ^after_id,
+        order_by: e.id,
+        limit: ^limit,
+        select: {e.id, e.reason}
+    )
+  end
+
+  @doc """
+  One page of an error's occurrences inserted at or after `since`, as
+  `{id, reason}` in id order: at most `limit` of them, with ids above
+  `after_id`. Narrows by `error_id` first, the column ErrorTracker indexes.
+  """
+  @spec occurrence_reasons_since(
+          pos_integer(),
+          DateTime.t(),
+          non_neg_integer(),
+          pos_integer()
+        ) :: [{pos_integer(), String.t()}]
+  def occurrence_reasons_since(error_id, %DateTime{} = since, after_id, limit) do
+    Repo.all(
+      from o in Occurrence,
+        where: o.error_id == ^error_id and o.inserted_at >= ^since and o.id > ^after_id,
+        order_by: o.id,
+        limit: ^limit,
+        select: {o.id, o.reason}
+    )
+  end
+
+  @doc """
   The number of stored occurrences of each error in `error_ids`, as a map
   from error id to count. An error with none, or no longer stored, is
   absent.

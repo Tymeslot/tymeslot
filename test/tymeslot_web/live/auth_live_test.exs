@@ -18,6 +18,14 @@ defmodule TymeslotWeb.AuthLiveTest do
       assert has_element?(view, "#login-form")
     end
 
+    test "marks its fields required but leaves validation to the app", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/auth/login")
+
+      assert has_element?(view, "#login-form[novalidate]")
+      assert has_element?(view, "#login-form input[name='email'][required]")
+      assert has_element?(view, "#login-form input[name='password'][required]")
+    end
+
     test "successful login with valid credentials", %{conn: conn} do
       password = "ValidPassword123!"
       user = insert(:user, password_hash: Password.hash_password(password))
@@ -160,6 +168,16 @@ defmodule TymeslotWeb.AuthLiveTest do
       assert [] = Repo.all(Oban.Job)
     end
 
+    test "marks its fields required but leaves validation to the app", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/auth/signup")
+
+      # An unticked terms box is reported by the server's own message (below).
+      assert has_element?(view, "#signup-form[novalidate]")
+      assert has_element?(view, "#signup-form input[name='user[email]'][required]")
+      assert has_element?(view, "#signup-form input[name='user[password]'][required]")
+      assert has_element?(view, "#signup-form input[name='user[terms_accepted]'][required]")
+    end
+
     test "validation errors on registration", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/auth/signup")
 
@@ -244,6 +262,13 @@ defmodule TymeslotWeb.AuthLiveTest do
 
       refute render(view) =~ "Check Your Email"
       assert has_element?(view, "#reset-password-form")
+    end
+
+    test "the email field is marked required but validation stays with the app", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/auth/reset-password")
+
+      assert has_element?(view, "#reset-password-form[novalidate]")
+      assert has_element?(view, "#reset-password-form input[name='email'][required]")
     end
 
     test "navigation between states", %{conn: conn} do
@@ -506,6 +531,29 @@ defmodule TymeslotWeb.AuthLiveTest do
       assert has_element?(view, ~s(a.btn-oauth[href="/auth/github"]), "GitHub")
       assert has_element?(view, ~s(a.btn-oauth[href="/auth/oauth"]), "SSO")
       refute has_element?(view, ~s(a.btn-oauth[href="/auth/google"]))
+    end
+
+    test "name the SSO provider when its configuration carries a name", %{conn: conn} do
+      social_auth = Application.get_env(:tymeslot, :social_auth, [])
+      oauth_provider = Application.get_env(:tymeslot, :oauth_provider, [])
+
+      Application.put_env(:tymeslot, :social_auth, Keyword.put(social_auth, :oauth_enabled, true))
+
+      Application.put_env(
+        :tymeslot,
+        :oauth_provider,
+        Keyword.put(oauth_provider, :name, "Beaver Cloud")
+      )
+
+      on_exit(fn ->
+        Application.put_env(:tymeslot, :social_auth, social_auth)
+        Application.put_env(:tymeslot, :oauth_provider, oauth_provider)
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/auth/login")
+
+      assert has_element?(view, ~s(a.btn-oauth[href="/auth/oauth"]), "Beaver Cloud")
+      refute has_element?(view, ~s(a.btn-oauth[href="/auth/oauth"]), "SSO")
     end
   end
 
