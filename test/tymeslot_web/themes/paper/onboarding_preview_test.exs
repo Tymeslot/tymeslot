@@ -56,6 +56,33 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreviewTest do
     assert [_calendar] = Floki.find(doc, "[data-preview-part='calendar'].grid-cols-7")
     assert [_times] = Floki.find(doc, "[data-preview-part='times']")
     assert html =~ "9:30"
-    assert html =~ "background: #2563eb;"
+    assert [book] = Floki.find(doc, "[data-preview='paper'] > button")
+    assert Floki.text(book) =~ "Book"
+    assert [style] = Floki.attribute(book, "style")
+    assert style =~ "background: #2563eb;"
+  end
+
+  test "the card's edge follows the text colour, so a dark card gets a light edge" do
+    assigns = %{slots: @slots}
+
+    html =
+      rendered_to_string(~H"""
+      <PreviewParts.theme_preview
+        theme_module={Theme}
+        variant={:card}
+        colors={%{primary: "#0891b2", surface: "#18181b", text: "#f4f4f5"}}
+        slots={@slots}
+      >
+        <:header>
+          <p>Ada Lovelace</p>
+        </:header>
+      </PreviewParts.theme_preview>
+      """)
+
+    assert [card] = html |> Floki.parse_fragment!() |> Floki.find("[data-preview='paper']")
+    assert [style] = Floki.attribute(card, "style")
+    assert style =~ "border-color: #f4f4f51f;"
+    assert [class] = Floki.attribute(card, "class")
+    refute class =~ "border-tymeslot"
   end
 end

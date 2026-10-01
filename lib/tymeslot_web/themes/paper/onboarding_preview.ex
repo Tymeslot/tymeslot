@@ -70,8 +70,8 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreview do
   def card(assigns) do
     ~H"""
     <div
-      class="rounded-token-xl p-5 flex flex-col items-center gap-3 border border-tymeslot-200"
-      style={card_style(@colors, @highlight_card)}
+      class="rounded-token-xl p-5 flex flex-col items-center gap-3 border"
+      style={card_style(@colors, @highlight_card) <> edge_style(@colors)}
       data-preview="paper"
     >
       {render_slot(@header)}
@@ -102,4 +102,8 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreview do
     </div>
     """
   end
+
+  # The card's edge: the text colour at 12%, as Paper's own card line is,
+  # so it follows a dark card instead of staying a light grey.
+  defp edge_style(colors), do: "border-color: #{color(colors, :text, "#111111")}1f;"
 end
