@@ -34,8 +34,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   also handed to a `Tymeslot.CalendarGrid.WriteGuardian` after every
   change, and each write's result is sent to it as well; should the
   LiveView go, or the grid be taken off the page, before the queue drains,
-  the guardian finishes it, and a grid mounted again, in this LiveView or
-  in a new one after the connection came back, takes it over (`adopt/1`).
+  the guardian finishes it. A grid mounted again in this LiveView takes the
+  queue back from it. One mounted in another LiveView, after the
+  connection came back or in another tab, takes nothing: it waits for the
+  events the other LiveView's guardian is still writing, and starts its own
+  edits of them once that guardian has released them (`adopt/1`).
 
   ## Results
 
@@ -150,13 +153,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
     do: WriteQueue.series_busy?(socket.assigns.event_writes, event)
 
   @doc """
-  Takes over the writes guardians are still making for this organiser, when
-  the grid mounts: this LiveView's own, after the organiser left the
-  calendar for another dashboard page, and those of a LiveView that is gone,
-  after the connection dropped and came back (see
-  `Tymeslot.CalendarGrid.WriteGuardian.adopt/2`), so that a new edit of an
-  event still being written waits behind it. The queue taken over is handed
-  straight to this LiveView's guardian.
+  The queue the grid starts from when it mounts, so that a new edit of an
+  event still being written waits behind it (see
+  `Tymeslot.CalendarGrid.WriteGuardian.adopt/2`): this LiveView's own,
+  taken back from its guardian after the organiser left the calendar for
+  another dashboard page, waiting for the events and series every other
+  guardian of the organiser is still writing, after the connection dropped
+  and came back, or in another tab. Those are written by the guardian
+  writing them, and this grid's edits of them start once it has released
+  them. The queue is handed straight to this LiveView's guardian.
   """
   @spec adopt(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def adopt(socket) do
