@@ -5,13 +5,14 @@
 
 .paper-calendar__header {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm);
+  flex-direction: column;
+  gap: var(--space-xs);
   margin-bottom: var(--space-md);
 }
 
+/* The same size and line height as the times' heading
+   (.paper-slots .slot-list__heading), so the two read as one row when
+   the times stand beside the calendar. */
 .paper-calendar__title {
   margin: 0;
   font-family: var(--theme-font-heading);
@@ -20,14 +21,20 @@
   line-height: var(--theme-line-height-snug);
 }
 
+/* The month navigation has a row of its own, as wide as the grid under
+   it: the chevrons at its ends, the month centred between them. Beside
+   the title it would wrap under it in longer languages and narrower
+   cards anyway, so it always sits here. */
 .paper-calendar__nav {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-2xs);
 }
 
 .paper-calendar__month {
-  min-width: 9rem;
+  flex: 1;
+  min-width: 0;
   color: var(--ink-1);
   font-size: var(--theme-font-size-sm);
   font-weight: var(--font-weight-medium);

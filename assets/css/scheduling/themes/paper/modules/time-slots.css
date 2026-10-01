@@ -2,11 +2,14 @@
    outlined buttons in the accent, filled when chosen, and hour groups
    behind a toggle for a meeting type with fine-grained starts. */
 
+/* Sized like the calendar's title (.paper-calendar__title), which it
+   lines up with when the times stand beside the calendar. */
 .paper-slots .slot-list__heading {
   margin: 0 0 var(--space-sm);
   font-family: var(--theme-font-heading);
-  font-size: var(--theme-font-size-md);
+  font-size: var(--theme-font-size-lg);
   font-weight: var(--font-weight-semibold);
+  line-height: var(--theme-line-height-snug);
 }
 
 /* The heading is focused by script (AutoScrollToSlots) only to move the
