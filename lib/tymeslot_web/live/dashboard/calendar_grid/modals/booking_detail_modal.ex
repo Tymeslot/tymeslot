@@ -99,10 +99,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.BookingDetailModal do
   end
 
   defp booking_date_label(booking, timezone) do
-    date = Helpers.event_display_date(booking, timezone)
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-
-    "#{LocaleFormat.format_weekday_name(Date.day_of_week(date), locale, :full)}, " <>
-      "#{LocaleFormat.format_month_name(date.month, locale)} #{date.day}, #{date.year}"
+    booking
+    |> Helpers.event_display_date(timezone)
+    |> LocaleFormat.format_weekday_date(Gettext.get_locale(TymeslotWeb.Gettext))
   end
 end

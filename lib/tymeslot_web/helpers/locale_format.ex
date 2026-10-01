@@ -23,16 +23,16 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   conventions, given a bare (unpadded) day number. Shared by `format_date/2`
   and callers that build their own day/month/year pieces (e.g. date ranges).
   Matches `format_date/2`'s per-locale padding: `en`/unknown locales
-  zero-pad the day; `de`/`cs`/`uk`/`fr`/`it` do not.
+  zero-pad the day; `de`/`cs`/`uk`/`fr`/`it`/`pl` do not.
   - en: April 05, 2026
   - de/cs: 5. April 2026 / 5. dubna 2026
-  - uk/fr/it: 5 квітня 2026 (day before month, no period)
+  - uk/fr/it/pl: 5 квітня 2026 (day before month, no period)
   """
   @spec order_date_parts(String.t() | integer(), String.t(), integer(), String.t()) :: String.t()
   def order_date_parts(day, month_name, year, locale) do
     case locale do
       loc when loc in ["de", "cs"] -> "#{day}. #{month_name} #{year}"
-      loc when loc in ["uk", "fr", "it"] -> "#{day} #{month_name} #{year}"
+      loc when loc in ["uk", "fr", "it", "pl"] -> "#{day} #{month_name} #{year}"
       _other_locale -> "#{month_name} #{pad_day(day)}, #{year}"
     end
   end
@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   naturally with bare day numbers, e.g. "April 10 – 12, 2026").
   - en: April 10 – 12, 2026 / April 30 – May 2, 2026
   - de/cs: 10.–12. April 2026 / 30. April – 2. Mai 2026
-  - uk/fr/it: 10–12 квітня 2026 / 30 квітня – 2 травня 2026 (day before month, no period)
+  - uk/fr/it/pl: 10–12 квітня 2026 / 30 квітня – 2 травня 2026 (day before month, no period)
   """
   @spec format_date_range(Calendar.date(), Calendar.date(), String.t()) :: String.t()
   def format_date_range(start_date, end_date, locale) do
@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
       loc when loc in ["de", "cs"] ->
         day_first_range(start_date, start_month, end_date, end_month, ".")
 
-      loc when loc in ["uk", "fr", "it"] ->
+      loc when loc in ["uk", "fr", "it", "pl"] ->
         day_first_range(start_date, start_month, end_date, end_month, "")
 
       _other ->
@@ -126,6 +126,13 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
       full:
         ~w(ledna února března dubna května června července srpna září října listopadu prosince),
       short: ~w(led úno bře dub kvě čvn čvc srp zář říj lis pro)
+    },
+    # Polish, like Czech, names a month inside a date in the genitive
+    # ("5 kwietnia 2026"), which is the only place these are used.
+    "pl" => %{
+      full:
+        ~w(stycznia lutego marca kwietnia maja czerwca lipca sierpnia września października listopada grudnia),
+      short: ~w(sty lut mar kwi maj cze lip sie wrz paź lis gru)
     }
   }
 
@@ -170,6 +177,11 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
       full: ["neděle", "pondělí", "úterý", "středa", "čtvrtek", "pátek", "sobota"],
       short: ["ne", "po", "út", "st", "čt", "pá", "so"],
       narrow: ["N", "P", "Ú", "S", "Č", "P", "S"]
+    },
+    "pl" => %{
+      full: ["niedziela", "poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota"],
+      short: ["niedz", "pon", "wt", "śr", "czw", "pt", "sob"],
+      narrow: ["N", "P", "W", "Ś", "C", "P", "S"]
     }
   }
 
@@ -205,6 +217,60 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   @spec format_month_name(integer(), String.t(), :full | :short) :: String.t()
   def format_month_name(_invalid_month, _locale, _format), do: ""
 
+  # The standalone (nominative) month, for a heading that names a month without
+  # a day. Only the locales whose standalone form differs from the in-date one
+  # in `@month_names` are listed; the rest share it (fr, it, de) or are English.
+  # Stored lowercase except where the language capitalises the noun itself
+  # (en, de); `format_month_year/3` capitalises the start of the heading.
+  @standalone_month_names %{
+    "uk" =>
+      ~w(січень лютий березень квітень травень червень липень серпень вересень жовтень листопад грудень),
+    "cs" => ~w(leden únor březen duben květen červen červenec srpen září říjen listopad prosinec),
+    "pl" =>
+      ~w(styczeń luty marzec kwiecień maj czerwiec lipiec sierpień wrzesień październik listopad grudzień)
+  }
+
+  @doc """
+  The standalone month name for a heading without a day, as it reads mid-sentence:
+  lowercase in the languages that do not capitalise month names ("září",
+  "octobre"). Unlike `format_month_name/3`, never the genitive a date uses.
+
+  Headings starting with it go through `capitalize_first/1`, which
+  `format_month_year/3` already does.
+  """
+  @spec format_standalone_month_name(1..12, String.t()) :: String.t()
+  def format_standalone_month_name(month_num, locale) when month_num in 1..12 do
+    case Map.fetch(@standalone_month_names, locale) do
+      {:ok, names} -> Enum.at(names, month_num - 1)
+      :error -> format_month_name(month_num, locale, :full)
+    end
+  end
+
+  @doc """
+  A month-and-year heading, capitalised as a heading in the locale:
+  - en: September 2026
+  - fr: Septembre 2026
+  - cs: Leden 2026 (nominative, never the in-date "ledna")
+  """
+  @spec format_month_year(1..12, integer(), String.t()) :: String.t()
+  def format_month_year(month_num, year, locale) do
+    capitalize_first("#{format_standalone_month_name(month_num, locale)} #{year}")
+  end
+
+  @doc """
+  Upper-cases the first grapheme only, leaving the rest as it is.
+
+  `String.capitalize/1` is wrong for headings: it lowercases everything after
+  the first letter, turning German "Januar – Februar" into "Januar – februar".
+  """
+  @spec capitalize_first(String.t()) :: String.t()
+  def capitalize_first(string) do
+    case String.next_grapheme(string) do
+      {first, rest} -> String.upcase(first) <> rest
+      nil -> string
+    end
+  end
+
   @doc """
   Formats a weekday name based on weekday number (1=Monday, 7=Sunday) and locale.
   """
@@ -219,6 +285,82 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
 
   @spec format_weekday_name(integer(), String.t(), :full | :short | :narrow) :: String.t()
   def format_weekday_name(_invalid_weekday, _locale, _format), do: ""
+
+  @doc """
+  Formats a date led by its full weekday name, in the locale's order and
+  punctuation. The weekday keeps the case the locale gives it, so French and
+  Italian start lowercase.
+  - en: Monday, February 5, 2026
+  - de: Montag, 5. Februar 2026
+  - cs: pondělí 5. února 2026
+  - fr: lundi 5 février 2026
+  - pl: poniedziałek, 5 lutego 2026
+  """
+  @spec format_weekday_date(Calendar.date(), String.t()) :: String.t()
+  def format_weekday_date(date, locale) do
+    weekday_prefix(date, locale) <>
+      with_year(day_month(date, format_month_name(date.month, locale), locale), date.year, locale)
+  end
+
+  @doc """
+  Formats a date led by its full weekday name, without the year.
+  - en: Monday, February 5
+  - de: Montag, 5. Februar
+  - cs: pondělí 5. února
+  - fr: lundi 5 février
+  """
+  @spec format_weekday_day_month(Calendar.date(), String.t()) :: String.t()
+  def format_weekday_day_month(date, locale) do
+    weekday_prefix(date, locale) <>
+      day_month(date, format_month_name(date.month, locale), locale)
+  end
+
+  @doc """
+  Formats a compact day and abbreviated month, without the year.
+  - en: Feb 5
+  - de: 5. Feb
+  - cs: 5. úno
+  - fr: 5 févr.
+  """
+  @spec format_short_date(Calendar.date(), String.t()) :: String.t()
+  def format_short_date(date, locale) do
+    day_month(date, format_month_name(date.month, locale, :short), locale)
+  end
+
+  @doc """
+  `format_short_date/2` led by the abbreviated weekday.
+  - en: Mon Feb 5
+  - de: Mo 5. Feb
+  - fr: lun 5 févr.
+  """
+  @spec format_short_weekday_date(Calendar.date(), String.t()) :: String.t()
+  def format_short_weekday_date(date, locale) do
+    "#{format_weekday_name(Date.day_of_week(date), locale, :short)} " <>
+      format_short_date(date, locale)
+  end
+
+  # Day-and-month order, unpadded, shared by the weekday and short shapes.
+  # Mirrors `order_date_parts/4`'s locale groups.
+  defp day_month(date, month_name, locale) when locale in ["de", "cs"],
+    do: "#{date.day}. #{month_name}"
+
+  defp day_month(date, month_name, locale) when locale in ["uk", "fr", "it", "pl"],
+    do: "#{date.day} #{month_name}"
+
+  defp day_month(date, month_name, _other_locale), do: "#{month_name} #{date.day}"
+
+  defp with_year(day_month, year, locale) when locale in ["de", "cs", "uk", "fr", "it", "pl"],
+    do: "#{day_month} #{year}"
+
+  defp with_year(day_month, year, _other_locale), do: "#{day_month}, #{year}"
+
+  # French, Italian and Czech run the weekday straight into the date; the
+  # others set it off with a comma.
+  defp weekday_prefix(date, locale) do
+    weekday = format_weekday_name(Date.day_of_week(date), locale, :full)
+
+    if locale in ["fr", "it", "cs"], do: "#{weekday} ", else: "#{weekday}, "
+  end
 
   @doc """
   Formats a datetime as a full weekday-led date beside its clock time:
@@ -309,6 +451,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   defp thousand_separator("uk"), do: @group_space
   defp thousand_separator("fr"), do: @group_space
   defp thousand_separator("cs"), do: @group_space
+  defp thousand_separator("pl"), do: @group_space
   defp thousand_separator(_other_locale), do: ","
 
   defp decimal_separator("de"), do: ","
@@ -316,5 +459,6 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   defp decimal_separator("uk"), do: ","
   defp decimal_separator("fr"), do: ","
   defp decimal_separator("cs"), do: ","
+  defp decimal_separator("pl"), do: ","
   defp decimal_separator(_other_locale), do: "."
 end

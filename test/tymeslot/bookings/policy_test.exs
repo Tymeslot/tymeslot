@@ -330,6 +330,47 @@ defmodule Tymeslot.Bookings.PolicyTest do
     end
   end
 
+  describe "build_meeting_attributes/1 title" do
+    setup do
+      stub(Tymeslot.CalendarMock, :get_booking_integration_info, fn _client ->
+        {:ok, %{integration_id: 1, calendar_path: "primary"}}
+      end)
+
+      :ok
+    end
+
+    defp build_title_attrs(organizer_locale) do
+      user = insert(:user, locale: organizer_locale)
+      _profile = insert(:profile, user: user)
+      meeting_type = insert(:meeting_type, user: user, name: "IRIS Demo")
+
+      params = %{
+        meeting_uid: "meeting-uid",
+        start_datetime: DateTime.add(DateTime.utc_now(), 3600, :second),
+        end_datetime: DateTime.add(DateTime.utc_now(), 5400, :second),
+        duration_minutes: 30,
+        form_data: %{"name" => "Jane Doe", "email" => "jane@example.com"},
+        organizer_user_id: user.id,
+        meeting_type_id: meeting_type.id,
+        user_timezone: "UTC",
+        attendee_locale: "en"
+      }
+
+      Policy.build_meeting_attributes(BuildParams.new(params))
+    end
+
+    test "renders the title in the organiser's language, not the attendee's" do
+      attrs = build_title_attrs("de")
+
+      assert attrs.title == "IRIS Demo mit Jane Doe"
+      assert attrs.summary == "IRIS Demo mit Jane Doe"
+    end
+
+    test "keeps the English title for an English-speaking organiser" do
+      assert build_title_attrs("en").title == "IRIS Demo with Jane Doe"
+    end
+  end
+
   describe "build_meeting_attributes/1 reminders snapshot" do
     test "uses meeting type reminder config when present" do
       user = insert(:user)

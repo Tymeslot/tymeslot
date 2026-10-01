@@ -170,6 +170,8 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     )
   end
 
+  defp update_failed_message(:not_organiser), do: EditWorkflow.not_organiser_message()
+
   defp update_failed_message(reason)
        when reason in [:unaddressable_occurrence, :unreadable_timing, :not_recurring],
        do: EditWorkflow.unmatched_series_message()

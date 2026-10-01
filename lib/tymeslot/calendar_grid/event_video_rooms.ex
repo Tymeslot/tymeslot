@@ -413,6 +413,16 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
   def rooms_on_integration(_event, _video_integration_id), do: []
 
   @doc """
+  The recorded rooms of `event`'s series (or of `event` itself, if it is not
+  part of one), unscoped by video integration. For
+  `Tymeslot.CalendarGrid.SeriesCarry` alone, which does not yet know which
+  integration a series' room belongs to when its currently cached rows have
+  lost track of the video (a sync that outran the carry).
+  """
+  @spec rooms_of_series(map()) :: [EventVideoRoomSchema.t()]
+  def rooms_of_series(event), do: rooms_of_event(event)
+
+  @doc """
   Deletes `rooms`, which their event no longer uses, through
   `Tymeslot.Workers.VideoSyncWorker`, which removes each record once its room
   is gone.

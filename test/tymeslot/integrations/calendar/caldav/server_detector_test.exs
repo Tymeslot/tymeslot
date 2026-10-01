@@ -1,6 +1,7 @@
 defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetectorTest do
   use ExUnit.Case, async: true
   @moduletag :integrations
+  @moduletag :calendar
 
   alias Tymeslot.Integrations.Calendar.CalDAV.ServerDetector
 
@@ -304,6 +305,55 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetectorTest do
 
       assert ServerDetector.detect_from_url("https://mail.example.com/dav/user.php@example.com/") ==
                :zimbra
+    end
+  end
+
+  # Issue #151. Open-Xchange names a calendar collection after its folder id,
+  # `cal://0/<n>`, base64url-encoded: the only fingerprint that survives a
+  # host other than mailbox.org.
+  describe "open_xchange_path?/1" do
+    test "recognises the collection mailbox.org's discovery returns" do
+      assert ServerDetector.open_xchange_path?("/caldav/Y2FsOi8vMC8zMg/")
+    end
+
+    test "recognises it inside a full URL on any host" do
+      assert ServerDetector.open_xchange_path?(
+               "https://dav.example-hosting.de/caldav/Y2FsOi8vMC8xMjM0/"
+             )
+    end
+
+    test "recognises a segment that carries base64 padding" do
+      assert ServerDetector.open_xchange_path?("/caldav/Y2FsOi8vMC8zMg==/")
+    end
+
+    test "does not match the task folder, whose id is not a calendar folder" do
+      # mailbox.org's own VTODO collection: base64 of "35".
+      refute ServerDetector.open_xchange_path?("/caldav/MzU/")
+    end
+
+    test "does not match other servers' collections" do
+      refute ServerDetector.open_xchange_path?("/remote.php/dav/calendars/ada/personal/")
+      refute ServerDetector.open_xchange_path?("/dav.php/calendars/ada/default/")
+      refute ServerDetector.open_xchange_path?("/dav/ada@example.com/Calendar/")
+      refute ServerDetector.open_xchange_path?("/caldav/")
+      refute ServerDetector.open_xchange_path?("")
+    end
+  end
+
+  describe "detect_from_url/1 on Open-Xchange" do
+    test "detects mailbox.org from its hostname" do
+      assert ServerDetector.detect_from_url("https://dav.mailbox.org/caldav/") == :mailbox_org
+    end
+
+    test "detects another host's Open-Xchange from a collection URL" do
+      assert ServerDetector.detect_from_url("https://dav.example.net/caldav/Y2FsOi8vMC8zMg/") ==
+               :open_xchange
+    end
+
+    test "prefers Open-Xchange over the Zimbra guess a principal-style path attracts" do
+      assert ServerDetector.detect_from_url(
+               "https://dav.example.net/principals/users/3/Y2FsOi8vMC8zMg/"
+             ) == :open_xchange
     end
   end
 end

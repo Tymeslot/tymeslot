@@ -168,7 +168,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
       role="button"
       tabindex="0"
       aria-label={
-        "#{LocaleFormat.format_weekday_name(Date.day_of_week(@day), @locale, :full)}, #{LocaleFormat.format_month_name(@day.month, @locale)} #{@day.day}" <>
+        LocaleFormat.format_weekday_day_month(@day, @locale) <>
           ", " <>
           dngettext(
             "dashboard_calendar",

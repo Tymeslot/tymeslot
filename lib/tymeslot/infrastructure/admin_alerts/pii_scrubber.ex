@@ -36,6 +36,8 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.PIIScrubber do
                     end)
 
   # Matches an email address embedded anywhere in a string.
+  # Bump `ReasonScrubber`'s `@rules_version` with any change to this pattern
+  # or to how `mask_emails/1` masks, so stored error reports are masked again.
   @email_regex ~r/([A-Za-z0-9._%+-])[A-Za-z0-9._%+-]*(@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/
 
   @spec scrub(map()) :: map()

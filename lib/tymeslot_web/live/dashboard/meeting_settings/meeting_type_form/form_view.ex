@@ -80,6 +80,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
         phx-submit={if @is_edit, do: "flush_autosave", else: "save_meeting_type"}
         phx-target={if @is_edit, do: @myself, else: @parent_myself}
         class={if @is_edit, do: "space-y-6", else: "space-y-8"}
+        novalidate
       >
         <.tab_bar
           :if={@is_edit}

@@ -93,7 +93,7 @@ defmodule Tymeslot.Emails.Shared.Styles.Tokens do
   # TYPOGRAPHY
   # ============================================================================
 
-  @font_family "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+  @font_family "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
 
   @font_sizes %{
     eyebrow: "11px",
@@ -155,7 +155,7 @@ defmodule Tymeslot.Emails.Shared.Styles.Tokens do
   @spec ink_whisper() :: String.t()
   def ink_whisper, do: @ink_whisper
 
-  @doc "Inter-based font stack with platform fallbacks."
+  @doc "Platform font stack; no web font, so opening an email fetches nothing."
   @spec font_family() :: String.t()
   def font_family, do: @font_family
 

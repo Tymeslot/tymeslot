@@ -195,6 +195,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
         phx-change="validate_break"
         phx-target={@myself}
         class="flex flex-wrap items-start gap-3 border-t-2 border-tymeslot-50 bg-tymeslot-50/40 px-4 py-3"
+        novalidate
       >
         <input type="hidden" name="day" value={@day} />
         <div class="w-40">

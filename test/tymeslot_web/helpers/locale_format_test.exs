@@ -35,6 +35,11 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       assert LocaleFormat.format_date(date, "it") == "15 marzo 2026"
     end
 
+    test "formats date in Polish with the genitive month" do
+      assert LocaleFormat.format_date(~D[2026-04-05], "pl") == "5 kwietnia 2026"
+      assert LocaleFormat.format_date(~D[2026-03-15], "pl") == "15 marca 2026"
+    end
+
     test "falls back to English for unknown locale" do
       date = ~D[2026-03-15]
       assert LocaleFormat.format_date(date, "es") == "March 15, 2026"
@@ -82,6 +87,11 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       assert LocaleFormat.format_time(time, "it") == "14:30"
     end
 
+    test "formats time in 24-hour format for Polish" do
+      time = ~T[14:30:00]
+      assert LocaleFormat.format_time(time, "pl") == "14:30"
+    end
+
     test "falls back to English for unknown locale" do
       time = ~T[14:30:00]
       assert LocaleFormat.format_time(time, "es") == "02:30 PM"
@@ -127,6 +137,15 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       assert Enum.at(months, 2) == "marzo"
       assert Enum.at(months, 7) == "agosto"
       assert Enum.at(months, 11) == "dicembre"
+    end
+
+    test "returns Polish month names in genitive case" do
+      months = LocaleFormat.get_month_names("pl")
+      assert length(months) == 12
+      assert Enum.at(months, 0) == "stycznia"
+      assert Enum.at(months, 3) == "kwietnia"
+      assert Enum.at(months, 8) == "września"
+      assert Enum.at(months, 11) == "grudnia"
     end
 
     test "falls back to English for unknown locale" do
@@ -359,6 +378,64 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
     end
   end
 
+  describe "Polish locale" do
+    test "returns Polish full weekday names" do
+      weekdays = LocaleFormat.get_weekday_names("pl", :full)
+      assert length(weekdays) == 7
+      assert Enum.at(weekdays, 0) == "niedziela"
+      assert Enum.at(weekdays, 1) == "poniedziałek"
+      assert Enum.at(weekdays, 6) == "sobota"
+    end
+
+    test "returns Polish short weekday names" do
+      weekdays = LocaleFormat.get_weekday_names("pl", :short)
+      assert weekdays == ["niedz", "pon", "wt", "śr", "czw", "pt", "sob"]
+    end
+
+    test "returns Polish narrow weekday names" do
+      weekdays = LocaleFormat.get_weekday_names("pl", :narrow)
+      assert weekdays == ["N", "P", "W", "Ś", "C", "P", "S"]
+    end
+
+    test "returns Polish short month names" do
+      months = LocaleFormat.get_month_names("pl", :short)
+      assert length(months) == 12
+      assert Enum.at(months, 3) == "kwi"
+      assert Enum.at(months, 9) == "paź"
+    end
+
+    test "formats numbers with non-breaking space thousand separator and comma decimal" do
+      assert LocaleFormat.format_number(1234.56, "pl", 2) == "1#{@nbsp}234,56"
+    end
+
+    test "formats month name in Polish" do
+      assert LocaleFormat.format_month_name(1, "pl") == "stycznia"
+      assert LocaleFormat.format_month_name(9, "pl") == "września"
+    end
+
+    test "formats weekday name in Polish" do
+      assert LocaleFormat.format_weekday_name(1, "pl", :full) == "poniedziałek"
+      assert LocaleFormat.format_weekday_name(7, "pl", :full) == "niedziela"
+    end
+  end
+
+  describe "format_date_range/3" do
+    test "formats a same-month range in Polish without a day period" do
+      assert LocaleFormat.format_date_range(~D[2026-04-10], ~D[2026-04-12], "pl") ==
+               "10–12 kwietnia 2026"
+    end
+
+    test "formats a cross-month range in Polish" do
+      assert LocaleFormat.format_date_range(~D[2026-04-30], ~D[2026-05-02], "pl") ==
+               "30 kwietnia – 2 maja 2026"
+    end
+
+    test "keeps the period after the day in Czech" do
+      assert LocaleFormat.format_date_range(~D[2026-04-10], ~D[2026-04-12], "cs") ==
+               "10.–12. dubna 2026"
+    end
+  end
+
   describe "format_integer/2" do
     test "groups thousands using each locale's separator" do
       assert LocaleFormat.format_integer(1500, "en") == "1,500"
@@ -367,6 +444,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       assert LocaleFormat.format_integer(1500, "cs") == "1#{@nbsp}500"
       assert LocaleFormat.format_integer(1500, "uk") == "1#{@nbsp}500"
       assert LocaleFormat.format_integer(1500, "fr") == "1#{@nbsp}500"
+      assert LocaleFormat.format_integer(1500, "pl") == "1#{@nbsp}500"
     end
 
     test "leaves values below a thousand ungrouped" do
@@ -391,7 +469,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
 
   describe "group_separator/1" do
     test "reports the same separator format_integer/2 applies" do
-      for locale <- ~w(en de it cs uk fr) do
+      for locale <- ~w(en de it cs uk fr pl) do
         separator = LocaleFormat.group_separator(locale)
         assert LocaleFormat.format_integer(1000, locale) == "1" <> separator <> "000"
       end
@@ -406,6 +484,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
     test "honours an explicit decimal count" do
       assert LocaleFormat.format_number(520.0, "en", 1) == "520.0"
       assert LocaleFormat.format_number(2080.0, "cs", 1) == "2#{@nbsp}080,0"
+      assert LocaleFormat.format_number(2080.0, "pl", 1) == "2#{@nbsp}080,0"
     end
 
     test "omits the decimal separator entirely for zero decimals" do
@@ -445,6 +524,82 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       # New Year's Eve
       nye = ~D[2026-12-31]
       assert LocaleFormat.format_date(nye, "en") == "December 31, 2026"
+    end
+  end
+
+  describe "format_month_year/3" do
+    test "names the month in the nominative, not the in-date genitive" do
+      assert LocaleFormat.format_month_year(1, 2026, "cs") == "Leden 2026"
+      assert LocaleFormat.format_month_year(9, 2026, "uk") == "Вересень 2026"
+      assert LocaleFormat.format_month_year(10, 2026, "pl") == "Październik 2026"
+    end
+
+    test "capitalises the heading in languages that lowercase month names" do
+      assert LocaleFormat.format_month_year(9, 2026, "fr") == "Septembre 2026"
+      assert LocaleFormat.format_month_year(9, 2026, "it") == "Settembre 2026"
+    end
+
+    test "keeps English and German as they are" do
+      assert LocaleFormat.format_month_year(9, 2026, "en") == "September 2026"
+      assert LocaleFormat.format_month_year(3, 2026, "de") == "März 2026"
+    end
+
+    test "leaves the in-date month names untouched" do
+      assert LocaleFormat.format_date(~D[2026-01-05], "cs") == "5. ledna 2026"
+      assert LocaleFormat.format_date(~D[2026-09-05], "uk") == "5 вересня 2026"
+    end
+  end
+
+  describe "format_standalone_month_name/2" do
+    test "is lowercase where the language does not capitalise months" do
+      assert LocaleFormat.format_standalone_month_name(10, "fr") == "octobre"
+      assert LocaleFormat.format_standalone_month_name(10, "it") == "ottobre"
+      assert LocaleFormat.format_standalone_month_name(10, "uk") == "жовтень"
+      assert LocaleFormat.format_standalone_month_name(10, "cs") == "říjen"
+      assert LocaleFormat.format_standalone_month_name(10, "pl") == "październik"
+    end
+
+    test "falls back to English for an unknown locale" do
+      assert LocaleFormat.format_standalone_month_name(10, "xx") == "October"
+    end
+  end
+
+  describe "capitalize_first/1" do
+    test "upper-cases only the first letter, keeping later capitals and lowercase alike" do
+      assert LocaleFormat.capitalize_first("září – říjen 2026") == "Září – říjen 2026"
+      assert LocaleFormat.capitalize_first("Januar – Februar 2026") == "Januar – Februar 2026"
+    end
+
+    test "returns an empty string unchanged" do
+      assert LocaleFormat.capitalize_first("") == ""
+    end
+  end
+
+  describe "weekday and short date shapes" do
+    # 2026-02-05 is a Thursday.
+    @date ~D[2026-02-05]
+
+    for {locale, weekday_date, weekday_day_month, short, short_weekday} <- [
+          {"en", "Thursday, February 5, 2026", "Thursday, February 5", "Feb 5", "Thu Feb 5"},
+          {"de", "Donnerstag, 5. Februar 2026", "Donnerstag, 5. Februar", "5. Feb", "Do 5. Feb"},
+          {"fr", "jeudi 5 février 2026", "jeudi 5 février", "5 févr.", "jeu 5 févr."},
+          {"it", "giovedì 5 febbraio 2026", "giovedì 5 febbraio", "5 feb", "gio 5 feb"},
+          {"cs", "čtvrtek 5. února 2026", "čtvrtek 5. února", "5. úno", "čt 5. úno"},
+          {"uk", "Четвер, 5 лютого 2026", "Четвер, 5 лютого", "5 лют", "Чт 5 лют"},
+          {"pl", "czwartek, 5 lutego 2026", "czwartek, 5 lutego", "5 lut", "czw 5 lut"}
+        ] do
+      test "#{locale}: orders the date parts the way the language writes them" do
+        locale = unquote(locale)
+
+        assert LocaleFormat.format_weekday_date(@date, locale) == unquote(weekday_date)
+        assert LocaleFormat.format_weekday_day_month(@date, locale) == unquote(weekday_day_month)
+        assert LocaleFormat.format_short_date(@date, locale) == unquote(short)
+        assert LocaleFormat.format_short_weekday_date(@date, locale) == unquote(short_weekday)
+      end
+    end
+
+    test "an unknown locale falls back to English order" do
+      assert LocaleFormat.format_weekday_date(@date, "xx") == "Thursday, February 5, 2026"
     end
   end
 end

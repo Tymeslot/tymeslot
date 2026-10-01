@@ -8,6 +8,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ReportErrorTest do
   import Ecto.Query
   import Tymeslot.ConfigTestHelpers
 
+  alias Ecto.Changeset
   alias ErrorTracker.Error
   alias ExUnit.CaptureLog
   alias Tymeslot.Infrastructure.CrashReporter
@@ -53,6 +54,50 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ReportErrorTest do
   defp report_reason(reason, context) do
     :ok = ErrorTracking.report_error(reason, nil, context)
     :ok
+  end
+
+  describe "report_error/3 with sensitive data in the failure" do
+    # A booking's guest insert failing reports the changeset, which carries
+    # the guest's address; a provider's failure reports its decoded body.
+    defp guest_failure do
+      changeset =
+        Changeset.cast({%{}, %{email: :string}}, %{"email" => "guest@example.com"}, [:email])
+
+      {:create_guests, changeset, %{"access_token" => "tok-secret-123"}}
+    end
+
+    test "keeps the values of sensitive keys out of the handled reason" do
+      assert %HandledError{reason: reason} = HandledError.exception(guest_failure())
+
+      assert reason =~ "create_guests"
+      refute reason =~ "tok-secret-123"
+    end
+
+    # The occurrence ErrorTracker hands to telemetry is the row as inserted,
+    # before the ReasonScrubber handler rewrites it: masked here means the
+    # raw message was never written.
+    test "inserts an exception's message already masked" do
+      {exception, stacktrace} = raise_and_capture("sync failed for jane@example.com token=abc123")
+
+      :ok = ErrorTracking.report_error(exception, stacktrace, %{})
+
+      assert_receive {:occurrence_recorded, occurrence}
+      assert occurrence.reason =~ "sync failed for"
+      refute occurrence.reason =~ "jane@example.com"
+      refute occurrence.reason =~ "abc123"
+      refute occurrence.error.reason =~ "jane@example.com"
+    end
+
+    test "inserts a computed message with the sensitive field redacted" do
+      exception = %KeyError{key: :missing, term: %{"access_token" => "tok-secret-123"}}
+
+      :ok = ErrorTracking.report_error(exception, nil, %{})
+
+      assert_receive {:occurrence_recorded, occurrence}
+      assert occurrence.reason =~ "key :missing not found"
+      refute occurrence.reason =~ "tok-secret-123"
+      assert occurrence.error.kind == "Elixir.KeyError"
+    end
   end
 
   describe "report_error/3 with an exception" do

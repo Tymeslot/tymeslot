@@ -18,6 +18,15 @@ defmodule TymeslotWeb.Plugs.EmbedTokenPlug do
   so `:drop` answered it with a site-wide `Set-Cookie: _tymeslot_key=;
   expires=1970; path=/` and logged the organiser out of their own dashboard on
   the next navigation (issue #96).
+
+  A top-level visit to an embed URL (`Sec-Fetch-Dest: document`, e.g. the
+  iframe URL pasted into a tab) is served as an ordinary page instead. Framed,
+  `core.js` connects to `/embed-live`, which needs no session; top-level it
+  connects to `/live`, which does. With the session write ignored, a visitor
+  without a cookie never receives the CSRF state the page was rendered with, so
+  every mount came back stale and the page reloaded for ever. Browsers that
+  send no `Sec-Fetch-Dest` keep the embed treatment, which is what a real
+  iframe needs.
   """
 
   @behaviour Plug
@@ -36,7 +45,7 @@ defmodule TymeslotWeb.Plugs.EmbedTokenPlug do
   def call(conn, _opts) do
     conn = fetch_query_params(conn)
 
-    if conn.query_params["embed"] == "1" do
+    if conn.query_params["embed"] == "1" and not top_level_navigation?(conn) do
       # Write no session cookie for embed requests: the browser would reject it
       # (SameSite=Lax in a cross-site iframe). `:ignore` drops the write only;
       # `:drop` would delete the cookie the caller sent us. See the moduledoc.
@@ -54,6 +63,10 @@ defmodule TymeslotWeb.Plugs.EmbedTokenPlug do
       conn
     end
   end
+
+  # Only a top-level navigation is excluded: an iframe sends `iframe`, and a
+  # browser without Fetch Metadata sends nothing, both of which stay embedded.
+  defp top_level_navigation?(conn), do: get_req_header(conn, "sec-fetch-dest") == ["document"]
 
   # Prefer the browser-enforced Referer header over the client-supplied
   # query parameter. The Referer is set by the browser when loading an
