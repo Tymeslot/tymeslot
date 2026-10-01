@@ -105,6 +105,12 @@
   font: inherit;
 }
 
+.paper-theme-wrapper .guest-add__input::placeholder,
+.paper-theme-wrapper .location-phone__input::placeholder {
+  color: var(--ink-2);
+  opacity: 1;
+}
+
 .paper-theme-wrapper .guest-add__input:focus {
   outline: none;
   border-color: var(--theme-primary);
@@ -150,6 +156,9 @@
 }
 
 .paper-theme-wrapper .location-option {
+  /* Inside the group's box, inset by its padding, so the corners stay
+     concentric under every radius option (square under sharp). */
+  border-radius: max(0rem, calc(min(var(--radius-control), var(--paper-radius-box)) - var(--space-3xs)));
   color: var(--ink-2);
 }
 

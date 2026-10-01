@@ -129,8 +129,10 @@
   --payment-link-weight: var(--font-weight-semibold);
   --payment-link-transition: background var(--transition-fast);
 
-  /* --- Booking fields (shared/components/booking-fields.css) --- */
-  --guest-remove-ink-hover: var(--theme-danger);
+  /* --- Booking fields (shared/components/booking-fields.css) ---
+     The remove glyph is drawn on --theme-danger on hover; the card colour
+     clears 4.5:1 on it in every tone and mode (4.83:1 at worst, cool dark). */
+  --guest-remove-ink-hover: var(--theme-surface);
 
   /* --- Language switcher (shared/components/language-switcher.css) --- */
   --lang-switcher-surface: var(--theme-surface);
@@ -198,6 +200,7 @@
   --paper-nav-size: 2.25rem;
   --paper-badge-size: 3rem;
   --paper-dot-size: 0.25rem;
+  --paper-progress-height: 0.25rem;
   /* The largest corner a box taller than one line takes, whatever the radius option. */
   --paper-radius-box: 0.75rem;
 }

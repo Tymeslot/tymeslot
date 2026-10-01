@@ -22,7 +22,7 @@
 .paper-question__bar {
   display: block;
   width: 100%;
-  height: var(--paper-dot-size);
+  height: var(--paper-progress-height);
   overflow: hidden;
   border: 0;
   border-radius: var(--radius-full);
