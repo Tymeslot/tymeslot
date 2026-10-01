@@ -313,7 +313,7 @@ defmodule Tymeslot.Bookings.Policy do
 
   # Snapshots host-uploaded meeting-type attachments as plain maps so the
   # calendar event and confirmation email reference a stable file set.
-  defp attachments_snapshot(%{attachments: attachments}) when is_list(attachments) do
+  defp attachments_snapshot(%{attachments: attachments}) do
     Enum.map(attachments, fn a ->
       %{
         "id" => a.id,
@@ -324,8 +324,6 @@ defmodule Tymeslot.Bookings.Policy do
       }
     end)
   end
-
-  defp attachments_snapshot(_meeting_type), do: []
 
   # Resolves the meeting type record if available and active
   defp resolve_meeting_type_record(meeting_type_id, organizer_user_id) do

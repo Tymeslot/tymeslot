@@ -37,7 +37,7 @@ defmodule TymeslotWeb.Themes.Shared.SelfHostedFontsTest do
       response = get(conn, url)
 
       assert response.status == 200, "#{url} returned #{response.status}"
-      assert [content_type | _] = get_resp_header(response, "content-type")
+      assert [content_type | _rest] = get_resp_header(response, "content-type")
       assert content_type =~ "font/woff2"
     end
   end
