@@ -65,6 +65,10 @@
   /* Text on a tint: the fitted primary pulled towards the text colour, so it
      keeps 4.5:1 on --paper-tint as well as on the card. */
   --paper-accent-ink: color-mix(in srgb, var(--theme-primary) 70%, var(--theme-text));
+  /* Secondary text on --paper-selected-surface: the secondary ink pulled
+     towards the text colour, 5.41:1 at worst (warm tone, light set,
+     graphite accent), where the secondary ink alone measures 4.47:1. */
+  --paper-ink-selected: color-mix(in srgb, var(--theme-text-secondary) 85%, var(--theme-text));
 
   /* --- Ink --- */
   --ink-1: var(--theme-text);

@@ -67,6 +67,12 @@
   background: var(--paper-selected-surface);
 }
 
+/* The chosen row's tint takes a little contrast from the secondary text. */
+.paper-type[aria-pressed="true"] .paper-type__description,
+.paper-type[aria-pressed="true"] .paper-type__meta {
+  color: var(--paper-ink-selected);
+}
+
 /* The list clips its rows to its corners, so the focus ring sits inside
    the row instead of around it. */
 .paper-type:focus-visible {

@@ -1,13 +1,21 @@
-/* The language switcher: on the overview only (the shared rule), in a row
-   of its own above the card, right-aligned to the card's width; a pill
-   with a hairline edge. The structure and the --lang-switcher-* colours
-   are shared/components/language-switcher.css. The row sits outside the
-   card, so its queries are the viewport's. */
+/* The language switcher: above the card on the overview (the shared
+   rule) and on the meeting and poll pages (Paper's page shell shows it
+   wherever the page has a locale), in a row of its own, right-aligned to
+   the width of the card below it; a pill with a hairline edge. The
+   structure and the --lang-switcher-* colours are
+   shared/components/language-switcher.css. The row sits outside the card,
+   so its queries are the viewport's; in the column embed it widens with
+   the card (iframe.css). */
 
 .paper-language {
   display: flex;
   justify-content: flex-end;
   width: min(100%, var(--paper-card-width));
+}
+
+/* Above a wide card (the poll page's), the row is as wide as the card. */
+.paper-page .content-area:has(> .paper-card--wide) > .paper-language {
+  width: min(100%, var(--paper-card-width-wide));
 }
 
 /* ThemeShell hides the row after the overview with Tailwind's hidden,
@@ -42,6 +50,12 @@
 
 .paper-language .lang-switcher__item {
   color: var(--ink-1);
+}
+
+/* The panel scrolls and clips its items, so an item's focus ring sits
+   inside the item instead of around it. */
+.paper-language .lang-switcher__item:focus-visible {
+  outline-offset: calc(-2 * var(--border-width-medium));
 }
 
 /* The check mark beside the language in use. */

@@ -20,8 +20,13 @@ html.paper-theme[data-embedded] .paper-card {
   box-shadow: none;
 }
 
-/* Column layout: the card uses the embed container's whole width. */
+/* Column layout: the card uses the embed container's whole width, and the
+   language switcher's row above it follows. */
 html.paper-theme[data-embed-layout="column"] .paper-page .content-area {
   padding-left: 0;
   padding-right: 0;
+}
+
+html.paper-theme[data-embed-layout="column"] .paper-page .content-area > .paper-language {
+  width: 100%;
 }
