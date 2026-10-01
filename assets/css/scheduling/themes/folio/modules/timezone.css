@@ -1,0 +1,107 @@
+/* The timezone row on the schedule step: a label and the shared picker
+   (shared/components/timezone-picker.css), whose trigger content is
+   Folio's markup, in the card's colours. */
+
+.folio-timezone {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  border: var(--border-width-thin) solid var(--folio-line);
+  border-radius: var(--radius-control);
+  background: var(--surface-subtle);
+}
+
+.folio-timezone .tz-picker {
+  width: min(100%, 18rem);
+}
+
+.folio-timezone .tz-picker__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-xs);
+  min-height: var(--folio-control-height);
+  padding: var(--space-2xs) var(--space-sm);
+  box-sizing: border-box;
+  border-color: var(--border-medium);
+  border-radius: var(--radius-control);
+  background: var(--theme-surface);
+  font: inherit;
+  font-size: var(--theme-font-size-sm);
+  text-align: start;
+}
+
+.folio-timezone .tz-picker__trigger:hover {
+  border-color: var(--theme-primary);
+  background: var(--folio-tint);
+}
+
+.folio-timezone__current {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.folio-timezone__flag {
+  flex: none;
+  width: var(--icon-sm);
+  height: var(--flag-height);
+  border-radius: var(--space-hairline);
+  object-fit: cover;
+}
+
+.folio-timezone__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folio-timezone__chevron {
+  flex: none;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  color: var(--theme-text-secondary);
+}
+
+.folio-timezone .tz-picker__panel {
+  width: min(22rem, calc(100cqi - 2 * var(--folio-gutter)));
+  border: var(--border-width-thin) solid var(--border-light);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.folio-timezone .tz-picker__search {
+  border-color: var(--border-medium);
+  border-radius: var(--radius-control);
+  background: var(--theme-surface);
+  font: inherit;
+}
+
+.folio-timezone .tz-picker__option:hover {
+  background: var(--folio-tint);
+}
+
+/* The options list scrolls inside the panel (the markup's .scroll-y). */
+.folio-theme-wrapper .scroll-y {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-medium) transparent;
+}
+
+@container scheduling (width < 30rem) {
+  .folio-timezone {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .folio-timezone .tz-picker {
+    width: 100%;
+  }
+}

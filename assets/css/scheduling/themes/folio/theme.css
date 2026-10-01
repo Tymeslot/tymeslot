@@ -18,7 +18,10 @@
 @import "../../shared/components/language-switcher.css";
 @import "./modules/language-switcher.css";
 @import "../../shared/components/timezone-picker.css";
+@import "./modules/timezone.css";
+@import "./modules/schedule.css";
 @import "../../shared/components/slot-list.css";
+@import "./modules/time-slots.css";
 @import "../../shared/components/custom-questions.css";
 @import "../../shared/components/booking-fields.css";
 @import "../../shared/components/manage-pages.css";
