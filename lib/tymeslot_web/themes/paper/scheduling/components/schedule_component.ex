@@ -9,7 +9,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   The calendar's buttons carry the class names and test ids the shared
   suites and the visual harness drive: `calendar-day` with `data-date`,
   `calendar-day--selected`, `calendar-day--other-month`, `calendar-day--today`
-  and `calendar-day--loading`, and `calendar-nav-button` on the month arrows.
+  and `calendar-day--loading`, `calendar-nav-button` on the month arrows, and
+  `calendar-month-label` on the month between them.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -192,7 +193,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
           >
             <.icon name="hero-chevron-left-mini" class="paper-calendar__nav-icon" />
           </button>
-          <span class="paper-calendar__month" aria-live="polite">
+          <span class="calendar-month-label paper-calendar__month" aria-live="polite">
             {LocalizationHelpers.get_month_year_display(@year, @month)}
           </span>
           <button
