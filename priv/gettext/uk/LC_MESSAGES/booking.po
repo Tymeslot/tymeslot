@@ -164,11 +164,6 @@ msgstr "Доступний час"
 msgid "Booking confirmed"
 msgstr "Бронювання підтверджено"
 
-#: lib/tymeslot_web/themes/shared/booking_flow.ex
-#, elixir-autogen, elixir-format
-msgid "Booking submitted successfully! You'll receive a confirmation email shortly."
-msgstr "Бронювання успішно надіслано! Незабаром ви отримаєте електронний лист із підтвердженням."
-
 #: lib/tymeslot_web/themes/folio/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
@@ -968,11 +963,6 @@ msgstr "Оберіть варіант нижче."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex
 #, elixir-autogen, elixir-format
-msgid "Booking submitted successfully!"
-msgstr "Бронювання успішно надіслано!"
-
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex
-#, elixir-autogen, elixir-format
 msgid "Demo: Booking submitted successfully! (Using the app, you would receive a confirmation email)"
 msgstr "Демо: бронювання успішно надіслано! (У застосунку ви б отримали лист із підтвердженням)"
 
@@ -980,11 +970,6 @@ msgstr "Демо: бронювання успішно надіслано! (У з
 #, elixir-autogen, elixir-format
 msgid "Demo: Meeting rescheduled successfully! (Using the app, you would receive a confirmation email)"
 msgstr "Демо: зустріч успішно перенесено! (У застосунку ви б отримали лист із підтвердженням)"
-
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting rescheduled successfully!"
-msgstr "Зустріч успішно перенесено!"
 
 #: lib/tymeslot_web/components/layouts/scheduling_root.html.heex
 #, elixir-autogen, elixir-format

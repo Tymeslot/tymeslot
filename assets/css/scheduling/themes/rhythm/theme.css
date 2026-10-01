@@ -13,6 +13,7 @@
 @import "./modules/overview.css";
 @import "../../shared/components/approval-notice.css";
 @import "../../shared/components/preview-notice.css";
+@import "../../shared/components/flash.css";
 @import "../../shared/components/timezone-picker.css";
 @import "./modules/schedule-header.css";
 @import "../../shared/components/booking-fields.css";

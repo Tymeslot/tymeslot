@@ -345,11 +345,14 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
       <div
         id={@id}
         role="alert"
-        class="form-field-error mt-2 flex items-center gap-2 text-red-600 font-bold text-sm"
+        class="form-field-error mt-2 flex items-start gap-2 text-red-600 font-bold text-sm"
       >
+        <%!-- Top-aligned and never shrunk, so a message that wraps keeps a
+              full-size icon beside its first line; mt-0.5 centres the 16px
+              icon in that line's 20px. --%>
         <TymeslotWeb.Components.CoreComponents.Icons.icon
           name="hero-exclamation-circle-solid"
-          class="w-4 h-4"
+          class="w-4 h-4 shrink-0 mt-0.5"
         />
         <div class="flex flex-col">
           <%= for error <- @errors do %>

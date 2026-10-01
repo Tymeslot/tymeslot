@@ -2,7 +2,7 @@ defmodule TymeslotWeb.Live.Scheduling.HostCurrencyTest do
   @moduledoc """
   The booking page holds the currency the organiser's paid meeting types are
   priced in (`:host_currency`), which a theme shows a price with
-  (`BookingText.price_label/2`). An organiser who offers no paid type costs
+  (`BookingText.price_label/3`). An organiser who offers no paid type costs
   the page no lookup, and the assign is `nil`.
   """
   use TymeslotWeb.LiveCase, async: false

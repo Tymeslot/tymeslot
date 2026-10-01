@@ -140,33 +140,42 @@ defmodule TymeslotWeb.Themes.Shared.BookingTextTest do
     end
   end
 
-  describe "price_label/2" do
+  describe "price_label/3" do
     test "formats a paid type's price in the organiser's currency" do
       paid = build(:meeting_type, payment_required: true, price_cents: 4500)
 
-      assert BookingText.price_label(paid, "chf") == "CHF 45.00"
-      assert BookingText.price_label(paid, "eur") == "€45.00"
+      assert BookingText.price_label(paid, "chf", "en") == "CHF 45.00"
+      assert BookingText.price_label(paid, "eur", "en") == "€45.00"
+    end
+
+    test "writes the price the way the guest's locale writes amounts" do
+      paid = build(:meeting_type, payment_required: true, price_cents: 4500)
+
+      assert BookingText.price_label(paid, "eur", "de") == "45,00\u00A0€"
     end
 
     test "is nil for a free type, a paid type without a price, or an unknown currency" do
       assert BookingText.price_label(
                build(:meeting_type, payment_required: false, price_cents: 4500),
-               "eur"
+               "eur",
+               "en"
              ) == nil
 
       assert BookingText.price_label(
                build(:meeting_type, payment_required: true, price_cents: nil),
-               "eur"
+               "eur",
+               "en"
              ) == nil
 
       assert BookingText.price_label(
                build(:meeting_type, payment_required: true, price_cents: 4500),
-               nil
+               nil,
+               "en"
              ) == nil
 
-      assert BookingText.price_label(nil, "eur") == nil
+      assert BookingText.price_label(nil, "eur", "en") == nil
       # A demo persona's meeting type is a plain map without the fields.
-      assert BookingText.price_label(%{name: "Coffee Chat"}, "eur") == nil
+      assert BookingText.price_label(%{name: "Coffee Chat"}, "eur", "en") == nil
     end
   end
 
