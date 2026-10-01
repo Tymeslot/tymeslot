@@ -649,3 +649,8 @@ msgstr "Avorio"
 #, elixir-autogen, elixir-format
 msgid "Sage"
 msgstr "Salvia"
+
+#: lib/tymeslot_web/themes/paper/theme.ex
+#, elixir-autogen, elixir-format
+msgid "A calm, neutral booking page: everything on one screen, light and dark modes and your own accent colour."
+msgstr "Una pagina di prenotazione sobria e neutra: tutto in una sola schermata, modalità chiara e scura e il tuo colore di accento."

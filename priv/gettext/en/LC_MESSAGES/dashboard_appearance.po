@@ -649,3 +649,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Sage"
 msgstr ""
+
+#: lib/tymeslot_web/themes/paper/theme.ex
+#, elixir-autogen, elixir-format
+msgid "A calm, neutral booking page: everything on one screen, light and dark modes and your own accent colour."
+msgstr ""

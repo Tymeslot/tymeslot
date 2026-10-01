@@ -1,0 +1,27 @@
+/* Paper's own embed rules. The shell every theme shares (body sizing, the
+   page grid sized to content, the footer hidden, the slot scroll region
+   released, full width in the column layout) is shared/embed.css,
+   imported just before this file. Scoped to html.paper-theme[data-embedded],
+   which iframe_embed.js sets inside an iframe. */
+
+/* The page follows its content, not the iframe's viewport. */
+html.paper-theme[data-embedded] .paper-theme-wrapper,
+html.paper-theme[data-embedded] .paper-page {
+  min-height: 0;
+}
+
+/* The card keeps its edge on the host page; the canvas around it shrinks
+   to a hairline margin, and the shadow, which the iframe would clip, goes. */
+html.paper-theme[data-embedded] .paper-page .content-area {
+  padding: var(--space-xs);
+}
+
+html.paper-theme[data-embedded] .paper-card {
+  box-shadow: none;
+}
+
+/* Column layout: the card uses the embed container's whole width. */
+html.paper-theme[data-embed-layout="column"] .paper-page .content-area {
+  padding-left: 0;
+  padding-right: 0;
+}

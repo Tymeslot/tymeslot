@@ -65,6 +65,14 @@ defmodule Tymeslot.Themes.Catalog do
         heading_style: :named,
         customization_spec: Tymeslot.ThemeCustomizations.RhythmSpec,
         status: :active
+      },
+      paper: %{
+        id: "3",
+        key: :paper,
+        name: "Paper",
+        heading_style: :named,
+        customization_spec: Tymeslot.ThemeCustomizations.PaperSpec,
+        status: :beta
       }
     }
   end

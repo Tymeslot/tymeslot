@@ -645,3 +645,8 @@ msgstr "Kość słoniowa"
 #, elixir-autogen, elixir-format
 msgid "Sage"
 msgstr "Szałwia"
+
+#: lib/tymeslot_web/themes/paper/theme.ex
+#, elixir-autogen, elixir-format
+msgid "A calm, neutral booking page: everything on one screen, light and dark modes and your own accent colour."
+msgstr "Spokojna, neutralna strona rezerwacji: wszystko na jednym ekranie, tryb jasny i ciemny oraz własny kolor akcentu."

@@ -39,7 +39,8 @@ defmodule TymeslotWeb.Themes.Core.Registry do
   @bindings Map.merge(
               %{
                 "1" => TymeslotWeb.Themes.Quill.Theme,
-                "2" => TymeslotWeb.Themes.Rhythm.Theme
+                "2" => TymeslotWeb.Themes.Rhythm.Theme,
+                "3" => TymeslotWeb.Themes.Paper.Theme
               },
               @extra_bindings
             )
