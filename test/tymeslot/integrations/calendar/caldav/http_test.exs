@@ -444,6 +444,19 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.HttpTest do
                )
     end
 
+    test "maps 410 to :gone" do
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        Conn.send_resp(conn, 410, "")
+      end)
+
+      assert {:error, :gone} =
+               Http.head_event(
+                 "https://caldav.example.com/calendars/user/personal/deleted.ics",
+                 "user",
+                 "pass"
+               )
+    end
+
     test "maps 5xx to :server_error" do
       ReqTest.stub(:tymeslot_http, fn conn ->
         Conn.send_resp(conn, 503, "")

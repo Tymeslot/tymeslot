@@ -106,6 +106,69 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
     end
   end
 
+  describe "merge/2" do
+    # Two occurrences of one series, which the queue holds by its master.
+    @occurrence %{
+      id: 2,
+      calendar_integration_id: 7,
+      uid: "weekly_1",
+      provider: "google",
+      recurring_event_id: "weekly",
+      summary: "Weekly"
+    }
+    @other_occurrence %{@occurrence | id: 3, uid: "weekly_2"}
+
+    test "joins queues writing different events, each still waiting on its own write" do
+      {queue, [{:start, mine, _event}]} =
+        WriteQueue.update(WriteQueue.new(), @event, %{summary: "Mine"}, [])
+
+      {other, [{:start, theirs, _event}]} =
+        WriteQueue.update(WriteQueue.new(), @occurrence, %{summary: "Theirs"}, [])
+
+      {other, []} = WriteQueue.update(other, @occurrence, %{location: "Room 9"}, [])
+
+      assert {:ok, merged} = WriteQueue.merge(queue, other)
+      assert WriteQueue.pending_count(merged) == 3
+
+      assert {_merged, [{:start, waiting, %{summary: "Theirs"}}]} =
+               WriteQueue.settle(merged, theirs.ref, {:ok, %{@occurrence | summary: "Theirs"}})
+
+      assert waiting.changes == %{location: "Room 9"}
+      assert {_merged, []} = WriteQueue.settle(merged, mine.ref, {:ok, @event})
+    end
+
+    test "refuses queues that both write one event" do
+      {queue, _start} = WriteQueue.update(WriteQueue.new(), @event, %{summary: "Mine"}, [])
+      {other, _start} = WriteQueue.update(WriteQueue.new(), @event, %{summary: "Theirs"}, [])
+
+      assert WriteQueue.merge(queue, other) == :conflict
+    end
+
+    test "refuses a queue writing an occurrence of a series the other is moving" do
+      {queue, _start} =
+        WriteQueue.update(WriteQueue.new(), @other_occurrence, %{summary: "Mine"}, [])
+
+      moving = WriteQueue.series_moving(WriteQueue.new(), @occurrence)
+
+      assert WriteQueue.merge(queue, moving) == :conflict
+      assert WriteQueue.merge(moving, queue) == :conflict
+    end
+  end
+
+  describe "running/1" do
+    test "keeps the write in flight, and nothing waiting behind it" do
+      {queue, [{:start, write, _event}]} =
+        WriteQueue.update(WriteQueue.new(), @event, %{summary: "Renamed"}, [])
+
+      {queue, []} = WriteQueue.update(queue, @event, %{location: "Room 9"}, [])
+      running = WriteQueue.running(queue)
+
+      assert WriteQueue.pending_count(running) == 1
+      assert {drained, []} = WriteQueue.settle(running, write.ref, {:ok, @event})
+      refute WriteQueue.pending?(drained)
+    end
+  end
+
   describe "telling the attendees" do
     @notify %{original: @event, saved_message: "Saved"}
 

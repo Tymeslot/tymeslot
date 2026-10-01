@@ -176,9 +176,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsConditionalPutTest do
 
       ReqTest.stub(:tymeslot_http, fn conn ->
         case conn.method do
-          # No cached ETag, and this server refuses HEAD outright.
+          # No cached ETag, and this server refuses HEAD outright and serves
+          # the event without one.
           "HEAD" ->
             Conn.send_resp(conn, 501, "")
+
+          "GET" ->
+            Conn.send_resp(conn, 200, "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n")
 
           "PUT" ->
             :counters.add(counter, 1, 1)

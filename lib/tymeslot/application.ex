@@ -42,6 +42,7 @@ defmodule Tymeslot.Application do
   alias Tymeslot.Mailer.HealthCheck, as: MailerHealthCheck
   alias Tymeslot.Payments.Webhooks.SecretCheck
   alias Tymeslot.Telegram.BotSetup
+  alias Tymeslot.Workers.ErrorTrackerMaintenanceWorker
   alias TymeslotWeb.Endpoint
   alias TymeslotWeb.Plugs.AdditionalDashboardPlugs
   alias TymeslotWeb.Router
@@ -103,10 +104,7 @@ defmodule Tymeslot.Application do
       # Bounded, so a crash storm cannot spawn one database writer per crash
       {Task.Supervisor,
        name: ErrorTracking.task_supervisor(),
-       max_children: Application.get_env(:tymeslot, :error_tracking_max_concurrent_reports, 10)},
-      # Guardians that finish the calendar grid's queued writes when the
-      # grid's LiveView is gone
-      WriteGuardianSupervisor
+       max_children: Application.get_env(:tymeslot, :error_tracking_max_concurrent_reports, 10)}
     ]
 
     # Additional children for non-test environments
@@ -176,7 +174,18 @@ defmodule Tymeslot.Application do
       base_children ++
         production_children ++
         dev_children ++
-        tz_watcher_children() ++ [TymeslotWeb.Endpoint] ++ startup_check_children()
+        tz_watcher_children() ++
+        [
+          # Guardians that finish the calendar grid's queued writes when the
+          # grid's LiveView is gone. Children stop in reverse order, so placed
+          # here they stop right after the Endpoint: the LiveViews it takes
+          # down hand their queues to guardians that can still reach the
+          # circuit breakers, Oban and the caches, and on stopping save what
+          # is left for a later sync. Started any earlier, they would drive
+          # the queue against stopped breakers and lose it.
+          WriteGuardianSupervisor,
+          TymeslotWeb.Endpoint
+        ] ++ startup_check_children()
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
@@ -474,6 +483,12 @@ defmodule Tymeslot.Application do
   defp schedule_periodic_jobs do
     schedule_supervised("Google Calendar token refresh", fn ->
       TokenRefreshJob.schedule_periodic_refresh()
+    end)
+
+    # Mask the stored error reasons again when the masking rules have
+    # changed since the last boot.
+    schedule_supervised("ErrorTracker reason re-masking", fn ->
+      {:ok, _job} = ErrorTrackerMaintenanceWorker.enqueue_full_remask()
     end)
 
     # Register Telegram webhook if shared bot mode is enabled (production only —

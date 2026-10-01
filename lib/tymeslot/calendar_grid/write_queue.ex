@@ -292,6 +292,47 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
   defp plain_edit?(_write), do: false
 
   @doc """
+  Joins two queues into one, unless an event has writes in both or one
+  holds a series the other writes to: two writes already running for one
+  event cannot be put back in order.
+  """
+  @spec merge(t(), t()) :: {:ok, t()} | :conflict
+  def merge(%__MODULE__{} = queue, %__MODULE__{} = other) do
+    if disjoint?(Map.keys(queue.chains), Map.keys(other.chains)) and
+         disjoint?(Map.keys(queue.holds), touched_series(other)) and
+         disjoint?(Map.keys(other.holds), touched_series(queue)) do
+      chains = Map.merge(queue.chains, other.chains)
+      {:ok, %__MODULE__{chains: chains, holds: Map.merge(queue.holds, other.holds)}}
+    else
+      :conflict
+    end
+  end
+
+  defp disjoint?(these, those), do: MapSet.disjoint?(MapSet.new(these), MapSet.new(those))
+
+  defp touched_series(queue),
+    do:
+      Map.keys(queue.holds) ++ for({_key, %{series: series}} <- queue.chains, series, do: series)
+
+  @doc """
+  The queue with only the writes and series moves already running, nothing
+  waiting or held behind them: what a driver that has handed its queue on
+  still waits to hear about.
+  """
+  @spec running(t()) :: t()
+  def running(%__MODULE__{chains: chains, holds: holds}) do
+    in_flight = for {_key, %{in_flight: %{series: series}}} <- chains, do: series
+
+    holds =
+      for {series, hold} <- holds, hold.uid == nil or series in in_flight, into: %{} do
+        {series, %{hold | held: []}}
+      end
+
+    chains = Map.new(chains, fn {key, chain} -> {key, %{chain | waiting: :queue.new()}} end)
+    %__MODULE__{chains: chains, holds: holds}
+  end
+
+  @doc """
   Whether the queue still waits for the write result `{tag, result}`, or
   for the answer of a whole-series move, `{:event_move_result, result}`.
   """

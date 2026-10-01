@@ -545,6 +545,16 @@ msgstr "ПРИМІТКА ВІД ОРГАНІЗАТОРА:"
 msgid "Note from the organiser"
 msgstr "Примітка від організатора"
 
+#: lib/tymeslot/bookings/booking_title.ex
+#, elixir-autogen, elixir-format
+msgid "%{meeting_type} with %{name}"
+msgstr "%{meeting_type} з %{name}"
+
+#: lib/tymeslot/bookings/demo_orchestrator.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting with %{name}"
+msgstr "Зустріч із %{name}"
+
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgid "The address is to be arranged with the booker."

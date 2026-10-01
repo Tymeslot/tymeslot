@@ -43,7 +43,10 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   @doc "Compiles MJML to HTML, raising on error."
   @spec compile_mjml(String.t()) :: String.t()
   def compile_mjml(mjml_content) do
-    case Mjml.to_html(mjml_content) do
+    # With no font map, MJML links Google Fonts for any of its default web
+    # fonts (Roboto among them) the font stack names, so every open would
+    # reach Google. An empty map links none, whatever the stack says.
+    case Mjml.to_html(mjml_content, fonts: %{}) do
       {:ok, html} -> html
       {:error, errors} -> raise "MJML compilation failed: #{inspect(errors)}"
     end

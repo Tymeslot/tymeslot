@@ -354,6 +354,45 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalEmailsTest do
     end
   end
 
+  # The stored title is the organiser's calendar event title, in their
+  # language. The invitee reads it in theirs.
+  describe "the booking's title in the invitee's language" do
+    defp german_hosted(attrs) do
+      meeting(Map.merge(%{title: "Strategy call mit Alex Guest", attendee_locale: "fr"}, attrs))
+    end
+
+    test "the acknowledgement's subject names the booking in the invitee's language" do
+      email = BookingRequestReceived.render(german_hosted(%{}))
+
+      assert email.subject =~ "Strategy call avec Alex Guest"
+      refute email.subject =~ "mit"
+    end
+
+    test "the outcome's subject names the booking in the invitee's language" do
+      email = BookingRequestOutcome.render(:declined, german_hosted(%{}))
+
+      assert email.subject =~ "Strategy call avec Alex Guest"
+    end
+
+    test "the calendar cancellation carries the title in the language it is tagged with" do
+      email =
+        BookingRequestOutcome.render(
+          :expired,
+          german_hosted(%{first_announced_at: ~U[2026-08-20 10:00:00Z], ical_sequence: 2})
+        )
+
+      ics = Enum.find(email.attachments, &calendar_attachment?/1)
+
+      assert ics.data =~ "SUMMARY;LANGUAGE=fr:Strategy call avec Alex Guest"
+    end
+
+    test "a title the organiser wrote is not rebuilt" do
+      email = BookingRequestReceived.render(german_hosted(%{title: "Q4 planning"}))
+
+      assert email.subject =~ "Q4 planning"
+    end
+  end
+
   describe "held-request location classification" do
     test "a held video request shows Video Call rather than TBD" do
       # `location` and `meeting_url` are both nil on a held request — the

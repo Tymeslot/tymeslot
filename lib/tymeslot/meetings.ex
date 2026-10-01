@@ -7,7 +7,7 @@ defmodule Tymeslot.Meetings do
 
   require Logger
 
-  alias Tymeslot.Bookings.{Cancel, Reschedule, RescheduleRequest}
+  alias Tymeslot.Bookings.{BookingTitle, Cancel, Reschedule, RescheduleRequest}
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
 
@@ -313,7 +313,8 @@ defmodule Tymeslot.Meetings do
   conversion, location, and organizer contact info — carrying over the
   description and custom question answers so the download matches what was
   emailed. The attendee's own video join link is preferred over the generic
-  meeting URL, since the attendee is exporting their own event.
+  meeting URL, and the title is rendered in the attendee's language, since
+  the attendee is exporting their own event.
 
   A held request (`MeetingState.awaiting_approval?/1`) is exportable — it
   occupies its slot — but must not read as a confirmed meeting to whichever
@@ -327,6 +328,7 @@ defmodule Tymeslot.Meetings do
         meeting
         |> ContentBuilder.build_appointment_details()
         |> Map.merge(%{
+          title: BookingTitle.localise(meeting, meeting.attendee_locale),
           description: meeting.description,
           custom_fields_snapshot: meeting.custom_fields_snapshot,
           custom_field_answers: meeting.custom_field_answers,

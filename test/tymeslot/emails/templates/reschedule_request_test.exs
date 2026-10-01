@@ -35,6 +35,20 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
       assert email.subject =~ "Product Demo"
     end
 
+    test "names the booking in the attendee's language, not the organiser's" do
+      meeting =
+        insert(:meeting,
+          title: "Consultation mit Sarah Johnson",
+          meeting_type: "Consultation",
+          attendee_name: "Sarah Johnson",
+          attendee_locale: "it"
+        )
+
+      email = RescheduleRequest.render(meeting)
+
+      assert email.subject =~ "Consultation con Sarah Johnson"
+    end
+
     test "includes attendee name in HTML body" do
       meeting = insert(:meeting, attendee_name: "Michael Chen")
       email = RescheduleRequest.render(meeting)

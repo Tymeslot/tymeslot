@@ -30,6 +30,7 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
 
   require Logger
 
+  alias Tymeslot.Bookings.BookingTitle
   alias Tymeslot.Emails.Templates.BookingPaymentRefunded
   alias Tymeslot.Emails.Templates.BookingPaymentRefunded.RefundContext
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
@@ -132,7 +133,10 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
     end
   end
 
-  defp meeting_title(%{title: title}, _payment) when is_binary(title) and title != "", do: title
+  # The refund notice goes to the booker, so the title is in their language.
+  defp meeting_title(%{title: title} = meeting, _payment) when is_binary(title) and title != "",
+    do: BookingTitle.localise(meeting, locale_for(meeting))
+
   defp meeting_title(_meeting, %{meeting_type_name: name}) when is_binary(name), do: name
   defp meeting_title(_meeting, _payment), do: nil
 
