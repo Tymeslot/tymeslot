@@ -393,7 +393,7 @@ defmodule Tymeslot.Migrations.CreateVenuesTest do
         [
           organizer_user_id: user.id,
           meeting_type_id: meeting_type.id,
-          location: "Somewhere",
+          location: "In person",
           location_kind: kind,
           location_option_id: option_id
         ] ++ at.(days)
@@ -412,6 +412,30 @@ defmodule Tymeslot.Migrations.CreateVenuesTest do
     assert address_to_arrange(at_office) == false
     assert address_to_arrange(on_video) == false
     assert address_to_arrange(elsewhere) == false
+  end
+
+  # The old booking path wrote "Label (address)" while the location had an
+  # address. A host who cleared it afterwards leaves the location listing no
+  # venue, but the meeting was booked at that address and must not now be
+  # told it is still to be arranged.
+  test "a meeting booked before its location's address was cleared keeps false" do
+    user = insert(:user)
+    meeting_type = insert(:meeting_type, user: user)
+    put_raw_locations(meeting_type, [in_person("Office", nil, "loc-office")])
+
+    meeting =
+      insert(:meeting,
+        organizer_user_id: user.id,
+        meeting_type_id: meeting_type.id,
+        location: "Office (12 High Street)",
+        location_kind: "in_person",
+        location_option_id: "loc-office"
+      )
+
+    MigrationRunner.rerun!(@version)
+
+    assert address_to_arrange(meeting) == false
+    assert meeting_venue_id(meeting) == {nil, "Office (12 High Street)"}
   end
 
   test "a meeting on a location with an address keeps false" do

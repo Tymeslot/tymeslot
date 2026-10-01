@@ -39,7 +39,9 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
       `venue_id`, so a reschedule opens on it. Their `location` text is
       never rewritten;
     * in-person meetings booked on a location left listing no venue (it
-      had no address) get `address_to_arrange`, which is what they were.
+      had no address) get `address_to_arrange`, which is what they were,
+      unless their `location` text shows they were booked while it still
+      had one.
       Every other existing meeting keeps `false`.
 
   Rolling back writes each location's first venue's description back into
@@ -83,7 +85,9 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
 
     # Names are unique per owner regardless of case, so "Studio" and
     # "studio" cannot both appear in the owner's picker.
-    create(unique_index(:venues, [:user_id, "lower(name)"], name: :venues_user_id_lower_name_index))
+    create(
+      unique_index(:venues, [:user_id, "lower(name)"], name: :venues_user_id_lower_name_index)
+    )
 
     alter table(:meetings) do
       add(:venue_id, references(:venues, on_delete: :nilify_all))
@@ -120,7 +124,7 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
   # plain venue name goes to the address they set up first.
   defp load_in_person_rows do
     %{rows: rows} =
-      repo().query!("""
+      query!("""
       SELECT id, user_id, locations
       FROM meeting_types
       WHERE user_id IS NOT NULL
@@ -250,7 +254,7 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
     orders = Enum.map(named, fn {key, _label, _name} -> Map.fetch!(positions, key) end)
 
     %{rows: rows} =
-      repo().query!(
+      query!(
         """
         INSERT INTO venues (user_id, name, description, position, inserted_at, updated_at)
         SELECT v.user_id, v.name, v.description, v.position,
@@ -276,7 +280,7 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
 
   defp insert_suffixed({user_id, _folded, address} = key, label, n, position) do
     %{rows: rows} =
-      repo().query!(
+      query!(
         """
         INSERT INTO venues (user_id, name, description, position, inserted_at, updated_at)
         VALUES ($1, $2, $3, $4,
@@ -298,7 +302,7 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
     rewritten = Enum.map(locations, &rewrite_location(&1, user_id, venue_ids))
 
     if rewritten != locations do
-      repo().query!("UPDATE meeting_types SET locations = $2::jsonb[] WHERE id = $1", [
+      query!("UPDATE meeting_types SET locations = $2::jsonb[] WHERE id = $1", [
         id,
         rewritten
       ])
@@ -320,7 +324,7 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
   defp rewrite_location(location, _user_id, _venue_ids), do: location
 
   defp link_meetings do
-    repo().query!("""
+    query!("""
     UPDATE meetings AS m
     SET venue_id = (loc -> 'venue_ids' ->> 0)::bigint
     FROM meeting_types AS mt
@@ -336,9 +340,12 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
   end
 
   # Only a location the backfill rewrote carries `venue_ids`, and an empty
-  # list there is exactly an in-person location without an address.
+  # list there is exactly an in-person location without an address. A
+  # meeting booked while the location still had one recorded it after the
+  # label ("Office (Main St 1)"), so only a meeting holding the bare label
+  # was booked without an address; any other keeps `false` and its text.
   defp mark_addresses_to_arrange do
-    repo().query!("""
+    query!("""
     UPDATE meetings AS m
     SET address_to_arrange = true
     FROM meeting_types AS mt
@@ -348,14 +355,19 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
       AND m.location_option_id = loc ->> 'id'
       AND loc ->> 'kind' = 'in_person'
       AND loc -> 'venue_ids' = '[]'::jsonb
+      AND m.location IS NOT DISTINCT FROM loc ->> 'label'
     """)
   end
+
+  # The backfill's statements run over whole tables, so they get the
+  # runner's unbounded timeout rather than the Repo's default.
+  defp query!(sql, params \\ []), do: repo().query!(sql, params, timeout: :infinity)
 
   # A location goes back to the address of the first venue it lists. A
   # venue saved with a name and no description has only its name to go by,
   # and dropping it would leave the location with no address at all.
   defp restore_details do
-    %{rows: venue_rows} = repo().query!("SELECT id, name, description FROM venues")
+    %{rows: venue_rows} = query!("SELECT id, name, description FROM venues")
 
     addresses =
       Map.new(venue_rows, fn [id, name, description] ->
@@ -363,7 +375,7 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
       end)
 
     %{rows: rows} =
-      repo().query!("""
+      query!("""
       SELECT id, locations
       FROM meeting_types
       WHERE EXISTS (SELECT 1 FROM unnest(locations) AS loc WHERE loc ? 'venue_ids')
@@ -372,7 +384,7 @@ defmodule Tymeslot.Repo.Migrations.CreateVenues do
     Enum.each(rows, fn [id, locations] ->
       restored = Enum.map(locations, &restore_location(&1, addresses))
 
-      repo().query!("UPDATE meeting_types SET locations = $2::jsonb[] WHERE id = $1", [
+      query!("UPDATE meeting_types SET locations = $2::jsonb[] WHERE id = $1", [
         id,
         restored
       ])
