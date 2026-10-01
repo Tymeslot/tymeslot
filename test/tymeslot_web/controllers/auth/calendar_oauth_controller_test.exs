@@ -111,7 +111,7 @@ defmodule TymeslotWeb.CalendarOAuthControllerTest do
       conn = get(conn, ~p"/auth/google/calendar/callback", %{"error" => "access_denied"})
 
       assert redirected_to(conn) == "/dashboard/integrations?tab=calendars"
-      assert Flash.get(conn.assigns.flash, :error) =~ "Authorization was denied"
+      assert Flash.get(conn.assigns.flash, :error) =~ "Authorisation was denied"
     end
 
     test "google_callback handles invalid params", %{conn: conn} do
@@ -125,7 +125,7 @@ defmodule TymeslotWeb.CalendarOAuthControllerTest do
       conn = get(conn, ~p"/auth/outlook/calendar/callback", %{"error" => "access_denied"})
 
       assert redirected_to(conn) == "/dashboard/integrations?tab=calendars"
-      assert Flash.get(conn.assigns.flash, :error) =~ "Authorization was denied"
+      assert Flash.get(conn.assigns.flash, :error) =~ "Authorisation was denied"
     end
 
     test "outlook_callback surfaces admin consent message when AADSTS code is present", %{

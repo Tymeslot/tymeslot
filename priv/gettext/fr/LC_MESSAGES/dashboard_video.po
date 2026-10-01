@@ -309,11 +309,6 @@ msgstr "Saisissez à nouveau le mot de passe d’application pour vous connecter
 msgid "Enter your video meeting URL. Use {{meeting_id}} for unique rooms per meeting"
 msgstr "Saisissez l’URL de votre réunion vidéo. Utilisez {{meeting_id}} pour des salles uniques par réunion"
 
-#: lib/tymeslot/integrations/video/provider_config.ex
-#, elixir-autogen, elixir-format
-msgid "Enterprise OAuth integration with organizational accounts"
-msgstr "Intégration OAuth d’entreprise avec des comptes organisationnels"
-
 #: lib/tymeslot_web/components/dashboard/integrations/video/kmeet_config.ex
 #, elixir-autogen, elixir-format
 msgid "Every booking gets its own room, generated automatically."
@@ -1159,3 +1154,8 @@ msgstr "⚠ Syntaxe invalide"
 #, elixir-autogen, elixir-format
 msgid "✓ Valid Template"
 msgstr "✓ Modèle valide"
+
+#: lib/tymeslot/integrations/video/provider_config.ex
+#, elixir-autogen, elixir-format
+msgid "Enterprise OAuth integration with organisational accounts"
+msgstr "Intégration OAuth d’entreprise avec des comptes organisationnels"

@@ -13,11 +13,6 @@ msgstr ""
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
-msgid "%{provider} authentication failed - missing authorization code or security token."
-msgstr "Помилка автентифікації через %{provider}: відсутній код авторизації або токен безпеки."
-
-#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
-#, elixir-autogen, elixir-format
 msgid "%{provider} authentication is not available"
 msgstr "Автентифікація через %{provider} недоступна"
 
@@ -941,3 +936,8 @@ msgstr "Пароль задовгий"
 #, elixir-autogen, elixir-format
 msgid "An account with this email address already exists. Sign in with your password or with the service you originally signed up with. If you have forgotten your password, you can reset it from the sign-in page."
 msgstr "Обліковий запис із цією електронною адресою вже існує. Увійдіть за допомогою пароля або сервісу, через який ви зареєструвалися. Якщо ви забули пароль, його можна скинути на сторінці входу."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} authentication failed - missing authorisation code or security token."
+msgstr "Помилка автентифікації через %{provider}: відсутній код авторизації або токен безпеки."

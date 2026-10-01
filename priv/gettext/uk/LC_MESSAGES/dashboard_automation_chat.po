@@ -258,11 +258,6 @@ msgstr "Не вдалося від'єднати Slack"
 msgid "Failed to generate link. Please try again."
 msgstr "Не вдалося згенерувати посилання. Будь ласка, спробуйте ще раз."
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram/form_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to initialize integration. Please try again."
-msgstr "Не вдалося ініціалізувати інтеграцію. Будь ласка, спробуйте ще раз."
-
 #: lib/tymeslot_web/live/dashboard/automation/slack/state_handlers.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex
 #, elixir-autogen, elixir-format
@@ -841,3 +836,8 @@ msgstr "URL вебхука відкликано у Slack. Створіть но�
 #, elixir-autogen, elixir-format
 msgid "Slack error: %{error}"
 msgstr "Помилка Slack: %{error}"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram/form_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to initialise integration. Please try again."
+msgstr "Не вдалося ініціалізувати інтеграцію. Будь ласка, спробуйте ще раз."

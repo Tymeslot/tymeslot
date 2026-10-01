@@ -258,11 +258,6 @@ msgstr "Slack konnte nicht getrennt werden"
 msgid "Failed to generate link. Please try again."
 msgstr "Link konnte nicht erstellt werden. Bitte versuchen Sie es erneut."
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram/form_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to initialize integration. Please try again."
-msgstr "Integration konnte nicht initialisiert werden. Bitte versuchen Sie es erneut."
-
 #: lib/tymeslot_web/live/dashboard/automation/slack/state_handlers.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex
 #, elixir-autogen, elixir-format
@@ -841,3 +836,8 @@ msgstr "Die Webhook-URL wurde in Slack widerrufen. Erstellen Sie eine neue."
 #, elixir-autogen, elixir-format
 msgid "Slack error: %{error}"
 msgstr "Slack-Fehler: %{error}"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram/form_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to initialise integration. Please try again."
+msgstr "Integration konnte nicht initialisiert werden. Bitte versuchen Sie es erneut."

@@ -389,13 +389,6 @@ msgstr "Platba byla zrušena"
 msgid "Payment was cancelled. Please try booking again."
 msgstr "Platba byla zrušena. Zkuste prosím rezervaci znovu."
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/overview_component.ex
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
-#, elixir-autogen, elixir-format
-msgid "Please contact the organizer"
-msgstr "Obraťte se prosím na organizátora"
-
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex
 #, elixir-autogen, elixir-format
 msgid "Please correct the errors below before submitting."
@@ -719,7 +712,7 @@ msgstr "Zadejte celé jméno"
 #: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #, elixir-autogen, elixir-format
 msgid "john@example.com"
-msgstr "john@example.com"
+msgstr "jan@example.com"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
@@ -888,11 +881,6 @@ msgstr "Hostitele se nepodařilo najít. Obnovte prosím stránku a zkuste to z
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "Organizer is required for booking"
-msgstr "Bez organizátora nelze rezervaci vytvořit."
-
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
-#, elixir-autogen, elixir-format
 msgid "Payments are not available for this booking. Please contact the host."
 msgstr "Pro tuto rezervaci nejsou platby k dispozici. Obraťte se prosím na hostitele."
 
@@ -1025,16 +1013,6 @@ msgstr "Vyberte prosím délku schůzky"
 #, elixir-autogen, elixir-format
 msgid "Please select a time"
 msgstr "Vyberte prosím čas"
-
-#: lib/tymeslot/scheduling/link_access_policy.ex
-#, elixir-autogen, elixir-format
-msgid "This scheduling page isn’t available right now. The organizer hasn’t connected a calendar yet."
-msgstr "Tato rezervační stránka není momentálně dostupná. Organizátor zatím nepřipojil kalendář."
-
-#: lib/tymeslot/scheduling/link_access_policy.ex
-#, elixir-autogen, elixir-format
-msgid "This scheduling page isn’t available yet. The organizer hasn’t set a username."
-msgstr "Tato rezervační stránka zatím není dostupná. Organizátor si ještě nenastavil uživatelské jméno."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
@@ -1436,3 +1414,25 @@ msgstr "Následující měsíc"
 #, elixir-autogen, elixir-format
 msgid "Previous month"
 msgstr "Předchozí měsíc"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Organiser is required for booking"
+msgstr "Bez organizátora nelze rezervaci vytvořit."
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
+#, elixir-autogen, elixir-format
+msgid "Please contact the organiser"
+msgstr "Obraťte se prosím na organizátora"
+
+#: lib/tymeslot/scheduling/link_access_policy.ex
+#, elixir-autogen, elixir-format
+msgid "This scheduling page isn’t available right now. The organiser hasn’t connected a calendar yet."
+msgstr "Tato rezervační stránka není momentálně dostupná. Organizátor zatím nepřipojil kalendář."
+
+#: lib/tymeslot/scheduling/link_access_policy.ex
+#, elixir-autogen, elixir-format
+msgid "This scheduling page isn’t available yet. The organiser hasn’t set a username."
+msgstr "Tato rezervační stránka zatím není dostupná. Organizátor si ještě nenastavil uživatelské jméno."

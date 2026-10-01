@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationSetOptionTest do
 
     test "the colour widget commits through the same event", %{conn: conn, profile: profile} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
-      view |> element("button", "Solid Color") |> render_click()
+      view |> element("button", "Solid Colour") |> render_click()
       view |> element("button[phx-click='theme:toggle_custom_picker']") |> render_click()
 
       assert has_element?(
@@ -105,7 +105,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationSetOptionTest do
       set_option(view, %{"option" => "logo", "field" => "file", "choice" => "x.png"})
 
       assert ThemeCustomizations.get_by_profile_and_theme(profile.id, "1") == nil
-      assert render(view) =~ "Color Palette"
+      assert render(view) =~ "Colour Palette"
     end
 
     test "a background kind the theme does not declare is refused with a message",
@@ -127,7 +127,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationSetOptionTest do
         "choice" => "gradient_999"
       })
 
-      assert render(view) =~ "Could not save your theme customization"
+      assert render(view) =~ "Could not save your theme customisation"
       assert ThemeCustomizations.get_by_profile_and_theme(profile.id, "1") == nil
     end
 
@@ -165,7 +165,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationSetOptionTest do
 
         {:ok, _view, html} = live(conn, "/dashboard/theme/customize/#{unquote(theme.id)}")
 
-        assert html =~ "Color Palette" == Palette in groups
+        assert html =~ "Colour Palette" == Palette in groups
         assert html =~ "Background Design" == Background in groups
 
         # The matrix says independently whether the theme offers video, so a

@@ -104,11 +104,6 @@ msgstr "Uwierzytelnianie nie powiodło się. Spróbuj ponownie."
 msgid "Authentication session mismatch. Please sign in and try again."
 msgstr "Niezgodność sesji uwierzytelniania. Zaloguj się i spróbuj ponownie."
 
-#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
-#, elixir-autogen, elixir-format
-msgid "Authorization was denied. Please try again."
-msgstr "Autoryzacja została odrzucona. Spróbuj ponownie."
-
 #: lib/tymeslot_web/components/dashboard/integrations/shared/provider_picker_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Back to providers"
@@ -445,3 +440,8 @@ msgstr "Usuń też te rozmowy z serwera Nextcloud. Uczestnikom nadchodzących sp
 #, elixir-autogen, elixir-format
 msgid "Enter the address on its own and put the username and password in their own fields."
 msgstr "Wpisz sam adres, a nazwę użytkownika i hasło podaj w osobnych polach."
+
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
+#, elixir-autogen, elixir-format
+msgid "Authorisation was denied. Please try again."
+msgstr "Autoryzacja została odrzucona. Spróbuj ponownie."

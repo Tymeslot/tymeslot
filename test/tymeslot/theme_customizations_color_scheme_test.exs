@@ -35,7 +35,7 @@ defmodule Tymeslot.ThemeCustomizationsColorSchemeTest do
     end
 
     test "apply_option/4 rejects invalid hex", %{profile: profile} do
-      assert {:error, "Could not save your theme customization. Please try again."} =
+      assert {:error, "Could not save your theme customisation. Please try again."} =
                seed(profile, "not-hex")
 
       assert ThemeCustomizations.get_by_profile_and_theme(profile.id, "1") == nil

@@ -108,11 +108,6 @@ msgstr ""
 msgid "Authentication session mismatch. Please sign in and try again."
 msgstr ""
 
-#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
-#, elixir-autogen, elixir-format
-msgid "Authorization was denied. Please try again."
-msgstr ""
-
 #: lib/tymeslot_web/components/dashboard/integrations/shared/provider_picker_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Back to providers"
@@ -445,4 +440,9 @@ msgstr ""
 #: lib/tymeslot/integrations/shared/input_validators.ex
 #, elixir-autogen, elixir-format
 msgid "Enter the address on its own and put the username and password in their own fields."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
+#, elixir-autogen, elixir-format
+msgid "Authorisation was denied. Please try again."
 msgstr ""

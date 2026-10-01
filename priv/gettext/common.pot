@@ -21,11 +21,6 @@ msgstr ""
 msgid "Yes"
 msgstr ""
 
-#: lib/tymeslot/custom_fields/answer_renderer.ex
-#, elixir-autogen, elixir-format
-msgid "✓ Acknowledged (%{at})"
-msgstr ""
-
 #: lib/tymeslot_web/components/core_components/flash.ex
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
@@ -254,4 +249,9 @@ msgstr ""
 #: lib/tymeslot_web/components/timezone_dropdown.ex
 #, elixir-autogen, elixir-format
 msgid "Search timezones"
+msgstr ""
+
+#: lib/tymeslot/custom_fields/answer_renderer.ex
+#, elixir-autogen, elixir-format
+msgid "✓ Acknowledged"
 msgstr ""

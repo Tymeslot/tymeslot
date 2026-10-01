@@ -24,12 +24,12 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PalettePanel do
       <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
         <div>
           <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
-            {dgettext("dashboard_appearance", "Color Palette")}
+            {dgettext("dashboard_appearance", "Colour Palette")}
           </h3>
           <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
             {dgettext(
               "dashboard_appearance",
-              "Select the primary colors for your booking page interface."
+              "Select the primary colours for your booking page interface."
             )}
           </p>
         </div>

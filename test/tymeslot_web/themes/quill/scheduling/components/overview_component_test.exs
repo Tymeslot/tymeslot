@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponentTest d
       html = render_overview(meeting_types: [])
 
       assert html =~ "No meeting types available"
-      assert html =~ "Please contact the organizer"
+      assert html =~ "Please contact the organiser"
       assert duration_option_count(html) == 0
     end
 

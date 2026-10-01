@@ -254,11 +254,6 @@ msgstr "Nie udało się odłączyć Slacka"
 msgid "Failed to generate link. Please try again."
 msgstr "Nie udało się wygenerować linku. Spróbuj ponownie."
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram/form_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to initialize integration. Please try again."
-msgstr "Nie udało się zainicjować integracji. Spróbuj ponownie."
-
 #: lib/tymeslot_web/live/dashboard/automation/slack/state_handlers.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex
 #, elixir-autogen, elixir-format
@@ -837,3 +832,8 @@ msgstr "Adres URL webhooka został unieważniony w Slacku. Wygeneruj nowy."
 #, elixir-autogen, elixir-format
 msgid "Slack error: %{error}"
 msgstr "Błąd Slacka: %{error}"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram/form_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to initialise integration. Please try again."
+msgstr "Nie udało się zainicjować integracji. Spróbuj ponownie."

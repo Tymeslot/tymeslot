@@ -65,7 +65,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                   {dgettext("booking", "No meeting types available")}
                 </p>
                 <p class="overview-empty-subtitle">
-                  {dgettext("booking", "Please contact the organizer")}
+                  {dgettext("booking", "Please contact the organiser")}
                 </p>
               </div>
             <% else %>

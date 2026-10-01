@@ -20,12 +20,13 @@
    the border and the icon with its status input, and an error tints the
    surface too, so it stays error-coloured in every theme.
 
-   On a wider standalone booking page the group sits at the bottom right,
-   clear of the language switcher and the step's heading, which share the
-   top. Inside an embed it keeps Core's top right: an inline frame is as
-   tall as its content, so its bottom can lie below the host's fold. On a
-   narrow viewport it spans the top between side gutters instead of a
-   fixed 20rem box, since the bottom there holds pinned step actions.
+   The group keeps Core's top right, where it may briefly cover the
+   language switcher. The bottom was tried and is worse: it covers a
+   step's primary action (the pinned actions on a phone, a poll's save
+   button on a wide page), and an inline embed's frame is as tall as its
+   content, so its bottom can lie below the host's fold. On a narrow
+   viewport the toast spans the top between side gutters instead of a
+   fixed 20rem box.
 
    Reads --dropdown-surface, --line-1, --ink-1, --radius-card,
    --radius-control, --status-shadow, --theme-font-family,
@@ -69,14 +70,6 @@
   background: color-mix(in srgb, var(--flash-tone) 16%, transparent);
   box-shadow: none;
   color: var(--flash-tone);
-}
-
-@media (min-width: 40.0625rem) {
-  html.scheduling-app:not([data-embedded]) #app-flash-group {
-    top: auto;
-    bottom: var(--space-sm);
-    flex-direction: column-reverse;
-  }
 }
 
 @media (max-width: 40rem) {

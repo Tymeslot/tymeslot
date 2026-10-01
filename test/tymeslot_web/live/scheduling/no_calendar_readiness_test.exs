@@ -17,11 +17,11 @@ defmodule TymeslotWeb.Live.Scheduling.NoCalendarReadinessTest do
   # The card's own strings, from the `errors` gettext domain. The heading is
   # matched from its apostrophe onwards, which HEEx escapes to `&#39;`.
   @heading "show this scheduling page yet"
-  @call_to_action "If you are the organizer, please connect a calendar in your dashboard."
+  @call_to_action "If you are the organiser, please connect a calendar in your dashboard."
 
   # `LinkAccessPolicy.reason_to_message(:no_calendar)`, from `booking`. The
   # apostrophe is typographic in the catalogue and survives HTML escaping.
-  @explanation "This scheduling page isn’t available right now. The organizer hasn’t connected a calendar yet."
+  @explanation "This scheduling page isn’t available right now. The organiser hasn’t connected a calendar yet."
 
   defp seed_organizer(theme_id, username) do
     user = insert(:user)

@@ -162,7 +162,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeIntegrationTest do
       {:ok, _view, html} = live(conn, ~p"/#{profile.username}")
 
       # Check for the error message (HTML entities will be escaped)
-      assert html =~ "organizer hasn"
+      assert html =~ "organiser hasn"
       assert html =~ "connected a calendar yet"
     end
   end

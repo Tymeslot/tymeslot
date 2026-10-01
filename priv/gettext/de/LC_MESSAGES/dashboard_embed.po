@@ -41,11 +41,6 @@ msgstr "Bereits freigegeben: %{domains}"
 msgid "Book a Meeting →"
 msgstr "Termin buchen →"
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
-#, elixir-autogen, elixir-format
-msgid "By default, embedding is disabled to prevent unauthorized use of your booking page. To enable embedding, you must specify the domains you trust."
-msgstr "Standardmäßig ist das Einbetten deaktiviert, um eine unbefugte Nutzung Ihrer Buchungsseite zu verhindern. Um das Einbetten zu aktivieren, müssen Sie die Domains angeben, denen Sie vertrauen."
-
 #: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Code copied to clipboard!"
@@ -368,16 +363,6 @@ msgstr "Geben Sie eine Domain ein und drücken Sie die Eingabetaste, um sie hinz
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
-msgid "For security, %{emphasis} to only specific domains you trust. This prevents your booking page from appearing on unauthorized websites."
-msgstr "Aus Sicherheitsgründen %{emphasis} auf bestimmte Domains beschränken, denen Sie vertrauen. Dies verhindert, dass Ihre Buchungsseite auf nicht autorisierten Websites erscheint."
-
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
-#, elixir-autogen, elixir-format
-msgid "Need help? See the %{guide} for step-by-step instructions, platform tips, and customization options."
-msgstr "Brauchen Sie Hilfe? In der %{guide} finden Sie eine Schritt-für-Schritt-Anleitung, Plattform-Tipps und Anpassungsoptionen."
-
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
-#, elixir-autogen, elixir-format
 msgid "Use %{wildcard} to allow all subdomains"
 msgstr "Verwenden Sie %{wildcard}, um alle Subdomains zu erlauben"
 
@@ -440,3 +425,18 @@ msgstr "Nur Vorschau: Dieser Link öffnet sich im Testmodus und funktioniert nac
 #, elixir-autogen, elixir-format
 msgid "The preview is disabled because your booking link is currently deactivated."
 msgstr "Die Vorschau ist deaktiviert, weil Ihr Buchungslink derzeit deaktiviert ist."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
+#, elixir-autogen, elixir-format
+msgid "By default, embedding is disabled to prevent unauthorised use of your booking page. To enable embedding, you must specify the domains you trust."
+msgstr "Standardmäßig ist das Einbetten deaktiviert, um eine unbefugte Nutzung Ihrer Buchungsseite zu verhindern. Um das Einbetten zu aktivieren, müssen Sie die Domains angeben, denen Sie vertrauen."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
+#, elixir-autogen, elixir-format
+msgid "For security, %{emphasis} to only specific domains you trust. This prevents your booking page from appearing on unauthorised websites."
+msgstr "Aus Sicherheitsgründen %{emphasis} auf bestimmte Domains beschränken, denen Sie vertrauen. Dies verhindert, dass Ihre Buchungsseite auf nicht autorisierten Websites erscheint."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
+#, elixir-autogen, elixir-format
+msgid "Need help? See the %{guide} for step-by-step instructions, platform tips, and customisation options."
+msgstr "Brauchen Sie Hilfe? In der %{guide} finden Sie eine Schritt-für-Schritt-Anleitung, Plattform-Tipps und Anpassungsoptionen."

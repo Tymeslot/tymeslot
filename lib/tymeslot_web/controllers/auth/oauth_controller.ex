@@ -132,7 +132,7 @@ defmodule TymeslotWeb.OAuthController do
           :error,
           dgettext(
             "auth",
-            "%{provider} authentication failed - missing authorization code or security token.",
+            "%{provider} authentication failed - missing authorisation code or security token.",
             provider: provider_name(provider_atom)
           )
         )

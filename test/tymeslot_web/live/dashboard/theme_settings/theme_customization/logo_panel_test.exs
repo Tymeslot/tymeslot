@@ -86,7 +86,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.LogoPanelTest d
     assert has_element?(view, "[data-testid='logo-panel'] #theme-logo-form")
     assert has_element?(view, "[data-testid='logo-panel']", "No logo uploaded yet.")
     refute has_element?(view, "[data-testid='remove-logo']")
-    assert html =~ "Color Palette"
+    assert html =~ "Colour Palette"
     assert html =~ "Background Design"
   end
 

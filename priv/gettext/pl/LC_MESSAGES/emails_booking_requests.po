@@ -255,11 +255,6 @@ msgstr "Przepraszam za niedogodności. Dotychczasowe spotkanie zostało odwołan
 
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
-msgid "I apologize for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience."
-msgstr "Przepraszam za niedogodności. Dotychczasowe spotkanie zostało odwołane – chętnie pomogę ci wybrać nowy termin w dogodnym dla ciebie momencie."
-
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#, elixir-autogen, elixir-format
 msgid "I need to reschedule our upcoming meeting. Could you please select a new time that works for you?"
 msgstr "Muszę zmienić termin naszego najbliższego spotkania. Czy możesz wybrać nowy termin, który ci odpowiada?"
 

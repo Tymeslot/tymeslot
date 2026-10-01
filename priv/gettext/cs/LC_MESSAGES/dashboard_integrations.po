@@ -108,11 +108,6 @@ msgstr "Ověření se nezdařilo. Zkuste to prosím znovu."
 msgid "Authentication session mismatch. Please sign in and try again."
 msgstr "Ověřovací relace neodpovídá. Přihlaste se prosím a zkuste to znovu."
 
-#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
-#, elixir-autogen, elixir-format
-msgid "Authorization was denied. Please try again."
-msgstr "Autorizace byla zamítnuta. Zkuste to prosím znovu."
-
 #: lib/tymeslot_web/components/dashboard/integrations/shared/provider_picker_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Back to providers"
@@ -449,3 +444,8 @@ msgstr "Smazat tyto konverzace také z vašeho serveru Nextcloud. Účastníků
 #, elixir-autogen, elixir-format
 msgid "Enter the address on its own and put the username and password in their own fields."
 msgstr "Zadejte pouze adresu a uživatelské jméno s heslem vyplňte do jejich vlastních polí."
+
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
+#, elixir-autogen, elixir-format
+msgid "Authorisation was denied. Please try again."
+msgstr "Autorizace byla zamítnuta. Zkuste to prosím znovu."

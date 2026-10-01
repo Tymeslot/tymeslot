@@ -40,13 +40,13 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ColorPi
     <div class="space-y-6">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <p class="text-token-sm font-black text-tymeslot-400 uppercase tracking-widest">
-          {dgettext("dashboard_appearance", "Select a solid color")}
+          {dgettext("dashboard_appearance", "Select a solid colour")}
         </p>
         <div class="flex flex-wrap items-center gap-3">
           <%= if @customization.settings["background_type"] == "color" and @customization.settings["background_value"] do %>
             <.current_indicator
               swatches={[@customization.settings["background_value"]]}
-              label={dgettext("dashboard_appearance", "Solid Color")}
+              label={dgettext("dashboard_appearance", "Solid Colour")}
               code={String.upcase(@customization.settings["background_value"])}
               highlighted={not preset_swatch?(@customization.settings["background_value"])}
             />

@@ -13,11 +13,6 @@ msgstr ""
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
-msgid "%{provider} authentication failed - missing authorization code or security token."
-msgstr "Échec de l’authentification %{provider} : code d’autorisation ou jeton de sécurité manquant."
-
-#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
-#, elixir-autogen, elixir-format
 msgid "%{provider} authentication is not available"
 msgstr "L’authentification %{provider} n’est pas disponible"
 
@@ -939,3 +934,8 @@ msgstr "Le mot de passe est trop long"
 #, elixir-autogen, elixir-format
 msgid "An account with this email address already exists. Sign in with your password or with the service you originally signed up with. If you have forgotten your password, you can reset it from the sign-in page."
 msgstr "Un compte existe déjà avec cette adresse e-mail. Veuillez vous connecter avec votre mot de passe ou avec le service utilisé lors de votre inscription. Si vous avez oublié votre mot de passe, vous pouvez le réinitialiser depuis la page de connexion."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} authentication failed - missing authorisation code or security token."
+msgstr "Échec de l’authentification %{provider} : code d’autorisation ou jeton de sécurité manquant."

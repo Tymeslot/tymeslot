@@ -118,7 +118,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationBackgroundUpload
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
       view
-      |> element("button[phx-value-theme='1']", "Customize Style")
+      |> element("button[phx-value-theme='1']", "Customise Style")
       |> render_click()
 
       # Switch to the image tab, which renders the upload form.
@@ -169,7 +169,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationBackgroundUpload
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
       view
-      |> element("button[phx-value-theme='1']", "Customize Style")
+      |> element("button[phx-value-theme='1']", "Customise Style")
       |> render_click()
 
       view

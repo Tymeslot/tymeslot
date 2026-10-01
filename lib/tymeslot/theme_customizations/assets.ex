@@ -105,7 +105,7 @@ defmodule Tymeslot.ThemeCustomizations.Assets do
         {:error,
          dgettext(
            "dashboard_appearance",
-           "Could not save your theme customization. Please try again."
+           "Could not save your theme customisation. Please try again."
          )}
     end
   end

@@ -6,7 +6,7 @@ defmodule Tymeslot.ThemeCustomizationsEdgeCasesTest do
   alias Tymeslot.Repo
   alias Tymeslot.ThemeCustomizations
 
-  @not_saved "Could not save your theme customization. Please try again."
+  @not_saved "Could not save your theme customisation. Please try again."
   @unavailable "This option is not available for this theme."
 
   # ---- Color validation consistency ----

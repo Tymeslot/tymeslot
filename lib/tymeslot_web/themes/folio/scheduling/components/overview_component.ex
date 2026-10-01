@@ -51,7 +51,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.OverviewComponent do
         <%= if @meeting_types == [] do %>
           <div class="folio-empty">
             <p class="folio-empty__title">{dgettext("booking", "No meeting types available")}</p>
-            <p class="folio-muted">{dgettext("booking", "Please contact the organizer")}</p>
+            <p class="folio-muted">{dgettext("booking", "Please contact the organiser")}</p>
           </div>
         <% else %>
           <ul class="folio-meetings">
