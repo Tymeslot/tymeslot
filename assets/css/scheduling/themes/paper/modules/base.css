@@ -89,6 +89,9 @@ body.paper-theme {
   line-height: var(--theme-line-height-snug);
   letter-spacing: -0.01em;
   color: var(--ink-1);
+  /* An organiser's heading may be one long word; it wraps rather than
+     pushing the card wider than the page. */
+  overflow-wrap: anywhere;
 }
 
 .paper-heading {
