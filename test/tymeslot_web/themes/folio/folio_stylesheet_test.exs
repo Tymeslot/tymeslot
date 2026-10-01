@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Themes.Folio.FolioStylesheetTest do
   alias Tymeslot.ThemeCustomizations.FolioSpec
 
   @variables "assets/css/scheduling/themes/folio/modules/variables.css"
+  @masthead "assets/css/scheduling/themes/folio/modules/masthead.css"
 
   defp declared(css, name) do
     case Regex.run(~r/^\s*#{Regex.escape(name)}:\s*([^;]+);/m, css) do
@@ -31,5 +32,18 @@ defmodule TymeslotWeb.Themes.Folio.FolioStylesheetTest do
 
     assert map_size(vars) > 10
     assert Enum.reject(vars, fn {name, value} -> declared(css, name) == value end) == []
+  end
+
+  # Each cover is cropped per preset (context: no cover file of its own), so
+  # a cover Folio offers without a focus rule would be centred blindly.
+  test "masthead.css crops every cover Folio offers" do
+    css = File.read!(@masthead)
+    %{presets: covers} = Enum.find(FolioSpec.option_groups(), &(&1.key == :cover))
+
+    assert covers != []
+
+    assert Enum.reject(covers, fn id ->
+             css =~ ~s(.folio-cover[data-cover="#{id}"]) and css =~ "--folio-cover-focus"
+           end) == []
   end
 end
