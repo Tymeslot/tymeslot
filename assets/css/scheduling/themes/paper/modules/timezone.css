@@ -80,6 +80,20 @@
   color: var(--ink-1);
 }
 
+/* The rule above resets the shared focus border, so the focus treatment of
+   Paper's other inputs comes back here. */
+.paper-timezone .tz-picker__search:focus {
+  outline: none;
+  border-color: var(--theme-primary);
+  box-shadow: var(--focus-ring);
+}
+
+/* The panel clips and scrolls its list, so an option's focus ring sits
+   inside the option instead of around it. */
+.paper-timezone .tz-picker__option:focus-visible {
+  outline-offset: calc(-2 * var(--border-width-medium));
+}
+
 .paper-timezone .tz-picker__option-offset {
   font-variant-numeric: tabular-nums;
 }

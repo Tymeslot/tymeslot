@@ -113,4 +113,15 @@
     max-height: var(--paper-slots-max-height);
     overflow-y: auto;
   }
+
+  /* The capped list clips what lies outside it, so a time's focus ring sits
+     inside the button; on the chosen (filled) time it takes the on-primary
+     colour to stay visible. */
+  .paper-slots .slot-list__slot:focus-visible {
+    outline-offset: calc(-1 * (var(--border-width-thick) + var(--border-width-medium)));
+  }
+
+  .paper-slots .slot-list__slot.slot-list__slot--selected:focus-visible {
+    outline-color: var(--theme-on-primary);
+  }
 }

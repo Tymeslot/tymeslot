@@ -121,7 +121,9 @@
   cursor: pointer;
 }
 
-.calendar-day:not(:disabled):hover {
+/* The chosen day keeps its fill under the pointer: the stronger tint would
+   put the on-primary number on a pale ground. */
+.calendar-day:not(:disabled):not(.calendar-day--selected):hover {
   background: var(--paper-tint-strong);
 }
 
