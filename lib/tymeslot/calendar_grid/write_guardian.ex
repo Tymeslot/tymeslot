@@ -28,9 +28,26 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
   `Tymeslot.CalendarGrid.update_event/4` as usual.
 
   A grid mounted again in the same LiveView takes the queue back
-  (`adopt/0`), so that its new edits wait behind the ones still being
+  (`adopt/2`), so that its new edits wait behind the ones still being
   written; until then, and after, each write's result goes to the LiveView
   as well. A guardian whose LiveView is gone stops once the queue is empty.
+
+  ## A LiveView mounted again
+
+  When the connection drops and comes back (common on a phone), the grid is
+  mounted in a new LiveView while the old one's guardian may still be
+  writing its queue. Left to itself, an older edit it writes could land
+  after a newer edit of the same event made in the new grid. So `adopt/2`
+  also takes over the queue of every guardian of the same organiser whose
+  LiveView is gone, merging it into the new grid's (`WriteQueue.merge/2`),
+  and the new grid's edits wait behind its writes. A guardian whose
+  LiveView still lives, another tab, is never taken.
+
+  The guardian taken over writes nothing more. It stays registered under
+  its old LiveView, which its running writes still report to, and passes
+  each of their results on to the new LiveView (`report/2`), stopping once
+  the last has answered. Write references are unique on the node, so the
+  merged queues never confuse one write's answer for another's.
 
   Should the queue never be driven to its end, because the node is stopping
   or the provider has not answered for `:drain_timeout`, the guardian saves
@@ -50,6 +67,7 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
   alias Tymeslot.Infrastructure.Tasks
 
   @registry Tymeslot.CalendarGrid.WriteGuardianRegistry
+  @user_registry Tymeslot.CalendarGrid.WriteGuardianUserRegistry
   @supervisor Tymeslot.CalendarGrid.WriteGuardians
 
   # How long a guardian left driving waits for a write to answer before it
@@ -65,6 +83,10 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
   @doc "The name of the Registry guardians register in."
   @spec registry() :: atom()
   def registry, do: @registry
+
+  @doc "The name of the Registry guardians register in under their user's id."
+  @spec user_registry() :: atom()
+  def user_registry, do: @user_registry
 
   @doc "The name of the DynamicSupervisor guardians run under."
   @spec supervisor() :: atom()
@@ -102,21 +124,31 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
   end
 
   @doc """
-  Takes back the queue the calling LiveView's guardian holds, for a grid
-  mounted again after `detach/0`, so that a new edit of an event the guardian
-  is still writing waits behind it. The guardian goes back to only mirroring
-  the queue. Answers `nil` when there is no guardian.
+  The queue a grid mounting in the calling LiveView for `user_id` starts
+  from, so that a new edit of an event still being written waits behind it:
+  the queue the LiveView's own guardian holds, for a grid mounted again
+  after `detach/0`, or else `queue`; merged with the queue of every guardian
+  of `user_id` whose LiveView is gone (see "A LiveView mounted again"). The
+  LiveView's own guardian goes back to only mirroring the queue.
 
   Called inside the LiveView, so the result of any write that arrives before
   the grid has its queue waits in the LiveView's mailbox, and is settled
-  against the queue once the grid has it: a result the guardian already
+  against the queue once the grid has it: a result a guardian already
   settled no longer names a write in flight, and is ignored.
   """
-  @spec adopt() :: WriteQueue.t() | nil
-  def adopt do
-    case whereis(self()) do
-      nil -> nil
-      pid -> call(pid, :adopt, nil)
+  @spec adopt(WriteQueue.t(), pos_integer()) :: WriteQueue.t()
+  def adopt(queue, user_id) do
+    own = whereis(self())
+    queue = (own && call(own, :adopt, nil)) || queue
+
+    for {pid, _value} <- Registry.lookup(@user_registry, user_id),
+        pid != own,
+        reduce: queue do
+      queue ->
+        case call(pid, {:take_over, self(), queue}, :refused) do
+          {:ok, merged} -> merged
+          :refused -> queue
+        end
     end
   end
 
@@ -176,6 +208,7 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
     # So that a shutdown runs `terminate/2`, which saves what it can.
     Process.flag(:trap_exit, true)
     Process.put(:"$callers", callers)
+    {:ok, _owner} = Registry.register(@user_registry, user_id, nil)
 
     {:ok,
      %{
@@ -185,7 +218,11 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
        user_id: user_id,
        queue: WriteQueue.new(),
        results: [],
-       driving?: false
+       driving?: false,
+       # Once taken over: the LiveView its writes' results go on to, and
+       # what of its queue is still running.
+       taken_by: nil,
+       running: nil
      }}
   end
 
@@ -206,9 +243,29 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
   def handle_call(:adopt, _from, state),
     do: {:reply, state.queue, %{state | driving?: false}}
 
+  # Taken over only by a LiveView of the same organiser (see `adopt/2`), and
+  # only once its own LiveView is gone; asked before its `:DOWN` is handled,
+  # it answers by whether the LiveView lives now.
+  def handle_call({:take_over, new_owner, queue}, _from, %{taken_by: nil} = state) do
+    with false <- Process.alive?(state.owner),
+         {:ok, merged} <- WriteQueue.merge(queue, state.queue) do
+      state |> taken_over(new_owner) |> forwarding({:ok, merged})
+    else
+      _owner_alive_or_conflict -> {:reply, :refused, state, timeout(state)}
+    end
+  end
+
+  def handle_call({:take_over, _new_owner, _queue}, _from, state),
+    do: {:reply, :refused, state, timeout(state)}
+
   @impl GenServer
   def handle_info({:DOWN, ref, :process, _owner, _reason}, %{monitor: ref} = state),
     do: drive(%{state | owner_alive?: false})
+
+  def handle_info({tag, _result} = message, %{taken_by: pid} = state)
+      when is_pid(pid) and tag in @result_tags do
+    state |> forward(message) |> forwarding()
+  end
 
   def handle_info({tag, _result} = message, %{driving?: false} = state)
       when tag in @result_tags do
@@ -267,6 +324,50 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
 
       length(writes)
   end
+
+  # Hands the queue on: from now on it writes nothing, and only passes on
+  # the results of the writes it has running, including any it already
+  # holds, to the LiveView that took it over.
+  defp taken_over(state, new_owner) do
+    Process.demonitor(state.monitor, [:flush])
+    Registry.unregister(@user_registry, state.user_id)
+
+    Enum.reduce(
+      state.results,
+      %{
+        state
+        | queue: WriteQueue.new(),
+          results: [],
+          driving?: true,
+          taken_by: new_owner,
+          running: WriteQueue.running(state.queue)
+      },
+      &forward(&2, &1)
+    )
+  end
+
+  defp forward(state, message) do
+    if WriteQueue.awaits?(state.running, message) do
+      report(state.taken_by, message)
+      {running, _effects} = WriteQueue.apply_result(state.running, message)
+      %{state | running: running}
+    else
+      state
+    end
+  end
+
+  # Stops once every write it had running has answered.
+  defp forwarding(state, reply \\ nil) do
+    case {WriteQueue.pending?(state.running), reply} do
+      {true, nil} -> {:noreply, state, @drain_timeout}
+      {true, reply} -> {:reply, reply, state, @drain_timeout}
+      {false, nil} -> {:stop, :normal, state}
+      {false, reply} -> {:stop, :normal, reply, state}
+    end
+  end
+
+  defp timeout(%{driving?: true}), do: @drain_timeout
+  defp timeout(_mirroring), do: :infinity
 
   # Takes the queue over from the grid: settles the results already in
   # hand, oldest first, then waits for the rest.

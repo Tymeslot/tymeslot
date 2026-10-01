@@ -2,6 +2,7 @@ defmodule Tymeslot.Workers.ErrorTrackerMaintenanceWorkerTest do
   # async: false: the regression test switches ErrorTracker on through its
   # global `enabled` application env and listens to global telemetry.
   use Tymeslot.DataCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :infrastructure
 
@@ -12,6 +13,7 @@ defmodule Tymeslot.Workers.ErrorTrackerMaintenanceWorkerTest do
   alias ErrorTracker.Error
   alias ErrorTracker.Occurrence
   alias Oban.Cron.Expression
+  alias Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber
   alias Tymeslot.Workers.ErrorTrackerMaintenanceWorker
 
   describe "perform/1" do
@@ -133,6 +135,43 @@ defmodule Tymeslot.Workers.ErrorTrackerMaintenanceWorkerTest do
       assert Repo.get!(Error, error.id).reason == "sync failed for j***@example.com"
       assert Repo.get!(Occurrence, recent.id).reason == "sync failed for j***@example.com"
       assert Repo.get!(Occurrence, old.id).reason == raw
+    end
+  end
+
+  describe "full re-masking for a rules version" do
+    # Stored under older rules, or whose masking failed outside the daily
+    # window: the daily run never reads them again.
+    test "masks reasons stored longer ago than the daily window" do
+      raw = "sync failed for jane@example.com"
+      error = insert_error(last_seen_days_ago: 10, reason: raw)
+      old = insert_occurrence(error, days_ago: 40, reason: raw)
+
+      assert :ok =
+               perform_job(ErrorTrackerMaintenanceWorker, %{
+                 rules_version: ReasonScrubber.rules_version()
+               })
+
+      assert Repo.get!(Error, error.id).reason == "sync failed for j***@example.com"
+      assert Repo.get!(Occurrence, old.id).reason == "sync failed for j***@example.com"
+    end
+
+    test "runs once per rules version, however many boots enqueue it" do
+      assert {:ok, %Oban.Job{conflict?: false}} =
+               ErrorTrackerMaintenanceWorker.enqueue_full_remask()
+
+      assert {:ok, %Oban.Job{conflict?: true}} =
+               ErrorTrackerMaintenanceWorker.enqueue_full_remask()
+
+      assert %{success: 1} = Oban.drain_queue(queue: :default)
+
+      # Finished, it still stands for its version, so a later boot adds none.
+      assert {:ok, %Oban.Job{conflict?: true}} =
+               ErrorTrackerMaintenanceWorker.enqueue_full_remask()
+
+      assert [%Oban.Job{state: "completed"}] =
+               Repo.all(
+                 from j in Oban.Job, where: j.worker == ^inspect(ErrorTrackerMaintenanceWorker)
+               )
     end
   end
 
