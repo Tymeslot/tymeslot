@@ -1,0 +1,139 @@
+/* Overview: the organiser's introduction, then the meeting types as one
+   bordered list with a row per type. */
+
+.paper-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-xl);
+  text-align: center;
+}
+
+.paper-intro .paper-avatar {
+  margin-bottom: var(--space-xs);
+}
+
+.paper-intro__greeting,
+.paper-intro__instruction {
+  max-width: 32rem;
+  margin: 0;
+  color: var(--ink-2);
+}
+
+/* --- The list --- */
+
+.paper-types {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+  border: var(--border-width-thin) solid var(--line-1);
+  border-radius: min(var(--radius-card), var(--paper-radius-box));
+}
+
+.paper-types__item + .paper-types__item {
+  border-top: var(--border-width-thin) solid var(--line-1);
+}
+
+/* --- A row: name and description, then length and price, then a chevron --- */
+
+.paper-type {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-md);
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--space-md) var(--space-lg);
+  border: 0;
+  border-left: var(--border-width-thick) solid transparent;
+  background: var(--theme-surface);
+  color: var(--ink-1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.paper-type:hover {
+  background: var(--surface-subtle);
+}
+
+.paper-type[aria-pressed="true"] {
+  border-left-color: var(--theme-primary);
+  background: var(--paper-selected-surface);
+}
+
+/* The list clips its rows to its corners, so the focus ring sits inside
+   the row instead of around it. */
+.paper-type:focus-visible {
+  outline-offset: calc(-2 * var(--border-width-medium));
+}
+
+.paper-type__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  min-width: 0;
+}
+
+.paper-type__name {
+  font-size: var(--theme-font-size-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--theme-line-height-snug);
+  overflow-wrap: anywhere;
+}
+
+.paper-type__description {
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.paper-type__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-3xs);
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.paper-type__price {
+  color: var(--ink-1);
+  font-weight: var(--font-weight-medium);
+}
+
+.paper-type__chevron {
+  width: var(--paper-icon-sm);
+  height: var(--paper-icon-sm);
+  color: var(--ink-2);
+}
+
+.paper-type[aria-pressed="true"] .paper-type__chevron {
+  color: var(--paper-accent-ink);
+}
+
+/* A narrow card: length and price move under the name, the chevron goes. */
+@container scheduling (max-width: 30rem) {
+  .paper-type {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .paper-type__meta {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .paper-type__chevron {
+    display: none;
+  }
+}

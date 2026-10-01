@@ -14,6 +14,7 @@
 @import "../../shared/components/preview-notice.css";
 @import "../../shared/components/approval-notice.css";
 @import "../../shared/components/language-switcher.css";
+@import "./modules/overview.css";
 @import "../../shared/components/slot-list.css";
 @import "../../shared/components/timezone-picker.css";
 @import "../../shared/components/custom-questions.css";
