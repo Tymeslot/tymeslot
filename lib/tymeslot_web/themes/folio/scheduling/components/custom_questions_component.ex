@@ -67,10 +67,8 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.CustomQuestionsComponen
             phx-click="back_step"
             phx-target={@myself}
           >
-            <span class="custom-question-cta-nowrap">
-              <.icon name="hero-arrow-left-mini" class="folio-button__icon" />
-              {dgettext("booking", "Back")}
-            </span>
+            <.icon name="hero-arrow-left-mini" class="folio-button__icon" />
+            {dgettext("booking", "Back")}
           </button>
           <button
             type="button"
@@ -78,10 +76,8 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.CustomQuestionsComponen
             phx-click="next_step"
             phx-target={@myself}
           >
-            <span class="custom-question-cta-nowrap">
-              {if @last?, do: dgettext("booking", "Continue"), else: dgettext("booking", "Next")}
-              <.icon name="hero-arrow-right-mini" class="folio-button__icon" />
-            </span>
+            {if @last?, do: dgettext("booking", "Continue"), else: dgettext("booking", "Next")}
+            <.icon name="hero-arrow-right-mini" class="folio-button__icon" />
           </button>
         </div>
       </div>
