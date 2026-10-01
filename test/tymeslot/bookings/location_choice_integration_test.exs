@@ -21,6 +21,7 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
   alias Tymeslot.Bookings.Create
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Emails.Templates.AppointmentConfirmation
+  alias Tymeslot.Emails.Templates.AppointmentReminder
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.LocationOption
@@ -352,6 +353,17 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
       assert reloaded.location == "Munich office (Marienplatz 8)"
       assert email.text_body =~ "Munich office (Marienplatz 8)"
       refute email.text_body =~ "arranged with you after booking"
+
+      # The reminders still to come name it too, for the booker and the host.
+      for role <- [:attendee, :organizer] do
+        recipient = Map.fetch!(details, :"#{role}_email")
+        reminder = AppointmentReminder.render(role, recipient, details)
+
+        assert reminder.html_body =~ "Munich office"
+        assert reminder.text_body =~ "Munich office (Marienplatz 8)"
+        refute reminder.text_body =~ "to be arranged"
+        refute reminder.text_body =~ "arranged with you after booking"
+      end
     end
 
     test "deleting a location's only venue makes its next booking one to arrange", ctx do
