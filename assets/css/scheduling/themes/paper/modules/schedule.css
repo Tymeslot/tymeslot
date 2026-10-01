@@ -1,0 +1,116 @@
+/* Schedule step: the meeting's details and the picker (calendar, times,
+   timezone), laid out by the card's own width:
+     below 40rem  one column: details, calendar, times, timezone
+     from 40rem   the details beside the picker, a rule between them
+     from 52rem   details, calendar and times side by side, the timezone
+                  picker under the calendar, the times scrolling inside */
+
+.paper-schedule {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-lg);
+}
+
+/* --- Details --- */
+
+.paper-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  min-width: 0;
+  padding-bottom: var(--space-lg);
+  border-bottom: var(--border-width-thin) solid var(--line-1);
+}
+
+.paper-details__organiser {
+  margin: var(--space-2xs) 0 0;
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.paper-details__title {
+  margin: 0;
+  font-family: var(--theme-font-heading);
+  font-size: var(--theme-font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--theme-line-height-snug);
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.paper-details .paper-facts {
+  margin-top: var(--space-2xs);
+}
+
+.paper-details__description {
+  margin: var(--space-xs) 0 0;
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+/* --- Picker --- */
+
+.paper-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "calendar"
+    "slots"
+    "timezone";
+  gap: var(--space-lg);
+  min-width: 0;
+}
+
+.paper-calendar {
+  grid-area: calendar;
+  min-width: 0;
+}
+
+.paper-slots {
+  grid-area: slots;
+  min-width: 0;
+}
+
+.paper-timezone {
+  grid-area: timezone;
+}
+
+/* Two columns: the details beside the picker. */
+@container scheduling (min-width: 40rem) {
+  .paper-schedule {
+    grid-template-columns: var(--paper-details-width) minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .paper-details {
+    padding: 0 var(--space-lg) 0 0;
+    border-bottom: 0;
+    border-right: var(--border-width-thin) solid var(--line-1);
+  }
+
+  .paper-picker {
+    padding-left: var(--space-lg);
+  }
+}
+
+/* Three columns: details, calendar, times. */
+@container scheduling (min-width: 52rem) {
+  .paper-picker {
+    grid-template-columns: minmax(0, 1fr) var(--paper-slots-width);
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "calendar slots"
+      "timezone slots";
+    align-items: start;
+    column-gap: var(--space-lg);
+  }
+
+  .paper-slots .slot-list__body {
+    max-height: var(--paper-slots-max-height);
+    overflow-y: auto;
+  }
+}

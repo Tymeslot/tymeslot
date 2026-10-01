@@ -1,0 +1,144 @@
+/* The day's times (the shared SlotList, shared/components/slot-list.css):
+   outlined buttons in the accent, filled when chosen, and hour groups
+   behind a toggle for a meeting type with fine-grained starts. */
+
+.paper-slots .slot-list__heading {
+  margin: 0 0 var(--space-sm);
+  font-family: var(--theme-font-heading);
+  font-size: var(--theme-font-size-md);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* The heading is focused by script (AutoScrollToSlots) only to move the
+   reading position; it is not a control, so it draws no ring. */
+.paper-slots .slot-list__heading:focus {
+  outline: none;
+}
+
+.paper-slots .slot-list__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding-right: var(--space-3xs);
+}
+
+.paper-slots .slot-list__groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.paper-slots .slot-list__period {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.paper-slots .slot-list__period-label {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-2xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+/* The narrowest column holds an eight-character time ("09:00 AM") on one
+   line; the font size is set here so ch measures the slot's text. */
+.paper-slots .slot-list__grid {
+  font-size: var(--theme-font-size-sm);
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(max(5.5rem, calc(8ch + 2 * var(--space-sm) + 2 * var(--border-width-thin))), 1fr)
+  );
+}
+
+.paper-slots .slot-list__slot {
+  box-sizing: border-box;
+  min-height: var(--paper-control-height);
+  padding: 0 var(--space-sm);
+  border: var(--border-width-thin) solid var(--theme-primary);
+  border-radius: var(--radius-control);
+  background: var(--theme-surface);
+  color: var(--theme-primary);
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.paper-slots .slot-list__slot:hover {
+  transform: none;
+  background: var(--paper-tint);
+  color: var(--paper-accent-ink);
+}
+
+.paper-slots .slot-list__slot.slot-list__slot--selected {
+  border-color: var(--theme-primary-solid);
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+}
+
+/* --- Hour groups --- */
+
+.paper-slots .slot-list__slot--hour {
+  gap: var(--space-2xs);
+}
+
+.paper-slots .slot-list__hour-count {
+  min-width: 1.25rem;
+  padding: 0 var(--space-3xs);
+  border-radius: var(--radius-full);
+  background: var(--paper-tint);
+  color: var(--paper-accent-ink);
+  font-size: var(--theme-font-size-2xs);
+}
+
+.paper-slots .slot-list__slot--hour.slot-list__slot--expanded {
+  background: var(--paper-tint);
+  color: var(--paper-accent-ink);
+}
+
+.paper-slots .slot-list__grid--minutes {
+  padding: var(--space-xs);
+  border: var(--border-width-thin) solid var(--line-1);
+  border-radius: min(var(--radius-card), var(--paper-radius-box));
+  background: var(--surface-subtle);
+}
+
+/* --- Prompt, loading, empty and error states --- */
+
+.paper-slots .slot-list__prompt,
+.paper-slots .slot-list__loading,
+.paper-slots .slot-list__empty,
+.paper-slots .slot-list__error {
+  padding: var(--space-lg) var(--space-md);
+  border: var(--border-width-thin) dashed var(--line-2);
+  border-radius: min(var(--radius-card), var(--paper-radius-box));
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+  text-align: center;
+}
+
+.paper-slots .slot-list__prompt p,
+.paper-slots .slot-list__empty p {
+  margin: 0;
+}
+
+.paper-slots .slot-list__empty p + p {
+  margin-top: var(--space-3xs);
+}
+
+.paper-slots .slot-list__error {
+  border-style: solid;
+  border-color: var(--theme-danger);
+  color: var(--theme-danger);
+}
+
+/* Three columns: the times are a narrow column of their own, one per row. */
+@container scheduling (min-width: 52rem) {
+  .paper-slots .slot-list__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

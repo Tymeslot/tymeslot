@@ -15,8 +15,12 @@
 @import "../../shared/components/approval-notice.css";
 @import "../../shared/components/language-switcher.css";
 @import "./modules/overview.css";
+@import "./modules/schedule.css";
+@import "./modules/calendar.css";
 @import "../../shared/components/slot-list.css";
+@import "./modules/time-slots.css";
 @import "../../shared/components/timezone-picker.css";
+@import "./modules/timezone.css";
 @import "../../shared/components/custom-questions.css";
 @import "../../shared/components/booking-fields.css";
 @import "../../shared/components/manage-pages.css";
