@@ -46,7 +46,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.BookingComponent do
             meeting_type: assigns.meeting_type,
             duration: assigns.duration
           }),
-        price: BookingText.price_label(assigns.meeting_type, assigns.host_currency)
+        price:
+          BookingText.price_label(assigns.meeting_type, assigns.host_currency, assigns.locale)
       )
 
     ~H"""

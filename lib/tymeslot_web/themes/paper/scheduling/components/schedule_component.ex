@@ -43,7 +43,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
     assigns =
       assign(assigns,
         duration_text: BookingText.duration_label(assigns),
-        price: BookingText.price_label(assigns.meeting_type, assigns.host_currency),
+        price:
+          BookingText.price_label(assigns.meeting_type, assigns.host_currency, assigns.locale),
         days:
           CalendarHelpers.get_calendar_days(
             assigns.user_timezone,

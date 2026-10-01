@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
             meeting_type={meeting_type}
             slug={MeetingTypes.effective_slug(meeting_type)}
             selected_duration={@selected_duration}
-            price={BookingText.price_label(meeting_type, @host_currency)}
+            price={BookingText.price_label(meeting_type, @host_currency, @locale)}
             target={@myself}
           />
         </li>
