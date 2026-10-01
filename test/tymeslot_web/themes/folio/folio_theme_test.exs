@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Themes.Folio.FolioThemeTest do
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.Presets
   alias Tymeslot.ThemeCustomizations.Tokens
+  alias TymeslotWeb.Themes.Core.ThemeInfo
   alias TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent
   alias TymeslotWeb.Themes.Folio.Scheduling.Wrapper
 
@@ -219,6 +220,12 @@ defmodule TymeslotWeb.Themes.Folio.FolioThemeTest do
 
       assert html =~ ~r/<dd>\s*30 min\s*<\/dd>/
       refute html =~ "30-minutes"
+    end
+  end
+
+  describe "offered" do
+    test "the dashboard and onboarding pickers list Folio" do
+      assert {"Folio", "4"} in ThemeInfo.theme_options()
     end
   end
 end

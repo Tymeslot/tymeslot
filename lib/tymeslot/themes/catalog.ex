@@ -72,7 +72,7 @@ defmodule Tymeslot.Themes.Catalog do
         name: "Folio",
         heading_style: :named,
         customization_spec: Tymeslot.ThemeCustomizations.FolioSpec,
-        status: :beta
+        status: :active
       }
     }
   end
