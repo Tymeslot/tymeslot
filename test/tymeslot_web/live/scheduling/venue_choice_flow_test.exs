@@ -46,38 +46,6 @@ defmodule TymeslotWeb.Live.Scheduling.VenueChoiceFlowTest do
     %{user: insert(:user)}
   end
 
-  defp bookable_profile(user, theme_id) do
-    profile =
-      insert(:profile,
-        user: user,
-        username: "venuebooker#{theme_id}",
-        booking_theme: theme_id,
-        timezone: "America/New_York"
-      )
-
-    schedule =
-      insert(:availability_schedule,
-        profile: profile,
-        is_default: true,
-        advance_booking_days: 30,
-        min_advance_hours: 0,
-        buffer_minutes: 0
-      )
-
-    Enum.each(1..7, fn day_of_week ->
-      insert(:weekly_availability,
-        schedule: schedule,
-        day_of_week: day_of_week,
-        is_available: true,
-        start_time: ~T[09:00:00],
-        end_time: ~T[17:00:00]
-      )
-    end)
-
-    insert(:calendar_integration, user: user, is_active: true)
-    profile
-  end
-
   defp submit(view, email) do
     view
     |> form("form[phx-submit='submit']", %{
@@ -127,7 +95,11 @@ defmodule TymeslotWeb.Live.Scheduling.VenueChoiceFlowTest do
           ]
         )
 
-        %{profile: bookable_profile(user, unquote(theme_id)), berlin: berlin, munich: munich}
+        %{
+          profile: bookable_profile(user, unquote(theme_id), "venuebooker#{unquote(theme_id)}"),
+          berlin: berlin,
+          munich: munich
+        }
       end
 
       @tag :capture_log
@@ -217,7 +189,10 @@ defmodule TymeslotWeb.Live.Scheduling.VenueChoiceFlowTest do
           locations: [in_person_location([berlin], id: "loc-office", label: "Our office")]
         )
 
-        %{profile: bookable_profile(user, unquote(theme_id)), berlin: berlin}
+        %{
+          profile: bookable_profile(user, unquote(theme_id), "venuebooker#{unquote(theme_id)}"),
+          berlin: berlin
+        }
       end
 
       @tag :capture_log
@@ -265,7 +240,7 @@ defmodule TymeslotWeb.Live.Scheduling.VenueChoiceFlowTest do
           locations: [in_person_location([], id: "loc-in-person", label: "In person")]
         )
 
-        %{profile: bookable_profile(user, unquote(theme_id))}
+        %{profile: bookable_profile(user, unquote(theme_id), "venuebooker#{unquote(theme_id)}")}
       end
 
       @tag :capture_log

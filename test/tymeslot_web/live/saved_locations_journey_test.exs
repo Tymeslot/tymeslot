@@ -67,38 +67,6 @@ defmodule TymeslotWeb.SavedLocationsJourneyTest do
     %{user: insert(:user, onboarding_completed_at: DateTime.utc_now())}
   end
 
-  defp bookable_profile(user, theme_id) do
-    profile =
-      insert(:profile,
-        user: user,
-        username: "journey#{theme_id}",
-        booking_theme: theme_id,
-        timezone: "America/New_York"
-      )
-
-    schedule =
-      insert(:availability_schedule,
-        profile: profile,
-        is_default: true,
-        advance_booking_days: 30,
-        min_advance_hours: 0,
-        buffer_minutes: 0
-      )
-
-    Enum.each(1..7, fn day_of_week ->
-      insert(:weekly_availability,
-        schedule: schedule,
-        day_of_week: day_of_week,
-        is_available: true,
-        start_time: ~T[09:00:00],
-        end_time: ~T[17:00:00]
-      )
-    end)
-
-    insert(:calendar_integration, user: user, is_active: true)
-    profile
-  end
-
   defp organiser_conn(user) do
     build_conn()
     |> init_test_session(%{})
@@ -219,7 +187,7 @@ defmodule TymeslotWeb.SavedLocationsJourneyTest do
           )
 
         %{
-          profile: bookable_profile(user, unquote(theme_id)),
+          profile: bookable_profile(user, unquote(theme_id), "journey#{unquote(theme_id)}"),
           berlin: berlin,
           meeting_type: meeting_type
         }
@@ -271,7 +239,7 @@ defmodule TymeslotWeb.SavedLocationsJourneyTest do
           locations: [in_person_location([], id: "loc-in-person", label: "In person")]
         )
 
-        %{profile: bookable_profile(user, unquote(theme_id))}
+        %{profile: bookable_profile(user, unquote(theme_id), "journey#{unquote(theme_id)}")}
       end
 
       @tag :capture_log
@@ -328,7 +296,7 @@ defmodule TymeslotWeb.SavedLocationsJourneyTest do
         ]
       )
 
-      %{profile: bookable_profile(user, "1"), integration: integration}
+      %{profile: bookable_profile(user, "1", "journey1"), integration: integration}
     end
 
     @tag :capture_log
@@ -393,7 +361,7 @@ defmodule TymeslotWeb.SavedLocationsJourneyTest do
         )
 
       %{
-        profile: bookable_profile(user, "1"),
+        profile: bookable_profile(user, "1", "journey1"),
         berlin: berlin,
         munich: munich,
         meeting: meeting,
@@ -485,7 +453,7 @@ defmodule TymeslotWeb.SavedLocationsJourneyTest do
         end
 
         %{
-          profile: bookable_profile(user, unquote(theme_id)),
+          profile: bookable_profile(user, unquote(theme_id), "journey#{unquote(theme_id)}"),
           berlin: berlin,
           munich: munich,
           book: book,
@@ -607,7 +575,11 @@ defmodule TymeslotWeb.SavedLocationsJourneyTest do
           locations: [in_person_location([berlin], id: "loc-office", label: "Our office")]
         )
 
-      %{profile: bookable_profile(user, "1"), berlin: berlin, meeting_type: meeting_type}
+      %{
+        profile: bookable_profile(user, "1", "journey1"),
+        berlin: berlin,
+        meeting_type: meeting_type
+      }
     end
 
     @tag :capture_log

@@ -355,8 +355,10 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
       refute email.text_body =~ "arranged with you after booking"
 
       # The reminders still to come name it too, for the booker and the host.
-      for role <- [:attendee, :organizer] do
-        recipient = Map.fetch!(details, :"#{role}_email")
+      for {role, recipient} <- [
+            attendee: details.attendee_email,
+            organizer: details.organizer_email
+          ] do
         reminder = AppointmentReminder.render(role, recipient, details)
 
         assert reminder.html_body =~ "Munich office"
