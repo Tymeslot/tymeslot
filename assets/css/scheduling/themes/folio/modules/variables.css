@@ -93,6 +93,11 @@
   --notice-warning-border: color-mix(in srgb, var(--folio-warning-hue) 40%, var(--theme-surface));
   --radius-control: 8px;
   --radius-card: 12px;
+  /* Boxes taller than one line (the message field, the timezone panel, the
+     location choices, notices): the control radius, never more than the
+     card's, so "round" keeps pill controls without turning these into
+     capsules. */
+  --folio-radius-panel: min(var(--radius-control), var(--radius-card));
 
   /* Spacing. */
   --space-hairline: 1px;

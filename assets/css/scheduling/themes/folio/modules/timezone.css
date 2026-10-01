@@ -10,7 +10,7 @@
   gap: var(--space-xs);
   padding: var(--space-sm) var(--space-md);
   border: var(--border-width-thin) solid var(--folio-line);
-  border-radius: var(--radius-control);
+  border-radius: var(--folio-radius-panel);
   background: var(--surface-subtle);
 }
 

@@ -13,3 +13,9 @@
   min-height: var(--folio-control-height);
   font-family: var(--theme-font-family);
 }
+
+/* A notice runs to several lines: the panel radius, not the pill a "round"
+   control radius would make of it. */
+.folio-card--page .manage-page__notice {
+  border-radius: var(--folio-radius-panel);
+}

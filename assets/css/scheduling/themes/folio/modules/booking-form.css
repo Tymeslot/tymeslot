@@ -46,6 +46,7 @@
 
 .folio-theme-wrapper textarea.input {
   min-height: calc(var(--folio-control-height) * 2.5);
+  border-radius: var(--folio-radius-panel);
   line-height: var(--folio-line-height-body);
   resize: vertical;
 }
@@ -192,7 +193,7 @@
 
 .folio-theme-wrapper .location-options {
   border: var(--border-width-thin) solid var(--border-light);
-  border-radius: var(--radius-control);
+  border-radius: var(--folio-radius-panel);
   background: var(--surface-subtle);
 }
 
