@@ -117,7 +117,7 @@ defmodule Tymeslot.ThemeCustomizations.PaletteDerivation do
   # sit in the middle lightness band, darkened where a bright hue needs it to
   # show at 3:1 on the ground.
   defp light_colors(seed, {h, s, l}) do
-    background = Colour.hsl_to_hex({h, 0.30, 0.98})
+    background = Colour.hsl_to_hex({h, 0.25, 0.96})
     surface = Colour.hsl_to_hex({h, 0.30, 0.995})
     primary = ContrastTokens.fit_text(seed, surface)
 

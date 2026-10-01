@@ -1,5 +1,7 @@
 /* Shared Layout Primitives for Scheduling Themes
    Colours come from the theme's --status-* tokens (see shared/tokens.css).
+   The readiness card also reads --radius-card, --readiness-card-max-width
+   (defaulted in tokens.css) and --theme-font-heading.
    Replaces the old variables.css + utilities.css split. */
 
 /* Tailwind CSS is imported by each theme's entry file (theme.css) in v4 —
@@ -69,8 +71,9 @@
 }
 
 .awaiting-payment-heading {
+  font-family: var(--theme-font-heading);
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   margin: 0 0 0.75rem;
   color: var(--status-ink-heading);
 }
@@ -112,9 +115,9 @@
    surface, whereas this replaces it. */
 .readiness-notice-card {
   width: 100%;
-  max-width: 32rem;
+  max-width: var(--readiness-card-max-width);
   padding: 2rem;
-  border-radius: var(--radius-2xl);
+  border-radius: var(--radius-card);
   background: var(--status-surface-opaque);
   backdrop-filter: blur(16px) saturate(150%);
   -webkit-backdrop-filter: blur(16px) saturate(150%);
@@ -137,8 +140,9 @@
 }
 
 .readiness-notice-heading {
+  font-family: var(--theme-font-heading);
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   margin: 0 0 0.75rem;
   color: var(--status-ink-heading);
 }

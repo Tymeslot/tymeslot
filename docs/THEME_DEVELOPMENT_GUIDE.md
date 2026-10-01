@@ -378,7 +378,7 @@ Each theme's `theme.css` imports the shared entry, then the shared token file ri
 - Type: `--theme-font-family` (a `var(--font-stack-<id>)`, see *Fonts* below), `--theme-font-size-3xs`, `-2xs`, `-xs`, `-sm`, `-base`, `-md`, `-lg`, `-2xl`, `-3xl`; `--letter-spacing-wide`
 - Sizes and effects: `--space-hairline`, `--icon-sm`, `--shadow-md`
 
-`shared/tokens.css` defaults 25 tokens on `:where(:root)`, so a theme defines them only to change them: the border widths, font weights, line heights and transitions, `--z-dropdown`, `--flag-height`, `--dropdown-max-height`, the role aliases `--line-1`, `--line-2`, `--surface-1` and `--notice-warning`, the solid pairs `--theme-primary-solid(-hover)` and `--theme-accent-solid`, the `--chrome-*` tokens over a background photo or video, and `--print-line`. A theme's `:root` outranks them whatever the import order.
+`shared/tokens.css` defaults 26 tokens on `:where(:root)`, so a theme defines them only to change them: the border widths, font weights, line heights and transitions, `--z-dropdown`, `--flag-height`, `--dropdown-max-height`, `--readiness-card-max-width`, the role aliases `--line-1`, `--line-2`, `--surface-1` and `--notice-warning`, the solid pairs `--theme-primary-solid(-hover)` and `--theme-accent-solid`, the `--chrome-*` tokens over a background photo or video, and `--print-line`. A theme's `:root` outranks them whatever the import order.
 
 The radius scale they read (`--radius-sm`, `-md`, `-lg`, `-xl`, `-2xl`, `-full`) has fallback values in `shared/layout.css`, so a theme defines those only to change them.
 
