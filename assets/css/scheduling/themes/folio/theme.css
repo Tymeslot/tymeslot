@@ -23,9 +23,13 @@
 @import "../../shared/components/slot-list.css";
 @import "./modules/time-slots.css";
 @import "../../shared/components/custom-questions.css";
+@import "./modules/custom-questions.css";
 @import "../../shared/components/booking-fields.css";
+@import "./modules/booking-form.css";
+@import "./modules/confirmation.css";
 @import "../../shared/components/manage-pages.css";
 @import "../../shared/components/polls.css";
 @import "../../shared/components/payment-pages.css";
+@import "./modules/pages.css";
 @import "../../shared/embed.css";
 @import "./modules/iframe.css";

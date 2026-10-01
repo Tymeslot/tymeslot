@@ -1,0 +1,222 @@
+/* The booking step, and the one input style every Folio field uses: the
+   shared booking form (CoreComponents' .input, .label, .form-field-wrapper,
+   .form-field-error), the question inputs, and the guest and phone inputs.
+   The guest and location fields' structure is
+   shared/components/booking-fields.css, imported just before this file;
+   their colours are here. Unlayered rules, so they replace the Tailwind
+   utilities on the same elements. */
+
+/* --- Fields --- */
+
+.folio-theme-wrapper .form-field-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.folio-theme-wrapper .label {
+  margin: 0;
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--theme-text);
+}
+
+/* The required marker. */
+.folio-theme-wrapper .label span {
+  color: var(--theme-danger);
+}
+
+.folio-theme-wrapper .input,
+.folio-theme-wrapper .guest-add__input,
+.folio-theme-wrapper .location-phone__input {
+  width: 100%;
+  min-height: var(--folio-control-height);
+  padding: var(--space-xs) var(--space-sm);
+  box-sizing: border-box;
+  border: var(--border-width-thin) solid var(--border-medium);
+  border-radius: var(--radius-control);
+  background: var(--theme-surface);
+  color: var(--theme-text);
+  font: inherit;
+  font-size: var(--theme-font-size-base);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.folio-theme-wrapper textarea.input {
+  min-height: calc(var(--folio-control-height) * 2.5);
+  line-height: var(--folio-line-height-body);
+  resize: vertical;
+}
+
+.folio-theme-wrapper .input::placeholder,
+.folio-theme-wrapper .guest-add__input::placeholder,
+.folio-theme-wrapper .location-phone__input::placeholder {
+  color: color-mix(in srgb, var(--theme-text-secondary) 80%, var(--theme-surface));
+}
+
+.folio-theme-wrapper .input:hover,
+.folio-theme-wrapper .guest-add__input:hover,
+.folio-theme-wrapper .location-phone__input:hover {
+  border-color: var(--folio-border-strong);
+}
+
+.folio-theme-wrapper .input:focus,
+.folio-theme-wrapper .guest-add__input:focus,
+.folio-theme-wrapper .location-phone__input:focus {
+  outline: none;
+  border-color: var(--theme-primary);
+  box-shadow: var(--focus-ring);
+}
+
+.folio-theme-wrapper .input-error {
+  border-color: var(--theme-danger);
+  background: color-mix(in srgb, var(--theme-danger) 6%, var(--theme-surface));
+}
+
+.folio-theme-wrapper .form-field-error {
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-danger);
+}
+
+/* --- The booking step --- */
+
+.folio-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-sm) var(--space-md);
+  margin: 0;
+  padding: var(--space-md);
+  border-radius: var(--radius-card);
+  background: var(--folio-tint);
+}
+
+.folio-summary__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  min-width: 0;
+}
+
+.folio-summary dd {
+  margin: 0;
+  font-weight: var(--font-weight-semibold);
+  color: var(--theme-text);
+}
+
+@container scheduling (width >= 40rem) {
+  .folio-summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.folio-booking,
+.folio-booking-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Name and email: stacked, side by side from 34rem. */
+.folio-contact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-md);
+}
+
+@container scheduling (width >= 34rem) {
+  .folio-contact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.folio-theme-wrapper .recaptcha-notice {
+  font-size: var(--theme-font-size-2xs);
+  color: var(--theme-text-secondary);
+}
+
+.folio-theme-wrapper .recaptcha-notice a {
+  color: var(--theme-primary);
+}
+
+/* --- Guests --- */
+
+.folio-theme-wrapper .guest-field__toggle {
+  color: var(--theme-primary);
+}
+
+.folio-theme-wrapper .guest-field__toggle:hover {
+  color: var(--theme-primary-hover);
+  text-decoration: underline;
+}
+
+.folio-theme-wrapper .guest-field__label,
+.folio-theme-wrapper .guest-chip__email {
+  color: var(--theme-text);
+}
+
+.folio-theme-wrapper .guest-field__count,
+.folio-theme-wrapper .guest-field__close {
+  color: var(--theme-text-secondary);
+}
+
+.folio-theme-wrapper .guest-chip {
+  border: var(--border-width-thin) solid var(--border-light);
+}
+
+.folio-theme-wrapper .guest-chip__remove {
+  color: var(--theme-text-secondary);
+  font-size: var(--theme-font-size-md);
+}
+
+.folio-theme-wrapper .guest-add__button {
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-control);
+  color: var(--theme-text);
+  font: inherit;
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.folio-theme-wrapper .guest-field__error {
+  color: var(--theme-danger);
+}
+
+/* --- Location --- */
+
+.folio-theme-wrapper .location-field__label,
+.folio-theme-wrapper .location-phone__label {
+  color: var(--theme-text);
+}
+
+.folio-theme-wrapper .location-options {
+  border: var(--border-width-thin) solid var(--border-light);
+  border-radius: var(--radius-control);
+  background: var(--surface-subtle);
+}
+
+.folio-theme-wrapper .location-option {
+  border-radius: var(--radius-control);
+  color: var(--theme-text-secondary);
+}
+
+.folio-theme-wrapper .location-option:hover {
+  background: var(--surface-light);
+  color: var(--theme-text);
+}
+
+.folio-theme-wrapper .location-option:has(.location-option__radio:focus-visible) {
+  outline: var(--border-width-medium) solid var(--theme-primary);
+  outline-offset: var(--space-hairline);
+}
+
+.folio-theme-wrapper .location-option--selected,
+.folio-theme-wrapper .location-option--selected:hover {
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+}
+
+.folio-theme-wrapper .location-field__detail {
+  color: var(--theme-text-secondary);
+}
