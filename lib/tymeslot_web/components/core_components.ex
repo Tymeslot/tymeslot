@@ -458,6 +458,11 @@ defmodule TymeslotWeb.Components.CoreComponents do
     doc: "Accessible name for the dialog when no :header slot is rendered"
 
   slot :header, required: false
+
+  slot :subtitle,
+    required: false,
+    doc: "A line of explanation under the header; rendered only with a :header"
+
   slot :inner_block, required: true
   slot :footer, required: false
   @spec modal(map()) :: Phoenix.LiveView.Rendered.t()

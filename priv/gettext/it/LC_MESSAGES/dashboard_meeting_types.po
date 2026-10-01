@@ -323,3 +323,8 @@ msgstr "es. Ufficio di Milano"
 #, elixir-autogen, elixir-format
 msgid "This location no longer exists"
 msgstr "Questa sede non esiste più"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "A place you meet people, such as an office or a studio. Offer it on any in-person meeting type, and bookers see its name and address when they book."
+msgstr "Una sede in cui incontri le persone, come un ufficio o uno studio. Offrila su qualsiasi tipo di riunione di persona: chi prenota ne vedrà il nome e l'indirizzo al momento della prenotazione."

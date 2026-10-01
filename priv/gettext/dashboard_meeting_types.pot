@@ -323,3 +323,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "This location no longer exists"
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "A place you meet people, such as an office or a studio. Offer it on any in-person meeting type, and bookers see its name and address when they book."
+msgstr ""

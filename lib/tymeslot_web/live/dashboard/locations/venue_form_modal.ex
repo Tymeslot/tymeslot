@@ -30,6 +30,12 @@ defmodule TymeslotWeb.Dashboard.Locations.VenueFormModal do
           {dgettext("dashboard_meeting_types", "Add location")}
         <% end %>
       </:header>
+      <:subtitle>
+        {dgettext(
+          "dashboard_meeting_types",
+          "A place you meet people, such as an office or a studio. Offer it on any in-person meeting type, and bookers see its name and address when they book."
+        )}
+      </:subtitle>
 
       <.form
         for={@form}
@@ -46,6 +52,7 @@ defmodule TymeslotWeb.Dashboard.Locations.VenueFormModal do
           placeholder={dgettext("dashboard_meeting_types", "e.g., Berlin office")}
           maxlength={VenueSchema.name_max_length()}
           required
+          phx-hook={@mode == :new && "AutoFocus"}
         />
 
         <.input

@@ -322,3 +322,8 @@ msgstr "np. biuro w Berlinie"
 #, elixir-autogen, elixir-format
 msgid "This location no longer exists"
 msgstr "Ta lokalizacja już nie istnieje"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "A place you meet people, such as an office or a studio. Offer it on any in-person meeting type, and bookers see its name and address when they book."
+msgstr "Miejsce, w którym spotykasz się z ludźmi, na przykład biuro lub studio. Zaoferuj je w dowolnym typie spotkania osobistego, a osoby rezerwujące zobaczą jego nazwę i adres podczas rezerwacji."

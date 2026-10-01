@@ -40,6 +40,19 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponentTest do
   end
 
   describe "adding a location" do
+    test "opens ready to type the name, explaining what a location is for", %{conn: conn} do
+      view = open(conn)
+      view |> element("[data-testid='add-venue']") |> render_click()
+
+      assert has_element?(view, "#venue-form input[name='venue[name]'][phx-hook='AutoFocus']")
+
+      assert has_element?(
+               view,
+               "#venue-form-modal-subtitle",
+               "Offer it on any in-person meeting type"
+             )
+    end
+
     test "saves it and lists it", %{conn: conn, user: user} do
       view = open(conn)
       view |> element("[data-testid='add-venue']") |> render_click()
@@ -95,6 +108,8 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponentTest do
       view |> element("[phx-click='edit_venue'][phx-value-id='#{venue.id}']") |> render_click()
 
       assert has_element?(view, "#venue-form input[value='Studio']")
+      # Editing leaves focus alone: AutoFocus would select the saved name.
+      refute has_element?(view, "#venue-form input[phx-hook='AutoFocus']")
 
       view
       |> form("#venue-form", %{
