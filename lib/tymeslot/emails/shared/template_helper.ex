@@ -113,6 +113,14 @@ defmodule Tymeslot.Emails.Shared.TemplateHelper do
   end
 
   @doc """
+  Marks a shared appointment payload as rendered for a guest the booker
+  invited (`audience: :guest`), which words the details for them rather than
+  for the booker.
+  """
+  @spec as_guest_view(map()) :: map()
+  def as_guest_view(appointment_details), do: Map.put(appointment_details, :audience, :guest)
+
+  @doc """
   The meeting-details map for an organiser-addressed render: the meeting as the
   organiser sees it, in their own timezone and on the clock they chose.
 

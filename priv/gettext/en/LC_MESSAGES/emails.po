@@ -536,3 +536,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "The address is to be arranged with the booker."
 msgstr ""
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "The address will be arranged after booking."
+msgstr ""

@@ -218,7 +218,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
   end
 
   describe "an in-person address arranged after booking" do
-    test "is noted under the location, in HTML and text" do
+    test "is not noted under the cancelled appointment's location, in HTML or text" do
       note = "The address will be arranged with you after booking."
 
       meeting =
@@ -230,8 +230,9 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
 
       email = RescheduleRequest.render(meeting)
 
-      assert email.html_body =~ note
-      assert email.text_body =~ "Location: In person\n#{note}"
+      refute email.html_body =~ note
+      refute email.text_body =~ note
+      assert email.text_body =~ "Location: In person\n"
     end
   end
 end

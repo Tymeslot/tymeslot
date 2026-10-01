@@ -16,7 +16,6 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
     Styles,
     TemplateHelper,
     Text,
-    TextBodyHelper,
     TimezoneHelper
   }
 
@@ -33,16 +32,18 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
       # Convert time to attendee's timezone if available
       attendee_time = TimezoneHelper.convert_to_attendee_timezone(meeting)
 
-      meeting_details = %{
-        date: attendee_time,
-        start_time: attendee_time,
-        start_time_attendee_tz: attendee_time,
-        duration: meeting.duration,
-        location: meeting.location,
-        location_type: BookingRequestLocation.type(meeting),
-        meeting_type: meeting.meeting_type || dgettext("emails_booking_requests", "Meeting"),
-        timezone: meeting.attendee_timezone || "UTC"
-      }
+      # The appointment is cancelled, so there is no address left to arrange.
+      meeting_details =
+        Formatting.without_location_note(%{
+          date: attendee_time,
+          start_time: attendee_time,
+          start_time_attendee_tz: attendee_time,
+          duration: meeting.duration,
+          location: meeting.location,
+          location_type: BookingRequestLocation.type(meeting),
+          meeting_type: meeting.meeting_type || dgettext("emails_booking_requests", "Meeting"),
+          timezone: meeting.attendee_timezone || "UTC"
+        })
 
       mjml_content = """
       #{Text.section_title(dgettext("emails_booking_requests", "Cancelled Appointment Details"))}
@@ -108,7 +109,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
     #{dgettext("emails_booking_requests", "CANCELLED APPOINTMENT DETAILS:")}
     #{dgettext("emails_booking_requests", "Date:")} #{Formatting.format_date_short(details.date, locale)}
     #{dgettext("emails_booking_requests", "Duration:")} #{Formatting.format_duration(details.duration, locale)}
-    #{dgettext("emails_booking_requests", "Location:")} #{Formatting.format_location(details)}#{TextBodyHelper.location_note_line(details)}
+    #{dgettext("emails_booking_requests", "Location:")} #{Formatting.format_location(details)}
     #{dgettext("emails_booking_requests", "Type:")} #{details.meeting_type}
     #{dgettext("emails_booking_requests", "Timezone:")} #{details.timezone}
 

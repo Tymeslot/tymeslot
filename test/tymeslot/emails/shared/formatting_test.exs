@@ -306,6 +306,22 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
                "The address is to be arranged with the booker."
     end
 
+    test "tells a guest only that it will be arranged" do
+      assert Formatting.location_note(%{location_type: :in_person_to_arrange, audience: :guest}) ==
+               "The address will be arranged after booking."
+    end
+
+    test "is dropped from details the note no longer applies to" do
+      details = %{location_type: :in_person_to_arrange, location: "In person"}
+
+      assert Formatting.location_note(Formatting.without_location_note(details)) == nil
+      assert Formatting.without_location_note(details).location == "In person"
+
+      assert Formatting.without_location_note(%{location_type: :video}) == %{
+               location_type: :video
+             }
+    end
+
     test "is nothing for any other location" do
       assert Formatting.location_note(%{location_type: :video, audience: :host}) == nil
       assert Formatting.location_note(%{location_type: :in_person}) == nil

@@ -235,8 +235,9 @@ defmodule Tymeslot.Emails.Shared.Formatting do
 
   Worded for whoever reads the email: `audience: :host` (set by the
   organiser renders, see `Tymeslot.Emails.Shared.TemplateHelper`) is told to
-  arrange it with the booker; anyone else, the default, that it will be
-  arranged with them.
+  arrange it with the booker; `audience: :guest` (a guest the booker
+  invited, who arranges nothing) only that it will be arranged; the booker,
+  the default, that it will be arranged with them.
   Must be called within a `Gettext.with_locale` block.
   """
   @spec location_note(%{
@@ -247,10 +248,26 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   def location_note(%{location_type: :in_person_to_arrange, audience: :host}),
     do: dgettext("emails", "The address is to be arranged with the booker.")
 
+  def location_note(%{location_type: :in_person_to_arrange, audience: :guest}),
+    do: dgettext("emails", "The address will be arranged after booking.")
+
   def location_note(%{location_type: :in_person_to_arrange}),
     do: dgettext("emails", "The address will be arranged with you after booking.")
 
   def location_note(_details), do: nil
+
+  @doc """
+  `details` without the arranged-after-booking note: an in-person meeting
+  whose address was still to be arranged reads as a plain in-person one.
+
+  For the details of a meeting that is not going ahead, such as a
+  cancellation, where there is no longer an address to arrange.
+  """
+  @spec without_location_note(map()) :: map()
+  def without_location_note(%{location_type: :in_person_to_arrange} = details),
+    do: %{details | location_type: :in_person}
+
+  def without_location_note(details), do: details
 
   @doc """
   Formats currency based on cents (or raw units for zero-decimal currencies) and currency code.

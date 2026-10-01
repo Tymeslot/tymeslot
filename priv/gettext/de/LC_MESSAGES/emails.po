@@ -536,3 +536,8 @@ msgstr "Die Adresse wird nach der Buchung mit Ihnen abgestimmt."
 #, elixir-autogen, elixir-format
 msgid "The address is to be arranged with the booker."
 msgstr "Die Adresse ist mit der buchenden Person abzustimmen."
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "The address will be arranged after booking."
+msgstr "Die Adresse wird nach der Buchung abgestimmt."
