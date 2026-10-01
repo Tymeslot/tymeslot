@@ -38,14 +38,3 @@
   justify-content: center;
   align-self: center;
 }
-
-/* The poll page's "yes": the success colour. Folio's accent is a brown
-   close to its warning colour, so "yes" and "if need be" would read alike. */
-html.scheduling-app .folio-card .poll-tally--yes .poll-tally-icon,
-html.scheduling-app .folio-card .poll-closed-icon--success {
-  color: var(--theme-success);
-}
-
-html.scheduling-app .folio-card .poll-vote-option--yes:has(input:checked) {
-  border-color: var(--theme-success);
-}

@@ -154,6 +154,9 @@
   --poll-row-line: var(--border-light);
   --poll-option-line: var(--border-medium);
   --poll-option-selected-surface: var(--folio-tint-strong);
+  /* The poll's "yes" in the success colour: Folio's accent is a brown close
+     to its warning colour, so "yes" and "if need be" would read alike. */
+  --poll-yes-ink: var(--theme-success);
 
   /* Payment return pages (shared/components/payment-pages.css). */
   --payment-page-max-width: 36rem;
