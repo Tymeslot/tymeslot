@@ -16,33 +16,31 @@ defmodule TymeslotWeb.Dashboard.Locations.VenueCard do
   def venue_card(assigns) do
     ~H"""
     <div
-      class="card-glass p-4 flex flex-col gap-3"
+      class="card-glass p-4 flex items-start gap-3"
       data-testid="venue-card"
       data-venue-id={@venue.id}
       data-id={@venue.id}
       draggable="true"
     >
-      <div class="flex items-start gap-3">
-        <span class="drag-handle cursor-grab active:cursor-grabbing text-tymeslot-400 shrink-0 mt-0.5">
-          <.icon name="hero-bars-2" class="w-4 h-4" />
-        </span>
-        <.icon name="hero-map-pin" class="w-5 h-5 text-turquoise-500 shrink-0 mt-0.5" />
-        <div class="flex-1 min-w-0">
-          <h3 class="text-token-base font-semibold text-tymeslot-800 truncate">{@venue.name}</h3>
-          <%!-- Kept on one line: under whitespace-pre-line, any line break
-               around the text would render as an empty line. --%>
-          <p
-            :if={@venue.description}
-            class="mt-1 text-token-sm text-tymeslot-600 whitespace-pre-line break-words"
-            phx-no-format
-          >{@venue.description}</p>
-          <p class="mt-2 text-token-xs text-tymeslot-500" data-testid="venue-usage">
-            {usage_label(@usage)}
-          </p>
-        </div>
+      <span class="drag-handle cursor-grab active:cursor-grabbing text-tymeslot-400 shrink-0 mt-0.5">
+        <.icon name="hero-bars-2" class="w-4 h-4" />
+      </span>
+      <.icon name="hero-map-pin" class="w-5 h-5 text-turquoise-500 shrink-0 mt-0.5" />
+      <div class="flex-1 min-w-0">
+        <h3 class="text-token-base font-semibold text-tymeslot-800 truncate">{@venue.name}</h3>
+        <%!-- Kept on one line: under whitespace-pre-line, any line break
+             around the text would render as an empty line. --%>
+        <p
+          :if={@venue.description}
+          class="mt-1 text-token-sm text-tymeslot-600 whitespace-pre-line break-words"
+          phx-no-format
+        >{@venue.description}</p>
+        <p class="mt-1 text-token-xs text-tymeslot-500" data-testid="venue-usage">
+          {usage_label(@usage)}
+        </p>
       </div>
 
-      <div class="flex justify-end gap-2">
+      <div class="flex shrink-0 gap-2">
         <.action_button
           variant={:secondary}
           phx-click="edit_venue"
