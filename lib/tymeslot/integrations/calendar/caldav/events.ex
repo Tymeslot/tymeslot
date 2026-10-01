@@ -270,7 +270,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
         ical_data = document_to_put(client, raw_ical, uid, event_data)
         ConditionalWrite.put(client, url, ical_data, etag, policy, opts)
 
-      {:error, :not_found} ->
+      # Gone as absent (`:not_found` from a 404, `:gone` from a 410), as
+      # `ConditionalWrite` takes it: the rebuild is what recreates an event
+      # the organiser deleted in their own client.
+      {:error, reason} when reason in [:not_found, :gone] ->
         rebuild_and_put(client, url, uid, event_data, policy, opts)
 
       {:error, reason} ->

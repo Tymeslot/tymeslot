@@ -145,6 +145,36 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BookingUpdatePatchTest do
       assert @second_attendee in lines
       assert "DTSTART:20261103T150000Z" in lines
     end
+
+    # Approval rewrites the event as CONFIRMED, and a video room or a
+    # change of venue moves it: a patch has to carry each of those onto the
+    # organiser's copy, not only the times.
+    test "rewrites the status, place and free/busy of the booking", ctx do
+      {:ok, _meeting} =
+        ctx.meeting
+        |> Changeset.change(
+          status: "awaiting_approval",
+          meeting_url: "https://meet.example.com/intro",
+          show_as_free: true
+        )
+        |> Repo.update()
+
+      cache_document(ctx.integration, organiser_document(), "\"etag-1\"")
+      serve(fn _method, _path -> {204, []} end)
+
+      assert :ok = reschedule(ctx.meeting)
+
+      assert [{"PUT", @href, ["\"etag-1\""], body}] = requests()
+      lines = LineFolder.unfold_lines(body)
+
+      assert "STATUS:TENTATIVE" in lines
+      assert "TRANSP:TRANSPARENT" in lines
+      assert "LOCATION:https://meet.example.com/intro" in lines
+      assert "CONFERENCE;VALUE=URI;FEATURE=VIDEO:https://meet.example.com/intro" in lines
+      refute "STATUS:CONFIRMED" in lines
+      refute "TRANSP:OPAQUE" in lines
+      assert "CATEGORIES:CLIENT-A" in lines
+    end
   end
 
   describe "falling back to a rebuild" do
@@ -197,6 +227,38 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BookingUpdatePatchTest do
 
       assert {"PUT", @href, ["\"etag-9\""], body} = List.last(requests())
       assert "DTSTART:20261103T150000Z" in LineFolder.unfold_lines(body)
+    end
+  end
+
+  describe "an event the organiser deleted in their own client" do
+    # The cached ETag is refused, and the read that follows finds nothing:
+    # the booking's event is recreated in the booking calendar rather than
+    # left missing, whichever of the two statuses the server reports absence
+    # with.
+    for status <- [404, 410] do
+      test "is recreated when the server answers #{status} to the read", ctx do
+        cache_document(ctx.integration, organiser_document(), "\"etag-1\"")
+
+        serve(fn
+          "PUT", _path, ["\"etag-1\""] -> {412, []}
+          "PUT", _path, ["*"] -> {412, []}
+          "PUT", _path, [] -> {201, []}
+          _read, _path, _if_match -> {unquote(status), []}
+        end)
+
+        assert :ok = reschedule(ctx.meeting)
+
+        requests = requests()
+        assert {"PUT", @href, ["\"etag-1\""], _stale} = hd(requests)
+
+        assert {"PUT", @href, ["*"], _wildcard} =
+                 Enum.find(requests, &match?({"PUT", _path, ["*"], _body}, &1))
+
+        assert {"PUT", @href, [], body} = List.last(requests)
+        lines = LineFolder.unfold_lines(body)
+        assert "DTSTART:20261103T150000Z" in lines
+        assert "PRODID:-//Tymeslot//CalDAV Client//EN" in lines
+      end
     end
   end
 
@@ -276,8 +338,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BookingUpdatePatchTest do
     )
   end
 
-  # Answers each request with `respond.(method, path)`, which returns
-  # `{status, headers}` or `{status, headers, body}`, and records it.
+  # Answers each request with `respond.(method, path)`, or with
+  # `respond.(method, path, if_match)` for a three-argument `respond`, which
+  # returns `{status, headers}` or `{status, headers, body}`, and records it.
   defp serve(respond) do
     test_pid = self()
 
@@ -286,8 +349,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BookingUpdatePatchTest do
       if_match = Conn.get_req_header(conn, "if-match")
       send(test_pid, {:request, conn.method, conn.request_path, if_match, body})
 
+      answer =
+        if is_function(respond, 3),
+          do: respond.(conn.method, conn.request_path, if_match),
+          else: respond.(conn.method, conn.request_path)
+
       {status, headers, resp_body} =
-        case respond.(conn.method, conn.request_path) do
+        case answer do
           {status, headers} -> {status, headers, ""}
           {status, headers, resp_body} -> {status, headers, resp_body}
         end
