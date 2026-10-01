@@ -39,11 +39,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PalettePanel do
           <% custom_selected = not is_nil(@customization.settings["custom_palette_seed"]) %>
           <%= if current_scheme do %>
             <.current_indicator
-              swatches={[
-                current_scheme.colors.primary,
-                current_scheme.colors.secondary,
-                current_scheme.colors.accent
-              ]}
+              swatches={
+                if custom_selected,
+                  do: primary_swatches(current_scheme),
+                  else: swatches(current_scheme, @group)
+              }
               label={scheme_name(current_scheme)}
               code={
                 if custom_selected,
@@ -106,18 +106,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PalettePanel do
           >
             <div class="flex items-center gap-2 mb-4 bg-tymeslot-50/50 p-2 rounded-token-xl group-hover/scheme:scale-110 transition-transform">
               <div
+                :for={colour <- swatches(scheme, @group)}
                 class="w-6 h-6 rounded-full shadow-sm border border-white"
-                style={"background-color: #{scheme.colors.primary}"}
-              >
-              </div>
-              <div
-                class="w-6 h-6 rounded-full shadow-sm border border-white"
-                style={"background-color: #{scheme.colors.secondary}"}
-              >
-              </div>
-              <div
-                class="w-6 h-6 rounded-full shadow-sm border border-white"
-                style={"background-color: #{scheme.colors.accent}"}
+                style={"background-color: #{colour}"}
               >
               </div>
             </div>
@@ -179,6 +170,19 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PalettePanel do
 
   def telemetry(_group, _field, value),
     do: {:color_scheme_changed, "color_scheme", %{scheme_id: value}}
+
+  # The three dots drawn for a scheme. The tones of a `follow_os` group share
+  # one primary family by design, so their primary, secondary and accent look
+  # the same; they differ in their grounds, so a tone shows its light ground,
+  # its secondary text and its dark ground. Any other scheme (and a tone
+  # without `dark_colors`) shows its primary, secondary and accent.
+  defp swatches(%{colors: colors, dark_colors: %{background: dark_background}}, %{follow_os: true}),
+       do: [colors.background, colors.text_secondary, dark_background]
+
+  defp swatches(scheme, _group), do: primary_swatches(scheme)
+
+  defp primary_swatches(%{colors: colors}),
+    do: [colors.primary, colors.secondary, colors.accent]
 
   # A tone's name is registered for extraction in `Presets.ColourSchemes`;
   # the older schemes' names have no entry and come back as they are.

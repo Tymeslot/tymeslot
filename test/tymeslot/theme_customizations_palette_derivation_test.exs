@@ -141,7 +141,7 @@ defmodule Tymeslot.ThemeCustomizationsPaletteDerivationTest do
         for seed <- @seeds,
             %{colors: c} = PaletteDerivation.derive_palette(seed, :light),
             problem <- [
-              Colour.relative_luminance(c.background) > 0.9 || :background_not_light,
+              Colour.relative_luminance(c.background) > 0.85 || :background_not_light,
               Colour.contrast_ratio(c.text, c.background) >= 7.0 || :text,
               Colour.contrast_ratio(c.text_secondary, c.background) >= 4.5 ||
                 :text_secondary_on_background,
@@ -152,6 +152,17 @@ defmodule Tymeslot.ThemeCustomizationsPaletteDerivationTest do
             do: {seed, problem}
 
       assert failures == []
+    end
+
+    test "a light palette's ground sits visibly below its card surface, whatever the seed" do
+      for seed <- @seeds do
+        %{colors: c} = PaletteDerivation.derive_palette(seed, :light)
+        {_h, _s, ground_l} = Colour.hex_to_hsl(c.background)
+        {_h, _s, surface_l} = Colour.hex_to_hsl(c.surface)
+
+        assert surface_l - ground_l >= 0.03,
+               "expected the ground at least 3 points below the surface for #{seed}"
+      end
     end
 
     test "a light palette's dark counterpart is the dark palette of the same seed" do
