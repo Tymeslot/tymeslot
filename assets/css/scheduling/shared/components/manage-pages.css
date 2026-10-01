@@ -182,9 +182,11 @@
   cursor: not-allowed;
 }
 
+/* A solid outline, as on the slot list and week grid: --focus-ring is a
+   25% tint, too faint against the card to show keyboard focus. */
 .manage-page__button:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
+  outline: var(--border-width-thick) solid var(--theme-primary);
+  outline-offset: var(--space-3xs);
 }
 
 .manage-page__button--primary {

@@ -96,14 +96,14 @@ defmodule TymeslotWeb.Live.Scheduling.VisitorTodayTest do
         |> get("/#{profile.username}/30-minutes?timezone=#{@zone}")
         |> html_response(200)
 
-      # Quill draws today twice (month grid and narrow-screen week row), so
-      # compare the distinct dates marked as today.
-      todays =
+      # Every day button that marks today: Quill draws it twice (month grid
+      # and narrow-screen week row), so compare the distinct dates.
+      today_buttons =
         html
         |> Floki.parse_document!()
-        |> Floki.find("[data-testid='calendar-day'][aria-current='date']")
-        |> Floki.attribute("data-date")
-        |> Enum.uniq()
+        |> Floki.find("button[phx-click='select_date'][phx-value-date][aria-current='date']")
+
+      todays = today_buttons |> Floki.attribute("phx-value-date") |> Enum.uniq()
 
       assert todays == [Date.to_iso8601(@local_today)],
              "expected the calendar to show #{@local_today} as today in #{@zone}, " <>
