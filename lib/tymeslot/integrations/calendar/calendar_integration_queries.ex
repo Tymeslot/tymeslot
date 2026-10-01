@@ -32,6 +32,10 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   @doc """
   Gets all active calendar integrations across all users.
   Used for health checks and monitoring.
+
+  Credentials are deliberately left encrypted: the sweep only needs the id,
+  user and provider, and decrypting every row would let a single row that no
+  longer decrypts (a changed key, corrupt bytes) abort the whole listing.
   """
   @spec list_all_active() :: list(CalendarIntegrationSchema.t())
   def list_all_active do
@@ -39,7 +43,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
     |> where([c], c.is_active == true)
     |> order_by([c], asc: c.name)
     |> Repo.all()
-    |> Enum.map(&CalendarIntegrationSchema.decrypt_credentials/1)
   end
 
   @doc """

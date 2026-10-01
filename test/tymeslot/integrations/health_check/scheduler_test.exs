@@ -1,10 +1,13 @@
 defmodule Tymeslot.Integrations.HealthCheck.SchedulerTest do
-  use ExUnit.Case, async: true
+  use Tymeslot.DataCase, async: true
   @moduletag :integrations
 
+  use Oban.Testing, repo: Tymeslot.Repo
+  import Tymeslot.Factory
   import Tymeslot.Test.ClockHelpers
 
   alias Tymeslot.Integrations.HealthCheck.Scheduler
+  alias Tymeslot.Workers.IntegrationHealthWorker
 
   describe "due_for_check?/2" do
     test "returns true for integrations never checked" do
@@ -77,6 +80,36 @@ defmodule Tymeslot.Integrations.HealthCheck.SchedulerTest do
 
       # Should have at least some variation (not all the same)
       assert results |> Enum.uniq() |> length() > 1
+    end
+  end
+
+  describe "schedule_all/1 with an undecryptable calendar integration" do
+    test "still enqueues a health check for every active integration" do
+      user = insert(:user)
+
+      good = insert(:calendar_integration, user: user, provider: "caldav", is_active: true)
+
+      # Undecryptable bytes stand in for a credential whose key is genuinely gone.
+      stale =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          is_active: true,
+          username_encrypted: :crypto.strong_rand_bytes(40),
+          password_encrypted: :crypto.strong_rand_bytes(40)
+        )
+
+      assert :ok = Scheduler.schedule_all(force: true)
+
+      assert_enqueued(
+        worker: IntegrationHealthWorker,
+        args: %{"type" => "calendar", "integration_id" => good.id}
+      )
+
+      assert_enqueued(
+        worker: IntegrationHealthWorker,
+        args: %{"type" => "calendar", "integration_id" => stale.id}
+      )
     end
   end
 end
