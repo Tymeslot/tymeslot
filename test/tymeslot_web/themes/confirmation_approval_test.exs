@@ -105,6 +105,14 @@ defmodule TymeslotWeb.Themes.ConfirmationApprovalTest do
       refute html =~ "your request with"
     end
 
+    # The badge reads minutes, never the duration slug the flow carries.
+    test "without a meeting type, the duration badge shows minutes" do
+      html = render_rhythm(Map.put(confirmed_assigns(), :meeting_type, nil))
+
+      assert html =~ ~r/class="ticket-badge">\s*30 min\s*</
+      refute html =~ "30-minutes"
+    end
+
     test "confirmed booking: unchanged copy and no pending styling" do
       html = render_rhythm(confirmed_assigns())
 
