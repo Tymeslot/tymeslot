@@ -44,8 +44,8 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
   whole event, an older edit landing last would undo the newer one.
 
   So `adopt/2` asks every other guardian of the organiser which events it
-  has writes for, and the new grid's queue waits for those
-  (`WriteQueue.wait_elsewhere/2`). Nothing is taken from the other
+  has writes for, and which series it is writing or moving the whole of,
+  and the new grid's queue waits for those (`WriteQueue.wait_elsewhere/2`). Nothing is taken from the other
   guardian, which may belong to a tab still open: it, or its LiveView while
   that lives, goes on driving its own queue to the end. It only lends the
   event: once its queue has no write left for it, it releases the event to
@@ -360,7 +360,7 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
     {drained, lent} = Map.split_with(state.lent, fn {key, _borrowers} -> key not in pending end)
 
     for {key, borrowers} <- drained, borrower <- borrowers do
-      left = WriteQueue.left_by(old_queue, key, messages)
+      left = WriteResults.left_by(old_queue, key, messages)
       report(borrower, {:event_writes_released, {self(), key, left}})
     end
 

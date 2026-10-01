@@ -108,6 +108,23 @@ defmodule Tymeslot.CalendarGrid.QueuedWrite do
   defp video_failure(ref, event, reason),
     do: {:error, write: ref, original_event: event, reason: reason}
 
+  @doc """
+  The event as the provider holds it once `write`, made onto `confirmed`,
+  has answered `outcome`. An edit saved to sync later (`:queued`) counts as
+  made, as the queued replay will make it.
+  """
+  @spec confirmed_after(map(), WriteQueue.write(), WriteQueue.outcome()) :: map()
+  def confirmed_after(_confirmed, _write, {:ok, updated}), do: updated
+  def confirmed_after(confirmed, write, :queued), do: applied(confirmed, write)
+  def confirmed_after(confirmed, _write, _unchanged_or_failed), do: confirmed
+
+  @doc "Whether `write`, answering `outcome`, changed the whole of its series."
+  @spec series_wide_success?(WriteQueue.write(), WriteQueue.outcome()) :: boolean()
+  def series_wide_success?(%{kind: :update, opts: opts}, {:ok, _updated}),
+    do: Keyword.get(opts, :recurrence_scope) in [:following, :all]
+
+  def series_wide_success?(_write, _outcome), do: false
+
   @doc "`event` with the change `write` makes to it."
   @spec applied(map(), WriteQueue.write()) :: map()
   def applied(event, %{kind: :update, changes: changes}), do: Map.merge(event, changes)

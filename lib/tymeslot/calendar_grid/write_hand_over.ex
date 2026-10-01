@@ -42,13 +42,15 @@ defmodule Tymeslot.CalendarGrid.WriteHandOver do
   sync later would be. A video change cannot, nor anything behind it, since
   what it writes is only known once the video provider has answered; nor a
   write to a whole series, or anything waiting behind one or held by one,
-  since whether it may still be made depends on how the series write ends.
+  since whether it may still be made depends on how the series write ends,
+  nor anything kept for a series another driver was writing.
   Edits kept for an event another driver was writing are made onto the
   event the first of them was made against.
   """
   @spec plans(WriteQueue.t()) :: {[{map(), [WriteQueue.write()]}], non_neg_integer()}
   def plans(%WriteQueue{chains: chains, holds: holds, elsewhere: elsewhere}) do
-    held = Enum.reduce(holds, 0, fn {_series, hold}, n -> n + length(hold.held) end)
+    {lent_series, elsewhere} = Map.split_with(elsewhere, &match?({{:series, _series}, _w}, &1))
+    held = count_held(Map.values(holds) ++ Map.values(lent_series))
 
     kept =
       for {_key, %{held: [_newest | _older] = held}} <- elsewhere,
@@ -63,6 +65,8 @@ defmodule Tymeslot.CalendarGrid.WriteHandOver do
       {if(ready == [], do: plans, else: [{event, ready} | plans]), lost + length(rest)}
     end)
   end
+
+  defp count_held(holds), do: Enum.reduce(holds, 0, &(&2 + length(&1.held)))
 
   # Each event's writes not yet made, after the event they would be made
   # onto, or `nil` when none of them can be.

@@ -229,8 +229,8 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
       answer = {:event_update_result, {:ok, write: write.ref, updated_event: accepted}}
       failure = {:event_update_result, {:error, write: write.ref, retry: :not_queued}}
 
-      assert WriteQueue.left_by(queue, @key, [answer]) == {:ok, accepted}
-      assert WriteQueue.left_by(queue, @key, [failure]) == {:ok, @event}
+      assert WriteResults.left_by(queue, @key, [answer]) == {:ok, accepted}
+      assert WriteResults.left_by(queue, @key, [failure]) == {:ok, @event}
       assert WriteQueue.pending_keys(queue) == [@key]
     end
 
@@ -242,7 +242,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
 
       answer = {:event_update_result, {:ok, write: write.ref, updated_event: @occurrence}}
 
-      assert WriteQueue.left_by(queue, {7, @occurrence.uid}, [answer]) == :series_changed
+      assert WriteResults.left_by(queue, {7, @occurrence.uid}, [answer]) == :series_changed
     end
 
     # A write held behind the series write is dropped once it succeeds; a
@@ -259,7 +259,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
       {drained, _effects} = WriteResults.apply_result(queue, answer)
 
       refute @other_key in WriteQueue.pending_keys(drained)
-      assert WriteQueue.left_by(queue, @other_key, [answer]) == :series_changed
+      assert WriteResults.left_by(queue, @other_key, [answer]) == :series_changed
     end
 
     test "is left changed as a whole series when a held write was dropped by a series move" do
@@ -270,7 +270,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
       {drained, _effects} = WriteResults.apply_result(queue, moved)
 
       refute @other_key in WriteQueue.pending_keys(drained)
-      assert WriteQueue.left_by(queue, @other_key, [moved]) == :series_changed
+      assert WriteResults.left_by(queue, @other_key, [moved]) == :series_changed
     end
 
     # From `terminate/2` there is no message: the held write may simply be
@@ -283,7 +283,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
 
       {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
 
-      assert WriteQueue.left_by(queue, @other_key, []) == :unknown
+      assert WriteResults.left_by(queue, @other_key, []) == :unknown
     end
 
     test "is handed over, when the queue will never be driven, onto the event its kept writes were made against" do
@@ -293,6 +293,84 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
 
       assert {[{@event, [kept]}], 1} = WriteHandOver.plans(queue)
       assert kept.changes == %{location: "Room 9"}
+    end
+  end
+
+  describe "a series another driver is writing the whole of" do
+    setup do
+      {:ok, series: {:series, WriteQueue.series_key(@occurrence)}}
+    end
+
+    test "is lent while the queue writes the whole of it", %{series: series} do
+      {queue, _start} =
+        WriteQueue.update(WriteQueue.new(), @occurrence, %{summary: "All"},
+          recurrence_scope: :all
+        )
+
+      assert series in WriteQueue.pending_keys(queue)
+    end
+
+    test "keeps every write to its events until released, then makes them", %{series: series} do
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), [series]}])
+      {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
+
+      assert WriteQueue.series_busy?(queue, @other_occurrence)
+      assert WriteQueue.series_saving?(queue, @other_occurrence)
+
+      assert {queue, [{:start, kept, @other_occurrence}]} =
+               WriteQueue.resume(queue, {self(), series, :unknown})
+
+      assert kept.changes == %{location: "Room 9"}
+      refute WriteQueue.series_busy?(queue, @other_occurrence)
+    end
+
+    test "drops and counts the writes kept for it once the series changed", %{series: series} do
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), [series]}])
+      {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
+
+      assert {queue, [{:dropped, :series_write, 1}, :reload]} =
+               WriteQueue.resume(queue, {self(), series, :series_changed})
+
+      refute WriteQueue.pending?(queue)
+    end
+
+    test "is left changed once the series write succeeded, and unknown once it failed", %{
+      series: series
+    } do
+      {queue, [{:start, write, _event}]} =
+        WriteQueue.update(WriteQueue.new(), @occurrence, %{summary: "All"},
+          recurrence_scope: :all
+        )
+
+      answer = {:event_update_result, {:ok, write: write.ref, updated_event: @occurrence}}
+      failure = {:event_update_result, {:error, write: write.ref, retry: :not_queued}}
+
+      assert WriteResults.left_by(queue, series, [answer]) == :series_changed
+      assert WriteResults.left_by(queue, series, [failure]) == :unknown
+    end
+
+    # A grid mounted after the borrower waits for the events the borrower
+    # keeps writes for, and drops its own once the series changed.
+    test "lends on the events it keeps writes for, left changed once the series changed", %{
+      series: series
+    } do
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), [series]}])
+      {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
+
+      assert Enum.sort(WriteQueue.pending_keys(queue)) == Enum.sort([series, @other_key])
+
+      released = {:event_writes_released, {self(), series, :series_changed}}
+      assert WriteResults.left_by(queue, @other_key, [released]) == :series_changed
+      assert WriteResults.left_by(queue, series, [released]) == :series_changed
+    end
+
+    test "has the writes kept for it counted as lost when the queue will never be driven", %{
+      series: series
+    } do
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), [series]}])
+      {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
+
+      assert WriteHandOver.plans(queue) == {[], 1}
     end
   end
 

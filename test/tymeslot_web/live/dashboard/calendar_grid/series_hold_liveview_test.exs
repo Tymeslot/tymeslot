@@ -386,6 +386,59 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeriesHoldLiveViewTest do
       refute_receive {:held, :edit, _editor}, 300
     end
 
+    # The series write the other grid is making would land on the series as
+    # it was, so another tab's edit of an occurrence the first grid never
+    # touched waits for it, as an edit in the first grid would.
+    test "an edit of another occurrence waits for a write to all events and is made once that fails",
+         %{conn: conn, event: event, other: other} do
+      hold_puts()
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      write_all(lv, event)
+      assert_receive {:held, :edit, writer}, @task_timeout
+
+      {:ok, other_tab, _html} = live(conn, ~p"/dashboard/calendar")
+      show(other_tab, other)
+      rename(other_tab, "Remote standup")
+      refute_receive {:held, :edit, _editor}, 200
+
+      release(writer, 403)
+
+      assert_receive {:held, :edit, kept}, @task_timeout
+      release(kept, 204)
+      assert_receive {:put, @series_url, body}, @task_timeout
+      assert body =~ "SUMMARY:Remote standup"
+      refute_receive {:held, :edit, _editor}, 300
+    end
+
+    test "an edit of another occurrence kept while all events were written is dropped once that succeeds",
+         %{conn: conn, event: event, other: other} do
+      hold_puts()
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      write_all(lv, event)
+      assert_receive {:held, :edit, writer}, @task_timeout
+
+      {:ok, other_tab, _html} = live(conn, ~p"/dashboard/calendar")
+      show(other_tab, other)
+      rename(other_tab, "Remote standup")
+      refute_receive {:held, :edit, _editor}, 200
+
+      release(writer, 204)
+      assert_receive {:put, @series_url, series_body}, @task_timeout
+      refute series_body =~ "Remote standup"
+
+      eventually(
+        fn ->
+          assert render(other_tab) =~
+                   "The series was updated, but a change you made while it was saving was not applied."
+        end,
+        timeout: @task_timeout
+      )
+
+      refute_receive {:held, :edit, _editor}, 300
+    end
+
     # The grid mounted again finds the occurrence it holds an edit for lent
     # out to the other tab; waiting for that tab in turn would leave each
     # waiting for the other.
