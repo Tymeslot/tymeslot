@@ -3975,6 +3975,53 @@
       },
       "publishState": "published",
       "ts": "Tue, 29 Sep 2026 17:01:51 GMT"
+    },
+    "1.21.0": {
+      "creationDate": "Thu, 01 Oct 2026 10:03:06 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "Tymeslot now speaks Polish, booking titles follow each reader's language, and booking pages and emails no longer load fonts from Google. Also fixes for iCloud and mailbox.org calendars, dashboard calendar edits, and embed links. Under the hood it now runs on Elixir 1.20.4 and Erlang 28.5, with no configuration changes.\n* Booking pages, emails and the dashboard are now available in Polish\n* Booking titles in calendar events and emails were always in English; the host now sees them in their language and guests in theirs\n* Booking pages no longer load their fonts from Google\n* Rescheduling a booking now moves the event in an iCloud calendar, instead of leaving it at the old time\n* Bookings in a mailbox.org calendar no longer list your mailbox.org login address as an extra attendee\n* Edits in the dashboard calendar are still saved to your calendar when you close the calendar before they finish\n* A booking page's embed link opened in its own browser tab no longer reloads over and over",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:1.21.0",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!\n\nSet PHX_HOST to your app domain, either on the Environment tab or by editing /app/data/.env, which is pre-filled with every supported variable, commented out (cloudron exec --app <domain> -- vi /app/data/.env). Values set on the Environment tab take precedence over that file. Restart the app after editing it.\n\nThe first user to register becomes the admin.",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "1.21.0",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Thu, 01 Oct 2026 10:03:06 GMT"
     }
   }
 }
