@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Themes.Paper.Theme do
 
   use TymeslotWeb.Themes.Core.Theme,
     live_view: TymeslotWeb.Themes.Paper.Scheduling.Live,
-    preview_image: "/images/ui/theme-previews/quill-theme-preview.webp",
+    preview_image: "/images/ui/theme-previews/paper-theme-preview.webp",
     description:
       dgettext_noop(
         "dashboard_appearance",
