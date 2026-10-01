@@ -83,7 +83,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
       </div>
 
       <p class="paper-confirmation__sent">
-        <.icon name="hero-envelope-mini" class="paper-confirmation__sent-icon" />
+        <.icon name="hero-envelope" class="paper-confirmation__sent-icon" />
         <span>{dgettext("booking", "Sent to")} <strong>{@email}</strong></span>
       </p>
 
@@ -100,7 +100,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
           class="paper-button paper-button--secondary"
           data-testid="add-to-calendar"
         >
-          <.icon name="hero-calendar-days-mini" class="paper-button__icon" />
+          <.icon name="hero-calendar-days" class="paper-button__icon" />
           {if @held,
             do: dgettext("booking", "Add tentative hold to calendar"),
             else: dgettext("booking", "Add to calendar")}

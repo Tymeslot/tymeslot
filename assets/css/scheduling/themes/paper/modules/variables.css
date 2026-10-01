@@ -109,7 +109,8 @@
   --approval-notice-gap: var(--space-xs);
   --approval-notice-font-size: var(--theme-font-size-sm);
   --approval-notice-ink: var(--ink-2);
-  --approval-notice-max-width: 32rem;
+  /* As wide as the card's content, like the details box under it. */
+  --approval-notice-max-width: none;
 
   /* --- Poll voting page (shared/components/polls.css); Paper's card already pads it --- */
   --poll-voting-padding: 0;

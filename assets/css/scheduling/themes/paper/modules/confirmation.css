@@ -75,11 +75,9 @@
   color: var(--ink-1);
 }
 
+/* One centred run of text with the icon inline at its start, so a long
+   address wraps under the icon instead of leaving it at the card's edge. */
 .paper-confirmation__sent {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2xs);
   margin: 0 0 var(--space-lg);
   color: var(--ink-2);
   font-size: var(--theme-font-size-sm);
@@ -93,9 +91,12 @@
 }
 
 .paper-confirmation__sent-icon {
-  flex-shrink: 0;
+  display: inline-block;
   width: var(--paper-icon-sm);
   height: var(--paper-icon-sm);
+  /* With the space after it in the markup, the gap the row had. */
+  margin-inline-end: var(--space-hairline);
+  vertical-align: -0.1875em;
 }
 
 /* The actions' labels run long in some languages ("Add tentative hold to
