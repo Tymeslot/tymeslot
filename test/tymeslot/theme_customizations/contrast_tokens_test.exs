@@ -34,8 +34,8 @@ defmodule Tymeslot.ThemeCustomizations.ContrastTokensTest do
   describe "derive/1 across the shipped palettes" do
     test "every preset yields filled-control pairs that clear AA" do
       # Anchored so an empty preset map cannot pass this vacuously: the eight
-      # dark schemes and the three light tones.
-      assert map_size(presets()) == 11
+      # dark schemes, the three light tones and Folio's six schemes.
+      assert map_size(presets()) == 17
 
       failures =
         for {id, scheme} <- presets(),

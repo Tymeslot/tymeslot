@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
   alias Phoenix.Component
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Demo
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Live.Scheduling.BookingConfig
@@ -31,6 +32,7 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
     socket
     |> store_client_ip()
     |> assign(:username_context, nil)
+    |> assign(:host_currency, nil)
   end
 
   def handle_username_resolution(socket, username) do
@@ -46,6 +48,7 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
         |> assign(:booking_window_days, booking_window_days(nil))
         |> assign(:organizer_user_id, nil)
         |> assign(:meeting_types, [])
+        |> assign(:host_currency, nil)
         |> assign(:page_title, dgettext("errors", "Page not found"))
 
       {:ok, context} ->
@@ -55,7 +58,20 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
         |> assign(:booking_window_days, booking_window_days(context.profile))
         |> assign(:organizer_user_id, context.user_id)
         |> assign(:meeting_types, context.meeting_types)
+        |> assign(:host_currency, host_currency(context))
         |> assign(:page_title, context.page_title)
+    end
+  end
+
+  # The currency the organiser's paid meeting types are priced in, for the
+  # steps that show a price (`BookingText.price_label/2`). Looked up only when
+  # one of them is paid, so a page without a paid type costs no query. A demo
+  # persona's meeting types are plain maps without the field.
+  defp host_currency(%{user_id: user_id, meeting_types: meeting_types}) do
+    if Enum.any?(meeting_types, &(Map.get(&1, :payment_required) == true)) do
+      MeetingPayments.host_currency(user_id)
+    else
+      nil
     end
   end
 

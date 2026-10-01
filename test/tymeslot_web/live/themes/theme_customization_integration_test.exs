@@ -9,7 +9,9 @@ defmodule TymeslotWeb.Live.Themes.ThemeCustomizationIntegrationTest do
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias Tymeslot.ThemeCustomizations
+  alias Tymeslot.ThemeCustomizations.Options.Palette
   alias Tymeslot.ThemeCustomizations.Presets
+  alias Tymeslot.ThemeCustomizations.Specs
   alias TymeslotWeb.ThemeTestMatrix
 
   describe "theme customization application" do
@@ -99,11 +101,15 @@ defmodule TymeslotWeb.Live.Themes.ThemeCustomizationIntegrationTest do
       assert html =~ ~s(poster="/images/ui/posters/rhythm-background-poster.jpg")
     end
 
-    test "a preset image renders under the kept path in every theme", %{
+    test "a preset image renders under the kept path in every theme that offers images", %{
       conn: conn,
       profile: profile
     } do
-      for theme_id <- ThemeTestMatrix.ids() do
+      image_themes = ThemeTestMatrix.ids_where(&Specs.supports_background?(&1, :image))
+
+      assert image_themes != []
+
+      for theme_id <- image_themes do
         Repo.update!(Changeset.change(profile, %{booking_theme: theme_id}))
 
         {:ok, _customization} =
@@ -163,22 +169,27 @@ defmodule TymeslotWeb.Live.Themes.ThemeCustomizationIntegrationTest do
          %{conn: conn, profile: profile} do
       for theme_id <- ThemeTestMatrix.ids() do
         Repo.update!(Changeset.change(profile, %{booking_theme: theme_id}))
+        scheme = saved_scheme(theme_id)
 
-        {:ok, _customization} =
+        {:ok, customization} =
           ThemeCustomizations.upsert_theme_customization(profile.id, theme_id, %{
-            "color_scheme" => "purple"
+            "color_scheme" => scheme
           })
+
+        saved_primary =
+          ThemeCustomizations.tokens(theme_id, customization).vars["--theme-primary"]
+
+        refute saved_primary == "#e11d48"
 
         {:ok, _view, html} = live(conn, "/#{profile.username}?primary-color=%23e11d48")
         assert html =~ "--theme-primary: #e11d48;", "theme #{theme_id} ignored the override"
 
         {:ok, _view, plain} = live(conn, "/#{profile.username}")
-        assert plain =~ "--theme-primary: #8b5cf6;"
+        assert plain =~ "--theme-primary: #{saved_primary};"
 
         assert ThemeCustomizations.get_by_profile_and_theme(profile.id, theme_id).settings[
                  "color_scheme"
-               ] ==
-                 "purple"
+               ] == scheme
       end
     end
 
@@ -199,5 +210,17 @@ defmodule TymeslotWeb.Live.Themes.ThemeCustomizationIntegrationTest do
       assert :sys.get_state(view.pid).socket.assigns[:embedded] == true
       assert html =~ "--theme-primary: #e11d48;"
     end
+  end
+
+  # A scheme the theme offers other than its default, so the saved choice is
+  # visible on the page: "purple" where the theme has it, as this test has
+  # always saved for Quill and Rhythm.
+  defp saved_scheme(theme_id) do
+    spec = Specs.for_theme(theme_id)
+    schemes = Specs.group(spec, Palette).schemes
+
+    if "purple" in schemes,
+      do: "purple",
+      else: Enum.find(schemes, &(&1 != spec.defaults()[:color_scheme]))
   end
 end

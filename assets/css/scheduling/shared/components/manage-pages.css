@@ -1,8 +1,9 @@
 /* Default meeting pages (Shared.Components.MeetingPageBodies, drawn by
    Shared.DefaultPages inside a theme's page shell): cancel and its kept
-   state, reschedule, cancel-confirmed; plus the wrapper every default page
-   body sits in. Imported by a theme that takes the default pages (a
-   page_shell: in use TymeslotWeb.Themes.Core.Theme).
+   state, reschedule, cancel-confirmed, with the date, time and organiser
+   rows of their details panel (Shared.Components.MeetingDetails); plus the
+   wrapper every default page body sits in. Imported by a theme that takes
+   the default pages (a page_shell: in use TymeslotWeb.Themes.Core.Theme).
 
    Tokens: the contract's --ink-1/2/3, --surface-2/3, --line-1/2,
    --radius-card, --radius-control, the solid primary pair and the status
@@ -77,6 +78,57 @@
   color: var(--ink-1);
   font-size: var(--theme-font-size-lg);
   font-weight: var(--font-weight-semibold);
+}
+
+/* The details panel's rows: an icon in a small tile, then the value over
+   its label (the organiser's row reads label first, as the markup orders
+   it). Scoped to the panel, so a theme's own meeting-detail-* rules
+   elsewhere are untouched. */
+.manage-page__details .meeting-detail-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.manage-page__details .meeting-detail-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.manage-page__details .meeting-detail-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-control);
+  background: var(--surface-3);
+  color: var(--ink-2);
+}
+
+.manage-page__details .meeting-detail-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.manage-page__details .meeting-detail-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.manage-page__details .meeting-detail-value {
+  color: var(--ink-1);
+  font-weight: var(--font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.manage-page__details .meeting-detail-label {
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
 }
 
 .manage-page__duration {

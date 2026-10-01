@@ -1394,3 +1394,13 @@ msgstr "Settimana precedente"
 #, elixir-autogen, elixir-format
 msgid "Jump to first available"
 msgstr "Vai al primo orario disponibile"
+
+#: lib/tymeslot_web/live/scheduling/calendar_navigation.ex
+#, elixir-autogen, elixir-format
+msgid "Next month"
+msgstr "Mese successivo"
+
+#: lib/tymeslot_web/live/scheduling/calendar_navigation.ex
+#, elixir-autogen, elixir-format
+msgid "Previous month"
+msgstr "Mese precedente"

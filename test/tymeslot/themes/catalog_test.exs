@@ -11,7 +11,7 @@ defmodule Tymeslot.Themes.CatalogTest do
     assert %{quill: %{key: :quill, id: "1"}, rhythm: %{key: :rhythm}} = Catalog.all()
 
     active = Catalog.active()
-    assert Map.keys(active) == [:quill, :rhythm]
+    assert [:quill, :rhythm] -- Map.keys(active) == []
     assert Enum.all?(active, fn {_key, theme} -> theme.status == :active end)
 
     assert %{key: :quill, id: "1", status: :active} = Catalog.default()

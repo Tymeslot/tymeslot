@@ -2,7 +2,7 @@ defmodule Tymeslot.ThemeBookingFlowHelpers do
   @moduledoc """
   Shared helpers for driving the public booking flow in LiveView tests.
 
-  Keeps the multi-step "select duration → date → slot → submit" choreography in
+  Keeps the multi-step "select duration → day and time → submit" choreography in
   one place so feature tests (a real end-to-end booking, an owner-preview
   simulated booking, …) read as intent rather than repeating the same clicks.
   """
@@ -11,6 +11,8 @@ defmodule Tymeslot.ThemeBookingFlowHelpers do
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
   import Tymeslot.TestHelpers.Eventually
+
+  alias Tymeslot.WeekViewTestHelpers
 
   @doc """
   Inserts a booking-ready organiser: profile, an active 30-minute meeting type,
@@ -107,15 +109,7 @@ defmodule Tymeslot.ThemeBookingFlowHelpers do
 
     view |> element("button[data-testid='next-step']") |> render_click()
 
-    select_first_available_day(view)
-
-    eventually(fn -> has_element?(view, "button[data-testid='time-slot']") end, timeout: 5000)
-
-    slot = view |> render() |> Floki.parse_document!() |> first_slot_time()
-
-    view
-    |> element("button[data-testid='time-slot'][phx-value-time='#{slot}']")
-    |> render_click()
+    select_first_slot(view)
 
     eventually(
       fn -> not has_element?(view, "button[data-testid='next-step'][disabled]") end,
@@ -127,6 +121,39 @@ defmodule Tymeslot.ThemeBookingFlowHelpers do
     eventually(fn -> has_element?(view, "form[data-testid='booking-form']") end, timeout: 5000)
 
     :ok
+  end
+
+  @doc """
+  Picks the first free time on the schedule step from whichever picker the
+  theme shows: a calendar of days and the chosen day's times (Quill, Rhythm),
+  or the shared week grid (`Tymeslot.WeekViewTestHelpers`). Returns the day
+  and the time, `{iso_date, time}`.
+  """
+  @spec select_first_slot(term()) :: {String.t(), String.t()}
+  def select_first_slot(view) do
+    eventually(
+      fn ->
+        WeekViewTestHelpers.week_view?(view) or
+          has_element?(view, "button[data-testid='calendar-day']")
+      end,
+      timeout: 5000
+    )
+
+    if WeekViewTestHelpers.week_view?(view) do
+      WeekViewTestHelpers.select_first_slot(view)
+    else
+      date = select_first_available_day(view)
+
+      eventually(fn -> has_element?(view, "button[data-testid='time-slot']") end, timeout: 5000)
+
+      slot = view |> render() |> Floki.parse_document!() |> first_slot_time()
+
+      view
+      |> element("button[data-testid='time-slot'][phx-value-time='#{slot}']")
+      |> render_click()
+
+      {date, slot}
+    end
   end
 
   @doc "Fills and submits the booking form with the given attendee details."

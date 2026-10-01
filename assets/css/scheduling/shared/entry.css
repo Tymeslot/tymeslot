@@ -66,6 +66,7 @@
 @source "../../../../lib/tymeslot_web/components/layouts.ex";
 @source "../../../../lib/tymeslot_web/components/layouts";
 @source "../../../../lib/tymeslot_web/components/meeting_utils.ex";
+@source "../../../../lib/tymeslot_web/components/payment_helpers.ex";
 @source "../../../../lib/tymeslot_web/components/step_navigation.ex";
 @source "../../../../lib/tymeslot_web/helpers";
 @source "../../../../lib/tymeslot_web/hooks";

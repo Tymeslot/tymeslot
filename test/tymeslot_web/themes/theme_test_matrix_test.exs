@@ -9,6 +9,7 @@ defmodule TymeslotWeb.ThemeTestMatrixTest do
   @moduletag :themes
   @moduletag :unit
 
+  alias Tymeslot.ThemeCustomizations.QuillSpec
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.ThemeTestMatrix
 
@@ -46,5 +47,18 @@ defmodule TymeslotWeb.ThemeTestMatrixTest do
     assert ThemeTestMatrix.all() != []
     assert Enum.filter(ThemeTestMatrix.all(), & &1.fixture) == []
     assert ThemeTestMatrix.ids() == Enum.map(ThemeTestMatrix.all(), & &1.id)
+  end
+
+  test "ids_where/1 keeps the shipped themes whose spec passes, in id order" do
+    assert ThemeTestMatrix.ids_where(fn _spec -> true end) == ThemeTestMatrix.ids()
+    assert ThemeTestMatrix.ids_where(fn _spec -> false end) == []
+    assert ThemeTestMatrix.ids_where(&(&1 == QuillSpec)) == ["1"]
+  end
+
+  test "says how each theme's schedule step picks a time" do
+    for entry <- ThemeTestMatrix.registered() do
+      assert entry.schedule_view in [:calendar, :week_grid],
+             "#{entry.name} has no schedule_view (:calendar or :week_grid)"
+    end
   end
 end

@@ -37,8 +37,15 @@ defmodule TymeslotWeb.Themes.Core.ThemeInfoTest do
   end
 
   describe "theme_options/0" do
-    test "offers every shipping theme by name, in id order" do
-      assert ThemeInfo.theme_options() == [{"Quill", "1"}, {"Rhythm", "2"}]
+    test "offers every active theme by name, in id order" do
+      expected =
+        Catalog.active()
+        |> Map.values()
+        |> Enum.sort_by(&String.to_integer(&1.id))
+        |> Enum.map(&{&1.name, &1.id})
+
+      assert ThemeInfo.theme_options() == expected
+      assert [{"Quill", "1"}, {"Rhythm", "2"}] -- expected == []
     end
   end
 

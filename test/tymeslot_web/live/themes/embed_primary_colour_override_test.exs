@@ -12,7 +12,9 @@ defmodule TymeslotWeb.Live.Themes.EmbedPrimaryColourOverrideTest do
 
   Assertions read the theme's own `<style>` block (the `:root:root` one
   `ThemeStyle` writes), not the whole page, so a colour that only turns up
-  somewhere else in the markup cannot satisfy them.
+  somewhere else in the markup cannot satisfy them. A theme that follows the
+  visitor's OS writes its dark set in a second block after it; the root block
+  is the page as a light-mode visitor sees it, which is what is compared.
   """
   use TymeslotWeb.ConnCase, async: false
 
@@ -26,6 +28,10 @@ defmodule TymeslotWeb.Live.Themes.EmbedPrimaryColourOverrideTest do
   alias TymeslotWeb.ThemeTestMatrix
 
   @embedder "embedder.test"
+
+  # Clears 4.5:1 as text on every light card a shipped theme has, so a theme
+  # that fits its accent to the card keeps it exactly as given.
+  @override "#e11d48"
 
   setup tags do
     Mox.set_mox_from_context(tags)
@@ -74,9 +80,13 @@ defmodule TymeslotWeb.Live.Themes.EmbedPrimaryColourOverrideTest do
     css
   end
 
+  # The root block's declarations: everything before the first closing brace.
   defp vars(css) do
+    [_before, root] = String.split(css, ":root:root {", parts: 2)
+    [block | _rest] = String.split(root, "}", parts: 2)
+
     ~r/(--[a-z0-9-]+):\s*([^;]+);/
-    |> Regex.scan(css, capture: :all_but_first)
+    |> Regex.scan(block, capture: :all_but_first)
     |> Map.new(fn [name, value] -> {name, value} end)
   end
 
@@ -87,16 +97,16 @@ defmodule TymeslotWeb.Live.Themes.EmbedPrimaryColourOverrideTest do
         profile = embeddable_profile(user, unquote(theme.id))
 
         {default_static, _default_live} = embedded_css(conn, profile, [])
-        {static_css, live_css} = embedded_css(conn, profile, [{"primary-color", "#ff0000"}])
+        {static_css, live_css} = embedded_css(conn, profile, [{"primary-color", @override}])
 
         default = vars(default_static)
         overridden = vars(static_css)
 
         # Anchored: the theme's default is something else, or the override
         # could pass without doing anything.
-        refute default["--theme-primary"] == "#ff0000"
+        refute default["--theme-primary"] == @override
 
-        assert overridden["--theme-primary"] == "#ff0000"
+        assert overridden["--theme-primary"] == @override
 
         # The contrast pair is recomputed for the new colour: the ink on it,
         # and the filled-control surface nudged to meet contrast against that
@@ -110,10 +120,10 @@ defmodule TymeslotWeb.Live.Themes.EmbedPrimaryColourOverrideTest do
           refute overridden[token] == default[token], "#{token} kept the palette's value"
         end
 
-        refute overridden["--theme-primary-hover"] == "#ff0000"
+        refute overridden["--theme-primary-hover"] == @override
 
         # The connected LiveView keeps the override the first paint had.
-        assert vars(live_css)["--theme-primary"] == "#ff0000"
+        assert vars(live_css)["--theme-primary"] == @override
       end
 
       for bad <- ["red;}body{", "#12", "#ff0000;}body{display:none"] do
@@ -124,14 +134,12 @@ defmodule TymeslotWeb.Live.Themes.EmbedPrimaryColourOverrideTest do
           {default_css, _live} = embedded_css(conn, profile, [])
           {static_css, live_css} = embedded_css(conn, profile, [{"primary-color", unquote(bad)}])
 
-          assert vars(static_css) == vars(default_css)
-          assert vars(live_css) == vars(default_css)
-
+          # Exactly the theme's own style, block for block: nothing was
+          # added, and nothing closed a block early.
           for css <- [static_css, live_css] do
+            assert css == default_css
             refute css =~ "body"
             refute css =~ "red"
-            # One block, opened and closed once: nothing closed it early.
-            assert length(String.split(css, "}")) == 2
           end
         end
       end

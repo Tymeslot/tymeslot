@@ -1393,3 +1393,13 @@ msgstr "Předchozí týden"
 #, elixir-autogen, elixir-format
 msgid "Jump to first available"
 msgstr "Přejít na první volný termín"
+
+#: lib/tymeslot_web/live/scheduling/calendar_navigation.ex
+#, elixir-autogen, elixir-format
+msgid "Next month"
+msgstr "Následující měsíc"
+
+#: lib/tymeslot_web/live/scheduling/calendar_navigation.ex
+#, elixir-autogen, elixir-format
+msgid "Previous month"
+msgstr "Předchozí měsíc"

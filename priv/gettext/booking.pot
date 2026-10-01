@@ -1392,3 +1392,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Jump to first available"
 msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/calendar_navigation.ex
+#, elixir-autogen, elixir-format
+msgid "Next month"
+msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/calendar_navigation.ex
+#, elixir-autogen, elixir-format
+msgid "Previous month"
+msgstr ""

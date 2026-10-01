@@ -29,7 +29,8 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
   * `theme_options` - List of `{name, id}` booking theme tuples
   * `theme_customization` - The selected theme's customisation, or `nil`
   * `choices` - The theme's `ThemeCustomizations.onboarding_choices/1`; `nil`
-    hides the choice row
+    hides the choice row. Their names are translated through
+    `dashboard_appearance`, as the dashboard's panels translate them.
   """
   attr :profile, :map, required: true
   attr :theme_options, :list, required: true
@@ -104,8 +105,8 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
             type="button"
             phx-click="select_onboarding_choice"
             phx-value-choice={choice.value}
-            title={choice.name}
-            aria-label={choice.name}
+            title={choice_name(choice.name)}
+            aria-label={choice_name(choice.name)}
             class={[
               "w-9 h-9 rounded-full border-2 transition-transform hover:scale-110",
               if(@selected == choice.value,
@@ -140,6 +141,12 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
   end
 
   defp theme_selected?(profile, id), do: (profile && profile.booking_theme) == id
+
+  # The names come from the preset catalogues, which register the translatable
+  # ones in `dashboard_appearance` (`dgettext_noop/2`), as the dashboard's
+  # panels read them; a name with no entry there, such as a brand, is returned
+  # as it is.
+  defp choice_name(name), do: Gettext.dgettext(TymeslotWeb.Gettext, "dashboard_appearance", name)
 
   defp theme_module(id) do
     ThemeInfo.get_theme_module(id) || ThemeInfo.get_theme_module(Catalog.default_id())

@@ -38,6 +38,23 @@ defmodule Tymeslot.ThemeCustomizations.Presets.CoversTest do
            end) == []
   end
 
+  # A cover of its own (not a reused background) is a Pixabay image whose
+  # source page is recorded beside it, so its licence can be traced.
+  test "a cover of its own records its Pixabay source page" do
+    own =
+      for {id, cover} <- Covers.all(),
+          String.starts_with?(cover.src, "/images/themes/covers/"),
+          do: {id, cover}
+
+    assert own |> Enum.map(&elem(&1, 0)) |> Enum.sort() ==
+             ~w(botanical paper-texture studio-light)
+
+    assert Enum.reject(own, fn {_id, cover} ->
+             match?("https://pixabay.com/" <> _rest, cover[:source]) and
+               String.starts_with?(cover.thumb, "/images/themes/covers/")
+           end) == []
+  end
+
   test "the facade finds covers by id, and offers no cover the spec rules out" do
     assert Presets.find_preset_by_id(:cover, "ocean-sunset") == Covers.all()["ocean-sunset"]
     assert Presets.find_preset_by_id(:cover, "space-satellite") == nil

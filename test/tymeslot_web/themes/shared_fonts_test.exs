@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Themes.SharedFontsTest do
   use TymeslotWeb.ConnCase, async: true
 
   alias Tymeslot.ThemeCustomizations.Presets.Fonts
+  alias TymeslotWeb.ThemeTestMatrix
 
   @moduletag :themes
   @moduletag :unit
@@ -98,7 +99,8 @@ defmodule TymeslotWeb.Themes.SharedFontsTest do
         {path, String.trim(value)}
       end
 
-    assert length(families) == 2
+    # One stylesheet per shipped theme, so none is skipped by a typo in its path.
+    assert length(families) == length(ThemeTestMatrix.all())
 
     assert Enum.reject(families, fn {_path, value} ->
              case Regex.run(~r/^var\(--font-stack-([a-z]+)\)$/, value) do

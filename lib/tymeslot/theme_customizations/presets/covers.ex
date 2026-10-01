@@ -9,18 +9,21 @@ defmodule Tymeslot.ThemeCustomizations.Presets.Covers do
   every shipped background) rather than copying them, under the background
   presets' ids and names, so an organiser sees the same image under the same
   name in both pickers. A cover of its own lives under
-  `priv/static/images/themes/covers/`, with its Pixabay source URL recorded
-  beside its entry.
+  `priv/static/images/themes/covers/` (`botanical`, `studio-light`,
+  `paper-texture`), a Pixabay image at the background images' size, with its
+  source page in `source`.
   """
 
   @typedoc "A cover preset."
   @type cover_preset :: %{
           required(:name) => String.t(),
           required(:src) => String.t(),
-          required(:thumb) => String.t()
+          required(:thumb) => String.t(),
+          optional(:source) => String.t()
         }
 
   @backgrounds "/images/themes/backgrounds/"
+  @covers_dir "/images/themes/covers/"
 
   @covers %{
     "elegant-still-life" => %{
@@ -42,6 +45,24 @@ defmodule Tymeslot.ThemeCustomizations.Presets.Covers do
       name: "Rustic Farmhouse",
       src: @backgrounds <> "rustic-farmhouse.webp",
       thumb: @backgrounds <> "rustic-farmhouse-thumbnail.webp"
+    },
+    "botanical" => %{
+      name: "Botanical",
+      src: @covers_dir <> "botanical.webp",
+      thumb: @covers_dir <> "botanical-thumbnail.webp",
+      source: "https://pixabay.com/photos/eucalyptus-flowers-floral-leaf-3854084/"
+    },
+    "studio-light" => %{
+      name: "Studio Light",
+      src: @covers_dir <> "studio-light.webp",
+      thumb: @covers_dir <> "studio-light-thumbnail.webp",
+      source: "https://pixabay.com/photos/natural-nature-landscape-9954257/"
+    },
+    "paper-texture" => %{
+      name: "Paper Texture",
+      src: @covers_dir <> "paper-texture.webp",
+      thumb: @covers_dir <> "paper-texture-thumbnail.webp",
+      source: "https://pixabay.com/photos/paper-white-gray-handmade-1332019/"
     }
   }
 

@@ -114,6 +114,57 @@ defmodule Tymeslot.ThemeCustomizations.PresetsKindsTest do
     end
   end
 
+  describe "Folio's schemes" do
+    @folio_schemes ~w(ivory sage harbour blush dusk ink)
+
+    test "are four light and two dark schemes, none carrying a dark set" do
+      modes = Map.new(@folio_schemes, &{&1, ColourSchemes.all()[&1][:mode]})
+
+      assert modes == %{
+               "ivory" => :light,
+               "sage" => :light,
+               "harbour" => :light,
+               "blush" => :light,
+               "dusk" => :dark,
+               "ink" => :dark
+             }
+
+      assert Enum.filter(@folio_schemes, &Map.has_key?(ColourSchemes.all()[&1], :dark_colors)) ==
+               []
+    end
+
+    test "each sets every palette colour as a lower-case #rrggbb" do
+      keys = ~w(accent background primary primary_hover secondary surface text text_secondary)a
+
+      failures =
+        for id <- @folio_schemes,
+            colors = ColourSchemes.all()[id].colors,
+            Enum.sort(Map.keys(colors)) != keys or
+              not Enum.all?(Map.values(colors), &Regex.match?(~r/\A#[0-9a-f]{6}\z/, &1)),
+            do: id
+
+      assert failures == []
+    end
+
+    test "read on their own card and canvas" do
+      failures =
+        for id <- @folio_schemes,
+            c = ColourSchemes.all()[id].colors,
+            problem <- [
+              Colour.contrast_ratio(c.text, c.surface) >= 7.0 || :text,
+              Colour.contrast_ratio(c.text_secondary, c.surface) >= 4.5 || :text_secondary,
+              Colour.contrast_ratio(c.text_secondary, c.background) >= 4.5 ||
+                :text_secondary_on_canvas,
+              Colour.contrast_ratio(c.primary, c.surface) >= 4.5 || :primary,
+              Colour.contrast_ratio(c.primary_hover, c.surface) >= 4.5 || :primary_hover
+            ],
+            problem != true,
+            do: {id, problem}
+
+      assert failures == []
+    end
+  end
+
   describe "Presets.Fonts" do
     test "holds the seven font choices, each with a name" do
       assert Enum.sort(Map.keys(Fonts.all())) ==

@@ -4,10 +4,12 @@ defmodule Tymeslot.ThemeCustomizations.Presets.ColourSchemes do
   a theme offers a scheme only when its palette group lists the id.
 
   The light tones (`neutral`, `cool`, `warm`) carry their dark set in
-  `dark_colors`, for a palette group with `follow_os: true`; their names are
-  registered for the dashboard (`dashboard_appearance`) and translated where
-  they are shown. Every tone has the same primary family, since the accent
-  group that goes with them replaces it.
+  `dark_colors`, for a palette group with `follow_os: true`; their names, and
+  those of Folio's six fixed-mode schemes (`ivory`, `sage`, `harbour`,
+  `blush`, `dusk`, `ink`), are registered for the dashboard
+  (`dashboard_appearance`) and translated where they are shown. Every tone
+  has the same primary family, since the accent group that goes with them
+  replaces it.
   """
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -209,6 +211,94 @@ defmodule Tymeslot.ThemeCustomizations.Presets.ColourSchemes do
         surface: "#1f1b18",
         text: "#f5f5f4",
         text_secondary: "#a8a29e"
+      }
+    },
+    # Folio's schemes: editorial, low-saturation grounds with one strong
+    # colour, each in a fixed mode (no dark set; Folio does not follow the
+    # visitor's OS). `primary` is the scheme's strong colour; `accent` is a
+    # quieter companion.
+    "ivory" => %{
+      name: dgettext_noop("dashboard_appearance", "Ivory"),
+      mode: :light,
+      colors: %{
+        primary: "#b4532a",
+        primary_hover: "#96431f",
+        secondary: "#7a6450",
+        accent: "#a0612f",
+        background: "#faf7f2",
+        surface: "#fffdf9",
+        text: "#1f1b16",
+        text_secondary: "#6b6158"
+      }
+    },
+    "sage" => %{
+      name: dgettext_noop("dashboard_appearance", "Sage"),
+      mode: :light,
+      colors: %{
+        primary: "#4d7c5a",
+        primary_hover: "#3e6549",
+        secondary: "#5f6f61",
+        accent: "#5f7340",
+        background: "#f3f5f0",
+        surface: "#fbfcf9",
+        text: "#1e2a22",
+        text_secondary: "#55635a"
+      }
+    },
+    "harbour" => %{
+      name: dgettext_noop("dashboard_appearance", "Harbour"),
+      mode: :light,
+      colors: %{
+        primary: "#2f5d8a",
+        primary_hover: "#254a6f",
+        secondary: "#4f6478",
+        accent: "#3d6f7a",
+        background: "#f2f5f8",
+        surface: "#fbfcfe",
+        text: "#16212e",
+        text_secondary: "#54606e"
+      }
+    },
+    "blush" => %{
+      name: dgettext_noop("dashboard_appearance", "Blush"),
+      mode: :light,
+      colors: %{
+        primary: "#a8435a",
+        primary_hover: "#8c3549",
+        secondary: "#7d5a60",
+        accent: "#9a5a4e",
+        background: "#fbf4f2",
+        surface: "#fffbfa",
+        text: "#2b1d1d",
+        text_secondary: "#6e5858"
+      }
+    },
+    "dusk" => %{
+      name: dgettext_noop("dashboard_appearance", "Dusk"),
+      mode: :dark,
+      colors: %{
+        primary: "#c9a86a",
+        primary_hover: "#d8bb83",
+        secondary: "#b3a3cc",
+        accent: "#d4b27a",
+        background: "#1b1a24",
+        surface: "#24232f",
+        text: "#ece8f4",
+        text_secondary: "#aca6ba"
+      }
+    },
+    "ink" => %{
+      name: dgettext_noop("dashboard_appearance", "Ink"),
+      mode: :dark,
+      colors: %{
+        primary: "#e0b04a",
+        primary_hover: "#eac26c",
+        secondary: "#c9c4b5",
+        accent: "#e8bf63",
+        background: "#111315",
+        surface: "#1a1d20",
+        text: "#f2f2f0",
+        text_secondary: "#a6a9ab"
       }
     }
   }

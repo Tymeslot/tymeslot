@@ -25,13 +25,15 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
   makes.
 
   It also owns the meeting-length label every step shows, `duration_label/1`, so
-  the themes cannot disagree about which duration wins.
+  the themes cannot disagree about which duration wins, and a paid meeting
+  type's price, `price_label/2`.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Themes.Catalog
+  alias TymeslotWeb.Components.PaymentHelpers
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   @type theme_key :: Catalog.theme_key()
@@ -127,4 +129,17 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
 
   def duration_label(assigns),
     do: LocalizationHelpers.format_duration(Map.get(assigns, :duration))
+
+  @doc """
+  A paid meeting type's price in the organiser's currency (`@host_currency`,
+  which the page holds from mount), or `nil` for a free type, for a paid one
+  without a price, and when the currency is unknown. A demo persona's meeting
+  type is a plain map without the fields, and is `nil` too.
+  """
+  @spec price_label(map() | nil, String.t() | nil) :: String.t() | nil
+  def price_label(%{payment_required: true, price_cents: cents}, currency)
+      when is_integer(cents) and cents > 0 and is_binary(currency),
+      do: PaymentHelpers.format_amount(cents, currency)
+
+  def price_label(_meeting_type, _currency), do: nil
 end

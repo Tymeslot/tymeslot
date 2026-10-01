@@ -619,3 +619,33 @@ msgstr "JPG, PNG або WebP. Макс. %{size} МБ."
 #, elixir-autogen, elixir-format
 msgid "MP4, WebM or MOV. Max %{size} MB."
 msgstr "MP4, WebM або MOV. Макс. %{size} МБ."
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Blush"
+msgstr "Пудровий"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Dusk"
+msgstr "Сутінки"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Harbour"
+msgstr "Гавань"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Ink"
+msgstr "Чорнило"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Ivory"
+msgstr "Слонова кістка"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Sage"
+msgstr "Шавлія"

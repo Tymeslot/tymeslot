@@ -74,7 +74,9 @@ defmodule TymeslotWeb.Live.Scheduling.VisitorTodayTest do
     %{profile: profile, meeting_type: meeting_type}
   end
 
+  # Today's mark on the calendar's day buttons, in a dead render; a week grid draws no days until it asks for its week.
   for theme <- ThemeTestMatrix.all(),
+      theme.schedule_view == :calendar,
       {zone, frozen_at, local_today} <- [
         {"Pacific/Kiritimati", ~U[2027-01-31 12:00:00Z], ~D[2027-02-01]},
         {"Pacific/Pago_Pago", ~U[2027-02-01 05:00:00Z], ~D[2027-01-31]}

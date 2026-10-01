@@ -140,6 +140,36 @@ defmodule TymeslotWeb.Themes.Shared.BookingTextTest do
     end
   end
 
+  describe "price_label/2" do
+    test "formats a paid type's price in the organiser's currency" do
+      paid = build(:meeting_type, payment_required: true, price_cents: 4500)
+
+      assert BookingText.price_label(paid, "chf") == "CHF 45.00"
+      assert BookingText.price_label(paid, "eur") == "€45.00"
+    end
+
+    test "is nil for a free type, a paid type without a price, or an unknown currency" do
+      assert BookingText.price_label(
+               build(:meeting_type, payment_required: false, price_cents: 4500),
+               "eur"
+             ) == nil
+
+      assert BookingText.price_label(
+               build(:meeting_type, payment_required: true, price_cents: nil),
+               "eur"
+             ) == nil
+
+      assert BookingText.price_label(
+               build(:meeting_type, payment_required: true, price_cents: 4500),
+               nil
+             ) == nil
+
+      assert BookingText.price_label(nil, "eur") == nil
+      # A demo persona's meeting type is a plain map without the fields.
+      assert BookingText.price_label(%{name: "Coffee Chat"}, "eur") == nil
+    end
+  end
+
   defp customized(attrs) do
     build(:profile, Keyword.put(attrs, :booking_text_enabled, true))
   end

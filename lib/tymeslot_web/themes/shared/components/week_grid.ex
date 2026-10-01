@@ -15,6 +15,13 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
   an attribute because it is document semantics: the level of each day's
   heading in the page outline.
 
+  A theme that needs markup of its own between the week navigation and the
+  days (a day picker for a narrow screen, a notice about the week) passes it
+  in the `:before_days` slot. It is rendered inside the grid, so it answers
+  to the same `@container week-grid` queries as the days, in every state:
+  while the week loads, after a failed fetch, and once it is loaded. A caller
+  that passes none renders nothing there.
+
   Everything the grid shows comes from the flow's assigns
   (`TymeslotWeb.Live.Scheduling.WeekSlots`): `week_slots` is nil until the
   page asks for a week, then ISO date => that day's slots, and `loading` and
@@ -63,6 +70,9 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
 
   attr :target, :any, required: true
   attr :heading_tag, :string, default: "h3", values: ~w(h2 h3 h4)
+
+  slot :before_days,
+    doc: "markup of the theme's own between the week navigation and the days, in every state"
 
   @spec week_grid(map()) :: Phoenix.LiveView.Rendered.t()
   def week_grid(assigns) do
@@ -116,6 +126,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
           {dgettext("booking", "Jump to first available")}
         </button>
       </div>
+      {render_slot(@before_days)}
       <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
         {status_text(@state, @error)}
       </div>

@@ -434,9 +434,9 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
         {:ok, view, _html} =
           live(conn, ~p"/#{profile.username}/quick-chat?timezone=#{timezone}")
 
-        select_first_available_day(view)
+        select_first_slot(view)
 
-        wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
+        wait_until(fn -> not has_element?(view, "button[data-testid='next-step'][disabled]") end)
       end
 
       @tag :capture_log

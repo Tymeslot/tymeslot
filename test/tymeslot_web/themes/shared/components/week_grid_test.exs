@@ -14,7 +14,8 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGridTest do
   @moduletag :themes
   @moduletag :components
 
-  import Phoenix.LiveViewTest, only: [render_component: 2]
+  import Phoenix.Component, only: [sigil_H: 2]
+  import Phoenix.LiveViewTest, only: [render_component: 2, rendered_to_string: 1]
 
   alias Tymeslot.Test.ClockHelpers
   alias TymeslotWeb.Themes.Shared.Components.WeekGrid
@@ -259,6 +260,70 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGridTest do
       doc = render_grid(week_start: ~D[2027-03-22], landing_week: @week_start)
 
       assert text(doc, "[data-testid=week-grid-first-available]") == "Zum ersten freien Termin"
+    end
+  end
+
+  defp render_with_slot(overrides) do
+    assigns =
+      Map.merge(
+        %{
+          week_start: @week_start,
+          week_slots: %{"2027-03-08" => ["9:00 AM"]},
+          loading: false,
+          error: nil
+        },
+        Map.new(overrides)
+      )
+
+    ~H"""
+    <WeekGrid.week_grid
+      week_start={@week_start}
+      week_slots={@week_slots}
+      loading={@loading}
+      error={@error}
+      user_timezone="Etc/UTC"
+      booking_window_days={30}
+      target={nil}
+    >
+      <:before_days>
+        <p data-testid="theme-strip">Strip</p>
+      </:before_days>
+    </WeekGrid.week_grid>
+    """
+    |> rendered_to_string()
+    |> Floki.parse_fragment!()
+  end
+
+  # The grid's own children, in document order, named by their class or
+  # test id: where the slot lands relative to the navigation and the days.
+  defp children(doc) do
+    [{"div", _attrs, kids}] = Floki.find(doc, "[data-testid=week-grid]")
+
+    for {_tag, _attrs, _kids} = kid <- kids do
+      attr(kid, "data-testid") || kid |> attr("class") |> String.split() |> hd()
+    end
+  end
+
+  describe "what a theme puts before the days" do
+    test "sits between the week navigation and the days" do
+      assert children(render_with_slot([])) == [
+               "week-grid__nav",
+               "theme-strip",
+               "sr-only",
+               "week-grid__days"
+             ]
+    end
+
+    test "stays on screen while the week loads and when it fails" do
+      assert "theme-strip" in children(render_with_slot(week_slots: nil))
+
+      assert "theme-strip" in children(
+               render_with_slot(error: "No time slots could be loaded. Please try again.")
+             )
+    end
+
+    test "adds nothing when a theme passes none" do
+      assert children(render_grid([])) == ["week-grid__nav", "sr-only", "week-grid__days"]
     end
   end
 end
