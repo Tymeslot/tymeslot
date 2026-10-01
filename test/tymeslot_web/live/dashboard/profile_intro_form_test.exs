@@ -113,6 +113,8 @@ defmodule TymeslotWeb.Dashboard.ProfileIntroFormTest do
 
     test "clearing both fields takes them off the page", %{conn: conn, profile: profile} do
       save_intro(conn, %{headline: "Coach", bio: "Hello."})
+      assert stored(profile) == {"Coach", "Hello."}
+
       save_intro(conn, %{headline: "", bio: ""})
 
       assert stored(profile) == {nil, nil}
