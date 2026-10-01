@@ -42,6 +42,7 @@ defmodule Tymeslot.Application do
   alias Tymeslot.Mailer.HealthCheck, as: MailerHealthCheck
   alias Tymeslot.Payments.Webhooks.SecretCheck
   alias Tymeslot.Telegram.BotSetup
+  alias Tymeslot.Workers.ErrorTrackerMaintenanceWorker
   alias TymeslotWeb.Endpoint
   alias TymeslotWeb.Plugs.AdditionalDashboardPlugs
   alias TymeslotWeb.Router
@@ -482,6 +483,12 @@ defmodule Tymeslot.Application do
   defp schedule_periodic_jobs do
     schedule_supervised("Google Calendar token refresh", fn ->
       TokenRefreshJob.schedule_periodic_refresh()
+    end)
+
+    # Mask the stored error reasons again when the masking rules have
+    # changed since the last boot.
+    schedule_supervised("ErrorTracker reason re-masking", fn ->
+      {:ok, _job} = ErrorTrackerMaintenanceWorker.enqueue_full_remask()
     end)
 
     # Register Telegram webhook if shared bot mode is enabled (production only —

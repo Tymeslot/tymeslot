@@ -38,6 +38,12 @@ defmodule Tymeslot.Workers.ErrorTrackerMaintenanceWorker do
      the insert failed. Two days rather than one, so a missed run leaves no
      gap. It runs after the trim, which bounds how many occurrences it reads.
 
+  Once per version of the masking rules, a separate job of this worker masks
+  every reason still stored, whatever its age (`enqueue_full_remask/0`,
+  called at every boot): a reason stored under older rules, or whose masking
+  after the insert failed outside the two days, would otherwise stay as it
+  was for as long as the error keeps recurring.
+
   The tunables are read on every run, so `config/runtime.exs` can set them.
   Maintenance runs whether or not error tracking is switched on
   (`ERROR_TRACKING_ENABLED`): what was stored before it was switched off
@@ -53,7 +59,35 @@ defmodule Tymeslot.Workers.ErrorTrackerMaintenanceWorker do
 
   @remask_hours 48
 
+  @doc """
+  Enqueues the job that masks every stored reason again under the current
+  rules (`ReasonScrubber.rules_version/0`), unless one was already enqueued
+  for them, in any state. Called at every boot, so the first boot under new
+  rules runs it and later ones do nothing.
+
+  The pruner deletes a finished job after its `max_age`, so a boot after
+  that runs it again; re-masking a reason already masked changes nothing,
+  so the only cost is the read.
+  """
+  @spec enqueue_full_remask() :: {:ok, Oban.Job.t()} | {:error, term()}
+  def enqueue_full_remask do
+    %{rules_version: ReasonScrubber.rules_version()}
+    |> new(unique: [period: :infinity, states: :all, keys: [:rules_version]])
+    |> Oban.insert()
+  end
+
   @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"rules_version" => rules_version}}) do
+    remasked = ReasonScrubber.rescrub_since(DateTime.from_unix!(0))
+
+    Logger.info("ErrorTracker reasons re-masked under the current masking rules",
+      rules_version: rules_version,
+      reasons_remasked: remasked
+    )
+
+    :ok
+  end
+
   def perform(_job) do
     # Read at run time rather than compiled in, so `config/runtime.exs` can
     # tune them without a rebuild.
