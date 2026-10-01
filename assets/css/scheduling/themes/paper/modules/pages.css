@@ -1,0 +1,47 @@
+/* The default meeting, poll and payment pages in Paper's card. Their
+   structure and colours are shared (manage-pages.css, polls.css,
+   payment-pages.css, through Paper's tokens); Paper sizes their headings
+   to its scale, gives their buttons its control height, and centres the
+   payment pages' short messages. */
+
+.paper-card .manage-page__title {
+  font-size: var(--theme-font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.01em;
+}
+
+.paper-card .manage-page__icon {
+  width: var(--paper-badge-size);
+  height: var(--paper-badge-size);
+}
+
+.paper-card .manage-page__details {
+  border-radius: min(var(--radius-card), var(--paper-radius-box));
+  background: var(--surface-subtle);
+}
+
+.paper-card .manage-page__button {
+  min-height: var(--paper-control-height);
+  padding: 0 var(--space-lg);
+}
+
+.paper-card .manage-page--payment-processing,
+.paper-card .manage-page--payment-cancelled {
+  align-items: center;
+  text-align: center;
+}
+
+.paper-card .payment-page-heading {
+  font-family: var(--theme-font-heading);
+  font-size: var(--theme-font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+}
+
+.paper-card .payment-page-body {
+  font-size: var(--theme-font-size-md);
+}
+
+.paper-card .poll-voting-title {
+  font-family: var(--theme-font-heading);
+  font-weight: var(--font-weight-semibold);
+}

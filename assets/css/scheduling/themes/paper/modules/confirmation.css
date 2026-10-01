@@ -1,0 +1,153 @@
+/* Confirmation: a check in a success-tinted circle (a clock on the warning
+   tint for a request the organiser has still to accept), the headline and
+   message, the meeting's details in a quiet box, where the confirmation
+   went, the guest's answers, the actions and the help line. */
+
+.paper-confirmation__header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+  text-align: center;
+}
+
+.paper-confirmation__badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--paper-badge-size);
+  height: var(--paper-badge-size);
+  border-radius: var(--radius-full);
+  background: var(--paper-success-surface);
+  color: var(--theme-success);
+}
+
+.paper-confirmation__badge--pending {
+  background: var(--notice-warning-surface);
+  color: var(--notice-warning);
+}
+
+.paper-confirmation__icon {
+  width: var(--paper-icon-md);
+  height: var(--paper-icon-md);
+}
+
+.paper-confirmation__message {
+  max-width: 30rem;
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.paper-theme-wrapper .approval-notice-after {
+  margin-bottom: var(--space-lg);
+}
+
+/* --- The meeting's details --- */
+
+.paper-confirmation__details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+  padding: var(--space-md) var(--space-lg);
+  border: var(--border-width-thin) solid var(--line-1);
+  border-radius: min(var(--radius-card), var(--paper-radius-box));
+  background: var(--surface-subtle);
+}
+
+.paper-confirmation__meeting {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-xs);
+  margin: 0;
+}
+
+.paper-confirmation__meeting-name {
+  color: var(--ink-1);
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.paper-confirmation__details .paper-facts {
+  color: var(--ink-1);
+}
+
+.paper-confirmation__sent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2xs);
+  margin: 0 0 var(--space-lg);
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+  text-align: center;
+}
+
+.paper-confirmation__sent strong {
+  color: var(--ink-1);
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.paper-confirmation__sent-icon {
+  flex-shrink: 0;
+  width: var(--paper-icon-sm);
+  height: var(--paper-icon-sm);
+}
+
+.paper-confirmation__help {
+  margin: var(--space-md) 0 0;
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-xs);
+  text-align: center;
+}
+
+/* --- The guest's answers (Shared.Components.CustomAnswers) --- */
+
+.paper-theme-wrapper .custom-answers {
+  margin: 0 0 var(--space-lg);
+}
+
+.paper-theme-wrapper .custom-answers__heading {
+  margin: 0 0 var(--space-xs);
+  color: var(--ink-1);
+  font-size: var(--theme-font-size-md);
+  font-weight: var(--font-weight-semibold);
+}
+
+.paper-theme-wrapper .custom-answers__list {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0;
+}
+
+.paper-theme-wrapper .custom-answers__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+  gap: var(--space-sm);
+  padding-bottom: var(--space-xs);
+  border-bottom: var(--border-width-thin) solid var(--line-1);
+}
+
+.paper-theme-wrapper .custom-answers__label {
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+}
+
+.paper-theme-wrapper .custom-answers__value {
+  margin: 0;
+  color: var(--ink-1);
+  font-size: var(--theme-font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+/* A narrow card: each answer under its question. */
+@container scheduling (max-width: 26rem) {
+  .paper-theme-wrapper .custom-answers__row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3xs);
+  }
+}

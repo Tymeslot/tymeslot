@@ -14,6 +14,7 @@
 @import "../../shared/components/preview-notice.css";
 @import "../../shared/components/approval-notice.css";
 @import "../../shared/components/language-switcher.css";
+@import "./modules/language-switcher.css";
 @import "./modules/overview.css";
 @import "./modules/schedule.css";
 @import "./modules/calendar.css";
@@ -25,9 +26,11 @@
 @import "./modules/custom-questions.css";
 @import "../../shared/components/booking-fields.css";
 @import "./modules/booking-form.css";
+@import "./modules/confirmation.css";
 @import "../../shared/components/manage-pages.css";
 @import "../../shared/components/polls.css";
 @import "../../shared/components/payment-pages.css";
+@import "./modules/pages.css";
 
 @import "../../shared/embed.css";
 @import "./modules/iframe.css";

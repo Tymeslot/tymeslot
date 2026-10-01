@@ -1,0 +1,50 @@
+/* The language switcher: on the overview only (the shared rule), in a row
+   of its own above the card, right-aligned to the card's width; a pill
+   with a hairline edge. The structure and the --lang-switcher-* colours
+   are shared/components/language-switcher.css. The row sits outside the
+   card, so its queries are the viewport's. */
+
+.paper-language {
+  display: flex;
+  justify-content: flex-end;
+  width: min(100%, var(--paper-card-width));
+}
+
+/* ThemeShell hides the row after the overview with Tailwind's hidden,
+   which an unlayered display rule would override; this restores it. */
+.paper-language.theme-shell__language--hidden {
+  display: none;
+}
+
+.paper-language .lang-switcher {
+  position: relative;
+}
+
+.paper-language .lang-switcher__button {
+  border: var(--border-width-thin) solid var(--line-1);
+  border-radius: var(--radius-full);
+  color: var(--ink-1);
+  box-shadow: none;
+  transition: background var(--transition-fast);
+}
+
+.paper-language .lang-switcher__button:hover {
+  box-shadow: none;
+  transform: none;
+}
+
+.paper-language .lang-switcher__panel {
+  right: 0;
+  left: auto;
+  border-radius: min(var(--radius-card), var(--paper-radius-box));
+  box-shadow: var(--paper-panel-shadow);
+}
+
+.paper-language .lang-switcher__item {
+  color: var(--ink-1);
+}
+
+/* The check mark beside the language in use. */
+.paper-language .lang-switcher__item--active > svg:last-child {
+  color: var(--paper-accent-ink);
+}
