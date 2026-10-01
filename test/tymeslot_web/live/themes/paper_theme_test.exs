@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
   import Tymeslot.ThemeBookingFlowHelpers
 
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.Themes.Core.ThemeInfo
 
   @theme_id "3"
 
@@ -123,5 +124,9 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
 
     assert html =~ "/assets/scheduling-theme-paper.css"
     assert html =~ ~s(class="scheduling-app theme-3 paper-theme")
+  end
+
+  test "the dashboard's and the onboarding wizard's pickers offer Paper" do
+    assert {"Paper", "3"} in ThemeInfo.theme_options()
   end
 end

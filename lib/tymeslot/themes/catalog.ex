@@ -72,7 +72,7 @@ defmodule Tymeslot.Themes.Catalog do
         name: "Paper",
         heading_style: :named,
         customization_spec: Tymeslot.ThemeCustomizations.PaperSpec,
-        status: :beta
+        status: :active
       }
     }
   end
