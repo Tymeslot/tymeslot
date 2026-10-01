@@ -123,7 +123,9 @@
   --folio-portrait-size-slim: 3.5rem;
   --folio-day-size: clamp(2.25rem, 10cqi, 2.875rem);
   --folio-cover-fallback: linear-gradient(135deg, color-mix(in srgb, var(--theme-primary) 35%, var(--theme-canvas)) 0%, color-mix(in srgb, var(--theme-primary) 12%, var(--theme-canvas)) 100%);
-  --folio-cover-fade: linear-gradient(to bottom, transparent 55%, color-mix(in srgb, var(--theme-surface) 30%, transparent) 100%);
+  /* The cover's lower third eases into the card, so the portrait's ring
+     meets a calm edge; the upper two thirds keep the photo as it is. */
+  --folio-cover-fade: linear-gradient(to bottom, transparent 62%, color-mix(in srgb, var(--theme-surface) 30%, transparent) 82%, color-mix(in srgb, var(--theme-surface) 80%, transparent) 100%);
 
   /* Shared status screens (shared/layout.css: awaiting payment, readiness). */
   --status-surface: var(--theme-surface);

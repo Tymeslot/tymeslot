@@ -49,7 +49,9 @@
 }
 
 .folio-cover[data-cover="ocean-sunset"] {
-  --folio-cover-focus: 50% 52%;
+  /* High enough to keep the surfer's head in the band at every width,
+     with the horizon still in its lower part. */
+  --folio-cover-focus: 50% 28%;
 }
 
 .folio-cover[data-cover="rustic-farmhouse"] {
