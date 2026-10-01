@@ -9,6 +9,10 @@
 
    Matches the shared components TymeslotWeb.Themes.Shared.Components.
    GuestField and LocationField.
+
+   Tokens: --guest-remove-ink-hover, the glyph of the guest chip's remove
+   button and the guest field's close button on hover, drawn on
+   --theme-danger: an ink that reads on the danger colour.
    ========================================================================== */
 
 /* ===== Add Guests field ===== */
