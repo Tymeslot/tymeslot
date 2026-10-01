@@ -73,6 +73,10 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
   Should the queue never be driven to its end, because the node is stopping
   or the provider has not answered for `:drain_timeout`, the guardian saves
   what it can for the next sync (`Tymeslot.CalendarGrid.WriteHandOver`).
+  It still releases the events it lends, so a waiting grid's newer edit of
+  one is written before the saved older edit is replayed, which can then
+  land over it: a gap left open, since it needs a provider silent for
+  minutes that then answers the other grid at once.
   """
 
   # Long enough on shutdown to save what is still queued for a later sync.
@@ -333,6 +337,12 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
   # has; nor would stopping the task help, since a request already sent may
   # still be applied. Equally, when only the guardian was killed and its
   # LiveView lives on, that LiveView goes on writing its own queue.
+  #
+  # Nor is a lender that gives up covered, whose provider has not answered
+  # for `:drain_timeout`, or whose node is stopping: it saves its writes
+  # for the next sync and then releases its events (see `terminate/2`), so
+  # the kept edits are written at once, and the older saved ones, replayed
+  # at the next sync, can land over them.
   def handle_info({:DOWN, _ref, :process, lender, _reason}, state)
       when is_map_key(state.owed, lender) do
     {keys, owed} = Map.pop(state.owed, lender)
