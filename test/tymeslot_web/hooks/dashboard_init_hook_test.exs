@@ -6,6 +6,8 @@ defmodule TymeslotWeb.Hooks.DashboardInitHookTest do
   import Tymeslot.Factory
 
   alias Phoenix.LiveView.Socket
+  alias Tymeslot.Profiles
+  alias Tymeslot.Profiles.ProfileSchema
   alias TymeslotWeb.Hooks.DashboardInitHook
 
   defp build_socket(assigns \\ %{}) do
@@ -41,17 +43,16 @@ defmodule TymeslotWeb.Hooks.DashboardInitHookTest do
       assert updated_socket.assigns.saving == false
     end
 
-    test "handles missing profile gracefully by assigning a default" do
+    test "creates a missing profile rather than assigning an unsaved one" do
       user = insert(:user, onboarding_completed_at: DateTime.utc_now())
       # No profile inserted
       socket = build_socket(%{current_user: user})
 
       assert {:cont, updated_socket} = DashboardInitHook.on_mount(:default, %{}, %{}, socket)
 
-      assert %Tymeslot.Profiles.ProfileSchema{user_id: user_id} =
-               updated_socket.assigns.profile
-
+      assert %ProfileSchema{id: id, user_id: user_id} = updated_socket.assigns.profile
       assert user_id == user.id
+      assert Profiles.get_profile(user.id).id == id
     end
   end
 end

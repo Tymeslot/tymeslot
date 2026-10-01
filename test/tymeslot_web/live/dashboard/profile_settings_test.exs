@@ -3,9 +3,11 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
   @moduletag :profiles
   @moduletag :live
 
+  import Tymeslot.AuthTestHelpers
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
+  alias Tymeslot.Profiles
   alias Tymeslot.Profiles.Avatars
   alias Tymeslot.Repo
 
@@ -396,6 +398,33 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
       |> render_click(%{timezone: "Invalid-Timezone-Format"})
 
       assert render(view) =~ "Unknown timezone"
+    end
+  end
+
+  describe "an onboarded host with no stored profile" do
+    # The dashboard must work on the stored row: a save made from it has to
+    # land, rather than crash the page and discard what the host entered.
+    setup do
+      user = insert(:user, onboarding_completed_at: DateTime.utc_now())
+      conn = build_conn() |> init_test_session(%{}) |> log_in_user(user)
+      {:ok, conn: conn, user: user}
+    end
+
+    test "saves a timezone change to a stored profile", %{conn: conn, user: user} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      view
+      |> element("#timezone-form-container button[phx-click='toggle_timezone_dropdown']")
+      |> render_click()
+
+      view
+      |> element("#timezone-search")
+      |> render_keyup(%{value: "New York"})
+
+      view |> element("[phx-click='change_timezone']", "New York") |> render_click()
+
+      assert render(view) =~ "Timezone updated to #{Timezones.format("America/New_York")}"
+      assert Profiles.get_profile(user.id).timezone == "America/New_York"
     end
   end
 end
