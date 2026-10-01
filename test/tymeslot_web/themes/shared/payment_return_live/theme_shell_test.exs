@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ThemeShellTest do
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.Themes.Catalog
+  alias TymeslotWeb.Themes.Core.Registry
   alias TymeslotWeb.Themes.Shared.PaymentReturnLive.{Cancelled, Processing}
   alias TymeslotWeb.ThemeTestMatrix
 
@@ -26,6 +27,20 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ThemeShellTest do
            {:ok, key} = Catalog.id_to_key(id)
            {id, Atom.to_string(key)}
          end)
+
+  # The themes without a `page_shell:`: they render their payment pages
+  # through their own `<Theme>.Payment.Processing`, beside the theme module
+  # (see `TymeslotWeb.Themes.Core.Theme`); a theme with one takes the
+  # default pages.
+  @own_payment_card for id <- ThemeTestMatrix.registered_ids(),
+                        {:ok, %{module: module}} = Registry.get_theme_by_id(id),
+                        module
+                        |> Module.split()
+                        |> Enum.drop(-1)
+                        |> Kernel.++(["Payment", "Processing"])
+                        |> Module.concat()
+                        |> Code.ensure_loaded?(),
+                        do: id
 
   test "the matrix is not empty" do
     assert ThemeTestMatrix.registered_ids() != []
@@ -128,15 +143,29 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ThemeShellTest do
                      "?locale=de&session_id=cs_TEST"
         end
       else
-        test "without a customisation the theme's own payment card writes no style block",
-             %{conn: conn, meeting: meeting} do
-          {:ok, _view, html} =
-            live(
-              conn,
-              "/themes/#{unquote(slug)}/payment-processing/#{meeting.id}?session_id=cs_TEST"
-            )
+        if theme_id in @own_payment_card do
+          test "without a customisation the theme's own payment card writes no style block",
+               %{conn: conn, meeting: meeting} do
+            {:ok, _view, html} =
+              live(
+                conn,
+                "/themes/#{unquote(slug)}/payment-processing/#{meeting.id}?session_id=cs_TEST"
+              )
 
-          refute html =~ ":root:root"
+            refute html =~ ":root:root"
+          end
+        else
+          test "without a customisation the default pages carry the theme's defaults",
+               %{conn: conn, meeting: meeting} do
+            {:ok, _view, html} =
+              live(
+                conn,
+                "/themes/#{unquote(slug)}/payment-processing/#{meeting.id}?session_id=cs_TEST"
+              )
+
+            defaults = ThemeCustomizations.tokens(unquote(theme_id), nil).vars["--theme-primary"]
+            assert_primary(html, defaults)
+          end
         end
       end
     end
