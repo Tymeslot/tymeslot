@@ -91,7 +91,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
   event can make no write to it of its own: the two would race, and since
   every write sends the whole event, an older one landing last would undo a
   newer one. So the grid's queue waits for that event elsewhere
-  (`wait_elsewhere/3`): its writes to it are kept, not started, until every
+  (`wait_elsewhere/2`): its writes to it are kept, not started, until every
   driver it waits for has finished with the event and said so (`resume/2`),
   passing on the event as its writes left it. They then start, in order,
   from that event; after a write to the whole series, which leaves the
@@ -269,24 +269,34 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
   end
 
   @doc """
-  Waits for the events `keys` while the driver `driver` is still writing
-  them: a write to one of them is kept, not started, until `driver` has
-  released it (`resume/2`). An event the queue is already writing itself is
-  left out.
+  Waits for the events each driver in `lends`, given as `{driver, keys}`,
+  is still writing: a write to one of them is kept, not started, until
+  every driver lending it has released it (`resume/2`).
+
+  An event the queue already has a write for, or already waits for, is left
+  out: the queue is already ordered behind the drivers it waits for, and a
+  driver that lends the event back may itself be waiting for this queue, so
+  waiting for it as well would leave each waiting for the other. Every lend
+  is checked against the queue as it was before any of them, so an event
+  that two drivers lend is waited for from both.
   """
-  @spec wait_elsewhere(t(), pid(), [key()]) :: t()
-  def wait_elsewhere(%__MODULE__{} = queue, driver, keys) do
+  @spec wait_elsewhere(t(), [{pid(), [key()]}]) :: t()
+  def wait_elsewhere(%__MODULE__{} = queue, lends) do
+    own = MapSet.new(pending_keys(queue))
+
     elsewhere =
-      keys
-      |> Enum.reject(&Map.has_key?(queue.chains, &1))
-      |> Enum.reduce(queue.elsewhere, fn key, elsewhere ->
-        Map.update(
-          elsewhere,
-          key,
-          %{from: MapSet.new([driver]), held: [], left: :unknown},
-          &%{&1 | from: MapSet.put(&1.from, driver)}
-        )
-      end)
+      for {driver, keys} <- lends,
+          key <- keys,
+          not MapSet.member?(own, key),
+          reduce: queue.elsewhere do
+        elsewhere ->
+          Map.update(
+            elsewhere,
+            key,
+            %{from: MapSet.new([driver]), held: [], left: :unknown},
+            &%{&1 | from: MapSet.put(&1.from, driver)}
+          )
+      end
 
     %{queue | elsewhere: elsewhere}
   end

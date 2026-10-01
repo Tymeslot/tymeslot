@@ -121,13 +121,14 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
       summary: "Weekly"
     }
 
+    # Another occurrence of the same series.
+    @other_occurrence %{@occurrence | id: 3, uid: "weekly_20260608T090000"}
+    @other_key {7, "weekly_20260608T090000"}
+
     test "keeps its writes until every driver has released it, then makes them onto the event as they left it" do
       [one, two] = [spawn(fn -> :ok end), spawn(fn -> :ok end)]
 
-      queue =
-        WriteQueue.new()
-        |> WriteQueue.wait_elsewhere(one, [@key])
-        |> WriteQueue.wait_elsewhere(two, [@key])
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{one, [@key]}, {two, [@key]}])
 
       {queue, []} = WriteQueue.update(queue, @event, %{location: "Room 9"}, [])
       {queue, []} = WriteQueue.update(queue, @event, %{summary: "Renamed"}, [])
@@ -153,7 +154,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
     # A guardian releases the events a lender killed outright still owed,
     # and may do so after the lender's own release.
     test "makes its writes once, however often the event is released" do
-      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), self(), [@key])
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), [@key]}])
       {queue, []} = WriteQueue.update(queue, @event, %{location: "Room 9"}, [])
 
       assert {queue, [{:show, _shown}, {:start, write, _event}]} =
@@ -166,7 +167,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
     end
 
     test "drops and counts its writes once the other driver changed the whole series" do
-      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), self(), [@key])
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), [@key]}])
       {queue, []} = WriteQueue.update(queue, @event, %{location: "Room 9"}, [])
 
       assert {queue, [{:dropped, :series_write, 1}, :reload]} =
@@ -179,10 +180,44 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
       {queue, [{:start, _write, _event}]} =
         WriteQueue.update(WriteQueue.new(), @event, %{summary: "Mine"}, [])
 
-      queue = WriteQueue.wait_elsewhere(queue, self(), [@key])
+      queue = WriteQueue.wait_elsewhere(queue, [{self(), [@key]}])
 
       assert {_queue, []} = WriteQueue.update(queue, @event, %{location: "Room 9"}, [])
       refute WriteQueue.awaits?(queue, {:event_writes_released, {self(), @key, :unknown}})
+    end
+
+    # A driver that lends the event back may itself wait for this queue;
+    # waiting for it too would leave each waiting for the other forever.
+    test "is not waited for again from a driver lending it back to a queue already waiting for it" do
+      [first, lent_back] = [spawn(fn -> :ok end), spawn(fn -> :ok end)]
+
+      queue =
+        WriteQueue.new()
+        |> WriteQueue.wait_elsewhere([{first, [@key]}])
+        |> WriteQueue.wait_elsewhere([{lent_back, [@key]}])
+
+      {queue, []} = WriteQueue.update(queue, @event, %{location: "Room 9"}, [])
+
+      assert {_queue, [{:show, _shown}, {:start, write, @event}]} =
+               WriteQueue.resume(queue, {first, @key, {:ok, @event}})
+
+      assert write.changes == %{location: "Room 9"}
+    end
+
+    test "is not waited for when the queue holds a write for it behind its series write" do
+      {queue, [{:start, series_write, _event}]} =
+        WriteQueue.update(WriteQueue.new(), @occurrence, %{summary: "All"},
+          recurrence_scope: :all
+        )
+
+      {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
+      queue = WriteQueue.wait_elsewhere(queue, [{self(), [@other_key]}])
+
+      # The series was not changed, so the held write starts.
+      assert {_queue, [{:show, _reverted}, {:start, held, @other_occurrence}]} =
+               WriteQueue.settle(queue, series_write.ref, :failed)
+
+      assert held.changes == %{location: "Room 9"}
     end
 
     test "is left as the queue's last write left it once that write has answered" do
@@ -210,7 +245,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
     end
 
     test "is handed over, when the queue will never be driven, onto the event its kept writes were made against" do
-      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), self(), [@key])
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), [@key]}])
       {queue, []} = WriteQueue.update(queue, @event, %{location: "Room 9"}, [])
       {queue, []} = WriteQueue.change_video(queue, %{@event | location: "Room 9"}, 3)
 

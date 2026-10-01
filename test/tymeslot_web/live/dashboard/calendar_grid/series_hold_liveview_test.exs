@@ -350,6 +350,54 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeriesHoldLiveViewTest do
     end
   end
 
+  describe "when another grid of the organiser waits for its events" do
+    # The grid mounted again finds the occurrence it holds an edit for lent
+    # out to the other tab; waiting for that tab in turn would leave each
+    # waiting for the other.
+    test "a grid mounted again makes its held edit before the other tab's kept one", %{
+      conn: conn,
+      event: event,
+      other: other
+    } do
+      hold_puts()
+
+      # The first edit's write leaves the cached series without an ETag, so
+      # the second reads it again.
+      stub(Tymeslot.HTTPClientMock, :get, fn @series_url, _headers, _opts ->
+        {:ok,
+         %Req.Response{status: 200, body: series_ical(), headers: %{"etag" => ["\"etag-2\""]}}}
+      end)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      write_all(lv, event)
+      assert_receive {:held, :edit, writer}, @task_timeout
+
+      show(lv, other)
+      rename(lv, "Daily standup")
+
+      {:ok, other_tab, _html} = live(conn, ~p"/dashboard/calendar")
+      show(other_tab, other)
+      rename(other_tab, "Remote standup")
+
+      render_patch(lv, ~p"/dashboard/overview")
+      render_patch(lv, ~p"/dashboard/calendar")
+
+      release(writer, 403)
+
+      assert_receive {:held, :edit, editor}, @task_timeout
+      release(editor, 204)
+      assert_receive {:put, @series_url, body}, @task_timeout
+      assert body =~ "SUMMARY:Daily standup"
+
+      assert_receive {:held, :edit, kept}, @task_timeout
+      release(kept, 204)
+      assert_receive {:put, @series_url, body}, @task_timeout
+      assert body =~ "SUMMARY:Remote standup"
+
+      refute_receive {:held, :edit, _editor}, 300
+    end
+  end
+
   defp occurrence(integration, date, start_at) do
     key = Calendar.strftime(date, "%Y%m%dT090000")
 

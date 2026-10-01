@@ -518,6 +518,43 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
       refute_receive {:write_started, _pid, _uid, _payload}, 200
     end
 
+    # The phone reconnects and keeps an edit, a desktop tab keeps one too
+    # (waiting for the phone's grid as well), and the phone's grid is then
+    # mounted again. It must not wait for the desktop tab in turn, or each
+    # waits for the other and neither edit is ever written.
+    test "a grid mounted again while another tab waits for it writes its kept edit first", %{
+      conn: conn,
+      event: event
+    } do
+      old_lv = open_event(conn, event)
+      edit(old_lv, "update_event_title", "First title")
+      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, 1_000
+      kill(old_lv)
+
+      phone = open_event(conn, event)
+      edit(phone, "update_event_title", "Phone title")
+
+      desktop = open_event(conn, event)
+      edit(desktop, "update_event_location", "Room 9")
+
+      render_patch(phone, ~p"/dashboard/overview")
+      render_patch(phone, ~p"/dashboard/calendar")
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+
+      answer(first, :ok)
+
+      assert_receive {:write_started, phone_write, _uid, %{summary: "Phone title"}}, 1_000
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+      answer(phone_write, :ok)
+
+      assert_receive {:write_started, desktop_write, _uid, payload}, 1_000
+      assert %{summary: "Phone title", location: "Room 9"} = payload
+      answer(desktop_write, :ok)
+
+      assert settled(desktop) =~ "Room 9"
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+    end
+
     # A LiveView still alive may be another open tab of the same organiser:
     # it goes on writing its own queue, and this tab's edit of the same
     # event waits until it has.

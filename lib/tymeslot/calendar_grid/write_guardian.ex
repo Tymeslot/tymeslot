@@ -45,7 +45,7 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
 
   So `adopt/2` asks every other guardian of the organiser which events it
   has writes for, and the new grid's queue waits for those
-  (`WriteQueue.wait_elsewhere/3`). Nothing is taken from the other
+  (`WriteQueue.wait_elsewhere/2`). Nothing is taken from the other
   guardian, which may belong to a tab still open: it, or its LiveView while
   that lives, goes on driving its own queue to the end. It only lends the
   event: once its queue has no write left for it, it releases the event to
@@ -168,9 +168,10 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
         # Started before any event is lent, so that it hears every release.
         _guardian = own || start(user_id)
 
-        Enum.reduce(lenders, queue, fn lender, queue ->
-          WriteQueue.wait_elsewhere(queue, lender, call(lender, {:lend, self()}, []))
-        end)
+        WriteQueue.wait_elsewhere(
+          queue,
+          for(lender <- lenders, do: {lender, call(lender, {:lend, self()}, [])})
+        )
     end
   end
 
