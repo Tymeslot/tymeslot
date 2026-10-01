@@ -1000,7 +1000,7 @@ end
 | `meeting_types` | overview | mount | the organiser's active meeting types |
 | `host_currency` | overview, schedule, booking | mount | the currency the organiser's paid meeting types are priced in, for `BookingText.price_label/2`; `nil` while none is paid |
 | `selected_duration` | overview, schedule, booking | mount | the chosen meeting type's duration slug; `nil` until one is chosen |
-| `duration` | schedule, questions, booking, confirmation | mount | the duration slug the schedule step was entered with; `nil` before |
+| `duration` | schedule, questions, booking, confirmation | mount | the duration slug the schedule step was entered with (`"30-minutes"`), `nil` before; never print it: show the length with `BookingText.duration_label/1`, or take the number from `Offer.duration_minutes(@meeting_type, @duration)` |
 | `meeting_type` | schedule, booking, confirmation | mount | the chosen meeting type; `nil` until a step resolves one |
 | `user_timezone` | schedule, booking, confirmation | mount | the booker's timezone |
 | `timezone_dropdown_open` | schedule | mount | whether the timezone picker is open |
