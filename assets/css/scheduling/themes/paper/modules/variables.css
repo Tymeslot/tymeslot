@@ -123,6 +123,10 @@
   --poll-option-line: var(--paper-control-line);
   --poll-option-selected-surface: var(--paper-tint);
 
+  /* --- Readiness notice (shared/layout.css): Paper's card width, so it
+     lines up with the language switcher's row above it --- */
+  --readiness-card-max-width: var(--paper-card-width);
+
   /* --- Payment return pages (shared/components/payment-pages.css) --- */
   --payment-page-max-width: 40rem;
   --payment-card-surface: var(--theme-surface);
