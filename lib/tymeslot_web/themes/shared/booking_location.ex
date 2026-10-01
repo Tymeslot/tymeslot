@@ -70,6 +70,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
     |> assign(:selected_venue_id, nil)
     |> assign(:venue_picked, false)
     |> assign(:reschedule_location, nil)
+    |> assign(:booked_location, nil)
     |> assign(:location_phone, "")
     |> assign(:location_error, nil)
   end
@@ -350,6 +351,33 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
   end
 
   @doc """
+  Records where the meeting a submission wrote is, for the confirmation.
+
+  The page's own state says what the booker asked for; the server may have
+  placed the meeting elsewhere (a venue deleted, or dropped from its
+  location, while the page was open), so an in-person confirmation states
+  what was written instead.
+  """
+  @spec assign_booked(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
+  def assign_booked(socket, meeting) do
+    assign(socket, :booked_location, %{
+      location_kind: Map.get(meeting, :location_kind),
+      location: Map.get(meeting, :location),
+      address_to_arrange: Map.get(meeting, :address_to_arrange) == true
+    })
+  end
+
+  # The written location of an in-person booking, once there is one.
+  defp booked_in_person(assigns) do
+    with true <- in_person?(assigns),
+         %{location_kind: "in_person"} = booked <- assigns[:booked_location] do
+      booked
+    else
+      _not_booked_in_person -> nil
+    end
+  end
+
+  @doc """
   Whether this booking's in-person location has no venue, so the page says
   the address will be arranged after booking. False when nothing is being
   submitted, as on a reschedule that asked nothing: that meeting keeps the
@@ -358,7 +386,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
   """
   @spec arranged_after_booking?(map()) :: boolean()
   def arranged_after_booking?(assigns) do
-    case kept_location(assigns) do
+    case booked_in_person(assigns) || kept_location(assigns) do
       %{address_to_arrange: arranged} ->
         arranged
 
@@ -374,10 +402,11 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
   places the meeting afresh.
 
   That is a reschedule on the meeting's own in-person location with no venue
-  submitted: the server writes nothing about the location then
-  (`Tymeslot.Bookings.RescheduleLocation`), so the meeting keeps its address,
-  its venue and its arranged-after-booking flag, whatever the location offers
-  today.
+  submitted, or with the meeting's own venue submitted: the server writes
+  nothing about the location then (`Tymeslot.Bookings.RescheduleLocation`),
+  so the meeting keeps its address, its venue and its arranged-after-booking
+  flag, whatever the location offers today, and even when the host has
+  since edited that venue's address.
   """
   @spec kept_location(map()) :: %{location: String.t() | nil, address_to_arrange: boolean()} | nil
   def kept_location(
@@ -385,7 +414,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
       )
       when is_binary(id) do
     if submitted_option_id(assigns) == id and in_person?(assigns) and
-         is_nil(submitted_venue_id(assigns)),
+         submitted_venue_id(assigns) in [nil, kept[:venue_id]],
        do: %{location: kept[:location], address_to_arrange: kept[:address_to_arrange] == true}
   end
 
@@ -408,8 +437,9 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
   venue's `Tymeslot.Venues.display/1` for an in-person location with one,
   otherwise the option's own line.
 
-  A reschedule that keeps the meeting where it is shows the location the
-  meeting stores (`kept_location/1`).
+  Once an in-person booking is written (`assign_booked/2`) it is the location
+  the meeting records. A reschedule that keeps the meeting where it is shows
+  the location the meeting stores (`kept_location/1`).
 
   Nil when there is nothing to show: an ad-hoc booking with no meeting type,
   or a reschedule that asked nothing, whose location is the original
@@ -419,6 +449,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
   def chosen_display(assigns) do
     cond do
       is_nil(submitted_option_id(assigns)) -> nil
+      booked = booked_in_person(assigns) -> booked.location
       kept = kept_location(assigns) -> kept.location
       venue_choices(assigns) != [] -> submitted_venue_display(assigns)
       option = selected(assigns) -> with_provider(option, assigns)

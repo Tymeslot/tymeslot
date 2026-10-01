@@ -516,6 +516,30 @@ defmodule TymeslotWeb.SavedLocationsJourneyTest do
       end
 
       @tag :capture_log
+      test "a meeting at a venue edited since keeps the address it was booked at", ctx do
+        # Booked at Berlin's old address; the host has since corrected it.
+        meeting =
+          ctx.book.([ctx.berlin, ctx.munich], %{
+            location: "Berlin office (Unter den Linden 5)",
+            venue_id: ctx.berlin.id
+          })
+
+        {booking_step, confirmation, kept} = reschedule_time_only(ctx, meeting)
+
+        assert within(booking_step, "[data-testid='location-kept']") =~
+                 "Berlin office (Unter den Linden 5)"
+
+        assert within(confirmation, "[data-testid='confirmation-location']") =~
+                 "Berlin office (Unter den Linden 5)"
+
+        refute within(confirmation, "[data-testid='confirmation-location']") =~
+                 "Friedrichstrasse"
+
+        assert kept.location == "Berlin office (Unter den Linden 5)"
+        assert kept.venue_id == ctx.berlin.id
+      end
+
+      @tag :capture_log
       test "a meeting whose venue the location dropped opens with no venue chosen", ctx do
         # The location now offers two other venues.
         meeting =

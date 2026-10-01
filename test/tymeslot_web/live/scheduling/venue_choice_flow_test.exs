@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Live.Scheduling.VenueChoiceFlowTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
+  alias Tymeslot.Venues
 
   @themes [{"Quill", "1"}, {"Rhythm", "2"}]
   @note "The address will be arranged with you after booking."
@@ -177,6 +178,25 @@ defmodule TymeslotWeb.Live.Scheduling.VenueChoiceFlowTest do
                )
 
         refute has_element?(view, "[data-testid='location-arranged-note']")
+      end
+
+      @tag :capture_log
+      test "confirms where the meeting was booked when the pick is deleted meanwhile", ctx do
+        view = navigate_to_booking_form(ctx.conn, ctx.profile, nil)
+
+        pick_venue(view, ctx.munich)
+
+        # The host deletes Munich while the booker is on the booking step.
+        assert {:ok, _deleted} = Venues.delete_venue(ctx.munich)
+
+        submit(view, "moved@example.com")
+
+        assert [meeting] = Repo.all_by(MeetingSchema, attendee_email: "moved@example.com")
+        assert meeting.venue_id == ctx.berlin.id
+
+        confirmed = description_text(view, "[data-testid='confirmation-location']")
+        assert confirmed =~ "Berlin office"
+        refute confirmed =~ "Munich"
       end
     end
 

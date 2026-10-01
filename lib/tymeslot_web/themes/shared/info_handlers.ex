@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
   alias TymeslotWeb.Live.Scheduling.NextAvailable
+  alias TymeslotWeb.Themes.Shared.BookingLocation
 
   @doc """
   Handles calendar events updated via PubSub.
@@ -167,6 +168,7 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
         socket =
           socket
           |> assign(:meeting_uid, meeting.uid)
+          |> BookingLocation.assign_booked(meeting)
           |> assign(:name, meeting.attendee_name)
           |> assign(:email, meeting.attendee_email)
 
