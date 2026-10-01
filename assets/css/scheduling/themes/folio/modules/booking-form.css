@@ -169,7 +169,6 @@
   text-decoration: underline;
 }
 
-.folio-theme-wrapper .guest-field__label,
 .folio-theme-wrapper .guest-chip__email {
   color: var(--theme-text);
 }
@@ -203,8 +202,15 @@
 
 /* --- Location --- */
 
+/* The location and guest fields' labels read as the form's own (.label
+   above): the same size, weight and ink. */
 .folio-theme-wrapper .location-field__label,
-.folio-theme-wrapper .location-phone__label {
+.folio-theme-wrapper .location-phone__label,
+.folio-theme-wrapper .guest-field__label {
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--theme-text);
 }
 
