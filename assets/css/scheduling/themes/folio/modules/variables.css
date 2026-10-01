@@ -115,6 +115,7 @@
   --folio-column: 46rem;
   --folio-gutter: clamp(var(--space-md), 6cqi, var(--space-2xl));
   --folio-control-height: 2.75rem;
+  --folio-chevron-size: 0.3125rem;
   --folio-cover-height: clamp(8.5rem, 34cqi, 15rem);
   --folio-cover-height-slim: clamp(4rem, 13cqi, 6rem);
   --folio-portrait-size: clamp(5.5rem, 20cqi, 7.5rem);

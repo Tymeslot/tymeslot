@@ -37,11 +37,28 @@
   box-sizing: border-box;
   border: var(--border-width-thin) solid var(--border-medium);
   border-radius: var(--radius-control);
-  background: var(--theme-surface);
+  background-color: var(--theme-surface);
   color: var(--theme-text);
   font: inherit;
   font-size: var(--theme-font-size-base);
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+/* A select's chevron. The core select carries appearance-none, and the
+   booking page loads no dashboard stylesheet to draw one, so Folio draws
+   it: two small triangles in the secondary ink, on the end side with room
+   kept for them. */
+.folio-theme-wrapper select.input {
+  padding-inline-end: calc(var(--space-sm) + var(--space-md) + 2 * var(--folio-chevron-size));
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--theme-text-secondary) 50%),
+    linear-gradient(135deg, var(--theme-text-secondary) 50%, transparent 50%);
+  background-position:
+    right calc(var(--space-md) + var(--folio-chevron-size)) center,
+    right var(--space-md) center;
+  background-size: var(--folio-chevron-size) var(--folio-chevron-size);
+  background-repeat: no-repeat;
+  cursor: pointer;
 }
 
 .folio-theme-wrapper textarea.input {
@@ -73,7 +90,7 @@
 
 .folio-theme-wrapper .input-error {
   border-color: var(--theme-danger);
-  background: color-mix(in srgb, var(--theme-danger) 6%, var(--theme-surface));
+  background-color: color-mix(in srgb, var(--theme-danger) 6%, var(--theme-surface));
 }
 
 .folio-theme-wrapper .form-field-error {
