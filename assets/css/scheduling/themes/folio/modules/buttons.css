@@ -56,6 +56,15 @@
   cursor: not-allowed;
 }
 
+/* A disabled primary (Next before a choice, Submit before the form is
+   valid) turns quiet instead of fading: a tint of the primary with the
+   secondary ink, legible on every scheme, light or dark. */
+.folio-button--primary:disabled {
+  opacity: 1;
+  background: var(--folio-tint-strong);
+  color: var(--theme-text-secondary);
+}
+
 .folio-button__icon {
   flex: none;
   width: var(--icon-sm);
