@@ -189,7 +189,7 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
       assert mjml =~ "Tymeslot"
     end
 
-    test "includes Inter font" do
+    test "loads no web font, so opening the email contacts no font host" do
       content = "<mj-text>Test</mj-text>"
 
       organizer_details = %{
@@ -199,8 +199,9 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
 
       mjml = MjmlEmail.base_mjml_template(content, organizer_details)
 
-      assert mjml =~ "Inter"
-      assert mjml =~ "fonts.googleapis.com"
+      assert mjml =~ ~s(<mj-all font-family="-apple-system)
+      refute mjml =~ "<mj-font"
+      refute mjml =~ "'Inter'"
     end
 
     test "escapes ampersand in organizer name exactly once when stage_title is absent" do
