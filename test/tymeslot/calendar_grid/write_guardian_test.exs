@@ -104,6 +104,37 @@ defmodule Tymeslot.CalendarGrid.WriteGuardianTest do
     end
   end
 
+  describe "a grid mounting while another guardian is held up" do
+    # A guardian held up (stopping, saving what it can) must not hold up the
+    # grid mounting for each such guardian in turn; the grid still waits
+    # for the events every guardian that answers lends it.
+    test "waits for the others together, and still borrows from those that answer", %{
+      user: user
+    } do
+      google = insert(:calendar_integration, user: user, provider: "google")
+      event = cached_event(google, "google")
+
+      {queue, [{:start, _running, _event}]} =
+        WriteQueue.update(WriteQueue.new(), event, %{summary: "Renamed"}, [])
+
+      _answering = other_live_view(user, queue)
+      held_up = for _n <- 1..2, do: WriteGuardian.whereis(other_live_view(user, queue))
+      Enum.each(held_up, &:sys.suspend/1)
+      on_exit(fn -> Enum.each(held_up, &:sys.resume/1) end)
+
+      started = System.monotonic_time(:millisecond)
+      adopted = WriteGuardian.adopt(WriteQueue.new(), user.id)
+      waited = System.monotonic_time(:millisecond) - started
+
+      assert WriteQueue.pending_keys(adopted) == [{google.id, event.uid}]
+      # Two seconds for all of them, not for each in turn.
+      assert waited < 3_500
+
+      assert %{level: :warning} =
+               LogCapture.await_log("did not say what it lends in time")
+    end
+  end
+
   # A LiveView of the same organiser, still alive, whose guardian mirrors
   # `queue`.
   defp other_live_view(user, queue) do

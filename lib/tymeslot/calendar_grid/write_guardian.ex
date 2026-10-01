@@ -56,6 +56,13 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
   `:DOWN` messages arrives first. A guardian saves what it can when it
   stops, and releases every event it still lends on the way out.
 
+  The new grid asks every other guardian at once and gives them two
+  seconds together to answer, since it does so while mounting. One that
+  has not answered by then, because it is stopping and saving what it can,
+  or is held up, lends nothing: its events are not waited for. Should it
+  answer later, it records the grid and releases the events in due course,
+  and the grid, never having waited for them, ignores the releases.
+
   A guardian killed outright (a brutal kill once its shutdown time is up,
   or by hand) runs no `terminate/2` and releases nothing. So a guardian
   that lends events tells the waiting grid's guardian which ones, and that
@@ -91,6 +98,11 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
                    [__MODULE__, :drain_timeout],
                    :timer.minutes(10)
                  )
+
+  # How long a grid mounting waits for the other guardians of its organiser
+  # to say what they lend it, all of them together. A guardian answers at
+  # once unless it is stopping, saving what it can.
+  @lend_timeout Application.compile_env(:tymeslot, [__MODULE__, :lend_timeout], 2_000)
 
   @result_tags [
     :event_update_result,
@@ -169,10 +181,32 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
         # Started before any event is lent, so that it hears every release.
         _guardian = own || start(user_id)
 
-        WriteQueue.wait_elsewhere(
-          queue,
-          for(lender <- lenders, do: {lender, call(lender, {:lend, self()}, [])})
-        )
+        WriteQueue.wait_elsewhere(queue, borrow(lenders))
+    end
+  end
+
+  # Asks every lender at once, and gives each until one shared deadline to
+  # answer. A lender that has stopped lends nothing; one that has not
+  # answered in time is not waited for (see "A grid mounted in another
+  # LiveView").
+  defp borrow(lenders) do
+    deadline = System.monotonic_time(:millisecond) + @lend_timeout
+
+    requests =
+      for lender <- lenders, do: {lender, :gen_server.send_request(lender, {:lend, self()})}
+
+    for {lender, request} <- requests do
+      case :gen_server.receive_response(request, {:abs, deadline}) do
+        {:reply, lent} ->
+          {lender, lent}
+
+        {:error, {_reason, _lender}} ->
+          {lender, []}
+
+        :timeout ->
+          Logger.warning("Calendar grid write guardian did not say what it lends in time")
+          {lender, []}
+      end
     end
   end
 
