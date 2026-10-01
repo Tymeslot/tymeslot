@@ -30,3 +30,13 @@ html.paper-theme[data-embed-layout="column"] .paper-page .content-area {
 html.paper-theme[data-embed-layout="column"] .paper-page .content-area > .paper-language {
   width: 100%;
 }
+
+/* The timezone picker is the last control on the schedule card, and the
+   iframe ends at the card's edge, so a panel opening downward would be cut
+   off. Inside an embed it opens upward, over the calendar. */
+html.paper-theme[data-embedded] .paper-timezone .tz-picker__panel {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: var(--space-2xs);
+}
