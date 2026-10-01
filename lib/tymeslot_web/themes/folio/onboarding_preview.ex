@@ -62,7 +62,6 @@ defmodule TymeslotWeb.Themes.Folio.OnboardingPreview do
       assign(assigns,
         primary: color(assigns.colors, :primary, "#b4532a"),
         accent: color(assigns.colors, :accent, "#a0612f"),
-        surface: color(assigns.colors, :surface, "#fffdf9"),
         ink: ink(assigns.colors)
       )
 
@@ -77,11 +76,9 @@ defmodule TymeslotWeb.Themes.Folio.OnboardingPreview do
         style={"background: linear-gradient(135deg, #{@primary}, #{@accent});"}
       />
       <div class="px-5 pb-5 flex flex-col items-center gap-3">
-        <span
-          class="-mt-6 w-12 h-12 rounded-full border-4"
-          style={"background: #{@primary}; border-color: #{@surface};"}
-        />
-        {render_slot(@header)}
+        <div class="-mt-8 w-full flex flex-col items-center gap-3">
+          {render_slot(@header)}
+        </div>
         <div class="w-full grid grid-cols-7 gap-1" style={slots_style(@highlight_slots)}>
           <span
             :for={day <- 0..13}
