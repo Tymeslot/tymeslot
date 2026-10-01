@@ -22,7 +22,9 @@
 @import "../../shared/components/timezone-picker.css";
 @import "./modules/timezone.css";
 @import "../../shared/components/custom-questions.css";
+@import "./modules/custom-questions.css";
 @import "../../shared/components/booking-fields.css";
+@import "./modules/booking-form.css";
 @import "../../shared/components/manage-pages.css";
 @import "../../shared/components/polls.css";
 @import "../../shared/components/payment-pages.css";
