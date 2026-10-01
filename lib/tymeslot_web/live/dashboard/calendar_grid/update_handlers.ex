@@ -312,7 +312,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
     socket =
       cond do
         Map.get(socket.assigns, :_initialized) ->
-          socket
+          adopt_if_revived(socket)
 
         not connected?(socket) ->
           socket
@@ -332,6 +332,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
       end
 
     {:ok, assign_desktop_reminder_feed(socket)}
+  end
+
+  # LiveView revives a grid rendered again before the browser has confirmed
+  # its removal: the organiser left the calendar and came straight back. It
+  # still holds the queue it had when it left, which its guardian has been
+  # driving since, so it takes the queue back as a grid mounted afresh does.
+  defp adopt_if_revived(socket) do
+    if socket.assigns[:calendar_left] == socket.assigns[:writes_adopted_after],
+      do: socket,
+      else: socket |> EventWrites.adopt() |> Helpers.load_events()
   end
 
   defp open_on_today(socket),

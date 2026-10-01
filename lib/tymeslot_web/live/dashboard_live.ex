@@ -126,8 +126,16 @@ defmodule TymeslotWeb.DashboardLive do
     action = socket.assigns.live_action
 
     # Leaving the calendar unmounts the grid while this process lives on,
-    # so the writes it still has queued are handed to their guardian.
-    if action != :calendar, do: WriteGuardian.detach()
+    # so the writes it still has queued are handed to their guardian. The
+    # count tells a grid LiveView revives, rather than mounts afresh, to
+    # take them back (see `EventWrites.adopt/1`).
+    socket =
+      if action == :calendar do
+        assign_new(socket, :calendar_left, fn -> 0 end)
+      else
+        WriteGuardian.detach()
+        assign(socket, :calendar_left, Map.get(socket.assigns, :calendar_left, 0) + 1)
+      end
 
     socket =
       if connected?(socket) && action == :calendar &&
@@ -251,6 +259,7 @@ defmodule TymeslotWeb.DashboardLive do
               client_ip={@client_ip}
               user_agent={@user_agent}
               live_action={@live_action}
+              calendar_left={@calendar_left}
               params={@params}
               custom_questions_allowed={@custom_questions_allowed}
               payments_allowed={@payments_allowed}

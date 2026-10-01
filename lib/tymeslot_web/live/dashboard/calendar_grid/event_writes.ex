@@ -161,7 +161,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   @spec adopt(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def adopt(socket) do
     user_id = socket.assigns.current_user.id
-    drive(socket, &{WriteGuardian.adopt(&1, user_id), []})
+
+    socket
+    |> drive(&{WriteGuardian.adopt(&1, user_id), []})
+    |> assign(:writes_adopted_after, socket.assigns[:calendar_left])
   end
 
   @doc """

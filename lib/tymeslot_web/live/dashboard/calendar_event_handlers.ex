@@ -95,13 +95,13 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
         ) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event_update_result({:ok, payload}, socket) do
-    settle_write(payload[:write], {:ok, payload[:updated_event]})
+    settle_write(socket, payload[:write], {:ok, payload[:updated_event]})
     {:noreply, socket}
   end
 
   def handle_event_update_result({:error, payload}, socket) do
     if payload[:retry] == :queued do
-      settle_write(payload[:write], :queued)
+      settle_write(socket, payload[:write], :queued)
 
       {:noreply,
        put_flash(
@@ -126,8 +126,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   @spec handle_event_writes_released(tuple(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event_writes_released(release, socket) do
-    send_update(CalendarGridComponent,
-      id: "calendar",
+    to_grid(socket,
       action: :event_writes_released,
       release: release
     )
@@ -135,9 +134,21 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     {:noreply, socket}
   end
 
-  defp settle_write(write, outcome) do
-    send_update(CalendarGridComponent,
-      id: "calendar",
+  # A write's result reaches the grid only while it is on screen. Once the
+  # organiser has left the calendar, the LiveView's write guardian drives
+  # the queue (`Tymeslot.CalendarGrid.WriteGuardian.detach/0`) and hears
+  # every result itself, and a grid component LiveView has yet to delete
+  # would otherwise drive the same queue as well, starting its writes a
+  # second time.
+  defp to_grid(socket, assigns) do
+    if socket.assigns.live_action == :calendar,
+      do: send_update(CalendarGridComponent, [{:id, "calendar"} | assigns])
+
+    :ok
+  end
+
+  defp settle_write(socket, write, outcome) do
+    to_grid(socket,
       action: :event_write_settled,
       write: write,
       outcome: outcome
@@ -145,8 +156,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   end
 
   defp revert_failed_update(payload, socket) do
-    send_update(CalendarGridComponent,
-      id: "calendar",
+    to_grid(socket,
       action: :revert_event,
       write: payload[:write],
       original_event: payload[:original_event]
@@ -216,8 +226,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   def handle_event_move_result({:ok, new_event_info}, socket) do
     case new_event_info[:series_to] do
       nil ->
-        send_update(CalendarGridComponent,
-          id: "calendar",
+        to_grid(socket,
           action: :event_moved,
           new_event_uid: new_event_info[:uid],
           new_event_integration_id: new_event_info[:integration_id]
@@ -227,8 +236,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
         {:noreply, put_flash(socket, level, message)}
 
       calendar ->
-        send_update(CalendarGridComponent,
-          id: "calendar",
+        to_grid(socket,
           action: :series_moved,
           moved_event: new_event_info[:original_event]
         )
@@ -241,8 +249,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   def handle_event_move_result({:error, payload}, socket) do
     case payload[:series_to] do
       nil ->
-        send_update(CalendarGridComponent,
-          id: "calendar",
+        to_grid(socket,
           action: :revert_event,
           original_event: payload[:original_event]
         )
@@ -250,8 +257,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
         {:noreply, put_flash(socket, :error, move_failed_message(payload[:reason]))}
 
       _calendar ->
-        send_update(CalendarGridComponent,
-          id: "calendar",
+        to_grid(socket,
           action: :series_move_failed,
           moved_event: payload[:original_event]
         )
@@ -391,30 +397,26 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
           Phoenix.LiveView.Socket.t()
         ) :: {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event_video_result({:unchanged, payload}, socket) do
-    settle_write(payload[:write], :unchanged)
+    settle_write(socket, payload[:write], :unchanged)
     {:noreply, socket}
   end
 
   def handle_event_video_result({:ok, result}, socket) do
     updated_event = result[:updated_event]
 
-    if socket.assigns.live_action == :calendar do
-      send_update(CalendarGridComponent,
-        id: "calendar",
-        action: :video_link_updated,
-        write: result[:write],
-        original_event: result[:original_event],
-        updated_event: updated_event
-      )
-    end
+    to_grid(socket,
+      action: :video_link_updated,
+      write: result[:write],
+      original_event: result[:original_event],
+      updated_event: updated_event
+    )
 
     {:noreply,
      put_flash(socket, :info, EditWorkflow.video_changed_message(updated_event.video_link))}
   end
 
   def handle_event_video_result({:error, payload}, socket) do
-    send_update(CalendarGridComponent,
-      id: "calendar",
+    to_grid(socket,
       action: :revert_event,
       write: payload[:write],
       original_event: payload[:original_event]
