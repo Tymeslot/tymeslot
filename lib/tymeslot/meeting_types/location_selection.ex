@@ -10,7 +10,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
       the host's editor renders, so the two can never disagree about what
       this meeting type offers.
 
-    * `resolve/3` — turns the option id the booker submitted into the
+    * `resolve/4` — turns the option id the booker submitted into the
       meeting fields that follow from it: the location string the calendar
       event and confirmation emails show, the kind, and the video
       integration the room will be created on.
