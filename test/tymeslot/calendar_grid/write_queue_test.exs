@@ -150,6 +150,21 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
       assert next.changes == %{summary: "Renamed"}
     end
 
+    # A guardian releases the events a lender killed outright still owed,
+    # and may do so after the lender's own release.
+    test "makes its writes once, however often the event is released" do
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), self(), [@key])
+      {queue, []} = WriteQueue.update(queue, @event, %{location: "Room 9"}, [])
+
+      assert {queue, [{:show, _shown}, {:start, write, _event}]} =
+               WriteQueue.resume(queue, {self(), @key, {:ok, @event}})
+
+      assert {^queue, []} = WriteQueue.resume(queue, {self(), @key, :unknown})
+
+      assert {_queue, []} =
+               WriteQueue.settle(queue, write.ref, {:ok, %{@event | location: "Room 9"}})
+    end
+
     test "drops and counts its writes once the other driver changed the whole series" do
       queue = WriteQueue.wait_elsewhere(WriteQueue.new(), self(), [@key])
       {queue, []} = WriteQueue.update(queue, @event, %{location: "Room 9"}, [])

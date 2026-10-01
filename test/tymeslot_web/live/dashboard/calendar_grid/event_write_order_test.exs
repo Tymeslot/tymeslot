@@ -433,6 +433,91 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
       refute_receive {:write_started, _pid, _uid, _payload}, 200
     end
 
+    # A guardian killed outright (a brutal kill at the end of its shutdown
+    # time) never releases the events it lent; the new grid's guardian
+    # notices it is gone and releases them in its place.
+    test "an edit kept for an event whose old guardian is killed outright still starts", %{
+      conn: conn,
+      event: event
+    } do
+      old_lv = open_event(conn, event)
+      edit(old_lv, "update_event_title", "First title")
+      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, 1_000
+
+      old_guardian = WriteGuardian.whereis(old_lv.pid)
+      kill(old_lv)
+
+      lv = open_event(conn, event)
+      edit(lv, "update_event_title", "Third title")
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+
+      Process.exit(old_guardian, :kill)
+
+      # Well within the guardian's drain timeout.
+      assert_receive {:write_started, kept, _uid, %{summary: "Third title"}}, 1_000
+      answer(kept, :ok)
+      answer(first, :ok)
+
+      assert settled(lv) =~ "Third title"
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+    end
+
+    test "an edit kept by a grid that is gone starts once the old guardian is killed outright", %{
+      conn: conn,
+      event: event
+    } do
+      old_lv = open_event(conn, event)
+      edit(old_lv, "update_event_title", "First title")
+      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, 1_000
+
+      old_guardian = WriteGuardian.whereis(old_lv.pid)
+      kill(old_lv)
+
+      lv = open_event(conn, event)
+      edit(lv, "update_event_title", "Third title")
+
+      # The new grid's guardian now drives its queue.
+      kill(lv)
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+
+      Process.exit(old_guardian, :kill)
+
+      assert_receive {:write_started, kept, _uid, %{summary: "Third title"}}, 1_000
+      answer(kept, :ok)
+      answer(first, :ok)
+
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+    end
+
+    test "an old guardian that released the event and is then killed starts the kept edit once",
+         %{
+           conn: conn,
+           event: event
+         } do
+      old_lv = open_event(conn, event)
+      edit(old_lv, "update_event_title", "First title")
+      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, 1_000
+
+      lv = open_event(conn, event)
+      edit(lv, "update_event_title", "Third title")
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+
+      answer(first, :ok)
+      assert settled(old_lv) =~ "First title"
+      assert_receive {:write_started, kept, _uid, %{summary: "Third title"}}, 1_000
+
+      old_guardian = WriteGuardian.whereis(old_lv.pid)
+      ref = Process.monitor(old_guardian)
+      Process.exit(old_guardian, :kill)
+      assert_receive {:DOWN, ^ref, :process, ^old_guardian, :killed}, 1_000
+
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+      answer(kept, :ok)
+
+      assert settled(lv) =~ "Third title"
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+    end
+
     # A LiveView still alive may be another open tab of the same organiser:
     # it goes on writing its own queue, and this tab's edit of the same
     # event waits until it has.

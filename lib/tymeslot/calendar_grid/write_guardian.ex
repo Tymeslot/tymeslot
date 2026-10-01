@@ -56,6 +56,13 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
   `:DOWN` messages arrives first. A guardian saves what it can when it
   stops, and releases every event it still lends on the way out.
 
+  A guardian killed outright (a brutal kill once its shutdown time is up,
+  or by hand) runs no `terminate/2` and releases nothing. So a guardian
+  that lends events tells the waiting grid's guardian which ones, and that
+  guardian monitors it and keeps track of the events it still owes: should
+  the lender die owing any, it releases them itself, as `:unknown`, both to
+  itself and to its LiveView, and the grid's kept edits start.
+
   Should the queue never be driven to its end, because the node is stopping
   or the provider has not answered for `:drain_timeout`, the guardian saves
   what it can for the next sync (`Tymeslot.CalendarGrid.WriteHandOver`).
@@ -235,7 +242,10 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
        results: [],
        driving?: false,
        # The LiveViews waiting for each event lent to them, by its key.
-       lent: %{}
+       lent: %{},
+       # The events lent to this guardian's LiveView that each lender, by
+       # its pid, has not released yet.
+       owed: %{}
      }}
   end
 
@@ -264,6 +274,11 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
     lent =
       Enum.reduce(keys, state.lent, &Map.update(&2, &1, [borrower], fn bs -> [borrower | bs] end))
 
+    # Sent from here, ahead of any release of these events, so that the
+    # borrower's guardian always hears of a lend before its release.
+    guardian = keys != [] && whereis(borrower)
+    if guardian, do: send(guardian, {:event_writes_lent, self(), keys})
+
     {:reply, keys, %{state | lent: lent}, timeout(state)}
   end
 
@@ -271,17 +286,51 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
   def handle_info({:DOWN, ref, :process, _owner, _reason}, %{monitor: ref} = state),
     do: drive(%{state | owner_alive?: false})
 
-  # A release is kept even before the queue waiting for it has arrived,
-  # since a guardian may lend the event as soon as `adopt/2` has asked.
-  def handle_info({tag, _result} = message, %{driving?: false} = state)
-      when tag in @result_tags do
-    if tag == :event_writes_released or WriteQueue.awaits?(state.queue, message),
-      do: {:noreply, %{state | results: state.results ++ [message]}},
-      else: {:noreply, state}
+  # A lender's messages all arrive before its `:DOWN`, so the events it
+  # still owes here are those it never released: it was killed outright.
+  # Each is released as a lender would release it, with the event left
+  # `:unknown`, so the kept edits start from the event they were made on.
+  #
+  # What this cannot cover: a write the lender had in flight runs on in an
+  # unlinked task, whose result goes to the lender's LiveView, so it may
+  # still land after the kept edits, and nothing here can know when it
+  # has; nor would stopping the task help, since a request already sent may
+  # still be applied. Equally, when only the guardian was killed and its
+  # LiveView lives on, that LiveView goes on writing its own queue.
+  def handle_info({:DOWN, _ref, :process, lender, _reason}, state)
+      when is_map_key(state.owed, lender) do
+    {keys, owed} = Map.pop(state.owed, lender)
+
+    for key <- keys do
+      release = {:event_writes_released, {lender, key, :unknown}}
+      send(self(), release)
+      if state.owner_alive?, do: send(state.owner, release)
+    end
+
+    {:noreply, %{state | owed: owed}, timeout(state)}
+  end
+
+  def handle_info({:event_writes_lent, lender, keys}, state) do
+    if not Map.has_key?(state.owed, lender), do: Process.monitor(lender)
+    owed = Map.update(state.owed, lender, MapSet.new(keys), &MapSet.union(&1, MapSet.new(keys)))
+    {:noreply, %{state | owed: owed}, timeout(state)}
   end
 
   def handle_info({tag, _result} = message, state) when tag in @result_tags do
-    state |> apply_result(message) |> continue()
+    state = forget_owed(state, message)
+
+    cond do
+      state.driving? ->
+        state |> apply_result(message) |> continue()
+
+      # A release is kept even before the queue waiting for it has arrived,
+      # since a guardian may lend the event as soon as `adopt/2` has asked.
+      tag == :event_writes_released or WriteQueue.awaits?(state.queue, message) ->
+        {:noreply, %{state | results: state.results ++ [message]}}
+
+      true ->
+        {:noreply, state}
+    end
   end
 
   # `terminate/2` saves what it can.
@@ -315,6 +364,15 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
 
     %{state | lent: lent}
   end
+
+  defp forget_owed(state, {:event_writes_released, {lender, key, _left}}) do
+    case state.owed do
+      %{^lender => keys} -> %{state | owed: %{state.owed | lender => MapSet.delete(keys, key)}}
+      _not_owed -> state
+    end
+  end
+
+  defp forget_owed(state, _result), do: state
 
   defp timeout(%{driving?: true}), do: @drain_timeout
   defp timeout(_mirroring), do: :infinity
