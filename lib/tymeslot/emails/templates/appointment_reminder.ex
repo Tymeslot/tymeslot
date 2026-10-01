@@ -46,6 +46,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
 
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 
+      #{MeetingComponents.organizer_note_box(@intent, appointment_details[:organizer_note])}
+
       #{MeetingComponents.custom_answers_section(appointment_details)}
 
       #{if Map.get(appointment_details, :meeting_url) do
@@ -67,7 +69,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
           eyebrow: dgettext("emails_booking", "Reminder"),
           stage_title: dgettext("emails_booking", "Our meeting is coming up"),
           stage_subtitle:
-            dgettext("emails_booking", "Starting %{time_until}",
+            dgettext("emails_booking", "Starting in %{time_until}",
               time_until: appointment_details.time_until
             )
         )
@@ -78,7 +80,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
       |> to({appointment_details.attendee_name, attendee_email})
       |> subject(
         Sanitise.sanitize_for_header(
-          dgettext("emails_booking", "Reminder: Our meeting is %{time_until}",
+          dgettext("emails_booking", "Reminder: Our meeting is in %{time_until}",
             time_until: appointment_details.time_until
           )
         )
@@ -124,6 +126,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
       #{Text.centered_text(intro_copy, padding: "8px 0 16px 0")}
 
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
+
+      #{MeetingComponents.organizer_note_box(@intent, appointment_details[:organizer_note])}
 
       #{if guest_video_url do
         MeetingComponents.video_meeting_section(@intent, guest_video_url,
@@ -238,7 +242,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
     #{dgettext("emails_booking", "I'm looking forward to our conversation!")}
 
     #{dgettext("emails_booking", "DETAILS:")}
-    #{meeting_details}#{video_section}#{custom_answers}
+    #{meeting_details}#{TextBodyHelper.format_organizer_note(appointment_details, locale)}#{video_section}#{custom_answers}
     #{dgettext("emails_booking", "Need to change plans?")}#{action_links}
 
     #{dgettext("emails_booking", "See you %{time_until}!", time_until: appointment_details.time_until_friendly || dgettext("emails_booking", "soon"))}
@@ -262,7 +266,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
     #{dgettext("emails_booking", "The meeting with %{organizer} that %{booker} invited you to is coming up.", organizer: appointment_details.organizer_name, booker: appointment_details.attendee_name)}
 
     #{dgettext("emails_booking", "DETAILS:")}
-    #{meeting_details}#{video_section}
+    #{meeting_details}#{TextBodyHelper.format_organizer_note(appointment_details, locale)}#{video_section}
 
     #{dgettext("emails_booking", "CAN YOU STILL MAKE IT?")}
     #{dgettext("emails_booking", "Yes, I'll attend: %{url}", url: Map.get(appointment_details, :guest_accept_url, "#"))}

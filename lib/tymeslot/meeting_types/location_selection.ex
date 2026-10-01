@@ -73,12 +73,6 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
 
   def options(meeting_type), do: derived_options(meeting_type)
 
-  @doc """
-  Whether the booking page has to ask. One location is stated, not chosen.
-  """
-  @spec choice_required?(map() | nil) :: boolean()
-  def choice_required?(meeting_type), do: length(options(meeting_type)) > 1
-
   @doc "The option with `id`, or the first one when `id` matches nothing."
   @spec fetch(map() | nil, String.t() | nil) :: LocationOption.t() | nil
   def fetch(meeting_type, id) do

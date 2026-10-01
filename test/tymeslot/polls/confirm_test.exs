@@ -134,6 +134,31 @@ defmodule Tymeslot.Polls.ConfirmTest do
       assert meeting.attendee_timezone == poll.timezone
     end
 
+    test "carries the poll's description onto the meeting as the organiser's note",
+         %{user: user, poll: poll, slot: slot} do
+      poll = poll |> Changeset.change(description: "Bring the Q3 numbers.") |> Repo.update!()
+
+      participant = insert(:poll_participant, poll: poll, email: "solo@example.com")
+      insert(:poll_vote, participant: participant, time_slot: slot, response: :yes)
+
+      assert {:ok, meeting} = Confirm.confirm(poll.id, slot.id, user.id)
+      assert meeting.organizer_note == "Bring the Q3 numbers."
+      assert meeting.attendee_message == nil
+    end
+
+    test "still confirms a poll whose description predates the length cap, cutting the note to fit",
+         %{user: user, poll: poll, slot: slot} do
+      max = MeetingSchema.organizer_note_max_length()
+      long = String.duplicate("a", max + 500)
+      poll = poll |> Changeset.change(description: long) |> Repo.update!()
+
+      participant = insert(:poll_participant, poll: poll, email: "solo@example.com")
+      insert(:poll_vote, participant: participant, time_slot: slot, response: :yes)
+
+      assert {:ok, meeting} = Confirm.confirm(poll.id, slot.id, user.id)
+      assert meeting.organizer_note == String.duplicate("a", max)
+    end
+
     test "returns :slot_taken when the organiser already has a meeting at that time",
          %{user: user, poll: poll, slot: slot} do
       insert(:poll_participant, poll: poll, email: "voter@example.com")

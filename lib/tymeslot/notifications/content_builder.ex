@@ -34,6 +34,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
       attendee_timezone: attendee_timezone,
 
       # Organizer information
+      organizer_note: meeting.organizer_note,
       organizer_name: meeting.organizer_name,
       organizer_email: meeting.organizer_email,
       organizer_title: meeting.organizer_title,

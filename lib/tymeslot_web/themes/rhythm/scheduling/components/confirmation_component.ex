@@ -117,7 +117,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                       <.icon name="hero-clock" class="hero-icon hero-icon--md" />
                     </div>
                     <div class="ticket-info">
-                      <span class="ticket-value">{@selected_time}</span>
+                      <span class="ticket-value">
+                        {LocalizationHelpers.format_slot_label(@selected_time)}
+                      </span>
                       <span class="ticket-sublabel">{Timezones.format(@user_timezone)}</span>
                     </div>
                   </div>

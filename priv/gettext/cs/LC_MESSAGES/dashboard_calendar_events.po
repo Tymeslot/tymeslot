@@ -178,7 +178,6 @@ msgid "Cancel"
 msgstr "Zrušit"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_recurrence.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex
 #, elixir-autogen, elixir-format
@@ -1117,6 +1116,7 @@ msgid "Events of a repeating series cannot be switched between all-day and timed
 msgstr "Události opakující se série zde nelze přepnout mezi celodenní a časovanou. Proveďte prosím tuto změnu ve své kalendářové aplikaci."
 
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex
 #, elixir-autogen, elixir-format
 msgid "That change cannot be made to the events you chose. A repeat rule can only be changed for all events, or this and following events, and cannot be removed here."
 msgstr "Tuto změnu nelze u zvolených událostí provést. Pravidlo opakování lze změnit jen pro všechny události, nebo pro tuto a následující, a zde jej nelze odstranit."
@@ -1286,3 +1286,78 @@ msgstr "Smazání se nezdařilo – zkusíme to znovu při příští synchroniz
 #, elixir-autogen, elixir-format
 msgid "Event deleted, but the attendees could not be notified."
 msgstr "Událost byla smazána, ale účastníky se nepodařilo informovat."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Add a note"
+msgstr "Přidat poznámku"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "An agenda, or anything to bring or prepare"
+msgstr "Program schůzky nebo co si přinést či připravit"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Included in the invitation and on the calendar entry."
+msgstr "Bude součástí pozvánky i záznamu v kalendáři."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Note to the guest"
+msgstr "Poznámka pro hosta"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Remove note"
+msgstr "Odebrat poznámku"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Each one is invited by email and can accept or decline."
+msgstr "Každý dostane pozvánku e-mailem a může ji přijmout nebo odmítnout."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Language of the invitation"
+msgstr "Jazyk pozvánky"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "More guests (optional)"
+msgstr "Další hosté (nepovinné)"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The language every email about this meeting is written in, for the guest and anyone else invited."
+msgstr "Jazyk všech e-mailů o této schůzce – pro hosta i pro všechny další pozvané."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
+#, elixir-autogen, elixir-format
+msgid "%{email} is already invited."
+msgstr "%{email} už je pozván."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
+#, elixir-autogen, elixir-format
+msgid "%{email} is already the main guest."
+msgstr "%{email} už je hlavním hostem."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
+#, elixir-autogen, elixir-format
+msgid "%{email} is not a valid email address."
+msgstr "%{email} není platná e-mailová adresa."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
+#, elixir-autogen, elixir-format
+msgid "No more guests can be added to this meeting."
+msgstr "Na tuto schůzku už nelze přidat další hosty."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
+#, elixir-autogen, elixir-format
+msgid "Too many new meetings. Please wait a moment."
+msgstr "Příliš mnoho nových schůzek. Počkejte prosím chvíli."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "Someone else organises this meeting, so Tymeslot can't move or split a series you were only invited to."
+msgstr "Tuto schůzku organizuje někdo jiný, takže Tymeslot nemůže přesunout ani rozdělit sérii, na kterou jste byli jen pozváni."

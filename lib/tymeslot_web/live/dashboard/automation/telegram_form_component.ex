@@ -110,6 +110,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
           }
           phx-target={@parent_component}
           class="space-y-8"
+          novalidate
         >
           <%!-- Name & Details --%>
           <div class="card-glass">

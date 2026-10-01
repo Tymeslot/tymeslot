@@ -83,6 +83,39 @@ defmodule Tymeslot.Infrastructure.Logging.RedactorTest do
       assert Redactor.redact("zipcode=12345&estate=big") == "zipcode=12345&estate=big"
     end
 
+    test "redacts a quoted value under any secret-bearing key name" do
+      text =
+        ~s(%{webhook_secret: "whsec-1", bot_token: "123:abc", secret_key: "sk-2", ) <>
+          ~s("stripe_secret_key" => "sk-3", "signing_key":"sig-4", DATA_ENCRYPTION_KEY: "ek-5"})
+
+      redacted = Redactor.redact(text)
+
+      for secret <- ~w(whsec-1 123:abc sk-2 sk-3 sig-4 ek-5), do: refute(redacted =~ secret)
+      assert redacted =~ ~s(webhook_secret: "[REDACTED]")
+      assert redacted =~ ~s(stripe_secret_key: "[REDACTED]")
+    end
+
+    test "redacts a secret in a tuple pair" do
+      assert Redactor.redact(~s([{"client_secret", "cs-1"}])) =~ ~s(client_secret: "[REDACTED]")
+    end
+
+    test "redacts secret-bearing query parameters" do
+      assert Redactor.redact("https://x.test/hook?client_secret=cs%2F1&id=2") ==
+               "https://x.test/hook?client_secret=[REDACTED]&id=2"
+
+      assert Redactor.redact("url?bot_token=123:abc") == "url?bot_token=[REDACTED]"
+    end
+
+    test "keeps the message of an error tagged with a token-like atom" do
+      text = ~s({:error, :invalid_token, "Token has expired"})
+      assert Redactor.redact(text) == text
+    end
+
+    test "leaves diagnostic key names alone" do
+      text = ~s(cache_key: "user:1", idempotency_key: "idem-1", dedup_key: "d-1")
+      assert Redactor.redact(text) == text
+    end
+
     test "redacts api_key in different formats" do
       assert Redactor.redact("api_key:\"key123\"") =~ "api_key: \"[REDACTED]\""
       assert Redactor.redact("api_key : \"key456\"") =~ "api_key: \"[REDACTED]\""

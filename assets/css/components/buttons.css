@@ -31,6 +31,14 @@
   @apply hover:from-red-400 hover:to-rose-500 hover:shadow-red-500/40;
 }
 
+/* Adding guests is additive rather than destructive, so it reads green beside
+   the red cancel button rather than borrowing the primary gradient, which on a
+   booking card already means "join this meeting". */
+.btn-success {
+  @apply bg-linear-to-r from-green-600 to-emerald-600 text-white font-bold shadow-lg shadow-green-500/20 rounded-token-2xl px-6 py-3 transition-glass;
+  @apply hover:from-green-500 hover:to-emerald-500 hover:shadow-green-500/40;
+}
+
 .btn-ghost {
   @apply bg-transparent text-tymeslot-600 font-bold rounded-token-2xl px-6 py-3 transition-glass;
   @apply hover:bg-tymeslot-50 hover:text-turquoise-600;

@@ -149,9 +149,10 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
   as `"error.reason"`; ids and other variable data belong in `context` too,
   never in a message.
 
-  ErrorTracker stores an exception's message as it is, unredacted, and many
-  messages embed the term that failed (`KeyError`, `MatchError`,
-  `FunctionClauseError`). Where that term can hold a decrypted credential,
+  An exception is reported as `ReasonScrubber.scrub_exception/1` leaves it,
+  with the values of its sensitive fields redacted, but many messages embed
+  the term that failed (`KeyError`, `MatchError`, `FunctionClauseError`) in a
+  form no key rule reaches. Where that term can hold a decrypted credential,
   report `{:raised, exception.__struct__}` with the exception's stacktrace
   instead, so the error is known by its module alone.
 
@@ -181,8 +182,16 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
 
     log_handled_error(exception, exception_or_reason, context)
 
+    # Scrubbed before the insert, so the message is masked from the first
+    # write. The module and stacktrace are unchanged, so the error groups as
+    # it would have.
     if enabled?(),
-      do: record(exception, stacktrace, tracker_context(exception, context)),
+      do:
+        record(
+          ReasonScrubber.scrub_exception(exception),
+          stacktrace,
+          tracker_context(exception, context)
+        ),
       else: :ok
   rescue
     failure -> log_report_failure(failure)

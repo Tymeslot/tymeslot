@@ -50,6 +50,41 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
       assert meeting.status == "confirmed"
     end
 
+    test "stores the organiser's note trimmed, never as the attendee's message", %{
+      base_params: params
+    } do
+      assert {:ok, meeting} =
+               params
+               |> Map.put(:organizer_note, "  Agenda: the Q3 roadmap.\n")
+               |> CreateAdHoc.execute()
+
+      assert meeting.organizer_note == "Agenda: the Q3 roadmap."
+      assert meeting.attendee_message == nil
+    end
+
+    test "stores no note for a blank one or none at all", %{base_params: params} do
+      assert {:ok, blank} = CreateAdHoc.execute(Map.put(params, :organizer_note, "  \n "))
+      assert blank.organizer_note == nil
+
+      later = %{
+        params
+        | start_time: DateTime.add(params.start_time, 1, :day),
+          end_time: DateTime.add(params.end_time, 1, :day)
+      }
+
+      assert {:ok, absent} = CreateAdHoc.execute(later)
+      assert absent.organizer_note == nil
+    end
+
+    test "rejects a note over the length limit and creates no meeting", %{base_params: params} do
+      assert {:error, _reason} =
+               params
+               |> Map.put(:organizer_note, String.duplicate("a", 2001))
+               |> CreateAdHoc.execute()
+
+      assert Repo.all(MeetingSchema) == []
+    end
+
     test "populates organizer fields from profile", %{
       base_params: params,
       user: user,
@@ -86,6 +121,22 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
       assert meeting.calendar_integration_id == cal.id
       assert meeting.calendar_path == "/calendars/main"
       assert_enqueued(worker: Tymeslot.Workers.CalendarEventWorker)
+    end
+
+    test "asks for no reminders, rather than leaving the question unanswered", %{
+      base_params: params
+    } do
+      # A nil reminders column means "meeting from before this field existed"
+      # to `Notifications.Orchestrator`, which answers it with the legacy
+      # default of 30 minutes. The booking's own confirmation says no reminders
+      # are scheduled, so one arriving anyway is a contradiction the guest sees.
+      assert {:ok, meeting} = CreateAdHoc.execute(params)
+      assert meeting.reminders == []
+
+      refute_enqueued(
+        worker: Tymeslot.Workers.EmailWorker,
+        args: %{"action" => "send_reminder_emails", "meeting_id" => meeting.id}
+      )
     end
 
     test "schedules email notifications when no video integration", %{base_params: params} do

@@ -64,6 +64,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 
+      #{MeetingComponents.organizer_note_box(@intent, appointment_details[:organizer_note])}
+
       #{MeetingComponents.custom_answers_section(appointment_details)}
 
       #{if attendee_video_url do
@@ -145,19 +147,14 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
         audience: :guest
       }
 
-      intro_copy =
-        dgettext(
-          "emails_booking",
-          "Hi %{guest} - %{booker} has invited you as a guest to this meeting with %{organizer}.",
-          guest: guest_name,
-          booker: appointment_details.attendee_name,
-          organizer: appointment_details.organizer_name
-        )
+      intro_copy = guest_intro(appointment_details, guest_name)
 
       mjml_content = """
       #{Text.centered_text(intro_copy, padding: "8px 0 16px 0")}
 
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
+
+      #{MeetingComponents.organizer_note_box(@intent, appointment_details[:organizer_note])}
 
       #{if guest_video_url do
         MeetingComponents.video_meeting_section(@intent, guest_video_url,
@@ -299,7 +296,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
     #{dgettext("emails_booking", "I'm looking forward to our meeting. I've blocked the time on my calendar and will be ready for you.")}
 
     #{dgettext("emails_booking", "MEETING DETAILS:")}
-    #{meeting_details}#{video_section}#{custom_answers}
+    #{meeting_details}#{TextBodyHelper.format_organizer_note(appointment_details, locale)}#{video_section}#{custom_answers}
     #{action_links}#{payment_section}
     #{if appointment_details.organizer_contact_info, do: "\n#{dgettext("emails_booking", "QUESTIONS?")}\n#{appointment_details.organizer_contact_info}\n"}
     #{if appointment_details.reminders_summary, do: "\n#{appointment_details.reminders_summary}\n", else: ""}
@@ -307,6 +304,43 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
     #{dgettext("emails_booking", "Looking forward to meeting you!")}
     #{appointment_details.organizer_name}
     """
+  end
+
+  # Whoever put the guest on the meeting is the one named as inviting them:
+  # the booker for a guest brought on the public page, the host for one they
+  # added themselves (see `Tymeslot.Meetings.GuestSchema.inviter/1`).
+  defp guest_intro(%{guest_invited_by: :organizer} = appointment_details, guest_name) do
+    dgettext(
+      "emails_booking",
+      "Hi %{guest} - %{organizer} has invited you as a guest to this meeting.",
+      guest: guest_name,
+      organizer: appointment_details.organizer_name
+    )
+  end
+
+  defp guest_intro(appointment_details, guest_name) do
+    dgettext(
+      "emails_booking",
+      "Hi %{guest} - %{booker} has invited you as a guest to this meeting with %{organizer}.",
+      guest: guest_name,
+      booker: appointment_details.attendee_name,
+      organizer: appointment_details.organizer_name
+    )
+  end
+
+  defp guest_invited_line(%{guest_invited_by: :organizer} = appointment_details) do
+    dgettext("emails_booking", "%{organizer} has invited you as a guest to this meeting.",
+      organizer: appointment_details.organizer_name
+    )
+  end
+
+  defp guest_invited_line(appointment_details) do
+    dgettext(
+      "emails_booking",
+      "%{booker} has invited you as a guest to this meeting with %{organizer}.",
+      booker: appointment_details.attendee_name,
+      organizer: appointment_details.organizer_name
+    )
   end
 
   defp build_guest_text_body(appointment_details, guest_name, locale) do
@@ -320,10 +354,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
     #{dgettext("emails_booking", "Hi %{guest},", guest: guest_name)}
 
-    #{dgettext("emails_booking", "%{booker} has invited you as a guest to this meeting with %{organizer}.", booker: appointment_details.attendee_name, organizer: appointment_details.organizer_name)}
+    #{guest_invited_line(appointment_details)}
 
     #{dgettext("emails_booking", "MEETING DETAILS:")}
-    #{meeting_details}#{video_section}
+    #{meeting_details}#{TextBodyHelper.format_organizer_note(appointment_details, locale)}#{video_section}
 
     #{dgettext("emails_booking", "WILL YOU BE THERE?")}
     #{dgettext("emails_booking", "Yes, I'll attend: %{url}", url: Map.get(appointment_details, :guest_accept_url, "#"))}

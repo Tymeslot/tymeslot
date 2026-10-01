@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
   import Tymeslot.Factory
 
   alias Plug.Test
+  alias Tymeslot.CalendarGrid.WriteGuardian
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
@@ -156,6 +157,134 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
     refute html =~ "Renamed"
   end
 
+  describe "when the grid is gone before a waiting edit has started" do
+    setup %{integration: integration} do
+      {:ok, event: standup(integration, "Team Standup", "Room 101")}
+    end
+
+    # The waiting edit lives only in the LiveView; its guardian makes it once
+    # the write ahead of it answers, onto the event as that write left it.
+    test "an edit queued behind a running one still reaches the calendar", %{
+      conn: conn,
+      event: event
+    } do
+      lv = open_event(conn, event)
+
+      edit(lv, "update_event_title", "First title")
+      edit(lv, "update_event_location", "Room 9")
+      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, 1_000
+
+      kill(lv)
+      refute_receive {:write_started, _pid, _uid, _payload}, 100
+
+      answer(first, :ok)
+
+      assert_receive {:write_started, second, _uid, payload}, 1_000
+      assert %{summary: "First title", location: "Room 9"} = payload
+      answer(second, :ok)
+
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+    end
+
+    test "leaving the calendar for another dashboard page still makes it", %{
+      conn: conn,
+      event: event
+    } do
+      lv = open_event(conn, event)
+
+      edit(lv, "update_event_title", "First title")
+      edit(lv, "update_event_title", "Second title")
+      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, 1_000
+
+      # The grid is unmounted while the LiveView lives on.
+      render_patch(lv, ~p"/dashboard/overview")
+      answer(first, :ok)
+
+      assert_receive {:write_started, second, _uid, %{summary: "Second title"}}, 1_000
+      answer(second, :ok)
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+    end
+
+    # The grid mounted again takes back the queue its guardian was driving,
+    # so a new edit of the event waits behind the edit still being written
+    # and is made onto the event as that one leaves it.
+    test "an edit made on returning to the calendar waits behind the ones still saving", %{
+      conn: conn,
+      event: event
+    } do
+      lv = open_event(conn, event)
+
+      edit(lv, "update_event_title", "First title")
+      edit(lv, "update_event_location", "Room 9")
+      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, 1_000
+
+      render_patch(lv, ~p"/dashboard/overview")
+      answer(first, :ok)
+      assert_receive {:write_started, second, _uid, %{location: "Room 9"}}, 1_000
+
+      render_patch(lv, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+      edit(lv, "update_event_title", "Third title")
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+
+      answer(second, :ok)
+
+      assert_receive {:write_started, third, _uid, payload}, 1_000
+      assert %{summary: "Third title", location: "Room 9"} = payload
+      answer(third, :ok)
+
+      assert settled(lv) =~ "Third title"
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+    end
+
+    # The replacement guardian is handed the queue with the write already
+    # running; its answer must reach it, not the guardian that crashed.
+    test "a guardian started again after a crash still hears the running write", %{
+      conn: conn,
+      event: event
+    } do
+      lv = open_event(conn, event)
+
+      edit(lv, "update_event_title", "First title")
+      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, 1_000
+
+      crashed = WriteGuardian.whereis(lv.pid)
+      Process.exit(crashed, :kill)
+      eventually(fn -> WriteGuardian.whereis(lv.pid) == nil end)
+
+      edit(lv, "update_event_location", "Room 9")
+      assert is_pid(WriteGuardian.whereis(lv.pid))
+
+      kill(lv)
+      answer(first, :ok)
+
+      assert_receive {:write_started, second, _uid, %{location: "Room 9"}}, 1_000
+      answer(second, :ok)
+    end
+
+    test "nothing is written twice once every edit has answered", %{conn: conn, event: event} do
+      lv = open_event(conn, event)
+
+      edit(lv, "update_event_title", "First title")
+      edit(lv, "update_event_title", "Second title")
+      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, 1_000
+      answer(first, :ok)
+      assert_receive {:write_started, second, _uid, %{summary: "Second title"}}, 1_000
+      answer(second, :ok)
+      assert settled(lv) =~ "Second title"
+
+      guardian = WriteGuardian.whereis(lv.pid)
+      assert is_pid(guardian)
+      ref = Process.monitor(guardian)
+
+      kill(lv)
+
+      # With nothing left to finish it stops, having written nothing.
+      assert_receive {:DOWN, ^ref, :process, ^guardian, :normal}, 1_000
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+    end
+  end
+
   defp standup(integration, summary, location, time \\ ~T[10:00:00]) do
     today = Date.utc_today()
 
@@ -177,6 +306,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
 
   defp edit(lv, event_name, value),
     do: lv |> element("#calendar-grid") |> render_hook(event_name, %{"value" => value})
+
+  defp kill(lv) do
+    Process.flag(:trap_exit, true)
+    ref = Process.monitor(lv.pid)
+    Process.exit(lv.pid, :kill)
+    assert_receive {:DOWN, ^ref, :process, _pid, :killed}, 1_000
+  end
 
   # Answers the held write and waits for its task to finish, by which time the
   # result is on its way to the LiveView.

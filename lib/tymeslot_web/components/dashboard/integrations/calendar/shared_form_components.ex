@@ -80,6 +80,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
           phx-change="track_form_change"
           phx-target={@target}
           class="space-y-5"
+          novalidate
         >
           <input type="hidden" name="integration[provider]" value={@provider} />
 

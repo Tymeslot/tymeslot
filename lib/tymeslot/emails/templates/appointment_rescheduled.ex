@@ -143,14 +143,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
         audience: :guest
       }
 
-      intro_copy =
-        dgettext(
-          "emails_booking",
-          "Hi %{guest} - the meeting with %{organizer} that %{booker} invited you to has been moved to a new time.",
-          guest: guest_name,
-          organizer: appointment_details.organizer_name,
-          booker: appointment_details.attendee_name
-        )
+      intro_copy = guest_intro(appointment_details, guest_name)
 
       mjml_content = """
       #{Text.centered_text(intro_copy, padding: "8px 0 16px 0")}
@@ -376,6 +369,44 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
     """
   end
 
+  # Whoever put the guest on the meeting is the one named as inviting them
+  # (see `Tymeslot.Meetings.GuestSchema.inviter/1`).
+  defp guest_intro(%{guest_invited_by: :organizer} = appointment_details, guest_name) do
+    dgettext(
+      "emails_booking",
+      "Hi %{guest} - the meeting %{organizer} invited you to has been moved to a new time.",
+      guest: guest_name,
+      organizer: appointment_details.organizer_name
+    )
+  end
+
+  defp guest_intro(appointment_details, guest_name) do
+    dgettext(
+      "emails_booking",
+      "Hi %{guest} - the meeting with %{organizer} that %{booker} invited you to has been moved to a new time.",
+      guest: guest_name,
+      organizer: appointment_details.organizer_name,
+      booker: appointment_details.attendee_name
+    )
+  end
+
+  defp guest_moved_line(%{guest_invited_by: :organizer} = appointment_details) do
+    dgettext(
+      "emails_booking",
+      "The meeting %{organizer} invited you to has been moved to a new time.",
+      organizer: appointment_details.organizer_name
+    )
+  end
+
+  defp guest_moved_line(appointment_details) do
+    dgettext(
+      "emails_booking",
+      "The meeting with %{organizer} that %{booker} invited you to has been moved to a new time.",
+      organizer: appointment_details.organizer_name,
+      booker: appointment_details.attendee_name
+    )
+  end
+
   defp build_guest_text_body(appointment_details, guest_name, locale) do
     meeting_details = TextBodyHelper.format_meeting_details(appointment_details, locale)
 
@@ -387,7 +418,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
 
     #{dgettext("emails_booking", "Hi %{guest},", guest: guest_name)}
 
-    #{dgettext("emails_booking", "The meeting with %{organizer} that %{booker} invited you to has been moved to a new time.", organizer: appointment_details.organizer_name, booker: appointment_details.attendee_name)}
+    #{guest_moved_line(appointment_details)}
     #{previous_time_line(appointment_details, :attendee, locale)}
     #{dgettext("emails_booking", "NEW MEETING DETAILS:")}
     #{meeting_details}#{video_section}

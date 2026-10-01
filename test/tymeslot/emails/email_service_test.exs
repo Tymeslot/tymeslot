@@ -346,7 +346,7 @@ defmodule Tymeslot.Emails.EmailServiceTest do
       assert org_email.subject =~ "Meeting with Jane Attendee in 30 minutes"
 
       assert att_email.to == [{"Jane Attendee", "attendee@example.com"}]
-      assert att_email.subject == "Reminder: Our meeting is 30 minutes"
+      assert att_email.subject == "Reminder: Our meeting is in 30 minutes"
     end
 
     test "cancellation templates address each party with their own subject" do

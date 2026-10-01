@@ -259,11 +259,7 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
 
   defp has_writable_calendar?(_integration), do: true
 
-  @doc """
-  Finds the calendar entry with the given id.
-  """
-  @spec find_calendar_by_id([CalendarEntry.t()], String.t() | nil) :: CalendarEntry.t() | nil
-  def find_calendar_by_id(calendar_list, id) when is_list(calendar_list) do
+  defp find_calendar_by_id(calendar_list, id) when is_list(calendar_list) do
     Enum.find(calendar_list, &(&1.id == id))
   end
 

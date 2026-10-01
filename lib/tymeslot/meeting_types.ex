@@ -31,12 +31,6 @@ defmodule Tymeslot.MeetingTypes do
   @spec location_options(map() | nil) :: [LocationOption.t()]
   defdelegate location_options(meeting_type), to: LocationSelection, as: :options
 
-  @doc "Whether the booking page must ask the booker to choose a location."
-  @spec location_choice_required?(map() | nil) :: boolean()
-  defdelegate location_choice_required?(meeting_type),
-    to: LocationSelection,
-    as: :choice_required?
-
   @typedoc """
   What a booker submitted about where to meet. Every key is optional, and
   each is honoured only where the host's own meeting type offers it:

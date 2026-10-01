@@ -451,7 +451,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
   # Recurrence changes deviate from the standard `apply_optimistic_update`
   # pattern: the async step is conditional on whether the event belongs to a
   # series, so the update and the flash are handled inline here.
-  defp push_recurrence_change(socket, original_event, new_rule) do
+  #
+  # A member of a series cannot have its repeat rule removed for any scope
+  # the prompt would offer (`SeriesEdit`'s `rule_refused?/3` refuses
+  # `:following` and `:all` unconditionally when the rule is being taken
+  # away), so that choice is refused here rather than sent to a scope prompt
+  # every button of which is a dead end.
+  defp push_recurrence_change(socket, original_event, nil) do
+    if EditWorkflow.series_edit?(original_event) do
+      refuse_rule_removal(socket)
+    else
+      apply_recurrence_change(socket, original_event, nil)
+    end
+  end
+
+  defp push_recurrence_change(socket, original_event, new_rule),
+    do: apply_recurrence_change(socket, original_event, new_rule)
+
+  defp apply_recurrence_change(socket, original_event, new_rule) do
     optimistic_event = %{original_event | recurrence_rule: new_rule}
 
     updated_events =
@@ -481,6 +498,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
       send(self(), {:flash, {:info, dgettext("dashboard_calendar_events", "Changes saved.")}})
       {:noreply, socket}
     end
+  end
+
+  defp refuse_rule_removal(socket) do
+    send(
+      self(),
+      {:flash,
+       {:error,
+        dgettext(
+          "dashboard_calendar_events",
+          "That change cannot be made to the events you chose. A repeat rule can only be changed for all events, or this and following events, and cannot be removed here."
+        )}}
+    )
+
+    {:noreply, socket}
   end
 
   # Flipping all-day refits a recurring event's UNTIL to the value type its new

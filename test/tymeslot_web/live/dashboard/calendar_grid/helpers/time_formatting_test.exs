@@ -90,6 +90,35 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormattingTest do
 
   # ── format_time_range_in_tz/3 ───────────────────────────────────────
 
+  describe "format_display_time_range/3 across days, localised" do
+    setup do
+      on_exit(fn -> Gettext.put_locale(TymeslotWeb.Gettext, "en") end)
+
+      event = %{
+        all_day: false,
+        start_at: ~U[2026-02-05 17:30:00Z],
+        end_at: ~U[2026-02-06 09:00:00Z]
+      }
+
+      {:ok, event: event}
+    end
+
+    for {locale, expected} <- [
+          {"en", "Feb 5, 17:30 – Feb 6, 09:00"},
+          {"de", "5. Feb, 17:30 – 6. Feb, 09:00"},
+          {"fr", "5 févr., 17:30 – 6 févr., 09:00"},
+          {"cs", "5. úno, 17:30 – 6. úno, 09:00"},
+          {"pl", "5 lut, 17:30 – 6 lut, 09:00"}
+        ] do
+      test "#{locale}: puts each day before its time in the locale's order", %{event: event} do
+        Gettext.put_locale(TymeslotWeb.Gettext, unquote(locale))
+
+        assert TimeFormatting.format_display_time_range(event, "24h", "Etc/UTC") ==
+                 unquote(expected)
+      end
+    end
+  end
+
   describe "format_time_range_in_tz/3" do
     test "converts UTC event to the specified timezone" do
       event = %{

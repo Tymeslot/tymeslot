@@ -388,7 +388,7 @@ defmodule Tymeslot.Bookings.Create do
       booking_data
       |> Map.get(:guest_emails, [])
       |> Guests.sanitize_emails(meeting.attendee_email)
-      |> then(&Guests.create_for_meeting(meeting.id, &1))
+      |> then(&Guests.create_for_meeting(meeting.id, &1, :booker))
     else
       {:ok, []}
     end

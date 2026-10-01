@@ -158,7 +158,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   logged, and does not fail the split. The answer is then
   `{:ok, %{tail: %{uid: uid, id: id}}}`, the new series' `iCalUId` and id;
   an edit of the first occurrence is written as one of every occurrence. A
-  refusal of the edit is answered before anything is written.
+  refusal of the edit is answered before anything is written. A series the
+  account was only invited to is refused with `{:error, :not_organiser}`
+  before the split is written: the new tail would carry its attendees from
+  this account, inviting them all afresh to a series this account now
+  organises.
   """
   @spec call_update_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
           {:ok, map()} | {:error, atom(), String.t()} | {:error, term()}
@@ -190,6 +194,12 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
         else: api_module().patch_event(integration, edit.master_id, body)
     end
   end
+
+  # A series the account was only invited to is refused before anything is
+  # written: the tail would carry its attendees from this account, so Graph
+  # would invite them all afresh to a series this account now organises,
+  # leaving the real organiser off it.
+  defp split_series(_integration, %{"isOrganizer" => false}, _edit), do: {:error, :not_organiser}
 
   # The tail goes into the calendar Graph says holds the master: the cached
   # row's calendar can read "primary" for a series in another calendar, and
@@ -236,7 +246,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
       when is_binary(event_id) and event_id != "" do
     fetched =
       case get_live_event(integration, event_id) do
-        {:error, :not_found} -> find_moved_event(integration, Map.get(ref, :ical_uid))
+        {:error, :not_found} -> find_by_ical_uid(integration, Map.get(ref, :ical_uid))
         other -> other
       end
 
@@ -255,7 +265,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     end
   end
 
-  defp find_moved_event(integration, ical_uid) when is_binary(ical_uid) and ical_uid != "" do
+  defp find_by_ical_uid(integration, ical_uid) when is_binary(ical_uid) and ical_uid != "" do
     case api_module().find_events_by_ical_uid(integration, ical_uid) do
       {:ok, found} ->
         case Enum.reject(found, &(&1["isCancelled"] == true)) do
@@ -271,7 +281,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     end
   end
 
-  defp find_moved_event(_integration, _ical_uid), do: {:error, :unconfirmed}
+  defp find_by_ical_uid(_integration, _ical_uid), do: {:error, :unconfirmed}
 
   defp normalise_fetched({:ok, raw}, ref),
     do:

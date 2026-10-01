@@ -269,6 +269,14 @@ defmodule Tymeslot.MeetingsTest do
       refute ics =~ "STATUS:CONFIRMED"
     end
 
+    test "carries the organiser's note to the guest" do
+      meeting =
+        exportable_meeting(status: "confirmed", organizer_note: "Bring the Q3 numbers.")
+
+      assert {:ok, ics} = Meetings.calendar_export(meeting.uid, meeting.organizer_user_id)
+      assert ics =~ "Bring the Q3 numbers."
+    end
+
     test "returns not_found for a cancelled meeting" do
       meeting = exportable_meeting(status: "cancelled")
 

@@ -39,6 +39,7 @@ defmodule TymeslotWeb.Registration.SignupComponent do
       <:form>
         <.auth_form
           id="signup-form"
+          novalidate
           phx-submit="submit_signup"
           loading={@loading}
           csrf_token={@csrf_token}

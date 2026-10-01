@@ -279,11 +279,6 @@ msgstr ""
 msgid "Icon"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
-#, elixir-autogen, elixir-format
-msgid "In-Person"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -372,7 +367,6 @@ msgstr ""
 msgid "No reminders configured."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "No video integrations configured."
@@ -482,17 +476,11 @@ msgstr ""
 msgid "Saving..."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
-#, elixir-autogen, elixir-format
-msgid "Select Video Provider"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/validation.ex
 #, elixir-autogen, elixir-format
 msgid "Select a valid reminder unit"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Set up video integration"
@@ -571,11 +559,6 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/autosave.ex
 #, elixir-autogen, elixir-format
 msgid "Unsaved changes"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
-#, elixir-autogen, elixir-format
-msgid "Video Meeting"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
@@ -719,7 +702,6 @@ msgstr ""
 msgid "Hide from public booking page"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "Location"

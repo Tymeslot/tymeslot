@@ -41,6 +41,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Integrations.Video.Rooms, as: VideoRooms
   alias Tymeslot.Meetings.AttendeeNotifications
+  alias Tymeslot.Meetings.Guests
 
   @doc """
   Returns the flash message surfaced to the user when an integration's
@@ -150,7 +151,13 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
       organizer_user_id: params.organizer_user_id,
       calendar_integration_id: params[:calendar_integration_id],
       calendar_path: params[:calendar_id],
-      video_integration_id: params[:video_integration_id]
+      video_integration_id: params[:video_integration_id],
+      organizer_note: params[:organizer_note],
+      attendee_locale: params[:attendee_locale],
+      # `CreateAdHoc` expects a pre-validated list. The form checks each address
+      # as it is added, but the main guest can still be typed in afterwards as
+      # one of them, so the list is settled here against the final address.
+      guest_emails: Guests.sanitize_emails(params[:guest_emails] || [], params.attendee_email)
     }
 
     case CreateAdHoc.execute(ad_hoc_params) do

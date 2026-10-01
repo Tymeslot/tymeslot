@@ -89,7 +89,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
       # The notice belongs to the theme, in the host's own branding, not to the
       # dispatcher's last-resort crash card.
       assert has_element?(view, "[data-testid='readiness-notice']")
-      refute html =~ "Theme Error"
+      refute html =~ "theme-error-retry-button"
     end
   end
 

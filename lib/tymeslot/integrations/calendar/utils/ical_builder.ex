@@ -93,7 +93,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   payload never drives user-facing labels.
 
   The `mode` decides whether the attendee is advertised as a real `ATTENDEE`
-  or as the `CONTACT` fallback; `CalDAV.Scheduling.attendee_mode/1` owns that
+  (beside the organiser, for a server that would otherwise add its owner) or
+  as the `CONTACT` fallback; `CalDAV.Scheduling.attendee_mode/1` owns that
   choice per server. It defaults to `:contact`, the conservative answer, so a
   caller that has no client in hand cannot accidentally ask a scheduling-happy
   server to mail everyone.
@@ -183,9 +184,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   # `Patcher`'s "What is left alone"). This marks ours. `X-` properties are
   # preserved across patches, so the mark survives for as long as the block
   # it describes.
-  defp attendee_marker(event_data, :attendee) do
-    if Properties.build_attendee_lines(event_data, :attendee), do: @attendee_marker
-  end
-
   defp attendee_marker(_event_data, :contact), do: nil
+
+  defp attendee_marker(event_data, mode) do
+    if Properties.build_attendee_lines(event_data, mode), do: @attendee_marker
+  end
 end

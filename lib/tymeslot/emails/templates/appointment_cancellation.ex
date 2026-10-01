@@ -117,7 +117,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
       }
 
       mjml_content = """
-      #{Text.centered_text(dgettext("emails_booking", "Hi %{guest} - the meeting with %{organizer} that %{booker} invited you to has been cancelled.", guest: guest_name, organizer: appointment_details.organizer_name, booker: appointment_details.attendee_name), padding: "8px 0 16px 0")}
+      #{Text.centered_text(guest_intro(appointment_details, guest_name), padding: "8px 0 16px 0")}
 
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 
@@ -224,6 +224,42 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
     """
   end
 
+  # Whoever put the guest on the meeting is the one named as inviting them
+  # (see `Tymeslot.Meetings.GuestSchema.inviter/1`).
+  defp guest_intro(%{guest_invited_by: :organizer} = appointment_details, guest_name) do
+    dgettext(
+      "emails_booking",
+      "Hi %{guest} - the meeting %{organizer} invited you to has been cancelled.",
+      guest: guest_name,
+      organizer: appointment_details.organizer_name
+    )
+  end
+
+  defp guest_intro(appointment_details, guest_name) do
+    dgettext(
+      "emails_booking",
+      "Hi %{guest} - the meeting with %{organizer} that %{booker} invited you to has been cancelled.",
+      guest: guest_name,
+      organizer: appointment_details.organizer_name,
+      booker: appointment_details.attendee_name
+    )
+  end
+
+  defp guest_cancelled_line(%{guest_invited_by: :organizer} = appointment_details) do
+    dgettext("emails_booking", "The meeting %{organizer} invited you to has been cancelled.",
+      organizer: appointment_details.organizer_name
+    )
+  end
+
+  defp guest_cancelled_line(appointment_details) do
+    dgettext(
+      "emails_booking",
+      "The meeting with %{organizer} that %{booker} invited you to has been cancelled.",
+      organizer: appointment_details.organizer_name,
+      booker: appointment_details.attendee_name
+    )
+  end
+
   defp text_body_guest(appointment_details, guest_name, locale) do
     meeting_details = TextBodyHelper.format_meeting_details(appointment_details, locale)
 
@@ -232,7 +268,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
 
     #{dgettext("emails_booking", "Hi %{guest},", guest: guest_name)}
 
-    #{dgettext("emails_booking", "The meeting with %{organizer} that %{booker} invited you to has been cancelled.", organizer: appointment_details.organizer_name, booker: appointment_details.attendee_name)}
+    #{guest_cancelled_line(appointment_details)}
 
     #{dgettext("emails_booking", "CANCELLED APPOINTMENT DETAILS:")}
     #{meeting_details}

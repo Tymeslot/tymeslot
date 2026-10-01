@@ -91,6 +91,7 @@ msgstr "ZPRÁVA OD ÚČASTNÍKA:"
 msgid "Meeting"
 msgstr "Schůzka"
 
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
 #, elixir-autogen, elixir-format
 msgid "Message from %{name}:"
@@ -534,10 +535,15 @@ msgstr "Zrušeno: %{title} – %{date}"
 msgid "Event Cancelled"
 msgstr "Událost byla zrušena"
 
-#: lib/tymeslot/emails/shared/formatting.ex
+#: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
-msgid "The address will be arranged with you after booking."
-msgstr "Adresu s vámi domluvíme po rezervaci."
+msgid "NOTE FROM THE ORGANISER:"
+msgstr "POZNÁMKA OD ORGANIZÁTORA:"
+
+#: lib/tymeslot/emails/shared/meeting/notes.ex
+#, elixir-autogen, elixir-format
+msgid "Note from the organiser"
+msgstr "Poznámka od organizátora"
 
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
@@ -548,3 +554,8 @@ msgstr "Adresu je třeba domluvit s osobou, která rezervovala."
 #, elixir-autogen, elixir-format
 msgid "The address will be arranged after booking."
 msgstr "Adresa bude domluvena po rezervaci."
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "The address will be arranged with you after booking."
+msgstr "Adresu s vámi domluvíme po rezervaci."

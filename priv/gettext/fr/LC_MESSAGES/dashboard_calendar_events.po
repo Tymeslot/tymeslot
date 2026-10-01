@@ -174,7 +174,6 @@ msgid "Cancel"
 msgstr "Annuler"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_recurrence.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex
 #, elixir-autogen, elixir-format
@@ -1105,6 +1104,7 @@ msgid "Events of a repeating series cannot be switched between all-day and timed
 msgstr "Les événements d’une série ne peuvent pas passer ici de « toute la journée » à un horaire, ni l’inverse. Veuillez effectuer cette modification dans votre application de calendrier."
 
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex
 #, elixir-autogen, elixir-format
 msgid "That change cannot be made to the events you chose. A repeat rule can only be changed for all events, or this and following events, and cannot be removed here."
 msgstr "Cette modification ne peut pas être appliquée aux événements choisis. Une règle de répétition ne peut être modifiée que pour tous les événements, ou pour cet événement et les suivants, et ne peut pas être supprimée ici."
@@ -1272,3 +1272,78 @@ msgstr "Échec de la suppression - nouvelle tentative programmée à la prochain
 #, elixir-autogen, elixir-format
 msgid "Event deleted, but the attendees could not be notified."
 msgstr "Événement supprimé, mais les participants n'ont pas pu être informés."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Add a note"
+msgstr "Ajouter une note"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "An agenda, or anything to bring or prepare"
+msgstr "Un ordre du jour, ou ce qu’il faut apporter ou préparer"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Included in the invitation and on the calendar entry."
+msgstr "Incluse dans l’invitation et dans l’entrée du calendrier."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Note to the guest"
+msgstr "Note pour l’invité"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Remove note"
+msgstr "Supprimer la note"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Each one is invited by email and can accept or decline."
+msgstr "Chacun reçoit une invitation par e-mail et peut accepter ou décliner."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Language of the invitation"
+msgstr "Langue de l’invitation"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "More guests (optional)"
+msgstr "Autres invités (facultatif)"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The language every email about this meeting is written in, for the guest and anyone else invited."
+msgstr "La langue de tous les e-mails concernant cette réunion, pour l’invité comme pour les autres personnes conviées."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
+#, elixir-autogen, elixir-format
+msgid "%{email} is already invited."
+msgstr "%{email} est déjà invité."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
+#, elixir-autogen, elixir-format
+msgid "%{email} is already the main guest."
+msgstr "%{email} est déjà l’invité principal."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
+#, elixir-autogen, elixir-format
+msgid "%{email} is not a valid email address."
+msgstr "%{email} n’est pas une adresse e-mail valide."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
+#, elixir-autogen, elixir-format
+msgid "No more guests can be added to this meeting."
+msgstr "Vous ne pouvez plus ajouter d’invités à cette réunion."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
+#, elixir-autogen, elixir-format
+msgid "Too many new meetings. Please wait a moment."
+msgstr "Trop de nouvelles réunions. Veuillez patienter un instant."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "Someone else organises this meeting, so Tymeslot can't move or split a series you were only invited to."
+msgstr "Cette réunion est organisée par quelqu'un d'autre : Tymeslot ne peut pas déplacer ni scinder une série à laquelle vous êtes seulement invité."

@@ -8,7 +8,8 @@ defmodule Tymeslot.Auth.OAuth.Providers do
   Per provider:
 
     * `:slug` - the URL segment (`/auth/github`) and the stored `provider`
-    * `:name` - the name shown to users
+    * `:name` - the name shown to users; for the generic provider, the
+      fallback when its configuration carries no `:name`
     * `:setting` - the `AppSettings` key that switches it on, read at request
       time because an admin can toggle it without a restart
     * `:uid_field` - the user column holding the provider's stable user ID
@@ -111,8 +112,19 @@ defmodule Tymeslot.Auth.OAuth.Providers do
   @spec fetch!(provider()) :: map()
   def fetch!(provider), do: Map.fetch!(@providers, provider)
 
-  @doc "The name shown to users."
+  @doc """
+  The name shown to users. The generic provider's comes from
+  `config :tymeslot, :oauth_provider` when set (on Cloudron, the name of the
+  Cloudron identity provider), and is "SSO" otherwise.
+  """
   @spec name(provider()) :: String.t()
+  def name(:oauth) do
+    case String.trim(Application.get_env(:tymeslot, :oauth_provider, [])[:name] || "") do
+      "" -> fetch!(:oauth).name
+      name -> name
+    end
+  end
+
   def name(provider), do: fetch!(provider).name
 
   @doc "The callback path the provider redirects back to."
@@ -129,7 +141,7 @@ defmodule Tymeslot.Auth.OAuth.Providers do
   @spec enabled() :: [%{slug: String.t(), name: String.t()}]
   def enabled do
     for provider <- @button_order, enabled?(provider) do
-      Map.take(fetch!(provider), [:slug, :name])
+      %{slug: fetch!(provider).slug, name: name(provider)}
     end
   end
 

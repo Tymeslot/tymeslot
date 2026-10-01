@@ -91,6 +91,7 @@ msgstr "NACHRICHT DES TEILNEHMERS:"
 msgid "Meeting"
 msgstr "Termin"
 
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
 #, elixir-autogen, elixir-format
 msgid "Message from %{name}:"
@@ -527,10 +528,15 @@ msgstr "Abgesagt – %{title} am %{date}"
 msgid "Event Cancelled"
 msgstr "Termin abgesagt"
 
-#: lib/tymeslot/emails/shared/formatting.ex
+#: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
-msgid "The address will be arranged with you after booking."
-msgstr "Die Adresse wird nach der Buchung mit Ihnen abgestimmt."
+msgid "NOTE FROM THE ORGANISER:"
+msgstr "NOTIZ VOM ORGANISATOR:"
+
+#: lib/tymeslot/emails/shared/meeting/notes.ex
+#, elixir-autogen, elixir-format
+msgid "Note from the organiser"
+msgstr "Notiz vom Organisator"
 
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
@@ -541,3 +547,8 @@ msgstr "Die Adresse ist mit der buchenden Person abzustimmen."
 #, elixir-autogen, elixir-format
 msgid "The address will be arranged after booking."
 msgstr "Die Adresse wird nach der Buchung abgestimmt."
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "The address will be arranged with you after booking."
+msgstr "Die Adresse wird nach der Buchung mit Ihnen abgestimmt."

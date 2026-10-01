@@ -95,6 +95,21 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   end
 
   @doc """
+  The organiser's note to the guest, as a plain-text block, or `""` when the
+  meeting carries none.
+  """
+  @spec format_organizer_note(Tymeslot.Emails.EmailService.appointment_details(), String.t()) ::
+          String.t()
+  def format_organizer_note(%{organizer_note: note}, locale)
+      when is_binary(note) and note != "" do
+    Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+      "\n\n#{dgettext("emails", "NOTE FROM THE ORGANISER:")}\n\"#{note}\""
+    end)
+  end
+
+  def format_organizer_note(_appointment_details, _locale), do: ""
+
+  @doc """
   Formats attendee information for text body.
   """
   @spec format_attendee_info(Tymeslot.Emails.EmailService.appointment_details(), String.t()) ::

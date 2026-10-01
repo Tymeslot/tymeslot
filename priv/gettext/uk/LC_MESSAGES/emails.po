@@ -91,6 +91,7 @@ msgstr "ПОВІДОМЛЕННЯ ВІД УЧАСНИКА:"
 msgid "Meeting"
 msgstr "Зустріч"
 
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
 #, elixir-autogen, elixir-format
 msgid "Message from %{name}:"
@@ -534,10 +535,15 @@ msgstr "Скасовано - %{title}, %{date}"
 msgid "Event Cancelled"
 msgstr "Подію скасовано"
 
-#: lib/tymeslot/emails/shared/formatting.ex
+#: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
-msgid "The address will be arranged with you after booking."
-msgstr "Адресу погодять з вами після бронювання."
+msgid "NOTE FROM THE ORGANISER:"
+msgstr "ПРИМІТКА ВІД ОРГАНІЗАТОРА:"
+
+#: lib/tymeslot/emails/shared/meeting/notes.ex
+#, elixir-autogen, elixir-format
+msgid "Note from the organiser"
+msgstr "Примітка від організатора"
 
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
@@ -548,3 +554,8 @@ msgstr "Адресу потрібно погодити з тим, хто бро�
 #, elixir-autogen, elixir-format
 msgid "The address will be arranged after booking."
 msgstr "Адресу погодять після бронювання."
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "The address will be arranged with you after booking."
+msgstr "Адресу погодять з вами після бронювання."

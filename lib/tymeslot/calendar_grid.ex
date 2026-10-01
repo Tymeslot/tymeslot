@@ -381,14 +381,6 @@ defmodule Tymeslot.CalendarGrid do
   defdelegate ensure_video_changeable(event), to: EventVideo
 
   @doc """
-  Returns `description` with the "Join video call" line for the previous URL
-  taken out and one for the new URL appended. See
-  `Tymeslot.CalendarGrid.EventVideo.put_join_link/3`.
-  """
-  @spec put_join_link(String.t() | nil, String.t() | nil, String.t() | nil) :: String.t() | nil
-  defdelegate put_join_link(description, previous_url, url), to: EventVideo
-
-  @doc """
   Deletes an event from its calendar, cancels the Tymeslot meeting it was
   booked as, and removes its cached row; for a member of a series, `scope`
   says whether one occurrence or the whole series goes. See
@@ -440,32 +432,6 @@ defmodule Tymeslot.CalendarGrid do
   end
 
   # --- Video rooms of grid events (see `EventVideoRooms`) ---
-
-  @doc "Records a video room made for a grid event. See `EventVideoRooms.record/2`."
-  @spec record_event_video_room(map(), map()) :: :ok
-  defdelegate record_event_video_room(meeting_context, event), to: EventVideoRooms, as: :record
-
-  @doc "Brings a grid event's video rooms in step with its timing. See `EventVideoRooms.rescheduled/1`."
-  @spec reschedule_event_video_rooms(map()) :: :ok
-  defdelegate reschedule_event_video_rooms(event), to: EventVideoRooms, as: :rescheduled
-
-  @doc "Follows a grid event moved to another integration. See `EventVideoRooms.moved/4`."
-  @spec move_event_video_rooms(
-          map(),
-          pos_integer(),
-          String.t(),
-          String.t() | nil,
-          String.t() | nil
-        ) :: :ok
-  defdelegate move_event_video_rooms(
-                event,
-                to_integration_id,
-                new_uid,
-                provider_uid,
-                provider_calendar_id
-              ),
-              to: EventVideoRooms,
-              as: :moved
 
   @doc "Deletes a deleted grid event's video rooms. See `EventVideoRooms.event_deleted/1`."
   @spec delete_event_video_rooms(map()) :: :ok
