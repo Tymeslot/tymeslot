@@ -77,6 +77,10 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponentTest do
       view = open(conn)
       view |> element("[data-testid='add-venue']") |> render_click()
 
+      # The name is marked required for assistive technology, so the form
+      # must turn off the browser's own check or it would hide this error.
+      assert has_element?(view, "#venue-form[novalidate] input[name='venue[name]'][required]")
+
       view |> form("#venue-form", %{"venue" => %{"name" => ""}}) |> render_change()
 
       assert has_element?(view, "#venue-form", "can't be blank")
@@ -173,7 +177,7 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponentTest do
       view = open(conn)
 
       view
-      |> element("#locations-list")
+      |> element("[data-testid='locations-list']")
       |> render_hook("reorder", %{"ids" => [hamburg.id, berlin.id, munich.id]})
 
       drain(view)
@@ -198,7 +202,7 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponentTest do
       view = open(conn)
 
       view
-      |> element("#locations-list")
+      |> element("[data-testid='locations-list']")
       |> render_hook("reorder", %{"ids" => [foreign.id, berlin.id, munich.id]})
 
       drain(view)
@@ -307,6 +311,46 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponentTest do
           :ok -> nil
         end
       )
+    end
+
+    test "refuses a reorder and rebuilds the list in the saved order",
+         %{conn: conn, user: user} do
+      berlin = insert(:venue, user: user, name: "Berlin office", position: 0)
+      munich = insert(:venue, user: user, name: "Munich office", position: 1)
+      view = open(conn)
+      before = list_id(view)
+      message = exhaust_write_limit(user)
+
+      view
+      |> element("[data-testid='locations-list']")
+      |> render_hook("reorder", %{"ids" => [munich.id, berlin.id]})
+
+      drain(view)
+
+      assert has_element?(view, "#app-flash-group-error", message)
+
+      assert ["Berlin office", "Munich office"] =
+               user.id |> Venues.list_venues() |> Enum.map(& &1.name)
+
+      # The browser has already moved the dragged card, and only a list with
+      # a new id is rebuilt from the server's order rather than patched.
+      refute list_id(view) == before
+
+      shown =
+        view
+        |> render()
+        |> Floki.parse_document!()
+        |> Floki.attribute("[data-testid='venue-card']", "data-venue-id")
+
+      assert shown == Enum.map([berlin, munich], &to_string(&1.id))
+    end
+
+    defp list_id(view) do
+      view
+      |> render()
+      |> Floki.parse_document!()
+      |> Floki.attribute("[data-testid='locations-list']", "id")
+      |> List.first()
     end
 
     test "refuses saving a location, keeping the form open", %{conn: conn, user: user} do

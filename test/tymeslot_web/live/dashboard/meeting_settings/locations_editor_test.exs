@@ -451,6 +451,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
 
       view |> element("[data-testid='new-venue-toggle']") |> render_click()
 
+      # Its required name leaves blank-name errors to the form, not the browser.
+      assert has_element?(view, "#new-venue-form[novalidate] input[name='venue[name]'][required]")
+
       view
       |> form("#new-venue-form", %{
         "venue" => %{"name" => "Studio", "description" => "Canal Street 5"}

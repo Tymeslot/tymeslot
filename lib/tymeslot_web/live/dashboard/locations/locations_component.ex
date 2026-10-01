@@ -41,6 +41,7 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
      |> assign_new(:deleting_venue, fn -> nil end)
      |> assign_new(:deleting_in_use, fn -> [] end)
      |> assign_new(:deleting_left_without, fn -> [] end)
+     |> assign_new(:list_epoch, fn -> 0 end)
      |> load_venues()}
   end
 
@@ -131,19 +132,24 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
 
   # Mirrors `ServiceSettingsComponent`'s "reorder_meeting_types": the same
   # write rate limit, the context doing the owner-scoped renumbering, and the
-  # list reloaded from the database either way, so the page never shows an
-  # order that was not saved.
+  # list reloaded from the database either way. The hook has already moved
+  # the dragged card in the browser, and a refused write reloads a list equal
+  # to the one assigned, which sends no diff; a new list id makes the browser
+  # rebuild it in the saved order, so the page never shows an order that was
+  # not saved.
   def handle_event("reorder", %{"ids" => ids}, socket) when is_list(ids) do
     user_id = socket.assigns.current_user.id
 
     case RateLimiter.check_meeting_type_write_rate_limit(user_id) do
       :ok ->
-        reorder(user_id, ids)
-        {:noreply, load_venues(socket)}
+        case reorder(user_id, ids) do
+          :ok -> {:noreply, load_venues(socket)}
+          :error -> {:noreply, socket |> load_venues() |> reset_list()}
+        end
 
       {:error, :rate_limited, message} ->
         Flash.error(message)
-        {:noreply, load_venues(socket)}
+        {:noreply, socket |> load_venues() |> reset_list()}
 
       {:error, :invalid_user_id} ->
         {:noreply, socket}
@@ -226,7 +232,7 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
         <%!-- One column, because the sortable hook places a dragged card by
              its vertical position. --%>
         <div
-          id="locations-list"
+          id={"locations-list-#{@list_epoch}"}
           phx-hook="QuestionsSortable"
           phx-target={@myself}
           data-target={@myself}
@@ -273,12 +279,16 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
     case Venues.reorder_venues(user_id, ids) do
       {:ok, _count} ->
         Flash.info(dgettext("dashboard_meeting_types", "Locations reordered"))
+        :ok
 
       {:error, reason} ->
         Logger.error("Failed to reorder locations", reason: LogFormat.reason(reason))
         Flash.error(dgettext("dashboard_meeting_types", "Could not reorder the locations"))
+        :error
     end
   end
+
+  defp reset_list(socket), do: update(socket, :list_epoch, &(&1 + 1))
 
   defp open_form(socket, venue) do
     assign(socket,

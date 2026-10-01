@@ -34,6 +34,7 @@ defmodule TymeslotWeb.Dashboard.Locations.VenueFormModal do
       <.form
         for={@form}
         id="venue-form"
+        novalidate
         phx-change="validate_venue"
         phx-submit="save_venue"
         phx-target={@myself}

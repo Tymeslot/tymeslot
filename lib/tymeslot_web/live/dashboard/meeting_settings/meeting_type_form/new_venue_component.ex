@@ -80,6 +80,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.NewVenueComponen
       <.form
         for={@form}
         id="new-venue-form"
+        novalidate
         phx-change="validate"
         phx-submit="save"
         phx-target={@myself}
