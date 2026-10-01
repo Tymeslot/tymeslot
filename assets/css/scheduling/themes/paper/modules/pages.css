@@ -1,8 +1,8 @@
 /* The default meeting, poll and payment pages in Paper's card. Their
    structure and colours are shared (manage-pages.css, polls.css,
    payment-pages.css, through Paper's tokens); Paper sizes their headings
-   to its scale, gives their buttons its control height, and centres the
-   payment pages' short messages. */
+   to its scale, gives their buttons its control height, darkens the
+   status notices' text, and centres the payment pages' short messages. */
 
 .paper-card .manage-page__title {
   font-size: var(--theme-font-size-2xl);
@@ -10,14 +10,15 @@
   letter-spacing: -0.01em;
 }
 
-.paper-card .manage-page__icon {
-  width: var(--paper-badge-size);
-  height: var(--paper-badge-size);
-}
-
 .paper-card .manage-page__details {
   border-radius: min(var(--radius-card), var(--paper-radius-box));
   background: var(--surface-subtle);
+}
+
+/* The status notices are tinted; the body ink clears 4.5:1 on them,
+   where the secondary ink does not on every tone. */
+.paper-card .manage-page__notice {
+  color: var(--ink-1);
 }
 
 .paper-card .manage-page__button {
@@ -41,7 +42,9 @@
   font-size: var(--theme-font-size-md);
 }
 
-.paper-card .poll-voting-title {
+/* Prefixed like the shared rule (polls.css), so it outranks it and the
+   weight applies. */
+html.scheduling-app .paper-card .poll-voting-title {
   font-family: var(--theme-font-heading);
   font-weight: var(--font-weight-semibold);
 }

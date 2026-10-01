@@ -98,6 +98,18 @@
   height: var(--paper-icon-sm);
 }
 
+/* The actions' labels run long in some languages ("Add tentative hold to
+   calendar"), so here a label wraps inside the card instead of running
+   out of it. */
+.paper-confirmation__actions .paper-button {
+  max-width: 100%;
+  padding-block: var(--space-xs);
+  line-height: var(--theme-line-height-snug);
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .paper-confirmation__help {
   margin: var(--space-md) 0 0;
   color: var(--ink-2);

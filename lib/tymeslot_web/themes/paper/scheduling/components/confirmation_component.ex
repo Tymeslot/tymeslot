@@ -92,7 +92,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
         answers={@custom_field_answers}
       />
 
-      <div class="paper-actions paper-actions--center">
+      <div class="paper-actions paper-actions--center paper-confirmation__actions">
         <a
           :if={@calendar_path}
           href={@calendar_path}
