@@ -7,8 +7,8 @@ defmodule Tymeslot.ThemeCustomizations.Options.Palette do
 
   An `OptionGroup`: a spec lists it as `%{key: :palette, module:
   Options.Palette, schemes: [...]}`, `schemes` being the preset ids the theme
-  offers, in the theme's presentation order (onboarding shows them in it; the
-  dashboard sorts them by id). A preset scheme outside them is refused.
+  offers, in the theme's presentation order (onboarding and the dashboard
+  both show them in it). A preset scheme outside them is refused.
 
   Besides the scheme list, its group descriptor may say:
 

@@ -78,17 +78,27 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
         />
         <p :if={PaymentReturn.approval_deadline_text(@meeting)} class="payment-page-body">
           <%= if Approval.refunds_on_release?(@meeting) do %>
-            {dgettext(
-              "booking",
-              "If there's no answer by %{deadline}, the request lapses and you're refunded automatically.",
-              deadline: PaymentReturn.approval_deadline_text(@meeting)
-            )}
+            <.with_date
+              date={PaymentReturn.approval_deadline_text(@meeting)}
+              text={
+                dgettext(
+                  "booking",
+                  "If there's no answer by %{deadline}, the request lapses and you're refunded automatically.",
+                  deadline: date_marker()
+                )
+              }
+            />
           <% else %>
-            {dgettext(
-              "booking",
-              "If there's no answer by %{deadline}, the request lapses.",
-              deadline: PaymentReturn.approval_deadline_text(@meeting)
-            )}
+            <.with_date
+              date={PaymentReturn.approval_deadline_text(@meeting)}
+              text={
+                dgettext(
+                  "booking",
+                  "If there's no answer by %{deadline}, the request lapses.",
+                  deadline: date_marker()
+                )
+              }
+            />
           <% end %>
         </p>
       <% :declined -> %>
@@ -130,13 +140,19 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
           {dgettext("booking", "Booking confirmed")}
         </h1>
         <p class="payment-page-body">
-          {dgettext("booking", "Thank you, your booking is confirmed for %{date}.",
-            date:
+          <.with_date
+            date={
               LocalizationHelpers.format_meeting_datetime(
                 @meeting.start_time,
                 @meeting.attendee_timezone
               )
-          )}
+            }
+            text={
+              dgettext("booking", "Thank you, your booking is confirmed for %{date}.",
+                date: date_marker()
+              )
+            }
+          />
         </p>
     <% end %>
     """
@@ -160,6 +176,30 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
     <a :if={@rebook_path} href={@rebook_path} class="payment-page-link">
       {dgettext("booking", "Return to booking")}
     </a>
+    """
+  end
+
+  # A sentence's date or time is drawn in its own `payment-page-date` span,
+  # which a theme can keep on one line: the message is translated with a
+  # marker in the placeholder's place, then split around it. A translation
+  # that dropped the placeholder is shown as it is.
+  @date_marker "\uE000"
+
+  defp date_marker, do: @date_marker
+
+  attr :text, :string, required: true
+  attr :date, :string, required: true
+
+  defp with_date(assigns) do
+    assigns = assign(assigns, :parts, String.split(assigns.text, @date_marker, parts: 2))
+
+    ~H"""
+    <%= case @parts do %>
+      <% [before, rest] -> %>
+        {before}<span class="payment-page-date">{@date}</span>{rest}
+      <% [text] -> %>
+        {text}
+    <% end %>
     """
   end
 end

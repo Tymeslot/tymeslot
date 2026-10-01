@@ -2,13 +2,16 @@
    Shared.DefaultPages inside a theme's page shell): cancel and its kept
    state, reschedule, cancel-confirmed, with the date, time and organiser
    rows of their details panel (Shared.Components.MeetingDetails); plus the
-   wrapper every default page body sits in. Imported by a theme that takes
-   the default pages (a page_shell: in use TymeslotWeb.Themes.Core.Theme).
+   wrapper every default page body sits in, and the default payment pages'
+   layout, heading and status icon (their card and inks are
+   payment-pages.css's). Imported by a theme that takes the default pages
+   (a page_shell: in use TymeslotWeb.Themes.Core.Theme).
 
-   Tokens: the contract's --ink-1/2/3, --surface-2/3, --line-1/2,
-   --radius-card, --radius-control, the solid primary pair and the status
-   colours; optional --manage-page-danger-ink (--theme-danger), the cancel
-   button's ink, for a theme whose danger colour is too light as text. */
+   Tokens: the contract's --ink-1/2, --surface-2/3, --line-1/2,
+   --radius-card, --radius-control, the solid primary pair, the status
+   colours, --theme-font-heading and the type scale; optional
+   --manage-page-danger-ink (--theme-danger), the cancel button's ink, for
+   a theme whose danger colour is too light as text. */
 
 .manage-page {
   display: flex;
@@ -18,10 +21,31 @@
 
 /* The payment pages space their own heading and link with margins (see
    payment-pages.css), so their body flows as a block: the wrapper's gap
-   doubled it and stretched the link to full width. */
+   doubled it and stretched the link to full width. Centred under their
+   status icon, at a reading width, like the meeting pages' header. */
 .manage-page--payment-processing,
 .manage-page--payment-cancelled {
   display: block;
+  max-width: 32rem;
+  margin-inline: auto;
+  text-align: center;
+}
+
+/* The meeting pages' title and lead, for the payment pages' heading and
+   text; two classes, so this holds whatever order the files load in. */
+:is(.manage-page--payment-processing, .manage-page--payment-cancelled) .payment-page-heading {
+  margin: 0 0 var(--space-xs);
+  font-family: var(--theme-font-heading);
+  font-size: var(--theme-font-size-2xl);
+}
+
+:is(.manage-page--payment-processing, .manage-page--payment-cancelled) .payment-page-body {
+  font-size: var(--theme-font-size-md);
+}
+
+/* A date and time ("3 March 2027 at 10:00 AM CET") stays on one line. */
+:is(.manage-page--payment-processing, .manage-page--payment-cancelled) .payment-page-date {
+  white-space: nowrap;
 }
 
 .manage-page__header {
@@ -60,9 +84,12 @@
   font-size: var(--theme-font-size-md);
 }
 
+/* A sentence of body text below the details (the reschedule page's "Ready
+   to pick a new time?", the kept meeting's closing line): --ink-2, since
+   --ink-3 falls under 4.5:1 at body size. */
 .manage-page__muted {
   margin: 0;
-  color: var(--ink-3);
+  color: var(--ink-2);
   text-align: center;
 }
 

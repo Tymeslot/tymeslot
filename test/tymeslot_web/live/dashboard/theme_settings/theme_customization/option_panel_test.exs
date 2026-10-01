@@ -77,12 +77,48 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.OptionPanelTest
     |> Floki.attribute("button[phx-value-field='#{field}']", "phx-value-choice")
   end
 
-  # A `schemes:` list is the theme's presentation order (onboarding's); the
-  # dashboard lists schemes by id, as it always has.
-  test "the palette panel shows the group's schemes, sorted by id" do
+  # A `schemes:` list is the theme's presentation order, which the dashboard
+  # keeps, as onboarding does.
+  test "the palette panel shows the group's schemes in the group's order" do
     html = render_panel(%{key: :palette, module: Palette, schemes: ["ocean", "forest"]})
 
-    assert choices(html, "scheme") == ["forest", "ocean"]
+    assert choices(html, "scheme") == ["ocean", "forest"]
+  end
+
+  test "an unselected scheme's name uses the dashboard's secondary text, not a fainter one" do
+    html = render_panel(%{key: :palette, module: Palette, schemes: ["ocean", "forest"]})
+
+    [label_class] =
+      html
+      |> Floki.parse_fragment!()
+      |> Floki.find("button[phx-value-choice='forest'] p")
+      |> Floki.attribute("class")
+
+    assert label_class =~ "text-tymeslot-500"
+    refute label_class =~ "text-tymeslot-400"
+  end
+
+  test "a scheme's dots sit on its own background, a tone's on the neutral backing" do
+    html =
+      render_panel(%{key: :palette, module: Palette, schemes: ~w(ocean neutral)})
+
+    tone_html =
+      render_panel(%{key: :palette, module: Palette, schemes: ~w(neutral), follow_os: true})
+
+    backing = fn html, scheme ->
+      html
+      |> Floki.parse_fragment!()
+      |> Floki.find("button[phx-value-choice='#{scheme}'] [data-testid='scheme-swatches']")
+      |> Floki.attribute("style")
+    end
+
+    assert backing.(html, "ocean") ==
+             ["background-color: #{ColourSchemes.all()["ocean"].colors.background}"]
+
+    assert backing.(html, "neutral") ==
+             ["background-color: #{ColourSchemes.all()["neutral"].colors.background}"]
+
+    assert backing.(tone_html, "neutral") == []
   end
 
   test "the current-palette indicator derives a seed the way the group does" do

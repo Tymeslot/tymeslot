@@ -157,10 +157,24 @@ defmodule TymeslotWeb.Themes.Shared.Components.MeetingPageBodies do
   defp heading(assigns) do
     ~H"""
     <div class="manage-page__header">
-      <.icon name={@icon} class={"manage-page__icon manage-page__icon--#{@tone}"} />
+      <.status_icon icon={@icon} tone={@tone} />
       <h1 class="manage-page__title">{render_slot(@title)}</h1>
       <p class="manage-page__lead">{render_slot(@inner_block)}</p>
     </div>
+    """
+  end
+
+  attr :icon, :string, required: true
+  attr :tone, :string, required: true, values: ~w(success danger primary)
+
+  @doc """
+  A default page's status icon above its title, tinted by `tone`. The
+  payment pages (`Shared.DefaultPages`) show it too.
+  """
+  @spec status_icon(map()) :: Phoenix.LiveView.Rendered.t()
+  def status_icon(assigns) do
+    ~H"""
+    <.icon name={@icon} class={"manage-page__icon manage-page__icon--#{@tone}"} />
     """
   end
 

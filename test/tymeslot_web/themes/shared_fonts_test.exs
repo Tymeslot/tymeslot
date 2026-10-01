@@ -25,6 +25,9 @@ defmodule TymeslotWeb.Themes.SharedFontsTest do
   @fonts_dir "priv/static/fonts"
 
   @families ~w(inter ibm-plex-sans source-serif-4 source-sans-3 lora fraunces)
+  # Fraunces has no Cyrillic glyphs, so its Cyrillic falls to the system serif.
+  @cyrillic_families @families -- ["fraunces"]
+  @font_files length(@families) * 2 + length(@cyrillic_families)
   @font_ids Map.keys(Fonts.all())
 
   defp font_urls do
@@ -45,8 +48,8 @@ defmodule TymeslotWeb.Themes.SharedFontsTest do
   test "every url() names a woff2 file under /fonts/ that ships" do
     urls = font_urls()
 
-    # Two subsets for each of the six families.
-    assert length(urls) == 12
+    # Latin and Latin Extended for each family, plus Cyrillic where it exists.
+    assert length(urls) == @font_files
 
     assert Enum.reject(urls, fn url ->
              String.starts_with?(url, "/fonts/") and String.ends_with?(url, ".woff2") and
@@ -66,12 +69,25 @@ defmodule TymeslotWeb.Themes.SharedFontsTest do
 
   test "every font file is a real woff2, of one subset's size" do
     files = Path.wildcard("#{@fonts_dir}/*.woff2")
-    assert length(files) == 12
+    assert length(files) == @font_files
 
     assert Enum.reject(files, fn file ->
              match?(<<"wOF2", _rest::binary>>, File.read!(file)) and
                File.stat!(file).size < 100_000
            end) == []
+  end
+
+  # Ukrainian and Russian text would otherwise drop to a system face beside
+  # the theme's Latin letters.
+  test "every family with a Cyrillic subset declares it for the Cyrillic block" do
+    css = File.read!(@fonts_css)
+
+    assert Enum.reject(@cyrillic_families, fn family ->
+             css =~
+               ~r{src: url\("/fonts/#{family}-cyrillic-wght-normal\.woff2"\) format\("woff2"\);\s*unicode-range: U\+0301, U\+0400-045F,}
+           end) == []
+
+    refute css =~ "fraunces-cyrillic"
   end
 
   test "every family carries its licence" do

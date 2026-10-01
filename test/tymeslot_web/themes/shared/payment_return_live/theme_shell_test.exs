@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ThemeShellTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Profiles
+  alias Tymeslot.ThemeCustomizations
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Themes.Shared.PaymentReturnLive.{Cancelled, Processing}
   alias TymeslotWeb.ThemeTestMatrix
@@ -35,7 +36,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ThemeShellTest do
       setup do
         user = insert(:user)
         {:ok, profile} = Profiles.get_or_create_profile(user.id)
-        {:ok, _profile} = Profiles.update_profile(profile, %{booking_theme: unquote(theme_id)})
+        {:ok, profile} = Profiles.update_profile(profile, %{booking_theme: unquote(theme_id)})
         meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
 
         insert(:booking_payment,
@@ -44,7 +45,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ThemeShellTest do
           stripe_checkout_session_id: "cs_TEST"
         )
 
-        %{meeting: meeting}
+        %{meeting: meeting, profile: profile}
       end
 
       test "Stripe's return URLs route to the shared pages" do
@@ -84,6 +85,60 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ThemeShellTest do
 
         assert html =~ "Confirming your payment"
       end
+
+      test "both connected pages carry the organiser's customised palette",
+           %{conn: conn, meeting: meeting, profile: profile} do
+        customization =
+          insert(:theme_customization,
+            profile: profile,
+            theme_id: unquote(theme_id),
+            custom_palette_seed: "#c2410c"
+          )
+
+        primary =
+          ThemeCustomizations.tokens(unquote(theme_id), customization).vars["--theme-primary"]
+
+        refute primary ==
+                 ThemeCustomizations.tokens(unquote(theme_id), nil).vars["--theme-primary"]
+
+        processing =
+          "/themes/#{unquote(slug)}/payment-processing/#{meeting.id}?session_id=cs_TEST"
+
+        cancelled = "/themes/#{unquote(slug)}/payment-cancelled/#{meeting.id}"
+
+        for path <- [processing, cancelled] do
+          {:ok, _view, html} = live(conn, path)
+          assert_primary(html, primary)
+        end
+      end
+
+      if ThemeTestMatrix.fetch!(theme_id).fixture do
+        test "a locale change keeps the attendee on the payment page",
+             %{conn: conn, meeting: meeting} do
+          path = "/themes/#{unquote(slug)}/payment-processing/#{meeting.id}?session_id=cs_TEST"
+          {:ok, view, html} = live(conn, path)
+
+          assert html =~ ~s(id="language-switcher-dropdown")
+
+          assert {:error, {:redirect, %{to: to}}} =
+                   render_click(view, "change_locale", %{"locale" => "de"})
+
+          assert to ==
+                   "/themes/#{unquote(slug)}/payment-processing/#{meeting.id}" <>
+                     "?locale=de&session_id=cs_TEST"
+        end
+      else
+        test "without a customisation the theme's own payment card writes no style block",
+             %{conn: conn, meeting: meeting} do
+          {:ok, _view, html} =
+            live(
+              conn,
+              "/themes/#{unquote(slug)}/payment-processing/#{meeting.id}?session_id=cs_TEST"
+            )
+
+          refute html =~ ":root:root"
+        end
+      end
     end
   end
 
@@ -102,6 +157,11 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ThemeShellTest do
       conn = get(conn, "/themes/no-such-theme/payment-cancelled/m-1")
       assert redirected_to(conn) == "/"
     end
+  end
+
+  defp assert_primary(html, primary) do
+    [style] = Regex.run(~r{<style[^>]*>.*?</style>}s, html)
+    assert style =~ "--theme-primary: #{primary};"
   end
 
   defp route_module(path) do
