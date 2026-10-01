@@ -6,8 +6,13 @@ import {
   AnalyticsView,
   scrubAnalyticsUrl,
   scrubAnalyticsPayload,
+  maskPath,
   BEFORE_SEND_GLOBAL,
 } from "../analytics";
+
+// Shared with `Tymeslot.Infrastructure.Logging.PathMaskerTest`, so that the
+// browser scrubber and the server's log masker cannot drift apart.
+import PATH_MASKING_CASES from "../../../test/support/fixtures/path_masking.json";
 
 describe("installAnalytics", () => {
   beforeEach(() => { delete window.analytics; delete window.umami; });
@@ -176,9 +181,9 @@ describe("scrubAnalyticsUrl", () => {
   test("removes the meeting uid from cancel and reschedule links", () => {
     const uid = "8f14e45f-ceea-4e67-a7a5-6b1e2c3d4f50";
     expect(scrubAnalyticsUrl(`https://tymeslot.app/luka/meeting/${uid}/cancel`)).toBe(
-      "https://tymeslot.app/luka/meeting/:uid/cancel",
+      "https://tymeslot.app/luka/meeting/:id/cancel",
     );
-    expect(scrubAnalyticsUrl(`/luka/meeting/${uid}/reschedule`)).toBe("/luka/meeting/:uid/reschedule");
+    expect(scrubAnalyticsUrl(`/luka/meeting/${uid}/reschedule`)).toBe("/luka/meeting/:id/reschedule");
   });
 
   test("drops identifying query parameters but keeps campaign tags", () => {
@@ -197,6 +202,20 @@ describe("scrubAnalyticsUrl", () => {
   });
 });
 
+describe("maskPath", () => {
+  test("has cases to check", () => {
+    expect(PATH_MASKING_CASES.length).toBeGreaterThan(0);
+  });
+
+  test.each(PATH_MASKING_CASES)("$case", ({ path, masked }) => {
+    expect(scrubAnalyticsUrl(path)).toBe(masked);
+  });
+
+  test("masks a non-UUID meeting uid, which the shape rule alone would keep", () => {
+    expect(maskPath("/jane/meeting/short-uid/cancel")).toBe("/jane/meeting/:id/cancel");
+  });
+});
+
 describe("scrubAnalyticsPayload", () => {
   test("scrubs both the page address and the referrer", () => {
     const payload = {
@@ -209,8 +228,24 @@ describe("scrubAnalyticsPayload", () => {
     expect(scrubAnalyticsPayload("event", payload)).toEqual({
       website: "abc",
       title: "Cancel meeting",
-      url: "https://tymeslot.app/luka/meeting/:uid/cancel",
+      url: "https://tymeslot.app/luka/meeting/:id/cancel",
       referrer: "/luka",
+    });
+  });
+
+  test("scrubs a page view sent after a live navigation to a token route", () => {
+    // Umami reports a `live_patch` or `push_navigate` as a page view through
+    // the same before-send callback, carrying the previous page as referrer.
+    const payload = {
+      website: "abc",
+      url: "/auth/reset-password/7HNitQU4ksua3aSoWzU-djSPUNrKyph37CgxPJhWPuo",
+      referrer: "https://tymeslot.app/jane/poll/fxwU20dKoWWL43ubhQ_ktpdcikDD5ziL",
+    };
+
+    expect(scrubAnalyticsPayload("event", payload)).toEqual({
+      website: "abc",
+      url: "/auth/reset-password/:id",
+      referrer: "https://tymeslot.app/jane/poll/:id",
     });
   });
 

@@ -28,10 +28,41 @@ const PENDING_LIMIT = 50;
  */
 export const BEFORE_SEND_GLOBAL = "tymeslotAnalyticsBeforeSend";
 
-// A meeting's uid is the only credential its cancel and reschedule links carry:
-// whoever holds `/:username/meeting/<uid>/cancel` can cancel that meeting. Keep
-// the page recognisable, drop the credential.
+// Several routes carry a credential in the path: a meeting's uid lets its
+// holder cancel or reschedule it, and password-reset, email-change, RSVP, poll,
+// sign-up confirmation and unsubscribe links are opened by the token they carry.
+// The rule is by shape, so it covers every such route without a list to keep:
+// a UUID, a segment of 20 or more URL-safe characters, or a signed token (two
+// dot-separated parts and a signature of 20 or more characters, the shape of a
+// `Phoenix.Token`). It is the rule `Tymeslot.Infrastructure.Logging.PathMasker`
+// applies to request logs; `test/support/fixtures/path_masking.json` holds the
+// cases both must agree on. A long username or slug is masked too, which costs
+// a little granularity, never a credential.
+const MASK = ":id";
+const UUID_SEGMENT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const TOKEN_SEGMENT = /^[A-Za-z0-9_-]{20,}$/;
+const SIGNED_TOKEN_SEGMENT = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{20,}$/;
+
+// The meeting uid is masked whatever its shape, as it always has been.
 const MEETING_UID_SEGMENT = /\/meeting\/[^/]+/g;
+
+function maskSegment(segment) {
+  const credential =
+    UUID_SEGMENT.test(segment) || TOKEN_SEGMENT.test(segment) || SIGNED_TOKEN_SEGMENT.test(segment);
+  return credential ? MASK : segment;
+}
+
+/**
+ * Masks the credential-shaped segments of a path. The path is matched as the
+ * browser sends it, percent-encoding included, as the server matches it.
+ */
+export function maskPath(pathname) {
+  return pathname
+    .split("/")
+    .map(maskSegment)
+    .join("/")
+    .replace(MEETING_UID_SEGMENT, `/meeting/${MASK}`);
+}
 
 // Query strings carry identifiers too (`?reschedule_meeting_uid=`, and names or
 // emails on older confirmation links), so only campaign tags survive.
@@ -39,8 +70,8 @@ const KEPT_QUERY_PARAM = /^utm_[a-z]+$/;
 
 /**
  * Removes credentials and personal data from an address before it reaches the
- * analytics store: meeting uids in the path, every query parameter except
- * `utm_*` campaign tags, and the fragment. Accepts absolute URLs and the
+ * analytics store: credential-shaped path segments (see `maskPath`), every
+ * query parameter except `utm_*` campaign tags, and the fragment. Accepts absolute URLs and the
  * origin-relative paths Umami sends as the referrer; anything that does not
  * parse is returned unchanged.
  */
@@ -54,7 +85,7 @@ export function scrubAnalyticsUrl(value) {
     return value;
   }
 
-  url.pathname = url.pathname.replace(MEETING_UID_SEGMENT, "/meeting/:uid");
+  url.pathname = maskPath(url.pathname);
   for (const key of [...url.searchParams.keys()]) {
     if (!KEPT_QUERY_PARAM.test(key)) url.searchParams.delete(key);
   }
