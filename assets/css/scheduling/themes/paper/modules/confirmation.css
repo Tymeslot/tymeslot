@@ -145,6 +145,12 @@
   border-bottom: var(--border-width-thin) solid var(--line-1);
 }
 
+/* The actions' divider follows the list, so the last row needs no line. */
+.paper-theme-wrapper .custom-answers__row:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
 .paper-theme-wrapper .custom-answers__label {
   color: var(--ink-2);
   font-size: var(--theme-font-size-sm);
