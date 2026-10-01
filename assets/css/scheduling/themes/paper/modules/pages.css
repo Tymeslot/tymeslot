@@ -48,3 +48,28 @@ html.scheduling-app .paper-card .poll-voting-title {
   font-family: var(--theme-font-heading);
   font-weight: var(--font-weight-semibold);
 }
+
+/* The poll's fields, its submit button and the payment pages' link take
+   Paper's control height, like the meeting pages' buttons; the vote pills
+   are a compact segmented control with a height of their own. Prefixed
+   like the shared rules (polls.css), so they outrank them. */
+html.scheduling-app .paper-card .poll-field-input {
+  box-sizing: border-box;
+  min-height: var(--paper-control-height);
+}
+
+html.scheduling-app .paper-card .poll-submit-button,
+.paper-card .payment-page-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: var(--paper-control-height);
+  padding-block: 0;
+}
+
+html.scheduling-app .paper-card .poll-vote-option {
+  box-sizing: border-box;
+  min-height: var(--paper-vote-height);
+  padding-block: 0;
+}

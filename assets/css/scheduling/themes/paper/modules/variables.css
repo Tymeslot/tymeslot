@@ -203,6 +203,9 @@
   --paper-control-height: 2.75rem;
   --paper-day-size: 2.75rem;
   --paper-nav-size: 2.25rem;
+  /* A poll's Yes / If need be / No pills: a compact segmented control,
+     shorter than a full control. */
+  --paper-vote-height: 2.25rem;
   --paper-badge-size: 3rem;
   --paper-dot-size: 0.25rem;
   --paper-progress-height: 0.25rem;
