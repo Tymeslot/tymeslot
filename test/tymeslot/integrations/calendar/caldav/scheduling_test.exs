@@ -16,7 +16,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SchedulingTest do
   alias Tymeslot.Integrations.Calendar.CalDAV.Client
   alias Tymeslot.Integrations.Calendar.CalDAV.Scheduling
 
-  defp client(provider, base_url), do: %Client{provider: provider, base_url: base_url}
+  defp client(provider, base_url, calendar_paths \\ []),
+    do: %Client{provider: provider, base_url: base_url, calendar_paths: calendar_paths}
+
+  @ox_collection "/caldav/Y2FsOi8vMC8zMg/"
 
   describe "attendee_mode/1" do
     test "advertises attendees to servers that honour SCHEDULE-AGENT" do
@@ -56,6 +59,47 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SchedulingTest do
 
     test "falls back to advertising when there is no URL to judge" do
       assert Scheduling.attendee_mode(%Client{provider: :caldav, base_url: nil}) == :attendee
+    end
+
+    test "lists the organiser too on mailbox.org, which adds its owner otherwise" do
+      assert Scheduling.attendee_mode(client(:mailbox_org, "https://dav.mailbox.org")) ==
+               :organiser_attendee
+    end
+
+    test "recognises mailbox.org connected through the generic CalDAV provider" do
+      assert Scheduling.attendee_mode(client(:caldav, "https://dav.mailbox.org/caldav/")) ==
+               :organiser_attendee
+    end
+
+    test "recognises Open-Xchange on another host by its collection paths" do
+      assert Scheduling.attendee_mode(
+               client(:caldav, "https://dav.example-hosting.de/caldav/", [@ox_collection])
+             ) == :organiser_attendee
+    end
+
+    test "recognises it from a collection among the writable paths alone" do
+      client = %Client{
+        provider: :caldav,
+        base_url: "https://dav.example-hosting.de/",
+        calendar_paths: [],
+        writable_calendar_paths: [@ox_collection]
+      }
+
+      assert Scheduling.attendee_mode(client) == :organiser_attendee
+    end
+
+    # Server-issued collection ids outrank the Zimbra guess a principal URL,
+    # typed as the base URL, would otherwise attract.
+    test "trusts the collection paths over a URL that looks like Zimbra's" do
+      assert Scheduling.attendee_mode(
+               client(:caldav, "https://dav.example.net/principals/users/3", [@ox_collection])
+             ) == :organiser_attendee
+    end
+
+    test "keeps the Zimbra provider on CONTACT whatever its paths look like" do
+      assert Scheduling.attendee_mode(
+               client(:zimbra, "https://mail.example.com/dav/user@x.com", [@ox_collection])
+             ) == :contact
     end
   end
 end

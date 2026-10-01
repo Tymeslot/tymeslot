@@ -6,10 +6,12 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
   use Gettext, backend: TymeslotWeb.Gettext
   import Ecto.Changeset
   alias Tymeslot.ChangesetValidators.URL, as: URLValidator
-  alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Security.SsrfGuard
+
+  require Logger
 
   # Why a provider refuses to create rooms for an integration, where its answer
   # says so. `Tymeslot.Integrations.Video.RoomCreationError` describes each one.
@@ -254,8 +256,21 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
   rescue
     # Data this application encrypted no longer decrypts: corrupted, or the
     # key it was written under is gone. The field reads as unset.
+    #
+    # Logged, not reported to error tracking: this runs per field for every
+    # row a listing decrypts, so after a lost key each dashboard load would
+    # insert up to eight errors per integration. The condition is recorded
+    # once per integration where it is acted on, by
+    # `ReauthHandling.flag/2` when the integration is flagged for reauth.
+    # Only the exception's module is logged, never its message, so no
+    # ciphertext or key material reaches the log.
     e ->
-      ErrorTracking.report_error(e, __STACKTRACE__, %{field: field, integration_id: id})
+      Logger.error("Failed to decrypt video integration field",
+        field: field,
+        integration_id: id,
+        error: LogFormat.reason(e.__struct__)
+      )
+
       nil
   end
 

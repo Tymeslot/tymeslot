@@ -278,3 +278,7 @@ config :wallaby,
     binary:
       System.get_env("CHROME_BINARY", "/snap/chromium/current/usr/lib/chromium-browser/chrome")
   ]
+
+# A calendar grid write guardian left driving after its test's LiveView has
+# gone gives up on writes that never answer within seconds, not minutes.
+config :tymeslot, Tymeslot.CalendarGrid.WriteGuardian, drain_timeout: 3_000

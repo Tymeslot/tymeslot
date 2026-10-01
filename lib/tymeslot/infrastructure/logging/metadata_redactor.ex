@@ -165,13 +165,17 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
   implementations often hide fields of their own (Req hides its `auth:`
   option), and a redacted value in a shape they do not expect makes them
   raise, at which point `inspect/2` falls back to printing the raw map.
-  Exceptions are exempt and stay structs, since crash reporting needs them.
+  Exceptions are exempt and stay structs, since crash reporting needs them,
+  and so is every struct inside an exception that its implementation can
+  still render: `Exception.message/1` reads its fields as the structs they
+  were (`Ecto.InvalidChangesetError` walks its changeset's errors), and a
+  string in their place makes the message raise.
 
   Other stores that persist arbitrary diagnostic context (ErrorTracker
   occurrences) use this so they share one definition of "sensitive".
   """
   @spec redact(term()) :: term()
-  def redact(term), do: redact_term(term, @max_depth)
+  def redact(term), do: redact_term(term, @max_depth, :render)
 
   @doc """
   The nesting depth `redact/1` walks to. Terms nested deeper are left as they
@@ -228,12 +232,12 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
   defp redact_event_meta(event), do: event
 
   defp redact_event_msg(%{msg: {:report, report}} = event),
-    do: %{event | msg: {:report, redact_term(report, @max_depth)}}
+    do: %{event | msg: {:report, redact_term(report, @max_depth, :render)}}
 
   defp redact_event_msg(%{msg: {:string, _chardata}} = event), do: event
 
   defp redact_event_msg(%{msg: {format, args}} = event) when is_list(args),
-    do: %{event | msg: {format, redact_term(args, @max_depth)}}
+    do: %{event | msg: {format, redact_term(args, @max_depth, :render)}}
 
   defp redact_event_msg(event), do: event
 
@@ -244,7 +248,7 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
       fn
         key, value when key in @logger_owned_keys -> value
         :crash_reason, value -> redact_crash_reason(value)
-        key, value -> redact_entry(key, value, @meta_max_depth)
+        key, value -> redact_entry(key, value, @meta_max_depth, :render)
       end,
       meta
     )
@@ -254,100 +258,126 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
   # stacktrace is still a list. The stacktrace is never walked: redacting any
   # part of it would cost the crash its record.
   defp redact_crash_reason({reason, stacktrace}) when is_list(stacktrace),
-    do: {redact_term(reason, @meta_max_depth - 1), stacktrace}
+    do: {redact_term(reason, @meta_max_depth - 1, :render), stacktrace}
 
-  defp redact_crash_reason(other), do: redact_term(other, @meta_max_depth)
+  defp redact_crash_reason(other), do: redact_term(other, @meta_max_depth, :render)
 
-  defp redact_term(term, depth) when depth <= 0, do: term
+  # `mode` says what becomes of a struct with a custom `Inspect`
+  # implementation once something inside it is redacted: `:render` turns it
+  # into that implementation's string, `:keep` leaves it a struct. Everything
+  # below an exception is walked in `:keep`.
+  defp redact_term(term, depth, _mode) when depth <= 0, do: term
 
-  defp redact_term(%module{} = struct, depth), do: redact_struct(module, struct, depth)
+  defp redact_term(%module{} = struct, depth, mode),
+    do: redact_struct(module, struct, depth, mode)
 
-  defp redact_term(term, depth) when is_map(term), do: redact_map(term, depth)
+  defp redact_term(term, depth, mode) when is_map(term), do: redact_map(term, depth, mode)
 
-  defp redact_term(term, depth) when is_list(term), do: redact_list(term, depth)
+  defp redact_term(term, depth, mode) when is_list(term), do: redact_list(term, depth, mode)
 
-  defp redact_term({scheme, _credential}, _depth) when scheme in @auth_schemes,
+  defp redact_term({scheme, _credential}, _depth, _mode) when scheme in @auth_schemes,
     do: {scheme, @redacted}
 
-  defp redact_term(term, depth) when is_tuple(term) do
+  defp redact_term(term, depth, mode) when is_tuple(term) do
     term
     |> Tuple.to_list()
-    |> Enum.map(&redact_term(&1, depth - 1))
+    |> Enum.map(&redact_term(&1, depth - 1, mode))
     |> List.to_tuple()
   end
 
-  defp redact_term(term, _depth), do: term
+  defp redact_term(term, _depth, _mode), do: term
 
   # Hand-rolled rather than `Enum.map/2` so that an improper list — chardata
   # is routinely one — keeps its tail instead of raising inside the logger,
   # and so that list elements are siblings rather than each one level deeper.
-  defp redact_list([head | tail], depth),
-    do: [redact_element(head, depth - 1) | redact_list(tail, depth)]
+  defp redact_list([head | tail], depth, mode),
+    do: [redact_element(head, depth - 1, mode) | redact_list(tail, depth, mode)]
 
-  defp redact_list([], _depth), do: []
+  defp redact_list([], _depth, _mode), do: []
 
-  defp redact_list(improper_tail, depth), do: redact_term(improper_tail, depth - 1)
+  defp redact_list(improper_tail, depth, mode), do: redact_term(improper_tail, depth - 1, mode)
 
   # A pair inside a list is a keyword, proplist or header entry: the one place
   # outside a map where the first element is a key.
-  defp redact_element({key, value}, depth) when depth > 0 and key not in @auth_schemes do
+  defp redact_element({key, value}, depth, mode) when depth > 0 and key not in @auth_schemes do
     if sensitive_key?(key),
-      do: {key, redact_sensitive(value, depth - 1)},
-      else: {redact_term(key, depth - 1), redact_term(value, depth - 1)}
+      do: {key, redact_sensitive(value, depth - 1, mode)},
+      else: {redact_term(key, depth - 1, mode), redact_term(value, depth - 1, mode)}
   end
 
-  defp redact_element(term, depth), do: redact_term(term, depth)
+  defp redact_element(term, depth, mode), do: redact_term(term, depth, mode)
 
   # `:maps.map/2` rather than `Map.new/2` because a struct is a map that does
   # not implement `Enumerable`: an exception or a `%Req.Request{}` nested in a
   # crash report would raise here. It also keeps every key it was given,
   # `__struct__` included, so a struct stays the struct it was.
-  defp redact_map(term, depth),
-    do: :maps.map(fn key, value -> redact_entry(key, value, depth - 1) end, term)
+  defp redact_map(term, depth, mode),
+    do: :maps.map(fn key, value -> redact_entry(key, value, depth - 1, mode) end, term)
 
-  defp redact_entry(key, value, depth) do
+  defp redact_entry(key, value, depth, mode) do
     if sensitive_key?(key),
-      do: redact_sensitive(value, depth),
-      else: redact_term(value, depth)
+      do: redact_sensitive(value, depth, mode),
+      else: redact_term(value, depth, mode)
   end
 
   # A changeset error (`password: {"is too short", [count: 8]}`) sits under the
   # field's name but carries only the validation message, never the value.
-  defp redact_sensitive({message, opts}, depth) when is_binary(message) and is_list(opts) do
+  defp redact_sensitive({message, opts}, depth, mode)
+       when is_binary(message) and is_list(opts) do
     if Keyword.keyword?(opts),
-      do: {message, redact_term(opts, depth)},
+      do: {message, redact_term(opts, depth, mode)},
       else: @redacted
   end
 
-  defp redact_sensitive(_value, _depth), do: @redacted
+  defp redact_sensitive(_value, _depth, _mode), do: @redacted
 
-  defp redact_struct(module, struct, depth) do
-    redacted = redact_map(struct, depth)
+  defp redact_struct(_module, struct, depth, _mode) when is_exception(struct),
+    do: redact_map(struct, depth, :keep)
+
+  # Below an exception, a struct its own implementation can still render
+  # stays a struct; one it cannot is replaced by the placeholder, since
+  # whatever inspects the exception later would fall back to the raw map.
+  defp redact_struct(module, struct, depth, mode) do
+    redacted = redact_map(struct, depth, mode)
 
     cond do
-      redacted == struct -> struct
-      is_exception(struct) -> redacted
-      custom_inspect?(struct) -> render_struct(module, redacted)
-      true -> redacted
+      redacted == struct or not custom_inspect?(struct) -> redacted
+      mode == :render -> render_struct(module, redacted)
+      renders?(redacted) -> redacted
+      true -> placeholder(module)
     end
   end
 
   defp custom_inspect?(struct), do: Inspect.impl_for(struct) != Inspect.Any
 
+  defp render_struct(module, redacted) do
+    case render(redacted) do
+      {:ok, rendered} -> rendered
+      :error -> placeholder(module)
+    end
+  end
+
+  defp renders?(redacted), do: render(redacted) != :error
+
   # Calls the implementation directly, not through `inspect/2`, because the
   # latter rescues a raising implementation and prints the raw map instead:
   # the very fields the implementation exists to hide.
-  defp render_struct(module, redacted) do
+  defp render(redacted) do
     impl = Inspect.impl_for(redacted)
     opts = Inspect.Opts.new(@struct_inspect_opts)
 
-    redacted
-    |> impl.inspect(opts)
-    |> Inspect.Algebra.format(opts.width)
-    |> IO.iodata_to_binary()
+    rendered =
+      redacted
+      |> impl.inspect(opts)
+      |> Inspect.Algebra.format(opts.width)
+      |> IO.iodata_to_binary()
+
+    {:ok, rendered}
   catch
-    _kind, _reason -> "#" <> inspect(module) <> "<" <> @redacted <> ">"
+    _kind, _reason -> :error
   end
+
+  defp placeholder(module), do: "#" <> inspect(module) <> "<" <> @redacted <> ">"
 
   defp sensitive_key?(key) when is_atom(key) do
     key

@@ -127,7 +127,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                   <div>
                     <div class="summary-value">{LocalizationHelpers.format_date(@selected_date)}</div>
                     <div class="summary-label">
-                      {@selected_time || dgettext("booking", "No time selected")}
+                      {LocalizationHelpers.format_slot_label(@selected_time) ||
+                        dgettext("booking", "No time selected")}
                     </div>
                   </div>
                 </div>
@@ -180,6 +181,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
               as={:booking}
               id="booking-form"
               {SecurityFields.recaptcha_form_attrs("booking_form", "booking")}
+              novalidate
             >
               <SecurityFields.honeypot_field id_prefix="booking" param_root="booking" />
 

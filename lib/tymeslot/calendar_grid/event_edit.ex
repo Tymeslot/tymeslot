@@ -161,6 +161,34 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
     |> SeriesEdit.edit_scopes()
   end
 
+  @doc """
+  Saves an edit of `event` for replay on the next sync without writing it
+  now, as a failed write a retry can recover would be (see "Failure" in the
+  moduledoc), and records it on the cached row. For an edit that can no
+  longer be made in time, such as one still queued in the grid when the node
+  stops (see `Tymeslot.CalendarGrid.WriteGuardian`).
+
+  Answers `{:ok, updated_event}` once it is queued, or `{:error,
+  :not_queued}` for an event whose integration has no offline queue, a
+  member of a series (never queued), or a change that cannot be applied.
+  """
+  @spec queue_for_retry(pos_integer(), map(), changes(), keyword()) ::
+          {:ok, map()} | {:error, :not_queued}
+  def queue_for_retry(user_id, event, changes, opts \\ []) when is_map(changes) do
+    ensure_known_fields!(changes)
+    stored = stored_row(event)
+
+    with :single <- Occurrence.series_family(stored || event),
+         {:ok, updated} <- apply_changes(event, changes, opts),
+         {:ok, payload} <- ProviderPayload.from_event(updated),
+         payload = payload |> put_stored_document(stored) |> scope_attendees(event, changes),
+         :queued <- queue_retry(:queue_recoverable, user_id, updated, payload, :not_written) do
+      {:ok, updated}
+    else
+      _not_queued -> {:error, :not_queued}
+    end
+  end
+
   @typedoc """
   Turns the payload of a whole event into the write the provider is given,
   or refuses it before anything is written.

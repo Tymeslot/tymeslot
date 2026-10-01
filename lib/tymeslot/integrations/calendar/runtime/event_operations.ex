@@ -224,16 +224,18 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
 
   # --- Private Helpers ---
 
-  # A whole event goes with `:ok`; one occurrence of a series with the
-  # document the rest of the series now lives in, which the caller needs to
-  # refresh its cache.
-  # A whole event is written with `:ok`; one occurrence of a CalDAV series
-  # with the document the series now lives in.
+  # A whole event is written with `:ok`; one CalDAV occurrence of a series
+  # with the document the series now lives in; a Google/Outlook split (the
+  # occurrence detached into its own event, the rest of the series re-created
+  # after it) with the document the tail now lives in.
   defp written(:ok), do: {:written, :ok}
   defp written({:ok, %{document: _document}} = occurrence), do: {:written, occurrence}
   defp written({:ok, %{tail: _tail}} = split), do: {:written, split}
   defp written(error), do: error
 
+  # A whole event goes with `:ok`; one CalDAV occurrence of a series with the
+  # document the rest of the series now lives in, which the caller needs to
+  # refresh its cache.
   defp deleted(:ok), do: {:deleted, :ok}
   defp deleted({:ok, %{document: _document}} = occurrence), do: {:deleted, occurrence}
   defp deleted(error), do: error

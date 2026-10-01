@@ -171,6 +171,16 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
       assert [%Error{kind: "Elixir.RuntimeError", occurrences: [_one]}] = errors()
     end
 
+    test "a crashing Task's message is inserted already masked" do
+      CaptureLog.capture_log(fn ->
+        crash_task(fn -> raise "sync failed for jane@example.com" end)
+
+        occurrence = await_occurrence!()
+        assert occurrence.reason =~ "sync failed for"
+        refute occurrence.reason =~ "jane@example.com"
+      end)
+    end
+
     # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
     test "a crashing supervised Task is recorded once" do
       CaptureLog.capture_log(fn ->

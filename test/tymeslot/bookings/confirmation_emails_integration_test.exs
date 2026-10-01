@@ -243,6 +243,41 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
       assert subjects["attendee@example.com"] =~ "Appointment Confirmed"
     end
 
+    # The stored title becomes the host's calendar event, so it is in the
+    # host's language. The booker's calendar file is tagged with the booker's
+    # language, so the title in it has to be in that language too, through
+    # the confirmation and a later cancellation alike.
+    test "titles the booker's calendar file in the booker's language, the host's event in the host's",
+         %{user: user, meeting_params: meeting_params, form_data: form_data} do
+      {:ok, _user} = UserQueries.update_user_locale(user, "de")
+
+      assert {:ok, meeting} =
+               Create.execute(Map.put(meeting_params, :attendee_locale, "fr"), form_data)
+
+      assert meeting.title == "Test Meeting mit Test Attendee"
+
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_confirmation_emails",
+                 "meeting_id" => meeting.id
+               })
+
+      assert attendee_ics(collect_emails(2)) =~
+               "SUMMARY;LANGUAGE=fr:Test Meeting avec Test Attendee"
+
+      meeting |> Changeset.change(status: "cancelled") |> Repo.update!()
+
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_cancellation_emails",
+                 "meeting_id" => meeting.id
+               })
+
+      cancellation_ics = attendee_ics(collect_emails(2))
+      assert cancellation_ics =~ "STATUS:CANCELLED"
+      assert cancellation_ics =~ "SUMMARY;LANGUAGE=fr:Test Meeting avec Test Attendee"
+    end
+
     test "shows the host's uploaded avatar by absolute URL, which Gmail can fetch", %{
       profile: profile,
       meeting_params: meeting_params,
@@ -511,5 +546,21 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
       assert updated_meeting.organizer_email_sent == true
       assert updated_meeting.attendee_email_sent == true
     end
+  end
+
+  defp collect_emails(count) do
+    for _n <- 1..count do
+      assert_received {:email, email}
+      email
+    end
+  end
+
+  defp attendee_ics(emails) do
+    email = Enum.find(emails, &(&1.to == [{"Test Attendee", "attendee@example.com"}]))
+    assert email, "no email reached the attendee"
+
+    attachment = Enum.find(email.attachments, &String.ends_with?(&1.filename, ".ics"))
+    assert attachment, "the attendee's email carried no calendar file"
+    attachment.data
   end
 end

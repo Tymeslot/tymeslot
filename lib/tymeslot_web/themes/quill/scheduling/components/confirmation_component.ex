@@ -284,6 +284,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
       |> assign_new(:duration_label, fn -> dgettext("booking", "Duration") end)
       |> assign_new(:timezone_label, fn -> dgettext("booking", "Timezone") end)
       |> assign_new(:formatted_date, fn -> LocalizationHelpers.format_date(assigns.date) end)
+      |> assign_new(:formatted_time, fn -> LocalizationHelpers.format_slot_label(assigns.time) end)
       |> assign_new(:formatted_duration, fn ->
         LocalizationHelpers.format_duration(assigns.duration)
       end)
@@ -297,7 +298,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
       </div>
       <div>
         <p class="booking-detail-label">{@time_label}</p>
-        <p class="booking-detail-value">{@time}</p>
+        <p class="booking-detail-value">{@formatted_time}</p>
       </div>
       <div>
         <p class="booking-detail-label">{@duration_label}</p>

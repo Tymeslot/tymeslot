@@ -74,7 +74,9 @@ defmodule TymeslotWeb.TimeFormatAudienceTest do
         "de" => "14:30",
         "fr" => "14:30",
         "it" => "14:30",
-        "uk" => "14:30"
+        "uk" => "14:30",
+        "cs" => "14:30",
+        "pl" => "14:30"
       }
 
       for {locale, want} <- expected do

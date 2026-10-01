@@ -318,6 +318,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
           |> Helpers.assign_view_from_preferences()
           |> Helpers.assign_timezone()
           |> open_on_today()
+          |> EventWrites.adopt()
           |> Helpers.load_events()
           |> maybe_auto_refresh()
       end

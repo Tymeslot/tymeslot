@@ -52,4 +52,44 @@ defmodule TymeslotWeb.Components.CoreComponentsInputTest do
     assert html =~ ~s(aria-invalid="true")
     refute html =~ "aria-describedby"
   end
+
+  describe "required" do
+    # The attribute must land on the control itself, not only on the label's
+    # `*`: it is what tells assistive technology the field is required.
+    defp render_control(type, required) do
+      render_component(
+        fn assigns ->
+          ~H"""
+          <Forms.input
+            id="field"
+            name="field"
+            label="Field"
+            type={@type}
+            options={[{"One", "1"}]}
+            required={@required}
+          />
+          """
+        end,
+        %{type: type, required: required}
+      )
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("#field")
+    end
+
+    for {type, tag} <- [{"text", "input"}, {"select", "select"}, {"textarea", "textarea"}] do
+      test "renders on a #{type} control" do
+        control = render_control(unquote(type), true)
+
+        assert LazyHTML.tag(control) == [unquote(tag)]
+        assert LazyHTML.attribute(control, "required") == [""]
+      end
+    end
+
+    test "required={false} leaves no attribute on the control" do
+      control = render_control("text", false)
+
+      assert LazyHTML.tag(control) == ["input"]
+      assert LazyHTML.attribute(control, "required") == []
+    end
+  end
 end

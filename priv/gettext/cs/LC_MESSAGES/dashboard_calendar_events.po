@@ -178,7 +178,6 @@ msgid "Cancel"
 msgstr "Zrušit"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_recurrence.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex
 #, elixir-autogen, elixir-format
@@ -1117,6 +1116,7 @@ msgid "Events of a repeating series cannot be switched between all-day and timed
 msgstr "Události opakující se série zde nelze přepnout mezi celodenní a časovanou. Proveďte prosím tuto změnu ve své kalendářové aplikaci."
 
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex
 #, elixir-autogen, elixir-format
 msgid "That change cannot be made to the events you chose. A repeat rule can only be changed for all events, or this and following events, and cannot be removed here."
 msgstr "Tuto změnu nelze u zvolených událostí provést. Pravidlo opakování lze změnit jen pro všechny události, nebo pro tuto a následující, a zde jej nelze odstranit."
@@ -1356,3 +1356,8 @@ msgstr "Na tuto schůzku už nelze přidat další hosty."
 #, elixir-autogen, elixir-format
 msgid "Too many new meetings. Please wait a moment."
 msgstr "Příliš mnoho nových schůzek. Počkejte prosím chvíli."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "Someone else organises this meeting, so Tymeslot can't move or split a series you were only invited to."
+msgstr "Tuto schůzku organizuje někdo jiný, takže Tymeslot nemůže přesunout ani rozdělit sérii, na kterou jste byli jen pozváni."

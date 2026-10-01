@@ -1,4 +1,22 @@
 
+[1.21.0]
+* booking: Show the booking title to guests in their own language
+* calendar: Move the iCloud event when a booking is rescheduled
+* booking: Translate the preview booking title into the host's language
+* calendar: Translate booking event titles into the host's language
+* privacy: Stop loading fonts from Google in booking pages and emails
+* calendar: Write dashboard calendar dates in each language's order
+* Redirect URLs with a trailing slash to the slashless path
+* i18n: Capitalise month headings and use the standalone month name
+* booking: Show the chosen time on the visitor's clock after booking
+* accessibility: Announce required form fields to screen readers
+* calendar: Stop mailbox.org adding your login address to bookings
+* booking: Show the booking page error card in the visitor's language
+* embed: Stop an embed URL opened in its own tab from reloading endlessly
+* auth: Name the Cloudron identity provider on the SSO button
+* i18n: Add Polish translation
+
+
 [1.20.0]
 * calendar: Limit how often quick add can create meetings
 * calendar: Delete a removed event's video room despite shared calendars

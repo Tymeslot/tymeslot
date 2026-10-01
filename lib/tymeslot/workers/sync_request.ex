@@ -21,14 +21,24 @@ defmodule Tymeslot.Workers.SyncRequest do
       fetch;
     * a scheduled one, such as the sweep's jittered full fetch, is brought
       forward to now;
+    * a retryable one (already failed once and waiting out its backoff, up
+      to 8 minutes on Outlook) is brought forward to now too, so the request
+      does not wait out someone else's backoff, and is not lost with the job
+      if that backoff ladder then runs out and the job is discarded;
     * a running one cannot take new args mid-run, so the worker, once its run
       has succeeded, rereads its row (`rerun_if_requested/2`). Args that are
       no longer the ones it started with mean a request came in meanwhile,
       and the job snoozes: the same job runs again straight after, never
       beside itself, reading the provider afresh.
 
-  A request is matched against a job of any age (`period: :infinity`), so it
-  folds into a long-running sync rather than starting a second one beside it.
+  A request is matched against a waiting (available/scheduled/retryable) job
+  of any age (`period: :infinity`), so it folds into one rather than starting
+  a second beside it. An `:executing` row is matched the same way, unless it
+  is older than `@orphaned_executing_after_seconds`: nothing here runs
+  anywhere near that long, so a row that old did not survive its node (the
+  Lifeline in `config/runtime.exs` only rescues it after 6 hours) and folding
+  into it would otherwise swallow the request until the rescue. Such a
+  request instead gets a job of its own.
   """
 
   alias Tymeslot.Jobs
@@ -36,12 +46,16 @@ defmodule Tymeslot.Workers.SyncRequest do
   @replace [
     available: [:args],
     scheduled: [:args, :scheduled_at],
-    retryable: [:args],
+    retryable: [:args, :scheduled_at],
     executing: [:args]
   ]
 
   # How long a job that was asked to run again while running waits first.
   @rerun_after_seconds 1
+
+  # An `:executing` row this old cannot still be a sync in progress; see the
+  # moduledoc.
+  @orphaned_executing_after_seconds 1800
 
   @doc """
   Inserts a request of `worker`, a sync worker unique per integration, with
@@ -50,13 +64,44 @@ defmodule Tymeslot.Workers.SyncRequest do
   @spec insert(module(), map()) :: {:ok, Oban.Job.t()} | {:error, term()}
   def insert(worker, args) do
     now = DateTime.utc_now()
+    stamped_args = Map.put(args, "requested_at", DateTime.to_iso8601(now))
     unique = Keyword.put(worker.__opts__()[:unique], :period, :infinity)
 
-    args
-    |> Map.put("requested_at", DateTime.to_iso8601(now))
+    stamped_args
     |> worker.new(state: "available", scheduled_at: now, unique: unique, replace: @replace)
     |> Oban.insert()
+    |> retry_past_orphaned_executing(worker, stamped_args, now)
   end
+
+  # A conflict folded into an `:executing` row too old to still be running:
+  # insert again without matching `:executing`, so the request gets a job of
+  # its own instead of waiting for the Lifeline to rescue that row.
+  defp retry_past_orphaned_executing(
+         {:ok,
+          %Oban.Job{
+            conflict?: true,
+            state: "executing",
+            attempted_at: %DateTime{} = attempted_at
+          }} = result,
+         worker,
+         stamped_args,
+         now
+       ) do
+    if DateTime.diff(now, attempted_at, :second) > @orphaned_executing_after_seconds do
+      unique =
+        worker.__opts__()[:unique]
+        |> Keyword.put(:period, :infinity)
+        |> Keyword.update!(:states, &List.delete(&1, :executing))
+
+      stamped_args
+      |> worker.new(state: "available", scheduled_at: now, unique: unique, replace: @replace)
+      |> Oban.insert()
+    else
+      result
+    end
+  end
+
+  defp retry_past_orphaned_executing(result, _worker, _stamped_args, _now), do: result
 
   @doc """
   Turns a run's successful `result` into a snooze when a request rewrote the
