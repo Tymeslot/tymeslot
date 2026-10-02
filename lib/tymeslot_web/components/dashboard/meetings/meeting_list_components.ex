@@ -115,7 +115,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   def meetings_list(assigns) do
     ~H"""
     <div>
-      <CoreComponents.loading_card :if={@loading} />
+      <CoreComponents.loading_card
+        :if={@loading}
+        label={dgettext("dashboard_bookings", "Loading meetings")}
+      />
       <.no_meetings :if={!@loading and @is_empty} filter={@filter} />
       <div :if={!@loading and !@is_empty} class="space-y-4" id="meetings" phx-update="stream">
         <div :for={{dom_id, meeting} <- @meetings_stream} id={dom_id}>
@@ -401,6 +404,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
     <CoreComponents.empty_state
       icon="hero-calendar-days"
       size={:lg}
+      heading={:h3}
       title={no_meetings_title(@filter)}
       description={no_meetings_description(@filter)}
     />

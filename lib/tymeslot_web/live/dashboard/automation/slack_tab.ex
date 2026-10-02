@@ -86,6 +86,8 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackTab do
     <% else %>
       <.empty_state
         size={:lg}
+        tone={:brand}
+        heading={:h3}
         title={dgettext("dashboard_automation_chat", "No Slack Integrations")}
         description={
           dgettext(

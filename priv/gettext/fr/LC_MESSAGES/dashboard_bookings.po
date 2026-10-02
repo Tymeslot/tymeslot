@@ -683,3 +683,8 @@ msgstr "Vous ne pouvez plus ajouter d’invités à cette réunion."
 msgctxt "reminder status"
 msgid "Not scheduled"
 msgstr "Non planifié"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Loading meetings"
+msgstr "Chargement des réunions"

@@ -71,6 +71,8 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramTab do
     <% else %>
       <.empty_state
         size={:lg}
+        tone={:brand}
+        heading={:h3}
         title={dgettext("dashboard_automation_chat", "No Telegram Integrations")}
         description={
           dgettext(

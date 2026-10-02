@@ -34,6 +34,8 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
 
   @empty_state_sizes [:sm, :md, :lg]
   @empty_state_variants [:card, :dashed, :plain]
+  @empty_state_tones [:neutral, :brand, :warning]
+  @empty_state_headings [:p, :h2, :h3]
 
   @empty_state_size_classes %{
     sm: %{
@@ -62,10 +64,24 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
     }
   }
 
+  # `tile` is the neutral tile's surface on each variant; a non-neutral tone
+  # brings its own.
   @empty_state_variant_classes %{
-    card: "card-glass",
-    dashed: "rounded-token-2xl border-2 border-dashed border-tymeslot-200 bg-tymeslot-50/50",
-    plain: nil
+    card: %{surface: "card-glass", tile: "bg-tymeslot-50 border-tymeslot-100"},
+    dashed: %{
+      surface: "rounded-token-2xl border-2 border-dashed border-tymeslot-200 bg-tymeslot-50/50",
+      tile: "bg-white border-tymeslot-100 shadow-sm"
+    },
+    plain: %{surface: nil, tile: "bg-tymeslot-50 border-tymeslot-100"}
+  }
+
+  @empty_state_tone_classes %{
+    neutral: %{tile: "text-tymeslot-400", title: "text-tymeslot-900"},
+    brand: %{
+      tile: "bg-turquoise-50 border-turquoise-100 text-turquoise-600",
+      title: "text-tymeslot-900"
+    },
+    warning: %{tile: "bg-amber-50 border-amber-100 text-amber-600", title: "text-amber-700"}
   }
 
   # ========== FEEDBACK ==========
@@ -74,6 +90,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
   Renders a loading spinner.
   """
   attr :class, :string, default: nil
+  attr :rest, :global
 
   @spec spinner(map()) :: Phoenix.LiveView.Rendered.t()
   def spinner(assigns) do
@@ -83,6 +100,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
       xmlns="http://www.w3.org/2000/svg"
       fill="none"
       viewBox="0 0 24 24"
+      {@rest}
     >
       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
       </circle>
@@ -116,33 +134,44 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
   `size` scales the tile and the type: `:lg` for a whole page that is empty,
   `:md` for a section, `:sm` for a panel or a list inside a card.
 
-  For a mark the hero set lacks (a brand logo), leave `icon` out and pass the
-  `:graphic` slot instead; it is drawn inside the same tile and inherits its
-  colour. The inner block, when given, renders below the actions, for
-  supporting detail such as a hint or a fallback instruction.
+  `tone` colours the tile and the title: `:neutral` for most, `:brand` for a
+  first-run invitation drawn with a brand mark, `:warning` for a state the
+  organiser has to act on, such as an expired link. `heading` sets the title's
+  element: keep `:p` inside a section, and pass `:h2` or `:h3` when the empty
+  state stands in for a page or a section that would otherwise carry that
+  heading.
+
+  For a mark the hero set lacks (a brand logo), pass the `:graphic` slot
+  instead of `icon`; it is drawn inside the same tile and inherits its colour.
+  When both are given, only the graphic is drawn. The inner block, when given,
+  renders below the actions, for supporting detail such as a hint or a
+  fallback instruction.
   """
   attr :icon, :string, default: nil, doc: "A `hero-…` icon name shown in the tile"
   attr :title, :string, required: true
   attr :description, :string, default: nil
   attr :size, :atom, default: :md, values: @empty_state_sizes
   attr :variant, :atom, default: :card, values: @empty_state_variants
+  attr :tone, :atom, default: :neutral, values: @empty_state_tones
+  attr :heading, :atom, default: :p, values: @empty_state_headings, doc: "The title's element"
   attr :class, :any, default: nil, doc: "Layout classes only"
   attr :rest, :global
-  slot :graphic, doc: "Custom tile content, in place of `icon`"
+  slot :graphic, doc: "Custom tile content, in place of `icon`; wins when both are given"
   slot :action, doc: "Buttons or links offering the way out of the empty state"
   slot :inner_block, doc: "Supporting detail below the actions"
 
   @spec empty_state(map()) :: Phoenix.LiveView.Rendered.t()
   def empty_state(assigns) do
+    variant = Map.fetch!(@empty_state_variant_classes, assigns.variant)
+    tone = Map.fetch!(@empty_state_tone_classes, assigns.tone)
+
     assigns =
       assign(assigns,
         sizing: Map.fetch!(@empty_state_size_classes, assigns.size),
-        surface: Map.fetch!(@empty_state_variant_classes, assigns.variant),
-        tile_surface:
-          if(assigns.variant == :dashed,
-            do: "bg-white border-tymeslot-100 shadow-sm",
-            else: "bg-tymeslot-50 border-tymeslot-100"
-          )
+        surface: variant.surface,
+        tile_class: [assigns.tone == :neutral && variant.tile, tone.tile],
+        title_class: tone.title,
+        heading_tag: Atom.to_string(assigns.heading)
       )
 
     ~H"""
@@ -150,16 +179,18 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
       <div
         :if={@icon || @graphic != []}
         class={[
-          "mx-auto flex items-center justify-center border-2 text-tymeslot-400",
-          @tile_surface,
+          "mx-auto flex items-center justify-center border-2",
+          @tile_class,
           @sizing.tile
         ]}
         aria-hidden="true"
       >
-        <Icons.icon :if={@icon} name={@icon} class={@sizing.icon} />
+        <Icons.icon :if={@icon && @graphic == []} name={@icon} class={@sizing.icon} />
         {render_slot(@graphic)}
       </div>
-      <p class={["text-tymeslot-900 tracking-tight", @sizing.title]}>{@title}</p>
+      <.dynamic_tag tag_name={@heading_tag} class={["tracking-tight", @title_class, @sizing.title]}>
+        {@title}
+      </.dynamic_tag>
       <p
         :if={@description}
         class={["mx-auto max-w-md font-medium leading-relaxed text-tymeslot-500", @sizing.description]}
@@ -192,7 +223,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
     ~H"""
     <div class={["card-glass", @class]} role="status" {@rest}>
       <div class="flex items-center justify-center py-12">
-        <.spinner class="h-8 w-8 text-turquoise-600" />
+        <.spinner class="h-8 w-8 text-turquoise-600" aria-hidden="true" />
         <span class="sr-only">{@label || dgettext("common", "Loading")}</span>
       </div>
     </div>

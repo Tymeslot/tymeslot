@@ -73,6 +73,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView do
         :if={@groups == []}
         icon="hero-calendar-days"
         variant={:plain}
+        heading={:h2}
         class="flex flex-col items-center justify-center h-full"
         title={
           if @agenda_lens == :bookings,

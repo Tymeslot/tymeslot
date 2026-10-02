@@ -17,6 +17,8 @@ defmodule TymeslotWeb.Components.CoreComponentsEmptyStateTest do
       description: nil,
       size: :md,
       variant: :card,
+      tone: :neutral,
+      heading: :p,
       with_action: false,
       with_graphic: false,
       with_detail: false
@@ -31,6 +33,8 @@ defmodule TymeslotWeb.Components.CoreComponentsEmptyStateTest do
             description={@description}
             size={@size}
             variant={@variant}
+            tone={@tone}
+            heading={@heading}
             data-testid="the-empty-state"
           >
             <:graphic :if={@with_graphic}><svg data-role="brand-mark"></svg></:graphic>
@@ -128,9 +132,35 @@ defmodule TymeslotWeb.Components.CoreComponentsEmptyStateTest do
       assert title_class(%{size: :lg}) =~ "text-token-2xl"
     end
 
-    test "rejects a size or variant outside the declared values" do
-      assert_raise KeyError, fn -> render_empty_state(%{size: :xl}) end
-      assert_raise KeyError, fn -> render_empty_state(%{variant: :glass}) end
+    test "draws the title as a paragraph by default, or as the heading asked for" do
+      assert count(render_empty_state(%{}), "p.tracking-tight") == 1
+
+      for level <- [:h2, :h3] do
+        doc = render_empty_state(%{heading: level})
+        assert doc |> LazyHTML.query("#{level}") |> LazyHTML.text() =~ "No saved locations yet"
+        assert count(doc, "p.tracking-tight") == 0
+      end
+    end
+
+    test "each tone colours the tile and the title" do
+      neutral = render_empty_state(%{})
+      brand = render_empty_state(%{tone: :brand})
+      warning = render_empty_state(%{tone: :warning})
+
+      assert tile_class(neutral) =~ "bg-tymeslot-50"
+      assert tile_class(neutral) =~ "text-tymeslot-400"
+      assert tile_class(brand) =~ "bg-turquoise-50"
+      refute tile_class(brand) =~ "bg-tymeslot-50"
+      assert tile_class(warning) =~ "bg-amber-50"
+      assert count(warning, "p.text-amber-700") == 1
+      assert count(neutral, "p.text-tymeslot-900") == 1
+    end
+
+    test "draws only the graphic when given both a graphic and an icon" do
+      doc = render_empty_state(%{with_graphic: true})
+
+      assert count(doc, "svg") == 1
+      assert count(doc, "svg[data-role='brand-mark']") == 1
     end
 
     test "the CoreComponents delegate declares the same attrs and slots as Feedback" do
@@ -144,7 +174,7 @@ defmodule TymeslotWeb.Components.CoreComponentsEmptyStateTest do
 
       status = LazyHTML.query(doc, "[role='status']")
       assert class_of(status) =~ "card-glass"
-      assert count(doc, "[role='status'] svg.spinner") == 1
+      assert count(doc, "[role='status'] svg.spinner[aria-hidden='true']") == 1
       assert doc |> LazyHTML.query(".sr-only") |> LazyHTML.text() == "Loading"
     end
 
@@ -157,6 +187,8 @@ defmodule TymeslotWeb.Components.CoreComponentsEmptyStateTest do
       assert doc |> LazyHTML.query(".sr-only") |> LazyHTML.text() == "Loading meetings"
     end
   end
+
+  defp tile_class(doc), do: doc |> LazyHTML.query("[aria-hidden='true']") |> class_of()
 
   defp doc_class(assigns), do: assigns |> render_empty_state() |> root() |> class_of()
 

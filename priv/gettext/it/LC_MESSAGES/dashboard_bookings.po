@@ -683,3 +683,8 @@ msgstr "Non è possibile aggiungere altri ospiti a questa riunione."
 msgctxt "reminder status"
 msgid "Not scheduled"
 msgstr "Non programmato"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Loading meetings"
+msgstr "Caricamento delle riunioni"

@@ -689,3 +689,8 @@ msgstr "До цієї зустрічі більше не можна додати
 msgctxt "reminder status"
 msgid "Not scheduled"
 msgstr "Не заплановано"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Loading meetings"
+msgstr "Завантаження зустрічей"

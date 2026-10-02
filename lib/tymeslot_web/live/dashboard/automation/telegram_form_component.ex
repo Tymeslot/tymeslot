@@ -307,6 +307,8 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
     ~H"""
     <.empty_state
       size={:lg}
+      tone={:warning}
+      heading={:h3}
       title={dgettext("dashboard_automation_chat", "Link Expired")}
       description={
         dgettext(
@@ -333,6 +335,8 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
     ~H"""
     <.empty_state
       size={:lg}
+      tone={:brand}
+      heading={:h3}
       title={dgettext("dashboard_automation_chat", "Connect Telegram")}
       description={
         dgettext(

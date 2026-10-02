@@ -685,3 +685,8 @@ msgstr "Do tego spotkania nie można dodać więcej gości."
 msgctxt "reminder status"
 msgid "Not scheduled"
 msgstr "Niezaplanowane"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Loading meetings"
+msgstr "Ładowanie spotkań"

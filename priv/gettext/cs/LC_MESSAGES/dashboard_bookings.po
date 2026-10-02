@@ -689,3 +689,8 @@ msgstr "Na tuto schůzku už nelze přidat další hosty."
 msgctxt "reminder status"
 msgid "Not scheduled"
 msgstr "Nenaplánováno"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Loading meetings"
+msgstr "Načítání schůzek"

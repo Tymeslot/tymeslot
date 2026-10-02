@@ -217,6 +217,7 @@ defmodule TymeslotWeb.Components.CoreComponents do
   Renders a loading spinner.
   """
   attr :class, :string, default: nil
+  attr :rest, :global
   @spec spinner(map()) :: Phoenix.LiveView.Rendered.t()
   def spinner(assigns), do: Feedback.spinner(assigns)
 
@@ -236,9 +237,11 @@ defmodule TymeslotWeb.Components.CoreComponents do
   attr :description, :string, default: nil
   attr :size, :atom, default: :md, values: [:sm, :md, :lg]
   attr :variant, :atom, default: :card, values: [:card, :dashed, :plain]
+  attr :tone, :atom, default: :neutral, values: [:neutral, :brand, :warning]
+  attr :heading, :atom, default: :p, values: [:p, :h2, :h3], doc: "The title's element"
   attr :class, :any, default: nil, doc: "Layout classes only"
   attr :rest, :global
-  slot :graphic, doc: "Custom tile content, in place of `icon`"
+  slot :graphic, doc: "Custom tile content, in place of `icon`; wins when both are given"
   slot :action, doc: "Buttons or links offering the way out of the empty state"
   slot :inner_block, doc: "Supporting detail below the actions"
   @spec empty_state(map()) :: Phoenix.LiveView.Rendered.t()
