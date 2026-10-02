@@ -127,7 +127,6 @@ msgstr "Змінити доступність для %{name}"
 msgid "Are you sure you want to delete the meeting type \"%{name}\"?"
 msgstr "Ви впевнені, що хочете видалити тип зустрічі «%{name}»?"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Booking Limits"
@@ -148,30 +147,10 @@ msgstr "Ліміт бронювань скасовано"
 msgid "Booking limit updated to %{limit} bookings"
 msgstr "Ліміт бронювань оновлено: %{limit}"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Maximum number of bookings you accept across all meeting types. Days at their cap disappear from your booking page. Leave a field empty for no limit."
 msgstr "Максимальна кількість бронювань, які ви приймаєте за всіма типами зустрічей. Дні, що досягли ліміту, зникають з вашої сторінки бронювання. Залиште поле порожнім, щоб не встановлювати ліміт."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "No limit"
-msgstr "Без обмежень"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "Per day"
-msgstr "На день"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "Per month"
-msgstr "На місяць"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "Per week"
-msgstr "На тиждень"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
