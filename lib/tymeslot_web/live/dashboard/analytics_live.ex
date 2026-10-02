@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
 
   alias Tymeslot.Analytics
   alias Tymeslot.Analytics.MetricsCache
+  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Components.DashboardLayout
   alias TymeslotWeb.Dashboard.AnalyticsLive.DeviceBreakdown
   alias TymeslotWeb.Dashboard.AnalyticsLive.SourcesTable
@@ -172,7 +173,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
           aria-live="polite"
         >
           {dgettext("dashboard_analytics", "Updated %{time}",
-            time: format_refreshed_at(@refreshed_at, @time_zone)
+            time: format_refreshed_at(@refreshed_at, @time_zone, @time_format)
           )}
         </p>
 
@@ -338,12 +339,19 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
     |> assign(:refreshed_at, DateTime.utc_now())
   end
 
-  defp format_refreshed_at(%DateTime{} = dt, time_zone) do
-    case DateTime.shift_zone(dt, time_zone || "Etc/UTC") do
-      {:ok, local} -> Calendar.strftime(local, "%H:%M:%S")
-      {:error, _reason} -> Calendar.strftime(dt, "%H:%M:%S")
-    end
+  # The organiser's own clock, 12- or 24-hour, as on every other dashboard page.
+  defp format_refreshed_at(%DateTime{} = dt, time_zone, time_format) do
+    local =
+      case DateTime.shift_zone(dt, time_zone || "Etc/UTC") do
+        {:ok, local} -> local
+        {:error, _reason} -> dt
+      end
+
+    TimeFormat.format(
+      local,
+      TimeFormat.resolve(time_format, Gettext.get_locale(TymeslotWeb.Gettext))
+    )
   end
 
-  defp format_refreshed_at(_other, _time_zone), do: ""
+  defp format_refreshed_at(_other, _time_zone, _time_format), do: ""
 end

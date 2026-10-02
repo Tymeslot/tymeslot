@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Analytics.EventQueries
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.Security.RateLimiter
 
   setup %{conn: conn} do
@@ -28,6 +29,32 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
   end
 
   describe "page rendering" do
+    test "titles the page as the analytics section", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/analytics")
+
+      assert page_title(view) =~ "Analytics - Dashboard"
+    end
+
+    test "shows the refresh time on the organiser's 12-hour clock", %{conn: conn, user: user} do
+      {:ok, _prefs} = CalendarGrid.save_preferences(user.id, %{time_format: "12h"})
+      seed_visit(user, "linkedin", "hash-a")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/analytics")
+
+      assert render(view) =~ ~r/Updated \d{1,2}:\d{2} (AM|PM)/
+    end
+
+    test "shows the refresh time on the organiser's 24-hour clock", %{conn: conn, user: user} do
+      {:ok, _prefs} = CalendarGrid.save_preferences(user.id, %{time_format: "24h"})
+      seed_visit(user, "linkedin", "hash-a")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/analytics")
+
+      html = render(view)
+      assert html =~ ~r/Updated \d{2}:\d{2}\s*</
+      refute html =~ ~r/Updated [^<]*(AM|PM)/
+    end
+
     test "renders summary cards and date-range controls", %{conn: conn, user: user} do
       seed_visit(user, "linkedin", "hash-a")
 

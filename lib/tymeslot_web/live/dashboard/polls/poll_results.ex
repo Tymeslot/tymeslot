@@ -24,9 +24,11 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Dashboard.Polls.PollShareLink
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   @responses [:yes, :if_need_be, :no]
   @bar_responses [:yes, :if_need_be, :no, :none]
@@ -46,6 +48,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   attr :editing_details?, :boolean, default: false
   attr :detail_errors, :map, default: %{}
   attr :meetings_path, :string, required: true
+  attr :time_format, :string, default: nil
   attr :myself, :any, required: true
 
   @spec results_panel(map()) :: Phoenix.LiveView.Rendered.t()
@@ -162,6 +165,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
           health={Map.get(@slot_health, slot.id, :ok)}
           slot_error={Map.get(@slot_errors, slot.id)}
           timezone={@poll.timezone}
+          time_format={@time_format}
           winner?={@winning_slot_id == slot.id}
           leader?={@open? && slot.id in @leaders}
           expanded?={slot.id in @expanded_slots}
@@ -290,6 +294,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   attr :health, :atom, required: true
   attr :slot_error, :any, default: nil
   attr :timezone, :string, required: true
+  attr :time_format, :string, default: nil
   attr :winner?, :boolean, default: false
   attr :leader?, :boolean, default: false
   attr :expanded?, :boolean, default: false
@@ -311,7 +316,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
       <div class="flex items-start justify-between gap-3 flex-wrap">
         <div class="flex items-center gap-2 flex-wrap min-w-0">
           <span class="font-medium text-tymeslot-800">
-            {format_slot(@slot, @timezone)}
+            {format_slot(@slot, @timezone, @time_format)}
           </span>
           <span
             :if={@winner?}
@@ -536,10 +541,14 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
     if length(leaders) == map_size(scores), do: [], else: leaders
   end
 
-  defp format_slot(slot, timezone) do
-    slot.start_time
-    |> DateTimeUtils.convert_to_timezone(timezone)
-    |> Calendar.strftime("%a %-d %b, %H:%M")
+  # The weekday and month follow the organiser's language and the clock their
+  # own 12/24-hour preference, as everywhere else on the dashboard.
+  defp format_slot(slot, timezone, time_format) do
+    local = DateTimeUtils.convert_to_timezone(slot.start_time, timezone)
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+
+    "#{LocaleFormat.format_short_weekday_date(local, locale)}, " <>
+      TimeFormat.format(local, TimeFormat.resolve(time_format, locale))
   end
 
   # --- Response presentation ---

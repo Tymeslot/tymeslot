@@ -136,6 +136,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
           profile={@profile}
           integration_status={@integration_status}
           meetings_path={~p"/dashboard/meetings"}
+          time_format={@time_format}
           myself={@myself}
         />
 

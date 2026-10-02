@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Availability.TimeOff
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.Meetings
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
@@ -115,6 +116,28 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
                view,
                "#poll-slot-#{slot1.id} button[phx-click='toggle_slot_voters'][aria-expanded='false']"
              )
+    end
+
+    test "labels each slot on the organiser's chosen clock", %{conn: conn, user: user} do
+      {:ok, _prefs} = CalendarGrid.save_preferences(user.id, %{time_format: "12h"})
+
+      poll =
+        insert(:poll, user: user, status: :open, timezone: "Europe/Tallinn", meeting_type_id: nil)
+
+      # 12:30 UTC is 14:30 in Tallinn (UTC+2 before the March clock change).
+      slot =
+        insert(:poll_time_slot,
+          poll: poll,
+          start_time: ~U[2030-03-04 12:30:00Z],
+          end_time: ~U[2030-03-04 13:30:00Z],
+          position: 0
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+      select_poll(view, poll)
+
+      assert has_element?(view, "#poll-slot-#{slot.id}", "Mon Mar 4, 2:30 PM")
+      refute has_element?(view, "#poll-slot-#{slot.id}", "14:30")
     end
 
     test "expanding a slot reveals who voted, and collapsing hides them again", %{
