@@ -25,7 +25,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewFormatters do
   @doc """
   The countdown text for an entry `seconds` away.
 
-  Shared with `AgendaDetailModal`, which renders the same entry: the two used
+  Shared with `AppointmentDetails`, which renders the same entry: the two used
   to carry the same gettext msgid and disagree below a minute, one showing
   "in 0m" where the other clamped to "in 1m". A countdown that reads zero is
   the wrong one.
