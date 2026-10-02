@@ -73,51 +73,51 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.NewVenueComponen
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div class="card-glass p-4 mt-4 space-y-3" data-testid="new-venue">
-      <h4 class="text-token-sm font-semibold text-tymeslot-800">
-        {dgettext("dashboard_meeting_form", "New location")}
-      </h4>
+    <div class="mt-4" data-testid="new-venue">
+      <.card variant={:flat} padding={:sm} class="space-y-3">
+        <.subsection_header level={4} title={dgettext("dashboard_meeting_form", "New location")} />
 
-      <.form
-        for={@form}
-        id="new-venue-form"
-        novalidate
-        phx-change="validate"
-        phx-submit="save"
-        phx-target={@myself}
-        class="space-y-3"
-      >
-        <Forms.input
-          field={@form[:name]}
-          label={dgettext("dashboard_meeting_form", "Name")}
-          placeholder={dgettext("dashboard_meeting_form", "e.g., Berlin office")}
-          maxlength={VenueSchema.name_max_length()}
-          required
-        />
+        <.form
+          for={@form}
+          id="new-venue-form"
+          novalidate
+          phx-change="validate"
+          phx-submit="save"
+          phx-target={@myself}
+          class="space-y-3"
+        >
+          <Forms.input
+            field={@form[:name]}
+            label={dgettext("dashboard_meeting_form", "Name")}
+            placeholder={dgettext("dashboard_meeting_form", "e.g., Berlin office")}
+            maxlength={VenueSchema.name_max_length()}
+            required
+          />
 
-        <Forms.input
-          field={@form[:description]}
-          type="textarea"
-          rows={3}
-          label={dgettext("dashboard_meeting_form", "Address and directions (optional)")}
-          placeholder={dgettext("dashboard_meeting_form", "12 High Street, London EC1A 1BB")}
-          maxlength={VenueSchema.description_max_length()}
-        />
+          <Forms.input
+            field={@form[:description]}
+            type="textarea"
+            rows={3}
+            label={dgettext("dashboard_meeting_form", "Address and directions (optional)")}
+            placeholder={dgettext("dashboard_meeting_form", "12 High Street, London EC1A 1BB")}
+            maxlength={VenueSchema.description_max_length()}
+          />
 
-        <div class="flex justify-end gap-2">
-          <Buttons.action_button
-            type="button"
-            variant={:secondary}
-            phx-click="toggle_new_venue"
-            phx-target={@editor}
-          >
-            {dgettext("dashboard_meeting_form", "Cancel")}
-          </Buttons.action_button>
-          <Buttons.action_button type="submit" variant={:primary}>
-            {dgettext("dashboard_meeting_form", "Add location")}
-          </Buttons.action_button>
-        </div>
-      </.form>
+          <div class="flex justify-end gap-2">
+            <Buttons.action_button
+              type="button"
+              variant={:secondary}
+              phx-click="toggle_new_venue"
+              phx-target={@editor}
+            >
+              {dgettext("dashboard_meeting_form", "Cancel")}
+            </Buttons.action_button>
+            <Buttons.action_button type="submit" variant={:primary}>
+              {dgettext("dashboard_meeting_form", "Add location")}
+            </Buttons.action_button>
+          </div>
+        </.form>
+      </.card>
     </div>
     """
   end

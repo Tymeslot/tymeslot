@@ -32,21 +32,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.AvailabilitySect
   def availability_section(assigns) do
     ~H"""
     <section class="space-y-4">
-      <div class="flex items-center gap-2">
-        <.icon name="hero-calendar-days" class="w-5 h-5 text-turquoise-500" />
-        <h3 class="text-token-base font-semibold text-tymeslot-800">
-          {dgettext("dashboard_meeting_form", "Availability")}
-        </h3>
-      </div>
-
-      <div class="card-glass p-4 space-y-4">
-        <p class="text-token-sm text-tymeslot-500">
-          {dgettext(
+      <.subsection_header
+        icon="hero-calendar-days"
+        title={dgettext("dashboard_meeting_form", "Availability")}
+        description={
+          dgettext(
             "dashboard_meeting_form",
             "Choose the hours this meeting type can be booked in. The default schedule applies unless you pick another one."
-          )}
-        </p>
+          )
+        }
+      />
 
+      <.card variant={:flat} padding={:sm}>
         <div class="space-y-2">
           <span class="label" id="availability-schedule-label">
             {dgettext("dashboard_meeting_form", "Schedule")}
@@ -76,7 +73,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.AvailabilitySect
             />
           </div>
         </div>
-      </div>
+      </.card>
     </section>
     """
   end

@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Components.Shared.TimeOptions
+  alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.Availability.ListComponent.BreakHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -43,26 +44,15 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
       )
     ]}>
       <div class="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3">
-        <button
-          phx-click="toggle_day_available"
+        <StatusSwitch.status_switch
+          id={"day-available-toggle-#{@day}"}
+          checked={@day_availability.is_available == true}
+          on_change="toggle_day_available"
+          target={@myself}
+          aria_label={toggle_label(@day_availability.is_available, @day_name)}
+          class="shrink-0"
           phx-value-day={@day}
-          phx-target={@myself}
-          class={[
-            "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400",
-            if(@day_availability.is_available,
-              do: "bg-turquoise-600 border-turquoise-600",
-              else: "bg-tymeslot-300 border-tymeslot-300"
-            )
-          ]}
-          role="switch"
-          aria-checked={to_string(@day_availability.is_available == true)}
-          aria-label={toggle_label(@day_availability.is_available, @day_name)}
-        >
-          <span class={[
-            "pointer-events-none absolute top-0.5 left-0.5 inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200",
-            if(@day_availability.is_available, do: "translate-x-5", else: "translate-x-0")
-          ]}></span>
-        </button>
+        />
 
         <span class={[
           "w-24 shrink-0 font-bold text-token-sm",

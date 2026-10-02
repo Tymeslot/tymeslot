@@ -32,28 +32,23 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
   def render(assigns) do
     ~H"""
     <section class="space-y-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <div class="flex items-center gap-2">
-            <Icons.icon name="hero-map-pin" class="w-5 h-5 text-turquoise-500" />
-            <h3 class="text-token-base font-semibold text-tymeslot-800">
-              {dgettext("dashboard_meeting_form", "Location")}
-            </h3>
-          </div>
-          <p class="text-token-sm text-tymeslot-500 mt-0.5">
-            {location_hint(@locations)}
-          </p>
-        </div>
-        <Buttons.action_button
-          type="button"
-          variant={:secondary}
-          phx-click="add_location"
-          phx-target={@myself}
-          data-testid="add-location"
-        >
-          {dgettext("dashboard_meeting_form", "Add location")}
-        </Buttons.action_button>
-      </div>
+      <.subsection_header
+        icon="hero-map-pin"
+        title={dgettext("dashboard_meeting_form", "Location")}
+        description={location_hint(@locations)}
+      >
+        <:actions>
+          <Buttons.action_button
+            type="button"
+            variant={:secondary}
+            phx-click="add_location"
+            phx-target={@myself}
+            data-testid="add-location"
+          >
+            {dgettext("dashboard_meeting_form", "Add location")}
+          </Buttons.action_button>
+        </:actions>
+      </.subsection_header>
 
       <%!-- Reuses the questions list's sortable hook: it is generic over
            `[data-id]` children and pushes the same "reorder" event, so a
@@ -67,8 +62,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
         class="space-y-2"
       >
         <%= for {location, index} <- Enum.with_index(@locations) do %>
-          <li
-            class="card-glass flex items-center gap-3 px-4 py-3"
+          <.card
+            tag="li"
+            variant={:flat}
+            padding={:xs}
+            class="flex items-center gap-3"
             data-id={location.id}
             data-index={index}
             data-testid="location-row"
@@ -124,7 +122,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
                 {dgettext("dashboard_meeting_form", "Delete")}
               </Buttons.action_button>
             </div>
-          </li>
+          </.card>
         <% end %>
       </ul>
     </section>

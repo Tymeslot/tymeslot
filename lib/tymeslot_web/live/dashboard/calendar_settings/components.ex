@@ -104,21 +104,19 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   def freebusy_section(assigns) do
     ~H"""
     <section class="space-y-4">
-      <div class="flex items-center gap-2">
-        <.icon name="hero-link" class="w-5 h-5 text-turquoise-500" />
-        <h3 class="text-token-base font-semibold text-tymeslot-800">
-          {dgettext("dashboard_calendar_settings", "Free/busy feed")}
-        </h3>
-      </div>
-
-      <div class="card-glass p-4 space-y-3">
-        <p class="text-token-sm text-tymeslot-500">
-          {dgettext(
+      <.subsection_header
+        size={:lg}
+        icon="hero-link"
+        title={dgettext("dashboard_calendar_settings", "Free/busy feed")}
+        description={
+          dgettext(
             "dashboard_calendar_settings",
             "Share a read-only link that publishes when you're busy (not the event details) as a standard iCalendar feed, so other calendar systems can overlay your availability."
-          )}
-        </p>
+          )
+        }
+      />
 
+      <.card padding={:sm} class="space-y-3">
         <%= if @enabled do %>
           <code class="block w-full overflow-x-auto rounded-token-md bg-tymeslot-50 px-3 py-2 text-token-sm text-tymeslot-700 select-all">
             {@url}
@@ -140,7 +138,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             {dgettext("dashboard_calendar_settings", "Enable free/busy feed")}
           </.action_button>
         <% end %>
-      </div>
+      </.card>
     </section>
     """
   end
@@ -169,7 +167,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       <div :if={@active_integrations != []} class="space-y-6">
         <div class="flex items-center justify-between gap-4 flex-col md:flex-row">
           <div>
-            <h3 class="text-xl font-black text-tymeslot-900 tracking-tight flex items-center gap-3">
+            <h3 class="text-token-lg font-semibold text-tymeslot-900 flex items-center gap-3">
               <div class="w-2 h-2 rounded-full bg-turquoise-500 animate-pulse"></div>
               {dgettext("dashboard_calendar_settings", "Active for Conflict Checking")}
             </h3>
@@ -208,7 +206,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       <%!-- Inactive Calendars Section --%>
       <div :if={@inactive_integrations != []} class="space-y-6">
         <div>
-          <h3 class="text-xl font-black text-tymeslot-400 tracking-tight flex items-center gap-3">
+          <h3 class="text-token-lg font-semibold text-tymeslot-500 flex items-center gap-3">
             <div class="w-2 h-2 rounded-full bg-tymeslot-300"></div>
             {dgettext("dashboard_calendar_settings", "Paused Calendars")}
           </h3>

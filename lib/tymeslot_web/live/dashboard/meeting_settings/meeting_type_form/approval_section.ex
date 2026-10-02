@@ -32,36 +32,27 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ApprovalSection 
 
     ~H"""
     <section class="space-y-4">
-      <div class="flex items-center gap-2">
-        <.icon name="hero-inbox-arrow-down" class="w-5 h-5 text-turquoise-500" />
-        <h3 class="text-token-base font-semibold text-tymeslot-800">
-          {dgettext("dashboard_meeting_form", "Approval")}
-        </h3>
-      </div>
+      <.subsection_header
+        icon="hero-inbox-arrow-down"
+        title={dgettext("dashboard_meeting_form", "Approval")}
+      />
 
-      <label class="card-glass flex items-start gap-3 p-4 cursor-pointer">
-        <input
-          type="checkbox"
-          class="checkbox mt-0.5"
-          checked={@requires_approval}
-          phx-click="toggle_requires_approval"
-          phx-target={@myself}
-          data-testid="requires-approval-toggle"
-        />
-        <div class="space-y-1">
-          <p class="text-token-sm font-medium text-tymeslot-700">
-            {dgettext("dashboard_meeting_form", "Confirm each booking myself")}
-          </p>
-          <p class="text-token-sm text-tymeslot-500">
-            {dgettext(
-              "dashboard_meeting_form",
-              "Invitees get a \"request received\" email instead of a confirmation, and the slot is held so nobody else can take it. They get the confirmation and the calendar invite once you accept."
-            )}
-          </p>
-        </div>
-      </label>
+      <.setting_row
+        id="requires-approval-toggle"
+        label={dgettext("dashboard_meeting_form", "Confirm each booking myself")}
+        description={
+          dgettext(
+            "dashboard_meeting_form",
+            "Invitees get a \"request received\" email instead of a confirmation, and the slot is held so nobody else can take it. They get the confirmation and the calendar invite once you accept."
+          )
+        }
+        checked={@requires_approval}
+        on_change="toggle_requires_approval"
+        target={@myself}
+        data-testid="requires-approval-toggle"
+      />
 
-      <div :if={@requires_approval} class="card-glass p-4 space-y-2">
+      <.card :if={@requires_approval} variant={:flat} padding={:sm} class="space-y-2">
         <label class="label" for="approval-window-hours">
           {dgettext("dashboard_meeting_form", "Answer within")}
         </label>
@@ -101,7 +92,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ApprovalSection 
             default: Constraints.default_approval_window_hours()
           )}
         </p>
-      </div>
+      </.card>
     </section>
     """
   end

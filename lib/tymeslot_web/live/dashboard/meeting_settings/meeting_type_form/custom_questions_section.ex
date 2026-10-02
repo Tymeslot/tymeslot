@@ -34,13 +34,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
     # SaaS hasn't registered a placeholder component — render a minimal lock
     # notice rather than nothing, so the operator notices the misconfiguration.
     ~H"""
-    <section class="card-glass py-6 text-center">
-      <p class="text-token-sm text-tymeslot-500">
-        {dgettext(
-          "dashboard_meeting_form",
-          "Custom booking questions are not available on your current plan."
-        )}
-      </p>
+    <section>
+      <.card class="text-center">
+        <p class="text-token-sm text-tymeslot-500">
+          {dgettext(
+            "dashboard_meeting_form",
+            "Custom booking questions are not available on your current plan."
+          )}
+        </p>
+      </.card>
     </section>
     """
   end
@@ -61,27 +63,27 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
   def render(assigns) do
     ~H"""
     <section class="space-y-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <h3 class="text-token-base font-semibold text-tymeslot-800">
-            {dgettext("dashboard_meeting_form", "Custom questions")}
-          </h3>
-          <p class="text-token-sm text-tymeslot-500 mt-0.5">
-            {dgettext(
-              "dashboard_meeting_form",
-              "Ask bookers extra questions during the booking flow."
-            )}
-          </p>
-        </div>
-        <Buttons.action_button
-          type="button"
-          variant={:secondary}
-          phx-click="add_question"
-          phx-target={@myself}
-        >
-          {dgettext("dashboard_meeting_form", "Add question")}
-        </Buttons.action_button>
-      </div>
+      <.subsection_header
+        icon="hero-question-mark-circle"
+        title={dgettext("dashboard_meeting_form", "Custom questions")}
+        description={
+          dgettext(
+            "dashboard_meeting_form",
+            "Ask bookers extra questions during the booking flow."
+          )
+        }
+      >
+        <:actions>
+          <Buttons.action_button
+            type="button"
+            variant={:secondary}
+            phx-click="add_question"
+            phx-target={@myself}
+          >
+            {dgettext("dashboard_meeting_form", "Add question")}
+          </Buttons.action_button>
+        </:actions>
+      </.subsection_header>
 
       <%= if @custom_fields == [] do %>
         <Feedback.empty_state
@@ -104,8 +106,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
           class="space-y-2"
         >
           <%= for {q, i} <- Enum.with_index(@custom_fields) do %>
-            <li
-              class="card-glass flex items-center gap-3 px-4 py-3"
+            <.card
+              tag="li"
+              variant={:flat}
+              padding={:xs}
+              class="flex items-center gap-3"
               data-id={q.id}
               data-index={i}
               draggable="true"
@@ -160,7 +165,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
                   {dgettext("dashboard_meeting_form", "Delete")}
                 </Buttons.action_button>
               </div>
-            </li>
+            </.card>
           <% end %>
         </ul>
       <% end %>

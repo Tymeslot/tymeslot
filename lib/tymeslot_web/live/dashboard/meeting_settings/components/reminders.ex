@@ -30,20 +30,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
 
     ~H"""
     <section class="space-y-2">
-      <div class="flex items-center gap-2">
-        <.icon name="hero-bell" class="w-5 h-5 text-turquoise-500" />
-        <h3 class="text-token-base font-semibold text-tymeslot-800">
-          {dgettext("dashboard_meeting_form", "Reminders")}
-        </h3>
-      </div>
-      <p class="text-token-sm text-tymeslot-600">
-        {dngettext(
-          "dashboard_meeting_form",
-          "Add up to %{count} reminder email for this meeting type. We recommend using only one.",
-          "Add up to %{count} reminder emails for this meeting type. We recommend using only one.",
-          @max_reminders
-        )}
-      </p>
+      <.subsection_header
+        icon="hero-bell"
+        title={dgettext("dashboard_meeting_form", "Reminders")}
+        description={
+          dngettext(
+            "dashboard_meeting_form",
+            "Add up to %{count} reminder email for this meeting type. We recommend using only one.",
+            "Add up to %{count} reminder emails for this meeting type. We recommend using only one.",
+            @max_reminders
+          )
+        }
+      />
 
       <div class="mt-3 flex flex-wrap items-center gap-3">
         <%= if @reminders == [] do %>

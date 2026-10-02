@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
-  use TymeslotWeb.Components.CoreComponents, only: [pill: 1, spinner: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [pill: 1, spinner: 1, subsection_header: 1]
   import TymeslotWeb.Components.Icons.ProviderIcon
 
   @doc """
@@ -28,12 +28,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
   def icon_picker(assigns) do
     ~H"""
     <section class="space-y-2">
-      <div class="flex items-center gap-2">
-        <Icons.icon name="hero-face-smile" class="w-5 h-5 text-turquoise-500" />
-        <h3 class="text-token-base font-semibold text-tymeslot-800">
-          {dgettext("dashboard_meeting_form", "Icon")}
-        </h3>
-      </div>
+      <.subsection_header icon="hero-face-smile" title={dgettext("dashboard_meeting_form", "Icon")} />
       <div class="grid grid-cols-8 sm:grid-cols-10 md:grid-cols-14 lg:grid-cols-16 gap-1">
         <%= for {icon_value, icon_name} <- MeetingTypeSchema.valid_icons_with_names() do %>
           <button
@@ -112,18 +107,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
   def booking_destination_section(assigns) do
     ~H"""
     <section class="pt-4 border-t border-tymeslot-100">
-      <div class="flex items-center gap-2">
-        <Icons.icon name="hero-calendar-days" class="w-5 h-5 text-turquoise-500" />
-        <h3 class="text-token-base font-semibold text-tymeslot-800">
-          {dgettext("dashboard_meeting_form", "Booking Destination")}
-        </h3>
-      </div>
-      <p class="mt-2 text-token-sm text-tymeslot-600 mb-4">
-        {dgettext(
-          "dashboard_meeting_form",
-          "Choose where new bookings for this meeting type should be created."
-        )}
-      </p>
+      <.subsection_header
+        icon="hero-calendar-days"
+        title={dgettext("dashboard_meeting_form", "Booking Destination")}
+        description={
+          dgettext(
+            "dashboard_meeting_form",
+            "Choose where new bookings for this meeting type should be created."
+          )
+        }
+        class="mb-4"
+      />
 
       <div class="space-y-4">
         <div>
