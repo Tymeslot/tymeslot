@@ -7,12 +7,12 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "%{going} of %{total} going"
 msgstr "%{going} z %{total} weźmie udział"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Custom answers"
 msgstr "Odpowiedzi z formularza"
@@ -27,7 +27,7 @@ msgstr "Nie weźmie udziału"
 msgid "Going"
 msgstr "Weźmie udział"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Guests"
 msgstr "Goście"
@@ -37,7 +37,7 @@ msgstr "Goście"
 msgid "%{attendee_name} will receive an email explaining you need to reschedule"
 msgstr "%{attendee_name} otrzyma e-mail z informacją, że musisz zmienić termin"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee Email"
 msgstr "E-mail uczestnika"
@@ -94,12 +94,12 @@ msgstr "Potwierdź odwołanie"
 msgid "Current Meeting"
 msgstr "Obecne spotkanie"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Date & Time"
 msgstr "Data i godzina"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Dismiss"
 msgstr "Zamknij"
@@ -169,7 +169,7 @@ msgstr "Zarządzaj wszystkimi zaplanowanymi spotkaniami w jednym miejscu. Filtru
 msgid "Meeting Management"
 msgstr "Zarządzanie spotkaniami"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Notes"
 msgstr "Notatki ze spotkania"
@@ -310,12 +310,12 @@ msgstr "Uczestnik wybierze nowy termin spośród twoich wolnych terminów"
 msgid "This action cannot be undone. The attendee will be notified of the cancellation."
 msgstr "Tej operacji nie można cofnąć. Uczestnik otrzyma powiadomienie o odwołaniu."
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting's event was deleted from your external calendar."
 msgstr "Wydarzenie tego spotkania zostało usunięte z zewnętrznego kalendarza."
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting's event was rescheduled in your external calendar."
 msgstr "Wydarzenie tego spotkania zostało przeniesione na inny termin w zewnętrznym kalendarzu."
@@ -330,7 +330,7 @@ msgstr "Zaznacz potwierdzenie, aby odwołać bez zwrotu dla uczestnika."
 msgid "Upcoming"
 msgstr "Nadchodzące"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Video Call"
 msgstr "Spotkanie wideo"
@@ -690,3 +690,8 @@ msgstr "Ładowanie spotkań"
 #, elixir-autogen, elixir-format
 msgid "Join meeting"
 msgstr "Dołącz do spotkania"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type"
+msgstr "Typ spotkania"
