@@ -460,9 +460,8 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   @doc """
   Renders the honeypot field `Tymeslot.Security.Honeypot` checks.
 
-  Hidden from sighted users by `sr-only` (and by the booking themes'
-  `.honeypot-field` rule, which moves it off-screen), from assistive technology
-  by `aria-hidden`, from keyboard users by `tabindex="-1"`, and from autofill by
+  Hidden from sighted users by `sr-only`, from assistive technology by
+  `aria-hidden`, from keyboard users by `tabindex="-1"`, and from autofill by
   `autocomplete="off"`. Bots that fill every field fill this one too. `sr-only`
   is a Tailwind utility, so the field stays hidden under every stylesheet that
   scans Core's web layer: the dashboard's, each booking theme's and SaaS's.
@@ -478,7 +477,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
     assigns = assign(assigns, :name, honeypot_name(assigns.param_root))
 
     ~H"""
-    <div class="honeypot-field sr-only" aria-hidden="true">
+    <div class="sr-only" aria-hidden="true">
       <label for={@id}>Website</label>
       <input id={@id} type="text" name={@name} tabindex="-1" autocomplete="off" value="" />
     </div>
