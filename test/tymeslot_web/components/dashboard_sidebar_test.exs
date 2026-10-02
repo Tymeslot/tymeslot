@@ -40,6 +40,22 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     assert Floki.attribute(active_link, "href") == ["/dashboard/overview"]
   end
 
+  test "marks only the active link as the current page for assistive technology" do
+    assigns = %{
+      current_action: :availability,
+      integration_status: %{has_calendar: true, has_video: true, has_meeting_types: true},
+      profile: %{username: "testuser"}
+    }
+
+    doc =
+      (&DashboardSidebar.sidebar/1)
+      |> render_component(assigns)
+      |> Floki.parse_document!()
+
+    assert doc |> Floki.find("a[aria-current='page']") |> Floki.attribute("href") ==
+             ["/dashboard/availability"]
+  end
+
   test "renders active link correctly for different actions" do
     # The merged Integrations item is current for the hub action and for every
     # legacy action that redirects into it, so all four highlight the same link.

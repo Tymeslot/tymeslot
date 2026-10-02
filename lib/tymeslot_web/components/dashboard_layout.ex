@@ -99,12 +99,17 @@ defmodule TymeslotWeb.Components.DashboardLayout do
               <%= if @show_sidebar_toggle do %>
                 <%!-- Mobile Menu Button --%>
                 <button
+                  id="dashboard-sidebar-toggle"
+                  type="button"
                   class="lg:hidden dashboard-mobile-menu-toggle flex items-center justify-center w-12 h-12 rounded-xl bg-tymeslot-50 border-2 border-tymeslot-100 hover:bg-turquoise-50 hover:border-turquoise-100 transition-all shrink-0"
                   phx-click={
                     JS.toggle_class("dashboard-sidebar-open", to: "#dashboard-sidebar")
                     |> JS.toggle_class("hidden", to: "#dashboard-sidebar-overlay")
+                    |> JS.toggle_attribute({"aria-expanded", "true", "false"})
                   }
                   aria-label={dgettext("dashboard_common", "Toggle sidebar")}
+                  aria-controls="dashboard-sidebar"
+                  aria-expanded="false"
                 >
                   <svg
                     class="w-6 h-6 text-tymeslot-700"

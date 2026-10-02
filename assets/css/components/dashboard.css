@@ -338,12 +338,43 @@
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-/* Focus states for accessibility */
+/* Focus states for accessibility: a ring for keyboard focus only, so a
+   mouse click does not leave one behind. */
 .dashboard-nav-link:focus {
   outline: none;
-  box-shadow: 
-    0 0 0 2px var(--color-primary-500),
-    0 0 0 4px var(--color-primary-100);
+}
+
+.dashboard-nav-link:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+/* Off-canvas sidebar (below Tailwind's lg breakpoint, where the sidebar is
+   toggled rather than always shown): while closed it is hidden from focus and
+   from assistive technology, not just slid off screen. Visibility switches
+   only after the slide-out has finished, and at once when opening. */
+@media (width < 64rem) {
+  .dashboard-sidebar:not(.dashboard-sidebar-open) {
+    visibility: hidden;
+    transition:
+      translate 300ms ease-in-out,
+      visibility 0s linear 300ms;
+  }
+
+  .dashboard-sidebar.dashboard-sidebar-open {
+    visibility: visible;
+    transition:
+      translate 300ms ease-in-out,
+      visibility 0s linear 0s;
+  }
+}
+
+/* Desktop: a slightly tighter row so the full navigation, extensions
+   included, fits a typical laptop viewport without scrolling. */
+@media (width >= 64rem) {
+  .dashboard-sidebar nav .dashboard-nav-link {
+    padding-block: 0.375rem;
+  }
 }
 
 /* Sortable drag state */

@@ -42,9 +42,9 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
     <aside
       id="dashboard-sidebar"
       data-tour="sidebar-nav"
-      class="dashboard-sidebar lg:w-64 w-80 h-screen lg:h-full overflow-y-auto lg:shrink-0 lg:relative fixed top-0 left-0 z-40 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out"
+      class="dashboard-sidebar lg:w-64 w-80 h-screen lg:h-full overflow-y-auto overscroll-contain [scrollbar-width:thin] lg:shrink-0 lg:relative fixed top-0 left-0 z-40 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out"
     >
-      <div class="p-6">
+      <div class="p-6 lg:px-4 lg:pt-4">
         <%!-- Mobile Close Button --%>
         <div class="lg:hidden flex items-center justify-between mb-6">
           <TymeslotWeb.Components.CoreComponents.logo mode={:full} img_class="h-12" />
@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
         </div>
 
         <%!-- Scheduling Link (Mobile and Desktop) --%>
-        <div class="mb-6 flex gap-2">
+        <div class="mb-6 lg:mb-4 flex gap-2">
           <.link
             :if={LinkAccessPolicy.can_link?(@profile, @integration_status)}
             href={LinkAccessPolicy.scheduling_path(@profile)}
@@ -101,7 +101,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
         </div>
 
         <%!-- Navigation Links --%>
-        <nav class="space-y-3 mt-6">
+        <nav class="space-y-3 mt-6 lg:mt-4">
           <div>
             <div class="dashboard-nav-section-title">{dgettext("dashboard_common", "General")}</div>
             <div class="space-y-0">
@@ -303,6 +303,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
     %JS{}
     |> JS.remove_class("dashboard-sidebar-open", to: "#dashboard-sidebar")
     |> JS.add_class("hidden", to: "#dashboard-sidebar-overlay")
+    |> JS.set_attribute({"aria-expanded", "false"}, to: "#dashboard-sidebar-toggle")
   end
 
   # Private component for navigation links
@@ -324,6 +325,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
       patch={@patch}
       navigate={@navigate}
       phx-click={close_sidebar_js()}
+      aria-current={if @current == @action, do: "page"}
       {@rest}
       class={[
         "dashboard-nav-link flex items-center space-x-3 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200",
