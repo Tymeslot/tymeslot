@@ -1359,5 +1359,5 @@ msgstr "To spotkanie organizuje ktoś inny, więc Tymeslot nie może przenieść
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
 #, elixir-autogen, elixir-format
-msgid "Several people are booked on this slot. Move it, cancel it or change who attends from the meeting instead."
-msgstr "Ten termin zarezerwowało kilka osób. Przenieś go, odwołaj lub zmień uczestników z poziomu spotkania."
+msgid "This is a group booking. Move it, cancel it or change who attends from the meeting instead."
+msgstr "To rezerwacja grupowa. Przenieś ją, anuluj lub zmień uczestników ze spotkania."

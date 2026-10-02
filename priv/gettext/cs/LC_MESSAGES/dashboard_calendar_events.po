@@ -1363,5 +1363,5 @@ msgstr "Tuto schůzku organizuje někdo jiný, takže Tymeslot nemůže přesuno
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
 #, elixir-autogen, elixir-format
-msgid "Several people are booked on this slot. Move it, cancel it or change who attends from the meeting instead."
-msgstr "Tento termín má rezervovaný několik lidí. Přesunout, zrušit nebo změnit účastníky můžete ve schůzce."
+msgid "This is a group booking. Move it, cancel it or change who attends from the meeting instead."
+msgstr "Toto je skupinová rezervace. Přesunout, zrušit nebo změnit účastníky můžete ve schůzce."

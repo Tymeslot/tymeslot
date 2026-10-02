@@ -10,6 +10,8 @@ defmodule TymeslotWeb.SeatHTML do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Emails.Shared.BookingRequestLocation
+  alias Tymeslot.Emails.Shared.Formatting
   alias TymeslotWeb.Components.Shared.TokenPage
   alias TymeslotWeb.Helpers.MeetingTimeFormat
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
@@ -278,7 +280,20 @@ defmodule TymeslotWeb.SeatHTML do
         <.icon name="hero-user-mini" class="h-4 w-4 text-turquoise-500" />
         {dgettext("booking_manage", "Hosted by %{name}", name: @meeting.organizer_name)}
       </p>
+      <p class="flex items-center gap-2 text-token-sm text-tymeslot-600" data-testid="seat-location">
+        <.icon name="hero-map-pin-mini" class="h-4 w-4 text-turquoise-500" />
+        {location_label(@meeting)}
+      </p>
     </div>
     """
+  end
+
+  # The same label the booking emails give the place: "Video Call", the phone
+  # number, the venue or the host's own text.
+  defp location_label(meeting) do
+    Formatting.format_location(%{
+      location_type: BookingRequestLocation.type(meeting),
+      location: meeting.location
+    })
   end
 end

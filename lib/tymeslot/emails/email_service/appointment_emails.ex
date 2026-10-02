@@ -149,7 +149,7 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
         old_event_details,
         old_event.ical_sequence + 1,
         locale,
-        "cancelled-#{old_event.uid}.ics"
+        "appointment-#{old_event.uid}.ics"
       )
 
     moved_details =

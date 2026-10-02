@@ -150,7 +150,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.BookingEventsLiveviewTest do
       assert lv |> element(~s{[data-testid="booking-seats"]}) |> render() =~ "2/3 seats taken"
 
       assert lv |> element(~s{[data-testid="booking-lock-note"]}) |> render() =~
-               "Several people are booked on this slot."
+               "This is a group booking."
     end
 
     test "ignores an unknown meeting id", %{conn: conn} do

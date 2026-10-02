@@ -761,5 +761,5 @@ msgstr "Усі місця було звільнено"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
-msgid "Released their spot"
-msgstr "Звільнив(-ла) своє місце"
+msgid "Left this slot"
+msgstr "Залишив(-ла) цей слот"

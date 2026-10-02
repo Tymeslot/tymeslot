@@ -238,7 +238,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
 
           <%!-- Participants panel, group meetings only. The preload keeps to
                live participants, except on a cancelled meeting, where it also
-               brings those who released their spot first, marked as such. --%>
+               brings those who left the slot (released or moved their seat) first, marked as such. --%>
           <div
             :if={Helpers.participants(@meeting) != []}
             class="mt-8 p-5 bg-tymeslot-50/50 rounded-token-2xl border-2 border-tymeslot-50"
@@ -268,7 +268,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
                     class="inline-flex flex-none items-center rounded-full px-2.5 py-0.5 text-token-xs font-bold bg-tymeslot-100 text-tymeslot-500"
                     data-testid="participant-released"
                   >
-                    {dgettext("dashboard_bookings", "Released their spot")}
+                    {dgettext("dashboard_bookings", "Left this slot")}
                   </span>
                 </span>
                 <a

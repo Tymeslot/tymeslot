@@ -114,7 +114,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   def seat_lock_message do
     dgettext(
       "dashboard_calendar_events",
-      "Several people are booked on this slot. Move it, cancel it or change who attends from the meeting instead."
+      "This is a group booking. Move it, cancel it or change who attends from the meeting instead."
     )
   end
 

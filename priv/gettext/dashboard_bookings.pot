@@ -751,5 +751,5 @@ msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
-msgid "Released their spot"
+msgid "Left this slot"
 msgstr ""

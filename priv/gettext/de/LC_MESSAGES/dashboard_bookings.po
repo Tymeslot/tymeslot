@@ -751,5 +751,5 @@ msgstr "Alle Plätze wurden freigegeben"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
-msgid "Released their spot"
-msgstr "Platz freigegeben"
+msgid "Left this slot"
+msgstr "Hat diesen Termin verlassen"

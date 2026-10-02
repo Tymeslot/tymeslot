@@ -26,7 +26,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
   @original_start_minutes 780
   @moved_start_minutes 840
 
-  @locked_message "Several people are booked on this slot. Move it, cancel it or change who attends from the meeting instead."
+  @locked_message "This is a group booking. Move it, cancel it or change who attends from the meeting instead."
 
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
@@ -108,11 +108,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
       assert block =~ ~s(data-locked="true")
       # Pressing and dragging must not select text across neighbouring events.
       assert has_element?(lv, "[id^='event-#{ctx.event.id}-'].select-none")
-      refute has_element?(lv, "[role='alert']", "Several people are booked")
+      refute has_element?(lv, "[role='alert']", "This is a group booking")
 
       lv |> element("#calendar-grid") |> render_hook("locked_event_drag", %{})
 
-      assert has_element?(lv, "[role='alert']", "Several people are booked on this slot.")
+      assert has_element?(lv, "[role='alert']", "This is a group booking.")
       assert_untouched(ctx, jobs)
     end
 

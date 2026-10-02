@@ -256,8 +256,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementGroupMeetingsTest do
 
       assert render(view) =~ "Ada Lovelace"
       assert render(view) =~ "Grace Hopper"
-      assert view |> element("li", "Left Early") |> render() =~ "Released their spot"
-      refute view |> element("li", "Ada Lovelace") |> render() =~ "Released their spot"
+      assert view |> element("li", "Left Early") |> render() =~ "Left this slot"
+      refute view |> element("li", "Ada Lovelace") |> render() =~ "Left this slot"
     end
 
     test "say so when every spot had been released", %{conn: conn, meeting: meeting} do

@@ -751,5 +751,5 @@ msgstr "Tutti i posti sono stati liberati"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
-msgid "Released their spot"
-msgstr "Ha liberato il posto"
+msgid "Left this slot"
+msgstr "Ha lasciato questo orario"

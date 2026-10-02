@@ -210,6 +210,10 @@ defmodule Tymeslot.Emails.GroupParticipantEmailsTest do
       new_ics = Enum.find(calendar_files(email), &(&1.data =~ "UID:#{moved.id}"))
       old_ics = Enum.find(calendar_files(email), &(&1.data =~ "UID:#{participant.id}"))
 
+      # Both files are named as a solo booking's are: `appointment-<uid>.ics`.
+      assert new_ics.filename == "appointment-#{moved.id}.ics"
+      assert old_ics.filename == "appointment-#{participant.id}.ics"
+
       assert new_ics.data =~ "STATUS:CONFIRMED"
       # The new seat is a new entry at its own first revision, so its later
       # cancellation (one above) still supersedes it.

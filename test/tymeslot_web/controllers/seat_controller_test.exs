@@ -91,6 +91,20 @@ defmodule TymeslotWeb.SeatControllerTest do
       assert reloaded.cancelled_at == nil
     end
 
+    test "names where the meeting takes place", %{
+      conn: conn,
+      leaver: leaver,
+      meeting: meeting
+    } do
+      meeting
+      |> Changeset.change(%{location_kind: "custom", location: "Studio 4, 1 High Street"})
+      |> Repo.update!()
+
+      conn = get(conn, ~p"/seat/#{leaver.management_token}/cancel")
+
+      assert html_response(conn, 200) =~ "Studio 4, 1 High Street"
+    end
+
     test "an unknown token shows the invalid page", %{conn: conn} do
       conn = get(conn, ~p"/seat/nope-not-a-token/cancel")
 
@@ -105,6 +119,20 @@ defmodule TymeslotWeb.SeatControllerTest do
       assert html_response(conn, 200) =~ "Your spot has been cancelled"
       assert {:ok, reloaded} = ParticipantQueries.get_by_token(leaver.management_token)
       assert %DateTime{} = reloaded.cancelled_at
+    end
+
+    test "names where the meeting was to take place", %{
+      conn: conn,
+      leaver: leaver,
+      meeting: meeting
+    } do
+      meeting
+      |> Changeset.change(%{location_kind: "video", location: "Video Call"})
+      |> Repo.update!()
+
+      conn = post(conn, ~p"/seat/#{leaver.management_token}/cancel")
+
+      assert html_response(conn, 200) =~ "Video Call"
     end
 
     test "an unknown token shows the invalid page", %{conn: conn} do

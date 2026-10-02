@@ -1349,5 +1349,5 @@ msgstr "Cette réunion est organisée par quelqu'un d'autre : Tymeslot ne peut p
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
 #, elixir-autogen, elixir-format
-msgid "Several people are booked on this slot. Move it, cancel it or change who attends from the meeting instead."
-msgstr "Plusieurs personnes ont réservé ce créneau. Déplacez-le, annulez-le ou modifiez les participants depuis la réunion."
+msgid "This is a group booking. Move it, cancel it or change who attends from the meeting instead."
+msgstr "Il s'agit d'une réservation de groupe. Déplacez-la, annulez-la ou modifiez les participants depuis la réunion."

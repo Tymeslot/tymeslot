@@ -1364,5 +1364,5 @@ msgstr "Цю зустріч організовує хтось інший, том
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
 #, elixir-autogen, elixir-format
-msgid "Several people are booked on this slot. Move it, cancel it or change who attends from the meeting instead."
-msgstr "Цей слот забронювали кілька людей. Перенесіть, скасуйте його або змініть учасників у зустрічі."
+msgid "This is a group booking. Move it, cancel it or change who attends from the meeting instead."
+msgstr "Це групове бронювання. Перенесіть його, скасуйте або змініть учасників у самій зустрічі."
