@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
               ]}>
                 {@integration.name}
               </h3>
-              <.status_badge status={@integration.status} reason={@integration.disabled_reason} />
+              <.status_pill status={@integration.status} />
             </div>
 
             <%= if @integration.chat_id do %>
@@ -219,41 +219,28 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
     """
   end
 
-  defp status_badge(%{status: :pending_link} = assigns) do
+  attr :status, :atom, required: true
+
+  defp status_pill(assigns) do
+    {tone, pulse, label} = status_presentation(assigns.status)
+    assigns = assign(assigns, tone: tone, pulse: pulse, label: label)
+
     ~H"""
-    <span class="inline-flex items-center gap-1 bg-amber-100 text-amber-700 text-xs font-black px-2.5 py-1 rounded-full uppercase tracking-wide">
-      <div class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-      {dgettext("dashboard_automation_chat", "Awaiting connection")}
-    </span>
+    <.pill tone={@tone} dot pulse={@pulse}>{@label}</.pill>
     """
   end
 
-  defp status_badge(%{status: :active} = assigns) do
-    ~H"""
-    <span class="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-black px-2.5 py-1 rounded-full uppercase tracking-wide">
-      <div class="w-1.5 h-1.5 rounded-full bg-green-500" />
-      {dgettext("dashboard_automation_chat", "Connected")}
-    </span>
-    """
-  end
+  defp status_presentation(:pending_link),
+    do: {:warning, true, dgettext("dashboard_automation_chat", "Awaiting connection")}
 
-  defp status_badge(%{status: :paused} = assigns) do
-    ~H"""
-    <span class="inline-flex items-center gap-1 bg-tymeslot-200 text-tymeslot-600 text-xs font-black px-2.5 py-1 rounded-full uppercase tracking-wide">
-      <div class="w-1.5 h-1.5 rounded-full bg-tymeslot-400" />
-      {dgettext("dashboard_automation_chat", "Paused")}
-    </span>
-    """
-  end
+  defp status_presentation(:active),
+    do: {:success, false, dgettext("dashboard_automation_chat", "Connected")}
 
-  defp status_badge(%{status: :auto_disabled} = assigns) do
-    ~H"""
-    <span class="inline-flex items-center gap-1 bg-red-100 text-red-700 text-xs font-black px-2.5 py-1 rounded-full uppercase tracking-wide">
-      <div class="w-1.5 h-1.5 rounded-full bg-red-500" />
-      {dgettext("dashboard_automation_chat", "Disabled")}
-    </span>
-    """
-  end
+  defp status_presentation(:paused),
+    do: {:neutral, false, dgettext("dashboard_automation_chat", "Paused")}
+
+  defp status_presentation(:auto_disabled),
+    do: {:danger, false, dgettext("dashboard_automation_chat", "Disabled")}
 
   defp card_style(:active), do: "hover:shadow-xl"
   defp card_style(:paused), do: "opacity-75 grayscale-[0.3] bg-tymeslot-100/50"

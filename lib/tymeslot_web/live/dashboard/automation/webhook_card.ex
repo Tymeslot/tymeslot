@@ -61,12 +61,9 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
               ]}>
                 {@webhook.name}
               </h3>
-              <%= if !@webhook.is_active do %>
-                <span class="inline-flex items-center gap-1 bg-tymeslot-200 text-tymeslot-600 text-xs font-black px-2.5 py-1 rounded-full uppercase tracking-wide">
-                  <.icon name="hero-x-circle" class="w-3 h-3" />
-                  {dgettext("dashboard_automation", "Disabled")}
-                </span>
-              <% end %>
+              <.pill :if={!@webhook.is_active} tone={:neutral} icon="hero-x-circle">
+                {dgettext("dashboard_automation", "Disabled")}
+              </.pill>
             </div>
 
             <%= if @webhook.disabled_reason do %>
