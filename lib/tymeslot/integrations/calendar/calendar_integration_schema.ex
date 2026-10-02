@@ -25,6 +25,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Shared.PathUtils
+  alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Security.SsrfGuard
 
@@ -117,22 +118,32 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     field(:google_channel_id, :string)
     field(:google_channel_resource_id, :string)
     field(:google_channel_expires_at, :utc_datetime)
-    # Stored as plaintext: random verification token with no credential reuse risk.
-    # Used solely to verify webhook authenticity. Follow _encrypted pattern if threat model changes.
-    # Redacted like the virtual credential fields below: Google and Outlook
-    # hand this whole struct to the availability fan-out as the provider
-    # client, so it reaches anything that inspects a client — including an OTP
-    # crash report. It is the token inbound webhooks are verified against.
-    field(:google_channel_secret, :string, redact: true)
+    # The token inbound Google notifications are verified against, so holding
+    # it is enough to forge a sync callback: encrypted at rest, and redacted
+    # because Google and Outlook hand this whole struct to the availability
+    # fan-out as the provider client, where anything that inspects a client
+    # (an OTP crash report included) would print it. The plain
+    # `google_channel_secret` column predates this and is no longer read or
+    # written.
+    field(:google_channel_secret, EncryptedString,
+      source: :google_channel_secret_encrypted,
+      redact: true
+    )
+
     field(:google_sync_token, :string)
     field(:last_google_notification_at, :utc_datetime)
 
     # Outlook subscription fields
     field(:graph_subscription_id, :string)
     field(:graph_subscription_expires_at, :utc_datetime)
-    # Stored as plaintext: random verification token with no credential reuse risk.
-    # Used solely to verify webhook authenticity. Follow _encrypted pattern if threat model changes.
-    field(:graph_client_state, :string)
+    # The Outlook counterpart of `google_channel_secret`, kept the same way.
+    # It is encrypted rather than hashed because renewing a subscription sends
+    # it back to Graph.
+    field(:graph_client_state, EncryptedString,
+      source: :graph_client_state_encrypted,
+      redact: true
+    )
+
     field(:graph_delta_link, :string)
     field(:last_outlook_notification_at, :utc_datetime)
 

@@ -51,6 +51,7 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.{CalendarManagement, CalendarPrimary}
   alias Tymeslot.Integrations.Providers.Directory
   alias Tymeslot.Integrations.Shared.InputValidators
+  alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Workers.SyncIcsCalendarWorker
 
   @type user_id :: pos_integer()
@@ -69,7 +70,8 @@ defmodule Tymeslot.Integrations.Calendar do
   def encrypted_storage,
     do:
       {CalendarIntegrationSchema.__schema__(:source),
-       CalendarIntegrationSchema.encrypted_credential_fields()}
+       CalendarIntegrationSchema.encrypted_credential_fields() ++
+         EncryptedString.columns(CalendarIntegrationSchema)}
 
   # ---------------------------
   # Public API: Listing/CRUD

@@ -30,6 +30,19 @@ defmodule Tymeslot.Security.CredentialReencryptionTest do
     {Webhooks, "webhooks"}
   ]
 
+  # Schemas whose credentials sit behind a virtual field and an explicit
+  # `*_encrypted` field, listed by `encrypted_credential_fields/0`.
+  @encrypted_credential_schemas [
+    CalendarIntegrationSchema,
+    VideoIntegrationSchema,
+    SlackIntegrationSchema,
+    TelegramIntegrationSchema,
+    WebhookSchema
+  ]
+
+  # Every schema of a swept table, whichever way it maps its encrypted columns.
+  @swept_schemas @encrypted_credential_schemas
+
   defp reload_token(schema, id) do
     Repo.get!(schema, id).bot_token_encrypted
   end
@@ -63,6 +76,23 @@ defmodule Tymeslot.Security.CredentialReencryptionTest do
       assert telegram_migrated >= 1
       assert %{already_current: slack_already} = tables["slack_integrations"]
       assert slack_already >= 1
+    end
+
+    test "migrates a legacy value behind an EncryptedString field" do
+      webhook = insert(:webhook)
+
+      Repo.update_all(from(w in "webhooks", where: w.id == ^webhook.id),
+        set: [url_encrypted: Encryption.encrypt_legacy("https://hooks.example.com/legacy")]
+      )
+
+      assert {:ok, %{tables: %{"webhooks" => %{migrated_values: 1}}}} =
+               CredentialReencryption.run()
+
+      %{rows: [[stored]]} =
+        Repo.query!("SELECT url_encrypted FROM webhooks WHERE id = $1", [webhook.id])
+
+      assert Encryption.current?(stored)
+      assert Repo.get!(WebhookSchema, webhook.id).url == "https://hooks.example.com/legacy"
     end
 
     test "a second run is a no-op" do
@@ -170,19 +200,27 @@ defmodule Tymeslot.Security.CredentialReencryptionTest do
                Enum.sort(Enum.map(@covered_contexts, fn {_context, table} -> table end))
     end
 
+    test "sweeps every encrypted column of each table, EncryptedString fields included" do
+      # A field typed `EncryptedString` maps to its `*_encrypted` column under
+      # another name, so only the column names show what the sweep must cover.
+      covered = Map.new(CredentialReencryption.covered_tables())
+
+      for schema <- @swept_schemas do
+        columns =
+          for field <- schema.__schema__(:fields),
+              column = schema.__schema__(:field_source, field),
+              String.ends_with?(to_string(column), "_encrypted"),
+              do: column
+
+        assert Enum.sort(Map.fetch!(covered, schema.__schema__(:source))) == Enum.sort(columns)
+      end
+    end
+
     test "every schema's encrypted_credential_fields/0 matches its actual *_encrypted columns" do
       # A new `*_encrypted` field added to a schema but never added to
       # `encrypted_credential_fields/0` would silently strand that column on
       # the legacy key forever — the sweep only ever sees the declared list.
-      schemas = [
-        CalendarIntegrationSchema,
-        VideoIntegrationSchema,
-        SlackIntegrationSchema,
-        TelegramIntegrationSchema,
-        WebhookSchema
-      ]
-
-      for schema <- schemas do
+      for schema <- @encrypted_credential_schemas do
         actual_encrypted_fields =
           schema.__schema__(:fields)
           |> Enum.filter(&String.ends_with?(to_string(&1), "_encrypted"))

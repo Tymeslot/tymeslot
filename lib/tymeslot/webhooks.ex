@@ -20,6 +20,7 @@ defmodule Tymeslot.Webhooks do
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Notifications.EventTypes
+  alias Tymeslot.Security.EncryptedString
 
   alias Tymeslot.Webhooks.{
     HttpDelivery,
@@ -34,7 +35,9 @@ defmodule Tymeslot.Webhooks do
 
   @impl Tymeslot.Security.EncryptedStorage
   def encrypted_storage,
-    do: {WebhookSchema.__schema__(:source), WebhookSchema.encrypted_credential_fields()}
+    do:
+      {WebhookSchema.__schema__(:source),
+       WebhookSchema.encrypted_credential_fields() ++ EncryptedString.columns(WebhookSchema)}
 
   # ============================================================================
   # CRUD Operations

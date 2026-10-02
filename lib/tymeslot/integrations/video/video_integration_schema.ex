@@ -8,6 +8,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
   alias Tymeslot.ChangesetValidators.URL, as: URLValidator
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Video.ProviderConfig
+  alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Security.SsrfGuard
 
@@ -72,7 +73,14 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
     field(:client_secret_encrypted, :binary)
     field(:tenant_id_encrypted, :binary)
     field(:teams_user_id_encrypted, :binary)
-    field(:custom_meeting_url, :string)
+    # A personal meeting room link often carries its passcode (`?pwd=`), so it
+    # is encrypted at rest. The plain `custom_meeting_url` column predates
+    # this and is no longer read or written.
+    field(:custom_meeting_url, EncryptedString,
+      source: :custom_meeting_url_encrypted,
+      redact: true
+    )
+
     field(:token_expires_at, :utc_datetime)
     field(:oauth_scope, :string)
     field(:provider_account_id, :string)

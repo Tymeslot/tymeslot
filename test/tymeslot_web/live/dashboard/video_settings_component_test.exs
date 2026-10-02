@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
   import Tymeslot.AuthTestHelpers
 
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Integrations.Video.AccountKey
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
 
@@ -245,7 +246,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       insert(:video_integration,
         user: user,
         provider: "custom",
-        provider_account_id: "https://meet.jit.si/my-room",
+        provider_account_id: AccountKey.key_for(:custom, "https://meet.jit.si/my-room"),
         custom_meeting_url: "https://meet.jit.si/my-room"
       )
 
