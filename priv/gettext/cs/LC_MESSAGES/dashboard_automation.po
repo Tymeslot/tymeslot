@@ -81,9 +81,8 @@ msgstr "Zrušit"
 msgid "Choose which booking events to monitor"
 msgstr "Vyberte, které události rezervací chcete sledovat"
 
+#: lib/tymeslot_web/live/dashboard/automation/chat_deliveries_modal.ex
 #: lib/tymeslot_web/live/dashboard/automation/deliveries_modal.ex
-#: lib/tymeslot_web/live/dashboard/automation/slack_deliveries_modal.ex
-#: lib/tymeslot_web/live/dashboard/automation/telegram_deliveries_modal.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Close"
@@ -557,8 +556,7 @@ msgstr[0] "Za poslední %{days} den"
 msgstr[1] "Za poslední %{days} dny"
 msgstr[2] "Za posledních %{days} dní"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_deliveries_modal.ex
-#: lib/tymeslot_web/live/dashboard/automation/telegram_deliveries_modal.ex
+#: lib/tymeslot_web/live/dashboard/automation/chat_deliveries_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Delivery History - %{name}"
 msgstr "Historie doručení – %{name}"

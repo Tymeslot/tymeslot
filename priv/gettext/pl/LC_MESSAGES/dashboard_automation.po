@@ -77,9 +77,8 @@ msgstr "Anuluj"
 msgid "Choose which booking events to monitor"
 msgstr "Wybierz, które zdarzenia rezerwacji monitorować"
 
+#: lib/tymeslot_web/live/dashboard/automation/chat_deliveries_modal.ex
 #: lib/tymeslot_web/live/dashboard/automation/deliveries_modal.ex
-#: lib/tymeslot_web/live/dashboard/automation/slack_deliveries_modal.ex
-#: lib/tymeslot_web/live/dashboard/automation/telegram_deliveries_modal.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Close"
@@ -553,8 +552,7 @@ msgstr[0] "Ostatni %{days} dzień"
 msgstr[1] "Ostatnie %{days} dni"
 msgstr[2] "Ostatnie %{days} dni"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_deliveries_modal.ex
-#: lib/tymeslot_web/live/dashboard/automation/telegram_deliveries_modal.ex
+#: lib/tymeslot_web/live/dashboard/automation/chat_deliveries_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Delivery History - %{name}"
 msgstr "Historia wysyłek – %{name}"

@@ -81,9 +81,8 @@ msgstr "Скасувати"
 msgid "Choose which booking events to monitor"
 msgstr "Виберіть події бронювання для відстеження"
 
+#: lib/tymeslot_web/live/dashboard/automation/chat_deliveries_modal.ex
 #: lib/tymeslot_web/live/dashboard/automation/deliveries_modal.ex
-#: lib/tymeslot_web/live/dashboard/automation/slack_deliveries_modal.ex
-#: lib/tymeslot_web/live/dashboard/automation/telegram_deliveries_modal.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Close"
@@ -557,8 +556,7 @@ msgstr[0] "Останній %{days} день"
 msgstr[1] "Останні %{days} дні"
 msgstr[2] "Останні %{days} днів"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_deliveries_modal.ex
-#: lib/tymeslot_web/live/dashboard/automation/telegram_deliveries_modal.ex
+#: lib/tymeslot_web/live/dashboard/automation/chat_deliveries_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Delivery History - %{name}"
 msgstr "Історія відправлень - %{name}"
