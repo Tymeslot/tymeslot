@@ -252,20 +252,25 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
               data-tpl-days={templates.days}
               class="text-token-4xl font-black tabular-nums leading-none"
             >{relative_hint(@entry)}</time>
-            <a
+            <%!-- The countdown hook reveals this wrapper from ten minutes before
+                 the start: an action link's display beats a `hidden` utility. --%>
+            <span
               :if={@entry.join_url}
               id={"agenda-cockpit-join-#{@entry.id}"}
-              href={@entry.join_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              phx-click={%JS{}}
-              class="hidden shrink-0 items-center gap-1.5 rounded-token-xl bg-white px-4 py-2 text-token-sm font-black text-turquoise-700 shadow-lg hover:bg-turquoise-50 transition-colors"
+              class="hidden shrink-0"
             >
-              <.icon name="hero-video-camera-mini" class="w-4 h-4" /> {dgettext(
-                "dashboard_home",
-                "Join"
-              )}
-            </a>
+              <.action_link
+                href={@entry.join_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                phx-click={%JS{}}
+                variant={:on_dark}
+                size={:sm}
+                icon="hero-video-camera-mini"
+              >
+                {dgettext("dashboard_home", "Join meeting")}
+              </.action_link>
+            </span>
           </div>
         </div>
 
@@ -353,19 +358,19 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
             <span :if={@entry.location}>{@entry.location}</span>
           </div>
         </div>
-        <a
+        <.action_link
           :if={@entry.join_url}
           href={@entry.join_url}
           target="_blank"
           rel="noopener noreferrer"
           phx-click={%JS{}}
-          class="shrink-0 inline-flex items-center gap-1.5 rounded-token-xl bg-turquoise-50 px-3 py-1.5 text-token-xs font-black text-turquoise-700 hover:bg-turquoise-100 transition-colors"
+          variant={:secondary}
+          size={:sm}
+          icon="hero-video-camera-mini"
+          class="shrink-0"
         >
-          <.icon name="hero-video-camera-mini" class="w-4 h-4" /> {dgettext(
-            "dashboard_home",
-            "Join"
-          )}
-        </a>
+          {dgettext("dashboard_home", "Join meeting")}
+        </.action_link>
       </div>
     </div>
     """

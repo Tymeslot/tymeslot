@@ -119,7 +119,12 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
     assert modal =~ "Calendar"
     assert modal =~ "Tymeslot"
     assert modal =~ "Manage booking"
-    assert modal =~ "Join"
+
+    assert has_element?(
+             view,
+             ~s(#agenda-detail-modal a[href="https://zoom.us/j/123"][target="_blank"]),
+             "Join meeting"
+           )
   end
 
   test "dismissing the detail modal clears it", %{conn: conn, user: user} do
@@ -206,8 +211,21 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
     # It names the source calendar it came from …
     assert modal =~ "Work Google"
     # … and offers Join but not booking management for a synced event.
-    assert modal =~ "Join"
+    assert has_element?(
+             view,
+             ~s(#agenda-detail-modal a[href="https://meet.example.com/d"]),
+             "Join meeting"
+           )
+
     refute modal =~ "Manage booking"
+
+    # The cockpit carries the same link inside the wrapper the countdown hook
+    # reveals near the start time, so it renders hidden until then.
+    assert has_element?(
+             view,
+             ~s([id^="agenda-cockpit-join-"].hidden a[href="https://meet.example.com/d"]),
+             "Join meeting"
+           )
   end
 
   describe "per-event colour" do

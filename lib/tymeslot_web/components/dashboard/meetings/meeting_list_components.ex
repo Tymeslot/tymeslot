@@ -335,20 +335,17 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   def load_more(assigns) do
     ~H"""
     <div :if={@has_more} class="mt-10 text-center">
-      <button
-        class="btn-secondary px-10 py-4"
+      <CoreComponents.loading_button
+        variant={:secondary}
+        size={:lg}
         phx-click="load_more"
         phx-target={@target}
-        disabled={@loading_more}
+        loading={@loading_more}
+        loading_text={dgettext("dashboard_bookings", "Loading...")}
+        class="mx-auto"
       >
-        <span :if={@loading_more}>
-          <CoreComponents.spinner class="h-5 w-5 mr-3 inline-block" /> {dgettext(
-            "dashboard_bookings",
-            "Loading..."
-          )}
-        </span>
-        <span :if={!@loading_more}>{dgettext("dashboard_bookings", "Load more meetings")}</span>
-      </button>
+        {dgettext("dashboard_bookings", "Load more meetings")}
+      </CoreComponents.loading_button>
     </div>
     """
   end

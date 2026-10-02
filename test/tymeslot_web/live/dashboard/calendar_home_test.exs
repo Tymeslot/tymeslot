@@ -94,6 +94,29 @@ defmodule TymeslotWeb.Dashboard.CalendarHomeTest do
       assert html =~ "Grace Hopper"
     end
 
+    test "carries a Join meeting link the countdown reveals near the start",
+         %{conn: conn, user: user} do
+      start_time = DateTime.add(DateTime.utc_now(), 3600, :second)
+
+      insert(:meeting,
+        organizer_user: user,
+        organizer_email: user.email,
+        title: "Strategy sync",
+        start_time: start_time,
+        end_time: DateTime.add(start_time, 1800, :second),
+        status: "confirmed",
+        organizer_video_url: "https://zoom.us/j/456"
+      )
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+
+      assert has_element?(
+               lv,
+               ~s([data-testid="up-next-strip"] [id^="calendar-up-next-join-"].hidden a[href="https://zoom.us/j/456"]),
+               "Join meeting"
+             )
+    end
+
     test "renders no strip when nothing is upcoming", %{conn: conn} do
       {:ok, _lv, html} = live(conn, ~p"/dashboard")
 

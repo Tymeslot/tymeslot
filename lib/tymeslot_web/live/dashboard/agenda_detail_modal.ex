@@ -134,28 +134,23 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
 
       <:footer :if={@entry.join_url || @entry.source == :tymeslot}>
         <div class="flex flex-wrap justify-end gap-3">
-          <.link
+          <.action_link
             :if={@entry.source == :tymeslot}
             navigate={~p"/dashboard/meetings"}
-            class="action-button action-button--secondary"
+            variant={:secondary}
+            icon="hero-cog-6-tooth"
           >
-            <.icon name="hero-cog-6-tooth-mini" class="w-4 h-4" /> {dgettext(
-              "dashboard_home",
-              "Manage booking"
-            )}
-          </.link>
-          <a
+            {dgettext("dashboard_home", "Manage booking")}
+          </.action_link>
+          <.action_link
             :if={@entry.join_url}
             href={@entry.join_url}
             target="_blank"
             rel="noopener noreferrer"
-            class="action-button action-button--primary"
+            icon="hero-video-camera"
           >
-            <.icon name="hero-video-camera-mini" class="w-4 h-4" /> {dgettext(
-              "dashboard_home",
-              "Join"
-            )}
-          </a>
+            {dgettext("dashboard_home", "Join meeting")}
+          </.action_link>
         </div>
       </:footer>
     </.modal>

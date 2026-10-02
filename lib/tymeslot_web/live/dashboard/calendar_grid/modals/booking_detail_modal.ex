@@ -75,23 +75,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.BookingDetailModal do
 
       <:footer>
         <div class="flex flex-wrap gap-2">
-          <a
+          <.action_link
             :if={@booking.join_url}
             href={@booking.join_url}
             target="_blank"
             rel="noopener noreferrer"
-            class="inline-flex items-center gap-2 px-4 py-2 bg-turquoise-600 hover:bg-turquoise-700 text-white text-token-sm font-semibold rounded-token-lg transition-colors"
+            icon="hero-video-camera"
           >
-            <.icon name="hero-video-camera" class="w-4 h-4" />
             {dgettext("dashboard_calendar", "Join meeting")}
-          </a>
-          <.link
+          </.action_link>
+          <.action_link
             patch={~p"/dashboard/meetings"}
-            class="inline-flex items-center gap-2 px-4 py-2 bg-tymeslot-50 hover:bg-tymeslot-100 text-tymeslot-700 text-token-sm font-semibold rounded-token-lg transition-colors"
+            variant={:secondary}
+            icon="hero-arrow-top-right-on-square"
           >
-            <.icon name="hero-arrow-top-right-on-square" class="w-4 h-4" />
             {dgettext("dashboard_calendar", "Manage in Meetings")}
-          </.link>
+          </.action_link>
         </div>
       </:footer>
     </.modal>
