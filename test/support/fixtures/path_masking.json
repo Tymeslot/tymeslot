@@ -35,6 +35,11 @@
     "masked": "/u/unsubscribe/:id"
   },
   {
+    "case": "marketing unsubscribe link (encrypted token)",
+    "path": "/u/unsubscribe/XCP.Dxd4v31Dxe-07rA9z3yKEydFaiUpl019gQndjie0cF5vGj6wHOwEI_C-e0e1Ql_uMDqWhgM0jk-FsVdAdjU",
+    "masked": "/u/unsubscribe/:id"
+  },
+  {
     "case": "meeting-request approval link (signed token)",
     "path": "/meeting-request/SFMyNTY.g2gDYSpuBgAAbFDEoAFiAAFRgA.r4hqihM0G28UDKzmmNzL2XvYQm0YRv6sdLN08973WdI",
     "masked": "/meeting-request/:id"
@@ -63,6 +68,16 @@
     "case": "short token-like segment",
     "path": "/jane/quick-intro-call",
     "masked": "/jane/quick-intro-call"
+  },
+  {
+    "case": "digested asset file name (short extension, kept)",
+    "path": "/assets/app-3f2a8b9c0d1e2f3a.js",
+    "masked": "/assets/app-3f2a8b9c0d1e2f3a.js"
+  },
+  {
+    "case": "dotted segment with short parts",
+    "path": "/files/report.v2.final.pdf",
+    "masked": "/files/report.v2.final.pdf"
   },
   {
     "case": "username of 20 or more characters (masked: costs granularity, never a credential)",

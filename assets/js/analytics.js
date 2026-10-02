@@ -32,23 +32,25 @@ export const BEFORE_SEND_GLOBAL = "tymeslotAnalyticsBeforeSend";
 // holder cancel or reschedule it, and password-reset, email-change, RSVP, poll,
 // sign-up confirmation and unsubscribe links are opened by the token they carry.
 // The rule is by shape, so it covers every such route without a list to keep:
-// a UUID, a segment of 20 or more URL-safe characters, or a signed token (two
-// dot-separated parts and a signature of 20 or more characters, the shape of a
-// `Phoenix.Token`). It is the rule `Tymeslot.Infrastructure.Logging.PathMasker`
-// applies to request logs; `test/support/fixtures/path_masking.json` holds the
-// cases both must agree on. A long username or slug is masked too, which costs
-// a little granularity, never a credential.
+// a UUID, a segment of 20 or more URL-safe characters, or a dotted token
+// (URL-safe parts joined by dots, the last of 20 or more characters: the shape
+// of both a signed and an encrypted `Phoenix.Token`; a file name such as
+// `app-3f2a8b.js` is kept, its extension being short). It is the rule
+// `Tymeslot.Infrastructure.Logging.PathMasker` applies to request logs;
+// `test/support/fixtures/path_masking.json` holds the cases both must agree
+// on. A long username or slug is masked too, which costs a little granularity,
+// never a credential.
 const MASK = ":id";
 const UUID_SEGMENT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TOKEN_SEGMENT = /^[A-Za-z0-9_-]{20,}$/;
-const SIGNED_TOKEN_SEGMENT = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{20,}$/;
+const DOTTED_TOKEN_SEGMENT = /^(?:[A-Za-z0-9_-]+\.)+[A-Za-z0-9_-]{20,}$/;
 
 // The meeting uid is masked whatever its shape, as it always has been.
 const MEETING_UID_SEGMENT = /\/meeting\/[^/]+/g;
 
 function maskSegment(segment) {
   const credential =
-    UUID_SEGMENT.test(segment) || TOKEN_SEGMENT.test(segment) || SIGNED_TOKEN_SEGMENT.test(segment);
+    UUID_SEGMENT.test(segment) || TOKEN_SEGMENT.test(segment) || DOTTED_TOKEN_SEGMENT.test(segment);
   return credential ? MASK : segment;
 }
 
