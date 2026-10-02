@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
   import Phoenix.LiveViewTest
 
   alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Buttons
 
   # Every test renders through the CoreComponents delegates rather than the
   # Buttons module, so an attribute the delegate fails to declare shows up here.
@@ -244,18 +245,81 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
             icon="hero-pencil-square"
             label="Edit"
             size={:sm}
-            variant={:brand}
+            variant={:warning}
             disabled
             phx-click="edit"
           />
           """
         end)
 
-      assert classes(doc, "button") == ["icon-button", "icon-button--brand", "icon-button--sm"]
+      assert classes(doc, "button") == ["icon-button", "icon-button--warning", "icon-button--sm"]
       assert [icon_class] = attr_of(doc, "button > svg", "class")
       assert icon_class =~ "w-4 h-4"
       assert attr_of(doc, "button", "phx-click") == ["edit"]
       assert attr_of(doc, "button", "disabled") == [""]
     end
+  end
+
+  describe "icon_button/1 tooltip" do
+    test "keeps the action as the accessible name and puts the reason in the title" do
+      doc =
+        render_doc(fn assigns ->
+          ~H"""
+          <CoreComponents.icon_button
+            icon="hero-clipboard"
+            label="Copy link"
+            tooltip="Publish the page to share its link"
+            aria-disabled="true"
+          />
+          """
+        end)
+
+      assert attr_of(doc, "button", "aria-label") == ["Copy link"]
+      assert attr_of(doc, "button", "title") == ["Publish the page to share its link"]
+      assert attr_of(doc, "button", "aria-disabled") == ["true"]
+      assert attr_of(doc, "button", "disabled") == []
+    end
+  end
+
+  describe "button_classes/2" do
+    test "gives a non-button element the look of an action button" do
+      assert CoreComponents.button_classes(:secondary, :sm) == [
+               "action-button",
+               "action-button--secondary",
+               "action-button--sm"
+             ]
+
+      assert CoreComponents.button_classes(:danger_soft) == [
+               "action-button",
+               "action-button--danger-soft",
+               nil
+             ]
+    end
+
+    test "rejects an unknown variant rather than emitting a class nothing styles" do
+      assert_raise FunctionClauseError, fn -> CoreComponents.button_classes(:brand, :md) end
+    end
+  end
+
+  describe "delegate declarations" do
+    # A delegate that declares less than its component silently rejects the
+    # difference at compile time, so every attribute and its allowed values
+    # must match.
+    test "each CoreComponents button delegate declares exactly its component's attributes" do
+      core = CoreComponents.__components__()
+      buttons = Buttons.__components__()
+
+      for name <- [:action_button, :action_link, :loading_button, :icon_button] do
+        assert summary(core[name]) == summary(buttons[name]), "#{name} delegate has drifted"
+      end
+    end
+  end
+
+  defp summary(%{attrs: attrs}) do
+    attrs
+    |> Enum.map(
+      &{&1.name, &1.type, &1.required, &1.opts[:default], &1.opts[:values], &1.opts[:include]}
+    )
+    |> Enum.sort()
   end
 end

@@ -16,7 +16,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Buttons do
 
   @variants [:primary, :secondary, :danger, :danger_soft, :outline, :ghost, :success, :on_dark]
   @sizes [:sm, :md, :lg]
-  @icon_variants [:neutral, :danger, :warning, :brand]
+  @icon_variants [:neutral, :danger, :warning]
   @icon_sizes [:sm, :md]
 
   # ========== BUTTONS ==========
@@ -151,20 +151,27 @@ defmodule TymeslotWeb.Components.CoreComponents.Buttons do
   @doc """
   Renders a square, icon-only button.
 
-  `label` is required: it is the button's accessible name (`aria-label`) and its
-  hover tooltip (`title`), since there is no visible text. On touch screens the
-  hit area extends to at least 44px whatever the visual size.
+  `label` is required: it is the button's accessible name (`aria-label`) and,
+  unless `tooltip` is given, its hover tooltip (`title`), since there is no
+  visible text. On touch screens the hit area extends to at least 44px whatever
+  the visual size.
+
+  For a control that is unavailable but should say why, keep `label` naming
+  the action ("Copy link"), put the reason in `tooltip`, and pass
+  `aria-disabled="true"` rather than `disabled`, so it stays focusable and the
+  reason stays reachable.
 
   ## Options
     * `:icon` - The `hero-…` icon name
     * `:label` - The accessible name, e.g. "Edit time off"
+    * `:tooltip` - The hover tooltip, when it should differ from `label`
     * `:variant` - `:neutral` (bordered tile), `:danger` (quiet until hovered,
-      then red), `:warning` (amber tile) or `:brand` (turquoise tile).
-      Defaults to `:neutral`
+      then red) or `:warning` (amber tile). Defaults to `:neutral`
     * `:size` - `:sm` (32px) or `:md` (36px). Defaults to `:md`
   """
   attr :icon, :string, required: true
   attr :label, :string, required: true
+  attr :tooltip, :string, default: nil
   attr :variant, :atom, default: :neutral, values: @icon_variants
   attr :size, :atom, default: :md, values: @icon_sizes
   attr :type, :string, default: "button"
@@ -179,7 +186,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Buttons do
       type={@type}
       disabled={@disabled}
       aria-label={@label}
-      title={@label}
+      title={@tooltip || @label}
       class={["icon-button", "icon-button--#{@variant}", "icon-button--#{@size}", @class]}
       {@rest}
     >
@@ -197,9 +204,17 @@ defmodule TymeslotWeb.Components.CoreComponents.Buttons do
     """
   end
 
-  defp action_classes(variant, size, extra) do
-    ["action-button", variant_class(variant), size_class(size), extra]
+  @doc """
+  The classes of an action button of the given variant and size, for an
+  element that cannot be one of the components above: a `<label>` wrapping a
+  file input. Add `aria-disabled="true"` to such an element when it is inert.
+  """
+  @spec classes(atom(), atom()) :: [String.t() | nil]
+  def classes(variant, size \\ :md) when variant in @variants and size in @sizes do
+    ["action-button", variant_class(variant), size_class(size)]
   end
+
+  defp action_classes(variant, size, extra), do: classes(variant, size) ++ [extra]
 
   defp variant_class(:danger_soft), do: "action-button--danger-soft"
   defp variant_class(:on_dark), do: "action-button--on-dark"

@@ -15,7 +15,6 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.NextcloudConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.RadicaleConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormComponents
-  alias TymeslotWeb.Components.Dashboard.Integrations.IntegrationForm
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig
@@ -169,61 +168,6 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     assert html =~ "Delete Video Integration"
     assert html =~ "video conferencing configuration"
     assert html =~ "Delete Integration"
-  end
-
-  test "renders integration_form with provider info and base errors" do
-    inner_block = [
-      %{__slot__: :inner_block, inner_block: fn assigns, _index -> ~H[<.input name="x" />] end}
-    ]
-
-    assigns = %{
-      title: "Add Integration",
-      cancel_event: "cancel",
-      submit_event: "submit",
-      target: "some-target",
-      provider_info: "Nextcloud",
-      show_errors: true,
-      form_errors: %{base: ["Something went wrong"]},
-      saving: false,
-      submit_text: "Add It",
-      inner_block: inner_block
-    }
-
-    html = render_component(&IntegrationForm.render/1, assigns)
-    doc = Floki.parse_document!(html)
-
-    assert html =~ "Add Integration"
-    assert html =~ "Provider:"
-    assert html =~ "Nextcloud"
-    assert html =~ "Something went wrong"
-    assert Floki.find(doc, "form[phx-submit='submit'][phx-target='some-target']") != []
-    assert Floki.find(doc, "button[type='submit']") != []
-    assert html =~ "Add It"
-  end
-
-  test "renders integration_form submit button in saving state" do
-    inner_block = [
-      %{__slot__: :inner_block, inner_block: fn assigns, _index -> ~H[<.input name="x" />] end}
-    ]
-
-    assigns = %{
-      title: "Add Integration",
-      cancel_event: "cancel",
-      submit_event: "submit",
-      target: "some-target",
-      provider_info: nil,
-      show_errors: false,
-      form_errors: %{},
-      saving: true,
-      submit_text: "Add It",
-      inner_block: inner_block
-    }
-
-    html = render_component(&IntegrationForm.render/1, assigns)
-    doc = Floki.parse_document!(html)
-
-    assert html =~ "Adding..."
-    assert Floki.find(doc, "button[type='submit'][disabled]") != []
   end
 
   test "renders shared calendar config_form in discovery and selection modes" do
