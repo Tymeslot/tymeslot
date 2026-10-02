@@ -11,6 +11,7 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
 
   alias Tymeslot.CalendarGrid.BookingEvent
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.Seats
 
   @doc """
   Returns the user's live bookings overlapping `[start_dt, end_dt)` as
@@ -55,8 +56,16 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
       join_url: presence(meeting.organizer_video_url) || presence(meeting.meeting_url),
       provider_event_id: meeting.provider_event_id,
       participants: participants(meeting),
+      capacity: meeting.capacity,
+      seats_taken: seats_taken(meeting),
       status: meeting.status
     }
+  end
+
+  # Counted like the meetings list and the booking page count them: a
+  # booker's guests hold seats too.
+  defp seats_taken(meeting) do
+    if Meetings.group?(meeting), do: Seats.seats_taken(meeting.id), else: 0
   end
 
   defp participants(meeting) do

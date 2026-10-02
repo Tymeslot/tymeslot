@@ -5,12 +5,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.BookingDetailModal do
   Bookings are managed through the booking flows (cancel with refund handling,
   reschedule requests) rather than edited like provider events, so this modal
   presents the booking and links to the Meetings page for those actions.
+
+  A group booking also shows how many of its seats are taken and, beside the
+  link, why it cannot be moved or deleted from the calendar: the same
+  wording the grid's lock badge and its refusals use.
   """
 
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Helpers.LocaleFormat
 
@@ -54,14 +59,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.BookingDetailModal do
           data-testid="booking-participants"
         >
           <.icon name="hero-user-group" class="w-5 h-5 text-tymeslot-400 shrink-0 mt-0.5" />
-          <ul class="min-w-0 space-y-2">
-            <li :for={participant <- @booking.participants} class="min-w-0">
-              <div :if={participant.name} class="text-token-sm font-medium text-tymeslot-800">
-                {participant.name}
-              </div>
-              <div class="text-token-sm text-tymeslot-500 truncate">{participant.email}</div>
-            </li>
-          </ul>
+          <div class="min-w-0 space-y-2">
+            <p
+              :if={group?(@booking)}
+              class="text-token-xs font-semibold uppercase tracking-wider text-turquoise-700"
+              data-testid="booking-seats"
+            >
+              {dgettext("dashboard_calendar", "%{count}/%{capacity} seats taken",
+                count: @booking.seats_taken,
+                capacity: @booking.capacity
+              )}
+            </p>
+            <ul class="min-w-0 space-y-2">
+              <li :for={participant <- @booking.participants} class="min-w-0">
+                <div :if={participant.name} class="text-token-sm font-medium text-tymeslot-800">
+                  {participant.name}
+                </div>
+                <div class="text-token-sm text-tymeslot-500 truncate">{participant.email}</div>
+              </li>
+            </ul>
+          </div>
         </div>
 
         <div :if={@booking.attendee_name || @booking.attendee_email} class="flex items-start gap-3">
@@ -90,29 +107,44 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.BookingDetailModal do
       </div>
 
       <:footer>
-        <div class="flex flex-wrap gap-2">
-          <a
-            :if={@booking.join_url}
-            href={@booking.join_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="inline-flex items-center gap-2 px-4 py-2 bg-turquoise-600 hover:bg-turquoise-700 text-white text-token-sm font-semibold rounded-token-lg transition-colors"
+        <div class="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+          <p
+            :if={group?(@booking)}
+            class="flex items-start gap-1.5 text-token-xs text-tymeslot-500 min-w-0 flex-1 basis-56"
+            data-testid="booking-lock-note"
           >
-            <.icon name="hero-video-camera" class="w-4 h-4" />
-            {dgettext("dashboard_calendar", "Join meeting")}
-          </a>
-          <.link
-            patch={~p"/dashboard/meetings"}
-            class="inline-flex items-center gap-2 px-4 py-2 bg-tymeslot-50 hover:bg-tymeslot-100 text-tymeslot-700 text-token-sm font-semibold rounded-token-lg transition-colors"
-          >
-            <.icon name="hero-arrow-top-right-on-square" class="w-4 h-4" />
-            {dgettext("dashboard_calendar", "Manage in Meetings")}
-          </.link>
+            <.icon name="hero-lock-closed-micro" class="w-3.5 h-3.5 shrink-0 mt-px" />
+            <span>{Shared.seat_lock_message()}</span>
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <a
+              :if={@booking.join_url}
+              href={@booking.join_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-2 px-4 py-2 bg-turquoise-600 hover:bg-turquoise-700 text-white text-token-sm font-semibold rounded-token-lg transition-colors"
+            >
+              <.icon name="hero-video-camera" class="w-4 h-4" />
+              {dgettext("dashboard_calendar", "Join meeting")}
+            </a>
+            <.link
+              patch={~p"/dashboard/meetings"}
+              class="inline-flex items-center gap-2 px-4 py-2 bg-tymeslot-50 hover:bg-tymeslot-100 text-tymeslot-700 text-token-sm font-semibold rounded-token-lg transition-colors"
+            >
+              <.icon name="hero-arrow-top-right-on-square" class="w-4 h-4" />
+              {dgettext("dashboard_calendar", "Manage in Meetings")}
+            </.link>
+          </div>
         </div>
       </:footer>
     </.modal>
     """
   end
+
+  defp group?(%{participants: [_first | _rest], capacity: capacity}) when capacity > 1,
+    do: true
+
+  defp group?(_booking), do: false
 
   defp booking_date_label(booking, timezone) do
     booking

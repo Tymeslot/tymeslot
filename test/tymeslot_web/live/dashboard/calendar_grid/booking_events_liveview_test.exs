@@ -101,6 +101,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.BookingEventsLiveviewTest do
       assert html =~ "ada@example.com"
       assert html =~ "Booked through your Tymeslot page"
       assert html =~ "Manage in Meetings"
+      # A one-to-one booking carries no seat count or group lock note.
+      refute html =~ "booking-seats"
+      refute html =~ "booking-lock-note"
 
       html =
         lv
@@ -117,6 +120,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.BookingEventsLiveviewTest do
         insert(:group_meeting,
           organizer_user: user,
           title: "Group workshop",
+          capacity: 3,
           start_time: start_time,
           end_time: DateTime.add(start_time, 3600, :second)
         )
@@ -142,6 +146,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.BookingEventsLiveviewTest do
       assert people =~ "Alan Turing"
       assert people =~ "alan@example.com"
       refute people =~ "Gone Booker"
+
+      assert lv |> element(~s{[data-testid="booking-seats"]}) |> render() =~ "2/3 seats taken"
+
+      assert lv |> element(~s{[data-testid="booking-lock-note"]}) |> render() =~
+               "Several people are booked on this slot."
     end
 
     test "ignores an unknown meeting id", %{conn: conn} do
