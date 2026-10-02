@@ -94,6 +94,14 @@ jobs:
       - name: tld_freshness
         if: ${{ !cancelled() }}
         run: mix test --only tld_freshness
+      # Fetches IANA's latest time zone release name. Running instances never
+      # contact IANA, so this is the only thing that notices a new release:
+      # one that changes a daylight-saving rule at a few weeks' notice has to
+      # ship in a Tymeslot release before it takes effect, or bookings in the
+      # affected zones land an hour out.
+      - name: tz_freshness
+        if: ${{ !cancelled() }}
+        run: mix test --only tz_freshness
       # `:e2e` is deliberately absent. The 11 Wallaby features need a Chrome
       # binary and a matching chromedriver, and no workflow in this repo
       # installs either; config/test.exs also pins the browser to a developer's

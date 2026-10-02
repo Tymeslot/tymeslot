@@ -375,14 +375,12 @@ config :elixir, :time_zone_database, Tz.TimeZoneDatabase
 #
 #     mix tz.download <version> && mix deps.compile tz --force
 #
-# then bump :iana_version to match. Tz.WatchPeriodically logs when a newer
-# release appears upstream; see Tymeslot.Application.
+# then bump :iana_version to match. Running instances never contact IANA, so
+# new rules reach users only through a release: the nightly `tz_freshness`
+# suite (test/tymeslot/timezones/iana_freshness_test.exs, run by the Excluded
+# suites workflow) fails once IANA publishes a release newer than this pin.
 config :tz, :data_dir, Path.expand("../priv/tz", __DIR__)
 config :tz, :iana_version, "2026c"
-
-# Watch data.iana.org for time zone releases newer than the pinned one. Logs
-# only; enabled in prod.exs so dev and test make no outbound calls.
-config :tymeslot, :tz_watch_enabled, false
 
 # Authentication configuration
 config :tymeslot, :auth,

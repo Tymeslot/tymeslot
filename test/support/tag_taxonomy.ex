@@ -136,7 +136,10 @@ defmodule Tymeslot.Test.TagTaxonomy do
       :catalogue_freshness,
       # Fetches IANA's TLD list over the network to check priv/tlds.json has
       # not gone stale — run with mix test --only tld_freshness
-      :tld_freshness
+      :tld_freshness,
+      # Fetches IANA's latest time zone release to check the vendored tz data
+      # has not gone stale — run with mix test --only tz_freshness
+      :tz_freshness
     ]
   }
 

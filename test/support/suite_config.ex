@@ -20,7 +20,8 @@ defmodule Tymeslot.Test.SuiteConfig do
     migrations: true,
     proxy_integration: true,
     catalogue_freshness: true,
-    tld_freshness: true
+    tld_freshness: true,
+    tz_freshness: true
   ]
 
   @doc """
@@ -33,9 +34,9 @@ defmodule Tymeslot.Test.SuiteConfig do
   in the suite that owns them. Excluding them keeps the guarantee on a schedule
   rather than on every local run.
 
-  `:tld_freshness` needs outbound network access to IANA, which a local run
-  cannot be assumed to have and which would make the suite fail offline for a
-  reason that has nothing to do with the change under test.
+  `:tld_freshness` and `:tz_freshness` need outbound network access to IANA,
+  which a local run cannot be assumed to have and which would make the suite
+  fail offline for a reason that has nothing to do with the change under test.
 
   `:git_cliff` is excluded only where the binary is missing, so the changelog
   config tests run by default for anyone able to cut a release (and in the
