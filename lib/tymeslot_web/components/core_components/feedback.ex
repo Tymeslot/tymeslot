@@ -2,6 +2,35 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
   @moduledoc "Feedback/status components extracted from CoreComponents."
   use Phoenix.Component
 
+  alias TymeslotWeb.Components.CoreComponents.Icons
+
+  @pill_tones [:brand, :neutral, :success, :warning, :danger, :info]
+
+  @pill_tone_classes %{
+    brand: "bg-turquoise-100 text-turquoise-700",
+    neutral: "bg-tymeslot-100 text-tymeslot-600",
+    success: "bg-green-100 text-green-700",
+    warning: "bg-amber-100 text-amber-700",
+    danger: "bg-red-100 text-red-700",
+    info: "bg-blue-100 text-blue-700"
+  }
+
+  @pill_dot_classes %{
+    brand: "bg-turquoise-500",
+    neutral: "bg-tymeslot-400",
+    success: "bg-green-500",
+    warning: "bg-amber-500",
+    danger: "bg-red-500",
+    info: "bg-blue-500"
+  }
+
+  @pill_size_classes %{
+    xs: "gap-1 px-2 py-0.5",
+    sm: "gap-1.5 px-3 py-1"
+  }
+
+  @pill_icon_classes %{xs: "w-3 h-3 shrink-0", sm: "w-3.5 h-3.5 shrink-0"}
+
   # ========== FEEDBACK ==========
 
   @doc """
@@ -62,4 +91,59 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
     </div>
     """
   end
+
+  @doc """
+  Renders a small status pill: a rounded label in one of six tones.
+
+  `icon` puts a `hero-…` icon before the label; `dot` puts a small status dot
+  there instead, and `pulse` animates that dot (for something happening now).
+  `class` is for layout only (margins, alignment); colour and type come from
+  `tone` and `size`, so every pill in the dashboard reads the same.
+  """
+  attr :tone, :atom, default: :neutral, values: @pill_tones
+  attr :size, :atom, default: :xs, values: [:xs, :sm]
+  attr :icon, :string, default: nil, doc: "A `hero-…` icon name shown before the label"
+  attr :dot, :boolean, default: false, doc: "Show a status dot before the label"
+  attr :pulse, :boolean, default: false, doc: "Show an animated dot (implies `dot`)"
+  attr :class, :any, default: nil, doc: "Layout classes only"
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  @spec pill(map()) :: Phoenix.LiveView.Rendered.t()
+  def pill(assigns) do
+    assigns =
+      assign(assigns,
+        tone_class: Map.fetch!(@pill_tone_classes, assigns.tone),
+        size_class: Map.fetch!(@pill_size_classes, assigns.size),
+        icon_class: Map.fetch!(@pill_icon_classes, assigns.size),
+        dot_class: (assigns.dot or assigns.pulse) && pill_dot_class(assigns.tone)
+      )
+
+    ~H"""
+    <span
+      class={[
+        "inline-flex shrink-0 items-center rounded-token-full text-token-xs font-black uppercase tracking-wider tabular-nums",
+        @size_class,
+        @tone_class,
+        @class
+      ]}
+      {@rest}
+    >
+      <Icons.icon :if={@icon} name={@icon} class={@icon_class} />
+      <span
+        :if={!@icon && @dot_class}
+        class={["w-1.5 h-1.5 shrink-0 rounded-token-full", @dot_class, @pulse && "animate-pulse"]}
+        aria-hidden="true"
+      ></span>
+      {render_slot(@inner_block)}
+    </span>
+    """
+  end
+
+  @doc """
+  The background class of a pill's status dot for `tone`, for a bare status
+  dot that has to match the pills beside it.
+  """
+  @spec pill_dot_class(atom()) :: String.t()
+  def pill_dot_class(tone), do: Map.fetch!(@pill_dot_classes, tone)
 end

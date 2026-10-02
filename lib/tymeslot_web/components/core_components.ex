@@ -229,6 +229,29 @@ defmodule TymeslotWeb.Components.CoreComponents do
   @spec empty_state(map()) :: Phoenix.LiveView.Rendered.t()
   def empty_state(assigns), do: Feedback.empty_state(assigns)
 
+  @doc """
+  Renders a small status pill in one of six tones.
+
+      <.pill tone={:success} icon="hero-check">Active</.pill>
+      <.pill tone={:brand} pulse>Now</.pill>
+
+  See `TymeslotWeb.Components.CoreComponents.Feedback.pill/1`, which this
+  delegates to; these declarations must stay in step with it.
+  """
+  attr :tone, :atom,
+    default: :neutral,
+    values: [:brand, :neutral, :success, :warning, :danger, :info]
+
+  attr :size, :atom, default: :xs, values: [:xs, :sm]
+  attr :icon, :string, default: nil, doc: "A `hero-…` icon name shown before the label"
+  attr :dot, :boolean, default: false, doc: "Show a status dot before the label"
+  attr :pulse, :boolean, default: false, doc: "Show an animated dot (implies `dot`)"
+  attr :class, :any, default: nil, doc: "Layout classes only"
+  attr :rest, :global
+  slot :inner_block, required: true
+  @spec pill(map()) :: Phoenix.LiveView.Rendered.t()
+  def pill(assigns), do: Feedback.pill(assigns)
+
   # ========== NAVIGATION ==========
 
   @doc """
