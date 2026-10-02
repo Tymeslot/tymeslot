@@ -344,9 +344,15 @@
   }
 }
 
-/* A narrow card: the chosen day and time take a row of their own above
-   Back and Next. */
+/* A narrow card: the timezone picker takes the heading's left edge on a
+   row of its own, and the chosen day and time take a row of their own
+   above Back and Next. */
 @container scheduling (max-width: 30rem) {
+  .paper-week__header .paper-timezone {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+
   .paper-selection,
   .paper-actions:not(.paper-actions--split) .paper-selection {
     flex-basis: 100%;
