@@ -21,24 +21,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
   def render(assigns) do
     ~H"""
     <div>
-      <.card>
-        <:header>
-          <%!-- The heading names the inputs, so it is not repeated as a label
-               above them. --%>
-          <.subsection_header
-            id="booking-limits-heading"
-            size={:lg}
-            level={2}
-            icon="hero-clock"
-            title={dgettext("dashboard_meeting_types", "Booking Limits")}
-            description={
-              dgettext(
-                "dashboard_meeting_types",
-                "Maximum number of bookings you accept across all meeting types. Days at their cap disappear from your booking page. Leave a field empty for no limit."
-              )
-            }
-          />
-        </:header>
+      <%!-- The heading names the inputs, so it is not repeated as a label
+           above them. --%>
+      <.card
+        title_id="booking-limits-heading"
+        icon="hero-clock"
+        title={dgettext("dashboard_meeting_types", "Booking Limits")}
+        description={
+          dgettext(
+            "dashboard_meeting_types",
+            "Maximum number of bookings you accept across all meeting types. Days at their cap disappear from your booking page. Leave a field empty for no limit."
+          )
+        }
+      >
         <form id="booking-limits-form" phx-change="update_booking_limit" phx-target={@myself}>
           <BookingLimitFields.booking_limit_fields
             id="booking-limits"

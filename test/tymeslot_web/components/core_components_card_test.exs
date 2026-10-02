@@ -95,6 +95,21 @@ defmodule TymeslotWeb.Components.CoreComponentsCardTest do
     end
   end
 
+  describe "card/1 title_id" do
+    test "puts the id on the title heading, so it can label a control" do
+      assigns = %{}
+
+      doc =
+        ~H"""
+        <Containers.card title="Booking limits" title_id="limits-heading">Body</Containers.card>
+        """
+        |> rendered_to_string()
+        |> LazyHTML.from_fragment()
+
+      assert LazyHTML.text(LazyHTML.query(doc, "h2#limits-heading")) =~ "Booking limits"
+    end
+  end
+
   describe "subsection_header/1" do
     defp render_header(attrs) do
       assigns = attrs

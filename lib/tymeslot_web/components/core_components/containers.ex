@@ -43,18 +43,22 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
     an optional `icon` and `description`; the `:header` slot replaces it with
     custom content, and `:actions` sits at the header's end.
 
-  `class` is for layout and state (margins, `space-y-*`, a selected ring), not
-  for restyling the surface.
+  `class` is for layout (margins, `space-y-*`, flex) and for state cues on the
+  surface (a selected ring or border, an error border). The surface itself,
+  its padding, shadow and hover, comes from `variant`, `padding` and
+  `interactive`. The card's CSS sits in the components layer, so those
+  utilities apply over it.
   """
   attr :variant, :atom, default: :glass, values: Map.keys(@card_variants)
   attr :padding, :atom, default: :md, values: Map.keys(@card_paddings)
   attr :interactive, :boolean, default: false
-  attr :tag, :string, default: "div", values: ~w(div section article aside li label)
+  attr :tag, :string, default: "div", values: ~w(div section article aside li)
   attr :title, :string, default: nil
   attr :description, :string, default: nil
   attr :icon, :string, default: nil, doc: "A `hero-…` icon beside the title"
   attr :class, :any, default: nil
-  attr :rest, :global, include: ~w(for)
+  attr :title_id, :string, default: nil, doc: "The title heading's id, to label a control"
+  attr :rest, :global
 
   slot :header, doc: "Custom header content, in place of `title`, `icon` and `description`"
   slot :actions, doc: "Controls at the end of the header row"
@@ -91,6 +95,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
               size={:lg}
               level={2}
               icon={@icon}
+              id={@title_id}
               title={@title}
               description={@description}
             />
