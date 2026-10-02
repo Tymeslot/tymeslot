@@ -52,14 +52,13 @@ msgstr[2] "+%{count} więcej"
 msgid "All day"
 msgstr "Cały dzień"
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
-#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
+#: lib/tymeslot_web/live/dashboard/dashboard_overview/source_pill.ex
 #, elixir-autogen, elixir-format
 msgid "Booking"
 msgstr "Rezerwacja"
 
 #: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
-#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
+#: lib/tymeslot_web/live/dashboard/dashboard_overview/source_pill.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr "Kalendarz"

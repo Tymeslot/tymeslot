@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
   alias Tymeslot.Integrations.Calendar.EventColour
   alias TymeslotWeb.Dashboard.AgendaDetailModal
   alias TymeslotWeb.Dashboard.AgendaTimeline
+  alias TymeslotWeb.Dashboard.DashboardOverview.SourcePill
   alias TymeslotWeb.Dashboard.OnboardingChecklist
 
   import TymeslotWeb.Dashboard.DashboardOverviewFormatters
@@ -65,12 +66,9 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
         <div class="flex items-center justify-between gap-4 mb-8">
           <div class="flex items-center gap-3">
             <.section_header level={2} title={dgettext("dashboard_home", "Your day")} />
-            <span
-              :if={@today_count > 0}
-              class="rounded-token-full bg-turquoise-100 px-2.5 py-0.5 text-token-xs font-black text-turquoise-700 tabular-nums"
-            >
+            <.pill :if={@today_count > 0} tone={:brand}>
               {@today_count} {dgettext("dashboard_home", "today")}
-            </span>
+            </.pill>
           </div>
           <.link
             patch={~p"/dashboard"}
@@ -346,16 +344,10 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
             <span class="text-tymeslot-900 font-black tracking-tight truncate group-hover:text-turquoise-700 transition-colors">
               {@entry.title}
             </span>
-            <span
-              :if={@in_progress?}
-              class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 text-token-xs font-black bg-turquoise-100 text-turquoise-700 rounded-token-full uppercase tracking-wider"
-            >
-              <span class="w-1.5 h-1.5 rounded-token-full bg-turquoise-500 animate-pulse"></span> {dgettext(
-                "dashboard_home",
-                "Now"
-              )}
-            </span>
-            <.source_badge source={@entry.source} />
+            <.pill :if={@in_progress?} tone={:brand} pulse>
+              {dgettext("dashboard_home", "Now")}
+            </.pill>
+            <SourcePill.source_pill source={@entry.source} />
           </div>
           <div
             :if={@entry.who || @entry.location}
@@ -493,24 +485,6 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
     <h4 class="mb-3 text-token-xs font-black uppercase tracking-widest text-tymeslot-400">
       {@label}
     </h4>
-    """
-  end
-
-  attr :source, :atom, required: true
-
-  defp source_badge(%{source: :tymeslot} = assigns) do
-    ~H"""
-    <span class="shrink-0 px-2 py-0.5 text-token-xs font-black bg-turquoise-100 text-turquoise-700 rounded-token-full uppercase tracking-wider">
-      {dgettext("dashboard_home", "Booking")}
-    </span>
-    """
-  end
-
-  defp source_badge(assigns) do
-    ~H"""
-    <span class="shrink-0 px-2 py-0.5 text-token-xs font-black bg-tymeslot-100 text-tymeslot-600 rounded-token-full uppercase tracking-wider">
-      {dgettext("dashboard_home", "Calendar")}
-    </span>
     """
   end
 end

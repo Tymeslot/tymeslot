@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
+  alias TymeslotWeb.Dashboard.DashboardOverview.SourcePill
   alias TymeslotWeb.Dashboard.DashboardOverviewFormatters
   alias TymeslotWeb.Helpers.LocaleFormat
 
@@ -41,13 +42,10 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
 
       <div class="space-y-6">
         <div class="flex flex-wrap items-center gap-2">
-          <.source_badge source={@entry.source} />
-          <span
-            :if={relative_label(@entry, @now)}
-            class="inline-flex items-center gap-1 rounded-token-full bg-turquoise-50 px-2.5 py-0.5 text-token-xs font-black text-turquoise-700"
-          >
-            <.icon name="hero-clock-mini" class="w-3.5 h-3.5" />{relative_label(@entry, @now)}
-          </span>
+          <SourcePill.source_pill source={@entry.source} />
+          <.pill :if={relative_label(@entry, @now)} tone={:brand} icon="hero-clock-mini">
+            {relative_label(@entry, @now)}
+          </.pill>
         </div>
 
         <dl class="space-y-4">
@@ -183,24 +181,6 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
         <dd class="mt-0.5 text-tymeslot-800 font-bold break-words">{render_slot(@inner_block)}</dd>
       </div>
     </div>
-    """
-  end
-
-  attr :source, :atom, required: true
-
-  defp source_badge(%{source: :tymeslot} = assigns) do
-    ~H"""
-    <span class="rounded-token-full bg-turquoise-100 px-2.5 py-0.5 text-token-xs font-black uppercase tracking-wider text-turquoise-700">
-      {dgettext("dashboard_home", "Booking")}
-    </span>
-    """
-  end
-
-  defp source_badge(assigns) do
-    ~H"""
-    <span class="rounded-token-full bg-tymeslot-100 px-2.5 py-0.5 text-token-xs font-black uppercase tracking-wider text-tymeslot-600">
-      {dgettext("dashboard_home", "Calendar")}
-    </span>
     """
   end
 
