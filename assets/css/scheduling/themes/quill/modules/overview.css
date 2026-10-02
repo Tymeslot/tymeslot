@@ -99,9 +99,10 @@
   height: 1.75rem;
 }
 
-/* overview-success-badge-emoji: compact default */
-.overview-success-badge-emoji {
-  font-size: 14px;
+/* overview-success-badge-icon: the check inside the badge */
+.overview-success-badge-icon {
+  width: 1rem;
+  height: 1rem;
 }
 
 /* overview-title: left-aligned at compact size, centered at 768px+ */
