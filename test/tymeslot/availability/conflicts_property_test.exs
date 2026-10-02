@@ -169,7 +169,7 @@ defmodule Tymeslot.Availability.ConflictsPropertyTest do
                slot_start,
                slot_end,
                events_in_tz,
-               0
+               {0, 0}
              ),
              "All-day Monday event blocked slot at #{slot_start} on Tuesday in #{timezone}"
 
@@ -188,7 +188,7 @@ defmodule Tymeslot.Availability.ConflictsPropertyTest do
                monday_slot_start,
                monday_slot_end,
                events_in_tz,
-               0
+               {0, 0}
              ),
              "All-day Monday event failed to block slot at #{monday_slot_start} on Monday in #{timezone}"
     end

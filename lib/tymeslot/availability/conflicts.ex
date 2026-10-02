@@ -53,7 +53,12 @@ defmodule Tymeslot.Availability.Conflicts do
         min_advance_hours,
         max_advance_booking_days
       ) and
-        not TimeRange.has_conflict_with_events?(slot_start, slot_end, events, buffer_minutes) and
+        not TimeRange.has_conflict_with_events?(
+          slot_start,
+          slot_end,
+          events,
+          {buffer_minutes, buffer_minutes}
+        ) and
         not limit_blocked?(config, slot_start)
     end)
   end
@@ -172,7 +177,7 @@ defmodule Tymeslot.Availability.Conflicts do
             slot_start,
             slot_end,
             nearby_events,
-            buffer_minutes
+            {buffer_minutes, buffer_minutes}
           ) and
           not limit_blocked?(config, slot_start)
       end)
