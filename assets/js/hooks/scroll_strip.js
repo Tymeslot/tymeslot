@@ -8,8 +8,11 @@
  *    `start`, `end` or `both` (removed when everything fits). The component's
  *    classes turn that into a fade on the clipped edge, which is what tells a
  *    reader there is more to scroll to.
- *  - Keeps the selected item in view, so a strip whose current tab sits past
- *    the edge does not open showing every tab but that one.
+ *  - Brings the selected item into view when the selection changes, so a
+ *    strip whose current tab sits past the edge does not open showing every
+ *    tab but that one. An update that leaves the selection alone leaves the
+ *    scroll position alone too, so a reader browsing the row is not pulled
+ *    back.
  *  - In a `role="tablist"`, moves between tabs with the arrow keys, Home and
  *    End, selecting the tab it lands on: the keyboard model ARIA expects of a
  *    tablist whose tabs, all but the selected one, are out of the tab order.
@@ -100,8 +103,14 @@ export const ScrollStrip = {
   },
 
   // Scrolls the row itself, never the page, so opening a view does not jump.
+  // Selection is keyed by element id where there is one: a patch may replace
+  // the element while the same tab stays selected.
   revealSelected() {
     const selected = this.el.querySelector(SELECTED)
+    const key = selected ? selected.id || selected : null
+    if (key === this.revealedKey) return
+
+    this.revealedKey = key
     if (!selected) return
 
     const row = this.el.getBoundingClientRect()

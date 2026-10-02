@@ -137,4 +137,72 @@ describe('ScrollStrip hook', () => {
 
     expect(document.activeElement).toBe(tabs[0]);
   });
+
+  test('updated() re-marks the overflow a patch removed', () => {
+    const { el } = buildTablist();
+    Object.defineProperty(el, 'scrollWidth', { value: 500, configurable: true });
+    Object.defineProperty(el, 'clientWidth', { value: 300, configurable: true });
+    const hook = mount(el);
+
+    // A LiveView patch drops attributes the server did not render.
+    delete el.dataset.overflow;
+    hook.updated();
+
+    expect(el.dataset.overflow).toBe('end');
+  });
+
+  describe('bringing the selected tab into view', () => {
+    // jsdom lays nothing out, so the row is 100px wide and the tabs sit at
+    // fixed offsets from its scroll position.
+    function layOut(el, tabs) {
+      el.getBoundingClientRect = () => ({ left: 0, right: 100 });
+      tabs.forEach((tab, index) => {
+        tab.getBoundingClientRect = () => {
+          const left = index * 80 - el.scrollLeft;
+          return { left, right: left + 80 };
+        };
+      });
+    }
+
+    function select(tabs, index) {
+      tabs.forEach((tab, i) => tab.setAttribute('aria-selected', String(i === index)));
+    }
+
+    test('scrolls a selected tab past the edge into view on mount', () => {
+      const { el, tabs } = buildTablist();
+      layOut(el, tabs);
+      select(tabs, 2);
+
+      mount(el);
+
+      // The third tab spans 160-240; the row shows 0-100.
+      expect(el.scrollLeft).toBe(140);
+    });
+
+    test('leaves the scroll position alone when an update keeps the selection', () => {
+      const { el, tabs } = buildTablist();
+      layOut(el, tabs);
+      select(tabs, 2);
+      const hook = mount(el);
+
+      // The reader scrolls back to the start to look at the other tabs.
+      el.scrollLeft = 0;
+      hook.updated();
+
+      expect(el.scrollLeft).toBe(0);
+    });
+
+    test('scrolls again once the selection changes', () => {
+      const { el, tabs } = buildTablist();
+      layOut(el, tabs);
+      select(tabs, 0);
+      const hook = mount(el);
+      expect(el.scrollLeft).toBe(0);
+
+      select(tabs, 2);
+      hook.updated();
+
+      expect(el.scrollLeft).toBe(140);
+    });
+  });
 });
