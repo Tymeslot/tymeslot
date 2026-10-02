@@ -18,14 +18,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   - `:profile`      — optional, only its `:timezone` field is read.
 
   Additional assigns forwarded from the parent dashboard LiveView:
-  - `:shared_data`               — map of shared cross-component data, defaults to `%{}`.
-  - `:integration_status`        — current calendar integration status.
-  - `:saving`                    — boolean, whether the parent is persisting something.
-  - `:client_ip`                 — client IP string, used for audit / rate-limit context.
-  - `:user_agent`                — client user-agent string.
-  - `:live_action`               — current route live action atom.
-  - `:params`                    — current URL params map.
-  - `:custom_questions_allowed`  — boolean feature flag.
+  - `:shared_data`: map of shared cross-component data, defaults to `%{}`.
+  - `:integration_status`: current calendar integration status.
+  - `:saving`: boolean, whether the parent is persisting something.
+  - `:client_ip`: client IP string, used for audit / rate-limit context.
+  - `:user_agent`: client user-agent string.
+  - `:live_action`: current route live action atom.
+  - `:params`: current URL params map.
+  - `:custom_questions_allowed`: boolean feature flag.
+  - `:group_bookings_allowed`: boolean feature flag.
 
   Parent-to-component messages travel through `send_update/2` with an `:action` key.
   These bypass attr validation and are dispatched in the `update/2` clauses below:
