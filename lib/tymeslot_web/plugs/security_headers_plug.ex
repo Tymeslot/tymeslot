@@ -10,7 +10,9 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Profiles
+  alias TymeslotWeb.Endpoint
   alias TymeslotWeb.Helpers.PathUtils
   alias TymeslotWeb.Plugs.SecurityHeaders.Hsts
 
@@ -205,60 +207,88 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
     18 |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)
   end
 
+  # Origins the reCAPTCHA v3 script loads from, frames and calls. Added to the
+  # policy only while a reCAPTCHA check is active, so an instance that has it
+  # switched off allows no Google origin at all.
+  @recaptcha_script_origins ["https://www.google.com", "https://www.gstatic.com"]
+  @recaptcha_connect_origins ["https://www.google.com"]
+  @recaptcha_frame_origins ["https://www.google.com"]
+
+  defp recaptcha_active? do
+    RecaptchaHelpers.booking_active?() or RecaptchaHelpers.signup_active?()
+  end
+
+  # The LiveView socket's own origin: ws(s)://host[:port] from the endpoint's
+  # URL config. 'self' already covers it in current browsers; naming it keeps
+  # the socket working in browsers that predate that rule, without allowing
+  # sockets to any other host.
+  defp socket_origin do
+    %URI{scheme: scheme, host: host, port: port} = URI.parse(Endpoint.url())
+    ws_scheme = if scheme == "https", do: "wss", else: "ws"
+
+    # URI.to_string/1 omits the port when it is the scheme's default.
+    URI.to_string(%URI{scheme: ws_scheme, host: host, port: port})
+  end
+
+  # Dev needs plain ws: and the localhost origins for live reload.
+  defp base_connect_sources do
+    if Application.get_env(:tymeslot, :environment) == :dev do
+      [
+        "'self'",
+        "ws://localhost:*",
+        "ws://127.0.0.1:*",
+        "http://localhost:*",
+        "http://127.0.0.1:*",
+        "ws:",
+        "wss:"
+      ]
+    else
+      ["'self'", socket_origin()]
+    end
+  end
+
   defp csp_header(frame_ancestors, nonce) do
-    extra_script_origins = analytics_script_origins()
+    analytics_origins = analytics_script_origins()
+    recaptcha? = recaptcha_active?()
 
     script_src =
-      Enum.join(
-        [
-          "'self'",
-          "'nonce-#{nonce}'",
-          "https://www.google.com",
-          "https://www.gstatic.com",
-          "https://js.stripe.com"
-        ] ++ extra_script_origins,
-        " "
-      )
-
-    extra_connect_suffix =
-      case extra_script_origins do
-        [] -> ""
-        origins -> " " <> Enum.join(origins, " ")
-      end
+      ["'self'", "'nonce-#{nonce}'"] ++
+        recaptcha_origins(recaptcha?, @recaptcha_script_origins) ++ analytics_origins
 
     connect_src =
-      if Application.get_env(:tymeslot, :environment) == :dev do
-        "'self' ws://localhost:* ws://127.0.0.1:* http://localhost:* http://127.0.0.1:* ws: wss: https://www.google.com https://accounts.google.com https://api.stripe.com" <>
-          extra_connect_suffix
-      else
-        "'self' wss: https://www.google.com https://accounts.google.com https://api.stripe.com" <>
-          extra_connect_suffix
-      end
+      base_connect_sources() ++
+        recaptcha_origins(recaptcha?, @recaptcha_connect_origins) ++ analytics_origins
+
+    frame_src = ["'self'" | recaptcha_origins(recaptcha?, @recaptcha_frame_origins)]
 
     [
       "default-src 'self'",
-      # Inline scripts are authorised by a per-request nonce; reCAPTCHA +
-      # Stripe require their external origins.
-      "script-src #{script_src}",
+      # Inline scripts are authorised by a per-request nonce; reCAPTCHA and
+      # analytics add their own origins only when configured.
+      "script-src #{Enum.join(script_src, " ")}",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: https:",
+      # Every image is same-origin or an inline data: URI (generated avatars).
+      # List any future remote image host explicitly rather than reopening https:.
+      "img-src 'self' data:",
       "font-src 'self' data:",
-      # Allow connections to reCAPTCHA, Google services, and Stripe
-      "connect-src #{connect_src}",
-      # Allow reCAPTCHA and Stripe frames
-      "frame-src 'self' https://www.google.com https://accounts.google.com https://js.stripe.com https://hooks.stripe.com",
+      "connect-src #{Enum.join(connect_src, " ")}",
+      "frame-src #{Enum.join(frame_src, " ")}",
       # nil frame_ancestors → omit the directive entirely (universally
       # frameable). Otherwise pin the computed value.
       frame_ancestors && "frame-ancestors #{frame_ancestors}",
       "base-uri 'self'",
-      # connect.stripe.com is the redirect target of the Connect onboarding
-      # form post; Chrome enforces form-action on redirects, so omitting it
-      # blocks Stripe onboarding entirely.
+      # Payments and billing leave the app by top-level navigation, so Stripe
+      # appears only here. connect.stripe.com is the redirect target of the
+      # Connect onboarding form post; Chrome enforces form-action on
+      # redirects, so omitting it blocks Stripe onboarding entirely.
       "form-action 'self' https://billing.stripe.com https://checkout.stripe.com https://connect.stripe.com"
     ]
     |> Enum.reject(&(&1 == nil))
     |> Enum.join("; ")
   end
+
+  defp recaptcha_origins(true, origins), do: origins
+  defp recaptcha_origins(false, _origins), do: []
 
   # Returns both the domain and its www counterpart so CSP frame-ancestors
   # covers both variants. Wildcards and localhost are returned as-is.
