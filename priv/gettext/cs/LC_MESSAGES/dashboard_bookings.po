@@ -745,3 +745,21 @@ msgstr[2] "Odeslat žádost o přeložení %{count} účastníkům této skupino
 #, elixir-autogen, elixir-format
 msgid "This action cannot be undone. Every participant will be notified of the cancellation."
 msgstr "Tuto akci nelze vrátit zpět. Všichni účastníci budou o zrušení informováni."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} person was booked"
+msgid_plural "%{count} people were booked"
+msgstr[0] "%{count} osoba byla rezervována"
+msgstr[1] "%{count} osoby byly rezervovány"
+msgstr[2] "%{count} osob bylo rezervováno"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Every spot was released"
+msgstr "Všechna místa byla uvolněna"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Released their spot"
+msgstr "Uvolnil(a) své místo"

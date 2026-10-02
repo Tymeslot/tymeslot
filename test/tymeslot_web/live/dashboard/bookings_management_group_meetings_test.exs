@@ -192,5 +192,87 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementGroupMeetingsTest do
       refute html =~ "participants"
       refute html =~ "Participants"
     end
+
+    test "a group card gives the date its whole row, so the time range stays on one line",
+         %{conn: conn, user: user} do
+      meeting_type = insert(:meeting_type, user: user, max_participants: 3)
+
+      meeting =
+        insert(:meeting,
+          organizer_user: user,
+          organizer_email: user.email,
+          meeting_type_ref: meeting_type,
+          capacity: 3
+        )
+
+      insert(:participant, meeting: meeting, name: "Ada Lovelace")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+      assert has_element?(view, "div.md\\:col-span-2 span.whitespace-nowrap")
+    end
+  end
+
+  describe "Cancelled group meetings" do
+    setup %{user: user} do
+      meeting_type = insert(:meeting_type, user: user, max_participants: 3)
+      cancelled_at = DateTime.utc_now(:second)
+
+      meeting =
+        insert(:meeting,
+          organizer_user: user,
+          organizer_email: user.email,
+          meeting_type_ref: meeting_type,
+          capacity: 3,
+          status: "cancelled",
+          cancelled_at: cancelled_at
+        )
+
+      {:ok, meeting: meeting, cancelled_at: cancelled_at}
+    end
+
+    defp cancelled_tab(conn) do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+      view |> element("button[phx-value-filter='cancelled']") |> render_click()
+      view
+    end
+
+    test "say who was still booked, and who had released their spot",
+         %{conn: conn, meeting: meeting, cancelled_at: cancelled_at} do
+      insert(:participant, meeting: meeting, name: "Ada Lovelace")
+      insert(:participant, meeting: meeting, name: "Grace Hopper")
+
+      insert(:participant,
+        meeting: meeting,
+        name: "Left Early",
+        cancelled_at: DateTime.add(cancelled_at, -3600)
+      )
+
+      view = cancelled_tab(conn)
+
+      badge = view |> element("[data-testid='group-seats-badge']") |> render()
+      assert badge =~ "2 people were booked"
+      refute badge =~ "seats taken"
+
+      assert render(view) =~ "Ada Lovelace"
+      assert render(view) =~ "Grace Hopper"
+      assert view |> element("li", "Left Early") |> render() =~ "Released their spot"
+      refute view |> element("li", "Ada Lovelace") |> render() =~ "Released their spot"
+    end
+
+    test "say so when every spot had been released", %{conn: conn, meeting: meeting} do
+      insert(:participant,
+        meeting: meeting,
+        name: "Erin",
+        cancelled_at: DateTime.utc_now(:second)
+      )
+
+      view = cancelled_tab(conn)
+
+      assert view |> element("[data-testid='group-seats-badge']") |> render() =~
+               "Every spot was released"
+
+      assert has_element?(view, "[data-testid='participant-released']")
+    end
   end
 end

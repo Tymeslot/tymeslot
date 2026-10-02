@@ -336,8 +336,22 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> apply_limit(limit)
     |> preload(
       guests: ^live_guests_preload(),
-      participants: ^live_participants_preload()
+      participants: ^card_participants_preload()
     )
     |> Repo.all()
+  end
+
+  # The participants a dashboard card lists: the live ones, and on a
+  # cancelled meeting every one, since a cancelled card records who had
+  # booked it. Whoever released their spot before the meeting was cancelled
+  # carries their own `cancelled_at`; those still booked when it was called
+  # off do not (cancelling a meeting leaves its participant rows alone).
+  defp card_participants_preload do
+    from(p in ParticipantSchema,
+      join: m in Meeting,
+      on: m.id == p.meeting_id,
+      where: is_nil(p.cancelled_at) or m.status == "cancelled",
+      order_by: [asc: p.inserted_at]
+    )
   end
 end

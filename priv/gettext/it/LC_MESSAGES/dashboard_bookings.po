@@ -736,3 +736,20 @@ msgstr[1] "Inviare una richiesta di riprogrammazione ai %{count} partecipanti di
 #, elixir-autogen, elixir-format
 msgid "This action cannot be undone. Every participant will be notified of the cancellation."
 msgstr "Questa azione non può essere annullata. Ogni partecipante riceverà una notifica dell'annullamento."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} person was booked"
+msgid_plural "%{count} people were booked"
+msgstr[0] "%{count} persona era prenotata"
+msgstr[1] "%{count} persone erano prenotate"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Every spot was released"
+msgstr "Tutti i posti sono stati liberati"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Released their spot"
+msgstr "Ha liberato il posto"

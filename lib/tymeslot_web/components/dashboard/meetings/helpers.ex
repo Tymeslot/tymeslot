@@ -20,9 +20,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
   def group_meeting?(_not_a_stored_meeting), do: false
 
   @doc """
-  The live participants loaded onto a group meeting (see
-  `Tymeslot.Meetings.with_live_participants/1`), or `[]` when none are
-  loaded.
+  The participants loaded onto a group meeting, or `[]` when none are
+  loaded. These are the live ones (see
+  `Tymeslot.Meetings.with_live_participants/1`), except on a cancelled
+  meeting in the meetings list, which also carries those who released their
+  spot before it was cancelled.
   """
   @spec participants(Ecto.Schema.t() | map()) :: [Ecto.Schema.t()]
   def participants(%{participants: participants}) when is_list(participants), do: participants

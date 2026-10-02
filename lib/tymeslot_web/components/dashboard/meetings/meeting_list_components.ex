@@ -169,12 +169,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
             <span
               :if={Helpers.group_meeting?(@meeting)}
               class="inline-flex items-center gap-1.5 px-3 py-1 bg-turquoise-50 text-turquoise-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-turquoise-100 shadow-sm"
+              data-testid="group-seats-badge"
             >
               <CoreComponents.icon name="hero-users" class="w-3.5 h-3.5" />
-              {dgettext("dashboard_bookings", "%{count}/%{capacity} seats taken",
-                count: seats_taken(@meeting),
-                capacity: @meeting.capacity
-              )}
+              {seats_label(@meeting)}
             </span>
             <span
               :if={@meeting.meeting_url}
@@ -186,7 +184,12 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="flex items-center gap-4">
+            <%!-- A group card has no attendee column beside this one, so the
+                 date takes the whole row rather than wrapping in half of it. --%>
+            <div class={[
+              "flex items-center gap-4",
+              Helpers.group_meeting?(@meeting) && "md:col-span-2"
+            ]}>
               <div class="w-12 h-12 rounded-token-2xl bg-turquoise-50 flex items-center justify-center shadow-sm border border-turquoise-100 transition-transform group-hover/card:scale-110">
                 <CoreComponents.icon name="hero-calendar-days" class="w-6 h-6 text-turquoise-600" />
               </div>
@@ -199,7 +202,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
                     @meeting,
                     Helpers.get_meeting_timezone(@meeting, @profile)
                   )}
-                  <span class="text-turquoise-600 ml-1">
+                  <span class="text-turquoise-600 ml-1 whitespace-nowrap">
                     {Helpers.format_meeting_time(
                       @meeting,
                       Helpers.get_meeting_timezone(@meeting, @profile),
@@ -233,8 +236,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
             </div>
           </div>
 
-          <%!-- Participants panel — group meetings only; the preload already
-               filters to live (non-cancelled) participants. --%>
+          <%!-- Participants panel, group meetings only. The preload keeps to
+               live participants, except on a cancelled meeting, where it also
+               brings those who released their spot first, marked as such. --%>
           <div
             :if={Helpers.participants(@meeting) != []}
             class="mt-8 p-5 bg-tymeslot-50/50 rounded-token-2xl border-2 border-tymeslot-50"
@@ -258,6 +262,13 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
                   </span>
                   <span class="truncate text-token-sm font-medium text-tymeslot-700">
                     {participant.name}
+                  </span>
+                  <span
+                    :if={participant.cancelled_at}
+                    class="inline-flex flex-none items-center rounded-full px-2.5 py-0.5 text-token-xs font-bold bg-tymeslot-100 text-tymeslot-500"
+                    data-testid="participant-released"
+                  >
+                    {dgettext("dashboard_bookings", "Released their spot")}
                   </span>
                 </span>
                 <a
@@ -472,6 +483,33 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
 
   defp guest_list(%{guests: guests}) when is_list(guests), do: guests
   defp guest_list(_meeting), do: []
+
+  # A cancelled group meeting holds no seats any more, so "0/3" would only
+  # say that it is cancelled. What the host wants to know is who was still
+  # booked when it was called off: the participants whose own seat was never
+  # released (the host cancelled the slot, or its calendar event was deleted).
+  # A slot cancelled because its last seat was released had nobody left.
+  defp seats_label(%{status: "cancelled"} = meeting) do
+    case Enum.count(Helpers.participants(meeting), &is_nil(&1.cancelled_at)) do
+      0 ->
+        dgettext("dashboard_bookings", "Every spot was released")
+
+      booked ->
+        dngettext(
+          "dashboard_bookings",
+          "%{count} person was booked",
+          "%{count} people were booked",
+          booked
+        )
+    end
+  end
+
+  defp seats_label(meeting) do
+    dgettext("dashboard_bookings", "%{count}/%{capacity} seats taken",
+      count: seats_taken(meeting),
+      capacity: meeting.capacity
+    )
+  end
 
   # Seats, not headcount. A booker who brings a guest occupies two of the
   # slot's seats, which is what the public booking page counts down and what
