@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AllDayRow do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
+  alias TymeslotWeb.Dashboard.DashboardFormat
 
   @allday_visible_limit 2
 
@@ -42,7 +43,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AllDayRow do
           tabindex="0"
           aria-label={
             dgettext("dashboard_calendar", "All-day: %{event}",
-              event: event.summary || dgettext("dashboard_calendar", "Untitled event")
+              event: DashboardFormat.title(event.summary)
             )
           }
         >
@@ -55,7 +56,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AllDayRow do
             :if={(Map.get(event, :reminders) || []) != []}
             name="hero-bell-micro"
             class="inline-block w-3 h-3 opacity-70 mr-0.5 align-text-bottom"
-          />{event.summary || dgettext("dashboard_calendar", "(No title)")}
+          />{DashboardFormat.title(event.summary)}
         </div>
         <span
           :if={@hidden_count > 0}
@@ -74,7 +75,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AllDayRow do
           role="button"
           tabindex="0"
         >
-          {event.summary || dgettext("dashboard_calendar", "(No title)")}
+          {DashboardFormat.title(event.summary)}
         </div>
       </div>
     </details>

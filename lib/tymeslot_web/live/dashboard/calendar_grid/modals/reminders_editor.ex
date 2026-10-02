@@ -32,67 +32,65 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
     assigns = assign(assigns, :presets, presets())
 
     ~H"""
-    <div class="flex items-start gap-3 mb-3">
-      <.icon name="hero-bell" class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" />
-      <div class="flex-1">
-        <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">
-          {dgettext("dashboard_calendar_events", "Reminders")}
-        </p>
-
-        <div :if={@reminders != []} class="flex flex-wrap gap-1.5 mb-2">
-          <span
-            :for={{reminder, index} <- Enum.with_index(@reminders)}
-            class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-turquoise-50 border border-turquoise-200 text-token-xs text-turquoise-800"
-          >
-            {reminder_label(reminder)}
-            <button
-              type="button"
-              phx-click={@remove_event}
-              phx-value-index={index}
-              phx-target={@myself}
-              class="w-4 h-4 rounded-full hover:bg-red-100 flex items-center justify-center transition-colors"
-              aria-label={
-                dgettext("dashboard_calendar_events", "Remove reminder %{label}",
-                  label: reminder_label(reminder)
-                )
-              }
-            >
-              <.icon name="hero-x-mark-micro" class="w-2.5 h-2.5" />
-            </button>
-          </span>
-        </div>
-
-        <form
-          id="add-reminder-form"
-          phx-submit={@add_event}
-          phx-target={@myself}
-          class="flex flex-wrap items-center gap-2"
+    <.detail_line
+      variant={:compact}
+      icon="hero-bell"
+      label={dgettext("dashboard_calendar_events", "Reminders")}
+      class="mb-3"
+    >
+      <div :if={@reminders != []} class="flex flex-wrap gap-1.5 mb-2">
+        <span
+          :for={{reminder, index} <- Enum.with_index(@reminders)}
+          class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-turquoise-50 border border-turquoise-200 text-token-xs text-turquoise-800"
         >
-          <select
-            name="minutes"
-            class="rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
+          {reminder_label(reminder)}
+          <button
+            type="button"
+            phx-click={@remove_event}
+            phx-value-index={index}
+            phx-target={@myself}
+            class="w-4 h-4 rounded-full hover:bg-red-100 flex items-center justify-center transition-colors"
+            aria-label={
+              dgettext("dashboard_calendar_events", "Remove reminder %{label}",
+                label: reminder_label(reminder)
+              )
+            }
           >
-            <option :for={{minutes, label} <- @presets} value={minutes}>{label}</option>
-          </select>
-          <select
-            name="method"
-            class="rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
-          >
-            <option value="popup">{dgettext("dashboard_calendar_events", "Notification")}</option>
-            <option value="email">{dgettext("dashboard_calendar_events", "Email")}</option>
-          </select>
-          <.action_button type="submit" variant={:secondary} size={:sm}>
-            {dgettext("dashboard_calendar_events", "Add reminder")}
-          </.action_button>
-        </form>
-        <p class="text-token-xs text-tymeslot-400 mt-1">
-          {dgettext(
-            "dashboard_calendar_events",
-            "Reminders are synced to your calendar so it can alert you on your own devices."
-          )}
-        </p>
+            <.icon name="hero-x-mark-micro" class="w-2.5 h-2.5" />
+          </button>
+        </span>
       </div>
-    </div>
+
+      <form
+        id="add-reminder-form"
+        phx-submit={@add_event}
+        phx-target={@myself}
+        class="flex flex-wrap items-center gap-2"
+      >
+        <select
+          name="minutes"
+          class="rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
+        >
+          <option :for={{minutes, label} <- @presets} value={minutes}>{label}</option>
+        </select>
+        <select
+          name="method"
+          class="rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
+        >
+          <option value="popup">{dgettext("dashboard_calendar_events", "Notification")}</option>
+          <option value="email">{dgettext("dashboard_calendar_events", "Email")}</option>
+        </select>
+        <.action_button type="submit" variant={:secondary} size={:sm}>
+          {dgettext("dashboard_calendar_events", "Add reminder")}
+        </.action_button>
+      </form>
+      <p class="text-token-xs text-tymeslot-400 mt-1">
+        {dgettext(
+          "dashboard_calendar_events",
+          "Reminders are synced to your calendar so it can alert you on your own devices."
+        )}
+      </p>
+    </.detail_line>
     """
   end
 

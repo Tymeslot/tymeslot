@@ -100,7 +100,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.BookingEventsLiveviewTest do
       assert html =~ "Ada Lovelace"
       assert html =~ "ada@example.com"
       assert html =~ "Booked through your Tymeslot page"
-      assert html =~ "Manage in Meetings"
+      assert html =~ "Manage booking"
 
       html =
         lv

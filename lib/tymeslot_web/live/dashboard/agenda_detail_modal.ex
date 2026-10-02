@@ -3,12 +3,10 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
   Detail modal for a single agenda appointment.
 
   Stateless function component rendered by `DashboardOverviewComponent` when a
-  row in the agenda is clicked. It presents everything the source-agnostic
-  `Agenda.Entry` carries — full date, time range and duration, who, location,
-  source, and a live relative hint — plus the two smart actions the entry can
-  offer: a Join button for video events and a "Manage booking" link for Tymeslot
-  bookings. Dismissal dispatches `close_entry` back to the owning component
-  (`@myself`), which holds the open/closed state.
+  row in the agenda is clicked. The details and the Join and Manage actions are
+  `AppointmentDetails`, shared with the calendar's booking modal; this modal
+  adds the colour picker. Dismissal dispatches `close_entry` back to the owning
+  component (`@myself`), which holds the open/closed state.
   """
 
   use TymeslotWeb, :html
@@ -17,11 +15,8 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
   alias Phoenix.LiveView.JS
   alias Tymeslot.Agenda.Entry
   alias Tymeslot.Integrations.Calendar.EventColour
-  alias Tymeslot.Utils.DateTimeUtils
-  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
-  alias TymeslotWeb.Dashboard.DashboardOverview.SourcePill
-  alias TymeslotWeb.Dashboard.DashboardOverviewFormatters
-  alias TymeslotWeb.Helpers.LocaleFormat
+  alias TymeslotWeb.Components.Dashboard.Appointments.AppointmentDetails
+  alias TymeslotWeb.Dashboard.DashboardFormat
 
   attr :entry, Entry, required: true
   attr :timezone, :string, required: true
@@ -38,51 +33,15 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
       on_cancel={JS.push("close_entry", target: @myself)}
       size={:medium}
     >
-      <:header>{@entry.title}</:header>
+      <:header>{DashboardFormat.title(@entry.title)}</:header>
 
       <div class="space-y-6">
-        <div class="flex flex-wrap items-center gap-2">
-          <SourcePill.source_pill source={@entry.source} />
-          <.pill
-            :if={relative_label(@entry, @now)}
-            tone={:brand}
-            icon="hero-clock-mini"
-          >
-            {relative_label(@entry, @now)}
-          </.pill>
-        </div>
-
-        <dl class="space-y-4">
-          <.info_line icon="hero-calendar-days" label={dgettext("dashboard_home", "When")}>
-            {date_label(@entry, @timezone)}
-          </.info_line>
-          <.info_line icon="hero-clock" label={dgettext("dashboard_home", "Time")}>
-            {time_label(@entry, @timezone, @time_format)}
-            <span :if={duration_label(@entry)} class="text-tymeslot-400 font-semibold">
-              · {duration_label(@entry)}
-            </span>
-          </.info_line>
-          <.info_line
-            :if={@entry.join_url}
-            icon="hero-video-camera"
-            label={dgettext("dashboard_home", "Video meeting")}
-          >
-            {platform_label(@entry.join_url)}
-          </.info_line>
-          <.info_line
-            :if={location_place(@entry)}
-            icon="hero-map-pin"
-            label={dgettext("dashboard_home", "Location")}
-          >
-            {location_place(@entry)}
-          </.info_line>
-          <.info_line :if={@entry.who} icon="hero-user" label={dgettext("dashboard_home", "With")}>
-            {@entry.who}
-          </.info_line>
-          <.info_line icon="hero-calendar" label={dgettext("dashboard_home", "Calendar")}>
-            {calendar_label(@entry)}
-          </.info_line>
-        </dl>
+        <AppointmentDetails.appointment_details
+          entry={@entry}
+          timezone={@timezone}
+          time_format={@time_format}
+          now={@now}
+        />
 
         <div :if={@entry.target}>
           <p
@@ -132,26 +91,8 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
         </div>
       </div>
 
-      <:footer :if={@entry.join_url || @entry.source == :tymeslot}>
-        <div class="flex flex-wrap justify-end gap-3">
-          <.action_link
-            :if={@entry.source == :tymeslot}
-            navigate={~p"/dashboard/meetings"}
-            variant={:secondary}
-            icon="hero-cog-6-tooth"
-          >
-            {dgettext("dashboard_home", "Manage booking")}
-          </.action_link>
-          <.action_link
-            :if={@entry.join_url}
-            href={@entry.join_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            icon="hero-video-camera"
-          >
-            {dgettext("dashboard_home", "Join meeting")}
-          </.action_link>
-        </div>
+      <:footer :if={AppointmentDetails.actions?(@entry)}>
+        <AppointmentDetails.appointment_actions entry={@entry} />
       </:footer>
     </.modal>
     """
@@ -162,126 +103,4 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
   # any colons inside a provider uid intact on the way back.
   defp encode_target({:meeting, id}), do: "meeting:#{id}"
   defp encode_target({:external, integration_id, uid}), do: "external:#{integration_id}:#{uid}"
-
-  # --- Info rows -------------------------------------------------------------
-
-  attr :icon, :string, required: true
-  attr :label, :string, required: true
-  slot :inner_block, required: true
-
-  defp info_line(assigns) do
-    ~H"""
-    <div class="flex items-start gap-3">
-      <.icon name={@icon} class="w-5 h-5 text-turquoise-500 shrink-0 mt-0.5" />
-      <div class="min-w-0">
-        <dt class="text-token-xs font-black uppercase tracking-widest text-tymeslot-400">
-          {@label}
-        </dt>
-        <dd class="mt-0.5 text-tymeslot-800 font-bold break-words">{render_slot(@inner_block)}</dd>
-      </div>
-    </div>
-    """
-  end
-
-  # --- Video, location & calendar --------------------------------------------
-
-  # Known video hosts → a friendly platform name. Self-hosted or unrecognised
-  # links still read clearly as a video meeting via the fallback.
-  @video_platforms [
-    {"zoom.us", "Zoom"},
-    {"meet.google.com", "Google Meet"},
-    {"teams.microsoft.com", "Microsoft Teams"},
-    {"teams.live.com", "Microsoft Teams"},
-    {"whereby.com", "Whereby"},
-    {"jit.si", "Jitsi Meet"}
-  ]
-
-  defp platform_label(url) do
-    host = URI.parse(url).host || ""
-
-    Enum.find_value(@video_platforms, dgettext("dashboard_home", "Video call"), fn {needle, name} ->
-      String.contains?(host, needle) && name
-    end)
-  end
-
-  # A physical place, if any — never the video link masquerading as a location.
-  defp location_place(%Entry{location: nil}), do: nil
-
-  defp location_place(%Entry{location: location}) do
-    if String.starts_with?(location, ["http://", "https://"]), do: nil, else: location
-  end
-
-  # Where the appointment lives: a Tymeslot booking, or the named synced calendar.
-  defp calendar_label(%Entry{source: :tymeslot}), do: "Tymeslot"
-  defp calendar_label(%Entry{calendar: nil}), do: dgettext("dashboard_home", "External calendar")
-  defp calendar_label(%Entry{calendar: name}), do: name
-
-  # --- Formatting ------------------------------------------------------------
-
-  # An all-day block spans [start_day, end_day]; its `end_at` is the exclusive
-  # local midnight after the final day, so the last covered day is end_at - 1.
-  defp date_label(%Entry{all_day?: true} = entry, tz) do
-    first = local_date(entry.start_at, tz)
-    last = entry.end_at |> local_date(tz) |> Date.add(-1)
-
-    case Date.compare(first, last) do
-      :lt -> "#{long_date(first)} – #{long_date(last)}"
-      _same -> long_date(first)
-    end
-  end
-
-  defp date_label(%Entry{} = entry, tz), do: entry.start_at |> local(tz) |> long_date()
-
-  defp time_label(%Entry{all_day?: true}, _tz, _time_format),
-    do: dgettext("dashboard_home", "All day")
-
-  defp time_label(%Entry{} = entry, tz, time_format) do
-    "#{clock(entry.start_at, tz, time_format)} – #{clock(entry.end_at, tz, time_format)}"
-  end
-
-  defp duration_label(%Entry{all_day?: true}), do: nil
-
-  defp duration_label(%Entry{start_at: start_at, end_at: end_at}) do
-    case max(DateTime.diff(end_at, start_at, :minute), 0) do
-      0 -> nil
-      minutes -> humanise_duration(minutes)
-    end
-  end
-
-  defp humanise_duration(minutes) when minutes < 60,
-    do: dgettext("dashboard_home", "%{minutes} min", minutes: minutes)
-
-  defp humanise_duration(minutes) do
-    case {div(minutes, 60), rem(minutes, 60)} do
-      {hours, 0} ->
-        dgettext("dashboard_home", "%{hours} hr", hours: hours)
-
-      {hours, mins} ->
-        dgettext("dashboard_home", "%{hours} hr %{mins} min", hours: hours, mins: mins)
-    end
-  end
-
-  # A live hint anchored to the caller's `now`: counting down before it starts,
-  # "In progress" while it runs, and nothing once it has ended.
-  defp relative_label(%Entry{start_at: start_at, end_at: end_at}, now) do
-    cond do
-      DateTime.compare(now, end_at) != :lt -> nil
-      DateTime.compare(now, start_at) != :lt -> dgettext("dashboard_home", "In progress")
-      true -> DashboardOverviewFormatters.countdown(DateTime.diff(start_at, now, :second))
-    end
-  end
-
-  defp clock(datetime, tz, time_format),
-    do: datetime |> local(tz) |> TimeFormat.format(time_format)
-
-  defp long_date(date) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-    weekday = LocaleFormat.format_weekday_name(Date.day_of_week(date), locale, :full)
-    month = LocaleFormat.format_month_name(date.month, locale, :full)
-    "#{weekday}, #{date.day} #{month} #{date.year}"
-  end
-
-  defp local(datetime, tz), do: DateTimeUtils.convert_to_timezone(datetime, tz)
-
-  defp local_date(datetime, tz), do: datetime |> local(tz) |> DateTime.to_date()
 end

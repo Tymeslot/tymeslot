@@ -55,8 +55,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.AgendaViewTest do
       assert html =~ "Boardroom A"
       assert html =~ "Design Workshop"
 
-      assert html =~ Calendar.strftime(day_one, "%a %-d %B")
-      assert html =~ Calendar.strftime(day_two, "%a %-d %B")
+      assert html =~ Calendar.strftime(day_one, "%a %b %-d")
+      assert html =~ Calendar.strftime(day_two, "%a %b %-d")
 
       # The agenda container is present and visible.
       assert html =~ "calendar-agenda"

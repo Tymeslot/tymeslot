@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
   alias TymeslotWeb.Dashboard.CalendarGrid.Views.EventBadges
   alias TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView
   alias TymeslotWeb.Dashboard.CalendarGrid.Views.StatusBanners
+  alias TymeslotWeb.Dashboard.DashboardFormat
   alias TymeslotWeb.Helpers.LocaleFormat
 
   @timed_views [:week, :three_day, :day]
@@ -153,13 +154,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
                   id={"event-#{event.id}-#{day}"}
                   class={"absolute rounded px-1 py-0.5 #{if @view == :day, do: "text-token-sm", else: "text-token-xs"} font-medium text-white overflow-hidden cursor-pointer hover:brightness-90 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 focus:ring-offset-1 group #{Helpers.color_for_event(assigns, event)}"}
                   style={"top: #{Helpers.top_rem(event.start_at, @user_timezone)}rem; height: #{Helpers.height_rem(event.start_at, event.end_at)}rem; left: #{Helpers.left_pct(col_idx, total_cols)}%; width: calc(#{Helpers.width_pct(total_cols)}% - 2px);"}
-                  {Helpers.open_event_attrs(event)}
+                  {Helpers.open_event_attrs(event, keys: :hook)}
                   phx-target={@myself}
-                  role="button"
-                  tabindex="0"
                   aria-label={
                     dgettext("dashboard_calendar", "%{event}, %{time}",
-                      event: event.summary || dgettext("dashboard_calendar", "Untitled event"),
+                      event: DashboardFormat.title(event.summary),
                       time:
                         Helpers.format_display_time_range(
                           event,
@@ -193,7 +192,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
                       :if={(Map.get(event, :reminders) || []) != []}
                       name="hero-bell-micro"
                       class="inline-block w-3 h-3 opacity-70 mr-0.5 align-text-bottom"
-                    />{event.summary || dgettext("dashboard_calendar", "(No title)")}
+                    />{DashboardFormat.title(event.summary)}
                   </div>
                   <div class="opacity-80">
                     {Helpers.format_display_time_range(

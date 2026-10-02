@@ -166,7 +166,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
         />
         <BookingDetailModal.booking_detail_modal
           :if={@selected_booking}
-          booking={@selected_booking}
+          entry={@selected_booking}
           user_timezone={@user_timezone}
           time_format={Helpers.time_format(assigns)}
           myself={@myself}

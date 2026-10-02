@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDeleteModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
+  alias TymeslotWeb.Dashboard.DashboardFormat
 
   attr :event, :map, required: true
   attr :scopes, :atom, values: [:single, :series], default: :single
@@ -21,12 +22,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDeleteModal do
 
   @spec confirm_delete_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def confirm_delete_modal(assigns) do
-    assigns =
-      assign(
-        assigns,
-        :title,
-        assigns.event.summary || dgettext("dashboard_calendar_events", "(No title)")
-      )
+    assigns = assign(assigns, :title, DashboardFormat.title(assigns.event.summary))
 
     ~H"""
     <.confirm_modal

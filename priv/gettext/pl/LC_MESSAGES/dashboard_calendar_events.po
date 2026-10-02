@@ -36,7 +36,6 @@ msgstr[2] "%{count} minut wcześniej"
 msgid "%{method} %{minutes}"
 msgstr "%{method} %{minutes}"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
 #, elixir-autogen, elixir-format
 msgid "(No title)"
@@ -137,20 +136,10 @@ msgstr "Uczestnik dodany i zaproszony."
 msgid "Attendee removed and notified."
 msgstr "Uczestnik usunięty i powiadomiony."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/attendee_editor.ex
-#, elixir-autogen, elixir-format
-msgid "Attendees"
-msgstr "Uczestnicy"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Attendees will be notified of pending changes."
 msgstr "Uczestnicy zostaną powiadomieni o oczekujących zmianach."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Calendar"
-msgstr "Kalendarz"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
 #, elixir-autogen, elixir-format
@@ -263,11 +252,6 @@ msgstr "Usuń wydarzenie"
 #, elixir-autogen, elixir-format
 msgid "Deleting..."
 msgstr "Usuwanie…"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Description"
-msgstr "Opis"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
 #, elixir-autogen, elixir-format
@@ -434,11 +418,6 @@ msgstr "Przejdź do dziś"
 #, elixir-autogen, elixir-format
 msgid "Keyboard shortcuts"
 msgstr "Skróty klawiszowe"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Location"
-msgstr "Lokalizacja"
 
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #, elixir-autogen, elixir-format
@@ -718,11 +697,6 @@ msgstr "Zostanie też usunięte u dostawcy kalendarza."
 #, elixir-autogen, elixir-format
 msgid "Thu"
 msgstr "Cz"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Time"
-msgstr "Godzina"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex
 #, elixir-autogen, elixir-format

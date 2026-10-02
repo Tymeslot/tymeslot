@@ -49,121 +49,118 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
       |> assign(:summary, summary(parsed))
 
     ~H"""
-    <div class="flex items-start gap-3">
-      <.icon name="hero-arrow-path" class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" />
-      <div class="flex-1">
-        <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">
-          {dgettext("dashboard_calendar_events", "Repeat")}
-        </p>
-
-        <form
-          id={"recurrence-editor-form-#{@change_event}"}
-          phx-change={@change_event}
-          phx-target={@myself}
-          class="space-y-2"
+    <.detail_line
+      variant={:compact}
+      icon="hero-arrow-path"
+      label={dgettext("dashboard_calendar_events", "Repeat")}
+    >
+      <form
+        id={"recurrence-editor-form-#{@change_event}"}
+        phx-change={@change_event}
+        phx-target={@myself}
+        class="space-y-2"
+      >
+        <select
+          name="freq"
+          class="w-full rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
         >
-          <select
-            name="freq"
-            class="w-full rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
+          <option
+            :for={{value, label} <- @freq_options}
+            value={value}
+            selected={to_string(@freq) == value}
           >
-            <option
-              :for={{value, label} <- @freq_options}
-              value={value}
-              selected={to_string(@freq) == value}
-            >
-              {label}
-            </option>
-          </select>
+            {label}
+          </option>
+        </select>
 
-          <div :if={@freq != nil} class="space-y-2 pl-0.5">
-            <div class="flex items-center gap-2">
-              <label class="text-token-xs text-tymeslot-600">{dgettext(
-                "dashboard_calendar_events",
-                "Every"
-              )}</label>
+        <div :if={@freq != nil} class="space-y-2 pl-0.5">
+          <div class="flex items-center gap-2">
+            <label class="text-token-xs text-tymeslot-600">{dgettext(
+              "dashboard_calendar_events",
+              "Every"
+            )}</label>
+            <input
+              type="number"
+              name="interval"
+              min="1"
+              max="999"
+              value={@interval}
+              class="w-16 rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
+            />
+            <span class="text-token-xs text-tymeslot-600">{interval_unit(@freq)}</span>
+          </div>
+
+          <div :if={@freq == :weekly} class="flex flex-wrap gap-1">
+            <label
+              :for={{day, label} <- @weekdays}
+              class={[
+                "px-2 py-1 rounded-md border text-token-xs cursor-pointer transition-all select-none",
+                if(day in @by_day,
+                  do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 font-semibold",
+                  else:
+                    "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"
+                )
+              ]}
+            >
+              <input
+                type="checkbox"
+                name="by_day[]"
+                value={day}
+                checked={day in @by_day}
+                class="sr-only"
+              />
+              {label}
+            </label>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <select
+              name="end_type"
+              class="rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
+            >
+              <option value="never" selected={@end_type == "never"}>
+                {dgettext("dashboard_calendar_events", "Never ends")}
+              </option>
+              <option value="count" selected={@end_type == "count"}>
+                {dgettext("dashboard_calendar_events", "After")}
+              </option>
+              <option value="until" selected={@end_type == "until"}>
+                {dgettext("dashboard_calendar_events", "On date")}
+              </option>
+            </select>
+
+            <div :if={@end_type == "count"} class="flex items-center gap-1.5">
               <input
                 type="number"
-                name="interval"
+                name="count"
                 min="1"
                 max="999"
-                value={@interval}
+                value={@count}
                 class="w-16 rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
               />
-              <span class="text-token-xs text-tymeslot-600">{interval_unit(@freq)}</span>
+              <span class="text-token-xs text-tymeslot-600">{dngettext(
+                "dashboard_calendar_events",
+                "occurrence",
+                "occurrences",
+                @count
+              )}</span>
             </div>
 
-            <div :if={@freq == :weekly} class="flex flex-wrap gap-1">
-              <label
-                :for={{day, label} <- @weekdays}
-                class={[
-                  "px-2 py-1 rounded-md border text-token-xs cursor-pointer transition-all select-none",
-                  if(day in @by_day,
-                    do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 font-semibold",
-                    else:
-                      "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"
-                  )
-                ]}
-              >
-                <input
-                  type="checkbox"
-                  name="by_day[]"
-                  value={day}
-                  checked={day in @by_day}
-                  class="sr-only"
-                />
-                {label}
-              </label>
-            </div>
-
-            <div class="flex flex-wrap items-center gap-2">
-              <select
-                name="end_type"
-                class="rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
-              >
-                <option value="never" selected={@end_type == "never"}>
-                  {dgettext("dashboard_calendar_events", "Never ends")}
-                </option>
-                <option value="count" selected={@end_type == "count"}>
-                  {dgettext("dashboard_calendar_events", "After")}
-                </option>
-                <option value="until" selected={@end_type == "until"}>
-                  {dgettext("dashboard_calendar_events", "On date")}
-                </option>
-              </select>
-
-              <div :if={@end_type == "count"} class="flex items-center gap-1.5">
-                <input
-                  type="number"
-                  name="count"
-                  min="1"
-                  max="999"
-                  value={@count}
-                  class="w-16 rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
-                />
-                <span class="text-token-xs text-tymeslot-600">{dngettext(
-                  "dashboard_calendar_events",
-                  "occurrence",
-                  "occurrences",
-                  @count
-                )}</span>
-              </div>
-
-              <input
-                :if={@end_type == "until"}
-                type="date"
-                name="until"
-                value={@until}
-                class="rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
-              />
-            </div>
+            <input
+              :if={@end_type == "until"}
+              type="date"
+              name="until"
+              value={@until}
+              class="rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
+            />
           </div>
-        </form>
+        </div>
+      </form>
 
-        <p :if={@summary != nil} class="text-token-xs text-tymeslot-400 mt-1.5">
-          {@summary}
-        </p>
-      </div>
-    </div>
+      <p :if={@summary != nil} class="text-token-xs text-tymeslot-400 mt-1.5">
+        {@summary}
+      </p>
+    </.detail_line>
     """
   end
 

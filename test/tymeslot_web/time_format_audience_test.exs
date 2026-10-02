@@ -38,7 +38,8 @@ defmodule TymeslotWeb.TimeFormatAudienceTest do
     test "sees their own dashboard on the clock they chose", %{chosen: chosen, slot: slot} do
       m = meeting(slot, ~U[2026-01-05 15:00:00Z])
 
-      assert Helpers.format_meeting_time(m, "Etc/UTC", chosen) == "2:30 PM - 3:00 PM"
+      assert Helpers.format_meeting_time(m, "Etc/UTC", chosen) ==
+               "2:30\u00A0PM\u00A0– 3:00\u00A0PM"
     end
 
     test "does not impose it on the booking page a German visitor reads", %{slot: slot} do
@@ -57,7 +58,7 @@ defmodule TymeslotWeb.TimeFormatAudienceTest do
     test "sees their own dashboard on the clock they chose", %{chosen: chosen, slot: slot} do
       m = meeting(slot, ~U[2026-01-05 15:00:00Z])
 
-      assert Helpers.format_meeting_time(m, "Etc/UTC", chosen) == "14:30 - 15:00"
+      assert Helpers.format_meeting_time(m, "Etc/UTC", chosen) == "14:30\u00A0– 15:00"
     end
 
     test "does not impose it on the booking page an English visitor reads", %{slot: slot} do

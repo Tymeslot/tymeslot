@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.SearchBox do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
-  alias TymeslotWeb.Helpers.LocaleFormat
+  alias TymeslotWeb.Dashboard.DashboardFormat
 
   attr :search_term, :string, required: true
   attr :search_results, :list, required: true
@@ -79,7 +79,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.SearchBox do
           ></span>
           <span class="min-w-0">
             <span class="block text-token-sm text-tymeslot-800 truncate">
-              {event.summary || dgettext("dashboard_calendar", "Untitled event")}
+              {DashboardFormat.title(event.summary)}
             </span>
             <span class="block text-token-xs text-tymeslot-500">
               {result_time_label(event, @user_timezone, @preferences)}
@@ -112,20 +112,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.SearchBox do
   defp result_date_iso(_event, _tz), do: ""
 
   # Short "date · time-range" label for a search result row.
-  defp result_time_label(%{all_day: true, start_date: %Date{} = date}, _tz, _prefs) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-
-    LocaleFormat.format_short_weekday_date(date, locale) <>
-      " · " <> dgettext("dashboard_calendar", "All day")
-  end
+  defp result_time_label(%{all_day: true, start_date: %Date{} = date}, _tz, _prefs),
+    do: DashboardFormat.short_date(date) <> " · " <> DashboardFormat.all_day()
 
   defp result_time_label(%{start_at: %DateTime{} = start_at} = event, tz, prefs) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-    fmt = Helpers.time_format(prefs)
-    local_date = start_at |> DateTime.shift_zone!(tz) |> DateTime.to_date()
-
-    LocaleFormat.format_short_weekday_date(local_date, locale) <>
-      " · " <> Helpers.format_time_range_in_tz(event, tz, fmt)
+    DashboardFormat.short_date(DashboardFormat.local_date(start_at, tz)) <>
+      " · " <> Helpers.format_display_time_range(event, Helpers.time_format(prefs), tz)
   end
 
   defp result_time_label(_event, _tz, _prefs), do: ""

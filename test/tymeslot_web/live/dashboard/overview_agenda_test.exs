@@ -38,7 +38,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
     assert html =~ "Quarterly review"
 
     # The cockpit carries the live countdown hook for this appointment.
-    assert html =~ "agenda-countdown-"
+    assert html =~ "agenda-cockpit-countdown-"
 
     # The replaced widgets are gone.
     refute html =~ "Quick Actions"
@@ -108,7 +108,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
 
     modal = view |> element("#agenda-detail-modal") |> render()
 
-    assert modal =~ Calendar.strftime(tomorrow, "%A, %-d %B %Y")
+    assert modal =~ Calendar.strftime(tomorrow, "%A, %B %-d, %Y")
     assert modal =~ "45 min"
     assert modal =~ "Dana Lee"
     # It reads clearly as a video meeting on a recognised platform, held in a room.

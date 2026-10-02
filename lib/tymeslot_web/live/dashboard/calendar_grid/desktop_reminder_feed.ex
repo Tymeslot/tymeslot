@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed do
 
   alias Tymeslot.Integrations.Calendar.Reminder
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
+  alias TymeslotWeb.Dashboard.DashboardFormat
   alias TymeslotWeb.Helpers.LocaleFormat
 
   # Reminders whose fire time is older than this are pruned from the feed.
@@ -62,7 +63,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed do
        ) do
     title =
       dgettext("dashboard_calendar", "Reminder: %{title}",
-        title: event.summary || dgettext("dashboard_calendar", "(No title)")
+        title: DashboardFormat.title(event.summary)
       )
 
     body = build_body(event, start_at, today, timezone, time_format)

@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
   alias TymeslotWeb.Dashboard.AnalyticsLive.SummaryCards
   alias TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart
   alias TymeslotWeb.Dashboard.ComponentDispatch
-  alias TymeslotWeb.Helpers.LocaleFormat
+  alias TymeslotWeb.Dashboard.DashboardFormat
   alias TymeslotWeb.Helpers.PageTitles
 
   @ranges %{"7d" => 7, "30d" => 30, "90d" => 90}
@@ -298,12 +298,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
     assign(socket, launch_date: launch_date, partial_window?: partial_window?)
   end
 
-  defp format_launch_date(%Date{} = date) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-    day = String.pad_leading(to_string(date.day), 2, "0")
-    "#{day} #{LocaleFormat.format_month_name(date.month, locale, :short)} #{date.year}"
-  end
-
+  defp format_launch_date(%Date{} = date), do: DashboardFormat.long_date(date)
   defp format_launch_date(_other), do: ""
 
   defp organizer_time_zone(socket) do

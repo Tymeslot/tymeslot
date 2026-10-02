@@ -10,7 +10,8 @@ defmodule TymeslotWeb.Dashboard.CalendarUpNextStrip do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias TymeslotWeb.Dashboard.DashboardOverviewFormatters, as: Formatters
+  alias TymeslotWeb.Components.Dashboard.Appointments.JoinLink
+  alias TymeslotWeb.Dashboard.DashboardFormat
 
   attr :entry, :map, required: true
   attr :timezone, :string, required: true
@@ -30,45 +31,18 @@ defmodule TymeslotWeb.Dashboard.CalendarUpNextStrip do
       <div class="min-w-0 flex-1 truncate text-token-sm font-semibold">
         {@entry.title}
         <span class="text-white/80 font-medium">
-          · {Formatters.day_label(@entry, @timezone)} · {Formatters.time_label(
+          · {DashboardFormat.day_label(@entry, @timezone)} · {DashboardFormat.start_label(
             @entry,
             @timezone,
             @time_format
           )}<span :if={@entry.who}> · {@entry.who}</span>
         </span>
       </div>
-      <%!-- Key the id on the start time too: `phx-update="ignore"` hands the
-            element to the JS hook, so a same-id reschedule would otherwise
-            count toward the old time. A changed start → new id → remount. --%>
-      <% templates = Formatters.countdown_templates() %>
-      <time
-        id={"calendar-up-next-countdown-#{@entry.id}-#{DateTime.to_unix(@entry.start_at)}"}
-        phx-hook="AgendaCountdown"
-        phx-update="ignore"
-        data-start={DateTime.to_iso8601(@entry.start_at)}
-        data-end={DateTime.to_iso8601(@entry.end_at)}
-        data-join={@entry.join_url && "calendar-up-next-join-#{@entry.id}"}
-        data-tpl-now={templates.now}
-        data-tpl-minutes={templates.minutes}
-        data-tpl-hours={templates.hours}
-        data-tpl-days={templates.days}
-        class="text-token-lg font-black tabular-nums leading-none shrink-0"
-      >{Formatters.relative_hint(@entry)}</time>
-      <%!-- The countdown hook reveals this link from ten minutes before the
-           start. --%>
-      <.action_link
-        :if={@entry.join_url}
-        id={"calendar-up-next-join-#{@entry.id}"}
-        href={@entry.join_url}
-        target="_blank"
-        rel="noopener noreferrer"
-        variant={:on_dark}
-        size={:sm}
-        icon="hero-video-camera-mini"
-        class="hidden shrink-0"
-      >
-        {dgettext("dashboard_home", "Join meeting")}
-      </.action_link>
+      <JoinLink.agenda_countdown
+        entry={@entry}
+        id_prefix="calendar-up-next"
+        class="text-token-lg shrink-0"
+      />
     </div>
     """
   end

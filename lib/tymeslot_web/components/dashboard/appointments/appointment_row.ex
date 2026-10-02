@@ -175,7 +175,7 @@ defmodule TymeslotWeb.Components.Dashboard.Appointments.AppointmentRow do
         class={["mt-0.5 w-2.5 h-2.5 rounded-token-full shrink-0", @colour_class || "bg-tymeslot-300"]}
         aria-hidden="true"
       ></span>
-      <span class="min-w-28 md:min-w-32 shrink-0 text-token-xs text-tymeslot-500 tabular-nums pt-0.5">
+      <span class="w-28 sm:w-36 shrink-0 text-token-xs text-tymeslot-500 tabular-nums pt-0.5">
         {@time}
       </span>
       <span class="min-w-0 flex-1">

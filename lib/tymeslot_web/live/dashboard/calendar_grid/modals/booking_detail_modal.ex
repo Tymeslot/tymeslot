@@ -4,23 +4,28 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.BookingDetailModal do
 
   Bookings are managed through the booking flows (cancel with refund handling,
   reschedule requests) rather than edited like provider events, so this modal
-  presents the booking and links to the Meetings page for those actions.
+  presents the booking and links to the Meetings page for those actions. Its
+  body and actions are `AppointmentDetails`, shared with the overview's agenda
+  modal; the booking arrives as an `Agenda.Entry`.
   """
 
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
-  alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
-  alias TymeslotWeb.Helpers.LocaleFormat
+  alias Tymeslot.Agenda.Entry
+  alias TymeslotWeb.Components.Dashboard.Appointments.AppointmentDetails
+  alias TymeslotWeb.Dashboard.DashboardFormat
 
-  attr :booking, :map, required: true
+  attr :entry, Entry, required: true
   attr :user_timezone, :string, required: true
-  attr :time_format, :any, default: nil
+  attr :time_format, :string, required: true
   attr :myself, :any, required: true
 
   @spec booking_detail_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def booking_detail_modal(assigns) do
+    assigns = assign(assigns, :now, DateTime.utc_now())
+
     ~H"""
     <.modal
       id="booking-detail-modal"
@@ -31,75 +36,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.BookingDetailModal do
       <:header>
         <div class="flex items-center gap-2 min-w-0">
           <img src="/images/brand/logo.svg" alt="" class="w-5 h-5 shrink-0" />
-          <span class="truncate">{@booking.summary}</span>
+          <span class="truncate">{DashboardFormat.title(@entry.title)}</span>
         </div>
       </:header>
 
-      <div class="space-y-4" data-testid="booking-detail">
-        <div class="flex items-start gap-3">
-          <.icon name="hero-clock" class="w-5 h-5 text-tymeslot-400 shrink-0 mt-0.5" />
-          <div>
-            <div class="text-token-sm font-medium text-tymeslot-800">
-              {booking_date_label(@booking, @user_timezone)}
-            </div>
-            <div class="text-token-sm text-tymeslot-500">
-              {Helpers.format_display_time_range(@booking, @time_format, @user_timezone)}
-            </div>
-          </div>
-        </div>
-
-        <div :if={@booking.attendee_name || @booking.attendee_email} class="flex items-start gap-3">
-          <.icon name="hero-user" class="w-5 h-5 text-tymeslot-400 shrink-0 mt-0.5" />
-          <div class="min-w-0">
-            <div :if={@booking.attendee_name} class="text-token-sm font-medium text-tymeslot-800">
-              {@booking.attendee_name}
-            </div>
-            <div :if={@booking.attendee_email} class="text-token-sm text-tymeslot-500 truncate">
-              {@booking.attendee_email}
-            </div>
-          </div>
-        </div>
-
-        <div :if={@booking.location} class="flex items-start gap-3">
-          <.icon name="hero-map-pin" class="w-5 h-5 text-tymeslot-400 shrink-0 mt-0.5" />
-          <div class="text-token-sm text-tymeslot-700 break-words min-w-0">
-            {@booking.location}
-          </div>
-        </div>
-
-        <div class="flex items-center gap-2 text-token-xs text-tymeslot-500">
-          <.icon name="hero-check-badge" class="w-4 h-4 text-turquoise-500" />
-          {dgettext("dashboard_calendar", "Booked through your Tymeslot page")}
-        </div>
+      <div data-testid="booking-detail">
+        <AppointmentDetails.appointment_details
+          entry={@entry}
+          timezone={@user_timezone}
+          time_format={@time_format}
+          now={@now}
+        />
       </div>
 
       <:footer>
-        <div class="flex flex-wrap gap-2">
-          <.action_link
-            :if={@booking.join_url}
-            href={@booking.join_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            icon="hero-video-camera"
-          >
-            {dgettext("dashboard_calendar", "Join meeting")}
-          </.action_link>
-          <.action_link
-            patch={~p"/dashboard/meetings"}
-            variant={:secondary}
-            icon="hero-arrow-top-right-on-square"
-          >
-            {dgettext("dashboard_calendar", "Manage in Meetings")}
-          </.action_link>
-        </div>
+        <AppointmentDetails.appointment_actions entry={@entry} />
       </:footer>
     </.modal>
     """
-  end
-
-  defp booking_date_label(booking, timezone) do
-    booking
-    |> Helpers.event_display_date(timezone)
-    |> LocaleFormat.format_weekday_date(Gettext.get_locale(TymeslotWeb.Gettext))
   end
 end

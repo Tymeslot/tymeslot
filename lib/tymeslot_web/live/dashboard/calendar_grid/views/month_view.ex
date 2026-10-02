@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
 
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Views.EventBadges
+  alias TymeslotWeb.Dashboard.DashboardFormat
   alias TymeslotWeb.Helpers.LocaleFormat
 
   # Vertical rhythm for the bar band, in rem. The day number occupies the top
@@ -123,15 +124,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
             style={bar_style(seg)}
             {Helpers.open_event_attrs(seg.event)}
             phx-target={@myself}
-            title={seg.event.summary || dgettext("dashboard_calendar", "(No title)")}
+            title={DashboardFormat.title(seg.event.summary)}
           >
             <img
               :if={Map.get(seg.event, :created_by_tymeslot)}
               src="/images/brand/logo.svg"
               alt=""
               class="inline-block w-3 h-3 opacity-70 mr-0.5 shrink-0"
-            /><span class="truncate">{seg.event.summary ||
-              dgettext("dashboard_calendar", "(No title)")}</span>
+            /><span class="truncate">{DashboardFormat.title(seg.event.summary)}</span>
           </div>
         </div>
       </div>
@@ -196,7 +196,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
             src="/images/brand/logo.svg"
             alt=""
             class="inline-block w-3 h-3 opacity-60 mr-0.5 align-text-bottom"
-          />{event.summary || dgettext("dashboard_calendar", "(No title)")}<span
+          />{DashboardFormat.title(event.summary)}<span
             :if={EventBadges.guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event)}
             class={[
               "inline-block w-1.5 h-1.5 rounded-full ml-0.5 align-middle",
@@ -224,7 +224,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
           :if={List.first(@chips)}
           class={"rounded px-1 text-token-xs font-medium text-white truncate #{Helpers.color_for_event(@assigns_ref, List.first(@chips))}"}
         >
-          {List.first(@chips).summary || dgettext("dashboard_calendar", "(No title)")}
+          {DashboardFormat.title(List.first(@chips).summary)}
         </div>
         <div
           :if={length(@chips) > 1}

@@ -20,7 +20,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormattingTest do
       }
 
       assert TimeFormatting.format_display_time_range(event, "12h", "Etc/UTC") ==
-               "9:00 AM – 10:00 AM"
+               "9:00\u00A0AM\u00A0– 10:00\u00A0AM"
     end
 
     test "formats a same-day event in 24h format" do
@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormattingTest do
       }
 
       assert TimeFormatting.format_display_time_range(event, "24h", "Etc/UTC") ==
-               "09:00 – 10:00"
+               "09:00\u00A0– 10:00"
     end
 
     test "includes date for multi-day events" do
@@ -46,9 +46,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormattingTest do
       }
 
       result = TimeFormatting.format_display_time_range(event, "12h", "Etc/UTC")
-      assert result =~ "Apr 10"
-      assert result =~ "Apr 11"
-      assert result =~ "–"
+      assert result == "Apr\u00A010,\u00A010:00\u00A0PM\u00A0– Apr\u00A011,\u00A02:00\u00A0AM"
     end
 
     test "returns 'All day' for all-day events" do
@@ -73,7 +71,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormattingTest do
 
       # In Europe/Berlin (CEST, UTC+2), both times land on Apr 11 → same-day
       result = TimeFormatting.format_display_time_range(event, "24h", "Europe/Berlin")
-      assert result == "01:00 – 03:00"
+      assert result == "01:00\u00A0– 03:00"
     end
 
     test "falls back to start_at/end_at when display fields are absent" do
@@ -84,11 +82,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormattingTest do
       }
 
       assert TimeFormatting.format_display_time_range(event, "24h", "Etc/UTC") ==
-               "14:00 – 15:00"
+               "14:00\u00A0– 15:00"
     end
   end
-
-  # ── format_time_range_in_tz/3 ───────────────────────────────────────
 
   describe "format_display_time_range/3 across days, localised" do
     setup do
@@ -104,11 +100,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormattingTest do
     end
 
     for {locale, expected} <- [
-          {"en", "Feb 5, 17:30 – Feb 6, 09:00"},
-          {"de", "5. Feb, 17:30 – 6. Feb, 09:00"},
-          {"fr", "5 févr., 17:30 – 6 févr., 09:00"},
-          {"cs", "5. úno, 17:30 – 6. úno, 09:00"},
-          {"pl", "5 lut, 17:30 – 6 lut, 09:00"}
+          {"en", "Feb\u00A05,\u00A017:30\u00A0– Feb\u00A06,\u00A009:00"},
+          {"de", "5.\u00A0Feb,\u00A017:30\u00A0– 6.\u00A0Feb,\u00A009:00"},
+          {"fr", "5\u00A0févr.,\u00A017:30\u00A0– 6\u00A0févr.,\u00A009:00"},
+          {"cs", "5.\u00A0úno,\u00A017:30\u00A0– 6.\u00A0úno,\u00A009:00"},
+          {"pl", "5\u00A0lut,\u00A017:30\u00A0– 6\u00A0lut,\u00A009:00"}
         ] do
       test "#{locale}: puts each day before its time in the locale's order", %{event: event} do
         Gettext.put_locale(TymeslotWeb.Gettext, unquote(locale))
@@ -116,42 +112,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormattingTest do
         assert TimeFormatting.format_display_time_range(event, "24h", "Etc/UTC") ==
                  unquote(expected)
       end
-    end
-  end
-
-  describe "format_time_range_in_tz/3" do
-    test "converts UTC event to the specified timezone" do
-      event = %{
-        all_day: false,
-        start_at: ~U[2026-04-10 12:00:00Z],
-        end_at: ~U[2026-04-10 13:00:00Z]
-      }
-
-      # Europe/Berlin is CEST (UTC+2) in April
-      result = TimeFormatting.format_time_range_in_tz(event, "Europe/Berlin", "24h")
-      assert result == "14:00 – 15:00"
-    end
-
-    test "returns 'All day' for all-day events regardless of timezone" do
-      event = %{
-        all_day: true,
-        start_at: ~U[2026-04-10 00:00:00Z],
-        end_at: ~U[2026-04-11 00:00:00Z]
-      }
-
-      assert TimeFormatting.format_time_range_in_tz(event, "America/New_York", "12h") ==
-               "All day"
-    end
-
-    test "formats in 12h mode" do
-      event = %{
-        all_day: false,
-        start_at: ~U[2026-04-10 14:00:00Z],
-        end_at: ~U[2026-04-10 15:30:00Z]
-      }
-
-      result = TimeFormatting.format_time_range_in_tz(event, "Etc/UTC", "12h")
-      assert result == "2:00 PM – 3:30 PM"
     end
   end
 
