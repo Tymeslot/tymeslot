@@ -29,6 +29,8 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.GuestQueries
+  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
@@ -107,15 +109,16 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
       {:ok, "sent"}
     end)
 
-    # The organiser's copy is built from the bare meeting, not the leaver's
-    # own overlay — it must not carry the leaver's tokenised seat links, and
-    # since group meetings carry no meeting-row attendee, it carries no
-    # attendee identity either (see `GroupMeetingEmails.send_seat_cancellation_emails/3`).
-    expect(EmailServiceMock, :send_cancellation_email_to_organizer, fn organizer_email, details ->
+    # The organiser is told who left and that the meeting carries on, never
+    # with the leaver's seat links.
+    expect(EmailServiceMock, :send_seat_update_to_organizer, fn :cancelled,
+                                                                organizer_email,
+                                                                details ->
       assert organizer_email == "organizer@example.com"
-      refute details.attendee_name == "Leaver"
-      refute String.contains?(details.cancel_url || "", leaver.management_token)
-      refute String.contains?(details.reschedule_url || "", leaver.management_token)
+      assert details.attendee_name == "Leaver"
+      assert details.attendee_email == "leaver@example.com"
+      assert details.seats_taken == 1
+      refute inspect(details) =~ leaver.management_token
       {:ok, "sent"}
     end)
 
@@ -259,6 +262,12 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
 
   test "organiser cancel-all emails every live participant and voids guest RSVPs",
        %{meeting: meeting, leaver: leaver, stayer: stayer} do
+    {:ok, [guest]} =
+      Guests.create_for_participant(meeting.id, stayer.id, ["stayers.guest@example.com"])
+
+    {:ok, guest} = GuestQueries.mark_confirmation_sent(guest, DateTime.utc_now(:second))
+    assert {:ok, _accepted} = Meetings.record_guest_rsvp(guest.rsvp_token, "accepted")
+
     assert {:ok, cancelled_meeting} = Cancel.execute(meeting, caller: :organizer)
     assert cancelled_meeting.status == "cancelled"
 
@@ -276,6 +285,14 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
     expect(EmailServiceMock, :send_cancellation_email_to_organizer, fn organizer_email, details ->
       assert organizer_email == "organizer@example.com"
       assert details.attendee_name == "2 participants"
+      {:ok, "sent"}
+    end)
+
+    # The guest is told on their own participant's calendar entry.
+    expect(EmailServiceMock, :send_guest_cancellation, fn email, details ->
+      assert email == "stayers.guest@example.com"
+      assert details.uid == stayer.id
+      assert details.attendee_name == "Stayer"
       {:ok, "sent"}
     end)
 
@@ -329,8 +346,62 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
                "participant_id" => stayer.id
              })
 
-    # Guest RSVP links on a cancelled meeting are inert.
-    assert {:error, :not_found} = Meetings.record_guest_rsvp("does-not-matter", "accepted")
+    # The guest's RSVP link, live a moment ago, is inert on a cancelled meeting.
+    assert {:error, :meeting_closed} = Meetings.record_guest_rsvp(guest.rsvp_token, "declined")
+  end
+
+  # A participant's guests are guests of their seat: when the seat goes,
+  # the meeting-level cancellation never reaches them (the seat is no longer
+  # live), so the seat's own cancellation must.
+  test "a cancelled seat's invited guests are sent a cancellation of that seat's calendar entry",
+       %{meeting: meeting, leaver: leaver} do
+    {:ok, [invited, declined, _never_invited]} =
+      Guests.create_for_participant(meeting.id, leaver.id, [
+        "invited@example.com",
+        "declined@example.com",
+        "never@example.com"
+      ])
+
+    for guest <- [invited, declined] do
+      {:ok, _guest} = GuestQueries.mark_confirmation_sent(guest, DateTime.utc_now(:second))
+    end
+
+    assert {:ok, _declined} = Meetings.record_guest_rsvp(declined.rsvp_token, "declined")
+
+    assert {:ok, :seat_cancelled} = CancelSeat.execute(leaver.management_token)
+
+    test_pid = self()
+
+    stub(EmailServiceMock, :send_cancellation_email_to_attendee, fn _email, _details ->
+      {:ok, "sent"}
+    end)
+
+    stub(EmailServiceMock, :send_seat_update_to_organizer, fn _variant, _email, _details ->
+      {:ok, "sent"}
+    end)
+
+    stub(EmailServiceMock, :send_guest_cancellation, fn email, details ->
+      send(test_pid, {:guest_cancellation, email, details})
+      {:ok, "sent"}
+    end)
+
+    assert :ok =
+             perform_job(EmailWorker, %{
+               "action" => "send_seat_cancellation_emails",
+               "meeting_id" => meeting.id,
+               "participant_id" => leaver.id,
+               "notify_organizer" => true
+             })
+
+    assert_received {:guest_cancellation, "invited@example.com", details}
+    assert_received {:guest_cancellation, "declined@example.com", _details}
+    refute_received {:guest_cancellation, "never@example.com", _details}
+
+    # The leaver's seat, stamped one revision above its invitation.
+    assert details.uid == leaver.id
+    assert details.ical_sequence == 0
+    assert details.attendee_name == "Leaver"
+    refute Map.has_key?(details, :attendee_email)
   end
 
   # The cancellation policy checks in `CancelSeat.execute/1` all run before

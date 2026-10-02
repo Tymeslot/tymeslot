@@ -161,6 +161,10 @@ defmodule Tymeslot.Notifications.Events do
     :ok
   end
 
+  # A room job that finishes after the host cancelled the meeting has no
+  # confirmations left to release: the participants were told it is off.
+  defp release_seat_confirmations(%{status: "cancelled"}), do: :ok
+
   defp release_seat_confirmations(meeting) do
     meeting.id
     |> ParticipantQueries.list_live_for_meeting()
@@ -191,15 +195,16 @@ defmodule Tymeslot.Notifications.Events do
   @doc """
   Handles a participant's seat moving to a new slot (move-my-seat).
 
-  Schedules the reschedule email: a confirmation for the new meeting whose
-  attachments also cancel the old meeting's event in the participant's
-  calendar. The old event snapshot is passed through the job args because
-  the old meeting may already be cancelled or mutated by the time the job
-  runs.
+  Schedules the reschedule email: a confirmation for the new seat whose
+  attachments also cancel the old seat's calendar entry for the participant,
+  and the matching cancellation and invitation for their guests.
+  `old_participant` is the seat row the move cancelled; each seat is its own
+  calendar entry, so the old one is named by that row, not by the old
+  meeting.
   """
-  @spec seat_rescheduled(term(), term(), map()) :: {:ok, term()} | {:error, term()}
-  def seat_rescheduled(meeting, participant, old_snapshot) do
-    Orchestrator.schedule_seat_reschedule(meeting, participant, old_snapshot)
+  @spec seat_rescheduled(term(), term(), term()) :: {:ok, term()} | {:error, term()}
+  def seat_rescheduled(meeting, participant, old_participant) do
+    Orchestrator.schedule_seat_reschedule(meeting, participant, old_participant)
   end
 
   @doc """

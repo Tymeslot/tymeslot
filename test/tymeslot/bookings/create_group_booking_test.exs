@@ -220,13 +220,17 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
         }
       )
 
-      expect(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn _email, _details ->
+      expect(EmailServiceMock, :send_seat_update_to_organizer, fn :booked, _email, _details ->
         {:ok, "sent"}
       end)
 
+      # The participant's payload is a `%MeetingSchema{}` overlay, so the
+      # location is read from the meeting's own kind: a video meeting is
+      # "Video call" to every participant, not the custom fallback.
       expect(EmailServiceMock, :send_appointment_confirmation_to_attendee, fn attendee_email,
-                                                                              _details ->
+                                                                              details ->
         assert attendee_email == "one@example.com"
+        assert details.location_type == :video
         {:ok, "sent"}
       end)
 

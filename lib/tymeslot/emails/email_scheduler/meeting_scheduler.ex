@@ -243,14 +243,22 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   @doc """
   Schedules a single-seat email job.
 
-  One job per `(action, meeting_id, participant_id)`, uniqued on that triple
-  — the shared shape behind every per-seat email action (confirmation,
-  cancellation, reschedule, and the whole-meeting
-  cancellation/reminder/reschedule-request fan-outs), so each recipient
-  retries independently of the others and a different action for the same
-  participant can never collide with this one. `extra_args` carries whatever
-  the action needs beyond the two ids (e.g. `notify_organizer`, the old-event
-  snapshot, or the reminder interval).
+  One job per `(action, meeting_id, participant_id)` plus whatever names
+  one logical email among several of the same action for the same seat
+  (`extra_keys`, each a key of `extra_args`): the shared shape behind every
+  per-seat email action (confirmation, cancellation, reschedule, and the
+  whole-meeting cancellation/reminder/reschedule-request fan-outs), so each
+  recipient retries independently of the others and a different action for
+  the same participant can never collide with this one. `extra_args` carries
+  whatever the action needs beyond the two ids (e.g. `notify_organizer`, the
+  moved-from seat, or the reminder interval).
+
+  The uniqueness covers completed jobs too, which is the point: a dispatcher
+  re-run must not send a seat its email a second time. So anything that can
+  legitimately send the same action to the same seat twice must say which
+  email it is in `extra_keys`. A meeting with reminders at one hour and at 15
+  minutes sends two different reminders, keyed by their offset; a host's
+  second reschedule request is a second email, keyed by when it was made.
 
   The uniqueness window is wider than the usual 5 minutes deliberately: a
   seat job that hits an open mail circuit breaker snoozes for the breaker's
@@ -263,8 +271,9 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   insert a second one — re-sending to a participant who already got their
   email instead of the harmless no-op re-dispatch is meant to be.
   """
-  @spec schedule_seat_email(String.t(), term(), term(), map()) :: :ok | {:error, String.t()}
-  def schedule_seat_email(action, meeting_id, participant_id, extra_args \\ %{}) do
+  @spec schedule_seat_email(String.t(), term(), term(), map(), [atom()]) ::
+          :ok | {:error, String.t()}
+  def schedule_seat_email(action, meeting_id, participant_id, extra_args \\ %{}, extra_keys \\ []) do
     result =
       extra_args
       |> Map.merge(%{
@@ -281,7 +290,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
           # dispatcher that re-runs this. See the moduledoc above.
           period: 3600,
           fields: [:args, :queue],
-          keys: [:action, :meeting_id, :participant_id]
+          keys: [:action, :meeting_id, :participant_id | extra_keys]
         ]
       )
       |> Oban.insert()
@@ -338,17 +347,15 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   @doc """
   Schedules the reschedule emails for a single group-booking seat.
 
-  `old_snapshot` carries the old event's identity (`uid`, `ical_sequence`,
-  `start_time`, `end_time`) so the email job can build the cancel ICS even
-  after the old meeting row changes.
+  `participant_id` is the seat at its new time; `old_participant_id` is the
+  cancelled row it moved from, whose own calendar entry (UID, revision and
+  time) the job cancels for the participant and their guests. A seat move
+  never rewrites that row, so it is read when the job runs.
   """
-  @spec schedule_seat_reschedule_emails(term(), term(), map()) :: :ok | {:error, String.t()}
-  def schedule_seat_reschedule_emails(meeting_id, participant_id, old_snapshot) do
+  @spec schedule_seat_reschedule_emails(term(), term(), term()) :: :ok | {:error, String.t()}
+  def schedule_seat_reschedule_emails(meeting_id, participant_id, old_participant_id) do
     schedule_seat_email(seat_action(:seat_reschedule), meeting_id, participant_id, %{
-      "old_uid" => old_snapshot.uid,
-      "old_ical_sequence" => old_snapshot.ical_sequence,
-      "old_start_time" => DateTime.to_iso8601(old_snapshot.start_time),
-      "old_end_time" => DateTime.to_iso8601(old_snapshot.end_time)
+      "old_participant_id" => old_participant_id
     })
   end
 
@@ -373,10 +380,13 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   @spec schedule_seat_reminder_email(term(), term(), term(), term()) ::
           :ok | {:error, String.t()}
   def schedule_seat_reminder_email(meeting_id, participant_id, reminder_value, reminder_unit) do
-    schedule_seat_email(seat_action(:seat_reminder), meeting_id, participant_id, %{
-      "reminder_value" => reminder_value,
-      "reminder_unit" => reminder_unit
-    })
+    schedule_seat_email(
+      seat_action(:seat_reminder),
+      meeting_id,
+      participant_id,
+      %{"reminder_value" => reminder_value, "reminder_unit" => reminder_unit},
+      [:reminder_value, :reminder_unit]
+    )
   end
 
   @doc """
@@ -385,10 +395,22 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   Dispatched (one call per live participant) from the meeting-level
   reschedule-request job instead of sending inline, so a failure on one
   participant cannot discard the request to the rest.
+
+  `requested_at` (the meeting's `reschedule_requested_at`, as ISO 8601, or
+  `nil`) names the request: a re-run of the same dispatch is a duplicate, a
+  later request is a new email.
   """
-  @spec schedule_seat_reschedule_request(term(), term()) :: :ok | {:error, String.t()}
-  def schedule_seat_reschedule_request(meeting_id, participant_id),
-    do: schedule_seat_email(seat_action(:seat_reschedule_request), meeting_id, participant_id)
+  @spec schedule_seat_reschedule_request(term(), term(), String.t() | nil) ::
+          :ok | {:error, String.t()}
+  def schedule_seat_reschedule_request(meeting_id, participant_id, requested_at) do
+    schedule_seat_email(
+      seat_action(:seat_reschedule_request),
+      meeting_id,
+      participant_id,
+      %{"requested_at" => requested_at},
+      [:requested_at]
+    )
+  end
 
   @doc """
   Schedules cancellation emails to be sent immediately with high priority.

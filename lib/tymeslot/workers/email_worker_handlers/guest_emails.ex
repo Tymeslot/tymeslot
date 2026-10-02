@@ -133,6 +133,10 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GuestEmails do
   Reminds the meeting's guests for one configured offset, stamping each guest
   per offset so a retry after a partial send re-emails only the guests it has
   not reached. Failures are logged and never change the caller's result.
+
+  A group-booking guest is reminded from their own participant's view of the
+  meeting (`GuestNotifications.with_inviter_details/4`); `appointment_details`
+  serves every other guest.
   """
   @spec send_reminders(MeetingSchema.t(), map(), term(), term()) :: :ok
   def send_reminders(meeting, appointment_details, reminder_value, reminder_unit) do
@@ -142,8 +146,12 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GuestEmails do
 
     meeting.id
     |> GuestQueries.list_for_reminder(value, unit)
-    |> Enum.each(fn guest ->
-      details = GuestNotifications.guest_details(appointment_details, guest)
+    |> GuestNotifications.with_inviter_details(meeting, appointment_details, %{
+      value: value,
+      unit: unit
+    })
+    |> Enum.each(fn {guest, owner_details} ->
+      details = GuestNotifications.guest_details(owner_details, guest)
 
       case email_service.send_guest_reminder(guest.email, details) do
         {:ok, _result} ->

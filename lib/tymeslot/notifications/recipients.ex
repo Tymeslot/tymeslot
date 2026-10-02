@@ -86,6 +86,13 @@ defmodule Tymeslot.Notifications.Recipients do
   The attendee_timezone should always be populated during booking creation.
   """
   @spec get_attendee_timezone(term()) :: String.t()
+  # A group meeting's row never carries an attendee (its people are its
+  # participants), so a missing timezone there is the design, not a defect
+  # worth a warning on every booking.
+  def get_attendee_timezone(%{attendee_timezone: nil, capacity: capacity} = meeting)
+      when is_integer(capacity) and capacity > 1,
+      do: get_organizer_timezone(meeting)
+
   def get_attendee_timezone(meeting) do
     # This should always be set, but add defensive logging
     case meeting.attendee_timezone do

@@ -8,14 +8,18 @@ defmodule Tymeslot.Meetings.Recipient do
   ICS attachments, reminders) can iterate people without caring which shape
   the meeting has.
 
-  `as_seen_by/2` and `meeting_view/2` are the inverse direction: they project
-  a recipient back onto the meeting's `attendee_*` fields, so the existing
-  email templates and the ICS generator all render the right person without
-  any template changes. For participant recipients the cancel and reschedule
-  URLs are replaced with the participant's tokenised seat URLs. The two
-  differ only in return shape: `as_seen_by/2` returns a `%MeetingSchema{}`
-  for the few callers that need one, `meeting_view/2` a plain map for
-  everyone else.
+  `as_seen_by/2` is the inverse direction: it projects a recipient back onto
+  the meeting's `attendee_*` fields, so the existing email templates and the
+  ICS generator all render the right person without any template changes. For
+  participant recipients the cancel and reschedule URLs are replaced with the
+  participant's tokenised seat URLs, and the calendar identity
+  (`calendar_uid`, `ical_sequence`) with the seat's own: each seat is its own
+  event in the participant's calendar.
+
+  The overlay is always a `%MeetingSchema{}`, never a plain map: code
+  downstream pattern-matches on the struct (`BookingRequestLocation.type/1`
+  among others) and silently falls through to a default on anything else.
+  It is a view, not a row, and is never written back.
   """
 
   alias Tymeslot.Bookings.Policy
@@ -35,7 +39,9 @@ defmodule Tymeslot.Meetings.Recipient do
     :locale,
     :custom_field_answers,
     :participant_id,
-    :management_token
+    :management_token,
+    :calendar_uid,
+    :ical_sequence
   ]
 
   @type t :: %__MODULE__{
@@ -49,7 +55,9 @@ defmodule Tymeslot.Meetings.Recipient do
           locale: String.t(),
           custom_field_answers: map(),
           participant_id: binary() | nil,
-          management_token: String.t() | nil
+          management_token: String.t() | nil,
+          calendar_uid: String.t() | nil,
+          ical_sequence: non_neg_integer() | nil
         }
 
   @doc """
@@ -97,7 +105,9 @@ defmodule Tymeslot.Meetings.Recipient do
       locale: participant.locale || "en",
       custom_field_answers: participant.custom_field_answers || %{},
       participant_id: participant.id,
-      management_token: participant.management_token
+      management_token: participant.management_token,
+      calendar_uid: ParticipantSchema.calendar_uid(participant),
+      ical_sequence: ParticipantSchema.invitation_sequence(participant)
     }
   end
 
@@ -105,35 +115,15 @@ defmodule Tymeslot.Meetings.Recipient do
   The meeting as the given recipient sees it.
 
   `:attendee` recipients see the meeting unchanged. `:participant`
-  recipients see their own data in the `attendee_*` fields and their
-  tokenised seat URLs in `cancel_url`/`reschedule_url`.
-
-  Returns a `%MeetingSchema{}`, for the handful of callers that must have one
-  (the webhook/Telegram/Slack dispatchers pattern-match on the struct, and
-  `RescheduleRequest.render/1` does too). Everyone else should use
-  `meeting_view/2`, which does the same overlay onto a plain map.
+  recipients see their own data in the `attendee_*` fields, their
+  tokenised seat URLs in `cancel_url`/`reschedule_url`, and their seat's own
+  calendar identity in `calendar_uid`/`ical_sequence`.
   """
   @spec as_seen_by(MeetingSchema.t(), t()) :: MeetingSchema.t()
   def as_seen_by(%MeetingSchema{} = meeting, %__MODULE__{kind: :attendee}), do: meeting
 
   def as_seen_by(%MeetingSchema{} = meeting, %__MODULE__{kind: :participant} = recipient),
     do: struct!(meeting, overlay(recipient))
-
-  @doc """
-  The meeting as the given recipient sees it, as a plain map.
-
-  Same overlay as `as_seen_by/2`, but returns a doctored map rather than a
-  `%MeetingSchema{}`, so nothing downstream can mistake the overlay for a
-  persisted row.
-  """
-  @spec meeting_view(MeetingSchema.t(), t()) :: map()
-  def meeting_view(%MeetingSchema{} = meeting, %__MODULE__{kind: :attendee}), do: meeting
-
-  def meeting_view(%MeetingSchema{} = meeting, %__MODULE__{kind: :participant} = recipient) do
-    meeting
-    |> Map.from_struct()
-    |> Map.merge(overlay(recipient))
-  end
 
   defp overlay(recipient) do
     urls = Policy.seat_urls(recipient.management_token)
@@ -148,7 +138,9 @@ defmodule Tymeslot.Meetings.Recipient do
       attendee_locale: recipient.locale,
       custom_field_answers: recipient.custom_field_answers,
       cancel_url: urls.cancel_url,
-      reschedule_url: urls.reschedule_url
+      reschedule_url: urls.reschedule_url,
+      calendar_uid: recipient.calendar_uid,
+      ical_sequence: recipient.ical_sequence
     }
   end
 

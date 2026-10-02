@@ -188,6 +188,7 @@ msgid "Cancel Appointment"
 msgstr "Odwołaj spotkanie"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "Cancelled"
 msgstr "Odwołane"
@@ -430,6 +431,7 @@ msgstr "Cieszę się na nasze spotkanie!"
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #: lib/tymeslot/emails/templates/event_update_notification.ex
 #: lib/tymeslot/emails/templates/external_booking_change.ex
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "MEETING DETAILS:"
 msgstr "SZCZEGÓŁY SPOTKANIA:"
@@ -508,6 +510,7 @@ msgstr "Zmiana planów?"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "Need to make changes?"
 msgstr "Chcesz coś zmienić?"
@@ -523,6 +526,7 @@ msgid "New Appointment: %{name} - %{date}"
 msgstr "Nowa rezerwacja: %{name} – %{date}"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "New booking"
 msgstr "Nowa rezerwacja"
@@ -706,6 +710,7 @@ msgid "Reschedule"
 msgstr "Zmień termin"
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "Rescheduled"
 msgstr "Termin zmieniony"
@@ -1095,3 +1100,67 @@ msgstr "Spotkanie, na które zaprasza cię %{organizer}, zostało odwołane."
 #, elixir-autogen, elixir-format
 msgid "The meeting %{organizer} invited you to has been moved to a new time."
 msgstr "Spotkanie, na które zaprasza cię %{organizer}, zostało przeniesione na nowy termin."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} booked a spot in your group meeting."
+msgstr "%{name} zarezerwował(a) miejsce na Twoim spotkaniu grupowym."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} cancelled their spot. The meeting goes ahead for everyone else."
+msgstr "%{name} odwołał(a) swoje miejsce. Spotkanie odbędzie się dla pozostałych uczestników."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} moved their spot from %{from} to %{to}."
+msgstr "%{name} przeniósł(-osła) swoje miejsce z %{from} na %{to}."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{taken} of %{count} spot taken"
+msgid_plural "%{taken} of %{count} spots taken"
+msgstr[0] "Zajęte miejsca: %{taken} z %{count}"
+msgstr[1] "Zajęte miejsca: %{taken} z %{count}"
+msgstr[2] "Zajęte miejsca: %{taken} z %{count}"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "A participant cancelled their spot"
+msgstr "Uczestnik odwołał swoje miejsce"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "A participant moved their spot"
+msgstr "Uczestnik przeniósł swoje miejsce"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "A spot was booked"
+msgstr "Zarezerwowano miejsce"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Open in dashboard"
+msgstr "Otwórz w panelu"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Spot booked: %{name} - %{date}"
+msgstr "Miejsce zarezerwowane: %{name} - %{date}"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Spot cancelled: %{name} - %{date}"
+msgstr "Miejsce odwołane: %{name} - %{date}"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Spot moved: %{name} - %{date}"
+msgstr "Miejsce przeniesione: %{name} - %{date}"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} moved their spot to %{to}."
+msgstr "%{name} przeniósł(-osła) swoje miejsce na %{to}."

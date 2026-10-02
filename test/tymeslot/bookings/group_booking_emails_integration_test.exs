@@ -122,16 +122,20 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
       |> ParticipantQueries.list_live_for_meeting()
       |> Map.new(&{&1.id, &1.management_token})
 
-    # The organiser's copy is built from the bare meeting, not the booker's
-    # own overlay — it must not carry the booker's identity or their
-    # tokenised seat links (see
-    # `GroupMeetingEmails.send_seat_confirmation_emails/2`).
-    expect(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn organizer_email,
-                                                                             details ->
+    # The organiser is told who took the spot and how full the slot now is,
+    # but never gets the booker's seat links: those are the booker's
+    # credentials, and the organiser manages the meeting from the dashboard.
+    expect(EmailServiceMock, :send_seat_update_to_organizer, fn :booked,
+                                                                organizer_email,
+                                                                details ->
       assert organizer_email == "organizer@example.com"
-      refute details.attendee_name == "Second Booker"
-      refute String.contains?(details.cancel_url || "", tokens_by_id[second_id])
-      refute String.contains?(details.reschedule_url || "", tokens_by_id[second_id])
+      assert details.attendee_name == "Second Booker"
+      assert details.attendee_email == "second@example.com"
+      assert details.attendee_message == "Count me in"
+      assert details.seats_taken == 2
+      assert details.capacity == 3
+      assert details.dashboard_url =~ "/dashboard/meetings"
+      refute inspect(details) =~ tokens_by_id[second_id]
       refute inspect(details) =~ "first@example.com"
       {:ok, "sent"}
     end)
@@ -190,6 +194,10 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
                                                                          details ->
       assert organizer_email == "organizer@example.com"
       assert details.attendee_name == "2 participants"
+      # The public links to manage a booking are refused for a group meeting.
+      assert details.cancel_url == nil
+      assert details.reschedule_url == nil
+      assert details.dashboard_url =~ "/dashboard/meetings"
       {:ok, "sent"}
     end)
 
@@ -413,7 +421,7 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
     [guest] = GuestQueries.list_for_participant(participant_id)
     refute guest.confirmation_sent_at
 
-    stub(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn _email, _details ->
+    stub(EmailServiceMock, :send_seat_update_to_organizer, fn _variant, _email, _details ->
       {:ok, "sent"}
     end)
 
@@ -421,8 +429,10 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
       {:ok, "sent"}
     end)
 
-    expect(EmailServiceMock, :send_guest_confirmation, fn guest_email, _details ->
+    # The guest's calendar entry is their participant's seat, not the slot.
+    expect(EmailServiceMock, :send_guest_confirmation, fn guest_email, details ->
       assert guest_email == "guest@example.com"
+      assert details.uid == participant_id
       {:ok, "sent"}
     end)
 
@@ -438,53 +448,6 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
            |> Map.get(:confirmation_sent_at)
   end
 
-  # `send_seat_reschedule_emails/3` previously sent the mover's own
-  # confirmation and the organiser's, but never touched guests — a mover's
-  # guests re-booked at the new slot (fresh, unsent rows) would keep
-  # whatever confirmation they had for the old, now-voided slot and never
-  # learn where the meeting moved to.
-  test "a seat reschedule also re-sends the mover's still-unsent guests",
-       %{meeting_params: meeting_params} do
-    meeting =
-      book_seat!(
-        Map.put(meeting_params, :guest_emails, ["guest@example.com"]),
-        "Booker With Guest",
-        "hasguest@example.com"
-      )
-
-    participant_id = participant_id!(meeting.id, "hasguest@example.com")
-    [guest] = GuestQueries.list_for_participant(participant_id)
-    refute guest.confirmation_sent_at
-
-    stub(EmailServiceMock, :send_seat_reschedule_to_participant, fn _email, _details, _old ->
-      {:ok, "sent"}
-    end)
-
-    stub(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn _email, _details ->
-      {:ok, "sent"}
-    end)
-
-    expect(EmailServiceMock, :send_guest_confirmation, fn guest_email, _details ->
-      assert guest_email == "guest@example.com"
-      {:ok, "sent"}
-    end)
-
-    assert :ok =
-             perform_job(EmailWorker, %{
-               "action" => "send_seat_reschedule_emails",
-               "meeting_id" => meeting.id,
-               "participant_id" => participant_id,
-               "old_uid" => meeting.calendar_uid,
-               "old_ical_sequence" => 0,
-               "old_start_time" => DateTime.to_iso8601(meeting.start_time),
-               "old_end_time" => DateTime.to_iso8601(meeting.end_time)
-             })
-
-    assert GuestQueries.get_by_token(guest.rsvp_token)
-           |> elem(1)
-           |> Map.get(:confirmation_sent_at)
-  end
-
   # A provider outage (:circuit_open) previously got flattened into a plain
   # string by the per-seat handlers, losing the snooze semantics
   # `EmailWorker` relies on to ride out the breaker's recovery window instead
@@ -493,6 +456,9 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
        %{meeting_params: meeting_params} do
     meeting = book_seat!(meeting_params, "First Booker", "first@example.com")
     first_id = participant_id!(meeting.id, "first@example.com")
+
+    assert {:ok, _cancelled} =
+             MeetingQueries.update_meeting_status(meeting, %{status: "cancelled"})
 
     expect(EmailServiceMock, :send_cancellation_email_to_attendee, fn _email, _details ->
       {:error, :circuit_open}

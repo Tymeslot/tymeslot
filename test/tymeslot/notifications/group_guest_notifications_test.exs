@@ -17,19 +17,38 @@ defmodule Tymeslot.Notifications.GroupGuestNotificationsTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Notifications.GuestNotifications
+  alias Tymeslot.Workers.EmailWorkerHandlers.GuestEmails
 
   setup :verify_on_exit!
 
   setup do
     # A group meeting is confirmed from its first seat and never goes through
     # the booking's announcement claim, so it carries no `first_announced_at`.
-    meeting = insert(:group_meeting, capacity: 4, first_announced_at: nil)
+    organizer = insert(:user)
+    insert(:profile, user: organizer, timezone: "Europe/London")
 
-    staying = insert(:participant, meeting: meeting, name: "Staying Booker")
+    meeting =
+      insert(:group_meeting,
+        capacity: 4,
+        first_announced_at: nil,
+        organizer_user_id: organizer.id,
+        attendee_locale: "en"
+      )
+
+    # A guest's emails follow the participant who invited them, not the slot
+    # row (whose locale is the first booker's and which has no timezone).
+    staying =
+      insert(:participant,
+        meeting: meeting,
+        name: "Staying Booker",
+        locale: "uk",
+        timezone: "Asia/Tokyo"
+      )
 
     left =
       insert(:participant,
@@ -48,28 +67,34 @@ defmodule Tymeslot.Notifications.GroupGuestNotificationsTest do
       {:ok, _guest} = GuestQueries.mark_confirmation_sent(guest, DateTime.utc_now(:second))
     end
 
-    %{meeting: meeting, staying_guest: staying_guest, left_guest: left_guest}
+    %{meeting: meeting, staying: staying, staying_guest: staying_guest, left_guest: left_guest}
   end
 
   describe "cancelling the whole meeting" do
-    test "tells the guests of seats still held, naming their own participant", %{
-      meeting: meeting
+    test "tells the guests of seats still held, in their own participant's view", %{
+      meeting: meeting,
+      staying: staying
     } do
       test_pid = self()
 
       expect(EmailServiceMock, :send_guest_cancellation, fn email, details ->
-        send(test_pid, {:guest_cancellation, email, details.attendee_name})
+        send(test_pid, {:guest_cancellation, email, details})
         {:ok, :sent}
       end)
 
       assert :ok =
-               GuestNotifications.notify_cancelled(meeting, %{
-                 organizer_name: "Host",
-                 attendee_name: nil
-               })
+               GuestNotifications.notify_cancelled(
+                 meeting,
+                 AppointmentBuilder.from_meeting(meeting)
+               )
 
-      assert_received {:guest_cancellation, "stays@example.com", "Staying Booker"}
-      refute_received {:guest_cancellation, "left@example.com", _booker}
+      assert_received {:guest_cancellation, "stays@example.com", details}
+      refute_received {:guest_cancellation, "left@example.com", _details}
+
+      assert details.attendee_name == "Staying Booker"
+      assert details.attendee_locale == "uk"
+      assert details.attendee_timezone == "Asia/Tokyo"
+      assert details.uid == staying.id
     end
   end
 
@@ -80,6 +105,33 @@ defmodule Tymeslot.Notifications.GroupGuestNotificationsTest do
     } do
       assert [guest] = GuestQueries.list_for_reminder(meeting.id, 30, "minutes")
       assert guest.id == staying_guest.id
+    end
+
+    test "are in the inviting participant's language and timezone, on their seat's entry", %{
+      meeting: meeting,
+      staying: staying
+    } do
+      test_pid = self()
+
+      expect(EmailServiceMock, :send_guest_reminder, fn email, details ->
+        send(test_pid, {:guest_reminder, email, details})
+        {:ok, :sent}
+      end)
+
+      reminder = %{value: 30, unit: "minutes"}
+
+      assert :ok =
+               GuestEmails.send_reminders(
+                 meeting,
+                 AppointmentBuilder.from_meeting(meeting, reminder),
+                 30,
+                 "minutes"
+               )
+
+      assert_received {:guest_reminder, "stays@example.com", details}
+      assert details.attendee_locale == "uk"
+      assert details.attendee_timezone == "Asia/Tokyo"
+      assert details.uid == staying.id
     end
   end
 end

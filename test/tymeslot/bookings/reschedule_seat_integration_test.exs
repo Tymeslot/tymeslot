@@ -32,6 +32,8 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
   alias Tymeslot.Bookings.{CalendarCheck, CancelSeat, Create, RescheduleSeat}
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Meetings.GuestQueries
+  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
@@ -158,46 +160,127 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
     assert_enqueued(worker: CalendarEventWorker, args: %{"meeting_id" => new_meeting.id})
   end
 
-  test "the participant email carries the new invite plus a SEQUENCE-bumped cancel for the old event",
+  defp reschedule_args(new_meeting, moved, mover) do
+    %{
+      "action" => "send_seat_reschedule_emails",
+      "meeting_id" => new_meeting.id,
+      "participant_id" => moved.id,
+      "old_participant_id" => mover.id
+    }
+  end
+
+  test "the participant email carries the new seat's invite plus a cancellation of the old seat's entry",
        %{old_meeting: old_meeting, mover: mover} do
     assert {:ok, %{meeting: new_meeting, participant: moved}} =
              move(mover, new_slot_params())
+
+    args = reschedule_args(new_meeting, moved, mover)
+    assert_enqueued(worker: EmailWorker, args: args)
+
+    # Moving cancelled the old seat, a new revision of its calendar entry.
+    assert {:ok, %{ical_sequence: 1, cancelled_at: %DateTime{}}} =
+             ParticipantQueries.get(mover.id)
 
     expect(EmailServiceMock, :send_seat_reschedule_to_participant, fn participant_email,
                                                                       appointment_details,
                                                                       old_event ->
       assert participant_email == "mover@example.com"
-      assert appointment_details.uid == new_meeting.calendar_uid
+      # Each seat is its own calendar entry: the new seat's UID is the new
+      # row's, and the cancelled one is the old seat's, one revision up.
+      assert appointment_details.uid == moved.id
+      assert appointment_details.ical_sequence == 0
       assert appointment_details.attendee_name == "Mover"
       assert String.contains?(appointment_details.cancel_url, moved.management_token)
-      assert old_event.uid == old_meeting.calendar_uid
-      assert old_event.ical_sequence == old_meeting.ical_sequence
+      assert old_event.uid == mover.id
+      assert old_event.ical_sequence == 0
       assert old_event.start_time == old_meeting.start_time
       assert old_event.end_time == old_meeting.end_time
       {:ok, "sent"}
     end)
 
-    # The organiser's copy is built from the bare (new) meeting, not the
-    # mover's own overlay — it must not carry the mover's tokenised seat
-    # links (see `GroupMeetingEmails.send_seat_reschedule_emails/3`).
-    expect(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn organizer_email,
-                                                                             details ->
+    # The organiser hears that this participant moved their spot, from when
+    # to when, and never gets the mover's seat links.
+    expect(EmailServiceMock, :send_seat_update_to_organizer, fn :moved,
+                                                                organizer_email,
+                                                                details ->
       assert organizer_email == "organizer@example.com"
-      refute String.contains?(details.cancel_url || "", moved.management_token)
-      refute String.contains?(details.reschedule_url || "", moved.management_token)
+      assert details.attendee_name == "Mover"
+      assert DateTime.compare(details.original_start_time_owner_tz, old_meeting.start_time) == :eq
+      assert DateTime.compare(details.start_time_owner_tz, new_meeting.start_time) == :eq
+      refute inspect(details) =~ moved.management_token
+      refute inspect(details) =~ mover.management_token
       {:ok, "sent"}
     end)
 
-    assert :ok =
-             perform_job(EmailWorker, %{
-               "action" => "send_seat_reschedule_emails",
-               "meeting_id" => new_meeting.id,
-               "participant_id" => moved.id,
-               "old_uid" => old_meeting.calendar_uid,
-               "old_ical_sequence" => old_meeting.ical_sequence,
-               "old_start_time" => DateTime.to_iso8601(old_meeting.start_time),
-               "old_end_time" => DateTime.to_iso8601(old_meeting.end_time)
-             })
+    assert :ok = perform_job(EmailWorker, args)
+  end
+
+  test "a move's emails retry only what did not go out",
+       %{mover: mover} do
+    assert {:ok, %{meeting: new_meeting, participant: moved}} =
+             move(mover, new_slot_params())
+
+    args = reschedule_args(new_meeting, moved, mover)
+
+    expect(EmailServiceMock, :send_seat_reschedule_to_participant, 1, fn _email, _details, _old ->
+      {:ok, "sent"}
+    end)
+
+    expect(EmailServiceMock, :send_seat_update_to_organizer, fn :moved, _email, _details ->
+      {:error, "SMTP unavailable"}
+    end)
+
+    assert {:error, _reason} = perform_job(EmailWorker, args)
+
+    # Only the organiser is expected this time.
+    expect(EmailServiceMock, :send_seat_update_to_organizer, fn :moved, _email, _details ->
+      {:ok, "sent"}
+    end)
+
+    assert :ok = perform_job(EmailWorker, args)
+
+    assert {:ok, %{confirmation_sent_at: %DateTime{}, organizer_notified_at: %DateTime{}}} =
+             ParticipantQueries.get(moved.id)
+  end
+
+  # The guests used to be re-invited to the new time while the old entry
+  # stayed in their calendars, never cancelled.
+  test "the mover's guests move with the seat: the old entry is cancelled and the new one invited",
+       %{old_meeting: old_meeting, mover: mover} do
+    {:ok, [guest]} =
+      Guests.create_for_participant(old_meeting.id, mover.id, ["guest@example.com"])
+
+    {:ok, _guest} = GuestQueries.mark_confirmation_sent(guest, DateTime.utc_now(:second))
+
+    assert {:ok, %{meeting: new_meeting, participant: moved}} =
+             move(mover, new_slot_params())
+
+    assert [%{email: "guest@example.com", confirmation_sent_at: nil}] =
+             GuestQueries.list_for_participant(moved.id)
+
+    stub(EmailServiceMock, :send_seat_reschedule_to_participant, fn _email, _details, _old ->
+      {:ok, "sent"}
+    end)
+
+    stub(EmailServiceMock, :send_seat_update_to_organizer, fn _variant, _email, _details ->
+      {:ok, "sent"}
+    end)
+
+    expect(EmailServiceMock, :send_guest_cancellation, fn email, details ->
+      assert email == "guest@example.com"
+      assert details.uid == mover.id
+      assert details.start_time == old_meeting.start_time
+      {:ok, "sent"}
+    end)
+
+    expect(EmailServiceMock, :send_guest_confirmation, fn email, details ->
+      assert email == "guest@example.com"
+      assert details.uid == moved.id
+      assert details.start_time == new_meeting.start_time
+      {:ok, "sent"}
+    end)
+
+    assert :ok = perform_job(EmailWorker, reschedule_args(new_meeting, moved, mover))
   end
 
   # `SeatRelease.release/1` cannot be driven into its error branch through

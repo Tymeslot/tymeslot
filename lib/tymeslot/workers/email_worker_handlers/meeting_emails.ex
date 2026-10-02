@@ -128,7 +128,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   consistent log line when the meeting no longer exists. `action` names the
   email action for the warning (e.g. "confirmation emails").
 
-  Public so `GroupMeetingEmails`'s per-seat handlers and
+  Public so the per-seat handlers (`SeatJobs`) and
   `BookingApprovalEmails` share this instead of carrying their own copy — the
   meeting-lookup contract is identical for all of them, only what runs on
   success differs.
@@ -197,13 +197,17 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     end
   end
 
+  # Preserves `:circuit_open` (snooze) and `{:recipient_rejected, _}`
+  # (discard) for `EmailWorker`, as every other meeting send does, rather than
+  # inspecting the reason (and the rejected address with it) into the job's
+  # error.
   defp send_organizer_cancellation_email(details) do
     case Config.email_service_module().send_cancellation_email_to_organizer(
            details.organizer_email,
            details
          ) do
       {:ok, _organizer} -> :ok
-      {:error, reason} -> {:error, "Failed to send cancellation email: #{inspect(reason)}"}
+      {:error, reason} -> DeliveryOutcome.from_error(reason, "Failed to send cancellation email")
     end
   end
 

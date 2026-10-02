@@ -40,7 +40,7 @@ defmodule Tymeslot.Emails.EmailScheduler do
   defdelegate schedule_reminder_emails(meeting_id, reminder_value, reminder_unit, scheduled_at),
     to: MeetingScheduler
 
-  defdelegate schedule_seat_reschedule_emails(meeting_id, participant_id, old_snapshot),
+  defdelegate schedule_seat_reschedule_emails(meeting_id, participant_id, old_participant_id),
     to: MeetingScheduler
 
   defdelegate schedule_seat_meeting_cancellation_email(meeting_id, participant_id),
@@ -54,7 +54,8 @@ defmodule Tymeslot.Emails.EmailScheduler do
               ),
               to: MeetingScheduler
 
-  defdelegate schedule_seat_reschedule_request(meeting_id, participant_id), to: MeetingScheduler
+  defdelegate schedule_seat_reschedule_request(meeting_id, participant_id, requested_at),
+    to: MeetingScheduler
 
   defdelegate cancel_reminder_emails(meeting_id), to: MeetingScheduler
 
@@ -112,14 +113,7 @@ defmodule Tymeslot.Emails.EmailScheduler do
     "send_seat_confirmation_emails" => ["meeting_id", "participant_id"],
     "send_cancellation_emails" => ["meeting_id"],
     "send_seat_cancellation_emails" => ["meeting_id", "participant_id", "notify_organizer"],
-    "send_seat_reschedule_emails" => [
-      "meeting_id",
-      "participant_id",
-      "old_uid",
-      "old_ical_sequence",
-      "old_start_time",
-      "old_end_time"
-    ],
+    "send_seat_reschedule_emails" => ["meeting_id", "participant_id", "old_participant_id"],
     "send_reminder_emails" => ["meeting_id", "reminder_value", "reminder_unit"],
     "send_seat_meeting_cancellation" => ["meeting_id", "participant_id"],
     "send_seat_reminder" => ["meeting_id", "participant_id", "reminder_value", "reminder_unit"],

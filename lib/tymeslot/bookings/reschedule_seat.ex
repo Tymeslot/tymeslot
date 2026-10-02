@@ -160,22 +160,13 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   defp move_seat(old_meeting, participant, new_times, meeting_type, guest_emails) do
     max_participants = max_participants_for(old_meeting, meeting_type)
 
-    # The old event's identity in the participant's calendar is the meeting's
-    # `calendar_uid`, never its `uid` (the booking's bearer capability).
-    old_snapshot = %{
-      uid: old_meeting.calendar_uid,
-      ical_sequence: old_meeting.ical_sequence,
-      start_time: old_meeting.start_time,
-      end_time: old_meeting.end_time
-    }
-
     old_meeting
     |> new_slot_attrs(new_times, participant)
     |> GroupScheduling.book_seat(seat_request(participant, guest_emails, max_participants),
       also_lock: old_meeting.id,
       on_booked: fn _booking -> cancel_old_seat(old_meeting, participant) end
     )
-    |> handle_move(old_meeting, participant, old_snapshot)
+    |> handle_move(old_meeting, participant)
   end
 
   # Runs inside the seat transaction, after the new seat is taken. The old
@@ -205,14 +196,14 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
 
   defp max_participants_for(old_meeting, _meeting_type), do: old_meeting.capacity
 
-  defp handle_move({:ok, booked}, old_meeting, _participant, old_snapshot),
-    do: after_commit(old_meeting, old_snapshot, booked)
+  defp handle_move({:ok, booked}, old_meeting, participant),
+    do: after_commit(old_meeting, participant, booked)
 
-  defp handle_move({:error, reason}, old_meeting, participant, _old_snapshot)
+  defp handle_move({:error, reason}, old_meeting, participant)
        when reason in [:slot_full, :time_conflict],
        do: log_and_bounce(old_meeting, participant, reason, :slot_taken)
 
-  defp handle_move({:error, :already_cancelled}, old_meeting, participant, _old_snapshot) do
+  defp handle_move({:error, :already_cancelled}, old_meeting, participant) do
     Logger.info("Seat cancelled by a concurrent request before it could move",
       meeting_id: old_meeting.id,
       participant_id: participant.id
@@ -221,10 +212,10 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     {:error, :already_cancelled}
   end
 
-  defp handle_move({:error, :booking_limit_reached}, _old_meeting, _participant, _snapshot),
+  defp handle_move({:error, :booking_limit_reached}, _old_meeting, _participant),
     do: {:error, :booking_limit_reached}
 
-  defp handle_move({:error, %Ecto.Changeset{} = changeset}, old_meeting, participant, _snapshot) do
+  defp handle_move({:error, %Ecto.Changeset{} = changeset}, old_meeting, participant) do
     cond do
       # The first-booker race exhausted book_seat/3's retry: the target slot
       # was created by someone else in the meantime, which is the same story
@@ -244,7 +235,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     end
   end
 
-  defp handle_move({:error, reason}, old_meeting, participant, _old_snapshot),
+  defp handle_move({:error, reason}, old_meeting, participant),
     do: log_and_bounce(old_meeting, participant, reason, :failed_to_update_meeting)
 
   defp duplicate_seat?(%Ecto.Changeset{errors: errors}) do
@@ -313,7 +304,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     }
   end
 
-  defp after_commit(old_meeting, old_snapshot, booked) do
+  defp after_commit(old_meeting, old_participant, booked) do
     # Both slots belong to the same meeting type, so one broadcast covers
     # the freed seat and the taken seat alike; the cache holds availability
     # per organiser, and both slots are theirs.
@@ -331,7 +322,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     # still worth having ready, quietly, for whoever opens the new event.
     if booked.created_meeting?, do: SeatEffects.schedule_new_slot_effects(booked.meeting)
 
-    Events.seat_rescheduled(booked.meeting, booked.participant, old_snapshot)
+    Events.seat_rescheduled(booked.meeting, booked.participant, old_participant)
 
     {:ok, booked}
   end

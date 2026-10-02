@@ -570,7 +570,7 @@ msgstr "Адресу погодять після бронювання."
 msgid "The address will be arranged with you after booking."
 msgstr "Адресу погодять з вами після бронювання."
 
-#: lib/tymeslot/workers/email_worker_handlers/group_meeting_emails.ex
+#: lib/tymeslot/emails/appointment_builder.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} participant"
 msgid_plural "%{count} participants"
@@ -582,3 +582,8 @@ msgstr[2] "%{count} учасників"
 #, elixir-autogen, elixir-format
 msgid "Attendees (%{count}):"
 msgstr "Учасники (%{count}):"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Open in dashboard:"
+msgstr "Відкрити в панелі керування:"

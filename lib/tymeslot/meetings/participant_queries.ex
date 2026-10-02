@@ -62,6 +62,30 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
     |> Repo.update()
   end
 
+  @doc """
+  Stamps `confirmation_sent_at` (the participant's own confirmation went out),
+  unless an earlier run already did. Returns `:ok` either way.
+  """
+  @spec mark_confirmation_sent(Participant.t()) :: :ok
+  def mark_confirmation_sent(%Participant{id: id}), do: stamp_once(id, :confirmation_sent_at)
+
+  @doc """
+  Stamps `organizer_notified_at` (the organiser was told about this seat),
+  unless an earlier run already did. Returns `:ok` either way.
+  """
+  @spec mark_organizer_notified(Participant.t()) :: :ok
+  def mark_organizer_notified(%Participant{id: id}), do: stamp_once(id, :organizer_notified_at)
+
+  defp stamp_once(id, field) do
+    now = DateTime.utc_now(:second)
+
+    Participant
+    |> where([p], p.id == ^id and is_nil(field(p, ^field)))
+    |> Repo.update_all(set: [{field, now}, {:updated_at, now}])
+
+    :ok
+  end
+
   @doc "Counts the live (not cancelled) participants of a meeting."
   @spec count_live_for_meeting(binary()) :: non_neg_integer()
   def count_live_for_meeting(meeting_id) do

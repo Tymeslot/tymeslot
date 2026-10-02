@@ -256,14 +256,20 @@ defmodule Tymeslot.Notifications.Orchestrator do
   end
 
   @doc """
-  Schedules the reschedule email job for one seat on a group meeting.
+  Schedules the reschedule email job for one seat on a group meeting:
+  `participant` is the seat at its new time, `old_participant` the seat it
+  moved from.
   """
-  @spec schedule_seat_reschedule(%{atom() => term()}, %{atom() => term()}, map()) ::
+  @spec schedule_seat_reschedule(%{atom() => term()}, %{atom() => term()}, %{atom() => term()}) ::
           {:ok, atom()} | {:error, term()}
-  def schedule_seat_reschedule(meeting, participant, old_snapshot) do
+  def schedule_seat_reschedule(meeting, participant, old_participant) do
     worker_module = get_email_worker_module()
 
-    case worker_module.schedule_seat_reschedule_emails(meeting.id, participant.id, old_snapshot) do
+    case worker_module.schedule_seat_reschedule_emails(
+           meeting.id,
+           participant.id,
+           old_participant.id
+         ) do
       :ok -> {:ok, :seat_reschedule_scheduled}
       {:error, reason} -> {:error, reason}
     end

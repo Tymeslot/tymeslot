@@ -15,7 +15,8 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
     BookingApprovalRequest,
     BookingRequestOutcome,
     BookingRequestReceived,
-    RescheduleRequestExpired
+    RescheduleRequestExpired,
+    SeatUpdateForOrganizer
   }
 
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -151,6 +152,20 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
       |> Email.attachment(cancel_attachment)
 
     Delivery.deliver(email)
+  end
+
+  @doc """
+  Tells the organiser about one seat of a group meeting: booked, cancelled by
+  its participant, or moved to another time. See
+  `Tymeslot.Emails.Templates.SeatUpdateForOrganizer`.
+  """
+  @spec send_seat_update_to_organizer(
+          SeatUpdateForOrganizer.variant(),
+          String.t(),
+          Tymeslot.Emails.EmailService.appointment_details()
+        ) :: {:ok, any()} | {:error, any()}
+  def send_seat_update_to_organizer(variant, organizer_email, appointment_details) do
+    Delivery.deliver(SeatUpdateForOrganizer.render(variant, organizer_email, appointment_details))
   end
 
   @doc """

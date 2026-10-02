@@ -116,11 +116,43 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
     |> foreign_key_constraint(:meeting_id)
   end
 
-  @doc "Changeset for soft-cancelling a participant at the given time."
+  @doc """
+  Changeset for soft-cancelling a participant at the given time.
+
+  Cancelling the seat is a new revision of its calendar entry (the
+  cancellation the participant and their guests are sent), so
+  `ical_sequence` advances with it, in the same write: a cancelled seat
+  stores the revision of its own cancellation. See `invitation_sequence/1`.
+  """
   @spec cancel_changeset(t(), DateTime.t()) :: Ecto.Changeset.t()
   def cancel_changeset(participant, cancelled_at) do
-    cast(participant, %{cancelled_at: cancelled_at}, [:cancelled_at])
+    change(participant, cancelled_at: cancelled_at, ical_sequence: participant.ical_sequence + 1)
   end
+
+  @doc """
+  The UID of this seat's own calendar entry.
+
+  Each seat is its own event in the participant's calendar (and their
+  guests'), never the slot's `calendar_uid`, which names the organiser's
+  provider event. The participant id is a UUID like `calendar_uid`, stable for
+  the seat's life and never reused: a seat cancelled and booked again by the
+  same person is a new row, so a new event rather than a revival of the
+  cancelled one.
+  """
+  @spec calendar_uid(t()) :: String.t()
+  def calendar_uid(%__MODULE__{id: id}) when is_binary(id), do: id
+
+  @doc """
+  The revision of the last invitation sent for this seat's calendar entry.
+
+  A live seat's stored `ical_sequence` is exactly that. A cancelled seat
+  stores the revision of its cancellation (`cancel_changeset/2` advances it),
+  so its last invitation is the one before, which is what a cancellation
+  payload carries: the cancellation file is stamped one above it.
+  """
+  @spec invitation_sequence(t()) :: non_neg_integer()
+  def invitation_sequence(%__MODULE__{cancelled_at: nil, ical_sequence: sequence}), do: sequence
+  def invitation_sequence(%__MODULE__{ical_sequence: sequence}), do: max(sequence - 1, 0)
 
   @doc "True while the participant still holds their seat (not cancelled)."
   @spec live?(t()) :: boolean()

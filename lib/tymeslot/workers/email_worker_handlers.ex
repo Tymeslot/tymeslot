@@ -12,6 +12,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   alias Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.PollEmails
+  alias Tymeslot.Workers.EmailWorkerHandlers.SeatEmails
+  alias Tymeslot.Workers.EmailWorkerHandlers.SeatJobs
 
   # Static dispatch table — keeps `execute_email_action/3` simple and lets
   # adding a new email type be a one-line change. Each entry maps the
@@ -30,14 +32,14 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     "send_admin_alert_digest" => {AdminEmails, :handle_admin_alert_digest},
     "send_confirmation_emails" => {MeetingEmails, :handle_confirmation_emails},
     MeetingScheduler.seat_action(:seat_confirmation) =>
-      {GroupMeetingEmails, :handle_seat_confirmation_emails},
+      {SeatEmails, :handle_seat_confirmation_emails},
     "send_cancellation_emails" => {MeetingEmails, :handle_cancellation_emails, :with_job_id},
     MeetingScheduler.seat_action(:seat_cancellation) =>
-      {GroupMeetingEmails, :handle_seat_cancellation_emails},
+      {SeatEmails, :handle_seat_cancellation_emails, :with_job_id},
     MeetingScheduler.seat_action(:seat_meeting_cancellation) =>
       {GroupMeetingEmails, :handle_seat_meeting_cancellation_emails},
     MeetingScheduler.seat_action(:seat_reschedule) =>
-      {GroupMeetingEmails, :handle_seat_reschedule_emails},
+      {SeatEmails, :handle_seat_reschedule_emails, :with_job_id},
     MeetingScheduler.seat_action(:seat_reschedule_request) =>
       {GroupMeetingEmails, :handle_seat_reschedule_request},
     "send_guest_invitations" => {GuestEmails, :handle_guest_invitations},
@@ -82,7 +84,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     GuestEmails,
     IntegrationEmails,
     MeetingEmails,
-    PollEmails
+    PollEmails,
+    SeatJobs
   ]
 
   @doc """

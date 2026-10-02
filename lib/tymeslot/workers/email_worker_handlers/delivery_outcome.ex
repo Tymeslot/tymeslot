@@ -73,6 +73,37 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome do
     end
   end
 
+  @doc """
+  The job outcome for a send to several recipients whose deliveries are each
+  recorded as they succeed (a sent stamp or a `DeliveryClaims` claim), so a
+  retry repeats only what has not gone out.
+
+  `:ok` once every result is a success (`{:ok, _}`, or the bare `:ok` a claim
+  already taken by an earlier run returns). Otherwise the job retries:
+  `{:error, _}` with the actionable reason `first_actionable/1` finds (an open
+  circuit snoozes; a permanent rejection with nothing else outstanding
+  discards), or a message naming the email.
+  """
+  @spec from_results(String.t(), keyword(), [term()]) :: :ok | {:error, term()}
+  def from_results(label, metadata, results) do
+    case Enum.reject(results, &succeeded?/1) do
+      [] ->
+        :ok
+
+      failures ->
+        Logger.warning(
+          "Some emails failed and will be retried",
+          metadata ++ [label: label, failures: Enum.map(failures, &LogFormat.reason/1)]
+        )
+
+        {:error, first_actionable(failures) || "Failed to send #{label} emails"}
+    end
+  end
+
+  defp succeeded?(:ok), do: true
+  defp succeeded?({:ok, _result}), do: true
+  defp succeeded?(_result), do: false
+
   # `{:ok, :skipped}` means a recipient was deliberately not sent to (e.g. a
   # last-leaver seat cancellation with no organiser notification), not that
   # something already went out. Counting it as delivered here would make a
