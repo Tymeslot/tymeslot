@@ -248,8 +248,8 @@ defmodule TymeslotWeb.Components.CoreComponents do
   attr :pulse, :boolean, default: false, doc: "Show an animated dot (implies `dot`)"
 
   attr :uppercase, :boolean,
-    default: true,
-    doc: "Uppercase for one-word tags; set false for phrases and data"
+    default: false,
+    doc: "Uppercase the label; for one-word tags only, never phrases or data"
 
   attr :class, :any, default: nil, doc: "Layout classes only"
   attr :rest, :global

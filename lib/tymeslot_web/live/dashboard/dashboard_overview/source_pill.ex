@@ -15,13 +15,15 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.SourcePill do
   @spec source_pill(map()) :: Phoenix.LiveView.Rendered.t()
   def source_pill(%{source: :tymeslot} = assigns) do
     ~H"""
-    <CoreComponents.pill tone={:brand}>{dgettext("dashboard_home", "Booking")}</CoreComponents.pill>
+    <CoreComponents.pill tone={:brand} uppercase>
+      {dgettext("dashboard_home", "Booking")}
+    </CoreComponents.pill>
     """
   end
 
   def source_pill(assigns) do
     ~H"""
-    <CoreComponents.pill tone={:neutral}>
+    <CoreComponents.pill tone={:neutral} uppercase>
       {dgettext("dashboard_home", "Calendar")}
     </CoreComponents.pill>
     """

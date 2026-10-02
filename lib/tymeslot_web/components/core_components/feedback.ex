@@ -99,11 +99,11 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
   there instead, and `pulse` animates that dot (for something happening now;
   it stops when the visitor prefers reduced motion).
 
-  Case rule: uppercase for one-word tags ("Booking", "Pro"), sentence case
-  (`uppercase={false}`) for multi-word phrases and for data such as a
-  timezone, a count or an HTTP status. Pick one case per surface: when any
-  label a wrapper can show is a phrase, the wrapper uses sentence case for
-  all of them, so neighbouring pills never mix.
+  Case rule: labels are sentence case by default, which suits multi-word
+  phrases and data such as a timezone, a count or an HTTP status. Pass
+  `uppercase` for one-word tags ("Booking", "Pro"). Pick one case per
+  surface: a wrapper opts in only when every label it can show is a single
+  word, so neighbouring pills never mix.
 
   `class` is for layout only (margins, alignment); colour and type come from
   `tone` and `size`, so every pill in the dashboard reads the same.
@@ -115,8 +115,8 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
   attr :pulse, :boolean, default: false, doc: "Show an animated dot (implies `dot`)"
 
   attr :uppercase, :boolean,
-    default: true,
-    doc: "Uppercase for one-word tags; set false for phrases and data"
+    default: false,
+    doc: "Uppercase the label; for one-word tags only, never phrases or data"
 
   attr :class, :any, default: nil, doc: "Layout classes only"
   attr :rest, :global

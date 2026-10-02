@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.SourcePillTest do
 
     assert label == "Booking"
     assert class =~ "bg-turquoise-100"
+    assert class =~ "uppercase"
   end
 
   test "an event from a connected calendar is labelled Calendar in neutral" do

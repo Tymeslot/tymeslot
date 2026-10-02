@@ -169,7 +169,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                     <span class="text-token-sm font-medium truncate max-w-full">
                       {integration.name}
                     </span>
-                    <.pill :if={not integration.is_active} tone={:warning} uppercase={false}>
+                    <.pill :if={not integration.is_active} tone={:warning}>
                       {dgettext("dashboard_meeting_form", "Reconnect")}
                     </.pill>
                   </div>

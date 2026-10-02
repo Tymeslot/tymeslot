@@ -47,7 +47,6 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
             :if={relative_label(@entry, @now)}
             tone={:brand}
             icon="hero-clock-mini"
-            uppercase={false}
           >
             {relative_label(@entry, @now)}
           </.pill>

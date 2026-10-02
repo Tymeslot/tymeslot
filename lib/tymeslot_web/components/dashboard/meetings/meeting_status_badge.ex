@@ -48,7 +48,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingStatusBadge do
       )
 
     ~H"""
-    <CoreComponents.pill tone={@tone} size={:sm} icon={@icon} uppercase={false}>
+    <CoreComponents.pill tone={@tone} size={:sm} icon={@icon}>
       {@label}
     </CoreComponents.pill>
     """

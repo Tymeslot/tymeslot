@@ -150,7 +150,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
   @spec status_pill(map()) :: Phoenix.LiveView.Rendered.t()
   defp status_pill(assigns) do
     ~H"""
-    <Feedback.pill tone={status_tone(@status)}>{status_label(@status)}</Feedback.pill>
+    <Feedback.pill tone={status_tone(@status)} uppercase>{status_label(@status)}</Feedback.pill>
     """
   end
 

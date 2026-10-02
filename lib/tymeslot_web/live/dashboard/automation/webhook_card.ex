@@ -65,7 +65,6 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
                 :if={!@webhook.is_active}
                 tone={:neutral}
                 icon="hero-x-circle"
-                uppercase={false}
               >
                 {dgettext("dashboard_automation", "Disabled")}
               </.pill>

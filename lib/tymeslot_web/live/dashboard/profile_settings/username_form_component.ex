@@ -239,15 +239,15 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
                   <div class="absolute right-3 top-1/2 -translate-y-1/2 shrink-0">
                     <%= case @username_available do %>
                       <% true -> %>
-                        <.pill tone={:success} icon="hero-check-mini">
+                        <.pill tone={:success} icon="hero-check-mini" uppercase>
                           {dgettext("dashboard_profile", "Available")}
                         </.pill>
                       <% false -> %>
-                        <.pill tone={:danger} icon="hero-x-mark-mini">
+                        <.pill tone={:danger} icon="hero-x-mark-mini" uppercase>
                           {dgettext("dashboard_profile", "Taken")}
                         </.pill>
                       <% {:error, _message} -> %>
-                        <.pill tone={:warning} icon="hero-exclamation-triangle-mini">
+                        <.pill tone={:warning} icon="hero-exclamation-triangle-mini" uppercase>
                           {dgettext("dashboard_profile", "Invalid")}
                         </.pill>
                       <% _ -> %>

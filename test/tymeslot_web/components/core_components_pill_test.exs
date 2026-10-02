@@ -22,7 +22,7 @@ defmodule TymeslotWeb.Components.CoreComponentsPillTest do
       icon: nil,
       dot: false,
       pulse: false,
-      uppercase: true,
+      uppercase: false,
       class: nil
     })
     |> Map.put(:rest, rest)
@@ -111,12 +111,12 @@ defmodule TymeslotWeb.Components.CoreComponentsPillTest do
       assert doc |> LazyHTML.query("svg") |> Enum.to_list() == []
     end
 
-    test "uppercases the label by default" do
-      assert pill_class(render_pill(%{})) =~ "uppercase"
+    test "keeps the label's own case by default" do
+      refute pill_class(render_pill(%{})) =~ "uppercase"
     end
 
-    test "uppercase={false} keeps the label's own case" do
-      refute pill_class(render_pill(%{uppercase: false})) =~ "uppercase"
+    test "uppercase uppercases the label" do
+      assert pill_class(render_pill(%{uppercase: true})) =~ "uppercase"
     end
 
     test "size :sm pads more than the default :xs" do

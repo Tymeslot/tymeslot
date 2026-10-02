@@ -78,7 +78,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
           class="flex cursor-pointer list-none items-center gap-2 text-token-sm"
           aria-label={dgettext("onboarding_wizard", "Setup checklist")}
         >
-          <.pill tone={:brand} uppercase={false}>{@done_count}/{@total}</.pill>
+          <.pill tone={:brand}>{@done_count}/{@total}</.pill>
           <span class="font-bold text-tymeslot-800">
             {dgettext("onboarding_wizard", "Finish setting up")}
           </span>
@@ -132,7 +132,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
           </p>
         </div>
         <div class="flex items-center gap-3 shrink-0">
-          <.pill tone={:brand} size={:sm} uppercase={false}>{@done_count}/{@total}</.pill>
+          <.pill tone={:brand} size={:sm}>{@done_count}/{@total}</.pill>
           <button
             type="button"
             phx-click="onboarding:dismiss"

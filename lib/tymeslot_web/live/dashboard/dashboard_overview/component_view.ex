@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
         <div class="flex items-center justify-between gap-4 mb-8">
           <div class="flex items-center gap-3">
             <.section_header level={2} title={dgettext("dashboard_home", "Your day")} />
-            <.pill :if={@today_count > 0} tone={:brand} uppercase={false}>
+            <.pill :if={@today_count > 0} tone={:brand}>
               {@today_count} {dgettext("dashboard_home", "today")}
             </.pill>
           </div>
@@ -344,7 +344,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
             <span class="text-tymeslot-900 font-black tracking-tight truncate group-hover:text-turquoise-700 transition-colors">
               {@entry.title}
             </span>
-            <.pill :if={@in_progress?} tone={:brand} pulse>
+            <.pill :if={@in_progress?} tone={:brand} pulse uppercase>
               {dgettext("dashboard_home", "Now")}
             </.pill>
             <SourcePill.source_pill source={@entry.source} />

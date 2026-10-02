@@ -81,7 +81,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
                 string and gives the badge an accessible reading. --%>
           <Feedback.pill
             icon="hero-globe-alt-mini"
-            uppercase={false}
             class="mt-1"
             aria-label={
               dgettext("dashboard_common", "Times shown in %{timezone}", timezone: @poll.timezone)
@@ -324,7 +323,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
             :if={@winner?}
             tone={:info}
             icon="hero-check-circle-mini"
-            uppercase={false}
           >
             {dgettext("dashboard_common", "Winner")}
           </Feedback.pill>
@@ -332,7 +330,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
             :if={@leader?}
             tone={:brand}
             icon="hero-arrow-trending-up-mini"
-            uppercase={false}
             data-testid="poll-slot-leader"
           >
             {dgettext("dashboard_common", "Most votes")}
@@ -341,7 +338,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
             :if={@health == :conflict}
             tone={:warning}
             icon="hero-exclamation-triangle-mini"
-            uppercase={false}
             title={dgettext("dashboard_common", "This time clashes with an event on your calendar")}
           >
             {dgettext("dashboard_common", "Calendar conflict")}

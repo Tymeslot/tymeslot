@@ -366,7 +366,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
 
   defp pro_badge(assigns) do
     ~H"""
-    <.pill tone={:brand} class={["ml-auto", @class]} {@rest}>
+    <.pill tone={:brand} uppercase class={["ml-auto", @class]} {@rest}>
       {dgettext("dashboard_common", "Pro")}
     </.pill>
     """

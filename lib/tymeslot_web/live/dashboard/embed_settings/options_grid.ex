@@ -409,7 +409,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
             <h3 class="text-token-xl font-bold text-tymeslot-900">{@title}</h3>
             <p class="text-token-sm text-tymeslot-600 mt-1">{@description}</p>
           </div>
-          <.pill :if={@badge} tone={@badge_tone} size={:sm}>{@badge}</.pill>
+          <.pill :if={@badge} tone={@badge_tone} size={:sm} uppercase>{@badge}</.pill>
         </div>
 
         <%!-- Preview --%>
