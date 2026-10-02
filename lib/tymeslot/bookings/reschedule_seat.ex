@@ -36,6 +36,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Notifications.Events
   alias UUID
 
@@ -57,9 +58,10 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
          :ok <- Policy.can_reschedule_meeting?(old_meeting) do
       meeting_type = resolve_meeting_type(old_meeting)
 
-      case Validation.prepare_new_times(new_params, old_meeting.organizer_user_id, meeting_type) do
-        {:ok, new_times} -> move_seat(old_meeting, participant, new_times, meeting_type)
-        error -> error
+      with :ok <- ensure_group_type(meeting_type),
+           {:ok, new_times} <-
+             Validation.prepare_new_times(new_params, old_meeting.organizer_user_id, meeting_type) do
+        move_seat(old_meeting, participant, new_times, meeting_type)
       end
     else
       {:error, :not_found} -> {:error, :meeting_not_found}
@@ -69,6 +71,17 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
 
   defp ensure_live(%{cancelled_at: nil}), do: :ok
   defp ensure_live(_participant), do: {:error, :already_cancelled}
+
+  # A type that is no longer a group type (its limit turned back to one)
+  # takes no seat moves: its existing group meetings keep their seats but
+  # accept nobody new, and a fresh slot would be a one-seat meeting with no
+  # attendee. A deleted type (`nil`) falls back to the old meeting's own
+  # capacity instead, see `max_participants_for/2`.
+  defp ensure_group_type(nil), do: :ok
+
+  defp ensure_group_type(meeting_type) do
+    if MeetingTypeSchema.group?(meeting_type), do: :ok, else: {:error, :seat_not_movable}
+  end
 
   # The meeting type a rescheduled seat is checked and, if it creates a new
   # slot, built against — the same one the offered grid came from. `nil` when

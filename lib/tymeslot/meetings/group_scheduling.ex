@@ -65,7 +65,10 @@ defmodule Tymeslot.Meetings.GroupScheduling do
     seats_requested = 1 + length(seat_request.guest_emails)
     on_booked = Keyword.get(opts, :on_booked, fn _booking -> {:ok, :noop} end)
 
-    if seats_requested > seat_request.max_participants do
+    # A limit of one means the type is no longer a group type: it takes no
+    # new seats at all, neither on an existing group meeting nor on a fresh
+    # slot (which would otherwise be a capacity-1 meeting with no attendee).
+    if seat_request.max_participants < 2 or seats_requested > seat_request.max_participants do
       {:error, :slot_full}
     else
       attempt_booking(meeting_attrs, seat_request, seats_requested, on_booked, _retries_left = 1)
@@ -130,12 +133,16 @@ defmodule Tymeslot.Meetings.GroupScheduling do
     end
   end
 
-  # Gates on the meeting's own snapshotted capacity, not the caller's
+  # Gates on the meeting's own capacity, not the caller's
   # `seat_request.max_participants` (which is only the correct capacity for
-  # a meeting not yet created — see `create_meeting_with_first_seat/2`). A
-  # meeting's seat count is governed by its own capacity for its whole life.
+  # a meeting not yet created, see `create_meeting_with_first_seat/2`); the
+  # type keeps a group meeting's capacity in step with its limit. A solo
+  # meeting at the slot (a one-to-one booked before the type became a group
+  # type) is never joined: it reads as full, so a private booking stays
+  # private.
   defp join_meeting(meeting, seat_request, seats_requested) do
-    if seats_requested > Seats.seats_left(meeting, meeting.capacity) do
+    if not Meeting.group?(meeting) or
+         seats_requested > Seats.seats_left(meeting, meeting.capacity) do
       Repo.rollback(:slot_full)
     else
       participant = insert_participant_or_rollback(meeting, seat_request)

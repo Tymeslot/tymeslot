@@ -24,6 +24,7 @@ defmodule Tymeslot.Availability.GroupSlots do
   alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Meetings.GroupMeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.Seats
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Utils.DateTimeUtils
@@ -152,27 +153,18 @@ defmodule Tymeslot.Availability.GroupSlots do
     end
   end
 
+  # Only group meetings are ever joinable. A solo meeting of the type (a
+  # one-to-one booked before the type became a group type) has no participant
+  # rows, so it must not read as a slot with free seats: it stays private and
+  # its own calendar event keeps blocking the slot.
   defp with_seats_left(meetings, seat_counts),
-    do: Enum.filter(meetings, &(&1.capacity - seats_taken(&1, seat_counts) > 0))
+    do: Enum.filter(meetings, &(seats_left(&1, seat_counts) > 0))
 
-  # `seat_counts` only knows about live participant rows (see
-  # `Tymeslot.Meetings.ParticipantQueries.seat_counts_for_range/3`), so a
-  # meeting still carrying its pre-conversion solo attendee — no
-  # participant row yet, see `Tymeslot.Meetings.GroupConversion` — is absent
-  # from it. Treating that absence as zero seats taken is what let a
-  # stranger join someone else's still-unconverted 1:1: the attendee column
-  # is checked here the same way `ParticipantQueries.count_seats_taken/1`
-  # checks it for the booking-time seat count, so both agree the slot is
-  # occupied until the conversion actually runs.
-  defp seats_taken(meeting, seat_counts) do
-    case Map.get(seat_counts, meeting.start_time) do
-      nil -> unconverted_seat(meeting)
-      count -> count
-    end
+  defp seats_left(meeting, seat_counts) do
+    if Meeting.group?(meeting),
+      do: meeting.capacity - Map.get(seat_counts, meeting.start_time, 0),
+      else: 0
   end
-
-  defp unconverted_seat(%{attendee_email: email}) when is_binary(email) and email != "", do: 1
-  defp unconverted_seat(_meeting), do: 0
 
   # --- Group day enrichment ---
 
@@ -184,12 +176,16 @@ defmodule Tymeslot.Availability.GroupSlots do
     |> Enum.uniq()
     |> Enum.map(fn slot ->
       start_time = slot_start_utc(date, slot, context.user_timezone)
-      # An existing meeting keeps its own snapshotted capacity for its whole
-      # life; a slot with no meeting yet takes the type's current value,
-      # which is what a new meeting would be created with.
+      # An existing meeting carries its own capacity (kept in step with the
+      # type by `MeetingTypes.update_meeting_type/3`); a slot with no meeting
+      # yet takes the type's current value, which is what a new meeting would
+      # be created with.
       capacity = Map.get(slot_ctx.capacities, start_time, meeting_type.max_participants)
-      seats_taken = Map.get(slot_ctx.seat_counts, start_time, 0)
-      %{time: slot, seats_left: capacity - seats_taken, capacity: capacity}
+
+      seats_left =
+        Map.get(slot_ctx.seats_left, start_time, meeting_type.max_participants)
+
+      %{time: slot, seats_left: seats_left, capacity: capacity}
     end)
     |> Enum.filter(&(&1.seats_left > 0))
     |> Enum.sort_by(&TimeSlots.parse_time_slot(&1.time), Time)
@@ -213,7 +209,13 @@ defmodule Tymeslot.Availability.GroupSlots do
 
     %{
       ignore_uids: ignore_uids,
-      seat_counts: seat_counts,
+      # A solo meeting at a start time reads as no seats left, so the slot is
+      # never offered as joinable even if its calendar event has not synced.
+      seats_left:
+        Enum.reduce(live, %{}, fn meeting, acc ->
+          left = seats_left(meeting, seat_counts)
+          Map.update(acc, meeting.start_time, left, &min(&1, left))
+        end),
       capacities: Map.new(live, &{&1.start_time, &1.capacity})
     }
   end

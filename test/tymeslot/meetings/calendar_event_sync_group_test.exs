@@ -1,8 +1,8 @@
 defmodule Tymeslot.Meetings.CalendarEventSyncGroupTest do
   @moduledoc """
   The group-booking cases of `CalendarEventSync.create/2`: the mapping of a
-  meeting with no attendee of its own, and the attendee list a converted
-  meeting writes to the organiser's calendar.
+  meeting with no attendee of its own, and the attendee list a group meeting
+  writes to the organiser's calendar.
   """
 
   use Tymeslot.DataCase, async: true
@@ -15,7 +15,6 @@ defmodule Tymeslot.Meetings.CalendarEventSyncGroupTest do
 
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Meetings.CalendarEventSync
-  alias Tymeslot.Meetings.GroupConversion
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
 
@@ -51,24 +50,26 @@ defmodule Tymeslot.Meetings.CalendarEventSyncGroupTest do
       assert updated_meeting.provider_event_id == "google-group-event"
     end
 
-    test "a meeting converted from solo to group lists every live participant, not just the original attendee" do
+    test "a group meeting lists every live participant in the organiser's event" do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user)
-      meeting_type = insert(:meeting_type, user: user, max_participants: 1)
 
       meeting =
-        insert(:meeting,
+        insert(:group_meeting,
           organizer_user_id: user.id,
-          meeting_type_ref: meeting_type,
           calendar_integration_id: integration.id,
           calendar_path: "primary",
-          attendee_name: "Solo Booker",
-          attendee_email: "solo@example.com"
+          capacity: 4
         )
 
-      # Drives the meeting through the real conversion path rather than
-      # hand-building a row that carries both shapes.
-      assert {:ok, 1} = GroupConversion.backfill(meeting_type.id, 4)
+      {:ok, _first} =
+        ParticipantQueries.insert(%{
+          meeting_id: meeting.id,
+          name: "First Booker",
+          email: "first@example.com",
+          timezone: "Etc/UTC",
+          locale: "en"
+        })
 
       {:ok, _joiner} =
         ParticipantQueries.insert(%{
@@ -81,9 +82,9 @@ defmodule Tymeslot.Meetings.CalendarEventSyncGroupTest do
 
       expect(Tymeslot.CalendarMock, :create_event, fn event_data, _ctx ->
         assert event_data.description =~ "Attendees (2):"
-        assert event_data.description =~ "Solo Booker <solo@example.com>"
+        assert event_data.description =~ "First Booker <first@example.com>"
         assert event_data.description =~ "Later Joiner <joiner@example.com>"
-        {:ok, CreatedEvent.provider_minted("remote-uid-converted")}
+        {:ok, CreatedEvent.provider_minted("remote-uid-group")}
       end)
 
       expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _ctx ->

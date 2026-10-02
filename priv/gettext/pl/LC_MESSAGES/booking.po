@@ -1405,3 +1405,8 @@ msgid_plural "You can add up to %{count} guests."
 msgstr[0] "Możesz dodać maksymalnie %{count} gościa."
 msgstr[1] "Możesz dodać maksymalnie %{count} gości."
 msgstr[2] "Możesz dodać maksymalnie %{count} gości."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This spot can no longer be moved online. Please contact the host to change it."
+msgstr "Tego miejsca nie można już przenieść online. Aby je zmienić, skontaktuj się z gospodarzem."

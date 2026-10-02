@@ -55,42 +55,21 @@ defmodule Tymeslot.Meetings.Recipient do
   @doc """
   Everyone on the meeting who should receive attendee-facing notifications.
 
-  Solo meetings return a single recipient built from the `attendee_*` fields;
-  group meetings return one recipient per live participant. The two are
-  unioned rather than chosen between, because a meeting type switched from
-  solo to group can leave a meeting carrying both. A group meeting whose
-  participants have all cancelled returns `[]` (its `attendee_*` fields are
-  empty by contract).
-
-  A meeting converted from solo to group carries the same person twice: once
-  as the attendee-column recipient from before the conversion, once as the
-  participant row `GroupConversion` built from those same columns. Those are
-  deduplicated on downcased email, with the participant entry winning — it
-  carries the seat identity and tokenised cancel/reschedule URLs the attendee
-  entry lacks — so callers never double-notify the converted booker.
+  A group meeting (`MeetingSchema.group?/1`) returns one recipient per live
+  participant, and `[]` once they have all cancelled: its people are its
+  participant rows, never its `attendee_*` fields. A solo meeting returns a
+  single recipient built from its `attendee_*` fields (or `[]` if it has no
+  attendee email).
   """
   @spec for_meeting(MeetingSchema.t()) :: [t()]
   def for_meeting(%MeetingSchema{} = meeting) do
-    participants =
+    if MeetingSchema.group?(meeting) do
       meeting.id
       |> ParticipantQueries.list_live_for_meeting()
       |> Enum.map(&from_participant/1)
-
-    participant_emails = MapSet.new(participants, &String.downcase(&1.email))
-
-    # Union, not either/or. A meeting normally carries one shape or the
-    # other, but a meeting type switched from solo to group leaves rows that
-    # carry both: an attendee on the meeting row from before the switch, and
-    # participants who joined after it. Dropping the attendee there would
-    # quietly stop notifying someone who still holds the booking — unless a
-    # participant already covers that same email, in which case keeping both
-    # would double-notify them instead.
-    attendees =
-      meeting
-      |> attendee_recipients()
-      |> Enum.reject(&MapSet.member?(participant_emails, String.downcase(&1.email)))
-
-    attendees ++ participants
+    else
+      attendee_recipients(meeting)
+    end
   end
 
   @doc """

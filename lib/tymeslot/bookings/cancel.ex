@@ -222,12 +222,9 @@ defmodule Tymeslot.Bookings.Cancel do
 
   # A group slot is shared, so flipping the meeting row to "cancelled" here
   # would cancel every other participant's seat, not just whoever is asking.
-  # That is exactly what a converted booker's old (pre-conversion) cancel
-  # link resolves to: it addresses the meeting by its uid, not by a seat's
-  # `management_token`, and by the time it is followed the meeting may carry
-  # other live participants who never agreed to any of this. That public,
-  # unauthenticated surface (`/:username/meeting/:uid/cancel`) never passes
-  # `caller: :organizer`, so it is refused by default; an authenticated
+  # The public, unauthenticated meeting-level surface
+  # (`/:username/meeting/:uid/cancel`) never passes `caller: :organizer`, so
+  # it is refused by default; an authenticated
   # organiser cancelling the whole meeting from their own dashboard is a
   # deliberate, distinct action and opts in explicitly.
   #

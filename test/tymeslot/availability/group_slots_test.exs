@@ -211,7 +211,7 @@ defmodule Tymeslot.Availability.GroupSlotsTest do
     refute Enum.any?(enriched, &(&1.time == "11:00 AM"))
   end
 
-  test "lowering the type's max_participants does not change an existing booked slot's capacity",
+  test "changing the type's max_participants carries an existing group slot's capacity with it",
        ctx do
     start_time = slot_start(ctx.date, ~T[11:00:00])
     %{meeting: meeting} = book_seat!(ctx, start_time, "one@example.com")
@@ -224,10 +224,7 @@ defmodule Tymeslot.Availability.GroupSlotsTest do
     enriched =
       GroupSlots.enrich_day_slots(slots, lowered_type, ctx.date, context(events, ctx.config))
 
-    # The meeting was created with capacity 3 (the type's value at the
-    # time); it keeps that capacity for its whole life even though the
-    # type's live value is now lower than the seats already taken.
-    assert %{capacity: 3, seats_left: 2} = Enum.find(enriched, &(&1.time == "11:00 AM"))
+    assert %{capacity: 2, seats_left: 1} = Enum.find(enriched, &(&1.time == "11:00 AM"))
   end
 
   test "overlay_range flips a day back to available when a joinable meeting exists", ctx do

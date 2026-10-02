@@ -84,11 +84,16 @@ defmodule Tymeslot.Meetings do
   @doc "Whether `meeting` was booked with room for more than one seat."
   defdelegate group?(meeting), to: MeetingSchema
 
-  @doc "Enqueues background conversion of a meeting type's bookings into group seats. See `Tymeslot.Workers.GroupConversionWorker`."
-  @spec convert_type_to_group(integer(), pos_integer()) :: {:ok, Oban.Job.t()} | {:error, term()}
-  defdelegate convert_type_to_group(meeting_type_id, capacity),
-    to: Tymeslot.Workers.GroupConversionWorker,
-    as: :enqueue
+  @doc """
+  Sets `capacity` on a meeting type's future, live group meetings so they
+  follow the type's new seat limit. Solo meetings are left alone. Returns the
+  number of meetings updated.
+  """
+  defdelegate set_future_group_capacity(meeting_type_id, capacity, now),
+    to: Tymeslot.Meetings.GroupMeetingQueries
+
+  @doc "Tells open booking pages that a meeting type's seat availability changed."
+  defdelegate broadcast_seat_change(meeting_type_id), to: Tymeslot.Meetings.SeatBroadcast
 
   @doc """
   Cancels a meeting including all side effects.

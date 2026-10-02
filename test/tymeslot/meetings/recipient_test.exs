@@ -5,9 +5,10 @@ defmodule Tymeslot.Meetings.RecipientTest do
 
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.Meetings
-  alias Tymeslot.Meetings.GroupConversion
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.Repo
 
   defp insert_group_meeting(_context) do
     user = insert(:user)
@@ -18,6 +19,7 @@ defmodule Tymeslot.Meetings.RecipientTest do
       insert(:meeting,
         organizer_user_id: user.id,
         meeting_type_id: meeting_type.id,
+        capacity: 5,
         attendee_name: nil,
         attendee_email: nil,
         attendee_phone: nil,
@@ -140,55 +142,28 @@ defmodule Tymeslot.Meetings.RecipientTest do
     end
   end
 
-  describe "recipients/1 for a meeting carrying both shapes" do
-    # A meeting type switched from solo to group leaves rows holding an
-    # attendee from before the switch and participants from after it. Picking
-    # one shape over the other silently stopped notifying someone who still
-    # held the booking.
-    test "includes the meeting-row attendee alongside the participants" do
-      meeting = insert(:meeting, attendee_name: "Solo Booker", attendee_email: "solo@example.com")
-
-      insert_participant(meeting, %{name: "Later Joiner", email: "later@example.com"})
-
-      recipients = Meetings.recipients(meeting)
-
-      assert Enum.map(recipients, & &1.email) == ["solo@example.com", "later@example.com"]
-      assert Enum.map(recipients, & &1.kind) == [:attendee, :participant]
-    end
-
-    # `GroupConversion` builds the new participant row directly from the
-    # meeting's own attendee columns, so a real conversion always leaves the
-    # two representations carrying the exact same email — the scenario the
-    # "both shapes" test above (deliberately mismatched emails) does not
-    # exercise. Without dedup, the original booker would be emailed twice.
-    test "the original booker converted by GroupConversion is deduplicated to a single participant recipient" do
-      user = insert(:user)
-      meeting_type = insert(:meeting_type, user: user, max_participants: 1)
+  describe "recipients/1 decides the shape by capacity" do
+    # A group meeting's people are its participant rows and a solo meeting's
+    # is its attendee; the two are never unioned.
+    test "a group meeting never lists the meeting row's attendee columns" do
+      %{meeting: meeting} = insert_group_meeting(%{})
 
       meeting =
-        insert(:meeting,
-          organizer_user_id: user.id,
-          meeting_type_ref: meeting_type,
-          attendee_name: "Solo Booker",
-          attendee_email: "solo@example.com"
-        )
+        meeting
+        |> Changeset.change(attendee_name: "Stray", attendee_email: "stray@example.com")
+        |> Repo.update!()
 
-      assert {:ok, 1} = GroupConversion.backfill(meeting_type.id, 4)
+      insert_participant(meeting, %{name: "Joiner", email: "joiner@example.com"})
 
-      insert_participant(meeting, %{name: "Later Joiner", email: "later@example.com"})
+      assert [%{kind: :participant, email: "joiner@example.com"}] = Meetings.recipients(meeting)
+    end
 
-      recipients = Meetings.recipients(meeting)
+    test "a solo meeting lists only its attendee" do
+      meeting = insert(:meeting, attendee_name: "Solo Booker", attendee_email: "solo@example.com")
 
-      assert Enum.count(recipients, &(&1.email == "solo@example.com")) == 1
-      assert Enum.find(recipients, &(&1.email == "solo@example.com")).kind == :participant
+      insert_participant(meeting, %{name: "Stray Row", email: "stray@example.com"})
 
-      assert recipients |> Enum.map(& &1.email) |> Enum.sort() == [
-               "later@example.com",
-               "solo@example.com"
-             ]
-
-      # The organiser is never a recipient in either shape.
-      refute Enum.any?(recipients, &(&1.email == user.email))
+      assert [%{kind: :attendee, email: "solo@example.com"}] = Meetings.recipients(meeting)
     end
   end
 end

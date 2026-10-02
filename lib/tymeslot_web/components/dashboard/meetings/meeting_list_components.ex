@@ -211,9 +211,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
             </div>
 
             <%!-- A group slot has no single attendee: every booker is listed
-                 in the participants panel below, so the label would otherwise
-                 head an empty value. --%>
-            <div :if={@meeting.attendee_email} class="flex items-center gap-4">
+                 in the participants panel below. --%>
+            <div
+              :if={not group_meeting?(@meeting) and @meeting.attendee_email}
+              class="flex items-center gap-4"
+            >
               <div class="w-12 h-12 rounded-token-2xl bg-blue-50 flex items-center justify-center shadow-sm border border-blue-100 transition-transform group-hover/card:scale-110">
                 <CoreComponents.icon name="hero-envelope" class="w-6 h-6 text-blue-600" />
               </div>
@@ -487,14 +489,21 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   defp seats_taken(meeting),
     do: Seats.seats_taken(participant_list(meeting), guest_list(meeting))
 
-  # The title of a group card: the shared slot has no single attendee, so it
-  # is named after what was booked rather than left blank. `title` is a
-  # required field on every meeting, snapshotted at creation like `capacity`
-  # (see `MeetingSchema.group?/1`), so it survives the meeting type being
-  # edited or deleted.
-  defp meeting_title(%{attendee_name: name}) when is_binary(name) and name != "", do: name
-  defp meeting_title(%{title: title}) when is_binary(title) and title != "", do: title
-  defp meeting_title(_meeting), do: dgettext("dashboard_bookings", "Group booking")
+  # A solo card is titled after its attendee. A group card has no single
+  # attendee, so it is named after what was booked: `title` is a required
+  # field on every meeting, snapshotted at creation, so it survives the
+  # meeting type being edited or deleted.
+  defp meeting_title(meeting) do
+    if group_meeting?(meeting),
+      do: group_title(meeting),
+      else: solo_title(meeting)
+  end
+
+  defp solo_title(%{attendee_name: name}) when is_binary(name) and name != "", do: name
+  defp solo_title(meeting), do: group_title(meeting)
+
+  defp group_title(%{title: title}) when is_binary(title) and title != "", do: title
+  defp group_title(_meeting), do: dgettext("dashboard_bookings", "Group booking")
 
   defp person_initial(%{name: name}) when is_binary(name) and name != "",
     do: name |> String.first() |> String.upcase()

@@ -86,20 +86,25 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   end
 
   @doc """
-  Lists the future, live meetings of a meeting type that still carry a solo
-  attendee on the meeting row.
+  Sets `capacity` on a meeting type's future, live group meetings
+  (`capacity > 1`, start time after `now`), returning how many were updated.
 
-  These are the bookings taken before the type became a group type; they are
-  what `Tymeslot.Meetings.GroupConversion` gives participant rows to.
+  A capacity may end up below the seats already taken; the slot then simply
+  has no seats left. Solo meetings (`capacity == 1`) are never touched, so a
+  one-to-one booking stays private whatever the type becomes.
   """
-  @spec list_convertible_solo_bookings(integer(), DateTime.t()) :: [Meeting.t()]
-  def list_convertible_solo_bookings(meeting_type_id, %DateTime{} = from_utc) do
-    Meeting
-    |> MeetingState.where_slot_live()
-    |> where([m], m.meeting_type_id == ^meeting_type_id)
-    |> where([m], m.start_time >= ^from_utc)
-    |> where([m], not is_nil(m.attendee_email) and m.attendee_email != "")
-    |> Repo.all()
+  @spec set_future_group_capacity(integer(), pos_integer(), DateTime.t()) :: non_neg_integer()
+  def set_future_group_capacity(meeting_type_id, capacity, %DateTime{} = now)
+      when is_integer(capacity) and capacity > 1 do
+    {count, _returning} =
+      Meeting
+      |> MeetingState.where_slot_live()
+      |> where([m], m.meeting_type_id == ^meeting_type_id)
+      |> where([m], m.capacity > 1 and m.capacity != ^capacity)
+      |> where([m], m.start_time > ^now)
+      |> Repo.update_all(set: [capacity: capacity, updated_at: DateTime.truncate(now, :second)])
+
+    count
   end
 
   @doc "Creates a group meeting (bookers live in meeting_participants, not attendee_* fields)."

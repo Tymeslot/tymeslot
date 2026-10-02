@@ -120,8 +120,17 @@ defmodule Tymeslot.Factory do
   end
 
   @spec group_meeting_factory() :: Tymeslot.Meetings.MeetingSchema.t()
+  # A group meeting's people are its participant rows; its own attendee
+  # columns are always empty.
   def group_meeting_factory do
-    build(:meeting, capacity: 2)
+    build(:meeting,
+      capacity: 2,
+      attendee_name: nil,
+      attendee_email: nil,
+      attendee_message: nil,
+      attendee_timezone: nil,
+      attendee_locale: nil
+    )
   end
 
   @spec participant_factory(map()) :: Tymeslot.Meetings.ParticipantSchema.t()

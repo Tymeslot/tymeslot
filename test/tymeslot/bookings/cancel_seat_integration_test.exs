@@ -229,10 +229,10 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
     assert ParticipantQueries.count_live_for_meeting(meeting.id) == 0
   end
 
-  # A converted booker's old, pre-conversion cancel link resolves the meeting
-  # by its uid and calls this same function with no opts — see
-  # `Tymeslot.Bookings.Cancel.validate_cancellation/2`. It must not be able to
-  # cancel a live group meeting out from under everyone else on it.
+  # The public meeting-level cancel link resolves the meeting by its uid and
+  # calls this same function with no opts (see
+  # `Tymeslot.Bookings.Cancel.validate_cancellation/2`). It must not be able
+  # to cancel a live group meeting out from under everyone else on it.
   test "the public path refuses to cancel a live group meeting", %{meeting: meeting} do
     assert {:error, :group_meeting_not_cancellable} = Cancel.execute(meeting)
     assert Repo.get!(MeetingSchema, meeting.id).status == "confirmed"

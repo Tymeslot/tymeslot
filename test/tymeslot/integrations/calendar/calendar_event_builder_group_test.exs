@@ -44,25 +44,4 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderGroupTest do
     assert description =~ "Attendee: Solo <solo@example.com>"
     refute description =~ "Attendees ("
   end
-
-  # A meeting converted from solo to group (`Tymeslot.Meetings.GroupConversion`)
-  # keeps its `attendee_*` columns populated alongside its new participant
-  # rows, so the meeting row alone still looks solo. The `:attendees` list
-  # must win regardless, or every joiner past the original booker silently
-  # disappears from the organiser's calendar event.
-  test "a converted meeting's attendees option wins over the meeting row's own attendee fields" do
-    meeting = %{@group_meeting | attendee_name: "Solo Booker", attendee_email: "solo@example.com"}
-
-    attendees = [
-      %{name: "Solo Booker", email: "solo@example.com"},
-      %{name: "Later Joiner", email: "joiner@example.com"}
-    ]
-
-    description =
-      CalendarEventBuilder.build_event_description(meeting, attendees: attendees)
-
-    assert description =~ "Attendees (2):"
-    assert description =~ "Solo Booker <solo@example.com>"
-    assert description =~ "Later Joiner <joiner@example.com>"
-  end
 end

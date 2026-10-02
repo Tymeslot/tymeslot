@@ -209,15 +209,13 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
     end
   end
 
-  # A group meeting's `:attendees` list takes priority over the meeting row's
-  # own `attendee_*` fields. A meeting converted from solo to group (see
-  # `Tymeslot.Meetings.GroupConversion`) still carries a populated
-  # `attendee_email`, so checking that field first would silently drop every
-  # joiner and print only the original booker. The caller passed in through
-  # the `:attendees` option so the organiser can see who is booked from
-  # inside their calendar app. The description is rebuilt on every "update"
-  # sync, so as long as the caller re-fetches the list, seat changes keep it
-  # current — this module never loads it itself.
+  # A group meeting's people are its participants, passed in through the
+  # `:attendees` option so the organiser can see who is booked from inside
+  # their calendar app; its own `attendee_*` fields are always empty. A solo
+  # meeting passes no list and is described by its `attendee_*` fields. The
+  # description is rebuilt on every "update" sync, so as long as the caller
+  # re-fetches the list, seat changes keep it current; this module never
+  # loads it itself.
   defp attendee_identity_line(_meeting, attendees) when attendees != [] do
     dgettext("emails", "Attendees (%{count}):", count: length(attendees)) <>
       "\n" <>

@@ -92,6 +92,13 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
     )
   end
 
+  def message(:seat_not_movable) do
+    dgettext(
+      "booking",
+      "This spot can no longer be moved online. Please contact the host to change it."
+    )
+  end
+
   # Step-requirement refusals: the booker has not chosen enough yet to move on.
   # `Availability.Calculate` and `MeetingTypes.Duration` used to return this
   # copy themselves, in English, straight into a flash on a public multi-locale

@@ -4,6 +4,7 @@ defmodule Tymeslot.MeetingTypes do
   """
   alias Ecto.UUID
   alias Tymeslot.BookingPage.Publication
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Integrations.Calendar.CalendarEntry
@@ -283,6 +284,7 @@ defmodule Tymeslot.MeetingTypes do
     case Repo.transaction(fn -> do_update_meeting_type(meeting_type, attrs, opts) end) do
       {:ok, updated} ->
         Publication.maybe_publish(updated.user_id)
+        maybe_broadcast_seat_change(meeting_type, updated)
         # Offered slots are cached per meeting type, and an edit can change which
         # availability schedule the type resolves to, so the cached answer must go.
         AvailabilityCache.invalidate_for_user(updated.user_id)
@@ -293,40 +295,36 @@ defmodule Tymeslot.MeetingTypes do
     end
   end
 
-  # The conversion job is enqueued inside the same transaction as the update
-  # itself, so it can never fire for an update that ends up rolling back.
   defp do_update_meeting_type(meeting_type, attrs, opts) do
-    with {:ok, updated} <- MeetingTypeQueries.update_meeting_type(meeting_type, attrs, opts),
-         :ok <- maybe_convert_to_group(meeting_type, updated) do
-      updated
-    else
-      {:error, reason} -> Repo.rollback(reason)
+    case MeetingTypeQueries.update_meeting_type(meeting_type, attrs, opts) do
+      {:ok, updated} ->
+        sync_group_capacity(meeting_type, updated)
+        updated
+
+      {:error, reason} ->
+        Repo.rollback(reason)
     end
   end
 
-  # Switching a type to group bookings leaves its existing solo bookings in
-  # the wrong shape for seat maths and notifications; give them participant
-  # rows before anyone can book alongside them. Every save that lands on a
-  # different `max_participants` while the type is (or becomes) a group type
-  # re-enqueues the conversion, not just the 1 -> many crossing: a meeting
-  # converted from an earlier save but not yet booked into by anyone else
-  # still has its capacity re-stamped to match (see
-  # `Tymeslot.Meetings.GroupConversion`), which is what lets an organiser's
-  # quick correction to the limit land instead of being silently frozen at
-  # whatever value the first save used. The query behind the conversion only
-  # ever touches meetings still carrying their original solo attendee, so
-  # this never reaches into a genuinely-booked group meeting's own capacity.
-  # The actual conversion runs off the request path — see
-  # `Tymeslot.Meetings.convert_type_to_group/2`.
-  defp maybe_convert_to_group(%{max_participants: before}, %{max_participants: now} = updated)
+  # Capacity follows the type: a new seat limit above one applies to the
+  # type's future group meetings, in the same transaction as the type itself.
+  # A capacity may land below the seats already taken; that slot then has no
+  # seats left and nobody is cancelled. Solo bookings are never touched, so a
+  # one-to-one booking stays private when its type becomes a group type.
+  # Turning group bookings off (a limit of one) leaves existing group
+  # meetings' capacity alone; they keep their seats but take no new joins,
+  # because joins and availability check the type as well.
+  defp sync_group_capacity(%{max_participants: before}, %{max_participants: now} = updated)
        when now > 1 and before != now do
-    case Meetings.convert_type_to_group(updated.id, now) do
-      {:ok, _job} -> :ok
-      {:error, reason} -> {:error, reason}
-    end
+    Meetings.set_future_group_capacity(updated.id, now, Clock.utc_now())
   end
 
-  defp maybe_convert_to_group(_before, _updated), do: :ok
+  defp sync_group_capacity(_before, _updated), do: 0
+
+  defp maybe_broadcast_seat_change(%{max_participants: same}, %{max_participants: same}), do: :ok
+
+  defp maybe_broadcast_seat_change(_before, updated),
+    do: Meetings.broadcast_seat_change(updated.id)
 
   @doc """
   Toggles the active status of a meeting type without validating video integration.

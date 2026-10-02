@@ -185,12 +185,11 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
 
     if Meetings.group?(meeting) do
       # `group?/1` is capacity-based, not "has live participants": a meeting
-      # emptied by every participant leaving is still a group meeting, so it
-      # must fall through to `send_solo_cancellation_emails/2`'s dedicated
-      # emptied-group clause below rather than dispatching a fan-out over an
-      # empty list.
-      case Enum.filter(Meetings.recipients(meeting), &(&1.kind == :participant)) do
-        [] -> send_solo_cancellation_emails(meeting, appointment_details)
+      # emptied by every participant leaving is still a group meeting, and
+      # each of them already received their seat-cancellation email when they
+      # left, so only the organiser needs the meeting-level cancellation.
+      case Meetings.recipients(meeting) do
+        [] -> send_organizer_cancellation_email(appointment_details)
         participants -> GroupMeetingEmails.send_group_cancellation_emails(meeting, participants)
       end
     else
@@ -198,11 +197,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     end
   end
 
-  defp send_solo_cancellation_emails(%{attendee_email: email}, details)
-       when email in [nil, ""] do
-    # An emptied group meeting being cancelled: every participant already
-    # received their seat-cancellation email when they left; only the
-    # organiser needs the meeting-level cancellation.
+  defp send_organizer_cancellation_email(details) do
     case Config.email_service_module().send_cancellation_email_to_organizer(
            details.organizer_email,
            details
@@ -326,7 +321,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     Logger.info("Sending reminder emails", meeting_id: meeting.id)
 
     if Meetings.group?(meeting) do
-      participants = Enum.filter(Meetings.recipients(meeting), &(&1.kind == :participant))
+      participants = Meetings.recipients(meeting)
 
       case GroupMeetingEmails.send_group_reminder_emails(
              meeting,
@@ -423,7 +418,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     Logger.info("Sending reschedule request email", meeting_id: meeting.id)
 
     if Meetings.group?(meeting) do
-      participants = Enum.filter(Meetings.recipients(meeting), &(&1.kind == :participant))
+      participants = Meetings.recipients(meeting)
       GroupMeetingEmails.send_group_reschedule_requests(meeting, participants)
     else
       send_solo_reschedule_request(meeting)
