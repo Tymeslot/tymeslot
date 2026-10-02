@@ -1357,6 +1357,14 @@ msgstr "Na tuto schůzku už nelze přidat další hosty."
 msgid "Too many new meetings. Please wait a moment."
 msgstr "Příliš mnoho nových schůzek. Počkejte prosím chvíli."
 
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Add up to %{count} reminder email for this meeting. The guest and anyone else invited receive it."
+msgid_plural "Add up to %{count} reminder emails for this meeting. The guest and anyone else invited receive it."
+msgstr[0] "Pro tuto schůzku můžete přidat až %{count} e-mail s připomínkou. Dostane jej host i všichni další pozvaní."
+msgstr[1] "Pro tuto schůzku můžete přidat až %{count} e-maily s připomínkou. Dostane je host i všichni další pozvaní."
+msgstr[2] "Pro tuto schůzku můžete přidat až %{count} e-mailů s připomínkou. Dostane je host i všichni další pozvaní."
+
 #: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #, elixir-autogen, elixir-format
 msgid "Someone else organises this meeting, so Tymeslot can't move or split a series you were only invited to."
