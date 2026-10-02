@@ -12,6 +12,7 @@ defmodule Tymeslot.Agenda do
   alias Tymeslot.Agenda.Day
   alias Tymeslot.Agenda.Entry
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.BookingEvent
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Meetings
   alias Tymeslot.Utils.DateTimeUtils
@@ -61,6 +62,65 @@ defmodule Tymeslot.Agenda do
       timezone: tz
     }
   end
+
+  @doc """
+  Normalises one calendar grid event into an `Entry`, so the grid's agenda list
+  and booking modal render through the same components as the overview.
+
+  Takes a booking projection (`BookingEvent`) or a cached provider event, with
+  its own start and end (not one clamped to a single day). A missing title stays
+  `nil` here, for the caller to label; nothing is resolved against the
+  organiser's calendar names or colour overrides, which the grid applies itself.
+  """
+  @spec entry_for_grid_event(BookingEvent.t() | map(), String.t()) :: Entry.t()
+  def entry_for_grid_event(%BookingEvent{} = booking, timezone) do
+    tz = normalize_timezone(timezone)
+
+    %Entry{
+      id: "meeting-" <> to_string(booking.meeting_id),
+      source: :tymeslot,
+      title: presence(booking.summary),
+      day: to_local_date(booking.start_at, tz),
+      start_at: booking.start_at,
+      end_at: booking.end_at,
+      all_day?: false,
+      location: presence(booking.location),
+      join_url: presence(booking.join_url),
+      who: presence(booking.attendee_name),
+      who_email: presence(booking.attendee_email),
+      target: {:meeting, booking.meeting_id}
+    }
+  end
+
+  def entry_for_grid_event(event, timezone) do
+    tz = normalize_timezone(timezone)
+    {day, start_at, end_at} = grid_event_span(event, tz)
+
+    %Entry{
+      id: "event-" <> to_string(event.id),
+      source: :external,
+      title: presence(Map.get(event, :summary)),
+      day: day,
+      start_at: start_at,
+      end_at: end_at,
+      all_day?: event.all_day == true,
+      location: presence(Map.get(event, :location)),
+      join_url: presence(Map.get(event, :video_link)),
+      who: organiser_name(Map.get(event, :organiser)),
+      colour: Map.get(event, :colour),
+      target: {:external, Map.get(event, :calendar_integration_id), Map.get(event, :uid)}
+    }
+  end
+
+  # An all-day event is held by its dates where it has them, as on the agenda;
+  # an event the grid built in memory may only carry its instants.
+  defp grid_event_span(%{all_day: true, start_date: %Date{} = start_date} = event, tz) do
+    end_date = Map.get(event, :end_date) || Date.add(start_date, 1)
+    {start_date, local_midnight(start_date, tz), local_midnight(end_date, tz)}
+  end
+
+  defp grid_event_span(event, tz),
+    do: {to_local_date(event.start_at, tz), event.start_at, event.end_at}
 
   # --- Gathering & merging ---------------------------------------------------
 
@@ -123,6 +183,7 @@ defmodule Tymeslot.Agenda do
       location: presence(meeting.location),
       join_url: presence(meeting.organizer_video_url) || presence(meeting.meeting_url),
       who: presence(meeting.attendee_name),
+      who_email: presence(meeting.attendee_email),
       calendar: nil,
       colour: Calendar.resolve_event_colour(Map.get(overrides, target), nil),
       target: target
