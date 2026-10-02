@@ -380,7 +380,7 @@ config :elixir, :time_zone_database, Tz.TimeZoneDatabase
 # suite (test/tymeslot/timezones/iana_freshness_test.exs, run by the Excluded
 # suites workflow) fails once IANA publishes a release newer than this pin.
 config :tz, :data_dir, Path.expand("../priv/tz", __DIR__)
-config :tz, :iana_version, "2026c"
+config :tz, :iana_version, "2026e"
 
 # Authentication configuration
 config :tymeslot, :auth,
