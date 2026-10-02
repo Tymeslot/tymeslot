@@ -3,6 +3,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   Schema for meeting types that users can configure.
   """
   use Ecto.Schema
+  use Gettext, backend: TymeslotWeb.Gettext
   import Ecto.Changeset
   import Tymeslot.ChangesetValidators.BookingLimits, only: [validate_booking_limits: 2]
 
@@ -525,11 +526,21 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   #
   # Read with `get_field/2` so a change to either side (the limit, or the
   # other setting) is caught.
+  #
+  # The messages are msgids of the `errors` domain, registered here with
+  # `dgettext_noop/2` and translated where the form shows them, like Ecto's
+  # own validator messages (`TymeslotWeb.Gettext.EctoErrorMsgids`).
   defp validate_group_rules(changeset) do
     if group_limit?(get_field(changeset, :max_participants)) do
       changeset
-      |> refuse_for_group(:payment_required, "group bookings cannot require payment")
-      |> refuse_for_group(:requires_approval, "group bookings cannot require approval")
+      |> refuse_for_group(
+        :payment_required,
+        dgettext_noop("errors", "group bookings cannot require payment")
+      )
+      |> refuse_for_group(
+        :requires_approval,
+        dgettext_noop("errors", "group bookings cannot require approval")
+      )
       |> validate_group_location()
     else
       changeset
@@ -561,19 +572,27 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   end
 
   defp group_location_message(:not_single_location),
-    do: "a group meeting type must offer exactly one location"
+    do: dgettext_noop("errors", "a group meeting type must offer exactly one location")
 
   defp group_location_message(:provider_choice),
-    do: "a group meeting type's video call must use exactly one provider"
+    do: dgettext_noop("errors", "a group meeting type's video call must use exactly one provider")
 
   defp group_location_message(:venue_choice),
-    do: "a group meeting type's in-person location must name exactly one venue"
+    do:
+      dgettext_noop(
+        "errors",
+        "a group meeting type's in-person location must name exactly one venue"
+      )
 
   defp group_location_message(:address_after_booking),
-    do: "a group meeting type's in-person location must name a venue"
+    do: dgettext_noop("errors", "a group meeting type's in-person location must name a venue")
 
   defp group_location_message(:booker_phone),
-    do: "a group meeting type cannot ask each booker for their phone number"
+    do:
+      dgettext_noop(
+        "errors",
+        "a group meeting type cannot ask each booker for their phone number"
+      )
 
   @doc """
   True when the meeting type accepts more than one participant per slot.

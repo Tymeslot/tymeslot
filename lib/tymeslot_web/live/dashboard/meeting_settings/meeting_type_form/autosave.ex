@@ -108,7 +108,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
   # fire before they've had a chance to fill in the price.
   defp apply_result({:error, %Ecto.Changeset{} = changeset}, socket)
        when socket.assigns.payment_required == true do
-    errors = FormHelpers.format_changeset_errors(changeset)
+    errors = Helpers.changeset_form_errors(changeset)
 
     if Map.keys(errors) == [:price_cents] do
       assign(socket, :save_status, :incomplete)
@@ -131,7 +131,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
     )
 
     socket
-    |> assign(:form_errors, FormHelpers.format_changeset_errors(changeset))
+    |> assign(:form_errors, Helpers.changeset_form_errors(changeset))
     |> assign(:save_status, :error)
   end
 

@@ -373,3 +373,38 @@ msgstr "Questa immagine è troppo grande (%{size} megapixel). Carica un’immagi
 #, elixir-autogen, elixir-format
 msgid "We are busy processing other uploads. Please try again in a moment."
 msgstr "Stiamo elaborando altri caricamenti. Riprova tra un momento."
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "a group meeting type cannot ask each booker for their phone number"
+msgstr "un tipo di riunione di gruppo non può chiedere il numero di telefono a ogni persona che prenota"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "a group meeting type must offer exactly one location"
+msgstr "un tipo di riunione di gruppo deve offrire esattamente un luogo"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "a group meeting type's in-person location must name a venue"
+msgstr "il luogo in presenza di un tipo di riunione di gruppo deve indicare una sede"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "a group meeting type's in-person location must name exactly one venue"
+msgstr "il luogo in presenza di un tipo di riunione di gruppo deve indicare esattamente una sede"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "a group meeting type's video call must use exactly one provider"
+msgstr "la videochiamata di un tipo di riunione di gruppo deve usare esattamente un fornitore"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "group bookings cannot require approval"
+msgstr "le prenotazioni di gruppo non possono richiedere l'approvazione"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "group bookings cannot require payment"
+msgstr "le prenotazioni di gruppo non possono richiedere un pagamento"
