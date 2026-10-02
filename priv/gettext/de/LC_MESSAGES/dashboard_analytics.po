@@ -161,3 +161,8 @@ msgstr "Besuche"
 #, elixir-autogen, elixir-format
 msgid "Visits over time"
 msgstr "Besuche im Zeitverlauf"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex
+#, elixir-autogen, elixir-format
+msgid "No visits yet"
+msgstr "Noch keine Besuche"

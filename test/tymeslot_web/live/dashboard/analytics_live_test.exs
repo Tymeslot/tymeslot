@@ -228,13 +228,28 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
 
   describe "empty / zero-data state" do
     test "renders zeroed summary and empty-state messaging with no data", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard/analytics")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/analytics")
 
-      assert html =~ "Analytics"
-      # Conversion with zero unique visitors is guarded to 0.0%
-      assert html =~ "0.0%"
-      # Both the chart and the sources table show the empty-state copy
-      assert html =~ "No traffic in this period yet."
+      # With no visitors there is no conversion rate: a dash, not "0.0%".
+      assert has_element?(view, "[data-testid='conversion-card']", "—")
+      refute has_element?(view, "[data-testid='conversion-card']", "0.0%")
+      # The chart says so rather than drawing an empty 0 to 1 axis.
+      assert has_element?(
+               view,
+               "[data-testid='visits-chart-empty']",
+               "No traffic in this period yet."
+             )
+
+      refute has_element?(view, "svg[role='img']")
+    end
+
+    test "shows a conversion rate once there are visitors", %{conn: conn, user: user} do
+      seed_visit(user, "linkedin", "hash-a")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/analytics")
+
+      assert has_element?(view, "[data-testid='conversion-card']", "0.0%")
+      refute has_element?(view, "[data-testid='visits-chart-empty']")
     end
   end
 

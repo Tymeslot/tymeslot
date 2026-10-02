@@ -162,3 +162,8 @@ msgstr "Візити"
 #, elixir-autogen, elixir-format
 msgid "Visits over time"
 msgstr "Динаміка візитів"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex
+#, elixir-autogen, elixir-format
+msgid "No visits yet"
+msgstr "Відвідувань ще немає"

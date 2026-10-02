@@ -46,10 +46,14 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SummaryCards do
         value={@bookings}
         loading?={@loading?}
       />
+      <%!-- With no visitors there is no rate to report, and "0.0%" would read
+            as a measured result; a dash says "nothing to measure yet". --%>
       <.stat_card
         label={dgettext("dashboard_analytics", "Conversion (est.)")}
-        value={"#{@conversion_rate}%"}
+        value={if @unique_visitors > 0, do: "#{@conversion_rate}%", else: "—"}
+        value_label={if @unique_visitors == 0, do: dgettext("dashboard_analytics", "No visits yet")}
         loading?={@loading?}
+        data-testid="conversion-card"
       />
     </div>
     """
@@ -57,11 +61,13 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SummaryCards do
 
   attr :label, :string, required: true
   attr :value, :any, required: true
+  attr :value_label, :string, default: nil, doc: "spoken in place of a placeholder value"
   attr :loading?, :boolean, default: false
+  attr :rest, :global
 
   defp stat_card(assigns) do
     ~H"""
-    <div class="card-glass flex h-full flex-col">
+    <div class="card-glass flex h-full flex-col" {@rest}>
       <div class="text-token-sm font-black uppercase tracking-widest text-tymeslot-400">
         {@label}
       </div>
@@ -76,7 +82,8 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SummaryCards do
           :if={!@loading?}
           class="text-token-3xl font-black tracking-tight tabular-nums text-tymeslot-900"
         >
-          {@value}
+          <span aria-hidden={@value_label && "true"}>{@value}</span>
+          <span :if={@value_label} class="sr-only">{@value_label}</span>
         </div>
       </div>
     </div>

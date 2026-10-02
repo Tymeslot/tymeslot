@@ -46,6 +46,9 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
       assign(assigns,
         series: full_series,
         max: max_visits(full_series),
+        # The series always spans the whole window, so "no data" means every
+        # day is zero rather than an empty list.
+        empty?: Enum.all?(full_series, &(&1.visits == 0)),
         width: @width,
         height: @height,
         padding: @padding,
@@ -74,13 +77,14 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
       </div>
 
       <div
-        :if={!@loading? and @series == []}
+        :if={!@loading? and @empty?}
         class="mt-4 py-8 text-center text-token-sm text-tymeslot-400"
+        data-testid="visits-chart-empty"
       >
         {dgettext("dashboard_analytics", "No traffic in this period yet.")}
       </div>
 
-      <div :if={!@loading? and @series != []} class="mt-3 flex gap-2">
+      <div :if={!@loading? and not @empty?} class="mt-3 flex gap-2">
         <%!-- y-axis: visits range from 0 at the baseline up to the busiest day --%>
         <div
           class="flex h-48 flex-col justify-between py-px text-right text-token-xs tabular-nums text-tymeslot-400"
