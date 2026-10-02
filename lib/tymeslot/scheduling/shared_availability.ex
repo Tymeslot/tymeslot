@@ -37,6 +37,7 @@ defmodule Tymeslot.Scheduling.SharedAvailability do
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
@@ -166,8 +167,7 @@ defmodule Tymeslot.Scheduling.SharedAvailability do
   The users to check when `meeting` is rescheduled, recovered from its guests
   (`resolve_from_guest_emails/2`).
   """
-  @spec resolve_for_meeting(%{id: pos_integer(), organizer_user_id: pos_integer()}) ::
-          [Guest.t()]
+  @spec resolve_for_meeting(MeetingSchema.t()) :: [Guest.t()]
   def resolve_for_meeting(%{id: meeting_id, organizer_user_id: host_user_id}) do
     meeting_id
     |> Guests.list_for_meeting()
@@ -392,7 +392,7 @@ defmodule Tymeslot.Scheduling.SharedAvailability do
   """
   @spec validate_reschedule(
           [Guest.t()],
-          %{id: pos_integer(), calendar_uid: String.t() | nil},
+          MeetingSchema.t(),
           {Date.t(), DateTime.t(), DateTime.t(), String.t()},
           map()
         ) :: :ok | {:error, :slot_taken}
