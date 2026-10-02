@@ -28,17 +28,18 @@ defmodule TymeslotWeb.Themes.Shared.Components.DemoThemeSwitcher do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Themes.Core.Registry
   alias TymeslotWeb.Themes.Core.ThemeInfo
   alias TymeslotWeb.Themes.Shared.PathHandlers
 
   attr :theme_id, :string, required: true, doc: "the theme the page shows"
   attr :base_path, :string, required: true, doc: "the mounted route's path, without a query"
-  attr :options, :list, default: nil, doc: "`{name, id}` pairs; the pickers' themes when nil"
+  attr :options, :list, default: nil, doc: "`{name, id}` pairs; the active themes when nil"
 
   @doc "Renders nothing when there is no other theme to offer."
   @spec switcher(map()) :: Phoenix.LiveView.Rendered.t()
   def switcher(assigns) do
-    assigns = assign(assigns, :options, assigns.options || ThemeInfo.theme_options())
+    assigns = assign(assigns, :options, assigns.options || active_options())
 
     ~H"""
     <nav
@@ -65,5 +66,17 @@ defmodule TymeslotWeb.Themes.Shared.Components.DemoThemeSwitcher do
       </ul>
     </nav>
     """
+  end
+
+  @doc """
+  The `{name, id}` pairs of the themes whose status is `:active`, in numeric
+  id order. A beta or deprecated theme is not offered in a demo. Takes the
+  registry's definitions by default; passing them in is for tests.
+  """
+  @spec active_options(%{atom() => map()}) :: [{String.t(), String.t()}]
+  def active_options(themes \\ Registry.all_themes()) do
+    themes
+    |> Map.filter(fn {_key, theme} -> theme.status == :active end)
+    |> ThemeInfo.theme_options()
   end
 end

@@ -54,7 +54,9 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2xs);
+  /* Wide enough that a link's focus ring (thick outline plus its 2px
+     offset) clears the end of the label. */
+  gap: var(--space-xs);
   box-sizing: border-box;
   width: fit-content;
   max-width: calc(100% - 2 * var(--space-md));

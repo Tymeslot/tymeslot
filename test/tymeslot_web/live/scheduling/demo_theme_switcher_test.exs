@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Live.Scheduling.DemoThemeSwitcherTest do
   import Tymeslot.ThemeBookingFlowHelpers, only: [seed_booking_account: 3]
 
   alias TymeslotWeb.Themes.Core.ThemeInfo
+  alias TymeslotWeb.Themes.Shared.Components.DemoThemeSwitcher
 
   @switcher "[data-testid='demo-theme-switcher']"
 
@@ -57,6 +58,23 @@ defmodule TymeslotWeb.Live.Scheduling.DemoThemeSwitcherTest do
 
     seed_booking_account("1", "switcher-demo", "Etc/UTC")
     :ok
+  end
+
+  describe "active_options/1" do
+    test "offers only active themes, in id order" do
+      themes = %{
+        ten: %{id: "10", name: "Ten", status: :active},
+        old: %{id: "3", name: "Old", status: :deprecated},
+        next: %{id: "4", name: "Next", status: :beta},
+        one: %{id: "1", name: "One", status: :active}
+      }
+
+      assert DemoThemeSwitcher.active_options(themes) == [{"One", "1"}, {"Ten", "10"}]
+    end
+
+    test "by default matches the pickers' themes while none is deprecated" do
+      assert DemoThemeSwitcher.active_options() == ThemeInfo.theme_options()
+    end
   end
 
   describe "with the default demo provider" do
