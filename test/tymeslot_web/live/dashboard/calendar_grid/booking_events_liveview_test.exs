@@ -110,6 +110,40 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.BookingEventsLiveviewTest do
       refute html =~ "booking-detail-modal"
     end
 
+    test "lists a group meeting's live participants", %{conn: conn, user: user} do
+      start_time = DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC")
+
+      meeting =
+        insert(:group_meeting,
+          organizer_user: user,
+          title: "Group workshop",
+          start_time: start_time,
+          end_time: DateTime.add(start_time, 3600, :second)
+        )
+
+      insert(:participant, meeting: meeting, name: "Grace Hopper", email: "grace@example.com")
+      insert(:participant, meeting: meeting, name: "Alan Turing", email: "alan@example.com")
+
+      insert(:participant,
+        meeting: meeting,
+        name: "Gone Booker",
+        email: "gone@example.com",
+        cancelled_at: DateTime.utc_now(:second)
+      )
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+
+      lv |> element(~s{[data-event-id="booking-#{meeting.id}"]}) |> render_click()
+
+      people = lv |> element(~s{[data-testid="booking-participants"]}) |> render()
+
+      assert people =~ "Grace Hopper"
+      assert people =~ "grace@example.com"
+      assert people =~ "Alan Turing"
+      assert people =~ "alan@example.com"
+      refute people =~ "Gone Booker"
+    end
+
     test "ignores an unknown meeting id", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard")
 

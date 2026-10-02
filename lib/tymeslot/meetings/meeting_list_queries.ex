@@ -264,12 +264,15 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   end
 
   @doc """
-  Loads `meeting`'s live participants into `:participants`, oldest booking
-  first, the same set the dashboard lists show.
+  Loads the live participants of `meeting`, or of each of a list of
+  meetings, into `:participants`, oldest booking first, the same set the
+  dashboard lists show. A list is loaded in one query.
   """
   @spec preload_live_participants(Meeting.t()) :: Meeting.t()
-  def preload_live_participants(%Meeting{} = meeting),
-    do: Repo.preload(meeting, [participants: live_participants_preload()], force: true)
+  @spec preload_live_participants([Meeting.t()]) :: [Meeting.t()]
+  def preload_live_participants(meeting_or_meetings),
+    do:
+      Repo.preload(meeting_or_meetings, [participants: live_participants_preload()], force: true)
 
   @doc """
   Returns the organiser's live bookings overlapping the `[from_utc, to_utc)`

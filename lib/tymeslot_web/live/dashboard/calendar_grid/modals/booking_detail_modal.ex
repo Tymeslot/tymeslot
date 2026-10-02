@@ -48,6 +48,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.BookingDetailModal do
           </div>
         </div>
 
+        <div
+          :if={@booking.participants != []}
+          class="flex items-start gap-3"
+          data-testid="booking-participants"
+        >
+          <.icon name="hero-user-group" class="w-5 h-5 text-tymeslot-400 shrink-0 mt-0.5" />
+          <ul class="min-w-0 space-y-2">
+            <li :for={participant <- @booking.participants} class="min-w-0">
+              <div :if={participant.name} class="text-token-sm font-medium text-tymeslot-800">
+                {participant.name}
+              </div>
+              <div class="text-token-sm text-tymeslot-500 truncate">{participant.email}</div>
+            </li>
+          </ul>
+        </div>
+
         <div :if={@booking.attendee_name || @booking.attendee_email} class="flex items-start gap-3">
           <.icon name="hero-user" class="w-5 h-5 text-tymeslot-400 shrink-0 mt-0.5" />
           <div class="min-w-0">

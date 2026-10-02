@@ -14,6 +14,9 @@ defmodule Tymeslot.CalendarGrid.BookingEvent do
   time against the synced copy, so this struct chiefly represents bookings
   with no provider-side counterpart — most importantly every booking of a
   user with no calendar integration at all.
+
+  A group meeting has no attendee: its people are its live participants,
+  carried in `participants` (empty for a one-to-one booking).
   """
 
   @enforce_keys [:id, :meeting_id, :summary, :start_at, :end_at]
@@ -29,6 +32,7 @@ defmodule Tymeslot.CalendarGrid.BookingEvent do
     :attendee_email,
     :join_url,
     :provider_event_id,
+    participants: [],
     all_day: false,
     calendar_integration_id: nil,
     provider_calendar_id: nil,
@@ -51,6 +55,7 @@ defmodule Tymeslot.CalendarGrid.BookingEvent do
           attendee_email: String.t() | nil,
           join_url: String.t() | nil,
           provider_event_id: String.t() | nil,
+          participants: [%{name: String.t() | nil, email: String.t()}],
           all_day: false,
           calendar_integration_id: nil,
           provider_calendar_id: nil,
