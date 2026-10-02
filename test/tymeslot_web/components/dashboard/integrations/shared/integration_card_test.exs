@@ -210,7 +210,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCardTe
 
   describe "footer" do
     test "puts the leading actions first and pushes the trailing ones to the right" do
-      doc = render_card() |> doc()
+      doc = doc(render_card())
 
       [footer] = doc |> LazyHTML.query("div.border-t") |> Enum.to_list()
       assert footer |> LazyHTML.query("[data-testid='lead']") |> Enum.count() == 1
@@ -238,7 +238,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCardTe
       integration =
         build(:slack_integration, id: 7, last_triggered_at: ~U[2026-01-08 12:00:00Z])
 
-      doc =
+      html =
         render_component(&SlackCard.slack_card/1,
           integration: integration,
           time_format: "24h",
@@ -249,7 +249,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCardTe
           on_test: "test",
           on_view_deliveries: "deliveries"
         )
-        |> doc()
+
+      doc = doc(html)
 
       text = LazyHTML.text(doc)
 
@@ -258,7 +259,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCardTe
       assert text =~ "Test Workspace · #bookings"
       assert doc |> LazyHTML.query("#slack-toggle-7[phx-click='toggle']") |> Enum.count() == 1
 
-      footer = doc |> LazyHTML.query("div.border-t")
+      footer = LazyHTML.query(doc, "div.border-t")
       assert footer |> LazyHTML.query("button[phx-click='test']") |> Enum.count() == 1
       assert footer |> LazyHTML.query("button[phx-click='deliveries']") |> Enum.count() == 1
       assert footer |> LazyHTML.query("button[phx-click='edit']") |> Enum.count() == 1
@@ -283,13 +284,14 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCardTe
         last_external_sync_at: DateTime.add(DateTime.utc_now(), -120, :second)
       }
 
-      doc =
+      html =
         render_component(&CalendarComponents.calendar_connection_row/1,
           integration: integration,
           health_state: nil,
           myself: "target"
         )
-        |> doc()
+
+      doc = doc(html)
 
       text = LazyHTML.text(doc)
 
@@ -299,7 +301,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCardTe
       refute doc |> LazyHTML.query("p[title]") |> LazyHTML.text() =~ "synced"
       assert doc |> LazyHTML.query("#toggle-12") |> Enum.count() == 1
 
-      footer = doc |> LazyHTML.query("div.border-t")
+      footer = LazyHTML.query(doc, "div.border-t")
       assert footer |> LazyHTML.query("button[phx-click='manage_calendars']") |> Enum.count() == 1
       assert footer |> LazyHTML.query("button[phx-click='show_reconnect']") |> Enum.count() == 1
 

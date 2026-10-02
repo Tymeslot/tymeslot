@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavFamilyCon
 
   import Phoenix.LiveViewTest
 
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavFamilyConfig
 
   defp render_form(provider) do
@@ -85,7 +86,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavFamilyCon
           {html, _doc} = render_form(unquote(provider))
 
           url =
-            Tymeslot.Integrations.Calendar.ProviderConfig.locked_url_for(unquote(provider)).url
+            ProviderConfig.locked_url_for(unquote(provider)).url
 
           assert html =~ ~s(value="#{url}")
         end
