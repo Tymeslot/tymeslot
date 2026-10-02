@@ -9,7 +9,7 @@ defmodule Tymeslot.Utils.AvatarUtils do
 
   @spec generate_fallback_svg(map(), non_neg_integer()) :: String.t()
   defp generate_fallback_svg(profile, size) do
-    initials = get_initials(profile)
+    initials = initials(profile)
     color = get_consistent_color(profile)
     profile_id = Map.get(profile, :id, "default")
 
@@ -61,8 +61,17 @@ defmodule Tymeslot.Utils.AvatarUtils do
     "data:image/svg+xml;base64,#{encoded}"
   end
 
-  @spec get_initials(map()) :: String.t()
-  defp get_initials(profile) do
+  @doc """
+  The initials the fallback avatar draws: the first letters of the first two
+  words of the profile's full name, else the first letter of its user's
+  email, else "U". For a page that draws its own initials mark instead of
+  the gradient avatar; `Tymeslot.Profiles.uploaded_avatar_path/1` tells it
+  whether a real image exists.
+  """
+  @spec initials(map() | nil) :: String.t()
+  def initials(nil), do: "U"
+
+  def initials(profile) do
     cond do
       profile.full_name && String.trim(profile.full_name) != "" ->
         profile.full_name

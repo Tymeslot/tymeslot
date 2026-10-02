@@ -50,38 +50,36 @@ defmodule TymeslotWeb.Themes.Core.RegistryTest do
       beta: %{id: "2", key: :beta, name: "Beta"}
     }
 
-    test "binds each Catalog theme to its module by id" do
-      assert Definitions.build!(@facts, %{"1" => AlphaTheme, "2" => BetaTheme}) == %{
-               alpha: %{id: "1", key: :alpha, name: "Alpha", module: AlphaTheme},
-               beta: %{id: "2", key: :beta, name: "Beta", module: BetaTheme}
+    test "gives each theme its conventional module, by key" do
+      assert Definitions.build!(@facts, %{}) == %{
+               alpha: %{
+                 id: "1",
+                 key: :alpha,
+                 name: "Alpha",
+                 module: TymeslotWeb.Themes.Alpha.Theme
+               },
+               beta: %{id: "2", key: :beta, name: "Beta", module: TymeslotWeb.Themes.Beta.Theme}
              }
     end
 
-    test "refuses a Catalog theme with no binding, naming its id" do
-      error =
-        assert_raise ArgumentError, fn -> Definitions.build!(@facts, %{"1" => AlphaTheme}) end
-
-      assert error.message =~
-               ~s(no binding in TymeslotWeb.Themes.Core.Registry's @bindings: ["2"])
+    test "camelizes keys with underscores" do
+      assert Definitions.conventional_module(:soft_ink) == TymeslotWeb.Themes.SoftInk.Theme
     end
 
-    test "refuses a binding with no Catalog theme, naming its id" do
-      error =
-        assert_raise ArgumentError, fn ->
-          Definitions.build!(@facts, %{"1" => AlphaTheme, "2" => BetaTheme, "7" => GammaTheme})
-        end
+    test "an extra binding overrides the conventional module" do
+      themes = Definitions.build!(@facts, %{"2" => BetaTheme})
 
-      assert error.message =~ ~s(bindings with no Tymeslot.Themes.Catalog theme: ["7"])
-      refute error.message =~ "no binding in"
+      assert themes.alpha.module == TymeslotWeb.Themes.Alpha.Theme
+      assert themes.beta.module == BetaTheme
     end
 
-    test "names both mismatches at once" do
+    test "refuses an extra binding with no Catalog theme, naming its id" do
       error =
         assert_raise ArgumentError, fn ->
-          Definitions.build!(@facts, %{"1" => AlphaTheme, "7" => GammaTheme})
+          Definitions.build!(@facts, %{"2" => BetaTheme, "7" => GammaTheme})
         end
 
-      assert error.message =~ ~s(["2"])
+      assert error.message =~ ~s(:extra_themes entries with no Tymeslot.Themes.Catalog theme)
       assert error.message =~ ~s(["7"])
     end
   end
@@ -90,6 +88,21 @@ defmodule TymeslotWeb.Themes.Core.RegistryTest do
     test "holds exactly the Catalog's themes" do
       assert Registry.all_themes() |> Map.keys() |> Enum.sort() ==
                Catalog.all() |> Map.keys() |> Enum.sort()
+    end
+
+    test "gives every shipped theme its conventional, loadable module" do
+      extra_ids = :tymeslot |> Application.get_env(:extra_themes, []) |> Enum.map(& &1.id)
+
+      for {key, theme} <- Registry.all_themes(), theme.id not in extra_ids do
+        expected = Definitions.conventional_module(key)
+
+        assert theme.module == expected
+        # The module name must match the key, so a theme whose module does not
+        # follow the convention fails here, naming its key.
+        assert Code.ensure_loaded?(expected),
+               "theme #{inspect(key)} must define #{inspect(expected)} " <>
+                 "(lib/tymeslot_web/themes/#{key}/theme.ex)"
+      end
     end
   end
 end

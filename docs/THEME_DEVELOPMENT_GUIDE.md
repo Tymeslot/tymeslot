@@ -9,13 +9,13 @@ The theme system uses a centralized registry pattern that eliminates magic strin
 ### Key Components
 
 1. **Theme Catalog** (`Tymeslot.Themes.Catalog`) - Domain source of truth for theme *facts* (id, key, name, heading style, customisation spec, status)
-2. **Theme Registry** (`TymeslotWeb.Themes.Core.Registry`) - Web layer; merges catalog facts with presentation bindings (the theme module)
+2. **Theme Registry** (`TymeslotWeb.Themes.Core.Registry`) - Web layer; joins catalog facts to each theme's module, derived from the catalog key by convention
 3. **Theme Behaviour** (`TymeslotWeb.Themes.Core.Behaviour`) - The contract a theme module fulfils; `use TymeslotWeb.Themes.Core.Theme` generates it
 4. **SchedulingLive Macro** (`TymeslotWeb.Themes.Shared.SchedulingLive`) - Injects all common LiveView callbacks; a theme's `live.ex` is built on it
 5. **Shared State Machine** (`TymeslotWeb.Themes.Shared.StateMachineHelpers`) - Owns state transitions and routing for all themes (no per-theme state machine)
 6. **Shared Context** (`TymeslotWeb.Themes.Shared.*`) - Shared helpers, handlers, and components
 7. **Customisation spec** (`Tymeslot.ThemeCustomizations.Spec`) - Per-theme option groups, defaults, validation and CSS tokens; each Catalog entry names its spec module
-8. **Dispatcher** (`TymeslotWeb.Themes.Core.Dispatcher`) - The LiveView every booking route hits; it resolves the theme's module through `ThemeInfo` (the Registry's binding) and delegates the LiveView callbacks to it
+8. **Dispatcher** (`TymeslotWeb.Themes.Core.Dispatcher`) - The LiveView every booking route hits; it resolves the theme's module through `ThemeInfo` (the Registry's definition) and delegates the LiveView callbacks to it
 9. **Wrapper Components** (per-theme): the theme's background and wrapper classes around the shared `Shared.Components.ThemeShell`, which renders the page chrome
 
 ## Quick Reference
@@ -212,15 +212,14 @@ reachable with `?theme=<id>`. Switch it to `:active` when it is ready to offer.
 The description shown in the dashboard is the theme's own, translated, not a
 catalogue fact.
 
-**b. Presentation bindings** — add an entry to `@bindings` (keyed by theme **id**)
-in `lib/tymeslot_web/themes/core/registry.ex`:
-
-```elixir
-"3" => TymeslotWeb.Themes.Aurora.Theme
-```
-
-`Registry` joins the two at compile time (`Catalog.all/0` ⨝ `@bindings`) into the
-`theme_definition` the web layer consumes. The two must match: a Catalog entry with no binding, or a binding with no Catalog entry, fails the build with a message naming the id (`Registry.Definitions.build!/2`). Nothing else is bound: the stylesheet
+**b. Presentation bindings** — none to write: no registry edit is needed. The theme
+module must be named after the Catalog key, `TymeslotWeb.Themes.<Key>.Theme`
+(`TymeslotWeb.Themes.Aurora.Theme` for `:aurora`), in
+`lib/tymeslot_web/themes/<key>/theme.ex`. `Registry` derives the module from the
+key while it compiles (`Registry.Definitions.conventional_module/1`) and joins it
+to the facts into the `theme_definition` the web layer consumes, without naming
+the module, so editing a theme recompiles nothing else. A theme whose module does
+not follow the convention fails `registry_test.exs`, naming the key. Nothing else is bound: the stylesheet
 path (`/assets/scheduling-theme-aurora.css`) and the `aurora-theme` class derive
 from the key, and the picker's preview image and description come from the theme
 module's `metadata/0`. So the theme's CSS directory must be named after its
@@ -1400,7 +1399,7 @@ Logger.debug("Socket assigns: #{inspect(socket.assigns)}")
 Every place a new theme touches, in the order to add them (`aurora`, id `"3"`, as the example):
 
 - [ ] **Catalog facts** in `lib/tymeslot/themes/catalog.ex`: `id`, `key`, `name`, `heading_style`, `status` (start at `:beta`) and `customization_spec:`
-- [ ] **Registry binding** in `lib/tymeslot_web/themes/core/registry.ex`: one `"3" => TymeslotWeb.Themes.Aurora.Theme` line in `@bindings` (the build fails, naming the id, until both halves exist)
+- [ ] **Registry binding**: nothing to edit; the module must be `TymeslotWeb.Themes.Aurora.Theme` in `lib/tymeslot_web/themes/aurora/theme.ex` (`registry_test.exs` fails, naming the key, otherwise)
 - [ ] **`theme.ex`**: one `use TymeslotWeb.Themes.Core.Theme, live_view:, preview_image:, description:` (the description a `dgettext_noop/2` call)
 - [ ] **Translations**: `mix gettext.extract --merge` adds the description's msgid to every locale's `dashboard_appearance.po`; translate it there, or CI's `gettext.extract --check-up-to-date` fails
 - [ ] **`scheduling/live.ex`**: one `use TymeslotWeb.Themes.Shared.SchedulingLive, wrapper:, steps:`, with the aliases above it, naming your `scheduling/wrapper.ex` and all five steps

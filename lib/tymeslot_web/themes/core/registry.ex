@@ -5,9 +5,9 @@ defmodule TymeslotWeb.Themes.Core.Registry do
   path (`/assets/scheduling-theme-<key>.css`) and html class (`<key>-theme`)
   derive from the key; the picker's preview image and description come from
   the module's `metadata/0`. Domain code reads facts from the catalog
-  directly. The two halves must match: `Registry.Definitions.build!/2` fails
-  the build for a Catalog theme with no binding or a binding with no Catalog
-  theme.
+  directly. A theme's module is derived from its key by convention
+  (`:quill` is `TymeslotWeb.Themes.Quill.Theme`), so the registry never names a
+  theme module and has no compile-time dependency on them.
   """
 
   alias Tymeslot.Themes.Catalog
@@ -26,30 +26,22 @@ defmodule TymeslotWeb.Themes.Core.Registry do
           optional(atom()) => term()
         }
 
-  # Presentation bindings keyed by theme ID: the theme module. Everything else
-  # the web layer needs is derived: the stylesheet path and html class from the
-  # key, and the picker's preview image and description from the module's
-  # `metadata/0`. The facts these bindings join live in Tymeslot.Themes.Catalog.
-  # Themes registered through `:extra_themes` (the test build's test-only themes,
-  # see the Catalog's moduledoc) bring their module in their entry.
+  # Each shipped theme's module follows from its catalogue key
+  # (`TymeslotWeb.Themes.<Key>.Theme`, see `Definitions.conventional_module/1`),
+  # built from strings so this module does not depend on the theme modules at
+  # compile time. Everything else the web layer needs is derived: the stylesheet
+  # path and html class from the key, and the picker's preview image and
+  # description from the module's `metadata/0`. Themes registered through
+  # `:extra_themes` (the test build's test-only themes, see the Catalog's
+  # moduledoc) bring their module in their entry.
   @extra_bindings :tymeslot
                   |> Application.compile_env(:extra_themes, [])
                   |> Map.new(&{&1.id, &1.module})
 
-  @bindings Map.merge(
-              %{
-                "1" => TymeslotWeb.Themes.Quill.Theme,
-                "2" => TymeslotWeb.Themes.Rhythm.Theme,
-                "3" => TymeslotWeb.Themes.Paper.Theme,
-                "4" => TymeslotWeb.Themes.Folio.Theme
-              },
-              @extra_bindings
-            )
-
   # Full definitions, built while this module compiles: the Catalog's facts
-  # joined to the bindings. A theme with facts and no binding, or a binding
-  # with no facts, fails the build here, naming the ids.
-  @themes Definitions.build!(Catalog.all(), @bindings)
+  # joined to each theme's module. An extra theme entry with no facts fails the
+  # build here, naming the id.
+  @themes Definitions.build!(Catalog.all(), @extra_bindings)
 
   # Create reverse lookup maps at compile time
   @id_to_key_map @themes

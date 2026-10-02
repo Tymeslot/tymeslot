@@ -120,7 +120,7 @@ defmodule Mix.Tasks.Precommit do
     # picker fails the build when a provider has no group, mirroring the
     # calendar picker. Both exist because a newly registered provider was
     # once missed. Lower it again if either goes away.
-    {"xref", ~w[xref graph --label compile-connected --fail-above 27], :dev},
+    {"xref", ~w[xref graph --label compile-connected --fail-above 24], :dev},
     {"test", ~w[test], :test},
     {"dialyzer", ~w[dialyzer.incremental --list-unused-filters], :dev}
   ]

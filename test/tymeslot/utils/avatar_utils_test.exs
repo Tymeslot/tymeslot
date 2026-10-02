@@ -33,4 +33,16 @@ defmodule Tymeslot.Utils.AvatarUtilsTest do
 
     assert svg =~ ~s(fill="#{ink}">AL</text>)
   end
+
+  describe "initials/1" do
+    test "takes the first letters of the first two words of the full name" do
+      assert AvatarUtils.initials(%{full_name: "  ada byron lovelace ", user: nil}) == "AB"
+    end
+
+    test "falls back to the email's first letter, then to U" do
+      assert AvatarUtils.initials(%{full_name: " ", user: %{email: "grace@example.com"}}) == "G"
+      assert AvatarUtils.initials(%{full_name: nil, user: nil}) == "U"
+      assert AvatarUtils.initials(nil) == "U"
+    end
+  end
 end
