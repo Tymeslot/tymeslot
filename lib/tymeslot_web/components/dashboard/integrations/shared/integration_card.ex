@@ -86,8 +86,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard d
       )
 
     ~H"""
+    <%!-- `.card-glass` is unlayered CSS with its own p-6, so the tighter
+         padding that lets a phone keep the footer on one row needs `!`. --%>
     <div
-      class={["card-glass p-4 sm:p-5 transition-opacity", !@active && "opacity-70", @class]}
+      class={["card-glass p-4! sm:p-5! transition-opacity", !@active && "opacity-70", @class]}
       {@rest}
     >
       <div class="flex items-start gap-3 sm:gap-4">

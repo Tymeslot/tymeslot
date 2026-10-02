@@ -83,13 +83,13 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
           phx-value-id={@integration.id}
           phx-target={@myself}
           class={[
-            "icon-button gap-1.5 px-3 py-1.5 font-bold lg:h-9 lg:w-9 lg:px-0 lg:py-0",
+            "icon-button gap-1.5 px-3 py-1.5 text-token-sm font-bold",
             (@integration.needs_reauth && "icon-button--warning") || "icon-button--neutral"
           ]}
           title={dgettext("dashboard_video", "Reconnect integration")}
           aria-label={dgettext("dashboard_video", "Reconnect integration")}
         >
-          <.icon name="hero-arrow-path" class="w-4 h-4" /><span class="lg:hidden">{dgettext(
+          <.icon name="hero-arrow-path" class="w-4 h-4" /><span>{dgettext(
             "dashboard_video",
             "Reconnect"
           )}</span>

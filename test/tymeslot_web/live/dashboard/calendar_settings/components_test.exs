@@ -376,11 +376,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
     end
   end
 
-  describe "calendar_connection_row desktop icon-only actions" do
-    # On desktop the Manage-calendars and Reconnect actions collapse to
-    # icon-only squares; their labels live in an `lg:hidden` span (shown on
-    # mobile) and each carries an aria-label so the icon-only form stays
-    # accessible.
+  describe "calendar_connection_row labelled actions" do
+    # The card's footer has room for every label, so Manage calendars and
+    # Reconnect keep theirs at every width; each also carries an aria-label
+    # naming the action in full.
     setup do
       integration = %{
         id: 12,
@@ -408,22 +407,30 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
       {:ok, html: html}
     end
 
-    test "Manage calendars is an aria-labelled button with an lg:hidden label", %{html: html} do
+    test "Manage calendars is an aria-labelled button with a visible label", %{html: html} do
       assert html =~ ~s(aria-label="Manage calendars")
-      # The visible text is kept for mobile but hidden from lg upwards.
-      assert html =~ ~r/<span class="lg:hidden">\s*Manage calendars\s*<\/span>/
+      assert html =~ ~r/<span>\s*Manage calendars\s*<\/span>/
     end
 
-    test "Reconnect is an aria-labelled button with an lg:hidden label", %{html: html} do
+    # A routine Reconnect keeps its label from sm up and shrinks to its icon
+    # on a phone, so the actions share one row there.
+    test "Reconnect is an aria-labelled button labelled from sm up", %{html: html} do
       assert html =~ ~s(aria-label="Reconnect integration")
-      assert html =~ ~r/<span class="lg:hidden">\s*Reconnect\s*<\/span>/
+      assert html =~ ~r/<span class="max-sm:sr-only">\s*Reconnect\s*<\/span>/
     end
 
-    test "the desktop icon-only sizing collapses the buttons to a square", %{html: html} do
-      # lg:h-9/lg:w-9 with zeroed padding is what turns the padded mobile pill
-      # into a square icon button on desktop.
-      assert html =~ "lg:h-9"
-      assert html =~ "lg:w-9"
+    test "a Reconnect the owner must act on keeps its label on a phone" do
+      html = render_row_with(needs_reauth: true)
+
+      assert html =~
+               ~r/aria-label="Reconnect integration">\s*<svg.*?<\/svg><span[^>]*>\s*Reconnect\s*<\/span>/s
+
+      refute html =~ "max-sm:sr-only"
+    end
+
+    test "neither label is hidden on wide screens", %{html: html} do
+      refute html =~ "lg:hidden"
+      refute html =~ "lg:w-9"
     end
   end
 

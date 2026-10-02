@@ -297,7 +297,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
           phx-click="upgrade_google_scope"
           phx-value-id={@integration.id}
           phx-target={@myself}
-          class={tile_class(:warning, :labelled)}
+          class={tile_class(:warning)}
           title={dgettext("dashboard_calendar_settings", "Upgrade Google Calendar permissions")}
         >
           <.icon name="hero-bolt" class="w-4 h-4" /> {dgettext(
@@ -315,7 +315,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
           phx-click="manage_calendars"
           phx-value-id={@integration.id}
           phx-target={@myself}
-          class={tile_class(:neutral, :collapsing)}
+          class={tile_class(:neutral)}
           title={
             dgettext(
               "dashboard_calendar_settings",
@@ -324,7 +324,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
           }
           aria-label={dgettext("dashboard_calendar_settings", "Manage calendars")}
         >
-          <.icon name="hero-squares-2x2" class="w-4 h-4" /><span class="lg:hidden">{dgettext(
+          <.icon name="hero-squares-2x2" class="w-4 h-4" /><span>{dgettext(
             "dashboard_calendar_settings",
             "Manage calendars"
           )}</span>
@@ -364,7 +364,11 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   attr :variant, :atom, values: [:normal, :attention], required: true
 
   defp reconnect_button(assigns) do
-    assigns = assign(assigns, :class, reconnect_button_class(assigns.variant))
+    assigns =
+      assign(assigns,
+        class: reconnect_button_class(assigns.variant),
+        label_class: reconnect_label_class(assigns.variant)
+      )
 
     ~H"""
     <button
@@ -376,7 +380,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       title={dgettext("dashboard_calendar_settings", "Reconnect integration")}
       aria-label={dgettext("dashboard_calendar_settings", "Reconnect integration")}
     >
-      <.icon name="hero-arrow-path" class="w-4 h-4" /><span class="lg:hidden">{dgettext(
+      <.icon name="hero-arrow-path" class="w-4 h-4" /><span class={@label_class}>{dgettext(
         "dashboard_calendar_settings",
         "Reconnect"
       )}</span>
@@ -390,7 +394,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       title={dgettext("dashboard_calendar_settings", "Reconnect integration")}
       aria-label={dgettext("dashboard_calendar_settings", "Reconnect integration")}
     >
-      <.icon name="hero-arrow-path" class="w-4 h-4" /><span class="lg:hidden">{dgettext(
+      <.icon name="hero-arrow-path" class="w-4 h-4" /><span class={@label_class}>{dgettext(
         "dashboard_calendar_settings",
         "Reconnect"
       )}</span>
@@ -400,22 +404,24 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
   # The promoted (:attention) style is the amber warning tile; the subtle
   # (:normal) one is the neutral tile.
-  defp reconnect_button_class(:attention), do: tile_class(:warning, :collapsing)
-  defp reconnect_button_class(:normal), do: tile_class(:neutral, :collapsing)
+  defp reconnect_button_class(:attention), do: tile_class(:warning)
 
-  # Row actions that carry a text label as well as an icon, so they cannot be
+  defp reconnect_button_class(:normal),
+    do: [tile_class(:neutral), "max-sm:h-8 max-sm:w-8 max-sm:px-0 max-sm:py-0"]
+
+  # On a phone the routine Reconnect shrinks to its icon so Manage calendars,
+  # Reconnect and Delete share one row; a promoted Reconnect is the action the
+  # owner has to take, so it keeps its label there too.
+  defp reconnect_label_class(:attention), do: nil
+  defp reconnect_label_class(:normal), do: "max-sm:sr-only"
+
+  # Card actions that carry a text label as well as an icon, so they cannot be
   # `icon_button/1`, take its tile look (the `.icon-button` colour rules set no
-  # size or padding) and size themselves here. A `:collapsing` tile shows its
-  # label on small screens, where there is no hover tooltip, and shrinks to the
-  # 36px icon-only square from `lg` up; a `:labelled` tile keeps its label.
-  @labelled_tile "gap-1.5 px-3 py-1.5 font-bold"
-  @collapsing_tile "#{@labelled_tile} lg:h-9 lg:w-9 lg:px-0 lg:py-0"
-
-  defp tile_class(variant, :labelled),
-    do: ["icon-button", "icon-button--#{variant}", @labelled_tile]
-
-  defp tile_class(variant, :collapsing),
-    do: ["icon-button", "icon-button--#{variant}", @collapsing_tile]
+  # size or padding) and the small action button's size, so they sit level
+  # with the icon buttons in the card's footer and keep their label at every
+  # width.
+  defp tile_class(variant),
+    do: ["icon-button", "icon-button--#{variant}", "gap-1.5 px-3 py-1.5 text-token-sm font-bold"]
 
   @doc """
   Builds a one-line human summary for a calendar integration: account

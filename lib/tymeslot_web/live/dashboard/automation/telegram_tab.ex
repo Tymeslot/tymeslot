@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramTab do
     ~H"""
     <%= if @integrations != [] do %>
       <div class="space-y-6">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-wrap items-center justify-between gap-3">
           <.section_header
             level={2}
             title={dgettext("dashboard_automation_chat", "Your Telegram Integrations")}

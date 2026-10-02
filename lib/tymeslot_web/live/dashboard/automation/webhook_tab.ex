@@ -22,7 +22,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookTab do
     ~H"""
     <%= if @webhooks != [] do %>
       <div class="space-y-6">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-wrap items-center justify-between gap-3">
           <.section_header
             level={2}
             title={dgettext("dashboard_automation", "Your Webhooks")}
