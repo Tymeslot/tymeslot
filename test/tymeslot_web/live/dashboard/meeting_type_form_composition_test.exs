@@ -11,9 +11,9 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormCompositionTest do
     * `meeting_type_form/validation_test.exs` — reminder validation
       unit tests (empty, negative, non-numeric, cap, unit whitelist).
     * `meeting_type_form/init_test.exs` — component initialisation.
-    * `scheduling_settings_component`'s `update_buffer_before_minutes` /
-      `update_buffer_after_minutes` / `update_advance_booking_days` —
-      exercised end-to-end in `meeting_settings_test.exs:209–251`.
+    * `ScheduleSettingsComponent`'s `update_buffer_before_minutes` /
+      `update_buffer_after_minutes` / `update_advance_booking_days`:
+      exercised end-to-end in `availability/policy_card_test.exs`.
 
   What was missing: the **server wins when the UI state goes stale
   mid-flow**. Plan line 1856 calls this out for video integrations —

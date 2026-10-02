@@ -2,9 +2,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
   @moduledoc """
   LiveComponent encapsulating the account-wide booking limits.
 
-  Buffer, advance booking window and minimum notice belong to a named
-  availability schedule and are edited on the availability page; what remains
-  here are the caps that apply across every meeting type.
+  The buffers before and after meetings, the advance booking window and
+  minimum notice belong to a named availability schedule and are edited on
+  the availability page; what remains here are the caps that apply across
+  every meeting type.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
