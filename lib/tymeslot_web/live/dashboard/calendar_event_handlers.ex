@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   alias Tymeslot.Integrations.Video.RoomCreationError
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.IcsImport
   alias TymeslotWeb.Dashboard.CalendarGridComponent
 
   @doc "Advances the clock-tick timer and pushes the current time to the calendar grid."
@@ -339,6 +340,68 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_create_event_result(result, socket) do
     EventCrud.handle_create_result(result, socket)
+  end
+
+  # A send_update re-renders the whole grid, so a long import reports its
+  # progress every few events rather than after each one.
+  @ics_import_progress_every 10
+
+  @doc """
+  Spawns a supervised task that imports an `.ics` plan into a calendar,
+  reporting progress and the result back to this LiveView.
+
+  The task is not linked: an import the user walked away from still finishes,
+  rather than stopping part-way with some of the file's events written.
+  """
+  @spec handle_execute_ics_import(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_execute_ics_import(payload, socket) do
+    lv_pid = self()
+    total = length(payload.plan.events)
+
+    on_progress = fn done ->
+      if rem(done, @ics_import_progress_every) == 0 or done == total,
+        do: send(lv_pid, {:ics_import_progress, done})
+    end
+
+    Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
+      result =
+        CalendarGrid.import_ics(
+          payload.user_id,
+          payload.integration_id,
+          payload.calendar_id,
+          payload.plan,
+          on_progress: on_progress
+        )
+
+      send(lv_pid, {:ics_import_result, result})
+    end)
+
+    {:noreply, socket}
+  end
+
+  @doc "Passes a running import's progress to the calendar grid."
+  @spec handle_ics_import_progress(non_neg_integer(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_ics_import_progress(done, socket) do
+    to_grid(socket, action: :ics_import_progress, done: done)
+    {:noreply, socket}
+  end
+
+  @doc """
+  Hands a finished import to the calendar grid, which closes its modal and
+  flashes the outcome; off the calendar page the outcome is flashed here.
+  """
+  @spec handle_ics_import_result(term(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_ics_import_result(result, %{assigns: %{live_action: :calendar}} = socket) do
+    to_grid(socket, action: :ics_import_finished, result: result)
+    {:noreply, socket}
+  end
+
+  def handle_ics_import_result(result, socket) do
+    {kind, message} = IcsImport.result_flash(result)
+    {:noreply, put_flash(socket, kind, message)}
   end
 
   @doc "Spawns a supervised task to create an ad-hoc meeting."

@@ -386,3 +386,13 @@ msgstr "Brak nadchodzących rezerwacji"
 #, elixir-autogen, elixir-format
 msgid "Your bookings already show here. Connect a calendar to see the rest of your events and prevent double-bookings."
 msgstr "Rezerwacje są już tu widoczne. Podłącz kalendarz, aby zobaczyć pozostałe wydarzenia i uniknąć podwójnych rezerwacji."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
+#, elixir-autogen, elixir-format
+msgid "Import"
+msgstr "Importuj"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
+#, elixir-autogen, elixir-format
+msgid "Import events from an .ics file"
+msgstr "Importuj wydarzenia z pliku .ics"

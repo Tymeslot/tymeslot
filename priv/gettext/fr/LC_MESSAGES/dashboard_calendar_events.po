@@ -168,6 +168,7 @@ msgstr "Calendriers actualisés"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
@@ -404,6 +405,7 @@ msgid "Input too long"
 msgstr "Le champ est trop long"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid calendar selected"
 msgstr "Calendrier sélectionné invalide"
@@ -1347,3 +1349,138 @@ msgstr "Trop de nouvelles réunions. Veuillez patienter un instant."
 #, elixir-autogen, elixir-format
 msgid "Someone else organises this meeting, so Tymeslot can't move or split a series you were only invited to."
 msgstr "Cette réunion est organisée par quelqu'un d'autre : Tymeslot ne peut pas déplacer ni scinder une série à laquelle vous êtes seulement invité."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
+#, elixir-autogen, elixir-format
+msgid "1 event could not be imported."
+msgid_plural "%{count} events could not be imported."
+msgstr[0] "1 événement n’a pas pu être importé."
+msgstr[1] "%{count} événements n’ont pas pu être importés."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
+#, elixir-autogen, elixir-format
+msgid "1 of them repeats."
+msgid_plural "%{count} of them repeat."
+msgstr[0] "1 d’entre eux se répète."
+msgstr[1] "%{count} d’entre eux se répètent."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Choose an .ics file"
+msgstr "Choisir un fichier .ics"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Close"
+msgstr "Fermer"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar Tymeslot can write to before importing events."
+msgstr "Connectez un calendrier dans lequel Tymeslot peut écrire avant d’importer des événements."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Copy the events of an .ics file into one of your calendars."
+msgstr "Copiez les événements d’un fichier .ics dans l’un de vos calendriers."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Exported from Google Calendar, Outlook, Apple Calendar or any other calendar app."
+msgstr "Exporté depuis Google Calendar, Outlook, Apple Calendar ou toute autre application de calendrier."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Found 1 event."
+msgid_plural "Found %{count} events."
+msgstr[0] "1 événement trouvé."
+msgstr[1] "%{count} événements trouvés."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Guests are not imported, and nobody is sent an invitation."
+msgstr "Les invités ne sont pas importés et aucune invitation n’est envoyée."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Import"
+msgstr "Importer"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Import events"
+msgstr "Importer des événements"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Import into"
+msgstr "Importer dans"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
+#, elixir-autogen, elixir-format
+msgid "Imported 1 event."
+msgid_plural "Imported %{count} events."
+msgstr[0] "1 événement importé."
+msgstr[1] "%{count} événements importés."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Importing %{done} of %{total} events..."
+msgstr "Importation de %{done} événements sur %{total}..."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
+#, elixir-autogen, elixir-format
+msgid "Only .ics calendar files can be imported."
+msgstr "Seuls les fichiers de calendrier .ics peuvent être importés."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
+#, elixir-autogen, elixir-format
+msgid "Outlook could not take the skipped dates of 1 recurring event, so it may show extra occurrences."
+msgid_plural "Outlook could not take the skipped dates of %{count} recurring events, so they may show extra occurrences."
+msgstr[0] "Outlook n’a pas pu prendre en compte les dates ignorées de 1 événement récurrent ; des occurrences supplémentaires peuvent donc apparaître."
+msgstr[1] "Outlook n’a pas pu prendre en compte les dates ignorées de %{count} événements récurrents ; des occurrences supplémentaires peuvent donc apparaître."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
+#, elixir-autogen, elixir-format
+msgid "The file could not be uploaded. Please try again."
+msgstr "Le fichier n’a pas pu être téléversé. Veuillez réessayer."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
+#, elixir-autogen, elixir-format
+msgid "The file is too large. Files up to %{size} MB can be imported."
+msgstr "Le fichier est trop volumineux. Les fichiers jusqu’à %{size} Mo peuvent être importés."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
+#, elixir-autogen, elixir-format
+msgid "The import stopped because the calendar could not be written to."
+msgstr "L’importation s’est arrêtée, car il n’a pas été possible d’écrire dans le calendrier."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
+#, elixir-autogen, elixir-format
+msgid "The import stopped because your calendar needs to be reconnected."
+msgstr "L’importation s’est arrêtée, car votre calendrier doit être reconnecté."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
+#, elixir-autogen, elixir-format
+msgid "This file contains more than %{count} events. Please split it into smaller files."
+msgstr "Ce fichier contient plus de %{count} événements. Veuillez le diviser en fichiers plus petits."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
+#, elixir-autogen, elixir-format
+msgid "This file contains no events to import."
+msgstr "Ce fichier ne contient aucun événement à importer."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
+#, elixir-autogen, elixir-format
+msgid "This file could not be read as a calendar. Please choose an .ics file."
+msgstr "Ce fichier n’a pas pu être lu comme un calendrier. Veuillez choisir un fichier .ics."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
+#, elixir-autogen, elixir-format
+msgid "Too many imports. Please wait a while before importing another file."
+msgstr "Trop d’importations. Veuillez patienter un moment avant d’importer un autre fichier."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
+#, elixir-autogen, elixir-format
+msgid "You can close this window; the import carries on."
+msgstr "Vous pouvez fermer cette fenêtre ; l’importation se poursuit."

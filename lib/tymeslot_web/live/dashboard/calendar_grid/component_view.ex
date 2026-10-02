@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmSeriesMoveModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ImportIcsModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.NotifyPromptModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal
@@ -134,6 +135,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           user_timezone={@user_timezone}
           myself={@myself}
           video_integrations={@video_integrations}
+        />
+        <ImportIcsModal.import_ics_modal
+          :if={@ics_import && @ics_import.open}
+          ics_import={@ics_import}
+          upload={@uploads.ics_file}
+          integrations={@integrations}
+          integration_colors={@integration_colors}
+          myself={@myself}
         />
         <RecurrencePromptModal.recurrence_prompt_modal
           :if={@recurrence_prompt}

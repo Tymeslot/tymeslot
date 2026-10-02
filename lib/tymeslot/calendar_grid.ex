@@ -17,7 +17,9 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
+  alias Tymeslot.CalendarGrid.IcsImport
   alias Tymeslot.CalendarGrid.SeriesCarry
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.CalendarAppearanceSchema
@@ -335,6 +337,29 @@ defmodule Tymeslot.CalendarGrid do
   defp to_usec(%DateTime{microsecond: {_value, 6}} = dt), do: dt
   defp to_usec(%DateTime{} = dt), do: %{dt | microsecond: {elem(dt.microsecond, 0), 6}}
   defp to_usec(other), do: other
+
+  @doc "Parses an uploaded `.ics` file into an import plan. See `IcsImport.plan/1`."
+  defdelegate plan_ics_import(content), to: IcsImport, as: :plan
+
+  @doc """
+  Writes an import plan to one of the user's calendars (see `IcsImport.run/3`),
+  then drops the user's cached availability and syncs the calendar, so the
+  imported events block their time and appear on the grid.
+  """
+  @spec import_ics(pos_integer(), pos_integer(), String.t() | nil, IcsImport.plan(), keyword()) ::
+          {:ok, IcsImport.summary()} | {:error, :not_found}
+  def import_ics(user_id, integration_id, calendar_id, plan, opts \\ []) do
+    with {:ok, target} <- IcsImport.target(user_id, integration_id, calendar_id) do
+      summary = IcsImport.run(target, plan, opts)
+
+      if summary.created > 0 do
+        AvailabilityCache.invalidate_for_user(user_id)
+        enqueue_sync_worker(target.integration)
+      end
+
+      {:ok, summary}
+    end
+  end
 
   @doc """
   Applies `changes` to an existing event, writes the whole updated event to

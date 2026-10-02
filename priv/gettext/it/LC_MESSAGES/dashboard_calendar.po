@@ -386,3 +386,13 @@ msgstr "Nessuna prenotazione in programma"
 #, elixir-autogen, elixir-format
 msgid "Your bookings already show here. Connect a calendar to see the rest of your events and prevent double-bookings."
 msgstr "Le tue prenotazioni sono già visibili qui. Collega un calendario per vedere gli altri tuoi eventi ed evitare doppie prenotazioni."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
+#, elixir-autogen, elixir-format
+msgid "Import"
+msgstr "Importa"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
+#, elixir-autogen, elixir-format
+msgid "Import events from an .ics file"
+msgstr "Importa eventi da un file .ics"
