@@ -24,9 +24,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
   @spec action_bar(map()) :: Phoenix.LiveView.Rendered.t()
   def action_bar(assigns) do
     ~H"""
-    <div
-      class="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-col gap-3 shrink-0 lg:w-[160px]"
-    >
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-col gap-3 shrink-0 lg:w-[160px]">
       <%!-- A held request offers exactly two actions. Join, Reschedule and
               Cancel all presuppose a meeting that is happening, and offering
               them here is what let a host "reschedule" a booking they had
