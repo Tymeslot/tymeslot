@@ -119,6 +119,13 @@
   color: var(--seat-red);
 }
 
+/* The selected slot's surface differs from the unselected one, and a faint
+   status wash on it is hard to read; the badge takes the primary pair. */
+.time-slot.selected .seat-badge {
+  background: var(--seat-selected-bg);
+  color: var(--seat-selected);
+}
+
 /* ============================================================================
    CONTAINER QUERY OVERRIDES
    Replaces width-based @media queries from responsive.css.

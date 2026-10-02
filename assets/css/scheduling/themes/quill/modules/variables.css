@@ -229,6 +229,11 @@
   --seat-green-bg: rgba(16, 185, 129, 0.18);
   --seat-amber-bg: rgba(251, 191, 36, 0.18);
   --seat-red-bg: rgba(239, 68, 68, 0.18);
+  /* A selected slot sits on the primary gradient, whose text colour is
+     --theme-on-primary: the badge takes that colour on a faint wash of it,
+     so a custom palette's contrast pair carries over to the badge. */
+  --seat-selected: var(--theme-on-primary);
+  --seat-selected-bg: color-mix(in srgb, var(--theme-on-primary) 14%, transparent);
 
   /* Component-Specific Tokens - Container Widths */
   --container-xs: 280px;
