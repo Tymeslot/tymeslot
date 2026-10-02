@@ -29,6 +29,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
      |> assign(:venues, [])
      |> assign(:toggling_type_id, nil)
      |> assign(:custom_questions_allowed, true)
+     |> assign(:group_bookings_allowed, true)
      |> assign(:show_slug_modal, false)
      |> assign(:slug_modal_type, nil)
      |> assign(:slug_draft, "")

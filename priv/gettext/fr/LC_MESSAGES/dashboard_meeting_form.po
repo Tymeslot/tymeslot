@@ -1130,3 +1130,53 @@ msgstr "Désactivez les réservations de groupe pour exiger un paiement."
 #, elixir-autogen, elixir-format
 msgid "Turn off payments to enable group bookings."
 msgstr "Désactivez les paiements pour activer les réservations de groupe."
+
+#: lib/tymeslot/utils/form_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Group bookings are not included in your current plan."
+msgstr "Les réservations de groupe ne sont pas incluses dans votre offre actuelle."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_rules.ex
+#, elixir-autogen, elixir-format
+msgid "Group bookings cannot ask each booker for their phone number. Edit the location to publish a number for them to call instead."
+msgstr "Les réservations de groupe ne peuvent pas demander son numéro de téléphone à chaque personne qui réserve. Modifiez le lieu pour publier plutôt un numéro à appeler."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_rules.ex
+#, elixir-autogen, elixir-format
+msgid "Group bookings need a single venue. Edit the location so it names just one."
+msgstr "Les réservations de groupe nécessitent une seule adresse. Modifiez le lieu pour n'en indiquer qu'une."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_rules.ex
+#, elixir-autogen, elixir-format
+msgid "Group bookings need a single video provider. Edit the location so it uses just one."
+msgstr "Les réservations de groupe nécessitent un seul fournisseur vidéo. Modifiez le lieu pour n'en utiliser qu'un."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_rules.ex
+#, elixir-autogen, elixir-format
+msgid "Group bookings need exactly one location, so everyone in a slot meets in the same place. Remove the other locations to enable them."
+msgstr "Les réservations de groupe nécessitent exactement un lieu, afin que tout le monde se retrouve au même endroit pour un créneau. Supprimez les autres lieux pour les activer."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_rules.ex
+#, elixir-autogen, elixir-format
+msgid "Group bookings need the address up front. Edit the location and choose a venue."
+msgstr "Les réservations de groupe nécessitent l'adresse à l'avance. Modifiez le lieu et choisissez une adresse."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Group bookings use a location fixed in advance: one video provider, one venue, or a number for bookers to call."
+msgstr "Les réservations de groupe utilisent un lieu fixé à l'avance : un fournisseur vidéo, une adresse, ou un numéro que les personnes qui réservent appellent."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off approval to enable group bookings."
+msgstr "Désactivez la validation pour activer les réservations de groupe."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/approval_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off group bookings to require approval."
+msgstr "Désactivez les réservations de groupe pour exiger une validation."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
+#, elixir-autogen, elixir-format
+msgid "Where this meeting is held. Group bookings use one location, fixed in advance, so everyone in a slot meets in the same place."
+msgstr "Où se tient ce rendez-vous. Les réservations de groupe utilisent un seul lieu, fixé à l'avance, afin que tout le monde se retrouve au même endroit pour un créneau."

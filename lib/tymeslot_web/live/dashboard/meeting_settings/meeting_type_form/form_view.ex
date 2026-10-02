@@ -29,6 +29,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     AvailabilitySection,
     CustomQuestionsSection,
     GroupBookingsSection,
+    GroupRules,
     GuestsSection,
     HiddenFields,
     LimitsSection,
@@ -37,6 +38,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     PaymentsSection,
     QuestionEditorComponent,
     ShowAsFreeSection,
+    Submission,
     VisibilitySection
   }
 
@@ -242,6 +244,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             video_integrations={@video_integrations}
             venues={@venues}
             form_id={@id}
+            group_bookings_enabled={@group_bookings_enabled}
+            errors={
+              @form_errors
+              |> FormValidationHelpers.field_errors(:locations)
+              |> Enum.map(&Helpers.format_errors/1)
+            }
           />
 
           <.booking_destination_section
@@ -283,7 +291,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             group_bookings_enabled={@group_bookings_enabled}
             max_participants={@max_participants}
             payment_required={@payment_required}
-            payments_charges_enabled={@payments_charges_enabled}
+            blocker={
+              GroupRules.enable_blocker(%{
+                group_bookings_allowed: @group_bookings_allowed,
+                payment_required: @payment_required,
+                payments_charges_enabled: @payments_charges_enabled,
+                requires_approval: @requires_approval,
+                locations: @locations
+              })
+            }
+            allowed={@group_bookings_allowed}
+            form_id={@id}
+            current_user={@current_user}
             form_errors={@form_errors}
             myself={@myself}
           />
@@ -296,6 +315,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
           <.approval_section
             requires_approval={@requires_approval}
+            group_bookings_enabled={@group_bookings_enabled}
             approval_window_hours={@approval_window_hours}
             errors={
               @form_errors
@@ -411,7 +431,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
               </button>
               <button
                 type="submit"
-                disabled={@saving || @refreshing_calendars || @form_errors != %{}}
+                disabled={
+                  @saving || @refreshing_calendars ||
+                    Submission.pending_group_limit_invalid?(
+                      @group_bookings_enabled,
+                      @max_participants
+                    )
+                }
                 class="btn btn-primary"
               >
                 <%= if @saving do %>
@@ -435,6 +461,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
           id={"location-editor-#{@id}"}
           location={@editing_location}
           existing_locations={@locations}
+          group_bookings_enabled={@group_bookings_enabled}
           video_integrations={@video_integrations}
           venues={@venues}
           current_user={@current_user}

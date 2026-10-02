@@ -77,7 +77,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
           name: "Workshop",
           duration_minutes: 60,
           user_id: user.id,
-          max_participants: 999
+          max_participants: 999,
+          locations: [%{kind: "custom", label: "Main hall"}]
         })
 
       assert changeset.valid?

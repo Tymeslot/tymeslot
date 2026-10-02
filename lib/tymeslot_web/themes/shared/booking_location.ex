@@ -274,12 +274,12 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
   """
   @spec choice_required?(map()) :: boolean()
   def choice_required?(assigns) do
-    length(assigns[:location_options] || []) > 1 or
-      several?(assigns[:location_video_choices]) or
-      several?(assigns[:location_venue_choices])
+    LocationSelection.choice_required?(
+      assigns[:location_options] || [],
+      assigns[:location_video_choices],
+      assigns[:location_venue_choices]
+    )
   end
-
-  defp several?(choices), do: Enum.any?(Map.values(choices || %{}), &(length(&1) > 1))
 
   @doc """
   The option id a submission carries.

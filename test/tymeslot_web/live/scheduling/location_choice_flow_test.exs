@@ -40,6 +40,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.MeetingTypes.GroupLocationRule
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
@@ -356,6 +357,39 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
       assert [meeting] = Repo.all_by(MeetingSchema, attendee_email: "single@example.com")
       assert meeting.location == "Our office"
       assert meeting.location_kind == "in_person"
+    end
+  end
+
+  # A group type's location is fixed in advance (`GroupLocationRule`), so
+  # however the page is reached there is never a picker: every seat in a
+  # slot is held at the one place the slot is.
+  describe "a group meeting type" do
+    setup %{user: user} do
+      venue = insert(:venue, user: user, name: "Main Hall", description: "1 Market Square")
+
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          duration_minutes: 30,
+          name: "Workshop",
+          is_active: true,
+          max_participants: 4,
+          locations: [in_person_location([venue])]
+        )
+
+      %{meeting_type: meeting_type}
+    end
+
+    test "shows no picker, and states the one location every seat is held at",
+         %{conn: conn, profile: profile, meeting_type: meeting_type} do
+      assert GroupLocationRule.check_meeting_type(meeting_type) == :ok
+
+      view = navigate_to_booking_form(conn, profile, nil)
+
+      refute has_element?(view, "[data-testid='location-field']")
+      refute has_element?(view, "[data-testid='venue-field']")
+      refute has_element?(view, "[data-testid='video-provider-field']")
+      assert view |> element("[data-testid='location-stated']") |> render() =~ "Main Hall"
     end
   end
 

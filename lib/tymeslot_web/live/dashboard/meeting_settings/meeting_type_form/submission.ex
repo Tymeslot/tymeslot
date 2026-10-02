@@ -191,6 +191,22 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
 
   defp maybe_put_max_participants(params, _assigns), do: Map.put(params, "max_participants", "1")
 
+  @doc """
+  Whether group bookings are on with a participant limit outside the group
+  range still in the input. The inline validator has already said so; the
+  create form's submit button stays disabled until it is fixed, rather than
+  posting a limit the host can see is wrong.
+
+  Derived from the current state rather than from the form's errors, so an
+  error no field handler clears (a `:base` error from a failed save, say)
+  can never leave the button disabled for good.
+  """
+  @spec pending_group_limit_invalid?(boolean(), String.t() | integer() | nil) :: boolean()
+  def pending_group_limit_invalid?(true = _group_bookings_enabled, max_participants),
+    do: group_participants_param(to_string(max_participants)) == :error
+
+  def pending_group_limit_invalid?(_group_bookings_enabled, _max_participants), do: false
+
   defp group_participants_param(value) when is_binary(value) do
     range = Constraints.group_participants_range()
 

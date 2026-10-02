@@ -73,6 +73,24 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
 
   def options(meeting_type), do: derived_options(meeting_type)
 
+  @doc """
+  Whether the booker has anything to choose: between locations, between the
+  providers of a video location, or between the venues of an in-person one.
+
+  `video_choices` and `venue_choices` map an option id to what that option
+  offers (`Tymeslot.MeetingTypes.location_video_choices/1` and
+  `location_venue_choices/1` on the booking page, which leave out providers
+  and venues that no longer exist). The booking page renders its location
+  picker exactly when this is true, and `Tymeslot.MeetingTypes.GroupLocationRule`
+  admits only locations for which it can never be.
+  """
+  @spec choice_required?([LocationOption.t()], map() | nil, map() | nil) :: boolean()
+  def choice_required?(options, video_choices, venue_choices) do
+    length(options) > 1 or several?(video_choices) or several?(venue_choices)
+  end
+
+  defp several?(choices), do: Enum.any?(Map.values(choices || %{}), &(length(&1) > 1))
+
   @doc "The option with `id`, or the first one when `id` matches nothing."
   @spec fetch(map() | nil, String.t() | nil) :: LocationOption.t() | nil
   def fetch(meeting_type, id) do

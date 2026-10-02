@@ -4,15 +4,23 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
   section.
 
   Renders the "Group bookings" toggle and, when enabled, the
-  participant-limit number input (2 up to the `Constraints` maximum). Group
-  bookings and payments are mutually exclusive: while payment is required
-  the toggle renders disabled with an explanatory hint — the parent guards
-  the event server-side and the changeset enforces the rule. The toggle
-  stays enabled, though, when the host has since lost charge capability
-  (`payments_charges_enabled: false`): the payments toggle is unreachable
-  in that state, so blocking this one too would leave the organiser with no
-  way to reach group bookings at all. The parent event handler clears
-  `payment_required` as part of enabling the toggle in that case.
+  participant-limit number input (2 up to the `Constraints` maximum).
+
+  A group type cannot require payment or approval, and its location has to be
+  fixed in advance (`Tymeslot.MeetingTypes.GroupLocationRule`). While any of
+  those stands in the way (`GroupRules.enable_blocker/1`, the `blocker`
+  attr), the toggle renders disabled with a hint saying what to change; the
+  parent guards the event server-side and the changeset enforces the rules.
+  Turning group bookings off is never blocked. The payment rule does not
+  block a host who has since lost charge capability: the payments toggle is
+  unreachable in that state, so the parent clears `payment_required` as part
+  of enabling group bookings instead.
+
+  Group bookings can be a paid feature. Without access (`allowed: false`) a
+  one-to-one type shows the upgrade placeholder registered under
+  `:feature_placeholder_components[:group_bookings]`, the same way the
+  custom-questions section does; an existing group type keeps the section, so
+  its host can still save it as it is or turn group bookings off.
 
   The toggle and input dispatch `toggle_group_bookings` and
   `change_max_participants` back to the parent `MeetingTypeForm`
@@ -26,19 +34,56 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Utils.FormHelpers
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupRules
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   attr :group_bookings_enabled, :boolean, required: true
   attr :max_participants, :string, required: true
   attr :payment_required, :boolean, required: true
-  attr :payments_charges_enabled, :boolean, required: true
+  attr :blocker, :any, default: nil, doc: "`GroupRules.enable_blocker/1`'s answer"
+  attr :allowed, :boolean, default: true
+  attr :form_id, :string, required: true
+  attr :current_user, :any, default: nil
   attr :form_errors, :map, required: true
   attr :myself, :any, required: true
 
   @spec group_bookings_section(map()) :: Phoenix.LiveView.Rendered.t()
+  def group_bookings_section(%{allowed: false, group_bookings_enabled: false} = assigns) do
+    assigns = assign(assigns, :placeholder_component, placeholder_component())
+
+    ~H"""
+    <section data-testid="group-bookings-locked">
+      <%= if @placeholder_component do %>
+        <.live_component
+          module={@placeholder_component}
+          id={"group-bookings-upgrade-#{@form_id}"}
+          feature={:group_bookings}
+          current_user={@current_user}
+        />
+      <% else %>
+        <%!-- No placeholder registered: a minimal notice rather than nothing,
+              so a misconfiguration is noticed. --%>
+        <div class="card-glass py-6 text-center">
+          <p class="text-token-sm text-tymeslot-500">
+            {FormHelpers.group_bookings_not_allowed_message()}
+          </p>
+        </div>
+      <% end %>
+    </section>
+    """
+  end
+
   def group_bookings_section(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :toggle_disabled,
+        not assigns.group_bookings_enabled and assigns.blocker != nil
+      )
+
     ~H"""
     <div class="space-y-3">
       <div class="flex items-center gap-2">
@@ -48,19 +93,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
         </h3>
       </div>
 
-      <.info_box :if={@payment_required and @payments_charges_enabled} variant={:info}>
-        {dgettext("dashboard_meeting_form", "Turn off payments to enable group bookings.")}
+      <.info_box :if={!@group_bookings_enabled and @blocker != nil} variant={:info}>
+        {blocker_message(@blocker)}
       </.info_box>
 
-      <label class={[
-        "flex items-center gap-3",
-        @payment_required && @payments_charges_enabled && "opacity-60 cursor-not-allowed"
-      ]}>
+      <label class={["flex items-center gap-3", @toggle_disabled && "opacity-60 cursor-not-allowed"]}>
         <input
           type="checkbox"
           class="checkbox"
           checked={@group_bookings_enabled}
-          disabled={@payment_required and @payments_charges_enabled}
+          disabled={@toggle_disabled}
           phx-click="toggle_group_bookings"
           phx-target={@myself}
         />
@@ -107,5 +149,24 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
       <% end %>
     </div>
     """
+  end
+
+  defp blocker_message(:plan), do: FormHelpers.group_bookings_not_allowed_message()
+
+  defp blocker_message(:payment),
+    do: dgettext("dashboard_meeting_form", "Turn off payments to enable group bookings.")
+
+  defp blocker_message(:approval),
+    do: dgettext("dashboard_meeting_form", "Turn off approval to enable group bookings.")
+
+  defp blocker_message({:location, reason}), do: GroupRules.location_message(reason)
+
+  # Bracket access works for both a keyword list and a map. Core leaves the
+  # config unset; the managed overlay registers one.
+  defp placeholder_component do
+    case Application.get_env(:tymeslot, :feature_placeholder_components) do
+      nil -> nil
+      placeholders -> placeholders[:group_bookings]
+    end
   end
 end

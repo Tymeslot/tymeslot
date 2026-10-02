@@ -95,7 +95,12 @@ defmodule Tymeslot.MeetingTypes.GroupCapacityFollowsTypeTest do
   describe "a type switched to group bookings" do
     setup ctx do
       meeting_type =
-        insert(:meeting_type, user: ctx.user, max_participants: 1, duration_minutes: 30)
+        insert(:meeting_type,
+          user: ctx.user,
+          max_participants: 1,
+          duration_minutes: 30,
+          locations: [in_person_location([insert(:venue, user: ctx.user)])]
+        )
 
       solo =
         meeting_at(ctx, :meeting, meeting_type, ctx.start_time,
@@ -151,7 +156,12 @@ defmodule Tymeslot.MeetingTypes.GroupCapacityFollowsTypeTest do
   describe "changing a group type's limit to another group limit" do
     test "updates capacity on future live group meetings only", ctx do
       meeting_type =
-        insert(:meeting_type, user: ctx.user, max_participants: 4, duration_minutes: 30)
+        insert(:meeting_type,
+          user: ctx.user,
+          max_participants: 4,
+          duration_minutes: 30,
+          locations: [in_person_location([insert(:venue, user: ctx.user)])]
+        )
 
       future = meeting_at(ctx, :group_meeting, meeting_type, ctx.start_time, capacity: 4)
 
@@ -181,7 +191,12 @@ defmodule Tymeslot.MeetingTypes.GroupCapacityFollowsTypeTest do
 
     test "a capacity below the seats taken leaves the slot full without cancelling anyone", ctx do
       meeting_type =
-        insert(:meeting_type, user: ctx.user, max_participants: 4, duration_minutes: 30)
+        insert(:meeting_type,
+          user: ctx.user,
+          max_participants: 4,
+          duration_minutes: 30,
+          locations: [in_person_location([insert(:venue, user: ctx.user)])]
+        )
 
       meeting = meeting_at(ctx, :group_meeting, meeting_type, ctx.start_time, capacity: 4)
 
@@ -203,7 +218,12 @@ defmodule Tymeslot.MeetingTypes.GroupCapacityFollowsTypeTest do
   describe "a group type turned back to one seat" do
     setup ctx do
       meeting_type =
-        insert(:meeting_type, user: ctx.user, max_participants: 4, duration_minutes: 30)
+        insert(:meeting_type,
+          user: ctx.user,
+          max_participants: 4,
+          duration_minutes: 30,
+          locations: [in_person_location([insert(:venue, user: ctx.user)])]
+        )
 
       meeting = meeting_at(ctx, :group_meeting, meeting_type, ctx.start_time, capacity: 4)
       participant = insert(:participant, meeting: meeting, email: "seated@example.com")

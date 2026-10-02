@@ -25,6 +25,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
   re-render this editor at any time, an update keeps the changeset for as
   long as it is the same location being edited.
 
+  While group bookings are on (`group_bookings_enabled`), a save is also
+  checked against `Tymeslot.MeetingTypes.GroupLocationRule`: a group type's
+  location must be fixed in advance, so several providers or venues, no
+  venue at all, or a number asked of the booker are refused with a message
+  saying what to change. The changeset would refuse the same location on
+  the next save; refusing it here keeps the host in the editor that can fix
+  it.
+
   The `mode` assign (`:add` or `:edit`) controls the modal header. It is set
   by `LocationsSection` and forwarded through `MeetingTypeForm`; do not
   derive it from `@location.id`, which is always populated.
@@ -35,10 +43,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
   alias Ecto.Changeset
   alias Phoenix.LiveView
   alias Phoenix.LiveView.JS
+  alias Tymeslot.MeetingTypes.GroupLocationRule
   alias Tymeslot.MeetingTypes.LocationOption
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupRules
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.NewVenueComponent
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.VenuePicker
   alias TymeslotWeb.Helpers.LocationIcons
@@ -82,6 +92,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
      |> start_changeset(location)
      |> assign_new(:venues, fn -> [] end)
      |> assign_new(:mode, fn -> :add end)
+     |> assign_new(:group_bookings_enabled, fn -> false end)
      |> assign_new(:field_errors, fn -> %{} end)
      |> assign_new(:creating_venue, fn -> false end)}
   end
@@ -110,17 +121,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
   def handle_event("save", %{"location" => params}, socket) do
     changeset = LocationOption.changeset(socket.assigns.location, normalise_id_lists(params))
 
-    if changeset.valid? do
-      location = Changeset.apply_changes(changeset)
-      existing = socket.assigns.existing_locations || []
-
-      updated =
-        if Enum.any?(existing, &(&1.id == location.id)) do
-          Enum.map(existing, fn l -> if l.id == location.id, do: location, else: l end)
-        else
-          existing ++ [location]
-        end
-
+    with true <- changeset.valid?,
+         updated = merge_location(socket, Changeset.apply_changes(changeset)),
+         :ok <- check_group_rule(updated, socket.assigns.group_bookings_enabled) do
       LiveView.send_update(MeetingTypeForm,
         id: socket.assigns.form_id,
         locations: updated,
@@ -129,10 +132,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
 
       {:noreply, socket}
     else
-      {:noreply,
-       socket
-       |> assign(:changeset, changeset)
-       |> assign(:field_errors, FormValidationHelpers.changeset_errors_map(changeset))}
+      false ->
+        {:noreply,
+         socket
+         |> assign(:changeset, changeset)
+         |> assign(:field_errors, FormValidationHelpers.changeset_errors_map(changeset))}
+
+      {:error, reason} ->
+        {:noreply,
+         socket
+         |> assign(:changeset, changeset)
+         |> assign(:field_errors, %{group: [GroupRules.location_message(reason)]})}
     end
   end
 
@@ -194,6 +204,21 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
           class="space-y-4"
           novalidate
         >
+          <CoreComponents.info_box :if={@group_bookings_enabled} variant={:info}>
+            {dgettext(
+              "dashboard_meeting_form",
+              "Group bookings use a location fixed in advance: one video provider, one venue, or a number for bookers to call."
+            )}
+          </CoreComponents.info_box>
+
+          <p
+            :for={error <- FormValidationHelpers.field_errors(@field_errors, :group)}
+            class="form-error"
+            data-testid="group-location-error"
+          >
+            {error}
+          </p>
+
           <.choice_toggle
             id="location_kind"
             name="location[kind]"
@@ -382,6 +407,21 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
     </div>
     """
   end
+
+  defp merge_location(socket, location) do
+    existing = socket.assigns.existing_locations || []
+
+    if Enum.any?(existing, &(&1.id == location.id)) do
+      Enum.map(existing, fn l -> if l.id == location.id, do: location, else: l end)
+    else
+      existing ++ [location]
+    end
+  end
+
+  defp check_group_rule(locations, true = _group_bookings_enabled),
+    do: GroupLocationRule.check(locations)
+
+  defp check_group_rule(_locations, _group_bookings_enabled), do: :ok
 
   # A fresh changeset only for a location not already being edited: a
   # re-render from the page above must not discard what has been ticked or

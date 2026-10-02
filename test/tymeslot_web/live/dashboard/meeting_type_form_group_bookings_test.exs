@@ -25,7 +25,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
   describe "Editing: auto-save" do
     test "toggling group bookings on persists the default limit and the input persists changes",
          %{conn: conn, user: user} do
-      meeting_type = insert(:meeting_type, user: user, name: "Team Demo")
+      meeting_type = insert_type(user, name: "Team Demo")
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
 
@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
     end
 
     test "toggling group bookings off reverts the limit to 1", %{conn: conn, user: user} do
-      meeting_type = insert(:meeting_type, user: user, max_participants: 8)
+      meeting_type = insert_type(user, max_participants: 8)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
 
@@ -71,7 +71,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
 
     test "a limit above 999 shows an inline error and does not persist",
          %{conn: conn, user: user} do
-      meeting_type = insert(:meeting_type, user: user)
+      meeting_type = insert_type(user)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
 
@@ -93,7 +93,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
 
     test "an invalid limit left pending does not un-group the type on a later autosave",
          %{conn: conn, user: user} do
-      meeting_type = insert(:meeting_type, user: user, max_participants: 10)
+      meeting_type = insert_type(user, max_participants: 10)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
 
@@ -126,6 +126,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
     test "the hidden fields persist the limit on submit", %{conn: conn, user: user} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
       view |> element("button", "Add Meeting Type") |> render_click()
+      hold_at_fixed_location(view)
 
       # Remove the default reminder so the hidden reminder inputs do not
       # break Plug.Conn.Query re-encoding on submit (same workaround the
@@ -163,6 +164,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
     test "an invalid pending limit disables the submit button", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
       view |> element("button", "Add Meeting Type") |> render_click()
+      hold_at_fixed_location(view)
 
       view
       |> element("input[phx-click='toggle_group_bookings']")
@@ -206,6 +208,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
     test "requiring payment disables the group toggle and blocks the event", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
       view |> element("button", "Add Meeting Type") |> render_click()
+      hold_at_fixed_location(view)
 
       view
       |> element("input[phx-click='toggle_payment_required']")
@@ -229,6 +232,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
          %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
       view |> element("button", "Add Meeting Type") |> render_click()
+      hold_at_fixed_location(view)
 
       view
       |> element("input[phx-click='toggle_group_bookings']")
@@ -264,7 +268,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
       # No charge-ready Connect account: the host has lost (or never
       # finished setting up) charge capability, so the payments toggle
       # itself renders disabled and is unreachable from the UI.
-      insert(:meeting_type, user: user, payment_required: true, price_cents: 1000)
+      insert_type(user, payment_required: true, price_cents: 1000)
 
       on_exit(fn ->
         restore_env(:feature_access_checker, previous_checker)
@@ -299,6 +303,34 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
       refute updated.payment_required
       assert updated.max_participants == 10
     end
+  end
+
+  # A group type's location is fixed in advance, which the "address arranged
+  # after booking" default is not: one venue is.
+  defp insert_type(user, attrs \\ []) do
+    venue = insert(:venue, user: user)
+    insert(:meeting_type, [user: user, locations: [in_person_location([venue])]] ++ attrs)
+  end
+
+  # The new-type form opens on an in-person location with no venue, which a
+  # group type cannot offer; turn it into a written one.
+  defp hold_at_fixed_location(view) do
+    view
+    |> element("[data-testid='location-row'] button[phx-click='edit_location']")
+    |> render_click()
+
+    view
+    |> form("#location-editor-form", %{"location" => %{"kind" => "custom"}})
+    |> render_change()
+
+    view
+    |> form("#location-editor-form", %{
+      "location" => %{"kind" => "custom", "label" => "Main hall"}
+    })
+    |> render_submit()
+
+    refute has_element?(view, "#location-editor-form")
+    view
   end
 
   defp reload_type(user, id) do

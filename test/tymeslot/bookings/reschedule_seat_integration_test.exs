@@ -57,12 +57,16 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
     # every hour of every day so the schedule is never why a booking is refused.
     open_schedule_for(profile)
 
+    # A group type's location is fixed in advance: one venue.
+    venue = insert(:venue, user: user, name: "Main Hall", description: "1 Market Square")
+
     meeting_type =
       insert(:meeting_type,
         user: user,
         duration_minutes: 30,
         is_active: true,
-        max_participants: 2
+        max_participants: 2,
+        locations: [in_person_location([venue])]
       )
 
     base_params = %{
@@ -84,6 +88,7 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
 
     %{
       user: user,
+      venue: venue,
       meeting_type: meeting_type,
       base_params: base_params,
       old_meeting: old_meeting,
@@ -350,8 +355,9 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
 
     {:ok, meeting_type} =
       MeetingTypes.update_meeting_type(meeting_type, %{
-        allow_video: true,
-        video_integration_id: integration.id
+        locations: [
+          %{kind: "video", label: "Video call", video_integration_ids: [integration.id]}
+        ]
       })
 
     assert {:ok, %{meeting: new_meeting}} =
@@ -364,6 +370,24 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
       worker: EmailWorker,
       args: %{"action" => "send_reminder_emails", "meeting_id" => new_meeting.id}
     )
+  end
+
+  # A group type's location is fixed in advance, so the slot a seat move
+  # creates is held where every other slot of the type is: the type's one
+  # location, at its one venue, with nothing taken from the mover.
+  test "a seat move creating a brand-new slot is held at the meeting type's fixed location",
+       %{venue: venue, old_meeting: old_meeting, mover: mover} do
+    assert old_meeting.venue_id == venue.id
+
+    assert {:ok, %{meeting: new_meeting, created_meeting?: true}} =
+             RescheduleSeat.execute(mover.management_token, new_slot_params())
+
+    assert new_meeting.id != old_meeting.id
+    assert new_meeting.location_kind == "in_person"
+    assert new_meeting.location_option_id == old_meeting.location_option_id
+    assert new_meeting.venue_id == venue.id
+    assert new_meeting.location == "Main Hall (1 Market Square)"
+    refute new_meeting.address_to_arrange
   end
 
   # `Validation.prepare_new_times/2` never ran `ScheduleCheck`, so a seat

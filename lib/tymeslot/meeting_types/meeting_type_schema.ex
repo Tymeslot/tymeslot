@@ -7,6 +7,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   import Tymeslot.ChangesetValidators.BookingLimits, only: [validate_booking_limits: 2]
 
   alias Tymeslot.CustomFields.FieldDefinition
+  alias Tymeslot.MeetingTypes.GroupLocationRule
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.MeetingTypeAttachment
   alias Tymeslot.MeetingTypes.ReminderValidation
@@ -198,7 +199,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> validate_calendar_destination()
     |> validate_reminder_config()
     |> validate_payment_fields(opts)
-    |> validate_group_payment_exclusivity()
+    |> validate_group_rules()
     |> unique_constraint([:user_id, :name],
       message: "You already have a meeting type with this name"
     )
@@ -491,20 +492,66 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     "#{String.upcase(currency)} #{:erlang.float_to_binary(cents / 100, decimals: 2)}"
   end
 
-  # Group bookings and paid bookings are mutually exclusive: per-seat
-  # payment is out of scope, so a type accepting more than one participant
-  # must not require payment.
-  defp validate_group_payment_exclusivity(changeset) do
-    payment_required = get_field(changeset, :payment_required)
-
-    case {payment_required, get_field(changeset, :max_participants)} do
-      {true, max} when is_integer(max) and max > 1 ->
-        add_error(changeset, :max_participants, "group bookings cannot require payment")
-
-      _compatible ->
-        changeset
+  # What a group type (more than one participant per slot) cannot also be.
+  # Everyone in a group slot shares one meeting row, so nothing about that
+  # row may be decided per booker:
+  #
+  #   * payment: per-seat payment is out of scope;
+  #   * approval: the approval flow answers one booker's request for a whole
+  #     meeting, and a shared slot has no single booker to answer;
+  #   * the location: see `GroupLocationRule`.
+  #
+  # Read with `get_field/2` so a change to either side (the limit, or the
+  # other setting) is caught.
+  defp validate_group_rules(changeset) do
+    if group_limit?(get_field(changeset, :max_participants)) do
+      changeset
+      |> refuse_for_group(:payment_required, "group bookings cannot require payment")
+      |> refuse_for_group(:requires_approval, "group bookings cannot require approval")
+      |> validate_group_location()
+    else
+      changeset
     end
   end
+
+  defp group_limit?(max), do: is_integer(max) and max > 1
+
+  defp refuse_for_group(changeset, field, message) do
+    if get_field(changeset, field) == true,
+      do: add_error(changeset, :max_participants, message),
+      else: changeset
+  end
+
+  # The effective options, including the single fallback option a type with
+  # no stored list offers, so a group type cannot slip through on the
+  # "address arranged after booking" fallback.
+  defp validate_group_location(changeset) do
+    offered = %{
+      locations: get_field(changeset, :locations),
+      allow_video: get_field(changeset, :allow_video),
+      video_integration_id: get_field(changeset, :video_integration_id)
+    }
+
+    case GroupLocationRule.check_meeting_type(offered) do
+      :ok -> changeset
+      {:error, reason} -> add_error(changeset, :locations, group_location_message(reason))
+    end
+  end
+
+  defp group_location_message(:not_single_location),
+    do: "a group meeting type must offer exactly one location"
+
+  defp group_location_message(:provider_choice),
+    do: "a group meeting type's video call must use exactly one provider"
+
+  defp group_location_message(:venue_choice),
+    do: "a group meeting type's in-person location must name exactly one venue"
+
+  defp group_location_message(:address_after_booking),
+    do: "a group meeting type's in-person location must name a venue"
+
+  defp group_location_message(:booker_phone),
+    do: "a group meeting type cannot ask each booker for their phone number"
 
   @doc """
   True when the meeting type accepts more than one participant per slot.

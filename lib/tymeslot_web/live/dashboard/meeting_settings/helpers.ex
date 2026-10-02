@@ -49,6 +49,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Helpers do
     DashboardHelpers.get_security_metadata(socket)
   end
 
+  @flashed_field_errors [
+    :video_integration_required,
+    :invalid_duration,
+    :invalid_price,
+    :group_bookings_not_allowed
+  ]
+
   @doc """
   Handles the result of saving a meeting type.
   """
@@ -73,35 +80,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Helpers do
 
         {:noreply, reset_form_state(socket)}
 
-      {:error, :video_integration_required} ->
-        Flash.error(
-          dgettext("dashboard_meeting_form", "Please select a video provider for video meetings")
-        )
+      {:error, reason} when reason in @flashed_field_errors ->
+        Flash.error(field_error_flash(reason))
 
         {:noreply,
          socket
-         |> Component.assign(
-           :form_errors,
-           FormHelpers.format_context_error(:video_integration_required)
-         )
-         |> Component.assign(:saving, false)}
-
-      {:error, :invalid_duration} ->
-        Flash.error(dgettext("dashboard_meeting_form", "Duration must be a valid number"))
-
-        {:noreply,
-         socket
-         |> Component.assign(:form_errors, FormHelpers.format_context_error(:invalid_duration))
-         |> Component.assign(:saving, false)}
-
-      {:error, :invalid_price} ->
-        Flash.error(
-          dgettext("dashboard_meeting_form", "Enter a valid price for this meeting type")
-        )
-
-        {:noreply,
-         socket
-         |> Component.assign(:form_errors, FormHelpers.format_context_error(:invalid_price))
+         |> Component.assign(:form_errors, FormHelpers.format_context_error(reason))
          |> Component.assign(:saving, false)}
 
       {:error, :insufficient_plan} ->
@@ -141,6 +125,20 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Helpers do
          |> Component.assign(:saving, false)}
     end
   end
+
+  # Refusals that belong to one field: a flash says what went wrong, and the
+  # field's own error outlet points at where.
+  defp field_error_flash(:video_integration_required),
+    do: dgettext("dashboard_meeting_form", "Please select a video provider for video meetings")
+
+  defp field_error_flash(:invalid_duration),
+    do: dgettext("dashboard_meeting_form", "Duration must be a valid number")
+
+  defp field_error_flash(:invalid_price),
+    do: dgettext("dashboard_meeting_form", "Enter a valid price for this meeting type")
+
+  defp field_error_flash(:group_bookings_not_allowed),
+    do: FormHelpers.group_bookings_not_allowed_message()
 
   @doc """
   Formats error messages that can be either strings or lists.

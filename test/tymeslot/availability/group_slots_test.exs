@@ -19,7 +19,15 @@ defmodule Tymeslot.Availability.GroupSlotsTest do
 
   setup do
     %{user: user, profile_id: profile_id} = create_bookable_profile(timezone: @timezone)
-    meeting_type = insert(:meeting_type, user: user, max_participants: 3, duration_minutes: 30)
+
+    meeting_type =
+      insert(:meeting_type,
+        user: user,
+        max_participants: 3,
+        duration_minutes: 30,
+        locations: [in_person_location([insert(:venue, user: user)])]
+      )
+
     date = next_bookable_weekday()
 
     config = %{

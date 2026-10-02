@@ -34,7 +34,9 @@ defmodule Tymeslot.MeetingTypes.FormProcessingMaxParticipantsTest do
         "name" => "Group Workshop",
         "duration" => "60",
         "description" => "",
-        "is_active" => "true"
+        "is_active" => "true",
+        # A group type's location is fixed in advance; "custom" always is.
+        "locations" => [%{"kind" => "custom", "label" => "Main hall", "details" => "Room 1"}]
       },
       overrides
     )
@@ -116,6 +118,157 @@ defmodule Tymeslot.MeetingTypes.FormProcessingMaxParticipantsTest do
                MeetingTypes.update_meeting_type_from_form(meeting_type, params, ui_state())
 
       assert updated.max_participants == 25
+    end
+  end
+
+  describe "group bookings plan gate" do
+    defmodule DenyGroupBookingsChecker do
+      @behaviour Tymeslot.Features.CheckerBehaviour
+      @impl Tymeslot.Features.CheckerBehaviour
+      def check_access(_user_id, :group_bookings_allowed), do: {:error, :insufficient_plan}
+      def check_access(_user_id, _feature), do: :ok
+    end
+
+    defmodule FailingChecker do
+      @behaviour Tymeslot.Features.CheckerBehaviour
+      @impl Tymeslot.Features.CheckerBehaviour
+      def check_access(_user_id, :group_bookings_allowed), do: raise("checker down")
+      def check_access(_user_id, _feature), do: :ok
+    end
+
+    setup do
+      setup_config(:tymeslot, feature_access_checker: DenyGroupBookingsChecker)
+    end
+
+    defp group_type(user, limit) do
+      insert(:meeting_type,
+        user: user,
+        max_participants: limit,
+        locations: [in_person_location([insert(:venue, user: user)])]
+      )
+    end
+
+    defp edit_params(meeting_type, overrides) do
+      form_params(
+        Map.merge(
+          %{
+            "name" => meeting_type.name,
+            "duration" => to_string(meeting_type.duration_minutes),
+            "description" => meeting_type.description || ""
+          },
+          overrides
+        )
+      )
+    end
+
+    test "Core's default checker allows group bookings" do
+      setup_config(:tymeslot, feature_access_checker: Tymeslot.Features.DefaultAccessChecker)
+      user = insert(:user)
+
+      assert {:ok, %{max_participants: 5}} =
+               MeetingTypes.create_meeting_type_from_form(
+                 user.id,
+                 form_params(%{"max_participants" => "5"}),
+                 ui_state()
+               )
+    end
+
+    test "creating a group type without access is refused" do
+      user = insert(:user)
+
+      assert {:error, :group_bookings_not_allowed} =
+               MeetingTypes.create_meeting_type_from_form(
+                 user.id,
+                 form_params(%{"max_participants" => "5"}),
+                 ui_state()
+               )
+
+      refute Enum.any?(
+               MeetingTypes.get_all_meeting_types(user.id),
+               &(&1.name == "Group Workshop")
+             )
+    end
+
+    test "creating a one-to-one type without access is allowed" do
+      user = insert(:user)
+
+      assert {:ok, %{max_participants: 1}} =
+               MeetingTypes.create_meeting_type_from_form(
+                 user.id,
+                 form_params(%{"max_participants" => "1"}),
+                 ui_state()
+               )
+    end
+
+    test "turning a one-to-one type into a group type without access is refused" do
+      user = insert(:user)
+      meeting_type = insert(:meeting_type, user: user)
+
+      assert {:error, :group_bookings_not_allowed} =
+               MeetingTypes.update_meeting_type_from_form(
+                 meeting_type,
+                 edit_params(meeting_type, %{"max_participants" => "5"}),
+                 ui_state()
+               )
+
+      assert MeetingTypes.get_meeting_type(meeting_type.id, user.id).max_participants == 1
+    end
+
+    test "raising an existing group type's limit without access is refused" do
+      user = insert(:user)
+      meeting_type = group_type(user, 4)
+
+      assert {:error, :group_bookings_not_allowed} =
+               MeetingTypes.update_meeting_type_from_form(
+                 meeting_type,
+                 edit_params(meeting_type, %{"max_participants" => "5"}),
+                 ui_state()
+               )
+    end
+
+    test "an existing group type can still be saved, and its limit lowered, without access" do
+      user = insert(:user)
+      meeting_type = group_type(user, 4)
+
+      assert {:ok, renamed} =
+               MeetingTypes.update_meeting_type_from_form(
+                 meeting_type,
+                 edit_params(meeting_type, %{"name" => "Renamed", "max_participants" => "4"}),
+                 ui_state()
+               )
+
+      assert %{name: "Renamed", max_participants: 4} = renamed
+
+      assert {:ok, %{max_participants: 3}} =
+               MeetingTypes.update_meeting_type_from_form(
+                 renamed,
+                 edit_params(renamed, %{"max_participants" => "3"}),
+                 ui_state()
+               )
+    end
+
+    test "turning group bookings off without access is allowed" do
+      user = insert(:user)
+      meeting_type = group_type(user, 4)
+
+      assert {:ok, %{max_participants: 1}} =
+               MeetingTypes.update_meeting_type_from_form(
+                 meeting_type,
+                 edit_params(meeting_type, %{"max_participants" => "1"}),
+                 ui_state()
+               )
+    end
+
+    test "a failing checker refuses enabling with its own reason" do
+      setup_config(:tymeslot, feature_access_checker: FailingChecker)
+      user = insert(:user)
+
+      assert {:error, :feature_access_checker_failed} =
+               MeetingTypes.create_meeting_type_from_form(
+                 user.id,
+                 form_params(%{"max_participants" => "5"}),
+                 ui_state()
+               )
     end
   end
 end

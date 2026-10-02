@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{
     Autosave,
     FormView,
+    GroupRules,
     Init,
     ReminderHandlers,
     Validation
@@ -70,6 +71,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:editing_location, nil)
      |> assign(:editing_location_mode, :add)
      |> assign(:custom_questions_allowed, true)
+     |> assign(:group_bookings_allowed, true)
      |> assign(:payments_feature_enabled, false)
      |> assign(:payments_charges_enabled, false)
      |> assign(:payment_currency, "usd")
@@ -243,10 +245,21 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   @impl Phoenix.LiveComponent
   def handle_event("toggle_requires_approval", _params, socket) do
-    {:noreply,
-     socket
-     |> assign(:requires_approval, !socket.assigns.requires_approval)
-     |> Autosave.maybe_run()}
+    # Guard: approval and group bookings are mutually exclusive. The control
+    # renders disabled while group bookings are on, so a stale or forged
+    # event must not turn approval on; turning it off is always allowed.
+    if socket.assigns.group_bookings_enabled and not socket.assigns.requires_approval do
+      {:noreply, socket}
+    else
+      {:noreply,
+       socket
+       |> assign(:requires_approval, !socket.assigns.requires_approval)
+       |> assign(
+         :form_errors,
+         FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :max_participants)
+       )
+       |> Autosave.maybe_run()}
+    end
   end
 
   @impl Phoenix.LiveComponent
@@ -339,17 +352,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   @impl Phoenix.LiveComponent
   def handle_event("toggle_group_bookings", _params, socket) do
-    # Guard: payments and group bookings are mutually exclusive — the
-    # control renders disabled while payment is required, so a stale or
-    # forged event must not flip the toggle. Exception: once the host has
-    # lost charge capability, the payments toggle itself is unreachable
-    # (disabled), so this guard alone would strand the organiser with no
-    # way to ever reach group bookings. In that case the toggle stays
-    # enabled and flipping it also clears `payment_required`, keeping the
-    # two mutually exclusive without a dead end.
-    if socket.assigns.payment_required and socket.assigns.payments_charges_enabled do
-      {:noreply, socket}
-    else
+    # Guard: turning group bookings on is refused while anything stands in
+    # the way (`GroupRules.enable_blocker/1`: no plan access, payment or
+    # approval required, a location that is not fixed in advance). The
+    # control renders disabled with the reason, so this only stops a stale
+    # or forged event. Turning them off is always allowed.
+    #
+    # A host who has lost charge capability cannot reach the payments toggle,
+    # so a required payment does not block them; enabling clears
+    # `payment_required` instead, keeping the two mutually exclusive without
+    # a dead end.
+    if socket.assigns.group_bookings_enabled or GroupRules.enable_blocker(socket.assigns) == nil do
       {:noreply,
        socket
        |> assign(:group_bookings_enabled, !socket.assigns.group_bookings_enabled)
@@ -359,6 +372,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
          FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :max_participants)
        )
        |> Autosave.maybe_run()}
+    else
+      {:noreply, socket}
     end
   end
 

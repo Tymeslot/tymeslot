@@ -123,6 +123,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
               user_agent={@user_agent}
               form_errors={@form_errors}
               custom_questions_allowed={@custom_questions_allowed}
+              group_bookings_allowed={@group_bookings_allowed}
             />
           </div>
 
