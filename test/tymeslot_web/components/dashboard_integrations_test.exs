@@ -3,9 +3,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
 
   @moduletag :utils
 
-  import Phoenix.Component
   import Phoenix.LiveViewTest
-  import TymeslotWeb.Components.CoreComponents
   alias Floki
 
   alias Tymeslot.Integrations.Calendar.CalendarEntry
