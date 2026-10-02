@@ -90,7 +90,12 @@
   text-decoration: underline;
 }
 
+/* Positioned, so it is the containing block of the days' screen-reader
+   headings (.sr-only, absolutely positioned): otherwise those of the days
+   scrolled out of a narrow grid escape its sideways scroll and widen the
+   page. */
 .week-grid__days {
+  position: relative;
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);

@@ -40,3 +40,13 @@ html.paper-theme[data-embedded] .paper-timezone .tz-picker__panel {
   margin-top: 0;
   margin-bottom: var(--space-2xs);
 }
+
+/* The week view's picker sits near the card's top, above the week, so its
+   panel keeps opening downward, over the days: upward it would be cut off
+   at the frame's top edge. */
+html.paper-theme[data-embedded] .paper-week .paper-timezone .tz-picker__panel {
+  top: 100%;
+  bottom: auto;
+  margin-top: var(--space-2xs);
+  margin-bottom: 0;
+}

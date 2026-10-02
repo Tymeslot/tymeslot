@@ -21,6 +21,8 @@
 @import "./modules/calendar.css";
 @import "../../shared/components/slot-list.css";
 @import "./modules/time-slots.css";
+@import "../../shared/components/week-grid.css";
+@import "./modules/week.css";
 @import "../../shared/components/timezone-picker.css";
 @import "./modules/timezone.css";
 @import "../../shared/components/custom-questions.css";

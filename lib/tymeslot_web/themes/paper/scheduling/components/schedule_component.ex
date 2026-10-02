@@ -1,16 +1,29 @@
 defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   @moduledoc """
-  Paper's schedule step: one card holding the meeting's details beside the
-  month calendar, the chosen day's times (the shared `SlotList`) and the
-  timezone picker, then Back and Next. The card lays them out by its own
-  width (`schedule.css`): one column, then the details beside the picker,
-  then details, calendar and times side by side.
+  Paper's schedule step: one card holding the meeting's details and a picker,
+  then Back and Next. The organiser's calendar view option
+  (`Options.CalendarView`, read from `@theme_tokens.media[:calendar_view]`;
+  no tokens or no setting is a month) decides the picker.
+
+  A month (`data-calendar-view="month"`): the month calendar, the chosen day's
+  times (the shared `SlotList`) and the timezone picker. The card lays them
+  out by its own width (`schedule.css`): one column, then the details beside
+  the picker, then details, calendar and times side by side.
+
+  A week (`paper-card--week`, `data-calendar-view="week"`): the step's
+  heading, the timezone picker and the shared `WeekGrid`
+  (`data-testid="paper-week"`), where one click on a time picks the day and
+  the time together. The card is wider, the details stand beside the week
+  once seven days fit and become a compact row above it before
+  (`week.css`), and the actions bar names the chosen day and time between
+  Back and Next (`data-testid="paper-selection"`, announced politely).
 
   The calendar's buttons carry the class names and test ids the shared
   suites and the visual harness drive: `calendar-day` with `data-date`,
   `calendar-day--selected`, `calendar-day--other-month`, `calendar-day--today`
   and `calendar-day--loading`, `calendar-nav-button` on the month arrows, and
-  `calendar-month-label` on the month between them.
+  `calendar-month-label` on the month between them. The week's are the
+  grid's own (`week-slot` with `data-date` and `data-time`).
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -25,6 +38,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Components.SlotList
   alias TymeslotWeb.Themes.Shared.Components.TimezonePicker
+  alias TymeslotWeb.Themes.Shared.Components.WeekGrid
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
 
@@ -40,31 +54,28 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
+    view = calendar_view(assigns.theme_tokens)
+
     assigns =
       assign(assigns,
+        view: view,
+        chosen: not is_nil(assigns.selected_date) and not is_nil(assigns.selected_time),
         duration_text: BookingText.duration_label(assigns),
         price:
           BookingText.price_label(assigns.meeting_type, assigns.host_currency, assigns.locale),
-        days:
-          CalendarHelpers.get_calendar_days(
-            assigns.user_timezone,
-            assigns.current_year,
-            assigns.current_month,
-            assigns.organizer_profile,
-            assigns.month_availability_map,
-            assigns.meeting_type
-          )
+        days: month_days(view, assigns)
       )
 
     ~H"""
     <section
-      class="paper-card paper-card--wide booker-card"
+      class={["paper-card paper-card--wide booker-card", @view == "week" && "paper-card--week"]}
       data-locale={@locale}
+      data-calendar-view={@view}
       data-testid="paper-schedule"
     >
       <Components.brand theme_tokens={@theme_tokens} />
 
-      <div class="paper-schedule">
+      <div class={["paper-schedule", @view == "week" && "paper-schedule--week"]}>
         <.details
           organizer_profile={@organizer_profile}
           meeting_type={@meeting_type}
@@ -72,7 +83,34 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
           price={@price}
         />
 
-        <div class="paper-picker">
+        <div :if={@view == "week"} class="paper-week" data-testid="paper-week">
+          <div class="paper-week__header">
+            <h2 class="paper-week__title">{dgettext("booking", "Select a Date & Time")}</h2>
+            <.timezone
+              timezone={@user_timezone}
+              open={@timezone_dropdown_open}
+              search={@timezone_search}
+              target={@myself}
+            />
+          </div>
+
+          <WeekGrid.week_grid
+            week_start={@current_week_start}
+            week_slots={@week_slots}
+            loading={@week_slots_loading}
+            error={@week_slots_error}
+            selected_date={@selected_date}
+            selected_time={@selected_time}
+            today={@calendar_today}
+            user_timezone={@user_timezone}
+            booking_window_days={@booking_window_days}
+            landing_week={CalendarHelpers.landing_week(assigns)}
+            target={@myself}
+            heading_tag="h2"
+          />
+        </div>
+
+        <div :if={@view == "month"} class="paper-picker">
           <.calendar
             days={@days}
             year={@current_year}
@@ -124,13 +162,30 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
           <.icon name="hero-arrow-left-mini" class="paper-button__icon" />
           {dgettext("booking", "Back")}
         </button>
+        <p
+          :if={@view == "week"}
+          class="paper-selection"
+          aria-live="polite"
+          data-testid="paper-selection"
+        >
+          <%= if @chosen do %>
+            <span class="paper-selection__date">
+              {LocalizationHelpers.format_full_date_label(@selected_date)}
+            </span>
+            <span class="paper-selection__time">
+              {LocalizationHelpers.format_slot_label(@selected_time)}
+            </span>
+          <% else %>
+            <span class="paper-selection__prompt">{dgettext("booking", "Please select a time")}</span>
+          <% end %>
+        </p>
         <button
           type="button"
           class="paper-button paper-button--primary"
           phx-click="next_step"
           phx-target={@myself}
           data-testid="next-step"
-          disabled={is_nil(@selected_date) or is_nil(@selected_time)}
+          disabled={not @chosen}
         >
           {dgettext("booking", "Next")}
           <.icon name="hero-arrow-right-mini" class="paper-button__icon" />
@@ -138,6 +193,24 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
       </div>
     </section>
     """
+  end
+
+  # The organiser's calendar view; no tokens, or none resolved, is a month.
+  defp calendar_view(%{media: %{calendar_view: "week"}}), do: "week"
+  defp calendar_view(_theme_tokens), do: "month"
+
+  # The month calendar's days, worked out only when the month is on show.
+  defp month_days("week", _assigns), do: []
+
+  defp month_days("month", assigns) do
+    CalendarHelpers.get_calendar_days(
+      assigns.user_timezone,
+      assigns.current_year,
+      assigns.current_month,
+      assigns.organizer_profile,
+      assigns.month_availability_map,
+      assigns.meeting_type
+    )
   end
 
   attr :organizer_profile, :map, required: true

@@ -11,6 +11,7 @@ defmodule Tymeslot.ThemeCustomizations.PaperSpecTest do
 
   alias Ecto.Changeset
   alias Tymeslot.ThemeCustomizations.Options.Accent
+  alias Tymeslot.ThemeCustomizations.Options.CalendarView
   alias Tymeslot.ThemeCustomizations.Options.ColourMode
   alias Tymeslot.ThemeCustomizations.Options.Font
   alias Tymeslot.ThemeCustomizations.Options.Logo
@@ -35,7 +36,7 @@ defmodule Tymeslot.ThemeCustomizations.PaperSpecTest do
   describe "option groups" do
     test "are the shared groups Paper offers, in the canonical order" do
       assert Enum.map(PaperSpec.option_groups(), & &1.module) ==
-               [Palette, ColourMode, Accent, Font, Radius, Logo]
+               [Palette, ColourMode, Accent, Font, Radius, CalendarView, Logo]
     end
 
     test "offer the three tones, following the visitor's OS, and no background" do
@@ -76,7 +77,8 @@ defmodule Tymeslot.ThemeCustomizations.PaperSpecTest do
           {"colour_mode", "sepia"},
           {"accent", "chartreuse"},
           {"font", "editorial"},
-          {"radius", "pill"}
+          {"radius", "pill"},
+          {"calendar_view", "day"}
         ] do
       test "refuses #{setting} #{inspect(value)}, which Paper does not offer" do
         changeset = validate(Map.put(defaults(), unquote(setting), unquote(value)))
@@ -84,6 +86,10 @@ defmodule Tymeslot.ThemeCustomizations.PaperSpecTest do
         refute changeset.valid?
         assert Keyword.has_key?(changeset.errors, String.to_existing_atom(unquote(setting)))
       end
+    end
+
+    test "accepts the week calendar view" do
+      assert validate(Map.put(defaults(), "calendar_view", "week")).valid?
     end
 
     test "accepts a custom accent colour" do
@@ -147,6 +153,11 @@ defmodule Tymeslot.ThemeCustomizations.PaperSpecTest do
       assert vars["--theme-font-heading"] == "var(--font-heading-plex)"
       assert vars["--radius-control"] == "999px"
       assert vars["--radius-card"] == "20px"
+    end
+
+    test "the calendar view is a month until the week is chosen" do
+      assert tokens(%{}).media[:calendar_view] == "month"
+      assert tokens(%{"calendar_view" => "week"}).media[:calendar_view] == "week"
     end
 
     test "never set a density" do

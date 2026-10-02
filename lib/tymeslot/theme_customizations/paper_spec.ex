@@ -2,7 +2,8 @@ defmodule Tymeslot.ThemeCustomizations.PaperSpec do
   @moduledoc """
   Customisation spec of the Paper theme: a neutral tone with one accent
   colour, a colour mode (light, dark, or the visitor's own), a font, a
-  corner style and a logo. Paper has no background option: the tone's
+  corner style, a calendar view (a month calendar, or a week of free times
+  on one screen) and a logo. Paper has no background option: the tone's
   canvas is the page.
 
   The groups are the shared ones, in the canonical order, so the generated
@@ -10,7 +11,8 @@ defmodule Tymeslot.ThemeCustomizations.PaperSpec do
   the tone's light set and its dark set (`follow_os: true`), the colour mode
   picks between them, and the accent then replaces the primary family in
   whichever sets remain, fitted to each set's card; the font and radius add
-  their variables and the logo its media.
+  their variables, and the calendar view and the logo their media (the
+  schedule step reads `media[:calendar_view]`).
 
   Onboarding offers the accents rather than the tones. The three tones share
   one primary and differ only in their greys, so their swatches would be
@@ -20,6 +22,7 @@ defmodule Tymeslot.ThemeCustomizations.PaperSpec do
   use Tymeslot.ThemeCustomizations.Spec
 
   alias Tymeslot.ThemeCustomizations.Options.Accent
+  alias Tymeslot.ThemeCustomizations.Options.CalendarView
   alias Tymeslot.ThemeCustomizations.Options.ColourMode
   alias Tymeslot.ThemeCustomizations.Options.Font
   alias Tymeslot.ThemeCustomizations.Options.Logo
@@ -40,6 +43,7 @@ defmodule Tymeslot.ThemeCustomizations.PaperSpec do
       %{key: :accent, module: Accent, presets: @accents, default: "tymeslot"},
       %{key: :font, module: Font, presets: @fonts, default: "system"},
       %{key: :radius, module: Radius, default: "soft"},
+      %{key: :calendar_view, module: CalendarView, default: "month"},
       %{key: :logo, module: Logo}
     ]
 
@@ -50,7 +54,8 @@ defmodule Tymeslot.ThemeCustomizations.PaperSpec do
       colour_mode: "auto",
       accent: "tymeslot",
       font: "system",
-      radius: "soft"
+      radius: "soft",
+      calendar_view: "month"
     }
 
   @impl Spec

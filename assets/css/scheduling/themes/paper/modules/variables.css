@@ -154,6 +154,7 @@
 
   /* --- Slot list and timezone picker --- */
   --slot-list-grid-gap: var(--space-xs);
+  --week-grid-gap: var(--space-xs);
   --dropdown-surface: var(--theme-surface);
 
   /* --- Answer tiles and option cards (shared/components/custom-questions.css) --- */
@@ -197,6 +198,9 @@
   --paper-icon-md: 1.5rem;
   --paper-card-width: 40rem;
   --paper-card-width-wide: 64rem;
+  /* The schedule step's week view: wide enough for the details beside
+     seven day columns of a comfortable width (week.css). */
+  --paper-card-width-week: 72rem;
   --paper-details-width: 15rem;
   --paper-slots-width: 13rem;
   --paper-slots-max-height: 24rem;
@@ -207,6 +211,9 @@
   --paper-control-height: 2.75rem;
   --paper-day-size: 2.75rem;
   --paper-nav-size: 2.25rem;
+  /* A week's time: shorter than a full control while seven days stand side
+     by side, a full control once the week narrows to touch sizes. */
+  --paper-week-slot-height: 2.25rem;
   /* A poll's Yes / If need be / No pills: a compact segmented control,
      shorter than a full control. */
   --paper-vote-height: 2.25rem;
