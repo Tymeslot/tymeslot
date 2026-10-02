@@ -48,7 +48,7 @@ defmodule TymeslotWeb.SeatController do
         keep_path: booking_page_path(meeting)
       )
     else
-      error -> render_error(conn, error)
+      error -> render_error(conn, error, token)
     end
   end
 
@@ -71,7 +71,7 @@ defmodule TymeslotWeb.SeatController do
         booking_path: booking_page_path(meeting)
       )
     else
-      error -> render_error(conn, error)
+      error -> render_error(conn, error, token)
     end
   end
 
@@ -102,10 +102,10 @@ defmodule TymeslotWeb.SeatController do
           |> render(:not_movable, token: token)
 
         {:error, :not_found} = error ->
-          render_error(conn, error)
+          render_error(conn, error, token)
       end
     else
-      error -> render_error(conn, error)
+      error -> render_error(conn, error, token)
     end
   end
 
@@ -181,6 +181,24 @@ defmodule TymeslotWeb.SeatController do
       _missing -> :error
     end
   end
+
+  # A link that can no longer be used still offers the host's booking page,
+  # so the visitor can pick a new time rather than close the tab.
+  defp render_error(conn, error, token) do
+    conn
+    |> assign(:booking_path, spent_link_booking_path(error, token))
+    |> render_error(error)
+  end
+
+  defp spent_link_booking_path({:error, reason}, token)
+       when reason in [:already_cancelled, :meeting_cancelled, :meeting_past] do
+    case Meetings.seat_organizer_user_id(token) do
+      {:ok, user_id} -> booking_page_path(%{organizer_user_id: user_id})
+      {:error, :not_found} -> nil
+    end
+  end
+
+  defp spent_link_booking_path(_error, _token), do: nil
 
   defp render_error(conn, {:error, :rate_limited, _message}) do
     conn

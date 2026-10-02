@@ -42,6 +42,24 @@ defmodule Tymeslot.Meetings.SeatLookup do
   def fetch_live_seat(_token), do: {:error, :not_found}
 
   @doc """
+  The organiser whose meeting the seat behind `token` is on, live or not.
+
+  A link that can no longer be used still says whose booking page to send
+  the visitor to for a new time; only a token naming no seat at all says
+  nothing.
+  """
+  @spec organizer_user_id(String.t()) :: {:ok, integer()} | {:error, :not_found}
+  def organizer_user_id(token) when is_binary(token) do
+    with {:ok, participant} <- ParticipantQueries.get_by_token(token),
+         {:ok, %{organizer_user_id: user_id}} when is_integer(user_id) <-
+           MeetingQueries.get_meeting(participant.meeting_id) do
+      {:ok, user_id}
+    else
+      _error -> {:error, :not_found}
+    end
+  end
+
+  @doc """
   A live seat its participant may still cancel. The same checks
   `Tymeslot.Bookings.CancelSeat` makes before it cancels, so the cancel
   landing page refuses exactly what the cancellation would.

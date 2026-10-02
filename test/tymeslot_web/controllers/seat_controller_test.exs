@@ -128,6 +128,7 @@ defmodule TymeslotWeb.SeatControllerTest do
       for response <- [html_response(get_conn, 410), html_response(post_conn, 410)] do
         assert response =~ "This meeting has been cancelled"
         refute response =~ "A confirmation email is on its way"
+        assert response =~ ~s(href="/test-organizer")
       end
 
       assert {:ok, %{cancelled_at: nil}} =
@@ -145,6 +146,30 @@ defmodule TymeslotWeb.SeatControllerTest do
         assert response =~ "This spot is already cancelled"
         refute response =~ "A confirmation email is on its way"
       end
+    end
+
+    # A spent link is a dead end only for the spot it named: the host's
+    # booking page is still where a new time is picked.
+    test "a spent cancel or reschedule link offers the host's booking page for a new time",
+         %{conn: conn, leaver: leaver} do
+      token = leaver.management_token
+      assert conn |> post(~p"/seat/#{token}/cancel") |> html_response(200)
+
+      responses = [
+        conn |> recycle() |> get(~p"/seat/#{token}/cancel") |> html_response(410),
+        conn |> recycle() |> get(~p"/seat/#{token}/reschedule") |> html_response(410)
+      ]
+
+      for response <- responses do
+        assert response =~ ~s(data-testid="book-new-time")
+        assert response =~ ~s(href="/test-organizer")
+      end
+    end
+
+    test "an unknown link offers no booking page, since it names no host", %{conn: conn} do
+      html = conn |> get(~p"/seat/nope-not-a-token/cancel") |> html_response(404)
+
+      refute html =~ "book-new-time"
     end
 
     test "a meeting under way says it has started, not that it is too close to start",
@@ -170,6 +195,7 @@ defmodule TymeslotWeb.SeatControllerTest do
       for response <- [html_response(get_conn, 409), html_response(post_conn, 409)] do
         assert response =~ "This meeting has already taken place"
         refute response =~ "This meeting has already started"
+        assert response =~ ~s(data-testid="book-new-time")
       end
 
       assert {:ok, %{cancelled_at: nil}} =

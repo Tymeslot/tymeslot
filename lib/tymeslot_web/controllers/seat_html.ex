@@ -99,6 +99,7 @@ defmodule TymeslotWeb.SeatHTML do
   def already_cancelled(assigns) do
     ~H"""
     <.notice
+      booking_path={assigns[:booking_path]}
       icon="hero-check-circle"
       tone={:neutral}
       title={dgettext("booking_manage", "This spot is already cancelled")}
@@ -117,6 +118,7 @@ defmodule TymeslotWeb.SeatHTML do
   def meeting_cancelled(assigns) do
     ~H"""
     <.notice
+      booking_path={assigns[:booking_path]}
       icon="hero-calendar-days"
       tone={:neutral}
       title={dgettext("booking_manage", "This meeting has been cancelled")}
@@ -156,6 +158,7 @@ defmodule TymeslotWeb.SeatHTML do
   def not_allowed(%{reason: :meeting_past} = assigns) do
     ~H"""
     <.notice
+      booking_path={assigns[:booking_path]}
       icon="hero-calendar-days"
       tone={:neutral}
       title={dgettext("booking_manage", "This meeting has already taken place")}
@@ -222,6 +225,7 @@ defmodule TymeslotWeb.SeatHTML do
   attr :tone, :atom, values: [:success, :warning, :neutral], required: true
   attr :title, :string, required: true
   attr :body, :string, required: true
+  attr :booking_path, :string, default: nil, doc: "the host's booking page, to pick a new time"
   slot :inner_block
 
   defp notice(assigns) do
@@ -231,6 +235,14 @@ defmodule TymeslotWeb.SeatHTML do
       <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">{@title}</h1>
       <p class="mt-2 text-token-base text-tymeslot-600">{@body}</p>
       {render_slot(@inner_block)}
+      <.link
+        :if={@booking_path}
+        href={@booking_path}
+        data-testid="book-new-time"
+        class="mt-6 inline-block text-token-sm font-medium text-turquoise-600 underline"
+      >
+        {dgettext("booking_manage", "Book another time")}
+      </.link>
     </TokenPage.shell>
     """
   end

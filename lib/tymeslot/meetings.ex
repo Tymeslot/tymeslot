@@ -172,6 +172,10 @@ defmodule Tymeslot.Meetings do
           {:ok, SeatLookup.seat()} | {:error, SeatLookup.dead_end()}
   defdelegate fetch_live_seat(token), to: SeatLookup
 
+  @doc "The organiser a seat's meeting belongs to, live or not. See `Tymeslot.Meetings.SeatLookup`."
+  @spec seat_organizer_user_id(String.t()) :: {:ok, integer()} | {:error, :not_found}
+  defdelegate seat_organizer_user_id(token), to: SeatLookup, as: :organizer_user_id
+
   @doc """
   Loads a live seat its participant may still cancel, refusing what
   `cancel_seat/1` would. See `Tymeslot.Meetings.SeatLookup`.
