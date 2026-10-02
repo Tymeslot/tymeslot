@@ -244,7 +244,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramStateActionsTest do
       view |> element("button", "Connect") |> render_click()
 
       assert render(view) =~ "Open in Telegram"
-      assert {:ok, %{link_token: token}} = Telegram.get_integration(integration.id, user.id)
+      token = deep_link_token(view)
       assert {:ok, %{id: linked_id}} = Telegram.handle_start_payload(token, "555000222")
       assert linked_id == integration.id
     end
@@ -265,8 +265,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramStateActionsTest do
 
       assert render(view) =~ "Open in Telegram"
 
-      assert {:ok, %{link_token: token}} = Telegram.get_integration(integration.id, user.id)
-      assert token =~ ~r/\A[A-Za-z0-9_-]{32}\z/
+      token = deep_link_token(view)
 
       assert {:ok, linked} = Telegram.handle_start_payload(token, "555000111")
       assert linked.id == integration.id
@@ -275,4 +274,11 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramStateActionsTest do
   end
 
   defp an_hour_ago, do: DateTime.add(DateTime.utc_now(:second), -3600, :second)
+
+  # The token the bot is sent, read off the deep link the wizard shows: the
+  # integration keeps only its hash.
+  defp deep_link_token(view) do
+    assert [_link, token] = Regex.run(~r/\?start=([A-Za-z0-9_-]{32})/, render(view))
+    token
+  end
 end

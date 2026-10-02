@@ -6,6 +6,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchema do
   import Ecto.Changeset
 
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Security.Token
   alias Tymeslot.Validation.Constraints
 
   @type status :: :pending_link | :active | :paused | :auto_disabled
@@ -19,6 +20,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchema do
           bot_token: String.t() | nil,
           chat_id: String.t() | nil,
           link_token: String.t() | nil,
+          link_token_hash: String.t() | nil,
           link_token_issued_at: DateTime.t() | nil,
           linked_at: DateTime.t() | nil,
           events: [String.t()],
@@ -46,7 +48,13 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchema do
     field(:bot_mode, :string, default: "own")
     field(:bot_token_encrypted, :binary)
     field(:chat_id, :string)
-    field(:link_token, :string)
+    # The one-time `/start` token of the shared bot's deep link. It is only
+    # ever compared once issued, so the row keeps its hash; the virtual field
+    # carries the token itself on the integration it was just issued to. The
+    # plain `link_token` column predates this and is no longer read or
+    # written.
+    field(:link_token, :string, virtual: true, redact: true)
+    field(:link_token_hash, :string)
     field(:link_token_issued_at, :utc_datetime)
     field(:linked_at, :utc_datetime)
     field(:events, {:array, :string}, default: [])
@@ -89,7 +97,9 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchema do
     |> validate_length(:name, Constraints.webhook_name_length_opts())
     |> validate_inclusion(:bot_mode, @valid_bot_modes)
     |> validate_events()
+    |> keep_explicit_link_token(attrs)
     |> stamp_link_token_issued_at()
+    |> Token.put_hash(:link_token, :link_token_hash)
     |> stamp_linked_at()
     |> encrypt_token()
     |> foreign_key_constraint(:user_id)
@@ -158,6 +168,17 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchema do
           add_error(changeset, :events, "contains invalid events: #{Enum.join(invalid, ", ")}")
         end
     end
+  end
+
+  # The token is virtual, so a loaded row carries nil and casting a nil over
+  # it is no change at all. Clearing the token is still a change to its hash
+  # and its issue time, so a token given explicitly always counts as one.
+  defp keep_explicit_link_token(changeset, attrs) do
+    given? = Map.has_key?(attrs, :link_token) or Map.has_key?(attrs, "link_token")
+
+    if given? and not Map.has_key?(changeset.changes, :link_token),
+      do: force_change(changeset, :link_token, get_field(changeset, :link_token)),
+      else: changeset
   end
 
   # The issue time travels with the token, so no caller can hand out a token

@@ -93,11 +93,21 @@ defmodule Tymeslot.Migrations.AddLinkStateToTelegramIntegrationsTest do
     end
   end
 
+  # A row as an earlier release saved it, with any link token in the plain
+  # `link_token` column this migration reads.
   defp integration(attrs) do
-    insert(
-      :telegram_integration,
-      Keyword.merge([bot_mode: "shared", updated_at: @updated_at], attrs)
-    )
+    integration =
+      insert(
+        :telegram_integration,
+        Keyword.merge([bot_mode: "shared", updated_at: @updated_at], attrs)
+      )
+
+    Repo.query!("UPDATE telegram_integrations SET link_token = $1 WHERE id = $2", [
+      attrs[:link_token],
+      integration.id
+    ])
+
+    integration
   end
 
   defp column(%{id: id}, name) do

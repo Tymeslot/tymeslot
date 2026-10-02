@@ -365,8 +365,10 @@ defmodule Tymeslot.Factory do
     }
   end
 
-  @spec telegram_integration_factory() :: TelegramIntegrationSchema.t()
-  def telegram_integration_factory do
+  # Takes the attrs so a `link_token` given to the factory is stored as the
+  # hash the row is looked up by, as the changeset would store it.
+  @spec telegram_integration_factory(map()) :: TelegramIntegrationSchema.t()
+  def telegram_integration_factory(attrs) do
     %TelegramIntegrationSchema{
       name: sequence(:telegram_name, &"Telegram #{&1}"),
       bot_mode: "own",
@@ -376,6 +378,9 @@ defmodule Tymeslot.Factory do
       is_active: true,
       user: build(:user)
     }
+    |> merge_attributes(attrs)
+    |> evaluate_lazy_attributes()
+    |> put_token_hash(:link_token, :link_token_hash)
   end
 
   @spec slack_integration_factory() :: SlackIntegrationSchema.t()
@@ -528,5 +533,14 @@ defmodule Tymeslot.Factory do
       participant: build(:poll_participant),
       time_slot: build(:poll_time_slot)
     }
+  end
+
+  # A token is looked up by its hash, which factories bypassing the changeset
+  # have to store themselves. An explicit hash in the attrs wins.
+  defp put_token_hash(record, field, hash_field) do
+    case {Map.fetch!(record, field), Map.fetch!(record, hash_field)} do
+      {token, nil} when is_binary(token) -> Map.put(record, hash_field, Token.hash_token(token))
+      _no_token_or_hash_given -> record
+    end
   end
 end

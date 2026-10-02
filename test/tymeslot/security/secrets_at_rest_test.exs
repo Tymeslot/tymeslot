@@ -16,6 +16,8 @@ defmodule Tymeslot.Security.SecretsAtRestTest do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Security.Token
+  alias Tymeslot.Telegram
   alias Tymeslot.Webhooks.WebhookSchema
 
   describe "encrypted secrets" do
@@ -64,6 +66,18 @@ defmodule Tymeslot.Security.SecretsAtRestTest do
     end
   end
 
+  describe "hashed tokens" do
+    test "a Telegram link token, cleared once it links a chat" do
+      integration = insert(:telegram_integration, bot_mode: "shared", chat_id: nil)
+      {:ok, token} = Telegram.refresh_link_token(integration)
+
+      assert_hashed("telegram_integrations", integration.id, "link_token", token)
+
+      assert {:ok, _linked} = Telegram.handle_start_payload(token, "123456")
+      assert raw("telegram_integrations", integration.id, "link_token_hash") == nil
+    end
+  end
+
   # The plain column the value used to live in stays empty, and the encrypted
   # one opens to the value without containing it.
   defp assert_encrypted(table, id, column, value) do
@@ -74,4 +88,22 @@ defmodule Tymeslot.Security.SecretsAtRestTest do
     refute ciphertext =~ value
     assert Encryption.decrypt(ciphertext) == value
   end
+
+  # The plain column stays empty, and the hash column holds the token's hash.
+  defp assert_hashed(table, id, column, token) do
+    assert is_binary(token)
+    assert raw(table, id, column) == nil
+    assert raw(table, id, "#{column}_hash") == Token.hash_token(token)
+  end
+
+  defp raw(table, id, column) do
+    %{rows: [[value]]} =
+      Repo.query!("SELECT #{column} FROM #{table} WHERE id = $1", [dump_id(id)])
+
+    value
+  end
+
+  # Postgrex takes a UUID as its 16 raw bytes.
+  defp dump_id(id) when is_integer(id), do: id
+  defp dump_id(id), do: Ecto.UUID.dump!(id)
 end
