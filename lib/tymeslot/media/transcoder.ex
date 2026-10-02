@@ -120,7 +120,10 @@ defmodule Tymeslot.Media.Transcoder do
   end
 
   defp build_ffmpeg_args(source, output, codec, max_height, format) do
-    base_args = ["-i", source, "-y", "-an"]
+    # ffmpeg copies the source's metadata into its output by default, so
+    # without `-map_metadata -1` a variant would republish the location and
+    # capture time the upload was stripped of.
+    base_args = ["-i", source, "-y", "-an", "-map_metadata", "-1", "-map_chapters", "-1"]
 
     codec_args =
       case format do

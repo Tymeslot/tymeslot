@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
   alias Tymeslot.Repo
 
   alias Ecto.Changeset
+  alias Tymeslot.Test.MediaFixtures
   alias Tymeslot.Timezones
 
   setup :setup_dashboard_user
@@ -18,10 +19,8 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
     test "successfully uploads an avatar", %{conn: conn, profile: profile} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
 
-      # Prepare file for upload with valid PNG magic bytes
-      png_content =
-        <<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13, "IHDR", 0, 0, 0, 1, 0, 0,
-          0, 1, 8, 2, 0, 0, 0, 0x90, 0x77, 0x53, 0xDE>>
+      # Prepare a complete, decodable PNG for upload
+      png_content = MediaFixtures.png()
 
       avatar = %{
         last_modified: System.system_time(:millisecond),
@@ -52,9 +51,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
     } do
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
 
-      png_content =
-        <<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13, "IHDR", 0, 0, 0, 1, 0, 0,
-          0, 1, 8, 2, 0, 0, 0, 0x90, 0x77, 0x53, 0xDE>>
+      png_content = MediaFixtures.png()
 
       png = fn name ->
         %{
@@ -82,9 +79,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
     } do
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
 
-      png_content =
-        <<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13, "IHDR", 0, 0, 0, 1, 0, 0,
-          0, 1, 8, 2, 0, 0, 0, 0x90, 0x77, 0x53, 0xDE>>
+      png_content = MediaFixtures.png()
 
       avatar = %{
         last_modified: System.system_time(:millisecond),
@@ -108,6 +103,33 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
 
       assert response.status == 200
       assert get_resp_header(response, "x-content-type-options") == ["nosniff"]
+    end
+
+    test "publishes a phone photo without its EXIF location, turned upright", %{
+      conn: conn,
+      profile: profile
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      avatar = %{
+        last_modified: System.system_time(:millisecond),
+        name: "selfie.jpg",
+        content: MediaFixtures.read!("gps_portrait.jpg"),
+        type: "image/jpeg"
+      }
+
+      view
+      |> file_input("#avatar-upload-form", :avatar, [avatar])
+      |> render_upload("selfie.jpg")
+
+      assert render(view) =~ "Avatar updated successfully"
+
+      # What a visitor to the booking page can download.
+      response = get(build_conn(), Avatars.avatar_url(Repo.reload!(profile)))
+      assert response.status == 200
+      assert MediaFixtures.image_metadata_fields(response.resp_body) == []
+      refute response.resp_body =~ "SN12345"
+      assert MediaFixtures.image_dimensions(response.resp_body) == {16, 32}
     end
 
     test "does not show error when no files are provided on submit (auto-upload fallback)", %{

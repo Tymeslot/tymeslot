@@ -13,6 +13,7 @@ defmodule Tymeslot.Release do
   alias Tymeslot.AppSettings.LockoutPolicy
   alias Tymeslot.Auth
   alias Tymeslot.Auth.{AdminRoles, AdminUserQueries, UserQueries, UserSchema}
+  alias Tymeslot.Media.UploadMetadataSweep
 
   @doc """
   Promotes the user with the given email to admin.
@@ -107,6 +108,19 @@ defmodule Tymeslot.Release do
 
     Enum.map(AdminUserQueries.list_admins(), fn user -> %{id: user.id, email: user.email} end)
   end
+
+  @doc """
+  Strips location, capture time and device metadata from every image and
+  video already in the upload directory. See `Tymeslot.Media.UploadMetadataSweep`.
+
+  Touches only files, never the database, so it needs no running node:
+
+      bin/tymeslot eval 'Tymeslot.Release.strip_upload_metadata()'
+
+  Run it as the user the app runs as, so rewritten files keep their owner.
+  """
+  @spec strip_upload_metadata() :: UploadMetadataSweep.report()
+  def strip_upload_metadata, do: UploadMetadataSweep.run()
 
   # When called via `bin/tymeslot eval`, the application isn't started — we
   # need at least the Repo running to issue queries. `rpc` against a live

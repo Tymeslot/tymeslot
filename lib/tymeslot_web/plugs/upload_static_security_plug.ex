@@ -6,9 +6,11 @@ defmodule TymeslotWeb.Plugs.UploadStaticSecurity do
 
   * **Extension allowlist.** The upload flows only ever produce images
     (`.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`) and videos (`.mp4`,
-    `.webm`, `.mov`). Anything else reaching the upload directory is
-    either an attacker artefact that bypassed an upload validator or a
-    historical file that should no longer be served. Requests for those
+    `.webm`), plus `.mov` videos uploaded before that format stopped being
+    accepted, which existing themes still reference. Anything else
+    reaching the upload directory is either an attacker artefact that
+    bypassed an upload validator or a historical file that should no longer
+    be served. Requests for those
     extensions return `404` before `Plug.Static` touches the filesystem.
 
   * **MIME sniffing.** `X-Content-Type-Options: nosniff` is added to every
@@ -26,10 +28,15 @@ defmodule TymeslotWeb.Plugs.UploadStaticSecurity do
 
   @uploads_prefix "uploads"
 
+  # No longer accepted for upload, but still served for the backgrounds
+  # uploaded while it was.
+  @legacy_extensions [".mov"]
+
   @allowed_extensions MapSet.new(
                         UploadConstraints.allowed_extensions(:avatar) ++
                           UploadConstraints.allowed_extensions(:image) ++
-                          UploadConstraints.allowed_extensions(:video)
+                          UploadConstraints.allowed_extensions(:video) ++
+                          @legacy_extensions
                       )
 
   @impl Plug

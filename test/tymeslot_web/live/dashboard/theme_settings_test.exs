@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Repo
+  alias Tymeslot.Test.MediaFixtures
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
   alias TymeslotWeb.Live.Scheduling.PreviewToken
@@ -206,38 +207,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       image = %{
         last_modified: System.system_time(:millisecond),
         name: "bg.png",
-        content: <<
-          0x89,
-          0x50,
-          0x4E,
-          0x47,
-          0x0D,
-          0x0A,
-          0x1A,
-          0x0A,
-          0x00,
-          0x00,
-          0x00,
-          0x0D,
-          "IHDR",
-          0x00,
-          0x00,
-          0x00,
-          0x01,
-          0x00,
-          0x00,
-          0x00,
-          0x01,
-          0x08,
-          0x02,
-          0x00,
-          0x00,
-          0x00,
-          0x90,
-          0x77,
-          0x53,
-          0xDE
-        >>,
+        content: MediaFixtures.png(),
         type: "image/png"
       }
 
@@ -278,10 +248,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       image = %{
         last_modified: System.system_time(:millisecond),
         name: "bg.png",
-        content:
-          <<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, "IHDR", 0x00,
-            0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77,
-            0x53, 0xDE>>,
+        content: MediaFixtures.png(),
         type: "image/png"
       }
 

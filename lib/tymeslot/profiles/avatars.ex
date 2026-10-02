@@ -4,6 +4,7 @@ defmodule Tymeslot.Profiles.Avatars do
   Handles file system operations and coordinates with ProfileQueries.
   """
 
+  alias Tymeslot.Media.ImageMetadata
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Profiles.ProfileSchema
@@ -228,10 +229,14 @@ defmodule Tymeslot.Profiles.Avatars do
     upload_dir = get_upload_directory()
     profile_dir = Path.join([upload_dir, "avatars", to_string(profile.id)])
 
+    # The avatar is public: it appears on the booking page, in embeds and in
+    # email. Re-encoding drops the EXIF location and device details a phone
+    # photo carries, and runs only once the content has passed the check.
     with :ok <- File.mkdir_p(profile_dir),
          {:ok, binary} <- File.read(uploaded_entry.path),
          :ok <- validate_image_binary(binary),
-         :ok <- File.cp(uploaded_entry.path, Path.join(profile_dir, filename)) do
+         :ok <-
+           ImageMetadata.strip(uploaded_entry.path, Path.join(profile_dir, filename), extension) do
       {:ok, filename}
     else
       {:error, reason} -> {:error, reason}

@@ -156,6 +156,10 @@ defmodule Tymeslot.MixProject do
       {:postgrex, "~> 0.22"},
       {:nimble_parsec, "~> 1.4"},
       {:ex_image_info, "~> 1.0"},
+      # libvips through vix, which ships prebuilt binaries: re-encodes uploaded
+      # images so their metadata (EXIF location, capture time, device) is never
+      # published.
+      {:image, "~> 0.72"},
       {:sweet_xml, "~> 0.7"},
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},

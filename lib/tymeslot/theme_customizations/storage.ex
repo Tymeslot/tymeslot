@@ -5,6 +5,8 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
   """
 
   require Logger
+  alias Tymeslot.Media.ImageMetadata
+  alias Tymeslot.Media.VideoMetadata
   alias Tymeslot.Utils.MediaValidator
   alias TymeslotWeb.Helpers.UploadHandler
 
@@ -76,6 +78,10 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
 
   @doc """
   Stores a background image file and returns {:ok, relative_path}.
+
+  The image is re-encoded without its metadata (see
+  `Tymeslot.Media.ImageMetadata`) in place at `temp_path`, which the caller
+  hands over: it is moved into the upload directory.
   """
   @spec store_background_image(integer(), String.t(), file_upload()) ::
           {:ok, String.t()} | {:error, term()}
@@ -83,7 +89,8 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
     if MediaValidator.valid_image_file?(temp_path) do
       dest_dir = get_theme_upload_directory(profile_id, theme_id, "images")
 
-      with :ok <- ensure_directory_exists(dest_dir),
+      with :ok <- ImageMetadata.strip(temp_path, temp_path, Path.extname(filename)),
+           :ok <- ensure_directory_exists(dest_dir),
            {:ok, sanitized_filename} <-
              UploadHandler.store_file_atomically(
                temp_path,
@@ -101,6 +108,11 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
 
   @doc """
   Stores a background video file and returns {:ok, relative_path}.
+
+  The video's metadata is removed (see `Tymeslot.Media.VideoMetadata`) in
+  place at `temp_path`, which the caller hands over: it is moved into the
+  upload directory. A file that is not an MP4 or WebM the stripper can read
+  to the end is refused as `:invalid_video_format`.
   """
   @spec store_background_video(integer(), String.t(), file_upload()) ::
           {:ok, String.t()} | {:error, term()}
@@ -108,7 +120,8 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
     if MediaValidator.valid_video_file?(temp_path) do
       dest_dir = get_theme_upload_directory(profile_id, theme_id, "videos")
 
-      with :ok <- ensure_directory_exists(dest_dir),
+      with {:ok, _stripped_or_unchanged} <- strip_video(temp_path),
+           :ok <- ensure_directory_exists(dest_dir),
            {:ok, sanitized_filename} <-
              UploadHandler.store_file_atomically(
                temp_path,
@@ -121,6 +134,19 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
       end
     else
       {:error, :invalid_video_format}
+    end
+  end
+
+  defp strip_video(path) do
+    case VideoMetadata.strip(path) do
+      {:ok, result} ->
+        {:ok, result}
+
+      {:error, reason} when reason in [:unsupported_container, :malformed] ->
+        {:error, :invalid_video_format}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 end
