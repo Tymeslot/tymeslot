@@ -72,14 +72,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupRules do
   def location_message(:venue_choice) do
     dgettext(
       "dashboard_meeting_form",
-      "Group bookings need a single venue. Edit the location so it names just one."
+      "Group bookings need a single saved location. Edit the location so it names just one."
     )
   end
 
   def location_message(:address_after_booking) do
     dgettext(
       "dashboard_meeting_form",
-      "Group bookings need the address up front. Edit the location and choose a venue."
+      "Group bookings need the address up front. Edit the location and choose a saved location."
     )
   end
 
@@ -87,6 +87,47 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupRules do
     dgettext(
       "dashboard_meeting_form",
       "Group bookings cannot ask each booker for their phone number. Edit the location to publish a number for them to call instead."
+    )
+  end
+
+  @doc """
+  The same refusal as `location_message/1`, worded for the location editor:
+  the host is already editing the location there, so it says what to pick
+  rather than where to go.
+  """
+  @spec editor_message(GroupLocationRule.reason()) :: String.t()
+  def editor_message(:not_single_location) do
+    dgettext(
+      "dashboard_meeting_form",
+      "Group bookings need exactly one location. Change the existing location instead of adding another."
+    )
+  end
+
+  def editor_message(:provider_choice) do
+    dgettext(
+      "dashboard_meeting_form",
+      "Group bookings need a single video provider. Keep just one."
+    )
+  end
+
+  def editor_message(:venue_choice) do
+    dgettext(
+      "dashboard_meeting_form",
+      "Group bookings meet in one place. Keep just one saved location."
+    )
+  end
+
+  def editor_message(:address_after_booking) do
+    dgettext(
+      "dashboard_meeting_form",
+      "Group bookings need the address up front. Choose one saved location."
+    )
+  end
+
+  def editor_message(:booker_phone) do
+    dgettext(
+      "dashboard_meeting_form",
+      "Group bookings cannot ask each booker for their phone number. Turn this off and publish a number for them to call instead."
     )
   end
 end

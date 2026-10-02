@@ -42,6 +42,31 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupRulesTest do
     [in_person_location([venue])]
   end
 
+  defp edit_location(conn, meeting_type) do
+    view = edit(conn, meeting_type)
+
+    view
+    |> element("[data-testid='location-row'] button[phx-click='edit_location']")
+    |> render_click()
+
+    view
+  end
+
+  defp location_params(location, overrides) do
+    %{
+      "location" =>
+        Map.merge(
+          %{
+            "id" => location.id,
+            "kind" => "in_person",
+            "label" => "In person",
+            "position" => "0"
+          },
+          overrides
+        )
+    }
+  end
+
   defp reload(meeting_type),
     do: MeetingTypes.get_meeting_type(meeting_type.id, meeting_type.user_id)
 
@@ -173,9 +198,67 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupRulesTest do
       })
 
       assert view |> element("[data-testid='group-location-error']") |> render() =~
-               "Group bookings need a single venue."
+               "Group bookings meet in one place. Keep just one saved location."
 
       assert reload(meeting_type).locations |> hd() |> Map.get(:venue_ids) == location.venue_ids
+    end
+
+    test "a refusal goes once the location would pass, without another save",
+         %{conn: conn, user: user} do
+      [location] = locations = at_venue(user)
+      [venue_id] = location.venue_ids
+      second = insert(:venue, user: user, name: "Annex")
+      meeting_type = insert(:meeting_type, user: user, max_participants: 5, locations: locations)
+      view = edit_location(conn, meeting_type)
+
+      two_venues =
+        location_params(location, %{"venue_ids" => ["", "#{venue_id}", "#{second.id}"]})
+
+      view |> element("#location-editor-form") |> render_submit(two_venues)
+      assert has_element?(view, "[data-testid='group-location-error']")
+
+      view
+      |> element("#location-editor-form")
+      |> render_change(location_params(location, %{"venue_ids" => ["", "#{second.id}"]}))
+
+      refute has_element?(view, "[data-testid='group-location-error']")
+    end
+
+    test "a refusal is reworded when the location breaks a different rule",
+         %{conn: conn, user: user} do
+      [location] = locations = at_venue(user)
+      meeting_type = insert(:meeting_type, user: user, max_participants: 5, locations: locations)
+      view = edit_location(conn, meeting_type)
+
+      view
+      |> element("#location-editor-form")
+      |> render_submit(
+        location_params(location, %{"kind" => "phone", "collect_from_guest" => "true"})
+      )
+
+      assert view |> element("[data-testid='group-location-error']") |> render() =~
+               "Turn this off and publish a number for them to call instead."
+
+      view
+      |> element("#location-editor-form")
+      |> render_change(location_params(location, %{"kind" => "in_person", "venue_ids" => [""]}))
+
+      error = view |> element("[data-testid='group-location-error']") |> render()
+      assert error =~ "Group bookings need the address up front. Choose one saved location."
+      refute error =~ "Edit the location"
+    end
+
+    test "the venue picker offers a single choice and says why",
+         %{conn: conn, user: user} do
+      locations = at_venue(user)
+      insert(:venue, user: user, name: "Annex")
+      meeting_type = insert(:meeting_type, user: user, max_participants: 5, locations: locations)
+      view = edit_location(conn, meeting_type)
+
+      assert has_element?(view, "#location_venue_ids input[type='radio']")
+      refute has_element?(view, "#location_venue_ids input[type='checkbox']")
+      assert render(view) =~ "Pick one. Group bookings meet in one place."
+      refute render(view) =~ "Pick one or more."
     end
   end
 

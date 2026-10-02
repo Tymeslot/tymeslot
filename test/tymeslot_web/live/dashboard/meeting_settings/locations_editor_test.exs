@@ -130,6 +130,34 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
       assert workshop.position == 1
     end
 
+    test "the label follows the kind until the host writes their own", ctx do
+      {view, _type} = open_editor(ctx, [office()])
+
+      view |> element("button[data-testid='add-location']") |> render_click()
+
+      view
+      |> form("#location-editor-form", %{"location" => %{"kind" => "in_person"}})
+      |> render_change()
+
+      assert has_element?(view, "#location_label[value='In person']")
+
+      view
+      |> form("#location-editor-form", %{"location" => %{"kind" => "phone"}})
+      |> render_change()
+
+      assert has_element?(view, "#location_label[value='Phone call']")
+
+      view
+      |> form("#location-editor-form", %{"location" => %{"label" => "Hotline"}})
+      |> render_change()
+
+      view
+      |> form("#location-editor-form", %{"location" => %{"kind" => "custom"}})
+      |> render_change()
+
+      assert has_element?(view, "#location_label[value='Hotline']")
+    end
+
     test "a video location binds to one of the host's integrations", %{user: user} = ctx do
       integration = insert(:video_integration, user: user, name: "Team Room", is_active: true)
       {view, meeting_type} = open_editor(ctx, [office()])
@@ -441,7 +469,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
       refute has_element?(view, "[data-testid='venue-hint']")
     end
 
-    test "+ New location creates a location and selects it without leaving the form",
+    test "+ New saved location creates a location and selects it without leaving the form",
          %{user: user} = ctx do
       {view, meeting_type} = open_editor(ctx, [office()])
 
@@ -476,7 +504,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
       assert render(view) =~ "Studio (Canal Street 5)"
     end
 
-    test "+ New location does not make later edits to the meeting type go unsaved",
+    test "+ New saved location does not make later edits to the meeting type go unsaved",
          %{user: user} = ctx do
       {view, meeting_type} = open_editor(ctx, [office()])
       duration = ~s|input[name="meeting_type[duration]"]|
@@ -505,7 +533,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
       assert reload(view, meeting_type, user).duration_minutes == 30
     end
 
-    test "+ New location keeps the form open with the error for a name already used",
+    test "+ New saved location keeps the form open with the error for a name already used",
          %{user: user} = ctx do
       insert(:venue, user: user, name: "Studio")
       {view, _meeting_type} = open_editor(ctx, [office()])
@@ -526,7 +554,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
       assert [_only] = Venues.list_venues(user.id)
     end
 
-    test "+ New location is refused over the meeting-type write limit", %{user: user} = ctx do
+    test "+ New saved location is refused over the meeting-type write limit",
+         %{user: user} = ctx do
       {view, _meeting_type} = open_editor(ctx, [office()])
 
       view

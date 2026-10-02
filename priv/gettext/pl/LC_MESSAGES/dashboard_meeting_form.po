@@ -883,7 +883,6 @@ msgstr "ul. Długa 12, 00-238 Warszawa"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/new_venue_component.ex
 #, elixir-autogen, elixir-format
 msgid "Add location"
 msgstr "Dodaj lokalizację"
@@ -1044,11 +1043,6 @@ msgstr[2] "%{count} minut"
 msgid "A selected location is not one of yours"
 msgstr "Wybrana lokalizacja nie należy do twojego konta"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/venue_picker.ex
-#, elixir-autogen, elixir-format
-msgid "+ New location"
-msgstr "+ Nowa lokalizacja"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/new_venue_component.ex
 #, elixir-autogen, elixir-format
 msgid "Address and directions (optional)"
@@ -1058,16 +1052,6 @@ msgstr "Adres i wskazówki dojazdu (opcjonalne)"
 #, elixir-autogen, elixir-format
 msgid "Address arranged after booking"
 msgstr "Adres ustalany po rezerwacji"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/venue_picker.ex
-#, elixir-autogen, elixir-format
-msgid "Locations"
-msgstr "Lokalizacje"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/new_venue_component.ex
-#, elixir-autogen, elixir-format
-msgid "New location"
-msgstr "Nowa lokalizacja"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/venue_picker.ex
 #, elixir-autogen, elixir-format
@@ -1146,11 +1130,6 @@ msgstr "Rezerwacje grupowe nie mogą prosić każdej rezerwującej osoby o numer
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_rules.ex
 #, elixir-autogen, elixir-format
-msgid "Group bookings need a single venue. Edit the location so it names just one."
-msgstr "Rezerwacje grupowe wymagają jednego miejsca spotkania. Edytuj lokalizację, aby wskazywała tylko jedno."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_rules.ex
-#, elixir-autogen, elixir-format
 msgid "Group bookings need a single video provider. Edit the location so it uses just one."
 msgstr "Rezerwacje grupowe wymagają jednego dostawcy wideo. Edytuj lokalizację, aby korzystała tylko z jednego."
 
@@ -1158,16 +1137,6 @@ msgstr "Rezerwacje grupowe wymagają jednego dostawcy wideo. Edytuj lokalizację
 #, elixir-autogen, elixir-format
 msgid "Group bookings need exactly one location, so everyone in a slot meets in the same place. Remove the other locations to enable them."
 msgstr "Rezerwacje grupowe wymagają dokładnie jednej lokalizacji, aby wszyscy w danym terminie spotkali się w tym samym miejscu. Usuń pozostałe lokalizacje, aby je włączyć."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_rules.ex
-#, elixir-autogen, elixir-format
-msgid "Group bookings need the address up front. Edit the location and choose a venue."
-msgstr "Rezerwacje grupowe wymagają adresu z góry. Edytuj lokalizację i wybierz miejsce spotkania."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Group bookings use a location fixed in advance: one video provider, one venue, or a number for bookers to call."
-msgstr "Rezerwacje grupowe korzystają z lokalizacji ustalonej z góry: jednego dostawcy wideo, jednego miejsca spotkania lub numeru, pod który dzwonią rezerwujący."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
 #, elixir-autogen, elixir-format
@@ -1183,3 +1152,78 @@ msgstr "Wyłącz rezerwacje grupowe, aby wymagać zatwierdzania."
 #, elixir-autogen, elixir-format
 msgid "Where this meeting is held. Group bookings use one location, fixed in advance, so everyone in a slot meets in the same place."
 msgstr "Gdzie odbywa się to spotkanie. Rezerwacje grupowe korzystają z jednej lokalizacji ustalonej z góry, aby wszyscy w danym terminie spotkali się w tym samym miejscu."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/venue_picker.ex
+#, elixir-autogen, elixir-format
+msgid "+ New saved location"
+msgstr "+ Nowa zapisana lokalizacja"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/new_venue_component.ex
+#, elixir-autogen, elixir-format
+msgid "Add to saved locations"
+msgstr "Dodaj do zapisanych lokalizacji"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Each slot stays open until the participant limit is reached, and everyone booked into it meets together."
+msgstr "Każdy termin pozostaje otwarty, dopóki nie zostanie osiągnięty limit uczestników, a wszyscy, którzy go zarezerwowali, spotykają się razem."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_rules.ex
+#, elixir-autogen, elixir-format
+msgid "Group bookings cannot ask each booker for their phone number. Turn this off and publish a number for them to call instead."
+msgstr "Rezerwacje grupowe nie mogą prosić każdej rezerwującej osoby o numer telefonu. Wyłącz tę opcję i zamiast tego podaj numer, pod który mogą zadzwonić."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_rules.ex
+#, elixir-autogen, elixir-format
+msgid "Group bookings meet in one place. Keep just one saved location."
+msgstr "Rezerwacje grupowe odbywają się w jednym miejscu. Zostaw tylko jedną zapisaną lokalizację."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_rules.ex
+#, elixir-autogen, elixir-format
+msgid "Group bookings need a single saved location. Edit the location so it names just one."
+msgstr "Rezerwacje grupowe wymagają jednej zapisanej lokalizacji. Edytuj lokalizację, aby wskazywała tylko jedną."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_rules.ex
+#, elixir-autogen, elixir-format
+msgid "Group bookings need a single video provider. Keep just one."
+msgstr "Rezerwacje grupowe wymagają jednego dostawcy wideo. Zostaw tylko jednego."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_rules.ex
+#, elixir-autogen, elixir-format
+msgid "Group bookings need exactly one location. Change the existing location instead of adding another."
+msgstr "Rezerwacje grupowe wymagają dokładnie jednej lokalizacji. Zmień istniejącą lokalizację zamiast dodawać kolejną."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_rules.ex
+#, elixir-autogen, elixir-format
+msgid "Group bookings need the address up front. Choose one saved location."
+msgstr "Rezerwacje grupowe wymagają adresu z góry. Wybierz jedną zapisaną lokalizację."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_rules.ex
+#, elixir-autogen, elixir-format
+msgid "Group bookings need the address up front. Edit the location and choose a saved location."
+msgstr "Rezerwacje grupowe wymagają adresu z góry. Edytuj lokalizację i wybierz zapisaną lokalizację."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Group bookings use a location fixed in advance: one video provider, one saved location, or a number for bookers to call."
+msgstr "Rezerwacje grupowe korzystają z lokalizacji ustalonej z góry: jednego dostawcy wideo, jednej zapisanej lokalizacji lub numeru, pod który dzwonią osoby rezerwujące."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/new_venue_component.ex
+#, elixir-autogen, elixir-format
+msgid "New saved location"
+msgstr "Nowa zapisana lokalizacja"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/venue_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Pick one. Group bookings meet in one place."
+msgstr "Wybierz jedną. Rezerwacje grupowe odbywają się w jednym miejscu."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/venue_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Saved locations"
+msgstr "Zapisane lokalizacje"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/venue_picker.ex
+#, elixir-autogen, elixir-format
+msgid "You have no saved locations yet. Add one here: group bookings need the address up front."
+msgstr "Nie masz jeszcze zapisanych lokalizacji. Dodaj nową tutaj: rezerwacje grupowe wymagają adresu z góry."

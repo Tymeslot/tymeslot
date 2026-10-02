@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
   deterministic.
 
   An in-person location picks from the organiser's saved venues
-  (`VenuePicker`). "+ New location" opens `NewVenueComponent` below the
+  (`VenuePicker`). "+ New saved location" opens `NewVenueComponent` below the
   form; it saves the venue and sends it back here as `venue_created`, which
   adds it to the choices and ticks it without leaving the editor. The inline
   form is a sibling of this component's `<form>`, never nested in it, so the
@@ -29,9 +29,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
   checked against `Tymeslot.MeetingTypes.GroupLocationRule`: a group type's
   location must be fixed in advance, so several providers or venues, no
   venue at all, or a number asked of the booker are refused with a message
-  saying what to change. The changeset would refuse the same location on
-  the next save; refusing it here keeps the host in the editor that can fix
-  it.
+  saying what to change (`GroupRules.editor_message/1`). The changeset would
+  refuse the same location on the next save; refusing it here keeps the host
+  in the editor that can fix it. Once shown, the refusal is re-checked on
+  every change, so it never outlives its cause. The venue picker turns
+  single-select while group bookings are on.
 
   The `mode` assign (`:add` or `:edit`) controls the modal header. It is set
   by `LocationsSection` and forwarded through `MeetingTypeForm`; do not
@@ -62,14 +64,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
   # Multi-select pickers post a leading blank (see `ChoiceToggle`).
   @id_list_fields ~w(video_integration_ids venue_ids)
 
-  # A venue made with "+ New location" joins the choices and is ticked, on
+  # A venue made with "+ New saved location" joins the choices and is ticked, on
   # top of whatever the organiser has already ticked or typed. A new venue is
   # last in the organiser's order, so it is appended, as it is in the
   # library, and ticked last.
   @impl Phoenix.LiveComponent
+  #
+  # A group type meets in one place, so there the new venue replaces the
+  # selection instead of joining it.
   def update(%{venue_created: venue}, socket) do
     changeset = socket.assigns.changeset
-    ids = (Changeset.get_field(changeset, :venue_ids) || []) ++ [venue.id]
+    ids = venue_ids_with(changeset, venue.id, socket.assigns.group_bookings_enabled)
     params = Map.put(changeset.params || %{}, "venue_ids", Enum.map(ids, &to_string/1))
     venues = socket.assigns.venues ++ [venue]
 
@@ -79,7 +84,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
      socket
      |> assign(:venues, venues)
      |> assign(:changeset, LocationOption.changeset(socket.assigns.location, params))
-     |> assign(:creating_venue, false)}
+     |> assign(:creating_venue, false)
+     |> recheck_group_error()}
   end
 
   def update(assigns, socket) do
@@ -114,7 +120,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
     {:noreply,
      socket
      |> assign(:changeset, LocationOption.changeset(socket.assigns.location, params))
-     |> assign(:field_errors, field_errors)}
+     |> assign(:field_errors, field_errors)
+     |> recheck_group_error()}
   end
 
   @impl Phoenix.LiveComponent
@@ -142,7 +149,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
         {:noreply,
          socket
          |> assign(:changeset, changeset)
-         |> assign(:field_errors, %{group: [GroupRules.location_message(reason)]})}
+         |> assign(:field_errors, %{group: [GroupRules.editor_message(reason)]})}
     end
   end
 
@@ -207,7 +214,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
           <CoreComponents.info_box :if={@group_bookings_enabled} variant={:info}>
             {dgettext(
               "dashboard_meeting_form",
-              "Group bookings use a location fixed in advance: one video provider, one venue, or a number for bookers to call."
+              "Group bookings use a location fixed in advance: one video provider, one saved location, or a number for bookers to call."
             )}
           </CoreComponents.info_box>
 
@@ -261,6 +268,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
               <VenuePicker.venue_picker
                 changeset={@changeset}
                 venues={@venues}
+                group_bookings_enabled={@group_bookings_enabled}
                 field_errors={@field_errors}
                 myself={@myself}
               />
@@ -423,6 +431,33 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
 
   defp check_group_rule(_locations, _group_bookings_enabled), do: :ok
 
+  # A group-rule refusal names what to change, so once it is shown it follows
+  # the location as it is edited: it goes as soon as the location would pass,
+  # and its wording follows whichever rule the location now breaks. Before
+  # the first save nothing is shown, so the host is not told off mid-edit.
+  defp recheck_group_error(%{assigns: %{field_errors: %{group: _shown}}} = socket) do
+    changeset = socket.assigns.changeset
+    locations = merge_location(socket, Changeset.apply_changes(changeset))
+
+    field_errors =
+      case check_group_rule(locations, socket.assigns.group_bookings_enabled) do
+        :ok ->
+          Map.delete(socket.assigns.field_errors, :group)
+
+        {:error, reason} ->
+          Map.put(socket.assigns.field_errors, :group, [GroupRules.editor_message(reason)])
+      end
+
+    assign(socket, :field_errors, field_errors)
+  end
+
+  defp recheck_group_error(socket), do: socket
+
+  defp venue_ids_with(_changeset, venue_id, true = _group_bookings_enabled), do: [venue_id]
+
+  defp venue_ids_with(changeset, venue_id, _group_bookings_enabled),
+    do: (Changeset.get_field(changeset, :venue_ids) || []) ++ [venue_id]
+
   # A fresh changeset only for a location not already being edited: a
   # re-render from the page above must not discard what has been ticked or
   # typed so far.
@@ -444,12 +479,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
 
   # A location's label is the one field the host must write, and every kind
   # has an obvious name for itself. Filling it in when the kind changes on a
-  # still-unnamed option means "add location, choose Zoom, save" works, while
-  # a label the host has already typed is never overwritten.
+  # still-unnamed option means "add location, choose Zoom, save" works. A
+  # label that is still the previous kind's own default follows the kind
+  # too, so "In person" does not linger on a phone call; a label the host has
+  # written is never overwritten.
   defp default_label_for_kind(params, changeset) do
-    current = Changeset.get_field(changeset, :label)
+    previous_kind = Changeset.get_field(changeset, :kind)
+    label = Map.get(params, "label", Changeset.get_field(changeset, :label))
 
-    if blank?(params["label"]) and blank?(current) do
+    if blank?(label) or
+         (params["kind"] != previous_kind and label == default_label(previous_kind)) do
       Map.put(params, "label", default_label(params["kind"]))
     else
       params
