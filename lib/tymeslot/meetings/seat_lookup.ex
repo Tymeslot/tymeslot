@@ -54,12 +54,9 @@ defmodule Tymeslot.Meetings.SeatLookup do
     end
   end
 
-  @doc """
-  Whether `meeting` still lets a participant give up their seat, with the
-  policy's refusals for a meeting that has started or ended named as atoms.
-  """
-  @spec cancellable(MeetingSchema.t()) :: :ok | {:error, refusal()}
-  def cancellable(meeting) do
+  # Whether `meeting` still lets a participant give up their seat, with the
+  # policy's refusals for a meeting that has started or ended named as atoms.
+  defp cancellable(meeting) do
     case Policy.can_cancel_meeting?(meeting) do
       :ok -> :ok
       {:error, message} -> {:error, refusal(meeting, message)}

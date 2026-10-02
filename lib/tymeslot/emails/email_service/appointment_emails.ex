@@ -117,12 +117,12 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   @doc """
   Sends the move-my-seat confirmation to a group participant.
 
-  The email is the standard attendee confirmation for the new meeting, with
-  one extra attachment: a `STATUS:CANCELLED` ICS for the old meeting's UID
-  at `SEQUENCE: old_ical_sequence + 1`, so the participant's calendar drops
-  the old copy (see `Tymeslot.Meetings.AttendeeNotifications.IcalMethod`:
-  the move is an `:event_deleted` on the old UID plus an `:event_created`
-  on the new one — never an `:event_updated`, because the UID changes).
+  The email is the standard attendee confirmation for the new seat, with one
+  extra attachment: a `STATUS:CANCELLED` ICS for the old seat's UID at
+  `SEQUENCE: old_ical_sequence + 1`, so the participant's calendar drops the
+  old entry (see `Tymeslot.Meetings.AttendeeNotifications.IcalMethod`: the
+  move is an `:event_deleted` on the old seat's UID plus an `:event_created`
+  on the new one, never an `:event_updated`, because the UID changes).
 
   `old_event` is `%{uid:, ical_sequence:, start_time:, end_time:}`.
   """

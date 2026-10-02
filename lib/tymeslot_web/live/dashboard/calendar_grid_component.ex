@@ -26,7 +26,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   - `:live_action`               — current route live action atom.
   - `:params`                    — current URL params map.
   - `:custom_questions_allowed`  — boolean feature flag.
-  - `:group_bookings_allowed`    — boolean feature flag.
 
   Parent-to-component messages travel through `send_update/2` with an `:action` key.
   These bypass attr validation and are dispatched in the `update/2` clauses below:

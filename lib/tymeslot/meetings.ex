@@ -134,10 +134,9 @@ defmodule Tymeslot.Meetings do
   The attendees to list on a synced calendar event.
 
   Solo meetings return `[]`: the event already carries its one attendee via
-  the meeting's own `attendee_*` fields. Group meetings — including meetings
-  converted from solo to group, where the original booker's `attendee_*`
-  columns are still populated alongside their new participant row — return
-  `recipients/1`, which is deduplicated so a converted booker is listed once.
+  the meeting's own `attendee_*` fields. Group meetings, whose `attendee_*`
+  columns are always empty, return `recipients/1`: one entry per live
+  participant.
   """
   @spec attendees_for_calendar(MeetingSchema.t()) :: [Recipient.t()]
   def attendees_for_calendar(meeting) do

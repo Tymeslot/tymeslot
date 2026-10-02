@@ -180,9 +180,12 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   end
 
   # `uid` here is the calendar event's UID (the `.ics` UID and the attachment
-  # filename), so it is the meeting's `calendar_uid`: the attendee's copy has to
-  # match the organiser's event, and the booking's own `uid` is the capability
-  # behind the cancel and reschedule links, which travel as their own fields.
+  # filename), so it is the `calendar_uid` of the meeting as this recipient
+  # sees it: a solo attendee's copy matches the organiser's event, while a
+  # group participant's overlay (`Tymeslot.Meetings.Recipient`) carries their
+  # seat's own UID, since each seat is its own calendar entry. The booking's
+  # own `uid` is the capability behind the cancel and reschedule links, which
+  # travel as their own fields.
   #
   # The title is the attendee's: this payload is built in their locale, and
   # the attendee and guest copies carry it into the `.ics` they import. The

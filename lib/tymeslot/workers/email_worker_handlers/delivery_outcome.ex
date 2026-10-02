@@ -104,9 +104,9 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome do
   defp succeeded?({:ok, _result}), do: true
   defp succeeded?(_result), do: false
 
-  # `{:ok, :skipped}` means a recipient was deliberately not sent to (e.g. a
-  # last-leaver seat cancellation with no organiser notification), not that
-  # something already went out. Counting it as delivered here would make a
+  # `{:ok, :skipped}` means a recipient was deliberately not sent to (e.g. the
+  # half of a confirmation or reminder pair an earlier attempt already
+  # stamped as sent), not that this attempt sent something. Counting it as delivered here would make a
   # genuine single-recipient failure look like a partial success, discarding
   # a job a retry could still fix instead of retrying it.
   defp delivered?(result), do: match?({:ok, outcome} when outcome != :skipped, result)

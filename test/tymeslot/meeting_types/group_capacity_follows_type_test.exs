@@ -89,8 +89,6 @@ defmodule Tymeslot.MeetingTypes.GroupCapacityFollowsTypeTest do
     }
   end
 
-  defp window(ctx), do: {ctx.start_time, DateTime.add(ctx.start_time, 1, :hour)}
-
   defp capacity(meeting), do: Repo.get!(MeetingSchema, meeting.id).capacity
 
   describe "a type switched to group bookings" do
@@ -126,8 +124,7 @@ defmodule Tymeslot.MeetingTypes.GroupCapacityFollowsTypeTest do
 
     test "the one-to-one booking keeps its slot: it is not joinable and refuses a seat",
          %{group_type: group_type, solo: solo} = ctx do
-      {from, to} = window(ctx)
-      assert GroupSlots.joinable_uids(group_type, from, to) == MapSet.new()
+      assert GroupScheduling.join_target(group_type.id, ctx.start_time, 1) == nil
 
       # Even before the booking's calendar event has synced (no events at
       # all), the slot is not offered with seats.
@@ -249,8 +246,28 @@ defmodule Tymeslot.MeetingTypes.GroupCapacityFollowsTypeTest do
 
     test "the slot refuses new joins and is not offered as joinable",
          %{solo_type: solo_type, meeting: meeting} = ctx do
-      {from, to} = window(ctx)
-      assert GroupSlots.joinable_uids(solo_type, from, to) == MapSet.new()
+      # The meeting's own calendar event blocks the slot, and a type that is
+      # no longer a group type does not unblock it for a seat.
+      event = %{
+        uid: meeting.calendar_uid,
+        start_time: meeting.start_time,
+        end_time: meeting.end_time
+      }
+
+      {:ok, slots} =
+        Calculate.available_slots(ctx.date, 30, @timezone, @timezone, [event], ctx.config)
+
+      context = %{
+        user_timezone: @timezone,
+        owner_timezone: @timezone,
+        events: [event],
+        config: ctx.config
+      }
+
+      refute Enum.any?(
+               GroupSlots.enrich_day_slots(slots, solo_type, ctx.date, context),
+               &(&1.time == "11:00 AM")
+             )
 
       assert {:error, :slot_full} =
                GroupScheduling.book_seat(

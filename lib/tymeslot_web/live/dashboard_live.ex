@@ -262,7 +262,6 @@ defmodule TymeslotWeb.DashboardLive do
               calendar_left={@calendar_left}
               params={@params}
               custom_questions_allowed={@custom_questions_allowed}
-              group_bookings_allowed={@group_bookings_allowed}
               payments_allowed={@payments_allowed}
             />
           <% else %>

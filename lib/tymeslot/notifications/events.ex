@@ -123,14 +123,14 @@ defmodule Tymeslot.Notifications.Events do
         Orchestrator.schedule_request_notifications(meeting, opts)
       end)
 
-    dispatch_request_channels(:meeting_requested, meeting)
+    dispatch_channels(:meeting_requested, meeting)
 
     result
   end
 
   @doc """
   Announces a video-room job's outcome for its meeting: the full
-  `meeting_created/1` event for a solo meeting, or — for a group meeting —
+  `meeting_created/1` event for a solo meeting, or, for a group meeting,
   releasing every live seat's own confirmation email.
 
   A group meeting never raises `meeting_created/1` here. `seat_booked/3`
@@ -141,13 +141,11 @@ defmodule Tymeslot.Notifications.Events do
   carrying no attendee at all, since a group meeting row has none of its own.
 
   Only the confirmation email was ever waiting on this: exactly one seat's,
-  for a fresh booking, but every live seat's release is idempotent —
-  `Tymeslot.Notifications.Orchestrator.schedule_seat_confirmation/2` is
-  uniqued on `(meeting_id, participant_id)`, so releasing an already-sent
-  seat here is a no-op in the common case. Only a room recovery spanning past
-  that job's uniqueness window could resend one; still a better trade than
-  the group confirmation this replaces silently dropping the first booker's
-  email outright.
+  for a fresh booking, but releasing every live seat is safe. The job
+  `Tymeslot.Notifications.Orchestrator.schedule_seat_confirmation/2`
+  enqueues is uniqued on `(meeting_id, participant_id)`, and should a late
+  release enqueue one anyway, the seat's own sent markers
+  (`confirmation_sent_at`, `organizer_notified_at`) stop it sending again.
   """
   @spec announce_video_room_outcome(term()) :: :ok
   def announce_video_room_outcome(meeting) do
@@ -257,7 +255,7 @@ defmodule Tymeslot.Notifications.Events do
         Orchestrator.send_request_outcome_notifications(meeting, variant)
       end)
 
-    dispatch_request_channels(event, meeting)
+    dispatch_channels(event, meeting)
 
     result
   end
@@ -401,31 +399,18 @@ defmodule Tymeslot.Notifications.Events do
       {:error, {:dispatch_failed, exception}}
   end
 
+  # Every event, the request-lifecycle ones (`meeting.requested`,
+  # `meeting.declined`, `meeting.request_expired`) included, fans out to all
+  # three channels through the guarded `dispatch_channel/3`, so a raising
+  # channel cannot abort the fan-out or escape into callers this module
+  # documents as non-failing. Telegram finds no subscriber to the request
+  # events yet (`TelegramIntegrationSchema`'s `@valid_events` still lists the
+  # original three), so widening that allowlist is all it will need.
   defp dispatch_channels(event, meeting) do
     dispatch_webhooks(event, meeting)
     dispatch_telegram(event, meeting)
     dispatch_slack(event, meeting)
   end
-
-  # The three request-lifecycle events (`meeting.requested`,
-  # `meeting.declined`, `meeting.request_expired`) fan out to all three
-  # channels through the same guarded `dispatch_channel/3` as every other
-  # event, so a raising channel cannot abort the fan-out or escape into
-  # callers this module documents as non-failing.
-  #
-  # Telegram finds nothing to notify for now:
-  # `TelegramIntegrationSchema.@valid_events` still hardcodes the
-  # pre-approval three, so no integration can be subscribed to these events
-  # yet. It is dispatched anyway rather than special-cased, so widening that
-  # allowlist is the only change Telegram will need.
-  #
-  # Slack does reach real subscribers today — `SlackIntegrationSchema`'s
-  # `@valid_events` derives from `EventTypes.all/0` and
-  # `Slack.default_events_for_new_integration/0` subscribes fresh
-  # integrations to all of them — and `Slack.MessageBuilder` now has
-  # dedicated rendering for all three, so what a host sees is a real
-  # notification rather than the generic "Meeting update" fallback.
-  defp dispatch_request_channels(event, meeting), do: dispatch_channels(event, meeting)
 
   defp dispatch_channel(channel, event, meeting) do
     dispatch_fun(channel).(event, meeting)

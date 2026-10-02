@@ -58,11 +58,11 @@ defmodule Tymeslot.Meetings.GroupScheduling do
   `meeting_attrs` (`:meeting_type_id` and `:start_time` identify the slot).
 
   Options:
-    * `:on_booked` — a function `(booking -> {:ok, term} | {:error, term})`
+    * `:on_booked`: a function `(booking -> {:ok, term} | {:error, term})`
       run inside the transaction after the seat is taken; an error return
       rolls the whole seat back. Used by the booking flow to enqueue the
       calendar-event job atomically with the seat.
-    * `:also_lock` — the id of a further meeting the `:on_booked` callback
+    * `:also_lock`: the id of a further meeting the `:on_booked` callback
       will lock (a seat move's old meeting). It is locked together with the
       target slot's row, in id order, before either is read, so that two
       moves in opposite directions between the same two meetings queue

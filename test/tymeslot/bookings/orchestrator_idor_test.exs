@@ -162,7 +162,7 @@ defmodule Tymeslot.Bookings.OrchestratorIdorTest do
   # A seat reschedule link authorises moving that seat, but the new time is
   # picked from whichever organiser's page the link was opened on. Opening it
   # on another organiser's page (a hand-edited URL) must not move the seat.
-  describe "submit_booking/2 with a seat token — organiser of the page" do
+  describe "submit_booking/2 with a seat token: organiser of the page" do
     setup do
       TestMocks.setup_calendar_mocks()
       TestMocks.stub_no_calendar_events()

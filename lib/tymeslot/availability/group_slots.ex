@@ -7,8 +7,8 @@ defmodule Tymeslot.Availability.GroupSlots do
   event-conflict checking. This module never re-derives them; instead it
   tells `Calculate` which live meetings of this type still have a seat free
   via its `:ignore_event_uids` option, so a slot occupied by one of them is
-  only unblocked *for itself* — every other slot
-  still sees its buffer (see `Tymeslot.Availability.Conflicts`). This module
+  only unblocked *for itself*: every other slot still sees its buffer (see
+  `Tymeslot.Availability.Conflicts`). This module
   then owns exactly the seat-count fact `Calculate` has no reason to know:
 
     * overlaying seat counts on every slot;
@@ -115,24 +115,6 @@ defmodule Tymeslot.Availability.GroupSlots do
     end
   end
 
-  @doc """
-  Calendar-event ids of the live meetings of `meeting_type` within
-  `[from_utc, to_utc]` that still have a seat free.
-
-  A pure capacity lookup: it says nothing about minimum notice, the booking
-  window, or event conflicts, which remain `Calculate`'s sole concern. Seats
-  are counted over `[from_utc, to_utc)`, so the window must be wider than an
-  instant for a full meeting to read as full. The booking submit decides a
-  single slot's joinability with `GroupScheduling.join_target/3` instead,
-  the seat transaction's own rule.
-  """
-  @spec joinable_uids(map() | nil, DateTime.t(), DateTime.t()) :: MapSet.t(String.t())
-  def joinable_uids(meeting_type, from_utc, to_utc) do
-    meeting_type
-    |> joinable_meetings(from_utc, to_utc)
-    |> event_uid_set()
-  end
-
   # A meeting's own calendar event is reported back under its iCal uid (the
   # meeting's `calendar_uid`, never its `uid`) by CalDAV, but under the
   # provider's own event id by Google and Outlook, which is what
@@ -210,10 +192,9 @@ defmodule Tymeslot.Availability.GroupSlots do
   defp live_meetings(meeting_type, from_utc, to_utc),
     do: GroupMeetingQueries.list_live_for_type_in_range(meeting_type.id, from_utc, to_utc)
 
-  # Builds every fact `enrich_group_day/4` needs from a single pass over
-  # `list_live_for_type_in_range/3` plus a single `seat_counts_for_range/3`
-  # call, instead of the two independent queries `joinable_uids/3` would
-  # otherwise repeat.
+  # Builds every fact `enrich_group_day/4` needs from one
+  # `list_live_for_type_in_range/3` and one `seat_counts_for_range/3` call:
+  # the joinable meetings, each start time's seats left, and its capacity.
   defp slot_context(meeting_type, from_utc, to_utc) do
     seat_counts = Seats.seat_counts_for_range(meeting_type.id, from_utc, to_utc)
     live = live_meetings(meeting_type, from_utc, to_utc)
