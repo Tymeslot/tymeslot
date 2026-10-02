@@ -2,95 +2,28 @@
    BUTTON COMPONENTS
    =================================== */
 
-/* Base Button */
-.btn {
-  @apply inline-flex items-center justify-center font-bold transition-all duration-300 cursor-pointer border-none outline-hidden no-underline whitespace-nowrap select-none touch-manipulation;
-}
-
-.btn:focus-visible {
-  @apply ring-2 ring-turquoise-500 ring-offset-2;
-}
-
-/* Button Variants — kept visually in sync with the sanctioned <.action_button>
-   component (.action-button--* below) so both class schemes render the same
-   primary/secondary/danger appearance. Only colour, weight and hover are aligned
-   here; display and width behaviour are deliberately left as-is so existing
-   layouts that use these classes are undisturbed. */
-.btn-primary {
-  @apply bg-linear-to-r from-turquoise-600 to-cyan-600 text-white font-bold shadow-lg shadow-turquoise-500/20 rounded-token-2xl px-6 py-3 transition-glass;
-  @apply hover:from-turquoise-700 hover:to-cyan-700 hover:shadow-turquoise-500/40;
-}
-
-.btn-secondary {
-  @apply bg-white border-2 border-tymeslot-200 text-tymeslot-700 font-bold rounded-token-2xl px-6 py-3 transition-glass shadow-sm;
-  @apply hover:border-turquoise-400 hover:text-turquoise-700 hover:bg-turquoise-50/50;
-}
-
-.btn-danger {
-  @apply bg-linear-to-r from-red-500 to-rose-600 text-white font-bold shadow-lg shadow-red-500/20 rounded-token-2xl px-6 py-3 transition-glass;
-  @apply hover:from-red-400 hover:to-rose-500 hover:shadow-red-500/40;
-}
-
-/* Adding guests is additive rather than destructive, so it reads green beside
-   the red cancel button rather than borrowing the primary gradient, which on a
-   booking card already means "join this meeting". */
-.btn-success {
-  @apply bg-linear-to-r from-green-600 to-emerald-600 text-white font-bold shadow-lg shadow-green-500/20 rounded-token-2xl px-6 py-3 transition-glass;
-  @apply hover:from-green-500 hover:to-emerald-500 hover:shadow-green-500/40;
-}
-
+/* Legacy button classes, kept only for the surfaces that still render them
+   as raw classes: the auth pages (.btn-primary, .btn-secondary, .btn-link),
+   the marketing contact page (.btn-primary, .btn-secondary) and the segmented
+   <.toggle> (.btn-primary, .btn-ghost). Their colours are shared with the
+   matching .action-button--* variants below; these rules add only the box
+   (padding, radius, weight) that those callers expect without the
+   .action-button base class. Everything else uses <.action_button>. */
+.btn-primary,
+.btn-secondary,
 .btn-ghost {
-  @apply bg-transparent text-tymeslot-600 font-bold rounded-token-2xl px-6 py-3 transition-glass;
-  @apply hover:bg-tymeslot-50 hover:text-turquoise-600;
+  @apply font-bold rounded-token-2xl px-6 py-3 transition-glass;
 }
 
 .btn-link {
   @apply text-turquoise-600 font-bold hover:text-turquoise-700 transition-colors underline underline-offset-4 decoration-2 decoration-turquoise-200 hover:decoration-turquoise-400;
 }
 
-/* Button Sizes */
-.btn-sm {
-  @apply px-4 py-2 text-token-xs rounded-token-xl;
-}
-
-.btn-lg {
-  @apply px-8 py-4 text-token-base rounded-token-2xl;
-}
-
-.btn-xl {
-  @apply px-10 py-5 text-token-xl rounded-token-2xl;
-}
-
-/* Button States */
-.btn:disabled {
-  @apply opacity-50! cursor-not-allowed! transform-none!;
-}
-
-/* Primary button carries its own hover colour shift without the base .btn
-   class, so it needs an explicit disabled treatment: grey it out and hold the
-   base gradient so it reads as inert. */
-.btn-primary:disabled {
-  @apply opacity-50 cursor-not-allowed;
-}
-
-.btn-primary:disabled:hover {
-  @apply from-turquoise-600 to-cyan-600 shadow-lg;
-}
-
-/* Secondary button carries its own hover affordances (lift, shadow, border
-   colour shift) without the base .btn class, so it needs an explicit disabled
-   treatment: grey it out and strip every hover effect to signal it is inert. */
+/* Without the .action-button base class the legacy classes need their own
+   disabled treatment; the shared hover rules already skip :disabled. */
+.btn-primary:disabled,
 .btn-secondary:disabled {
   @apply opacity-50 cursor-not-allowed;
-}
-
-.btn-secondary:disabled:hover {
-  @apply border-tymeslot-100 bg-white shadow-sm transform-none;
-}
-
-.btn-auth {
-  @apply bg-white border-2 border-tymeslot-100 text-tymeslot-700 font-bold rounded-token-2xl px-4 py-3 transition-glass shadow-sm w-full;
-  @apply hover:border-turquoise-100 hover:bg-tymeslot-50 hover:shadow-md;
 }
 
 /* Action Buttons: the sanctioned <.action_button> / <.action_link> /
@@ -100,6 +33,13 @@
    a caller's class is for layout only (width, margins). */
 .action-button {
   @apply px-6 py-3 rounded-token-2xl font-bold transition-glass disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 text-token-base whitespace-nowrap no-underline cursor-pointer select-none touch-manipulation;
+}
+
+/* A control kept focusable for its tooltip but inert: aria-disabled rather
+   than disabled, which a <label> or <div> styled as a button cannot take. */
+.action-button[aria-disabled="true"],
+.icon-button[aria-disabled="true"] {
+  @apply cursor-not-allowed;
 }
 
 .action-button:focus-visible {
@@ -114,19 +54,23 @@
   @apply px-8 py-4 text-token-lg;
 }
 
-.action-button--primary {
+.action-button--primary,
+.btn-primary {
   @apply bg-linear-to-r from-turquoise-600 to-cyan-600 text-white shadow-lg shadow-turquoise-500/20;
 }
 
-.action-button--primary:hover:not(:disabled) {
+.action-button--primary:hover:not(:disabled),
+.btn-primary:hover:not(:disabled) {
   @apply from-turquoise-700 to-cyan-700 shadow-turquoise-500/40;
 }
 
-.action-button--secondary {
+.action-button--secondary,
+.btn-secondary {
   @apply bg-white border-2 border-tymeslot-200 text-tymeslot-700 shadow-sm;
 }
 
-.action-button--secondary:hover:not(:disabled) {
+.action-button--secondary:hover:not(:disabled),
+.btn-secondary:hover:not(:disabled) {
   @apply border-turquoise-400 text-turquoise-700 bg-turquoise-50/50;
 }
 
@@ -161,11 +105,13 @@
   @apply border-turquoise-400 text-turquoise-700 bg-turquoise-50/50;
 }
 
-.action-button--ghost {
+.action-button--ghost,
+.btn-ghost {
   @apply bg-transparent text-tymeslot-600;
 }
 
-.action-button--ghost:hover:not(:disabled) {
+.action-button--ghost:hover:not(:disabled),
+.btn-ghost:hover:not(:disabled) {
   @apply bg-tymeslot-100 text-turquoise-700;
 }
 

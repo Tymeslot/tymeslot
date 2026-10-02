@@ -369,22 +369,6 @@
   color: var(--color-primary-700);
 }
 
-.onboarding-url-copy-btn {
-  margin-left: auto;
-  padding: var(--spacing-2);
-  border-radius: var(--radius-token-md);
-  color: var(--color-neutral-400);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  background: none;
-  border: none;
-}
-
-.onboarding-url-copy-btn:hover {
-  color: var(--color-primary-600);
-  background-color: var(--color-primary-50);
-}
-
 /* Slide animations */
 .onboarding-slide-in-left {
   animation: onboarding-slide-left 0.25s ease-out;
