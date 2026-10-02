@@ -616,3 +616,19 @@ msgstr "Enquete atualizada"
 #, elixir-autogen, elixir-format
 msgid "Save changes"
 msgstr "Salvar alterações"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#, elixir-autogen, elixir-format
+msgid "This time falls within your time off, so it can't be confirmed while that stays in place."
+msgstr "Este horário cai dentro da sua ausência, então não pode ser confirmado enquanto ela continuar marcada."
+
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#, elixir-autogen, elixir-format
+msgid "This time falls within your time off. Change or remove the time off to confirm it."
+msgstr "Este horário cai dentro da sua ausência. Altere ou remova a ausência para confirmá-lo."
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
+#, elixir-autogen, elixir-format
+msgid "Locations"
+msgstr "Locais"

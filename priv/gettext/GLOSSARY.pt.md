@@ -120,6 +120,14 @@ flow and in the dashboard.
 | overview | visão geral |
 | analytics | análises |
 | plan (Pro, Free) | plano |
+| time off (days away, v1.22) | ausência — never *folga*, which is the buffer |
+| location / venue (where a meeting happens) | local · plural **locais** |
+| in person | presencial |
+| phone call | ligação telefônica |
+| lobby (Nextcloud Talk) | sala de espera |
+| login name (Nextcloud) | nome de login |
+| reschedule request | pedido de remarcação |
+| outstanding (refund) | em aberto |
 
 ### Third-party UI labels — never guess
 
@@ -134,6 +142,7 @@ Invent one and they hunt for a menu that does not exist.
 | Apple, running prose | app-specific password | **senha específica do app** | *ibid.* — note the singular shifts to `do app` |
 | Apple | *Generate* a password | **gerar** | Apple's own verb; not "criar" |
 | mailbox.org | Settings → Security | **keep English: `Settings → Security`** | see below |
+| Nextcloud | Personal settings → Security | **Configurações pessoais → Segurança** | Nextcloud ships a pt-BR interface; re-check against a pt-BR install |
 
 **mailbox.org stays in English, and that is the careful answer, not the lazy one.**
 mailbox.org's interface is offered in German, English, Spanish, French, Italian and
@@ -168,7 +177,9 @@ Search→Buscar · Loading…→Carregando… · Optional→Opcional.
 Tymeslot"), Stripe, Stripe Checkout, Stripe Connect, reCAPTCHA, Google, Google Calendar,
 Google Meet, GitHub, Outlook, Microsoft Teams, Zoom, CalDAV, Nextcloud, iCloud, Fastmail,
 Zimbra, Radicale, mailbox.org, MiroTalk, Keycloak, Authentik, Lemonldap, JavaScript,
-OAuth, OIDC, SSO, Oban, UTM, Cloudron.
+OAuth, OIDC, SSO, Oban, UTM, Cloudron — and, since v1.22, Jitsi, Jitsi Meet, kMeet,
+Infomaniak and Nextcloud Talk (*o Talk*). Jitsi's token fields **App ID** and
+**App secret** stay verbatim: they are the names the server's own configuration uses.
 
 Loanwords kept as-is: **link**, **webhook**, **slug**, **e-mail**, **upgrade**, **plugin**,
 **check-in**, **app**. All are current Brazilian technical usage; translating them
@@ -409,4 +420,4 @@ than picking one. **No article before a possessive** (*seu e-mail*, not *o seu e
 **participante** (attendee) · **convidado** (guest/invitee) · **compromisso**
 (appointment). Keep **Tymeslot / brand names / env vars / `%{…}`** verbatim. Use `“…”`,
 `–`, `—`, `…`, decimal comma, 24-hour clock, day-first dates, lowercase month names.
-`msgstr[0]` covers **zero and one**. Never drop or invent a placeholder.
+`msgstr[0]` is one only; zero takes `msgstr[1]`. Never drop or invent a placeholder.

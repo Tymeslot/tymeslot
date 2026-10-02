@@ -667,3 +667,13 @@ msgstr "Dispara quando você recusa um pedido de agendamento"
 #, elixir-autogen, elixir-format
 msgid "Triggers on this event"
 msgstr "Dispara neste evento"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Delivery ID"
+msgstr "ID da entrega"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "The delivery ID is the same on every retry of one delivery and different for every other delivery. A failed or timed-out delivery can be retried, so your endpoint may receive the same event twice: record the delivery ID and ignore a request whose ID you have already processed."
+msgstr "O ID da entrega é o mesmo em todas as novas tentativas de uma entrega e diferente em qualquer outra entrega. Uma entrega que falhou ou passou do tempo limite pode ser repetida, então seu endpoint pode receber o mesmo evento duas vezes: guarde o ID da entrega e ignore a requisição cujo ID você já processou."
