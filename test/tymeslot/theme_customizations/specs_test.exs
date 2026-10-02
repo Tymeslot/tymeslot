@@ -318,16 +318,18 @@ defmodule Tymeslot.ThemeCustomizations.SpecsTest do
       assert Specs.media(ShowcaseThemeSpec, settings) == %{
                background: %{kind: :color, color: "#123456"},
                logo: %{src: "/uploads/themes/1/9/images/logo.png"},
+               calendar_view: "month",
                cover: %{src: "/uploads/themes/1/9/images/cover.png", preset: nil}
              }
     end
 
+    # The calendar view always resolves, to its default when nothing is stored.
     test "leaves out what resolves to nothing" do
       assert Specs.media(ShowcaseThemeSpec, %{
                "background_type" => "gradient",
                "background_value" => "gradient_999",
                "cover_value" => "custom"
-             }) == %{}
+             }) == %{calendar_view: "month"}
     end
   end
 
@@ -377,6 +379,7 @@ defmodule Tymeslot.ThemeCustomizations.SpecsTest do
 
       assert ShowcaseThemeSpec.tokens(settings, %{}).media == %{
                background: %{kind: :color, color: "#123456"},
+               calendar_view: "month",
                cover: %{
                  src: Presets.find_preset_by_id(:cover, "elegant-still-life").src,
                  preset: "elegant-still-life"

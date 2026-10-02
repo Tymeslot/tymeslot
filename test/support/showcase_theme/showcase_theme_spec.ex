@@ -14,6 +14,7 @@ defmodule Tymeslot.Test.ShowcaseThemeSpec do
 
   alias Tymeslot.ThemeCustomizations.Options.Accent
   alias Tymeslot.ThemeCustomizations.Options.Background
+  alias Tymeslot.ThemeCustomizations.Options.CalendarView
   alias Tymeslot.ThemeCustomizations.Options.ColourMode
   alias Tymeslot.ThemeCustomizations.Options.Cover
   alias Tymeslot.ThemeCustomizations.Options.Density
@@ -45,6 +46,7 @@ defmodule Tymeslot.Test.ShowcaseThemeSpec do
       %{key: :font, module: Font, presets: @fonts, default: "system"},
       %{key: :radius, module: Radius, default: "soft"},
       %{key: :density, module: Density, default: "comfortable"},
+      %{key: :calendar_view, module: CalendarView, default: "month"},
       %{key: :logo, module: Logo},
       %{key: :cover, module: Cover, presets: @covers, default: "elegant-still-life"},
       Specs.group(QuillSpec, Background)
@@ -62,6 +64,7 @@ defmodule Tymeslot.Test.ShowcaseThemeSpec do
         font: "system",
         radius: "soft",
         density: "comfortable",
+        calendar_view: "month",
         cover_value: "elegant-still-life"
       })
 
