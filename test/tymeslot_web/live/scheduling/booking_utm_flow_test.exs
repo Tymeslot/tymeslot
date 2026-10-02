@@ -131,6 +131,39 @@ defmodule TymeslotWeb.Live.Scheduling.BookingUtmFlowTest do
   end
 
   @tag :capture_log
+  test "an ad click identifier on the landing URL is stored as its network, never itself", %{
+    conn: conn,
+    profile: profile,
+    meeting_type: meeting_type
+  } do
+    conn = put_req_header(conn, "user-agent", "Mozilla/5.0 (Macintosh) Chrome/126.0.0.0")
+
+    view =
+      navigate_to_booking_form_with_tracking(conn, profile, meeting_type, %{
+        "utm_source" => "x",
+        "gclid" => "Cj0KCQjw-click-id",
+        "mc_eid" => "subscriber-id"
+      })
+
+    view
+    |> form("form[phx-submit='submit']", %{
+      "booking" => %{
+        "name" => "Ad Click User",
+        "email" => "ad-click-user@example.com",
+        "message" => "Found you through an ad"
+      }
+    })
+    |> render_submit()
+
+    _drain = :sys.get_state(view.pid)
+
+    [meeting] = Repo.all_by(MeetingSchema, attendee_email: "ad-click-user@example.com")
+
+    assert meeting.utm_source == "x"
+    assert meeting.tracking_params == %{"ad_network" => "google"}
+  end
+
+  @tag :capture_log
   test "no UTM or tracking params are persisted when booking analytics is disabled", %{
     conn: conn,
     profile: profile,
@@ -171,21 +204,27 @@ defmodule TymeslotWeb.Live.Scheduling.BookingUtmFlowTest do
   # page) — the public scheduling entry where a campaign link lives is
   # `/:username/:slug`, which lets us pin the URL the booker actually
   # arrives on.
-  defp navigate_to_booking_form_with_tracking(conn, profile, meeting_type) do
+  @campaign_query %{
+    "utm_source" => "linkedin",
+    "utm_medium" => "social",
+    "utm_campaign" => "spring",
+    "ref" => "newsletter"
+  }
+
+  defp navigate_to_booking_form_with_tracking(
+         conn,
+         profile,
+         meeting_type,
+         landing_query \\ @campaign_query
+       ) do
     timezone = profile.timezone
     slug = Slugs.to_slug(meeting_type)
 
-    # Drive the landing URL the way a campaign would: only UTM and a
-    # custom tracking param, no scheduling-internal query string. The
+    # Drive the landing URL the way a campaign would: only UTM and
+    # attribution params, no scheduling-internal query string. The
     # LiveView falls back to the profile timezone when no `?timezone=`
     # is provided.
-    query =
-      URI.encode_query(%{
-        "utm_source" => "linkedin",
-        "utm_medium" => "social",
-        "utm_campaign" => "spring",
-        "ref" => "newsletter"
-      })
+    query = URI.encode_query(landing_query)
 
     {:ok, view, _html} = live(conn, "/#{profile.username}/#{slug}?#{query}")
 
