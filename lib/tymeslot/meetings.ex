@@ -41,10 +41,12 @@ defmodule Tymeslot.Meetings do
   alias Tymeslot.Pagination.CursorPage
   alias Tymeslot.Security.EncryptedString
 
-  # The guests' RSVP tokens.
+  # The guests' RSVP tokens and the group participants' seat tokens.
   @impl Tymeslot.Security.EncryptedStorage
-  def encrypted_storage,
-    do: {GuestSchema.__schema__(:source), EncryptedString.columns(GuestSchema)}
+  def encrypted_storage do
+    for schema <- [GuestSchema, ParticipantSchema],
+        do: {schema.__schema__(:source), EncryptedString.columns(schema)}
+  end
 
   @doc """
   Looks up the open invitation behind a guest's RSVP token, with its meeting

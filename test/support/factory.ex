@@ -124,8 +124,8 @@ defmodule Tymeslot.Factory do
     build(:meeting, capacity: 2)
   end
 
-  @spec participant_factory() :: Tymeslot.Meetings.ParticipantSchema.t()
-  def participant_factory do
+  @spec participant_factory(map()) :: Tymeslot.Meetings.ParticipantSchema.t()
+  def participant_factory(attrs) do
     %ParticipantSchema{
       meeting: build(:meeting),
       name: sequence(:participant_name, &"Participant #{&1}"),
@@ -135,6 +135,9 @@ defmodule Tymeslot.Factory do
       custom_field_answers: %{},
       management_token: ParticipantSchema.generate_token()
     }
+    |> merge_attributes(attrs)
+    |> evaluate_lazy_attributes()
+    |> put_token_hash(:management_token, :management_token_hash)
   end
 
   @spec user_factory() :: Tymeslot.Auth.UserSchema.t()

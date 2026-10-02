@@ -14,6 +14,7 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
   alias Tymeslot.Repo
+  alias Tymeslot.Security.Token
 
   @doc "Inserts a participant for a meeting."
   @spec insert(map()) :: {:ok, Participant.t()} | {:error, Changeset.t()}
@@ -23,10 +24,10 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
     |> Repo.insert()
   end
 
-  @doc "Fetches a participant by their management token."
+  @doc "Fetches a participant by their management token, looked up by its hash."
   @spec get_by_token(String.t()) :: {:ok, Participant.t()} | {:error, :not_found}
   def get_by_token(token) when is_binary(token) do
-    case Repo.get_by(Participant, management_token: token) do
+    case Repo.get_by(Participant, management_token_hash: Token.hash_token(token)) do
       nil -> {:error, :not_found}
       participant -> {:ok, participant}
     end

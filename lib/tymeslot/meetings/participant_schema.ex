@@ -15,6 +15,8 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
   alias Tymeslot.ChangesetValidators.Email, as: EmailChangeset
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Security.EncryptedString
+  alias Tymeslot.Security.Token
 
   @type t :: %__MODULE__{
           id: binary() | nil,
@@ -28,6 +30,10 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
           locale: String.t(),
           custom_field_answers: map(),
           management_token: String.t() | nil,
+          management_token_hash: String.t() | nil,
+          ical_sequence: non_neg_integer(),
+          confirmation_sent_at: DateTime.t() | nil,
+          organizer_notified_at: DateTime.t() | nil,
           cancelled_at: DateTime.t() | nil,
           meeting: MeetingSchema.t() | Ecto.Association.NotLoaded.t() | nil,
           guests: [Tymeslot.Meetings.GuestSchema.t()] | Ecto.Association.NotLoaded.t(),
@@ -47,7 +53,16 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
     field(:timezone, :string)
     field(:locale, :string, default: "en")
     field(:custom_field_answers, :map, default: %{})
-    field(:management_token, :string)
+    # Every email to the participant rebuilds their seat links from this
+    # token, so it is encrypted rather than only hashed, and looked up by
+    # `management_token_hash`.
+    field(:management_token, EncryptedString, source: :management_token_encrypted, redact: true)
+    field(:management_token_hash, :string)
+    # The seat's own calendar-file revision: each seat is its own event in
+    # the participant's calendar.
+    field(:ical_sequence, :integer, default: 0)
+    field(:confirmation_sent_at, :utc_datetime)
+    field(:organizer_notified_at, :utc_datetime)
     field(:cancelled_at, :utc_datetime)
 
     belongs_to(:meeting, MeetingSchema, type: :binary_id)
@@ -89,7 +104,8 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
     |> EmailChangeset.validate_email(:email)
     |> validate_inclusion(:locale, supported_locale_codes(), message: "is not a supported locale")
     |> ensure_management_token()
-    |> unique_constraint(:management_token)
+    |> Token.put_hash(:management_token, :management_token_hash)
+    |> unique_constraint(:management_token_hash)
     # One live seat per address per slot. Without it, submitting the booking
     # form from two tabs quietly consumes two seats and issues two management
     # tokens, so cancelling "the" booking only frees half of it.

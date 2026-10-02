@@ -6,9 +6,12 @@ defmodule Tymeslot.Meetings.ParticipantQueriesTest do
 
   import Tymeslot.Factory
 
+  alias Ecto.UUID
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema
+  alias Tymeslot.Security.Encryption
+  alias Tymeslot.Security.Token
 
   describe "insert/1" do
     test "inserts a participant with a generated management token" do
@@ -24,6 +27,33 @@ defmodule Tymeslot.Meetings.ParticipantQueriesTest do
 
       assert participant.meeting_id == meeting.id
       assert byte_size(participant.management_token) > 0
+    end
+
+    test "stores the management token encrypted and looks it up by its hash" do
+      meeting = insert(:meeting)
+
+      {:ok, participant} =
+        ParticipantQueries.insert(%{
+          meeting_id: meeting.id,
+          name: "Ada Lovelace",
+          email: "ada@example.com",
+          timezone: "Europe/London"
+        })
+
+      %{rows: [[encrypted, hash]]} =
+        Repo.query!(
+          "SELECT management_token_encrypted, management_token_hash FROM meeting_participants WHERE id = $1",
+          [UUID.dump!(participant.id)]
+        )
+
+      assert hash == Token.hash_token(participant.management_token)
+      refute encrypted =~ participant.management_token
+      assert Encryption.decrypt(encrypted) == participant.management_token
+
+      participant_id = participant.id
+
+      assert {:ok, %ParticipantSchema{id: ^participant_id}} =
+               ParticipantQueries.get_by_token(participant.management_token)
     end
 
     test "returns a changeset error for missing required fields" do
