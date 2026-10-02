@@ -290,8 +290,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       # autosaving over a good previously saved window.
       {:error, :invalid_approval_window} ->
         {:noreply,
-         assign(
-           socket,
+         socket
+         |> assign(:save_status, :unsaved)
+         |> assign(
            :form_errors,
            Map.put(
              socket.assigns.form_errors,
@@ -401,10 +402,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
       {:error, %{max_participants: message}} ->
         # Keep the raw value so the input shows what was typed; skip the
-        # autosave — persisting a known-invalid limit is pointless.
+        # autosave — persisting a known-invalid limit is pointless. The
+        # indicator must not keep claiming the form is saved meanwhile.
         {:noreply,
          socket
          |> assign(:max_participants, value)
+         |> assign(:save_status, :unsaved)
          |> assign(
            :form_errors,
            Map.put(socket.assigns.form_errors, :max_participants, message)

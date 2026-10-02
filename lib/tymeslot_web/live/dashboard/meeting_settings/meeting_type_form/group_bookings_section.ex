@@ -85,50 +85,63 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
       )
 
     ~H"""
-    <div class="space-y-3">
+    <section class="space-y-4">
       <div class="flex items-center gap-2">
         <.icon name="hero-users" class="w-5 h-5 text-turquoise-500" />
-        <h3 class="text-token-base font-semibold text-tymeslot-700">
+        <h3 class="text-token-base font-semibold text-tymeslot-800">
           {dgettext("dashboard_meeting_form", "Group bookings")}
         </h3>
       </div>
 
-      <.info_box :if={!@group_bookings_enabled and @blocker != nil} variant={:info}>
+      <.info_box :if={!@group_bookings_enabled and @blocker != nil} variant={:info} class="mb-0!">
         {blocker_message(@blocker)}
       </.info_box>
 
-      <label class={["flex items-center gap-3", @toggle_disabled && "opacity-60 cursor-not-allowed"]}>
+      <label class={[
+        "card-glass flex items-start gap-3 p-4",
+        if(@toggle_disabled, do: "opacity-60 cursor-not-allowed", else: "cursor-pointer")
+      ]}>
         <input
           type="checkbox"
-          class="checkbox"
+          class="checkbox mt-0.5"
           checked={@group_bookings_enabled}
           disabled={@toggle_disabled}
           phx-click="toggle_group_bookings"
           phx-target={@myself}
         />
-        <span class="text-token-sm text-tymeslot-700">
-          {dgettext("dashboard_meeting_form", "Let multiple people book the same time slot")}
-        </span>
+        <div class="space-y-1">
+          <p class="text-token-sm font-medium text-tymeslot-700">
+            {dgettext("dashboard_meeting_form", "Let multiple people book the same time slot")}
+          </p>
+          <p class="text-token-sm text-tymeslot-500">
+            {dgettext(
+              "dashboard_meeting_form",
+              "Each slot stays open until the participant limit is reached, and everyone booked into it meets together."
+            )}
+          </p>
+        </div>
       </label>
 
-      <div :if={@group_bookings_enabled and not @payment_required} class="max-w-xs">
-        <.input
-          type="number"
-          name="meeting_type[max_participants_input]"
-          label={dgettext("dashboard_meeting_form", "Participant limit")}
-          value={@max_participants}
-          min={Constraints.group_participants_range().first}
-          max={Constraints.group_participants_range().last}
-          step="1"
-          phx-change="change_max_participants"
-          phx-debounce="500"
-          phx-target={@myself}
-          errors={
-            FormValidationHelpers.field_errors(@form_errors, :max_participants)
-            |> Enum.map(&Helpers.format_errors/1)
-          }
-        />
-        <p class="mt-1 text-token-sm text-tymeslot-600">
+      <div :if={@group_bookings_enabled and not @payment_required} class="card-glass p-4">
+        <div class="max-w-xs">
+          <.input
+            type="number"
+            name="meeting_type[max_participants_input]"
+            label={dgettext("dashboard_meeting_form", "Participant limit")}
+            value={@max_participants}
+            min={Constraints.group_participants_range().first}
+            max={Constraints.group_participants_range().last}
+            step="1"
+            phx-change="change_max_participants"
+            phx-debounce="500"
+            phx-target={@myself}
+            errors={
+              FormValidationHelpers.field_errors(@form_errors, :max_participants)
+              |> Enum.map(&Helpers.format_errors/1)
+            }
+          />
+        </div>
+        <p class="mt-1 text-token-sm text-tymeslot-500">
           {dgettext("dashboard_meeting_form", "Between %{min} and %{max} participants per slot.",
             min: Constraints.group_participants_range().first,
             max: Constraints.group_participants_range().last
@@ -147,7 +160,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
           <p class="form-error">{Helpers.format_errors(error)}</p>
         <% end %>
       <% end %>
-    </div>
+    </section>
     """
   end
 

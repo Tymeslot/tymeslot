@@ -36,7 +36,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
   @spec payments_section(map()) :: Phoenix.LiveView.Rendered.t()
   def payments_section(assigns) do
     ~H"""
-    <div class="space-y-3">
+    <section class="space-y-4">
       <div class="flex items-center gap-2">
         <.icon name="hero-banknotes" class="w-5 h-5 text-turquoise-500" />
         <h3 class="text-token-base font-semibold text-tymeslot-800">
@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
         </h3>
       </div>
 
-      <.info_box :if={not @charges_enabled} variant={:info}>
+      <.info_box :if={not @charges_enabled} variant={:info} class="mb-0!">
         {raw(
           dgettext(
             "dashboard_meeting_form",
@@ -58,23 +58,26 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
         )}
       </.info_box>
 
-      <.info_box :if={@charges_enabled and @group_bookings_enabled} variant={:info}>
+      <.info_box :if={@charges_enabled and @group_bookings_enabled} variant={:info} class="mb-0!">
         {dgettext("dashboard_meeting_form", "Turn off group bookings to require payment.")}
       </.info_box>
 
       <label class={[
-        "flex items-center gap-3",
-        (not @charges_enabled or @group_bookings_enabled) && "opacity-60 cursor-not-allowed"
+        "card-glass flex items-start gap-3 p-4",
+        if(not @charges_enabled or @group_bookings_enabled,
+          do: "opacity-60 cursor-not-allowed",
+          else: "cursor-pointer"
+        )
       ]}>
         <input
           type="checkbox"
-          class="checkbox"
+          class="checkbox mt-0.5"
           checked={@payment_required}
           disabled={not @charges_enabled or @group_bookings_enabled}
           phx-click="toggle_payment_required"
           phx-target={@myself}
         />
-        <span class="text-token-sm text-tymeslot-700">
+        <span class="text-token-sm font-medium text-tymeslot-700">
           {dgettext("dashboard_meeting_form", "Require payment for this meeting type")}
         </span>
       </label>
@@ -94,34 +97,36 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
         )}
       </p>
 
-      <div :if={@charges_enabled and @payment_required} class="max-w-xs">
-        <.input
-          type="number"
-          name="meeting_type[price_input]"
-          label={
-            dgettext("dashboard_meeting_form", "Price (%{currency})",
-              currency: String.upcase(@currency)
-            )
-          }
-          value={@payment_price}
-          min="0"
-          step="0.01"
-          placeholder="0.00"
-          phx-change="change_payment_price"
-          phx-debounce="500"
-          phx-target={@myself}
-          errors={
-            FormValidationHelpers.field_errors(@form_errors, :price_cents)
-            |> Enum.map(&Helpers.format_errors/1)
-          }
-        >
-          <:leading_icon>
-            <span class="text-tymeslot-400 font-bold text-token-sm tracking-tight whitespace-nowrap">
-              {currency_symbol(@currency)}
-            </span>
-          </:leading_icon>
-        </.input>
-        <p class="mt-1 text-token-sm text-tymeslot-600">
+      <div :if={@charges_enabled and @payment_required} class="card-glass p-4">
+        <div class="max-w-xs">
+          <.input
+            type="number"
+            name="meeting_type[price_input]"
+            label={
+              dgettext("dashboard_meeting_form", "Price (%{currency})",
+                currency: String.upcase(@currency)
+              )
+            }
+            value={@payment_price}
+            min="0"
+            step="0.01"
+            placeholder="0.00"
+            phx-change="change_payment_price"
+            phx-debounce="500"
+            phx-target={@myself}
+            errors={
+              FormValidationHelpers.field_errors(@form_errors, :price_cents)
+              |> Enum.map(&Helpers.format_errors/1)
+            }
+          >
+            <:leading_icon>
+              <span class="text-tymeslot-400 font-bold text-token-sm tracking-tight whitespace-nowrap">
+                {currency_symbol(@currency)}
+              </span>
+            </:leading_icon>
+          </.input>
+        </div>
+        <p class="mt-1 text-token-sm text-tymeslot-500">
           {dgettext("dashboard_meeting_form", "Minimum %{amount}.",
             amount: format_minimum(@currency_minimum_cents, @currency)
           )}
@@ -131,7 +136,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
       <%= for error <- FormValidationHelpers.field_errors(@form_errors, :payment_required) do %>
         <p class="form-error">{Helpers.format_errors(error)}</p>
       <% end %>
-    </div>
+    </section>
     """
   end
 

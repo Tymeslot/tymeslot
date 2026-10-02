@@ -69,6 +69,60 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
       assert reload_type(user, meeting_type.id).max_participants == 1
     end
 
+    test "turning group bookings off and on again keeps the limit", %{conn: conn, user: user} do
+      meeting_type = insert_type(user)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      view
+      |> element("button[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
+      |> render_click()
+
+      toggle = element(view, "input[phx-click='toggle_group_bookings']")
+      render_click(toggle)
+
+      view
+      |> element("input[phx-change='change_max_participants']")
+      |> render_change(%{"meeting_type" => %{"max_participants_input" => "3"}})
+
+      assert reload_type(user, meeting_type.id).max_participants == 3
+
+      render_click(toggle)
+      assert reload_type(user, meeting_type.id).max_participants == 1
+
+      render_click(toggle)
+
+      assert has_element?(view, "input[name='meeting_type[max_participants_input]'][value='3']")
+      assert reload_type(user, meeting_type.id).max_participants == 3
+    end
+
+    test "an invalid limit is not reported as saved, even after another field saves",
+         %{conn: conn, user: user} do
+      meeting_type = insert_type(user, max_participants: 4)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      view
+      |> element("button[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
+      |> render_click()
+
+      view
+      |> element("input[phx-change='change_max_participants']")
+      |> render_change(%{"meeting_type" => %{"max_participants_input" => "1500"}})
+
+      refute render(view) =~ "All changes saved"
+      assert render(view) =~ "Unsaved changes"
+
+      view
+      |> element("input[name='meeting_type[name]']")
+      |> render_change(%{"meeting_type" => %{"name" => "Renamed Workshop"}})
+
+      assert reload_type(user, meeting_type.id).name == "Renamed Workshop"
+      html = render(view)
+      refute html =~ "All changes saved"
+      assert html =~ "Participant limit cannot exceed 999"
+    end
+
     test "a limit above 999 shows an inline error and does not persist",
          %{conn: conn, user: user} do
       meeting_type = insert_type(user)

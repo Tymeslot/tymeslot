@@ -51,7 +51,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ApprovalSection 
         </h3>
       </div>
 
-      <.info_box :if={@toggle_disabled} variant={:info}>
+      <.info_box :if={@toggle_disabled} variant={:info} class="mb-0!">
         {dgettext("dashboard_meeting_form", "Turn off group bookings to require approval.")}
       </.info_box>
 
