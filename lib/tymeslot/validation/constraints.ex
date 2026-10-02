@@ -63,14 +63,13 @@ defmodule Tymeslot.Validation.Constraints do
   always shown five as its minimum; this is the rule behind it.
   """
   @spec duration_minutes_range() :: Range.t()
-  def duration_minutes_range, do: 5..480
+  def duration_minutes_range, do: 5..1440
 
   @doc """
   How long a poll's proposed meeting may be, in minutes.
 
-  Same floor as `duration_minutes_range/0`, and for the same reason. The
-  ceiling is higher: a poll is how a whole-day workshop gets scheduled, which
-  is not something a meeting type is asked to express.
+  Same floor and ceiling as `duration_minutes_range/0`, and for the same
+  reasons: a whole-day workshop is a legitimate thing to schedule either way.
   """
   @spec poll_duration_minutes_range() :: Range.t()
   def poll_duration_minutes_range, do: 5..1440
