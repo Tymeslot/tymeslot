@@ -11,7 +11,7 @@ msgstr ""
 "Language: cs\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delivery_components.ex
 #, elixir-autogen, elixir-format
 msgid "%{rate}% success rate"
 msgstr "úspěšnost %{rate} %"
@@ -36,7 +36,7 @@ msgstr "Přidejte spouštěč webhooku"
 msgid "All webhook requests include a unique security token in the HTTP headers for verification:"
 msgstr "Všechny požadavky webhooku obsahují v hlavičkách HTTP jedinečný bezpečnostní token pro ověření:"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/regenerate_token_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Are you sure? The current security token will be immediately invalidated and any existing integrations using it will stop working."
 msgstr "Opravdu chcete pokračovat? Stávající bezpečnostní token okamžitě přestane platit a všechny integrace, které jej používají, přestanou fungovat."
@@ -46,7 +46,7 @@ msgstr "Opravdu chcete pokračovat? Stávající bezpečnostní token okamžitě
 msgid "At least one event subscription is required."
 msgstr "Je nutné vybrat alespoň jednu událost."
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delivery_components.ex
 #, elixir-autogen, elixir-format
 msgid "Attempt %{count}"
 msgstr "Pokus %{count}"
@@ -71,7 +71,6 @@ msgstr "Dostupné události"
 msgid "Build automation"
 msgstr "Sestavte automatizaci"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
@@ -82,7 +81,9 @@ msgstr "Zrušit"
 msgid "Choose which booking events to monitor"
 msgstr "Vyberte, které události rezervací chcete sledovat"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/deliveries_modal.ex
+#: lib/tymeslot_web/live/dashboard/automation/slack_deliveries_modal.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_deliveries_modal.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Close"
@@ -134,28 +135,29 @@ msgstr "Vytvořte výše webhook a vložte do něj zkopírovanou adresu URL"
 msgid "Create a workflow"
 msgstr "Vytvořte pracovní postup"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delete_slack_modal.ex
+#: lib/tymeslot_web/live/dashboard/automation/delete_telegram_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Delete Integration"
 msgstr "Smazat integraci"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delete_slack_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Delete Slack Integration?"
 msgstr "Smazat integraci Slack?"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delete_telegram_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Delete Telegram Integration?"
 msgstr "Smazat integraci Telegram?"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delete_webhook_modal.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
 msgid "Delete Webhook"
 msgstr "Smazat webhook"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delete_webhook_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Delete Webhook?"
 msgstr "Smazat webhook?"
@@ -176,7 +178,7 @@ msgstr "Upravit webhook"
 msgid "Enable webhook to test"
 msgstr "Pro otestování nejprve zapněte webhook"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delivery_components.ex
 #, elixir-autogen, elixir-format
 msgid "Error: %{message}"
 msgstr "Chyba: %{message}"
@@ -186,7 +188,7 @@ msgstr "Chyba: %{message}"
 msgid "Event Subscriptions"
 msgstr "Odběry událostí"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delivery_components.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
 msgid "Failed"
@@ -247,7 +249,7 @@ msgstr "Nikdy nespuštěno"
 msgid "No Webhooks Yet"
 msgstr "Zatím žádné webhooky"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delivery_components.ex
 #, elixir-autogen, elixir-format
 msgid "No deliveries yet"
 msgstr "Zatím žádná doručení"
@@ -262,18 +264,18 @@ msgstr "Opravte prosím chyby uvedené výše."
 msgid "Quick Setup with n8n"
 msgstr "Rychlé nastavení s n8n"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/deliveries_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Recent Deliveries"
 msgstr "Poslední doručení"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/regenerate_token_modal.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Regenerate"
 msgstr "Vygenerovat znovu"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/regenerate_token_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Regenerate Token?"
 msgstr "Vygenerovat token znovu?"
@@ -333,7 +335,7 @@ msgstr "Slack"
 msgid "Start a new workflow in your n8n instance"
 msgstr "Založte nový pracovní postup ve své instanci n8n"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delivery_components.ex
 #, elixir-autogen, elixir-format
 msgid "Success"
 msgstr "Úspěšné"
@@ -353,7 +355,7 @@ msgstr "Otestovat"
 msgid "Test Connection"
 msgstr "Otestovat připojení"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/deliveries_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Test calls are not logged"
 msgstr "Testovací volání se nezaznamenávají"
@@ -378,12 +380,13 @@ msgstr "Testování"
 msgid "Testing..."
 msgstr "Testování…"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delete_slack_modal.ex
+#: lib/tymeslot_web/live/dashboard/automation/delete_telegram_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This action cannot be undone. All delivery logs for this integration will also be deleted."
 msgstr "Tuto akci nelze vzít zpět. Smažou se také všechny protokoly doručení této integrace."
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delete_webhook_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This action cannot be undone. All delivery logs for this webhook will also be deleted."
 msgstr "Tuto akci nelze vzít zpět. Smažou se také všechny protokoly doručení tohoto webhooku."
@@ -393,7 +396,7 @@ msgstr "Tuto akci nelze vzít zpět. Smažou se také všechny protokoly doruče
 msgid "This automation feature is available on the Pro plan."
 msgstr "Tato funkce automatizace je k dispozici v tarifu Pro."
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delivery_components.ex
 #, elixir-autogen, elixir-format
 msgid "Total"
 msgstr "Celkem"
@@ -546,7 +549,7 @@ msgstr "Tento token se automaticky odesílá v hlavičce %{header}."
 msgid "%{date} at %{time}"
 msgstr "%{date} v %{time}"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delivery_components.ex
 #, elixir-autogen, elixir-format
 msgid "Last %{days} day"
 msgid_plural "Last %{days} days"
@@ -554,7 +557,8 @@ msgstr[0] "Za poslední %{days} den"
 msgstr[1] "Za poslední %{days} dny"
 msgstr[2] "Za posledních %{days} dní"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/slack_deliveries_modal.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_deliveries_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Delivery History - %{name}"
 msgstr "Historie doručení – %{name}"

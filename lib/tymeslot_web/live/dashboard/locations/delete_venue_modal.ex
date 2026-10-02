@@ -26,79 +26,57 @@ defmodule TymeslotWeb.Dashboard.Locations.DeleteVenueModal do
   @spec delete_venue_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def delete_venue_modal(assigns) do
     ~H"""
-    <.modal
+    <.confirm_modal
       id="delete-venue-modal"
       show
+      title={dgettext("dashboard_meeting_types", "Delete location")}
+      confirm_label={dgettext("dashboard_meeting_types", "Delete location")}
       on_cancel={JS.push("close_delete_venue", target: @myself)}
-      size={:medium}
+      on_confirm="confirm_delete_venue"
+      phx-target={@myself}
+      data-testid="confirm-delete-venue"
     >
-      <:header>
-        <div class="flex items-center gap-2">
-          <.icon name="hero-exclamation-triangle" class="w-5 h-5 text-red-500" />
-          <span>{dgettext("dashboard_meeting_types", "Delete location")}</span>
-        </div>
-      </:header>
-
       <%= if @in_use == [] do %>
-        <p class="text-tymeslot-700">
+        <p>
           {dgettext("dashboard_meeting_types", "Delete %{name}? This cannot be undone.",
             name: @venue.name
           )}
         </p>
       <% else %>
-        <div class="space-y-4 text-tymeslot-700">
+        <div class="space-y-2">
+          <p>
+            {dgettext(
+              "dashboard_meeting_types",
+              "%{name} is offered by these meeting types. Deleting it removes it from them:",
+              name: @venue.name
+            )}
+          </p>
+          <ul class="list-disc pl-5" data-testid="venue-in-use">
+            <li :for={meeting_type <- @in_use}>{meeting_type.name}</li>
+          </ul>
+        </div>
+        <.info_box :if={@left_without != []} variant={:warning}>
           <div class="space-y-2">
             <p>
               {dgettext(
                 "dashboard_meeting_types",
-                "%{name} is offered by these meeting types. Deleting it removes it from them:",
-                name: @venue.name
+                "These are then left with an in-person option that has no address, so their bookers will be told the address is arranged after booking:"
               )}
             </p>
-            <ul class="list-disc pl-5" data-testid="venue-in-use">
-              <li :for={meeting_type <- @in_use}>{meeting_type.name}</li>
+            <ul class="list-disc pl-5" data-testid="venue-left-without">
+              <li :for={meeting_type <- @left_without}>{meeting_type.name}</li>
             </ul>
           </div>
+        </.info_box>
 
-          <.info_box :if={@left_without != []} variant={:warning}>
-            <div class="space-y-2">
-              <p>
-                {dgettext(
-                  "dashboard_meeting_types",
-                  "These are then left with an in-person option that has no address, so their bookers will be told the address is arranged after booking:"
-                )}
-              </p>
-              <ul class="list-disc pl-5" data-testid="venue-left-without">
-                <li :for={meeting_type <- @left_without}>{meeting_type.name}</li>
-              </ul>
-            </div>
-          </.info_box>
-
-          <p class="text-token-sm">
-            {dgettext(
-              "dashboard_meeting_types",
-              "Meetings already booked there keep their address. This cannot be undone."
-            )}
-          </p>
-        </div>
+        <p class="text-token-sm text-tymeslot-500">
+          {dgettext(
+            "dashboard_meeting_types",
+            "Meetings already booked there keep their address. This cannot be undone."
+          )}
+        </p>
       <% end %>
-
-      <:footer>
-        <div class="flex justify-end gap-3">
-          <.action_button variant={:secondary} phx-click="close_delete_venue" phx-target={@myself}>
-            {dgettext("dashboard_meeting_types", "Cancel")}
-          </.action_button>
-          <.action_button
-            variant={:danger}
-            phx-click="confirm_delete_venue"
-            phx-target={@myself}
-            data-testid="confirm-delete-venue"
-          >
-            {dgettext("dashboard_meeting_types", "Delete location")}
-          </.action_button>
-        </div>
-      </:footer>
-    </.modal>
+    </.confirm_modal>
     """
   end
 end

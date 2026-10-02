@@ -19,13 +19,19 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   alias Tymeslot.Slack
   alias Tymeslot.Telegram
   alias TymeslotWeb.Dashboard.Automation.Defaults
+  alias TymeslotWeb.Dashboard.Automation.DeleteSlackModal
+  alias TymeslotWeb.Dashboard.Automation.DeleteTelegramModal
+  alias TymeslotWeb.Dashboard.Automation.DeleteWebhookModal
+  alias TymeslotWeb.Dashboard.Automation.DeliveriesModal
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
-  alias TymeslotWeb.Dashboard.Automation.Modals
+  alias TymeslotWeb.Dashboard.Automation.RegenerateTokenModal
   alias TymeslotWeb.Dashboard.Automation.Slack.FormHandlers, as: SlackFormHandlers
+  alias TymeslotWeb.Dashboard.Automation.SlackDeliveriesModal
   alias TymeslotWeb.Dashboard.Automation.SlackEventHandlers
   alias TymeslotWeb.Dashboard.Automation.SlackFormComponent
   alias TymeslotWeb.Dashboard.Automation.SlackTab
   alias TymeslotWeb.Dashboard.Automation.TabNav
+  alias TymeslotWeb.Dashboard.Automation.TelegramDeliveriesModal
   alias TymeslotWeb.Dashboard.Automation.TelegramEventHandlers
   alias TymeslotWeb.Dashboard.Automation.TelegramFormComponent
   alias TymeslotWeb.Dashboard.Automation.TelegramTab
@@ -225,14 +231,14 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
     ~H"""
     <div>
       <%!-- Modals (outside space-y layout to avoid affecting headline position) --%>
-      <Modals.delete_webhook_modal
+      <DeleteWebhookModal.delete_webhook_modal
         show={@show_delete_modal}
         on_cancel={JS.push("hide_delete_modal", target: @myself)}
         on_confirm={JS.push("delete_webhook", target: @myself)}
       />
 
       <%= if @show_deliveries_modal do %>
-        <Modals.deliveries_modal
+        <DeliveriesModal.deliveries_modal
           show={@show_deliveries_modal}
           webhook={@selected_webhook}
           deliveries={@deliveries}
@@ -242,14 +248,14 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
         />
       <% end %>
 
-      <Modals.regenerate_token_modal
+      <RegenerateTokenModal.regenerate_token_modal
         show={@show_regenerate_token_modal}
         on_cancel={JS.push("hide_regenerate_token_modal", target: @myself)}
         on_confirm={JS.push("regenerate_token", target: @myself)}
       />
 
       <%!-- Telegram Delete Modal --%>
-      <Modals.delete_telegram_modal
+      <DeleteTelegramModal.delete_telegram_modal
         show={@show_telegram_delete_modal}
         on_cancel={JS.push("hide_telegram_delete_modal", target: @myself)}
         on_confirm={JS.push("delete_telegram", target: @myself)}
@@ -257,7 +263,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
 
       <%!-- Telegram Deliveries Modal --%>
       <%= if @show_telegram_deliveries_modal && @selected_telegram do %>
-        <Modals.telegram_deliveries_modal
+        <TelegramDeliveriesModal.telegram_deliveries_modal
           id="telegram-deliveries-modal"
           show={@show_telegram_deliveries_modal}
           integration={@selected_telegram}
@@ -269,7 +275,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
       <% end %>
 
       <%!-- Slack Delete Modal --%>
-      <Modals.delete_slack_modal
+      <DeleteSlackModal.delete_slack_modal
         show={@show_slack_delete_modal}
         on_cancel={JS.push("slack_hide_delete", target: @myself)}
         on_confirm={JS.push("slack_delete", target: @myself)}
@@ -277,7 +283,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
 
       <%!-- Slack Deliveries Modal --%>
       <%= if @show_slack_deliveries_modal && @selected_slack do %>
-        <Modals.slack_deliveries_modal
+        <SlackDeliveriesModal.slack_deliveries_modal
           id="slack-deliveries-modal"
           show={@show_slack_deliveries_modal}
           integration={@selected_slack}

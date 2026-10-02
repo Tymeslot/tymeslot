@@ -32,7 +32,7 @@ msgstr "Próba ponownego połączenia"
 msgid "Browser Not Supported"
 msgstr "Nieobsługiwana przeglądarka"
 
-#: lib/tymeslot_web/components/confirmation_modal.ex
+#: lib/tymeslot_web/components/core_components/modal.ex
 #: lib/tymeslot_web/components/dashboard/meetings/add_guests_modal.ex
 #: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
@@ -55,7 +55,7 @@ msgstr "Zamknij"
 msgid "Close modal"
 msgstr "Zamknij okno"
 
-#: lib/tymeslot_web/components/confirmation_modal.ex
+#: lib/tymeslot_web/components/core_components/modal.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm"
 msgstr "Potwierdź"
@@ -95,7 +95,6 @@ msgstr "Jedna wielka litera"
 msgid "Password must contain:"
 msgstr "Hasło musi zawierać:"
 
-#: lib/tymeslot_web/components/confirmation_modal.ex
 #: lib/tymeslot_web/components/core_components/buttons.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format

@@ -25,29 +25,27 @@ defmodule TymeslotWeb.Dashboard.Polls.CancelPollModal do
   @spec cancel_poll_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def cancel_poll_modal(assigns) do
     ~H"""
-    <.modal
+    <.confirm_modal
       :if={@open && @poll}
       id="cancel-poll-modal"
-      show={true}
+      show
+      title={dgettext("dashboard_common", "Cancel this poll?")}
+      confirm_label={dgettext("dashboard_common", "Cancel poll")}
+      cancel_label={dgettext("dashboard_common", "Keep poll")}
       on_cancel={JS.push("close_cancel_poll_modal", target: @myself)}
-      size={:medium}
+      on_confirm="cancel_poll"
+      phx-target={@myself}
     >
-      <:header>
-        <span class="text-token-xl font-black tracking-tight">
-          {dgettext("dashboard_common", "Cancel this poll?")}
-        </span>
-      </:header>
+      <p>
+        {dgettext(
+          "dashboard_common",
+          "“%{title}” will stop accepting responses and everyone holding the voting link will see it as cancelled. This cannot be undone.",
+          title: @poll.title
+        )}
+      </p>
 
-      <div class="space-y-4">
-        <p class="text-tymeslot-700">
-          {dgettext(
-            "dashboard_common",
-            "“%{title}” will stop accepting responses and everyone holding the voting link will see it as cancelled. This cannot be undone.",
-            title: @poll.title
-          )}
-        </p>
-
-        <.info_box :if={@participant_count > 0} variant={:warning}>
+      <:extra :if={@participant_count > 0}>
+        <.info_box variant={:warning}>
           {dngettext(
             "dashboard_common",
             "%{count} guest has already voted. Their responses will be discarded.",
@@ -55,23 +53,8 @@ defmodule TymeslotWeb.Dashboard.Polls.CancelPollModal do
             @participant_count
           )}
         </.info_box>
-      </div>
-
-      <:footer>
-        <div class="flex justify-end gap-3">
-          <.action_button
-            variant={:secondary}
-            phx-click="close_cancel_poll_modal"
-            phx-target={@myself}
-          >
-            {dgettext("dashboard_common", "Keep poll")}
-          </.action_button>
-          <.action_button variant={:danger} phx-click="cancel_poll" phx-target={@myself}>
-            {dgettext("dashboard_common", "Cancel poll")}
-          </.action_button>
-        </div>
-      </:footer>
-    </.modal>
+      </:extra>
+    </.confirm_modal>
     """
   end
 end

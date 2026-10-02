@@ -252,7 +252,7 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponentTest do
       view = open(conn)
 
       view |> element("[phx-click='delete_venue'][phx-value-id='#{venue.id}']") |> render_click()
-      view |> element("#delete-venue-modal [phx-click='close_delete_venue']") |> render_click()
+      view |> element("#delete-venue-modal .modal-footer button", "Cancel") |> render_click()
 
       refute has_element?(view, "#delete-venue-modal")
       assert {:ok, _still_there} = Venues.get_venue(user.id, venue.id)

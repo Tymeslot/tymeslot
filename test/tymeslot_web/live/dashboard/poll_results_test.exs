@@ -460,7 +460,8 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
       assert html =~ "Cancel this poll?"
       assert {:ok, %{status: :open}} = Polls.get_poll_for_host(poll.id, user.id)
 
-      html = view |> element("button[phx-click='close_cancel_poll_modal']") |> render_click()
+      html =
+        view |> element("#cancel-poll-modal .modal-footer button", "Keep poll") |> render_click()
 
       refute html =~ "Cancel this poll?"
       assert {:ok, %{status: :open}} = Polls.get_poll_for_host(poll.id, user.id)

@@ -32,7 +32,6 @@ msgstr "Částka překračuje zbývající zůstatek k vrácení."
 msgid "Attendee"
 msgstr "Účastník"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"

@@ -32,7 +32,6 @@ msgstr "Сума перевищує залишок, доступний для п
 msgid "Attendee"
 msgstr "Учасник"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"

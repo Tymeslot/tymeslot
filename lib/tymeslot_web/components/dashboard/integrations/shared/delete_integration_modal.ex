@@ -150,82 +150,56 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
   def render(assigns) do
     ~H"""
     <div id={@id}>
-      <TymeslotWeb.Components.CoreComponents.modal
+      <.confirm_modal
         id={"#{@id}-modal"}
         show={@show}
-        on_cancel={JS.push("hide", target: @myself)}
         size={:small}
+        title={
+          dgettext("dashboard_integrations", "Delete %{type} Integration",
+            type: format_integration_type(@integration_type)
+          )
+        }
+        confirm_label={dgettext("dashboard_integrations", "Delete Integration")}
+        on_cancel={JS.push("hide", target: @myself)}
+        on_confirm={JS.push("confirm", target: @myself)}
       >
-        <:header>
-          <div class="flex items-center gap-2">
-            <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-              />
-            </svg>
-            {dgettext("dashboard_integrations", "Delete %{type} Integration",
-              type: format_integration_type(@integration_type)
-            )}
-          </div>
-        </:header>
-        <div class="space-y-4">
-          <p class="text-tymeslot-600 font-medium text-lg leading-relaxed">
-            {dgettext(
-              "dashboard_integrations",
-              "Are you sure you want to delete this %{type} integration?",
-              type: format_integration_type(@integration_type) |> String.downcase()
-            )}
+        <p>
+          {dgettext(
+            "dashboard_integrations",
+            "Are you sure you want to delete this %{type} integration?",
+            type: format_integration_type(@integration_type) |> String.downcase()
+          )}
+        </p>
+        <p class="text-tymeslot-500">
+          {dgettext(
+            "dashboard_integrations",
+            "This action cannot be undone and will remove all associated %{data}.",
+            data: format_integration_data(@integration_type)
+          )}
+        </p>
+        <%!-- Only video integrations own provider-side rooms, and only the
+              rooms the disconnect would actually delete are worth asking about. --%>
+        <:extra :if={@integration_type == :video and @rooms_to_delete.count > 0}>
+          <p class="text-tymeslot-500">
+            {rooms_summary(@rooms_to_delete)}
           </p>
-          <p class="text-tymeslot-500 font-medium">
-            {dgettext(
-              "dashboard_integrations",
-              "This action cannot be undone and will remove all associated %{data}.",
-              data: format_integration_data(@integration_type)
-            )}
-          </p>
-          <%!-- Only video integrations own provider-side rooms, and only the
-                rooms the disconnect would actually delete are worth asking about. --%>
-          <div :if={@integration_type == :video and @rooms_to_delete.count > 0} class="space-y-3">
-            <p class="text-tymeslot-500 font-medium">
-              {rooms_summary(@rooms_to_delete)}
-            </p>
-            <label class="flex items-start gap-3 p-4 rounded-token-xl border-2 border-tymeslot-100 hover:border-turquoise-200 cursor-pointer transition-colors">
-              <%!-- For a non-array name the input component derives its checked
-                    state by comparing value against checked_value ("true"), so
-                    the state has to be passed as value; a `checked` attribute is
-                    ignored and the box would never appear ticked. --%>
-              <.input
-                type="checkbox"
-                name="delete_rooms"
-                value={to_string(@delete_rooms)}
-                phx-click={JS.push("toggle_delete_rooms", target: @myself)}
-              />
-              <span class="flex-1 text-token-sm text-tymeslot-600 font-medium">
-                {delete_rooms_label(@rooms_to_delete.scope)}
-              </span>
-            </label>
-          </div>
-        </div>
-        <:footer>
-          <div class="flex justify-end gap-3">
-            <TymeslotWeb.Components.CoreComponents.action_button
-              variant={:secondary}
-              phx-click={JS.push("hide", target: @myself)}
-            >
-              {dgettext("dashboard_integrations", "Cancel")}
-            </TymeslotWeb.Components.CoreComponents.action_button>
-            <TymeslotWeb.Components.CoreComponents.action_button
-              variant={:danger}
-              phx-click={JS.push("confirm", target: @myself)}
-            >
-              {dgettext("dashboard_integrations", "Delete Integration")}
-            </TymeslotWeb.Components.CoreComponents.action_button>
-          </div>
-        </:footer>
-      </TymeslotWeb.Components.CoreComponents.modal>
+          <label class="flex items-start gap-3 p-4 rounded-token-xl border-2 border-tymeslot-100 hover:border-turquoise-200 cursor-pointer transition-colors">
+            <%!-- For a non-array name the input component derives its checked
+                  state by comparing value against checked_value ("true"), so
+                  the state has to be passed as value; a `checked` attribute is
+                  ignored and the box would never appear ticked. --%>
+            <.input
+              type="checkbox"
+              name="delete_rooms"
+              value={to_string(@delete_rooms)}
+              phx-click={JS.push("toggle_delete_rooms", target: @myself)}
+            />
+            <span class="flex-1 text-token-sm">
+              {delete_rooms_label(@rooms_to_delete.scope)}
+            </span>
+          </label>
+        </:extra>
+      </.confirm_modal>
     </div>
     """
   end

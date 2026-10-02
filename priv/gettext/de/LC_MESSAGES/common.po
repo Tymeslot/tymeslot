@@ -36,7 +36,7 @@ msgstr "Verbindung wird wiederhergestellt"
 msgid "Browser Not Supported"
 msgstr "Browser nicht unterstützt"
 
-#: lib/tymeslot_web/components/confirmation_modal.ex
+#: lib/tymeslot_web/components/core_components/modal.ex
 #: lib/tymeslot_web/components/dashboard/meetings/add_guests_modal.ex
 #: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
@@ -59,7 +59,7 @@ msgstr "Schließen"
 msgid "Close modal"
 msgstr "Dialog schließen"
 
-#: lib/tymeslot_web/components/confirmation_modal.ex
+#: lib/tymeslot_web/components/core_components/modal.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm"
 msgstr "Bestätigen"
@@ -99,7 +99,6 @@ msgstr "Einen Großbuchstaben"
 msgid "Password must contain:"
 msgstr "Das Passwort muss enthalten:"
 
-#: lib/tymeslot_web/components/confirmation_modal.ex
 #: lib/tymeslot_web/components/core_components/buttons.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format

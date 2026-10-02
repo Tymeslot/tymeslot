@@ -50,21 +50,21 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
     assigns = assign(assigns, :paid?, MeetingPayments.refundable?(assigns[:booking_payment]))
 
     ~H"""
-    <CoreComponents.modal id={@id} show={@show} on_cancel={@on_cancel} size={:medium}>
-      <:header>
-        <div class="flex items-center gap-2">
-          <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-            />
-          </svg>
-          {dgettext("dashboard_bookings", "Cancel Meeting")}
-        </div>
-      </:header>
-
+    <CoreComponents.confirm_modal
+      id={@id}
+      show={@show}
+      title={dgettext("dashboard_bookings", "Cancel Meeting")}
+      confirm_label={
+        if @paid?,
+          do: dgettext("dashboard_bookings", "Confirm cancellation"),
+          else: dgettext("dashboard_bookings", "Cancel Meeting")
+      }
+      cancel_label={dgettext("dashboard_bookings", "Keep Meeting")}
+      confirm_form="cancel-meeting-form"
+      loading={@cancelling}
+      loading_label={dgettext("dashboard_bookings", "Cancelling...")}
+      on_cancel={@on_cancel}
+    >
       <form
         :if={@meeting}
         id="cancel-meeting-form"
@@ -72,7 +72,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
         phx-target={@target}
         class="space-y-4"
       >
-        <p class="text-tymeslot-600 font-medium text-lg leading-relaxed">
+        <p>
           {dgettext(
             "dashboard_bookings",
             "Are you sure you want to cancel the meeting with %{name} scheduled for %{when}?",
@@ -83,33 +83,14 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
         </p>
 
         <.paid_options :if={@paid?} booking_payment={@booking_payment} />
-        <p :if={not @paid?} class="text-tymeslot-500 font-medium">
+        <p :if={not @paid?} class="text-tymeslot-500">
           {dgettext(
             "dashboard_bookings",
             "This action cannot be undone. The attendee will be notified of the cancellation."
           )}
         </p>
       </form>
-
-      <:footer>
-        <div class="flex justify-end gap-3">
-          <CoreComponents.action_button variant={:secondary} phx-click={@on_cancel}>
-            {dgettext("dashboard_bookings", "Keep Meeting")}
-          </CoreComponents.action_button>
-          <CoreComponents.loading_button
-            type="submit"
-            form="cancel-meeting-form"
-            variant={:danger}
-            loading={@cancelling}
-            loading_text={dgettext("dashboard_bookings", "Cancelling...")}
-          >
-            {if @paid?,
-              do: dgettext("dashboard_bookings", "Confirm cancellation"),
-              else: dgettext("dashboard_bookings", "Cancel Meeting")}
-          </CoreComponents.loading_button>
-        </div>
-      </:footer>
-    </CoreComponents.modal>
+    </CoreComponents.confirm_modal>
     """
   end
 

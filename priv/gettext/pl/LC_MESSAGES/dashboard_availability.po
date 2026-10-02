@@ -67,10 +67,6 @@ msgstr "Dodano przerwę"
 msgid "Break deleted"
 msgstr "Usunięto przerwę"
 
-#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex
-#: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex
-#: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
-#: lib/tymeslot_web/components/dashboard/availability/delete_time_off_modal.ex
 #: lib/tymeslot_web/components/dashboard/availability/schedule_form_modal.ex
 #: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex

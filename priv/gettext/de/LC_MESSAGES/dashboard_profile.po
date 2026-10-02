@@ -36,11 +36,6 @@ msgstr "Avatar erfolgreich aktualisiert"
 msgid "Basic Information"
 msgstr "Grundlegende Informationen"
 
-#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Cancel"
-msgstr "Abbrechen"
-
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a unique username for your personal booking page."

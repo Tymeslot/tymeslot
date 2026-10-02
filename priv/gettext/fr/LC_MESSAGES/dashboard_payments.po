@@ -32,7 +32,6 @@ msgstr "Le montant dépasse le solde remboursable restant."
 msgid "Attendee"
 msgstr "Participant"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"

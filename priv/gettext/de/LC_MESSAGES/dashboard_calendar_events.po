@@ -163,9 +163,6 @@ msgstr "Kalendereinstellungen"
 msgid "Calendars refreshed"
 msgstr "Kalender aktualisiert"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_remove_attendee_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex

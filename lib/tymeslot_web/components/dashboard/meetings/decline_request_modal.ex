@@ -34,14 +34,17 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.DeclineRequestModal do
   @spec decline_request_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def decline_request_modal(assigns) do
     ~H"""
-    <CoreComponents.modal id={@id} show={@show} on_cancel={@on_cancel} size={:medium}>
-      <:header>
-        <div class="flex items-center gap-2">
-          <CoreComponents.icon name="hero-x-circle" class="w-5 h-5 text-red-500" />
-          {dgettext("dashboard_bookings", "Decline request")}
-        </div>
-      </:header>
-
+    <CoreComponents.confirm_modal
+      id={@id}
+      show={@show}
+      title={dgettext("dashboard_bookings", "Decline request")}
+      confirm_label={dgettext("dashboard_bookings", "Decline request")}
+      cancel_label={dgettext("dashboard_bookings", "Keep it open")}
+      confirm_form="decline-request-form"
+      loading={@declining}
+      loading_label={dgettext("dashboard_bookings", "Declining...")}
+      on_cancel={@on_cancel}
+    >
       <form
         :if={@meeting}
         id="decline-request-form"
@@ -49,7 +52,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.DeclineRequestModal do
         phx-target={@target}
         class="space-y-4"
       >
-        <p class="text-tymeslot-600 font-medium text-lg leading-relaxed">
+        <p>
           {dgettext(
             "dashboard_bookings",
             "Decline the request from %{name} for %{when}?",
@@ -72,7 +75,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.DeclineRequestModal do
           maxlength={Constraints.decline_reason_max_length()}
         />
 
-        <p class="text-tymeslot-500 font-medium">
+        <p class="text-tymeslot-500">
           {dgettext(
             "dashboard_bookings",
             "The slot is released immediately and %{name} is told it wasn't confirmed.",
@@ -80,24 +83,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.DeclineRequestModal do
           )}
         </p>
       </form>
-
-      <:footer>
-        <div class="flex justify-end gap-3">
-          <CoreComponents.action_button variant={:secondary} phx-click={@on_cancel}>
-            {dgettext("dashboard_bookings", "Keep it open")}
-          </CoreComponents.action_button>
-          <CoreComponents.loading_button
-            type="submit"
-            form="decline-request-form"
-            variant={:danger}
-            loading={@declining}
-            loading_text={dgettext("dashboard_bookings", "Declining...")}
-          >
-            {dgettext("dashboard_bookings", "Decline request")}
-          </CoreComponents.loading_button>
-        </div>
-      </:footer>
-    </CoreComponents.modal>
+    </CoreComponents.confirm_modal>
     """
   end
 end

@@ -29,19 +29,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDeleteModal do
       )
 
     ~H"""
-    <.modal
+    <.confirm_modal
       id="confirm-delete-event-modal"
-      show={true}
-      on_cancel={JS.push("cancel_delete_event", target: @myself)}
+      show
       size={:small}
-    >
-      <:header>
-        {if @scopes == :series,
+      title={
+        if @scopes == :series,
           do: dgettext("dashboard_calendar_events", "Delete recurring event"),
-          else: dgettext("dashboard_calendar_events", "Delete event")}
-      </:header>
-
-      <p :if={@scopes == :single} class="text-token-sm text-tymeslot-500">
+          else: dgettext("dashboard_calendar_events", "Delete event")
+      }
+      confirm_label={dgettext("dashboard_calendar_events", "Delete")}
+      loading={@deleting}
+      loading_label={dgettext("dashboard_calendar_events", "Deleting...")}
+      on_cancel={JS.push("cancel_delete_event", target: @myself)}
+      on_confirm={JS.push("confirm_delete_event", target: @myself)}
+    >
+      <p :if={@scopes == :single}>
         {dgettext("dashboard_calendar_events", "Are you sure you want to delete %{title}?",
           title: @title
         )}
@@ -50,7 +53,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDeleteModal do
           "This will also remove it from your calendar provider."
         )}
       </p>
-      <p :if={@scopes == :series} class="text-token-sm text-tymeslot-500">
+      <p :if={@scopes == :series}>
         {dgettext(
           "dashboard_calendar_events",
           "%{title} is part of a repeating series. Do you want to delete only this event, or every event in the series?",
@@ -61,57 +64,36 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDeleteModal do
           "Deleted events are also removed from your calendar provider."
         )}
       </p>
-      <p :if={@linked_to_booking} class="mt-2 text-token-sm text-amber-600">
+      <p :if={@linked_to_booking} class="text-amber-600">
         {dgettext(
           "dashboard_calendar_events",
           "This event is linked to a booking. The attendee will be notified of the cancellation."
         )}
       </p>
 
-      <:footer>
-        <div class="flex flex-wrap gap-2">
-          <.loading_button
-            :if={@scopes == :single}
-            variant={:danger}
-            loading={@deleting}
-            loading_text={dgettext("dashboard_calendar_events", "Deleting...")}
-            phx-click="confirm_delete_event"
-            phx-target={@myself}
-          >
-            {dgettext("dashboard_calendar_events", "Delete")}
-          </.loading_button>
-          <.loading_button
-            :if={@scopes == :series}
-            variant={:danger}
-            loading={@deleting}
-            loading_text={dgettext("dashboard_calendar_events", "Deleting...")}
-            phx-click="confirm_delete_event"
-            phx-value-scope="occurrence"
-            phx-target={@myself}
-          >
-            {dgettext("dashboard_calendar_events", "Delete this event")}
-          </.loading_button>
-          <.loading_button
-            :if={@scopes == :series}
-            variant={:danger}
-            loading={@deleting}
-            loading_text={dgettext("dashboard_calendar_events", "Deleting...")}
-            phx-click="confirm_delete_event"
-            phx-value-scope="series"
-            phx-target={@myself}
-          >
-            {dgettext("dashboard_calendar_events", "Delete all events")}
-          </.loading_button>
-          <.action_button
-            variant={:secondary}
-            disabled={@deleting}
-            phx-click={JS.push("cancel_delete_event", target: @myself)}
-          >
-            {dgettext("dashboard_calendar_events", "Cancel")}
-          </.action_button>
-        </div>
-      </:footer>
-    </.modal>
+      <:actions :if={@scopes == :series}>
+        <.loading_button
+          variant={:danger}
+          loading={@deleting}
+          loading_text={dgettext("dashboard_calendar_events", "Deleting...")}
+          phx-click="confirm_delete_event"
+          phx-value-scope="occurrence"
+          phx-target={@myself}
+        >
+          {dgettext("dashboard_calendar_events", "Delete this event")}
+        </.loading_button>
+        <.loading_button
+          variant={:danger}
+          loading={@deleting}
+          loading_text={dgettext("dashboard_calendar_events", "Deleting...")}
+          phx-click="confirm_delete_event"
+          phx-value-scope="series"
+          phx-target={@myself}
+        >
+          {dgettext("dashboard_calendar_events", "Delete all events")}
+        </.loading_button>
+      </:actions>
+    </.confirm_modal>
     """
   end
 end
