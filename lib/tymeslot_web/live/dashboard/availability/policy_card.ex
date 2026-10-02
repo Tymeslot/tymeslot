@@ -2,9 +2,9 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
   @moduledoc """
   Scheduling policy card for the availability page.
 
-  Buffer, advance booking window and minimum notice belong to a single named
-  schedule, so they are edited here beside the weekly pattern they constrain
-  rather than on the account-wide meeting settings page.
+  The two buffers, the advance booking window and minimum notice belong to a
+  single named schedule, so they are edited here beside the weekly pattern
+  they constrain rather than on the account-wide meeting settings page.
 
   The quick-pick tags render from `CustomInputModeHelper.presets/1`, which is
   also what validates the `_preset` marker a tag click carries. Rendering them
@@ -14,10 +14,18 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.CustomInputModeHelper
 
+  # Each buffer has its own form and event, so editing one never resubmits the
+  # other.
+  @buffer_forms %{
+    buffer_before_minutes: %{form_id: "buffer-before-form", event: "update_buffer_before_minutes"},
+    buffer_after_minutes: %{form_id: "buffer-after-form", event: "update_buffer_after_minutes"}
+  }
+
   @doc """
-  Renders the three scheduling policy settings for one schedule.
+  Renders the scheduling policy settings for one schedule.
   """
   attr :schedule, :map, required: true
   attr :myself, :any, required: true
@@ -42,10 +50,10 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
       </p>
 
       <div class="space-y-8">
-        <.buffer_minutes_setting
+        <.buffer_settings
           schedule={@schedule}
           myself={@myself}
-          custom_mode={Map.get(@custom_input_mode, :buffer_minutes, false)}
+          custom_input_mode={@custom_input_mode}
         />
         <.advance_booking_days_setting
           schedule={@schedule}
@@ -63,40 +71,82 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
   end
 
   @doc """
-  Component for configuring buffer time between appointments.
+  The buffer section: preparation time kept free before each booking, and
+  wrap-up time kept free after it, stacked as two settings.
   """
+  attr :schedule, :map, required: true
+  attr :myself, :any, required: true
+  attr :custom_input_mode, :map, required: true
+
+  @spec buffer_settings(map()) :: Phoenix.LiveView.Rendered.t()
+  def buffer_settings(assigns) do
+    ~H"""
+    <div>
+      <label class="label">
+        {dgettext("dashboard_availability", "Buffer Time")}
+      </label>
+
+      <div class="space-y-6">
+        <.buffer_setting
+          field={:buffer_before_minutes}
+          schedule={@schedule}
+          myself={@myself}
+          custom_mode={Map.get(@custom_input_mode, :buffer_before_minutes, false)}
+        />
+        <.buffer_setting
+          field={:buffer_after_minutes}
+          schedule={@schedule}
+          myself={@myself}
+          custom_mode={Map.get(@custom_input_mode, :buffer_after_minutes, false)}
+        />
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
+  One buffer, before or after, with the same preset tags and custom input as
+  the other policy settings.
+  """
+  attr :field, :atom, required: true, values: [:buffer_before_minutes, :buffer_after_minutes]
   attr :schedule, :map, required: true
   attr :myself, :any, required: true
   attr :custom_mode, :boolean, required: true
 
-  @spec buffer_minutes_setting(map()) :: Phoenix.LiveView.Rendered.t()
-  def buffer_minutes_setting(assigns) do
+  @spec buffer_setting(map()) :: Phoenix.LiveView.Rendered.t()
+  def buffer_setting(assigns) do
+    %{form_id: form_id, event: event} = Map.fetch!(@buffer_forms, assigns.field)
+
     assigns =
       assign(assigns,
-        buffer_value: if(assigns.schedule, do: assigns.schedule.buffer_minutes, else: 0),
-        presets: CustomInputModeHelper.presets(:buffer_minutes)
+        form_id: form_id,
+        event: event,
+        param: Atom.to_string(assigns.field),
+        range: Constraints.buffer_minutes_range(),
+        buffer_value:
+          if(assigns.schedule, do: Map.fetch!(assigns.schedule, assigns.field), else: 0),
+        presets: CustomInputModeHelper.presets(assigns.field)
       )
 
     ~H"""
     <div>
-      <label class="label">
-        {dgettext("dashboard_availability", "Buffer Between Appointments")}
-      </label>
+      <p id={"#{@form_id}-label"} class="mb-3 text-token-sm font-bold text-tymeslot-700">
+        {buffer_title(@field)}
+      </p>
 
       <%!-- Tag-based Selection --%>
-      <form
-        id="buffer-minutes-form"
-        phx-change="update_buffer_minutes"
-        phx-debounce="300"
-        phx-target={@myself}
-      >
-        <div class="flex flex-wrap items-center gap-3">
+      <form id={@form_id} phx-change={@event} phx-debounce="300" phx-target={@myself}>
+        <div
+          class="flex flex-wrap items-center gap-3"
+          role="group"
+          aria-labelledby={"#{@form_id}-label"}
+        >
           <%!-- Quick preset tags --%>
           <%= for minutes <- @presets do %>
             <button
               type="button"
-              phx-click="update_buffer_minutes"
-              phx-value-buffer_minutes={minutes}
+              phx-click={@event}
+              {%{"phx-value-#{@param}" => minutes}}
               phx-value-_preset="true"
               phx-target={@myself}
               class={[
@@ -115,11 +165,12 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
             <div class="btn-tag-selector btn-tag-selector-primary--active p-0! overflow-hidden">
               <input
                 type="number"
-                min="0"
-                max="120"
+                min={@range.first}
+                max={@range.last}
                 step="5"
                 value={@buffer_value}
-                name="buffer_minutes"
+                name={@param}
+                aria-labelledby={"#{@form_id}-label"}
                 class="w-20 px-3 py-2 text-token-sm font-black bg-transparent border-0 focus:ring-0 focus:outline-hidden rounded-l-xl"
                 placeholder="0"
               />
@@ -131,7 +182,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
             <button
               type="button"
               phx-click="focus_custom_input"
-              phx-value-setting="buffer_minutes"
+              phx-value-setting={@param}
               phx-target={@myself}
               class="btn-tag-selector btn-tag-selector-primary"
             >
@@ -142,10 +193,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
       </form>
 
       <p class="mt-4 text-token-sm text-tymeslot-500 font-bold">
-        {dgettext(
-          "dashboard_availability",
-          "Time to block after each appointment for preparation, travel, or breaks."
-        )}
+        {buffer_help(@field)}
       </p>
     </div>
     """
@@ -332,6 +380,18 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
   # Tag labels. These cover the preset lists above with room to spare; a preset
   # added without a label here raises on render rather than rendering a blank
   # tag, which is the failure we want to hear about.
+
+  defp buffer_title(:buffer_before_minutes),
+    do: dgettext("dashboard_availability", "Before each meeting")
+
+  defp buffer_title(:buffer_after_minutes),
+    do: dgettext("dashboard_availability", "After each meeting")
+
+  defp buffer_help(:buffer_before_minutes),
+    do: dgettext("dashboard_availability", "Preparation time kept free before each booking.")
+
+  defp buffer_help(:buffer_after_minutes),
+    do: dgettext("dashboard_availability", "Wrap-up time kept free after each booking.")
 
   defp buffer_label(0), do: dgettext("dashboard_availability", "No buffer")
 

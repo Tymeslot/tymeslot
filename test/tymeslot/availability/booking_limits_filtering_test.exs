@@ -50,7 +50,8 @@ defmodule Tymeslot.Availability.BookingLimitsFilteringTest do
       schedule_id: nil,
       min_advance_hours: 0,
       max_advance_booking_days: 365,
-      buffer_minutes: 0,
+      buffer_before_minutes: 0,
+      buffer_after_minutes: 0,
       duration_minutes: 30,
       limit_checker: Checker.build_slot_checker(user.id, profile, nil, from, to)
     }

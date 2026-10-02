@@ -55,7 +55,12 @@ defmodule Tymeslot.Bookings.RescheduleCompositionTest do
     profile = insert(:profile, user: user, timezone: "Europe/Berlin")
 
     schedule =
-      insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 15)
+      insert(:availability_schedule,
+        profile: profile,
+        is_default: true,
+        buffer_before_minutes: 15,
+        buffer_after_minutes: 15
+      )
 
     # Reschedule now refuses a time the organiser's schedule doesn't offer
     # (mirroring booking creation), so these job-chain tests, which pick

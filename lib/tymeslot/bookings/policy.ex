@@ -30,7 +30,7 @@ defmodule Tymeslot.Bookings.Policy do
   require Logger
 
   @doc """
-  Scheduling policy for a booking: buffer, minimum notice, advance window and
+  Scheduling policy for a booking: buffers, minimum notice, advance window and
   the organiser's timezone.
 
   The policy comes from the schedule the meeting type is booked against, so
@@ -39,7 +39,8 @@ defmodule Tymeslot.Bookings.Policy do
   """
   @spec scheduling_config(integer() | nil, map() | nil) :: %{
           required(:schedule_id) => integer() | nil,
-          required(:buffer_minutes) => integer(),
+          required(:buffer_before_minutes) => integer(),
+          required(:buffer_after_minutes) => integer(),
           required(:min_advance_hours) => integer(),
           required(:max_advance_booking_days) => integer(),
           required(:owner_timezone) => String.t(),

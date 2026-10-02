@@ -20,7 +20,7 @@ defmodule Tymeslot.Bookings.CalendarCheck do
 
   A reschedule's fresh fetch returns the meeting's own provider event, because
   Tymeslot wrote it to the host's calendar when the booking was made. Left in,
-  it would refuse every move onto a time overlapping (or, through the buffer,
+  it would refuse every move onto a time overlapping (or, through a buffer,
   merely adjacent to) the slot the meeting already occupies, so a booking
   could not be nudged by fifteen minutes. Pass the meeting as `:exclude` and
   its mirror is dropped before the conflict check runs.
@@ -30,6 +30,7 @@ defmodule Tymeslot.Bookings.CalendarCheck do
 
   require Logger
 
+  alias Tymeslot.Availability.Calculate
   alias Tymeslot.Bookings.Validation
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
@@ -91,7 +92,7 @@ defmodule Tymeslot.Bookings.CalendarCheck do
   def probe(%{organizer_user_id: organizer_user_id} = slot, config, opts)
       when is_integer(organizer_user_id) do
     %{start_datetime: start_datetime, end_datetime: end_datetime} = slot
-    {start_date, end_date} = fetch_range(slot, Map.get(config, :buffer_minutes, 15))
+    {start_date, end_date} = fetch_range(slot, Calculate.config_buffers(config))
 
     fetch =
       Tasks.async(Tymeslot.TaskSupervisor, fn ->
@@ -164,11 +165,14 @@ defmodule Tymeslot.Bookings.CalendarCheck do
   # The fetch asks providers for whole UTC days, so the range has to be derived
   # from the slot's own UTC instants rather than from the visitor's local date:
   # 10:00 in Auckland is the previous day in UTC, and a range built from the
-  # local date would not contain the slot at all. The buffer is folded in
-  # because a conflict is anything within `buffer_minutes` of the slot, which
-  # can sit on the neighbouring day.
-  defp fetch_range(%{start_datetime: start_datetime, end_datetime: end_datetime}, buffer_minutes) do
-    {utc_date(start_datetime, -buffer_minutes), utc_date(end_datetime, buffer_minutes)}
+  # local date would not contain the slot at all. The buffers are folded in
+  # because a conflict is anything within the before-buffer ahead of the slot
+  # or the after-buffer behind it, and either can reach a neighbouring day.
+  defp fetch_range(
+         %{start_datetime: start_datetime, end_datetime: end_datetime},
+         {buffer_before, buffer_after}
+       ) do
+    {utc_date(start_datetime, -buffer_before), utc_date(end_datetime, buffer_after)}
   end
 
   defp utc_date(datetime, offset_minutes) do

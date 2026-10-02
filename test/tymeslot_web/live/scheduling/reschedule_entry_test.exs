@@ -108,7 +108,8 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
           name: "Long lead time",
           advance_booking_days: 180,
           min_advance_hours: 0,
-          buffer_minutes: 0
+          buffer_before_minutes: 0,
+          buffer_after_minutes: 0
         )
 
       pinned_type =

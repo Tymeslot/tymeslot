@@ -223,7 +223,13 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
     test "respects buffer time between meetings" do
       user = insert(:user)
       profile = insert(:profile, user: user)
-      insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 30)
+
+      insert(:availability_schedule,
+        profile: profile,
+        is_default: true,
+        buffer_before_minutes: 30,
+        buffer_after_minutes: 30
+      )
 
       {start_time1, end_time1} = build_meeting_times(1, 60)
 
@@ -267,6 +273,62 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
 
       {:ok, meeting3} = Scheduling.create_meeting_with_conflict_check(sufficient_buffer_attrs)
       assert meeting3.uid == "sufficient-buffer"
+    end
+
+    test "pads the new meeting by the schedule's before and after buffers separately" do
+      user = insert(:user)
+      profile = insert(:profile, user: user)
+
+      insert(:availability_schedule,
+        profile: profile,
+        is_default: true,
+        buffer_before_minutes: 5,
+        buffer_after_minutes: 20
+      )
+
+      {start_time, end_time} = build_meeting_times(1, 60)
+
+      attrs = %{
+        uid: "existing",
+        title: "Existing",
+        start_time: start_time,
+        end_time: end_time,
+        organizer_name: "Test Organizer",
+        organizer_email: "organizer@example.com",
+        organizer_user_id: user.id,
+        attendee_name: "Test Attendee",
+        attendee_email: "attendee@example.com",
+        status: "confirmed"
+      }
+
+      {:ok, _existing} = Scheduling.create_meeting_with_conflict_check(attrs)
+
+      # Starts five minutes after the existing meeting ends: exactly the
+      # before-buffer, so it fits. The existing meeting's own after-buffer
+      # (20) is not re-applied.
+      later_start = DateTime.add(end_time, 5, :minute)
+
+      assert {:ok, _later} =
+               Scheduling.create_meeting_with_conflict_check(
+                 Map.merge(attrs, %{
+                   uid: "later",
+                   start_time: later_start,
+                   end_time: DateTime.add(later_start, 30, :minute)
+                 })
+               )
+
+      # Ends ten minutes before the existing meeting starts: inside the new
+      # meeting's 20-minute after-buffer.
+      earlier_end = DateTime.add(start_time, -10, :minute)
+
+      assert {:error, :time_conflict} =
+               Scheduling.create_meeting_with_conflict_check(
+                 Map.merge(attrs, %{
+                   uid: "earlier",
+                   start_time: DateTime.add(earlier_end, -30, :minute),
+                   end_time: earlier_end
+                 })
+               )
     end
   end
 

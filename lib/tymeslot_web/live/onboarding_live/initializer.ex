@@ -98,7 +98,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
     end
   end
 
-  # The buffer, booking window and minimum notice edited by the preference
+  # The buffers, booking window and minimum notice edited by the preference
   # steps live on the profile's default availability schedule. There is no
   # profile during the disconnected render, so there is no schedule either.
   defp load_default_schedule(nil), do: nil

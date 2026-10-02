@@ -59,7 +59,8 @@ defmodule Tymeslot.Availability.CalculateBreakTimezoneTest do
       time_off: [],
       min_advance_hours: 0,
       max_advance_booking_days: 3650,
-      buffer_minutes: 0
+      buffer_before_minutes: 0,
+      buffer_after_minutes: 0
     }
   end
 
@@ -162,7 +163,8 @@ defmodule Tymeslot.Availability.CalculateBreakTimezoneTest do
         duration_minutes: 30,
         min_advance_hours: 0,
         max_advance_booking_days: 3650,
-        buffer_minutes: 0
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0
       }
     end
 

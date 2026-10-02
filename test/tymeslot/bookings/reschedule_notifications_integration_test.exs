@@ -93,7 +93,12 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
     # organiser's schedule doesn't offer, and these tests pick
     # `future_datetime/2`, a fixed mid-day time.
     schedule =
-      insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 15)
+      insert(:availability_schedule,
+        profile: profile,
+        is_default: true,
+        buffer_before_minutes: 15,
+        buffer_after_minutes: 15
+      )
 
     for day_of_week <- 1..7 do
       {:ok, _day} =

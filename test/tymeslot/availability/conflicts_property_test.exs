@@ -53,7 +53,8 @@ defmodule Tymeslot.Availability.ConflictsPropertyTest do
       date = Date.add(Date.utc_today(), days_ahead)
 
       config = %{
-        buffer_minutes: buffer,
+        buffer_before_minutes: buffer,
+        buffer_after_minutes: buffer,
         min_advance_hours: 0,
         duration_minutes: duration,
         slot_interval_minutes: slot_interval_minutes
@@ -282,7 +283,12 @@ defmodule Tymeslot.Availability.ConflictsPropertyTest do
           synced_at: DateTime.utc_now()
         })
 
-      config = %{buffer_minutes: 0, min_advance_hours: 0, duration_minutes: 30}
+      config = %{
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0,
+        min_advance_hours: 0,
+        duration_minutes: 30
+      }
 
       events_in_tz =
         [event]

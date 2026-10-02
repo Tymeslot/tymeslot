@@ -268,30 +268,37 @@ defmodule Tymeslot.MeetingTypes.InputValidationTest do
     end
   end
 
-  describe "validate_buffer_minutes/2" do
-    test "accepts valid buffer (0)" do
-      assert {:ok, 0} = InputValidation.validate_buffer_minutes("0")
-    end
+  for fun <- [:validate_buffer_before_minutes, :validate_buffer_after_minutes] do
+    describe "#{fun}/2" do
+      test "accepts both ends of 0..120 and a value between" do
+        assert {:ok, 0} = InputValidation.unquote(fun)("0")
+        assert {:ok, 60} = InputValidation.unquote(fun)("60")
+        assert {:ok, 120} = InputValidation.unquote(fun)("120")
+      end
 
-    test "accepts valid buffer (60)" do
-      assert {:ok, 60} = InputValidation.validate_buffer_minutes("60")
-    end
+      test "rejects a negative value" do
+        assert {:error, message} = InputValidation.unquote(fun)("-1")
+        assert message =~ "must be at least 0"
+      end
 
-    test "accepts maximum buffer (120)" do
-      assert {:ok, 120} = InputValidation.validate_buffer_minutes("120")
-    end
+      test "rejects a value above 120" do
+        assert {:error, message} = InputValidation.unquote(fun)("121")
+        assert message =~ "cannot exceed 120"
+      end
 
-    test "rejects negative buffer" do
-      assert {:error, _msg} = InputValidation.validate_buffer_minutes("-1")
+      test "rejects non-numeric input" do
+        assert {:error, message} = InputValidation.unquote(fun)("lots")
+        assert message =~ "must be a valid number"
+      end
     end
+  end
 
-    test "rejects buffer exceeding 120" do
-      assert {:error, _msg} = InputValidation.validate_buffer_minutes("121")
-    end
+  test "names which buffer a rejection is about" do
+    assert {:error, "Buffer before cannot exceed 120"} =
+             InputValidation.validate_buffer_before_minutes("121")
 
-    test "rejects non-numeric input" do
-      assert {:error, _msg} = InputValidation.validate_buffer_minutes("lots")
-    end
+    assert {:error, "Buffer after cannot exceed 120"} =
+             InputValidation.validate_buffer_after_minutes("121")
   end
 
   describe "validate_advance_booking_days/2" do

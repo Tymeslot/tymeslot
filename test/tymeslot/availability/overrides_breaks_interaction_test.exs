@@ -128,7 +128,12 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
       profile = insert(:profile, timezone: "Europe/Berlin")
 
       schedule =
-        insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 0)
+        insert(:availability_schedule,
+          profile: profile,
+          is_default: true,
+          buffer_before_minutes: 0,
+          buffer_after_minutes: 0
+        )
 
       weekly =
         insert(:weekly_availability,
@@ -247,7 +252,12 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
     profile = insert(:profile, timezone: "Europe/Berlin")
 
     schedule =
-      insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 0)
+      insert(:availability_schedule,
+        profile: profile,
+        is_default: true,
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0
+      )
 
     weekly =
       insert(:weekly_availability,
@@ -288,7 +298,12 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
     profile = insert(:profile, timezone: "Europe/Berlin")
 
     schedule =
-      insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 0)
+      insert(:availability_schedule,
+        profile: profile,
+        is_default: true,
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0
+      )
 
     insert(:weekly_availability,
       schedule: schedule,
@@ -300,6 +315,11 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
   end
 
   defp config(schedule) do
-    %{schedule_id: schedule.id, buffer_minutes: 0, min_advance_hours: 0}
+    %{
+      schedule_id: schedule.id,
+      buffer_before_minutes: 0,
+      buffer_after_minutes: 0,
+      min_advance_hours: 0
+    }
   end
 end

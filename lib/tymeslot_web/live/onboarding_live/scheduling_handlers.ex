@@ -3,7 +3,7 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
   Scheduling preferences event handlers for the onboarding flow.
 
   Handles validation and updates for scheduling preferences including
-  buffer time, advance booking window, and minimum advance notice.
+  buffers before and after meetings, advance booking window, and minimum advance notice.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -34,7 +34,7 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
   @doc """
   Handles updating scheduling preferences in the database.
 
-  Validates and persists scheduling preference settings. The buffer, booking
+  Validates and persists scheduling preference settings. The buffers, booking
   window and minimum notice live on the profile's default availability
   schedule, so the updated schedule is what gets assigned back.
   """
@@ -125,7 +125,8 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
     end)
   end
 
-  defp field_key_to_atom("buffer_minutes"), do: :buffer_minutes
+  defp field_key_to_atom("buffer_before_minutes"), do: :buffer_before_minutes
+  defp field_key_to_atom("buffer_after_minutes"), do: :buffer_after_minutes
   defp field_key_to_atom("advance_booking_days"), do: :advance_booking_days
   defp field_key_to_atom("min_advance_hours"), do: :min_advance_hours
   defp field_key_to_atom(_arg), do: nil
@@ -144,7 +145,10 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
 
   defp fields do
     [
-      {"buffer_minutes", :buffer_minutes, dgettext("onboarding_wizard", "Buffer minutes")},
+      {"buffer_before_minutes", :buffer_before_minutes,
+       dgettext("onboarding_wizard", "Buffer before")},
+      {"buffer_after_minutes", :buffer_after_minutes,
+       dgettext("onboarding_wizard", "Buffer after")},
       {"advance_booking_days", :advance_booking_days,
        dgettext("onboarding_wizard", "Advance booking days")},
       {"min_advance_hours", :min_advance_hours,
@@ -159,7 +163,7 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
       fields()
       |> Enum.flat_map(fn {key, error_key, label} ->
         with {:ok, value} <- Map.fetch(params, key),
-             {:error, error} <- validate_field(value, config[key].constraints, label) do
+             {:error, error} <- validate_field(value, config[key].constraints, error_key, label) do
           [{error_key, error}]
         else
           :error -> []
@@ -171,30 +175,47 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
     if map_size(errors) == 0, do: {:ok, params}, else: {:error, errors}
   end
 
-  defp validate_field(value, constraints, label) when is_binary(value) do
+  defp validate_field(value, constraints, error_key, label) when is_binary(value) do
     case Integer.parse(value) do
       {int, ""} ->
-        validate_field(int, constraints, label)
+        validate_field(int, constraints, error_key, label)
 
       _other ->
         {:error, dgettext("onboarding_wizard", "%{field} must be a valid number", field: label)}
     end
   end
 
-  defp validate_field(value, %{min: min, max: max}, label) when is_integer(value) do
+  defp validate_field(value, %{min: min, max: max}, error_key, label) when is_integer(value) do
     if value >= min and value <= max,
       do: :ok,
-      else:
-        {:error,
-         dgettext(
-           "onboarding_wizard",
-           "%{field} must be between %{min} and %{max}",
-           field: label,
-           min: min,
-           max: max
-         )}
+      else: {:error, range_error(error_key, label, min, max)}
   end
 
-  defp validate_field(_value, _constraints, label),
+  defp validate_field(_value, _constraints, _error_key, label),
     do: {:error, dgettext("onboarding_wizard", "%{field} must be a number", field: label)}
+
+  # The buffer fields name their unit in a whole-sentence message of their own.
+  defp range_error(:buffer_before_minutes, _label, min, max),
+    do:
+      dgettext("onboarding_wizard", "Buffer before must be between %{min} and %{max} minutes.",
+        min: min,
+        max: max
+      )
+
+  defp range_error(:buffer_after_minutes, _label, min, max),
+    do:
+      dgettext("onboarding_wizard", "Buffer after must be between %{min} and %{max} minutes.",
+        min: min,
+        max: max
+      )
+
+  defp range_error(_error_key, label, min, max),
+    do:
+      dgettext(
+        "onboarding_wizard",
+        "%{field} must be between %{min} and %{max}",
+        field: label,
+        min: min,
+        max: max
+      )
 end

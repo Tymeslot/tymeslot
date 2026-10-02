@@ -105,17 +105,10 @@ defmodule Tymeslot.Availability.Audit do
     schedule_id = schedule && schedule.id
 
     config =
-      Map.merge(
-        %{
-          schedule_id: schedule_id,
-          duration_minutes: duration_minutes,
-          buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
-          max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days),
-          min_advance_hours: Schedules.policy(schedule, :min_advance_hours),
-          owner_timezone: timezone
-        },
-        prefetched(schedule_id, start_date, end_date)
-      )
+      schedule
+      |> Schedules.config(nil)
+      |> Map.merge(%{duration_minutes: duration_minutes, owner_timezone: timezone})
+      |> Map.merge(prefetched(schedule_id, start_date, end_date))
 
     range_events = CalendarEventQueries.in_range(integration_ids, {start_date, end_date})
 

@@ -6,7 +6,7 @@ defmodule Tymeslot.Bookings.Validation do
   All validation is based on the data passed in as parameters.
   """
 
-  alias Tymeslot.Availability.TimeSlots
+  alias Tymeslot.Availability.{Calculate, TimeSlots}
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Utils.{DateTimeUtils, TimeRange}
@@ -21,7 +21,8 @@ defmodule Tymeslot.Bookings.Validation do
   @type scheduling_config :: %{
           optional(:min_advance_hours) => non_neg_integer(),
           optional(:max_advance_booking_days) => non_neg_integer(),
-          optional(:buffer_minutes) => non_neg_integer(),
+          optional(:buffer_before_minutes) => non_neg_integer(),
+          optional(:buffer_after_minutes) => non_neg_integer(),
           optional(atom()) => term()
         }
 
@@ -132,13 +133,11 @@ defmodule Tymeslot.Bookings.Validation do
   @spec validate_no_conflicts(DateTime.t(), DateTime.t(), [calendar_event()], scheduling_config()) ::
           :ok | {:error, :slot_unavailable}
   def validate_no_conflicts(start_datetime, end_datetime, events, config) do
-    buffer_minutes = Map.get(config, :buffer_minutes, 15)
-
     check_slot_availability(
       start_datetime,
       end_datetime,
       events,
-      {buffer_minutes, buffer_minutes}
+      Calculate.config_buffers(config)
     )
   end
 
