@@ -65,14 +65,16 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
   }
 
   # `tile` is the neutral tile's surface on each variant; a non-neutral tone
-  # brings its own.
+  # brings its own. `padded?` says whether the size's box padding applies: the
+  # card keeps the card's own padding at every size, as it always rendered.
   @empty_state_variant_classes %{
-    card: %{surface: "card-glass", tile: "bg-tymeslot-50 border-tymeslot-100"},
+    card: %{surface: "card-glass", tile: "bg-tymeslot-50 border-tymeslot-100", padded?: false},
     dashed: %{
       surface: "rounded-token-2xl border-2 border-dashed border-tymeslot-200 bg-tymeslot-50/50",
-      tile: "bg-white border-tymeslot-100 shadow-sm"
+      tile: "bg-white border-tymeslot-100 shadow-sm",
+      padded?: true
     },
-    plain: %{surface: nil, tile: "bg-tymeslot-50 border-tymeslot-100"}
+    plain: %{surface: nil, tile: "bg-tymeslot-50 border-tymeslot-100", padded?: true}
   }
 
   @empty_state_tone_classes %{
@@ -164,18 +166,20 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
   def empty_state(assigns) do
     variant = Map.fetch!(@empty_state_variant_classes, assigns.variant)
     tone = Map.fetch!(@empty_state_tone_classes, assigns.tone)
+    sizing = Map.fetch!(@empty_state_size_classes, assigns.size)
 
     assigns =
       assign(assigns,
-        sizing: Map.fetch!(@empty_state_size_classes, assigns.size),
+        sizing: sizing,
         surface: variant.surface,
+        box_class: variant.padded? && sizing.box,
         tile_class: [assigns.tone == :neutral && variant.tile, tone.tile],
         title_class: tone.title,
         heading_tag: Atom.to_string(assigns.heading)
       )
 
     ~H"""
-    <div class={["text-center", @surface, @sizing.box, @class]} {@rest}>
+    <div class={["text-center", @surface, @box_class, @class]} {@rest}>
       <div
         :if={@icon || @graphic != []}
         class={[

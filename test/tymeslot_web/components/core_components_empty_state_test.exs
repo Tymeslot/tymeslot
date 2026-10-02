@@ -125,6 +125,15 @@ defmodule TymeslotWeb.Components.CoreComponentsEmptyStateTest do
       refute plain =~ "border-dashed"
     end
 
+    test "a card keeps the card's own padding; the other variants take the size's" do
+      for size <- [:sm, :md, :lg] do
+        refute doc_class(%{variant: :card, size: size}) =~ ~r/\bp[xy]-/
+      end
+
+      assert doc_class(%{variant: :dashed, size: :md}) =~ "py-12"
+      assert doc_class(%{variant: :plain, size: :sm}) =~ "py-8"
+    end
+
     test "each size scales the title" do
       assert title_class(%{size: :sm}) =~ "text-token-base"
       assert title_class(%{size: :md}) =~ "text-token-lg"
