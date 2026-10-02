@@ -76,15 +76,9 @@ defmodule TymeslotWeb.Dashboard.Automation.DeliveryComponents do
                     {delivery.event_type}
                   </span>
                   <%= if delivery.response_status do %>
-                    <span class={[
-                      "text-token-xs font-black px-2 py-1 rounded-token-lg border",
-                      if(delivery.response_status >= 200 and delivery.response_status < 300,
-                        do: "bg-green-50 text-green-700 border-green-100",
-                        else: "bg-red-50 text-red-700 border-red-100"
-                      )
-                    ]}>
+                    <.pill tone={response_tone(delivery.response_status)}>
                       {delivery.response_status}
-                    </span>
+                    </.pill>
                   <% end %>
                   <span class="text-token-xs text-tymeslot-500 font-medium">
                     {dgettext("dashboard_automation", "Attempt %{count}",
@@ -111,4 +105,7 @@ defmodule TymeslotWeb.Dashboard.Automation.DeliveryComponents do
     <% end %>
     """
   end
+
+  defp response_tone(status) when status >= 200 and status < 300, do: :success
+  defp response_tone(_status), do: :danger
 end
