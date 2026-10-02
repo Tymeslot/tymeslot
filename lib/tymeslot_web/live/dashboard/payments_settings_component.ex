@@ -131,7 +131,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
         )}
       </p>
       <.action_button
-        variant={:danger}
+        variant={:danger_soft}
         phx-click="open_disconnect_modal"
         phx-target={@myself}
       >
