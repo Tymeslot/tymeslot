@@ -29,15 +29,12 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   require Logger
 
-  alias Tymeslot.Availability.Offer
-
   alias Tymeslot.Bookings.{
     CalendarCheck,
     CalendarJobs,
     Errors,
     Policy,
     RescheduleLocation,
-    ScheduleCheck,
     Validation
   }
 
@@ -60,7 +57,8 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   `duration` is accepted for shape-compatibility with the booking form but is
   never used: the rescheduled meeting keeps the original meeting's persisted
-  duration (see `prepare_new_times/3`), never the request's.
+  duration (see `Tymeslot.Bookings.Validation.prepare_new_times/4`), never
+  the request's.
 
   `location_option_id`, `location_phone`, `location_video_integration_id` and
   `location_venue_id` are the booker's location choice, applied only when it
@@ -123,7 +121,7 @@ defmodule Tymeslot.Bookings.Reschedule do
            ),
          config <- Policy.scheduling_config(original_meeting.organizer_user_id, meeting_type),
          {:ok, new_times} <-
-           prepare_new_times(new_params, original_meeting, meeting_type, config),
+           Validation.prepare_new_times(new_params, original_meeting, meeting_type, config),
          :ok <- verify_calendar_free(original_meeting, new_times, config),
          {:ok, updated_meeting} <-
            apply_time_update_and_schedule_job(
@@ -444,69 +442,8 @@ defmodule Tymeslot.Bookings.Reschedule do
     end
   end
 
-  # The rescheduled meeting keeps its meeting type, so the notice and window
-  # rules re-checked here come from the same schedule the original booking used.
-  #
-  # The duration comes from the ORIGINAL meeting, never from `params`: a
-  # reschedule moves a meeting in time, it is not an opportunity to change its
-  # length, and `params.duration` is an attendee-supplied URL slug with no
-  # binding to what the meeting actually is (this stays true even when the
-  # meeting type has since been deleted and `fetch_meeting_type/3` falls back
-  # to `nil`).
-  #
-  # `ScheduleCheck`, however, is given the duration the reschedule page's grid
-  # is stepped by (`Offer.duration_minutes/2`): the CURRENT meeting type's,
-  # falling back to the persisted one only for an unresolved type. Re-deriving
-  # the grid with a stale duration after a host edits the type would refuse
-  # slots the page just offered. Only the check's step size changes; the
-  # meeting's own duration, computed below via `duration_minutes`, never does.
-  #
-  # `meeting_type` and `config` are resolved once by the caller and threaded
-  # through here rather than re-fetched: two reads of the same rows leave a
-  # window in which a host edit between them could be answered differently by
-  # each call, and `verify_calendar_free/3` needs the same buffer and notice
-  # rules this check was made against.
-  defp prepare_new_times(params, meeting, meeting_type, config) do
-    organizer_user_id = meeting.organizer_user_id
-
-    duration_minutes = meeting.duration
-
-    schedule_check_duration_minutes = Offer.duration_minutes(meeting_type, duration_minutes)
-
-    with {:ok, {start_datetime, end_datetime}} <-
-           Validation.parse_meeting_times(
-             params.date,
-             params.time,
-             duration_minutes,
-             params.user_timezone
-           ),
-         {:ok, date} <- Date.from_iso8601(params.date),
-         :ok <- Validation.validate_booking_time(start_datetime, params.user_timezone, config),
-         :ok <-
-           ScheduleCheck.validate_slot_on_schedule(
-             date,
-             start_datetime,
-             schedule_check_duration_minutes,
-             params.user_timezone,
-             config,
-             organizer_user_id
-           ) do
-      {:ok,
-       %{
-         start_time: start_datetime,
-         end_time: end_datetime,
-         duration_minutes: duration_minutes
-       }}
-    else
-      {:error, reason} when is_atom(reason) ->
-        {:error, Errors.classify_schedule_check_reason(reason) || reason}
-
-      {:error, _reason} = error ->
-        error
-    end
-  end
-
-  # The schedule check above re-derives the organiser's windows and breaks, but
+  # The schedule check in `Validation.prepare_new_times/4` re-derives the
+  # organiser's windows and breaks, but
   # it computes them against an empty event list by design
   # (`Calculate.offers_slot/6`), and the write below only looks at Tymeslot's
   # own meetings. Without this, nothing on the reschedule path ever consults the

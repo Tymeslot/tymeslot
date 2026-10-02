@@ -149,23 +149,25 @@ defmodule Tymeslot.Bookings.Validation do
   end
 
   @doc """
-  Parses and validates the requested new time for a single-seat reschedule
-  (move-my-seat) off `old_meeting`, returning the new slot's times.
+  Parses and validates the requested new time for a reschedule off
+  `old_meeting`, returning the new slot's times.
 
-  Used by `Tymeslot.Bookings.RescheduleSeat` alone. Mirrors the
-  whole-meeting reschedule (`Tymeslot.Bookings.Reschedule`): the seat keeps
-  the duration of the meeting it leaves, never `params.duration`, which is
-  an attendee-supplied URL slug with no binding to what the meeting is;
-  `ScheduleCheck` is stepped by the duration the booking page's grid is
-  drawn with (`Offer.duration_minutes/2`, the meeting type's current one),
-  so a slot the page just offered is not refused after a host edits the
-  type. Both paths must agree on what counts as a valid new slot: a
-  divergence here would let a seat move to a time the meeting itself could
-  not be booked at.
+  Shared by the whole-meeting reschedule (`Tymeslot.Bookings.Reschedule`)
+  and move-my-seat (`Tymeslot.Bookings.RescheduleSeat`), so both agree on
+  what counts as a valid new slot. The new slot keeps the old meeting's
+  duration, never `params.duration`: a reschedule moves a meeting in time,
+  it does not change its length, and `params.duration` is an
+  attendee-supplied URL slug with no binding to what the meeting is (this
+  holds even when the meeting type has been deleted and `meeting_type` is
+  `nil`). `ScheduleCheck` is stepped by the duration the booking page's grid
+  is drawn with (`Offer.duration_minutes/2`, the meeting type's current
+  one), so a slot the page just offered is not refused after a host edits
+  the type; only the check's step size follows the type.
 
-  `config` is the scheduling policy the caller resolved for `meeting_type`,
-  threaded through so the calendar check that follows uses the same buffer
-  and notice rules.
+  `meeting_type` and `config` are resolved once by the caller and threaded
+  through rather than re-fetched: two reads of the same rows leave a window
+  in which a host edit between them is answered differently by each, and
+  the calendar check that follows needs the same buffer and notice rules.
   """
   @spec prepare_new_times(map(), map(), map() | nil, map()) ::
           {:ok, %{start_time: DateTime.t(), end_time: DateTime.t(), duration_minutes: integer()}}
