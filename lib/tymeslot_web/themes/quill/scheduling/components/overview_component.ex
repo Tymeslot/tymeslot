@@ -125,9 +125,25 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                       <% end %>
                       {BookingText.instruction(@organizer_profile)}
                     </p>
+                    <p
+                      :if={assigns[:shared_availability_guests] not in [nil, []]}
+                      class="overview-description overview-participants text-glass-primary"
+                    >
+                      {BookingText.additional_participants(@shared_availability_guests)}
+                    </p>
 
                     <div class="overview-duration-list">
-                      <%= if @meeting_types == [] do %>
+                      <div
+                        :if={assigns[:shared_availability_error]}
+                        class="text-center py-8 text-purple-300"
+                        role="alert"
+                      >
+                        <p class="text-lg font-medium">
+                          {dgettext("booking", "This booking link can’t be used")}
+                        </p>
+                        <p class="text-sm mt-1">{@shared_availability_error}</p>
+                      </div>
+                      <%= if @meeting_types == [] and is_nil(assigns[:shared_availability_error]) do %>
                         <div class="text-center py-8 text-purple-300">
                           <p class="text-lg font-medium">
                             {dgettext("booking", "No meeting types available")}

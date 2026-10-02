@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     NextAvailable,
     OrganizerHelpers,
     PreviewToken,
+    SharedAvailabilityGuests,
     ThemeUtils
   }
 
@@ -66,6 +67,9 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       else
         OrganizerHelpers.handle_username_resolution(socket, params["username"])
       end
+
+    # `?with=michael,sandy` adds guests every offered time must also suit.
+    socket = SharedAvailabilityGuests.assign_from_params(socket, params)
 
     # Apply theme customization after organizer is resolved
     socket = maybe_assign_customization(socket)
@@ -370,15 +374,14 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   # Carries the reschedule context across the redirect so a bad slug doesn't
   # silently turn a reschedule into a new, duplicate booking.
   defp invalid_meeting_type_redirect_path(socket) do
-    base = ~p"/#{socket.assigns[:username_context]}"
+    query =
+      case socket.assigns[:reschedule_meeting_uid] do
+        uid when is_binary(uid) and uid != "" -> %{"reschedule_meeting_uid" => uid}
+        _other -> %{}
+      end
 
-    case socket.assigns[:reschedule_meeting_uid] do
-      uid when is_binary(uid) and uid != "" ->
-        "#{base}?#{URI.encode_query(%{"reschedule_meeting_uid" => uid})}"
-
-      _other ->
-        base
-    end
+    path = ~p"/#{socket.assigns[:username_context]}"
+    SharedAvailabilityGuests.path_with_query(path, socket, query)
   end
 
   defp assign_meeting_type(socket, meeting_type) do
@@ -393,6 +396,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       )
     )
     |> OrganizerHelpers.assign_booking_window()
+    |> SharedAvailabilityGuests.check_meeting_type(meeting_type)
   end
 
   # Re-initialise only when the definitions actually changed, so re-entering a
@@ -504,7 +508,9 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       slug = socket.assigns[:selected_duration] || params["slug"]
 
       if is_binary(username) && is_binary(slug) do
-        redirect(socket, to: ~p"/#{username}/#{slug}")
+        redirect(socket,
+          to: SharedAvailabilityGuests.path_with_query(~p"/#{username}/#{slug}", socket)
+        )
       else
         redirect(socket, to: ~p"/")
       end

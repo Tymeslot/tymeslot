@@ -52,6 +52,17 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
   def instruction(profile), do: custom(profile, :booking_instruction) || default_instruction()
 
   @doc """
+  The line naming the other users a booking link invites along
+  (`?with=michael,sandy`), shared by every theme's overview step.
+  """
+  @spec additional_participants([%{name: String.t()}]) :: String.t()
+  def additional_participants(guests) do
+    dgettext("booking", "Additional participants: %{names}",
+      names: Enum.map_join(guests, ", ", & &1.name)
+    )
+  end
+
+  @doc """
   The heading a theme shows when the organiser has not supplied one.
   """
   @spec default_heading(theme_key(), String.t() | nil) :: String.t()

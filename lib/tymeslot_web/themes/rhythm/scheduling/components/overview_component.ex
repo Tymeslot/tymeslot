@@ -69,10 +69,22 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                 <p class="organizer-instruction">
                   {BookingText.instruction(@organizer_profile)}
                 </p>
+                <p
+                  :if={assigns[:shared_availability_guests] not in [nil, []]}
+                  class="organizer-instruction organizer-participants"
+                >
+                  {BookingText.additional_participants(@shared_availability_guests)}
+                </p>
               </div>
             </div>
 
-            <%= if @username_context && @meeting_types == [] do %>
+            <div :if={assigns[:shared_availability_error]} class="overview-empty-state" role="alert">
+              <p class="overview-empty-title">
+                {dgettext("booking", "This booking link can’t be used")}
+              </p>
+              <p class="overview-empty-subtitle">{@shared_availability_error}</p>
+            </div>
+            <%= if @username_context && @meeting_types == [] && is_nil(assigns[:shared_availability_error]) do %>
               <div class="overview-empty-state">
                 <p class="overview-empty-title">
                   {dgettext("booking", "No meeting types available")}
