@@ -321,7 +321,7 @@ defmodule Tymeslot.Profiles do
   end
 
   defp username_reserved_status(username) do
-    if username in ReservedPaths.list(), do: :reserved, else: :ok
+    if ReservedPaths.reserved?(username), do: :reserved, else: :ok
   end
 
   @doc """

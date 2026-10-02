@@ -4,7 +4,19 @@ defmodule Tymeslot.Profiles.ReservedPaths do
   This module separates the concern of namespace management from the broader profile context.
   """
 
+  alias Tymeslot.Demo
   alias Tymeslot.Locales
+
+  @doc """
+  Whether `username` is reserved, so no organiser may choose it.
+
+  A username is reserved when it is on `list/0`, or when the configured demo
+  provider serves it: a real profile under such a username would have its
+  booking page replaced by demo content.
+  """
+  @spec reserved?(String.t()) :: boolean()
+  def reserved?(username) when is_binary(username),
+    do: username in list() or Demo.demo_username?(username)
 
   @doc """
   Returns a list of top-level paths and usernames that are reserved for system use.

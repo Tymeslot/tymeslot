@@ -6,7 +6,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
   import Ecto.Changeset
   import Tymeslot.ChangesetValidators.BookingLimits, only: [validate_booking_limits: 2]
 
-  alias Tymeslot.Profiles
+  alias Tymeslot.Profiles.ReservedPaths
   alias Tymeslot.Security.FieldValidators.UsernameValidator
   alias Tymeslot.Security.Security
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
@@ -230,7 +230,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
         changeset
 
       username ->
-        if username in Profiles.reserved_paths() do
+        if ReservedPaths.reserved?(username) do
           add_error(changeset, :username, "is reserved", validation: :reserved)
         else
           changeset

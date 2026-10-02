@@ -21,6 +21,9 @@ defmodule Tymeslot.Demo do
   @spec get_profile_by_user_id(integer()) :: map() | nil
   def get_profile_by_user_id(user_id), do: provider().get_profile_by_user_id(user_id)
 
+  @spec demo_username?(String.t()) :: boolean()
+  def demo_username?(username), do: provider().demo_username?(username)
+
   @spec demo_profile?(map() | nil) :: boolean()
   def demo_profile?(profile), do: provider().demo_profile?(profile)
 
