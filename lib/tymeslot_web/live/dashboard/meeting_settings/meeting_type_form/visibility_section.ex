@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.VisibilitySectio
           phx-value-id={@type.id}
           phx-target={@parent}
           role="switch"
-          aria-checked={@type.is_private}
+          aria-checked={to_string(@type.is_private == true)}
           aria-label={dgettext("dashboard_meeting_form", "Hide from public booking page")}
           class={[
             "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ease-in-out focus:outline-hidden focus:ring-2 focus:ring-turquoise-500 focus:ring-offset-2",

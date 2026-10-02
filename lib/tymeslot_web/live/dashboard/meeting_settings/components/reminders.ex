@@ -145,13 +145,21 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
               <select
                 name="reminder[unit]"
                 class="input py-1.5! px-3! w-28 text-token-sm"
-                value={@new_reminder_unit}
                 phx-change="update_reminder_input"
                 phx-target={@myself}
               >
-                <option value="minutes">{dgettext("dashboard_meeting_form", "Minutes")}</option>
-                <option value="hours">{dgettext("dashboard_meeting_form", "Hours")}</option>
-                <option value="days">{dgettext("dashboard_meeting_form", "Days")}</option>
+                <%!-- A select element ignores a value attribute; the chosen unit has to
+                      be marked on its option, or a re-render snaps it back to
+                      the first one. --%>
+                <option value="minutes" selected={@new_reminder_unit == "minutes"}>
+                  {dgettext("dashboard_meeting_form", "Minutes")}
+                </option>
+                <option value="hours" selected={@new_reminder_unit == "hours"}>
+                  {dgettext("dashboard_meeting_form", "Hours")}
+                </option>
+                <option value="days" selected={@new_reminder_unit == "days"}>
+                  {dgettext("dashboard_meeting_form", "Days")}
+                </option>
               </select>
             </div>
             <button

@@ -98,7 +98,7 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
               :for={{key, label, swatch_class} <- EventColour.palette()}
               type="button"
               role="radio"
-              aria-checked={@entry.colour == key}
+              aria-checked={to_string(@entry.colour == key)}
               phx-click="set_entry_colour"
               phx-value-colour={key}
               phx-value-target={encode_target(@entry.target)}
@@ -114,7 +114,7 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
             <button
               type="button"
               role="radio"
-              aria-checked={@entry.colour == nil}
+              aria-checked={to_string(@entry.colour == nil)}
               phx-click="clear_entry_colour"
               phx-value-target={encode_target(@entry.target)}
               phx-target={@myself}

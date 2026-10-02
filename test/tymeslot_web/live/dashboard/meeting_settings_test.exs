@@ -163,11 +163,23 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
     } do
       view |> element("#tab-booking") |> render_click()
 
+      # A switch must state "false" when off: a boolean false drops the
+      # attribute, leaving screen readers with no state at all.
+      assert has_element?(
+               view,
+               "#panel-booking [phx-click='toggle_private'][aria-checked='false']"
+             )
+
       view
       |> element("#panel-booking [phx-click='toggle_private']")
       |> render_click()
 
       assert MeetingTypes.get_meeting_type(meeting_type.id, user.id).is_private
+
+      assert has_element?(
+               view,
+               "#panel-booking [phx-click='toggle_private'][aria-checked='true']"
+             )
     end
 
     test "create mode renders all sections stacked without a tab bar", %{conn: conn} do
@@ -290,6 +302,38 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
 
       assert MeetingTypes.get_meeting_type(meeting_type.id, user.id).duration_minutes == 45
       assert render(view) =~ "All changes saved"
+    end
+
+    test "the custom reminder unit select keeps the chosen unit across re-renders", %{
+      conn: conn,
+      user: user
+    } do
+      meeting_type = insert(:meeting_type, user: user, duration_minutes: 30)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      view
+      |> element("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
+      |> render_click()
+
+      view |> element("#tab-reminders") |> render_click()
+      view |> element("button[phx-click='toggle_custom_reminder']") |> render_click()
+
+      assert has_element?(
+               view,
+               ~s|select[name="reminder[unit]"] option[value="minutes"][selected]|
+             )
+
+      view
+      |> element(~s|select[name="reminder[unit]"]|)
+      |> render_change(%{"reminder" => %{"unit" => "hours"}})
+
+      assert has_element?(view, ~s|select[name="reminder[unit]"] option[value="hours"][selected]|)
+
+      refute has_element?(
+               view,
+               ~s|select[name="reminder[unit]"] option[value="minutes"][selected]|
+             )
     end
   end
 

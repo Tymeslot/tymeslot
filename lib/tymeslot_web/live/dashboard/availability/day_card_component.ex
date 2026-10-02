@@ -55,7 +55,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
             )
           ]}
           role="switch"
-          aria-checked={to_string(@day_availability.is_available)}
+          aria-checked={to_string(@day_availability.is_available == true)}
           aria-label={toggle_label(@day_availability.is_available, @day_name)}
         >
           <span class={[
