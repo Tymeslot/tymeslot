@@ -76,14 +76,7 @@ msgstr ""
 msgid "%{name} stopped syncing."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
-#: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex
-#: lib/tymeslot_web/components/dashboard/integrations/video/jitsi_config.ex
-#: lib/tymeslot_web/components/dashboard/integrations/video/kmeet_config.ex
-#: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex
-#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
 #, elixir-autogen, elixir-format
 msgid "Add Integration"
 msgstr ""
@@ -93,14 +86,7 @@ msgstr ""
 msgid "Add Meeting Type"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
-#: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex
-#: lib/tymeslot_web/components/dashboard/integrations/video/jitsi_config.ex
-#: lib/tymeslot_web/components/dashboard/integrations/video/kmeet_config.ex
-#: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex
-#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
 #, elixir-autogen, elixir-format
 msgid "Adding..."
 msgstr ""
@@ -140,15 +126,11 @@ msgstr ""
 msgid "Calendars"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
-#: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex
+#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex
 #: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Close"
@@ -267,11 +249,6 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
 #, elixir-autogen, elixir-format
 msgid "Payments"
-msgstr ""
-
-#: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex
-#, elixir-autogen, elixir-format
-msgid "Provider:"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex

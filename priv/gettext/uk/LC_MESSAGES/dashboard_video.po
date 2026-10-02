@@ -132,12 +132,7 @@ msgstr "Базова URL-адреса має бути текстом"
 msgid "Booked through Tymeslot."
 msgstr "Заброньовано через Tymeslot."
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
-#: lib/tymeslot_web/components/dashboard/integrations/video/jitsi_config.ex
-#: lib/tymeslot_web/components/dashboard/integrations/video/kmeet_config.ex
-#: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex
-#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Скасувати"

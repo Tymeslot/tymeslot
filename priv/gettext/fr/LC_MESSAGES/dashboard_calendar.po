@@ -92,11 +92,6 @@ msgid "3 Days"
 msgstr "3 jours"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
-#, elixir-autogen, elixir-format
-msgid "Add event"
-msgstr "Ajouter un événement"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Agenda"
