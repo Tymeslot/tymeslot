@@ -55,7 +55,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponentTest d
 
       assert html =~ "Let&#39;s Connect!"
       assert html =~ "Hi! I&#39;m Sarah Rodriguez."
-      assert html =~ "Pick an option below."
+      assert html =~ "Pick an option to get started."
     end
 
     test "shows the organiser's wording in place of all three lines" do
@@ -74,7 +74,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponentTest d
       assert html =~ "I am Sarah, and I help teams ship."
       assert html =~ "Choose whichever session suits you."
       refute html =~ "Let&#39;s Connect!"
-      refute html =~ "Pick an option below."
+      refute html =~ "Pick an option to get started."
     end
 
     test "starts the instruction on its own line below the greeting" do
@@ -120,7 +120,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponentTest d
 
       html = render_overview(organizer_profile: profile)
 
-      assert html =~ "Pick an option below."
+      assert html =~ "Pick an option to get started."
       refute html =~ "Hi! I&#39;m"
     end
 

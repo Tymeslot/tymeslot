@@ -969,8 +969,8 @@ msgstr "Vaše rezervace se už zpracovává. Počkejte prosím…"
 
 #: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
-msgid "Pick an option below."
-msgstr "Vyberte si níže některou z možností."
+msgid "Pick an option to get started."
+msgstr "Začněte výběrem jedné z možností."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex
 #, elixir-autogen, elixir-format

@@ -109,7 +109,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
   The instruction shown when the organiser has not supplied one.
   """
   @spec default_instruction() :: String.t()
-  def default_instruction, do: dgettext("booking", "Pick an option below.")
+  def default_instruction, do: dgettext("booking", "Pick an option to get started.")
 
   defp custom(%{booking_text_enabled: true} = profile, field), do: Map.get(profile, field)
   defp custom(_profile, _field), do: nil

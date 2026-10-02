@@ -969,8 +969,8 @@ msgstr "Ваше бронювання вже обробляється. Будь 
 
 #: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
-msgid "Pick an option below."
-msgstr "Оберіть варіант нижче."
+msgid "Pick an option to get started."
+msgstr "Оберіть варіант, щоб почати."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex
 #, elixir-autogen, elixir-format

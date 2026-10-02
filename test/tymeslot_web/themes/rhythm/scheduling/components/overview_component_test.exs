@@ -20,7 +20,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponentTest 
 
       assert html =~ "Schedule with Sarah Rodriguez"
       assert html =~ "Hi! I&#39;m Sarah Rodriguez."
-      assert html =~ "Pick an option below."
+      assert html =~ "Pick an option to get started."
     end
 
     test "shows the organiser's wording in place of all three lines" do
@@ -39,7 +39,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponentTest 
       assert html =~ "I am Sarah, and I help teams ship."
       assert html =~ "Choose whichever session suits you."
       refute html =~ "Schedule with Sarah Rodriguez"
-      refute html =~ "Pick an option below."
+      refute html =~ "Pick an option to get started."
     end
 
     test "keeps each welcome line in its own paragraph" do

@@ -70,7 +70,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
       # The current theme's default heading, not the other theme's.
       assert saved.booking_heading == "Let's Connect!"
       assert saved.booking_greeting == "Hi! I'm Sarah."
-      assert saved.booking_instruction == "Pick an option below."
+      assert saved.booking_instruction == "Pick an option to get started."
     end
 
     test "switching off resets the wording to the built-in defaults", %{

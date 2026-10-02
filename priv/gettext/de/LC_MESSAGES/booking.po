@@ -969,8 +969,8 @@ msgstr "Ihre Buchung wird bereits verarbeitet. Bitte warten…"
 
 #: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
-msgid "Pick an option below."
-msgstr "Bitte wählen Sie unten eine Option aus."
+msgid "Pick an option to get started."
+msgstr "Wählen Sie eine Option, um zu beginnen."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex
 #, elixir-autogen, elixir-format
