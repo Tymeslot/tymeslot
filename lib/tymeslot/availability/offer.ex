@@ -26,6 +26,7 @@ defmodule Tymeslot.Availability.Offer do
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.BookingLimits.Checker
+  alias Tymeslot.MeetingTypes.Lengths
   alias Tymeslot.Profiles
 
   # A day. The duration can come from a URL slug, which is visitor input, so an
@@ -127,8 +128,10 @@ defmodule Tymeslot.Availability.Offer do
   @doc """
   The meeting length a booking is made for, in minutes.
 
-  The resolved meeting type's current duration is authoritative. Only when
-  there is none does `fallback` (a duration slug such as `"30min"`, or a
+  The resolved meeting type's current duration is authoritative, or `chosen`
+  when the type offers that length among several
+  (`Tymeslot.MeetingTypes.Lengths`); a length it does not offer is ignored.
+  Only when there is no type does `fallback` (a duration slug such as `"30min"`, or a
   persisted length in minutes) decide, and that is bounded to a day, with
   anything unparseable resolving to #{@default_duration_minutes} minutes.
 
@@ -136,11 +139,14 @@ defmodule Tymeslot.Availability.Offer do
   the duration here, so the grid a time was offered from and the grid it is
   checked against cannot be stepped differently.
   """
-  @spec duration_minutes(map() | nil, String.t() | integer() | nil) :: pos_integer()
-  def duration_minutes(%{duration_minutes: minutes}, _fallback) when is_integer(minutes),
-    do: minutes
+  @spec duration_minutes(map() | nil, String.t() | integer() | nil, term()) :: pos_integer()
+  def duration_minutes(meeting_type, fallback, chosen \\ nil)
 
-  def duration_minutes(_meeting_type, fallback), do: bounded_duration(fallback)
+  def duration_minutes(%{duration_minutes: minutes} = meeting_type, _fallback, chosen)
+      when is_integer(minutes),
+      do: Lengths.resolve(meeting_type, chosen)
+
+  def duration_minutes(_meeting_type, fallback, _chosen), do: bounded_duration(fallback)
 
   @doc """
   The config the slot engine computes a page's offer from: the scheduling

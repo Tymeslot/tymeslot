@@ -64,6 +64,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
     %{"locale" => locale}
     |> put_preview_params(socket)
     |> maybe_put_query_param("reschedule_meeting_uid", socket.assigns[:reschedule_meeting_uid])
+    |> maybe_put_query_param("minutes", socket.assigns[:chosen_length_minutes])
   end
 
   # `theme` rides along here and nowhere else, which is the fix for #84. It used

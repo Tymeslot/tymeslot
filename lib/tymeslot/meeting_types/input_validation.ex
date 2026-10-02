@@ -28,6 +28,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
     validations = [
       {:name, params["name"]},
       {:duration, params["duration"]},
+      {:extra_lengths, {params["extra_lengths"], params["duration"]}},
       {:slot_interval, params["slot_interval"]},
       {:description, params["description"]},
       {:icon, params["icon"]},
@@ -65,6 +66,11 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   @spec validate_field(atom(), any(), map()) :: {:ok, any()} | {:error, map()}
   def validate_field(:name, value, metadata), do: validate_meeting_name(value, metadata)
   def validate_field(:duration, value, metadata), do: validate_meeting_duration(value, metadata)
+
+  # The further durations are checked together with the primary one, since
+  # none of them may repeat it. The value is `{extra_lengths, duration}`.
+  def validate_field(:extra_lengths, {extras, primary}, _metadata),
+    do: validate_extra_lengths(extras, primary)
 
   def validate_field(:slot_interval, value, metadata),
     do: validate_meeting_slot_interval(value, metadata)
@@ -294,6 +300,74 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
 
   defp validate_duration_constraints(duration) do
     {:ok, to_string(duration)}
+  end
+
+  @doc """
+  Normalises the posted list of further durations into a list of strings, in
+  the order they were entered. The form posts them as an index-keyed map
+  (`%{"0" => "45", "1" => "60"}`); the autosave path builds a list.
+  """
+  @spec extra_lengths_list(term()) :: [String.t()]
+  def extra_lengths_list(nil), do: []
+  def extra_lengths_list(list) when is_list(list), do: Enum.map(list, &to_string/1)
+
+  def extra_lengths_list(%{} = indexed) do
+    indexed
+    |> Enum.sort_by(fn {index, _value} -> index_order(index) end)
+    |> Enum.map(fn {_index, value} -> to_string(value) end)
+  end
+
+  def extra_lengths_list(_other), do: []
+
+  defp index_order(index) do
+    case Integer.parse(to_string(index)) do
+      {number, ""} -> number
+      _other -> 0
+    end
+  end
+
+  defp validate_extra_lengths(extras, primary) do
+    values = extra_lengths_list(extras)
+    max = Constraints.max_lengths_per_meeting_type()
+
+    with :ok <- check_extra_count(values, max),
+         {:ok, minutes} <- parse_extra_lengths(values),
+         :ok <- check_extra_repeats(minutes, primary) do
+      {:ok, Enum.map(minutes, &to_string/1)}
+    end
+  end
+
+  defp check_extra_count(values, max) when length(values) + 1 > max,
+    do: {:error, %{extra_lengths: "You can offer at most #{max} durations"}}
+
+  defp check_extra_count(_values, _max), do: :ok
+
+  defp parse_extra_lengths(values) do
+    Enum.reduce_while(values, {:ok, []}, fn value, {:ok, acc} ->
+      case value |> String.trim() |> Integer.parse() do
+        {minutes, ""} ->
+          case validate_duration_constraints(minutes) do
+            {:ok, _string} -> {:cont, {:ok, acc ++ [minutes]}}
+            {:error, %{duration: message}} -> {:halt, {:error, %{extra_lengths: message}}}
+          end
+
+        _invalid ->
+          {:halt,
+           {:error, %{extra_lengths: "Each additional duration must be a number of minutes"}}}
+      end
+    end)
+  end
+
+  defp check_extra_repeats(minutes, primary) do
+    all =
+      case primary |> to_string() |> String.trim() |> Integer.parse() do
+        {primary_minutes, ""} -> [primary_minutes | minutes]
+        _unparsable -> minutes
+      end
+
+    if length(Enum.uniq(all)) == length(all),
+      do: :ok,
+      else: {:error, %{extra_lengths: "Each duration can only be offered once"}}
   end
 
   # Blank means "use the meeting type's own duration" — the field is optional,

@@ -66,6 +66,14 @@ defmodule Tymeslot.Validation.Constraints do
   def duration_minutes_range, do: 5..480
 
   @doc """
+  How many durations one meeting type may offer the booker to choose from,
+  its own `duration_minutes` included. Enough for a 15-minute-to-two-hour
+  ladder; beyond that the choice step stops being a quick pick.
+  """
+  @spec max_lengths_per_meeting_type() :: pos_integer()
+  def max_lengths_per_meeting_type, do: 8
+
+  @doc """
   How long a poll's proposed meeting may be, in minutes.
 
   Same floor as `duration_minutes_range/0`, and for the same reason. The

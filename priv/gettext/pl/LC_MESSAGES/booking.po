@@ -404,6 +404,7 @@ msgstr "Wypełnij wszystkie wymagane pola"
 msgid "Please select a date to see available times"
 msgstr "Wybierz datę, aby zobaczyć dostępne terminy"
 
+#: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a meeting duration first"
@@ -673,8 +674,14 @@ msgstr "Rezerwacja nie została potwierdzona. Możesz wrócić i spróbować pon
 msgid "Your timezone"
 msgstr "Twoja strefa czasowa"
 
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
 #, elixir-autogen, elixir-format
+msgid "back"
+msgstr "Wstecz"
+
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
+#, elixir-autogen
 msgid "Add any details..."
 msgstr "Dodaj szczegóły…"
 
@@ -1309,6 +1316,17 @@ msgstr "Ta rezerwacja została odwołana, więc spotkanie się nie odbędzie."
 msgid "This booking wasn't accepted, so it won't be going ahead."
 msgstr "Ta rezerwacja nie została przyjęta, więc spotkanie się nie odbędzie."
 
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "%{min}–%{max} min"
+msgstr "%{min}–%{max} min"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
+#, elixir-autogen, elixir-format
+msgid "How long should the meeting be?"
+msgstr "Jak długo ma trwać spotkanie?"
+
 #: lib/tymeslot_web/themes/shared/booking_location.ex
 #, elixir-autogen, elixir-format
 msgid "Enter the number we should call you on."
@@ -1349,6 +1367,12 @@ msgstr "Która usługa wideo?"
 #, elixir-autogen, elixir-format
 msgid "Your phone number"
 msgstr "Numer telefonu"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
+#, elixir-autogen, elixir-format
+msgid "next"
+msgstr "Dalej"
 
 #: lib/tymeslot_web/themes/core/dispatcher.ex
 #, elixir-autogen, elixir-format
