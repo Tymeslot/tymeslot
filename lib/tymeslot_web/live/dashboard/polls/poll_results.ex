@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
 
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
+  alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Dashboard.Polls.PollShareLink
@@ -78,16 +79,16 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
                 property of the poll rather than a sentence about it. The full
                 phrasing stays on the label, which keeps the already-translated
                 string and gives the badge an accessible reading. --%>
-          <span
-            class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-token-full text-token-xs font-medium bg-tymeslot-100 text-tymeslot-600"
+          <Feedback.pill
+            icon="hero-globe-alt-mini"
+            class="mt-1"
             aria-label={
               dgettext("dashboard_common", "Times shown in %{timezone}", timezone: @poll.timezone)
             }
             data-testid="poll-timezone-badge"
           >
-            <Icons.icon name="hero-globe-alt-mini" class="w-3.5 h-3.5" />
             {@poll.timezone}
-          </span>
+          </Feedback.pill>
 
           <%!-- The host's own description. Shown here because the panel is
                 where they check what they asked their guests, and it is the
@@ -318,29 +319,25 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
           <span class="font-medium text-tymeslot-800">
             {format_slot(@slot, @timezone, @time_format)}
           </span>
-          <span
-            :if={@winner?}
-            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-token-full text-token-xs font-medium bg-blue-100 text-blue-700"
-          >
-            <Icons.icon name="hero-check-circle-mini" class="w-3.5 h-3.5" />
+          <Feedback.pill :if={@winner?} tone={:info} icon="hero-check-circle-mini">
             {dgettext("dashboard_common", "Winner")}
-          </span>
-          <span
+          </Feedback.pill>
+          <Feedback.pill
             :if={@leader?}
-            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-token-full text-token-xs font-medium bg-turquoise-100 text-turquoise-700"
+            tone={:brand}
+            icon="hero-arrow-trending-up-mini"
             data-testid="poll-slot-leader"
           >
-            <Icons.icon name="hero-arrow-trending-up-mini" class="w-3.5 h-3.5" />
             {dgettext("dashboard_common", "Most votes")}
-          </span>
-          <span
+          </Feedback.pill>
+          <Feedback.pill
             :if={@health == :conflict}
-            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-token-full text-token-xs font-medium bg-amber-100 text-amber-700"
+            tone={:warning}
+            icon="hero-exclamation-triangle-mini"
             title={dgettext("dashboard_common", "This time clashes with an event on your calendar")}
           >
-            <Icons.icon name="hero-exclamation-triangle-mini" class="w-3.5 h-3.5" />
             {dgettext("dashboard_common", "Calendar conflict")}
-          </span>
+          </Feedback.pill>
         </div>
 
         <button

@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Polls
+  alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Dashboard.Polls.PollShareLink
 
@@ -83,7 +84,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
             <h3 class="text-token-base font-semibold text-tymeslot-800 truncate">
               {@poll.title}
             </h3>
-            <.status_badge status={@poll.status} />
+            <.status_pill status={@poll.status} />
           </div>
 
           <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-token-xs text-tymeslot-600">
@@ -146,21 +147,16 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
 
   attr :status, :atom, required: true
 
-  @spec status_badge(map()) :: Phoenix.LiveView.Rendered.t()
-  defp status_badge(assigns) do
+  @spec status_pill(map()) :: Phoenix.LiveView.Rendered.t()
+  defp status_pill(assigns) do
     ~H"""
-    <span class={[
-      "shrink-0 inline-flex items-center px-2 py-0.5 rounded-token-full text-token-xs font-medium",
-      status_badge_class(@status)
-    ]}>
-      {status_label(@status)}
-    </span>
+    <Feedback.pill tone={status_tone(@status)}>{status_label(@status)}</Feedback.pill>
     """
   end
 
-  defp status_badge_class(:open), do: "bg-turquoise-100 text-turquoise-700"
-  defp status_badge_class(:confirmed), do: "bg-blue-100 text-blue-700"
-  defp status_badge_class(:cancelled), do: "bg-tymeslot-100 text-tymeslot-500"
+  defp status_tone(:open), do: :brand
+  defp status_tone(:confirmed), do: :info
+  defp status_tone(:cancelled), do: :neutral
 
   defp status_label(:open), do: dgettext("dashboard_common", "Open")
   defp status_label(:confirmed), do: dgettext("dashboard_common", "Confirmed")
