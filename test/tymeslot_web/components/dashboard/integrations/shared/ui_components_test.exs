@@ -124,9 +124,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponentsTest 
     test "uses the type scale tokens rather than raw sizes" do
       {html, _doc} = render_header([])
 
-      assert html =~ "text-token-xl"
+      assert html =~ "text-token-lg"
       assert html =~ "text-token-sm"
-      refute html =~ ~r/class="[^"]*\btext-(xl|sm)\b/
+      refute html =~ ~r/class="[^"]*\btext-(lg|sm)\b/
     end
   end
 end

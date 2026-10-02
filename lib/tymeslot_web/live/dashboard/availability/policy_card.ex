@@ -26,21 +26,16 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
   @spec policy_card(map()) :: Phoenix.LiveView.Rendered.t()
   def policy_card(assigns) do
     ~H"""
-    <div class="card-glass shadow-2xl shadow-tymeslot-200/50">
-      <.section_header
-        level={2}
-        icon="hero-clock"
-        title={dgettext("dashboard_availability", "Scheduling Preferences")}
-        class="mb-4"
-      />
-
-      <p class="mb-10 text-token-sm text-tymeslot-500 font-bold">
-        {dgettext(
+    <.card
+      icon="hero-clock"
+      title={dgettext("dashboard_availability", "Scheduling Preferences")}
+      description={
+        dgettext(
           "dashboard_availability",
           "These rules apply to every meeting type booked against this schedule."
-        )}
-      </p>
-
+        )
+      }
+    >
       <div class="space-y-8">
         <.buffer_minutes_setting
           schedule={@schedule}
@@ -58,7 +53,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
           custom_mode={Map.get(@custom_input_mode, :min_advance_hours, false)}
         />
       </div>
-    </div>
+    </.card>
     """
   end
 

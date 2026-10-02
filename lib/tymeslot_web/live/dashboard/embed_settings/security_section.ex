@@ -27,7 +27,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection do
               >
               </path>
             </svg>
-            <h3 class="text-token-2xl font-bold text-tymeslot-900">
+            <h3 class="text-token-lg font-semibold text-tymeslot-900">
               {dgettext("dashboard_embed", "Security & Domain Control")}
             </h3>
           </div>

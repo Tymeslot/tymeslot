@@ -77,14 +77,15 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
         <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
           <%= for {theme_name, theme_id} <- @themes do %>
             <div class="group/theme space-y-6">
-              <div
+              <.card
+                padding={:none}
+                interactive
                 class={[
-                  "card-glass p-0 overflow-hidden cursor-pointer transition-all duration-500 border-2",
+                  "overflow-hidden duration-500",
                   if(@profile.booking_theme == theme_id,
                     do:
-                      "glass-gradient border-turquoise-400 shadow-2xl shadow-turquoise-500/20 ring-4 ring-turquoise-50",
-                    else:
-                      "border-tymeslot-50 hover:border-turquoise-200 hover:shadow-xl hover:shadow-tymeslot-200/50"
+                      "glass-gradient border-turquoise-400 shadow-turquoise-500/20 ring-4 ring-turquoise-50",
+                    else: "hover:border-turquoise-200 hover:shadow-tymeslot-200/50"
                   )
                 ]}
                 phx-click="select_theme"
@@ -146,7 +147,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
                     {ThemeInfo.get_description(theme_id)}
                   </p>
                 </div>
-              </div>
+              </.card>
 
               <%!-- Wraps rather than overflows when a narrow card cannot fit both
                     labels on one line. --%>

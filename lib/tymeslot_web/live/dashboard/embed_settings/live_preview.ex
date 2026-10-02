@@ -30,7 +30,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.LivePreview do
     <div class="bg-linear-to-br from-tymeslot-50 to-tymeslot-100 rounded-token-2xl border-2 border-tymeslot-200 p-8">
       <div class="flex items-center mb-6">
         <div>
-          <h3 class="text-token-2xl font-bold text-tymeslot-900">
+          <h3 class="text-token-lg font-semibold text-tymeslot-900">
             {dgettext("dashboard_embed", "Test It Live")}
           </h3>
           <p class="text-tymeslot-600 mt-1">

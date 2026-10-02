@@ -32,7 +32,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SourcesTable do
     assigns = assign(assigns, :rows, rows)
 
     ~H"""
-    <div class="card-glass overflow-hidden p-0">
+    <.card padding={:none} class="overflow-hidden">
       <div :if={@loading?} class="space-y-3 p-4" aria-hidden="true">
         <div
           :for={i <- 1..3}
@@ -90,7 +90,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SourcesTable do
           </dl>
         </div>
       </div>
-    </div>
+    </.card>
     """
   end
 end

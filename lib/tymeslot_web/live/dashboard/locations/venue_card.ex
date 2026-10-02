@@ -15,8 +15,9 @@ defmodule TymeslotWeb.Dashboard.Locations.VenueCard do
   @spec venue_card(map()) :: Phoenix.LiveView.Rendered.t()
   def venue_card(assigns) do
     ~H"""
-    <div
-      class="card-glass p-4 flex items-start gap-3"
+    <.card
+      padding={:sm}
+      class="flex items-start gap-3"
       data-testid="venue-card"
       data-venue-id={@venue.id}
       data-id={@venue.id}
@@ -60,7 +61,7 @@ defmodule TymeslotWeb.Dashboard.Locations.VenueCard do
           {dgettext("dashboard_meeting_types", "Delete")}
         </.action_button>
       </div>
-    </div>
+    </.card>
     """
   end
 

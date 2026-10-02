@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.LocationOption
   alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents.Containers
   alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Components.Icons.ProviderIcon
@@ -26,10 +27,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   @spec meeting_type_card(map()) :: Phoenix.LiveView.Rendered.t()
   def meeting_type_card(assigns) do
     ~H"""
-    <div class={[
-      "card-glass py-3 px-4",
-      if(@type.is_active, do: "card-glass-available", else: "card-glass-unavailable")
-    ]}>
+    <Containers.card
+      padding={:xs}
+      class={if(@type.is_active, do: "card-glass-available", else: "card-glass-unavailable")}
+    >
       <div class="flex items-center gap-3">
         <%!-- Drag Handle --%>
         <div class="cursor-grab active:cursor-grabbing text-tymeslot-400 shrink-0">
@@ -50,7 +51,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
         <%!-- Name + details --%>
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 min-w-0">
-            <h3 class="text-token-base font-medium text-tymeslot-800 truncate">
+            <h3 class="text-token-base font-semibold text-tymeslot-800 truncate">
               {@type.name}
             </h3>
             <Feedback.pill
@@ -152,7 +153,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
           />
         </div>
       </div>
-    </div>
+    </Containers.card>
     """
   end
 

@@ -62,7 +62,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
             <%= if active_integrations != [] do %>
               <div class="space-y-3">
                 <%= if show_section_headers do %>
-                  <h3 class="text-lg font-bold text-turquoise-800">
+                  <h3 class="text-token-lg font-semibold text-tymeslot-900">
                     {dgettext("dashboard_video", "Active Video Integrations")}
                   </h3>
                 <% end %>
@@ -82,7 +82,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
             <%= if inactive_integrations != [] do %>
               <div class="space-y-3">
                 <%= if show_section_headers do %>
-                  <h3 class="text-lg font-semibold text-tymeslot-600">
+                  <h3 class="text-token-lg font-semibold text-tymeslot-500">
                     {dgettext("dashboard_video", "Inactive Video Integrations")}
                   </h3>
                 <% end %>

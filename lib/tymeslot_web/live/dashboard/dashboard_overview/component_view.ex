@@ -63,14 +63,16 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
       />
 
       <%!-- Live agenda --%>
-      <div class="card-glass min-w-0">
-        <div class="flex items-center justify-between gap-4 mb-8">
+      <.card class="min-w-0">
+        <:header>
           <div class="flex items-center gap-3">
-            <.section_header level={2} title={dgettext("dashboard_home", "Your day")} />
+            <.subsection_header size={:lg} level={2} title={dgettext("dashboard_home", "Your day")} />
             <.pill :if={@today_count > 0} tone={:brand}>
               {@today_count} {dgettext("dashboard_home", "today")}
             </.pill>
           </div>
+        </:header>
+        <:actions>
           <.link
             patch={~p"/dashboard"}
             class="text-turquoise-600 hover:text-turquoise-700 font-bold text-token-sm transition-colors flex items-center gap-1 group shrink-0"
@@ -78,7 +80,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
             {dgettext("dashboard_home", "View calendar")}
             <span class="group-hover:translate-x-1 transition-transform">→</span>
           </.link>
-        </div>
+        </:actions>
 
         <%!-- Focus cockpit: the next appointment, zoomed in --%>
         <div :if={@agenda.next} class="mb-8">
@@ -164,7 +166,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
           <.icon name="hero-calendar-days" class="w-4 h-4" />
           {dgettext("dashboard_home", "Connect a calendar to see your whole schedule here")}
         </.link>
-      </div>
+      </.card>
 
       <%!-- Appointment detail modal --%>
       <AgendaDetailModal.agenda_detail_modal

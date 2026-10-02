@@ -67,7 +67,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SummaryCards do
 
   defp stat_card(assigns) do
     ~H"""
-    <div class="card-glass flex h-full flex-col" {@rest}>
+    <.card class="flex h-full flex-col" {@rest}>
       <div class="text-token-sm font-black uppercase tracking-widest text-tymeslot-400">
         {@label}
       </div>
@@ -86,7 +86,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SummaryCards do
           <span :if={@value_label} class="sr-only">{@value_label}</span>
         </div>
       </div>
-    </div>
+    </.card>
     """
   end
 end

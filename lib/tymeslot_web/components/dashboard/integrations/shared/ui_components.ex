@@ -38,7 +38,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
       <div class="flex min-w-0 items-center gap-4">
         <ProviderIcon.provider_icon provider={@provider} type={@type} size="large" class="shrink-0" />
         <div class="min-w-0">
-          <h3 class="text-token-xl font-black tracking-tight text-tymeslot-900">{@title}</h3>
+          <h3 class="text-token-lg font-semibold text-tymeslot-900">{@title}</h3>
           <p class="text-token-sm font-medium text-tymeslot-500">{@tagline}</p>
         </div>
       </div>

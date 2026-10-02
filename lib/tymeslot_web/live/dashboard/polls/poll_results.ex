@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents.Containers
   alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.CoreComponents.Icons
@@ -63,7 +64,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
       |> assign(:leaders, leader_ids(assigns.poll.time_slots, assigns.tallies))
 
     ~H"""
-    <div id={"poll-results-#{@poll.id}"} class="card-glass py-6 px-6 space-y-6">
+    <Containers.card id={"poll-results-#{@poll.id}"} class="space-y-6">
       <.details_form
         :if={@editing_details?}
         poll={@poll}
@@ -181,7 +182,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
           {dgettext("dashboard_common", "Cancel poll")}
         </Buttons.action_button>
       </div>
-    </div>
+    </Containers.card>
     """
   end
 

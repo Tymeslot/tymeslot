@@ -22,7 +22,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.DeviceBreakdown do
     assigns = assign(assigns, rows: rows)
 
     ~H"""
-    <div class="card-glass">
+    <.card>
       <div class="mb-4 text-token-sm font-black uppercase tracking-widest text-tymeslot-400">
         {dgettext("dashboard_analytics", "Devices")}
       </div>
@@ -55,7 +55,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.DeviceBreakdown do
           </div>
         </div>
       </div>
-    </div>
+    </.card>
     """
   end
 

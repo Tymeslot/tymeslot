@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
       )
 
     ~H"""
-    <div class="card-glass">
+    <.card>
       <div class="flex items-center justify-between gap-2">
         <div class="text-token-xs font-black uppercase tracking-widest text-tymeslot-400">
           {dgettext("dashboard_analytics", "Visits over time")}
@@ -142,7 +142,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
           </div>
         </div>
       </div>
-    </div>
+    </.card>
     """
   end
 

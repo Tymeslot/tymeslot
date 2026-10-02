@@ -266,7 +266,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
     <div class="mb-6 bg-white border-2 border-tymeslot-200 rounded-token-lg p-6">
       <div class="flex items-center justify-between mb-4">
         <div>
-          <h3 class="text-token-lg font-bold text-tymeslot-900">
+          <h3 class="text-token-lg font-semibold text-tymeslot-900">
             {dgettext("dashboard_embed", "Customise")}
           </h3>
           <p class="text-token-sm text-tymeslot-600 mt-1">
@@ -406,7 +406,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
       <div class="p-6">
         <div class="flex items-start justify-between mb-4">
           <div>
-            <h3 class="text-token-xl font-bold text-tymeslot-900">{@title}</h3>
+            <h3 class="text-token-lg font-semibold text-tymeslot-900">{@title}</h3>
             <p class="text-token-sm text-tymeslot-600 mt-1">{@description}</p>
           </div>
           <.pill :if={@badge} tone={@badge_tone} size={:sm} uppercase>{@badge}</.pill>

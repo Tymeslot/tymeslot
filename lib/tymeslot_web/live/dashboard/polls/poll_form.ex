@@ -59,170 +59,170 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div id={"poll-form-#{@id}"} class="card-glass py-6 px-6 space-y-6">
-      <.section_header
-        level={3}
+    <div id={"poll-form-#{@id}"}>
+      <.card
         icon="hero-plus-circle"
         title={dgettext("dashboard_common", "New poll")}
-      />
-
-      <form
-        id={"poll-create-form-#{@id}"}
-        phx-submit="create_poll"
-        phx-change="form_change"
-        phx-target={@myself}
-        class="space-y-4"
-        novalidate
+        class="space-y-6"
       >
-        <.input
-          name="poll[title]"
-          label={dgettext("dashboard_common", "Title")}
-          value={@title}
-          required
-          placeholder={dgettext("dashboard_common", "e.g., Team sync")}
-          errors={error_list(@errors, :title)}
-          icon="hero-hand-raised"
-        />
-
-        <.input
-          type="textarea"
-          name="poll[description]"
-          label={dgettext("dashboard_common", "Description (optional)")}
-          value={@description}
-          placeholder={dgettext("dashboard_common", "Add any context for your guests")}
-          errors={error_list(@errors, :description)}
-        />
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form
+          id={"poll-create-form-#{@id}"}
+          phx-submit="create_poll"
+          phx-change="form_change"
+          phx-target={@myself}
+          class="space-y-4"
+          novalidate
+        >
           <.input
-            type="select"
-            name="poll[meeting_type_id]"
-            label={dgettext("dashboard_common", "Meeting type (optional)")}
-            value={@meeting_type_id}
-            prompt={dgettext("dashboard_common", "No meeting type")}
-            options={meeting_type_options(@meeting_types)}
-            errors={error_list(@errors, :meeting_type_id)}
-          />
-
-          <div :if={meeting_type_selected?(@meeting_types, @meeting_type_id)}>
-            <input type="hidden" name="poll[duration]" value={@duration} />
-            <p class="text-token-sm text-tymeslot-600 mt-8">
-              {dgettext("dashboard_common", "Duration: %{minutes} min (from meeting type)",
-                minutes: @duration
-              )}
-            </p>
-          </div>
-          <.input
-            :if={!meeting_type_selected?(@meeting_types, @meeting_type_id)}
-            type="number"
-            name="poll[duration]"
-            label={dgettext("dashboard_common", "Duration (minutes)")}
-            value={@duration}
-            min={Constraints.poll_duration_minutes_opts()[:greater_than_or_equal_to]}
-            max={Constraints.poll_duration_minutes_opts()[:less_than_or_equal_to]}
+            name="poll[title]"
+            label={dgettext("dashboard_common", "Title")}
+            value={@title}
             required
-            errors={error_list(@errors, :duration_minutes)}
-            icon="hero-clock"
-          />
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <.input
-            type="select"
-            name="poll[timezone]"
-            label={dgettext("dashboard_common", "Timezone")}
-            value={@timezone}
-            options={Timezones.all_options()}
-            errors={error_list(@errors, :timezone)}
+            placeholder={dgettext("dashboard_common", "e.g., Team sync")}
+            errors={error_list(@errors, :title)}
+            icon="hero-hand-raised"
           />
 
           <.input
-            type="datetime-local"
-            name="poll[deadline]"
-            label={dgettext("dashboard_common", "Voting deadline (optional)")}
-            value={@deadline}
-            errors={error_list(@errors, :deadline_at)}
+            type="textarea"
+            name="poll[description]"
+            label={dgettext("dashboard_common", "Description (optional)")}
+            value={@description}
+            placeholder={dgettext("dashboard_common", "Add any context for your guests")}
+            errors={error_list(@errors, :description)}
           />
-        </div>
 
-        <div class="space-y-3">
-          <div class="flex items-center justify-between">
-            <label class="label mb-0">
-              {dgettext("dashboard_common", "Candidate times")}
-            </label>
-            <span class="text-token-xs text-tymeslot-500">
-              {dngettext(
-                "dashboard_common",
-                "%{count} of %{max} time",
-                "%{count} of %{max} times",
-                length(@slots),
-                count: length(@slots),
-                max: PollSchema.max_slots()
-              )}
-            </span>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <.input
+              type="select"
+              name="poll[meeting_type_id]"
+              label={dgettext("dashboard_common", "Meeting type (optional)")}
+              value={@meeting_type_id}
+              prompt={dgettext("dashboard_common", "No meeting type")}
+              options={meeting_type_options(@meeting_types)}
+              errors={error_list(@errors, :meeting_type_id)}
+            />
+
+            <div :if={meeting_type_selected?(@meeting_types, @meeting_type_id)}>
+              <input type="hidden" name="poll[duration]" value={@duration} />
+              <p class="text-token-sm text-tymeslot-600 mt-8">
+                {dgettext("dashboard_common", "Duration: %{minutes} min (from meeting type)",
+                  minutes: @duration
+                )}
+              </p>
+            </div>
+            <.input
+              :if={!meeting_type_selected?(@meeting_types, @meeting_type_id)}
+              type="number"
+              name="poll[duration]"
+              label={dgettext("dashboard_common", "Duration (minutes)")}
+              value={@duration}
+              min={Constraints.poll_duration_minutes_opts()[:greater_than_or_equal_to]}
+              max={Constraints.poll_duration_minutes_opts()[:less_than_or_equal_to]}
+              required
+              errors={error_list(@errors, :duration_minutes)}
+              icon="hero-clock"
+            />
           </div>
 
-          <div :for={{slot, index} <- Enum.with_index(@slots)} class="space-y-1">
-            <div class="flex items-center gap-2">
-              <div class="flex-1">
-                <.input
-                  type="datetime-local"
-                  name={"poll[slots][#{slot.key}]"}
-                  value={slot.value}
-                  aria-label={dgettext("dashboard_common", "Candidate time %{n}", n: index + 1)}
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <.input
+              type="select"
+              name="poll[timezone]"
+              label={dgettext("dashboard_common", "Timezone")}
+              value={@timezone}
+              options={Timezones.all_options()}
+              errors={error_list(@errors, :timezone)}
+            />
+
+            <.input
+              type="datetime-local"
+              name="poll[deadline]"
+              label={dgettext("dashboard_common", "Voting deadline (optional)")}
+              value={@deadline}
+              errors={error_list(@errors, :deadline_at)}
+            />
+          </div>
+
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <label class="label mb-0">
+                {dgettext("dashboard_common", "Candidate times")}
+              </label>
+              <span class="text-token-xs text-tymeslot-500">
+                {dngettext(
+                  "dashboard_common",
+                  "%{count} of %{max} time",
+                  "%{count} of %{max} times",
+                  length(@slots),
+                  count: length(@slots),
+                  max: PollSchema.max_slots()
+                )}
+              </span>
+            </div>
+
+            <div :for={{slot, index} <- Enum.with_index(@slots)} class="space-y-1">
+              <div class="flex items-center gap-2">
+                <div class="flex-1">
+                  <.input
+                    type="datetime-local"
+                    name={"poll[slots][#{slot.key}]"}
+                    value={slot.value}
+                    aria-label={dgettext("dashboard_common", "Candidate time %{n}", n: index + 1)}
+                  />
+                </div>
+                <.icon_button
+                  icon="hero-x-mark"
+                  label={dgettext("dashboard_common", "Remove time")}
+                  variant={:danger}
+                  phx-click="remove_slot"
+                  phx-value-key={slot.key}
+                  phx-target={@myself}
                 />
               </div>
-              <.icon_button
-                icon="hero-x-mark"
-                label={dgettext("dashboard_common", "Remove time")}
-                variant={:danger}
-                phx-click="remove_slot"
-                phx-value-key={slot.key}
-                phx-target={@myself}
-              />
+              <p
+                :if={MapSet.member?(@time_off_keys, slot.key)}
+                data-testid="poll-slot-time-off-warning"
+                data-slot-key={slot.key}
+                class="flex items-center gap-1 text-token-xs text-amber-700"
+              >
+                <.icon name="hero-exclamation-triangle-mini" class="w-4 h-4 shrink-0" />
+                {dgettext(
+                  "dashboard_common",
+                  "This time falls within your time off, so it can't be confirmed while that stays in place."
+                )}
+              </p>
             </div>
-            <p
-              :if={MapSet.member?(@time_off_keys, slot.key)}
-              data-testid="poll-slot-time-off-warning"
-              data-slot-key={slot.key}
-              class="flex items-center gap-1 text-token-xs text-amber-700"
+
+            <p :for={error <- error_list(@errors, :slots)} class="form-error">{error}</p>
+
+            <.action_button
+              variant={:secondary}
+              size={:sm}
+              icon="hero-plus"
+              phx-click="add_slot"
+              phx-target={@myself}
             >
-              <.icon name="hero-exclamation-triangle-mini" class="w-4 h-4 shrink-0" />
-              {dgettext(
-                "dashboard_common",
-                "This time falls within your time off, so it can't be confirmed while that stays in place."
-              )}
-            </p>
+              {dgettext("dashboard_common", "Add time")}
+            </.action_button>
           </div>
 
-          <p :for={error <- error_list(@errors, :slots)} class="form-error">{error}</p>
+          <p :for={error <- error_list(@errors, :base)} class="form-error">{error}</p>
 
-          <.action_button
-            variant={:secondary}
-            size={:sm}
-            icon="hero-plus"
-            phx-click="add_slot"
-            phx-target={@myself}
-          >
-            {dgettext("dashboard_common", "Add time")}
-          </.action_button>
-        </div>
-
-        <p :for={error <- error_list(@errors, :base)} class="form-error">{error}</p>
-
-        <div class="flex justify-end gap-3 pt-2">
-          <.action_button
-            variant={:secondary}
-            phx-click="cancel_poll_form"
-            phx-target={@parent_myself}
-          >
-            {dgettext("dashboard_common", "Cancel")}
-          </.action_button>
-          <.action_button type="submit">
-            {dgettext("dashboard_common", "Create poll")}
-          </.action_button>
-        </div>
-      </form>
+          <div class="flex justify-end gap-3 pt-2">
+            <.action_button
+              variant={:secondary}
+              phx-click="cancel_poll_form"
+              phx-target={@parent_myself}
+            >
+              {dgettext("dashboard_common", "Cancel")}
+            </.action_button>
+            <.action_button type="submit">
+              {dgettext("dashboard_common", "Create poll")}
+            </.action_button>
+          </div>
+        </form>
+      </.card>
     </div>
     """
   end

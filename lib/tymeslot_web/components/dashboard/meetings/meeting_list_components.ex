@@ -165,13 +165,14 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   @spec info_panel(map()) :: Phoenix.LiveView.Rendered.t()
   def info_panel(assigns) do
     ~H"""
-    <div class="mt-12 card-glass p-8 lg:p-12 relative overflow-hidden group/info">
+    <Containers.card padding={:lg} class="mt-12 relative overflow-hidden group/info">
       <div class="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-turquoise-500/5 rounded-full blur-3xl transition-colors group-hover/info:bg-turquoise-500/10">
       </div>
 
       <div class="flex flex-col lg:flex-row gap-12 relative z-10">
         <div class="flex-1">
-          <Containers.section_header
+          <Containers.subsection_header
+            size={:lg}
             level={2}
             icon="hero-calendar-days"
             title={dgettext("dashboard_bookings", "Meeting Management")}
@@ -218,7 +219,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
           />
         </div>
       </div>
-    </div>
+    </Containers.card>
     """
   end
 

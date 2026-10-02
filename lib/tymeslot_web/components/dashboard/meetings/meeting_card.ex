@@ -41,7 +41,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
       )
 
     ~H"""
-    <div class="card-glass hover:bg-white hover:border-turquoise-100 hover:shadow-2xl hover:shadow-turquoise-500/5 group/card">
+    <Containers.card class="group/card hover:border-turquoise-100 hover:shadow-turquoise-500/5">
       <.calendar_sync_banner
         :if={
           @meeting.calendar_sync_status in ["externally_deleted", "externally_modified"] and
@@ -53,7 +53,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
       <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-3 flex-wrap mb-6">
-            <h4 class="text-token-2xl font-black text-tymeslot-900 tracking-tight group-hover/card:text-turquoise-700 transition-colors">
+            <h4 class="text-token-lg font-semibold text-tymeslot-900 group-hover/card:text-turquoise-700 transition-colors">
               {@meeting.attendee_name}
             </h4>
             <span
@@ -166,7 +166,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
           cancelling_meeting={@cancelling_meeting}
         />
       </div>
-    </div>
+    </Containers.card>
     """
   end
 

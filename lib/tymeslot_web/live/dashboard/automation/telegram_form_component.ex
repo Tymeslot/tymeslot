@@ -106,19 +106,15 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
           novalidate
         >
           <%!-- Name & Details --%>
-          <div class="card-glass">
-            <div class="mb-6">
-              <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
-                {dgettext("dashboard_automation_chat", "Integration Details")}
-              </h3>
-              <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
-                {dgettext(
-                  "dashboard_automation_chat",
-                  "Configure your Telegram notification settings."
-                )}
-              </p>
-            </div>
-
+          <.card
+            title={dgettext("dashboard_automation_chat", "Integration Details")}
+            description={
+              dgettext(
+                "dashboard_automation_chat",
+                "Configure your Telegram notification settings."
+              )
+            }
+          >
             <div class="space-y-6">
               <.input
                 name="telegram[name]"
@@ -215,7 +211,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
                 </div>
               <% end %>
             </div>
-          </div>
+          </.card>
 
           <%!-- Events Selection --%>
           <EventSubscriptions.event_subscriptions

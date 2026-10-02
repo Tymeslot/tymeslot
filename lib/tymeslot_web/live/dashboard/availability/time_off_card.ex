@@ -386,118 +386,110 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(assigns) do
     ~H"""
-    <div class="card-glass shadow-2xl shadow-tymeslot-200/50">
-      <div class="flex flex-wrap items-start justify-between gap-4 mb-4">
-        <.section_header
-          level={2}
-          icon="hero-sun"
-          title={dgettext("dashboard_availability", "Time Off")}
-        />
-
-        <%!-- An empty card carries this action in its empty state instead. --%>
-        <.add_time_off_button
-          :if={@periods != [] or @past_periods != []}
-          variant={:secondary}
-          myself={@myself}
-        />
-      </div>
-
-      <p class="mb-8 text-token-sm text-tymeslot-500 font-bold">
-        {dgettext(
-          "dashboard_availability",
-          "Days you are away. These apply to every schedule and every meeting type, and nobody booking you sees why those days are closed."
-        )}
-      </p>
-
-      <%!-- The full empty state is only for a card with nothing in it at all.
-      Once past periods exist, both categories show, so an empty current one
-      reads as "nothing coming up" rather than disappearing above the past. --%>
-      <.empty_state
-        :if={@periods == [] and @past_periods == []}
+    <div>
+      <.card
         icon="hero-sun"
-        variant={:dashed}
-        title={dgettext("dashboard_availability", "No time off booked")}
+        title={dgettext("dashboard_availability", "Time Off")}
         description={
           dgettext(
             "dashboard_availability",
-            "Add a period and those days stop being offered, without touching your calendars."
+            "Days you are away. These apply to every schedule and every meeting type, and nobody booking you sees why those days are closed."
           )
         }
-        data-testid="time-off-empty"
       >
-        <:action><.add_time_off_button variant={:primary} myself={@myself} /></:action>
-      </.empty_state>
+        <:actions :if={@periods != [] or @past_periods != []}>
+          <%!-- An empty card carries this action in its empty state instead. --%>
+          <.add_time_off_button variant={:secondary} myself={@myself} />
+        </:actions>
 
-      <div :if={@periods != [] or @past_periods != []} data-testid="time-off-current">
-        <.section_header
-          level={4}
-          title={dgettext("dashboard_availability", "Current and upcoming")}
-          class="mb-4"
-        />
-
-        <ul :if={@periods != []} class="space-y-3" data-testid="time-off-list">
-          <.period_row
-            :for={period <- @periods}
-            period={period}
-            time_format={@time_format}
-            myself={@myself}
-          />
-        </ul>
-
+        <%!-- The full empty state is only for a card with nothing in it at all.
+      Once past periods exist, both categories show, so an empty current one
+      reads as "nothing coming up" rather than disappearing above the past. --%>
         <.empty_state
-          :if={@periods == []}
+          :if={@periods == [] and @past_periods == []}
           icon="hero-sun"
-          size={:sm}
           variant={:dashed}
-          title={dgettext("dashboard_availability", "No upcoming time off")}
-          description={dgettext("dashboard_availability", "Anything you add appears here.")}
-          data-testid="time-off-current-empty"
-        />
-      </div>
+          title={dgettext("dashboard_availability", "No time off booked")}
+          description={
+            dgettext(
+              "dashboard_availability",
+              "Add a period and those days stop being offered, without touching your calendars."
+            )
+          }
+          data-testid="time-off-empty"
+        >
+          <:action><.add_time_off_button variant={:primary} myself={@myself} /></:action>
+        </.empty_state>
 
-      <div :if={@past_periods != []} class="mt-8" data-testid="time-off-past">
-        <.section_header
-          level={4}
-          title={dgettext("dashboard_availability", "Past")}
-          count={length(@past_periods)}
-          class="mb-2"
-        />
-        <p class="mb-4 text-token-sm text-tymeslot-500 font-medium">
-          {dgettext(
-            "dashboard_availability",
-            "Time off that ended in the last %{count} days. It no longer affects your availability.",
-            count: TimeOff.recent_past_days()
-          )}
-        </p>
-
-        <ul class="space-y-3" data-testid="time-off-past-list">
-          <.period_row
-            :for={period <- @past_periods}
-            period={period}
-            time_format={@time_format}
-            myself={@myself}
-            past
+        <div :if={@periods != [] or @past_periods != []} data-testid="time-off-current">
+          <.subsection_header
+            title={dgettext("dashboard_availability", "Current and upcoming")}
+            class="mb-4"
           />
-        </ul>
-      </div>
 
-      <TimeOffFormModal.time_off_form_modal
-        id="time-off-form-modal"
-        show={@show_time_off_form_modal}
-        period_data={@time_off_form_modal_data}
-        time_format={@time_format}
-        timezone={@profile.timezone}
-        on_cancel={JS.push("hide_time_off_form", target: @myself)}
-        myself={@myself}
-      />
+          <ul :if={@periods != []} class="space-y-3" data-testid="time-off-list">
+            <.period_row
+              :for={period <- @periods}
+              period={period}
+              time_format={@time_format}
+              myself={@myself}
+            />
+          </ul>
 
-      <DeleteTimeOffModal.delete_time_off_modal
-        id="delete-time-off-modal"
-        show={@show_delete_time_off_modal}
-        period_data={@delete_time_off_modal_data}
-        on_cancel={JS.push("hide_delete_time_off", target: @myself)}
-        on_confirm={JS.push("confirm_delete_time_off", target: @myself)}
-      />
+          <.empty_state
+            :if={@periods == []}
+            icon="hero-sun"
+            size={:sm}
+            variant={:dashed}
+            title={dgettext("dashboard_availability", "No upcoming time off")}
+            description={dgettext("dashboard_availability", "Anything you add appears here.")}
+            data-testid="time-off-current-empty"
+          />
+        </div>
+
+        <div :if={@past_periods != []} class="mt-8" data-testid="time-off-past">
+          <.subsection_header title={dgettext("dashboard_availability", "Past")} class="mb-2">
+            <:actions>
+              <.pill tone={:brand} size={:sm}>{length(@past_periods)}</.pill>
+            </:actions>
+          </.subsection_header>
+          <p class="mb-4 text-token-sm text-tymeslot-500 font-medium">
+            {dgettext(
+              "dashboard_availability",
+              "Time off that ended in the last %{count} days. It no longer affects your availability.",
+              count: TimeOff.recent_past_days()
+            )}
+          </p>
+
+          <ul class="space-y-3" data-testid="time-off-past-list">
+            <.period_row
+              :for={period <- @past_periods}
+              period={period}
+              time_format={@time_format}
+              myself={@myself}
+              past
+            />
+          </ul>
+        </div>
+
+        <TimeOffFormModal.time_off_form_modal
+          id="time-off-form-modal"
+          show={@show_time_off_form_modal}
+          period_data={@time_off_form_modal_data}
+          time_format={@time_format}
+          timezone={@profile.timezone}
+          on_cancel={JS.push("hide_time_off_form", target: @myself)}
+          myself={@myself}
+        />
+
+        <DeleteTimeOffModal.delete_time_off_modal
+          id="delete-time-off-modal"
+          show={@show_delete_time_off_modal}
+          period_data={@delete_time_off_modal_data}
+          on_cancel={JS.push("hide_delete_time_off", target: @myself)}
+          on_confirm={JS.push("confirm_delete_time_off", target: @myself)}
+        />
+      </.card>
     </div>
     """
   end

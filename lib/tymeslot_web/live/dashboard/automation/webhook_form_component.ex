@@ -99,16 +99,12 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
         novalidate
       >
         <%!-- Name Field --%>
-        <div class="card-glass">
-          <div class="mb-6">
-            <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
-              {dgettext("dashboard_automation", "Webhook Details")}
-            </h3>
-            <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
-              {dgettext("dashboard_automation", "Configure the basic information for your webhook.")}
-            </p>
-          </div>
-
+        <.card
+          title={dgettext("dashboard_automation", "Webhook Details")}
+          description={
+            dgettext("dashboard_automation", "Configure the basic information for your webhook.")
+          }
+        >
           <div class="space-y-6">
             <.input
               name="webhook[name]"
@@ -222,7 +218,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
               </p>
             </div>
           </div>
-        </div>
+        </.card>
 
         <%!-- Events Selection --%>
         <EventSubscriptions.event_subscriptions

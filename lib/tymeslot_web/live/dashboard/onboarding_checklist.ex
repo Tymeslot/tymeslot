@@ -110,35 +110,30 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
 
   defp checklist_body(assigns) do
     ~H"""
-    <section
-      class="card-glass onboarding-checklist"
+    <.card
+      tag="section"
+      class="onboarding-checklist"
       data-testid="onboarding-checklist"
       data-tour="quick-actions"
       aria-label={dgettext("onboarding_wizard", "Setup checklist")}
       phx-remove={JS.transition("onboarding-checklist--leaving", time: 500)}
+      title={dgettext("onboarding_wizard", "Finish setting up")}
+      description={
+        dgettext(
+          "onboarding_wizard",
+          "A few recommended steps - tick off the ones you don't need."
+        )
+      }
     >
-      <div class="flex items-start justify-between gap-4 mb-6">
-        <div class="min-w-0">
-          <h2 class="text-token-xl font-black tracking-tight text-tymeslot-900">
-            {dgettext("onboarding_wizard", "Finish setting up")}
-          </h2>
-          <p class="text-token-sm font-bold text-tymeslot-500 mt-1 text-pretty">
-            {dgettext(
-              "onboarding_wizard",
-              "A few recommended steps - tick off the ones you don't need."
-            )}
-          </p>
-        </div>
-        <div class="flex items-center gap-3 shrink-0">
-          <.pill tone={:brand} size={:sm}>{@done_count}/{@total}</.pill>
-          <.icon_button
-            icon="hero-x-mark"
-            label={dgettext("onboarding_wizard", "Dismiss setup checklist")}
-            size={:sm}
-            phx-click="onboarding:dismiss"
-          />
-        </div>
-      </div>
+      <:actions>
+        <.pill tone={:brand} size={:sm}>{@done_count}/{@total}</.pill>
+        <.icon_button
+          icon="hero-x-mark"
+          label={dgettext("onboarding_wizard", "Dismiss setup checklist")}
+          size={:sm}
+          phx-click="onboarding:dismiss"
+        />
+      </:actions>
 
       <div class="h-2 w-full rounded-full bg-tymeslot-100 overflow-hidden mb-6">
         <div
@@ -153,7 +148,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
           <.item_row item={item} />
         </li>
       </ul>
-    </section>
+    </.card>
     """
   end
 

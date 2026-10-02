@@ -163,16 +163,10 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
         novalidate
       >
         <%!-- Details --%>
-        <div class="card-glass">
-          <div class="mb-6">
-            <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
-              {dgettext("dashboard_automation_chat", "Integration Details")}
-            </h3>
-            <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
-              {details_subtitle(@mode)}
-            </p>
-          </div>
-
+        <.card
+          title={dgettext("dashboard_automation_chat", "Integration Details")}
+          description={details_subtitle(@mode)}
+        >
           <div class="space-y-6">
             <%= if @mode != :oauth_pending do %>
               <.input
@@ -271,7 +265,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
                 />
             <% end %>
           </div>
-        </div>
+        </.card>
 
         <%!-- Events --%>
         <EventSubscriptions.event_subscriptions

@@ -23,14 +23,7 @@ defmodule TymeslotWeb.Dashboard.Automation.EventSubscriptions do
   @spec event_subscriptions(map()) :: Phoenix.LiveView.Rendered.t()
   def event_subscriptions(assigns) do
     ~H"""
-    <div class="card-glass">
-      <div class="mb-6">
-        <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
-          {dgettext("dashboard_automation", "Event Subscriptions")}
-        </h3>
-        <p class="text-token-sm text-tymeslot-500 font-bold mt-1">{@description}</p>
-      </div>
-
+    <.card title={dgettext("dashboard_automation", "Event Subscriptions")} description={@description}>
       <div class="space-y-3">
         <label
           :for={event <- @events}
@@ -50,7 +43,7 @@ defmodule TymeslotWeb.Dashboard.Automation.EventSubscriptions do
         </label>
       </div>
       <p :for={error <- @errors} class="text-token-sm text-red-600 font-medium mt-3">{error}</p>
-    </div>
+    </.card>
     """
   end
 end

@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
 
   alias Tymeslot.Polls
   alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents.Containers
   alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Dashboard.Polls.PollShareLink
@@ -93,10 +94,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
       |> assign(:vote_count, total_votes(tallies))
 
     ~H"""
-    <div class={[
-      "card-glass py-4 px-5",
-      @selected && "ring-2 ring-turquoise-400"
-    ]}>
+    <Containers.card padding={:sm} class={@selected && "ring-2 ring-turquoise-400"}>
       <div class="flex items-start gap-3">
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 min-w-0">
@@ -157,7 +155,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
           />
         </div>
       </div>
-    </div>
+    </Containers.card>
     """
   end
 
