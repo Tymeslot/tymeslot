@@ -49,7 +49,8 @@ defmodule TymeslotWeb.Components.CoreComponents do
        :card,
        :subsection_header
      ]},
-    {:Forms, [:input, :form_wrapper, :password_requirements, :setting_row]},
+    {:Forms, [:input, :form_wrapper, :password_requirements]},
+    {:SettingRow, [:setting_row]},
     {:Feedback, [:spinner, :empty_state, :loading_card, :pill]},
     {:Navigation, [:detail_row, :tab_bar, :segmented_control]},
     {:Dropdown, [:dropdown, :dropdown_item, :dropdown_divider]},

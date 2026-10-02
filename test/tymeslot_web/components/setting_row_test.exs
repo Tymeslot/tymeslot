@@ -1,4 +1,4 @@
-defmodule TymeslotWeb.Components.CoreComponentsSettingRowTest do
+defmodule TymeslotWeb.Components.CoreComponents.SettingRowTest do
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :components
@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Components.CoreComponentsSettingRowTest do
   import Phoenix.Component
   import Phoenix.LiveViewTest
 
-  alias TymeslotWeb.Components.CoreComponents.Forms
+  alias TymeslotWeb.Components.CoreComponents.SettingRow
 
   defp render_row(attrs) do
     assigns =
@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Components.CoreComponentsSettingRowTest do
       )
 
     ~H"""
-    <Forms.setting_row
+    <SettingRow.setting_row
       id="guests-toggle"
       control={@control}
       label="Let invitees add guests"
@@ -28,8 +28,10 @@ defmodule TymeslotWeb.Components.CoreComponentsSettingRowTest do
       target="#form"
       data-testid="guests"
     >
-      <:disabled_reason :if={@reason?}>Connect Stripe first.</:disabled_reason>
-    </Forms.setting_row>
+      <:disabled_reason :if={@reason?}>
+        Connect Stripe on the <a href="/payments">Payments</a> page.
+      </:disabled_reason>
+    </SettingRow.setting_row>
     """
     |> rendered_to_string()
     |> LazyHTML.from_fragment()
@@ -41,7 +43,26 @@ defmodule TymeslotWeb.Components.CoreComponentsSettingRowTest do
   defp count(doc, selector), do: doc |> LazyHTML.query(selector) |> Enum.count()
 
   describe "as a checkbox" do
-    test "the whole card is the label of a checkbox that sends the change event" do
+    test "the checkbox is named by the label alone, not by its description" do
+      doc = render_row(%{})
+
+      assert attr_of(doc, "#guests-toggle", "aria-labelledby") == ["guests-toggle-label"]
+
+      assert LazyHTML.text(LazyHTML.query(doc, "#guests-toggle-label")) =~
+               "Let invitees add guests"
+
+      refute LazyHTML.text(LazyHTML.query(doc, "#guests-toggle-label")) =~ "emailed"
+    end
+
+    test "a label holds only phrasing content" do
+      doc = render_row(%{disabled: true, reason?: true})
+
+      assert Enum.empty?(LazyHTML.query(doc, "label div, label p, label a"))
+      # The reason carries a link, so it sits beside the label, not in it.
+      assert Enum.count(LazyHTML.query(doc, "#guests-toggle-reason a")) == 1
+    end
+
+    test "the label wraps a checkbox that sends the change event" do
       doc = render_row(%{checked: true})
 
       assert attr_of(doc, "label", "for") == ["guests-toggle"]
@@ -78,7 +99,7 @@ defmodule TymeslotWeb.Components.CoreComponentsSettingRowTest do
       assert count(doc, "#guests-toggle[disabled]") == 1
 
       assert LazyHTML.text(LazyHTML.query(doc, "#guests-toggle-reason")) =~
-               "Connect Stripe first."
+               "Connect Stripe on the Payments page."
 
       assert attr_of(doc, "#guests-toggle", "aria-describedby") == [
                "guests-toggle-description guests-toggle-reason"
@@ -123,7 +144,7 @@ defmodule TymeslotWeb.Components.CoreComponentsSettingRowTest do
       assert count(doc, "button#guests-toggle[disabled]") == 1
 
       assert LazyHTML.text(LazyHTML.query(doc, "#guests-toggle-reason")) =~
-               "Connect Stripe first."
+               "Connect Stripe on the Payments page."
     end
   end
 end
