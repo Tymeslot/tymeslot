@@ -81,12 +81,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
             <option value="popup">{dgettext("dashboard_calendar_events", "Notification")}</option>
             <option value="email">{dgettext("dashboard_calendar_events", "Email")}</option>
           </select>
-          <button
-            type="submit"
-            class="px-2.5 py-1 rounded-md border border-tymeslot-300 text-token-xs text-tymeslot-600 hover:bg-tymeslot-50 transition-colors"
-          >
+          <.action_button type="submit" variant={:secondary} size={:sm}>
             {dgettext("dashboard_calendar_events", "Add reminder")}
-          </button>
+          </.action_button>
         </form>
         <p class="text-token-xs text-tymeslot-400 mt-1">
           {dgettext(

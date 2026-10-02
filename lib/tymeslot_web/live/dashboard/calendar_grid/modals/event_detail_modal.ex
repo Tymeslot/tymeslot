@@ -483,14 +483,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
 
       <%!-- Footer actions --%>
       <div :if={@editable} class="mt-4 pt-3 border-t border-tymeslot-100 flex items-center">
-        <button
-          type="button"
+        <.action_button
+          variant={:danger_soft}
+          size={:sm}
+          icon="hero-trash"
           phx-click="request_delete_event"
           phx-target={@myself}
-          class="text-token-sm text-red-500 hover:text-red-700 transition-colors"
         >
           {dgettext("dashboard_calendar_events", "Delete event")}
-        </button>
+        </.action_button>
       </div>
     </.modal>
     """

@@ -172,12 +172,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
               placeholder="colleague@example.com"
               class="flex-1 rounded-md border-tymeslot-300 text-token-sm focus:border-turquoise-500 focus:ring-turquoise-500"
             />
-            <button
-              type="submit"
-              class="px-3 py-1.5 rounded-md border border-tymeslot-300 text-token-xs text-tymeslot-600 hover:bg-tymeslot-50 transition-colors"
-            >
+            <.action_button type="submit" variant={:secondary} size={:sm}>
               {dgettext("dashboard_calendar_events", "Add")}
-            </button>
+            </.action_button>
           </form>
           <p class="text-token-xs text-tymeslot-400 mt-1">
             {dgettext(
@@ -424,12 +421,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
               placeholder="attendee@example.com"
               class="flex-1 rounded-md border-tymeslot-300 text-token-sm focus:border-turquoise-500 focus:ring-turquoise-500"
             />
-            <button
-              type="submit"
-              class="px-3 py-1.5 rounded-md border border-tymeslot-300 text-token-xs text-tymeslot-600 hover:bg-tymeslot-50 transition-colors"
-            >
+            <.action_button type="submit" variant={:secondary} size={:sm}>
               {dgettext("dashboard_calendar_events", "Add")}
-            </button>
+            </.action_button>
           </form>
           <p class="text-token-xs text-tymeslot-400 mt-1">
             {dgettext(

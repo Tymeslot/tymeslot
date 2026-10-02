@@ -47,29 +47,28 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
       <div class="flex flex-col gap-1 md:gap-2 px-3 py-2 md:px-4 md:py-3">
         <%!-- Row 1: navigation (left) + view switcher (right) --%>
         <div class="flex items-center gap-1 md:gap-2 min-w-0">
-          <button
+          <.icon_button
+            icon="hero-chevron-left"
+            label={dgettext("dashboard_calendar", "Previous period")}
             phx-click="prev_period"
             phx-target={@myself}
-            class="min-w-[40px] min-h-[40px] flex items-center justify-center rounded hover:bg-tymeslot-100 text-tymeslot-600 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-            aria-label={dgettext("dashboard_calendar", "Previous period")}
-          >
-            <.icon name="hero-chevron-left" class="w-4 h-4" />
-          </button>
-          <button
+          />
+          <.icon_button
+            icon="hero-chevron-right"
+            label={dgettext("dashboard_calendar", "Next period")}
             phx-click="next_period"
             phx-target={@myself}
-            class="min-w-[40px] min-h-[40px] flex items-center justify-center rounded hover:bg-tymeslot-100 text-tymeslot-600 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-            aria-label={dgettext("dashboard_calendar", "Next period")}
-          >
-            <.icon name="hero-chevron-right" class="w-4 h-4" />
-          </button>
-          <button
+          />
+          <.action_button
+            variant={:secondary}
+            size={:sm}
             phx-click={
               JS.push("today", target: @myself)
               |> JS.dispatch("calendar:scroll-to-current", to: "#calendar-drag-zone")
             }
-            class="px-2.5 py-1.5 md:px-3 text-token-sm border border-tymeslot-200 rounded hover:bg-tymeslot-50 text-tymeslot-600 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-          >{dgettext("dashboard_calendar", "Today")}</button>
+          >
+            {dgettext("dashboard_calendar", "Today")}
+          </.action_button>
           <MiniMonthPopover.mini_month_popover
             open={@mini_month_open}
             view={@view}
@@ -132,23 +131,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
             myself={@myself}
           />
           <.refresh_button :if={@integrations != []} syncing={@syncing} myself={@myself} />
-          <button
-            phx-click="toggle_shortcuts_help"
-            phx-target={@myself}
-            class="hidden md:flex min-w-[40px] min-h-[40px] items-center justify-center text-token-sm font-semibold text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-            aria-label={dgettext("dashboard_calendar", "Keyboard shortcuts")}
-            title={dgettext("dashboard_calendar", "Keyboard shortcuts (?)")}
-          >
-            ?
-          </button>
-          <button
+          <%!-- The wrapper carries the breakpoint: `.icon-button` sets its own
+                display, which a `hidden` utility on it could not override. --%>
+          <div class="hidden md:flex">
+            <.icon_button
+              icon="hero-question-mark-circle"
+              label={dgettext("dashboard_calendar", "Keyboard shortcuts")}
+              phx-click="toggle_shortcuts_help"
+              phx-target={@myself}
+            />
+          </div>
+          <.icon_button
+            icon="hero-cog-6-tooth"
+            label={dgettext("dashboard_calendar", "Calendar settings")}
             phx-click="toggle_settings"
             phx-target={@myself}
-            class="min-w-[40px] min-h-[40px] flex items-center justify-center text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-            aria-label={dgettext("dashboard_calendar", "Calendar settings")}
-          >
-            <.icon name="hero-cog-6-tooth" class="w-4 h-4" />
-          </button>
+          />
         </div>
       </div>
     </div>
@@ -173,7 +171,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
       target={@myself}
       role="dialog"
       panel_label={dgettext("dashboard_calendar", "My Calendars")}
-      trigger_class="min-w-[40px] min-h-[40px] px-2 md:px-3 md:py-1.5 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 flex items-center gap-1.5 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
+      trigger_class="action-button action-button--secondary action-button--sm"
       class="bg-white border border-tymeslot-200 rounded-xl shadow-lg p-3 w-60"
       aria-label={dgettext("dashboard_calendar", "Toggle calendars")}
     >
@@ -210,7 +208,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
         on_toggle="toggle_view_menu"
         on_close="close_view_menu"
         target={@myself}
-        trigger_class="min-w-[40px] min-h-[40px] px-2 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 flex items-center gap-1 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
+        trigger_class="action-button action-button--secondary action-button--sm"
         class="bg-white border border-tymeslot-200 rounded-xl shadow-lg py-1 w-36"
         aria-label={dgettext("dashboard_calendar", "Switch view")}
       >
@@ -268,16 +266,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
   # the modal itself, so there is no inline text entry to parse here.
   defp quick_add(assigns) do
     ~H"""
-    <button
-      type="button"
-      phx-click="show_create_form"
-      phx-target={@myself}
-      class="hidden sm:flex min-w-[40px] min-h-[40px] px-2 md:px-3 md:py-1.5 items-center gap-1.5 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-      aria-label={dgettext("dashboard_calendar", "Add event")}
-    >
-      <.icon name="hero-plus-circle-mini" class="w-4 h-4" />
-      <span>{dgettext("dashboard_calendar", "Quick add")}</span>
-    </button>
+    <%!-- The wrapper carries the breakpoint: `.action-button` sets its own
+          display, which a `hidden` utility on it could not override. --%>
+    <div class="hidden sm:flex">
+      <.action_button
+        variant={:secondary}
+        size={:sm}
+        icon="hero-plus-circle-mini"
+        phx-click="show_create_form"
+        phx-target={@myself}
+        aria-label={dgettext("dashboard_calendar", "Add event")}
+      >
+        {dgettext("dashboard_calendar", "Quick add")}
+      </.action_button>
+    </div>
     """
   end
 
@@ -286,18 +288,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
 
   defp refresh_button(assigns) do
     ~H"""
-    <button
+    <%!-- The icon is in the slot rather than `icon` so it can spin while syncing. --%>
+    <.action_button
+      variant={:secondary}
+      size={:sm}
+      disabled={@syncing}
       phx-click={
         JS.push("refresh", target: @myself)
         |> JS.dispatch("calendar:scroll-to-current", to: "#calendar-drag-zone")
       }
-      disabled={@syncing}
-      class="min-w-[40px] min-h-[40px] px-2 md:px-3 md:py-1.5 flex items-center justify-center gap-1.5 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
       aria-label={dgettext("dashboard_calendar", "Refresh")}
     >
-      <.icon name="hero-arrow-path" class={if @syncing, do: "w-4 h-4 animate-spin", else: "w-4 h-4"} />
+      <.icon
+        name="hero-arrow-path"
+        class={if @syncing, do: "w-4 h-4 shrink-0 animate-spin", else: "w-4 h-4 shrink-0"}
+      />
       <span class="hidden md:inline">{dgettext("dashboard_calendar", "Refresh")}</span>
-    </button>
+    </.action_button>
     """
   end
 end
