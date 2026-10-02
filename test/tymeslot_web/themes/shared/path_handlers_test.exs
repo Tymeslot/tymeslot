@@ -386,4 +386,52 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
   defp query_params(path) do
     path |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
   end
+
+  defp demo_socket(assigns) do
+    %Phoenix.LiveView.Socket{
+      assigns:
+        Map.merge(
+          %{
+            username_context: "demo-page",
+            live_action: :overview,
+            demo_theme_switcher: true,
+            organizer_profile: %{booking_theme: "1"}
+          },
+          assigns
+        )
+    }
+  end
+
+  describe "a demo page's chosen theme" do
+    test "rides along a locale switch when it is not the organiser's own" do
+      assert PathHandlers.build_path_with_locale(demo_socket(%{theme_id: "3"}), "de") ==
+               "/demo-page?locale=de&theme=3"
+    end
+
+    test "adds nothing on the organiser's own theme" do
+      assert PathHandlers.build_path_with_locale(demo_socket(%{theme_id: "1"}), "de") ==
+               "/demo-page?locale=de"
+    end
+
+    # Issue #84: on an ordinary page a bare ?theme= must not survive a locale switch.
+    test "is never carried by a page that is not a demo" do
+      socket = demo_socket(%{theme_id: "3", demo_theme_switcher: false})
+      assert PathHandlers.build_path_with_locale(socket, "de") == "/demo-page?locale=de"
+      assert PathHandlers.demo_theme_param(socket.assigns) == %{}
+    end
+  end
+
+  describe "current_base_path/1 and with_query/2" do
+    test "name the route's step and append a query only when there is one" do
+      assert PathHandlers.current_base_path(%{
+               username_context: "johndoe",
+               live_action: :schedule,
+               duration: "30min"
+             }) == "/johndoe/30-minutes"
+
+      assert PathHandlers.current_base_path(%{}) == "/"
+      assert PathHandlers.with_query("/johndoe", %{}) == "/johndoe"
+      assert PathHandlers.with_query("/johndoe", %{"theme" => "2"}) == "/johndoe?theme=2"
+    end
+  end
 end

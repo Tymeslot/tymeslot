@@ -11,11 +11,16 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingPage do
   Each step component receives the LiveView's assigns minus this module's
   own; the ones a step may rely on are the table in
   `docs/THEME_DEVELOPMENT_GUIDE.md` §"Step Components".
+
+  On a demo page the shared theme switcher (`Components.DemoThemeSwitcher`)
+  leads the content, above the step, so every theme carries it without a
+  wrapper of its own changing.
   """
 
   use Phoenix.Component
 
-  alias TymeslotWeb.Themes.Shared.Components.{AwaitingPayment, ErrorComponent}
+  alias TymeslotWeb.Themes.Shared.Components.{AwaitingPayment, DemoThemeSwitcher, ErrorComponent}
+  alias TymeslotWeb.Themes.Shared.PathHandlers
 
   @page_keys [:page_wrapper, :step_module, :step_id]
 
@@ -38,6 +43,11 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingPage do
       should_show_branding={assigns[:should_show_branding]}
       {Map.take(assigns, [:demo_mode])}
     >
+      <DemoThemeSwitcher.switcher
+        :if={assigns[:demo_theme_switcher]}
+        theme_id={assigns[:theme_id]}
+        base_path={PathHandlers.current_base_path(assigns)}
+      />
       <%= cond do %>
         <% assigns[:scheduling_error_message] -> %>
           <.live_component

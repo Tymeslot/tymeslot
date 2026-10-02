@@ -1468,3 +1468,13 @@ msgstr "Ця сторінка бронювання наразі недоступ
 #, elixir-autogen, elixir-format
 msgid "This scheduling page isn’t available yet. The organiser hasn’t set a username."
 msgstr "Ця сторінка бронювання ще недоступна. Організатор ще не встановив ім'я користувача."
+
+#: lib/tymeslot_web/themes/shared/components/demo_theme_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Demo themes"
+msgstr "Теми демо"
+
+#: lib/tymeslot_web/themes/shared/components/demo_theme_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Try another theme"
+msgstr "Спробуйте іншу тему"

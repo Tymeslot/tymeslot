@@ -1463,3 +1463,13 @@ msgstr "Ta strona rezerwacji jest teraz niedostępna. Organizator nie podłączy
 #, elixir-autogen, elixir-format
 msgid "This scheduling page isn’t available yet. The organiser hasn’t set a username."
 msgstr "Ta strona rezerwacji nie jest jeszcze dostępna. Organizator nie ustawił nazwy użytkownika."
+
+#: lib/tymeslot_web/themes/shared/components/demo_theme_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Demo themes"
+msgstr "Motywy wersji demo"
+
+#: lib/tymeslot_web/themes/shared/components/demo_theme_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Try another theme"
+msgstr "Wypróbuj inny motyw"

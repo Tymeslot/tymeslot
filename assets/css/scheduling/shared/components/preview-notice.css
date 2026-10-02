@@ -1,5 +1,7 @@
 /* ==========================================================================
-   Preview notice: the "bookings made here are simulated" banner
+   Page notices: the preview banner and the demo's theme switcher
+
+   The preview notice is the "bookings made here are simulated" banner.
 
    Matches the shared component (TymeslotWeb.Themes.Shared.Components.
    PreviewNotice), which renders unconditionally in the theme wrapper and is
@@ -8,6 +10,9 @@
    Amber like .approval-notice: both are warnings that something about this
    booking is not what it looks like. Reads the --notice-warning role and the
    --theme-warning input (see shared/tokens.css).
+
+   The demo's theme switcher matches TymeslotWeb.Themes.Shared.Components.
+   DemoThemeSwitcher, which Shared.SchedulingPage renders on demo pages only.
    ========================================================================== */
 
 .preview-notice {
@@ -32,4 +37,63 @@
   width: 1rem;
   height: 1rem;
   flex-shrink: 0;
+}
+
+/* The demo's theme switcher: the same pill on every theme, on the chrome
+   tokens (shared/tokens.css) that read over any canvas, photo or video. */
+.demo-theme-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2xs);
+  max-width: max-content;
+  margin: 0 auto var(--space-sm);
+  padding: var(--space-3xs) var(--space-xs);
+  border-radius: var(--radius-control);
+  background: var(--chrome-surface);
+  color: var(--chrome-ink);
+  font-family: var(--theme-font-family);
+  font-size: var(--theme-font-size-xs);
+  line-height: var(--theme-line-height-snug);
+}
+
+.demo-theme-switcher__label {
+  font-weight: var(--font-weight-medium);
+}
+
+.demo-theme-switcher__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.demo-theme-switcher__link {
+  display: inline-block;
+  padding: var(--space-3xs) var(--space-2xs);
+  border: var(--border-width-thin) solid transparent;
+  border-radius: var(--radius-control);
+  color: inherit;
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+  transition: background var(--transition-fast);
+}
+
+.demo-theme-switcher__link:hover {
+  background: var(--chrome-surface-hover);
+  border-color: var(--chrome-line-hover);
+}
+
+.demo-theme-switcher__link:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.demo-theme-switcher__link--current {
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+  font-weight: var(--font-weight-semibold);
 }

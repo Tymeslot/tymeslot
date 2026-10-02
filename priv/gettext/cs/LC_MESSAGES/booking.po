@@ -1467,3 +1467,13 @@ msgstr "Tato rezervační stránka není momentálně dostupná. Organizátor za
 #, elixir-autogen, elixir-format
 msgid "This scheduling page isn’t available yet. The organiser hasn’t set a username."
 msgstr "Tato rezervační stránka zatím není dostupná. Organizátor si ještě nenastavil uživatelské jméno."
+
+#: lib/tymeslot_web/themes/shared/components/demo_theme_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Demo themes"
+msgstr "Motivy ukázky"
+
+#: lib/tymeslot_web/themes/shared/components/demo_theme_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Try another theme"
+msgstr "Vyzkoušejte jiný motiv"

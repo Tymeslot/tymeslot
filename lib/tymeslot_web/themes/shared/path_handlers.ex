@@ -12,60 +12,87 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   """
   @spec build_path_with_locale(Phoenix.LiveView.Socket.t(), String.t()) :: String.t()
   def build_path_with_locale(socket, locale) do
-    base_path = get_base_path(socket)
-    query_params = build_query_params(socket, locale)
-    query_string = URI.encode_query(query_params)
-    if query_string == "", do: base_path, else: "#{base_path}?#{query_string}"
+    socket.assigns
+    |> current_base_path()
+    |> with_query(build_query_params(socket, locale))
   end
 
-  defp get_base_path(socket) do
-    username = socket.assigns[:username_context]
-
-    if is_nil(username) do
-      "/"
-    else
-      do_get_base_path(socket.assigns[:live_action], username, socket)
+  @doc """
+  The path of the step the page's route names (`/username`,
+  `/username/slug`, `/username/slug/book`, ...), with no query. The page's
+  links back to itself start from it: the locale switch and the demo's theme
+  switcher.
+  """
+  @spec current_base_path(map()) :: String.t()
+  def current_base_path(assigns) do
+    case assigns[:username_context] do
+      nil -> "/"
+      username -> base_path(assigns[:live_action], username, assigns)
     end
   end
 
-  defp do_get_base_path(:overview, username, _socket), do: "/#{username}"
+  @doc "`path` with `query` appended, or `path` alone when `query` is empty."
+  @spec with_query(String.t(), map()) :: String.t()
+  def with_query(path, query) when map_size(query) == 0, do: path
+  def with_query(path, query), do: path <> "?" <> URI.encode_query(query)
 
-  defp do_get_base_path(:schedule, username, socket) do
-    slug = get_slug(socket)
+  @doc """
+  The `theme` parameter a demo page's redirects carry: the theme the page
+  shows, when it is not the organiser's own, so a visitor who picked another
+  one in the demo's switcher (`Components.DemoThemeSwitcher`) keeps it on the
+  page the flow sends them to. Empty on every page that is not a demo, where
+  only previews and embeds carry `?theme=` (issue #84).
+  """
+  @spec demo_theme_param(map()) :: %{optional(String.t()) => String.t()}
+  def demo_theme_param(%{demo_theme_switcher: true, theme_id: theme_id} = assigns)
+      when is_binary(theme_id) do
+    case assigns[:organizer_profile] do
+      %{booking_theme: ^theme_id} -> %{}
+      _another_theme -> %{"theme" => theme_id}
+    end
+  end
+
+  def demo_theme_param(_assigns), do: %{}
+
+  defp base_path(:overview, username, _assigns), do: "/#{username}"
+
+  defp base_path(:schedule, username, assigns) do
+    slug = get_slug(assigns)
     if slug, do: "/#{username}/#{slug}", else: "/#{username}"
   end
 
-  defp do_get_base_path(:booking, username, socket) do
-    slug = get_slug(socket)
+  defp base_path(:booking, username, assigns) do
+    slug = get_slug(assigns)
     if slug, do: "/#{username}/#{slug}/book", else: "/#{username}"
   end
 
-  defp do_get_base_path(:confirmation, username, _socket), do: "/#{username}/thank-you"
+  defp base_path(:confirmation, username, _assigns), do: "/#{username}/thank-you"
 
-  defp do_get_base_path(:cancel, username, socket) do
-    meeting_uid = socket.assigns[:meeting_uid]
+  defp base_path(:cancel, username, assigns) do
+    meeting_uid = assigns[:meeting_uid]
     if meeting_uid, do: "/#{username}/meeting/#{meeting_uid}/cancel", else: "/#{username}"
   end
 
-  defp do_get_base_path(:cancel_confirmed, username, socket) do
-    meeting_uid = socket.assigns[:meeting_uid]
+  defp base_path(:cancel_confirmed, username, assigns) do
+    meeting_uid = assigns[:meeting_uid]
 
     if meeting_uid,
       do: "/#{username}/meeting/#{meeting_uid}/cancel-confirmed",
       else: "/#{username}"
   end
 
-  defp do_get_base_path(:reschedule, username, socket) do
-    meeting_uid = socket.assigns[:meeting_uid]
+  defp base_path(:reschedule, username, assigns) do
+    meeting_uid = assigns[:meeting_uid]
     if meeting_uid, do: "/#{username}/meeting/#{meeting_uid}/reschedule", else: "/#{username}"
   end
 
-  defp do_get_base_path(_action, username, _socket), do: "/#{username}"
+  defp base_path(_action, username, _assigns), do: "/#{username}"
 
   defp build_query_params(socket, locale) do
     %{"locale" => locale}
     |> put_embed_params(socket)
     |> put_preview_params(socket)
+    |> Map.merge(demo_theme_param(socket.assigns))
     |> maybe_put_query_param("reschedule_meeting_uid", socket.assigns[:reschedule_meeting_uid])
   end
 
@@ -82,6 +109,8 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   # land the owner on a page that still looks like their preview but persists a
   # real meeting; dropping `preview_token` would fail their booking closed. Both
   # were live defects the moment `?theme=` stopped standing in for the claim.
+  # A demo page is the one other carrier, through `demo_theme_param/1`, and
+  # only for a theme the visitor chose.
   defp put_preview_params(params, socket) do
     if preview_session?(socket) do
       params
@@ -130,8 +159,8 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
     socket.assigns[:theme_preview] || socket.assigns[:owner_preview] || false
   end
 
-  defp get_slug(socket) do
-    duration = socket.assigns[:duration] || socket.assigns[:selected_duration]
+  defp get_slug(assigns) do
+    duration = assigns[:duration] || assigns[:selected_duration]
     MeetingTypes.normalize_duration_slug(duration)
   end
 
