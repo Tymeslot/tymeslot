@@ -85,8 +85,14 @@ defmodule Tymeslot.Meetings.Listing do
         # column "past" filters on) is often still ahead of it. It falls into
         # "past" honestly once `end_time` catches up, same as any other
         # meeting that has run its course.
+        # Upcoming reads soonest first, the order a host works through them;
+        # every other list stays newest first.
         "upcoming" ->
-          [time_filter: :upcoming, exclude_status: ["cancelled", "awaiting_approval", "expired"]]
+          [
+            time_filter: :upcoming,
+            exclude_status: ["cancelled", "awaiting_approval", "expired"],
+            order: :asc
+          ]
 
         "past" ->
           [time_filter: :past, exclude_status: "cancelled"]
@@ -132,6 +138,7 @@ defmodule Tymeslot.Meetings.Listing do
     time_filter = Keyword.get(opts, :time_filter)
     after_start = Keyword.get(opts, :after_start)
     after_id = Keyword.get(opts, :after_id)
+    order = Keyword.get(opts, :order, :desc)
 
     MeetingListQueries.list_meetings_for_user_paginated_cursor(user_email,
       per_page: per_page,
@@ -139,7 +146,8 @@ defmodule Tymeslot.Meetings.Listing do
       exclude_status: exclude_status,
       time_filter: time_filter,
       after_start: after_start,
-      after_id: after_id
+      after_id: after_id,
+      order: order
     )
   end
 

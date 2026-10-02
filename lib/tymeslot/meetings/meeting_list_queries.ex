@@ -41,10 +41,12 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   defp apply_time_filter(query, :upcoming, now), do: upcoming(query, now)
   defp apply_time_filter(query, :past, now), do: past(query, now)
 
-  defp cursor_after(query, nil, _after_id), do: query
-  defp cursor_after(query, _after_start, nil), do: query
+  # The keyset cursor walks in the same direction as the ordering, so a page
+  # always continues from the last row of the previous one.
+  defp cursor_after(query, nil, _after_id, _order), do: query
+  defp cursor_after(query, _after_start, nil, _order), do: query
 
-  defp cursor_after(query, after_start, after_id) do
+  defp cursor_after(query, after_start, after_id, :desc) do
     from(m in query,
       where:
         m.start_time < ^after_start or
@@ -52,8 +54,19 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     )
   end
 
-  defp order_by_start_desc_id_desc(query),
+  defp cursor_after(query, after_start, after_id, :asc) do
+    from(m in query,
+      where:
+        m.start_time > ^after_start or
+          (m.start_time == ^after_start and m.id > ^after_id)
+    )
+  end
+
+  defp order_by_start_and_id(query, :desc),
     do: from(m in query, order_by: [desc: m.start_time, desc: m.id])
+
+  defp order_by_start_and_id(query, :asc),
+    do: from(m in query, order_by: [asc: m.start_time, asc: m.id])
 
   @doc """
   Returns upcoming meetings that should have a video room link but do not.
@@ -271,7 +284,8 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
 
   @doc """
   Cursor-based pagination for a user's meetings using keyset on start_time and id.
-  Accepts opts: :after_start (DateTime), :after_id (binary_id), :per_page, :status, :time_filter (:upcoming | :past).
+  Accepts opts: :after_start (DateTime), :after_id (binary_id), :per_page, :status, :time_filter (:upcoming | :past),
+  :order (:desc, the default, newest first; or :asc, soonest first).
   Returns a list limited to per_page.
   """
   @spec list_meetings_for_user_paginated_cursor(String.t(), Keyword.t()) :: [Meeting.t()]
@@ -284,6 +298,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     status = Keyword.get(opts, :status)
     exclude_status = Keyword.get(opts, :exclude_status)
     time_filter = Keyword.get(opts, :time_filter)
+    order = Keyword.get(opts, :order, :desc)
 
     now = DateTime.utc_now()
 
@@ -292,8 +307,8 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> with_status(status)
     |> without_status(exclude_status)
     |> apply_time_filter(time_filter, now)
-    |> order_by_start_desc_id_desc()
-    |> cursor_after(after_start, after_id)
+    |> order_by_start_and_id(order)
+    |> cursor_after(after_start, after_id, order)
     |> apply_limit(limit)
     |> preload(:guests)
     |> Repo.all()
