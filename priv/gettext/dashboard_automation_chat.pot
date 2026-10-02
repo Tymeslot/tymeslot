@@ -226,12 +226,6 @@ msgstr ""
 msgid "Edit Telegram Integration"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
-#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
-#, elixir-autogen, elixir-format
-msgid "Event Subscriptions"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/automation/slack/crud_handlers.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram/crud_handlers.ex
 #, elixir-autogen, elixir-format

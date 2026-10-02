@@ -178,7 +178,7 @@ msgstr "Włącz webhook, aby przetestować"
 msgid "Error: %{message}"
 msgstr "Błąd: %{message}"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#: lib/tymeslot_web/live/dashboard/automation/event_subscriptions.ex
 #, elixir-autogen, elixir-format
 msgid "Event Subscriptions"
 msgstr "Subskrypcje zdarzeń"

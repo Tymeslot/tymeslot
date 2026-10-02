@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Components.Icons.IconComponents
+  alias TymeslotWeb.Dashboard.Automation.EventSubscriptions
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -217,45 +218,20 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
           </div>
 
           <%!-- Events Selection --%>
-          <div class="card-glass">
-            <div class="mb-6">
-              <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
-                {dgettext("dashboard_automation_chat", "Event Subscriptions")}
-              </h3>
-              <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
-                {dgettext(
-                  "dashboard_automation_chat",
-                  "Select which events should trigger Telegram notifications."
-                )}
-              </p>
-            </div>
-
-            <div class="space-y-3">
-              <%= for event <- @available_events do %>
-                <label class="flex items-start gap-3 p-4 rounded-token-xl border-2 border-tymeslot-100 hover:border-turquoise-200 cursor-pointer transition-colors">
-                  <.input
-                    type="checkbox"
-                    name="telegram[events][]"
-                    value={event.value}
-                    checked={event.value in Map.get(@form_values, "events", [])}
-                    phx-click={
-                      JS.push("toggle_telegram_event",
-                        value: %{"event" => event.value},
-                        target: @parent_component
-                      )
-                    }
-                  />
-                  <div class="flex-1">
-                    <div class="font-black text-tymeslot-900">{event.label}</div>
-                    <div class="text-token-sm text-tymeslot-600 font-medium">{event.description}</div>
-                  </div>
-                </label>
-              <% end %>
-            </div>
-            <%= for error <- FormValidationHelpers.field_errors(@form_errors, :events) do %>
-              <p class="text-token-sm text-red-600 font-medium mt-3">{error}</p>
-            <% end %>
-          </div>
+          <EventSubscriptions.event_subscriptions
+            name="telegram[events][]"
+            events={@available_events}
+            selected={Map.get(@form_values, "events", [])}
+            toggle_event="toggle_telegram_event"
+            target={@parent_component}
+            errors={FormValidationHelpers.field_errors(@form_errors, :events)}
+            description={
+              dgettext(
+                "dashboard_automation_chat",
+                "Select which events should trigger Telegram notifications."
+              )
+            }
+          />
 
           <%!-- Form Actions --%>
           <div class="flex justify-end gap-3 pt-4">

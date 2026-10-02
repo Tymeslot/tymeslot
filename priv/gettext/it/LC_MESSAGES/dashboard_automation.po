@@ -182,7 +182,7 @@ msgstr "Abilita il webhook per provarlo"
 msgid "Error: %{message}"
 msgstr "Errore: %{message}"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#: lib/tymeslot_web/live/dashboard/automation/event_subscriptions.ex
 #, elixir-autogen, elixir-format
 msgid "Event Subscriptions"
 msgstr "Sottoscrizioni agli eventi"

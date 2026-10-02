@@ -182,7 +182,7 @@ msgstr "Увімкніть вебхук, щоб виконати перевір�
 msgid "Error: %{message}"
 msgstr "Помилка: %{message}"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#: lib/tymeslot_web/live/dashboard/automation/event_subscriptions.ex
 #, elixir-autogen, elixir-format
 msgid "Event Subscriptions"
 msgstr "Підписки на події"
