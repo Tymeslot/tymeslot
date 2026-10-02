@@ -194,9 +194,11 @@ defmodule Tymeslot.Media.ImageMetadataTest do
   test "refuses an image whose declared canvas would exhaust memory", %{tmp_dir: tmp_dir} do
     source = Path.join(tmp_dir, "bomb.png")
     dest = Path.join(tmp_dir, "stored.png")
-    File.write!(source, png_declaring(20_000, 20_000))
+    File.write!(source, MediaFixtures.png_declaring(20_000, 20_000))
 
-    assert {:error, :image_too_large} = ImageMetadata.strip(source, dest, ".png")
+    assert {:error, {:image_too_large, %{pixels: 400_000_000, max_pixels: 40_000_000}}} =
+             ImageMetadata.strip(source, dest, ".png")
+
     refute File.exists?(dest)
   end
 
@@ -311,9 +313,9 @@ defmodule Tymeslot.Media.ImageMetadataTest do
     @tag :tmp_dir
     test "refuses any image above 40 megapixels", %{tmp_dir: tmp_dir} do
       source = Path.join(tmp_dir, "large.png")
-      File.write!(source, png_declaring(8000, 5001))
+      File.write!(source, MediaFixtures.png_declaring(8000, 5001))
 
-      assert {:error, :image_too_large} =
+      assert {:error, {:image_too_large, %{pixels: 40_008_000, max_pixels: 40_000_000}}} =
                ImageMetadata.strip(source, Path.join(tmp_dir, "stored.png"), ".png")
     end
 
@@ -327,10 +329,12 @@ defmodule Tymeslot.Media.ImageMetadataTest do
       :ok = VipsImage.write_to_file(black, webp)
       :ok = VipsImage.write_to_file(black, png)
 
-      assert {:error, :image_too_large} =
+      too_large = {:image_too_large, %{pixels: 16_810_000, max_pixels: 16_000_000}}
+
+      assert {:error, ^too_large} =
                ImageMetadata.strip(webp, Path.join(tmp_dir, "stored.webp"), ".webp")
 
-      assert {:error, :image_too_large} =
+      assert {:error, ^too_large} =
                ImageMetadata.strip(png, Path.join(tmp_dir, "stored.webp"), ".webp")
 
       assert :ok = ImageMetadata.strip(png, Path.join(tmp_dir, "stored.png"), ".png")
@@ -453,17 +457,4 @@ defmodule Tymeslot.Media.ImageMetadataTest do
       type when type in [2, 6] -> :truecolour
     end
   end
-
-  # A well-formed PNG declaring a `width` x `height` RGB canvas, with no pixel
-  # data behind it: enough for a decoder to read the size.
-  defp png_declaring(width, height) do
-    ihdr = <<width::32, height::32, 8, 2, 0, 0, 0>>
-
-    <<0x89, "PNG", 0x0D, 0x0A, 0x1A, 0x0A>> <>
-      chunk("IHDR", ihdr) <>
-      chunk("IDAT", :zlib.compress(<<>>)) <> chunk("IEND", <<>>)
-  end
-
-  defp chunk(type, data),
-    do: <<byte_size(data)::32, type::binary, data::binary, :erlang.crc32(type <> data)::32>>
 end

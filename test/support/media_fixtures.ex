@@ -84,4 +84,22 @@ defmodule Tymeslot.Test.MediaFixtures do
   @doc "A minimal, complete PNG: one transparent pixel."
   @spec png() :: binary()
   def png, do: @png
+
+  @doc """
+  A PNG of a few dozen bytes whose header declares a `width` x `height`
+  canvas, with no pixel data behind it. The size bound on stored images is
+  checked from the header, so this is enough to be refused as too large
+  without decoding anything.
+  """
+  @spec png_declaring(pos_integer(), pos_integer()) :: binary()
+  def png_declaring(width, height) do
+    ihdr = <<width::32, height::32, 8, 2, 0, 0, 0>>
+
+    <<0x89, "PNG", 0x0D, 0x0A, 0x1A, 0x0A>> <>
+      png_chunk("IHDR", ihdr) <>
+      png_chunk("IDAT", :zlib.compress(<<>>)) <> png_chunk("IEND", <<>>)
+  end
+
+  defp png_chunk(type, data),
+    do: <<byte_size(data)::32, type::binary, data::binary, :erlang.crc32(type <> data)::32>>
 end

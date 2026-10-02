@@ -67,7 +67,13 @@ defmodule Tymeslot.Media.ImageMetadata do
   # `orientation` is listed because it means the pixels are not yet upright.
   @metadata_field ~r/\A(exif-|xmp-data\z|iptc-data\z|png-comment-|gif-comment\z|orientation\z)/
 
-  @type error :: :invalid_image_format | :image_too_large | :busy | File.posix()
+  @typedoc """
+  The size of an image refused as too large, and the bound it exceeded, both
+  in pixels. For an animation `pixels` is summed over its frames.
+  """
+  @type oversize :: %{pixels: pos_integer(), max_pixels: pos_integer()}
+
+  @type error :: :invalid_image_format | {:image_too_large, oversize()} | :busy | File.posix()
 
   @doc """
   Writes `source_path` to `dest_path` as an `extension` image (".jpg", ".png",
@@ -76,8 +82,11 @@ defmodule Tymeslot.Media.ImageMetadata do
   `dest_path` may be `source_path`. The destination is replaced atomically, so
   a reader never sees a partly written file.
 
-  Returns `{:error, :busy}` when other strips kept this one waiting longer
-  than 30 seconds.
+  Returns `{:error, {:image_too_large, oversize}}` for an image whose canvas
+  is over the bound (#{div(@max_pixels, 1_000_000)} megapixels, or
+  #{div(@max_webp_pixels, 1_000_000)} for WebP read or written), and
+  `{:error, :busy}` when other strips kept this one waiting longer than 30
+  seconds.
   """
   @spec strip(Path.t(), Path.t(), String.t()) :: :ok | {:error, error()}
   def strip(source_path, dest_path, extension) when is_binary(extension) do
@@ -108,7 +117,7 @@ defmodule Tymeslot.Media.ImageMetadata do
   little quality each time, so a file with nothing to remove is left alone.
   """
   @spec metadata?(Path.t()) ::
-          {:ok, boolean()} | {:error, :invalid_image_format | :image_too_large}
+          {:ok, boolean()} | {:error, :invalid_image_format | {:image_too_large, oversize()}}
   def metadata?(path) do
     with {:ok, image} <- open(path, String.downcase(Path.extname(path))) do
       case VipsImage.header_field_names(image) do
@@ -149,9 +158,11 @@ defmodule Tymeslot.Media.ImageMetadata do
   end
 
   defp check_size(image, max_pixels) do
-    if VipsImage.width(image) * VipsImage.height(image) <= max_pixels,
+    pixels = VipsImage.width(image) * VipsImage.height(image)
+
+    if pixels <= max_pixels,
       do: {:ok, image},
-      else: {:error, :image_too_large}
+      else: {:error, {:image_too_large, %{pixels: pixels, max_pixels: max_pixels}}}
   end
 
   defp upright(image) do

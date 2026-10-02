@@ -76,6 +76,34 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationBackgroundUpload
       assert MediaFixtures.image_metadata_fields(response.resp_body) == []
       refute response.resp_body =~ "Model-X"
     end
+
+    test "refuses an image over 40 megapixels and says how large it may be", %{
+      conn: conn,
+      profile: profile
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      open_image_tab(view)
+
+      image = %{
+        last_modified: System.system_time(:millisecond),
+        name: "huge.png",
+        content: MediaFixtures.png_declaring(20_000, 20_000),
+        type: "image/png"
+      }
+
+      view
+      |> file_input("#theme-background-image-form", :background_image, [image])
+      |> render_upload("huge.png")
+
+      assert render(view) =~
+               "This image is too large (400.0 megapixels). " <>
+                 "Please upload an image of at most 40 megapixels."
+
+      refute match?(
+               %{background_image_path: path} when is_binary(path),
+               ThemeCustomizations.get_by_profile_and_theme(profile.id, "1")
+             )
+    end
   end
 
   describe "background video upload" do

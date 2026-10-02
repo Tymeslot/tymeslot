@@ -7,6 +7,7 @@ defmodule TymeslotWeb.OnboardingAvatarUploadTest do
 
   use TymeslotWeb.LiveCase, async: false
 
+  alias Tymeslot.Profiles
   alias Tymeslot.Test.MediaFixtures
 
   @moduletag :onboarding
@@ -52,6 +53,28 @@ defmodule TymeslotWeb.OnboardingAvatarUploadTest do
       |> render_upload("avatar.png")
 
       assert_push_event(view, "upload-complete", %{})
+    end
+
+    test "refuses an image over 40 megapixels and says how large it may be", %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding(conn)
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      avatar = %{
+        last_modified: System.system_time(:millisecond),
+        name: "huge.png",
+        content: MediaFixtures.png_declaring(20_000, 20_000),
+        type: "image/png"
+      }
+
+      view
+      |> file_input("#onboarding-avatar-form", :avatar, [avatar])
+      |> render_upload("huge.png")
+
+      assert render(view) =~
+               "This image is too large (400.0 megapixels). " <>
+                 "Please upload an image of at most 40 megapixels."
+
+      assert Profiles.get_profile(user.id).avatar == nil
     end
   end
 end
