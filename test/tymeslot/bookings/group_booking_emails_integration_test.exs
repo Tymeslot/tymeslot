@@ -334,35 +334,6 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
              })
   end
 
-  # An emptied group meeting is still `group?/1` (capacity-based), so its
-  # cancellation must fall through to the dedicated "organiser only" wording
-  # rather than a fan-out over zero participants that would tell the
-  # organiser "the appointment with 0 participants has been cancelled".
-  test "the last seat leaving cancels the meeting and the organiser email carries no participant count",
-       %{meeting_params: meeting_params} do
-    meeting = book_seat!(meeting_params, "Solo Booker", "solo@example.com")
-    [participant] = ParticipantQueries.list_live_for_meeting(meeting.id)
-
-    assert {:ok, :meeting_cancelled} = CancelSeat.execute(participant.management_token)
-
-    assert_enqueued(
-      worker: EmailWorker,
-      args: %{"action" => "send_cancellation_emails", "meeting_id" => meeting.id}
-    )
-
-    expect(EmailServiceMock, :send_cancellation_email_to_organizer, fn organizer_email, details ->
-      assert organizer_email == "organizer@example.com"
-      assert details.attendee_name in [nil, ""]
-      {:ok, "sent"}
-    end)
-
-    assert :ok =
-             perform_job(EmailWorker, %{
-               "action" => "send_cancellation_emails",
-               "meeting_id" => meeting.id
-             })
-  end
-
   # `cancel_reminder_emails/1` only sweeps pending `send_reminder_emails`
   # jobs, not the `send_seat_reminder` jobs dispatched once that job runs —
   # so a seat cancelled after dispatch, or a meeting voided after dispatch,

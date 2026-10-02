@@ -32,7 +32,9 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.SeatEmails do
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.Recipient
   alias Tymeslot.Notifications.GuestNotifications
   alias Tymeslot.Workers.DeliveryClaims
@@ -61,9 +63,13 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.SeatEmails do
 
   @doc """
   A seat its participant cancelled: their cancellation, the organiser's "a
-  participant cancelled their spot" (unless `notify_organizer` is false, when
-  the seat was the last and the meeting-level cancellation tells the
-  organiser instead), and cancellations for the participant's guests.
+  participant cancelled their spot", and cancellations for the participant's
+  guests.
+
+  `slot_freed` marks the last seat, whose leaving cancelled the meeting: the
+  organiser's email then says the slot is now empty and free. It is the
+  organiser's only email about it; the emptied meeting's own cancellation
+  sends them nothing.
   """
   @spec handle_seat_cancellation_emails(%{String.t() => term()}, DeliveryClaims.job_id()) ::
           :ok | {:error, term()} | {:discard, String.t()}
@@ -71,14 +77,14 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.SeatEmails do
         %{"meeting_id" => meeting_id, "participant_id" => participant_id} = args,
         job_id
       ) do
-    notify_organizer? = Map.get(args, "notify_organizer", true)
+    slot_freed? = Map.get(args, "slot_freed") == true
 
     SeatJobs.with_seat(
       meeting_id,
       participant_id,
       "seat cancellation emails",
       {:any, :cancelled},
-      &send_cancellation(&1, &2, notify_organizer?, job_id)
+      &send_cancellation(&1, &2, slot_freed?, job_id)
     )
   end
 
@@ -89,7 +95,15 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.SeatEmails do
   participant's guests and an invitation to the new one.
 
   `participant_id` is the seat at its new time, `old_participant_id` the
-  cancelled seat it moved from.
+  cancelled seat it moved from, and `old_slot_freed` says the move emptied,
+  and so cancelled, the old meeting (the organiser's email then says so).
+
+  The old seat's cancellation is owed whatever has become of the new seat:
+  its calendar entry is still in the participant's and their guests'
+  calendars. So when the new seat is already gone by the time this runs
+  (cancelled, or its meeting cancelled) the job still cancels the old entry
+  for the participant and their guests, and only the new seat's invitations
+  are skipped.
   """
   @spec handle_seat_reschedule_emails(%{String.t() => term()}, DeliveryClaims.job_id()) ::
           :ok | {:error, term()} | {:discard, String.t()}
@@ -98,15 +112,17 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.SeatEmails do
           "meeting_id" => meeting_id,
           "participant_id" => participant_id,
           "old_participant_id" => old_participant_id
-        },
+        } = args,
         job_id
       ) do
+    old_slot_freed? = Map.get(args, "old_slot_freed") == true
+
     SeatJobs.with_seat(
       meeting_id,
       participant_id,
       "seat reschedule emails",
-      {:live_slot, :live},
-      &send_reschedule(&1, &2, old_seat(old_participant_id), job_id)
+      {:any, :any},
+      &send_reschedule(&1, &2, old_seat(old_participant_id), old_slot_freed?, job_id)
     )
   end
 
@@ -143,7 +159,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.SeatEmails do
   # carries the invitation's (see `ParticipantSchema.invitation_sequence/1`)
   # and the cancellation template stamps its file one above it, on the seat's
   # own UID. Their guests share that entry, so they get the same.
-  defp send_cancellation(meeting, participant, notify_organizer?, job_id) do
+  defp send_cancellation(meeting, participant, slot_freed?, job_id) do
     recipient = Recipient.from_participant(participant)
     details = AppointmentBuilder.from_meeting(meeting, recipient, nil)
     email_service = Config.email_service_module()
@@ -154,17 +170,15 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.SeatEmails do
       end)
 
     organizer_result =
-      if notify_organizer? do
-        DeliveryClaims.once(job_id, "seat_cancellation:organizer", fn ->
-          email_service.send_seat_update_to_organizer(
-            :cancelled,
-            meeting.organizer_email,
-            AppointmentBuilder.for_organizer_of_seat(meeting, recipient)
-          )
-        end)
-      else
-        {:ok, :skipped}
-      end
+      DeliveryClaims.once(job_id, "seat_cancellation:organizer", fn ->
+        email_service.send_seat_update_to_organizer(
+          :cancelled,
+          meeting.organizer_email,
+          meeting
+          |> AppointmentBuilder.for_organizer_of_seat(recipient)
+          |> Map.put(:slot_freed, slot_freed?)
+        )
+      end)
 
     GuestNotifications.notify_seat_cancelled(
       meeting,
@@ -180,14 +194,23 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.SeatEmails do
     )
   end
 
-  defp send_reschedule(meeting, participant, old_seat, job_id) do
+  # The organiser is told of the move either way: it happened, and if the new
+  # seat has gone since, its own cancellation email tells them that too.
+  defp send_reschedule(meeting, participant, old_seat, old_slot_freed?, job_id) do
     recipient = Recipient.from_participant(participant)
     details = AppointmentBuilder.from_meeting(meeting, recipient, nil)
     email_service = Config.email_service_module()
+    new_seat_live? = ParticipantSchema.live?(participant) and not MeetingState.slot_void?(meeting)
 
     attendee_result =
       unless_stamped(participant, :confirmation_sent_at, fn ->
-        send_moved_seat_to_participant(email_service, recipient.email, details, old_seat)
+        send_moved_seat_to_participant(
+          email_service,
+          recipient.email,
+          details,
+          old_seat,
+          new_seat_live?
+        )
       end)
 
     organizer_result =
@@ -198,11 +221,12 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.SeatEmails do
           meeting
           |> AppointmentBuilder.for_organizer_of_seat(recipient)
           |> put_original_time(old_seat)
+          |> Map.put(:old_slot_freed, old_slot_freed?)
         )
       end)
 
     cancel_old_guests(old_seat, job_id)
-    invite_guests(meeting, participant, details, email_service)
+    if new_seat_live?, do: invite_guests(meeting, participant, details, email_service)
 
     DeliveryOutcome.from_results(
       "seat reschedule",
@@ -230,10 +254,20 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.SeatEmails do
     end
   end
 
-  defp send_moved_seat_to_participant(email_service, email, details, nil),
+  # The new seat still stands: its invitation, carrying the old seat's
+  # cancellation as a second attachment (or alone, when the old seat can no
+  # longer be named). The new seat has gone: only the old seat's
+  # cancellation, since the new one's has been, or is being, sent on its own.
+  defp send_moved_seat_to_participant(email_service, email, details, nil, true),
     do: email_service.send_appointment_confirmation_to_attendee(email, details)
 
-  defp send_moved_seat_to_participant(email_service, email, details, %{details: old}) do
+  defp send_moved_seat_to_participant(_email_service, _email, _details, nil, false),
+    do: {:ok, :skipped}
+
+  defp send_moved_seat_to_participant(email_service, email, _details, %{details: old}, false),
+    do: email_service.send_cancellation_email_to_attendee(email, old)
+
+  defp send_moved_seat_to_participant(email_service, email, details, %{details: old}, true) do
     old_event = %{
       uid: old.uid,
       ical_sequence: old.ical_sequence,

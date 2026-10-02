@@ -158,6 +158,15 @@ defmodule Tymeslot.Emails.GroupSeatPayloadsTest do
       assert email.text_body =~ ~r/Ada moved their spot from .+ to .+\./
     end
 
+    test "says the earlier slot is free when the move emptied it", %{details: details} do
+      email = render_in_english(:moved, Map.put(details, :old_slot_freed, true))
+
+      assert email.text_body =~
+               "Nobody is left at the earlier time, so that meeting has been cancelled and the time is free again."
+
+      refute render_in_english(:moved, details).text_body =~ "Nobody is left"
+    end
+
     test "is written in the organiser's language", %{details: details} do
       email = SeatUpdateForOrganizer.render(:booked, "host@example.com", details)
 

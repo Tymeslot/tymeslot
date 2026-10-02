@@ -185,29 +185,17 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
 
     if Meetings.group?(meeting) do
       # `group?/1` is capacity-based, not "has live participants": a meeting
-      # emptied by every participant leaving is still a group meeting, and
-      # each of them already received their seat-cancellation email when they
-      # left, so only the organiser needs the meeting-level cancellation.
+      # emptied by every participant leaving is still a group meeting. Each of
+      # them was told when they left, and so was the organiser: the last
+      # leaver's seat email (or the last mover's) says the slot is now empty
+      # and free. A second, meeting-level email here would only repeat that
+      # with nobody to name, so the emptied meeting sends nothing more.
       case Meetings.recipients(meeting) do
-        [] -> send_organizer_cancellation_email(appointment_details)
+        [] -> :ok
         participants -> GroupMeetingEmails.send_group_cancellation_emails(meeting, participants)
       end
     else
       send_solo_cancellation_emails(meeting, appointment_details)
-    end
-  end
-
-  # Preserves `:circuit_open` (snooze) and `{:recipient_rejected, _}`
-  # (discard) for `EmailWorker`, as every other meeting send does, rather than
-  # inspecting the reason (and the rejected address with it) into the job's
-  # error.
-  defp send_organizer_cancellation_email(details) do
-    case Config.email_service_module().send_cancellation_email_to_organizer(
-           details.organizer_email,
-           details
-         ) do
-      {:ok, _organizer} -> :ok
-      {:error, reason} -> DeliveryOutcome.from_error(reason, "Failed to send cancellation email")
     end
   end
 

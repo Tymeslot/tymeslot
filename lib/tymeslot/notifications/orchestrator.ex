@@ -242,13 +242,13 @@ defmodule Tymeslot.Notifications.Orchestrator do
   """
   @spec schedule_seat_cancellation(%{atom() => term()}, %{atom() => term()}, boolean()) ::
           {:ok, atom()} | {:error, term()}
-  def schedule_seat_cancellation(meeting, participant, notify_organizer?) do
+  def schedule_seat_cancellation(meeting, participant, slot_freed?) do
     worker_module = get_email_worker_module()
 
     case worker_module.schedule_seat_cancellation_emails(
            meeting.id,
            participant.id,
-           notify_organizer?
+           slot_freed?
          ) do
       :ok -> {:ok, :seat_cancellation_scheduled}
       {:error, reason} -> {:error, reason}
@@ -260,15 +260,20 @@ defmodule Tymeslot.Notifications.Orchestrator do
   `participant` is the seat at its new time, `old_participant` the seat it
   moved from.
   """
-  @spec schedule_seat_reschedule(%{atom() => term()}, %{atom() => term()}, %{atom() => term()}) ::
-          {:ok, atom()} | {:error, term()}
-  def schedule_seat_reschedule(meeting, participant, old_participant) do
+  @spec schedule_seat_reschedule(
+          %{atom() => term()},
+          %{atom() => term()},
+          %{atom() => term()},
+          boolean()
+        ) :: {:ok, atom()} | {:error, term()}
+  def schedule_seat_reschedule(meeting, participant, old_participant, old_slot_freed?) do
     worker_module = get_email_worker_module()
 
     case worker_module.schedule_seat_reschedule_emails(
            meeting.id,
            participant.id,
-           old_participant.id
+           old_participant.id,
+           old_slot_freed?
          ) do
       :ok -> {:ok, :seat_reschedule_scheduled}
       {:error, reason} -> {:error, reason}

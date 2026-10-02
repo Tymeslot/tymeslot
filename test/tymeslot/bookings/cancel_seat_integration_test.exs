@@ -127,7 +127,7 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
                "action" => "send_seat_cancellation_emails",
                "meeting_id" => meeting.id,
                "participant_id" => leaver.id,
-               "notify_organizer" => true
+               "slot_freed" => false
              })
   end
 
@@ -390,7 +390,7 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
                "action" => "send_seat_cancellation_emails",
                "meeting_id" => meeting.id,
                "participant_id" => leaver.id,
-               "notify_organizer" => true
+               "slot_freed" => false
              })
 
     assert_received {:guest_cancellation, "invited@example.com", details}

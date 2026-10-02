@@ -13,8 +13,10 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.SeatJobs do
       `:not_cancelled`, `:cancelled` (the copy of a whole-meeting
       cancellation), or `:any` (a participant's own cancellation, which is
       owed to them even when their leaving cancelled the meeting);
-    * the participant: `:live` (still holds the seat) or `:cancelled` (the
-      seat's own cancellation, which needs it to have actually happened).
+    * the participant: `:live` (still holds the seat), `:cancelled` (the
+      seat's own cancellation, which needs it to have actually happened), or
+      `:any` (a job that decides for itself, as a seat move does: the old
+      seat's cancellation is owed whatever has become of the new one).
 
   A job whose seat no longer qualifies is discarded with a reason
   `expected_discard?/1` recognises: it is the normal end of a job overtaken
@@ -38,7 +40,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.SeatJobs do
   @participant_not_cancelled "Participant still holds their seat"
 
   @type meeting_rule :: :live_slot | :not_cancelled | :cancelled | :any
-  @type participant_rule :: :live | :cancelled
+  @type participant_rule :: :live | :cancelled | :any
 
   @doc """
   Whether `reason`, from a discard this module returned, is an expected end
@@ -137,4 +139,5 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.SeatJobs do
     do: {:discard, @participant_not_cancelled}
 
   defp check_participant(participant, :cancelled), do: {:ok, participant}
+  defp check_participant(participant, :any), do: {:ok, participant}
 end

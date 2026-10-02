@@ -28,6 +28,7 @@ defmodule Tymeslot.Bookings.GroupSeatJobsIntegrationTest do
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Emails.Templates.AppointmentCancellation
   alias Tymeslot.Emails.Templates.AppointmentConfirmation
+  alias Tymeslot.Emails.Templates.SeatUpdateForOrganizer
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.ParticipantQueries
@@ -260,7 +261,7 @@ defmodule Tymeslot.Bookings.GroupSeatJobsIntegrationTest do
                  %{
                    "meeting_id" => meeting.id,
                    "participant_id" => first_id,
-                   "notify_organizer" => true
+                   "slot_freed" => false
                  },
                  nil
                )
@@ -320,7 +321,7 @@ defmodule Tymeslot.Bookings.GroupSeatJobsIntegrationTest do
                  "action" => "send_seat_cancellation_emails",
                  "meeting_id" => meeting.id,
                  "participant_id" => first.id,
-                 "notify_organizer" => true
+                 "slot_freed" => false
                })
 
       assert_received {:cancellation, "first@example.com", cancel_details}
@@ -338,31 +339,64 @@ defmodule Tymeslot.Bookings.GroupSeatJobsIntegrationTest do
     end
   end
 
-  describe "the organiser-only cancellation of an emptied group meeting" do
-    setup %{meeting_params: meeting_params} do
+  # The last seat leaving cancels the meeting. The organiser used to get a
+  # meeting-level "The appointment with  has been cancelled", naming nobody;
+  # now they get exactly one email, the leaver's, saying the slot is free.
+  describe "the last seat leaving" do
+    test "sends the organiser one email naming the leaver and saying the slot is free",
+         %{meeting_params: meeting_params} do
       meeting = book_seat!(meeting_params, "Solo Booker", "solo@example.com")
       [participant] = ParticipantQueries.list_live_for_meeting(meeting.id)
+
       assert {:ok, :meeting_cancelled} = CancelSeat.execute(participant.management_token)
 
-      %{args: %{"action" => "send_cancellation_emails", "meeting_id" => meeting.id}}
-    end
+      seat_args = %{
+        "action" => "send_seat_cancellation_emails",
+        "meeting_id" => meeting.id,
+        "participant_id" => participant.id,
+        "slot_freed" => true
+      }
 
-    test "snoozes past an open circuit", %{args: args} do
-      expect(EmailServiceMock, :send_cancellation_email_to_organizer, fn _email, _details ->
-        {:error, :circuit_open}
+      assert_enqueued(worker: EmailWorker, args: seat_args)
+
+      # The emptied meeting's own cancellation sends the organiser nothing:
+      # no expectation is set, so any send would fail on the unexpected call.
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_cancellation_emails",
+                 "meeting_id" => meeting.id
+               })
+
+      test_pid = self()
+
+      stub(EmailServiceMock, :send_cancellation_email_to_attendee, fn _email, _details ->
+        {:ok, "sent"}
       end)
 
-      assert {:snooze, seconds} = perform_job(EmailWorker, args)
-      assert seconds >= 300
-    end
-
-    test "discards a rejected address without writing it into the job's error", %{args: args} do
-      expect(EmailServiceMock, :send_cancellation_email_to_organizer, fn _email, _details ->
-        {:error, {:recipient_rejected, "550 no such user organizer@example.com"}}
+      expect(EmailServiceMock, :send_seat_update_to_organizer, fn :cancelled, email, details ->
+        send(test_pid, {:organizer, email, details})
+        {:ok, "sent"}
       end)
 
-      assert {:discard, reason} = perform_job(EmailWorker, args)
-      refute inspect(reason) =~ "organizer@example.com"
+      assert :ok = perform_job(EmailWorker, seat_args)
+
+      assert_received {:organizer, "organizer@example.com", details}
+      assert details.attendee_name == "Solo Booker"
+      assert details.slot_freed == true
+
+      email =
+        SeatUpdateForOrganizer.render(:cancelled, "organizer@example.com", %{
+          details
+          | organizer_locale: "en"
+        })
+
+      assert email.subject =~ "Slot freed: Solo Booker cancelled"
+
+      assert email.text_body =~
+               "Solo Booker cancelled their spot. Nobody is left on this slot, so the meeting has been cancelled and the time is free again."
+
+      refute email.text_body =~ "The appointment with"
+      refute email.text_body =~ "spots taken"
     end
   end
 

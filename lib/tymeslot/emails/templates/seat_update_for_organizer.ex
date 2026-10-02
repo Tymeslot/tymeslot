@@ -59,7 +59,7 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
 
       #{MeetingComponents.custom_answers_section(details)}
 
-      #{Text.centered_text(seats_line(details), font_size: "14px", padding: "8px 0 8px 0")}
+      #{if line = seats_line(details), do: Text.centered_text(line, font_size: "14px", padding: "8px 0 8px 0")}
 
       #{Text.section_title(dgettext("emails_booking", "Need to make changes?"))}
 
@@ -102,6 +102,28 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
     }
   end
 
+  # The last seat: its leaving cancelled the meeting. This is the organiser's
+  # only email about it, so it says both facts.
+  defp copy(:cancelled, %{slot_freed: true} = details) do
+    name = details.attendee_name
+
+    %{
+      eyebrow: dgettext("emails_booking", "Cancelled"),
+      title: dgettext("emails_booking", "The last participant cancelled their spot"),
+      lead:
+        dgettext(
+          "emails_booking",
+          "%{name} cancelled their spot. Nobody is left on this slot, so the meeting has been cancelled and the time is free again.",
+          name: name
+        ),
+      subject:
+        dgettext("emails_booking", "Slot freed: %{name} cancelled - %{date}",
+          name: name,
+          date: short_date(details)
+        )
+    }
+  end
+
   defp copy(:cancelled, details) do
     name = details.attendee_name
 
@@ -128,7 +150,7 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
     %{
       eyebrow: dgettext("emails_booking", "Rescheduled"),
       title: dgettext("emails_booking", "A participant moved their spot"),
-      lead: moved_lead(details),
+      lead: moved_lead(details) <> old_slot_freed_note(details),
       subject:
         dgettext("emails_booking", "Spot moved: %{name} - %{date}",
           name: name,
@@ -163,6 +185,16 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
     )
   end
 
+  defp old_slot_freed_note(%{old_slot_freed: true}) do
+    " " <>
+      dgettext(
+        "emails_booking",
+        "Nobody is left at the earlier time, so that meeting has been cancelled and the time is free again."
+      )
+  end
+
+  defp old_slot_freed_note(_details), do: ""
+
   defp attendee_info(details) do
     %{
       name: details.attendee_name,
@@ -172,7 +204,10 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
     }
   end
 
-  # How full the slot is now, guests included: each guest takes a seat.
+  # How full the slot is now, guests included: each guest takes a seat. A
+  # slot the last seat has just left has no count worth stating.
+  defp seats_line(%{slot_freed: true}), do: nil
+
   defp seats_line(details) do
     dngettext(
       "emails_booking",
@@ -196,7 +231,6 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
     #{TextBodyHelper.format_meeting_details(view, locale)}#{TextBodyHelper.format_custom_answers(view, locale)}
 
     #{seats_line(details)}
-
     #{dgettext("emails_booking", "Open in dashboard")}: #{details.dashboard_url}
     """
   end

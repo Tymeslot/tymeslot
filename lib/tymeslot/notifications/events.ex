@@ -182,14 +182,17 @@ defmodule Tymeslot.Notifications.Events do
   @doc """
   Handles a participant cancelling their seat on a group meeting.
 
-  Schedules the seat-cancellation emails. `notify_organizer: false` is used
-  by the last-leaver path, where the meeting-level cancellation flow already
-  emails the organiser.
+  Schedules the seat-cancellation emails. `slot_freed: true` marks the last
+  leaver: their leaving cancelled the meeting, and the organiser's email
+  about the seat says so (it is the organiser's only email about it).
   """
   @spec seat_cancelled(term(), term(), keyword()) :: {:ok, term()} | {:error, term()}
   def seat_cancelled(meeting, participant, opts \\ []) do
-    notify_organizer? = Keyword.get(opts, :notify_organizer, true)
-    Orchestrator.schedule_seat_cancellation(meeting, participant, notify_organizer?)
+    Orchestrator.schedule_seat_cancellation(
+      meeting,
+      participant,
+      Keyword.get(opts, :slot_freed, false)
+    )
   end
 
   @doc """
@@ -200,11 +203,17 @@ defmodule Tymeslot.Notifications.Events do
   and the matching cancellation and invitation for their guests.
   `old_participant` is the seat row the move cancelled; each seat is its own
   calendar entry, so the old one is named by that row, not by the old
-  meeting.
+  meeting. `old_slot_freed: true` says the move emptied, and so cancelled,
+  the old meeting.
   """
-  @spec seat_rescheduled(term(), term(), term()) :: {:ok, term()} | {:error, term()}
-  def seat_rescheduled(meeting, participant, old_participant) do
-    Orchestrator.schedule_seat_reschedule(meeting, participant, old_participant)
+  @spec seat_rescheduled(term(), term(), term(), keyword()) :: {:ok, term()} | {:error, term()}
+  def seat_rescheduled(meeting, participant, old_participant, opts \\ []) do
+    Orchestrator.schedule_seat_reschedule(
+      meeting,
+      participant,
+      old_participant,
+      Keyword.get(opts, :old_slot_freed, false)
+    )
   end
 
   @doc """

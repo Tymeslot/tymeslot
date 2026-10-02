@@ -310,7 +310,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     # per organiser, and both slots are theirs.
     SeatEffects.broadcast_and_invalidate(old_meeting)
 
-    release_old_meeting(old_meeting)
+    old_slot_freed? = release_old_meeting(old_meeting)
 
     SeatEffects.schedule_calendar_job(booked.meeting, booked.created_meeting?)
 
@@ -322,23 +322,25 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     # still worth having ready, quietly, for whoever opens the new event.
     if booked.created_meeting?, do: SeatEffects.schedule_new_slot_effects(booked.meeting)
 
-    Events.seat_rescheduled(booked.meeting, booked.participant, old_participant)
+    Events.seat_rescheduled(booked.meeting, booked.participant, old_participant,
+      old_slot_freed: old_slot_freed?
+    )
 
     {:ok, booked}
   end
 
   # If the move emptied the old meeting it is cancelled (calendar event
-  # deleted, organiser notified of the cancellation in addition to the
-  # reschedule notification — deliberate, both facts are true and each email
-  # carries its own ICS). Otherwise the old event is refreshed so its
-  # attendee list drops the mover.
+  # deleted) and this returns `true`: the organiser's one email about the
+  # move then also says the old slot is empty and free. Otherwise the old
+  # event is refreshed so its attendee list drops the mover.
   defp release_old_meeting(old_meeting) do
     case SeatRelease.release(old_meeting) do
       {:ok, :meeting_cancelled} ->
-        :ok
+        true
 
       {:ok, :seats_remain} ->
         CalendarJobs.schedule_job(old_meeting, "update")
+        false
 
       {:error, :release_check_failed} ->
         # The emptiness check failed rather than the status transition, so
@@ -347,6 +349,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
         # `:seats_remain` case rather than leaving it stale. `SeatRelease`
         # has already alerted on the check itself failing.
         CalendarJobs.schedule_job(old_meeting, "update")
+        false
     end
   end
 end

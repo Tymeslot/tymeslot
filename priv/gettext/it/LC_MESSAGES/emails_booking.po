@@ -1163,3 +1163,23 @@ msgstr "Posto spostato: %{name} - %{date}"
 #, elixir-autogen, elixir-format
 msgid "%{name} moved their spot to %{to}."
 msgstr "%{name} ha spostato il proprio posto a %{to}."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} cancelled their spot. Nobody is left on this slot, so the meeting has been cancelled and the time is free again."
+msgstr "%{name} ha annullato il proprio posto. Non è rimasto nessuno in questo orario, quindi la riunione è stata annullata e l'orario è di nuovo libero."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Nobody is left at the earlier time, so that meeting has been cancelled and the time is free again."
+msgstr "Non è rimasto nessuno all'orario precedente, quindi quella riunione è stata annullata e l'orario è di nuovo libero."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Slot freed: %{name} cancelled - %{date}"
+msgstr "Orario liberato: %{name} ha annullato - %{date}"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "The last participant cancelled their spot"
+msgstr "L'ultimo partecipante ha annullato il proprio posto"

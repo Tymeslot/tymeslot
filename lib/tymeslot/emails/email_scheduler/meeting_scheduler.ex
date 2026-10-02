@@ -250,7 +250,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   whole-meeting cancellation/reminder/reschedule-request fan-outs), so each
   recipient retries independently of the others and a different action for
   the same participant can never collide with this one. `extra_args` carries
-  whatever the action needs beyond the two ids (e.g. `notify_organizer`, the
+  whatever the action needs beyond the two ids (e.g. `slot_freed`, the
   moved-from seat, or the reminder interval).
 
   The uniqueness covers completed jobs too, which is the point: a dispatcher
@@ -335,12 +335,14 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
 
   @doc """
   Schedules the cancellation emails for a single group-booking seat.
+  `slot_freed?` says the seat was the last one and its leaving cancelled the
+  meeting.
   """
   @spec schedule_seat_cancellation_emails(term(), term(), boolean()) ::
           :ok | {:error, String.t()}
-  def schedule_seat_cancellation_emails(meeting_id, participant_id, notify_organizer?) do
+  def schedule_seat_cancellation_emails(meeting_id, participant_id, slot_freed?) do
     schedule_seat_email(seat_action(:seat_cancellation), meeting_id, participant_id, %{
-      "notify_organizer" => notify_organizer?
+      "slot_freed" => slot_freed?
     })
   end
 
@@ -351,11 +353,19 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   cancelled row it moved from, whose own calendar entry (UID, revision and
   time) the job cancels for the participant and their guests. A seat move
   never rewrites that row, so it is read when the job runs.
+  `old_slot_freed?` says the move emptied, and so cancelled, the old meeting.
   """
-  @spec schedule_seat_reschedule_emails(term(), term(), term()) :: :ok | {:error, String.t()}
-  def schedule_seat_reschedule_emails(meeting_id, participant_id, old_participant_id) do
+  @spec schedule_seat_reschedule_emails(term(), term(), term(), boolean()) ::
+          :ok | {:error, String.t()}
+  def schedule_seat_reschedule_emails(
+        meeting_id,
+        participant_id,
+        old_participant_id,
+        old_slot_freed?
+      ) do
     schedule_seat_email(seat_action(:seat_reschedule), meeting_id, participant_id, %{
-      "old_participant_id" => old_participant_id
+      "old_participant_id" => old_participant_id,
+      "old_slot_freed" => old_slot_freed?
     })
   end
 

@@ -112,20 +112,22 @@ defmodule Tymeslot.Bookings.CancelSeat do
   end
 
   # `SeatRelease.release/1` decides under the meeting row lock whether this
-  # was the last seat. The leaver's own confirmation is sent either way; when
-  # the meeting goes with them it carries `notify_organizer: false`, because
-  # the meeting-level cancellation notifies the organiser already.
+  # was the last seat. The seat's cancellation emails go out either way; when
+  # the meeting goes with them they carry `slot_freed: true`, and the
+  # organiser's one email about it says the slot is now empty and free (the
+  # meeting-level cancellation of an emptied meeting sends the organiser
+  # nothing, see `MeetingEmails`).
   defp after_commit(meeting, cancelled) do
     publish_seat_change(meeting)
 
     case SeatRelease.release(meeting) do
       {:ok, :meeting_cancelled} ->
-        Events.seat_cancelled(meeting, cancelled, notify_organizer: false)
+        Events.seat_cancelled(meeting, cancelled, slot_freed: true)
         {:ok, :meeting_cancelled}
 
       {:ok, :seats_remain} ->
         CalendarJobs.schedule_job(meeting, "update")
-        Events.seat_cancelled(meeting, cancelled, notify_organizer: true)
+        Events.seat_cancelled(meeting, cancelled)
         {:ok, :seat_cancelled}
 
       {:error, :release_check_failed} ->
@@ -137,7 +139,7 @@ defmodule Tymeslot.Bookings.CancelSeat do
         # and the organiser still needs telling. `SeatRelease` has already
         # alerted on the check itself failing.
         CalendarJobs.schedule_job(meeting, "update")
-        Events.seat_cancelled(meeting, cancelled, notify_organizer: true)
+        Events.seat_cancelled(meeting, cancelled)
         {:ok, :seat_cancelled}
     end
   end
