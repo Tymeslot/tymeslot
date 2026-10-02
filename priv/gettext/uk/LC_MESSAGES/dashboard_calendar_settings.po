@@ -241,11 +241,6 @@ msgstr "додає записи в %{calendar}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
-msgid "conflict-checks %{selected} of %{total} calendars"
-msgstr "перевіряє на конфлікти %{selected} з %{total} календарів"
-
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
-#, elixir-autogen, elixir-format
 msgid "synced %{time}"
 msgstr "синхронізовано %{time}"
 
@@ -313,3 +308,11 @@ msgstr "Сервери Exchange"
 #, elixir-autogen, elixir-format
 msgid "read-only, blocks time but takes no bookings"
 msgstr "лише для перегляду, блокує час, але не приймає бронювань"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "checks %{selected} of %{count} calendar for conflicts"
+msgid_plural "checks %{selected} of %{count} calendars for conflicts"
+msgstr[0] "перевіряє на конфлікти %{selected} з %{count} календаря"
+msgstr[1] "перевіряє на конфлікти %{selected} з %{count} календарів"
+msgstr[2] "перевіряє на конфлікти %{selected} з %{count} календарів"

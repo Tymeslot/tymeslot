@@ -21,6 +21,26 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
       assert Components.calendar_summary(integration) == "books into Work"
     end
 
+    test "counts the calendars checked for conflicts in a grammatical phrase" do
+      one =
+        summary_integration(
+          is_active: true,
+          calendar_list: [%CalendarEntry{id: "a", name: "A", selected: true}]
+        )
+
+      several =
+        summary_integration(
+          is_active: true,
+          calendar_list: [
+            %CalendarEntry{id: "a", name: "A", selected: true},
+            %CalendarEntry{id: "b", name: "B", selected: false}
+          ]
+        )
+
+      assert Components.calendar_summary(one) == "checks 1 of 1 calendar for conflicts"
+      assert Components.calendar_summary(several) == "checks 1 of 2 calendars for conflicts"
+    end
+
     test "warns when a writable provider's configured booking target has turned read-only" do
       integration =
         summary_integration(

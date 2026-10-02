@@ -552,9 +552,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   defp conflict_segment(%{is_active: true}, calendar_list) when calendar_list != [] do
     selected = Enum.count(calendar_list, & &1.selected)
 
-    dgettext("dashboard_calendar_settings", "conflict-checks %{selected} of %{total} calendars",
-      selected: selected,
-      total: length(calendar_list)
+    dngettext(
+      "dashboard_calendar_settings",
+      "checks %{selected} of %{count} calendar for conflicts",
+      "checks %{selected} of %{count} calendars for conflicts",
+      length(calendar_list),
+      selected: selected
     )
   end
 

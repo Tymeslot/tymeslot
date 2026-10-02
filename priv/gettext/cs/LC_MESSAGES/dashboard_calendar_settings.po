@@ -241,11 +241,6 @@ msgstr "rezervuje do kalendáře %{calendar}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
-msgid "conflict-checks %{selected} of %{total} calendars"
-msgstr "kontroluje konflikty u %{selected} z %{total} kalendářů"
-
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
-#, elixir-autogen, elixir-format
 msgid "synced %{time}"
 msgstr "synchronizováno %{time}"
 
@@ -313,3 +308,11 @@ msgstr "Servery Exchange"
 #, elixir-autogen, elixir-format
 msgid "read-only, blocks time but takes no bookings"
 msgstr "jen pro čtení, blokuje čas, ale nepřijímá rezervace"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "checks %{selected} of %{count} calendar for conflicts"
+msgid_plural "checks %{selected} of %{count} calendars for conflicts"
+msgstr[0] "kontroluje konflikty u %{selected} z %{count} kalendáře"
+msgstr[1] "kontroluje konflikty u %{selected} z %{count} kalendářů"
+msgstr[2] "kontroluje konflikty u %{selected} z %{count} kalendářů"

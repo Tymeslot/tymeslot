@@ -240,11 +240,6 @@ msgstr "salva le prenotazioni in %{calendar}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
-msgid "conflict-checks %{selected} of %{total} calendars"
-msgstr "controlla i conflitti su %{selected} di %{total} calendari"
-
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
-#, elixir-autogen, elixir-format
 msgid "synced %{time}"
 msgstr "sincronizzato %{time}"
 
@@ -312,3 +307,10 @@ msgstr "Server Exchange"
 #, elixir-autogen, elixir-format
 msgid "read-only, blocks time but takes no bookings"
 msgstr "di sola lettura, blocca gli orari ma non accetta prenotazioni"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "checks %{selected} of %{count} calendar for conflicts"
+msgid_plural "checks %{selected} of %{count} calendars for conflicts"
+msgstr[0] "controlla i conflitti su %{selected} di %{count} calendario"
+msgstr[1] "controlla i conflitti su %{selected} di %{count} calendari"
