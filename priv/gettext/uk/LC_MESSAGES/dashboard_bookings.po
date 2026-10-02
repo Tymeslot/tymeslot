@@ -143,11 +143,6 @@ msgstr "Повне повернення коштів."
 msgid "I understand the attendee will not receive a refund."
 msgstr "Я розумію, що учаснику не повернуть кошти."
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Join Meeting"
-msgstr "Приєднатися до зустрічі"
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "Join Video"
@@ -694,3 +689,8 @@ msgstr "Не заплановано"
 #, elixir-autogen, elixir-format
 msgid "Loading meetings"
 msgstr "Завантаження зустрічей"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Join meeting"
+msgstr "Приєднатися до зустрічі"

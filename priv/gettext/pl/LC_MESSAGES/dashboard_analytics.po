@@ -103,11 +103,6 @@ msgstr "Telefon"
 
 #: lib/tymeslot_web/live/dashboard/analytics_live.ex
 #, elixir-autogen, elixir-format
-msgid "Refresh"
-msgstr "Odśwież"
-
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex
-#, elixir-autogen, elixir-format
 msgid "Refresh analytics"
 msgstr "Odśwież statystyki"
 

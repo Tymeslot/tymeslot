@@ -143,11 +143,6 @@ msgstr "Remboursement intégral."
 msgid "I understand the attendee will not receive a refund."
 msgstr "Je comprends que le participant ne recevra aucun remboursement."
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Join Meeting"
-msgstr "Rejoindre la réunion"
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "Join Video"
@@ -688,3 +683,8 @@ msgstr "Non planifié"
 #, elixir-autogen, elixir-format
 msgid "Loading meetings"
 msgstr "Chargement des réunions"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Join meeting"
+msgstr "Rejoindre la réunion"

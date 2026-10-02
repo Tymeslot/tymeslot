@@ -106,11 +106,6 @@ msgstr "Mobile"
 
 #: lib/tymeslot_web/live/dashboard/analytics_live.ex
 #, elixir-autogen, elixir-format
-msgid "Refresh"
-msgstr "Aggiorna"
-
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex
-#, elixir-autogen, elixir-format
 msgid "Refresh analytics"
 msgstr "Aggiorna le statistiche"
 

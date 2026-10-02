@@ -139,11 +139,6 @@ msgstr "Pełny zwrot."
 msgid "I understand the attendee will not receive a refund."
 msgstr "Rozumiem, że uczestnik nie otrzyma zwrotu."
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Join Meeting"
-msgstr "Dołącz do spotkania"
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "Join Video"
@@ -690,3 +685,8 @@ msgstr "Niezaplanowane"
 #, elixir-autogen, elixir-format
 msgid "Loading meetings"
 msgstr "Ładowanie spotkań"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Join meeting"
+msgstr "Dołącz do spotkania"

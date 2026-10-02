@@ -839,11 +839,6 @@ msgstr "Przetestuj połączenie"
 msgid "Testing connection…"
 msgstr "Testowanie połączenia…"
 
-#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
-#, elixir-autogen, elixir-format
-msgid "Testing…"
-msgstr "Testowanie…"
-
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "That calendar connection is no longer available."

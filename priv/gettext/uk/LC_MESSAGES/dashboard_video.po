@@ -839,11 +839,6 @@ msgstr "Перевірити підключення"
 msgid "Testing connection…"
 msgstr "Перевірка підключення…"
 
-#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
-#, elixir-autogen, elixir-format
-msgid "Testing…"
-msgstr "Перевірка…"
-
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "That calendar connection is no longer available."

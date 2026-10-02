@@ -107,11 +107,6 @@ msgstr "Mobil"
 
 #: lib/tymeslot_web/live/dashboard/analytics_live.ex
 #, elixir-autogen, elixir-format
-msgid "Refresh"
-msgstr "Obnovit"
-
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex
-#, elixir-autogen, elixir-format
 msgid "Refresh analytics"
 msgstr "Obnovit statistiky"
 

@@ -150,11 +150,6 @@ msgid "Keyboard shortcuts"
 msgstr "Комбінації клавіш"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
-#, elixir-autogen, elixir-format
-msgid "Keyboard shortcuts (?)"
-msgstr "Комбінації клавіш (?)"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Month"

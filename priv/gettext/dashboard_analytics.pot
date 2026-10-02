@@ -106,11 +106,6 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/analytics_live.ex
 #, elixir-autogen, elixir-format
-msgid "Refresh"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex
-#, elixir-autogen, elixir-format
 msgid "Refresh analytics"
 msgstr ""
 

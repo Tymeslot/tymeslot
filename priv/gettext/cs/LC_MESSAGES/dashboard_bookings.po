@@ -143,11 +143,6 @@ msgstr "Plné vrácení platby."
 msgid "I understand the attendee will not receive a refund."
 msgstr "Beru na vědomí, že účastníkovi nebude vrácena platba."
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Join Meeting"
-msgstr "Připojit se ke schůzce"
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "Join Video"
@@ -694,3 +689,8 @@ msgstr "Nenaplánováno"
 #, elixir-autogen, elixir-format
 msgid "Loading meetings"
 msgstr "Načítání schůzek"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Join meeting"
+msgstr "Připojit se ke schůzce"
