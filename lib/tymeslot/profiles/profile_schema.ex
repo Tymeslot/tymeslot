@@ -7,8 +7,10 @@ defmodule Tymeslot.Profiles.ProfileSchema do
   import Tymeslot.ChangesetValidators.BookingLimits, only: [validate_booking_limits: 2]
 
   alias Tymeslot.Profiles
+  alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.FieldValidators.UsernameValidator
   alias Tymeslot.Security.Security
+  alias Tymeslot.Security.Token
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
   alias Tymeslot.Themes.Catalog
   alias Tymeslot.Timezones
@@ -33,6 +35,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
           booking_greeting: String.t() | nil,
           booking_instruction: String.t() | nil,
           freebusy_token: String.t() | nil,
+          freebusy_token_hash: String.t() | nil,
           primary_calendar_integration_id: integer() | nil,
           user: Tymeslot.Auth.UserSchema.t() | Ecto.Association.NotLoaded.t(),
           primary_calendar_integration:
@@ -62,7 +65,13 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     field(:booking_heading, :string)
     field(:booking_greeting, :string)
     field(:booking_instruction, :string)
-    field(:freebusy_token, :string)
+    # Grants read access to the host's busy times, and the host copies the
+    # feed URL from the dashboard again whenever they like, so it is
+    # encrypted rather than only hashed; the feed looks it up by
+    # `freebusy_token_hash`. The plain `freebusy_token` column predates this
+    # and is no longer read or written.
+    field(:freebusy_token, EncryptedString, source: :freebusy_token_encrypted, redact: true)
+    field(:freebusy_token_hash, :string)
     field(:meeting_types, {:array, :map}, virtual: true)
     belongs_to(:user, Tymeslot.Auth.UserSchema)
 
@@ -115,7 +124,8 @@ defmodule Tymeslot.Profiles.ProfileSchema do
   def freebusy_token_changeset(profile, attrs) do
     profile
     |> cast(attrs, [:freebusy_token])
-    |> unique_constraint(:freebusy_token)
+    |> Token.put_hash(:freebusy_token, :freebusy_token_hash)
+    |> unique_constraint(:freebusy_token_hash)
   end
 
   @booking_text_fields [:booking_heading, :booking_greeting, :booking_instruction]

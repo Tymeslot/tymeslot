@@ -490,8 +490,8 @@ defmodule Tymeslot.Factory do
     )
   end
 
-  @spec poll_factory() :: Tymeslot.Polls.PollSchema.t()
-  def poll_factory do
+  @spec poll_factory(map()) :: Tymeslot.Polls.PollSchema.t()
+  def poll_factory(attrs) do
     %PollSchema{
       title: "Team sync",
       duration_minutes: 30,
@@ -500,6 +500,9 @@ defmodule Tymeslot.Factory do
       token: UnguessableToken.generate(),
       user: build(:user)
     }
+    |> merge_attributes(attrs)
+    |> evaluate_lazy_attributes()
+    |> put_token_hash(:token, :token_hash)
   end
 
   @spec poll_time_slot_factory() :: Tymeslot.Polls.PollTimeSlotSchema.t()
@@ -515,8 +518,8 @@ defmodule Tymeslot.Factory do
     }
   end
 
-  @spec poll_participant_factory() :: Tymeslot.Polls.PollParticipantSchema.t()
-  def poll_participant_factory do
+  @spec poll_participant_factory(map()) :: Tymeslot.Polls.PollParticipantSchema.t()
+  def poll_participant_factory(attrs) do
     %PollParticipantSchema{
       name: sequence(:poll_participant_name, &"Participant #{&1}"),
       email: sequence(:poll_participant_email, &"participant#{&1}@example.com"),
@@ -524,6 +527,9 @@ defmodule Tymeslot.Factory do
       locale: "en",
       poll: build(:poll)
     }
+    |> merge_attributes(attrs)
+    |> evaluate_lazy_attributes()
+    |> put_token_hash(:token, :token_hash)
   end
 
   @spec poll_vote_factory() :: Tymeslot.Polls.PollVoteSchema.t()

@@ -3,10 +3,18 @@ defmodule Tymeslot.Security.CredentialReencryptionTest do
   @moduletag :security
   @moduletag :integration
 
+  alias Ecto.UUID
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
+  alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.GuestSchema
+  alias Tymeslot.Polls
+  alias Tymeslot.Polls.PollParticipantSchema
+  alias Tymeslot.Polls.PollSchema
+  alias Tymeslot.Profiles
+  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Security.CredentialReencryption
   alias Tymeslot.Security.EncryptedStorage
   alias Tymeslot.Security.Encryption
@@ -27,7 +35,11 @@ defmodule Tymeslot.Security.CredentialReencryptionTest do
     {Video, "video_integrations"},
     {Slack, "slack_integrations"},
     {Telegram, "telegram_integrations"},
-    {Webhooks, "webhooks"}
+    {Webhooks, "webhooks"},
+    {Meetings, "meeting_guests"},
+    {Polls, "polls"},
+    {Polls, "poll_participants"},
+    {Profiles, "profiles"}
   ]
 
   # Schemas whose credentials sit behind a virtual field and an explicit
@@ -41,7 +53,8 @@ defmodule Tymeslot.Security.CredentialReencryptionTest do
   ]
 
   # Every schema of a swept table, whichever way it maps its encrypted columns.
-  @swept_schemas @encrypted_credential_schemas
+  @swept_schemas @encrypted_credential_schemas ++
+                   [GuestSchema, PollSchema, PollParticipantSchema, ProfileSchema]
 
   defp reload_token(schema, id) do
     Repo.get!(schema, id).bot_token_encrypted
@@ -93,6 +106,26 @@ defmodule Tymeslot.Security.CredentialReencryptionTest do
 
       assert Encryption.current?(stored)
       assert Repo.get!(WebhookSchema, webhook.id).url == "https://hooks.example.com/legacy"
+    end
+
+    test "migrates a legacy value in a table keyed by UUID" do
+      # The keyset pages start from no id, which a UUID key can be compared
+      # with, where an integer 0 could not.
+      polls = insert_list(3, :poll)
+
+      for poll <- polls do
+        Repo.query!("UPDATE polls SET token_encrypted = $1 WHERE id = $2", [
+          Encryption.encrypt_legacy(poll.token),
+          UUID.dump!(poll.id)
+        ])
+      end
+
+      assert {:ok, %{tables: %{"polls" => %{migrated_values: 3}}}} =
+               CredentialReencryption.run(batch_size: 2)
+
+      for poll <- polls do
+        assert Repo.get!(PollSchema, poll.id).token == poll.token
+      end
     end
 
     test "a second run is a no-op" do

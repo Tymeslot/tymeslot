@@ -13,6 +13,8 @@ defmodule Tymeslot.Meetings.GuestSchema do
 
   alias Tymeslot.ChangesetValidators.Email, as: EmailChangeset
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Security.EncryptedString
+  alias Tymeslot.Security.Token
 
   @type t :: %__MODULE__{
           id: binary() | nil,
@@ -21,6 +23,7 @@ defmodule Tymeslot.Meetings.GuestSchema do
           name: String.t() | nil,
           status: String.t(),
           rsvp_token: String.t() | nil,
+          rsvp_token_hash: String.t() | nil,
           responded_at: DateTime.t() | nil,
           confirmation_sent_at: DateTime.t() | nil,
           invited_by: inviter() | nil,
@@ -37,7 +40,12 @@ defmodule Tymeslot.Meetings.GuestSchema do
     field(:email, :string)
     field(:name, :string)
     field(:status, :string, default: "pending")
-    field(:rsvp_token, :string)
+    # Every email a guest is sent (confirmation, reminders, reschedules)
+    # rebuilds their RSVP links from this token, so it is encrypted rather
+    # than only hashed, and looked up by `rsvp_token_hash`. The plain
+    # `rsvp_token` column predates this and is no longer read or written.
+    field(:rsvp_token, EncryptedString, source: :rsvp_token_encrypted, redact: true)
+    field(:rsvp_token_hash, :string)
     field(:responded_at, :utc_datetime)
     field(:confirmation_sent_at, :utc_datetime)
     field(:reminders_sent, {:array, :map}, default: nil)
@@ -76,7 +84,8 @@ defmodule Tymeslot.Meetings.GuestSchema do
     |> ensure_status()
     |> validate_inclusion(:status, @valid_statuses)
     |> ensure_rsvp_token()
-    |> unique_constraint(:rsvp_token)
+    |> Token.put_hash(:rsvp_token, :rsvp_token_hash)
+    |> unique_constraint(:rsvp_token_hash)
     |> unique_constraint([:meeting_id, :email],
       name: :meeting_guests_meeting_id_email_index,
       message: "has already been added"

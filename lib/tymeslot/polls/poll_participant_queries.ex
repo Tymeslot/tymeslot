@@ -5,6 +5,7 @@ defmodule Tymeslot.Polls.PollParticipantQueries do
 
   alias Tymeslot.Polls.PollParticipantSchema
   alias Tymeslot.Repo
+  alias Tymeslot.Security.Token
 
   @spec insert(Ecto.Changeset.t()) ::
           {:ok, PollParticipantSchema.t()} | {:error, Ecto.Changeset.t()}
@@ -24,8 +25,10 @@ defmodule Tymeslot.Polls.PollParticipantQueries do
 
   @spec get_by_poll_and_token(Ecto.UUID.t(), String.t()) :: PollParticipantSchema.t() | nil
   def get_by_poll_and_token(poll_id, token) when is_binary(token) do
+    token_hash = Token.hash_token(token)
+
     PollParticipantSchema
-    |> where([p], p.poll_id == ^poll_id and p.token == ^token)
+    |> where([p], p.poll_id == ^poll_id and p.token_hash == ^token_hash)
     |> preload(:votes)
     |> Repo.one()
   end

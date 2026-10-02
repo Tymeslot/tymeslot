@@ -5,6 +5,8 @@ defmodule Tymeslot.Profiles do
   specialized tasks to subcomponents.
   """
 
+  @behaviour Tymeslot.Security.EncryptedStorage
+
   use Gettext, backend: TymeslotWeb.Gettext
 
   require Logger
@@ -22,6 +24,7 @@ defmodule Tymeslot.Profiles do
   alias Tymeslot.Profiles.Timezone
   alias Tymeslot.Profiles.Usernames
   alias Tymeslot.Repo
+  alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.FieldValidators.UsernameValidator
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Themes.Catalog
@@ -39,6 +42,11 @@ defmodule Tymeslot.Profiles do
           max_bookings_per_week: pos_integer() | nil,
           max_bookings_per_month: pos_integer() | nil
         }
+
+  # The free/busy feed token.
+  @impl Tymeslot.Security.EncryptedStorage
+  def encrypted_storage,
+    do: {ProfileSchema.__schema__(:source), EncryptedString.columns(ProfileSchema)}
 
   # --- Profile Retrieval ---
 
