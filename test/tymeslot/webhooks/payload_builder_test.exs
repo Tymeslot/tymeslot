@@ -278,6 +278,26 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
     end
   end
 
+  describe "build_payload/3 seat" do
+    test "describes the seat of a group meeting the event is about" do
+      meeting =
+        build(:group_meeting,
+          capacity: 6,
+          seat: %{participant_id: "seat-1", seats_taken: 3}
+        )
+
+      payload = PayloadBuilder.build_payload("meeting.created", meeting, "1")
+
+      assert payload.data.meeting.seat == %{id: "seat-1", capacity: 6, seats_taken: 3}
+    end
+
+    test "is absent from a solo booking's payload" do
+      payload = PayloadBuilder.build_payload("meeting.created", build(:meeting), "1")
+
+      refute Map.has_key?(payload.data.meeting, :seat)
+    end
+  end
+
   describe "build_test_payload/0" do
     test "returns a payload with the webhook.test event type" do
       payload = PayloadBuilder.build_test_payload()

@@ -31,6 +31,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           address_to_arrange: boolean(),
           meeting_type: String.t() | nil,
           capacity: pos_integer(),
+          seat: %{participant_id: binary(), seats_taken: non_neg_integer()} | nil,
           organizer_name: String.t() | nil,
           organizer_email: String.t() | nil,
           organizer_title: String.t() | nil,
@@ -135,6 +136,12 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # A solo meeting is always `1`. `Tymeslot.Meetings.group?/1` is the one
     # place that turns this into a group/solo predicate — see its @doc.
     field(:capacity, :integer, default: 1)
+
+    # Set only on the view of a group meeting as one seat sees it
+    # (`Tymeslot.Meetings.SeatView`), never on a row read from the database:
+    # which seat the view is of, and the seats taken on the slot when the
+    # event about it fired. Integrations read it to address that seat.
+    field(:seat, :map, virtual: true)
 
     # Organizer details
     field(:organizer_name, :string)

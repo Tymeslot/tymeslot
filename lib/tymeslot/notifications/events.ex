@@ -11,7 +11,7 @@ defmodule Tymeslot.Notifications.Events do
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
-  alias Tymeslot.Meetings.Recipient
+  alias Tymeslot.Meetings.SeatView
   alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Slack.Dispatcher, as: SlackDispatcher
   alias Tymeslot.Telegram.Dispatcher, as: TelegramDispatcher
@@ -66,9 +66,7 @@ defmodule Tymeslot.Notifications.Events do
         Orchestrator.schedule_meeting_notifications(meeting)
       end)
 
-    dispatch_webhooks(channel_event, meeting)
-    dispatch_telegram(channel_event, meeting)
-    dispatch_slack(channel_event, meeting)
+    dispatch_integrations(channel_event, meeting)
 
     result
   end
@@ -85,7 +83,8 @@ defmodule Tymeslot.Notifications.Events do
   The integration dispatchers fire per seat, not per slot, because a booking
   is a person: a host's webhook, Telegram or Slack automation needs to hear
   about the fifth booker as much as the first. Each carries that seat's
-  participant, since the shared meeting row has no attendee of its own.
+  participant (see `Tymeslot.Meetings.SeatView`), since the shared meeting
+  row has no attendee of its own.
 
   Options:
     * `:defer_emails?` — the caller has scheduled video-room creation and the
@@ -101,7 +100,7 @@ defmodule Tymeslot.Notifications.Events do
         Orchestrator.schedule_seat_confirmation(meeting, participant)
       end
 
-    dispatch_seat_integrations(meeting, participant)
+    dispatch_seat(:meeting_created, meeting, participant)
 
     result
   end
@@ -171,28 +170,29 @@ defmodule Tymeslot.Notifications.Events do
     |> Enum.each(&Orchestrator.schedule_seat_confirmation(meeting, &1))
   end
 
-  defp dispatch_seat_integrations(meeting, participant) do
-    seat_meeting = Recipient.meeting_as_seen_by(meeting, participant)
-
-    Dispatcher.dispatch(:meeting_created, seat_meeting)
-    TelegramDispatcher.dispatch(:meeting_created, seat_meeting)
-    SlackDispatcher.dispatch(:meeting_created, seat_meeting)
-  end
-
   @doc """
   Handles a participant cancelling their seat on a group meeting.
 
   Schedules the seat-cancellation emails. `slot_freed: true` marks the last
   leaver: their leaving cancelled the meeting, and the organiser's email
   about the seat says so (it is the organiser's only email about it).
+
+  Integrations hear `meeting.cancelled` for this seat. For the last leaver
+  that is the only one: the meeting-level cancellation that follows finds no
+  live seat left to announce, and an empty slot was never a booking.
   """
   @spec seat_cancelled(term(), term(), keyword()) :: {:ok, term()} | {:error, term()}
   def seat_cancelled(meeting, participant, opts \\ []) do
-    Orchestrator.schedule_seat_cancellation(
-      meeting,
-      participant,
-      Keyword.get(opts, :slot_freed, false)
-    )
+    result =
+      Orchestrator.schedule_seat_cancellation(
+        meeting,
+        participant,
+        Keyword.get(opts, :slot_freed, false)
+      )
+
+    dispatch_seat(:meeting_cancelled, meeting, participant)
+
+    result
   end
 
   @doc """
@@ -205,15 +205,24 @@ defmodule Tymeslot.Notifications.Events do
   calendar entry, so the old one is named by that row, not by the old
   meeting. `old_slot_freed: true` says the move emptied, and so cancelled,
   the old meeting.
+
+  Integrations hear `meeting.rescheduled` for the new seat, the way a solo
+  booking's move is one rescheduled booking rather than a cancellation and a
+  new one.
   """
   @spec seat_rescheduled(term(), term(), term(), keyword()) :: {:ok, term()} | {:error, term()}
   def seat_rescheduled(meeting, participant, old_participant, opts \\ []) do
-    Orchestrator.schedule_seat_reschedule(
-      meeting,
-      participant,
-      old_participant,
-      Keyword.get(opts, :old_slot_freed, false)
-    )
+    result =
+      Orchestrator.schedule_seat_reschedule(
+        meeting,
+        participant,
+        old_participant,
+        Keyword.get(opts, :old_slot_freed, false)
+      )
+
+    dispatch_seat(:meeting_rescheduled, meeting, participant)
+
+    result
   end
 
   @doc """
@@ -247,6 +256,12 @@ defmodule Tymeslot.Notifications.Events do
 
   @doc """
   Handles meeting cancellation event.
+
+  For a group meeting, integrations hear one `meeting.cancelled` per seat
+  still live when it was cancelled: the host calling the whole slot off
+  cancels every one of those bookings, and the participant rows are left
+  live by it. An emptied slot cancelled by its last leaver has no live seat
+  left, and `seat_cancelled/3` already announced that seat.
   """
   @spec meeting_cancelled(term()) :: {:ok, term()} | {:error, term()}
   def meeting_cancelled(meeting) do
@@ -261,14 +276,8 @@ defmodule Tymeslot.Notifications.Events do
     # never fail the cancellation itself.
     cancel_reminders(meeting)
 
-    # Dispatch webhooks (don't fail if webhooks fail)
-    dispatch_webhooks(:meeting_cancelled, meeting)
-
-    # Dispatch Telegram notifications (don't fail if Telegram fails)
-    dispatch_telegram(:meeting_cancelled, meeting)
-
-    # Dispatch Slack notifications (don't fail if Slack fails)
-    dispatch_slack(:meeting_cancelled, meeting)
+    # Webhooks, Telegram and Slack; none of them fails the cancellation.
+    dispatch_integrations(:meeting_cancelled, meeting)
 
     result
   end
@@ -290,14 +299,8 @@ defmodule Tymeslot.Notifications.Events do
     # logged but never fail the reschedule itself.
     schedule_reminders(updated_meeting)
 
-    # Dispatch webhooks (don't fail if webhooks fail)
-    dispatch_webhooks(:meeting_rescheduled, updated_meeting)
-
-    # Dispatch Telegram notifications (don't fail if Telegram fails)
-    dispatch_telegram(:meeting_rescheduled, updated_meeting)
-
-    # Dispatch Slack notifications (don't fail if Slack fails)
-    dispatch_slack(:meeting_rescheduled, updated_meeting)
+    # Webhooks, Telegram and Slack; none of them fails the reschedule.
+    dispatch_integrations(:meeting_rescheduled, updated_meeting)
 
     result
   end
@@ -348,6 +351,51 @@ defmodule Tymeslot.Notifications.Events do
   defp dispatch_telegram(event, meeting), do: dispatch_channel(:telegram, event, meeting)
   defp dispatch_slack(event, meeting), do: dispatch_channel(:slack, event, meeting)
 
+  # A meeting-level event on a group meeting reaches integrations once per
+  # live seat, each as that seat's booking: the slot row has no attendee, and
+  # one event for it would name nobody.
+  defp dispatch_integrations(event, %MeetingSchema{} = meeting) do
+    if MeetingSchema.group?(meeting) do
+      seat_guard(event, meeting, fn ->
+        meeting.id
+        |> ParticipantQueries.list_live_for_meeting()
+        |> Enum.each(&dispatch_channels(event, SeatView.at_event(meeting, &1)))
+      end)
+    else
+      dispatch_channels(event, meeting)
+    end
+  end
+
+  defp dispatch_integrations(event, meeting), do: dispatch_channels(event, meeting)
+
+  defp dispatch_seat(event, meeting, participant) do
+    seat_guard(event, meeting, fn ->
+      dispatch_channels(event, SeatView.at_event(meeting, participant))
+    end)
+  end
+
+  # Building a seat's view reads the database (its live seats, the seat
+  # count), which the per-channel guard below does not cover. It is as
+  # best-effort as the channels themselves, so it gets a guard of its own.
+  defp seat_guard(event, meeting, fun) do
+    fun.()
+  rescue
+    exception ->
+      ErrorTracking.report_error(exception, __STACKTRACE__, %{
+        channel: :seats,
+        event: event,
+        meeting_id: Map.get(meeting, :id)
+      })
+
+      {:error, {:dispatch_failed, exception}}
+  end
+
+  defp dispatch_channels(event, meeting) do
+    dispatch_webhooks(event, meeting)
+    dispatch_telegram(event, meeting)
+    dispatch_slack(event, meeting)
+  end
+
   # The three request-lifecycle events (`meeting.requested`,
   # `meeting.declined`, `meeting.request_expired`) fan out to all three
   # channels through the same guarded `dispatch_channel/3` as every other
@@ -366,11 +414,7 @@ defmodule Tymeslot.Notifications.Events do
   # integrations to all of them — and `Slack.MessageBuilder` now has
   # dedicated rendering for all three, so what a host sees is a real
   # notification rather than the generic "Meeting update" fallback.
-  defp dispatch_request_channels(event, meeting) do
-    dispatch_webhooks(event, meeting)
-    dispatch_telegram(event, meeting)
-    dispatch_slack(event, meeting)
-  end
+  defp dispatch_request_channels(event, meeting), do: dispatch_channels(event, meeting)
 
   defp dispatch_channel(channel, event, meeting) do
     dispatch_fun(channel).(event, meeting)
