@@ -36,6 +36,7 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Telegram.TelegramIntegrationSchema
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
   alias Tymeslot.Utils.UnguessableToken
+  alias Tymeslot.Venues.VenueSchema
   alias Tymeslot.Webhooks.WebhookDeliverySchema
   alias Tymeslot.Webhooks.WebhookSchema
 
@@ -191,6 +192,36 @@ defmodule Tymeslot.Factory do
     )
   end
 
+  @doc """
+  An in-person location for a meeting type, listing `venues` in the order
+  given; the first is the one a booker who changes nothing gets. With no
+  venues it is the "address arranged after booking" location.
+
+      insert(:meeting_type, user: user, locations: [in_person_location([office])])
+  """
+  @spec in_person_location([map()], keyword()) :: LocationOption.t()
+  def in_person_location(venues \\ [], attrs \\ []) do
+    struct!(
+      %LocationOption{
+        id: UUID.generate(),
+        kind: "in_person",
+        label: "In person",
+        venue_ids: Enum.map(venues, & &1.id),
+        position: 0
+      },
+      attrs
+    )
+  end
+
+  @spec venue_factory() :: Tymeslot.Venues.VenueSchema.t()
+  def venue_factory do
+    %VenueSchema{
+      name: sequence(:venue_name, &"Office #{&1}"),
+      description: "12 High Street",
+      user: build(:user)
+    }
+  end
+
   @spec calendar_integration_factory() ::
           Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t()
   def calendar_integration_factory do
@@ -334,8 +365,10 @@ defmodule Tymeslot.Factory do
     }
   end
 
-  @spec telegram_integration_factory() :: TelegramIntegrationSchema.t()
-  def telegram_integration_factory do
+  # Takes the attrs so a `link_token` given to the factory is stored as the
+  # hash the row is looked up by, as the changeset would store it.
+  @spec telegram_integration_factory(map()) :: TelegramIntegrationSchema.t()
+  def telegram_integration_factory(attrs) do
     %TelegramIntegrationSchema{
       name: sequence(:telegram_name, &"Telegram #{&1}"),
       bot_mode: "own",
@@ -345,6 +378,9 @@ defmodule Tymeslot.Factory do
       is_active: true,
       user: build(:user)
     }
+    |> merge_attributes(attrs)
+    |> evaluate_lazy_attributes()
+    |> put_token_hash(:link_token, :link_token_hash)
   end
 
   @spec slack_integration_factory() :: SlackIntegrationSchema.t()
@@ -454,8 +490,8 @@ defmodule Tymeslot.Factory do
     )
   end
 
-  @spec poll_factory() :: Tymeslot.Polls.PollSchema.t()
-  def poll_factory do
+  @spec poll_factory(map()) :: Tymeslot.Polls.PollSchema.t()
+  def poll_factory(attrs) do
     %PollSchema{
       title: "Team sync",
       duration_minutes: 30,
@@ -464,6 +500,9 @@ defmodule Tymeslot.Factory do
       token: UnguessableToken.generate(),
       user: build(:user)
     }
+    |> merge_attributes(attrs)
+    |> evaluate_lazy_attributes()
+    |> put_token_hash(:token, :token_hash)
   end
 
   @spec poll_time_slot_factory() :: Tymeslot.Polls.PollTimeSlotSchema.t()
@@ -479,8 +518,8 @@ defmodule Tymeslot.Factory do
     }
   end
 
-  @spec poll_participant_factory() :: Tymeslot.Polls.PollParticipantSchema.t()
-  def poll_participant_factory do
+  @spec poll_participant_factory(map()) :: Tymeslot.Polls.PollParticipantSchema.t()
+  def poll_participant_factory(attrs) do
     %PollParticipantSchema{
       name: sequence(:poll_participant_name, &"Participant #{&1}"),
       email: sequence(:poll_participant_email, &"participant#{&1}@example.com"),
@@ -488,6 +527,9 @@ defmodule Tymeslot.Factory do
       locale: "en",
       poll: build(:poll)
     }
+    |> merge_attributes(attrs)
+    |> evaluate_lazy_attributes()
+    |> put_token_hash(:token, :token_hash)
   end
 
   @spec poll_vote_factory() :: Tymeslot.Polls.PollVoteSchema.t()
@@ -497,5 +539,14 @@ defmodule Tymeslot.Factory do
       participant: build(:poll_participant),
       time_slot: build(:poll_time_slot)
     }
+  end
+
+  # A token is looked up by its hash, which factories bypassing the changeset
+  # have to store themselves. An explicit hash in the attrs wins.
+  defp put_token_hash(record, field, hash_field) do
+    case {Map.fetch!(record, field), Map.fetch!(record, hash_field)} do
+      {token, nil} when is_binary(token) -> Map.put(record, hash_field, Token.hash_token(token))
+      _no_token_or_hash_given -> record
+    end
   end
 end

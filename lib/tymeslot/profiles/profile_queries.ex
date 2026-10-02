@@ -6,6 +6,7 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   import Ecto.Query
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
+  alias Tymeslot.Security.Token
 
   @doc """
   Inserts a new profile record for a user ID.
@@ -29,7 +30,7 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   """
   @spec get_by_freebusy_token(String.t()) :: {:ok, ProfileSchema.t()} | {:error, :not_found}
   def get_by_freebusy_token(token) when is_binary(token) and token != "" do
-    case Repo.get_by(ProfileSchema, freebusy_token: token) do
+    case Repo.get_by(ProfileSchema, freebusy_token_hash: Token.hash_token(token)) do
       nil -> {:error, :not_found}
       profile -> {:ok, Repo.preload(profile, :user)}
     end

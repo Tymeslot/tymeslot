@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CardTest do
 
   alias Tymeslot.CustomFields.FieldDefinition
   alias Tymeslot.Integrations.Calendar.CalendarEntry
+  alias Tymeslot.MeetingTypes.LocationOption
   alias TymeslotWeb.Dashboard.MeetingSettings.Card
 
   defp build_type(overrides) do
@@ -179,6 +180,55 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CardTest do
 
       refute html =~ "Read-only"
       refute html =~ "Calendar gone"
+    end
+  end
+
+  describe "location summary for a single in-person location" do
+    defp in_person(venue_ids),
+      do: %LocationOption{
+        id: "loc-office",
+        kind: "in_person",
+        label: "Our office",
+        venue_ids: venue_ids,
+        position: 0
+      }
+
+    defp venues,
+      do: [
+        %{id: 1, name: "Berlin office", description: "Friedrichstrasse 1"},
+        %{id: 2, name: "Munich office", description: nil}
+      ]
+
+    test "names its one saved location" do
+      html = render_card(build_type(%{locations: [in_person([1])]}), %{venues: venues()})
+
+      assert html =~ "Berlin office"
+      refute html =~ "Our office"
+    end
+
+    test "counts several saved locations" do
+      html = render_card(build_type(%{locations: [in_person([1, 2])]}), %{venues: venues()})
+
+      assert html =~ "2 locations"
+    end
+
+    test "falls back to the location's label with no saved location" do
+      html = render_card(build_type(%{locations: [in_person([])]}), %{venues: venues()})
+
+      assert html =~ "Our office"
+    end
+
+    test "ignores a saved location that is no longer in the library" do
+      html = render_card(build_type(%{locations: [in_person([1, 99])]}), %{venues: venues()})
+
+      assert html =~ "Berlin office"
+      refute html =~ "2 locations"
+    end
+
+    test "falls back to the label when its only saved location was deleted" do
+      html = render_card(build_type(%{locations: [in_person([99])]}), %{venues: venues()})
+
+      assert html =~ "Our office"
     end
   end
 end

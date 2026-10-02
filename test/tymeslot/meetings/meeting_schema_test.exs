@@ -175,4 +175,20 @@ defmodule Tymeslot.Meetings.MeetingSchemaTest do
       assert "is invalid" in errors_on(changeset).status
     end
   end
+
+  describe "venue" do
+    # A venue can be deleted between a booking resolving it and the meeting
+    # row being written.
+    test "a venue that no longer exists is a changeset error, not a raise" do
+      venue = insert(:venue)
+      Repo.delete!(venue)
+
+      assert {:error, changeset} =
+               %Meeting{}
+               |> Meeting.changeset(Map.put(@valid_base_attrs, :venue_id, venue.id))
+               |> Repo.insert()
+
+      assert {"does not exist", _meta} = changeset.errors[:venue_id]
+    end
+  end
 end

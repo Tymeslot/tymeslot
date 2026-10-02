@@ -88,7 +88,8 @@ defmodule Tymeslot.Auth.RegistrationVerificationRateLimitTest do
     assert_receive {:captured_log, %{meta: %{event_type: "rate_limit_violation"} = meta}}
 
     assert meta.limit_type == "email_verification"
-    assert meta.ip_address == @client_ip_string
+    # Logged as its network: the redactor truncates every client IP.
+    assert meta.ip_address == "203.0.113.0/24"
 
     assert {:ok, user} = UserQueries.get_user_by_email("audited@example.com")
     assert meta.user_id == user.id

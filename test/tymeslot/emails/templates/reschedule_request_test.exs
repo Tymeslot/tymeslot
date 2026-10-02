@@ -230,4 +230,23 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
       refute email.subject =~ "\n"
     end
   end
+
+  describe "an in-person address arranged after booking" do
+    test "is not noted under the cancelled appointment's location, in HTML or text" do
+      note = "The address will be arranged with you after booking."
+
+      meeting =
+        insert(:meeting,
+          location_kind: "in_person",
+          address_to_arrange: true,
+          location: "In person"
+        )
+
+      email = RescheduleRequest.render(meeting)
+
+      refute email.html_body =~ note
+      refute email.text_body =~ note
+      assert email.text_body =~ "Location: In person\n"
+    end
+  end
 end

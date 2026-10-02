@@ -4,14 +4,32 @@ defmodule Tymeslot.Polls do
   for the host or for voting, tallying votes, and lifecycle transitions.
   """
 
+  @behaviour Tymeslot.Security.EncryptedStorage
+
   alias Tymeslot.Availability.TimeOff
   alias Tymeslot.Emails.EmailScheduler.PollScheduler
   alias Tymeslot.MeetingTypes
-  alias Tymeslot.Polls.{PollQueries, PollSchema, PollTimeSlotQueries, PollTimeSlotSchema}
+
+  alias Tymeslot.Polls.{
+    PollParticipantSchema,
+    PollQueries,
+    PollSchema,
+    PollTimeSlotQueries,
+    PollTimeSlotSchema
+  }
+
   alias Tymeslot.Repo
+  alias Tymeslot.Security.EncryptedString
 
   @pubsub Tymeslot.PubSub
   @responses [:yes, :if_need_be, :no]
+
+  # The voting links, the poll's and each participant's.
+  @impl Tymeslot.Security.EncryptedStorage
+  def encrypted_storage do
+    for schema <- [PollSchema, PollParticipantSchema],
+        do: {schema.__schema__(:source), EncryptedString.columns(schema)}
+  end
 
   @doc """
   Creates a poll and all of its candidate slots in a single transaction.

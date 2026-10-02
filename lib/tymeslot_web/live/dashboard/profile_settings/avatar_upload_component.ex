@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
   alias Tymeslot.Profiles.Avatars
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.ChangesetUtils
+  alias TymeslotWeb.Helpers.ImageUploadErrors
   alias TymeslotWeb.Helpers.UploadHandler
 
   @impl Phoenix.LiveComponent
@@ -118,7 +119,8 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
 
   defp handle_avatar_upload_error({:error, reason}, socket) do
     Flash.error(
-      dgettext("dashboard_profile", "Upload failed: %{reason}", reason: inspect(reason))
+      ImageUploadErrors.message(reason) ||
+        dgettext("dashboard_profile", "Upload failed: %{reason}", reason: inspect(reason))
     )
 
     socket

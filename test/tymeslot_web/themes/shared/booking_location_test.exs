@@ -1,0 +1,329 @@
+defmodule TymeslotWeb.Themes.Shared.BookingLocationTest do
+  @moduledoc """
+  The booking page's venue state: which venues the chosen location offers,
+  what the booker's pick submits, and when the page states a location or
+  says its address is arranged after booking. Pure functions over assigns;
+  the rendered journey is in `LocationChoiceFlowTest`.
+  """
+  use ExUnit.Case, async: true
+
+  @moduletag :unit
+  @moduletag :scheduling
+
+  alias Phoenix.LiveView.Socket
+  alias Tymeslot.MeetingTypes.LocationOption
+  alias TymeslotWeb.Themes.Shared.BookingLocation
+
+  @berlin %{id: 1, name: "Berlin office", description: "Friedrichstrasse 1\n3rd floor"}
+  @munich %{id: 2, name: "Munich office", description: nil}
+
+  defp offices,
+    do: %LocationOption{
+      id: "loc-offices",
+      kind: "in_person",
+      label: "Our offices",
+      venue_ids: [1, 2],
+      position: 0
+    }
+
+  defp arranged,
+    do: %LocationOption{id: "loc-arranged", kind: "in_person", label: "In person", position: 1}
+
+  defp call_me,
+    do: %LocationOption{
+      id: "loc-call",
+      kind: "phone",
+      label: "Phone call",
+      collect_from_guest: true,
+      position: 2
+    }
+
+  defp assigns(overrides \\ %{}) do
+    Map.merge(
+      %{
+        location_options: [offices(), arranged(), call_me()],
+        location_video_choices: %{},
+        location_venue_choices: %{"loc-offices" => [@berlin, @munich]},
+        selected_location_id: "loc-offices",
+        selected_video_id: nil,
+        selected_venue_id: 1,
+        venue_picked: false,
+        reschedule_location: nil,
+        location_phone: "",
+        is_rescheduling: false
+      },
+      overrides
+    )
+  end
+
+  defp socket(overrides \\ %{}),
+    do: %Socket{assigns: Map.put(assigns(overrides), :__changed__, %{})}
+
+  describe "venue_choices/1 and venue_choice_required?/1" do
+    test "are the chosen in-person location's venues, asked for when there are two or more" do
+      assert BookingLocation.venue_choices(assigns()) == [@berlin, @munich]
+      assert BookingLocation.venue_choice_required?(assigns())
+    end
+
+    test "are empty for a location offering no venue" do
+      without_venue = assigns(%{selected_location_id: "loc-arranged"})
+
+      assert BookingLocation.venue_choices(without_venue) == []
+      refute BookingLocation.venue_choice_required?(without_venue)
+    end
+  end
+
+  describe "choice_required?/1" do
+    test "asks for a single in-person location offering two venues" do
+      assert BookingLocation.choice_required?(assigns(%{location_options: [offices()]}))
+    end
+
+    test "asks nothing for a single in-person location with one venue" do
+      refute BookingLocation.choice_required?(
+               assigns(%{
+                 location_options: [offices()],
+                 location_venue_choices: %{"loc-offices" => [@berlin]}
+               })
+             )
+    end
+  end
+
+  describe "apply_event/3 with :select_venue" do
+    test "records a venue the chosen location offers" do
+      assert BookingLocation.apply_event(socket(), :select_venue, "2").assigns.selected_venue_id ==
+               2
+    end
+
+    test "ignores a venue the chosen location does not offer" do
+      socket = BookingLocation.apply_event(socket(), :select_venue, "99")
+
+      assert socket.assigns.selected_venue_id == 1
+      refute socket.assigns.venue_picked
+    end
+  end
+
+  describe "choose/2" do
+    test "moving to a location without venues leaves no venue selected" do
+      assert BookingLocation.choose(socket(), "loc-arranged").assigns.selected_venue_id == nil
+    end
+  end
+
+  describe "submitted_venue_id/1" do
+    test "is the picked venue for an in-person location offering venues" do
+      assert BookingLocation.submitted_venue_id(assigns(%{selected_venue_id: 2})) == 2
+    end
+
+    test "is the picker's default on a new booking the booker left alone" do
+      assert BookingLocation.submitted_venue_id(assigns()) == 1
+    end
+
+    test "is nil for a location without venues" do
+      assert BookingLocation.submitted_venue_id(assigns(%{selected_location_id: "loc-call"})) ==
+               nil
+    end
+  end
+
+  describe "submitted_venue_id/1 on a reschedule" do
+    # A meeting booked at the offices location, at a venue (99) the location
+    # no longer offers, so the picker opens with no venue chosen.
+    defp rescheduling(overrides \\ %{}) do
+      Map.merge(
+        %{
+          is_rescheduling: true,
+          selected_venue_id: nil,
+          reschedule_location: %{
+            option_id: "loc-offices",
+            venue_id: 99,
+            location: "Hamburg office (Jungfernstieg 3)",
+            address_to_arrange: false
+          },
+          location_options: [offices(), arranged(), hq()],
+          location_venue_choices: %{"loc-offices" => [@berlin, @munich], "loc-hq" => [@munich]}
+        },
+        overrides
+      )
+    end
+
+    defp hq,
+      do: %LocationOption{
+        id: "loc-hq",
+        kind: "in_person",
+        label: "Headquarters",
+        venue_ids: [2],
+        position: 3
+      }
+
+    test "is nil while the picker only defaulted to the location's first venue" do
+      assert BookingLocation.submitted_venue_id(assigns(rescheduling())) == nil
+    end
+
+    test "is the venue the booker then picks, the default included" do
+      picked =
+        rescheduling()
+        |> socket()
+        |> BookingLocation.apply_event(:select_venue, "1")
+
+      assert BookingLocation.submitted_venue_id(picked.assigns) == 1
+    end
+
+    test "is the venue shown on another location, since choosing it is a move" do
+      moved = rescheduling() |> socket() |> BookingLocation.choose("loc-hq")
+
+      assert BookingLocation.submitted_venue_id(moved.assigns) == 2
+      assert BookingLocation.chosen_display(moved.assigns) == "Munich office"
+    end
+
+    test "returns to the meeting's own venue, as picked, when the booker comes back" do
+      # The picker opened on the meeting's venue, which the location offers.
+      opened =
+        %{reschedule_location: %{option_id: "loc-offices", venue_id: 2}}
+        |> rescheduling()
+        |> Map.merge(%{selected_venue_id: 2, venue_picked: true})
+        |> socket()
+
+      for detour <- ["loc-arranged", "loc-hq"] do
+        back = opened |> BookingLocation.choose(detour) |> BookingLocation.choose("loc-offices")
+
+        assert back.assigns.selected_venue_id == 2
+        assert back.assigns.venue_picked
+        assert BookingLocation.submitted_venue_id(back.assigns) == 2
+      end
+    end
+
+    test "keeps a picked venue across a move to another location offering it, and no other" do
+      picked =
+        rescheduling()
+        |> socket()
+        |> BookingLocation.apply_event(:select_venue, "2")
+
+      assert BookingLocation.choose(picked, "loc-hq").assigns.venue_picked
+
+      back =
+        picked |> BookingLocation.choose("loc-arranged") |> BookingLocation.choose("loc-offices")
+
+      assert back.assigns.selected_venue_id == nil
+      assert BookingLocation.submitted_venue_id(back.assigns) == nil
+    end
+  end
+
+  describe "chosen_display/1" do
+    test "is the chosen venue's one-line address" do
+      assert BookingLocation.chosen_display(assigns()) ==
+               "Berlin office (Friedrichstrasse 1, 3rd floor)"
+    end
+
+    test "is the label for an in-person location without a venue" do
+      assert BookingLocation.chosen_display(assigns(%{selected_location_id: "loc-arranged"})) ==
+               "In person"
+    end
+
+    test "is the meeting's own address on a reschedule whose venue the booker did not pick" do
+      assert BookingLocation.chosen_display(assigns(rescheduling())) ==
+               "Hamburg office (Jungfernstieg 3)"
+    end
+  end
+
+  describe "arranged_after_booking?/1" do
+    test "is true for an in-person location without a venue" do
+      assert BookingLocation.arranged_after_booking?(
+               assigns(%{selected_location_id: "loc-arranged"})
+             )
+    end
+
+    test "is false for a location with a venue, and for other kinds" do
+      refute BookingLocation.arranged_after_booking?(assigns())
+      refute BookingLocation.arranged_after_booking?(assigns(%{selected_location_id: "loc-call"}))
+    end
+
+    test "is false on a reschedule that asked nothing, which keeps the meeting's location" do
+      refute BookingLocation.arranged_after_booking?(
+               assigns(%{
+                 location_options: [arranged()],
+                 selected_location_id: "loc-arranged",
+                 location_venue_choices: %{},
+                 is_rescheduling: true
+               })
+             )
+    end
+  end
+
+  describe "kept_location/1" do
+    # A time-only reschedule on the meeting's own location: nothing about the
+    # location is submitted, so the meeting keeps what it stores.
+    test "is the meeting's stored location while the booker has picked no venue" do
+      assert BookingLocation.kept_location(assigns(rescheduling())) ==
+               %{location: "Hamburg office (Jungfernstieg 3)", address_to_arrange: false}
+
+      refute BookingLocation.arranged_after_booking?(assigns(rescheduling()))
+    end
+
+    test "keeps a meeting to be arranged even when its location now offers a venue" do
+      to_arrange =
+        rescheduling(%{
+          reschedule_location: %{
+            option_id: "loc-hq",
+            venue_id: nil,
+            location: "Headquarters",
+            address_to_arrange: true
+          },
+          selected_location_id: "loc-hq"
+        })
+
+      assert BookingLocation.kept_location(assigns(to_arrange)).address_to_arrange
+      assert BookingLocation.arranged_after_booking?(assigns(to_arrange))
+      assert BookingLocation.chosen_display(assigns(to_arrange)) == "Headquarters"
+    end
+
+    test "shows no venue chosen on the meeting's location, and yields once the booker picks one" do
+      # Back from another location, the picker does not fall back to the
+      # first venue: nothing is chosen until the booker picks.
+      back =
+        rescheduling(%{selected_venue_id: 1})
+        |> socket()
+        |> BookingLocation.choose("loc-arranged")
+        |> BookingLocation.choose("loc-offices")
+
+      assert back.assigns.selected_venue_id == nil
+      assert BookingLocation.kept_location(back.assigns)
+
+      picked = BookingLocation.apply_event(back, :select_venue, "2")
+
+      assert BookingLocation.kept_location(picked.assigns) == nil
+      assert BookingLocation.chosen_display(picked.assigns) == "Munich office"
+    end
+
+    test "is nil on another location, and on a new booking" do
+      moved = rescheduling() |> socket() |> BookingLocation.choose("loc-arranged")
+
+      assert BookingLocation.kept_location(moved.assigns) == nil
+      assert BookingLocation.arranged_after_booking?(moved.assigns)
+      assert BookingLocation.kept_location(assigns()) == nil
+    end
+  end
+
+  describe "stated_location?/1" do
+    test "states a single in-person location that asks nothing" do
+      assert BookingLocation.stated_location?(
+               assigns(%{
+                 location_options: [arranged()],
+                 selected_location_id: "loc-arranged",
+                 location_venue_choices: %{}
+               })
+             )
+    end
+
+    test "does not state it while the booker has a choice to make" do
+      refute BookingLocation.stated_location?(assigns())
+    end
+
+    test "does not state a single location of another kind" do
+      refute BookingLocation.stated_location?(
+               assigns(%{
+                 location_options: [call_me()],
+                 selected_location_id: "loc-call",
+                 location_venue_choices: %{}
+               })
+             )
+    end
+  end
+end

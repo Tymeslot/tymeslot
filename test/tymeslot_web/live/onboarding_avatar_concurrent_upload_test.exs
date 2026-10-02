@@ -25,11 +25,11 @@ defmodule TymeslotWeb.OnboardingAvatarConcurrentUploadTest do
 
   alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Test.MediaFixtures
 
-  # Minimal valid PNG (magic bytes + IHDR): passes the accept list and the
-  # size limit without needing a fixture on disk.
-  @valid_png <<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13, "IHDR", 0, 0, 0, 1, 0,
-               0, 0, 1, 8, 2, 0, 0, 0, 0x90, 0x77, 0x53, 0xDE>>
+  # Complete and decodable: a stored image is re-encoded, so magic bytes
+  # alone are refused.
+  @valid_png MediaFixtures.png()
 
   setup :verify_on_exit!
 

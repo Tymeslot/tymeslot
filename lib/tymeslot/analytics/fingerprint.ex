@@ -2,13 +2,24 @@ defmodule Tymeslot.Analytics.Fingerprint do
   @moduledoc """
   Daily-rotated visitor fingerprint for cookie-less unique-visitor counting.
 
-  The salt rotates every UTC day and never leaves the server. The same
+  Each UTC day gets its own random salt, stored in `analytics_salts` so that
+  every node hashes with the same one, and deleted by
+  `Tymeslot.Workers.DataRetentionWorker` once the day is over. The same
   visitor on different days hashes to a different value, so no persistent
   identifier exists. This is the standard cookie-less approach used by
   Plausible and similar privacy-friendly analytics products.
+
+  The salt is random rather than derived from the date and a secret, because a
+  derived salt can be rebuilt for any past day, and with it a stored hash can be
+  brute-forced back to the visitor's IP address (there are only about four
+  billion IPv4 addresses). Once a day's salt is deleted, that day's hashes can
+  no longer be recomputed from anything.
   """
 
+  alias Tymeslot.Analytics.SaltQueries
   alias Tymeslot.Clock
+
+  @salt_cache_key {__MODULE__, :daily_salt}
 
   @doc """
   Computes a daily-rotated visitor hash from the network identity (IP +
@@ -58,25 +69,20 @@ defmodule Tymeslot.Analytics.Fingerprint do
     |> Base.encode16(case: :lower)
   end
 
+  # Today's salt, cached per node with the date it belongs to. A cache miss (a
+  # new day, or a fresh node) reads the shared row, creating it if this is the
+  # day's first hash anywhere, so every node hashes with the same salt.
   defp daily_salt do
-    day = Date.to_iso8601(Clock.utc_today())
-    secret = Application.get_env(:tymeslot, :analytics_salt_secret) || dev_fallback_salt()
-    Base.encode16(:crypto.hash(:sha256, day <> secret), case: :lower)
-  end
+    today = Clock.utc_today()
 
-  # Returns a process-lifetime random salt for environments that have not
-  # configured `analytics_salt_secret` (e.g. early-boot before runtime.exs
-  # is loaded). Stored in `:persistent_term` so it is stable within a node
-  # restart but never survives a crash — intentionally weak outside production.
-  defp dev_fallback_salt do
-    case :persistent_term.get({__MODULE__, :dev_salt}, nil) do
-      nil ->
-        salt = Base.encode64(:crypto.strong_rand_bytes(32))
-        :persistent_term.put({__MODULE__, :dev_salt}, salt)
+    case :persistent_term.get(@salt_cache_key, nil) do
+      {^today, salt} ->
         salt
 
-      existing ->
-        existing
+      _stale_or_missing ->
+        salt = SaltQueries.get_or_create(today)
+        :persistent_term.put(@salt_cache_key, {today, salt})
+        salt
     end
   end
 end

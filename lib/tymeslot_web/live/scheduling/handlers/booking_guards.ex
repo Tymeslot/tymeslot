@@ -41,7 +41,6 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingGuards do
 
   import Phoenix.Component, only: [assign: 3]
 
-  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Security.SecurityLogger
@@ -66,20 +65,6 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingGuards do
          {:ok, socket} <- check_rate_limit(socket),
          :ok <- verify_recaptcha(socket, raw_params) do
       check_recipient_rate_limit(socket, sanitized_params)
-    end
-  end
-
-  @doc """
-  Whether the hidden honeypot field was filled in.
-
-  Checked before form validation: it is the cheapest gate and a tripped
-  honeypot means nothing else about the submission is worth processing.
-  """
-  @spec honeypot_tripped?(map()) :: boolean()
-  def honeypot_tripped?(params) do
-    case Map.get(params, "website") do
-      value when is_binary(value) -> value != ""
-      _other -> false
     end
   end
 
@@ -167,7 +152,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingGuards do
         {:ok, socket}
 
       {:deny, _limit} ->
-        Logger.warning("Booking rate limit exceeded", client_ip: LogFormat.reason(client_ip))
+        Logger.warning("Booking rate limit exceeded", client_ip: client_ip)
         {:error, too_many_attempts(socket)}
     end
   end

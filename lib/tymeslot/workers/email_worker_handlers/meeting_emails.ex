@@ -393,17 +393,13 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
 
     case Config.email_service_module().send_reschedule_request(meeting) do
       {:ok, _result} ->
-        Logger.info("Reschedule request email sent successfully",
-          meeting_id: meeting.id,
-          to: meeting.attendee_email
-        )
+        Logger.info("Reschedule request email sent successfully", meeting_id: meeting.id)
 
         :ok
 
       {:error, reason} ->
         Logger.error("Failed to send reschedule request email",
           meeting_id: meeting.id,
-          to: meeting.attendee_email,
           error: LogFormat.reason(reason)
         )
 

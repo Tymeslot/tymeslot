@@ -157,4 +157,20 @@ defmodule Tymeslot.Payments.SubscriptionInvoiceQueries do
     |> where([pi], pi.user_id == ^user_id and is_nil(pi.host_deleted_at))
     |> Repo.update_all(set: [user_id: nil, host_deleted_at: now, updated_at: now])
   end
+
+  @doc """
+  Deletes the captured invoices of deleted hosts whose statutory retention
+  period has ended: every row anonymised by `anonymise_for_host/2` and issued
+  before `cutoff` (or created before it, for a row with no issue date).
+
+  This removes only Tymeslot's copy. The document Stripe hosts behind
+  `hosted_invoice_url` and `invoice_pdf_url` is Stripe's, and is untouched.
+  """
+  @spec delete_retained_before(DateTime.t()) :: {non_neg_integer(), nil}
+  def delete_retained_before(%DateTime{} = cutoff) do
+    SubscriptionInvoice
+    |> where([pi], not is_nil(pi.host_deleted_at))
+    |> where([pi], coalesce(pi.issued_at, pi.inserted_at) < type(^cutoff, :utc_datetime))
+    |> Repo.delete_all()
+  end
 end

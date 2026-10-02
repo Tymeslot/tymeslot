@@ -6,6 +6,10 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
   alias Tymeslot.Infrastructure.Security.Recaptcha
   require Logger
 
+  # Sent by `assets/js/hooks/recaptcha_v3_hook.js` in place of a token when the
+  # reCAPTCHA script could not load.
+  @script_blocked_marker "RECAPTCHA_SCRIPT_BLOCKED"
+
   @doc """
   Returns the reCAPTCHA site key from environment variables.
   """
@@ -106,25 +110,26 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
   end
 
   @doc """
-  Validates a reCAPTCHA token using the verification service.
-  """
-  @spec validate_token(String.t()) ::
-          {:ok, %{score: float(), action: String.t() | nil, hostname: String.t() | nil}}
-          | {:error, atom() | String.t()}
-  def validate_token(token) when is_binary(token) and byte_size(token) > 0 do
-    Recaptcha.verify(token)
-  end
+  Whether any reCAPTCHA check is active on this instance.
 
-  @spec validate_token(any()) :: {:error, :invalid_token}
-  def validate_token(_token), do: {:error, :invalid_token}
+  The single answer to "does this instance use reCAPTCHA at all": the
+  Content-Security-Policy allows Google's origins only while it is true, so a
+  form that loads the reCAPTCHA script or demands a token must ask this same
+  question, or the policy blocks the script the form is waiting on.
+  """
+  @spec any_active?() :: boolean()
+  def any_active?, do: booking_active?() or signup_active?()
 
   @doc """
   Verify signup token if signup protection is enabled and configured.
 
   Returns:
-  - `:ok` when checks are disabled or when verification passes
+  - `:ok` when checks are disabled, when verification passes, or when Google
+    could not be reached (see `verify_failing_open/4`)
   - `{:error, :recaptcha_failed}` when enabled+configured but verification fails
-  - `{:error, :recaptcha_script_blocked}` when reCAPTCHA script failed to load (JS disabled, CSP blocked, extension blocked)
+  - `{:error, :recaptcha_script_blocked}` when the client reported the reCAPTCHA
+    script could not load (JS disabled, CSP blocked, extension blocked) and
+    Google, asked anyway, rejected the marker
   """
   @spec maybe_verify_signup_token(String.t(), map()) ::
           :ok | {:error, :recaptcha_failed} | {:error, :recaptcha_script_blocked}
@@ -145,53 +150,7 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
 
       true ->
         # Enabled and active; verify the token
-        verify_signup_token_impl(token, metadata)
-    end
-  end
-
-  # Special marker: reCAPTCHA script failed to load (CSP, extension, JS disabled)
-  defp verify_signup_token_impl("RECAPTCHA_SCRIPT_BLOCKED", metadata) do
-    Logger.warning("Signup attempted with reCAPTCHA script blocked",
-      event: "signup_recaptcha_script_blocked",
-      ip: metadata[:ip],
-      user_agent: metadata[:user_agent],
-      hint:
-        "Check: JavaScript disabled, browser extension, or Content-Security-Policy blocking reCAPTCHA"
-    )
-
-    {:error, :recaptcha_script_blocked}
-  end
-
-  defp verify_signup_token_impl(token, metadata) do
-    case Recaptcha.verify(token,
-           min_score: signup_min_score(),
-           expected_action: signup_action(),
-           expected_hostnames: expected_hostnames(),
-           remote_ip: metadata[:ip]
-         ) do
-      {:ok, %{score: score, action: action, hostname: hostname}} ->
-        Logger.info("Signup reCAPTCHA passed",
-          event: "signup_recaptcha_passed",
-          score: score,
-          threshold: signup_min_score(),
-          action: action,
-          hostname: hostname,
-          ip: metadata[:ip],
-          user_agent: metadata[:user_agent]
-        )
-
-        :ok
-
-      {:error, reason} ->
-        Logger.warning("Signup reCAPTCHA failed",
-          event: "signup_recaptcha_failed",
-          reason: reason,
-          threshold: signup_min_score(),
-          ip: metadata[:ip],
-          user_agent: metadata[:user_agent]
-        )
-
-        {:error, :recaptcha_failed}
+        verify_form_token(:signup, token, metadata)
     end
   end
 
@@ -208,9 +167,12 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
 
   ## Returns
 
-  - `:ok` when checks are disabled or when verification passes
+  - `:ok` when checks are disabled, when verification passes, or when Google
+    could not be reached (see `verify_failing_open/4`)
   - `{:error, :recaptcha_failed}` when enabled+configured but verification fails
-  - `{:error, :recaptcha_script_blocked}` when reCAPTCHA script failed to load (JS disabled, CSP blocked, extension blocked)
+  - `{:error, :recaptcha_script_blocked}` when the client reported the reCAPTCHA
+    script could not load (JS disabled, CSP blocked, extension blocked) and
+    Google, asked anyway, rejected the marker
   """
   @spec maybe_verify_booking_token(String.t() | nil, map()) ::
           :ok | {:error, :recaptcha_failed} | {:error, :recaptcha_script_blocked}
@@ -231,39 +193,97 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
 
       true ->
         # Enabled and active; verify the token
-        verify_booking_token_impl(token, metadata)
+        verify_form_token(:booking, token, metadata)
     end
   end
 
-  # Special marker: reCAPTCHA script failed to load (CSP, extension, JS disabled)
-  defp verify_booking_token_impl("RECAPTCHA_SCRIPT_BLOCKED", metadata) do
-    Logger.warning("Booking attempted with reCAPTCHA script blocked",
-      event: "booking_recaptcha_script_blocked",
-      ip: metadata[:ip],
-      user_agent: metadata[:user_agent],
-      hint:
-        "Check: JavaScript disabled, browser extension, or Content-Security-Policy blocking reCAPTCHA"
-    )
+  @doc """
+  Verifies a reCAPTCHA token, accepting the submission without a verdict if,
+  and only if, Google could not be reached.
 
-    {:error, :recaptcha_script_blocked}
+  The one outage policy for every public form. Losing a booking, a sign-up or a
+  message to a Google outage costs more than letting a little spam through
+  while it lasts, and the honeypot and rate limits still apply. Everything
+  else still rejects: every verdict Google gives (a rejected token, a low
+  score, a mismatched action or hostname), a missing or oversized token, and a
+  missing secret.
+
+  The script-blocked marker the client hook sends when the reCAPTCHA script
+  cannot load is verified like any token, never answered locally: Google
+  rejects it while siteverify answers, so it passes only when siteverify is
+  unreachable too.
+
+  `event` is the `event:` key of the warning logged when a submission is
+  accepted without a verdict; `metadata` may carry `:ip` and `:user_agent` for
+  it. `opts` are `Recaptcha.verify/2`'s.
+
+  Returns `{:ok, details}` for a passing verdict, `{:ok, :service_unavailable}`
+  for a submission accepted during an outage, and `{:error, reason}` otherwise.
+  """
+  @spec verify_failing_open(term(), String.t(), map(), [Recaptcha.verify_opt()]) ::
+          {:ok, %{score: float(), action: String.t() | nil, hostname: String.t() | nil}}
+          | {:ok, :service_unavailable}
+          | {:error, atom()}
+  def verify_failing_open(token, event, metadata, opts \\ []) do
+    case Recaptcha.verify(token, opts) do
+      {:error, :recaptcha_service_unavailable} ->
+        Logger.warning("Submission accepted without reCAPTCHA: siteverify unavailable",
+          event: event,
+          script_blocked: token == @script_blocked_marker,
+          ip: metadata[:ip] || "unknown",
+          user_agent: metadata[:user_agent] || "unknown"
+        )
+
+        {:ok, :service_unavailable}
+
+      result ->
+        result
+    end
   end
 
-  defp verify_booking_token_impl(token, metadata) do
-    # Provide defaults for logging metadata
+  # The booking and signup checks differ only in their settings and in the
+  # names their log lines carry.
+  @form_logs %{
+    booking: %{
+      passed: {"Booking reCAPTCHA passed", "booking_recaptcha_passed"},
+      failed: {"Booking reCAPTCHA failed", "booking_recaptcha_failed"},
+      script_blocked:
+        {"Booking attempted with reCAPTCHA script blocked", "booking_recaptcha_script_blocked"},
+      unavailable: "booking_recaptcha_unavailable"
+    },
+    signup: %{
+      passed: {"Signup reCAPTCHA passed", "signup_recaptcha_passed"},
+      failed: {"Signup reCAPTCHA failed", "signup_recaptcha_failed"},
+      script_blocked:
+        {"Signup attempted with reCAPTCHA script blocked", "signup_recaptcha_script_blocked"},
+      unavailable: "signup_recaptcha_unavailable"
+    }
+  }
+
+  defp verify_form_token(form, token, metadata) do
+    logs = Map.fetch!(@form_logs, form)
+    {passed_message, passed_event} = logs.passed
+    {failed_message, failed_event} = logs.failed
+    {blocked_message, blocked_event} = logs.script_blocked
+    threshold = form_min_score(form)
     ip = metadata[:ip] || "unknown"
     user_agent = metadata[:user_agent] || "unknown"
 
-    case Recaptcha.verify(token,
-           min_score: booking_min_score(),
-           expected_action: booking_action(),
-           expected_hostnames: expected_hostnames(),
-           remote_ip: ip
-         ) do
+    opts = [
+      min_score: threshold,
+      expected_action: form_action(form),
+      expected_hostnames: expected_hostnames()
+    ]
+
+    case verify_failing_open(token, logs.unavailable, metadata, opts) do
+      {:ok, :service_unavailable} ->
+        :ok
+
       {:ok, %{score: score, action: action, hostname: hostname}} ->
-        Logger.info("Booking reCAPTCHA passed",
-          event: "booking_recaptcha_passed",
+        Logger.info(passed_message,
+          event: passed_event,
           score: score,
-          threshold: booking_min_score(),
+          threshold: threshold,
           action: action,
           hostname: hostname,
           ip: ip,
@@ -272,11 +292,25 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
 
         :ok
 
+      # Google answered and refused the marker: the script really did not load
+      # in a browser while reCAPTCHA was up, so the visitor gets the advice that
+      # fits (enable JavaScript, allow the script) rather than a bare failure.
+      {:error, _reason} when token == @script_blocked_marker ->
+        Logger.warning(blocked_message,
+          event: blocked_event,
+          ip: ip,
+          user_agent: user_agent,
+          hint:
+            "Check: JavaScript disabled, browser extension, or Content-Security-Policy blocking reCAPTCHA"
+        )
+
+        {:error, :recaptcha_script_blocked}
+
       {:error, reason} ->
-        Logger.warning("Booking reCAPTCHA failed",
-          event: "booking_recaptcha_failed",
+        Logger.warning(failed_message,
+          event: failed_event,
           reason: reason,
-          threshold: booking_min_score(),
+          threshold: threshold,
           ip: ip,
           user_agent: user_agent
         )
@@ -284,6 +318,12 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
         {:error, :recaptcha_failed}
     end
   end
+
+  defp form_min_score(:booking), do: booking_min_score()
+  defp form_min_score(:signup), do: signup_min_score()
+
+  defp form_action(:booking), do: booking_action()
+  defp form_action(:signup), do: signup_action()
 
   defp key_present?(value) when is_binary(value), do: String.trim(value) != ""
   defp key_present?(_value), do: false

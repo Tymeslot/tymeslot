@@ -79,4 +79,40 @@ defmodule Tymeslot.Security.IPNormaliserTest do
       assert result.role == "admin"
     end
   end
+
+  describe "truncate_for_log/1" do
+    test "keeps an IPv4 address's /24" do
+      assert {:ok, "203.0.113.0/24"} == IPNormaliser.truncate_for_log("203.0.113.77")
+    end
+
+    test "keeps an IPv6 address's /48" do
+      assert {:ok, "2001:db8:85a3::/48"} ==
+               IPNormaliser.truncate_for_log("2001:db8:85a3:8d3:1319:8a2e:370:7348")
+    end
+
+    test "truncates an IPv4-mapped IPv6 address as the IPv4 address it carries" do
+      assert {:ok, "203.0.113.0/24"} == IPNormaliser.truncate_for_log("::ffff:203.0.113.77")
+    end
+
+    test "accepts :inet tuples and printable charlists" do
+      assert {:ok, "203.0.113.0/24"} == IPNormaliser.truncate_for_log({203, 0, 113, 77})
+
+      assert {:ok, "2001:db8:1::/48"} ==
+               IPNormaliser.truncate_for_log({0x2001, 0xDB8, 1, 2, 0, 0, 0, 9})
+
+      assert {:ok, "203.0.113.0/24"} == IPNormaliser.truncate_for_log(~c"203.0.113.77")
+    end
+
+    test "truncates every entry of a forwarded-for list" do
+      assert {:ok, "203.0.113.0/24, 10.0.0.0/24"} ==
+               IPNormaliser.truncate_for_log("203.0.113.77, 10.0.0.1")
+    end
+
+    test "refuses anything that is not an address" do
+      for value <- ["unknown", "203.0.113.77:443", "203.0.113.77, junk", "", nil, 42, {1, 2}] do
+        assert :error == IPNormaliser.truncate_for_log(value),
+               "expected #{inspect(value)} refused"
+      end
+    end
+  end
 end

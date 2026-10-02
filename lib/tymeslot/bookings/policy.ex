@@ -99,6 +99,8 @@ defmodule Tymeslot.Bookings.Policy do
           required(:calendar_integration_id) => integer() | nil,
           required(:calendar_path) => String.t() | nil,
           required(:video_integration_id) => integer() | nil,
+          required(:venue_id) => integer() | nil,
+          required(:address_to_arrange) => boolean(),
           required(:attendee_name) => String.t(),
           required(:attendee_email) => String.t(),
           required(:attendee_message) => String.t() | nil,
@@ -248,28 +250,31 @@ defmodule Tymeslot.Bookings.Policy do
   end
 
   # Where the meeting is held, and everything that follows from it: the
-  # display string, the kind, and the video integration a room would be
-  # created on.
+  # display string, the kind, the video integration a room would be created
+  # on, and the saved venue an in-person booking is at.
   #
   # The booker submitted only an option id, and within a video option the
-  # provider they picked. The rest is re-derived here from the host's own
-  # meeting type, so a forged or stale id can only ever select a location,
-  # or a provider, the host already offers.
+  # provider they picked, or within an in-person option the venue. The rest
+  # is re-derived here from the host's own meeting type, so a forged or stale
+  # id can only ever select a location, a provider or a venue the host
+  # already offers.
   defp location_attributes(meeting_type_record, %BuildParams{} = params, fallback_video_id) do
     location =
-      MeetingTypes.resolve_location(
-        meeting_type_record,
-        params.location_option_id,
-        params.location_phone,
-        params.location_video_integration_id
-      )
+      MeetingTypes.resolve_location(meeting_type_record, %{
+        option_id: params.location_option_id,
+        phone: params.location_phone,
+        video_integration_id: params.location_video_integration_id,
+        venue_id: params.location_venue_id
+      })
 
     %{
       location: location.location,
       location_kind: location.location_kind,
       location_option_id: location.location_option_id,
       attendee_phone: location.attendee_phone,
-      video_integration_id: video_integration_for(location, fallback_video_id)
+      video_integration_id: video_integration_for(location, fallback_video_id),
+      venue_id: location.venue_id,
+      address_to_arrange: location.address_to_arrange
     }
   end
 

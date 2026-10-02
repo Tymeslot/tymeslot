@@ -14,12 +14,19 @@ defmodule Tymeslot.Emails.Shared.BookingRequestLocation do
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
 
   @doc "The location kind, used to pick the label `Formatting.format_location/1` shows."
-  @spec type(Meeting.t()) :: :video | :phone | :in_person | :custom
+  @spec type(Meeting.t()) :: :video | :phone | :in_person | :in_person_to_arrange | :custom
   # A booking made against a meeting type's location list already recorded
   # which kind it chose, so there is nothing to infer. This clause comes
   # first precisely because it is the only one that cannot be wrong.
   def type(%Meeting{location_kind: "video"}), do: :video
   def type(%Meeting{location_kind: "phone"}), do: :phone
+  # An in-person booking made on a location offering no venue is one whose
+  # address the host arranges after booking, which the emails say in so many
+  # words. A nil `venue_id` alone does not mean that: it is also what a venue
+  # deleted after booking leaves.
+  def type(%Meeting{location_kind: "in_person", address_to_arrange: true}),
+    do: :in_person_to_arrange
+
   def type(%Meeting{location_kind: "in_person"}), do: :in_person
   def type(%Meeting{location_kind: "custom"}), do: :custom
 

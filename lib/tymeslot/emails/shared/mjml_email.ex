@@ -53,18 +53,18 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   end
 
   @typedoc """
-  Tracking category. Controls open-tracking and link-rewriting, and on
-  Postmark the message stream the email is routed through.
+  Tracking category. Controls open tracking, and on Postmark the message
+  stream the email is routed through. Links are never rewritten for click
+  tracking, whatever the category.
 
     * `:transactional` — confirmations, security alerts, receipts. No opens,
-      no link rewriting, sent on the default `outbound` (transactional) stream.
-      Safer for spam filters and respects user privacy.
+      sent on the default `outbound` (transactional) stream. Safer for spam
+      filters and respects user privacy.
     * `:lifecycle` — onboarding / billing nudges where engagement metrics are
-      genuinely useful (welcome, trial ending, dunning). Opens on, links left
-      untouched, still on `outbound`.
-    * `:marketing` — bulk newsletters and announcements. Opens on, links
-      rewritten in HTML and text, sent on the `broadcast` stream so reputation
-      is isolated from transactional mail.
+      genuinely useful (welcome, trial ending, dunning). Opens on, still on
+      `outbound`.
+    * `:marketing` — bulk newsletters and announcements. Opens on, sent on the
+      `broadcast` stream so reputation is isolated from transactional mail.
 
   The category itself is stashed on the email via `Tymeslot.Mailer.put_tracking/2`
   rather than resolved here: `Tymeslot.Mailer.deliver/2` reads it back at the

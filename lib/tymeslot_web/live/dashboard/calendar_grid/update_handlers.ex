@@ -29,6 +29,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
   def handle_event_write_settled(%{write: write, outcome: outcome}, socket),
     do: {:ok, EventWrites.settle(socket, write, outcome)}
 
+  @doc """
+  Starts the edits kept for an event another LiveView has finished writing.
+  """
+  @spec handle_event_writes_released(map(), Phoenix.LiveView.Socket.t()) ::
+          {:ok, Phoenix.LiveView.Socket.t()}
+  def handle_event_writes_released(%{release: release}, socket),
+    do: {:ok, EventWrites.resume(socket, release)}
+
   @spec handle_refresh_events(map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
   def handle_refresh_events(assigns, socket) do
@@ -304,7 +312,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
     socket =
       cond do
         Map.get(socket.assigns, :_initialized) ->
-          socket
+          adopt_if_revived(socket)
 
         not connected?(socket) ->
           socket
@@ -324,6 +332,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
       end
 
     {:ok, assign_desktop_reminder_feed(socket)}
+  end
+
+  # LiveView revives a grid rendered again before the browser has confirmed
+  # its removal: the organiser left the calendar and came straight back. It
+  # still holds the queue it had when it left, which its guardian has been
+  # driving since, so it takes the queue back as a grid mounted afresh does.
+  defp adopt_if_revived(socket) do
+    if socket.assigns[:calendar_left] == socket.assigns[:writes_adopted_after],
+      do: socket,
+      else: socket |> EventWrites.adopt() |> Helpers.load_events()
   end
 
   defp open_on_today(socket),

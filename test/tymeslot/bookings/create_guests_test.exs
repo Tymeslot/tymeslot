@@ -96,7 +96,7 @@ defmodule Tymeslot.Bookings.CreateGuestsTest do
       CREATE FUNCTION refuse_meeting_guest() RETURNS trigger AS $$
       BEGIN
         RAISE EXCEPTION 'token collision'
-          USING ERRCODE = 'unique_violation', CONSTRAINT = 'meeting_guests_rsvp_token_index';
+          USING ERRCODE = 'unique_violation', CONSTRAINT = 'meeting_guests_rsvp_token_hash_index';
       END;
       $$ LANGUAGE plpgsql
       """)
