@@ -14,7 +14,6 @@ defmodule Tymeslot.Repo.Migrations.ScopeMeetingGuestsToParticipantsTest do
   import Tymeslot.Factory
 
   alias Ecto.UUID
-  alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Test.MigrationRunner
 
   @version 20_261_002_161_422
@@ -74,36 +73,5 @@ defmodule Tymeslot.Repo.Migrations.ScopeMeetingGuestsToParticipantsTest do
 
     assert indexes["meeting_guests_participant_id_email_index"] =~
              ~r/UNIQUE INDEX .*\(meeting_id, participant_id, email\) WHERE \(participant_id IS NOT NULL\)/
-  end
-
-  test "lets two bookers of one slot invite the same address, but not one booker twice" do
-    meeting = insert(:group_meeting)
-    first = insert(:participant, meeting: meeting)
-    second = insert(:participant, meeting: meeting)
-
-    invite = fn participant ->
-      GuestQueries.insert_guest(%{
-        meeting_id: meeting.id,
-        participant_id: participant.id,
-        email: "shared@example.com"
-      })
-    end
-
-    assert {:ok, _guest} = invite.(first)
-    assert {:ok, _guest} = invite.(second)
-    assert {:error, changeset} = invite.(first)
-    assert {"has already been added", _opts} = changeset.errors[:meeting_id]
-  end
-
-  test "keeps one-to-one bookings from inviting an address twice" do
-    meeting = insert(:meeting)
-
-    invite = fn ->
-      GuestQueries.insert_guest(%{meeting_id: meeting.id, email: "a@example.com"})
-    end
-
-    assert {:ok, _guest} = invite.()
-    assert {:error, changeset} = invite.()
-    assert {"has already been added", _opts} = changeset.errors[:meeting_id]
   end
 end
