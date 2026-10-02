@@ -306,7 +306,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
-      before = lv |> render() |> count_occurrences("existing@example.com")
+      before = lv |> render() |> occurrences("existing@example.com")
 
       html =
         lv
@@ -314,7 +314,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
         |> render_hook("add_event_attendee", %{"email" => "existing@example.com"})
 
       # Listed once still, and not invited a second time.
-      assert count_occurrences(html, "existing@example.com") == before
+      assert occurrences(html, "existing@example.com") == before
       refute render(lv) =~ "Attendee added and invited."
     end
 
@@ -459,6 +459,4 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
   defp occurrences(html, email) do
     length(String.split(String.downcase(html), email)) - 1
   end
-
-  defp count_occurrences(html, text), do: length(String.split(html, text)) - 1
 end

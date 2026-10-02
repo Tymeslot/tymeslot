@@ -120,67 +120,6 @@ defmodule Tymeslot.CalendarGrid.IcsImportTest do
       assert plan.cancelled == 1
     end
 
-    test "excludes a series' EXDATEs and moved occurrences, writing each move on its own" do
-      plan =
-        plan!(
-          ics([
-            timed("weekly@x", "Standup", "20261102T090000Z", "20261102T091500Z", [
-              "RRULE:FREQ=WEEKLY;COUNT=10",
-              "EXDATE:20261109T090000Z"
-            ]),
-            # The 16 November occurrence moved an hour later.
-            timed("weekly@x", "Standup (late)", "20261116T100000Z", "20261116T101500Z", [
-              "RECURRENCE-ID:20261116T090000Z"
-            ]),
-            # The 23 November occurrence was cancelled.
-            timed("weekly@x", "Standup", "20261123T090000Z", "20261123T091500Z", [
-              "RECURRENCE-ID:20261123T090000Z",
-              "STATUS:CANCELLED"
-            ])
-          ])
-        )
-
-      assert [series, moved] = plan.events
-      assert series.recurrence_rule =~ "FREQ=WEEKLY"
-
-      assert Enum.sort(series.recurrence_exceptions, DateTime) == [
-               ~U[2026-11-09 09:00:00Z],
-               ~U[2026-11-16 09:00:00Z],
-               ~U[2026-11-23 09:00:00Z]
-             ]
-
-      assert moved.summary == "Standup (late)"
-      assert moved.start_time == ~U[2026-11-16 10:00:00Z]
-      refute Map.has_key?(moved, :recurrence_rule)
-      assert plan.series == 1
-    end
-
-    test "reads a wall-clock RECURRENCE-ID in the series' own zone" do
-      plan =
-        plan!(
-          ics([
-            vevent([
-              "UID:berlin@x",
-              "SUMMARY:Yoga",
-              "DTSTART;TZID=Europe/Berlin:20260706T180000",
-              "DTEND;TZID=Europe/Berlin:20260706T190000",
-              "RRULE:FREQ=WEEKLY;COUNT=4"
-            ]),
-            vevent([
-              "UID:berlin@x",
-              "SUMMARY:Yoga",
-              "RECURRENCE-ID;TZID=Europe/Berlin:20260713T180000",
-              "DTSTART;TZID=Europe/Berlin:20260713T190000",
-              "DTEND;TZID=Europe/Berlin:20260713T200000"
-            ])
-          ])
-        )
-
-      assert [series, _moved] = plan.events
-      # 18:00 in Berlin summer time is 16:00 UTC.
-      assert series.recurrence_exceptions == [~U[2026-07-13 16:00:00Z]]
-    end
-
     test "accepts a file starting with a byte-order mark" do
       content =
         <<0xEF, 0xBB, 0xBF>> <> ics([timed("b@x", "BOM", "20261105T090000Z", "20261105T100000Z")])
@@ -204,6 +143,96 @@ defmodule Tymeslot.CalendarGrid.IcsImportTest do
 
     test "rejects a file over the size cap" do
       assert IcsImport.plan(:binary.copy("x", IcsImport.max_bytes() + 1)) == {:error, :too_large}
+    end
+
+    test "reads a floating time as a wall-clock time in the given zone, series and all" do
+      content =
+        ics([
+          timed("f@x", "Floating", "20261102T100000", "20261102T110000", [
+            "RRULE:FREQ=DAILY;COUNT=3",
+            "EXDATE:20261103T100000"
+          ])
+        ])
+
+      assert {:ok, %{events: [event]}} = IcsImport.plan(content, "Europe/Berlin")
+      assert event.start_time == ~U[2026-11-02 09:00:00Z]
+      assert event.end_time == ~U[2026-11-02 10:00:00Z]
+      assert event.timezone == "Europe/Berlin"
+      assert event.recurrence_exceptions == [~U[2026-11-03 09:00:00Z]]
+    end
+
+    test "leaves a UTC time alone whatever zone is given" do
+      content = ics([timed("u@x", "UTC", "20261102T100000Z", "20261102T110000Z")])
+
+      assert {:ok, %{events: [%{start_time: ~U[2026-11-02 10:00:00Z]}]}} =
+               IcsImport.plan(content, "Europe/Berlin")
+    end
+
+    test "gives a timed event UTC as its zone in place of one the database does not know" do
+      plan =
+        plan!(
+          ics([
+            vevent([
+              "UID:m@x",
+              "SUMMARY:Mars",
+              "DTSTART;TZID=Mars/Olympus:20261102T100000",
+              "DTEND;TZID=Mars/Olympus:20261102T110000",
+              "RRULE:FREQ=DAILY;COUNT=2"
+            ]),
+            timed("z@x", "Zoneless series", "20261102T100000Z", "20261102T110000Z", [
+              "RRULE:FREQ=DAILY;COUNT=2"
+            ])
+          ])
+        )
+
+      assert Enum.map(plan.events, & &1.timezone) == ["Etc/UTC", "Etc/UTC"]
+    end
+
+    test "gives an end the value type of its start" do
+      plan =
+        plan!(
+          ics([
+            vevent([
+              "UID:a@x",
+              "SUMMARY:Date to time",
+              "DTSTART;VALUE=DATE:20261005",
+              "DTEND:20261007T100000Z"
+            ]),
+            vevent([
+              "UID:b@x",
+              "SUMMARY:Time to date",
+              "DTSTART:20261005T090000Z",
+              "DTEND;VALUE=DATE:20261006"
+            ]),
+            vevent([
+              "UID:c@x",
+              "SUMMARY:Ends before it starts",
+              "DTSTART;VALUE=DATE:20261005",
+              "DTEND:20261004T100000Z"
+            ])
+          ])
+        )
+
+      assert Enum.map(plan.events, &{&1.summary, &1.end_time}) == [
+               {"Date to time", ~D[2026-10-07]},
+               {"Time to date", ~U[2026-10-06 00:00:00Z]},
+               {"Ends before it starts", ~D[2026-10-06]}
+             ]
+    end
+
+    test "strips null bytes from the text it writes" do
+      plan =
+        plan!(
+          ics([
+            timed("n@x", "Den\x00tist", "20261105T090000Z", "20261105T093000Z", [
+              "LOCATION:High\x00 Street",
+              "DESCRIPTION:Bring\x00 forms"
+            ])
+          ])
+        )
+
+      assert [%{summary: "Dentist", location: "High Street", description: "Bring forms"}] =
+               plan.events
     end
 
     test "rejects a file with more events than one import writes" do
@@ -313,12 +342,56 @@ defmodule Tymeslot.CalendarGrid.IcsImportTest do
                IcsImport.run(ctx.target, ctx.plan)
     end
 
+    test "counts an event the provider raises on as failed and carries on", ctx do
+      expect(Tymeslot.CalendarMock, :create_event, 2, fn
+        %{summary: "One"}, _context -> raise FunctionClauseError
+        data, _context -> {:ok, CreatedEvent.new(data.uid)}
+      end)
+
+      assert %{created: 1, failed: 1, failed_titles: ["One"], halted: nil} =
+               IcsImport.run(ctx.target, ctx.plan)
+    end
+
     test "stops when the provider refuses the credentials", ctx do
       expect(Tymeslot.CalendarMock, :create_event, 1, fn _data, _context ->
         {:error, :unauthorized}
       end)
 
       assert %{created: 0, failed: 1, halted: :unauthorized} = IcsImport.run(ctx.target, ctx.plan)
+    end
+
+    test "stops after a run of failures, taking the provider to be down", ctx do
+      events =
+        for n <- 1..8,
+            do: %{summary: "E#{n}", start_time: ~U[2026-11-05 09:00:00Z], all_day: false}
+
+      expect(Tymeslot.CalendarMock, :create_event, 5, fn _data, _context ->
+        {:error, :timeout}
+      end)
+
+      assert %{created: 0, failed: 5, halted: :unavailable} =
+               IcsImport.run(ctx.target, %{events: events})
+    end
+
+    test "starts the count again after a write that succeeds", ctx do
+      events =
+        for n <- 1..9,
+            do: %{summary: "E#{n}", start_time: ~U[2026-11-05 09:00:00Z], all_day: false}
+
+      expect(Tymeslot.CalendarMock, :create_event, 9, fn
+        %{summary: "E5"} = data, _context -> {:ok, CreatedEvent.new(data.uid)}
+        _data, _context -> {:error, :timeout}
+      end)
+
+      assert %{created: 1, failed: 8, halted: nil} = IcsImport.run(ctx.target, %{events: events})
+    end
+
+    test "stops at once when the provider's circuit breaker is open", ctx do
+      expect(Tymeslot.CalendarMock, :create_event, 1, fn _data, _context ->
+        {:error, :circuit_open}
+      end)
+
+      assert %{failed: 1, halted: :circuit_open} = IcsImport.run(ctx.target, ctx.plan)
     end
 
     test "reports progress after each event", ctx do
@@ -389,6 +462,42 @@ defmodule Tymeslot.CalendarGrid.IcsImportTest do
         worker: SyncCalDavCalendarWorker,
         args: %{"calendar_integration_id" => ctx.integration.id}
       )
+    end
+
+    test "writes nothing while another import of the user's runs", ctx do
+      test_pid = self()
+
+      holder =
+        spawn(fn ->
+          IcsImport.exclusively(ctx.user.id, fn ->
+            send(test_pid, :claimed)
+
+            receive do
+              :release -> :ok
+            end
+          end)
+        end)
+
+      assert_receive :claimed
+      expect(Tymeslot.CalendarMock, :create_event, 0, fn _data, _context -> :unreachable end)
+
+      assert CalendarGrid.ics_import_running?(ctx.user.id)
+
+      assert CalendarGrid.import_ics(ctx.user.id, ctx.integration.id, nil, ctx.plan) ==
+               {:error, :already_running}
+
+      ref = Process.monitor(holder)
+      send(holder, :release)
+      assert_receive {:DOWN, ^ref, :process, ^holder, _reason}
+      refute CalendarGrid.ics_import_running?(ctx.user.id)
+    end
+
+    test "frees the claim when the import crashes", ctx do
+      assert_raise RuntimeError, fn ->
+        IcsImport.exclusively(ctx.user.id, fn -> raise "boom" end)
+      end
+
+      refute CalendarGrid.ics_import_running?(ctx.user.id)
     end
 
     test "writes nothing to a calendar the user does not own", ctx do

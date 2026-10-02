@@ -1369,7 +1369,7 @@ msgstr "Цю зустріч організовує хтось інший, том
 #, elixir-autogen, elixir-format
 msgid "1 event could not be imported."
 msgid_plural "%{count} events could not be imported."
-msgstr[0] "Не вдалося імпортувати 1 подію."
+msgstr[0] "Не вдалося імпортувати %{count} подію."
 msgstr[1] "Не вдалося імпортувати %{count} події."
 msgstr[2] "Не вдалося імпортувати %{count} подій."
 
@@ -1377,7 +1377,7 @@ msgstr[2] "Не вдалося імпортувати %{count} подій."
 #, elixir-autogen, elixir-format
 msgid "1 of them repeats."
 msgid_plural "%{count} of them repeat."
-msgstr[0] "1 із них повторюється."
+msgstr[0] "%{count} із них повторюється."
 msgstr[1] "%{count} із них повторюються."
 msgstr[2] "%{count} із них повторюються."
 
@@ -1405,7 +1405,7 @@ msgstr "Експортовано з Google Calendar, Outlook, Apple Calendar а�
 #, elixir-autogen, elixir-format
 msgid "Found 1 event."
 msgid_plural "Found %{count} events."
-msgstr[0] "Знайдено 1 подію."
+msgstr[0] "Знайдено %{count} подію."
 msgstr[1] "Знайдено %{count} події."
 msgstr[2] "Знайдено %{count} подій."
 
@@ -1433,7 +1433,7 @@ msgstr "Імпортувати в"
 #, elixir-autogen, elixir-format
 msgid "Imported 1 event."
 msgid_plural "Imported %{count} events."
-msgstr[0] "Імпортовано 1 подію."
+msgstr[0] "Імпортовано %{count} подію."
 msgstr[1] "Імпортовано %{count} події."
 msgstr[2] "Імпортовано %{count} подій."
 
@@ -1451,7 +1451,7 @@ msgstr "Можна імпортувати лише файли календаря
 #, elixir-autogen, elixir-format
 msgid "Outlook could not take the skipped dates of 1 recurring event, so it may show extra occurrences."
 msgid_plural "Outlook could not take the skipped dates of %{count} recurring events, so they may show extra occurrences."
-msgstr[0] "Outlook не зміг прийняти пропущені дати 1 повторюваної події, тому може показувати зайві повторення."
+msgstr[0] "Outlook не зміг прийняти пропущені дати %{count} повторюваної події, тому може показувати зайві повторення."
 msgstr[1] "Outlook не зміг прийняти пропущені дати %{count} повторюваних подій, тому може показувати зайві повторення."
 msgstr[2] "Outlook не зміг прийняти пропущені дати %{count} повторюваних подій, тому може показувати зайві повторення."
 
@@ -1509,3 +1509,18 @@ msgstr "Виберіть або перетягніть сюди файл .ics"
 #, elixir-autogen, elixir-format
 msgid "Reading the file..."
 msgstr "Читання файлу..."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
+#, elixir-autogen, elixir-format
+msgid "An import is still running. Please wait for it to finish before importing another file."
+msgstr "Імпорт ще триває. Зачекайте, доки він завершиться, перш ніж імпортувати інший файл."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
+#, elixir-autogen, elixir-format
+msgid "The import could not be finished. Some of its events may already be in your calendar."
+msgstr "Не вдалося завершити імпорт. Деякі його події вже можуть бути у вашому календарі."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
+#, elixir-autogen, elixir-format
+msgid "The import stopped because your calendar is not responding. Please try again later."
+msgstr "Імпорт зупинено, бо ваш календар не відповідає. Спробуйте пізніше."

@@ -12,12 +12,15 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   import Phoenix.LiveView, only: [clear_flash: 2, put_flash: 3, send_update: 2]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Video.RoomCreationError
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.IcsImport
   alias TymeslotWeb.Dashboard.CalendarGridComponent
+
+  require Logger
 
   @doc "Advances the clock-tick timer and pushes the current time to the calendar grid."
   @spec handle_tick(Phoenix.LiveView.Socket.t()) :: {:noreply, Phoenix.LiveView.Socket.t()}
@@ -365,19 +368,32 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     end
 
     Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
-      result =
-        CalendarGrid.import_ics(
-          payload.user_id,
-          payload.integration_id,
-          payload.calendar_id,
-          payload.plan,
-          on_progress: on_progress
-        )
-
-      send(lv_pid, {:ics_import_result, result})
+      send(lv_pid, {:ics_import_result, run_ics_import(payload, on_progress)})
     end)
 
     {:noreply, socket}
+  end
+
+  # Whatever happens, the LiveView hears how the import ended; otherwise its
+  # modal would show the import running until the page is reloaded.
+  defp run_ics_import(payload, on_progress) do
+    CalendarGrid.import_ics(
+      payload.user_id,
+      payload.integration_id,
+      payload.calendar_id,
+      payload.plan,
+      on_progress: on_progress
+    )
+  catch
+    kind, reason ->
+      Logger.error("ICS import failed",
+        user_id: payload.user_id,
+        kind: kind,
+        error: LogFormat.reason(reason),
+        stacktrace: LogFormat.stacktrace(__STACKTRACE__)
+      )
+
+      {:error, :failed}
   end
 
   @doc "Passes a running import's progress to the calendar grid."

@@ -1504,3 +1504,18 @@ msgstr "Wybierz lub upuść plik .ics"
 #, elixir-autogen, elixir-format
 msgid "Reading the file..."
 msgstr "Odczytywanie pliku..."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
+#, elixir-autogen, elixir-format
+msgid "An import is still running. Please wait for it to finish before importing another file."
+msgstr "Import nadal trwa. Poczekaj na jego zakończenie, zanim zaimportujesz kolejny plik."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
+#, elixir-autogen, elixir-format
+msgid "The import could not be finished. Some of its events may already be in your calendar."
+msgstr "Nie udało się dokończyć importu. Niektóre z jego wydarzeń mogą już być w Twoim kalendarzu."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
+#, elixir-autogen, elixir-format
+msgid "The import stopped because your calendar is not responding. Please try again later."
+msgstr "Import został przerwany, ponieważ Twój kalendarz nie odpowiada. Spróbuj ponownie później."

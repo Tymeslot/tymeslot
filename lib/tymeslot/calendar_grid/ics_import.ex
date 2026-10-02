@@ -17,22 +17,30 @@ defmodule Tymeslot.CalendarGrid.IcsImport do
     * `run/3` writes a plan to it.
 
   An imported event keeps its title, description, location, timing,
-  recurrence and free/busy flag. Its organiser and attendees are dropped: an
+  recurrence and free/busy flag. A floating time (one with no zone) is read
+  as a wall-clock time in the importing user's zone, and a zone the time-zone
+  database does not know is not passed on to the provider. Its organiser and attendees are dropped: an
   import must never send invitations on someone else's behalf, and the
   attendees of a meeting the user was invited to are not theirs to invite.
 
   A series' cancelled occurrences, and those moved by an override, are carried
   across as exclusions on the series, and each moved occurrence is written as
-  an event of its own at its new time. Outlook takes no exclusions when a
+  an event of its own at its new time; a change to an occurrence and every
+  later one splits the series there (see `IcsImport.Series`). Outlook takes no exclusions when a
   series is created, so `run/3` reports how many series it wrote without them.
   """
 
+  alias Tymeslot.CalendarGrid.IcsImport.Series
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ICalBuilder
   alias Tymeslot.Integrations.Calendar.ICalParser
+  alias Tymeslot.Timezones
+
+  require Logger
 
   # A full export of a busy calendar runs to a few megabytes; the parser holds
   # the whole document in memory, so the cap is kept a little above that.
@@ -40,8 +48,15 @@ defmodule Tymeslot.CalendarGrid.IcsImport do
   # Every event is a provider write, made one after another so as not to trip
   # a provider's own rate limit; a thousand takes a few minutes.
   @max_events 1_000
-  # Writing on would only fail the same way for every remaining event.
-  @fatal_errors [:unauthorized, :not_found, :read_only]
+  # A timed event is never written without a zone: Google requires one on a
+  # series, and a UTC instant is exactly what a zoneless time was read as.
+  @utc "Etc/UTC"
+  # Writing on would only fail the same way for every remaining event; an
+  # open circuit breaker refuses every write until it recovers.
+  @fatal_errors [:unauthorized, :not_found, :read_only, :circuit_open]
+  # This many failures in a row means the provider itself is failing, not
+  # the events: a stalled server would otherwise cost one timeout per event.
+  @max_failures_in_a_row 5
   # The failed titles reported back are a sample for the user to recognise,
   # not a log.
   @failed_sample_size 5
@@ -68,6 +83,8 @@ defmodule Tymeslot.CalendarGrid.IcsImport do
 
   @type plan_error :: :too_large | :invalid_file | :no_events | :too_many_events
 
+  @type import_error :: :already_running
+
   @type summary :: %{
           total: non_neg_integer(),
           created: non_neg_integer(),
@@ -86,32 +103,45 @@ defmodule Tymeslot.CalendarGrid.IcsImport do
   def max_events, do: @max_events
 
   @doc """
-  Parses an `.ics` document into the events an import would write.
+  Parses an `.ics` document into the events an import would write, reading
+  any floating time as a wall-clock time in `timezone`.
 
   Cancelled events are left out and counted under `:cancelled`; `:series`
   counts the recurring ones among `:events`.
   """
-  @spec plan(binary()) :: {:ok, plan()} | {:error, plan_error()}
-  def plan(content) when is_binary(content) and byte_size(content) > @max_bytes,
+  @spec plan(binary(), String.t()) :: {:ok, plan()} | {:error, plan_error()}
+  def plan(content, timezone \\ @utc)
+
+  def plan(content, _timezone) when is_binary(content) and byte_size(content) > @max_bytes,
     do: {:error, :too_large}
 
-  def plan(content) when is_binary(content) do
-    with {:ok, raw_events} <- parse(content) do
-      {cancelled, live} = Enum.split_with(raw_events, &cancelled?/1)
-      events = build_events(live, cancelled)
+  def plan(content, timezone) when is_binary(content) do
+    # Counted before parsing, which costs far more than the count: a file of
+    # tens of thousands of events is refused without being read.
+    if vevent_count(content) > @max_events do
+      {:error, :too_many_events}
+    else
+      build_plan(content, timezone)
+    end
+  end
 
-      cond do
-        events == [] ->
+  defp build_plan(content, timezone) do
+    with {:ok, raw_events} <- parse(content) do
+      zone = if Timezones.valid?(timezone), do: timezone, else: @utc
+      raw_events = Enum.map(raw_events, &anchor_floating(&1, zone))
+      {cancelled, live} = Enum.split_with(raw_events, &cancelled?/1)
+
+      case build_events(live, cancelled) do
+        [] ->
           {:error, :no_events}
 
-        length(events) > @max_events ->
-          {:error, :too_many_events}
-
-        true ->
+        events ->
           {:ok, %{events: events, series: count_series(events), cancelled: length(cancelled)}}
       end
     end
   end
+
+  defp vevent_count(content), do: length(:binary.matches(content, "BEGIN:VEVENT"))
 
   @doc """
   Resolves where an import is written: `calendar_id` on the user's active,
@@ -139,7 +169,8 @@ defmodule Tymeslot.CalendarGrid.IcsImport do
 
   A failed write is counted and the import carries on, unless the provider
   refused in a way every later write would repeat (`#{inspect(@fatal_errors)}`),
-  in which case it stops and names the reason under `:halted`.
+  in which case it stops and names the reason under `:halted`. After
+  #{@max_failures_in_a_row} failures in a row it stops as `:unavailable`.
 
   Options:
 
@@ -156,7 +187,8 @@ defmodule Tymeslot.CalendarGrid.IcsImport do
       failed: 0,
       failed_titles: [],
       exclusions_dropped: 0,
-      halted: nil
+      halted: nil,
+      failed_in_a_row: 0
     }
 
     summary =
@@ -168,8 +200,41 @@ defmodule Tymeslot.CalendarGrid.IcsImport do
         if acc.halted, do: {:halt, acc}, else: {:cont, acc}
       end)
 
-    Map.update!(summary, :failed_titles, &Enum.reverse/1)
+    summary
+    |> Map.delete(:failed_in_a_row)
+    |> Map.update!(:failed_titles, &Enum.reverse/1)
   end
+
+  @doc """
+  Runs `fun` as the user's only import, or returns `{:error, :already_running}`
+  while another of theirs is under way, from any tab or session.
+
+  The claim is a global name held by the calling process, so it lapses with
+  that process even when it crashes.
+  """
+  @spec exclusively(pos_integer(), (-> result)) :: result | {:error, import_error()}
+        when result: term()
+  def exclusively(user_id, fun) do
+    name = lock_name(user_id)
+
+    case :global.register_name(name, self()) do
+      :yes ->
+        try do
+          fun.()
+        after
+          :global.unregister_name(name)
+        end
+
+      :no ->
+        {:error, :already_running}
+    end
+  end
+
+  @doc "Whether an import of the user's is under way."
+  @spec running?(pos_integer()) :: boolean()
+  def running?(user_id), do: :global.whereis_name(lock_name(user_id)) != :undefined
+
+  defp lock_name(user_id), do: {__MODULE__, user_id}
 
   # --- Parsing ---
 
@@ -188,55 +253,55 @@ defmodule Tymeslot.CalendarGrid.IcsImport do
     end
   end
 
-  defp cancelled?(raw), do: String.upcase(raw[:status] || "") == "CANCELLED"
-
-  defp override?(raw), do: is_binary(raw[:recurrence_id]) and raw[:recurrence_id] != ""
-
-  defp series?(raw), do: is_binary(raw[:recurrence_rule]) and raw[:recurrence_rule] != ""
-
-  # An override replaces one occurrence of the series sharing its UID. When
-  # that series is in the file, the occurrence it replaces is excluded from
-  # the series and the override is written as an event of its own; a
-  # cancelled override only excludes. An override whose series is not in the
-  # file has nothing to exclude from and stands alone.
-  defp build_events(live, cancelled) do
-    series_by_uid =
-      for raw <- live, series?(raw), not override?(raw), into: %{}, do: {raw.uid, raw}
-
-    replaced =
-      for raw <- live ++ cancelled,
-          override?(raw),
-          series = series_by_uid[raw.uid],
-          slot = occurrence_slot(raw.recurrence_id, series),
-          reduce: %{} do
-        acc -> Map.update(acc, raw.uid, [slot], &[slot | &1])
-      end
-
-    Enum.map(live, fn raw ->
-      if override?(raw),
-        do: event_data(raw, nil, []),
-        else: event_data(raw, raw[:recurrence_rule], series_exclusions(raw, replaced))
-    end)
+  # The parser reads a floating time as UTC. Its wall clock is the one meant,
+  # so it is placed in `zone` instead, along with the series' exclusions, which
+  # RFC 5545 has written in the same value type as its DTSTART. The zone then
+  # stands as the series' own, so its overrides resolve in it too.
+  defp anchor_floating(%{floating: true} = raw, zone) do
+    %{
+      raw
+      | start_time: wall_clock_in(raw.start_time, zone),
+        end_time: wall_clock_in(raw.end_time, zone),
+        exdates: Enum.map(raw.exdates || [], &wall_clock_in(&1, zone)),
+        timezone: zone
+    }
   end
 
-  defp series_exclusions(raw, replaced) do
-    if series?(raw),
-      do: Enum.uniq((raw[:exdates] || []) ++ Map.get(replaced, raw.uid, [])),
-      else: []
+  defp anchor_floating(raw, _zone), do: raw
+
+  defp wall_clock_in(%DateTime{} = read_as_utc, zone) do
+    case DateTime.from_naive(DateTime.to_naive(read_as_utc), zone) do
+      {:ok, local} -> DateTime.shift_zone!(local, @utc)
+      {:ambiguous, first, _second} -> DateTime.shift_zone!(first, @utc)
+      {:gap, _before, just_after} -> DateTime.shift_zone!(just_after, @utc)
+      {:error, _reason} -> read_as_utc
+    end
+  end
+
+  defp wall_clock_in(other, _zone), do: other
+
+  defp cancelled?(raw), do: String.upcase(raw[:status] || "") == "CANCELLED"
+
+  # See `IcsImport.Series` for how overrides change the series they belong to.
+  defp build_events(live, cancelled) do
+    live
+    |> Series.resolve(cancelled)
+    |> Enum.map(fn {raw, rule, exclusions} -> event_data(raw, rule, exclusions) end)
   end
 
   defp event_data(raw, rule, exclusions) do
     all_day = is_struct(raw.start_time, Date)
+    zone = known_zone(raw[:timezone])
 
     Map.reject(
       %{
-        summary: raw[:summary] || "",
-        description: raw[:description],
-        location: raw[:location],
+        summary: clean_text(raw[:summary]) || "",
+        description: clean_text(raw[:description]),
+        location: clean_text(raw[:location]),
         start_time: raw.start_time,
-        end_time: raw.end_time,
+        end_time: end_time(raw.start_time, raw.end_time, zone),
         all_day: all_day,
-        timezone: raw[:timezone],
+        timezone: if(all_day, do: zone, else: zone || @utc),
         recurrence_rule: rule,
         recurrence_exceptions: exclusions,
         transparency: transparency(raw[:transparency])
@@ -245,42 +310,50 @@ defmodule Tymeslot.CalendarGrid.IcsImport do
     )
   end
 
+  # PostgreSQL rejects a null byte, which is valid UTF-8 and would otherwise
+  # reach the cached copy of the event the next sync reads back.
+  defp clean_text(nil), do: nil
+  defp clean_text(text), do: String.replace(text, "\x00", "")
+
+  # The parser keeps a TZID the database does not know, resolved through the
+  # file's own VTIMEZONE; the times are already UTC, and a provider would only
+  # refuse the name.
+  defp known_zone(zone) when is_binary(zone), do: if(Timezones.valid?(zone), do: zone)
+  defp known_zone(_zone), do: nil
+
+  # A DTEND must share its DTSTART's value type, but files in the wild mix
+  # them, and every provider's builder assumes they match. An end that is not
+  # after the start falls back to the length the parser gives a bare start.
+  defp end_time(%Date{} = start, end_value, zone) do
+    case end_value && to_date(end_value, zone) do
+      %Date{} = end_date ->
+        if Date.after?(end_date, start), do: end_date, else: Date.add(start, 1)
+
+      nil ->
+        Date.add(start, 1)
+    end
+  end
+
+  defp end_time(%DateTime{} = start, end_value, zone) do
+    case end_value && to_datetime(end_value, zone) do
+      %DateTime{} = end_at -> if DateTime.after?(end_at, start), do: end_at, else: start
+      nil -> start
+    end
+  end
+
+  defp to_date(%Date{} = date, _zone), do: date
+
+  defp to_date(%DateTime{} = at, zone),
+    do: at |> DateTime.shift_zone!(zone || @utc) |> DateTime.to_date()
+
+  defp to_datetime(%DateTime{} = at, _zone), do: at
+
+  defp to_datetime(%Date{} = date, zone),
+    do: wall_clock_in(DateTime.new!(date, ~T[00:00:00]), zone || @utc)
+
   defp transparency("transparent"), do: :transparent
   defp transparency("opaque"), do: :opaque
   defp transparency(_other), do: nil
-
-  # A `RECURRENCE-ID` is written in the value type of the series' DTSTART: a
-  # date for an all-day series, otherwise a UTC instant (`Z`) or a wall clock
-  # in the series' own zone.
-  @recurrence_id ~r/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z?))?$/
-
-  defp occurrence_slot(value, series) do
-    case Regex.run(@recurrence_id, String.trim(value)) do
-      [_all, y, m, d] -> date(y, m, d)
-      [_all, y, m, d, hh, mm, ss, "Z"] -> instant([y, m, d, hh, mm, ss], "Etc/UTC")
-      [_all, y, m, d, hh, mm, ss, ""] -> instant([y, m, d, hh, mm, ss], series[:timezone])
-      _unreadable -> nil
-    end
-  end
-
-  defp date(y, m, d) do
-    case Date.new(to_int(y), to_int(m), to_int(d)) do
-      {:ok, date} -> date
-      {:error, _reason} -> nil
-    end
-  end
-
-  defp instant([y, m, d, hh, mm, ss], zone) do
-    with {:ok, naive} <-
-           NaiveDateTime.new(to_int(y), to_int(m), to_int(d), to_int(hh), to_int(mm), to_int(ss)),
-         {:ok, local} <- DateTime.from_naive(naive, zone || "Etc/UTC") do
-      DateTime.shift_zone!(local, "Etc/UTC")
-    else
-      _unresolvable -> nil
-    end
-  end
-
-  defp to_int(digits), do: String.to_integer(digits)
 
   defp count_series(events), do: Enum.count(events, &Map.has_key?(&1, :recurrence_rule))
 
@@ -306,22 +379,46 @@ defmodule Tymeslot.CalendarGrid.IcsImport do
         calendar_id: target.calendar_id
       })
 
-    case CalendarEvents.create_event(data, {integration.id, target.user_id}) do
+    case create_event(data, integration, target.user_id) do
       {:ok, _created} ->
         %{
           acc
           | created: acc.created + 1,
+            failed_in_a_row: 0,
             exclusions_dropped: acc.exclusions_dropped + dropped_exclusions(event, integration)
         }
 
       {:error, reason} ->
+        in_a_row = acc.failed_in_a_row + 1
+
         %{
           acc
           | failed: acc.failed + 1,
+            failed_in_a_row: in_a_row,
             failed_titles: sample_title(acc.failed_titles, event.summary),
-            halted: if(reason in @fatal_errors, do: reason)
+            halted: halt_reason(reason, in_a_row)
         }
     end
+  end
+
+  defp halt_reason(reason, _in_a_row) when reason in @fatal_errors, do: reason
+  defp halt_reason(_reason, in_a_row) when in_a_row >= @max_failures_in_a_row, do: :unavailable
+  defp halt_reason(_reason, _in_a_row), do: nil
+
+  # One event a provider or builder cannot cope with is one failed event, not
+  # the end of an import that has already written the events before it.
+  defp create_event(data, integration, user_id) do
+    CalendarEvents.create_event(data, {integration.id, user_id})
+  rescue
+    exception ->
+      Logger.error("ICS import could not write an event",
+        user_id: user_id,
+        integration_id: integration.id,
+        error: LogFormat.reason(exception),
+        stacktrace: LogFormat.stacktrace(__STACKTRACE__)
+      )
+
+      {:error, :crashed}
   end
 
   defp dropped_exclusions(%{recurrence_exceptions: [_one | _more]}, %{provider: "outlook"}), do: 1

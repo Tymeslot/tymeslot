@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
 
   alias Plug.Test
   alias Tymeslot.Integrations.Calendar.CreatedEvent
+  alias Tymeslot.Security.RateLimiter
 
   setup :set_mox_global
   setup :verify_on_exit!
@@ -52,13 +53,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
     lv |> element(~s([data-testid="import-ics-button"])) |> render_click()
   end
 
+  # The file is planned in an async task once uploaded; `render_async/1`
+  # waits for it.
   defp upload(lv, content, name \\ "calendar.ics") do
     lv
     |> file_input("#import-ics-upload", :ics_file, [
       %{name: name, content: content, type: "text/calendar"}
     ])
     |> render_upload(name)
+
+    render_async(lv)
   end
+
+  defp busy_message,
+    do: "An import is still running. Please wait for it to finish before importing another file."
 
   defp start_import(lv) do
     lv |> element("#import-ics-modal button", "Import") |> render_click()
@@ -109,6 +117,216 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
       html = settle(lv)
       assert html =~ "Imported 2 events."
       refute html =~ ~s(data-testid="import-ics-modal")
+    end
+
+    test "picks a file through a button that clicks the grid's input without bubbling", %{
+      conn: conn
+    } do
+      # A label for the input would forward its click to an element outside
+      # the modal, which the modal's click-away takes for a click outside it.
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_import(lv)
+
+      [_match, ref] =
+        Regex.run(~r/id="import-ics-upload".*?<input[^>]*id="([^"]+)"/s, render(lv))
+
+      button = lv |> element("#import-ics-choose") |> render()
+      assert button =~ ~s(type="button")
+      assert button =~ "&quot;dispatch&quot;"
+      assert button =~ "&quot;to&quot;:&quot;##{ref}&quot;"
+      assert button =~ "&quot;event&quot;:&quot;click&quot;"
+      refute has_element?(lv, "#import-ics-panel label[for]")
+    end
+
+    test "writes to the calendar picked in the modal", %{conn: conn, user: user} do
+      picked =
+        insert(:calendar_integration,
+          user: user,
+          calendar_list: [
+            %{id: "/cal/home/", path: "/cal/home/", name: "Home", selected: true},
+            %{id: "/cal/work/", path: "/cal/work/", name: "Work", selected: true}
+          ]
+        )
+
+      test_pid = self()
+
+      stub(Tymeslot.CalendarMock, :create_event, fn data, context ->
+        send(test_pid, {:written, data.calendar_id, context, self()})
+        {:ok, CreatedEvent.new(data.uid)}
+      end)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_import(lv)
+      upload(lv, @two_events)
+
+      lv
+      |> element(
+        ~s(#import-ics-modal button[phx-value-integration-id="#{picked.id}"][phx-value-calendar-id="/cal/work/"])
+      )
+      |> render_click()
+
+      start_import(lv)
+
+      assert_receive {:written, "/cal/work/", context, task}
+      assert context == {picked.id, user.id}
+      ref = Process.monitor(task)
+      assert_receive {:DOWN, ^ref, :process, ^task, _reason}
+    end
+
+    test "refuses a calendar that is not the user's, and writes nothing", %{conn: conn} do
+      other = insert(:calendar_integration, user: insert(:user), calendar_list: [])
+      expect(Tymeslot.CalendarMock, :create_event, 0, fn _data, _context -> :unreachable end)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_import(lv)
+      upload(lv, @two_events)
+
+      lv
+      |> element("#import-ics-modal [phx-click=select_ics_import_calendar]")
+      |> render_click(%{"integration-id" => to_string(other.id)})
+
+      start_import(lv)
+
+      assert lv |> element(~s([data-testid="import-ics-error"])) |> render() =~
+               "Invalid calendar selected"
+
+      refute has_element?(lv, ~s([data-testid="import-ics-progress"]))
+    end
+
+    test "refuses a file that is not an .ics", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_import(lv)
+
+      assert {:error, [[_ref, :not_accepted]]} =
+               lv
+               |> file_input("#import-ics-upload", :ics_file, [
+                 %{name: "notes.txt", content: "hello", type: "text/plain"}
+               ])
+               |> render_upload("notes.txt")
+
+      # The browser follows a refused file with the form's change event, which
+      # LiveViewTest leaves to the test.
+      lv |> form("#import-ics-upload") |> render_change()
+
+      assert lv |> element(~s([data-testid="import-ics-error"])) |> render() =~
+               "Only .ics calendar files can be imported."
+
+      refute has_element?(lv, ~s([data-testid="import-ics-summary"]))
+    end
+
+    test "refuses to start once the user has imported too often", %{conn: conn, user: user} do
+      expect(Tymeslot.CalendarMock, :create_event, 0, fn _data, _context -> :unreachable end)
+
+      Enum.find(
+        Stream.repeatedly(fn -> RateLimiter.check_calendar_ics_import_rate_limit(user.id) end),
+        &match?({:error, :rate_limited, _message}, &1)
+      )
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_import(lv)
+      upload(lv, @two_events)
+      start_import(lv)
+
+      assert lv |> element(~s([data-testid="import-ics-error"])) |> render() =~
+               "Too many imports."
+
+      refute has_element?(lv, ~s([data-testid="import-ics-progress"]))
+    end
+
+    test "drops a file still uploading when the modal is cancelled", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_import(lv)
+
+      lv
+      |> file_input("#import-ics-upload", :ics_file, [
+        %{name: "calendar.ics", content: @two_events, type: "text/calendar"}
+      ])
+      |> render_upload("calendar.ics", 50)
+
+      assert has_element?(lv, "#import-ics-panel", "Reading the file...")
+
+      lv |> element("#import-ics-modal button", "Cancel") |> render_click()
+      open_import(lv)
+
+      refute has_element?(lv, "#import-ics-panel", "Reading the file...")
+    end
+
+    test "reports an import that fails part-way and takes the next file", %{conn: conn} do
+      test_pid = self()
+
+      stub(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
+        send(test_pid, {:task, self()})
+        exit(:timeout)
+      end)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_import(lv)
+      upload(lv, @two_events)
+      start_import(lv)
+
+      assert_receive {:task, task}
+      ref = Process.monitor(task)
+      assert_receive {:DOWN, ^ref, :process, ^task, _reason}
+
+      html = settle(lv)
+      assert html =~ "The import could not be finished."
+      refute html =~ ~s(data-testid="import-ics-progress")
+
+      upload(lv, @two_events, "again.ics")
+
+      assert lv |> element(~s([data-testid="import-ics-summary"])) |> render() =~
+               "Found 2 events."
+    end
+
+    test "says the calendar is not responding when its circuit breaker is open", %{conn: conn} do
+      test_pid = self()
+
+      stub(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
+        send(test_pid, {:task, self()})
+        {:error, :circuit_open}
+      end)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_import(lv)
+      upload(lv, @two_events)
+      start_import(lv)
+
+      assert_receive {:task, task}
+      ref = Process.monitor(task)
+      assert_receive {:DOWN, ^ref, :process, ^task, _reason}
+
+      assert settle(lv) =~ "The import stopped because your calendar is not responding."
+    end
+
+    test "turns a file away while an import started elsewhere runs", %{conn: conn} do
+      test_pid = self()
+
+      stub(Tymeslot.CalendarMock, :create_event, fn data, _context ->
+        send(test_pid, {:writing, self()})
+
+        receive do
+          :continue -> {:ok, CreatedEvent.new(data.uid)}
+        end
+      end)
+
+      {:ok, first, _html} = live(conn, ~p"/dashboard")
+      open_import(first)
+      upload(first, @two_events)
+      start_import(first)
+      assert_receive {:writing, task}
+
+      # Another tab, or this one after leaving the calendar and coming back.
+      {:ok, second, _html} = live(conn, ~p"/dashboard")
+      upload(second, @two_events, "second.ics")
+
+      assert second |> element(~s([data-testid="import-ics-error"])) |> render() =~ busy_message()
+      refute has_element?(second, ~s([data-testid="import-ics-summary"]))
+
+      ref = Process.monitor(task)
+      send(task, :continue)
+      assert_receive {:writing, ^task}
+      send(task, :continue)
+      assert_receive {:DOWN, ^ref, :process, ^task, _reason}
     end
 
     test "makes the whole calendar a drop target for the import's upload", %{conn: conn} do

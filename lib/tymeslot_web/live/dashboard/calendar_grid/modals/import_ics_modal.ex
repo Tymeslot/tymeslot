@@ -67,10 +67,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ImportIcsModal do
 
         <div :if={@targets != [] and not @running} id="import-ics-panel" class="space-y-4">
           <%!-- The file input itself is the calendar grid's, so a file dropped
-                anywhere on the calendar lands in the same upload. --%>
-          <label
-            for={@upload.ref}
-            class="flex flex-col items-center justify-center gap-2 px-4 py-6 border-2 border-dashed border-tymeslot-200 rounded-token-lg cursor-pointer hover:border-turquoise-300 hover:bg-tymeslot-50 transition-colors"
+                anywhere on the calendar lands in the same upload. This button
+                opens it with a non-bubbling click (LiveView's own handling of
+                a dispatched click on a file input): a label for it would
+                forward a click from outside the modal, which closes it. --%>
+          <button
+            type="button"
+            id="import-ics-choose"
+            phx-click={JS.dispatch("click", to: "##{@upload.ref}")}
+            class="w-full flex flex-col items-center justify-center gap-2 px-4 py-6 border-2 border-dashed border-tymeslot-200 rounded-token-lg cursor-pointer hover:border-turquoise-300 hover:bg-tymeslot-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-turquoise-500 transition-colors"
           >
             <.icon name="hero-arrow-up-tray" class="w-6 h-6 text-tymeslot-400" />
             <span class="text-token-sm font-semibold text-tymeslot-700">
@@ -84,10 +89,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ImportIcsModal do
                 "Exported from Google Calendar, Outlook, Apple Calendar or any other calendar app."
               )}
             </span>
-          </label>
+          </button>
 
           <div
-            :if={@upload.entries != []}
+            :if={@upload.entries != [] or @ics_import.reading}
             class="flex items-center gap-2 text-token-sm text-tymeslot-600"
           >
             <.spinner />
