@@ -54,6 +54,43 @@ defmodule Tymeslot.Repo.Migrations.EncryptAndHashLinkTokensTest do
     end
   end
 
+  test "rolling back restores each plain token from its encrypted value, over a stale copy" do
+    {:ok, profile} = FreeBusy.enable_feed(insert(:profile))
+    poll = insert(:poll)
+
+    # A plain copy left behind by something other than the application, which
+    # empties it whenever the token changes: the encrypted token is current.
+    Repo.query!("UPDATE profiles SET freebusy_token = 'stale' WHERE id = $1", [profile.id])
+    Repo.query!("UPDATE polls SET token = 'stale' WHERE id = $1", [UUID.dump!(poll.id)])
+
+    MigrationRunner.down!(@version)
+
+    assert plain("profiles", profile.id, "freebusy_token") == profile.freebusy_token
+    assert plain("polls", poll.id, "token") == poll.token
+  end
+
+  test "rolling back leaves a disabled feed without a token" do
+    {:ok, profile} = FreeBusy.enable_feed(insert(:profile))
+
+    Repo.query!("UPDATE profiles SET freebusy_token = $1 WHERE id = $2", [
+      profile.freebusy_token,
+      profile.id
+    ])
+
+    {:ok, _profile} = FreeBusy.disable_feed(profile)
+
+    MigrationRunner.down!(@version)
+
+    assert plain("profiles", profile.id, "freebusy_token") == nil
+  end
+
+  defp plain(table, id, column) do
+    %{rows: [[value]]} =
+      Repo.query!("SELECT #{column} FROM #{table} WHERE id = $1", [dump_id(id)])
+
+    value
+  end
+
   defp dump_id(id) when is_integer(id), do: id
   defp dump_id(id), do: UUID.dump!(id)
 end

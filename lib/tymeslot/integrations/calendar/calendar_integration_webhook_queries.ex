@@ -235,7 +235,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries do
           {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def update_push_channel(integration, attrs) do
     integration
-    |> Changeset.change(Map.put(attrs, :last_external_sync_at, DateTime.utc_now(:second)))
+    |> CalendarIntegrationSchema.bookkeeping_changeset(
+      Map.put(attrs, :last_external_sync_at, DateTime.utc_now(:second))
+    )
     |> Repo.update()
   end
 
@@ -244,7 +246,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries do
           {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def update_graph_subscription(integration, attrs) do
     integration
-    |> Changeset.change(Map.put(attrs, :last_external_sync_at, DateTime.utc_now(:second)))
+    |> CalendarIntegrationSchema.bookkeeping_changeset(
+      Map.put(attrs, :last_external_sync_at, DateTime.utc_now(:second))
+    )
     |> Repo.update()
   end
 

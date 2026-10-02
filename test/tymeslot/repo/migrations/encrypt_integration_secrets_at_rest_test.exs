@@ -68,6 +68,47 @@ defmodule Tymeslot.Repo.Migrations.EncryptIntegrationSecretsAtRestTest do
     assert key(jitsi) == "https://meet.example.com"
   end
 
+  test "rolling back restores each plain column from its encrypted value, over a stale copy" do
+    webhook = insert(:webhook, url: "https://hooks.example.com/current")
+    unreadable = insert(:webhook, url: "https://hooks.example.com/unreadable")
+
+    video =
+      insert(:video_integration,
+        provider: "custom",
+        custom_meeting_url: "https://zoom.us/j/1?pwd=current"
+      )
+
+    # Plain copies left behind by something other than the application, which
+    # empties them on every change: the encrypted value is the current one.
+    for {table, id, column} <- [
+          {"webhooks", webhook.id, "url"},
+          {"webhooks", unreadable.id, "url"},
+          {"video_integrations", video.id, "custom_meeting_url"}
+        ] do
+      Repo.query!("UPDATE #{table} SET #{column} = 'stale' WHERE id = $1", [id])
+    end
+
+    Repo.query!("UPDATE webhooks SET url_encrypted = $1 WHERE id = $2", [
+      "not ciphertext",
+      unreadable.id
+    ])
+
+    MigrationRunner.down!(@version)
+
+    assert plain("webhooks", webhook.id, "url") == "https://hooks.example.com/current"
+
+    assert plain("video_integrations", video.id, "custom_meeting_url") ==
+             "https://zoom.us/j/1?pwd=current"
+
+    # A value no key opens is skipped rather than written as garbage.
+    assert plain("webhooks", unreadable.id, "url") == "stale"
+  end
+
+  defp plain(table, id, column) do
+    %{rows: [[value]]} = Repo.query!("SELECT #{column} FROM #{table} WHERE id = $1", [id])
+    value
+  end
+
   defp stored(table, id, column) do
     %{rows: [[plain, ciphertext]]} =
       Repo.query!("SELECT #{column}, #{column}_encrypted FROM #{table} WHERE id = $1", [id])
