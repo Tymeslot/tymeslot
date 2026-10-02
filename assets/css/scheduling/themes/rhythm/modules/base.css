@@ -61,6 +61,28 @@ body.rhythm-theme {
   position: relative;
 }
 
+/* A demo page's theme switcher (shared/components/preview-notice.css) sits
+   above the box at every width, so the row becomes a column, centred as
+   the box alone is. The switcher is no wider than the box, which keeps it
+   out of the lane beside the box where the language switcher floats from
+   1024px. As in the column below 1024px (language-switcher.css), the box
+   keeps its content height and the content area scrolls. */
+.video-background-theme.theme-grid .content-area:has(> .demo-theme-switcher) {
+  flex-direction: column;
+  justify-content: flex-start;  /* fallback: top-align */
+  justify-content: safe center;
+  align-items: center;
+}
+
+.video-background-theme.theme-grid .content-area > .demo-theme-switcher {
+  flex-shrink: 0;
+  max-width: min(520px, calc(100% - 2 * var(--space-md)));
+}
+
+.video-background-theme.theme-grid .content-area:has(> .demo-theme-switcher) > .scheduling-box {
+  flex-shrink: 0;
+}
+
 /* Scheduling Box */
 .scheduling-box {
   container-type: inline-size;
@@ -333,6 +355,10 @@ body.rhythm-theme {
 
   .video-background-theme.theme-grid .content-area {
     padding: 0;
+  }
+
+  .video-background-theme.theme-grid .content-area > .demo-theme-switcher {
+    margin-top: var(--space-sm);
   }
 
   .scheduling-box {

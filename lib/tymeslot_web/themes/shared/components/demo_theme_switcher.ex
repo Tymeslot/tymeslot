@@ -2,7 +2,12 @@ defmodule TymeslotWeb.Themes.Shared.Components.DemoThemeSwitcher do
   @moduledoc """
   Lets a visitor of a demo booking page see it in another theme: one link
   per theme the pickers offer (`ThemeInfo.theme_options/0`), each to the
-  current step's path with `?theme=<id>`, the theme showing marked current.
+  path of the route the page was mounted on
+  (`PathHandlers.current_base_path/1`) with `?theme=<id>`, the theme
+  showing marked current. The steps after the overview are state inside
+  that one LiveView, so a switch from one of them reopens the route's own
+  step. A switch keeps no other query parameter: the locale persists
+  through the session, and UTM parameters are not carried.
 
   `Shared.SchedulingPage` renders it above the step of every theme, only
   when the page is a demo (`:demo_theme_switcher`, set at mount from
@@ -15,8 +20,9 @@ defmodule TymeslotWeb.Themes.Shared.Components.DemoThemeSwitcher do
   (`PathHandlers.demo_theme_param/1`).
 
   The same markup on every theme, styled once in
-  `shared/components/preview-notice.css` from the chrome tokens every theme
-  inherits (`shared/tokens.css`).
+  `shared/components/preview-notice.css` from the role tokens every theme
+  defines (`shared/tokens.css`). Paper's and Folio's column puts it above
+  the step as it is; Quill and Rhythm place it in their own `base.css`.
   """
 
   use Phoenix.Component
@@ -26,7 +32,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.DemoThemeSwitcher do
   alias TymeslotWeb.Themes.Shared.PathHandlers
 
   attr :theme_id, :string, required: true, doc: "the theme the page shows"
-  attr :base_path, :string, required: true, doc: "the current step's path, without a query"
+  attr :base_path, :string, required: true, doc: "the mounted route's path, without a query"
   attr :options, :list, default: nil, doc: "`{name, id}` pairs; the pickers' themes when nil"
 
   @doc "Renders nothing when there is no other theme to offer."

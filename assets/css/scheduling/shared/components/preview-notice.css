@@ -39,20 +39,31 @@
   flex-shrink: 0;
 }
 
-/* The demo's theme switcher: the same pill on every theme, on the chrome
-   tokens (shared/tokens.css) that read over any canvas, photo or video. */
+/* The demo's theme switcher: the same pill on every theme, on the theme's
+   own roles so it follows its palette and colour mode: --surface-2 over an
+   opaque --theme-canvas, so it reads over a photo or video as well as over
+   a plain canvas, with --ink-1 on it (10:1 or more on every shipped
+   palette), --surface-3 under the hovered link and the filled pair
+   --theme-primary-solid / --theme-on-primary (4.5:1 by contract) for the
+   theme showing. The side gutter keeps it off the viewport's edges where
+   the content area has no side padding. Paper's and Folio's column puts
+   it above the step as it is; Quill and Rhythm place it in their own
+   base.css. */
 .demo-theme-switcher {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: var(--space-2xs);
-  max-width: max-content;
+  box-sizing: border-box;
+  width: fit-content;
+  max-width: calc(100% - 2 * var(--space-md));
   margin: 0 auto var(--space-sm);
-  padding: var(--space-3xs) var(--space-xs);
+  padding: var(--space-xs);
+  border: var(--border-width-thin) solid var(--line-1);
   border-radius: var(--radius-control);
-  background: var(--chrome-surface);
-  color: var(--chrome-ink);
+  background: linear-gradient(var(--surface-2), var(--surface-2)) var(--theme-canvas);
+  color: var(--ink-1);
   font-family: var(--theme-font-family);
   font-size: var(--theme-font-size-xs);
   line-height: var(--theme-line-height-snug);
@@ -65,6 +76,7 @@
 .demo-theme-switcher__list {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: var(--space-3xs);
   margin: 0;
   padding: 0;
@@ -82,17 +94,20 @@
   transition: background var(--transition-fast);
 }
 
-.demo-theme-switcher__link:hover {
-  background: var(--chrome-surface-hover);
-  border-color: var(--chrome-line-hover);
+/* Not on the current link, which keeps its filled pair on hover. */
+.demo-theme-switcher__link:not(.demo-theme-switcher__link--current):hover {
+  background: var(--surface-3);
+  border-color: var(--line-2);
 }
 
+/* The ink on the switcher's own surface, which the switcher's padding
+   leaves room for: visible round the filled current link too. */
 .demo-theme-switcher__link:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
+  outline: var(--border-width-thick) solid var(--ink-1);
+  outline-offset: 2px;
 }
 
-.demo-theme-switcher__link--current {
+.demo-theme-switcher__link.demo-theme-switcher__link--current {
   background: var(--theme-primary-solid);
   color: var(--theme-on-primary);
   font-weight: var(--font-weight-semibold);

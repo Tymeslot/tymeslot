@@ -129,6 +129,11 @@
   --space-xl: clamp(1.25rem, 2.4vw, 1.5rem);     /* 20-24px */
   --space-2xl: clamp(1.5rem, 3.0vw, 2rem);       /* 24-32px */
   --space-3xl: clamp(2rem, 3.5vw, 2.5rem);       /* 32-40px */
+  /* The height the corner language switcher takes from the top of the
+     page from 641px: the wrapper's top-6 (1.5rem), its button (py-2 round
+     a text-sm line, about 2.4rem) and a gap. A demo page's theme switcher
+     starts below it (language-switcher.css). */
+  --quill-language-clearance: 4.5rem;
 
   /* Transition Speeds */
   --transition-smooth: 0.3s ease;
