@@ -50,6 +50,32 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
       assert html =~ "No polls yet"
     end
 
+    test "with no polls, the empty state carries the only New poll button", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+
+      assert has_element?(view, "[data-testid='polls-empty'] button", "New poll")
+
+      assert view
+             |> render()
+             |> LazyHTML.from_fragment()
+             |> LazyHTML.query("button[phx-click='new_poll']")
+             |> Enum.count() == 1
+
+      view |> element("[data-testid='polls-empty'] button", "New poll") |> render_click()
+
+      assert has_element?(view, "form[phx-submit='create_poll']")
+      refute has_element?(view, "[data-testid='polls-empty']")
+    end
+
+    test "with polls listed, New poll sits above the list", %{conn: conn, user: user} do
+      insert(:poll, user: user, title: "Team sync", status: :open)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+
+      refute has_element?(view, "[data-testid='polls-empty']")
+      assert has_element?(view, "#polls-container > div > button", "New poll")
+    end
+
     test "does not list polls belonging to other users", %{conn: conn} do
       other = insert(:user)
       insert(:poll, user: other, title: "Someone else's poll")

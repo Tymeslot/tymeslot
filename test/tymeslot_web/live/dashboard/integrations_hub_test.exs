@@ -64,6 +64,28 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubTest do
       assert html =~ "Connect a calendar"
       assert html =~ ~s(phx-click="show_picker")
     end
+
+    test "with nothing connected, offers the connect button once, in the empty state",
+         %{conn: conn} do
+      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+
+      assert buttons_labelled(html, "Connect a calendar") == 1
+
+      assert has_element?(
+               view,
+               "[data-testid='calendars-empty'] button[phx-click='show_picker']",
+               "Connect a calendar"
+             )
+    end
+
+    test "once connected, offers the connect button in the header", %{conn: conn, user: user} do
+      insert(:calendar_integration, user: user, provider: "google", is_active: true)
+
+      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+
+      assert buttons_labelled(html, "Connect a calendar") == 1
+      refute has_element?(view, "[data-testid='calendars-empty']")
+    end
   end
 
   describe "attention banner and tab summary" do
@@ -215,5 +237,12 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubTest do
                "button[phx-value-id='#{integration.id}'][phx-target='#edit-video-modal']"
              )
     end
+  end
+
+  defp buttons_labelled(html, label) do
+    html
+    |> LazyHTML.from_fragment()
+    |> LazyHTML.query("button")
+    |> Enum.count(&(LazyHTML.text(&1) =~ label))
   end
 end

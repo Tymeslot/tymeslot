@@ -31,41 +31,27 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
           icon="hero-video-camera"
           title={dgettext("dashboard_video", "Video Integration")}
         />
-        <button
-          phx-click="show_picker"
-          phx-target={@myself}
-          class="inline-flex items-center gap-1.5 rounded-token-lg bg-turquoise-500 px-4 py-2 text-token-sm font-semibold text-white transition-colors hover:bg-turquoise-600 shrink-0"
-        >
-          <.icon name="hero-plus" class="w-4 h-4" />
-          {dgettext("dashboard_video", "Connect a video provider")}
-        </button>
+        <%!-- With nothing connected, the empty state below carries the action. --%>
+        <.connect_button :if={@integrations != []} myself={@myself} />
       </div>
 
       <div>
         <%!-- Connected Video Providers Section --%>
         <%= if @integrations == [] do %>
-          <div class="card-glass p-10 text-center">
-            <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-token-2xl bg-turquoise-50 text-turquoise-500">
-              <.icon name="hero-video-camera" class="h-7 w-7" />
-            </div>
-            <h3 class="text-token-lg font-semibold text-tymeslot-800">
-              {dgettext("dashboard_video", "No video providers connected yet")}
-            </h3>
-            <p class="mx-auto mt-1 max-w-md text-token-sm text-tymeslot-500">
-              {dgettext(
+          <.empty_state
+            icon="hero-video-camera"
+            size={:lg}
+            data-testid="video-empty"
+            title={dgettext("dashboard_video", "No video providers connected yet")}
+            description={
+              dgettext(
                 "dashboard_video",
                 "Connect one so online meetings get a video link added automatically when they're booked."
-              )}
-            </p>
-            <button
-              phx-click="show_picker"
-              phx-target={@myself}
-              class="mt-5 inline-flex items-center gap-1.5 rounded-token-lg bg-turquoise-500 px-4 py-2 text-token-sm font-semibold text-white transition-colors hover:bg-turquoise-600"
-            >
-              <.icon name="hero-plus" class="w-4 h-4" />
-              {dgettext("dashboard_video", "Connect a video provider")}
-            </button>
-          </div>
+              )
+            }
+          >
+            <:action><.connect_button myself={@myself} /></:action>
+          </.empty_state>
         <% else %>
           <% {active_integrations, inactive_integrations} =
             Enum.split_with(@integrations, & &1.is_active) %>
@@ -198,6 +184,21 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
         current_user={@current_user}
       />
     </div>
+    """
+  end
+
+  attr :myself, :any, required: true
+
+  defp connect_button(assigns) do
+    ~H"""
+    <button
+      phx-click="show_picker"
+      phx-target={@myself}
+      class="inline-flex items-center gap-1.5 rounded-token-lg bg-turquoise-500 px-4 py-2 text-token-sm font-semibold text-white transition-colors hover:bg-turquoise-600 shrink-0"
+    >
+      <.icon name="hero-plus" class="w-4 h-4" />
+      {dgettext("dashboard_video", "Connect a video provider")}
+    </button>
     """
   end
 end

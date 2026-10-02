@@ -99,7 +99,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
       </p>
 
       <div id="polls-container" class="space-y-6">
-        <div :if={!@show_form} class="flex justify-end">
+        <%!-- With no polls yet, the empty state below carries the action. --%>
+        <div :if={!@show_form and @polls != []} class="flex justify-end">
           <button
             type="button"
             phx-click="new_poll"
@@ -149,6 +150,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
         />
 
         <PollList.poll_list
+          :if={!@show_form or @polls != []}
           polls={@polls}
           profile={@profile}
           integration_status={@integration_status}

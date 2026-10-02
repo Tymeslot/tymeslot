@@ -27,18 +27,30 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
   @spec poll_list(map()) :: Phoenix.LiveView.Rendered.t()
   def poll_list(%{polls: []} = assigns) do
     ~H"""
-    <div class="card-glass py-12 px-6 text-center">
-      <Icons.icon name="hero-hand-raised" class="w-10 h-10 mx-auto mb-3 text-tymeslot-300" />
-      <p class="text-token-base font-medium text-tymeslot-700">
-        {dgettext("dashboard_common", "No polls yet")}
-      </p>
-      <p class="mt-1 text-token-sm text-tymeslot-500">
-        {dgettext(
+    <Feedback.empty_state
+      icon="hero-hand-raised"
+      size={:lg}
+      data-testid="polls-empty"
+      title={dgettext("dashboard_common", "No polls yet")}
+      description={
+        dgettext(
           "dashboard_common",
           "Create a poll to propose a few times and let your guests vote."
-        )}
-      </p>
-    </div>
+        )
+      }
+    >
+      <:action>
+        <button
+          type="button"
+          phx-click="new_poll"
+          phx-target={@myself}
+          class="btn btn-primary inline-flex items-center gap-1"
+        >
+          <Icons.icon name="hero-plus" class="w-4 h-4" />
+          {dgettext("dashboard_common", "New poll")}
+        </button>
+      </:action>
+    </Feedback.empty_state>
     """
   end
 

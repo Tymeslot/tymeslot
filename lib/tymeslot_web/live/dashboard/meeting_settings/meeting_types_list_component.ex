@@ -23,50 +23,29 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
         <h2 class="text-token-xl font-semibold text-tymeslot-800">
           {dgettext("dashboard_meeting_types", "Meeting Types")}
         </h2>
-        <%= unless @show_add_form || @editing_type do %>
-          <button
-            phx-click="toggle_add_form"
-            phx-target={@parent_myself}
-            class="btn btn-primary btn-sm"
-          >
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            {dgettext("dashboard_meeting_types", "Add Meeting Type")}
-          </button>
-        <% end %>
+        <%!-- With no meeting types yet, the empty state below carries the action. --%>
+        <.add_meeting_type_button
+          :if={!@show_add_form and !@editing_type and @meeting_types != []}
+          parent_myself={@parent_myself}
+        />
       </div>
 
       <%= if @meeting_types == [] && !@show_add_form do %>
-        <div class="card-glass text-center py-8">
-          <svg
-            class="w-12 h-12 mx-auto text-tymeslot-400 mb-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <p class="text-tymeslot-600">
-            {dgettext("dashboard_meeting_types", "No meeting types configured yet")}
-          </p>
-          <p class="text-token-sm text-tymeslot-500 mt-1">
-            {dgettext(
+        <.empty_state
+          icon="hero-clock"
+          size={:lg}
+          title={dgettext("dashboard_meeting_types", "No meeting types configured yet")}
+          description={
+            dgettext(
               "dashboard_meeting_types",
               "Create meeting types to offer different appointment options"
-            )}
-          </p>
-        </div>
+            )
+          }
+        >
+          <:action :if={!@editing_type}>
+            <.add_meeting_type_button parent_myself={@parent_myself} />
+          </:action>
+        </.empty_state>
       <% else %>
         <div
           id="meeting-types-sortable-list"
@@ -87,6 +66,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
         </div>
       <% end %>
     </div>
+    """
+  end
+
+  attr :parent_myself, :any, required: true
+
+  defp add_meeting_type_button(assigns) do
+    ~H"""
+    <button phx-click="toggle_add_form" phx-target={@parent_myself} class="btn btn-primary btn-sm">
+      <.icon name="hero-plus" class="w-4 h-4 mr-2" />
+      {dgettext("dashboard_meeting_types", "Add Meeting Type")}
+    </button>
     """
   end
 end

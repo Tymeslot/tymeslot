@@ -371,6 +371,7 @@ msgid "Meeting type (optional)"
 msgstr "Tipo di riunione (facoltativo)"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
 #: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "New poll"
