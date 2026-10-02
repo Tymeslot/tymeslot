@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   alias Phoenix.LiveView.JS
   alias Tymeslot.Slack
   alias Tymeslot.Telegram
+  alias TymeslotWeb.Dashboard.Automation.ChatDeliveriesModal
   alias TymeslotWeb.Dashboard.Automation.Defaults
   alias TymeslotWeb.Dashboard.Automation.DeleteSlackModal
   alias TymeslotWeb.Dashboard.Automation.DeleteTelegramModal
@@ -26,12 +27,10 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
   alias TymeslotWeb.Dashboard.Automation.RegenerateTokenModal
   alias TymeslotWeb.Dashboard.Automation.Slack.FormHandlers, as: SlackFormHandlers
-  alias TymeslotWeb.Dashboard.Automation.SlackDeliveriesModal
   alias TymeslotWeb.Dashboard.Automation.SlackEventHandlers
   alias TymeslotWeb.Dashboard.Automation.SlackFormComponent
   alias TymeslotWeb.Dashboard.Automation.SlackTab
   alias TymeslotWeb.Dashboard.Automation.TabNav
-  alias TymeslotWeb.Dashboard.Automation.TelegramDeliveriesModal
   alias TymeslotWeb.Dashboard.Automation.TelegramEventHandlers
   alias TymeslotWeb.Dashboard.Automation.TelegramFormComponent
   alias TymeslotWeb.Dashboard.Automation.TelegramTab
@@ -263,7 +262,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
 
       <%!-- Telegram Deliveries Modal --%>
       <%= if @show_telegram_deliveries_modal && @selected_telegram do %>
-        <TelegramDeliveriesModal.telegram_deliveries_modal
+        <ChatDeliveriesModal.chat_deliveries_modal
           id="telegram-deliveries-modal"
           show={@show_telegram_deliveries_modal}
           integration={@selected_telegram}
@@ -283,7 +282,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
 
       <%!-- Slack Deliveries Modal --%>
       <%= if @show_slack_deliveries_modal && @selected_slack do %>
-        <SlackDeliveriesModal.slack_deliveries_modal
+        <ChatDeliveriesModal.chat_deliveries_modal
           id="slack-deliveries-modal"
           show={@show_slack_deliveries_modal}
           integration={@selected_slack}

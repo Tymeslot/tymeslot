@@ -1,6 +1,9 @@
-defmodule TymeslotWeb.Dashboard.Automation.TelegramDeliveriesModal do
+defmodule TymeslotWeb.Dashboard.Automation.ChatDeliveriesModal do
   @moduledoc """
-  Delivery history of one Telegram integration.
+  Delivery history of one chat integration, Slack or Telegram.
+
+  The two render identically; the caller passes the integration, the modal
+  `id` and the `on_close` event that set them apart.
   """
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
@@ -16,8 +19,8 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramDeliveriesModal do
   attr :time_format, :string, required: true
   attr :on_close, :any, required: true
 
-  @spec telegram_deliveries_modal(map()) :: Phoenix.LiveView.Rendered.t()
-  def telegram_deliveries_modal(assigns) do
+  @spec chat_deliveries_modal(map()) :: Phoenix.LiveView.Rendered.t()
+  def chat_deliveries_modal(assigns) do
     ~H"""
     <CoreComponents.modal id={@id} show={@show} on_cancel={@on_close} size={:large}>
       <:header>
