@@ -100,9 +100,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
           Row 2: tools. Use flex-wrap (not overflow-x-auto) so the toolbar
           reflows on narrow screens. overflow-x-auto forces overflow-y to compute
           to auto, which clips the dropdown panels (calendars, search) that
-          extend below the row via `top-full`.
+          extend below the row via `top-full`. The tighter gap on a phone, and
+          the view menu dropping its icon there, keep the row to one line at
+          390px.
         --%>
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <div class="md:hidden">
             <AvailabilityHelpers.timezone_display
               timezone_display={@timezone_display}
@@ -210,7 +212,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
         aria-label={dgettext("dashboard_calendar", "Switch view")}
       >
         <:trigger>
-          <.icon name="hero-calendar-days" class="w-4 h-4" />
+          <.icon name="hero-calendar-days" class="hidden sm:block w-4 h-4" />
           <span class="text-token-xs font-medium">{Helpers.view_label(@view)}</span>
           <.icon name="hero-chevron-down" class="w-3 h-3" />
         </:trigger>
