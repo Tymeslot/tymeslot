@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
-  import TymeslotWeb.Components.CoreComponents, only: [spinner: 1]
+  import TymeslotWeb.Components.CoreComponents, only: [pill: 1, spinner: 1]
   import TymeslotWeb.Components.Icons.ProviderIcon
 
   @doc """
@@ -169,11 +169,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                     <span class="text-token-sm font-medium truncate max-w-full">
                       {integration.name}
                     </span>
-                    <%= if not integration.is_active do %>
-                      <span class="text-token-2xs font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full leading-tight">
-                        {dgettext("dashboard_meeting_form", "Reconnect")}
-                      </span>
-                    <% end %>
+                    <.pill :if={not integration.is_active} tone={:warning}>
+                      {dgettext("dashboard_meeting_form", "Reconnect")}
+                    </.pill>
                   </div>
                 </button>
               <% end %>

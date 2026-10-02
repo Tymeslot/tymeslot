@@ -41,7 +41,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         title={dgettext("dashboard_embed", "Inline Embed")}
         description={dgettext("dashboard_embed", "Embed directly into your webpage")}
         badge={dgettext("dashboard_embed", "Recommended")}
-        badge_class="bg-turquoise-100 text-turquoise-700"
+        badge_tone={:brand}
         myself={@myself}
       >
         <:preview>
@@ -84,7 +84,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         title={dgettext("dashboard_embed", "Popup Modal")}
         description={dgettext("dashboard_embed", "Trigger a modal overlay with a button")}
         badge={dgettext("dashboard_embed", "Popular")}
-        badge_class="bg-blue-100 text-blue-700"
+        badge_tone={:info}
         myself={@myself}
       >
         <:preview>
@@ -123,7 +123,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         title={dgettext("dashboard_embed", "Direct Link")}
         description={dgettext("dashboard_embed", "Simple link to your booking page")}
         badge={dgettext("dashboard_embed", "Easiest")}
-        badge_class="bg-tymeslot-100 text-tymeslot-700"
+        badge_tone={:neutral}
         myself={@myself}
       >
         <:preview>
@@ -162,7 +162,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         title={dgettext("dashboard_embed", "Floating Button")}
         description={dgettext("dashboard_embed", "Fixed button in corner of page")}
         badge={dgettext("dashboard_embed", "Pro")}
-        badge_class="bg-purple-100 text-purple-700"
+        badge_tone={:brand}
         myself={@myself}
       >
         <:preview>
@@ -382,7 +382,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
   attr :title, :string, required: true
   attr :description, :string, required: true
   attr :badge, :string, default: nil
-  attr :badge_class, :string, default: nil
+  attr :badge_tone, :atom, default: :neutral
   attr :myself, :any, required: true
 
   defp embed_option_card(assigns) do
@@ -409,12 +409,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
             <h3 class="text-token-xl font-bold text-tymeslot-900">{@title}</h3>
             <p class="text-token-sm text-tymeslot-600 mt-1">{@description}</p>
           </div>
-          <span
-            :if={@badge}
-            class={["px-3 py-1 text-token-xs font-semibold rounded-full", @badge_class]}
-          >
-            {@badge}
-          </span>
+          <.pill :if={@badge} tone={@badge_tone} size={:sm}>{@badge}</.pill>
         </div>
 
         <%!-- Preview --%>

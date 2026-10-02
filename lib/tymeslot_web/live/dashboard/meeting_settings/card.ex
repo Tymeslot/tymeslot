@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.LocationOption
+  alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Components.UI.StatusSwitch
@@ -51,9 +52,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             <h3 class="text-token-base font-medium text-tymeslot-800 truncate">
               {@type.name}
             </h3>
-            <span
+            <Feedback.pill
               :if={@type.is_private}
-              class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-token-full bg-tymeslot-100 text-tymeslot-600 text-token-xs font-medium"
+              icon="hero-eye-slash-mini"
               title={
                 dgettext(
                   "dashboard_meeting_types",
@@ -61,11 +62,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
                 )
               }
             >
-              <Icons.icon name="hero-eye-slash-mini" class="w-3 h-3" />{dgettext(
-                "dashboard_meeting_types",
-                "Unlisted"
-              )}
-            </span>
+              {dgettext("dashboard_meeting_types", "Unlisted")}
+            </Feedback.pill>
           </div>
           <p
             :if={described?(@type)}
@@ -183,13 +181,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
       assign(assigns, :warning, target_calendar_warning_text(assigns.type))
 
     ~H"""
-    <span
+    <Feedback.pill
       :if={@warning}
-      class="ml-1 shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-token-full bg-amber-50 text-amber-700 text-token-2xs font-semibold"
+      tone={:warning}
+      icon="hero-exclamation-triangle-micro"
+      class="ml-1"
       title={@warning.title}
     >
-      <Icons.icon name="hero-exclamation-triangle-micro" class="w-3 h-3" />{@warning.label}
-    </span>
+      {@warning.label}
+    </Feedback.pill>
     """
   end
 
