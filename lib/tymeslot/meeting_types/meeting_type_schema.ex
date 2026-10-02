@@ -218,7 +218,15 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   for a venue being deleted. The remaining venues keep their order, and
   every other location, and every other field of the rewritten ones, is
   kept exactly as stored. The meeting type's own validation does not run:
-  nothing it checks changes, and a location listing no venue is valid.
+  nothing else it checks changes, and a location listing no venue is valid
+  for a one-to-one type.
+
+  A group type is the exception: its address is fixed in advance
+  (`Tymeslot.MeetingTypes.GroupLocationRule`), so a location whose only
+  venue this is would be left invalid, and the changeset carries an error
+  on `:locations` instead. Only the violation this rewrite would create is
+  checked, so a venue can still be taken off a group type that lists it
+  among several.
   """
   @spec without_venue_changeset(t(), integer()) :: Ecto.Changeset.t()
   def without_venue_changeset(%__MODULE__{locations: locations} = meeting_type, venue_id)
@@ -232,9 +240,23 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           location
       end)
 
-    meeting_type
-    |> change()
-    |> put_embed(:locations, locations)
+    changeset = meeting_type |> change() |> put_embed(:locations, locations)
+
+    if group?(meeting_type) and left_without_venue?(meeting_type, venue_id),
+      do: add_error(changeset, :locations, group_location_message(:address_after_booking)),
+      else: changeset
+  end
+
+  @doc """
+  Whether taking `venue_id` off the meeting type's locations would leave one
+  of them in person with no venue: a location whose only venue it is.
+  """
+  @spec left_without_venue?(t(), integer()) :: boolean()
+  def left_without_venue?(%__MODULE__{locations: locations}, venue_id) do
+    Enum.any?(locations, fn
+      %LocationOption{kind: "in_person", venue_ids: [^venue_id]} -> true
+      _location -> false
+    end)
   end
 
   @doc """

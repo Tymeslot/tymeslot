@@ -80,25 +80,42 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   end
 
   @doc """
-  Refuses a timing change to a calendar event that a group booking sits on.
+  Refuses a change to a calendar event that a group meeting with live seats
+  sits on: moving or resizing it, changing its recurrence, deleting it, or
+  adding or removing its attendees.
 
-  Moving the provider event does not move the Tymeslot meeting: participants
-  keep the slot they booked, their reschedule links still point at it, and the
-  next sync reports the organiser's own edit back to them as an external
-  modification. The block is a guard, not a hint — the grid marks these events
-  as locked, so reaching here means the client asked anyway.
+  The organiser's provider event is a projection of the Tymeslot meeting, not
+  the meeting itself. Moving it does not move the participants' seats (their
+  reschedule links still point at the booked slot, and the next sync reports
+  the organiser's own edit back as an external change); deleting it leaves
+  everyone booked on a meeting with no calendar event; and its attendee list
+  is not who holds a seat. The grid hides these controls on a locked event,
+  so reaching here means the client asked anyway: this is the guard, not a
+  hint.
 
   Deliberately re-read from the database rather than taken from the socket:
   the assigned lock set is as old as the last event load, and a seat booked
-  since then must still count.
+  since then must still count. Scoped to the acting organiser's meetings.
   """
-  @spec check_timing_lock(map()) :: :ok | {:error, :group_booking}
-  def check_timing_lock(event) do
-    if Meetings.group_booking_uid?(Map.get(event, :uid)) do
+  @spec check_seat_lock(Phoenix.LiveView.Socket.t(), map()) :: :ok | {:error, :group_booking}
+  def check_seat_lock(socket, event) do
+    if Meetings.group_booking_uid?(socket.assigns.current_user.id, Map.get(event, :uid)) do
       {:error, :group_booking}
     else
       :ok
     end
+  end
+
+  @doc """
+  Why an event `check_seat_lock/2` refuses cannot be changed here: the one
+  wording the refusal flash, the locked badge and the event modal share.
+  """
+  @spec seat_lock_message() :: String.t()
+  def seat_lock_message do
+    dgettext(
+      "dashboard_calendar_events",
+      "Several people are booked on this slot. Move it, cancel it or change who attends from the meeting instead."
+    )
   end
 
   @spec check_move_rate_limit(Phoenix.LiveView.Socket.t()) ::
@@ -339,7 +356,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
     * `{:error, :unauthorized}` — "You don't have permission to modify this event"
     * `{:error, :read_only}` — "This calendar is read-only..."
     * `{:error, :rate_limited, _message}` — "Too many edits. Please wait a moment."
-    * `{:error, :group_booking}` — the slot's time is fixed by its group booking
+    * `{:error, :group_booking}`: a group meeting with live seats sits on the event
 
   Flash messages are sent via `send(self(), {:flash, ...})` (the LiveComponent
   pattern; `put_flash/3` does not propagate from LiveComponents).
@@ -389,16 +406,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   end
 
   def flash_guard(socket, {:error, :group_booking}) do
-    send(
-      self(),
-      {:flash,
-       {:warning,
-        dgettext(
-          "dashboard_calendar_events",
-          "This slot is booked by several people, so its time is fixed here. Ask them to rebook from the meeting instead."
-        )}}
-    )
-
+    send(self(), {:flash, {:warning, seat_lock_message()}})
     socket
   end
 

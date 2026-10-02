@@ -85,7 +85,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
 
         with {:ok, {start_date, start_time, end_date, end_time}} <- parse_time_inputs(params),
              :ok <- EditWorkflow.assert_event_writable(socket, event),
-             :ok <- Shared.check_timing_lock(event),
+             :ok <- Shared.check_seat_lock(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket),
              {:ok, new_start} <- Shared.to_utc(start_date, start_time.hour, start_time.minute, tz),
              {:ok, raw_end} <- Shared.to_utc(end_date, end_time.hour, end_time.minute, tz) do
@@ -124,7 +124,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
 
       event ->
         with :ok <- EditWorkflow.assert_event_writable(socket, event),
-             :ok <- Shared.check_timing_lock(event),
+             :ok <- Shared.check_seat_lock(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket) do
           optimistic_event = AllDay.toggle(event, socket.assigns.user_timezone)
 
@@ -151,7 +151,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         with {:ok, start_date} <- Date.from_iso8601(params["start-date"]),
              {:ok, end_date} <- parse_end_date(params["end-date"], start_date),
              :ok <- EditWorkflow.assert_event_writable(socket, event),
-             :ok <- Shared.check_timing_lock(event),
+             :ok <- Shared.check_seat_lock(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket) do
           # The form presents inclusive dates; storage keeps `end_date`
           # exclusive, so a single-day range (start == end) is stored as +1.
@@ -261,7 +261,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
               {:noreply, socket}
             else
               with :ok <- EditWorkflow.assert_event_writable(socket, event),
-                   :ok <- Shared.check_timing_lock(event),
+                   :ok <- Shared.check_seat_lock(socket, event),
                    :ok <- Shared.check_edit_rate_limit(socket) do
                 push_recurrence_change(socket, event, new_rule)
               else

@@ -4,7 +4,7 @@ defmodule Tymeslot.Bookings.Create do
   Combines validation, policy enforcement, and side effects.
   """
 
-  alias Tymeslot.Availability.{GroupSlots, Offer}
+  alias Tymeslot.Availability.Offer
 
   alias Tymeslot.Bookings.{
     Activation,
@@ -28,7 +28,6 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.MeetingTypes
-  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias UUID
@@ -141,8 +140,8 @@ defmodule Tymeslot.Bookings.Create do
     # `validate_meeting_type_active/1` a few steps later) falls back to the
     # client-supplied value, bounded exactly as the booking page bounds it.
     # Resolving here also stashes the record on `booking_data` for everything
-    # downstream: the calendar check needs it to know whether this is a group
-    # booking (see `drop_own_group_event/2`), and the active/limits validations
+    # downstream: the group join lookup needs it to know whether this is a
+    # group booking (see `CreateGroup.join_target/1`), and the active/limits validations
     # and the paid?/guests-allowed? predicates then read it from memory instead
     # of each issuing the same query again.
     meeting_type = resolve_meeting_type_for_duration(meeting_params)
@@ -189,7 +188,9 @@ defmodule Tymeslot.Bookings.Create do
         visitor_hash: Map.get(meeting_params, :visitor_hash)
       }
 
-      {:ok, booking_data}
+      # Read once, here, so the booking-limit pre-check and the calendar
+      # check agree on whether this booking joins a live group slot.
+      {:ok, Map.put(booking_data, :join_target, CreateGroup.join_target(booking_data))}
     else
       {:error, :invalid_date_input} -> {:error, "Invalid date format"}
       {:error, :invalid_format} -> {:error, "Invalid date format"}
@@ -292,6 +293,14 @@ defmodule Tymeslot.Bookings.Create do
   # race-safe check runs again inside the booking transaction
   # (Tymeslot.Meetings.Scheduling), because the page can go stale between
   # render and submit.
+  #
+  # A seat on a live group slot adds no meeting row, so it is not counted
+  # against the limits and is exempt here. The exemption cannot be stretched
+  # to a new slot: the seat transaction refuses a slot that filled up in the
+  # meantime as full, and a slot cancelled in the meantime is recreated
+  # through `Scheduling`, whose in-transaction limit check applies.
+  defp validate_booking_limits(%{join_target: %{}}, _user_id), do: :ok
+
   defp validate_booking_limits(booking_data, user_id) do
     Checker.check_booking_allowed(
       user_id,
@@ -312,38 +321,16 @@ defmodule Tymeslot.Bookings.Create do
     end
   end
 
+  # A seat on a live group slot adds no organiser busy time, so the slot's own
+  # meeting event is excluded from the conflict check, exactly as a
+  # reschedule excludes the meeting it moves. Only that one meeting is
+  # excluded, and only when `CreateGroup.join_target/1` finds it joinable for
+  # this booker's seats: a full slot keeps its event blocking and is refused
+  # here, before any side effect, as the seat transaction would refuse it
+  # (`:slot_full` -> `:slot_taken`). Every other event (other meetings,
+  # external calendars) still refuses the booking.
   defp calendar_check_opts(booking_data) do
-    [filter_events: &drop_own_group_event(&1, booking_data)]
-  end
-
-  # For group meeting types, the live meeting's own calendar event must not
-  # fail the booking-time conflict check: joining an existing group meeting
-  # adds no new organiser busy time. Only the event whose uid matches the
-  # live, joinable (seats still free) meeting at exactly this start time is
-  # removed; every other blocking event (other meetings, external calendars)
-  # still refuses the booking, keeping validation consistent with the
-  # seat-aware display. `GroupSlots.joinable_uids/3` is the single place that
-  # decides "joinable" for both the display and this check, so the two can't
-  # drift. A meeting that's already full is left blocking here, and the seat
-  # transaction refuses it too (`:slot_full` -> `:slot_taken`).
-  defp drop_own_group_event(events, booking_data) do
-    case Map.get(booking_data, :meeting_type) do
-      %MeetingTypeSchema{} = meeting_type ->
-        reject_joinable_meeting_event(events, meeting_type, booking_data.start_datetime)
-
-      _other ->
-        events
-    end
-  end
-
-  defp reject_joinable_meeting_event(events, meeting_type, start_datetime) do
-    start_utc =
-      start_datetime
-      |> DateTime.shift_zone!("Etc/UTC")
-      |> DateTime.truncate(:second)
-
-    ignore_uids = GroupSlots.joinable_uids(meeting_type, start_utc, start_utc)
-    Enum.reject(events, &MapSet.member?(ignore_uids, Map.get(&1, :uid)))
+    [exclude: Map.get(booking_data, :join_target)]
   end
 
   defp execute_internal(booking_data, _form_data, opts) do

@@ -29,7 +29,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
 
   attr :time_locked, :boolean,
     default: false,
-    doc: "A live seat is held on this event's meeting, so its time is not editable here."
+    doc:
+      "A live seat is held on this event's meeting, so its time, attendees and deletion are not editable here."
 
   attr :attendee_input, :string, default: ""
   attr :pending_attendees, :list, default: []
@@ -242,12 +243,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
               id="event-time-locked-note"
             >
               <.icon name="hero-lock-closed-micro" class="w-3 h-3 mt-px shrink-0" />
-              <span>
-                {dgettext(
-                  "dashboard_calendar_events",
-                  "Several people are booked on this slot, so its time is fixed here. Ask them to rebook from the meeting to move it."
-                )}
-              </span>
+              <span>{Shared.seat_lock_message()}</span>
             </p>
           </div>
         </div>
@@ -370,7 +366,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
 
       <%!-- Attendees --%>
       <AttendeeEditor.attendee_editor
-        editable={@editable}
+        editable={@editable and not @time_locked}
         attendees={@attendees}
         pending_attendees={@pending_attendees}
         attendee_input={@attendee_input}
@@ -503,7 +499,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
       </div>
 
       <%!-- Footer actions --%>
-      <div :if={@editable} class="mt-4 pt-3 border-t border-tymeslot-100 flex items-center">
+      <div
+        :if={@editable and not @time_locked}
+        class="mt-4 pt-3 border-t border-tymeslot-100 flex items-center"
+      >
         <button
           type="button"
           phx-click="request_delete_event"

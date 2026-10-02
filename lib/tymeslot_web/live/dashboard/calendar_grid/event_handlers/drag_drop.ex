@@ -59,7 +59,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.DragDrop do
   # handler — a new timing gesture that forgets one of them would silently
   # move a slot several people are booked on.
   defp with_movable_event(socket, event, fun) do
-    with :ok <- Shared.check_timing_lock(event),
+    with :ok <- Shared.check_seat_lock(socket, event),
          :ok <- Shared.check_edit_rate_limit(socket) do
       fun.()
     else

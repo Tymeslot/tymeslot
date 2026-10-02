@@ -916,16 +916,6 @@ msgstr "Google Calendar hat das Ereignis gespeichert, aber keinen Meet-Link zur�
 msgid "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
 msgstr "Ihr Kalender muss erneut verbunden werden. Bitte verbinden Sie ihn auf der Seite „Integrationen“ erneut."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Several people are booked on this slot, so its time is fixed here. Ask them to rebook from the meeting to move it."
-msgstr "Mehrere Personen sind auf diesem Zeitfenster gebucht, daher ist die Zeit hier fest. Bitten Sie sie, über den Termin neu zu buchen, um ihn zu verschieben."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
-#, elixir-autogen, elixir-format
-msgid "This slot is booked by several people, so its time is fixed here. Ask them to rebook from the meeting instead."
-msgstr "Dieses Zeitfenster ist von mehreren Personen gebucht, daher ist die Zeit hier fest. Bitten Sie sie stattdessen, über den Termin neu zu buchen."
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
 msgid "A valid guest email is required"
@@ -1356,3 +1346,8 @@ msgstr "Zu viele neue Termine. Bitte warten Sie einen Moment."
 #, elixir-autogen, elixir-format
 msgid "Someone else organises this meeting, so Tymeslot can't move or split a series you were only invited to."
 msgstr "Diese Besprechung wird von jemand anderem organisiert. Tymeslot kann eine Serie, zu der Sie nur eingeladen wurden, nicht verschieben oder aufteilen."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
+#, elixir-autogen, elixir-format
+msgid "Several people are booked on this slot. Move it, cancel it or change who attends from the meeting instead."
+msgstr "Mehrere Personen sind auf diesem Zeitfenster gebucht. Verschieben, absagen oder Teilnehmende ändern können Sie stattdessen über den Termin."

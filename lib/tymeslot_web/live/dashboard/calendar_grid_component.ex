@@ -187,18 +187,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     {:ok, socket}
   end
 
-  # Loads the two uid-keyed maps the grid overlays onto Tymeslot-created event
-  # blocks: the RSVP summary behind the guest indicator, and the meetings a
-  # live seat is held on, which are shown locked because their time belongs to
-  # the booking rather than the calendar. Both are as fresh as the last load —
-  # the lock the drag handler enforces is re-read from the database, so a seat
-  # booked since then is still honoured.
+  # Loads the uid-keyed RSVP summaries behind the guest indicator the grid
+  # overlays onto Tymeslot-created event blocks. The group meetings shown
+  # locked are loaded with the events instead (`DataLoading.load_events/1`),
+  # so that set follows the visible range.
   defp assign_meeting_overlays(socket) do
     case socket.assigns[:current_user] do
       %{id: user_id} ->
-        socket
-        |> assign(:guest_rsvp_summaries, Meetings.guest_rsvp_summaries_for_user(user_id))
-        |> assign(:group_booking_uids, Meetings.group_booking_uids_for_user(user_id))
+        assign(socket, :guest_rsvp_summaries, Meetings.guest_rsvp_summaries_for_user(user_id))
 
       _other ->
         socket

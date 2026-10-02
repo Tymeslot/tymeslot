@@ -12,6 +12,7 @@ defmodule Tymeslot.Bookings.GroupBookingCalendarCheckTest do
   """
 
   use Tymeslot.DataCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :bookings
   @moduletag :calendar
@@ -97,6 +98,27 @@ defmodule Tymeslot.Bookings.GroupBookingCalendarCheckTest do
                Create.execute(context.meeting_params, form_data("second@example.com"))
 
       assert [_first] = ParticipantQueries.list_live_for_meeting(context.meeting.id)
+    end
+  end
+
+  # The meeting's own entry stops being "the slot being joined" once the
+  # meeting has no seat left: it blocks like any other event, so the submit
+  # refuses at its calendar check, before any seat, job or email.
+  describe "a full group meeting's own entry" do
+    test "closes the slot and refuses the booking before any side effect", context do
+      for email <- ["second@example.com", "third@example.com"] do
+        {:ok, _joined} =
+          Create.execute(context.meeting_params, form_data(email), skip_calendar_check: true)
+      end
+
+      stub_calendar_events([ten_oclock_event(context, uid: context.meeting.calendar_uid)])
+      jobs_before = all_enqueued()
+
+      assert {:error, :slot_taken} =
+               Create.execute(context.meeting_params, form_data("fourth@example.com"))
+
+      assert all_enqueued() == jobs_before
+      assert length(ParticipantQueries.list_live_for_meeting(context.meeting.id)) == 3
     end
   end
 

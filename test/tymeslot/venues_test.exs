@@ -10,6 +10,7 @@ defmodule Tymeslot.VenuesTest do
   import Tymeslot.Factory
 
   alias Tymeslot.MeetingTypes.LocationOption
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Repo
   alias Tymeslot.Venues
   alias Tymeslot.Venues.VenueSchema
@@ -321,6 +322,112 @@ defmodule Tymeslot.VenuesTest do
       reloaded = Repo.reload!(other)
       assert reloaded.locations == [theirs]
       assert reloaded.updated_at == stamp
+    end
+  end
+
+  describe "delete_venue/1 while a group meeting type offers the venue" do
+    # A group type's address is fixed in advance, so it can never be left
+    # with an in-person location to arrange after booking.
+    setup do
+      user = insert(:user)
+      berlin = insert(:venue, user: user, name: "Berlin")
+      munich = insert(:venue, user: user, name: "Munich")
+
+      workshop =
+        insert(:meeting_type,
+          user: user,
+          name: "Workshop",
+          max_participants: 8,
+          locations: [in_person_location([berlin], id: "loc-hall")]
+        )
+
+      %{user: user, berlin: berlin, munich: munich, workshop: workshop}
+    end
+
+    test "is refused while it is the group type's only venue, and changes nothing", ctx do
+      one_to_one =
+        insert(:meeting_type,
+          user: ctx.user,
+          name: "Consultation",
+          locations: [in_person_location([ctx.berlin, ctx.munich], id: "loc-offices")]
+        )
+
+      workshop_before = Repo.reload!(ctx.workshop)
+      one_to_one_before = Repo.reload!(one_to_one)
+
+      assert {:error, {:group_meeting_types, [blocking]}} = Venues.delete_venue(ctx.berlin)
+      assert blocking.id == ctx.workshop.id
+
+      assert {:ok, _still_there} = Venues.get_venue(ctx.user.id, ctx.berlin.id)
+      assert Repo.reload!(ctx.workshop) == workshop_before
+      # The rewrite of every other meeting type is rolled back with it.
+      assert Repo.reload!(one_to_one) == one_to_one_before
+    end
+
+    test "names every group type it is the only venue of, by name", ctx do
+      insert(:meeting_type,
+        user: ctx.user,
+        name: "Bootcamp",
+        max_participants: 3,
+        locations: [in_person_location([ctx.berlin])]
+      )
+
+      assert {:error, {:group_meeting_types, blocking}} = Venues.delete_venue(ctx.berlin)
+      assert Enum.map(blocking, & &1.name) == ["Bootcamp", "Workshop"]
+
+      assert Enum.map(Venues.blocking_group_types(ctx.berlin), & &1.name) == [
+               "Bootcamp",
+               "Workshop"
+             ]
+    end
+
+    test "a venue the group type does not use is deleted as before", ctx do
+      consultation =
+        insert(:meeting_type,
+          user: ctx.user,
+          name: "Consultation",
+          locations: [in_person_location([ctx.munich])]
+        )
+
+      assert Venues.blocking_group_types(ctx.munich) == []
+      assert {:ok, _deleted} = Venues.delete_venue(ctx.munich)
+
+      assert [%LocationOption{kind: "in_person", venue_ids: []}] =
+               Repo.reload!(consultation).locations
+
+      assert [%LocationOption{venue_ids: [berlin_id]}] = Repo.reload!(ctx.workshop).locations
+      assert berlin_id == ctx.berlin.id
+    end
+
+    # Stored before the group location rule, a group type may list several
+    # venues; taking one of them off leaves it with an address, so that is
+    # not refused.
+    test "is allowed when the group type lists other venues too", ctx do
+      legacy =
+        insert(:meeting_type,
+          user: ctx.user,
+          name: "Legacy group",
+          max_participants: 4,
+          locations: [in_person_location([ctx.munich, ctx.berlin])]
+        )
+
+      assert Venues.blocking_group_types(ctx.munich) == []
+      assert {:ok, _deleted} = Venues.delete_venue(ctx.munich)
+
+      assert [%LocationOption{venue_ids: [berlin_id]}] = Repo.reload!(legacy).locations
+      assert berlin_id == ctx.berlin.id
+    end
+
+    # The guard that holds on the locked rows, for a type turned into a group
+    # type after `blocking_group_types/1` was asked.
+    test "the rewrite refuses to leave a group type without its venue", ctx do
+      changeset = MeetingTypeSchema.without_venue_changeset(ctx.workshop, ctx.berlin.id)
+
+      refute changeset.valid?
+      assert %{locations: [_message]} = errors_on(changeset)
+
+      one_to_one = %{ctx.workshop | max_participants: 1}
+      assert MeetingTypeSchema.without_venue_changeset(one_to_one, ctx.berlin.id).valid?
     end
   end
 

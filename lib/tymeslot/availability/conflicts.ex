@@ -94,8 +94,16 @@ defmodule Tymeslot.Availability.Conflicts do
   # Booking limits are checked per slot (not per day) because the absolute
   # slot instant decides which host-timezone day/week/month it counts
   # against — one booker-timezone day can straddle two host days.
-  defp limit_blocked?(%{limit_checker: checker}, slot_start) when is_function(checker, 1) do
-    checker.(slot_start)
+  #
+  # A slot listed in `:limit_exempt_starts` is a live group slot with a seat
+  # free: joining it adds no booking, so a cap it already counts towards must
+  # not hide it (see `Tymeslot.Availability.GroupSlots`).
+  defp limit_blocked?(%{limit_checker: checker} = config, slot_start)
+       when is_function(checker, 1) do
+    not MapSet.member?(
+      Map.get(config, :limit_exempt_starts, MapSet.new()),
+      DateTime.to_unix(slot_start)
+    ) and checker.(slot_start)
   end
 
   defp limit_blocked?(_config, _slot_start), do: false

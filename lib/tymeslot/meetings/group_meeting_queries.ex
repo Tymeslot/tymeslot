@@ -13,6 +13,7 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   alias Ecto.Changeset
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.ParticipantSchema, as: Participant
   alias Tymeslot.Repo
 
   @doc """
@@ -116,38 +117,65 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   end
 
   @doc """
-  The calendar identities (`calendar_uid`) of the organiser's meetings that
-  are group bookings (`capacity > 1`).
+  The calendar identities (`calendar_uid`) of the organiser's group meetings
+  with live seats that overlap the UTC window `[from_utc, to_utc)`: the ones
+  the calendar grid shows locked in the range it has loaded.
+
+  A group meeting has live seats while its slot is live
+  (`MeetingState.where_slot_live/1`) and at least one participant has not
+  cancelled. Its time then belongs to the bookers, so the organiser's
+  provider event must not be moved, deleted or re-attended from the grid.
 
   Keyed by `calendar_uid` rather than id because the consumer is the
   calendar grid, which knows provider events, and a Tymeslot booking's
   provider event carries the meeting's `calendar_uid` (never its `uid`, the
   booking's bearer capability).
   """
-  @spec group_booking_uids_for_user(integer()) :: MapSet.t(String.t())
-  def group_booking_uids_for_user(user_id) do
-    Meeting
-    |> where([m], m.organizer_user_id == ^user_id and m.capacity > 1)
-    |> select([m], m.calendar_uid)
+  @spec group_booking_uids_for_user(integer(), DateTime.t(), DateTime.t()) ::
+          MapSet.t(String.t())
+  def group_booking_uids_for_user(user_id, %DateTime{} = from_utc, %DateTime{} = to_utc)
+      when is_integer(user_id) do
+    user_id
+    |> live_seats_query()
+    |> where([meeting: m], m.start_time < ^to_utc and m.end_time > ^from_utc)
+    |> where([meeting: m], not is_nil(m.calendar_uid))
+    |> select([meeting: m], m.calendar_uid)
     |> Repo.all()
     |> MapSet.new()
   end
 
   @doc """
-  Whether the meeting whose calendar event carries `uid` (its
-  `calendar_uid`) is a group booking (`capacity > 1`).
+  Whether the organiser's meeting whose calendar event carries `uid` (its
+  `calendar_uid`) is a group meeting with live seats.
 
-  The authoritative form of `group_booking_uids_for_user/1`, for guards that
-  must not act on a set assigned when the page was loaded.
+  The authoritative form of `group_booking_uids_for_user/3`, for guards that
+  must not act on a set assigned when the range was loaded. Another
+  organiser's meeting never matches.
   """
-  @spec group_booking_uid?(term()) :: boolean()
-  def group_booking_uid?(uid) when is_binary(uid) do
-    Meeting
-    |> where([m], m.calendar_uid == ^uid and m.capacity > 1)
+  @spec group_booking_uid?(integer(), term()) :: boolean()
+  def group_booking_uid?(user_id, uid) when is_integer(user_id) and is_binary(uid) do
+    user_id
+    |> live_seats_query()
+    |> where([meeting: m], m.calendar_uid == ^uid)
     |> Repo.exists?()
   end
 
-  def group_booking_uid?(_uid), do: false
+  def group_booking_uid?(_user_id, _uid), do: false
+
+  defp live_seats_query(user_id) do
+    from(m in Meeting, as: :meeting)
+    |> MeetingState.where_slot_live()
+    |> where([meeting: m], m.organizer_user_id == ^user_id and m.capacity > 1)
+    |> where(
+      [meeting: m],
+      exists(
+        from(p in Participant,
+          where: p.meeting_id == parent_as(:meeting).id and is_nil(p.cancelled_at),
+          select: 1
+        )
+      )
+    )
+  end
 
   defp live_at_query(meeting_type_id, start_time) do
     Meeting

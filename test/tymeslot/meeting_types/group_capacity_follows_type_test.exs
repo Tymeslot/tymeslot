@@ -264,14 +264,18 @@ defmodule Tymeslot.MeetingTypes.GroupCapacityFollowsTypeTest do
       }
 
       assert {:error, :seat_not_movable} =
-               RescheduleSeat.execute(participant.management_token, new_params)
+               RescheduleSeat.execute(
+                 participant.management_token,
+                 new_params,
+                 meeting.organizer_user_id
+               )
 
       assert [%{id: id, cancelled_at: nil}] = ParticipantQueries.list_live_for_meeting(meeting.id)
       assert id == participant.id
     end
 
     test "a seat move into another group meeting of the type is refused",
-         %{solo_type: solo_type, participant: participant} = ctx do
+         %{solo_type: solo_type, participant: participant, meeting: meeting} = ctx do
       target_start = DateTime.add(ctx.start_time, 2, :hour)
       target = meeting_at(ctx, :group_meeting, solo_type, target_start, capacity: 4)
 
@@ -283,7 +287,11 @@ defmodule Tymeslot.MeetingTypes.GroupCapacityFollowsTypeTest do
       }
 
       assert {:error, :seat_not_movable} =
-               RescheduleSeat.execute(participant.management_token, new_params)
+               RescheduleSeat.execute(
+                 participant.management_token,
+                 new_params,
+                 meeting.organizer_user_id
+               )
 
       assert ParticipantQueries.list_live_for_meeting(target.id) == []
     end

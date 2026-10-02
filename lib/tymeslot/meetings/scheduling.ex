@@ -264,7 +264,7 @@ defmodule Tymeslot.Meetings.Scheduling do
   end
 
   defp create_group_meeting_in_transaction(attrs) do
-    case GroupMeetingQueries.create_group_meeting(attrs) do
+    case attrs |> with_held_venue() |> GroupMeetingQueries.create_group_meeting() do
       {:ok, meeting} -> meeting
       {:error, changeset} -> Repo.rollback({:validation_error, changeset})
     end

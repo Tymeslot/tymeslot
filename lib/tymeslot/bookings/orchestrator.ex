@@ -107,11 +107,11 @@ defmodule Tymeslot.Bookings.Orchestrator do
 
   # A seat token takes precedence: the visitor followed a participant
   # reschedule link, so the submission moves their seat instead of creating
-  # a booking. The token itself authorises the move — no organizer scoping
-  # needed beyond it.
-  defp submit_action(seat_token, _rescheduling?, _uid, meeting_params, _form_data, _org_id)
+  # a booking. The token authorises the move; the page's organiser must
+  # still be the seat's, since the new time was picked from their schedule.
+  defp submit_action(seat_token, _rescheduling?, _uid, meeting_params, _form_data, org_id)
        when is_binary(seat_token) do
-    case RescheduleSeat.execute(seat_token, meeting_params) do
+    case RescheduleSeat.execute(seat_token, meeting_params, org_id) do
       {:ok, %{meeting: meeting}} -> {:ok, meeting}
       {:error, reason} -> {:error, reason}
     end

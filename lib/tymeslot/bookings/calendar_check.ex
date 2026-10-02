@@ -83,11 +83,8 @@ defmodule Tymeslot.Bookings.CalendarCheck do
   Options:
 
     * `:exclude` - a meeting whose own provider event must not count as a
-      conflict. See the module doc.
-    * `:filter_events` - a function applied to the fetched events before the
-      conflict check, for a caller with its own rule about which events cannot
-      block this slot (a group booking joining a meeting that already holds
-      the time). Defaults to leaving the events as they are.
+      conflict: the meeting being moved, or the group meeting a seat joins.
+      See the module doc.
   """
   @spec probe(slot(), map(), keyword()) :: :ok | {:error, probe_reason()}
   def probe(slot, config, opts \\ [])
@@ -104,12 +101,7 @@ defmodule Tymeslot.Bookings.CalendarCheck do
 
     case Task.yield(fetch, @fetch_timeout_ms) || Task.shutdown(fetch) do
       {:ok, {:ok, events}} ->
-        filter_events = Keyword.get(opts, :filter_events, &Function.identity/1)
-
-        blocking =
-          events
-          |> Meetings.reject_calendar_event_mirrors(Keyword.get(opts, :exclude))
-          |> filter_events.()
+        blocking = Meetings.reject_calendar_event_mirrors(events, Keyword.get(opts, :exclude))
 
         Validation.validate_no_conflicts(start_datetime, end_datetime, blocking, config)
 

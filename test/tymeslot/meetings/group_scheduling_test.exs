@@ -317,4 +317,69 @@ defmodule Tymeslot.Meetings.GroupSchedulingTest do
                )
     end
   end
+
+  # A venue can be deleted between the booking resolving the type's location
+  # and the slot's row being written; the first seat must still be taken,
+  # with the location written without the venue, as a solo booking is.
+  test "a venue deleted mid-booking does not fail the first seat", ctx do
+    venue = insert(:venue, user: ctx.user)
+    Repo.delete!(venue)
+
+    attrs =
+      ctx.user
+      |> meeting_attrs(ctx.meeting_type, ctx.start_time)
+      |> Map.merge(%{venue_id: venue.id, location: "Main Hall (1 Market Square)"})
+
+    assert {:ok, %{meeting: meeting, created_meeting?: true}} =
+             GroupScheduling.book_seat(attrs, seat_request("one@example.com"))
+
+    assert meeting.venue_id == nil
+    assert meeting.location == "Main Hall (1 Market Square)"
+  end
+
+  describe "join_target/3" do
+    setup ctx do
+      attrs = meeting_attrs(ctx.user, ctx.meeting_type, ctx.start_time)
+
+      {:ok, %{meeting: meeting}} =
+        GroupScheduling.book_seat(attrs, seat_request("one@example.com"))
+
+      %{meeting: meeting, attrs: attrs}
+    end
+
+    test "is the live meeting while it has the seats asked for", ctx do
+      assert %MeetingSchema{id: id} =
+               GroupScheduling.join_target(ctx.meeting_type.id, ctx.start_time, 2)
+
+      assert id == ctx.meeting.id
+    end
+
+    test "accepts the start in any timezone", ctx do
+      start_elsewhere = DateTime.shift_zone!(ctx.start_time, "America/New_York")
+
+      assert %MeetingSchema{} =
+               GroupScheduling.join_target(ctx.meeting_type.id, start_elsewhere, 1)
+    end
+
+    test "is nil when the booking asks for more seats than are left", ctx do
+      assert GroupScheduling.join_target(ctx.meeting_type.id, ctx.start_time, 3) == nil
+    end
+
+    # The rule `book_seat/3` applies: a full meeting is not joined, so the
+    # pre-checks keyed on this must not treat it as joinable either.
+    test "is nil once the meeting is full, matching book_seat/3", ctx do
+      {:ok, _seat} = GroupScheduling.book_seat(ctx.attrs, seat_request("two@example.com"))
+      {:ok, _seat} = GroupScheduling.book_seat(ctx.attrs, seat_request("three@example.com"))
+
+      assert GroupScheduling.join_target(ctx.meeting_type.id, ctx.start_time, 1) == nil
+
+      assert {:error, :slot_full} =
+               GroupScheduling.book_seat(ctx.attrs, seat_request("four@example.com"))
+    end
+
+    test "is nil at a time with no live meeting", ctx do
+      later = DateTime.add(ctx.start_time, 1, :hour)
+      assert GroupScheduling.join_target(ctx.meeting_type.id, later, 1) == nil
+    end
+  end
 end

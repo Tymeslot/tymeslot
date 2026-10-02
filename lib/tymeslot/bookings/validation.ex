@@ -6,9 +6,9 @@ defmodule Tymeslot.Bookings.Validation do
   All validation is based on the data passed in as parameters.
   """
 
+  alias Tymeslot.Availability.Offer
   alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Bookings.Errors
-  alias Tymeslot.Bookings.Policy
   alias Tymeslot.Bookings.ScheduleCheck
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.CalendarEvent
@@ -150,41 +150,47 @@ defmodule Tymeslot.Bookings.Validation do
 
   @doc """
   Parses and validates the requested new time for a single-seat reschedule
-  (move-my-seat), returning the meeting attrs to write.
+  (move-my-seat) off `old_meeting`, returning the new slot's times.
 
-  Used by `Tymeslot.Bookings.RescheduleSeat` alone — the whole-meeting
-  reschedule path (`Tymeslot.Bookings.Reschedule`) resolves its own new-time
-  window because it additionally re-derives `ScheduleCheck`'s grid step from
-  the meeting type's *current* duration rather than the meeting's persisted
-  one. Both paths must still agree on what counts as a valid new slot: a
+  Used by `Tymeslot.Bookings.RescheduleSeat` alone. Mirrors the
+  whole-meeting reschedule (`Tymeslot.Bookings.Reschedule`): the seat keeps
+  the duration of the meeting it leaves, never `params.duration`, which is
+  an attendee-supplied URL slug with no binding to what the meeting is;
+  `ScheduleCheck` is stepped by the duration the booking page's grid is
+  drawn with (`Offer.duration_minutes/2`, the meeting type's current one),
+  so a slot the page just offered is not refused after a host edits the
+  type. Both paths must agree on what counts as a valid new slot: a
   divergence here would let a seat move to a time the meeting itself could
-  not be booked at, which is why this also runs `ScheduleCheck` against
-  `meeting_type` rather than only the notice/window checks.
+  not be booked at.
+
+  `config` is the scheduling policy the caller resolved for `meeting_type`,
+  threaded through so the calendar check that follows uses the same buffer
+  and notice rules.
   """
-  @spec prepare_new_times(map(), integer(), map() | nil) ::
+  @spec prepare_new_times(map(), map(), map() | nil, map()) ::
           {:ok, %{start_time: DateTime.t(), end_time: DateTime.t(), duration_minutes: integer()}}
           | {:error, term()}
-  def prepare_new_times(params, organizer_user_id, meeting_type \\ nil) do
-    config = Policy.scheduling_config(organizer_user_id, meeting_type)
+  def prepare_new_times(params, old_meeting, meeting_type, config) do
+    duration_minutes = old_meeting.duration
+    schedule_check_duration_minutes = Offer.duration_minutes(meeting_type, duration_minutes)
 
     with {:ok, {start_datetime, end_datetime}} <-
            parse_meeting_times(
              params.date,
              params.time,
-             params.duration,
+             duration_minutes,
              params.user_timezone
            ),
          {:ok, date} <- parse_date(params.date),
          :ok <- validate_booking_time(start_datetime, params.user_timezone, config),
-         duration_minutes <- TimeSlots.parse_duration(params.duration),
          :ok <-
            ScheduleCheck.validate_slot_on_schedule(
              date,
              start_datetime,
-             duration_minutes,
+             schedule_check_duration_minutes,
              params.user_timezone,
              config,
-             organizer_user_id
+             old_meeting.organizer_user_id
            ) do
       {:ok,
        %{

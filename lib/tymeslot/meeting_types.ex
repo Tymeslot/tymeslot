@@ -449,13 +449,21 @@ defmodule Tymeslot.MeetingTypes do
   def left_without_venue(user_id, venue_id) do
     user_id
     |> list_using_venue(venue_id)
-    |> Enum.filter(fn meeting_type ->
-      Enum.any?(meeting_type.locations, &only_venue?(&1, venue_id))
-    end)
+    |> Enum.filter(&MeetingTypeSchema.left_without_venue?(&1, venue_id))
   end
 
-  defp only_venue?(%LocationOption{kind: "in_person", venue_ids: [venue_id]}, venue_id), do: true
-  defp only_venue?(_location, _venue_id), do: false
+  @doc """
+  Of `left_without_venue/2`, the group types. A group type's address is
+  fixed in advance (`Tymeslot.MeetingTypes.GroupLocationRule`), so it can
+  never be left to be arranged after booking: these keep the venue from
+  being deleted until they name another one.
+  """
+  @spec group_types_left_without_venue(integer(), integer()) :: [MeetingTypeSchema.t()]
+  def group_types_left_without_venue(user_id, venue_id) do
+    user_id
+    |> left_without_venue(venue_id)
+    |> Enum.filter(&MeetingTypeSchema.group?/1)
+  end
 
   # Duration parsing, normalisation, and booking-flow validation live in the
   # focused sibling module Tymeslot.MeetingTypes.Duration; these delegations

@@ -16,6 +16,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
   alias Tymeslot.Bookings.Telemetry
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Notifications.Events
 
@@ -25,6 +26,25 @@ defmodule Tymeslot.Bookings.CreateGroup do
     do: MeetingTypeSchema.group?(meeting_type)
 
   def applicable?(_booking_data), do: false
+
+  @doc """
+  The live group meeting this booking would join, or `nil` when it would
+  create a new slot, be refused as full, or is not a group booking at all.
+
+  Decided by `GroupScheduling.join_target/3`, the seat transaction's own
+  joinability rule, for this booker's seats (themselves plus their guests).
+  `Create` reads it to exempt a join from the booking-limit pre-check and to
+  drop the meeting's own event from the calendar check; neither exemption can
+  outlive the slot, because the seat transaction re-decides under its lock.
+  """
+  @spec join_target(map()) :: MeetingSchema.t() | nil
+  def join_target(%{meeting_type: meeting_type, start_datetime: start} = booking_data) do
+    if applicable?(booking_data) do
+      GroupScheduling.join_target(meeting_type.id, start, 1 + length(guest_emails(booking_data)))
+    end
+  end
+
+  def join_target(_booking_data), do: nil
 
   # `:attendee_locale` is deliberately kept off `SeatEffects.slot_attrs/2`'s
   # drop list: the first booker's locale seeds the (attendee-less) meeting

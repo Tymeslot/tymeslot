@@ -24,7 +24,8 @@ defmodule Tymeslot.Availability.Calculate do
           optional(:owner_timezone) => String.t(),
           optional(:min_advance_hours) => non_neg_integer(),
           optional(:limit_checker) => (DateTime.t() -> boolean()) | nil,
-          optional(:ignore_event_uids) => MapSet.t(String.t())
+          optional(:ignore_event_uids) => MapSet.t(String.t()),
+          optional(:limit_exempt_starts) => MapSet.t(integer())
         }
 
   @typedoc "The three scheduling policy values an `availability_config` carries."
@@ -57,7 +58,9 @@ defmodule Tymeslot.Availability.Calculate do
       lets a caller disregard specific blocking events for the one slot each
       occupies (see `Tymeslot.Availability.Conflicts.filter_available_slots/6`
       and `Tymeslot.Availability.GroupSlots`), without weakening buffer
-      protection around them for every other slot.
+      protection around them for every other slot. `config[:limit_exempt_starts]`
+      (Unix seconds) names slot instants the booking limits do not apply to:
+      a seat on a live group slot adds no booking.
 
   ## Returns
     List of available time slot strings

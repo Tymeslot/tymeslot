@@ -4,14 +4,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.EventBadges do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
+
   # ---------- Seat lock indicator ----------
 
   @doc """
   Whether a live seat is held on the meeting behind this event.
 
-  Such an event's time belongs to the booking, not to the calendar: dragging
-  the provider event would leave every participant booked at the old time.
-  The grid marks these locked and refuses the move server-side.
+  Such an event belongs to the booking, not to the calendar: dragging or
+  deleting the provider event would leave every participant booked on a
+  slot the calendar no longer shows. The grid marks these locked and
+  refuses the change server-side (`Shared.check_seat_lock/2`).
   """
   @spec seat_locked?(MapSet.t() | nil, map()) :: boolean()
   def seat_locked?(nil, _event), do: false
@@ -25,20 +28,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.EventBadges do
     <span
       :if={@locked}
       class="absolute bottom-0.5 right-0.5 inline-flex items-center rounded-full bg-black/25 p-px"
-      title={seat_lock_title()}
+      title={Shared.seat_lock_message()}
     >
       <.icon name="hero-lock-closed-micro" class="w-2.5 h-2.5" />
     </span>
     """
-  end
-
-  @doc "The tooltip explaining why a seat-locked event cannot be moved."
-  @spec seat_lock_title() :: String.t()
-  def seat_lock_title do
-    dgettext(
-      "dashboard_calendar",
-      "Several people are booked on this slot, so its time is fixed here. Open the booking and ask them to rebook to move it."
-    )
   end
 
   # ---------- Guest RSVP indicator ----------

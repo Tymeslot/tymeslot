@@ -18,6 +18,21 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   transaction rolls back, the old seat stands, and `{:error, :slot_taken}`
   is returned so the booking UI's existing bounce-back UX fires unchanged.
 
+  The old seat is cancelled under the old meeting's row lock with a fresh
+  liveness re-check, the way `Tymeslot.Bookings.CancelSeat` cancels one: of a
+  move and a cancellation of the same seat racing each other, exactly one
+  succeeds. A move that loses fails with `{:error, :already_cancelled}` and
+  takes no seat at the new slot.
+
+  The move is checked like any other booking of the new time: the
+  organiser's connected calendar is re-read (ignoring the group meeting the
+  seat joins, whose event already holds the time), and a move that creates a
+  new slot is subject to the host's booking limits inside `Scheduling`'s
+  transaction. A move onto an existing slot adds no meeting row and so is
+  not limit-checked. The seat keeps the old meeting's duration, type and
+  organiser; the booking page it was submitted from must belong to that
+  organiser.
+
   Once the move has committed, `Tymeslot.Bookings.SeatRelease.release/1`
   cancels the old meeting if the mover was the last one on it.
   """
@@ -25,12 +40,14 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   require Logger
 
   alias Tymeslot.Bookings.BuildParams
+  alias Tymeslot.Bookings.CalendarCheck
   alias Tymeslot.Bookings.CalendarJobs
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Bookings.SeatEffects
   alias Tymeslot.Bookings.SeatRelease
   alias Tymeslot.Bookings.Validation
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingQueries
@@ -48,20 +65,25 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
           required(:user_timezone) => String.t()
         }
 
-  @spec execute(String.t(), reschedule_params()) ::
+  @spec execute(String.t(), reschedule_params(), integer() | nil) ::
           {:ok, %{meeting: struct(), participant: struct(), created_meeting?: boolean()}}
           | {:error, term()}
-  def execute(management_token, new_params) when is_binary(management_token) do
+  def execute(management_token, new_params, organizer_user_id)
+      when is_binary(management_token) do
     with {:ok, participant} <- ParticipantQueries.get_by_token(management_token),
          :ok <- ensure_live(participant),
          {:ok, old_meeting} <- MeetingQueries.get_meeting(participant.meeting_id),
+         :ok <- ensure_same_organizer(old_meeting, organizer_user_id),
          :ok <- Policy.can_reschedule_meeting?(old_meeting) do
       meeting_type = resolve_meeting_type(old_meeting)
+      config = Policy.scheduling_config(old_meeting.organizer_user_id, meeting_type)
+      guest_emails = guest_emails(participant)
 
       with :ok <- ensure_group_type(meeting_type),
            {:ok, new_times} <-
-             Validation.prepare_new_times(new_params, old_meeting.organizer_user_id, meeting_type) do
-        move_seat(old_meeting, participant, new_times, meeting_type)
+             Validation.prepare_new_times(new_params, old_meeting, meeting_type, config),
+           :ok <- verify_calendar_free(old_meeting, new_times, config, guest_emails) do
+        move_seat(old_meeting, participant, new_times, meeting_type, guest_emails)
       end
     else
       {:error, :not_found} -> {:error, :meeting_not_found}
@@ -71,6 +93,20 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
 
   defp ensure_live(%{cancelled_at: nil}), do: :ok
   defp ensure_live(_participant), do: {:error, :already_cancelled}
+
+  # The seat link only says which seat to move; the page it was submitted
+  # from says whose calendar the new time was picked from. A seat moved from
+  # another organiser's page (a hand-edited URL) would be checked against
+  # that organiser's schedule while landing on this one's, so it is refused
+  # as if the seat did not exist there.
+  defp ensure_same_organizer(%{organizer_user_id: id}, id) when is_integer(id), do: :ok
+  defp ensure_same_organizer(_old_meeting, _organizer_user_id), do: {:error, :meeting_not_found}
+
+  defp guest_emails(participant) do
+    participant.id
+    |> GuestQueries.list_for_participant()
+    |> Enum.map(& &1.email)
+  end
 
   # A type that is no longer a group type (its limit turned back to one)
   # takes no seat moves: its existing group meetings keep their seats but
@@ -93,7 +129,35 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   defp resolve_meeting_type(old_meeting),
     do: MeetingTypes.get_meeting_type(old_meeting.meeting_type_id, old_meeting.organizer_user_id)
 
-  defp move_seat(old_meeting, participant, new_times, meeting_type) do
+  # The same re-read of the organiser's connected calendar that a booking
+  # (`Create`) and a whole-meeting reschedule (`Reschedule`) make, through the
+  # same module, so a time the host has since blocked elsewhere cannot be
+  # moved onto. When the move joins a live group slot, that meeting's own
+  # event is excluded, exactly as `Create` excludes it for a joining seat;
+  # the old meeting is not, since it keeps its time (and its other seats)
+  # whatever this seat does, and the move's own conflict check inside the
+  # seat transaction counts it too. Both refusals collapse to `:slot_taken`.
+  defp verify_calendar_free(old_meeting, new_times, config, guest_emails) do
+    slot = %{
+      organizer_user_id: old_meeting.organizer_user_id,
+      start_datetime: new_times.start_time,
+      end_datetime: new_times.end_time
+    }
+
+    join_target =
+      GroupScheduling.join_target(
+        old_meeting.meeting_type_id,
+        new_times.start_time,
+        1 + length(guest_emails)
+      )
+
+    case CalendarCheck.enforce(slot, config, exclude: join_target) do
+      :ok -> :ok
+      {:error, _reason} -> {:error, :slot_taken}
+    end
+  end
+
+  defp move_seat(old_meeting, participant, new_times, meeting_type, guest_emails) do
     max_participants = max_participants_for(old_meeting, meeting_type)
 
     # The old event's identity in the participant's calendar is the meeting's
@@ -105,17 +169,28 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
       end_time: old_meeting.end_time
     }
 
-    guest_emails =
-      participant.id
-      |> GuestQueries.list_for_participant()
-      |> Enum.map(& &1.email)
-
     old_meeting
     |> new_slot_attrs(new_times, participant)
     |> GroupScheduling.book_seat(seat_request(participant, guest_emails, max_participants),
-      on_booked: fn _booking -> ParticipantQueries.cancel(participant) end
+      also_lock: old_meeting.id,
+      on_booked: fn _booking -> cancel_old_seat(old_meeting, participant) end
     )
     |> handle_move(old_meeting, participant, old_snapshot)
+  end
+
+  # Runs inside the seat transaction, after the new seat is taken. The old
+  # meeting's row lock (already held, see `book_seat/3`'s `:also_lock`) is
+  # the one `CancelSeat` takes, so the seat's liveness is re-read under it:
+  # a cancellation of this seat that committed first makes the move fail and
+  # roll the new seat back, rather than both succeeding.
+  defp cancel_old_seat(old_meeting, participant) do
+    with %{status: status} when status != "cancelled" <-
+           GroupMeetingQueries.lock_for_update(old_meeting.id),
+         {:ok, %{cancelled_at: nil} = current} <- ParticipantQueries.get(participant.id) do
+      ParticipantQueries.cancel(current)
+    else
+      _gone -> {:error, :already_cancelled}
+    end
   end
 
   # The live target meeting's own snapshotted capacity governs when the move
@@ -136,6 +211,18 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   defp handle_move({:error, reason}, old_meeting, participant, _old_snapshot)
        when reason in [:slot_full, :time_conflict],
        do: log_and_bounce(old_meeting, participant, reason, :slot_taken)
+
+  defp handle_move({:error, :already_cancelled}, old_meeting, participant, _old_snapshot) do
+    Logger.info("Seat cancelled by a concurrent request before it could move",
+      meeting_id: old_meeting.id,
+      participant_id: participant.id
+    )
+
+    {:error, :already_cancelled}
+  end
+
+  defp handle_move({:error, :booking_limit_reached}, _old_meeting, _participant, _snapshot),
+    do: {:error, :booking_limit_reached}
 
   defp handle_move({:error, %Ecto.Changeset{} = changeset}, old_meeting, participant, _snapshot) do
     cond do

@@ -74,12 +74,18 @@ defmodule Tymeslot.Meetings do
     to: Tymeslot.Meetings.GuestQueries,
     as: :rsvp_summaries_for_user
 
-  @doc "Returns the calendar identities (`calendar_uid`s) of a user's group bookings."
-  defdelegate group_booking_uids_for_user(user_id),
+  @doc """
+  The calendar identities (`calendar_uid`s) of the organiser's group meetings
+  with live seats overlapping the UTC window `[from_utc, to_utc)`.
+  """
+  defdelegate group_booking_uids_for_user(user_id, from_utc, to_utc),
     to: Tymeslot.Meetings.GroupMeetingQueries
 
-  @doc "Whether the meeting behind a calendar event's `uid` is a group booking."
-  defdelegate group_booking_uid?(uid), to: Tymeslot.Meetings.GroupMeetingQueries
+  @doc """
+  Whether the organiser's meeting behind a calendar event's `uid` is a group
+  meeting with live seats.
+  """
+  defdelegate group_booking_uid?(user_id, uid), to: Tymeslot.Meetings.GroupMeetingQueries
 
   @doc "Whether `meeting` was booked with room for more than one seat."
   defdelegate group?(meeting), to: MeetingSchema

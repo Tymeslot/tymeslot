@@ -328,3 +328,13 @@ msgstr "Questa sede non esiste più"
 #, elixir-autogen, elixir-format
 msgid "A place you meet people, such as an office or a studio. Offer it on any in-person meeting type, and bookers see its name and address when they book."
 msgstr "Una sede in cui incontri le persone, come un ufficio o uno studio. Offrila su qualsiasi tipo di riunione di persona: chi prenota ne vedrà il nome e l'indirizzo al momento della prenotazione."
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} is the only location of these group meeting types, whose address must be fixed in advance. Give them another location before deleting it:"
+msgstr "%{name} è l'unica sede di questi tipi di riunione di gruppo, il cui indirizzo deve essere fissato in anticipo. Assegna loro un'altra sede prima di eliminarla:"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "This location is the only one of a group meeting type, so it cannot be deleted"
+msgstr "Questa sede è l'unica di un tipo di riunione di gruppo, quindi non può essere eliminata"

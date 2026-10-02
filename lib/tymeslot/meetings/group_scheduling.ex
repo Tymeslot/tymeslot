@@ -18,6 +18,13 @@ defmodule Tymeslot.Meetings.GroupScheduling do
   `(organizer_user_id, start_time) where status = 'confirmed'`: the loser's
   insert fails the constraint, the transaction rolls back, and one retry
   runs down the join path against the winner's now-visible row.
+
+  Joining adds no meeting row, so only the creating branch is subject to the
+  host's booking limits (enforced inside `Scheduling`'s transaction). A
+  caller's pre-check may skip the limits for a slot `join_target/3` reports as
+  joinable: should the slot turn out full by the time the seat transaction
+  runs, it is refused as `:slot_full` rather than replaced, and should it have
+  been cancelled, the new row it is replaced by is limit-checked there.
   """
 
   alias Ecto.Changeset
@@ -55,6 +62,11 @@ defmodule Tymeslot.Meetings.GroupScheduling do
       run inside the transaction after the seat is taken; an error return
       rolls the whole seat back. Used by the booking flow to enqueue the
       calendar-event job atomically with the seat.
+    * `:also_lock` — the id of a further meeting the `:on_booked` callback
+      will lock (a seat move's old meeting). It is locked together with the
+      target slot's row, in id order, before either is read, so that two
+      moves in opposite directions between the same two meetings queue
+      behind each other instead of deadlocking.
 
   Returns `{:ok, booking}` or `{:error, :slot_full | :time_conflict |
   Ecto.Changeset.t() | term}`.
@@ -63,7 +75,11 @@ defmodule Tymeslot.Meetings.GroupScheduling do
           {:ok, booking()} | {:error, :slot_full | :time_conflict | Changeset.t() | term()}
   def book_seat(meeting_attrs, seat_request, opts \\ []) do
     seats_requested = 1 + length(seat_request.guest_emails)
-    on_booked = Keyword.get(opts, :on_booked, fn _booking -> {:ok, :noop} end)
+
+    hooks = %{
+      on_booked: Keyword.get(opts, :on_booked, fn _booking -> {:ok, :noop} end),
+      also_lock: Keyword.get(opts, :also_lock)
+    }
 
     # A limit of one means the type is no longer a group type: it takes no
     # new seats at all, neither on an existing group meeting nor on a fresh
@@ -71,13 +87,42 @@ defmodule Tymeslot.Meetings.GroupScheduling do
     if seat_request.max_participants < 2 or seats_requested > seat_request.max_participants do
       {:error, :slot_full}
     else
-      attempt_booking(meeting_attrs, seat_request, seats_requested, on_booked, _retries_left = 1)
+      attempt_booking(meeting_attrs, seat_request, seats_requested, hooks, _retries_left = 1)
     end
   end
 
-  defp attempt_booking(meeting_attrs, seat_request, seats_requested, on_booked, retries_left) do
+  @doc """
+  The live group meeting at `(meeting_type_id, start_time)` that a booking of
+  `seats_requested` seats would join, or `nil` when such a booking would
+  create a new slot or be refused as full.
+
+  An unlocked read for pre-checks ahead of `book_seat/3`, deciding
+  joinability by the same rule the seat transaction applies under its lock,
+  so a pre-check can never call joinable a slot the transaction would not
+  join.
+  """
+  @spec join_target(integer() | nil, DateTime.t(), pos_integer()) :: Meeting.t() | nil
+  def join_target(meeting_type_id, %DateTime{} = start_time, seats_requested)
+      when is_integer(seats_requested) do
+    start_utc = start_time |> DateTime.shift_zone!("Etc/UTC") |> DateTime.truncate(:second)
+
+    case GroupMeetingQueries.get_live_at(meeting_type_id, start_utc) do
+      %Meeting{} = meeting -> if joinable?(meeting, seats_requested), do: meeting
+      nil -> nil
+    end
+  end
+
+  # A solo meeting at the slot (a one-to-one booked before the type became a
+  # group type) is never joined: it reads as full, so a private booking stays
+  # private.
+  defp joinable?(meeting, seats_requested),
+    do: Meeting.group?(meeting) and seats_requested <= Seats.seats_left(meeting, meeting.capacity)
+
+  defp attempt_booking(meeting_attrs, seat_request, seats_requested, hooks, retries_left) do
     result =
       Repo.transaction(fn ->
+        lock_in_order(hooks.also_lock, meeting_attrs)
+
         live_meeting =
           GroupMeetingQueries.get_live_for_update(
             meeting_attrs.meeting_type_id,
@@ -93,7 +138,7 @@ defmodule Tymeslot.Meetings.GroupScheduling do
               join_meeting(meeting, seat_request, seats_requested)
           end
 
-        run_on_booked(booking, on_booked)
+        run_on_booked(booking, hooks.on_booked)
       end)
 
     case result do
@@ -106,7 +151,7 @@ defmodule Tymeslot.Meetings.GroupScheduling do
             meeting_attrs,
             seat_request,
             seats_requested,
-            on_booked,
+            hooks,
             retries_left - 1
           )
         else
@@ -136,18 +181,32 @@ defmodule Tymeslot.Meetings.GroupScheduling do
   # Gates on the meeting's own capacity, not the caller's
   # `seat_request.max_participants` (which is only the correct capacity for
   # a meeting not yet created, see `create_meeting_with_first_seat/2`); the
-  # type keeps a group meeting's capacity in step with its limit. A solo
-  # meeting at the slot (a one-to-one booked before the type became a group
-  # type) is never joined: it reads as full, so a private booking stays
-  # private.
+  # type keeps a group meeting's capacity in step with its limit.
   defp join_meeting(meeting, seat_request, seats_requested) do
-    if not Meeting.group?(meeting) or
-         seats_requested > Seats.seats_left(meeting, meeting.capacity) do
-      Repo.rollback(:slot_full)
-    else
+    if joinable?(meeting, seats_requested) do
       participant = insert_participant_or_rollback(meeting, seat_request)
       %{meeting: meeting, participant: participant, created_meeting?: false}
+    else
+      Repo.rollback(:slot_full)
     end
+  end
+
+  # Without a second meeting to lock there is nothing to order: the target
+  # row is locked by `get_live_for_update/2` as always. With one, both rows
+  # are locked lowest id first; the target's id comes from an unlocked read,
+  # and `get_live_for_update/2` re-reads the row under its lock straight
+  # after, so a target that changed in between is still locked before use.
+  defp lock_in_order(nil, _meeting_attrs), do: :ok
+
+  defp lock_in_order(other_meeting_id, meeting_attrs) do
+    target =
+      GroupMeetingQueries.get_live_at(meeting_attrs.meeting_type_id, meeting_attrs.start_time)
+
+    [other_meeting_id, target && target.id]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+    |> Enum.sort()
+    |> Enum.each(&GroupMeetingQueries.lock_for_update/1)
   end
 
   defp insert_participant_or_rollback(meeting, seat_request) do
