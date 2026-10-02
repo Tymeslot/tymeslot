@@ -146,6 +146,28 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
     end
   end
 
+  describe "Webhook form close button" do
+    test "the labelled close icon closes the form without creating a webhook",
+         %{conn: conn, user: user} do
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+
+      view
+      |> element("button", "Create Your First Webhook")
+      |> render_click()
+
+      assert has_element?(view, "#webhook-form")
+
+      close = ~s(button[aria-label="Close"][title="Close"][phx-click="close_webhook_form"])
+      assert has_element?(view, close)
+
+      view |> element(close) |> render_click()
+
+      refute has_element?(view, "#webhook-form")
+      assert render(view) =~ "No Webhooks Yet"
+      assert Webhooks.list_webhooks(user.id) == []
+    end
+  end
+
   describe "Token regeneration flow" do
     setup %{user: user} do
       {:ok, webhook} =
