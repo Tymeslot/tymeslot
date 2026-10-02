@@ -171,6 +171,50 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
              |> element("#onboarding-buffer-after")
              |> render() =~ "Buffer after must be between 0 and 120 minutes."
     end
+
+    test "a buffer's invalid value does not stop the other buffer saving", %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding(conn)
+      navigate_to_scheduling_preferences(view)
+      focus_custom_buffer(view, "buffer_before_minutes")
+      focus_custom_buffer(view, "buffer_after_minutes")
+
+      # With both rows in custom mode, a change submits both inputs.
+      view
+      |> element("form[phx-change='update_scheduling_preferences']")
+      |> render_change(%{"buffer_before_minutes" => "200", "buffer_after_minutes" => "30"})
+
+      schedule = default_schedule(user)
+      assert {schedule.buffer_before_minutes, schedule.buffer_after_minutes} == {20, 30}
+
+      assert view
+             |> element("#onboarding-buffer-before")
+             |> render() =~ "Buffer before must be between 0 and 120 minutes."
+
+      refute view
+             |> element("#onboarding-buffer-after")
+             |> render() =~ "must be between"
+    end
+
+    test "a preset leaves custom mode while the other buffer holds an error", %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding(conn)
+      navigate_to_scheduling_preferences(view)
+      focus_custom_buffer(view, "buffer_after_minutes")
+      focus_custom_buffer(view, "buffer_before_minutes")
+
+      view
+      |> element("form[phx-change='update_scheduling_preferences']")
+      |> render_change(%{"buffer_before_minutes" => "200"})
+
+      view
+      |> element("#onboarding-buffer-after button[phx-value-buffer_after_minutes='15']")
+      |> render_click()
+
+      assert default_schedule(user).buffer_after_minutes == 15
+
+      after_row = view |> element("#onboarding-buffer-after") |> render()
+      refute after_row =~ ~s(name="buffer_after_minutes")
+      assert after_row =~ "btn-tag-selector-primary--active"
+    end
   end
 
   describe "advance_booking_days custom input" do
@@ -401,6 +445,12 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
   end
 
   # Helper functions
+
+  defp focus_custom_buffer(view, setting) do
+    view
+    |> element("button[phx-click='focus_custom_input'][phx-value-setting='#{setting}']")
+    |> render_click()
+  end
 
   defp setup_custom_input_and_change_value(view, setting, value) do
     # Click "Custom" button for the setting

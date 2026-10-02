@@ -22,13 +22,8 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
   @spec handle_validate_scheduling_preferences(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_validate_scheduling_preferences(params, socket) do
-    case validate_scheduling_preferences(params) do
-      {:ok, _sanitized_params} ->
-        {:noreply, Component.assign(socket, :form_errors, %{})}
-
-      {:error, errors} ->
-        {:noreply, Component.assign(socket, :form_errors, errors)}
-    end
+    {_valid_params, errors} = validate_scheduling_preferences(params)
+    {:noreply, Component.assign(socket, :form_errors, errors)}
   end
 
   @doc """
@@ -41,67 +36,25 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
   @spec handle_update_scheduling_preferences(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_update_scheduling_preferences(params, socket) do
-    case validate_scheduling_preferences(params) do
-      {:ok, sanitized_params} ->
-        case Settings.update_scheduling_preferences(
-               socket.assigns.profile,
-               sanitized_params
-             ) do
-          {:ok, schedule} ->
-            socket =
-              socket
-              |> Component.assign(:availability_schedule, schedule)
-              |> Component.assign(:form_errors, clear_submitted_errors(socket, params))
-
-            {:noreply, socket}
-
-          {:error, _changeset} ->
-            {:noreply,
-             LiveView.put_flash(
-               socket,
-               :error,
-               dgettext("onboarding_wizard", "Please check your input and try again.")
-             )}
-        end
-
-      {:error, errors} ->
-        form_errors = Map.merge(clear_submitted_errors(socket, params), errors)
-
-        {:noreply, Component.assign(socket, :form_errors, form_errors)}
-    end
-  end
-
-  # One step can hold several fields (the buffer step has two), but a change
-  # submits only the field that changed. Its outcome replaces that field's
-  # error alone, so an unsaved value in a sibling field keeps its error.
-  defp clear_submitted_errors(socket, params) do
-    submitted = for {key, error_key, _label} <- fields(), Map.has_key?(params, key), do: error_key
-
-    socket.assigns
-    |> Map.get(:form_errors, %{})
-    |> Map.drop(submitted)
+    {socket, _saved_params} = save_preferences(params, socket)
+    {:noreply, socket}
   end
 
   @doc """
-  Updates scheduling preferences and, on success, syncs the per-field
-  custom-input modes from the submitted params. Combines the persistence step
-  with its custom-input bookkeeping so the LiveView delegates a single call.
+  Updates scheduling preferences and syncs the custom-input mode of every field
+  that was saved. Combines the persistence step with its custom-input
+  bookkeeping so the LiveView delegates a single call.
   """
   @spec handle_update_with_custom_modes(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_update_with_custom_modes(params, socket) do
-    {:noreply, updated_socket} = handle_update_scheduling_preferences(params, socket)
-
-    if Map.get(updated_socket.assigns, :form_errors, %{}) == %{} do
-      {:noreply, update_custom_input_modes(updated_socket, params)}
-    else
-      {:noreply, updated_socket}
-    end
+    {socket, saved_params} = save_preferences(params, socket)
+    {:noreply, update_custom_input_modes(socket, saved_params, params)}
   end
 
   @doc """
   Seeds and reveals the custom-value input for a scheduling field, switching it
-  into custom mode (unless validation of the seeded value fails).
+  into custom mode (unless the seeded value could not be saved).
   """
   @spec handle_focus_custom_input(String.t(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -113,24 +66,66 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
       custom_value =
         if current in config.presets, do: config.constraints.default_custom, else: current
 
-      params = %{setting => to_string(custom_value)}
+      {socket, saved_params} = save_preferences(%{setting => to_string(custom_value)}, socket)
 
-      {:noreply, updated_socket} = handle_update_scheduling_preferences(params, socket)
-
-      if Map.get(updated_socket.assigns, :form_errors, %{}) == %{} do
-        {:noreply, CustomInputModeHelper.enable_custom_mode(updated_socket, config.field)}
+      if Map.has_key?(saved_params, setting) do
+        {:noreply, CustomInputModeHelper.enable_custom_mode(socket, config.field)}
       else
-        {:noreply, updated_socket}
+        {:noreply, socket}
       end
     else
       _other -> {:noreply, socket}
     end
   end
 
+  # One step can hold several fields (the buffer step has two), and a change
+  # may submit any of them. Each submitted field is judged on its own: the
+  # valid ones are saved and the invalid ones get an error, so a bad value in
+  # one field never holds back its sibling. A field's outcome replaces its own
+  # error alone, so an unsaved value in a field that was not submitted keeps
+  # its error. Returns the params that were saved.
+  defp save_preferences(params, socket) do
+    {valid_params, errors} = validate_scheduling_preferences(params)
+    form_errors = Map.merge(clear_submitted_errors(socket, params), errors)
+
+    socket
+    |> Component.assign(:form_errors, form_errors)
+    |> persist(valid_params)
+  end
+
+  defp persist(socket, valid_params) when map_size(valid_params) == 0, do: {socket, %{}}
+
+  defp persist(socket, valid_params) do
+    case Settings.update_scheduling_preferences(socket.assigns.profile, valid_params) do
+      {:ok, schedule} ->
+        {Component.assign(socket, :availability_schedule, schedule), valid_params}
+
+      {:error, _reason} ->
+        socket =
+          LiveView.put_flash(
+            socket,
+            :error,
+            dgettext("onboarding_wizard", "Please check your input and try again.")
+          )
+
+        {socket, %{}}
+    end
+  end
+
+  defp clear_submitted_errors(socket, params) do
+    submitted = for {key, error_key, _label} <- fields(), Map.has_key?(params, key), do: error_key
+
+    socket.assigns
+    |> Map.get(:form_errors, %{})
+    |> Map.drop(submitted)
+  end
+
   # Private helpers
 
-  defp update_custom_input_modes(socket, params) do
-    Enum.reduce(params, socket, fn {key, value}, acc ->
+  # `params` is the whole submission, which carries the `_preset` marker that
+  # tells a preset click from a custom value.
+  defp update_custom_input_modes(socket, saved_params, params) do
+    Enum.reduce(saved_params, socket, fn {key, value}, acc ->
       field = field_key_to_atom(key)
       if field, do: try_update_mode(acc, field, value, params), else: acc
     end)
@@ -167,23 +162,23 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
     ]
   end
 
+  # Splits the submitted fields into the ones that pass, keyed as submitted,
+  # and an error per field that does not.
   defp validate_scheduling_preferences(params) do
     config = StepConfig.custom_input_config()
 
-    errors =
-      fields()
-      |> Enum.flat_map(fn {key, error_key, label} ->
-        with {:ok, value} <- Map.fetch(params, key),
-             {:error, error} <- validate_field(value, config[key].constraints, error_key, label) do
-          [{error_key, error}]
-        else
-          :error -> []
-          :ok -> []
-        end
-      end)
-      |> Map.new()
+    Enum.reduce(fields(), {%{}, %{}}, fn {key, error_key, label}, {valid, errors} ->
+      case Map.fetch(params, key) do
+        {:ok, value} ->
+          case validate_field(value, config[key].constraints, error_key, label) do
+            :ok -> {Map.put(valid, key, value), errors}
+            {:error, error} -> {valid, Map.put(errors, error_key, error)}
+          end
 
-    if map_size(errors) == 0, do: {:ok, params}, else: {:error, errors}
+        :error ->
+          {valid, errors}
+      end
+    end)
   end
 
   defp validate_field(value, constraints, error_key, label) when is_binary(value) do
