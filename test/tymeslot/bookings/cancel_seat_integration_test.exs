@@ -404,6 +404,44 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
     refute Map.has_key?(details, :attendee_email)
   end
 
+  # The host cancelling the whole meeting between the seat's pre-transaction
+  # read and its row lock has already told every participant the meeting is
+  # off; the seat cancellation must not go on to cancel the seat and send its
+  # own emails on top. The organiser's cancellation is committed right after
+  # `CancelSeat` reads the meeting, before it takes the lock.
+  test "a seat cancelled while the host cancels the meeting is refused as meeting cancelled",
+       %{meeting: meeting, leaver: leaver} do
+    handler_id = "cancel-seat-race-#{inspect(make_ref())}"
+    test_pid = self()
+
+    :telemetry.attach(
+      handler_id,
+      [:tymeslot, :repo, :query],
+      fn _event, _measurements, %{source: source}, _config ->
+        if source == "meetings" and self() == test_pid do
+          :telemetry.detach(handler_id)
+
+          MeetingSchema
+          |> Repo.get!(meeting.id)
+          |> Changeset.change(status: "cancelled")
+          |> Repo.update!()
+        end
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(handler_id) end)
+
+    assert {:error, :meeting_cancelled} = CancelSeat.execute(leaver.management_token)
+
+    assert {:ok, %{cancelled_at: nil}} = ParticipantQueries.get(leaver.id)
+
+    refute_enqueued(
+      worker: EmailWorker,
+      args: %{"action" => "send_seat_cancellation_emails", "participant_id" => leaver.id}
+    )
+  end
+
   # The cancellation policy checks in `CancelSeat.execute/1` all run before
   # the transaction, off a single read. Two concurrent cancels of the same
   # seat can both pass those checks off the same stale, still-live read

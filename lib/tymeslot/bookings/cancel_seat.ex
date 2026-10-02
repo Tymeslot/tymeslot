@@ -64,6 +64,10 @@ defmodule Tymeslot.Bookings.CancelSeat do
   defp ensure_live(%{cancelled_at: nil}), do: :ok
   defp ensure_live(_participant), do: {:error, :already_cancelled}
 
+  defp ensure_meeting_on(%{status: "cancelled"}), do: {:error, :meeting_cancelled}
+  defp ensure_meeting_on(%{}), do: :ok
+  defp ensure_meeting_on(nil), do: {:error, :not_found}
+
   defp cancel_seat(meeting, participant) do
     transaction_result =
       Repo.transaction(fn ->
@@ -77,10 +81,19 @@ defmodule Tymeslot.Bookings.CancelSeat do
         # and re-running the last-leaver side effects (resurrecting the
         # calendar event the winner just deleted, re-notifying the
         # organiser) against a meeting that has already been finalised.
-        GroupMeetingQueries.lock_for_update(meeting.id)
+        #
+        # The meeting itself is re-read under the same lock: a host who
+        # cancelled the whole meeting after the pre-transaction read has
+        # already told every participant it is off, so this seat is refused
+        # as `:meeting_cancelled`, as `RescheduleSeat` refuses a move off it.
+        # The seat is checked first, so the loser of two cancels of the last
+        # seat still reads as `:already_cancelled` once the winner's release
+        # has cancelled the meeting.
+        locked = GroupMeetingQueries.lock_for_update(meeting.id)
 
         with {:ok, current} <- ParticipantQueries.get(participant.id),
-             :ok <- ensure_live(current) do
+             :ok <- ensure_live(current),
+             :ok <- ensure_meeting_on(locked) do
           case ParticipantQueries.cancel(current) do
             {:ok, cancelled} -> cancelled
             {:error, reason} -> Repo.rollback(reason)
@@ -101,6 +114,14 @@ defmodule Tymeslot.Bookings.CancelSeat do
         )
 
         {:error, :already_cancelled}
+
+      {:error, :meeting_cancelled} ->
+        Logger.info("Meeting cancelled by the organiser before the seat could be",
+          meeting_id: meeting.id,
+          participant_id: participant.id
+        )
+
+        {:error, :meeting_cancelled}
 
       {:error, reason} ->
         Logger.error("Failed to cancel seat",
