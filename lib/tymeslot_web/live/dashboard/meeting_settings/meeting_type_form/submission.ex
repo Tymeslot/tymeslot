@@ -17,7 +17,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
 
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.InputValidation
+  alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Utils.SanitizeMerge
+  alias Tymeslot.Venues
 
   @doc """
   Builds the `meeting_type` params map from the form's socket assigns.
@@ -44,7 +46,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
       "slot_interval" => Map.get(form_data, "slot_interval", ""),
       "description" => Map.get(form_data, "description", ""),
       "is_active" => active_param(Map.get(assigns, :type)),
-      "locations" => Enum.map(Map.get(assigns, :locations) || [], &location_param/1),
+      "locations" =>
+        Enum.map(
+          Map.get(assigns, :locations) || [],
+          &location_param(&1, Map.get(assigns, :venues) || [])
+        ),
       "calendar_integration_id" => to_param(assigns.selected_calendar_integration_id),
       "target_calendar_id" => to_param(assigns.selected_target_calendar_id),
       "availability_schedule_id" =>
@@ -71,12 +77,32 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
   returned as `{:error, {:invalid_form, errors_map}}` so callers can route them
   to inline field errors; context-level failures surface as their original
   `{:error, atom}` / `{:error, changeset}` shapes.
+
+  A save refused as `:invalid_venue` is tried once more without the venue
+  ids the organiser no longer has. That is what an open form runs into when
+  the venue it lists is deleted from the Locations page meanwhile: the
+  deletion rewrote the stored meeting type, but the form still posts the old
+  id, and without the retry every later save would fail with it. The context
+  keeps refusing any id that is not the organiser's; this only decides not
+  to post one.
   """
   @spec persist(map(), map(), Ecto.Schema.t() | nil, map()) ::
           {:ok, Ecto.Schema.t()}
           | {:error, {:invalid_form, map()}}
           | {:error, atom() | Ecto.Changeset.t()}
   def persist(params, metadata, editing_type, current_user) do
+    case save(params, metadata, editing_type, current_user) do
+      {:error, :invalid_venue} ->
+        params
+        |> drop_deleted_venues(current_user.id)
+        |> save(metadata, editing_type, current_user)
+
+      result ->
+        result
+    end
+  end
+
+  defp save(params, metadata, editing_type, current_user) do
     case InputValidation.validate_meeting_type_form(params, metadata: metadata) do
       {:ok, sanitized_params} ->
         ui_state = build_ui_state(params, sanitized_params)
@@ -92,6 +118,32 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
         {:error, {:invalid_form, validation_errors}}
     end
   end
+
+  # Keeps, in each posted location, only the venue ids still among the
+  # organiser's venues. Locations arrive as a list from `build_params/1` and
+  # as an index-keyed map from the rendered form.
+  defp drop_deleted_venues(%{"locations" => locations} = params, user_id) do
+    venues = Venues.list_venues(user_id)
+
+    keep_known = fn
+      %{"venue_ids" => ids} = location when is_list(ids) ->
+        %{location | "venue_ids" => known_venue_ids(ids, venues)}
+
+      location ->
+        location
+    end
+
+    Map.put(params, "locations", map_locations(locations, keep_known))
+  end
+
+  defp drop_deleted_venues(params, _user_id), do: params
+
+  defp map_locations(locations, fun) when is_list(locations), do: Enum.map(locations, fun)
+
+  defp map_locations(locations, fun) when is_map(locations),
+    do: Map.new(locations, fn {index, location} -> {index, fun.(location)} end)
+
+  defp map_locations(locations, _fun), do: locations
 
   # Builds the UI-state map the context uses to resolve the icon from the
   # submitted params.
@@ -149,7 +201,30 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
   defp put_optional(map, _key, nil), do: map
   defp put_optional(map, key, value), do: Map.put(map, key, to_string(value))
 
-  defp location_param(location) do
+  @doc """
+  The venue ids an in-person location posts: the ones it lists that are
+  still among the organiser's saved venues, in the location's order.
+
+  Deleting a venue already removes it from every meeting type that offered
+  it, so the two lists normally agree. This is a defence against them
+  disagreeing anyway: the context refuses an id that is not among the
+  organiser's venues, and one such id would make every save of the meeting
+  type fail, so an id missing from `venues` is left out instead of posted.
+  """
+  @spec venue_ids_param(LocationOption.t(), [%{id: integer()}]) :: [String.t()]
+  def venue_ids_param(location, venues) do
+    location.venue_ids |> known_venue_ids(venues) |> Enum.map(&to_string/1)
+  end
+
+  # The ids among `ids` that name one of `venues`, in their order. Compared
+  # as strings, so a posted id and a stored one match alike.
+  defp known_venue_ids(ids, venues) do
+    known = MapSet.new(venues, &to_string(&1.id))
+
+    Enum.filter(ids, &MapSet.member?(known, to_string(&1)))
+  end
+
+  defp location_param(location, venues) do
     %{
       "id" => location.id,
       "kind" => location.kind,
@@ -157,6 +232,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
       "details" => location.details || "",
       "collect_from_guest" => to_string(location.collect_from_guest),
       "video_integration_ids" => Enum.map(location.video_integration_ids, &to_string/1),
+      "venue_ids" => venue_ids_param(location, venues),
       "position" => to_string(location.position)
     }
   end

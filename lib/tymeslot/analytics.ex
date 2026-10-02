@@ -12,8 +12,10 @@ defmodule Tymeslot.Analytics do
   alias Tymeslot.Analytics.EventQueries
   alias Tymeslot.Analytics.EventSchema
   alias Tymeslot.Analytics.Fingerprint
+  alias Tymeslot.Analytics.SaltQueries
   alias Tymeslot.Analytics.Telemetry
   alias Tymeslot.Analytics.UtmExtractor
+  alias Tymeslot.Clock
   alias Tymeslot.Meetings
   alias Tymeslot.Security.RateLimiter.Analytics, as: AnalyticsLimiter
 
@@ -194,6 +196,17 @@ defmodule Tymeslot.Analytics do
   @spec prune_events(integer()) :: {non_neg_integer(), nil}
   def prune_events(days) do
     EventQueries.delete_events_older_than(days)
+  end
+
+  @doc """
+  Deletes the visitor-hash salts of every UTC day before today. Called by the
+  shared `DataRetentionWorker`: once a day's salt is gone, no hash made with it
+  can be recomputed, so a stored hash can no longer be brute-forced back to an
+  IP address. Returns the `{deleted_count, nil}` tuple from `delete_all`.
+  """
+  @spec prune_expired_salts() :: {non_neg_integer(), nil}
+  def prune_expired_salts do
+    SaltQueries.delete_before(Clock.utc_today())
   end
 
   @doc """

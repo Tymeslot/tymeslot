@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.ComponentDispatchTest do
   alias TymeslotWeb.Dashboard.CalendarSettingsComponent
   alias TymeslotWeb.Dashboard.ComponentDispatch
   alias TymeslotWeb.Dashboard.DashboardOverviewComponent
+  alias TymeslotWeb.Dashboard.Locations.LocationsComponent
   alias TymeslotWeb.Dashboard.ProfileSettingsComponent
   alias TymeslotWeb.Dashboard.ScheduleSettingsComponent
   alias TymeslotWeb.Dashboard.ServiceSettingsComponent
@@ -31,6 +32,7 @@ defmodule TymeslotWeb.Dashboard.ComponentDispatchTest do
       {:settings, ProfileSettingsComponent},
       {:availability, ScheduleSettingsComponent},
       {:meeting_settings, ServiceSettingsComponent},
+      {:locations, LocationsComponent},
       {:calendar, CalendarGridComponent},
       {:calendar_integration, CalendarSettingsComponent},
       {:video_integration, VideoSettingsComponent},

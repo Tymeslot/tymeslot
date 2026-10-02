@@ -62,5 +62,32 @@ defmodule Tymeslot.Emails.Shared.Meeting.HeroTest do
       assert html =~ "Virtual Meeting"
       assert html =~ "Discovery Call"
     end
+
+    test "notes under the location that the address will be arranged after booking" do
+      details = %{
+        date: ~D[2026-01-15],
+        start_time: ~U[2026-01-15 14:00:00Z],
+        duration: 60,
+        location: "In person",
+        location_type: :in_person_to_arrange
+      }
+
+      html = Hero.meeting_details_table(details, "en")
+
+      assert html =~ "In person"
+      assert html =~ "The address will be arranged with you after booking."
+    end
+
+    test "adds no note for a meeting with an address" do
+      details = %{
+        date: ~D[2026-01-15],
+        start_time: ~U[2026-01-15 14:00:00Z],
+        duration: 60,
+        location: "Berlin office (Friedrichstrasse 1)",
+        location_type: :in_person
+      }
+
+      refute Hero.meeting_details_table(details, "en") =~ "arranged with you after booking"
+    end
   end
 end

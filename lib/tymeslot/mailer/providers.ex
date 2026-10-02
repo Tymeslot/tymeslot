@@ -57,12 +57,13 @@ defmodule Tymeslot.Mailer.Providers do
   Tracking category declared by the caller of
   `Tymeslot.Emails.Shared.MjmlEmail.base_email/1`.
 
-    * `:transactional` — confirmations, security alerts, receipts. No opens,
-      no link rewriting.
+    * `:transactional` — confirmations, security alerts, receipts. No opens.
     * `:lifecycle` — onboarding and billing nudges, where open rates are
-      genuinely useful. Opens on, links untouched.
-    * `:marketing` — bulk newsletters and announcements. Opens on, links
-      rewritten.
+      genuinely useful. Opens on.
+    * `:marketing` — bulk newsletters and announcements. Opens on.
+
+  No category turns click tracking on: links are never rewritten through a
+  provider's redirect domain, whatever the category or provider.
   """
   @type tracking :: :transactional | :lifecycle | :marketing
 
@@ -282,59 +283,56 @@ defmodule Tymeslot.Mailer.Providers do
   Translates a tracking category into the provider options the configured
   adapter understands.
 
+  The category decides open tracking only. Click tracking is switched off
+  for every category and provider, explicitly rather than by omission, so a
+  dashboard-level default at the provider cannot rewrite our links into its
+  redirect domain. Campaign attribution belongs in UTM parameters on links to
+  our own pages instead.
+
   Only Postmark models the transactional/broadcast split as a message stream.
-  Elsewhere the category controls open and click tracking alone; separating
-  bulk mail from transactional reputation is an account-level concern the
-  operator configures at the provider (a subaccount, a sending domain, or an
-  SES configuration set).
+  Elsewhere separating bulk mail from transactional reputation is an
+  account-level concern the operator configures at the provider (a
+  subaccount, a sending domain, or an SES configuration set).
   """
   @spec tracking_options(module(), tracking()) :: keyword()
   def tracking_options(Swoosh.Adapters.Postmark, category) do
-    {opens, links, stream} =
-      case category do
-        :transactional -> {false, "None", "outbound"}
-        :lifecycle -> {true, "None", "outbound"}
-        :marketing -> {true, "HtmlAndText", "broadcast"}
-      end
-
-    [track_opens: opens, track_links: links, message_stream: stream]
+    [track_opens: opens?(category), track_links: "None", message_stream: stream(category)]
   end
 
   def tracking_options(Swoosh.Adapters.Sendgrid, category) do
-    {opens, clicks} = opens_and_clicks(category)
-
     [
       tracking_settings: %{
-        open_tracking: %{enable: opens},
-        click_tracking: %{enable: clicks},
+        open_tracking: %{enable: opens?(category)},
+        click_tracking: %{enable: false},
         subscription_tracking: %{enable: false}
       }
     ]
   end
 
   def tracking_options(Swoosh.Adapters.Mailgun, category) do
-    {opens, clicks} = opens_and_clicks(category)
+    opens = opens?(category)
 
     [
       sending_options: %{
-        tracking: yes_no(opens or clicks),
+        tracking: yes_no(opens),
         "tracking-opens": yes_no(opens),
-        "tracking-clicks": yes_no(clicks)
+        "tracking-clicks": "no"
       }
     ]
   end
 
   def tracking_options(Swoosh.Adapters.AhaSend, category) do
-    {opens, clicks} = opens_and_clicks(category)
-
-    [tracking: %{open: opens, click: clicks}]
+    [tracking: %{open: opens?(category), click: false}]
   end
 
   def tracking_options(_adapter, _category), do: []
 
-  defp opens_and_clicks(:transactional), do: {false, false}
-  defp opens_and_clicks(:lifecycle), do: {true, false}
-  defp opens_and_clicks(:marketing), do: {true, true}
+  defp opens?(:transactional), do: false
+  defp opens?(:lifecycle), do: true
+  defp opens?(:marketing), do: true
+
+  defp stream(:marketing), do: "broadcast"
+  defp stream(category) when category in [:transactional, :lifecycle], do: "outbound"
 
   defp yes_no(true), do: "yes"
   defp yes_no(false), do: "no"

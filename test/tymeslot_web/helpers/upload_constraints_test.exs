@@ -16,8 +16,8 @@ defmodule TymeslotWeb.Helpers.UploadConstraintsTest do
       assert UploadConstraints.allowed_extensions(:image) == [".jpg", ".jpeg", ".png", ".webp"]
     end
 
-    test "background videos accept mp4" do
-      assert ".mp4" in UploadConstraints.allowed_extensions(:video)
+    test "background videos accept only the formats whose metadata is stripped" do
+      assert UploadConstraints.allowed_extensions(:video) == [".mp4", ".webm"]
     end
 
     test "every extension is lowercase and dot-prefixed" do

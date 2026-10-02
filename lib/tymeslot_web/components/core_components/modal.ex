@@ -27,6 +27,13 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
         </:footer>
       </.modal>
 
+      # With a line of explanation under the title
+      <.modal id="venue-modal" show={@show_modal}>
+        <:header>Add location</:header>
+        <:subtitle>A place you meet people.</:subtitle>
+        <%!-- Form content here --%>
+      </.modal>
+
       # Small modal
       <.modal id="small-modal" show={@show_modal} size={:small}>
         <:header>Quick Note</:header>
@@ -64,6 +71,11 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
     doc: "Accessible name for the dialog when no :header slot is rendered"
 
   slot :header, required: false
+
+  slot :subtitle,
+    required: false,
+    doc: "A line of explanation under the header; rendered only with a :header"
+
   slot :inner_block, required: true
   slot :footer, required: false
 
@@ -100,13 +112,25 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
         >
           <%!-- Header --%>
           <%= if @header != [] do %>
-            <div class="modal-header px-8 py-6 border-b-2 border-tymeslot-50 flex items-center justify-between">
-              <h3
-                id={"#{@id}-title"}
-                class="modal-title text-2xl font-black text-tymeslot-900 tracking-tight"
-              >
-                {render_slot(@header)}
-              </h3>
+            <div class={[
+              "modal-header px-8 py-6 border-b-2 border-tymeslot-50 flex justify-between gap-4",
+              if(@subtitle == [], do: "items-center", else: "items-start")
+            ]}>
+              <div class="min-w-0">
+                <h3
+                  id={"#{@id}-title"}
+                  class="modal-title text-2xl font-black text-tymeslot-900 tracking-tight"
+                >
+                  {render_slot(@header)}
+                </h3>
+                <p
+                  :if={@subtitle != []}
+                  id={"#{@id}-subtitle"}
+                  class="mt-1 text-token-sm font-medium text-tymeslot-500"
+                >
+                  {render_slot(@subtitle)}
+                </p>
+              </div>
               <button
                 type="button"
                 class="w-10 h-10 rounded-xl bg-tymeslot-50 text-tymeslot-400 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center"
@@ -146,8 +170,9 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
 
   # Prefer aria-labelledby (pointing at the rendered header slot); fall back to
   # the caller-supplied aria-label when there is no header to label the dialog.
-  defp dialog_label_attrs(%{header: header, id: id}) when header != [] do
-    %{"aria-labelledby" => "#{id}-title"}
+  defp dialog_label_attrs(%{header: header, subtitle: subtitle, id: id}) when header != [] do
+    attrs = %{"aria-labelledby" => "#{id}-title"}
+    if subtitle == [], do: attrs, else: Map.put(attrs, "aria-describedby", "#{id}-subtitle")
   end
 
   defp dialog_label_attrs(%{aria_label: aria_label}) do

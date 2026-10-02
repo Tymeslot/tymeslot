@@ -117,6 +117,30 @@ defmodule Tymeslot.Media.TranscoderTest do
     end
   end
 
+  describe "transcode/3 arguments" do
+    @tag :tmp_dir
+    test "tells ffmpeg not to copy the source's metadata into the variant", %{tmp_dir: tmp_dir} do
+      source = Path.join(tmp_dir, "upload.mp4")
+      output = Path.join(tmp_dir, "upload-desktop.mp4")
+      File.write!(source, "video")
+
+      # Records one argument per line beside itself, so the assertion sees them
+      # as ffmpeg would. `$0` rather than an interpolated path: the test's
+      # tmp_dir is named after the test, apostrophe included.
+      stub = Path.join(tmp_dir, "ffmpeg")
+      args_file = stub <> ".args"
+      File.write!(stub, "#!/bin/sh\nfor arg in \"$@\"; do echo \"$arg\"; done > \"$0.args\"\n")
+      File.chmod!(stub, 0o755)
+
+      variant = [codec: "libx264", max_height: 1080, format: "mp4"]
+      assert :ok = with_path(tmp_dir, fn -> Transcoder.transcode(source, output, variant) end)
+
+      args = args_file |> File.read!() |> String.split("\n", trim: true)
+      assert ["-map_metadata", "-1"] in Enum.chunk_every(args, 2, 1, :discard)
+      assert ["-map_chapters", "-1"] in Enum.chunk_every(args, 2, 1, :discard)
+    end
+  end
+
   # Runs `fun` with the PATH narrowed to `dir`, restoring the caller's PATH
   # afterwards so a failure cannot leave the suite unable to find anything.
   defp with_path(dir, fun) do

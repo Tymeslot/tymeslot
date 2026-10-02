@@ -17,11 +17,13 @@ defmodule TymeslotWeb.Helpers.UploadConstraints do
     video: 100_000_000
   }
 
-  # Allowed extensions per type
+  # Allowed extensions per type. QuickTime (`.mov`) is no longer accepted:
+  # phones record their location into it, and only MP4 and WebM have their
+  # metadata stripped on upload.
   @extensions %{
     avatar: [".jpg", ".jpeg", ".png", ".gif", ".webp"],
     image: [".jpg", ".jpeg", ".png", ".webp"],
-    video: [".mp4", ".webm", ".mov"]
+    video: [".mp4", ".webm"]
   }
 
   @doc """

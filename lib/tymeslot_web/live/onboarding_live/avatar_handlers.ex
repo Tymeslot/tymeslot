@@ -14,6 +14,7 @@ defmodule TymeslotWeb.OnboardingLive.AvatarHandlers do
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Security.RateLimiter
+  alias TymeslotWeb.Helpers.ImageUploadErrors
   alias TymeslotWeb.Helpers.UploadHandler
   alias TymeslotWeb.OnboardingLive.BasicSettingsShared
 
@@ -78,14 +79,15 @@ defmodule TymeslotWeb.OnboardingLive.AvatarHandlers do
         |> LiveView.push_event("upload-complete", %{})
         |> Component.assign(:profile, updated)
 
-      [{:error, _reason}] ->
+      [{:error, reason}] ->
         LiveView.put_flash(
           socket,
           :error,
-          dgettext(
-            "onboarding_wizard",
-            "Could not update your photo. Please try a different image."
-          )
+          ImageUploadErrors.message(reason) ||
+            dgettext(
+              "onboarding_wizard",
+              "Could not update your photo. Please try a different image."
+            )
         )
 
       _other ->

@@ -1364,3 +1364,13 @@ msgstr "Coś poszło nie tak"
 #, elixir-autogen, elixir-format
 msgid "This page could not be loaded. Please try again."
 msgstr "Nie udało się wczytać tej strony. Spróbuj ponownie."
+
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "The address will be arranged with you after booking."
+msgstr "Adres zostanie ustalony z tobą po rezerwacji."
+
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "Which location?"
+msgstr "Która lokalizacja?"

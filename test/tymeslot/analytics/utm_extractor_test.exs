@@ -26,17 +26,85 @@ defmodule Tymeslot.Analytics.UtmExtractorTest do
              }
     end
 
-    test "keeps allowlisted attribution params (click IDs, ref) in tracking_params" do
+    test "keeps campaign-level attribution params (ref, mc_cid, gclsrc) in tracking_params" do
       params = %{
         "utm_source" => "linkedin",
         "ref" => "newsletter-42",
-        "gclid" => "abc"
+        "mc_cid" => "a1b2c3",
+        "gclsrc" => "aw.ds"
       }
 
       result = UtmExtractor.extract(params)
 
       assert result.utm_source == "linkedin"
-      assert result.tracking_params == %{"ref" => "newsletter-42", "gclid" => "abc"}
+
+      assert result.tracking_params == %{
+               "ref" => "newsletter-42",
+               "mc_cid" => "a1b2c3",
+               "gclsrc" => "aw.ds"
+             }
+    end
+
+    test "drops per-person click and subscriber identifiers, keeping campaign tags" do
+      params = %{
+        "fbclid" => "IwAR-click",
+        "mc_eid" => "subscriber-1",
+        "mc_cid" => "campaign-1",
+        "ref" => "spring"
+      }
+
+      result = UtmExtractor.extract(params)
+
+      assert result.tracking_params == %{
+               "ad_network" => "meta",
+               "mc_cid" => "campaign-1",
+               "ref" => "spring"
+             }
+    end
+
+    test "records a Google click as the network only, never the gclid" do
+      result = UtmExtractor.extract(%{"gclid" => "Cj0KCQ-click", "utm_source" => "x"})
+
+      assert result.utm_source == "x"
+      assert result.tracking_params == %{"ad_network" => "google"}
+    end
+
+    test "maps each click identifier to the network that issued it" do
+      networks = %{
+        "gclid" => "google",
+        "gbraid" => "google",
+        "wbraid" => "google",
+        "dclid" => "google",
+        "fbclid" => "meta",
+        "msclkid" => "microsoft",
+        "ttclid" => "tiktok",
+        "twclid" => "x",
+        "li_fat_id" => "linkedin",
+        "yclid" => "yandex",
+        "rdt_cid" => "reddit",
+        "epik" => "pinterest"
+      }
+
+      mismatches =
+        Enum.reject(networks, fn {key, network} ->
+          UtmExtractor.extract(%{key => "id-123"}).tracking_params == %{"ad_network" => network}
+        end)
+
+      assert mismatches == []
+    end
+
+    test "drops Instagram's igshid without recording a network" do
+      assert UtmExtractor.extract(%{"igshid" => "sharer-1"}).tracking_params == %{}
+    end
+
+    test "accepts a known ad_network back from the query string, so it survives navigation" do
+      assert UtmExtractor.extract(%{"ad_network" => "google"}).tracking_params ==
+               %{"ad_network" => "google"}
+    end
+
+    test "drops an ad_network value that names no known network" do
+      assert UtmExtractor.extract(%{"ad_network" => "invitee@example.com"}).tracking_params ==
+               %{}
     end
 
     test "drops non-allowlisted params so visitor PII is never persisted" do

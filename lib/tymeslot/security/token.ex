@@ -3,6 +3,8 @@ defmodule Tymeslot.Security.Token do
   Generation and hashing of the random tokens used for sessions and account links.
   """
 
+  alias Ecto.Changeset
+
   @doc """
   Generates a strong random session token.
   Returns just the token string.
@@ -35,5 +37,20 @@ defmodule Tymeslot.Security.Token do
   @spec hash_token(String.t()) :: String.t()
   def hash_token(token) when is_binary(token) do
     Base.encode16(:crypto.hash(:sha256, token), case: :lower)
+  end
+
+  @doc """
+  Keeps `hash_field` the hash of the token changing in `field`: set when the
+  token is, cleared when it is cleared, and left alone when it does not
+  change. The column a token is looked up by is always the hash, never the
+  token itself.
+  """
+  @spec put_hash(Changeset.t(), atom(), atom()) :: Changeset.t()
+  def put_hash(%Changeset{} = changeset, field, hash_field) do
+    case Changeset.fetch_change(changeset, field) do
+      {:ok, nil} -> Changeset.put_change(changeset, hash_field, nil)
+      {:ok, token} -> Changeset.put_change(changeset, hash_field, hash_token(token))
+      :error -> changeset
+    end
   end
 end

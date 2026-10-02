@@ -53,6 +53,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCompositionTest do
   alias Tymeslot.ConfigTestHelpers
   alias Tymeslot.Onboarding.OnboardingQueries
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Security.Token
   alias Tymeslot.Telegram
 
   setup :verify_on_exit!
@@ -137,9 +138,9 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCompositionTest do
 
       view |> element("button", "Add Telegram Account") |> render_click()
       assert [stub] = Telegram.list_integrations(user.id)
-      initial_token = stub.link_token
-      # 24 random bytes, url-safe base64 without padding
-      assert initial_token =~ ~r/\A[A-Za-z0-9_-]{32}\z/
+      # The row keeps only the hash of the token the deep link carries.
+      initial_hash = stub.link_token_hash
+      assert initial_hash =~ ~r/\A[0-9a-f]{64}\z/
 
       # Force the expired state so the "Generate New Link" button
       # renders — that is the only UI surface that fires
@@ -160,8 +161,11 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCompositionTest do
       # regression in the handler that forgot to rotate (or forgot to
       # persist) would leave the old token in place.
       [refreshed] = Telegram.list_integrations(user.id)
-      assert refreshed.link_token =~ ~r/\A[A-Za-z0-9_-]{32}\z/
-      refute refreshed.link_token == initial_token
+      refute refreshed.link_token_hash == initial_hash
+
+      # The deep link now on the page carries the token the new hash is of.
+      assert [_link, token] = Regex.run(~r/\?start=([A-Za-z0-9_-]{32})/, html)
+      assert Token.hash_token(token) == refreshed.link_token_hash
     end
   end
 

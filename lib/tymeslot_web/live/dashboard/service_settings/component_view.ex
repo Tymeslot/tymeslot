@@ -114,6 +114,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
               type={@editing_type}
               is_edit={!!@editing_type}
               video_integrations={@video_integrations}
+              venues={@venues}
               calendar_integrations={@calendar_integrations}
               parent_myself={@myself}
               saving={@saving}
@@ -143,6 +144,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
               show_add_form={@show_add_form}
               editing_type={@editing_type}
               currency={@payment_currency}
+              venues={@venues}
               parent_myself={@myself}
             />
           </div>

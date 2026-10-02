@@ -5,15 +5,21 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
   """
   use TymeslotWeb.LiveCase, async: false
   @moduletag :utils
+  @moduletag :polls
 
   import Ecto.Query
+  import Mox, only: [verify_on_exit!: 1]
   import Phoenix.LiveViewTest
+  import Tymeslot.ConfigTestHelpers, only: [setup_config: 3]
   import Tymeslot.Factory
   import Tymeslot.ThemeBookingFlowHelpers, only: [seed_booking_account: 3]
 
+  alias Tymeslot.HTTPClientMock
   alias Tymeslot.Polls
   alias Tymeslot.Polls.PollParticipantSchema
   alias Tymeslot.Repo
+
+  setup :verify_on_exit!
 
   defp poll_path(username, token), do: "/#{username}/poll/#{token}"
 
@@ -182,6 +188,119 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
                from(p in PollParticipantSchema, where: p.poll_id == ^poll.id),
                :count
              ) == 0
+    end
+  end
+
+  describe "registration bot checks" do
+    setup %{conn: conn} do
+      enable_booking_recaptcha()
+
+      %{user: user, profile: profile} = seed_booking_account("1", "guarded-host", "Etc/UTC")
+      poll = insert(:poll, user: user, title: "Guarded poll")
+      insert(:poll_time_slot, poll: poll)
+
+      {:ok, view, _html} = live(conn, poll_path(profile.username, poll.token))
+      %{view: view, poll: poll}
+    end
+
+    test "registration goes through when siteverify cannot be reached", %{view: view, poll: poll} do
+      stub_siteverify({:error, %Req.TransportError{reason: :timeout}})
+
+      register_with_token(view, "some-token")
+
+      assert participant_count(poll) == 1
+    end
+
+    test "registration goes through when siteverify answers with a 5xx", %{view: view, poll: poll} do
+      stub_siteverify({:ok, %Req.Response{status: 503, body: ""}})
+
+      register_with_token(view, "RECAPTCHA_SCRIPT_BLOCKED")
+
+      assert participant_count(poll) == 1
+    end
+
+    test "a token Google refuses still blocks registration", %{view: view, poll: poll} do
+      google_rejects_tokens()
+
+      html = register_with_token(view, "forged-token")
+
+      assert html =~ "Security verification failed"
+      assert participant_count(poll) == 0
+    end
+
+    test "the script-blocked marker is refused while Google answers", %{view: view, poll: poll} do
+      google_rejects_tokens()
+
+      html = register_with_token(view, "RECAPTCHA_SCRIPT_BLOCKED")
+
+      assert html =~ "Security verification is currently unavailable"
+      assert participant_count(poll) == 0
+    end
+
+    test "a whitespace-only honeypot is caught without asking Google", %{view: view, poll: poll} do
+      Mox.expect(HTTPClientMock, :post, 0, fn _url, _body, _headers, _opts -> :unused end)
+
+      render_submit(view, "register_participant", %{
+        "name" => "Bot",
+        "email" => "bot@example.com",
+        "website" => " ",
+        "g-recaptcha-response" => "some-token"
+      })
+
+      assert participant_count(poll) == 0
+    end
+
+    test "the honeypot is rendered hidden from sight and from assistive technology", %{
+      view: view
+    } do
+      assert has_element?(
+               view,
+               "form[data-testid='poll-register-form'] div.sr-only[aria-hidden='true'] input#poll-website[name='website'][tabindex='-1']"
+             )
+    end
+  end
+
+  # The RecaptchaV3 hook fills the hidden token input, which the form helper
+  # cannot set, so the event is sent the way the hook submits it.
+  defp register_with_token(view, token) do
+    render_submit(view, "register_participant", %{
+      "name" => "Ada Lovelace",
+      "email" => "ada@example.com",
+      "g-recaptcha-response" => token
+    })
+  end
+
+  defp participant_count(poll) do
+    Repo.aggregate(from(p in PollParticipantSchema, where: p.poll_id == ^poll.id), :count)
+  end
+
+  defp google_rejects_tokens do
+    body = Jason.encode!(%{"success" => false, "error-codes" => ["invalid-input-response"]})
+    stub_siteverify({:ok, %Req.Response{status: 200, body: body}})
+  end
+
+  defp stub_siteverify(response) do
+    Mox.stub(HTTPClientMock, :post, fn _url, _body, _headers, _opts -> response end)
+  end
+
+  defp enable_booking_recaptcha do
+    setup_config(:tymeslot, :recaptcha,
+      booking_enabled: true,
+      booking_min_score: 0.3,
+      booking_action: "booking_form",
+      expected_hostnames: []
+    )
+
+    for {name, value} <- [
+          {"RECAPTCHA_SITE_KEY", "test_site_key"},
+          {"RECAPTCHA_SECRET_KEY", "test_secret_key"}
+        ] do
+      original = System.get_env(name)
+      System.put_env(name, value)
+
+      on_exit(fn ->
+        if original, do: System.put_env(name, original), else: System.delete_env(name)
+      end)
     end
   end
 

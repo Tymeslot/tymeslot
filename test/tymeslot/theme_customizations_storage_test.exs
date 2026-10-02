@@ -2,6 +2,7 @@ defmodule Tymeslot.ThemeCustomizationsStorageTest do
   use Tymeslot.DataCase, async: false
   @moduletag :utils
 
+  alias Tymeslot.Test.MediaFixtures
   alias Tymeslot.ThemeCustomizations.Storage
 
   setup do
@@ -83,18 +84,15 @@ defmodule Tymeslot.ThemeCustomizationsStorageTest do
       original_dir = Application.get_env(:tymeslot, :upload_directory)
       Application.put_env(:tymeslot, :upload_directory, readonly)
 
-      temp_file = Path.join(System.tmp_dir!(), "test_img_#{:rand.uniform(100_000)}.jpg")
-      # GIF magic bytes so MediaValidator accepts it
-      File.write!(temp_file, "GIF89a" <> "data")
+      temp_file = MediaFixtures.temp_copy!("gps.webp")
 
       try do
-        result = Storage.store_background_image(1, "1", %{path: temp_file, filename: "bg.jpg"})
+        result = Storage.store_background_image(1, "1", %{path: temp_file, filename: "bg.webp"})
         assert {:error, :eacces} = result
       after
         Application.put_env(:tymeslot, :upload_directory, original_dir)
         File.chmod!(readonly, 0o755)
         File.rm_rf!(readonly)
-        File.rm(temp_file)
       end
     end
 
@@ -108,42 +106,48 @@ defmodule Tymeslot.ThemeCustomizationsStorageTest do
       assert result == {:error, :invalid_image_format}
     end
 
-    test "store_background_image/3 stores file successfully" do
-      temp_dir = System.tmp_dir!()
-      temp_file = Path.join(temp_dir, "test_image_#{:rand.uniform(100_000)}.jpg")
-      # GIF magic bytes: GIF89a
-      File.write!(temp_file, "GIF89a" <> "fake image data")
+    test "store_background_image/3 stores the image without its EXIF location" do
+      temp_file = MediaFixtures.temp_copy!("gps.webp")
 
-      try do
-        assert {:ok, stored_path} =
-                 Storage.store_background_image(1, "1", %{path: temp_file, filename: "test.jpg"})
+      assert {:ok, stored_path} =
+               Storage.store_background_image(1, "1", %{path: temp_file, filename: "bg.webp"})
 
-        assert stored_path =~ "themes/1/1/images"
-        full_path = Storage.build_theme_file_path(stored_path)
-        assert File.exists?(full_path)
-        File.rm!(full_path)
-      after
-        File.rm(temp_file)
-      end
+      assert stored_path =~ "themes/1/1/images"
+      full_path = Storage.build_theme_file_path(stored_path)
+      assert MediaFixtures.image_metadata_fields(File.read!(full_path)) == []
+      refute File.read!(full_path) =~ "Model-X"
     end
 
-    test "store_background_video/3 stores file" do
-      temp_dir = System.tmp_dir!()
-      temp_file = Path.join(temp_dir, "test_video_#{:rand.uniform(100_000)}.mp4")
-      # MP4 magic bytes: 00 00 00 18 66 74 79 70 69 73 6F 6D
-      File.write!(temp_file, <<0x00, 0x00, 0x00, 0x18, "ftypisom", "fake video data">>)
+    test "store_background_image/3 refuses a file that only has image magic bytes" do
+      temp_file = Path.join(System.tmp_dir!(), "test_image_#{System.unique_integer([:positive])}")
+      File.write!(temp_file, "GIF89a" <> "fake image data")
+      on_exit(fn -> File.rm(temp_file) end)
 
-      try do
-        assert {:ok, stored_path} =
-                 Storage.store_background_video(1, "1", %{path: temp_file, filename: "test.mp4"})
+      assert {:error, :invalid_image_format} =
+               Storage.store_background_image(1, "1", %{path: temp_file, filename: "bg.gif"})
+    end
 
-        assert stored_path =~ "themes/1/1/videos"
-        full_path = Storage.build_theme_file_path(stored_path)
-        assert File.exists?(full_path)
-        File.rm!(full_path)
-      after
-        File.rm(temp_file)
-      end
+    test "store_background_video/3 stores the video without its location" do
+      temp_file = MediaFixtures.temp_copy!("gps.mp4")
+
+      assert {:ok, stored_path} =
+               Storage.store_background_video(1, "1", %{path: temp_file, filename: "test.mp4"})
+
+      assert stored_path =~ "themes/1/1/videos"
+      stored = stored_path |> Storage.build_theme_file_path() |> File.read!()
+      assert byte_size(stored) == byte_size(MediaFixtures.read!("gps.mp4"))
+      refute stored =~ <<0xA9, "xyz">>
+      refute stored =~ "location.ISO6709"
+    end
+
+    test "store_background_video/3 refuses a container whose metadata cannot be stripped" do
+      temp_file = Path.join(System.tmp_dir!(), "test_video_#{System.unique_integer([:positive])}")
+      # AVI passes the magic-byte check but is neither MP4 nor WebM.
+      File.write!(temp_file, "RIFF" <> <<100::little-32>> <> "AVI LIST")
+      on_exit(fn -> File.rm(temp_file) end)
+
+      assert {:error, :invalid_video_format} =
+               Storage.store_background_video(1, "1", %{path: temp_file, filename: "clip.mp4"})
     end
   end
 end

@@ -442,8 +442,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
 
       nonce = conn.assigns.csp_nonce
 
-      assert script_src_directive ==
-               "script-src 'self' 'nonce-#{nonce}' https://www.google.com https://www.gstatic.com https://js.stripe.com"
+      assert script_src_directive == "script-src 'self' 'nonce-#{nonce}'"
     end
 
     test "does not allow 'unsafe-eval' or 'unsafe-inline' in script-src", %{conn: conn} do

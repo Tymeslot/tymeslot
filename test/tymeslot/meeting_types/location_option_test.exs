@@ -130,17 +130,17 @@ defmodule Tymeslot.MeetingTypes.LocationOptionTest do
       assert Changeset.get_field(cs, :collect_from_guest) == false
     end
 
-    test "details survive a kind change, because every kind means the same by them" do
-      in_person = %LocationOption{
+    test "details survive a change between the kinds that use them" do
+      custom = %LocationOption{
         id: "loc-1",
-        kind: "in_person",
-        label: "The office",
-        details: "12 High Street"
+        kind: "custom",
+        label: "Front desk",
+        details: "+44 20 7946 0000"
       }
 
-      cs = changeset(%{"kind" => "custom"}, in_person)
+      cs = changeset(%{"kind" => "phone"}, custom)
 
-      assert Changeset.get_field(cs, :details) == "12 High Street"
+      assert Changeset.get_field(cs, :details) == "+44 20 7946 0000"
     end
 
     test "an edit that does not change the kind keeps its config" do
@@ -155,6 +155,66 @@ defmodule Tymeslot.MeetingTypes.LocationOptionTest do
 
       assert cs.valid?
       assert Changeset.get_field(cs, :video_integration_ids) == [7]
+    end
+  end
+
+  describe "changeset/2 venues" do
+    test "an in-person location keeps its venues in order, each once" do
+      cs =
+        changeset(%{
+          "kind" => "in_person",
+          "label" => "Our offices",
+          "venue_ids" => ["9", "7", "9"]
+        })
+
+      assert cs.valid?
+      assert Changeset.get_field(cs, :venue_ids) == [9, 7]
+    end
+
+    test "an in-person location listing no venues is valid" do
+      cs = changeset(%{"kind" => "in_person", "label" => "In person", "venue_ids" => []})
+
+      assert cs.valid?
+      assert Changeset.get_field(cs, :venue_ids) == []
+    end
+
+    test "leaving the in-person kind drops the venues" do
+      in_person = %LocationOption{
+        id: "loc-1",
+        kind: "in_person",
+        label: "Our office",
+        venue_ids: [7]
+      }
+
+      cs = changeset(%{"kind" => "custom", "label" => "Somewhere else"}, in_person)
+
+      assert cs.valid?
+      assert Changeset.get_field(cs, :venue_ids) == []
+    end
+
+    test "an in-person location never keeps details, which venues replace" do
+      cs =
+        changeset(%{
+          "kind" => "in_person",
+          "label" => "Our office",
+          "details" => "12 High Street"
+        })
+
+      assert cs.valid?
+      assert Changeset.get_field(cs, :details) == nil
+    end
+
+    test "becoming in-person drops the details the old kind had" do
+      custom = %LocationOption{
+        id: "loc-1",
+        kind: "custom",
+        label: "Somewhere",
+        details: "By the river"
+      }
+
+      cs = changeset(%{"kind" => "in_person"}, custom)
+
+      assert Changeset.get_field(cs, :details) == nil
     end
   end
 

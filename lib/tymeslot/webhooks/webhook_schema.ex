@@ -11,7 +11,9 @@ defmodule Tymeslot.Webhooks.WebhookSchema do
 
   alias Tymeslot.ChangesetValidators.URL, as: URLValidator
   alias Tymeslot.Notifications.EventTypes
+  alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Security.LegacyPlainColumn
   alias Tymeslot.Validation.Constraints
   alias Tymeslot.Webhooks.SsrfValidator
 
@@ -36,7 +38,12 @@ defmodule Tymeslot.Webhooks.WebhookSchema do
 
   schema "webhooks" do
     field(:name, :string)
-    field(:url, :string)
+    # Zapier, n8n and Make hook URLs are themselves the credential: anyone
+    # holding one can post into the host's automation. The plain `url` column
+    # predates this and is no longer read; it is only emptied when the URL
+    # changes (see `Tymeslot.Security.LegacyPlainColumn`).
+    field(:url, EncryptedString, source: :url_encrypted, redact: true)
+    field(:legacy_url, :string, source: :url, load_in_query: false, redact: true)
     field(:webhook_token_encrypted, :binary)
     field(:events, {:array, :string}, default: [])
     field(:is_active, :boolean, default: true)
@@ -95,6 +102,7 @@ defmodule Tymeslot.Webhooks.WebhookSchema do
     |> maybe_seed_webhook_token(attrs)
     |> generate_token()
     |> encrypt_token()
+    |> LegacyPlainColumn.clear_on_change(url: :legacy_url)
   end
 
   defp maybe_seed_webhook_token(changeset, attrs) do

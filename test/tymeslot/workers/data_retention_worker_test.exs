@@ -2,18 +2,24 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :workers
+  @moduletag :auth
 
   use Oban.Testing, repo: Tymeslot.Repo
 
   import Tymeslot.Factory
 
   alias Tymeslot.Analytics.EventSchema
+  alias Tymeslot.Analytics.SaltSchema
+  alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Slack.SlackDeliverySchema
   alias Tymeslot.Telegram.TelegramDeliverySchema
   alias Tymeslot.Telegram.TelegramIntegrationSchema
   alias Tymeslot.Webhooks.WebhookDeliverySchema
   alias Tymeslot.Webhooks.WebhookEventSchema
   alias Tymeslot.Workers.DataRetentionWorker
+
+  import Tymeslot.Test.ClockHelpers
 
   describe "perform/1 - outgoing webhook delivery cleanup" do
     test "removes delivery records older than the retention period" do
@@ -339,6 +345,103 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
 
       assert :ok = perform_job(DataRetentionWorker, %{"analytics_event_retention_days" => 30})
       refute Repo.get(EventSchema, event.id)
+    end
+  end
+
+  describe "perform/1 - analytics salt cleanup" do
+    test "deletes the salts of past days and keeps today's" do
+      today = ~D[2031-03-10]
+      freeze_clock(DateTime.new!(today, ~T[04:00:00], "Etc/UTC"))
+
+      for date <- [~D[2031-02-01], ~D[2031-03-09], today] do
+        Repo.insert!(%SaltSchema{date: date, salt: :crypto.strong_rand_bytes(32)})
+      end
+
+      assert :ok = perform_job(DataRetentionWorker, %{})
+
+      assert Repo.all(from(s in SaltSchema, select: s.date)) == [today]
+    end
+  end
+
+  describe "perform/1 - unverified account cleanup" do
+    defp days_ago(days), do: DateTime.add(DateTime.utc_now(:second), -days, :day)
+
+    test "deletes accounts still unverified 30 days after sign-up, keeps verified and newer ones" do
+      stale = insert(:unverified_user, inserted_at: days_ago(31), signup_ip: "203.0.113.9")
+      fresh = insert(:unverified_user, inserted_at: days_ago(10))
+      verified = insert(:user, inserted_at: days_ago(400))
+
+      assert :ok = perform_job(DataRetentionWorker, %{})
+
+      refute Repo.get(UserSchema, stale.id)
+      assert Repo.get(UserSchema, fresh.id)
+      assert Repo.get(UserSchema, verified.id)
+    end
+
+    test "spares an old account its owner was sent a fresh link for within the window" do
+      user =
+        insert(:unverified_user,
+          inserted_at: days_ago(60),
+          verification_sent_at: days_ago(2)
+        )
+
+      assert :ok = perform_job(DataRetentionWorker, %{})
+
+      assert Repo.get(UserSchema, user.id)
+    end
+
+    test "deletes the account's dependent rows with it, as an erasure request would" do
+      stale = insert(:unverified_user, inserted_at: days_ago(31))
+      profile = insert(:profile, user: stale)
+
+      assert :ok = perform_job(DataRetentionWorker, %{})
+
+      refute Repo.get(UserSchema, stale.id)
+      refute Repo.get(ProfileSchema, profile.id)
+    end
+
+    test "respects the unverified_account_retention_days argument" do
+      user = insert(:unverified_user, inserted_at: days_ago(10))
+
+      assert :ok =
+               perform_job(DataRetentionWorker, %{"unverified_account_retention_days" => 40})
+
+      assert Repo.get(UserSchema, user.id)
+
+      assert :ok = perform_job(DataRetentionWorker, %{"unverified_account_retention_days" => 7})
+      refute Repo.get(UserSchema, user.id)
+    end
+
+    test "a zero or negative window deletes nothing" do
+      user = insert(:unverified_user, inserted_at: days_ago(1))
+
+      for days <- [0, -1] do
+        assert :ok =
+                 perform_job(DataRetentionWorker, %{"unverified_account_retention_days" => days})
+      end
+
+      assert Repo.get(UserSchema, user.id)
+    end
+  end
+
+  describe "perform/1 - financial records past their retention period" do
+    test "deletes a deleted host's expired records and scrubs a live host's attendee" do
+      freeze_clock(~U[2037-01-01 04:00:00Z])
+
+      retained =
+        insert(:paid_booking_payment,
+          attendee_email: nil,
+          attendee_name: nil,
+          host_deleted_at: ~U[2030-05-01 00:00:00Z],
+          paid_at: ~U[2026-12-31 23:59:59Z]
+        )
+
+      live = insert(:paid_booking_payment, paid_at: ~U[2026-06-01 12:00:00Z])
+
+      assert :ok = perform_job(DataRetentionWorker, %{})
+
+      refute Repo.reload(retained)
+      assert %{attendee_email: nil, attendee_name: nil} = Repo.reload(live)
     end
   end
 end

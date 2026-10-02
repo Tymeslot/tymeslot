@@ -16,8 +16,10 @@ defmodule TymeslotWeb.Layouts do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
+  alias TymeslotWeb.AuthLive
   alias TymeslotWeb.Endpoint
   alias TymeslotWeb.MeetingRequestLive
+  alias TymeslotWeb.Themes.Core.Dispatcher
 
   embed_templates "layouts/*"
 
@@ -263,31 +265,40 @@ defmodule TymeslotWeb.Layouts do
 
   Pass `live_module` (`assigns[:live_module]`, set automatically by
   `Phoenix.LiveView.Controller.live_render/3` on every LiveView page) so this
-  renders nothing for any module in `@credential_bearing_views`: their URLs
-  carry a long-lived credential (a signed token, a magic link) that
-  authorises an action on someone's behalf, and the analytics vendor's script
-  reports the page path, which would ship that credential to the analytics
-  store and every intermediate proxy.
+  renders nothing for a page in `@credential_bearing_views`, and `live_action`
+  (`assigns[:live_action]`, likewise set on every LiveView page) for a view
+  listed by action: their URLs carry a long-lived credential (a signed token,
+  a reset or poll link) that authorises an action on someone's behalf, and
+  the page shows it in other places too, such as a form's action.
 
-  Pages that stay tracked still pass every address through the
+  Every other page passes every address through the
   `tymeslotAnalyticsBeforeSend` scrubber in `assets/js/analytics.js`, which
-  removes meeting uids from paths (the cancel and reschedule links share the
-  booking-page LiveView, so they cannot be excluded by module) and drops every
-  query parameter except `utm_*`. The loader skips the tracker entirely when the
-  scrubber is missing.
+  masks credential-shaped path segments (UUIDs, random tokens, signed tokens;
+  the rule `Tymeslot.Infrastructure.Logging.PathMasker` applies to logs) and
+  drops every query parameter except `utm_*`. That scrubber is the primary
+  guard, covering controller pages and live navigation, which this check
+  cannot see; the list here is the second. The loader skips the tracker
+  entirely when the scrubber is missing.
   """
   attr :nonce, :string, default: nil
   attr :live_module, :atom, default: nil
+  attr :live_action, :atom, default: nil
 
-  # LiveViews whose URL itself is a credential (e.g. a signed
-  # `Phoenix.Token`), so the analytics vendor must never see the path.
-  # Add a module here the moment such a page is introduced; do not rely on
+  # LiveViews whose URL itself is a credential, so the analytics vendor
+  # must never load on them: a module for every action it serves, or
+  # `{module, action}` for one action of a view that also serves ordinary
+  # pages. Add an entry the moment such a page is introduced; do not rely on
   # its author remembering to edit this unrelated module.
-  @credential_bearing_views [MeetingRequestLive]
+  @credential_bearing_views [
+    MeetingRequestLive,
+    {AuthLive, :reset_password_form},
+    {Dispatcher, :poll_voting}
+  ]
 
   @spec analytics_scripts(map()) :: Phoenix.LiveView.Rendered.t()
-  def analytics_scripts(%{live_module: live_module} = assigns)
-      when live_module in @credential_bearing_views do
+  def analytics_scripts(%{live_module: live_module, live_action: live_action} = assigns)
+      when live_module in @credential_bearing_views or
+             {live_module, live_action} in @credential_bearing_views do
     ~H""
   end
 

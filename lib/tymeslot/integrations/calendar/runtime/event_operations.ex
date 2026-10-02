@@ -19,6 +19,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   require Logger
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Metrics
+  alias Tymeslot.Integrations.Calendar.CalDAV.BookingDocument
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
@@ -86,6 +87,11 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   @doc """
   Updates an existing event by UID.
   Accepts optional context (MeetingSchema, user_id, or {integration_id, user_id}) to use specific calendar.
+
+  A meeting's own event on a CalDAV-family calendar is patched onto the
+  document the sync cached for it rather than rebuilt from `event_data`, so
+  what the organiser added to the event survives the update (see
+  `CalDAV.BookingDocument`).
   """
   @spec update_event(event_uid(), event_data(), context() | {integration_id(), user_id()}) ::
           :ok
@@ -96,7 +102,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
       Logger.info("Updating calendar event", uid: uid)
 
       with %{} = client <- ClientManager.resolve_client(context),
-           {:written, written} <- written(ProviderAdapter.update_event(client, uid, event_data)) do
+           {:written, written} <- written(write_update(client, uid, event_data, context)) do
         Logger.info("Successfully updated calendar event", uid: uid)
         written
       else
@@ -223,6 +229,24 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   defp unless_moved(result, _clients, _event_ref), do: result
 
   # --- Private Helpers ---
+
+  # The cached href is where the event lived at the last sync. If nothing is
+  # there any more (the organiser moved it, or it was recreated elsewhere
+  # since), the plain write addresses the event by its UID in the booking
+  # calendar, exactly as it would have without a cache, and its own
+  # `:not_found` is what lets `CalendarEventSync` recreate a deleted event.
+  defp write_update(client, uid, event_data, context) do
+    case BookingDocument.for_update(client, uid, event_data, context) do
+      {:ok, patched} ->
+        case ProviderAdapter.update_event(client, uid, patched) do
+          {:error, :not_found} -> ProviderAdapter.update_event(client, uid, event_data)
+          result -> result
+        end
+
+      :none ->
+        ProviderAdapter.update_event(client, uid, event_data)
+    end
+  end
 
   # A whole event is written with `:ok`; one CalDAV occurrence of a series
   # with the document the series now lives in; a Google/Outlook split (the

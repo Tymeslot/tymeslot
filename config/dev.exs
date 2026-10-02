@@ -171,10 +171,6 @@ config :swoosh, :api_client, Swoosh.ApiClient.Hackney
 # Webhook verification enabled by default
 config :tymeslot, :skip_webhook_verification, false
 
-# Analytics fingerprint salt secret — fixed dev value. Production must override
-# via the ANALYTICS_SALT_SECRET environment variable (see runtime.exs).
-config :tymeslot, :analytics_salt_secret, "dev_analytics_salt_secret_change_in_prod"
-
 # Enable booking analytics in development so the feature is exercisable locally.
 config :tymeslot, :booking_analytics_enabled, true
 
