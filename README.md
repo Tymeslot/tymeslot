@@ -22,7 +22,7 @@ Built on Elixir/OTP, so it keeps running while you sleep.
 <p>
 <b><a href="#quick-start">Self-host with Docker →</a></b> &nbsp;·&nbsp;
 <b><a href="https://tymeslot.app">Try the Cloud →</a></b> &nbsp;·&nbsp;
-<b><a href="https://tymeslot.app/demo-theme-1">Live demo →</a></b> &nbsp;·&nbsp;
+<b><a href="https://tymeslot.app/demo-booking-page">Live demo →</a></b> &nbsp;·&nbsp;
 <b><a href="https://tymeslot.app/docs">Docs →</a></b> &nbsp;·&nbsp;
 <b><a href="https://github.com/tymeslot/tymeslot/issues">Issues →</a></b>
 </p>
@@ -99,7 +99,7 @@ Every connected calendar is checked the moment someone books. One conflict anywh
 - **SSO-first auth** — email/password, Google, GitHub, plus generic OAuth/OIDC for Keycloak, Authentik, Okta and Azure AD. Disable registration or password login independently.
 - **Privacy by design** — credentials encrypted at rest, no third-party trackers or analytics pixels, rate-limited public endpoints, HMAC-signed webhooks, CSRF and signed tokens throughout.
 - **Automate everything** — Slack and Telegram notifications, plus `meeting_created`, `meeting_cancelled` and `meeting_rescheduled` webhooks that plug straight into n8n, Zapier, Make or your own backend.
-- **Make it yours** — two booking-page themes (Quill and Rhythm) with custom colours, backgrounds and white-label options.
+- **Make it yours**: booking-page designs to choose from, with your own colours, fonts and backgrounds, light and dark modes, a cover image with your headline and bio, and white-label options.
 - **Speaks your language** — the whole app in English, German, Ukrainian, French, Italian, Czech and Polish: your dashboard, your booking pages and every email, with dates and times in local convention. Guests get their own language automatically; pick yours in Account settings.
 - **Get paid to meet** — optional paid bookings through [Stripe Connect](#meeting-payments), off by default and fee-free for self-hosters.
 
