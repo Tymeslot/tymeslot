@@ -502,7 +502,15 @@ config :tymeslot, :payments,
     outgoing_webhook_days: 60,
     stripe_event_days: 90,
     analytics_event_days: 90,
-    payload_days: 30
+    payload_days: 30,
+    # Statutory retention for financial records (booking payments, payment
+    # transactions, subscription invoices), in years counted from the end of
+    # the financial year a record belongs to. Ten is the longest period common
+    # in EU and Swiss commercial law; set the period your jurisdiction
+    # requires. See Tymeslot.MeetingPayments.DataRetention.
+    financial_record_years: 10,
+    # The month the financial year starts in (1 = the calendar year).
+    financial_year_start_month: 1
   ]
 
 # HSTS directives sent by TymeslotWeb.Plugs.SecurityHeadersPlug, read via

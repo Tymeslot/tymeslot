@@ -423,4 +423,25 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
       assert Repo.get(UserSchema, user.id)
     end
   end
+
+  describe "perform/1 - financial records past their retention period" do
+    test "deletes a deleted host's expired records and scrubs a live host's attendee" do
+      freeze_clock(~U[2037-01-01 04:00:00Z])
+
+      retained =
+        insert(:paid_booking_payment,
+          attendee_email: nil,
+          attendee_name: nil,
+          host_deleted_at: ~U[2030-05-01 00:00:00Z],
+          paid_at: ~U[2026-12-31 23:59:59Z]
+        )
+
+      live = insert(:paid_booking_payment, paid_at: ~U[2026-06-01 12:00:00Z])
+
+      assert :ok = perform_job(DataRetentionWorker, %{})
+
+      refute Repo.reload(retained)
+      assert %{attendee_email: nil, attendee_name: nil} = Repo.reload(live)
+    end
+  end
 end
