@@ -227,18 +227,16 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
             </p>
           <% else %>
             <.empty_state
-              message={dgettext("dashboard_appearance", "No preview yet")}
-              secondary_message={
+              icon="hero-eye-slash"
+              variant={:dashed}
+              title={dgettext("dashboard_appearance", "No preview yet")}
+              description={
                 dgettext(
                   "dashboard_appearance",
                   "Pick a username for your booking page to see it here."
                 )
               }
-            >
-              <:icon>
-                <.icon name="hero-eye-slash" class="w-8 h-8 text-tymeslot-400" />
-              </:icon>
-            </.empty_state>
+            />
           <% end %>
         </div>
       </div>

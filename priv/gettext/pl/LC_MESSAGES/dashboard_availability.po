@@ -770,11 +770,6 @@ msgstr "Nieobecności zakończone w ciągu ostatnich %{count} dn. Nie wpływają
 msgid "Current and upcoming"
 msgstr "Trwające i nadchodzące"
 
-#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
-#, elixir-autogen, elixir-format
-msgid "No upcoming time off. Anything you add appears here."
-msgstr "Brak nadchodzących nieobecności. Wszystko, co dodasz, pojawi się tutaj."
-
 #: lib/tymeslot/availability/schedules.ex
 #, elixir-autogen, elixir-format
 msgid "(copy)"
@@ -818,3 +813,13 @@ msgid_plural "and %{count} more"
 msgstr[0] "i jeszcze 1"
 msgstr[1] "i jeszcze %{count}"
 msgstr[2] "i jeszcze %{count}"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Anything you add appears here."
+msgstr "Wszystko, co dodasz, pojawi się tutaj."
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "No upcoming time off"
+msgstr "Brak nadchodzących nieobecności"

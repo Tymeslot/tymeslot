@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.Components.CoreComponents.Feedback do
   @moduledoc "Feedback/status components extracted from CoreComponents."
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Components.CoreComponents.Icons
 
@@ -31,6 +32,42 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
 
   @pill_icon_classes %{xs: "w-3 h-3 shrink-0", sm: "w-3.5 h-3.5 shrink-0"}
 
+  @empty_state_sizes [:sm, :md, :lg]
+  @empty_state_variants [:card, :dashed, :plain]
+
+  @empty_state_size_classes %{
+    sm: %{
+      box: "px-4 py-8",
+      tile: "mb-3 h-12 w-12 rounded-token-xl",
+      icon: "h-6 w-6",
+      title: "text-token-base font-bold",
+      description: "mt-1 text-token-sm",
+      actions: "mt-4"
+    },
+    md: %{
+      box: "px-6 py-12",
+      tile: "mb-4 h-16 w-16 rounded-token-2xl",
+      icon: "h-8 w-8",
+      title: "text-token-lg font-black",
+      description: "mt-1 text-token-sm",
+      actions: "mt-6"
+    },
+    lg: %{
+      box: "px-6 py-16 sm:py-20",
+      tile: "mb-6 h-20 w-20 rounded-token-3xl",
+      icon: "h-10 w-10",
+      title: "text-token-2xl font-black",
+      description: "mt-2 text-token-base",
+      actions: "mt-8"
+    }
+  }
+
+  @empty_state_variant_classes %{
+    card: "card-glass",
+    dashed: "rounded-token-2xl border-2 border-dashed border-tymeslot-200 bg-tymeslot-50/50",
+    plain: nil
+  }
+
   # ========== FEEDBACK ==========
 
   @doc """
@@ -60,33 +97,103 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
   end
 
   @doc """
-  Renders an empty state display.
+  Renders an empty state: an icon in a tile, a title, an optional
+  description and optional actions, all centred.
+
+      <.empty_state
+        icon="hero-hand-raised"
+        title={dgettext("dashboard_common", "No polls yet")}
+        description={dgettext("dashboard_common", "Create a poll to ...")}
+      >
+        <:action>
+          <.action_button phx-click="new_poll">New poll</.action_button>
+        </:action>
+      </.empty_state>
+
+  `variant` picks the surface: `:card` stands alone as a glass card,
+  `:dashed` marks a gap inside a card that already has content around it, and
+  `:plain` draws no surface at all, for a slot that already sits in a card.
+  `size` scales the tile and the type: `:lg` for a whole page that is empty,
+  `:md` for a section, `:sm` for a panel or a list inside a card.
+
+  For a mark the hero set lacks (a brand logo), leave `icon` out and pass the
+  `:graphic` slot instead; it is drawn inside the same tile and inherits its
+  colour. The inner block, when given, renders below the actions, for
+  supporting detail such as a hint or a fallback instruction.
   """
-  attr :message, :string, required: true
-  attr :secondary_message, :string, default: nil
-  slot :icon, required: true
+  attr :icon, :string, default: nil, doc: "A `hero-…` icon name shown in the tile"
+  attr :title, :string, required: true
+  attr :description, :string, default: nil
+  attr :size, :atom, default: :md, values: @empty_state_sizes
+  attr :variant, :atom, default: :card, values: @empty_state_variants
+  attr :class, :any, default: nil, doc: "Layout classes only"
+  attr :rest, :global
+  slot :graphic, doc: "Custom tile content, in place of `icon`"
+  slot :action, doc: "Buttons or links offering the way out of the empty state"
+  slot :inner_block, doc: "Supporting detail below the actions"
 
   @spec empty_state(map()) :: Phoenix.LiveView.Rendered.t()
   def empty_state(assigns) do
+    assigns =
+      assign(assigns,
+        sizing: Map.fetch!(@empty_state_size_classes, assigns.size),
+        surface: Map.fetch!(@empty_state_variant_classes, assigns.variant),
+        tile_surface:
+          if(assigns.variant == :dashed,
+            do: "bg-white border-tymeslot-100 shadow-sm",
+            else: "bg-tymeslot-50 border-tymeslot-100"
+          )
+      )
+
     ~H"""
-    <div class="h-full flex items-center justify-center">
-      <div class="text-center p-4">
-        <svg
-          class="w-12 h-12 mx-auto mb-2 text-tymeslot-400"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          {render_slot(@icon)}
-        </svg>
-        <p class="text-sm font-medium" style="color: rgba(255,255,255,0.8);">
-          {@message}
-        </p>
-        <%= if @secondary_message do %>
-          <p class="text-xs mt-1" style="color: rgba(255,255,255,0.6);">
-            {@secondary_message}
-          </p>
-        <% end %>
+    <div class={["text-center", @surface, @sizing.box, @class]} {@rest}>
+      <div
+        :if={@icon || @graphic != []}
+        class={[
+          "mx-auto flex items-center justify-center border-2 text-tymeslot-400",
+          @tile_surface,
+          @sizing.tile
+        ]}
+        aria-hidden="true"
+      >
+        <Icons.icon :if={@icon} name={@icon} class={@sizing.icon} />
+        {render_slot(@graphic)}
+      </div>
+      <p class={["text-tymeslot-900 tracking-tight", @sizing.title]}>{@title}</p>
+      <p
+        :if={@description}
+        class={["mx-auto max-w-md font-medium leading-relaxed text-tymeslot-500", @sizing.description]}
+      >
+        {@description}
+      </p>
+      <div
+        :if={@action != []}
+        class={["flex flex-wrap items-center justify-center gap-3", @sizing.actions]}
+      >
+        {render_slot(@action)}
+      </div>
+      <div :if={@inner_block != []} class={@sizing.actions}>
+        {render_slot(@inner_block)}
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders a card holding a centred spinner, standing in for content that is
+  still loading. `label` is announced to screen readers.
+  """
+  attr :label, :string, default: nil, doc: "Screen reader text; defaults to \"Loading\""
+  attr :class, :any, default: nil, doc: "Layout classes only"
+  attr :rest, :global
+
+  @spec loading_card(map()) :: Phoenix.LiveView.Rendered.t()
+  def loading_card(assigns) do
+    ~H"""
+    <div class={["card-glass", @class]} role="status" {@rest}>
+      <div class="flex items-center justify-center py-12">
+        <.spinner class="h-8 w-8 text-turquoise-600" />
+        <span class="sr-only">{@label || dgettext("common", "Loading")}</span>
       </div>
     </div>
     """

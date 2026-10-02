@@ -776,11 +776,6 @@ msgstr "Nepřítomnost, která skončila za posledních %{count} dní. Na vaši 
 msgid "Current and upcoming"
 msgstr "Aktuální a nadcházející"
 
-#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
-#, elixir-autogen, elixir-format
-msgid "No upcoming time off. Anything you add appears here."
-msgstr "Žádná nadcházející nepřítomnost. Vše, co přidáte, se zobrazí zde."
-
 #: lib/tymeslot/availability/schedules.ex
 #, elixir-autogen, elixir-format
 msgid "(copy)"
@@ -824,3 +819,13 @@ msgid_plural "and %{count} more"
 msgstr[0] "a 1 další"
 msgstr[1] "a %{count} další"
 msgstr[2] "a %{count} dalších"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Anything you add appears here."
+msgstr "Vše, co přidáte, se zobrazí zde."
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "No upcoming time off"
+msgstr "Žádné nadcházející volno"

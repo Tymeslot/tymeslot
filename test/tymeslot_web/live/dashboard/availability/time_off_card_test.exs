@@ -36,6 +36,32 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCardTest do
       refute html =~ ~s(data-testid="time-off-current")
     end
 
+    test "the empty state carries the only Add time off button, which opens the form",
+         %{conn: conn} do
+      {:ok, view, html} = live(conn, ~p"/dashboard/availability")
+
+      assert html
+             |> LazyHTML.from_fragment()
+             |> LazyHTML.query("[data-testid='add-time-off']")
+             |> Enum.count() == 1
+
+      assert has_element?(view, "[data-testid='time-off-empty'] [data-testid='add-time-off']")
+
+      view |> element("[data-testid='add-time-off']") |> render_click()
+
+      assert has_element?(view, "#time-off-form-modal-form")
+    end
+
+    test "once time off is listed, Add time off moves to the card header",
+         %{conn: conn, profile: profile} do
+      insert(:time_off_period, profile: profile, label: "Portugal")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      refute has_element?(view, "[data-testid='time-off-empty']")
+      assert has_element?(view, "[data-testid='add-time-off']", "Add time off")
+    end
+
     test "lists a whole-day period by its dates alone", %{conn: conn, profile: profile} do
       insert(:time_off_period,
         profile: profile,

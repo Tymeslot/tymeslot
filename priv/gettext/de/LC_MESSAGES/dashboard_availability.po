@@ -776,11 +776,6 @@ msgstr "Abwesenheiten, die in den letzten %{count} Tagen geendet haben. Sie wirk
 msgid "Current and upcoming"
 msgstr "Aktuell und bevorstehend"
 
-#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
-#, elixir-autogen, elixir-format
-msgid "No upcoming time off. Anything you add appears here."
-msgstr "Keine bevorstehende Abwesenheit. Alles, was Sie hinzufügen, erscheint hier."
-
 #: lib/tymeslot/availability/schedules.ex
 #, elixir-autogen, elixir-format
 msgid "(copy)"
@@ -821,3 +816,13 @@ msgid "and 1 more"
 msgid_plural "and %{count} more"
 msgstr[0] "und 1 weitere"
 msgstr[1] "und %{count} weitere"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Anything you add appears here."
+msgstr "Alles, was Sie hinzufügen, erscheint hier."
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "No upcoming time off"
+msgstr "Keine bevorstehende Abwesenheit"

@@ -775,11 +775,6 @@ msgstr "Відсутності, що завершилися за останні 
 msgid "Current and upcoming"
 msgstr "Поточні та майбутні"
 
-#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
-#, elixir-autogen, elixir-format
-msgid "No upcoming time off. Anything you add appears here."
-msgstr "Майбутніх відсутностей немає. Усе, що ви додасте, з'явиться тут."
-
 #: lib/tymeslot/availability/schedules.ex
 #, elixir-autogen, elixir-format
 msgid "(copy)"
@@ -823,3 +818,13 @@ msgid_plural "and %{count} more"
 msgstr[0] "і ще %{count}"
 msgstr[1] "і ще %{count}"
 msgstr[2] "і ще %{count}"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Anything you add appears here."
+msgstr "Усе, що ви додасте, з’явиться тут."
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "No upcoming time off"
+msgstr "Немає запланованих відсутностей"

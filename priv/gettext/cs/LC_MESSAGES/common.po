@@ -254,3 +254,8 @@ msgstr "Přehrát video na pozadí"
 #, elixir-autogen, elixir-format
 msgid "Search timezones"
 msgstr "Hledat časová pásma"
+
+#: lib/tymeslot_web/components/core_components/feedback.ex
+#, elixir-autogen, elixir-format
+msgid "Loading"
+msgstr "Načítání"

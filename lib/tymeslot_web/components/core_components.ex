@@ -221,13 +221,39 @@ defmodule TymeslotWeb.Components.CoreComponents do
   def spinner(assigns), do: Feedback.spinner(assigns)
 
   @doc """
-  Renders an empty state display.
+  Renders an empty state: an icon in a tile, a title, an optional
+  description and optional actions, all centred.
+
+      <.empty_state icon="hero-map-pin" title="No saved locations yet" size={:lg}>
+        <:action><.action_button phx-click="new_venue">Add location</.action_button></:action>
+      </.empty_state>
+
+  See `TymeslotWeb.Components.CoreComponents.Feedback.empty_state/1`, which
+  this delegates to; these declarations must stay in step with it.
   """
-  attr :message, :string, required: true
-  attr :secondary_message, :string, default: nil
-  slot :icon, required: true
+  attr :icon, :string, default: nil, doc: "A `hero-…` icon name shown in the tile"
+  attr :title, :string, required: true
+  attr :description, :string, default: nil
+  attr :size, :atom, default: :md, values: [:sm, :md, :lg]
+  attr :variant, :atom, default: :card, values: [:card, :dashed, :plain]
+  attr :class, :any, default: nil, doc: "Layout classes only"
+  attr :rest, :global
+  slot :graphic, doc: "Custom tile content, in place of `icon`"
+  slot :action, doc: "Buttons or links offering the way out of the empty state"
+  slot :inner_block, doc: "Supporting detail below the actions"
   @spec empty_state(map()) :: Phoenix.LiveView.Rendered.t()
   def empty_state(assigns), do: Feedback.empty_state(assigns)
+
+  @doc """
+  Renders a card holding a centred spinner, for content still loading.
+
+  See `TymeslotWeb.Components.CoreComponents.Feedback.loading_card/1`.
+  """
+  attr :label, :string, default: nil, doc: "Screen reader text; defaults to \"Loading\""
+  attr :class, :any, default: nil, doc: "Layout classes only"
+  attr :rest, :global
+  @spec loading_card(map()) :: Phoenix.LiveView.Rendered.t()
+  def loading_card(assigns), do: Feedback.loading_card(assigns)
 
   @doc """
   Renders a small status pill in one of six tones.

@@ -394,15 +394,12 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
           title={dgettext("dashboard_availability", "Time Off")}
         />
 
-        <.action_button
+        <%!-- An empty card carries this action in its empty state instead. --%>
+        <.add_time_off_button
+          :if={@periods != [] or @past_periods != []}
           variant={:secondary}
-          phx-click="show_time_off_form"
-          phx-target={@myself}
-          data-testid="add-time-off"
-        >
-          <.icon name="hero-plus" class="w-4 h-4" />
-          {dgettext("dashboard_availability", "Add time off")}
-        </.action_button>
+          myself={@myself}
+        />
       </div>
 
       <p class="mb-8 text-token-sm text-tymeslot-500 font-bold">
@@ -417,17 +414,18 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
       reads as "nothing coming up" rather than disappearing above the past. --%>
       <.empty_state
         :if={@periods == [] and @past_periods == []}
-        message={dgettext("dashboard_availability", "No time off booked")}
-        secondary_message={
+        icon="hero-sun"
+        variant={:dashed}
+        title={dgettext("dashboard_availability", "No time off booked")}
+        description={
           dgettext(
             "dashboard_availability",
             "Add a period and those days stop being offered, without touching your calendars."
           )
         }
+        data-testid="time-off-empty"
       >
-        <:icon>
-          <.icon name="hero-sun" class="w-8 h-8 text-tymeslot-300" />
-        </:icon>
+        <:action><.add_time_off_button variant={:primary} myself={@myself} /></:action>
       </.empty_state>
 
       <div :if={@periods != [] or @past_periods != []} data-testid="time-off-current">
@@ -446,14 +444,15 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
           />
         </ul>
 
-        <div
+        <.empty_state
           :if={@periods == []}
-          class="flex items-center gap-3 rounded-token-xl border-2 border-dashed border-tymeslot-200 px-4 py-4 text-token-sm font-medium text-tymeslot-500"
+          icon="hero-sun"
+          size={:sm}
+          variant={:dashed}
+          title={dgettext("dashboard_availability", "No upcoming time off")}
+          description={dgettext("dashboard_availability", "Anything you add appears here.")}
           data-testid="time-off-current-empty"
-        >
-          <.icon name="hero-sun" class="w-5 h-5 shrink-0 text-tymeslot-300" />
-          {dgettext("dashboard_availability", "No upcoming time off. Anything you add appears here.")}
-        </div>
+        />
       </div>
 
       <div :if={@past_periods != []} class="mt-8" data-testid="time-off-past">
@@ -500,6 +499,23 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
         on_confirm={JS.push("confirm_delete_time_off", target: @myself)}
       />
     </div>
+    """
+  end
+
+  attr :variant, :atom, required: true
+  attr :myself, :any, required: true
+
+  defp add_time_off_button(assigns) do
+    ~H"""
+    <.action_button
+      variant={@variant}
+      phx-click="show_time_off_form"
+      phx-target={@myself}
+      data-testid="add-time-off"
+    >
+      <.icon name="hero-plus" class="w-4 h-4" />
+      {dgettext("dashboard_availability", "Add time off")}
+    </.action_button>
     """
   end
 

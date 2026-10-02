@@ -279,20 +279,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
               </div>
             <% else %>
               <%= if !@calendar_error do %>
-                <.empty_state
-                  message={dgettext("booking", "This date is fully booked")}
-                  secondary_message={dgettext("booking", "Please select another date")}
-                >
-                  <:icon>
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                    >
-                    </path>
-                  </:icon>
-                </.empty_state>
+                <.fully_booked_notice />
               <% end %>
             <% end %>
           <% end %>
@@ -303,6 +290,39 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
             </p>
           </div>
         <% end %>
+      </div>
+    </div>
+    """
+  end
+
+  # Shown when the selected date has no free slots left. Drawn in Quill's own
+  # light-on-glass colours, so it stays local rather than using the dashboard's
+  # empty state.
+  defp fully_booked_notice(assigns) do
+    ~H"""
+    <div class="h-full flex items-center justify-center">
+      <div class="text-center p-4">
+        <svg
+          class="w-12 h-12 mx-auto mb-2 text-tymeslot-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+          >
+          </path>
+        </svg>
+        <p class="text-sm font-medium" style="color: rgba(255,255,255,0.8);">
+          {dgettext("booking", "This date is fully booked")}
+        </p>
+        <p class="text-xs mt-1" style="color: rgba(255,255,255,0.6);">
+          {dgettext("booking", "Please select another date")}
+        </p>
       </div>
     </div>
     """
