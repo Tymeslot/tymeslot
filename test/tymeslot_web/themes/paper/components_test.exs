@@ -1,8 +1,9 @@
 defmodule TymeslotWeb.Themes.Paper.ComponentsTest do
   @moduledoc """
   Paper's own pieces, rendered alone: the brand row only when there is a
-  logo, the avatar at its sizes, a meeting fact, and the overview's list of
-  meeting types with each type's length, price and approval pill, the
+  logo, the avatar at its sizes, a meeting fact, and the overview: the
+  introduction in the left pane, then in the right pane the list of meeting
+  types with each type's length, locations, price and approval pill, the
   choice marked by `aria-pressed`, and Next held back until one is chosen;
   and the confirmation's duration badge.
   """
@@ -15,6 +16,7 @@ defmodule TymeslotWeb.Themes.Paper.ComponentsTest do
   import Phoenix.LiveViewTest, only: [render_component: 2, rendered_to_string: 1]
   import Tymeslot.Factory
 
+  alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.ThemeCustomizations.Tokens
   alias TymeslotWeb.Themes.Paper.Components
   alias TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent
@@ -64,6 +66,12 @@ defmodule TymeslotWeb.Themes.Paper.ComponentsTest do
 
   defp text(doc, selector), do: doc |> Floki.find(selector) |> Floki.text() |> String.trim()
 
+  defp location_labels(row) do
+    row
+    |> Floki.find("[data-testid='paper-type-location']")
+    |> Enum.map(&(&1 |> Floki.text() |> String.trim()))
+  end
+
   describe "brand/1" do
     test "shows the organiser's logo" do
       tokens = %Tokens{media: %{logo: %{src: "/uploads/themes/7/3/images/logo.png"}}}
@@ -106,6 +114,19 @@ defmodule TymeslotWeb.Themes.Paper.ComponentsTest do
       assert [fact] = Floki.find(doc(html), "li.paper-fact")
       assert Floki.find(fact, ".paper-fact__icon") != []
       assert text([fact], ".paper-fact__text") == "30 minutes"
+    end
+
+    test "is a span where it sits inside a button" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <Components.fact tag="span" icon="hero-clock">30 minutes</Components.fact>
+        """)
+
+      assert [fact] = Floki.find(doc(html), "span.paper-fact")
+      assert text([fact], ".paper-fact__text") == "30 minutes"
+      assert Floki.find(doc(html), "li") == []
     end
   end
 
@@ -154,11 +175,56 @@ defmodule TymeslotWeb.Themes.Paper.ComponentsTest do
                )
     end
 
-    test "says so when there is nothing to book" do
+    test "draws each type's locations as facts, with their icons and labels" do
+      office = %LocationOption{id: "a", kind: "in_person", label: "The office", position: 0}
+      phone = %LocationOption{id: "b", kind: "phone", label: "Ring us", position: 1}
+
+      page =
+        overview(
+          meeting_types: [
+            quick_chat(locations: [phone, office]),
+            quick_chat(name: "Walk", slug: "walk", locations: [office])
+          ]
+        )
+
+      assert [chat, walk] = Floki.find(page, "button.paper-type")
+
+      assert location_labels(chat) == ["The office", "Ring us"]
+      assert location_labels(walk) == ["The office"]
+
+      assert [_icon] =
+               Floki.find(walk, "[data-testid='paper-type-location'] svg.paper-fact__icon")
+
+      # The length and the location are the same kind of fact, side by side.
+      assert [_clock, _office] = Floki.find(walk, ".paper-type__meta .paper-fact")
+    end
+
+    test "says so when there is nothing to book, in the pane beside the introduction" do
       page = overview(meeting_types: [])
 
       assert Floki.find(page, "[data-testid='duration-option']") == []
-      assert text(page, ".paper-empty") =~ "No meeting types available"
+
+      assert text(page, ".paper-overview > .paper-choices .paper-empty") =~
+               "No meeting types available"
+
+      assert [_next] =
+               Floki.find(page, ".paper-choices button[data-testid='next-step'][disabled]")
+    end
+
+    test "is the schedule step's wide card, the introduction beside the list" do
+      page = overview([])
+
+      assert [_card] = Floki.find(page, "section.paper-card.paper-card--wide")
+      assert [_intro] = Floki.find(page, ".paper-overview > header.paper-intro h1.paper-title")
+
+      assert [_row] =
+               Floki.find(
+                 page,
+                 ".paper-overview > .paper-choices [data-testid='duration-option']"
+               )
+
+      assert [_next] =
+               Floki.find(page, ".paper-choices > .paper-actions [data-testid='next-step']")
     end
 
     test "opens with the avatar, or with the logo in its place" do

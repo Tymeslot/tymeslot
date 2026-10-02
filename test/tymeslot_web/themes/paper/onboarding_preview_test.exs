@@ -1,8 +1,9 @@
 defmodule TymeslotWeb.Themes.Paper.OnboardingPreviewTest do
   @moduledoc """
   Paper as the onboarding wizard draws it: its own thumbnail and card, not
-  the generic mock, tinted with the organiser's accent, with the meeting's
-  details beside a month calendar and a column of times.
+  the generic mock, tinted with the organiser's accent, in the two panes of
+  its first screen: the introduction on the left, a rule, and the meeting
+  types with the chosen one marked, the times and Book on the right.
   """
   use ExUnit.Case, async: true
 
@@ -28,11 +29,15 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreviewTest do
         primary: "#2563eb"
       )
 
-    assert html =~ ~s(data-preview="paper")
-    assert html =~ "#2563eb"
+    doc = Floki.parse_fragment!(html)
+
+    assert [_tile] = Floki.find(doc, "[data-preview='paper']")
+    assert [chosen, _other, _third] = Floki.find(doc, "[data-preview-part='type']")
+    assert [style] = Floki.attribute(chosen, "style")
+    assert style =~ "border-left: 2px solid #2563eb;"
   end
 
-  test "the card puts the calendar beside a column of times, under the shared header" do
+  test "the card sets the shared header beside the meeting types, the times and Book" do
     assigns = %{slots: @slots}
 
     html =
@@ -52,11 +57,20 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreviewTest do
     doc = Floki.parse_fragment!(html)
 
     assert [_card] = Floki.find(doc, "[data-preview='paper']")
-    assert [_header] = Floki.find(doc, "#shared-header")
-    assert [_calendar] = Floki.find(doc, "[data-preview-part='calendar'].grid-cols-7")
-    assert [_times] = Floki.find(doc, "[data-preview-part='times']")
-    assert html =~ "9:30"
-    assert [book] = Floki.find(doc, "[data-preview='paper'] > button")
+    assert [intro] = Floki.find(doc, "[data-preview='paper'] > [data-preview-part='intro']")
+    assert [_header] = Floki.find(intro, "#shared-header")
+    assert [class] = Floki.attribute(intro, "class")
+    assert class =~ "border-r"
+    assert class =~ "items-start"
+
+    assert [types] = Floki.find(doc, "[data-preview='paper'] > [data-preview-part='types']")
+    assert [chosen, _other] = Floki.find(types, "[data-preview-part='type']")
+    assert [chosen_style] = Floki.attribute(chosen, "style")
+    assert chosen_style =~ "border-left: 2px solid #2563eb;"
+    assert [times] = Floki.find(types, "[data-preview-part='times']")
+    assert Floki.text(times) =~ "9:30"
+    assert Floki.find(doc, "[data-preview-part='calendar']") == []
+    assert [book] = Floki.find(types, "button")
     assert Floki.text(book) =~ "Book"
     assert [style] = Floki.attribute(book, "style")
     assert style =~ "background: #2563eb;"

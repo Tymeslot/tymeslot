@@ -1,10 +1,25 @@
 defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
   @moduledoc """
-  Paper's overview: the organiser's avatar (or nothing, with their logo
-  above), the page's heading, greeting and instruction, then the meeting
-  types as one plain list, each row with its name, description, length
-  and, for a paid type, its price. Choosing a row marks it (`aria-pressed`);
-  Next goes on to the schedule step.
+  Paper's overview, the first screen a visitor sees: the same wide card as
+  the schedule step's month (`paper-card--wide`), in two panes.
+
+  On the left the organiser's introduction, left-aligned: their avatar (or,
+  when they have uploaded a logo, the logo in the brand row above and no
+  avatar), the page's heading, greeting and instruction. On the right the
+  meeting types as one bordered list, each row with its name, approval
+  pill and description, then its facts with their icons: length, each
+  location (`MeetingTypes.location_options/1`, drawn with
+  `LocationIcons.icon/1`) and, for a paid type, its price. Under the list
+  the actions bar with Next; with no meeting types the right pane says so.
+
+  The card lays the panes out by its own width (`overview.css`, the frame
+  shared with the schedule step in `base.css`): the introduction above the
+  list on a narrow card, beside it with the schedule step's rule between
+  them once both fit, so the rule stays put going on to the next step.
+
+  Choosing a row marks it (`aria-pressed`); Next goes on to the schedule
+  step. The rows keep the test ids the shared suites and the visual harness
+  drive: `duration-option` with `data-duration`, and `next-step`.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -12,6 +27,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
+  alias TymeslotWeb.Helpers.LocationIcons
   alias TymeslotWeb.Themes.Paper.Components
   alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
@@ -37,45 +53,53 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
       )
 
     ~H"""
-    <section class="paper-card booker-card" data-locale={@locale} data-testid="paper-overview">
+    <section
+      class="paper-card paper-card--wide booker-card"
+      data-locale={@locale}
+      data-testid="paper-overview"
+    >
       <Components.brand theme_tokens={@theme_tokens} />
 
-      <header class="paper-intro">
-        <Components.avatar :if={is_nil(@logo)} profile={@organizer_profile} size={:lg} />
-        <h1 class="paper-title">{@heading}</h1>
-        <p :if={@greeting} class="paper-intro__greeting">{@greeting}</p>
-        <p class="paper-intro__instruction">{@instruction}</p>
-      </header>
+      <div class="paper-overview">
+        <header class="paper-intro">
+          <Components.avatar :if={is_nil(@logo)} profile={@organizer_profile} size={:lg} />
+          <h1 class="paper-title">{@heading}</h1>
+          <p :if={@greeting} class="paper-intro__greeting">{@greeting}</p>
+          <p class="paper-intro__instruction">{@instruction}</p>
+        </header>
 
-      <div :if={@meeting_types == []} class="paper-empty">
-        <p class="paper-empty__title">{dgettext("booking", "No meeting types available")}</p>
-        <p class="paper-empty__text">{dgettext("booking", "Please contact the organiser")}</p>
-      </div>
+        <div class="paper-choices">
+          <div :if={@meeting_types == []} class="paper-empty">
+            <p class="paper-empty__title">{dgettext("booking", "No meeting types available")}</p>
+            <p class="paper-empty__text">{dgettext("booking", "Please contact the organiser")}</p>
+          </div>
 
-      <ul :if={@meeting_types != []} class="paper-types" role="list">
-        <li :for={meeting_type <- @meeting_types} class="paper-types__item">
-          <.meeting_type_row
-            meeting_type={meeting_type}
-            slug={MeetingTypes.effective_slug(meeting_type)}
-            selected_duration={@selected_duration}
-            price={BookingText.price_label(meeting_type, @host_currency, @locale)}
-            target={@myself}
-          />
-        </li>
-      </ul>
+          <ul :if={@meeting_types != []} class="paper-types" role="list">
+            <li :for={meeting_type <- @meeting_types} class="paper-types__item">
+              <.meeting_type_row
+                meeting_type={meeting_type}
+                slug={MeetingTypes.effective_slug(meeting_type)}
+                selected_duration={@selected_duration}
+                price={BookingText.price_label(meeting_type, @host_currency, @locale)}
+                target={@myself}
+              />
+            </li>
+          </ul>
 
-      <div class="paper-actions">
-        <button
-          type="button"
-          class="paper-button paper-button--primary"
-          phx-click="next_step"
-          phx-target={@myself}
-          data-testid="next-step"
-          disabled={is_nil(@selected_duration)}
-        >
-          {dgettext("booking", "Next")}
-          <.icon name="hero-arrow-right-mini" class="paper-button__icon" />
-        </button>
+          <div class="paper-actions">
+            <button
+              type="button"
+              class="paper-button paper-button--primary"
+              phx-click="next_step"
+              phx-target={@myself}
+              data-testid="next-step"
+              disabled={is_nil(@selected_duration)}
+            >
+              {dgettext("booking", "Next")}
+              <.icon name="hero-arrow-right-mini" class="paper-button__icon" />
+            </button>
+          </div>
+        </div>
       </div>
     </section>
     """
@@ -88,7 +112,11 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
   attr :target, :any, required: true
 
   defp meeting_type_row(assigns) do
-    assigns = assign(assigns, :description, description(assigns.meeting_type))
+    assigns =
+      assign(assigns,
+        description: description(assigns.meeting_type),
+        locations: MeetingTypes.location_options(assigns.meeting_type)
+      )
 
     ~H"""
     <button
@@ -107,12 +135,25 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
           <ApprovalNotice.pill :if={Approval.required?(@meeting_type)} />
         </span>
         <span :if={@description} class="paper-type__description">{@description}</span>
-      </span>
-      <span class="paper-type__meta">
-        <span class="paper-type__duration">
-          {LocalizationHelpers.format_duration(@meeting_type.duration_minutes)}
+        <%!-- Spans, not a list: a button holds phrasing content only. --%>
+        <span class="paper-facts paper-type__meta">
+          <Components.fact tag="span" icon="hero-clock">
+            <span class="paper-type__duration">
+              {LocalizationHelpers.format_duration(@meeting_type.duration_minutes)}
+            </span>
+          </Components.fact>
+          <Components.fact
+            :for={location <- @locations}
+            tag="span"
+            icon={LocationIcons.icon(location.kind)}
+            data-testid="paper-type-location"
+          >
+            {location.label}
+          </Components.fact>
+          <Components.fact :if={@price} tag="span" icon="hero-banknotes">
+            <span class="paper-type__price">{@price}</span>
+          </Components.fact>
         </span>
-        <span :if={@price} class="paper-type__price">{@price}</span>
       </span>
       <.icon name="hero-chevron-right-mini" class="paper-type__chevron" />
     </button>

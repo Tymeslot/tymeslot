@@ -2,13 +2,14 @@ defmodule TymeslotWeb.Themes.Paper.Components do
   @moduledoc """
   The pieces Paper's steps and pages share: the card's brand row with the
   organiser's logo, the organiser's avatar, and a meeting fact (an icon
-  beside a line of text, one `li` of a `ul.paper-facts`).
+  beside a line of text, one `li` of a `ul.paper-facts`, or a `span` in a
+  meeting type's row on the overview).
 
   The logo is the page's tokens' `media[:logo]`, which `Options.Logo`
   resolves and sanitises, so a step draws it without reading the
   customisation. Paper shows it top-left of every card when the organiser
-  has uploaded one; the overview then leaves out the avatar it otherwise
-  opens with.
+  has uploaded one; the overview then leaves out the avatar its
+  introduction otherwise opens with.
   """
   use Phoenix.Component
 
@@ -52,6 +53,12 @@ defmodule TymeslotWeb.Themes.Paper.Components do
   end
 
   attr :icon, :string, required: true, doc: "a `hero-*` icon name"
+
+  attr :tag, :string,
+    values: ["li", "span"],
+    default: "li",
+    doc: "`li` in a `ul.paper-facts`; `span` inside a button, which holds no list"
+
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -59,10 +66,10 @@ defmodule TymeslotWeb.Themes.Paper.Components do
   @spec fact(map()) :: Phoenix.LiveView.Rendered.t()
   def fact(assigns) do
     ~H"""
-    <li class="paper-fact" {@rest}>
+    <.dynamic_tag tag_name={@tag} class="paper-fact" {@rest}>
       <.icon name={@icon} class="paper-fact__icon" />
       <span class="paper-fact__text">{render_slot(@inner_block)}</span>
-    </li>
+    </.dynamic_tag>
     """
   end
 end

@@ -1,27 +1,13 @@
 /* Schedule step: the meeting's details and the picker (calendar, times,
-   timezone), laid out by the card's own width:
+   timezone), in the two-pane frame base.css shares with the overview,
+   laid out by the card's own width:
      below 40rem  one column: details, calendar, times, timezone
      from 40rem   the details beside the picker, a rule between them
+                  (the frame)
      from 52rem   details, calendar and times side by side, the timezone
                   picker under the calendar, the times scrolling inside */
 
-.paper-schedule {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-lg);
-}
-
 /* --- Details --- */
-
-.paper-details {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-xs);
-  min-width: 0;
-  padding-bottom: var(--space-lg);
-  border-bottom: var(--border-width-thin) solid var(--line-1);
-}
 
 .paper-details__organiser {
   margin: var(--space-2xs) 0 0;
@@ -77,24 +63,6 @@
 
 .paper-timezone {
   grid-area: timezone;
-}
-
-/* Two columns: the details beside the picker. */
-@container scheduling (min-width: 40rem) {
-  .paper-schedule {
-    grid-template-columns: var(--paper-details-width) minmax(0, 1fr);
-    gap: 0;
-  }
-
-  .paper-details {
-    padding: 0 var(--space-lg) 0 0;
-    border-bottom: 0;
-    border-right: var(--border-width-thin) solid var(--line-1);
-  }
-
-  .paper-picker {
-    padding-left: var(--space-lg);
-  }
 }
 
 /* Three columns: details, calendar, times. */

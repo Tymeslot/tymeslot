@@ -137,6 +137,60 @@ body.paper-theme {
   height: var(--paper-avatar-sm);
 }
 
+/* --- The two-pane frame: the overview and the schedule step ---
+
+   A column on the left (the overview's introduction, .paper-intro; the
+   schedule step's meeting details, .paper-details) and the step's own
+   pane on the right (.paper-choices, .paper-picker), laid out by the
+   card's width. Both steps change shape at the same width and the left
+   column is as wide on each, so the rule between the panes stays put from
+   one step to the next.
+     below 40rem  one column: the left column above, a rule under it
+     from 40rem   the left column beside the pane, the rule between them */
+
+.paper-overview,
+.paper-schedule {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-lg);
+}
+
+.paper-intro,
+.paper-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  min-width: 0;
+  padding-bottom: var(--space-lg);
+  border-bottom: var(--border-width-thin) solid var(--line-1);
+}
+
+.paper-choices,
+.paper-picker {
+  min-width: 0;
+}
+
+@container scheduling (min-width: 40rem) {
+  .paper-overview,
+  .paper-schedule {
+    grid-template-columns: var(--paper-details-width) minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .paper-intro,
+  .paper-details {
+    padding: 0 var(--space-lg) 0 0;
+    border-bottom: 0;
+    border-right: var(--border-width-thin) solid var(--line-1);
+  }
+
+  .paper-choices,
+  .paper-picker {
+    padding-left: var(--space-lg);
+  }
+}
+
 /* --- Scroll regions: the timezone list (.scroll-y) and a capped slot list --- */
 
 .scroll-y {

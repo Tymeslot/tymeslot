@@ -1,7 +1,8 @@
 defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
   @moduledoc """
   Paper's booking page through the real routes: the overview's list of
-  meeting types with their lengths and a paid type's price, the logo in
+  meeting types with their lengths, locations and a paid type's price,
+  choosing one and going on with Next, the logo in
   the avatar's place, the schedule step's details beside the month
   calendar, the style block each colour mode writes, and the meeting pages
   in Paper's card. The shared flow suites book through it as through every
@@ -16,6 +17,7 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
   import Tymeslot.Factory
   import Tymeslot.ThemeBookingFlowHelpers
 
+  alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.TestMocks
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
@@ -54,6 +56,39 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
 
     assert has_element?(view, "button[data-duration='quick-chat'][aria-pressed='true']")
     refute has_element?(view, "button[data-testid='next-step'][disabled]")
+
+    view
+    |> element("[data-testid='paper-overview'] button[data-testid='next-step']")
+    |> render_click()
+
+    assert has_element?(view, "[data-testid='paper-schedule'] .paper-details h1", "Quick Chat")
+    refute has_element?(view, "[data-testid='paper-overview']")
+  end
+
+  test "each meeting type on the overview names where it is held",
+       %{conn: conn, user: user, profile: profile} do
+    insert(:meeting_type,
+      user: user,
+      name: "Site Visit",
+      duration_minutes: 45,
+      locations: [
+        %LocationOption{id: "office", kind: "in_person", label: "Our studio", position: 0}
+      ]
+    )
+
+    {:ok, view, _html} = live(conn, ~p"/#{profile.username}")
+
+    assert has_element?(
+             view,
+             "button.paper-type[data-duration='site-visit'] [data-testid='paper-type-location']",
+             "Our studio"
+           )
+
+    refute has_element?(
+             view,
+             "button.paper-type[data-duration='quick-chat'] [data-testid='paper-type-location']",
+             "Our studio"
+           )
   end
 
   test "a paid meeting type shows its price in the organiser's currency",

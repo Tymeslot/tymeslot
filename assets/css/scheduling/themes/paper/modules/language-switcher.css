@@ -13,7 +13,8 @@
   width: min(100%, var(--paper-card-width));
 }
 
-/* Above a wide card (the poll page's), the row is as wide as the card. */
+/* Above a wide card (the overview's, the poll page's), the row is as wide
+   as the card. */
 .paper-page .content-area:has(> .paper-card--wide) > .paper-language {
   width: min(100%, var(--paper-card-width-wide));
 }
