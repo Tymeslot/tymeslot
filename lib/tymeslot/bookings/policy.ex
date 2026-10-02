@@ -617,18 +617,6 @@ defmodule Tymeslot.Bookings.Policy do
   end
 
   @doc """
-  Builds the public seat-management URLs for a group participant's
-  management token.
-  """
-  @spec seat_urls(String.t()) :: %{cancel_url: String.t(), reschedule_url: String.t()}
-  def seat_urls(token) when is_binary(token) do
-    %{
-      cancel_url: app_url() <> "/seat/#{token}/cancel",
-      reschedule_url: app_url() <> "/seat/#{token}/reschedule"
-    }
-  end
-
-  @doc """
   Where a host answers a booking request from their email.
 
   Both actions point at the same review page. The `intent` parameter only

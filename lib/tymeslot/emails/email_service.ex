@@ -42,8 +42,8 @@ defmodule Tymeslot.Emails.EmailService do
           optional(:start_time_owner_tz) => DateTime.t(),
           optional(:attendee_video_url) => String.t() | nil,
           optional(:guest_video_url) => String.t() | nil,
-          optional(:reschedule_url) => String.t(),
-          optional(:cancel_url) => String.t(),
+          optional(:reschedule_url) => String.t() | nil,
+          optional(:cancel_url) => String.t() | nil,
           optional(:booking_url) => String.t(),
           optional(:meeting_url) => String.t(),
           optional(atom()) => term()

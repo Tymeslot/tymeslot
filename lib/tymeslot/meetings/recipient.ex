@@ -126,7 +126,7 @@ defmodule Tymeslot.Meetings.Recipient do
     do: struct!(meeting, overlay(recipient))
 
   defp overlay(recipient) do
-    urls = Policy.seat_urls(recipient.management_token)
+    urls = seat_urls(recipient.management_token)
 
     %{
       attendee_name: recipient.name,
@@ -144,6 +144,16 @@ defmodule Tymeslot.Meetings.Recipient do
     }
   end
 
+  # The public seat-management links carried by a participant's own emails.
+  defp seat_urls(token) when is_binary(token) do
+    base = Policy.app_url()
+
+    %{
+      cancel_url: base <> "/seat/#{token}/cancel",
+      reschedule_url: base <> "/seat/#{token}/reschedule"
+    }
+  end
+
   defp attendee_recipients(%MeetingSchema{attendee_email: email}) when email in [nil, ""], do: []
 
   defp attendee_recipients(meeting) do
@@ -156,8 +166,8 @@ defmodule Tymeslot.Meetings.Recipient do
         company: meeting.attendee_company,
         message: meeting.attendee_message,
         timezone: meeting.attendee_timezone,
-        locale: meeting.attendee_locale || "en",
-        custom_field_answers: meeting.custom_field_answers || %{}
+        locale: meeting.attendee_locale,
+        custom_field_answers: meeting.custom_field_answers
       }
     ]
   end
