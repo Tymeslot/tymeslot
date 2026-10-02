@@ -383,3 +383,13 @@ msgid_plural "%{count} minutes"
 msgstr[0] "minuty"
 msgstr[1] "%{count} minut"
 msgstr[2] "%{count} minut"
+
+#: lib/tymeslot_web/helpers/image_upload_errors.ex
+#, elixir-autogen, elixir-format
+msgid "This image is too large (%{size} megapixels). Please upload an image of at most %{limit} megapixels."
+msgstr "Ten obraz jest za duży (%{size} megapikseli). Prześlij obraz o rozdzielczości najwyżej %{limit} megapikseli."
+
+#: lib/tymeslot_web/helpers/image_upload_errors.ex
+#, elixir-autogen, elixir-format
+msgid "We are busy processing other uploads. Please try again in a moment."
+msgstr "Trwa przetwarzanie innych przesłanych plików. Spróbuj ponownie za chwilę."

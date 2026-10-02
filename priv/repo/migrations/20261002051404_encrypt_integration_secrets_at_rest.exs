@@ -19,18 +19,27 @@ defmodule Tymeslot.Repo.Migrations.EncryptIntegrationSecretsAtRest do
 
   An image can be rolled back without this migration's `down/0` running, and
   the previous release reads only the plain columns. They are therefore kept,
-  with their values, and the application stops reading and writing them;
-  `webhooks.url` loses its `NOT NULL` so new rows can leave it empty. A later
-  release, once rolling back past this one is no longer supported, empties and
-  drops them.
+  with their values, and the application stops reading them; `webhooks.url`
+  loses its `NOT NULL` so new rows can leave it empty. A later release, once
+  rolling back past this one is no longer supported, empties and drops them.
+
+  A kept copy must never outlive its value. Whenever a secret changes (a
+  webhook URL or meeting link edited, a push channel renewed), the same write
+  empties its plain copy (`Tymeslot.Security.LegacyPlainColumn`). So under a
+  rolled-back image a secret set or changed since this migration is simply
+  missing, failing closed, rather than a value the user replaced coming back:
+  a webhook never posts booking data to a URL its owner removed. Every
+  untouched row keeps working.
 
   Encrypting needs the application's key, so the backfill calls
   `Tymeslot.Security.Encryption`, as earlier encryption backfills did. It only
   fills an encrypted column that is still empty, so running it again changes
   nothing.
 
-  Rolling back copies each secret back into its plain column where that is
-  empty (rows created since), then drops the encrypted columns. Custom video
+  Rolling back writes each secret that decrypts back into its plain column,
+  over whatever that column holds, since the encrypted value is the current
+  one; a secret that no key opens leaves its row as it is. It then drops the
+  encrypted columns. Custom video
   link keys stay hashed: they are not reversible, and the earlier release only
   uses them to refuse connecting the same link twice.
   """
@@ -118,7 +127,7 @@ defmodule Tymeslot.Repo.Migrations.EncryptIntegrationSecretsAtRest do
     %{rows: rows} =
       repo().query!("""
       SELECT id, #{column}_encrypted FROM #{table}
-      WHERE #{column} IS NULL AND #{column}_encrypted IS NOT NULL
+      WHERE #{column}_encrypted IS NOT NULL
       ORDER BY id
       """)
 

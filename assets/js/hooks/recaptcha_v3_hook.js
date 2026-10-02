@@ -14,7 +14,11 @@
  * A form submitted before any token exists (autofill plus Enter, without ever
  * focusing a field) is held back: the submit is cancelled, the script is loaded
  * and executed, and the form is submitted again once a token, or the blocked
- * marker, is in place. The server rejects a missing token either way.
+ * marker, is in place. The server rejects a missing token either way. A held
+ * submit is never kept waiting for longer than PENDING_SUBMIT_TIMEOUT_MS: if no
+ * token has arrived by then, whichever step is stuck (the script loading,
+ * `grecaptcha.ready()` never calling back, `execute()` never settling), the
+ * form is posted with the blocked marker so the server answers it visibly.
  */
 
 // reCAPTCHA v3 tokens expire after two minutes; refresh well before that.
@@ -23,6 +27,8 @@ const TOKEN_REFRESH_MS = 90 * 1000;
 const IDLE_PAUSE_MS = 5 * 60 * 1000;
 // Treat the script as blocked if it has not loaded within this time.
 const SCRIPT_LOAD_TIMEOUT_MS = 10 * 1000;
+// Upper bound on how long a submit made before any token existed is held back.
+const PENDING_SUBMIT_TIMEOUT_MS = 10 * 1000;
 
 const SCRIPT_BLOCKED_MARKER = 'RECAPTCHA_SCRIPT_BLOCKED';
 
@@ -39,6 +45,7 @@ export const RecaptchaV3Hook = {
     this.lastInteractionAt = Date.now();
     // Set while a submit made before any token existed waits for one.
     this.pendingSubmit = null;
+    this.pendingSubmitTimer = null;
     this.resubmitting = false;
 
     this.handleInteraction = () => {
@@ -75,6 +82,8 @@ export const RecaptchaV3Hook = {
 
   destroyed() {
     this.clearRefreshTimer();
+    this.clearPendingSubmitTimer();
+    this.pendingSubmit = null;
 
     if (this.loadTimeoutTimer) {
       clearTimeout(this.loadTimeoutTimer);
@@ -110,6 +119,10 @@ export const RecaptchaV3Hook = {
 
     this.pendingSubmit = { submitter: event.submitter || null };
     this.refreshPaused = false;
+    this.pendingSubmitTimer = setTimeout(
+      () => this.handlePendingSubmitTimeout(),
+      PENDING_SUBMIT_TIMEOUT_MS
+    );
 
     if (this.loadRequested) {
       // The script is loading or loaded but no token has arrived yet.
@@ -119,24 +132,66 @@ export const RecaptchaV3Hook = {
     }
   },
 
+  // No token arrived in time, whichever step is stuck. Post the blocked marker
+  // so the server answers with its normal visible error instead of the visitor
+  // waiting on a submit that never happens. A token that arrives later only
+  // refreshes the field: the held submit is gone, so nothing posts twice.
+  handlePendingSubmitTimeout() {
+    this.pendingSubmitTimer = null;
+    if (!this.pendingSubmit) return;
+
+    console.warn('reCAPTCHA token did not arrive within 10 seconds; submitting without one');
+    this.useBlockedMarker();
+    this.releasePendingSubmit();
+  },
+
   releasePendingSubmit() {
     if (!this.pendingSubmit) return;
 
     const { submitter } = this.pendingSubmit;
     this.pendingSubmit = null;
+    this.clearPendingSubmitTimer();
 
     if (!this.el.isConnected) return;
 
     this.resubmitting = true;
     try {
-      if (submitter && submitter.form === this.el) {
+      this.resubmit(submitter && submitter.form === this.el ? submitter : null);
+    } finally {
+      this.resubmitting = false;
+    }
+  },
+
+  // requestSubmit() is missing before Safari 16. Clicking the original submit
+  // button is the closest equivalent there (it keeps the submitter); otherwise
+  // dispatch the bubbling, cancelable submit event LiveView's window-level
+  // listener handles. form.submit() is never right: it skips the submit event
+  // and navigates away from the LiveView.
+  resubmit(submitter) {
+    if (typeof this.el.requestSubmit === 'function') {
+      if (submitter) {
         this.el.requestSubmit(submitter);
       } else {
         this.el.requestSubmit();
       }
-    } finally {
-      this.resubmitting = false;
+    } else if (submitter) {
+      submitter.click();
+    } else {
+      this.el.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     }
+  },
+
+  clearPendingSubmitTimer() {
+    if (this.pendingSubmitTimer) {
+      clearTimeout(this.pendingSubmitTimer);
+      this.pendingSubmitTimer = null;
+    }
+  },
+
+  useBlockedMarker() {
+    // Set a special marker so the server can distinguish script-blocked from a missing token
+    this.currentToken = SCRIPT_BLOCKED_MARKER;
+    this.setHiddenField(this.currentToken);
   },
 
   loadRecaptcha() {
@@ -190,9 +245,7 @@ export const RecaptchaV3Hook = {
 
   handleRecaptchaLoadError() {
     console.error('Failed to load reCAPTCHA script (blocked by CSP, network, or extension).');
-    // Set a special marker so the server can distinguish script-blocked from a missing token
-    this.currentToken = SCRIPT_BLOCKED_MARKER;
-    this.setHiddenField(this.currentToken);
+    this.useBlockedMarker();
     this.releasePendingSubmit();
   },
 

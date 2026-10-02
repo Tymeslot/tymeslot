@@ -9,6 +9,13 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
   Every response that carries a score is logged once as
   `event: "recaptcha_verification"` with the score, action and outcome, so the
   score distribution and rejection rate can be compared over time.
+
+  Google being unreachable is reported apart from Google's own verdict: a
+  transport failure (refused connection, DNS failure, timeout) or a 5xx from
+  siteverify returns `{:error, :recaptcha_service_unavailable}`, which says
+  nothing about the visitor. Every other error is a verdict, or a response that
+  could not be trusted, and means the token was not accepted. Callers decide
+  what an outage means for them; most still reject.
   """
 
   alias Tymeslot.Infrastructure.Config
@@ -19,15 +26,18 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
   @verify_url "https://www.google.com/recaptcha/api/siteverify"
   @default_minimum_score 0.3
 
-  @doc """
-  Verifies a reCAPTCHA token with Google's API.
-  Returns {:ok, %{score: float}} on success or {:error, reason} on failure.
-  """
   @type verify_opt ::
           {:min_score, float()}
           | {:expected_action, String.t() | nil}
           | {:expected_hostnames, [String.t()]}
 
+  @doc """
+  Verifies a reCAPTCHA token with Google's API.
+
+  Returns `{:ok, %{score: float}}` on success or `{:error, reason}` on failure;
+  `{:error, :recaptcha_service_unavailable}` means siteverify could not be
+  reached or failed on Google's side (see the module documentation).
+  """
   @spec verify(String.t(), [verify_opt()]) ::
           {:ok, %{score: float(), action: String.t() | nil, hostname: String.t() | nil}}
           | {:error, atom()}
@@ -79,6 +89,10 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
           expected_hostnames
         )
 
+      {:ok, %Req.Response{status: status_code}} when status_code in 500..599 ->
+        Logger.error("reCAPTCHA siteverify unavailable", status_code: status_code)
+        {:error, :recaptcha_service_unavailable}
+
       {:ok, %Req.Response{status: status_code}} ->
         Logger.error("reCAPTCHA verification failed with unexpected status",
           status_code: status_code
@@ -87,8 +101,8 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
         {:error, :recaptcha_request_failed}
 
       {:error, exception} ->
-        Logger.error("reCAPTCHA verification request error", error: LogFormat.reason(exception))
-        {:error, :recaptcha_network_error}
+        Logger.error("reCAPTCHA siteverify unreachable", error: LogFormat.reason(exception))
+        {:error, :recaptcha_service_unavailable}
     end
   end
 

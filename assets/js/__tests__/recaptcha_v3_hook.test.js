@@ -7,7 +7,9 @@
  * - every form submission triggers a fresh token fetch, so retries after a
  *   server-side error don't reuse the already-consumed token;
  * - a submit made before any token exists is held back and re-dispatched once
- *   one is in place, never posted empty;
+ *   one is in place, never posted empty, and never held for longer than ten
+ *   seconds whichever step is stuck;
+ * - the re-dispatch works without form.requestSubmit (Safari before 16);
  * - token refresh pauses while the form is idle and resumes on interaction.
  */
 
@@ -291,6 +293,149 @@ describe('RecaptchaV3Hook', () => {
       await flush();
 
       expect(submits.posted).toEqual(['token']);
+      submits.stop();
+    });
+  });
+
+  describe('a held submit that never gets a token', () => {
+    const MARKER = 'RECAPTCHA_SCRIPT_BLOCKED';
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    test('is posted with the blocked marker when grecaptcha.ready() never calls back', async () => {
+      window.grecaptcha.ready = () => {};
+      const submits = captureSubmits();
+
+      const form = makeForm();
+      mountHook(form);
+      form.requestSubmit();
+
+      await vi.advanceTimersByTimeAsync(9_999);
+      expect(submits.posted).toEqual([]);
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(submits.posted).toEqual([MARKER]);
+      submits.stop();
+    });
+
+    test('is posted with the blocked marker when execute() never settles after the script loads', async () => {
+      delete window.grecaptcha;
+      const submits = captureSubmits();
+
+      const form = makeForm();
+      mountHook(form);
+      form.requestSubmit();
+
+      window.grecaptcha = { ready: (cb) => cb(), execute: () => new Promise(() => {}) };
+      document.head.querySelector(scriptSelector).onload();
+
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(submits.posted).toEqual([MARKER]);
+      submits.stop();
+    });
+
+    test('is released when the re-fetch after an idle pause never settles', async () => {
+      executeMock.mockResolvedValue('token');
+      const submits = captureSubmits();
+
+      const form = makeForm();
+      const hook = mountHook(form);
+      focusField(form);
+      await vi.advanceTimersByTimeAsync(0);
+
+      // Idle long enough for the token to be dropped.
+      await vi.advanceTimersByTimeAsync(30 * 60 * 1000);
+      expect(hook.currentToken).toBeNull();
+
+      executeMock.mockReturnValue(new Promise(() => {}));
+      form.requestSubmit();
+
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(submits.posted).toEqual([MARKER]);
+      submits.stop();
+    });
+
+    test('a token arriving after the release refreshes the field without posting again', async () => {
+      let resolveLate;
+      executeMock.mockReturnValueOnce(new Promise((resolve) => { resolveLate = resolve; }));
+      const submits = captureSubmits();
+
+      const form = makeForm();
+      mountHook(form);
+      form.requestSubmit();
+
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(submits.posted).toEqual([MARKER]);
+
+      resolveLate('token-late');
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(submits.posted).toEqual([MARKER]);
+      expect(tokenField(form).value).toBe('token-late');
+      submits.stop();
+    });
+
+    test('a token arriving in time cancels the timeout', async () => {
+      let resolveToken;
+      executeMock.mockReturnValueOnce(new Promise((resolve) => { resolveToken = resolve; }));
+      const submits = captureSubmits();
+
+      const form = makeForm();
+      mountHook(form);
+      form.requestSubmit();
+
+      resolveToken('token-in-time');
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(10_000);
+
+      expect(submits.posted).toEqual(['token-in-time']);
+      submits.stop();
+    });
+  });
+
+  describe('without form.requestSubmit (Safari before 16)', () => {
+    test('re-dispatches a held submit as a bubbling submit event', async () => {
+      executeMock.mockResolvedValueOnce('token-late');
+      const submits = captureSubmits();
+
+      const form = makeForm();
+      mountHook(form);
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      expect(submits.posted).toEqual([]);
+
+      form.requestSubmit = undefined;
+      await flush();
+
+      expect(submits.posted).toEqual(['token-late']);
+      submits.stop();
+    });
+
+    test('clicks the original submit button so the submitter is kept', async () => {
+      executeMock.mockResolvedValueOnce('token-late');
+      const submitters = [];
+      const submits = captureSubmits();
+      const recordSubmitter = (event) => submitters.push(event.submitter?.name);
+      window.addEventListener('submit', recordSubmitter);
+
+      const form = makeForm();
+      const button = document.createElement('button');
+      button.type = 'submit';
+      button.name = 'intent';
+      form.appendChild(button);
+      mountHook(form);
+
+      button.click();
+      expect(submits.posted).toEqual([]);
+
+      form.requestSubmit = undefined;
+      await flush();
+
+      expect(submits.posted).toEqual(['token-late']);
+      expect(submitters).toEqual(['intent']);
+      window.removeEventListener('submit', recordSubmitter);
       submits.stop();
     });
   });

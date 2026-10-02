@@ -211,6 +211,14 @@ defmodule TymeslotWeb.Components.CoreComponents do
   @spec password_requirements(map()) :: Phoenix.LiveView.Rendered.t()
   def password_requirements(assigns), do: Forms.password_requirements(assigns)
 
+  @doc """
+  Renders the hidden honeypot field `Tymeslot.Security.Honeypot` checks.
+  """
+  attr :id, :string, required: true
+  attr :param_root, :string, default: nil
+  @spec honeypot_field(map()) :: Phoenix.LiveView.Rendered.t()
+  def honeypot_field(assigns), do: Forms.honeypot_field(assigns)
+
   # ========== FEEDBACK ==========
 
   @doc """

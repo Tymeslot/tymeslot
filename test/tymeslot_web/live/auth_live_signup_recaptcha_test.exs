@@ -7,6 +7,7 @@ defmodule TymeslotWeb.AuthLiveSignupRecaptchaTest do
   @moduletag :security
 
   alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.HTTPClientMock
   alias Tymeslot.Infrastructure.Security.Recaptcha
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Repo
@@ -130,6 +131,8 @@ defmodule TymeslotWeb.AuthLiveSignupRecaptchaTest do
     conn: conn
   } do
     enable_recaptcha()
+    # Google answers, and refuses the marker as it refuses any non-token.
+    google_rejects_tokens()
     {:ok, view, _html} = live(conn, ~p"/auth/signup")
 
     # Simulate the client-side Recaptcha hook sending the special marker when the reCAPTCHA
@@ -154,6 +157,65 @@ defmodule TymeslotWeb.AuthLiveSignupRecaptchaTest do
     assert render(view) =~ "enable JavaScript"
     # No user should be created
     assert Repo.aggregate(UserSchema, :count, :id) == 0
+  end
+
+  describe "Google outage" do
+    test "signup goes through when siteverify cannot be reached", %{conn: conn} do
+      enable_recaptcha()
+      stub_siteverify({:error, %Req.TransportError{reason: :timeout}})
+
+      {:ok, view, _html} = live(conn, ~p"/auth/signup")
+      submit_signup_with_token(view, "outage@example.com", "some-token")
+
+      assert_patch(view, ~p"/auth/verify-email")
+      assert Repo.aggregate(UserSchema, :count, :id) == 1
+    end
+
+    test "signup goes through when siteverify answers with a 5xx", %{conn: conn} do
+      enable_recaptcha()
+      stub_siteverify({:ok, %Req.Response{status: 502, body: ""}})
+
+      {:ok, view, _html} = live(conn, ~p"/auth/signup")
+      submit_signup_with_token(view, "outage-5xx@example.com", "some-token")
+
+      assert_patch(view, ~p"/auth/verify-email")
+      assert Repo.aggregate(UserSchema, :count, :id) == 1
+    end
+
+    test "a token Google refuses still blocks signup", %{conn: conn} do
+      enable_recaptcha()
+      google_rejects_tokens()
+
+      {:ok, view, _html} = live(conn, ~p"/auth/signup")
+      submit_signup_with_token(view, "forged@example.com", "forged-token")
+
+      assert render(view) =~ "Security verification failed"
+      assert Repo.aggregate(UserSchema, :count, :id) == 0
+    end
+  end
+
+  defp submit_signup_with_token(view, email, token) do
+    csrf_html = view |> element("input[name=_csrf_token]") |> render()
+    [_csrf_pattern, csrf_token] = Regex.run(~r/value="([^"]+)"/, csrf_html)
+
+    render_submit(view, "submit_signup", %{
+      "_csrf_token" => csrf_token,
+      "user" => %{
+        "email" => email,
+        "password" => "ValidPassword123!",
+        "terms_accepted" => "true",
+        "g-recaptcha-response" => token
+      }
+    })
+  end
+
+  defp google_rejects_tokens do
+    body = Jason.encode!(%{"success" => false, "error-codes" => ["invalid-input-response"]})
+    stub_siteverify({:ok, %Req.Response{status: 200, body: body}})
+  end
+
+  defp stub_siteverify(response) do
+    Mox.stub(HTTPClientMock, :post, fn _url, _body, _headers, _opts -> response end)
   end
 
   test "rate limiter is checked before reCAPTCHA verification (hybrid gate)", %{conn: conn} do
@@ -217,7 +279,7 @@ defmodule TymeslotWeb.AuthLiveSignupRecaptchaTest do
         {:error, %Req.TransportError{reason: :timeout}}
       end)
 
-      assert Recaptcha.verify(max_token) == {:error, :recaptcha_network_error}
+      assert Recaptcha.verify(max_token) == {:error, :recaptcha_service_unavailable}
     end
 
     test "empty token is properly rejected with clear error" do

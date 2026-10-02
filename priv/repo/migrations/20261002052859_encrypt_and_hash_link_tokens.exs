@@ -20,18 +20,27 @@ defmodule Tymeslot.Repo.Migrations.EncryptAndHashLinkTokens do
 
   An image can be rolled back without this migration's `down/0` running, and
   the previous release reads and looks up only the plain columns. They are
-  therefore kept, with their values, and the application stops reading and
-  writing them; the ones that were `NOT NULL` lose it so new rows can leave
-  them empty. A later release, once rolling back past this one is no longer
-  supported, empties and drops them.
+  therefore kept, with their values, and the application stops reading them;
+  the ones that were `NOT NULL` lose it so new rows can leave them empty. A
+  later release, once rolling back past this one is no longer supported,
+  empties and drops them.
+
+  A kept copy must never outlive its value. Whenever a token changes (only
+  the free/busy token can: it is regenerated or disabled), the same write
+  empties its plain copy (`Tymeslot.Security.LegacyPlainColumn`). So under a
+  rolled-back image a token issued or changed since this migration simply
+  stops working, failing closed, rather than an old token the host replaced
+  or disabled serving again; every untouched row keeps working.
 
   Encrypting needs the application's key, so the backfill calls
   `Tymeslot.Security.Encryption`, as earlier encryption backfills did. Both
   backfills only fill a column that is still empty, so running them again
   changes nothing.
 
-  Rolling back copies each token back into its plain column where that is
-  empty (rows created since), then drops the new columns.
+  Rolling back writes each token that decrypts back into its plain column,
+  over whatever that column holds, since the encrypted value is the current
+  one; a token that no key opens leaves its row as it is. It then drops the
+  new columns.
   """
 
   use Ecto.Migration
@@ -119,7 +128,7 @@ defmodule Tymeslot.Repo.Migrations.EncryptAndHashLinkTokens do
     %{rows: rows} =
       repo().query!("""
       SELECT id, #{column}_encrypted FROM #{table}
-      WHERE #{column} IS NULL AND #{column}_encrypted IS NOT NULL
+      WHERE #{column}_encrypted IS NOT NULL
       ORDER BY id
       """)
 

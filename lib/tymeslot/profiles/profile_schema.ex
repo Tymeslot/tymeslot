@@ -9,6 +9,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
   alias Tymeslot.Profiles
   alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.FieldValidators.UsernameValidator
+  alias Tymeslot.Security.LegacyPlainColumn
   alias Tymeslot.Security.Security
   alias Tymeslot.Security.Token
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
@@ -69,9 +70,17 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     # feed URL from the dashboard again whenever they like, so it is
     # encrypted rather than only hashed; the feed looks it up by
     # `freebusy_token_hash`. The plain `freebusy_token` column predates this
-    # and is no longer read or written.
+    # and is no longer read; it is only emptied when the token changes (see
+    # `Tymeslot.Security.LegacyPlainColumn`).
     field(:freebusy_token, EncryptedString, source: :freebusy_token_encrypted, redact: true)
     field(:freebusy_token_hash, :string)
+
+    field(:legacy_freebusy_token, :string,
+      source: :freebusy_token,
+      load_in_query: false,
+      redact: true
+    )
+
     field(:meeting_types, {:array, :map}, virtual: true)
     belongs_to(:user, Tymeslot.Auth.UserSchema)
 
@@ -125,6 +134,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     profile
     |> cast(attrs, [:freebusy_token])
     |> Token.put_hash(:freebusy_token, :freebusy_token_hash)
+    |> LegacyPlainColumn.clear_on_change(freebusy_token: :legacy_freebusy_token)
     |> unique_constraint(:freebusy_token_hash)
   end
 
