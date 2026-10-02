@@ -112,7 +112,7 @@ defmodule TymeslotWeb.Dashboard.CalendarHomeTest do
 
       assert has_element?(
                lv,
-               ~s([data-testid="up-next-strip"] [id^="calendar-up-next-join-"].hidden a[href="https://zoom.us/j/456"]),
+               ~s([data-testid="up-next-strip"] a[id^="calendar-up-next-join-"].hidden[href="https://zoom.us/j/456"]),
                "Join meeting"
              )
     end

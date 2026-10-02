@@ -54,20 +54,21 @@ defmodule TymeslotWeb.Dashboard.CalendarUpNextStrip do
         data-tpl-days={templates.days}
         class="text-token-lg font-black tabular-nums leading-none shrink-0"
       >{Formatters.relative_hint(@entry)}</time>
-      <%!-- The countdown hook reveals this wrapper from ten minutes before the
-           start: an action link's display beats a `hidden` utility. --%>
-      <span :if={@entry.join_url} id={"calendar-up-next-join-#{@entry.id}"} class="hidden shrink-0">
-        <.action_link
-          href={@entry.join_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          variant={:on_dark}
-          size={:sm}
-          icon="hero-video-camera-mini"
-        >
-          {dgettext("dashboard_home", "Join meeting")}
-        </.action_link>
-      </span>
+      <%!-- The countdown hook reveals this link from ten minutes before the
+           start. --%>
+      <.action_link
+        :if={@entry.join_url}
+        id={"calendar-up-next-join-#{@entry.id}"}
+        href={@entry.join_url}
+        target="_blank"
+        rel="noopener noreferrer"
+        variant={:on_dark}
+        size={:sm}
+        icon="hero-video-camera-mini"
+        class="hidden shrink-0"
+      >
+        {dgettext("dashboard_home", "Join meeting")}
+      </.action_link>
     </div>
     """
   end

@@ -252,25 +252,22 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
               data-tpl-days={templates.days}
               class="text-token-4xl font-black tabular-nums leading-none"
             >{relative_hint(@entry)}</time>
-            <%!-- The countdown hook reveals this wrapper from ten minutes before
-                 the start: an action link's display beats a `hidden` utility. --%>
-            <span
+            <%!-- The countdown hook reveals this link from ten minutes before
+                 the start. --%>
+            <.action_link
               :if={@entry.join_url}
               id={"agenda-cockpit-join-#{@entry.id}"}
+              href={@entry.join_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              phx-click={%JS{}}
+              variant={:on_dark}
+              size={:sm}
+              icon="hero-video-camera-mini"
               class="hidden shrink-0"
             >
-              <.action_link
-                href={@entry.join_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                phx-click={%JS{}}
-                variant={:on_dark}
-                size={:sm}
-                icon="hero-video-camera-mini"
-              >
-                {dgettext("dashboard_home", "Join meeting")}
-              </.action_link>
-            </span>
+              {dgettext("dashboard_home", "Join meeting")}
+            </.action_link>
           </div>
         </div>
 

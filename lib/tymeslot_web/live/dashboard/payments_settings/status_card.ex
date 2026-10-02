@@ -52,7 +52,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
         data-submit-loading
       >
         <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
-        <.action_button type="submit" variant={:primary}>
+        <.action_button type="submit" variant={:primary} class="w-full sm:w-auto">
           <span data-submit-spinner class="hidden items-center gap-2">
             <.spinner /> {dgettext("dashboard_payments", "Connecting…")}
           </span>

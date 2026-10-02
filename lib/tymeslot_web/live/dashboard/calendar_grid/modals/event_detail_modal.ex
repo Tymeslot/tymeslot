@@ -66,17 +66,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
 
       <%!-- Custom header: title gets full width, close button is absolute top-right --%>
       <div class="relative mb-1">
-        <%!-- The wrapper carries the position: an icon button's own
-             `relative` beats an `absolute` utility on it. --%>
-        <div class="absolute -top-2 -right-2">
-          <.icon_button
-            icon="hero-x-mark"
-            variant={:danger}
-            size={:sm}
-            label={dgettext("dashboard_calendar_events", "Close modal")}
-            phx-click={JS.push("close_event_detail", target: @myself)}
-          />
-        </div>
+        <.icon_button
+          icon="hero-x-mark"
+          variant={:danger}
+          size={:sm}
+          label={dgettext("dashboard_calendar_events", "Close modal")}
+          class="absolute -top-2 -right-2"
+          phx-click={JS.push("close_event_detail", target: @myself)}
+        />
         <form
           :if={@editable}
           id="event-title-form"

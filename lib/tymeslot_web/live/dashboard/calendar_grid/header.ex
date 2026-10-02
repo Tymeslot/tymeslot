@@ -46,7 +46,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
       --%>
       <div class="flex flex-col gap-1 md:gap-2 px-3 py-2 md:px-4 md:py-3">
         <%!-- Row 1: navigation (left) + view switcher (right) --%>
-        <div class="flex items-center gap-1 md:gap-2 min-w-0">
+        <div class="flex items-center gap-2 min-w-0">
           <.icon_button
             icon="hero-chevron-left"
             label={dgettext("dashboard_calendar", "Previous period")}
@@ -102,7 +102,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
           to auto, which clips the dropdown panels (calendars, search) that
           extend below the row via `top-full`.
         --%>
-        <div class="flex flex-wrap items-center gap-1 md:gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <div class="md:hidden">
             <AvailabilityHelpers.timezone_display
               timezone_display={@timezone_display}
@@ -131,16 +131,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
             myself={@myself}
           />
           <.refresh_button :if={@integrations != []} syncing={@syncing} myself={@myself} />
-          <%!-- The wrapper carries the breakpoint: `.icon-button` sets its own
-                display, which a `hidden` utility on it could not override. --%>
-          <div class="hidden md:flex">
-            <.icon_button
-              icon="hero-question-mark-circle"
-              label={dgettext("dashboard_calendar", "Keyboard shortcuts")}
-              phx-click="toggle_shortcuts_help"
-              phx-target={@myself}
-            />
-          </div>
+          <.icon_button
+            icon="hero-question-mark-circle"
+            label={dgettext("dashboard_calendar", "Keyboard shortcuts")}
+            class="hidden md:inline-flex"
+            phx-click="toggle_shortcuts_help"
+            phx-target={@myself}
+          />
           <.icon_button
             icon="hero-cog-6-tooth"
             label={dgettext("dashboard_calendar", "Calendar settings")}
@@ -171,7 +168,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
       target={@myself}
       role="dialog"
       panel_label={dgettext("dashboard_calendar", "My Calendars")}
-      trigger_class="action-button action-button--secondary action-button--sm"
+      trigger_class={Enum.join(button_classes(:secondary, :sm), " ")}
       class="bg-white border border-tymeslot-200 rounded-xl shadow-lg p-3 w-60"
       aria-label={dgettext("dashboard_calendar", "Toggle calendars")}
     >
@@ -208,7 +205,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
         on_toggle="toggle_view_menu"
         on_close="close_view_menu"
         target={@myself}
-        trigger_class="action-button action-button--secondary action-button--sm"
+        trigger_class={Enum.join(button_classes(:secondary, :sm), " ")}
         class="bg-white border border-tymeslot-200 rounded-xl shadow-lg py-1 w-36"
         aria-label={dgettext("dashboard_calendar", "Switch view")}
       >
@@ -266,20 +263,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
   # the modal itself, so there is no inline text entry to parse here.
   defp quick_add(assigns) do
     ~H"""
-    <%!-- The wrapper carries the breakpoint: `.action-button` sets its own
-          display, which a `hidden` utility on it could not override. --%>
-    <div class="hidden sm:flex">
-      <.action_button
-        variant={:secondary}
-        size={:sm}
-        icon="hero-plus-circle-mini"
-        phx-click="show_create_form"
-        phx-target={@myself}
-        aria-label={dgettext("dashboard_calendar", "Add event")}
-      >
-        {dgettext("dashboard_calendar", "Quick add")}
-      </.action_button>
-    </div>
+    <.action_button
+      variant={:secondary}
+      size={:sm}
+      icon="hero-plus-circle-mini"
+      class="hidden sm:inline-flex"
+      phx-click="show_create_form"
+      phx-target={@myself}
+    >
+      {dgettext("dashboard_calendar", "Quick add")}
+    </.action_button>
     """
   end
 

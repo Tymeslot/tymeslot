@@ -219,11 +219,11 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
 
     refute modal =~ "Manage booking"
 
-    # The cockpit carries the same link inside the wrapper the countdown hook
-    # reveals near the start time, so it renders hidden until then.
+    # The cockpit carries the same link, which the countdown hook reveals near
+    # the start time, so it renders hidden until then.
     assert has_element?(
              view,
-             ~s([id^="agenda-cockpit-join-"].hidden a[href="https://meet.example.com/d"]),
+             ~s(a[id^="agenda-cockpit-join-"].hidden[href="https://meet.example.com/d"]),
              "Join meeting"
            )
   end
