@@ -26,7 +26,7 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
       <.stat_card label={dgettext("dashboard_admin", "Admins")} value={@admin_count} />
     </div>
 
-    <div class="card-glass p-0! overflow-hidden">
+    <.card padding={:none} class="overflow-hidden">
       <table class="min-w-full divide-y divide-tymeslot-100">
         <thead class="bg-tymeslot-50/60">
           <tr>
@@ -78,7 +78,7 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
           </tr>
         </tbody>
       </table>
-    </div>
+    </.card>
 
     <ConfirmRoleChangeModal.confirm_role_change_modal
       :if={@pending_action}
@@ -95,10 +95,10 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
 
   defp stat_card(assigns) do
     ~H"""
-    <div class="card-glass">
+    <.card>
       <p class="text-xs font-black uppercase tracking-wider text-tymeslot-500 mb-2">{@label}</p>
       <p class="text-4xl font-black text-tymeslot-900 tracking-tight">{@value}</p>
-    </div>
+    </.card>
     """
   end
 

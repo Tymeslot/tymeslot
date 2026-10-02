@@ -22,6 +22,8 @@ defmodule TymeslotWeb.Components.UI.StatusSwitch do
     default: nil,
     doc: "Accessible label describing what the switch toggles"
 
+  attr :rest, :global, doc: "Further attributes (`phx-value-*`, `aria-labelledby`, `data-testid`)"
+
   @spec status_switch(map()) :: Phoenix.LiveView.Rendered.t()
   def status_switch(assigns) do
     ~H"""
@@ -42,6 +44,7 @@ defmodule TymeslotWeb.Components.UI.StatusSwitch do
       aria-checked={to_string(@checked)}
       aria-label={@aria_label}
       id={@id}
+      {@rest}
     >
       <span class={[
         "status-toggle-slider",

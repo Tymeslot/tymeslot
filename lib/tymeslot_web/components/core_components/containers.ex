@@ -9,6 +9,160 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
 
   # ========== CARDS & CONTAINERS ==========
 
+  @card_variants %{
+    glass: nil,
+    flat: "card-glass--flat",
+    muted: "card-glass--muted"
+  }
+
+  @card_paddings %{
+    none: "p-0",
+    xs: "px-4 py-3",
+    sm: "p-4",
+    md: "p-6",
+    lg: "p-6 sm:p-8"
+  }
+
+  @doc """
+  Renders a dashboard card: the white surface every settings section and list
+  sits on.
+
+      <.card title="Booking limits" icon="hero-clock" description="Caps across every type">
+        <:actions><.action_button size={:sm}>Reset</.action_button></:actions>
+        ...
+      </.card>
+
+  * `variant`: `:glass` (the default, a lifted card on the page), `:flat` (the
+    same surface without the shadow, for a card inside another card or a row
+    in a list), `:muted` (a recessed tinted surface).
+  * `padding`: `:none`, `:xs` (a compact list row), `:sm`, `:md` (the
+    default) or `:lg`.
+  * `interactive`: the whole card is clickable, so it shows a pointer and
+    reacts to hover. Static cards do not.
+  * `title` renders the card heading (an `<h2>` at the card-title scale) with
+    an optional `icon` and `description`; the `:header` slot replaces it with
+    custom content, and `:actions` sits at the header's end.
+
+  `class` is for layout and state (margins, `space-y-*`, a selected ring), not
+  for restyling the surface.
+  """
+  attr :variant, :atom, default: :glass, values: Map.keys(@card_variants)
+  attr :padding, :atom, default: :md, values: Map.keys(@card_paddings)
+  attr :interactive, :boolean, default: false
+  attr :tag, :string, default: "div", values: ~w(div section article aside li label)
+  attr :title, :string, default: nil
+  attr :description, :string, default: nil
+  attr :icon, :string, default: nil, doc: "A `hero-…` icon beside the title"
+  attr :class, :any, default: nil
+  attr :rest, :global, include: ~w(for)
+
+  slot :header, doc: "Custom header content, in place of `title`, `icon` and `description`"
+  slot :actions, doc: "Controls at the end of the header row"
+  slot :inner_block
+
+  @spec card(map()) :: Phoenix.LiveView.Rendered.t()
+  def card(assigns) do
+    assigns =
+      assign(assigns,
+        variant_class: Map.fetch!(@card_variants, assigns.variant),
+        padding_class: Map.fetch!(@card_paddings, assigns.padding),
+        header?: assigns.title != nil or assigns.header != [] or assigns.actions != []
+      )
+
+    ~H"""
+    <.dynamic_tag
+      tag_name={@tag}
+      class={[
+        "card-glass",
+        @variant_class,
+        @padding_class,
+        @interactive && "card-glass--interactive",
+        @class
+      ]}
+      {@rest}
+    >
+      <div :if={@header?} class="mb-6 flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+        <div class="min-w-0 flex-1">
+          <%= if @header != [] do %>
+            {render_slot(@header)}
+          <% else %>
+            <.subsection_header
+              :if={@title}
+              size={:lg}
+              level={2}
+              icon={@icon}
+              title={@title}
+              description={@description}
+            />
+          <% end %>
+        </div>
+        <div :if={@actions != []} class="flex shrink-0 flex-wrap items-center gap-2">
+          {render_slot(@actions)}
+        </div>
+      </div>
+      {render_slot(@inner_block)}
+    </.dynamic_tag>
+    """
+  end
+
+  @subsection_sizes %{
+    md: %{title: "text-token-base text-tymeslot-800", icon: "h-5 w-5"},
+    lg: %{title: "text-token-lg text-tymeslot-900", icon: "h-6 w-6"}
+  }
+
+  @doc """
+  Renders the heading of a part of a settings card or form: an optional icon,
+  the title and an optional description, with actions at the end.
+
+      <.subsection_header icon="hero-bell" title="Reminders" description="..." />
+
+  Headings across the dashboard share one weight (semibold) on two sizes:
+  `:md` (the default) for a subsection inside a card, `:lg` for a card's own
+  title, which is what `<.card title>` renders. `level` sets the heading tag
+  only, so the outline stays right wherever the header sits.
+
+  Give it an `id` when the heading is what labels a control
+  (`aria-labelledby`); the heading carries the id.
+  """
+  attr :title, :string, required: true
+  attr :icon, :string, default: nil, doc: "A `hero-…` icon before the title"
+  attr :description, :string, default: nil
+  attr :size, :atom, default: :md, values: Map.keys(@subsection_sizes)
+  attr :level, :integer, default: 3, values: [2, 3, 4]
+  attr :id, :string, default: nil, doc: "The heading's id"
+  attr :class, :any, default: nil, doc: "Layout classes only"
+  slot :actions
+
+  @spec subsection_header(map()) :: Phoenix.LiveView.Rendered.t()
+  def subsection_header(assigns) do
+    assigns = assign(assigns, :sizing, Map.fetch!(@subsection_sizes, assigns.size))
+
+    ~H"""
+    <div class={["flex flex-wrap items-start justify-between gap-x-4 gap-y-2", @class]}>
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-2">
+          <Icons.icon
+            :if={@icon}
+            name={@icon}
+            class={"shrink-0 text-turquoise-500 #{@sizing.icon}"}
+          />
+          <.dynamic_tag
+            tag_name={"h#{@level}"}
+            id={@id}
+            class={["min-w-0 break-words font-semibold", @sizing.title]}
+          >
+            {@title}
+          </.dynamic_tag>
+        </div>
+        <p :if={@description} class="mt-1 text-token-sm text-tymeslot-600">{@description}</p>
+      </div>
+      <div :if={@actions != []} class="flex shrink-0 flex-wrap items-center gap-2">
+        {render_slot(@actions)}
+      </div>
+    </div>
+    """
+  end
+
   @doc """
   Renders a glass-morphism card container.
   """

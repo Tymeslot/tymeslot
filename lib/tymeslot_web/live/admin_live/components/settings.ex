@@ -96,9 +96,9 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
         {Formatters.section_label(@section)}
       </h3>
 
-      <div class="card-glass p-0! overflow-hidden divide-y divide-tymeslot-100">
-        <.setting_row :for={key <- @keys} key={key} effective_values={@effective_values} />
-      </div>
+      <.card padding={:none} class="overflow-hidden divide-y divide-tymeslot-100">
+        <.admin_setting_row :for={key <- @keys} key={key} effective_values={@effective_values} />
+      </.card>
     </section>
     """
   end
@@ -124,8 +124,8 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
         {Formatters.section_label(:email_branding)}
       </h3>
 
-      <div class="card-glass p-0! overflow-hidden divide-y divide-tymeslot-100">
-        <.setting_row key={:email_brand_name} effective_values={@effective_values} />
+      <.card padding={:none} class="overflow-hidden divide-y divide-tymeslot-100">
+        <.admin_setting_row key={:email_brand_name} effective_values={@effective_values} />
         <.brand_accent_row
           effective={Map.fetch!(@effective_values, :email_brand_accent)}
           stock_accent={@stock_accent}
@@ -138,7 +138,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
           errors={@logo_errors}
           max_bytes={@max_logo_bytes}
         />
-      </div>
+      </.card>
     </section>
     """
   end
@@ -146,7 +146,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   attr :key, :atom, required: true
   attr :effective_values, :map, required: true
 
-  defp setting_row(assigns) do
+  defp admin_setting_row(assigns) do
     effective = Map.fetch!(assigns.effective_values, assigns.key)
     kind = Formatters.kind(assigns.key)
 
