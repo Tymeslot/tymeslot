@@ -1,8 +1,12 @@
 /* Modal System - Modern Branding */
 
 /* Modal Overlay & Container */
+/* `margin: 0` because the overlay is often a child of a `space-y-*` stack,
+   whose margin would otherwise shorten the fixed box and leave the page
+   uncovered along the bottom of the viewport. */
 .modal-overlay {
   @apply fixed inset-0 z-[9999] overflow-hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-xs transition-all duration-300;
+  margin: 0;
 }
 
 .modal-container {
