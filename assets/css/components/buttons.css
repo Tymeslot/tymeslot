@@ -65,8 +65,8 @@
   }
 
   @media (hover: hover) {
-    .action-button--primary:hover:not(:disabled),
-    .btn-primary:hover:not(:disabled) {
+    .action-button--primary:hover:not(:disabled, [aria-disabled="true"]),
+    .btn-primary:hover:not(:disabled, [aria-disabled="true"]) {
       @apply from-turquoise-700 to-cyan-700 shadow-turquoise-500/40;
     }
   }
@@ -77,8 +77,8 @@
   }
 
   @media (hover: hover) {
-    .action-button--secondary:hover:not(:disabled),
-    .btn-secondary:hover:not(:disabled) {
+    .action-button--secondary:hover:not(:disabled, [aria-disabled="true"]),
+    .btn-secondary:hover:not(:disabled, [aria-disabled="true"]) {
       @apply border-turquoise-400 text-turquoise-700 bg-turquoise-50/50;
     }
   }
@@ -88,7 +88,7 @@
   }
 
   @media (hover: hover) {
-    .action-button--danger:hover:not(:disabled) {
+    .action-button--danger:hover:not(:disabled, [aria-disabled="true"]) {
       @apply from-red-400 to-rose-500 shadow-red-500/40;
     }
   }
@@ -101,7 +101,7 @@
   }
 
   @media (hover: hover) {
-    .action-button--danger-soft:hover:not(:disabled) {
+    .action-button--danger-soft:hover:not(:disabled, [aria-disabled="true"]) {
       @apply border-red-400 text-red-700 bg-red-50;
     }
   }
@@ -115,7 +115,7 @@
   }
 
   @media (hover: hover) {
-    .action-button--outline:hover:not(:disabled) {
+    .action-button--outline:hover:not(:disabled, [aria-disabled="true"]) {
       @apply border-turquoise-400 text-turquoise-700 bg-turquoise-50/50;
     }
   }
@@ -126,8 +126,8 @@
   }
 
   @media (hover: hover) {
-    .action-button--ghost:hover:not(:disabled),
-    .btn-ghost:hover:not(:disabled) {
+    .action-button--ghost:hover:not(:disabled, [aria-disabled="true"]),
+    .btn-ghost:hover:not(:disabled, [aria-disabled="true"]) {
       @apply bg-tymeslot-100 text-turquoise-700;
     }
   }
@@ -139,7 +139,7 @@
   }
 
   @media (hover: hover) {
-    .action-button--success:hover:not(:disabled) {
+    .action-button--success:hover:not(:disabled, [aria-disabled="true"]) {
       @apply from-green-500 to-emerald-500 shadow-green-500/40;
     }
   }
@@ -151,7 +151,7 @@
   }
 
   @media (hover: hover) {
-    .action-button--on-dark:hover:not(:disabled) {
+    .action-button--on-dark:hover:not(:disabled, [aria-disabled="true"]) {
       @apply bg-turquoise-50;
     }
   }
@@ -206,7 +206,7 @@
   }
 
   @media (hover: hover) {
-    .icon-button--neutral:hover:not(:disabled) {
+    .icon-button--neutral:hover:not(:disabled, [aria-disabled="true"]) {
       @apply bg-tymeslot-100;
     }
   }
@@ -216,7 +216,7 @@
   }
 
   @media (hover: hover) {
-    .icon-button--danger:hover:not(:disabled) {
+    .icon-button--danger:hover:not(:disabled, [aria-disabled="true"]) {
       @apply text-red-500 bg-red-50 border-red-100;
     }
   }
@@ -230,7 +230,7 @@
   }
 
   @media (hover: hover) {
-    .icon-button--warning:hover:not(:disabled) {
+    .icon-button--warning:hover:not(:disabled, [aria-disabled="true"]) {
       @apply bg-amber-100;
     }
   }

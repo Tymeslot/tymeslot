@@ -131,14 +131,15 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     # No clickable scheduling link
     assert Floki.find(doc, "a[href='/testuser']") == []
 
-    # Copy button disabled with tooltip
-    disabled_copy_btn = Floki.find(doc, "button[disabled][title]")
+    # Copy button inert but focusable: named for the action, the tooltip says why
+    disabled_copy_btn = Floki.find(doc, "button#copy-scheduling-link-disabled")
     assert length(disabled_copy_btn) == 1
+    assert Floki.attribute(disabled_copy_btn, "aria-disabled") == ["true"]
+    assert Floki.attribute(disabled_copy_btn, "disabled") == []
+    assert Floki.attribute(disabled_copy_btn, "phx-hook") == []
+    assert Floki.attribute(disabled_copy_btn, "aria-label") == ["Copy link to clipboard"]
 
-    assert disabled_copy_btn |> List.first() |> Floki.attribute("title") |> List.first() =~
-             "Set a username in Settings to enable this feature"
-
-    assert disabled_copy_btn |> Floki.attribute("aria-label") |> List.first() =~
+    assert disabled_copy_btn |> Floki.attribute("title") |> List.first() =~
              "Set a username in Settings to enable this feature"
   end
 
@@ -159,11 +160,13 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     # No clickable scheduling link
     assert Floki.find(doc, "a[href='/testuser']") == []
 
-    # Copy button disabled with tooltip
-    disabled_copy_btn = Floki.find(doc, "button[disabled][title]")
+    # Copy button inert but focusable: named for the action, the tooltip says why
+    disabled_copy_btn = Floki.find(doc, "button#copy-scheduling-link-disabled")
     assert length(disabled_copy_btn) == 1
+    assert Floki.attribute(disabled_copy_btn, "aria-disabled") == ["true"]
+    assert Floki.attribute(disabled_copy_btn, "aria-label") == ["Copy link to clipboard"]
 
-    assert disabled_copy_btn |> List.first() |> Floki.attribute("title") |> List.first() =~
+    assert disabled_copy_btn |> Floki.attribute("title") |> List.first() =~
              "Connect a calendar in Calendar settings to enable this feature"
   end
 

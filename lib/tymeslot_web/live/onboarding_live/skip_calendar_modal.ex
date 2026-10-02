@@ -55,14 +55,14 @@ defmodule TymeslotWeb.OnboardingLive.SkipCalendarModal do
           <CoreComponents.action_button
             variant={:outline}
             phx-click="confirm_skip_calendar"
-            class="flex-1 py-3"
+            class="flex-1"
           >
             {dgettext("onboarding_wizard", "Continue without one")}
           </CoreComponents.action_button>
           <CoreComponents.action_button
             variant={:primary}
             phx-click="hide_skip_calendar_modal"
-            class="flex-1 py-3"
+            class="flex-1"
           >
             {dgettext("onboarding_wizard", "Connect a calendar")}
           </CoreComponents.action_button>

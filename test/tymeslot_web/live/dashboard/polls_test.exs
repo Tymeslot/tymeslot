@@ -199,10 +199,19 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
       insert(:profile, user: user, username: "hostwithout")
       insert(:poll, user: user, title: "Needs a calendar")
 
-      {:ok, _view, html} = live(log_in(conn, user), ~p"/dashboard/polls")
+      {:ok, view, html} = live(log_in(conn, user), ~p"/dashboard/polls")
 
-      assert html =~ "Connect a calendar in Calendar settings to enable this feature"
       refute html =~ ~s(phx-hook="CopyOnClick")
+
+      # Inert but focusable: the accessible name stays the action and the
+      # tooltip carries the reason.
+      assert has_element?(
+               view,
+               ~s(button[aria-disabled="true"][aria-label="Copy poll link to clipboard"]) <>
+                 ~s([title="Connect a calendar in Calendar settings to enable this feature"])
+             )
+
+      refute has_element?(view, ~s(button[aria-label="Copy poll link to clipboard"][disabled]))
     end
 
     test "is enabled when the host has an active calendar integration", %{conn: conn} do

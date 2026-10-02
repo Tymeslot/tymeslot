@@ -262,12 +262,14 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
 
   defp item_cta(%{item: %{action: :copy}} = assigns) do
     ~H"""
+    <%!-- `aria-disabled` rather than `disabled`, so the control stays focusable
+          and its tooltip still explains why the link cannot be copied yet. --%>
     <.action_button
       variant={:secondary}
       size={:sm}
       icon="hero-clipboard"
-      class={cta_class()}
-      disabled
+      class={[cta_class(), "opacity-60"]}
+      aria-disabled="true"
       title={@item.disabled_tooltip}
     >
       {@item.cta}

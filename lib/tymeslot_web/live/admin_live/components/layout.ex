@@ -26,7 +26,7 @@ defmodule TymeslotWeb.AdminLive.Components.Layout do
         <div class="container mx-auto px-4">
           <div class="flex items-center justify-between h-16">
             <.action_link
-              patch={~p"/dashboard"}
+              navigate={~p"/dashboard"}
               variant={:secondary}
               size={:sm}
               icon="hero-arrow-left"

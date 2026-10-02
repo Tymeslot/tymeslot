@@ -34,6 +34,22 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       assert Repo.reload!(profile).booking_theme == "2"
       assert render(view) =~ "Current Style"
     end
+
+    test "locks Live Preview, focusable and explained, until a calendar is connected", %{
+      conn: conn
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+
+      refute has_element?(view, "a", "Live Preview")
+
+      assert has_element?(
+               view,
+               ~s(button[aria-disabled="true"][title="Connect Calendar to Preview"]),
+               "Live Preview"
+             )
+
+      refute has_element?(view, "button[disabled]", "Live Preview")
+    end
   end
 
   describe "Preview links" do

@@ -342,7 +342,6 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
         phx-target={@target}
         loading={@loading_more}
         loading_text={dgettext("dashboard_bookings", "Loading...")}
-        class="mx-auto"
       >
         {dgettext("dashboard_bookings", "Load more meetings")}
       </CoreComponents.loading_button>

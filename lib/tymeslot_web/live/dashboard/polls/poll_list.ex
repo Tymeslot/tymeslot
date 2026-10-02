@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Polls
-  alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Dashboard.Polls.PollShareLink
@@ -70,9 +70,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
   @spec new_poll_button(map()) :: Phoenix.LiveView.Rendered.t()
   def new_poll_button(assigns) do
     ~H"""
-    <Buttons.action_button icon="hero-plus" phx-click="new_poll" phx-target={@myself} {@rest}>
+    <CoreComponents.action_button icon="hero-plus" phx-click="new_poll" phx-target={@myself} {@rest}>
       {dgettext("dashboard_common", "New poll")}
-    </Buttons.action_button>
+    </CoreComponents.action_button>
     """
   end
 
@@ -140,7 +140,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
           </div>
         </div>
 
-        <div class="flex items-center gap-1.5 shrink-0">
+        <div class="flex items-center gap-2 shrink-0">
           <PollShareLink.copy_link_button
             id={"poll-copy-#{@poll.id}"}
             poll={@poll}
@@ -148,7 +148,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
             integration_status={@integration_status}
           />
 
-          <Buttons.icon_button
+          <CoreComponents.icon_button
             icon="hero-chart-bar"
             label={dgettext("dashboard_common", "View results")}
             phx-click="select_poll"

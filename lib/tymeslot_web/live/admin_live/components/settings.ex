@@ -474,7 +474,10 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
           --%>
           <.live_file_input upload={@upload} class="hidden" />
 
-          <label class="action-button action-button--secondary action-button--sm focus-within:outline-hidden focus-within:ring-2 focus-within:ring-turquoise-500 focus-within:ring-offset-2">
+          <label class={[
+            button_classes(:secondary, :sm),
+            "focus-within:outline-hidden focus-within:ring-2 focus-within:ring-turquoise-500 focus-within:ring-offset-2"
+          ]}>
             <.icon name="hero-arrow-up-tray-mini" class="w-4 h-4" />
             {if @logo_url,
               do: dgettext("dashboard_admin", "Replace"),

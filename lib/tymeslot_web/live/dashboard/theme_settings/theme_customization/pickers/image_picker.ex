@@ -115,14 +115,14 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImagePi
                   upload={@uploads.background_image}
                   class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
                 />
-                <div class="action-button action-button--secondary w-full">
+                <div class={[button_classes(:secondary), "w-full"]}>
                   <.icon name="hero-arrow-up-tray" class="w-5 h-5 shrink-0 text-turquoise-600" />
                   <span>{dgettext("dashboard_appearance", "Select Image")}</span>
                 </div>
               </div>
             <% else %>
               <div
-                class="action-button action-button--secondary w-full opacity-50"
+                class={[button_classes(:secondary), "w-full opacity-50"]}
                 aria-disabled="true"
               >
                 {dgettext("dashboard_appearance", "Upload not available")}

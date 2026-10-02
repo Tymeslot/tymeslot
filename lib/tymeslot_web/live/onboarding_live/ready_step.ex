@@ -33,7 +33,7 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
           icon="hero-clipboard-document"
           label={dgettext("onboarding_wizard", "Copy booking link")}
           size={:sm}
-          class="ml-auto shrink-0"
+          class="ml-auto"
           phx-hook="CopyOnClick"
           data-copy-text={@booking_url}
           data-copy-feedback={dgettext("onboarding_wizard", "Booking link copied!")}

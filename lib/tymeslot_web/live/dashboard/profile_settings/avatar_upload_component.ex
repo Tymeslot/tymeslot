@@ -161,7 +161,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
                   upload={@uploads.avatar}
                   class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
                 />
-                <div class="action-button action-button--primary w-full">
+                <div class={[button_classes(:primary), "w-full"]}>
                   <.icon name="hero-cloud-arrow-up" class="w-5 h-5 shrink-0" />
                   <span>
                     {if @uploads.avatar.entries != [],
@@ -171,7 +171,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
                 </div>
               </div>
             <% else %>
-              <div class="action-button action-button--primary w-full opacity-50" aria-disabled="true">
+              <div class={[button_classes(:primary), "w-full opacity-50"]} aria-disabled="true">
                 {dgettext("dashboard_profile", "Upload New")}
               </div>
             <% end %>

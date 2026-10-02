@@ -25,7 +25,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
 
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
-  alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.CoreComponents.Icons
@@ -103,7 +103,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
           </p>
         </div>
 
-        <div class="flex items-center gap-1.5 shrink-0">
+        <div class="flex items-center gap-2 shrink-0">
           <%!-- The voting link belongs next to the open poll, not only on the
                 list card the panel pushes off screen. --%>
           <PollShareLink.copy_link_button
@@ -114,7 +114,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
           />
           <%!-- Wording only, and only while the poll is open: see
                 `Polls.update_details/3` for why the times are not editable. --%>
-          <Buttons.icon_button
+          <CoreComponents.icon_button
             :if={@open?}
             icon="hero-pencil-square"
             label={dgettext("dashboard_common", "Edit title and description")}
@@ -122,7 +122,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
             phx-target={@myself}
             data-testid="poll-edit-details"
           />
-          <Buttons.icon_button
+          <CoreComponents.icon_button
             icon="hero-x-mark"
             label={dgettext("dashboard_common", "Close results")}
             phx-click="deselect_poll"
@@ -171,7 +171,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
       </div>
 
       <div :if={@open?} class="flex justify-end pt-2 border-t border-tymeslot-100">
-        <Buttons.action_button
+        <CoreComponents.action_button
           variant={:danger_soft}
           size={:sm}
           icon="hero-x-circle"
@@ -179,7 +179,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
           phx-target={@myself}
         >
           {dgettext("dashboard_common", "Cancel poll")}
-        </Buttons.action_button>
+        </CoreComponents.action_button>
       </div>
     </div>
     """
@@ -221,17 +221,17 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
       />
 
       <div class="flex justify-end gap-2">
-        <Buttons.action_button
+        <CoreComponents.action_button
           variant={:secondary}
           size={:sm}
           phx-click="cancel_edit_poll_details"
           phx-target={@myself}
         >
           {dgettext("dashboard_common", "Cancel")}
-        </Buttons.action_button>
-        <Buttons.action_button type="submit" size={:sm}>
+        </CoreComponents.action_button>
+        <CoreComponents.action_button type="submit" size={:sm}>
           {dgettext("dashboard_common", "Save changes")}
-        </Buttons.action_button>
+        </CoreComponents.action_button>
       </div>
     </form>
     """
@@ -339,7 +339,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
           </Feedback.pill>
         </div>
 
-        <Buttons.action_button
+        <CoreComponents.action_button
           :if={@open?}
           variant={:secondary}
           size={:sm}
@@ -351,7 +351,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
           phx-disable-with={dgettext("common", "Processing...")}
         >
           {dgettext("dashboard_common", "Confirm this time")}
-        </Buttons.action_button>
+        </CoreComponents.action_button>
       </div>
 
       <.response_bar counts={@counts} total={@participant_count} />

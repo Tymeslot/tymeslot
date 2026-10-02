@@ -54,6 +54,18 @@ defmodule TymeslotWeb.AccountLiveTest do
       assert html =~ user.email
     end
 
+    test "Back to Dashboard navigates rather than patches, as it leaves this LiveView", %{
+      conn: conn
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/account")
+
+      assert has_element?(
+               view,
+               ~s(a[href="/dashboard"][data-phx-link="redirect"]),
+               "Back to Dashboard"
+             )
+    end
+
     test "toggles email form", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/account")
 

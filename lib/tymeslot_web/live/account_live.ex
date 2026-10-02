@@ -35,7 +35,7 @@ defmodule TymeslotWeb.AccountLive do
           <div class="flex items-center justify-between h-16">
             <%!-- Back to Dashboard button --%>
             <.action_link
-              patch={~p"/dashboard"}
+              navigate={~p"/dashboard"}
               variant={:secondary}
               size={:sm}
               icon="hero-arrow-left"

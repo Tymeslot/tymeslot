@@ -151,7 +151,19 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklistTest do
         )
 
       refute html =~ ~s(phx-hook="CopyOnClick")
-      assert html =~ "Connect a calendar in Calendar settings to enable this feature"
+
+      # Inert but focusable: named for the action, the tooltip says why.
+      [button] =
+        html
+        |> Floki.parse_fragment!()
+        |> Floki.find(~s(button[aria-disabled="true"]))
+
+      assert Floki.text(button) =~ "Copy link"
+      assert Floki.attribute(button, "disabled") == []
+
+      assert Floki.attribute(button, "title") == [
+               "Connect a calendar in Calendar settings to enable this feature"
+             ]
     end
   end
 end

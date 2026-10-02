@@ -90,13 +90,17 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
           >
             <.icon name="hero-clipboard" class="w-5 h-5" />
           </button>
+          <%!-- `aria-disabled` rather than `disabled`, so the control stays
+                focusable and its tooltip still explains why the link is
+                unavailable. The accessible name stays the action. --%>
           <button
             :if={!LinkAccessPolicy.can_link?(@profile, @integration_status)}
+            id="copy-scheduling-link-disabled"
             type="button"
-            disabled
-            class="px-3 py-3 rounded-lg bg-tymeslot-200 text-tymeslot-500 cursor-not-allowed opacity-60 relative"
+            aria-disabled="true"
+            class="px-4 py-4 rounded-2xl bg-tymeslot-100 text-tymeslot-400 border-2 border-tymeslot-200 cursor-not-allowed opacity-60"
             title={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
-            aria-label={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
+            aria-label={dgettext("dashboard_common", "Copy link to clipboard")}
           >
             <.icon name="hero-clipboard" class="w-5 h-5" />
           </button>

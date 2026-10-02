@@ -165,11 +165,13 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
                     {dgettext("dashboard_appearance", "Live Preview")}
                   </.action_link>
                 <% else %>
+                  <%!-- `aria-disabled` rather than `disabled`, so the control
+                        stays focusable and its tooltip says what unlocks it. --%>
                   <.action_button
                     variant={:secondary}
                     icon="hero-lock-closed"
-                    class="flex-1"
-                    disabled
+                    class="flex-1 opacity-60"
+                    aria-disabled="true"
                     title={dgettext("dashboard_appearance", "Connect Calendar to Preview")}
                   >
                     {dgettext("dashboard_appearance", "Live Preview")}
