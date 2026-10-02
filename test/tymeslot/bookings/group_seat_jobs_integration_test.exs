@@ -21,6 +21,7 @@ defmodule Tymeslot.Bookings.GroupSeatJobsIntegrationTest do
   import Mox
   import Tymeslot.AvailabilityTestHelpers, only: [open_schedule_for: 1]
   import Tymeslot.Factory
+  import Tymeslot.WorkerTestHelpers, only: [persisted_job: 2]
 
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.Bookings.CancelSeat
@@ -218,6 +219,69 @@ defmodule Tymeslot.Bookings.GroupSeatJobsIntegrationTest do
 
       # Both legs recorded: a further run sends nothing at all.
       assert :ok = perform_job(EmailWorker, args)
+    end
+  end
+
+  # A seat cancellation has no per-recipient sent stamp (the seat is already
+  # cancelled), so its job's delivery claims are what stop a re-run from
+  # mailing the same people twice. They are keyed by the Oban job id, so these
+  # run a persisted job rather than `perform_job/2`, which has none.
+  describe "a seat cancellation job run again" do
+    setup %{meeting_params: meeting_params} do
+      meeting = book_seat!(meeting_params, "Stays Booker", "stays@example.com")
+      book_seat!(meeting_params, "Leaving Booker", "leaving@example.com")
+      leaving_id = participant_id!(meeting.id, "leaving@example.com")
+      {:ok, leaving} = ParticipantQueries.get(leaving_id)
+
+      assert {:ok, :seat_cancelled} = CancelSeat.execute(leaving.management_token)
+
+      job =
+        persisted_job(EmailWorker, %{
+          "action" => "send_seat_cancellation_emails",
+          "meeting_id" => meeting.id,
+          "participant_id" => leaving_id,
+          "slot_freed" => false
+        })
+
+      %{job: job}
+    end
+
+    test "a rescued job does not send either email again", %{job: job} do
+      expect(EmailServiceMock, :send_seat_update_to_organizer, 1, fn :cancelled,
+                                                                     _email,
+                                                                     _details ->
+        {:ok, "sent"}
+      end)
+
+      expect(EmailServiceMock, :send_cancellation_email_to_attendee, 1, fn email, _details ->
+        assert email == "leaving@example.com"
+        {:ok, "sent"}
+      end)
+
+      assert :ok = EmailWorker.perform(job)
+      assert :ok = EmailWorker.perform(job)
+    end
+
+    test "a retry after the participant's copy failed sends only the participant's",
+         %{job: job} do
+      expect(EmailServiceMock, :send_seat_update_to_organizer, 1, fn :cancelled,
+                                                                     _email,
+                                                                     _details ->
+        {:ok, "sent"}
+      end)
+
+      expect(EmailServiceMock, :send_cancellation_email_to_attendee, fn _email, _details ->
+        {:error, "SMTP unavailable"}
+      end)
+
+      assert {:error, _reason} = EmailWorker.perform(job)
+
+      expect(EmailServiceMock, :send_cancellation_email_to_attendee, fn email, _details ->
+        assert email == "leaving@example.com"
+        {:ok, "sent"}
+      end)
+
+      assert :ok = EmailWorker.perform(%{job | attempt: 2})
     end
   end
 
