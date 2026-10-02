@@ -222,6 +222,48 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaTest do
     end
   end
 
+  describe "RecaptchaHelpers.verify_failing_open/4" do
+    test "accepts without a verdict when siteverify cannot be reached" do
+      expect(HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:error, %Req.TransportError{reason: :nxdomain}}
+      end)
+
+      assert {:ok, :service_unavailable} =
+               RecaptchaHelpers.verify_failing_open("token", "test_unavailable", %{})
+    end
+
+    test "accepts without a verdict when siteverify answers with a 5xx" do
+      expect(HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 500, body: ""}}
+      end)
+
+      assert {:ok, :service_unavailable} =
+               RecaptchaHelpers.verify_failing_open("token", "test_unavailable", %{})
+    end
+
+    test "passes Google's verdict through, rejections included" do
+      expect(HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body: Jason.encode!(%{"success" => true, "score" => 0.1})
+         }}
+      end)
+
+      assert {:error, :recaptcha_score_too_low} =
+               RecaptchaHelpers.verify_failing_open("token", "test_unavailable", %{},
+                 min_score: 0.5
+               )
+    end
+
+    test "rejects a missing token without asking Google" do
+      expect(HTTPClientMock, :post, 0, fn _url, _body, _headers, _opts -> :unused end)
+
+      assert {:error, :missing_token} =
+               RecaptchaHelpers.verify_failing_open("", "test_unavailable", %{})
+    end
+  end
+
   describe "siteverify request" do
     test "sends only the secret and the token, never the visitor's IP address" do
       test_pid = self()

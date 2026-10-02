@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Voting
+  alias Tymeslot.Security.Honeypot
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Security.SecurityLogger
   alias TymeslotWeb.Helpers.ClientIP
@@ -74,7 +75,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
         %{"name" => _name, "email" => _email} = params,
         socket
       ) do
-    if honeypot_tripped?(params) do
+    if Honeypot.tripped?(params) do
       # A bot filled the hidden field: fake success and register nothing, exactly
       # as the booking form's honeypot does. Logged like the booking honeypot so
       # the hit is visible, and still counted against the limiter below so a
@@ -159,11 +160,6 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
         {:noreply, put_flash(socket, :error, register_error_message(reason))}
     end
   end
-
-  defp honeypot_tripped?(%{"website" => value}) when is_binary(value),
-    do: String.trim(value) != ""
-
-  defp honeypot_tripped?(_params), do: false
 
   @doc """
   Reloads the poll and tallies when a `{:poll_updated, poll_id}` broadcast is for

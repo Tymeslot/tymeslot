@@ -11,6 +11,7 @@ defmodule Tymeslot.Auth.SignupSecurityTest do
   @moduletag :unit
 
   alias Tymeslot.Auth.SignupSecurity
+  alias Tymeslot.HTTPClientMock
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Test.LogCapture
 
@@ -136,7 +137,7 @@ defmodule Tymeslot.Auth.SignupSecurityTest do
   end
 
   describe "gate/2 — {:error, :recaptcha_script_blocked, _}" do
-    setup :enable_recaptcha
+    setup [:enable_recaptcha, :google_rejects_tokens]
 
     test "returns recaptcha_script_blocked when the client sends the BLOCKED marker" do
       params = %{
@@ -156,6 +157,59 @@ defmodule Tymeslot.Auth.SignupSecurityTest do
 
       assert {:error, :recaptcha_script_blocked, message} = SignupSecurity.gate(params, @meta)
       assert message =~ "JavaScript"
+    end
+  end
+
+  describe "gate/2 — Google unreachable" do
+    setup :enable_recaptcha
+
+    test "lets a signup through when siteverify cannot be reached" do
+      stub_siteverify(fn -> {:error, %Req.TransportError{reason: :timeout}} end)
+
+      params = %{"email" => "outage@example.com", "g-recaptcha-response" => "some-token"}
+      assert :ok = SignupSecurity.gate(params, @meta)
+    end
+
+    test "lets a signup through when siteverify answers with a 5xx" do
+      stub_siteverify(fn -> {:ok, %Req.Response{status: 503, body: ""}} end)
+
+      params = %{"email" => "outage-5xx@example.com", "g-recaptcha-response" => "some-token"}
+      assert :ok = SignupSecurity.gate(params, @meta)
+    end
+
+    test "lets the script-blocked marker through only because siteverify is down too" do
+      stub_siteverify(fn -> {:error, %Req.TransportError{reason: :econnrefused}} end)
+
+      params = %{
+        "email" => "outage-marker@example.com",
+        "g-recaptcha-response" => "RECAPTCHA_SCRIPT_BLOCKED"
+      }
+
+      assert :ok = SignupSecurity.gate(params, @meta)
+    end
+
+    test "logs the acceptance as a warning with its own event" do
+      LogCapture.attach()
+      stub_siteverify(fn -> {:error, %Req.TransportError{reason: :timeout}} end)
+
+      params = %{"email" => "outage-log@example.com", "g-recaptcha-response" => "some-token"}
+      assert :ok = SignupSecurity.gate(params, @meta)
+
+      event = LogCapture.await_log("accepted without reCAPTCHA")
+      assert event.level == :warning
+
+      assert %{event: "signup_recaptcha_unavailable", script_blocked: false} =
+               LogCapture.user_metadata(event)
+    end
+  end
+
+  describe "gate/2 — Google rejects the token" do
+    setup [:enable_recaptcha, :google_rejects_tokens]
+
+    test "still rejects a token Google refuses" do
+      params = %{"email" => "rejected@example.com", "g-recaptcha-response" => "forged-token"}
+
+      assert {:error, :recaptcha_failed, _message} = SignupSecurity.gate(params, @meta)
     end
   end
 
@@ -213,6 +267,16 @@ defmodule Tymeslot.Auth.SignupSecurityTest do
       assert meta.ip_address == "127.0.0.0/24"
       assert meta.user_agent == nil
     end
+  end
+
+  defp stub_siteverify(response) do
+    Mox.stub(HTTPClientMock, :post, fn _url, _body, _headers, _opts -> response.() end)
+  end
+
+  defp google_rejects_tokens(_context) do
+    body = Jason.encode!(%{"success" => false, "error-codes" => ["invalid-input-response"]})
+    stub_siteverify(fn -> {:ok, %Req.Response{status: 200, body: body}} end)
+    :ok
   end
 
   defp enable_recaptcha(_context) do

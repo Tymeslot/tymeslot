@@ -194,7 +194,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
               {SecurityFields.recaptcha_form_attrs("booking_form", "booking")}
               novalidate
             >
-              <SecurityFields.honeypot_field id_prefix="booking" param_root="booking" />
+              <.honeypot_field id="booking-website" param_root="booking" />
 
               <.input
                 field={f[:name]}

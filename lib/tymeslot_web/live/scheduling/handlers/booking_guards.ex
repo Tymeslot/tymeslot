@@ -69,20 +69,6 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingGuards do
   end
 
   @doc """
-  Whether the hidden honeypot field was filled in.
-
-  Checked before form validation: it is the cheapest gate and a tripped
-  honeypot means nothing else about the submission is worth processing.
-  """
-  @spec honeypot_tripped?(map()) :: boolean()
-  def honeypot_tripped?(params) do
-    case Map.get(params, "website") do
-      value when is_binary(value) -> value != ""
-      _other -> false
-    end
-  end
-
-  @doc """
   Logs the honeypot hit and returns the socket for a simulated success.
 
   The caller reports success to the bot. Telling it the truth would let it

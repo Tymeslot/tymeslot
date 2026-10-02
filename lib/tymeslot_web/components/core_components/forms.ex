@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Security.FieldValidators.PasswordValidator
+  alias Tymeslot.Security.Honeypot
 
   # ========== UNIFIED INPUT ==========
 
@@ -453,4 +454,37 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
     </.form>
     """
   end
+
+  # ========== HONEYPOT ==========
+
+  @doc """
+  Renders the honeypot field `Tymeslot.Security.Honeypot` checks.
+
+  Hidden from sighted users by `sr-only` (and by the booking themes'
+  `.honeypot-field` rule, which moves it off-screen), from assistive technology
+  by `aria-hidden`, from keyboard users by `tabindex="-1"`, and from autofill by
+  `autocomplete="off"`. Bots that fill every field fill this one too. `sr-only`
+  is a Tailwind utility, so the field stays hidden under every stylesheet that
+  scans Core's web layer: the dashboard's, each booking theme's and SaaS's.
+
+  `param_root` nests the input under the form's params (`booking[website]`);
+  leave it out for a form that posts flat params.
+  """
+  attr :id, :string, required: true
+  attr :param_root, :string, default: nil
+
+  @spec honeypot_field(map()) :: Phoenix.LiveView.Rendered.t()
+  def honeypot_field(assigns) do
+    assigns = assign(assigns, :name, honeypot_name(assigns.param_root))
+
+    ~H"""
+    <div class="honeypot-field sr-only" aria-hidden="true">
+      <label for={@id}>Website</label>
+      <input id={@id} type="text" name={@name} tabindex="-1" autocomplete="off" value="" />
+    </div>
+    """
+  end
+
+  defp honeypot_name(nil), do: Honeypot.field()
+  defp honeypot_name(param_root), do: "#{param_root}[#{Honeypot.field()}]"
 end
