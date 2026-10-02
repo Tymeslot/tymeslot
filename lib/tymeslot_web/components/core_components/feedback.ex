@@ -97,7 +97,8 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
 
   `icon` puts a `hero-…` icon before the label; `dot` puts a small status dot
   there instead, and `pulse` animates that dot (for something happening now).
-  `class` is for layout only (margins, alignment); colour and type come from
+  Labels are uppercase by default; pass `uppercase={false}` when the label is
+  user data or a phrase, where capitals would hurt reading. `class` is for layout only (margins, alignment); colour and type come from
   `tone` and `size`, so every pill in the dashboard reads the same.
   """
   attr :tone, :atom, default: :neutral, values: @pill_tones
@@ -105,6 +106,11 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
   attr :icon, :string, default: nil, doc: "A `hero-…` icon name shown before the label"
   attr :dot, :boolean, default: false, doc: "Show a status dot before the label"
   attr :pulse, :boolean, default: false, doc: "Show an animated dot (implies `dot`)"
+
+  attr :uppercase, :boolean,
+    default: true,
+    doc: "Set to false for labels that are data or a phrase (a timezone, a sentence)"
+
   attr :class, :any, default: nil, doc: "Layout classes only"
   attr :rest, :global
   slot :inner_block, required: true
@@ -122,7 +128,8 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
     ~H"""
     <span
       class={[
-        "inline-flex shrink-0 items-center rounded-token-full text-token-xs font-black uppercase tracking-wider tabular-nums",
+        "inline-flex shrink-0 items-center rounded-token-full text-token-xs font-black tabular-nums",
+        @uppercase && "uppercase tracking-wider",
         @size_class,
         @tone_class,
         @class

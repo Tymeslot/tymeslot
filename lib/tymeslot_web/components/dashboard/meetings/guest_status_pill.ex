@@ -20,7 +20,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.GuestStatusPill do
     assigns = assign(assigns, tone: tone, icon: icon, label: label)
 
     ~H"""
-    <CoreComponents.pill tone={@tone} icon={@icon}>{@label}</CoreComponents.pill>
+    <CoreComponents.pill tone={@tone} icon={@icon} uppercase={false}>{@label}</CoreComponents.pill>
     """
   end
 

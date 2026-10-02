@@ -43,7 +43,12 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
       <div class="space-y-6">
         <div class="flex flex-wrap items-center gap-2">
           <SourcePill.source_pill source={@entry.source} />
-          <.pill :if={relative_label(@entry, @now)} tone={:brand} icon="hero-clock-mini">
+          <.pill
+            :if={relative_label(@entry, @now)}
+            tone={:brand}
+            icon="hero-clock-mini"
+            uppercase={false}
+          >
             {relative_label(@entry, @now)}
           </.pill>
         </div>

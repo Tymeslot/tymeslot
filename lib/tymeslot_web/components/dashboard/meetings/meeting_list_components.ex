@@ -173,6 +173,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
               tone={:info}
               size={:sm}
               icon="hero-video-camera"
+              uppercase={false}
             >
               {dgettext("dashboard_bookings", "Video Call")}
             </CoreComponents.pill>

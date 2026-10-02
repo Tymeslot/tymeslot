@@ -81,6 +81,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
                 string and gives the badge an accessible reading. --%>
           <Feedback.pill
             icon="hero-globe-alt-mini"
+            uppercase={false}
             class="mt-1"
             aria-label={
               dgettext("dashboard_common", "Times shown in %{timezone}", timezone: @poll.timezone)

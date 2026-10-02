@@ -246,6 +246,11 @@ defmodule TymeslotWeb.Components.CoreComponents do
   attr :icon, :string, default: nil, doc: "A `hero-…` icon name shown before the label"
   attr :dot, :boolean, default: false, doc: "Show a status dot before the label"
   attr :pulse, :boolean, default: false, doc: "Show an animated dot (implies `dot`)"
+
+  attr :uppercase, :boolean,
+    default: true,
+    doc: "Set to false for labels that are data or a phrase (a timezone, a sentence)"
+
   attr :class, :any, default: nil, doc: "Layout classes only"
   attr :rest, :global
   slot :inner_block, required: true

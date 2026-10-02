@@ -10,13 +10,21 @@ defmodule TymeslotWeb.Components.CoreComponentsPillTest do
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.CoreComponents.Feedback
 
-  @pill_attrs [:tone, :size, :icon, :dot, :pulse, :class]
+  @pill_attrs [:tone, :size, :icon, :dot, :pulse, :uppercase, :class]
 
   defp render_pill(opts) do
     {attrs, rest} = Map.split(opts, @pill_attrs)
 
     attrs
-    |> Enum.into(%{tone: :neutral, size: :xs, icon: nil, dot: false, pulse: false, class: nil})
+    |> Enum.into(%{
+      tone: :neutral,
+      size: :xs,
+      icon: nil,
+      dot: false,
+      pulse: false,
+      uppercase: true,
+      class: nil
+    })
     |> Map.put(:rest, rest)
     |> then(
       &render_component(
@@ -28,6 +36,7 @@ defmodule TymeslotWeb.Components.CoreComponentsPillTest do
             icon={@icon}
             dot={@dot}
             pulse={@pulse}
+            uppercase={@uppercase}
             class={@class}
             {@rest}
           >
@@ -100,6 +109,14 @@ defmodule TymeslotWeb.Components.CoreComponentsPillTest do
 
       assert doc |> LazyHTML.query("span[aria-hidden]") |> Enum.to_list() == []
       assert doc |> LazyHTML.query("svg") |> Enum.to_list() == []
+    end
+
+    test "uppercases the label by default" do
+      assert pill_class(render_pill(%{})) =~ "uppercase"
+    end
+
+    test "uppercase={false} keeps the label's own case" do
+      refute pill_class(render_pill(%{uppercase: false})) =~ "uppercase"
     end
 
     test "size :sm pads more than the default :xs" do
