@@ -8,6 +8,8 @@ defmodule Tymeslot.Test.SuiteConfig do
   suites can't drift on how many cases they run or which tags they skip.
   """
 
+  alias Oban.Job
+  alias Tymeslot.Repo
   alias Tymeslot.Test.LogCapture
 
   # Slow/external suites are opt-in — run them explicitly with `--include`
@@ -135,6 +137,23 @@ defmodule Tymeslot.Test.SuiteConfig do
       :ok
     end)
 
+    :ok
+  end
+
+  @doc """
+  Deletes every Oban job committed to the test database, outside any sandbox.
+
+  Tests insert jobs inside their sandbox transaction, so nothing they enqueue
+  survives them. What does survive is a job a migration inserts (see
+  `Tymeslot.Workers.UploadMetadataSweepWorker`), which `test_helper.exs`
+  commits when it migrates the database; left in place, it would show up in
+  every `all_enqueued/1` and every drain of its queue. Run from
+  `test_helper.exs`, after migrating and before the sandbox goes manual, and
+  by any test that rebuilds the schema outside the sandbox.
+  """
+  @spec discard_committed_jobs!() :: :ok
+  def discard_committed_jobs! do
+    {_count, _rows} = Repo.delete_all(Job)
     :ok
   end
 

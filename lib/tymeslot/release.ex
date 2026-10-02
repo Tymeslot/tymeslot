@@ -113,6 +113,9 @@ defmodule Tymeslot.Release do
   Strips location, capture time and device metadata from every image and
   video already in the upload directory. See `Tymeslot.Media.UploadMetadataSweep`.
 
+  The sweep runs once by itself after the upgrade that introduced it; this is
+  for running it again, for instance after restoring an old uploads backup.
+
   Touches only files, never the database, so it needs no running node:
 
       bin/tymeslot eval 'Tymeslot.Release.strip_upload_metadata()'

@@ -717,6 +717,8 @@ docker compose up -d --build
 
 > **Upgrading an older install — database volume renamed to `tymeslot_pg`.** Earlier versions named the PostgreSQL volume `postgres_data` (build script / manual `docker run`) or `<project>_postgres_data` (Docker Compose). Both now use `tymeslot_pg`. If you started Tymeslot before this change, your existing data is in the old volume — re-point the new mount at it, e.g. `-v postgres_data:/var/lib/postgresql/data`, or migrate the data into `tymeslot_pg` once, so the upgrade doesn't start against an empty database.
 
+> **Upgrading to a release that strips upload metadata.** Avatars and theme backgrounds no longer keep the location, capture time and camera or phone details that photos and videos often carry. Files uploaded before the update are cleaned automatically, once, in the background on the first start after updating; the log reports `Upload metadata sweep finished` when it is done. To run the clean-up again by hand, for instance after restoring an old copy of the uploads, run it as the app's user so the files keep their owner: `docker exec -u app tymeslot bin/tymeslot eval 'Tymeslot.Release.strip_upload_metadata()'`. It is safe to repeat. QuickTime (`.mov`) videos are no longer accepted as theme backgrounds; a `.mov` background you already have keeps working.
+
 ---
 
 ## Troubleshooting

@@ -456,6 +456,18 @@ docker push your-registry/tymeslot-cloudron:latest
 cloudron update --app tymeslot.yourdomain.com
 ```
 
+### Upgrading to a release that strips upload metadata
+
+Avatars and theme backgrounds no longer keep the location, capture time and camera or phone details that photos and videos often carry. Files uploaded before the update are cleaned automatically, once, in the background on the first start after updating; the app log reports `Upload metadata sweep finished` when it is done.
+
+To run the clean-up again by hand, for instance after restoring an old copy of `/app/data/uploads`, run it as the `cloudron` user so the files keep their owner. It is safe to repeat.
+
+```bash
+cloudron exec --app tymeslot.yourdomain.com -- gosu cloudron:cloudron /app/bin/tymeslot eval 'Tymeslot.Release.strip_upload_metadata()'
+```
+
+QuickTime (`.mov`) videos are no longer accepted as theme backgrounds; a `.mov` background you already have keeps working.
+
 ---
 
 ## Troubleshooting

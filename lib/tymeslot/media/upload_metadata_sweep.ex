@@ -5,7 +5,10 @@ defmodule Tymeslot.Media.UploadMetadataSweep do
 
   New uploads are stripped as they are stored. This catches the files stored
   before that was the case, which were published with whatever location,
-  capture time and device details they carried. It is a one-off, run with
+  capture time and device details they carried. It runs once by itself, on
+  the first boot after the upgrade, through
+  `Tymeslot.Workers.UploadMetadataSweepWorker`. To run it again (after
+  restoring an old uploads backup, say), use
   `mix tymeslot.strip_upload_metadata` or, from a release,
   `bin/tymeslot eval 'Tymeslot.Release.strip_upload_metadata()'`.
 

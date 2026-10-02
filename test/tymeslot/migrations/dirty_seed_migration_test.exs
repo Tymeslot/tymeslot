@@ -47,6 +47,7 @@ defmodule Tymeslot.Migrations.DirtySeedMigrationTest do
   alias Ecto.Adapters.SQL
   alias Ecto.Adapters.SQL.Sandbox
   alias Ecto.Migrator
+  alias Tymeslot.Test.SuiteConfig
 
   @seed_path Path.expand("../../support/migration_dirty_seed.sql", __DIR__)
 
@@ -115,6 +116,8 @@ defmodule Tymeslot.Migrations.DirtySeedMigrationTest do
         # Always restore clean state for other tests
         reset_database!()
         Migrator.run(Tymeslot.Repo, migrations_path(), :up, all: true)
+        # The rebuild commits the jobs migrations enqueue, as at boot.
+        SuiteConfig.discard_committed_jobs!()
       end
     end
   end
