@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.LocationOption
-  alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Components.Icons.ProviderIcon
@@ -118,8 +118,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
         </div>
 
         <%!-- Actions --%>
-        <div class="flex items-center gap-1.5 shrink-0">
-          <Buttons.icon_button
+        <div class="flex items-center gap-2 shrink-0">
+          <CoreComponents.icon_button
             icon="hero-pencil-square"
             size={:sm}
             label={dgettext("dashboard_meeting_types", "Edit")}
@@ -128,7 +128,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             phx-target={@myself}
           />
 
-          <Buttons.icon_button
+          <CoreComponents.icon_button
             icon="hero-trash"
             variant={:danger}
             size={:sm}

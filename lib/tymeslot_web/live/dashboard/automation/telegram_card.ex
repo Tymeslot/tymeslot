@@ -166,7 +166,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
             {dgettext("dashboard_automation_chat", "Logs")}
           </.action_button>
 
-          <div class="ml-auto flex items-center gap-1">
+          <div class="ml-auto flex items-center gap-2">
             <%!-- Edit Button --%>
             <%= if @integration.status != :pending_link do %>
               <.icon_button

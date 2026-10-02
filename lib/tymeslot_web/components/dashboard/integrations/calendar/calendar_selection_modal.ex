@@ -72,9 +72,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
                 class="input"
               />
             </div>
-            <TymeslotWeb.Components.CoreComponents.action_button type="submit" variant={:secondary}>
+            <.action_button type="submit" variant={:secondary}>
               {dgettext("dashboard_calendar_providers", "Rename")}
-            </TymeslotWeb.Components.CoreComponents.action_button>
+            </.action_button>
           </form>
 
           <div class="mb-6">
@@ -165,12 +165,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
 
         <:footer>
           <div class="flex justify-end">
-            <TymeslotWeb.Components.CoreComponents.action_button
+            <.action_button
               variant={:secondary}
               phx-click={@on_cancel}
             >
               {dgettext("dashboard_calendar_providers", "Done")}
-            </TymeslotWeb.Components.CoreComponents.action_button>
+            </.action_button>
           </div>
         </:footer>
       </TymeslotWeb.Components.CoreComponents.modal>

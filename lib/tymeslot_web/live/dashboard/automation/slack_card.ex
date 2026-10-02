@@ -173,7 +173,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
             </.action_button>
           <% end %>
 
-          <div class="ml-auto flex items-center gap-1">
+          <div class="ml-auto flex items-center gap-2">
             <%!-- Edit Button --%>
             <%= if @status != :pending_oauth do %>
               <.icon_button

@@ -51,9 +51,9 @@ defmodule TymeslotWeb.Dashboard.Automation.DeliveriesModal do
 
       <:footer>
         <div class="flex justify-end">
-          <CoreComponents.action_button variant={:primary} phx-click={@on_close}>
+          <.action_button variant={:primary} phx-click={@on_close}>
             {dgettext("dashboard_automation", "Close")}
-          </CoreComponents.action_button>
+          </.action_button>
         </div>
       </:footer>
     </CoreComponents.modal>

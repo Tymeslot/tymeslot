@@ -10,6 +10,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.KmeetConfig do
 
   alias Tymeslot.Integrations.Video.Providers.KmeetProvider
 
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
+
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponents,
     as: SharedForm
 
@@ -73,22 +75,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.KmeetConfig do
           <SharedForm.error_banner error={error} />
         <% end %>
 
-        <div class="flex justify-between items-center pt-4 border-t border-tymeslot-100">
-          <.action_button
-            variant={:secondary}
-            phx-click="back_to_providers"
-            phx-target={@target}
-          >
-            {dgettext("dashboard_video", "Cancel")}
-          </.action_button>
-          <.loading_button
-            type="submit"
-            loading={@saving}
-            loading_text={dgettext("dashboard_integrations", "Adding...")}
-          >
-            {dgettext("dashboard_integrations", "Add Integration")}
-          </.loading_button>
-        </div>
+        <UIComponents.form_actions
+          target={@target}
+          saving={@saving}
+        />
       </form>
     </div>
     """

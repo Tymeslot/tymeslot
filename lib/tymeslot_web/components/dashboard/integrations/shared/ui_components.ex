@@ -48,4 +48,37 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
         )
     }
   end
+
+  @doc """
+  The Cancel and submit row at the foot of a provider's connect form.
+
+  Cancel pushes `cancel_event` (by default back to the provider list) to
+  `target`; the submit button shows a spinner and `saving_text` while
+  `saving` is true. `class` sets the colour of the divider above the row:
+  calendar forms pass their turquoise border.
+  """
+  attr :target, :any, required: true
+  attr :saving, :boolean, default: false
+  attr :cancel_event, :string, default: "back_to_providers"
+  attr :submit_text, :string, default: nil, doc: "Defaults to \"Add Integration\""
+  attr :saving_text, :string, default: nil, doc: "Defaults to \"Adding...\""
+  attr :class, :any, default: "border-tymeslot-100"
+
+  @spec form_actions(map()) :: Phoenix.LiveView.Rendered.t()
+  def form_actions(assigns) do
+    ~H"""
+    <div class={["flex justify-between items-center pt-4 border-t", @class]}>
+      <.action_button variant={:secondary} phx-click={@cancel_event} phx-target={@target}>
+        {dgettext("dashboard_integrations", "Cancel")}
+      </.action_button>
+      <.loading_button
+        type="submit"
+        loading={@saving}
+        loading_text={@saving_text || dgettext("dashboard_integrations", "Adding...")}
+      >
+        {@submit_text || dgettext("dashboard_integrations", "Add Integration")}
+      </.loading_button>
+    </div>
+    """
+  end
 end

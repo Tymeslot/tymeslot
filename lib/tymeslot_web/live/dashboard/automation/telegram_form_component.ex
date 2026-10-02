@@ -259,14 +259,14 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
 
           <%!-- Form Actions --%>
           <div class="flex justify-end gap-3 pt-4">
-            <CoreComponents.action_button
+            <.action_button
               variant={:secondary}
               phx-click="close_telegram_form"
               phx-target={@parent_component}
             >
               {dgettext("dashboard_automation_chat", "Cancel")}
-            </CoreComponents.action_button>
-            <CoreComponents.loading_button
+            </.action_button>
+            <.loading_button
               type="submit"
               variant={:primary}
               loading={@saving}
@@ -286,7 +286,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
                 <% true -> %>
                   {dgettext("dashboard_automation_chat", "Update")}
               <% end %>
-            </CoreComponents.loading_button>
+            </.loading_button>
           </div>
         </form>
       <% end %>

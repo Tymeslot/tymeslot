@@ -288,20 +288,20 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
       <% end %>
 
       <div class="flex justify-end gap-3 pt-4 border-t border-turquoise-200/30">
-        <CoreComponents.action_button
+        <.action_button
           variant={:secondary}
           phx-click={JS.push("close_reconnect_modal", target: @target)}
         >
           {dgettext("dashboard_calendar_providers", "Cancel")}
-        </CoreComponents.action_button>
-        <CoreComponents.loading_button
+        </.action_button>
+        <.loading_button
           variant={:primary}
           type="submit"
           loading={@is_submitting}
           loading_text={dgettext("dashboard_calendar_providers", "Testing...")}
         >
           {dgettext("dashboard_calendar_providers", "Reconnect")}
-        </CoreComponents.loading_button>
+        </.loading_button>
       </div>
     </form>
     """
@@ -373,20 +373,20 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
       </div>
 
       <div class="flex justify-end gap-3 pt-4 border-t border-turquoise-200/30">
-        <CoreComponents.action_button
+        <.action_button
           variant={:secondary}
           phx-click={JS.push("close_reconnect_modal", target: @target)}
         >
           {dgettext("dashboard_calendar_providers", "Cancel")}
-        </CoreComponents.action_button>
-        <CoreComponents.loading_button
+        </.action_button>
+        <.loading_button
           variant={:primary}
           type="submit"
           loading={@is_submitting}
           loading_text={dgettext("dashboard_calendar_providers", "Saving...")}
         >
           {dgettext("dashboard_calendar_providers", "Save selection")}
-        </CoreComponents.loading_button>
+        </.loading_button>
       </div>
     </form>
     """
