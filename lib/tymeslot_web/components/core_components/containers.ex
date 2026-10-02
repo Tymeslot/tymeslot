@@ -169,6 +169,82 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
     """
   end
 
+  @detail_tiles %{
+    brand: "bg-turquoise-50 border-turquoise-100 text-turquoise-600",
+    info: "bg-blue-50 border-blue-100 text-blue-600",
+    danger: "bg-red-50 border-red-100 text-red-500"
+  }
+
+  @doc """
+  One line of details: an icon beside an optional label, over the value in the
+  inner block.
+
+      <.detail_line icon="hero-clock" label="Time">2:30 PM – 3:00 PM</.detail_line>
+
+  * `:default`: a brand icon, an uppercase label and a bold value. Detail modals.
+  * `:compact`: a small muted icon beside free content (text, inputs, pickers),
+    with a quiet label when given. Rows of an editable form.
+  * `:tile`: the icon in a square tinted by `tone`, for cards with room to spare.
+  """
+  attr :icon, :string, required: true
+  attr :label, :string, default: nil
+  attr :variant, :atom, default: :default, values: [:default, :compact, :tile]
+  attr :tone, :atom, default: :brand, values: Map.keys(@detail_tiles)
+  attr :class, :any, default: nil, doc: "Layout classes only"
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  @spec detail_line(map()) :: Phoenix.LiveView.Rendered.t()
+  def detail_line(%{variant: :tile} = assigns) do
+    assigns = assign(assigns, :tile_class, Map.fetch!(@detail_tiles, assigns.tone))
+
+    ~H"""
+    <div class={["flex items-center gap-4", @class]} {@rest}>
+      <div class={[
+        "w-12 h-12 shrink-0 rounded-token-2xl border shadow-sm flex items-center justify-center",
+        @tile_class
+      ]}>
+        <Icons.icon name={@icon} class="w-6 h-6" />
+      </div>
+      <div class="min-w-0">
+        <p
+          :if={@label}
+          class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest mb-0.5"
+        >
+          {@label}
+        </p>
+        <div class="text-tymeslot-700 font-bold break-words">{render_slot(@inner_block)}</div>
+      </div>
+    </div>
+    """
+  end
+
+  def detail_line(%{variant: :compact} = assigns) do
+    ~H"""
+    <div class={["flex items-start gap-3", @class]} {@rest}>
+      <Icons.icon name={@icon} class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" />
+      <div class="min-w-0 flex-1">
+        <p :if={@label} class="text-token-xs font-medium text-tymeslot-400 mb-1.5">{@label}</p>
+        {render_slot(@inner_block)}
+      </div>
+    </div>
+    """
+  end
+
+  def detail_line(assigns) do
+    ~H"""
+    <div class={["flex items-start gap-3", @class]} {@rest}>
+      <Icons.icon name={@icon} class="w-5 h-5 text-turquoise-500 shrink-0 mt-0.5" />
+      <div class="min-w-0 flex-1">
+        <p :if={@label} class="text-token-xs font-black uppercase tracking-widest text-tymeslot-400">
+          {@label}
+        </p>
+        <div class="mt-0.5 text-tymeslot-800 font-bold break-words">{render_slot(@inner_block)}</div>
+      </div>
+    </div>
+    """
+  end
+
   @doc """
   Renders an info/alert box.
   """

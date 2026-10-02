@@ -187,6 +187,17 @@ defmodule TymeslotWeb.Components.CoreComponents do
   @spec section_header(map()) :: Phoenix.LiveView.Rendered.t()
   def section_header(assigns), do: Containers.section_header(assigns)
 
+  @doc "An icon beside a labelled value. See `Containers.detail_line/1`."
+  attr :icon, :string, required: true
+  attr :label, :string, default: nil
+  attr :variant, :atom, default: :default, values: [:default, :compact, :tile]
+  attr :tone, :atom, default: :brand, values: [:brand, :info, :danger]
+  attr :class, :any, default: nil
+  attr :rest, :global
+  slot :inner_block, required: true
+  @spec detail_line(map()) :: Phoenix.LiveView.Rendered.t()
+  def detail_line(assigns), do: Containers.detail_line(assigns)
+
   @doc """
   Renders an info/alert box.
   """

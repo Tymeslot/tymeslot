@@ -103,4 +103,44 @@ defmodule TymeslotWeb.Components.ContainersTest do
       assert html =~ "<path"
     end
   end
+
+  describe "detail_line" do
+    defp detail_line_html(variant) do
+      assigns = %{variant: variant}
+
+      rendered_to_string(~H"""
+      <CoreComponents.detail_line variant={@variant} icon="hero-clock" label="Time" tone={:info}>
+        2:30 PM
+      </CoreComponents.detail_line>
+      """)
+    end
+
+    for variant <- [:default, :compact, :tile] do
+      test "#{variant}: shows the icon, the label and the value" do
+        doc = unquote(variant) |> detail_line_html() |> Floki.parse_fragment!()
+
+        assert [_svg] = Floki.find(doc, "svg")
+        assert doc |> Floki.find("p") |> Floki.text() |> String.trim() == "Time"
+        assert Floki.text(doc) =~ "2:30 PM"
+      end
+    end
+
+    test "tints the tile by tone" do
+      assert detail_line_html(:tile) =~ "bg-blue-50"
+    end
+
+    test "leaves the label out when there is none" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <CoreComponents.detail_line variant={:compact} icon="hero-bell">
+          Reminders
+        </CoreComponents.detail_line>
+        """)
+
+      refute html =~ ~r/<p[\s>]/
+      assert html =~ "Reminders"
+    end
+  end
 end
