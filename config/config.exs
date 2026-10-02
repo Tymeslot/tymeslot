@@ -555,10 +555,6 @@ config :tymeslot, :booking_analytics_enabled, false
 # SaaS sets its go-live date.
 config :tymeslot, :booking_analytics_launch_date, nil
 
-# Analytics — secret used to derive the daily-rotated visitor fingerprint salt.
-# Required in production; dev/test override with fixed values for repeatability.
-config :tymeslot, :analytics_salt_secret, nil
-
 # Migration safety analysis (excellent_migrations, run as its own gate step
 # rather than a Credo check: migrations are deliberately outside .credo.exs's
 # included paths, so that they do not attract ModuleDoc, Specs and the rest).

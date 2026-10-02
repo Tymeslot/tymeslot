@@ -8,12 +8,15 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Analytics.EventSchema
+  alias Tymeslot.Analytics.SaltSchema
   alias Tymeslot.Slack.SlackDeliverySchema
   alias Tymeslot.Telegram.TelegramDeliverySchema
   alias Tymeslot.Telegram.TelegramIntegrationSchema
   alias Tymeslot.Webhooks.WebhookDeliverySchema
   alias Tymeslot.Webhooks.WebhookEventSchema
   alias Tymeslot.Workers.DataRetentionWorker
+
+  import Tymeslot.Test.ClockHelpers
 
   describe "perform/1 - outgoing webhook delivery cleanup" do
     test "removes delivery records older than the retention period" do
@@ -339,6 +342,21 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
 
       assert :ok = perform_job(DataRetentionWorker, %{"analytics_event_retention_days" => 30})
       refute Repo.get(EventSchema, event.id)
+    end
+  end
+
+  describe "perform/1 - analytics salt cleanup" do
+    test "deletes the salts of past days and keeps today's" do
+      today = ~D[2031-03-10]
+      freeze_clock(DateTime.new!(today, ~T[04:00:00], "Etc/UTC"))
+
+      for date <- [~D[2031-02-01], ~D[2031-03-09], today] do
+        Repo.insert!(%SaltSchema{date: date, salt: :crypto.strong_rand_bytes(32)})
+      end
+
+      assert :ok = perform_job(DataRetentionWorker, %{})
+
+      assert Repo.all(from(s in SaltSchema, select: s.date)) == [today]
     end
   end
 end

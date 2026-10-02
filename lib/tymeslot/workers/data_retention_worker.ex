@@ -11,6 +11,7 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
   5. Analytics page-view events (90 days retention)
   6. Hourly calendar availability refusal counters (30 days retention)
   7. Abandoned Telegram setup stubs (own minute-scale TTL, not a day count)
+  8. Analytics visitor-hash salts (each kept only for its own UTC day)
 
   Ensures the database doesn't grow indefinitely by removing
   old records based on configured retention periods.
@@ -89,6 +90,8 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
 
     prune_orphaned_telegram_stubs()
 
+    prune_expired_analytics_salts()
+
     Enum.each(@retention_jobs, &run_cleanup(&1, args))
 
     :ok
@@ -141,6 +144,14 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
       {0, _rows} ->
         Logger.debug("No abandoned Telegram setup stubs to prune")
     end
+  end
+
+  # Deliberately not a `@retention_jobs` entry either: a salt's lifetime is its
+  # own UTC day, not a configurable window, because keeping it any longer keeps
+  # that day's visitor hashes recomputable.
+  defp prune_expired_analytics_salts do
+    {count, _rows} = Analytics.prune_expired_salts()
+    Logger.info("Pruned expired analytics salts", deleted_count: count)
   end
 
   defp nullify_stale_payloads(args) do
