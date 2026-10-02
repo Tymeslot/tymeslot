@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.OptionPanelTest
 
   alias Tymeslot.ThemeCustomizations.Options.Accent
   alias Tymeslot.ThemeCustomizations.Options.Background
+  alias Tymeslot.ThemeCustomizations.Options.CalendarView
   alias Tymeslot.ThemeCustomizations.Options.ColourMode
   alias Tymeslot.ThemeCustomizations.Options.Density
   alias Tymeslot.ThemeCustomizations.Options.Font
@@ -289,5 +290,53 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.OptionPanelTest
     assert choices(density_html, "density") == ~w(comfortable compact)
     assert density_html =~ "Abstände"
     assert density_html =~ "Kompakt"
+  end
+
+  describe "the calendar view panel" do
+    @calendar_view %{key: :calendar_view, module: CalendarView, default: "month"}
+
+    defp pressed(html) do
+      html
+      |> Floki.parse_fragment!()
+      |> Floki.find("button[phx-value-field='calendar_view'][aria-pressed='true']")
+      |> Floki.attribute("phx-value-choice")
+    end
+
+    test "offers a month and a week, in that order, each sending the change" do
+      html = render_panel(@calendar_view)
+
+      assert choices(html, "calendar_view") == ~w(month week)
+      assert html =~ ~s(data-testid="calendar-view-panel")
+      assert html =~ "Calendar View"
+
+      buttons =
+        html |> Floki.parse_fragment!() |> Floki.find("button[phx-value-field='calendar_view']")
+
+      assert Enum.map(buttons, &(&1 |> Floki.attribute("phx-click") |> hd())) ==
+               ["theme:set_option", "theme:set_option"]
+
+      assert Enum.map(buttons, &(&1 |> Floki.attribute("phx-value-option") |> hd())) ==
+               ["calendar_view", "calendar_view"]
+    end
+
+    test "marks the group's default as pressed when nothing is stored" do
+      assert pressed(render_panel(@calendar_view)) == ["month"]
+      assert pressed(render_panel(%{@calendar_view | default: "week"})) == ["week"]
+    end
+
+    test "marks the stored choice as pressed, over the default" do
+      stored = %ThemeCustomizationSchema{settings: %{"calendar_view" => "week"}}
+
+      assert pressed(render_panel(@calendar_view, customization: stored)) == ["week"]
+    end
+
+    test "names its choices in the viewer's language" do
+      html =
+        Gettext.with_locale(TymeslotWeb.Gettext, "de", fn -> render_panel(@calendar_view) end)
+
+      assert html =~ "Monat"
+      assert html =~ "Woche"
+      refute html =~ "Calendar View"
+    end
   end
 end

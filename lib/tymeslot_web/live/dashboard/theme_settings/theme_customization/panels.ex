@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Panels do
   alias Tymeslot.ThemeCustomizations.OptionGroup
   alias Tymeslot.ThemeCustomizations.Options.Accent
   alias Tymeslot.ThemeCustomizations.Options.Background
+  alias Tymeslot.ThemeCustomizations.Options.CalendarView
   alias Tymeslot.ThemeCustomizations.Options.ColourMode
   alias Tymeslot.ThemeCustomizations.Options.Cover
   alias Tymeslot.ThemeCustomizations.Options.Density
@@ -22,6 +23,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Panels do
   alias Tymeslot.ThemeCustomizations.Options.Radius
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.AccentPanel
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.BackgroundPanel
+  alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.CalendarViewPanel
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.ColourModePanel
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.CoverPanel
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.DensityPanel
@@ -40,7 +42,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Panels do
     Accent => AccentPanel,
     Font => FontPanel,
     Radius => RadiusPanel,
-    Density => DensityPanel
+    Density => DensityPanel,
+    CalendarView => CalendarViewPanel
   }
 
   @doc "The panel module for `group` in the theme `theme_id`."

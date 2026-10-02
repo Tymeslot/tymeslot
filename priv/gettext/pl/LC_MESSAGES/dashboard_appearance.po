@@ -655,3 +655,23 @@ msgstr "Spokojna, neutralna strona rezerwacji: wszystko na jednym ekranie, tryb 
 #, elixir-autogen, elixir-format
 msgid "An editorial page that introduces you, with a cover image, your portrait, headline and bio, and serif headings."
 msgstr "Strona w stylu magazynu, która cię przedstawia: zdjęcie tytułowe, twój portret, nagłówek i biogram oraz tytuły krojem szeryfowym."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/calendar_view_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar View"
+msgstr "Widok kalendarza"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/calendar_view_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Month"
+msgstr "Miesiąc"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/calendar_view_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Pick a day from a month, or see a whole week of free times at once."
+msgstr "Wybierz dzień z miesiąca albo zobacz od razu wszystkie wolne terminy całego tygodnia."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/calendar_view_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Week"
+msgstr "Tydzień"
