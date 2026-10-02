@@ -33,9 +33,12 @@
   /* Action Buttons: the sanctioned <.action_button> / <.action_link> /
      <.loading_button> surface. The base class carries the :md size; --sm and --lg
      override it. Size and colour come from the component attributes; a
-     caller's class is for layout (width, margins, position, visibility). */
+     caller's class is for layout (width, margins, position, visibility).
+     Every variant has the same 2px border, transparent where it shows none,
+     so a filled button and an outlined one of the same size stand the same
+     height side by side. */
   .action-button {
-    @apply px-6 py-3 rounded-token-2xl font-bold transition-glass disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 text-token-base whitespace-nowrap no-underline cursor-pointer select-none touch-manipulation;
+    @apply border-2 border-transparent px-6 py-3 rounded-token-2xl font-bold transition-glass disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 text-token-base whitespace-nowrap no-underline cursor-pointer select-none touch-manipulation;
   }
 
   /* A control kept focusable for its tooltip but inert: aria-disabled rather
@@ -207,8 +210,10 @@
     }
   }
 
+  /* Same box as --neutral, so an edit and a delete control side by side
+     read as a pair; only the hover says which one destroys. */
   .icon-button--danger {
-    @apply bg-transparent text-tymeslot-500 border-transparent;
+    @apply bg-white text-tymeslot-500 border-tymeslot-100 shadow-sm shadow-tymeslot-500/5;
   }
 
   @media (hover: hover) {
