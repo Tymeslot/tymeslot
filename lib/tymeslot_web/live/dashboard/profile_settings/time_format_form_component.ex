@@ -17,7 +17,6 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.TimeFormatFormComponent do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
-  alias TymeslotWeb.Components.UI.Toggle
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
@@ -58,12 +57,6 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.TimeFormatFormComponent do
     end
   end
 
-  # The toggle identifies its options by atom while the column stores a string.
-  # Matching the two known values keeps both atoms literal, so nothing here can
-  # mint an atom from user input.
-  defp toggle_value("12h"), do: :"12h"
-  defp toggle_value(_twenty_four_hour), do: :"24h"
-
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
@@ -73,16 +66,17 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.TimeFormatFormComponent do
         title={dgettext("dashboard_profile", "Time Format")}
         class="mb-4"
       />
-      <Toggle.toggle
+      <.segmented_control
         id="profile-time-format-toggle"
-        active_option={toggle_value(@time_format)}
-        phx_click="change_time_format"
-        phx_target={@myself}
-        options={[
-          %{value: :"12h", label: dgettext("dashboard_profile", "12h (AM/PM)")},
-          %{value: :"24h", label: dgettext("dashboard_profile", "24h")}
-        ]}
-      />
+        value={@time_format}
+        on_change="change_time_format"
+        param="option"
+        target={@myself}
+        aria_label={dgettext("dashboard_profile", "Time Format")}
+      >
+        <:option value="12h" label={dgettext("dashboard_profile", "12h (AM/PM)")} />
+        <:option value="24h" label={dgettext("dashboard_profile", "24h")} />
+      </.segmented_control>
       <p class="mt-2 text-token-sm text-tymeslot-500 font-bold">
         {dgettext(
           "dashboard_profile",

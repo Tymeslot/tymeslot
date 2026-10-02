@@ -355,3 +355,8 @@ msgstr "Niezapisane zmiany"
 #, elixir-autogen, elixir-format
 msgid "Complete the form to save"
 msgstr "Uzupełnij formularz, aby zapisać"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#, elixir-autogen, elixir-format
+msgid "Background type"
+msgstr "Rodzaj tła"

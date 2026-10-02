@@ -206,30 +206,21 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
       </div>
 
       <div class="space-y-10">
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-tymeslot-50/50 p-2 rounded-[1.5rem] border-2 border-tymeslot-50">
-          <%= for {type, icon_path, label} <- background_tabs() do %>
-            <button
-              type="button"
-              class={[
-                "flex items-center justify-center gap-2 px-4 py-3 rounded-token-2xl text-token-sm font-black uppercase tracking-widest transition-all duration-300 border-2 whitespace-nowrap",
-                if(@browsing_type == type,
-                  do:
-                    "bg-white border-white text-turquoise-600 shadow-xl shadow-tymeslot-200/50 scale-[1.02]",
-                  else:
-                    "bg-transparent border-transparent text-tymeslot-400 hover:text-tymeslot-600 hover:bg-white/50"
-                )
-              ]}
-              phx-click="theme:set_browsing_type"
-              phx-value-type={type}
-              phx-target={@myself}
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d={icon_path} />
-              </svg>
-              <span>{label}</span>
-            </button>
-          <% end %>
-        </div>
+        <.segmented_control
+          id="background-type"
+          value={@browsing_type}
+          on_change="theme:set_browsing_type"
+          param="type"
+          target={@myself}
+          aria_label={dgettext("dashboard_appearance", "Background type")}
+        >
+          <:option
+            :for={{type, icon, label} <- background_tabs()}
+            value={type}
+            label={label}
+            icon={icon}
+          />
+        </.segmented_control>
 
         <div>
           <%= case @browsing_type do %>
@@ -264,17 +255,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
 
   defp background_tabs do
     [
-      {"gradient", "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4",
-       dgettext("dashboard_appearance", "Gradient")},
-      {"color",
-       "M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a6 6 0 00-3-5.197M11 3h8a2 2 0 012 2v4a6 6 0 01-3 5.197",
-       dgettext("dashboard_appearance", "Solid Color")},
-      {"image",
-       "M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z",
-       dgettext("dashboard_appearance", "Image")},
-      {"video",
-       "M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z",
-       dgettext("dashboard_appearance", "Video")}
+      {"gradient", "hero-cube", dgettext("dashboard_appearance", "Gradient")},
+      {"color", "hero-swatch", dgettext("dashboard_appearance", "Solid Color")},
+      {"image", "hero-photo", dgettext("dashboard_appearance", "Image")},
+      {"video", "hero-video-camera", dgettext("dashboard_appearance", "Video")}
     ]
   end
 end

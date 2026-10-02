@@ -54,35 +54,21 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             Hidden when no calendar is connected — the form is then fixed to
             meeting mode, the only kind that can exist without one. --%>
       <div :if={@targets != []} class="mb-4">
-        <div
-          class="inline-flex rounded-token-lg border border-tymeslot-200 p-0.5 gap-0.5"
-          role="tablist"
-          aria-label={dgettext("dashboard_calendar_events", "What to create")}
+        <.segmented_control
+          id="create-mode"
+          value={if @meeting_mode, do: "meeting", else: "event"}
+          on_change="set_create_mode"
+          param="mode"
+          target={@myself}
+          aria_label={dgettext("dashboard_calendar_events", "What to create")}
         >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={to_string(!@meeting_mode)}
-            phx-click="set_create_mode"
-            phx-value-mode="event"
-            phx-target={@myself}
-            class={"px-3 py-1.5 rounded-token-md text-token-sm font-semibold transition-colors #{if !@meeting_mode, do: "bg-turquoise-600 text-white shadow-sm", else: "text-tymeslot-600 hover:bg-tymeslot-50"}"}
-          >
-            {dgettext("dashboard_calendar_events", "Event")}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={to_string(@meeting_mode)}
-            phx-click="set_create_mode"
-            phx-value-mode="meeting"
-            phx-target={@myself}
-            data-testid="create-mode-meeting"
-            class={"px-3 py-1.5 rounded-token-md text-token-sm font-semibold transition-colors #{if @meeting_mode, do: "bg-turquoise-600 text-white shadow-sm", else: "text-tymeslot-600 hover:bg-tymeslot-50"}"}
-          >
-            {dgettext("dashboard_calendar_events", "Meeting with a guest")}
-          </button>
-        </div>
+          <:option value="event" label={dgettext("dashboard_calendar_events", "Event")} />
+          <:option
+            value="meeting"
+            label={dgettext("dashboard_calendar_events", "Meeting with a guest")}
+            testid="create-mode-meeting"
+          />
+        </.segmented_control>
         <p :if={@meeting_mode} class="mt-1.5 text-token-xs text-tymeslot-400">
           {dgettext(
             "dashboard_calendar_events",

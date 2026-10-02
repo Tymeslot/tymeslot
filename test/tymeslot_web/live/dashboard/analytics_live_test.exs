@@ -86,14 +86,15 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/analytics")
 
-      # 30 days is the default range.
-      assert has_element?(view, ~s(button[phx-value-range="30d"][aria-pressed]))
-      refute has_element?(view, ~s(button[phx-value-range="7d"][aria-pressed]))
+      # 30 days is the default range. Every option carries aria-pressed, so the
+      # chosen one is the one where it is true.
+      assert has_element?(view, ~s(button[phx-value-range="30d"][aria-pressed="true"]))
+      refute has_element?(view, ~s(button[phx-value-range="7d"][aria-pressed="true"]))
 
       view |> element(~s(button[phx-value-range="7d"])) |> render_click()
 
-      assert has_element?(view, ~s(button[phx-value-range="7d"][aria-pressed]))
-      refute has_element?(view, ~s(button[phx-value-range="30d"][aria-pressed]))
+      assert has_element?(view, ~s(button[phx-value-range="7d"][aria-pressed="true"]))
+      refute has_element?(view, ~s(button[phx-value-range="30d"][aria-pressed="true"]))
     end
 
     test "renders the device breakdown with per-device labels", %{conn: conn, user: user} do

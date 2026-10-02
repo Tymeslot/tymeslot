@@ -693,3 +693,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Meeting type"
 msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Show meetings"
+msgstr ""

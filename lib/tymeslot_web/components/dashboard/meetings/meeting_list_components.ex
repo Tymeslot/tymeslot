@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.CoreComponents.Containers
   alias TymeslotWeb.Components.CoreComponents.Feedback
-  alias TymeslotWeb.Components.CoreComponents.Icons
+  alias TymeslotWeb.Components.CoreComponents.Navigation
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingCard
 
   # Filter Tabs
@@ -19,80 +19,40 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   @spec filter_tabs(map()) :: Phoenix.LiveView.Rendered.t()
   def filter_tabs(assigns) do
     ~H"""
-    <div class="flex flex-wrap gap-1 bg-white border-2 border-tymeslot-50 rounded-[1.25rem] p-1.5 shadow-sm w-fit max-w-full">
-      <.filter_tab_button
-        active={@active == "upcoming"}
-        filter="upcoming"
+    <Navigation.segmented_control
+      id="meetings-filter"
+      value={@active}
+      on_change="filter_meetings"
+      param="filter"
+      target={@target}
+      aria_label={dgettext("dashboard_bookings", "Show meetings")}
+    >
+      <:option
+        value="upcoming"
         label={dgettext("dashboard_bookings", "Upcoming")}
         icon="hero-clock"
-        target={@target}
       />
-      <.filter_tab_button
-        active={@active == "past"}
-        filter="past"
+      <:option
+        value="past"
         label={dgettext("dashboard_bookings", "Past")}
         icon="hero-calendar-days"
-        target={@target}
       />
-      <.filter_tab_button
-        active={@active == "cancelled"}
-        filter="cancelled"
+      <:option
+        value="cancelled"
         label={dgettext("dashboard_bookings", "Cancelled")}
         icon="hero-x-mark"
-        target={@target}
       />
       <%!-- Only shown once there is something to answer: a host who requires no
-            approvals should never see a tab that is permanently empty. --%>
-      <.filter_tab_button
+            approvals should never see an option that is permanently empty. --%>
+      <:option
         :if={@awaiting_approval_count > 0 or @active == "awaiting_approval"}
-        active={@active == "awaiting_approval"}
-        filter="awaiting_approval"
+        value="awaiting_approval"
         label={dgettext("dashboard_bookings", "Requests")}
         icon="hero-inbox-arrow-down"
-        count={@awaiting_approval_count}
-        target={@target}
+        count={if @awaiting_approval_count > 0, do: @awaiting_approval_count}
+        attention
       />
-    </div>
-    """
-  end
-
-  attr :active, :boolean, required: true
-  attr :filter, :string, required: true
-  attr :label, :string, required: true
-  attr :icon, :string, required: true
-  attr :target, :any, required: true
-  attr :count, :integer, default: 0
-
-  defp filter_tab_button(assigns) do
-    ~H"""
-    <button
-      phx-click="filter_meetings"
-      phx-value-filter={@filter}
-      phx-target={@target}
-      class={[
-        "flex items-center gap-2 px-3 sm:px-6 py-2.5 rounded-token-xl text-token-sm font-black transition-all duration-300",
-        if(@active,
-          do:
-            "bg-linear-to-br from-turquoise-600 to-cyan-600 text-white shadow-lg shadow-turquoise-500/20",
-          else: "text-tymeslot-500 hover:text-turquoise-600 hover:bg-turquoise-50"
-        )
-      ]}
-    >
-      <Icons.icon
-        name={@icon}
-        class={"hidden sm:block shrink-0 #{if @active, do: "text-white/90"}"}
-      />
-      <span>{@label}</span>
-      <span
-        :if={@count > 0}
-        class={[
-          "ml-1 inline-flex items-center justify-center min-w-[1.375rem] h-5.5 px-1.5 rounded-full text-token-xs font-black tabular-nums",
-          if(@active, do: "bg-white/25 text-white", else: "bg-amber-100 text-amber-700")
-        ]}
-      >
-        {@count}
-      </span>
-    </button>
+    </Navigation.segmented_control>
     """
   end
 

@@ -699,3 +699,8 @@ msgstr "Připojit se ke schůzce"
 #, elixir-autogen, elixir-format
 msgid "Meeting type"
 msgstr "Typ schůzky"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Show meetings"
+msgstr "Zobrazit schůzky"

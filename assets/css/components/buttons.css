@@ -10,14 +10,12 @@
 @layer components {
   /* Legacy button classes, kept only for the surfaces that still render them
      as raw classes: the auth pages (.btn-primary, .btn-secondary, .btn-link),
-     the marketing contact page (.btn-primary, .btn-secondary) and the segmented
-     <.toggle> (.btn-primary, .btn-ghost). Their colours are shared with the
-     matching .action-button--* variants below; these rules add only the box
-     (padding, radius, weight) that those callers expect without the
-     .action-button base class. Everything else uses <.action_button>. */
+     and the marketing contact page (.btn-primary, .btn-secondary). Their
+     colours are shared with the matching .action-button--* variants below;
+     these rules add only the box (padding, radius, weight) that those callers
+     expect without the .action-button base class. Everything else uses <.action_button>. */
   .btn-primary,
-  .btn-secondary,
-  .btn-ghost {
+  .btn-secondary {
     @apply font-bold rounded-token-2xl px-6 py-3 transition-glass;
   }
 
@@ -120,14 +118,12 @@
     }
   }
 
-  .action-button--ghost,
-  .btn-ghost {
+  .action-button--ghost {
     @apply bg-transparent text-tymeslot-600;
   }
 
   @media (hover: hover) {
-    .action-button--ghost:hover:not(:disabled, [aria-disabled="true"]),
-    .btn-ghost:hover:not(:disabled, [aria-disabled="true"]) {
+    .action-button--ghost:hover:not(:disabled, [aria-disabled="true"]) {
       @apply bg-tymeslot-100 text-turquoise-700;
     }
   }

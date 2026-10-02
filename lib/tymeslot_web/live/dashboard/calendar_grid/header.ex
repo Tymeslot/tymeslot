@@ -235,15 +235,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
   # (hidden on mobile, where the compact `view_menu` takes over).
   defp view_tabs(assigns) do
     ~H"""
-    <div class="hidden md:flex rounded-md border border-tymeslot-200 overflow-hidden text-token-sm">
-      <button
-        :for={{{value, label}, idx} <- view_options() |> Enum.with_index()}
-        phx-click="set_view"
-        phx-value-view={Atom.to_string(value)}
-        phx-target={@myself}
-        class={"px-3 py-1.5 focus:outline-hidden focus:z-10 focus:ring-2 focus:ring-turquoise-400 #{if idx > 0, do: "border-l border-tymeslot-200"} #{if @view == value, do: "bg-turquoise-600 text-white", else: "bg-white text-tymeslot-600 hover:bg-tymeslot-50"}"}
-      >{label}</button>
-    </div>
+    <.segmented_control
+      id="calendar-view"
+      value={@view}
+      on_change="set_view"
+      param="view"
+      target={@myself}
+      aria_label={dgettext("dashboard_calendar", "Switch view")}
+    >
+      <:option :for={{value, label} <- view_options()} value={value} label={label} />
+    </.segmented_control>
     """
   end
 

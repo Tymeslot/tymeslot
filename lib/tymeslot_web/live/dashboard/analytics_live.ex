@@ -134,27 +134,17 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
             {dgettext("dashboard_analytics", "Analytics")}
           </h1>
           <div class="flex items-center gap-2">
-            <div
-              class="flex gap-2"
-              role="group"
-              aria-label={dgettext("dashboard_analytics", "Date range")}
+            <.segmented_control
+              id="analytics-range"
+              value={@range}
+              on_change="set_range"
+              param="range"
+              aria_label={dgettext("dashboard_analytics", "Date range")}
             >
-              <.range_button
-                label={dgettext("dashboard_analytics", "7 days")}
-                value="7d"
-                current={@range}
-              />
-              <.range_button
-                label={dgettext("dashboard_analytics", "30 days")}
-                value="30d"
-                current={@range}
-              />
-              <.range_button
-                label={dgettext("dashboard_analytics", "90 days")}
-                value="90d"
-                current={@range}
-              />
-            </div>
+              <:option value="7d" label={dgettext("dashboard_analytics", "7 days")} />
+              <:option value="30d" label={dgettext("dashboard_analytics", "30 days")} />
+              <:option value="90d" label={dgettext("dashboard_analytics", "90 days")} />
+            </.segmented_control>
             <%!-- The arbitrary variant spins the component's icon while a
                   refresh is in flight; the button itself stays still. --%>
             <.icon_button
@@ -226,30 +216,6 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
         <SourcesTable.table sources={@sources} loading?={!@loaded?} />
       </div>
     </DashboardLayout.dashboard_layout>
-    """
-  end
-
-  attr :label, :string, required: true
-  attr :value, :string, required: true
-  attr :current, :string, required: true
-
-  defp range_button(assigns) do
-    ~H"""
-    <button
-      type="button"
-      phx-click="set_range"
-      phx-value-range={@value}
-      aria-pressed={@current == @value}
-      class={[
-        "rounded-md px-3 py-1.5 text-token-sm font-semibold transition-colors",
-        if(@current == @value,
-          do: "bg-turquoise-500 text-white shadow-sm",
-          else: "bg-tymeslot-50 text-tymeslot-700 hover:bg-tymeslot-100"
-        )
-      ]}
-    >
-      {@label}
-    </button>
     """
   end
 

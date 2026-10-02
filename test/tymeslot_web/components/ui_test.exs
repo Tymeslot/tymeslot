@@ -7,15 +7,6 @@ defmodule TymeslotWeb.Components.UITest do
   import Phoenix.Component
   alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.UI.StatusSwitch
-  alias TymeslotWeb.Components.UI.Toggle
-
-  # The class attribute of the single element matching `selector`. Raises when
-  # the selector matches none, so a renamed element fails loudly rather than
-  # quietly asserting against an empty string.
-  defp class_of(doc, selector) do
-    [class] = Floki.attribute(doc, selector, "class")
-    class
-  end
 
   describe "StatusSwitch" do
     test "renders in checked state" do
@@ -81,64 +72,6 @@ defmodule TymeslotWeb.Components.UITest do
           refute html =~ other_track
         end
       end
-    end
-  end
-
-  describe "Toggle" do
-    setup do
-      options = [
-        %{value: :list, label: "List View", icon: "list"},
-        %{value: :grid, label: "Grid View", icon: "grid"}
-      ]
-
-      {:ok, options: options}
-    end
-
-    test "renders all options", %{options: options} do
-      assigns = %{id: "toggle-1", active_option: :list, options: options, phx_click: "switch"}
-      html = render_component(&Toggle.toggle/1, assigns)
-
-      assert html =~ "List View"
-      assert html =~ "Grid View"
-      assert html =~ "toggle-1-list"
-      assert html =~ "toggle-1-grid"
-    end
-
-    test "highlights the active option and only that one", %{options: options} do
-      assigns = %{id: "toggle-1", active_option: :grid, options: options, phx_click: "switch"}
-      html = render_component(&Toggle.toggle/1, assigns)
-      doc = Floki.parse_fragment!(html)
-
-      # "btn-primary is somewhere in the markup" is satisfied by highlighting
-      # the wrong button, so pin the highlight to the option it belongs to.
-      assert class_of(doc, "#toggle-1-grid") =~ "btn-primary"
-      refute class_of(doc, "#toggle-1-list") =~ "btn-primary"
-      assert class_of(doc, "#toggle-1-list") =~ "btn-ghost"
-    end
-
-    test "renders icons based on option", %{options: options} do
-      assigns = %{id: "toggle-1", active_option: :list, options: options, phx_click: "switch"}
-      html = render_component(&Toggle.toggle/1, assigns)
-
-      # Should contain SVG paths for list and grid
-      # list icon
-      assert html =~ "M4 6h16M4 10h16M4 14h16M4 18h16"
-      # grid icon
-      assert html =~ "M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"
-    end
-
-    test "renders with label", %{options: options} do
-      assigns = %{
-        id: "toggle-1",
-        active_option: :list,
-        options: options,
-        phx_click: "switch",
-        label: "View Mode"
-      }
-
-      html = render_component(&Toggle.toggle/1, assigns)
-
-      assert html =~ "View Mode"
     end
   end
 

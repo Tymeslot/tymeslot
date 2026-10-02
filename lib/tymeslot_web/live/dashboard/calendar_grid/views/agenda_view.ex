@@ -36,36 +36,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView do
     >
       <%!-- Lens: everything, or only Tymeslot bookings --%>
       <div class="sticky top-0 z-10 bg-white px-3 md:px-4 py-2 border-b border-tymeslot-100">
-        <div
-          class="inline-flex rounded-token-lg border border-tymeslot-200 p-0.5 gap-0.5"
-          role="tablist"
-          aria-label={dgettext("dashboard_calendar", "Filter agenda")}
+        <.segmented_control
+          id="agenda-lens"
+          size={:sm}
+          value={@agenda_lens}
+          on_change="set_agenda_lens"
+          param="lens"
+          target={@myself}
+          aria_label={dgettext("dashboard_calendar", "Filter agenda")}
         >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={to_string(@agenda_lens == :all)}
-            phx-click="set_agenda_lens"
-            phx-value-lens="all"
-            phx-target={@myself}
-            data-testid="agenda-lens-all"
-            class={"px-3 py-1 rounded-token-md text-token-xs font-semibold transition-colors #{if @agenda_lens == :all, do: "bg-turquoise-600 text-white shadow-sm", else: "text-tymeslot-600 hover:bg-tymeslot-50"}"}
-          >
-            {dgettext("dashboard_calendar", "All")}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={to_string(@agenda_lens == :bookings)}
-            phx-click="set_agenda_lens"
-            phx-value-lens="bookings"
-            phx-target={@myself}
-            data-testid="agenda-lens-bookings"
-            class={"px-3 py-1 rounded-token-md text-token-xs font-semibold transition-colors #{if @agenda_lens == :bookings, do: "bg-turquoise-600 text-white shadow-sm", else: "text-tymeslot-600 hover:bg-tymeslot-50"}"}
-          >
-            {dgettext("dashboard_calendar", "Bookings")}
-          </button>
-        </div>
+          <:option value="all" label={dgettext("dashboard_calendar", "All")} testid="agenda-lens-all" />
+          <:option
+            value="bookings"
+            label={dgettext("dashboard_calendar", "Bookings")}
+            testid="agenda-lens-bookings"
+          />
+        </.segmented_control>
       </div>
 
       <.empty_state

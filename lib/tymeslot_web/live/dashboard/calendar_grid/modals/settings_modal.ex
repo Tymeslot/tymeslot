@@ -6,7 +6,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
 
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Components.UI.StatusSwitch
-  alias TymeslotWeb.Components.UI.Toggle
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers
 
   attr :preferences, :any, required: true
@@ -34,17 +33,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
               {dgettext("dashboard_calendar_events", "Start weeks on Monday or Sunday")}
             </p>
           </div>
-          <Toggle.toggle
+          <.segmented_control
             id="week-start-toggle"
-            active_option={safe_to_atom(@preferences.week_start_day, :monday)}
-            phx_click="update_week_start"
-            phx_target={@myself}
-            options={[
-              %{value: :monday, label: dgettext("dashboard_calendar_events", "Mon")},
-              %{value: :sunday, label: dgettext("dashboard_calendar_events", "Sun")}
-            ]}
-            size={:small}
-          />
+            size={:sm}
+            value={safe_to_atom(@preferences.week_start_day, :monday)}
+            on_change="update_week_start"
+            param="option"
+            target={@myself}
+            aria_label={dgettext("dashboard_calendar_events", "First day of week")}
+          >
+            <:option value={:monday} label={dgettext("dashboard_calendar_events", "Mon")} />
+            <:option value={:sunday} label={dgettext("dashboard_calendar_events", "Sun")} />
+          </.segmented_control>
         </div>
 
         <%!-- Time format --%>
@@ -57,17 +57,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
               {dgettext("dashboard_calendar_events", "12-hour or 24-hour clock")}
             </p>
           </div>
-          <Toggle.toggle
+          <.segmented_control
             id="time-format-toggle"
-            active_option={safe_to_atom(PreferenceHelpers.time_format(@preferences), :"12h")}
-            phx_click="update_time_format"
-            phx_target={@myself}
-            options={[
-              %{value: :"12h", label: dgettext("dashboard_calendar_events", "12h")},
-              %{value: :"24h", label: dgettext("dashboard_calendar_events", "24h")}
-            ]}
-            size={:small}
-          />
+            size={:sm}
+            value={safe_to_atom(PreferenceHelpers.time_format(@preferences), :"12h")}
+            on_change="update_time_format"
+            param="option"
+            target={@myself}
+            aria_label={dgettext("dashboard_calendar_events", "Time format")}
+          >
+            <:option value={:"12h"} label={dgettext("dashboard_calendar_events", "12h")} />
+            <:option value={:"24h"} label={dgettext("dashboard_calendar_events", "24h")} />
+          </.segmented_control>
         </div>
 
         <%!-- Default view --%>
@@ -80,18 +81,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
               {dgettext("dashboard_calendar_events", "Also switches the current view")}
             </p>
           </div>
-          <Toggle.toggle
+          <.segmented_control
             id="default-view-toggle"
-            active_option={safe_to_atom(@preferences.default_view, :week)}
-            phx_click="update_default_view"
-            phx_target={@myself}
-            options={[
-              %{value: :day, label: dgettext("dashboard_calendar_events", "Day")},
-              %{value: :week, label: dgettext("dashboard_calendar_events", "Week")},
-              %{value: :month, label: dgettext("dashboard_calendar_events", "Month")}
-            ]}
-            size={:small}
-          />
+            size={:sm}
+            value={safe_to_atom(@preferences.default_view, :week)}
+            on_change="update_default_view"
+            param="option"
+            target={@myself}
+            aria_label={dgettext("dashboard_calendar_events", "Default view")}
+          >
+            <:option value={:day} label={dgettext("dashboard_calendar_events", "Day")} />
+            <:option value={:week} label={dgettext("dashboard_calendar_events", "Week")} />
+            <:option value={:month} label={dgettext("dashboard_calendar_events", "Month")} />
+          </.segmented_control>
         </div>
 
         <%!-- Show week numbers --%>

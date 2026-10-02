@@ -699,3 +699,8 @@ msgstr "Приєднатися до зустрічі"
 #, elixir-autogen, elixir-format
 msgid "Meeting type"
 msgstr "Тип зустрічі"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Show meetings"
+msgstr "Показати зустрічі"

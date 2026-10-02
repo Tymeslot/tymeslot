@@ -359,3 +359,8 @@ msgstr "Nicht gespeicherte Änderungen"
 #, elixir-autogen, elixir-format
 msgid "Complete the form to save"
 msgstr "Formular ausfüllen, um zu speichern"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#, elixir-autogen, elixir-format
+msgid "Background type"
+msgstr "Hintergrundtyp"

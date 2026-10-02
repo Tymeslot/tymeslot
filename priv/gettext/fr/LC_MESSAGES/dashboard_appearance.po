@@ -359,3 +359,8 @@ msgstr "Modifications non enregistrées"
 #, elixir-autogen, elixir-format
 msgid "Complete the form to save"
 msgstr "Complétez le formulaire pour enregistrer"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#, elixir-autogen, elixir-format
+msgid "Background type"
+msgstr "Type d’arrière-plan"
