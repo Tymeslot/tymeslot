@@ -21,7 +21,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.NextcloudTalkConfi
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponents,
     as: SharedForm
 
-  alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Dashboard.VideoSettings.FormInput
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -53,20 +52,14 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.NextcloudTalkConfi
   def render(assigns) do
     ~H"""
     <div id="nextcloud-talk-video-config-modal" class="space-y-6">
-      <div class="flex items-center gap-4 mb-2">
-        <ProviderIcon.provider_icon provider="nextcloud_talk" type="video" size="large" />
-        <div>
-          <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
-            {dgettext("dashboard_video", "Nextcloud Talk")}
-          </h3>
-          <p class="text-token-sm text-tymeslot-500 font-medium">
-            {dgettext(
-              "dashboard_video",
-              "A Talk conversation on your own Nextcloud for every booking"
-            )}
-          </p>
-        </div>
-      </div>
+      <UIComponents.provider_config_header
+        provider="nextcloud_talk"
+        type="video"
+        title={dgettext("dashboard_video", "Nextcloud Talk")}
+        tagline={
+          dgettext("dashboard_video", "A Talk conversation on your own Nextcloud for every booking")
+        }
+      />
 
       <div
         :if={@nextcloud_calendars != []}

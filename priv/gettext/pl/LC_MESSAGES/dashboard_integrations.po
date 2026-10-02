@@ -441,3 +441,8 @@ msgstr "Wpisz sam adres, a nazwę użytkownika i hasło podaj w osobnych polach.
 #, elixir-autogen, elixir-format
 msgid "Integration categories"
 msgstr "Kategorie integracji"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
+#, elixir-autogen, elixir-format
+msgid "Setup guide"
+msgstr "Przewodnik konfiguracji"

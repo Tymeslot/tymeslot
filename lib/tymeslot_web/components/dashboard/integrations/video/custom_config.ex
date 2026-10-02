@@ -12,8 +12,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig do
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponents,
     as: SharedForm
 
-  alias TymeslotWeb.Components.Icons.ProviderIcon
-
   @impl Phoenix.LiveComponent
   def mount(socket) do
     {:ok,
@@ -37,17 +35,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig do
   def render(assigns) do
     ~H"""
     <div id="custom-video-config-modal" class="space-y-6">
-      <div class="flex items-center gap-4 mb-2">
-        <ProviderIcon.provider_icon provider="custom" type="video" size="large" />
-        <div>
-          <h3 class="text-xl font-black text-tymeslot-900 tracking-tight">
-            {dgettext("dashboard_video", "Custom Video Link")}
-          </h3>
-          <p class="text-sm text-tymeslot-500 font-medium">
-            {dgettext("dashboard_video", "Connect any video platform")}
-          </p>
-        </div>
-      </div>
+      <UIComponents.provider_config_header
+        provider="custom"
+        type="video"
+        title={dgettext("dashboard_video", "Custom Video Link")}
+        tagline={dgettext("dashboard_video", "Connect any video platform")}
+      />
 
       <form
         id="custom-video-integration-form"

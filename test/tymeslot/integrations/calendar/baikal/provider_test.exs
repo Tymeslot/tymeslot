@@ -136,9 +136,9 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.ProviderTest do
   end
 
   describe "setup_component/0" do
-    test "returns the BaikalConfig LiveComponent module" do
+    test "returns the CaldavFamilyConfig LiveComponent module" do
       assert Provider.setup_component() ==
-               TymeslotWeb.Components.Dashboard.Integrations.Calendar.BaikalConfig
+               TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavFamilyConfig
     end
   end
 

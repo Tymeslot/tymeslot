@@ -10,8 +10,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig do
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponents,
     as: SharedForm
 
-  alias TymeslotWeb.Components.Icons.ProviderIcon
-
   @impl Phoenix.LiveComponent
   def mount(socket) do
     {:ok,
@@ -35,15 +33,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig do
   def render(assigns) do
     ~H"""
     <div id="mirotalk-config-modal" class="space-y-6">
-      <div class="flex items-center gap-4 mb-2">
-        <ProviderIcon.provider_icon provider="mirotalk" type="video" size="large" />
-        <div>
-          <h3 class="text-xl font-black text-tymeslot-900 tracking-tight">MiroTalk P2P</h3>
-          <p class="text-sm text-tymeslot-500 font-medium">
-            {dgettext("dashboard_video", "Self-hosted video conferencing")}
-          </p>
-        </div>
-      </div>
+      <UIComponents.provider_config_header
+        provider="mirotalk"
+        type="video"
+        title="MiroTalk P2P"
+        tagline={dgettext("dashboard_video", "Self-hosted video conferencing")}
+      />
 
       <form
         id="mirotalk-integration-form"

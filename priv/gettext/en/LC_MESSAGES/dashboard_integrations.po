@@ -442,3 +442,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Integration categories"
 msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
+#, elixir-autogen, elixir-format
+msgid "Setup guide"
+msgstr ""

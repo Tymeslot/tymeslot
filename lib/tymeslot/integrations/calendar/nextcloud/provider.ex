@@ -31,7 +31,8 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
 
   @doc "Returns the LiveComponent module for provider configuration UI"
   @spec setup_component() :: module()
-  def setup_component, do: TymeslotWeb.Components.Dashboard.Integrations.Calendar.NextcloudConfig
+  def setup_component,
+    do: TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavFamilyConfig
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def config_schema do

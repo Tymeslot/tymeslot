@@ -15,8 +15,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.KmeetConfig do
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponents,
     as: SharedForm
 
-  alias TymeslotWeb.Components.Icons.ProviderIcon
-
   @impl Phoenix.LiveComponent
   def mount(socket) do
     {:ok,
@@ -40,17 +38,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.KmeetConfig do
   def render(assigns) do
     ~H"""
     <div id="kmeet-video-config-modal" class="space-y-6">
-      <div class="flex items-center gap-4 mb-2">
-        <ProviderIcon.provider_icon provider="kmeet" type="video" size="large" />
-        <div>
-          <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
-            {dgettext("dashboard_video", "kMeet")}
-          </h3>
-          <p class="text-token-sm text-tymeslot-500 font-medium">
-            {dgettext("dashboard_video", "Infomaniak's hosted video meetings")}
-          </p>
-        </div>
-      </div>
+      <UIComponents.provider_config_header
+        provider="kmeet"
+        type="video"
+        title={dgettext("dashboard_video", "kMeet")}
+        tagline={dgettext("dashboard_video", "Infomaniak's hosted video meetings")}
+      />
 
       <form
         id="kmeet-video-integration-form"

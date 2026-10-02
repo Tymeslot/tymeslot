@@ -7,11 +7,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
   alias Floki
 
   alias Tymeslot.Integrations.Calendar.CalendarEntry
-  alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavConfig
-  alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase
-  alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.MailboxOrgConfig
-  alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.NextcloudConfig
-  alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.RadicaleConfig
+  alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavFamilyConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormComponents
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig
@@ -221,7 +217,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     assert Floki.find(doc, "input[type='hidden'][name='integration[username]'][value='u']") != []
   end
 
-  test "ConfigBase event handlers update assigns without external calls" do
+  test "calendar config event handlers update assigns without external calls" do
     socket =
       %Phoenix.LiveView.Socket{
         assigns: %{
@@ -284,22 +280,33 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
       discovery_credentials: %{}
     }
 
-    html = render_component(&CaldavConfig.render/1, base_assigns)
+    html =
+      render_component(&CaldavFamilyConfig.render/1, Map.put(base_assigns, :provider, :caldav))
+
     assert html =~ "CalDAV"
     assert html =~ "Connect any CalDAV-compatible server"
     assert html =~ ~s(name="integration[provider]" value="caldav")
 
-    html = render_component(&NextcloudConfig.render/1, base_assigns)
+    html =
+      render_component(&CaldavFamilyConfig.render/1, Map.put(base_assigns, :provider, :nextcloud))
+
     assert html =~ "Nextcloud"
     assert html =~ "Sync calendars from your Nextcloud server"
     assert html =~ ~s(name="integration[provider]" value="nextcloud")
 
-    html = render_component(&RadicaleConfig.render/1, base_assigns)
+    html =
+      render_component(&CaldavFamilyConfig.render/1, Map.put(base_assigns, :provider, :radicale))
+
     assert html =~ "Radicale"
     assert html =~ "Lightweight CalDAV server integration"
     assert html =~ ~s(name="integration[provider]" value="radicale")
 
-    html = render_component(&MailboxOrgConfig.render/1, base_assigns)
+    html =
+      render_component(
+        &CaldavFamilyConfig.render/1,
+        Map.put(base_assigns, :provider, :mailbox_org)
+      )
+
     assert html =~ "mailbox.org"
     assert html =~ "Sync calendars from your mailbox.org account"
     assert html =~ "application-specific password"
@@ -319,7 +326,8 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
       discovery_credentials: %{}
     }
 
-    html = render_component(&NextcloudConfig.render/1, base_assigns)
+    html =
+      render_component(&CaldavFamilyConfig.render/1, Map.put(base_assigns, :provider, :nextcloud))
 
     assert html =~ "Create an app password in Nextcloud under"
     assert html =~ "Personal settings → Security"
@@ -330,7 +338,8 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     # Radicale, Baïkal, Zimbra and generic CalDAV servers take an ordinary
     # login password, so they must keep the neutral label and gain no
     # app-password guidance.
-    html = render_component(&CaldavConfig.render/1, base_assigns)
+    html =
+      render_component(&CaldavFamilyConfig.render/1, Map.put(base_assigns, :provider, :caldav))
 
     assert html =~ "Password / App Password"
     refute html =~ "Create an app password in Nextcloud under"
@@ -366,30 +375,22 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     assert html =~ "Meeting URL"
   end
 
-  test "ConfigBase macro can be exercised at runtime" do
-    # credo:disable-for-lines:2 Credo.Check.Warning.UnsafeToAtom
-    module_name =
-      Module.concat(__MODULE__, "ConfigBaseRuntime#{System.unique_integer([:positive])}")
+  test "the CalDAV-family form fills in its defaults on update" do
+    {:ok, socket} =
+      CaldavFamilyConfig.update(
+        %{id: "nextcloud-config", provider: :nextcloud, target: "parent-target"},
+        %Phoenix.LiveView.Socket{assigns: %{__changed__: %{}}}
+      )
 
-    code = """
-    defmodule #{module_name} do
-      use #{ConfigBase}, provider: :caldav, default_name: "X"
-    end
-    """
-
-    [{compiled, _bin}] = Code.compile_string(code)
-    assert compiled == module_name
-
-    # The macro must inject working defaults, not merely define the function.
     assert %{
+             provider: :nextcloud,
              show_calendar_selection: false,
              discovered_calendars: [],
              discovery_credentials: %{},
              form_values: %{},
              form_errors: %{},
-             saving: false,
-             metadata: %{}
-           } = module_name.assign_config_defaults(%{__changed__: %{}})
+             saving: false
+           } = socket.assigns
   end
 
   describe "refresh_all_calendars" do

@@ -13,15 +13,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   alias Tymeslot.Integrations.HealthCheck
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.{
-    AppleConfig,
-    BaikalConfig,
-    CaldavConfig,
+    CaldavFamilyConfig,
     ExchangeConfig,
-    IcsUrlConfig,
-    MailboxOrgConfig,
-    NextcloudConfig,
-    RadicaleConfig,
-    ZimbraConfig
+    IcsUrlConfig
   }
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow
@@ -35,7 +29,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   """
   attr :selected_provider, :atom, required: true
   attr :myself, :any, required: true
-  attr :security_metadata, :map, required: true
   attr :form_errors, :map, required: true
   attr :form_values, :map, required: true
   attr :discovered_calendars, :list, required: true
@@ -45,15 +38,22 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
   @spec config_view(map()) :: Phoenix.LiveView.Rendered.t()
   def config_view(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :caldav_family?,
+        assigns.selected_provider in CaldavFamilyConfig.providers()
+      )
+
     ~H"""
     <div id="calendar-config-view" phx-hook="ScrollReset" data-action={@selected_provider}>
-      <%= case @selected_provider do %>
-        <% :nextcloud -> %>
+      <%= cond do %>
+        <% @caldav_family? -> %>
           <.live_component
-            module={NextcloudConfig}
-            id="nextcloud-config"
+            module={CaldavFamilyConfig}
+            id={CaldavFamilyConfig.component_id(@selected_provider)}
+            provider={@selected_provider}
             target={@myself}
-            metadata={@security_metadata}
             form_errors={@form_errors}
             form_values={@form_values}
             discovered_calendars={@discovered_calendars}
@@ -61,72 +61,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             discovery_credentials={@discovery_credentials}
             saving={@is_saving}
           />
-        <% :radicale -> %>
-          <.live_component
-            module={RadicaleConfig}
-            id="radicale-config"
-            target={@myself}
-            metadata={@security_metadata}
-            form_errors={@form_errors}
-            form_values={@form_values}
-            discovered_calendars={@discovered_calendars}
-            show_calendar_selection={@show_calendar_selection}
-            discovery_credentials={@discovery_credentials}
-            saving={@is_saving}
-          />
-        <% :baikal -> %>
-          <.live_component
-            module={BaikalConfig}
-            id="baikal-config"
-            target={@myself}
-            metadata={@security_metadata}
-            form_errors={@form_errors}
-            form_values={@form_values}
-            discovered_calendars={@discovered_calendars}
-            show_calendar_selection={@show_calendar_selection}
-            discovery_credentials={@discovery_credentials}
-            saving={@is_saving}
-          />
-        <% :caldav -> %>
-          <.live_component
-            module={CaldavConfig}
-            id="caldav-config"
-            target={@myself}
-            metadata={@security_metadata}
-            form_errors={@form_errors}
-            form_values={@form_values}
-            discovered_calendars={@discovered_calendars}
-            show_calendar_selection={@show_calendar_selection}
-            discovery_credentials={@discovery_credentials}
-            saving={@is_saving}
-          />
-        <% :zimbra -> %>
-          <.live_component
-            module={ZimbraConfig}
-            id="zimbra-config"
-            target={@myself}
-            metadata={@security_metadata}
-            form_errors={@form_errors}
-            form_values={@form_values}
-            discovered_calendars={@discovered_calendars}
-            show_calendar_selection={@show_calendar_selection}
-            discovery_credentials={@discovery_credentials}
-            saving={@is_saving}
-          />
-        <% :mailbox_org -> %>
-          <.live_component
-            module={MailboxOrgConfig}
-            id="mailbox-org-config"
-            target={@myself}
-            metadata={@security_metadata}
-            form_errors={@form_errors}
-            form_values={@form_values}
-            discovered_calendars={@discovered_calendars}
-            show_calendar_selection={@show_calendar_selection}
-            discovery_credentials={@discovery_credentials}
-            saving={@is_saving}
-          />
-        <% :ics_url -> %>
+        <% @selected_provider == :ics_url -> %>
           <.live_component
             module={IcsUrlConfig}
             id="ics-url-config"
@@ -135,7 +70,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             form_values={@form_values}
             saving={@is_saving}
           />
-        <% :exchange -> %>
+        <% @selected_provider == :exchange -> %>
           <.live_component
             module={ExchangeConfig}
             id="exchange-config"
@@ -147,20 +82,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             discovery_credentials={@discovery_credentials}
             saving={@is_saving}
           />
-        <% :apple -> %>
-          <.live_component
-            module={AppleConfig}
-            id="apple-config"
-            target={@myself}
-            metadata={@security_metadata}
-            form_errors={@form_errors}
-            form_values={@form_values}
-            discovered_calendars={@discovered_calendars}
-            show_calendar_selection={@show_calendar_selection}
-            discovery_credentials={@discovery_credentials}
-            saving={@is_saving}
-          />
-        <% _ -> %>
+        <% true -> %>
           <p class="text-tymeslot-500 font-medium">
             {dgettext(
               "dashboard_calendar_settings",

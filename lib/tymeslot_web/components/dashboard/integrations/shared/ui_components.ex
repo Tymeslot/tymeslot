@@ -6,6 +6,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Components.Icons.ProviderIcon
+  alias TymeslotWeb.Live.Shared.DocsUrl
+
   @doc """
   Maps a connection status variant to the `Feedback.pill/1` tone that
   shows it. Shared by `IntegrationCard.integration_card/1` callers and
@@ -18,6 +21,42 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
   def status_tone(:error), do: :danger
   def status_tone(:info), do: :info
   def status_tone(:paused), do: :neutral
+
+  @doc """
+  The heading of a provider's connect form: its icon, name and tagline, plus a
+  link to the provider's setup guide in the docs when `guide_slug` names one.
+  Shared by every calendar and video connect form.
+  """
+  attr :provider, :string, required: true
+  attr :type, :string, required: true, values: ["calendar", "video"]
+  attr :title, :string, required: true
+  attr :tagline, :string, required: true
+  attr :guide_slug, :string, default: nil, doc: "A docs article slug, e.g. \"caldav-nextcloud\""
+
+  @spec provider_config_header(map()) :: Phoenix.LiveView.Rendered.t()
+  def provider_config_header(assigns) do
+    ~H"""
+    <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+      <div class="flex min-w-0 items-center gap-4">
+        <ProviderIcon.provider_icon provider={@provider} type={@type} size="large" class="shrink-0" />
+        <div class="min-w-0">
+          <h3 class="text-token-xl font-black tracking-tight text-tymeslot-900">{@title}</h3>
+          <p class="text-token-sm font-medium text-tymeslot-500">{@tagline}</p>
+        </div>
+      </div>
+      <a
+        :if={@guide_slug}
+        href={DocsUrl.article_url(@guide_slug)}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="mt-1 flex shrink-0 items-center gap-1.5 text-token-xs font-semibold text-tymeslot-500 transition-colors hover:text-tymeslot-700"
+      >
+        <.icon name="hero-question-mark-circle" class="h-4 w-4" />
+        {dgettext("dashboard_integrations", "Setup guide")}
+      </a>
+    </div>
+    """
+  end
 
   @doc """
   Attributes that make a `type="url"` input forgiving about the scheme.

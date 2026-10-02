@@ -442,3 +442,8 @@ msgstr "Geben Sie nur die Adresse ein und tragen Sie Benutzername und Passwort i
 #, elixir-autogen, elixir-format
 msgid "Integration categories"
 msgstr "Integrationskategorien"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
+#, elixir-autogen, elixir-format
+msgid "Setup guide"
+msgstr "Einrichtungsanleitung"

@@ -36,7 +36,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ExchangeConfig 
     as: SharedForm
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
-  alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   @impl Phoenix.LiveComponent
@@ -48,20 +47,17 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ExchangeConfig 
   def render(assigns) do
     ~H"""
     <div id={"exchange-config-#{@id}"} class="space-y-6">
-      <div class="flex items-center gap-4">
-        <ProviderIcon.provider_icon provider="exchange" type="calendar" size="large" />
-        <div>
-          <h3 class="text-xl font-black text-tymeslot-900 tracking-tight">
-            {dgettext("dashboard_calendar_providers", "Microsoft Exchange")}
-          </h3>
-          <p class="text-sm text-tymeslot-500 font-medium">
-            {dgettext(
-              "dashboard_calendar_providers",
-              "Sync busy time and bookings with an on-premises Exchange Server"
-            )}
-          </p>
-        </div>
-      </div>
+      <UIComponents.provider_config_header
+        provider="exchange"
+        type="calendar"
+        title={dgettext("dashboard_calendar_providers", "Microsoft Exchange")}
+        tagline={
+          dgettext(
+            "dashboard_calendar_providers",
+            "Sync busy time and bookings with an on-premises Exchange Server"
+          )
+        }
+      />
 
       <%= if @show_calendar_selection do %>
         <.selection_step

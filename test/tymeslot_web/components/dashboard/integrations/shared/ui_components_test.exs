@@ -76,4 +76,57 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponentsTest 
                ~s(class="flex justify-between items-center pt-4 border-t border-turquoise-200/30")
     end
   end
+
+  describe "provider_config_header/1" do
+    defp render_header(assigns) do
+      html =
+        render_component(
+          &UIComponents.provider_config_header/1,
+          Enum.into(assigns, %{
+            provider: "nextcloud",
+            type: "calendar",
+            title: "Nextcloud",
+            tagline: "Sync calendars from your Nextcloud server"
+          })
+        )
+
+      {html, Floki.parse_document!(html)}
+    end
+
+    test "shows the provider's icon, name and tagline" do
+      {_html, doc} = render_header([])
+
+      assert [src] = Floki.attribute(doc, "img", "src")
+      assert src =~ "/icons/providers/calendar/"
+      assert src =~ "nextcloud"
+      assert doc |> Floki.find("h3") |> Floki.text() == "Nextcloud"
+
+      assert doc |> Floki.find("h3 + p") |> Floki.text() ==
+               "Sync calendars from your Nextcloud server"
+    end
+
+    test "links the setup guide in a new tab when given a slug" do
+      {_html, doc} = render_header(guide_slug: "caldav-nextcloud")
+
+      assert [link] = Floki.find(doc, "a")
+      assert Floki.attribute(link, "href") == ["https://tymeslot.app/docs/caldav-nextcloud"]
+      assert Floki.attribute(link, "target") == ["_blank"]
+      assert Floki.attribute(link, "rel") == ["noopener noreferrer"]
+      assert Floki.text(link) =~ "Setup guide"
+    end
+
+    test "has no guide link without a slug" do
+      {_html, doc} = render_header(type: "video", provider: "mirotalk", title: "MiroTalk P2P")
+
+      assert Floki.find(doc, "a") == []
+    end
+
+    test "uses the type scale tokens rather than raw sizes" do
+      {html, _doc} = render_header([])
+
+      assert html =~ "text-token-xl"
+      assert html =~ "text-token-sm"
+      refute html =~ ~r/class="[^"]*\btext-(xl|sm)\b/
+    end
+  end
 end

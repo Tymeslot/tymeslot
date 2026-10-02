@@ -445,3 +445,8 @@ msgstr "Введіть лише адресу, а ім'я користувача 
 #, elixir-autogen, elixir-format
 msgid "Integration categories"
 msgstr "Категорії інтеграцій"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
+#, elixir-autogen, elixir-format
+msgid "Setup guide"
+msgstr "Посібник із налаштування"

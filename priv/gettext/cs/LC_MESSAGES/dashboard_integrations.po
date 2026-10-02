@@ -445,3 +445,8 @@ msgstr "Zadejte pouze adresu a uživatelské jméno s heslem vyplňte do jejich 
 #, elixir-autogen, elixir-format
 msgid "Integration categories"
 msgstr "Kategorie integrací"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
+#, elixir-autogen, elixir-format
+msgid "Setup guide"
+msgstr "Návod k nastavení"
