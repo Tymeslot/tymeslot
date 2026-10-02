@@ -259,8 +259,17 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> for_user_email(user_email)
     |> order_by_start_asc()
     |> apply_limit(limit)
+    |> preload(participants: ^live_participants_preload())
     |> Repo.all()
   end
+
+  @doc """
+  Loads `meeting`'s live participants into `:participants`, oldest booking
+  first, the same set the dashboard lists show.
+  """
+  @spec preload_live_participants(Meeting.t()) :: Meeting.t()
+  def preload_live_participants(%Meeting{} = meeting),
+    do: Repo.preload(meeting, [participants: live_participants_preload()], force: true)
 
   @doc """
   Returns the organiser's live bookings overlapping the `[from_utc, to_utc)`

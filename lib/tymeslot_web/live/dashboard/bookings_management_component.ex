@@ -579,8 +579,14 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     end
   end
 
+  # A group meeting's modals and flashes speak of its participants, so they
+  # arrive with it.
   defp fetch_meeting_for_user(id, user_email) do
-    Meetings.get_meeting_for_user(id, user_email)
+    with {:ok, meeting} <- Meetings.get_meeting_for_user(id, user_email) do
+      if Meetings.group?(meeting),
+        do: {:ok, Meetings.with_live_participants(meeting)},
+        else: {:ok, meeting}
+    end
   end
 
   @valid_filters ["upcoming", "past", "cancelled", "awaiting_approval"]

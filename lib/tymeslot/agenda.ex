@@ -9,6 +9,8 @@ defmodule Tymeslot.Agenda do
   owns no storage of its own.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Agenda.Day
   alias Tymeslot.Agenda.Entry
   alias Tymeslot.CalendarGrid
@@ -122,7 +124,7 @@ defmodule Tymeslot.Agenda do
       all_day?: false,
       location: presence(meeting.location),
       join_url: presence(meeting.organizer_video_url) || presence(meeting.meeting_url),
-      who: presence(meeting.attendee_name),
+      who: who(meeting),
       calendar: nil,
       colour: Calendar.resolve_event_colour(Map.get(overrides, target), nil),
       target: target
@@ -170,6 +172,24 @@ defmodule Tymeslot.Agenda do
       target: target
     }
   end
+
+  # Who a booking is with. A group meeting has no attendee: one live
+  # participant is named, several are counted (the list query loads only the
+  # live ones).
+  defp who(meeting) do
+    if Meetings.group?(meeting),
+      do: participants_label(meeting.participants),
+      else: presence(meeting.attendee_name)
+  end
+
+  defp participants_label([participant]), do: presence(participant.name)
+
+  defp participants_label(participants) when is_list(participants) and participants != [] do
+    count = length(participants)
+    dngettext("dashboard_home", "%{count} participant", "%{count} participants", count)
+  end
+
+  defp participants_label(_none), do: nil
 
   defp event_target(event), do: {:external, event.calendar_integration_id, event.uid}
 

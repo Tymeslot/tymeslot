@@ -69,9 +69,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RescheduleRequestModal do
       <%= if @meeting do %>
         <div class="space-y-6">
           <p class="text-tymeslot-600 font-medium text-lg leading-relaxed">
-            {dgettext("dashboard_bookings", "Send a reschedule request to %{name}?",
-              name: @meeting.attendee_name
-            )}
+            {question(@meeting)}
           </p>
 
           <div class="bg-tymeslot-50 rounded-token-2xl p-6 border border-tymeslot-100 space-y-3">
@@ -116,11 +114,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RescheduleRequestModal do
               </li>
               <li class="flex items-start gap-2">
                 <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-turquoise-400 shrink-0"></span>
-                <span>{dgettext(
-                  "dashboard_bookings",
-                  "%{attendee_name} will receive an email explaining you need to reschedule",
-                  attendee_name: @meeting.attendee_name
-                )}</span>
+                <span>{who_is_told(@meeting)}</span>
               </li>
               <li class="flex items-start gap-2">
                 <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-turquoise-400 shrink-0"></span>
@@ -160,5 +154,37 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RescheduleRequestModal do
     """
   end
 
-  # Private helper functions
+  # A group meeting has no single attendee: the request goes to everyone who
+  # holds a seat on it.
+  defp question(meeting) do
+    if Helpers.group_meeting?(meeting) do
+      count = length(Helpers.participants(meeting))
+
+      dngettext(
+        "dashboard_bookings",
+        "Send a reschedule request to the %{count} participant of this group meeting?",
+        "Send a reschedule request to the %{count} participants of this group meeting?",
+        count
+      )
+    else
+      dgettext("dashboard_bookings", "Send a reschedule request to %{name}?",
+        name: meeting.attendee_name
+      )
+    end
+  end
+
+  defp who_is_told(meeting) do
+    if Helpers.group_meeting?(meeting) do
+      dgettext(
+        "dashboard_bookings",
+        "Each participant will receive an email explaining you need to reschedule"
+      )
+    else
+      dgettext(
+        "dashboard_bookings",
+        "%{attendee_name} will receive an email explaining you need to reschedule",
+        attendee_name: meeting.attendee_name
+      )
+    end
+  end
 end

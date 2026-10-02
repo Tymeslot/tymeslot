@@ -167,7 +167,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
             </span>
             <MeetingStatusBadge.status_badges meeting={@meeting} />
             <span
-              :if={group_meeting?(@meeting)}
+              :if={Helpers.group_meeting?(@meeting)}
               class="inline-flex items-center gap-1.5 px-3 py-1 bg-turquoise-50 text-turquoise-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-turquoise-100 shadow-sm"
             >
               <CoreComponents.icon name="hero-users" class="w-3.5 h-3.5" />
@@ -213,7 +213,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
             <%!-- A group slot has no single attendee: every booker is listed
                  in the participants panel below. --%>
             <div
-              :if={not group_meeting?(@meeting) and @meeting.attendee_email}
+              :if={not Helpers.group_meeting?(@meeting) and @meeting.attendee_email}
               class="flex items-center gap-4"
             >
               <div class="w-12 h-12 rounded-token-2xl bg-blue-50 flex items-center justify-center shadow-sm border border-blue-100 transition-transform group-hover/card:scale-110">
@@ -236,7 +236,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
           <%!-- Participants panel — group meetings only; the preload already
                filters to live (non-cancelled) participants. --%>
           <div
-            :if={participant_list(@meeting) != []}
+            :if={Helpers.participants(@meeting) != []}
             class="mt-8 p-5 bg-tymeslot-50/50 rounded-token-2xl border-2 border-tymeslot-50"
           >
             <div class="flex items-center gap-4 mb-4">
@@ -249,7 +249,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
             </div>
             <ul class="space-y-2.5">
               <li
-                :for={participant <- participant_list(@meeting)}
+                :for={participant <- Helpers.participants(@meeting)}
                 class="flex items-center justify-between gap-3"
               >
                 <span class="flex items-center gap-2.5 min-w-0">
@@ -473,28 +473,19 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   defp guest_list(%{guests: guests}) when is_list(guests), do: guests
   defp guest_list(_meeting), do: []
 
-  defp group_meeting?(meeting), do: Meetings.group?(meeting)
-
-  # The is_list guard doubles as a NotLoaded guard for callers that render
-  # meeting_card without the participants preload.
-  defp participant_list(%{participants: participants}) when is_list(participants),
-    do: participants
-
-  defp participant_list(_meeting), do: []
-
   # Seats, not headcount. A booker who brings a guest occupies two of the
   # slot's seats, which is what the public booking page counts down and what
   # the organiser needs to read here — a card saying "1/4" beside a slot
   # advertising "2 seats left" is two answers to the same question.
   defp seats_taken(meeting),
-    do: Seats.seats_taken(participant_list(meeting), guest_list(meeting))
+    do: Seats.seats_taken(Helpers.participants(meeting), guest_list(meeting))
 
   # A solo card is titled after its attendee. A group card has no single
   # attendee, so it is named after what was booked: `title` is a required
   # field on every meeting, snapshotted at creation, so it survives the
   # meeting type being edited or deleted.
   defp meeting_title(meeting) do
-    if group_meeting?(meeting),
+    if Helpers.group_meeting?(meeting),
       do: group_title(meeting),
       else: solo_title(meeting)
   end

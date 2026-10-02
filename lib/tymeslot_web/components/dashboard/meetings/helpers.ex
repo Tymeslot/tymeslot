@@ -4,10 +4,29 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
   """
 
   alias Tymeslot.Bookings.Policy
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Helpers.LocaleFormat
+
+  @doc """
+  Whether `meeting` is a group meeting: it has no single attendee, and its
+  people are its participants. Anything but a stored meeting is not.
+  """
+  @spec group_meeting?(MeetingSchema.t() | map()) :: boolean()
+  def group_meeting?(%MeetingSchema{} = meeting), do: Meetings.group?(meeting)
+  def group_meeting?(_not_a_stored_meeting), do: false
+
+  @doc """
+  The live participants loaded onto a group meeting (see
+  `Tymeslot.Meetings.with_live_participants/1`), or `[]` when none are
+  loaded.
+  """
+  @spec participants(Ecto.Schema.t() | map()) :: [Ecto.Schema.t()]
+  def participants(%{participants: participants}) when is_list(participants), do: participants
+  def participants(_meeting), do: []
 
   # Status helpers
   @spec past_meeting?(Ecto.Schema.t()) :: boolean()

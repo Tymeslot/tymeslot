@@ -91,6 +91,15 @@ defmodule Tymeslot.Meetings do
   defdelegate group?(meeting), to: MeetingSchema
 
   @doc """
+  `meeting` with its live participants loaded into `:participants`, oldest
+  booking first: the people a group meeting is with.
+  """
+  @spec with_live_participants(MeetingSchema.t()) :: MeetingSchema.t()
+  defdelegate with_live_participants(meeting),
+    to: MeetingListQueries,
+    as: :preload_live_participants
+
+  @doc """
   Sets `capacity` on a meeting type's future, live group meetings so they
   follow the type's new seat limit. Solo meetings are left alone. Returns the
   number of meetings updated.

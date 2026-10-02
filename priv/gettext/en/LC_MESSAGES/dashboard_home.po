@@ -241,3 +241,10 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "today"
 msgstr ""
+
+#: lib/tymeslot/agenda.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} participant"
+msgid_plural "%{count} participants"
+msgstr[0] ""
+msgstr[1] ""
