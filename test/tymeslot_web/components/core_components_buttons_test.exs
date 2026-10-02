@@ -301,25 +301,35 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
     end
   end
 
-  describe "delegate declarations" do
-    # A delegate that declares less than its component silently rejects the
-    # difference at compile time, so every attribute and its allowed values
-    # must match.
-    test "each CoreComponents button delegate declares exactly its component's attributes" do
+  describe "the CoreComponents facade" do
+    # `Facade.expose/2` copies each component's declarations onto the facade.
+    # A facade that declared less than its component would silently reject
+    # the difference at a caller's compile time, so every exposed component
+    # must carry exactly its submodule's attributes and slots.
+    test "declares exactly what each exposed component declares" do
       core = CoreComponents.__components__()
-      buttons = Buttons.__components__()
+      exposed = CoreComponents.__exposed__()
 
-      for name <- [:action_button, :action_link, :loading_button, :icon_button] do
-        assert summary(core[name]) == summary(buttons[name]), "#{name} delegate has drifted"
-      end
+      assert Enum.sort(Map.keys(exposed)) == Enum.sort(Map.keys(core))
+      assert map_size(exposed) > 20
+
+      drifted =
+        for {name, module} <- exposed,
+            summary(core[name]) != summary(module.__components__()[name]),
+            do: name
+
+      assert drifted == []
     end
   end
 
-  defp summary(%{attrs: attrs}) do
-    attrs
-    |> Enum.map(
-      &{&1.name, &1.type, &1.required, &1.opts[:default], &1.opts[:values], &1.opts[:include]}
-    )
-    |> Enum.sort()
+  defp summary(%{attrs: attrs, slots: slots}) do
+    {attrs
+     |> Enum.map(
+       &{&1.name, &1.type, &1.required, &1.opts[:default], &1.opts[:values], &1.opts[:include]}
+     )
+     |> Enum.sort(),
+     slots
+     |> Enum.map(&{&1.name, &1.required, Enum.map(&1.attrs, fn attr -> attr.name end)})
+     |> Enum.sort()}
   end
 end

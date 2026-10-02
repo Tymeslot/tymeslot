@@ -185,11 +185,17 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
   * `:compact`: a small muted icon beside free content (text, inputs, pickers),
     with a quiet label when given. Rows of an editable form.
   * `:tile`: the icon in a square tinted by `tone`, for cards with room to spare.
+    `tone` applies to this variant only.
   """
   attr :icon, :string, required: true
   attr :label, :string, default: nil
   attr :variant, :atom, default: :default, values: [:default, :compact, :tile]
-  attr :tone, :atom, default: :brand, values: Map.keys(@detail_tiles)
+
+  attr :tone, :atom,
+    default: :brand,
+    values: Map.keys(@detail_tiles),
+    doc: "The tile's tint; `:tile` only, the other variants ignore it"
+
   attr :class, :any, default: nil, doc: "Layout classes only"
   attr :rest, :global
   slot :inner_block, required: true
