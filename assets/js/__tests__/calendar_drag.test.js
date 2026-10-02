@@ -479,3 +479,80 @@ describe('CalendarDrag: scroll-to-current survives the post-refresh reset', () =
     expect(hook.el.scrollTop).toBe(0);
   });
 });
+
+describe('CalendarDrag: a drag on a seat-locked event is answered', () => {
+  // A seat-locked event renders data-draggable="false" and data-locked="true".
+  // Pressing and dragging it moves nothing, so the hook asks the server to say
+  // why (once per press) and stops the press from selecting text across the
+  // neighbouring events.
+
+  let hook;
+  let grid;
+  let locked;
+  let plain;
+
+  function mouse(type, x, y) {
+    return new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y });
+  }
+
+  function eventBlock(attrs) {
+    const el = document.createElement('div');
+    Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+    const label = document.createElement('span');
+    label.textContent = 'Workshop';
+    el.appendChild(label);
+    return el;
+  }
+
+  beforeEach(() => {
+    grid = document.createElement('div');
+    locked = eventBlock({ 'data-draggable': 'false', 'data-locked': 'true' });
+    plain = eventBlock({ 'data-draggable': 'false' });
+    grid.append(locked, plain);
+    document.body.appendChild(grid);
+
+    hook = Object.assign(Object.create(CalendarDrag), { el: grid, pushEventTo: vi.fn() });
+    hook.mounted();
+  });
+
+  afterEach(() => {
+    hook.destroyed();
+    grid.remove();
+    vi.restoreAllMocks();
+  });
+
+  test('dragging past the threshold pushes the refusal once, and suppresses selection', () => {
+    const down = mouse('mousedown', 10, 10);
+    locked.firstChild.dispatchEvent(down);
+    expect(down.defaultPrevented).toBe(true);
+
+    document.dispatchEvent(mouse('mousemove', 10, 40));
+    document.dispatchEvent(mouse('mousemove', 10, 80));
+    document.dispatchEvent(mouse('mouseup', 10, 80));
+
+    expect(hook.pushEventTo).toHaveBeenCalledTimes(1);
+    expect(hook.pushEventTo).toHaveBeenCalledWith(grid, 'locked_event_drag', {});
+
+    // A fresh press answers again.
+    locked.dispatchEvent(mouse('mousedown', 10, 10));
+    document.dispatchEvent(mouse('mousemove', 10, 40));
+    expect(hook.pushEventTo).toHaveBeenCalledTimes(2);
+  });
+
+  test('a click without movement says nothing', () => {
+    locked.dispatchEvent(mouse('mousedown', 10, 10));
+    document.dispatchEvent(mouse('mousemove', 11, 11));
+    document.dispatchEvent(mouse('mouseup', 11, 11));
+
+    expect(hook.pushEventTo).not.toHaveBeenCalled();
+  });
+
+  test('a read-only event that is not seat-locked is left alone', () => {
+    const down = mouse('mousedown', 10, 10);
+    plain.dispatchEvent(down);
+    document.dispatchEvent(mouse('mousemove', 10, 80));
+
+    expect(down.defaultPrevented).toBe(false);
+    expect(hook.pushEventTo).not.toHaveBeenCalled();
+  });
+});

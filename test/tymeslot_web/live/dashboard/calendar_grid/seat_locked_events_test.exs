@@ -101,6 +101,21 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
       refute block =~ "data-resize-handle"
     end
 
+    test "answers a drag on the locked block by saying why it cannot move", ctx do
+      {lv, jobs} = mount_grid(ctx.conn)
+
+      block = event_block(lv, ctx.event.id)
+      assert block =~ ~s(data-locked="true")
+      # Pressing and dragging must not select text across neighbouring events.
+      assert has_element?(lv, "[id^='event-#{ctx.event.id}-'].select-none")
+      refute has_element?(lv, "[role='alert']", "Several people are booked")
+
+      lv |> element("#calendar-grid") |> render_hook("locked_event_drag", %{})
+
+      assert has_element?(lv, "[role='alert']", "Several people are booked on this slot.")
+      assert_untouched(ctx, jobs)
+    end
+
     test "refuses a drop and leaves the event where it was", ctx do
       {lv, jobs} = mount_grid(ctx.conn)
 
@@ -288,6 +303,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
 
       assert block =~ ~s(data-draggable="true")
       assert block =~ "data-resize-handle"
+      refute block =~ "data-locked"
     end
 
     test "moves when dropped", %{conn: conn, event: event} do

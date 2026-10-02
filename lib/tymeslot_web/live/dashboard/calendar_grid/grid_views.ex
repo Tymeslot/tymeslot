@@ -152,7 +152,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
                 <div
                   :for={{event, col_idx, total_cols} <- elem(Map.get(@day_layouts, day, {[], []}), 0)}
                   id={"event-#{event.id}-#{day}"}
-                  class={"absolute rounded px-1 py-0.5 #{if @view == :day, do: "text-token-sm", else: "text-token-xs"} font-medium text-white overflow-hidden cursor-pointer hover:brightness-90 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 focus:ring-offset-1 group #{Helpers.color_for_event(assigns, event)}"}
+                  class={"absolute rounded px-1 py-0.5 #{if @view == :day, do: "text-token-sm", else: "text-token-xs"} font-medium text-white overflow-hidden cursor-pointer select-none hover:brightness-90 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 focus:ring-offset-1 group #{Helpers.color_for_event(assigns, event)}"}
                   style={"top: #{Helpers.top_rem(event.start_at, @user_timezone)}rem; height: #{Helpers.height_rem(event.start_at, event.end_at)}rem; left: #{Helpers.left_pct(col_idx, total_cols)}%; width: calc(#{Helpers.width_pct(total_cols)}% - 2px);"}
                   {Helpers.open_event_attrs(event)}
                   phx-target={@myself}
@@ -170,6 +170,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
                     )
                   }
                   data-draggable={to_string(movable?(event, @group_booking_uids))}
+                  data-locked={EventBadges.seat_locked?(@group_booking_uids, event) && "true"}
                   data-event-id={event.id}
                   data-event-date={Date.to_iso8601(day)}
                   data-start-minutes={

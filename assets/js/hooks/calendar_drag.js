@@ -151,7 +151,10 @@ export const CalendarDrag = {
     // Only drag from event blocks, not resize handles
     if (e.target.closest('[data-resize-handle]')) return
     const eventEl = e.target.closest('[data-draggable="true"]')
-    if (!eventEl) return
+    if (!eventEl) {
+      this._armLockedPress(e)
+      return
+    }
 
     const isTouch = e.type === 'touchstart'
     const { x, y } = pointerXY(e)
@@ -185,7 +188,36 @@ export const CalendarDrag = {
     this._dragging = dragState
   },
 
+  // A seat-locked event cannot move, but a drag started on it should still
+  // be answered: once the mouse travels as far as a real drag would need,
+  // the server is asked to say why (once per press). Stopping the default
+  // also keeps the gesture from selecting text across neighbouring events.
+  // Touch is left alone: there a moving finger is a scroll.
+  _armLockedPress(e) {
+    if (e.type === 'touchstart') return
+    const lockedEl = e.target.closest('[data-locked="true"]')
+    if (!lockedEl) return
+    e.preventDefault()
+    const { x, y } = pointerXY(e)
+    this._lockedPress = { startX: x, startY: y, notified: false }
+  },
+
+  _handleLockedMove(e) {
+    const p = this._lockedPress
+    if (p.notified) return
+    const { x, y } = pointerXY(e)
+    const dx = x - p.startX
+    const dy = y - p.startY
+    if (Math.sqrt(dx * dx + dy * dy) < DRAG_THRESHOLD_PX) return
+    p.notified = true
+    this.pushEventTo(this.el, 'locked_event_drag', {})
+  },
+
   _handlePointerMove(e) {
+    if (this._lockedPress) {
+      this._handleLockedMove(e)
+      return
+    }
     if (!this._dragging) return
     const d = this._dragging
     const { x, y } = pointerXY(e)
@@ -221,6 +253,7 @@ export const CalendarDrag = {
 
   _handlePointerUp(e) {
     this._clearTouchHold()
+    this._lockedPress = null
     if (!this._dragging) return
     const d = this._dragging
 

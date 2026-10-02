@@ -297,6 +297,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     do: DragDrop.handle_event_dropped(params, socket)
 
   @impl Phoenix.LiveComponent
+  def handle_event("locked_event_drag", params, socket),
+    do: DragDrop.handle_locked_event_drag(params, socket)
+
+  @impl Phoenix.LiveComponent
   def handle_event("event_resized", params, socket),
     do: DragDrop.handle_event_resized(params, socket)
 

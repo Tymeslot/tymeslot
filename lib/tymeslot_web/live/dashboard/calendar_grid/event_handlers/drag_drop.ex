@@ -24,6 +24,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.DragDrop do
     end)
   end
 
+  @doc """
+  The grid's answer to a drag started on a seat-locked event. The block is
+  not draggable, so nothing moves; without this the gesture would do nothing
+  at all and leave the host guessing. It says why, in the lock badge's words.
+  """
+  @spec handle_locked_event_drag(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_locked_event_drag(_params, socket),
+    do: {:noreply, Shared.flash_guard(socket, {:error, :group_booking})}
+
   @spec handle_event_resized(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event_resized(params, socket) do
