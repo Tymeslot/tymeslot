@@ -57,25 +57,62 @@ defmodule TymeslotWeb.Components.CoreComponents do
   def footer(assigns), do: Layout.footer(assigns)
 
   # ========== BUTTONS ==========
+  # These declarations must stay in step with the delegates in
+  # `TymeslotWeb.Components.CoreComponents.Buttons`, `values:` included: a
+  # wrapper that declares less than its delegate silently rejects the difference.
 
   @doc """
-  Renders an action button with gradient styling.
+  Renders an action button.
 
   ## Options
-    * `:variant` - Button variant (:primary, :secondary, :danger). Defaults to :primary
+    * `:variant` - `:primary`, `:secondary`, `:danger` (solid red, for the confirm
+      button of a destructive confirmation), `:danger_soft` (red outline, for a
+      destructive action beside a primary one), `:outline`, `:ghost`, `:success`
+      or `:on_dark` (for a dark or brand-coloured surface). Defaults to `:primary`
+    * `:size` - `:sm`, `:md` or `:lg`. Defaults to `:md`
+    * `:icon` - A leading `hero-…` icon name
     * `:type` - Button type attribute. Defaults to "button"
     * `:disabled` - Whether the button is disabled. Defaults to false
-    * `:class` - Additional CSS classes
+    * `:class` - Additional CSS classes (layout only)
   """
-  attr :variant, :atom, default: :primary
+  attr :variant, :atom,
+    default: :primary,
+    values: [:primary, :secondary, :danger, :danger_soft, :outline, :ghost, :success, :on_dark]
+
+  attr :size, :atom, default: :md, values: [:sm, :md, :lg]
+  attr :icon, :string, default: nil
   attr :type, :string, default: "button"
   attr :form, :string, default: nil
   attr :disabled, :boolean, default: false
-  attr :class, :string, default: ""
+  attr :class, :any, default: ""
   attr :rest, :global
   slot :inner_block, required: true
   @spec action_button(map()) :: Phoenix.LiveView.Rendered.t()
   def action_button(assigns), do: Buttons.action_button(assigns)
+
+  @doc """
+  Renders a link (`navigate`, `patch` or `href`) with the look of `action_button/1`:
+  the same variants, sizes and leading icon.
+  """
+  attr :navigate, :string, default: nil
+  attr :patch, :string, default: nil
+  attr :href, :any, default: nil
+  attr :replace, :boolean, default: false
+  attr :method, :string, default: "get"
+
+  attr :variant, :atom,
+    default: :primary,
+    values: [:primary, :secondary, :danger, :danger_soft, :outline, :ghost, :success, :on_dark]
+
+  attr :size, :atom, default: :md, values: [:sm, :md, :lg]
+  attr :icon, :string, default: nil
+  attr :class, :any, default: ""
+
+  attr :rest, :global, include: ~w(download hreflang referrerpolicy rel target type csrf_token)
+
+  slot :inner_block, required: true
+  @spec action_link(map()) :: Phoenix.LiveView.Rendered.t()
+  def action_link(assigns), do: Buttons.action_link(assigns)
 
   @doc """
   Renders a loading button with spinner.
@@ -83,19 +120,40 @@ defmodule TymeslotWeb.Components.CoreComponents do
   ## Options
     * `:loading` - Whether to show loading state
     * `:loading_text` - Text to show when loading
-    * `:variant` - Button variant (passed to action_button)
+    * `:variant`, `:size`, `:icon` - As for `action_button/1`
   """
   attr :loading, :boolean, default: false
   attr :loading_text, :string, default: nil
-  attr :variant, :atom, default: :primary
+
+  attr :variant, :atom,
+    default: :primary,
+    values: [:primary, :secondary, :danger, :danger_soft, :outline, :ghost, :success, :on_dark]
+
+  attr :size, :atom, default: :md, values: [:sm, :md, :lg]
+  attr :icon, :string, default: nil
   attr :type, :string, default: "button"
   attr :form, :string, default: nil
-  attr :class, :string, default: ""
+  attr :class, :any, default: ""
   attr :disabled, :boolean, default: false
   attr :rest, :global
   slot :inner_block, required: true
   @spec loading_button(map()) :: Phoenix.LiveView.Rendered.t()
   def loading_button(assigns), do: Buttons.loading_button(assigns)
+
+  @doc """
+  Renders a square, icon-only button. `label` is required and becomes the
+  button's `aria-label` and `title`. The hit area is at least 44px on touch.
+  """
+  attr :icon, :string, required: true
+  attr :label, :string, required: true
+  attr :variant, :atom, default: :neutral, values: [:neutral, :danger, :warning, :brand]
+  attr :size, :atom, default: :md, values: [:sm, :md]
+  attr :type, :string, default: "button"
+  attr :disabled, :boolean, default: false
+  attr :class, :any, default: ""
+  attr :rest, :global
+  @spec icon_button(map()) :: Phoenix.LiveView.Rendered.t()
+  def icon_button(assigns), do: Buttons.icon_button(assigns)
 
   # ========== CARDS & CONTAINERS ==========
 
