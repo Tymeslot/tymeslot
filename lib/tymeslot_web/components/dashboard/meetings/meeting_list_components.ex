@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   @spec filter_tabs(map()) :: Phoenix.LiveView.Rendered.t()
   def filter_tabs(assigns) do
     ~H"""
-    <div class="flex bg-white border-2 border-tymeslot-50 rounded-[1.25rem] p-1.5 shadow-sm max-w-fit">
+    <div class="flex flex-wrap gap-1 bg-white border-2 border-tymeslot-50 rounded-[1.25rem] p-1.5 shadow-sm w-fit max-w-full">
       <.filter_tab_button
         active={@active == "upcoming"}
         filter="upcoming"
@@ -72,7 +72,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
       phx-value-filter={@filter}
       phx-target={@target}
       class={[
-        "flex items-center space-x-2 px-6 py-2.5 rounded-token-xl text-token-sm font-black transition-all duration-300",
+        "flex items-center gap-2 px-3 sm:px-6 py-2.5 rounded-token-xl text-token-sm font-black transition-all duration-300",
         if(@active,
           do:
             "bg-linear-to-br from-turquoise-600 to-cyan-600 text-white shadow-lg shadow-turquoise-500/20",
@@ -80,7 +80,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
         )
       ]}
     >
-      <CoreComponents.icon name={@icon} class={if @active, do: "text-white/90", else: ""} />
+      <CoreComponents.icon
+        name={@icon}
+        class={"hidden sm:block shrink-0 #{if @active, do: "text-white/90"}"}
+      />
       <span>{@label}</span>
       <span
         :if={@count > 0}
