@@ -159,6 +159,11 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.SeatEmails do
   # carries the invitation's (see `ParticipantSchema.invitation_sequence/1`)
   # and the cancellation template stamps its file one above it, on the seat's
   # own UID. Their guests share that entry, so they get the same.
+  #
+  # The participant's own copy is marked `:seat_given_up`: they gave up their
+  # spot themselves, which the cancellation template words as such rather
+  # than as the host's apology; `slot_freed` says nobody is left, so it does
+  # not tell them the meeting goes ahead for the others.
   defp send_cancellation(meeting, participant, slot_freed?, job_id) do
     recipient = Recipient.from_participant(participant)
     details = AppointmentBuilder.from_meeting(meeting, recipient, nil)
@@ -166,7 +171,10 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.SeatEmails do
 
     attendee_result =
       DeliveryClaims.once(job_id, "seat_cancellation:participant", fn ->
-        email_service.send_cancellation_email_to_attendee(recipient.email, details)
+        email_service.send_cancellation_email_to_attendee(
+          recipient.email,
+          Map.merge(details, %{seat_given_up: true, slot_freed: slot_freed?})
+        )
       end)
 
     organizer_result =
@@ -272,6 +280,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.SeatEmails do
       uid: old.uid,
       ical_sequence: old.ical_sequence,
       start_time: old.start_time,
+      start_time_attendee_tz: old.start_time_attendee_tz,
       end_time: old.end_time
     }
 

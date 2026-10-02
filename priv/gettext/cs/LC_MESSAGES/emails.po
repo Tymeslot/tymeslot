@@ -587,3 +587,11 @@ msgstr "Účastníci (%{count}):"
 #, elixir-autogen, elixir-format
 msgid "Open in dashboard:"
 msgstr "Otevřít v přehledu:"
+
+#: lib/tymeslot/emails/shared/group_session.ex
+#, elixir-autogen, elixir-format
+msgid "Group session: you have one of %{count} spot."
+msgid_plural "Group session: you have one of %{count} spots."
+msgstr[0] "Skupinové setkání: máte jedno z %{count} míst."
+msgstr[1] "Skupinové setkání: máte jedno z %{count} míst."
+msgstr[2] "Skupinové setkání: máte jedno z %{count} míst."

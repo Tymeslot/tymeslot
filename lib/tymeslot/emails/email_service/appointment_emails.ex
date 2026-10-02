@@ -115,16 +115,22 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   end
 
   @doc """
-  Sends the move-my-seat confirmation to a group participant.
+  Sends the move-my-seat notice to a group participant.
 
-  The email is the standard attendee confirmation for the new seat, with one
-  extra attachment: a `STATUS:CANCELLED` ICS for the old seat's UID at
-  `SEQUENCE: old_ical_sequence + 1`, so the participant's calendar drops the
-  old entry (see `Tymeslot.Meetings.AttendeeNotifications.IcalMethod`: the
-  move is an `:event_deleted` on the old seat's UID plus an `:event_created`
-  on the new one, never an `:event_updated`, because the UID changes).
+  The email is the attendee reschedule notice (`AppointmentRescheduled`, its
+  `:seat_move` wording: the participant's spot moved, not the meeting) for
+  the new seat, which carries that seat's own links and calendar entry, with
+  one extra attachment: a cancellation of the old seat's entry, on its UID at
+  `SEQUENCE: old_ical_sequence + 1`, so the participant's calendar drops it
+  (see `Tymeslot.Meetings.AttendeeNotifications.IcalMethod`: the move is an
+  `:event_deleted` on the old seat's UID plus an `:event_created` on the new
+  one, never an `:event_updated`, because the UID changes). The cancellation
+  is the same file a solo cancellation carries
+  (`IcsGenerator.generate_ics_cancel_attachment/4`).
 
-  `old_event` is `%{uid:, ical_sequence:, start_time:, end_time:}`.
+  `old_event` is `%{uid:, ical_sequence:, start_time:, end_time:}`, plus
+  `:start_time_attendee_tz`, the old time in the participant's timezone,
+  which the email states as the time the spot moved from.
   """
   @spec send_seat_reschedule_to_participant(String.t(), map(), map()) ::
           {:ok, any()} | {:error, any()}
@@ -146,9 +152,16 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
         "cancelled-#{old_event.uid}.ics"
       )
 
+    moved_details =
+      Map.merge(appointment_details, %{
+        seat_move: true,
+        original_start_time: old_event.start_time,
+        original_start_time_attendee_tz: Map.get(old_event, :start_time_attendee_tz)
+      })
+
     email =
       :attendee
-      |> AppointmentConfirmation.render(participant_email, appointment_details)
+      |> AppointmentRescheduled.render(participant_email, moved_details)
       |> Email.attachment(cancel_attachment)
 
     Delivery.deliver(email)

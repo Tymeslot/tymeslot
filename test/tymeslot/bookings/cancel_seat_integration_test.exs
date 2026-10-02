@@ -106,6 +106,9 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
       assert attendee_email == "leaver@example.com"
       assert details.attendee_name == "Leaver"
       assert String.contains?(details.cancel_url, leaver.management_token)
+      # Worded as the participant's own act, with the meeting going ahead.
+      assert details.seat_given_up == true
+      assert details.slot_freed == false
       {:ok, "sent"}
     end)
 

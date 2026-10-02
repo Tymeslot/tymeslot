@@ -583,3 +583,11 @@ msgstr "Uczestnicy (%{count}):"
 #, elixir-autogen, elixir-format
 msgid "Open in dashboard:"
 msgstr "Otwórz w panelu:"
+
+#: lib/tymeslot/emails/shared/group_session.ex
+#, elixir-autogen, elixir-format
+msgid "Group session: you have one of %{count} spot."
+msgid_plural "Group session: you have one of %{count} spots."
+msgstr[0] "Sesja grupowa: masz jedno z %{count} miejsc."
+msgstr[1] "Sesja grupowa: masz jedno z %{count} miejsc."
+msgstr[2] "Sesja grupowa: masz jedno z %{count} miejsc."

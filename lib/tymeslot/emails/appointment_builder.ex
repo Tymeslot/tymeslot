@@ -206,6 +206,9 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       location_type: determine_location_type(meeting),
       location_details: format_location_details(meeting),
       meeting_type: meeting.meeting_type,
+      # Above 1 for a group meeting, whose participants' emails say they hold
+      # one of these spots (`Tymeslot.Emails.Shared.GroupSession`).
+      capacity: Map.get(meeting, :capacity),
       ical_sequence: Map.get(meeting, :ical_sequence) || 0,
       custom_fields_snapshot: Map.get(meeting, :custom_fields_snapshot) || [],
       custom_field_answers: Map.get(meeting, :custom_field_answers) || %{}

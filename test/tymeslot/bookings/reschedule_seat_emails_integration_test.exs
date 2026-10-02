@@ -140,6 +140,8 @@ defmodule Tymeslot.Bookings.RescheduleSeatEmailsIntegrationTest do
       assert old_event.ical_sequence == 0
       assert old_event.start_time == old_meeting.start_time
       assert old_event.end_time == old_meeting.end_time
+      # The time the spot moved from, as the participant reads it.
+      assert DateTime.compare(old_event.start_time_attendee_tz, old_meeting.start_time) == :eq
       {:ok, "sent"}
     end)
 
