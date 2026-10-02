@@ -66,21 +66,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
 
       <%!-- Custom header: title gets full width, close button is absolute top-right --%>
       <div class="relative mb-1">
-        <button
-          type="button"
-          class="absolute -top-2 -right-2 w-8 h-8 rounded-lg bg-tymeslot-50 text-tymeslot-400 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center"
-          aria-label={dgettext("dashboard_calendar_events", "Close modal")}
-          phx-click={JS.push("close_event_detail", target: @myself)}
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2.5"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
+        <%!-- The wrapper carries the position: an icon button's own
+             `relative` beats an `absolute` utility on it. --%>
+        <div class="absolute -top-2 -right-2">
+          <.icon_button
+            icon="hero-x-mark"
+            variant={:danger}
+            size={:sm}
+            label={dgettext("dashboard_calendar_events", "Close modal")}
+            phx-click={JS.push("close_event_detail", target: @myself)}
+          />
+        </div>
         <form
           :if={@editable}
           id="event-title-form"

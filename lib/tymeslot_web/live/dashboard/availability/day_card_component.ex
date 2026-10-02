@@ -112,15 +112,15 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
                   @time_format
                 )}
               </span>
-              <button
+              <.icon_button
+                icon="hero-x-mark"
+                variant={:danger}
+                size={:sm}
+                label={dgettext("dashboard_availability", "Delete Break")}
                 phx-click="show_delete_break_modal"
                 phx-value-break_id={break.id}
                 phx-target={@myself}
-                class="text-tymeslot-300 hover:text-red-500 transition-colors"
-                aria-label={dgettext("dashboard_availability", "Delete Break")}
-              >
-                <.icon name="hero-x-mark-micro" class="w-3.5 h-3.5" />
-              </button>
+              />
             </span>
 
             <.action_button

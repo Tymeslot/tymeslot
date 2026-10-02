@@ -376,20 +376,16 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
           )}
         </span>
       </p>
-      <button
+      <CoreComponents.action_button
+        variant={:outline}
+        size={:sm}
         phx-click="dismiss_calendar_sync_banner"
         phx-value-id={@meeting.id}
         phx-target={@target}
-        class={[
-          "shrink-0 text-token-xs font-black uppercase tracking-wider px-3 py-1.5 rounded-token-lg border transition-colors",
-          if(@meeting.calendar_sync_status == "externally_deleted",
-            do: "border-red-300 hover:bg-red-100",
-            else: "border-amber-300 hover:bg-amber-100"
-          )
-        ]}
+        class="shrink-0"
       >
         {dgettext("dashboard_bookings", "Dismiss")}
-      </button>
+      </CoreComponents.action_button>
     </div>
     """
   end

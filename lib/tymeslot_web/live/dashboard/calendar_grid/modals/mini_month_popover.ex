@@ -72,27 +72,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
       <:panel>
         <%!-- Picker-month header: prev / month-year / next --%>
         <div class="flex items-center justify-between mb-2">
-          <button
-            type="button"
+          <.icon_button
+            icon="hero-chevron-left"
+            size={:sm}
+            label={dgettext("dashboard_calendar_events", "Previous month")}
             phx-click="mini_month_prev"
             phx-target={@myself}
-            class="min-w-[32px] min-h-[32px] flex items-center justify-center rounded hover:bg-tymeslot-100 text-tymeslot-600 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-            aria-label={dgettext("dashboard_calendar_events", "Previous month")}
-          >
-            <.icon name="hero-chevron-left" class="w-4 h-4" />
-          </button>
+          />
           <div class="text-token-sm font-semibold text-tymeslot-800">
             {LocaleFormat.format_month_year(@cursor.month, @cursor.year, @locale)}
           </div>
-          <button
-            type="button"
+          <.icon_button
+            icon="hero-chevron-right"
+            size={:sm}
+            label={dgettext("dashboard_calendar_events", "Next month")}
             phx-click="mini_month_next"
             phx-target={@myself}
-            class="min-w-[32px] min-h-[32px] flex items-center justify-center rounded hover:bg-tymeslot-100 text-tymeslot-600 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-            aria-label={dgettext("dashboard_calendar_events", "Next month")}
-          >
-            <.icon name="hero-chevron-right" class="w-4 h-4" />
-          </button>
+          />
         </div>
 
         <%!-- Weekday header row (+ optional week-number gutter) --%>
