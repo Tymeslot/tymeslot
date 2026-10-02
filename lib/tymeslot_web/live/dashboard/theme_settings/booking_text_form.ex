@@ -101,8 +101,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
         <%!-- `phx-submit` exists only so pressing Enter in a field flushes the
-        pending debounce instead of reloading the page; the change handler is
-        what normally saves. --%>
+             pending debounce instead of reloading the page; the change handler
+             is what normally saves. --%>
         <.card padding={:lg}>
           <.form
             for={@form}
@@ -128,18 +128,19 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
               target={@myself}
             />
 
-            <%!-- The switch is a button, not a form control, so the flag needs a
-          field of its own to travel with the submitted form. --%>
+            <%!-- The switch is a button, not a form control, so the flag needs
+                 a field of its own to travel with the submitted form. --%>
             <input
               type="hidden"
               name={@form[:booking_text_enabled].name}
               value={to_string(enabled?(@form))}
             />
 
-            <%!-- Disabled rather than hidden, so the section keeps its shape and
-          the organiser can still read what the switch controls. A disabled input
-          submits nothing, which is what stops the empty fields from being
-          validated as missing while the customisation is off. --%>
+            <%!-- Disabled rather than hidden, so the section keeps its shape
+                 and the organiser can still read what the switch controls. A
+                 disabled input submits nothing, which is what stops the empty
+                 fields from being validated as missing while the
+                 customisation is off. --%>
             <div class={["space-y-6", not enabled?(@form) && "opacity-60"]}>
               <.input
                 field={@form[:booking_heading]}

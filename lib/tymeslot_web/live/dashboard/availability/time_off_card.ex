@@ -403,8 +403,9 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
         </:actions>
 
         <%!-- The full empty state is only for a card with nothing in it at all.
-      Once past periods exist, both categories show, so an empty current one
-      reads as "nothing coming up" rather than disappearing above the past. --%>
+             Once past periods exist, both categories show, so an empty current
+             one reads as "nothing coming up" rather than disappearing above
+             the past. --%>
         <.empty_state
           :if={@periods == [] and @past_periods == []}
           icon="hero-sun"
