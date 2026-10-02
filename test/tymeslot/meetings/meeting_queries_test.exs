@@ -370,7 +370,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
     )
   end
 
-  defp insert_meeting_at(organizer_id, start_time, extra \\ []) do
+  defp insert_meeting_at(organizer_id, start_time, extra) do
     attrs =
       [
         organizer_user_id: organizer_id,
