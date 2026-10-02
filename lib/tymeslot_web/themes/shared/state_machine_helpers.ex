@@ -85,6 +85,23 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpers do
       )
   end
 
+  @doc """
+  Where "back" leads from the schedule step, or `nil` when nowhere.
+
+  The overview is only reachable when the booker actually entered via it. A
+  direct or private-link entry sets `entered_via_overview: false` and must
+  never expose the organiser's other meeting types. Choosing the length never
+  exposes them, so it is reachable from a direct link too.
+  """
+  @spec schedule_back_target(Phoenix.LiveView.Socket.t()) :: :length | :overview | nil
+  def schedule_back_target(socket) do
+    cond do
+      choose_length?(socket) -> :length
+      socket.assigns[:entered_via_overview] -> :overview
+      true -> nil
+    end
+  end
+
   defp with_length_step(states) do
     states
     |> put_in([:overview, :next], :length)

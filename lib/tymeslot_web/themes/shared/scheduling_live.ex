@@ -314,23 +314,12 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       defp handle_schedule_navigation_events(socket, event) do
         case event do
           :back_step ->
-            # Only allow returning to the overview when the booker actually
-            # entered via it. A direct/private-link entry sets
-            # `entered_via_overview: false` and must never expose the
-            # organiser's other meeting types — enforce this server-side so a
-            # client cannot bypass the template-level `:if` guard by pushing
-            # the event directly.
-            cond do
-              # Choosing the length never exposes the organiser's other
-              # meeting types, so it is reachable from a direct link too.
-              StateMachine.choose_length?(socket) ->
-                handle_state_transition(socket, :schedule, :length)
-
-              socket.assigns[:entered_via_overview] ->
-                handle_state_transition(socket, :schedule, :overview)
-
-              true ->
-                {:noreply, socket}
+            # Enforced server-side (see `StateMachine.schedule_back_target/1`)
+            # so a client cannot bypass the template-level `:if` guard by
+            # pushing the event directly.
+            case StateMachine.schedule_back_target(socket) do
+              nil -> {:noreply, socket}
+              target -> handle_state_transition(socket, :schedule, target)
             end
 
           :next_step ->
