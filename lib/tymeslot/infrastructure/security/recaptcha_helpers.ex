@@ -106,7 +106,22 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
   end
 
   @doc """
+  Whether any reCAPTCHA check is active on this instance.
+
+  The single answer to "does this instance use reCAPTCHA at all": the
+  Content-Security-Policy allows Google's origins only while it is true, so a
+  form that loads the reCAPTCHA script or demands a token must ask this same
+  question, or the policy blocks the script the form is waiting on.
+  """
+  @spec any_active?() :: boolean()
+  def any_active?, do: booking_active?() or signup_active?()
+
+  @doc """
   Validates a reCAPTCHA token using the verification service.
+
+  Returns `{:error, :recaptcha_service_unavailable}` when Google could not be
+  reached or failed on its side, apart from Google rejecting the token; see
+  `Tymeslot.Infrastructure.Security.Recaptcha`.
   """
   @spec validate_token(String.t()) ::
           {:ok, %{score: float(), action: String.t() | nil, hostname: String.t() | nil}}

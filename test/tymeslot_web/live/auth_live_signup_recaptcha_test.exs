@@ -217,7 +217,7 @@ defmodule TymeslotWeb.AuthLiveSignupRecaptchaTest do
         {:error, %Req.TransportError{reason: :timeout}}
       end)
 
-      assert Recaptcha.verify(max_token) == {:error, :recaptcha_network_error}
+      assert Recaptcha.verify(max_token) == {:error, :recaptcha_service_unavailable}
     end
 
     test "empty token is properly rejected with clear error" do

@@ -208,15 +208,12 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
   end
 
   # Origins the reCAPTCHA v3 script loads from, frames and calls. Added to the
-  # policy only while a reCAPTCHA check is active, so an instance that has it
-  # switched off allows no Google origin at all.
+  # policy only while `RecaptchaHelpers.any_active?/0` holds, so an instance
+  # that has it switched off allows no Google origin at all. Every form that
+  # loads the script asks the same predicate, so the two cannot disagree.
   @recaptcha_script_origins ["https://www.google.com", "https://www.gstatic.com"]
   @recaptcha_connect_origins ["https://www.google.com"]
   @recaptcha_frame_origins ["https://www.google.com"]
-
-  defp recaptcha_active? do
-    RecaptchaHelpers.booking_active?() or RecaptchaHelpers.signup_active?()
-  end
 
   # The LiveView socket's own origin: ws(s)://host[:port] from the endpoint's
   # URL config. 'self' already covers it in current browsers; naming it keeps
@@ -249,7 +246,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
 
   defp csp_header(frame_ancestors, nonce) do
     analytics_origins = analytics_script_origins()
-    recaptcha? = recaptcha_active?()
+    recaptcha? = RecaptchaHelpers.any_active?()
 
     script_src =
       ["'self'", "'nonce-#{nonce}'"] ++
