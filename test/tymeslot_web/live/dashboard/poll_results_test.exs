@@ -477,7 +477,11 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
       select_poll(view, poll)
 
       view |> element("button[phx-click='request_cancel_poll']") |> render_click()
-      html = view |> element("button[phx-click='cancel_poll']") |> render_click()
+
+      html =
+        view
+        |> element("#cancel-poll-modal [data-testid='confirm-cancel-poll']")
+        |> render_click()
 
       assert html =~ "This poll was cancelled"
       refute html =~ "Cancel this poll?"
@@ -604,7 +608,7 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
       poll |> Changeset.change(status: :cancelled) |> Repo.update!()
 
       view |> element("button[phx-click='request_cancel_poll']") |> render_click()
-      view |> element("button[phx-click='cancel_poll']") |> render_click()
+      view |> element("#cancel-poll-modal [data-testid='confirm-cancel-poll']") |> render_click()
 
       html = render(view)
       assert html =~ "This poll is no longer open"

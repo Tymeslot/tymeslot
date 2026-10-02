@@ -182,10 +182,19 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
   own wording and events; this owns the layout.
 
   Confirm either pushes `on_confirm` or, with `confirm_form`, submits the form
-  of that id rendered in the body. Attributes not declared here (`phx-target`,
-  `phx-value-*`, `phx-disable-with`, `data-testid`) land on the Confirm button.
+  of that id rendered in the body. Attributes not declared here (`phx-value-*`,
+  `phx-disable-with`, `data-testid`) land on the Confirm button; never pass
+  `phx-click` that way, since it would clash with `on_confirm`.
+
   Where the answer is a choice between several actions, the `:actions` slot
-  replaces the single Confirm button; Cancel always stays first.
+  replaces the single Confirm button; Cancel always stays first. With
+  `:actions`, the Confirm-only attributes (`on_confirm`, `confirm_form`,
+  `confirm_label`, `confirm_disabled`, `loading_label`) and the extra
+  attributes are ignored, so each action button carries its own.
+
+  While `loading`, both footer buttons are disabled and Escape, a click outside
+  and the close button do nothing, so a request in flight cannot be walked away
+  from half-finished.
 
   ## Examples
 
@@ -208,9 +217,9 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
   attr :title, :string, required: true
   attr :on_cancel, JS, default: %JS{}, doc: "pushed by Cancel, Escape and a click outside"
 
-  attr :on_confirm, :any,
+  attr :on_confirm, JS,
     default: nil,
-    doc: "event name or JS pushed by Confirm; leave unset when `confirm_form` submits"
+    doc: "pushed by Confirm; leave unset when `confirm_form` submits. Ignored with `:actions`"
 
   attr :confirm_form, :string,
     default: nil,
@@ -221,10 +230,16 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
   attr :confirm_variant, :atom, default: :danger, values: [:danger, :primary]
   attr :icon, :string, default: "hero-exclamation-triangle", doc: "a `hero-…` icon name"
   attr :size, :atom, default: :medium, values: [:small, :medium]
-  attr :loading, :boolean, default: false, doc: "shows Confirm's spinner and locks both buttons"
+
+  attr :loading, :boolean,
+    default: false,
+    doc: "shows Confirm's spinner, disables both buttons and blocks dismissal"
+
   attr :loading_label, :string, default: nil
   attr :confirm_disabled, :boolean, default: false
-  attr :rest, :global, doc: "extra attributes for the Confirm button"
+
+  attr :rest, :global,
+    doc: "extra attributes for the Confirm button, never `phx-click`; ignored with `:actions`"
 
   slot :inner_block, required: true
   slot :extra, doc: "secondary content under the body, such as an info box or a checkbox"
@@ -233,7 +248,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
   @spec confirm_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def confirm_modal(assigns) do
     ~H"""
-    <.modal id={@id} show={@show} on_cancel={@on_cancel} size={@size}>
+    <.modal id={@id} show={@show} on_cancel={if @loading, do: %JS{}, else: @on_cancel} size={@size}>
       <:header>
         <span class="flex items-center gap-3">
           <span class={[

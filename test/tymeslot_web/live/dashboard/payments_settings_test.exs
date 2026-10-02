@@ -220,7 +220,9 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       view |> element("button[phx-click=open_disconnect_modal]") |> render_click()
       assert has_element?(view, "#disconnect-modal")
 
-      view |> element("#disconnect-modal button[phx-click=disconnect]") |> render_click()
+      view
+      |> element("#disconnect-modal [data-testid='confirm-disconnect-stripe']")
+      |> render_click()
 
       refute ConnectAccountQueries.live_for_user(user.id)
       refute has_element?(view, "#disconnect-modal")
@@ -305,7 +307,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       {:ok, view, _html} = live(conn, "/dashboard/integrations?tab=payments")
 
       view |> element("button[phx-click=open_disconnect_modal]") |> render_click()
-      view |> element("#disconnect-modal button[phx-click=disconnect]") |> render_click()
+
+      view
+      |> element("#disconnect-modal [data-testid='confirm-disconnect-stripe']")
+      |> render_click()
 
       refute ConnectAccountQueries.live_for_user(user.id)
       assert has_element?(view, "#stripe-connect-form")

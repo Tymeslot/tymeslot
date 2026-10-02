@@ -2,7 +2,7 @@ defmodule TymeslotWeb.Components.CoreComponentsConfirmModalTest do
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :components
-  @moduletag :utils
+  @moduletag :dashboard
 
   import Phoenix.Component
   import Phoenix.LiveViewTest
@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Components.CoreComponentsConfirmModalTest do
             title="Delete thing"
             confirm_label="Delete it"
             on_cancel={@on_cancel}
-            on_confirm="delete"
+            on_confirm={JS.push("delete")}
           >
             <p>Delete the thing?</p>
           </CoreComponents.confirm_modal>
@@ -44,7 +44,8 @@ defmodule TymeslotWeb.Components.CoreComponentsConfirmModalTest do
       assert texts(doc, "#c-title") == ["Delete thing"]
       assert texts(doc, ".modal-body p") == ["Delete the thing?"]
       assert texts(doc, ".modal-footer button") == ["Cancel", "Delete it"]
-      assert attrs(doc, ".modal-footer button.action-button--danger", "phx-click") == ["delete"]
+      assert [confirm_js] = attrs(doc, ".modal-footer button.action-button--danger", "phx-click")
+      assert confirm_js =~ ~s("event":"delete")
 
       assert [cancel_js] =
                attrs(doc, ".modal-footer button.action-button--secondary", "phx-click")
@@ -61,7 +62,7 @@ defmodule TymeslotWeb.Components.CoreComponentsConfirmModalTest do
           title="T"
           confirm_variant={@variant}
           on_cancel={@on_cancel}
-          on_confirm="go"
+          on_confirm={JS.push("go")}
         >
           <p>Body</p>
         </CoreComponents.confirm_modal>
@@ -109,7 +110,7 @@ defmodule TymeslotWeb.Components.CoreComponentsConfirmModalTest do
             loading
             loading_label="Deleting..."
             on_cancel={@on_cancel}
-            on_confirm="go"
+            on_confirm={JS.push("go")}
           >
             <p>Body</p>
           </CoreComponents.confirm_modal>
@@ -118,6 +119,12 @@ defmodule TymeslotWeb.Components.CoreComponentsConfirmModalTest do
 
       assert texts(doc, ".action-button--danger") == ["Deleting..."]
       assert attrs(doc, ".modal-footer button", "disabled") == ["", ""]
+
+      # Escape, a click outside and the close button push nothing while loading.
+      assert [keydown] = attrs(doc, "div#c", "phx-window-keydown")
+      refute keydown =~ "close"
+      assert [close_js] = attrs(doc, ".modal-header button", "phx-click")
+      refute close_js =~ "close"
     end
 
     test "undeclared attributes land on the Confirm button" do
@@ -129,7 +136,7 @@ defmodule TymeslotWeb.Components.CoreComponentsConfirmModalTest do
             show
             title="T"
             on_cancel={@on_cancel}
-            on_confirm="go"
+            on_confirm={JS.push("go")}
             phx-value-scope="series"
             data-testid="confirm-it"
           >
@@ -171,7 +178,7 @@ defmodule TymeslotWeb.Components.CoreComponentsConfirmModalTest do
       doc =
         render_confirm(%{}, fn assigns ->
           ~H"""
-          <CoreComponents.confirm_modal id="c" title="T" on_cancel={@on_cancel} on_confirm="go">
+          <CoreComponents.confirm_modal id="c" title="T" on_cancel={@on_cancel} on_confirm={JS.push("go")}>
             <p>Body</p>
           </CoreComponents.confirm_modal>
           """

@@ -32,8 +32,7 @@ defmodule TymeslotWeb.Dashboard.Locations.DeleteVenueModal do
       title={dgettext("dashboard_meeting_types", "Delete location")}
       confirm_label={dgettext("dashboard_meeting_types", "Delete location")}
       on_cancel={JS.push("close_delete_venue", target: @myself)}
-      on_confirm="confirm_delete_venue"
-      phx-target={@myself}
+      on_confirm={JS.push("confirm_delete_venue", target: @myself)}
       data-testid="confirm-delete-venue"
     >
       <%= if @in_use == [] do %>

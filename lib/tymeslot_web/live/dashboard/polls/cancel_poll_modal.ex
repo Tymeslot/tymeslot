@@ -33,8 +33,8 @@ defmodule TymeslotWeb.Dashboard.Polls.CancelPollModal do
       confirm_label={dgettext("dashboard_common", "Cancel poll")}
       cancel_label={dgettext("dashboard_common", "Keep poll")}
       on_cancel={JS.push("close_cancel_poll_modal", target: @myself)}
-      on_confirm="cancel_poll"
-      phx-target={@myself}
+      on_confirm={JS.push("cancel_poll", target: @myself)}
+      data-testid="confirm-cancel-poll"
     >
       <p>
         {dgettext(

@@ -478,7 +478,7 @@ defmodule TymeslotWeb.Components.CoreComponents do
   attr :show, :boolean, default: false
   attr :title, :string, required: true
   attr :on_cancel, JS, default: %JS{}
-  attr :on_confirm, :any, default: nil
+  attr :on_confirm, JS, default: nil
   attr :confirm_form, :string, default: nil
   attr :confirm_label, :string, default: nil
   attr :cancel_label, :string, default: nil

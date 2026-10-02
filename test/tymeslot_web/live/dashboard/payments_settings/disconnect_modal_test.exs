@@ -36,7 +36,14 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.DisconnectModalTest do
 
       assert html =~ "disconnect-modal"
       assert html =~ "Disconnect your Stripe account"
-      assert html =~ "phx-click=\"disconnect\""
+
+      assert [push] =
+               html
+               |> LazyHTML.from_fragment()
+               |> LazyHTML.query("#disconnect-modal [data-testid='confirm-disconnect-stripe']")
+               |> LazyHTML.attribute("phx-click")
+
+      assert push =~ ~s("event":"disconnect")
     end
 
     test "shows a warning about pending bookings when the pending count is positive" do

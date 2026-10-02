@@ -36,8 +36,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.DisconnectModal do
       title={dgettext("dashboard_payments", "Disconnect Stripe")}
       confirm_label={dgettext("dashboard_payments", "Disconnect Stripe")}
       on_cancel={JS.push("close_disconnect_modal", target: @myself)}
-      on_confirm="disconnect"
-      phx-target={@myself}
+      on_confirm={JS.push("disconnect", target: @myself)}
+      data-testid="confirm-disconnect-stripe"
     >
       <p>
         {dgettext(
