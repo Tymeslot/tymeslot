@@ -207,6 +207,27 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
     end
   end
 
+  describe "Field headings" do
+    test "each heading names its field once, and still labels the input", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      assert has_element?(view, "h3#display-name-heading", "Display Name")
+
+      assert has_element?(
+               view,
+               ~s|input[name="full_name"][aria-labelledby="display-name-heading"]|
+             )
+
+      refute has_element?(view, "#display-name-form-container label", "Display Name")
+
+      assert has_element?(view, "h3#custom-url-heading", "Custom URL")
+      assert has_element?(view, ~s|input[name="username"][aria-labelledby="custom-url-heading"]|)
+      refute has_element?(view, "#username-form-container label", "Custom URL")
+
+      refute has_element?(view, "#timezone-form-container .label", "Your Timezone")
+    end
+  end
+
   describe "Display Name updates" do
     test "successfully updates display name on change", %{conn: conn, profile: profile} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")

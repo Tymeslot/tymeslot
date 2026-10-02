@@ -206,7 +206,11 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
 
     ~H"""
     <div id="username-form-container">
-      <.section_header level={3} title={dgettext("dashboard_profile", "Custom URL")} class="mb-4" />
+      <.subsection_header
+        id="custom-url-heading"
+        title={dgettext("dashboard_profile", "Custom URL")}
+        class="mb-4"
+      />
       <form
         id="username-form"
         phx-submit="update_username"
@@ -221,7 +225,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
               <% input_padding = "--leading-icon-width: #{prefix_length}ch;" %>
               <.input
                 name="username"
-                label={dgettext("dashboard_profile", "Your Custom URL")}
+                aria-labelledby="custom-url-heading"
                 value={if @profile, do: @profile.username || "", else: ""}
                 placeholder={dgettext("dashboard_profile", "yourname")}
                 pattern={UsernameValidator.html_pattern()}

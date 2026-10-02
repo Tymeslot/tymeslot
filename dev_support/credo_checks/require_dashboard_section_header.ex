@@ -8,7 +8,7 @@ defmodule CredoChecks.RequireDashboardSectionHeader do
   since they render inside the same dashboard shell.
 
   This is not a "top level only" rule. Page components nested one level down
-  (`profile_settings/`, `automation/`, `theme_settings/`) are checked too. Only
+  (`automation/`, `theme_settings/`) are checked too. Only
   the helper directories listed in `@helper_paths` are exempt, because the page
   component that renders them supplies the heading on their behalf.
   """
@@ -69,6 +69,7 @@ defmodule CredoChecks.RequireDashboardSectionHeader do
     "/calendar_grid/",
     "/calendar_settings/",
     "/meeting_settings/",
+    "/profile_settings/",
     "/shared/",
     "/subscription/",
     "/theme_customization/",

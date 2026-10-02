@@ -179,11 +179,6 @@ msgstr "Nom d’utilisateur mis à jour ! Votre page de réservation : %{url}"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
-msgid "Your Custom URL"
-msgstr "Votre URL personnalisée"
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
-#, elixir-autogen, elixir-format
 msgid "yourname"
 msgstr "votrenom"
 

@@ -179,11 +179,6 @@ msgstr "Ім'я користувача оновлено! Ваша сторінк
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
-msgid "Your Custom URL"
-msgstr "Ваша власна URL-адреса"
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
-#, elixir-autogen, elixir-format
 msgid "yourname"
 msgstr "vashe_imia"
 

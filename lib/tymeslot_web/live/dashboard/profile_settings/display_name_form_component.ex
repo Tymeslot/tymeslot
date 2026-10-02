@@ -63,7 +63,11 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.DisplayNameFormComponent do
   def render(assigns) do
     ~H"""
     <div id="display-name-form-container">
-      <.section_header level={3} title={dgettext("dashboard_profile", "Display Name")} class="mb-4" />
+      <.subsection_header
+        id="display-name-heading"
+        title={dgettext("dashboard_profile", "Display Name")}
+        class="mb-4"
+      />
       <.form_wrapper
         for={%{}}
         phx-change="validate_full_name"
@@ -73,7 +77,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.DisplayNameFormComponent do
         <.input
           name="full_name"
           value={if @profile, do: @profile.full_name || "", else: ""}
-          label={dgettext("dashboard_profile", "Display Name")}
+          aria-labelledby="display-name-heading"
           placeholder={dgettext("dashboard_profile", "Enter your full name")}
           errors={FormValidationHelpers.field_errors(@form_errors, :full_name)}
           phx-debounce="500"

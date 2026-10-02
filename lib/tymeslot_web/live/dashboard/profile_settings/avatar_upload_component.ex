@@ -132,7 +132,13 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
       class="lg:col-span-1 space-y-8 text-center pt-4"
       phx-hook="AutoUpload"
     >
-      <.section_header level={3} title={dgettext("dashboard_profile", "Profile Picture")} />
+      <.subsection_header
+        size={:lg}
+        level={2}
+        icon="hero-photo"
+        title={dgettext("dashboard_profile", "Profile Picture")}
+        class="text-left"
+      />
 
       <div class="relative inline-block mb-8" id="avatar-upload-section">
         <div class="w-40 h-40 rounded-[2.5rem] overflow-hidden bg-tymeslot-100 border-4 border-white shadow-2xl relative z-10 mx-auto">

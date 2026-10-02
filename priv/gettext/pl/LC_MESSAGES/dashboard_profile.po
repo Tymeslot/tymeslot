@@ -175,11 +175,6 @@ msgstr "Nazwa użytkownika zmieniona! Twoja strona rezerwacji: %{url}"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
-msgid "Your Custom URL"
-msgstr "Twój adres URL"
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
-#, elixir-autogen, elixir-format
 msgid "yourname"
 msgstr "twojanazwa"
 

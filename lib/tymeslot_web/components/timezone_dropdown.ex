@@ -24,13 +24,17 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
 
   attr :class, :string, default: "", doc: "Additional CSS classes for the container"
 
+  attr :show_label, :boolean,
+    default: true,
+    doc: "Whether to show the visual label; off where a heading above already names the field"
+
   @spec timezone_dropdown(map()) :: Phoenix.LiveView.Rendered.t()
   def timezone_dropdown(assigns) do
     ~H"""
     <div class={["relative", @class]}>
       <%!-- Visual label only: it names no control (the trigger below carries its
            own accessible name), so it must not be a <label> element. --%>
-      <div class="label text-tymeslot-700 mb-3 block">
+      <div :if={@show_label} class="label text-tymeslot-700 mb-3 block">
         <div class="flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path

@@ -61,11 +61,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.TimeFormatFormComponent do
   def render(assigns) do
     ~H"""
     <div id="time-format-form-container">
-      <.section_header
-        level={3}
-        title={dgettext("dashboard_profile", "Time Format")}
-        class="mb-4"
-      />
+      <.subsection_header title={dgettext("dashboard_profile", "Time Format")} class="mb-4" />
       <.segmented_control
         id="profile-time-format-toggle"
         value={@time_format}

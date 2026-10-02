@@ -39,7 +39,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
         saving={@saving}
       />
 
-      <div class="card-glass relative overflow-hidden">
+      <.card class="relative overflow-hidden">
         <div class="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
           <%!-- Avatar Section --%>
           <.live_component
@@ -51,26 +51,12 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
 
           <%!-- Settings Forms Section --%>
           <div class="lg:col-span-2 space-y-10 lg:border-l-2 lg:border-tymeslot-50 lg:pl-12 pt-4">
-            <div class="flex items-center gap-4 mb-2">
-              <div class="w-12 h-12 bg-cyan-50 rounded-token-xl flex items-center justify-center border border-cyan-100 shadow-sm">
-                <svg
-                  class="w-6 h-6 text-cyan-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2.5"
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
-                </svg>
-              </div>
-              <h3 class="text-2xl font-black text-tymeslot-900 tracking-tight">
-                {dgettext("dashboard_profile", "Basic Information")}
-              </h3>
-            </div>
+            <.subsection_header
+              size={:lg}
+              level={2}
+              icon="hero-user"
+              title={dgettext("dashboard_profile", "Basic Information")}
+            />
 
             <div class="space-y-10">
               <.live_component
@@ -106,7 +92,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
             </div>
           </div>
         </div>
-      </div>
+      </.card>
 
       <%!-- Delete Avatar Modal (rendered outside card to avoid z-index stacking issues) --%>
       <.live_component
