@@ -105,7 +105,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
                 phx-click="edit_location"
                 phx-value-id={location.id}
                 phx-target={@myself}
-                class="py-1! px-2! text-token-xs"
+                size={:sm}
               >
                 {dgettext("dashboard_meeting_form", "Edit")}
               </CoreComponents.action_button>
@@ -114,11 +114,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
               <CoreComponents.action_button
                 :if={length(@locations) > 1}
                 type="button"
-                variant={:danger}
+                variant={:danger_soft}
                 phx-click="delete_location"
                 phx-value-id={location.id}
                 phx-target={@myself}
-                class="py-1! px-2! text-token-xs"
+                size={:sm}
               >
                 {dgettext("dashboard_meeting_form", "Delete")}
               </CoreComponents.action_button>

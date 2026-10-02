@@ -51,16 +51,16 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.PaymentsTable do
               </td>
               <td class="p-2 text-token-sm">{format_status(p.status)}</td>
               <td class="p-2 text-right">
-                <button
+                <.action_button
                   :if={MeetingPayments.refundable?(p) and not connect_account_deleted?(@account)}
-                  type="button"
-                  class="text-token-sm text-turquoise-700 font-semibold underline"
+                  variant={:secondary}
+                  size={:sm}
                   phx-click="open_refund_modal"
                   phx-value-id={p.id}
                   phx-target={@myself}
                 >
                   {dgettext("dashboard_payments", "Refund")}
-                </button>
+                </.action_button>
               </td>
             </tr>
           </tbody>

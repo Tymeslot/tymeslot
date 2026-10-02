@@ -46,16 +46,16 @@ defmodule TymeslotWeb.Dashboard.Locations.VenueCard do
           phx-click="edit_venue"
           phx-value-id={@venue.id}
           phx-target={@myself}
-          class="py-1! px-2! text-token-xs"
+          size={:sm}
         >
           {dgettext("dashboard_meeting_types", "Edit")}
         </.action_button>
         <.action_button
-          variant={:danger}
+          variant={:danger_soft}
           phx-click="delete_venue"
           phx-value-id={@venue.id}
           phx-target={@myself}
-          class="py-1! px-2! text-token-xs"
+          size={:sm}
         >
           {dgettext("dashboard_meeting_types", "Delete")}
         </.action_button>

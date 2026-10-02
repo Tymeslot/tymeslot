@@ -70,7 +70,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.VenuePicker do
         phx-click="toggle_new_venue"
         phx-target={@myself}
         data-testid="new-venue-toggle"
-        class="py-1! px-2! text-token-xs"
+        size={:sm}
       >
         {dgettext("dashboard_meeting_form", "+ New location")}
       </CoreComponents.action_button>

@@ -376,39 +376,27 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
         <div class="flex items-center justify-between gap-4">
           <%= if @is_edit do %>
             <Autosave.indicator status={@save_status} />
-            <button
-              type="button"
-              phx-click="close_edit_overlay"
-              phx-target={@parent_myself}
-              class="btn btn-primary"
-            >
+            <.action_button phx-click="close_edit_overlay" phx-target={@parent_myself}>
               {dgettext("dashboard_meeting_form", "Done")}
-            </button>
+            </.action_button>
           <% else %>
             <span></span>
             <div class="flex justify-end space-x-3">
-              <button
-                type="button"
+              <.action_button
+                variant={:secondary}
                 phx-click="toggle_add_form"
                 phx-target={@parent_myself}
-                class="btn btn-secondary"
               >
                 {dgettext("dashboard_meeting_form", "Cancel")}
-              </button>
-              <button
+              </.action_button>
+              <.loading_button
                 type="submit"
-                disabled={@saving || @refreshing_calendars}
-                class="btn btn-primary"
+                loading={@saving}
+                loading_text={dgettext("dashboard_meeting_form", "Saving...")}
+                disabled={@refreshing_calendars}
               >
-                <%= if @saving do %>
-                  <span class="flex items-center">
-                    <.spinner class="h-4 w-4 mr-2" />
-                    {dgettext("dashboard_meeting_form", "Saving...")}
-                  </span>
-                <% else %>
-                  {dgettext("dashboard_meeting_form", "Create Meeting Type")}
-                <% end %>
-              </button>
+                {dgettext("dashboard_meeting_form", "Create Meeting Type")}
+              </.loading_button>
             </div>
           <% end %>
         </div>

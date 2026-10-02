@@ -73,10 +73,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
 
   defp add_meeting_type_button(assigns) do
     ~H"""
-    <button phx-click="toggle_add_form" phx-target={@parent_myself} class="btn btn-primary btn-sm">
-      <.icon name="hero-plus" class="w-4 h-4 mr-2" />
+    <.action_button
+      size={:sm}
+      icon="hero-plus"
+      phx-click="toggle_add_form"
+      phx-target={@parent_myself}
+    >
       {dgettext("dashboard_meeting_types", "Add Meeting Type")}
-    </button>
+    </.action_button>
     """
   end
 end

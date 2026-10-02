@@ -210,9 +210,9 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
               variant={:primary}
               phx-click="new_venue"
               phx-target={@myself}
+              icon="hero-plus"
               data-testid="add-venue"
             >
-              <.icon name="hero-plus" class="w-4 h-4" />
               {dgettext("dashboard_meeting_types", "Add location")}
             </.action_button>
           </:action>
@@ -223,9 +223,9 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
             variant={:primary}
             phx-click="new_venue"
             phx-target={@myself}
+            icon="hero-plus"
             data-testid="add-venue"
           >
-            <.icon name="hero-plus" class="w-4 h-4" />
             {dgettext("dashboard_meeting_types", "Add location")}
           </.action_button>
         </div>

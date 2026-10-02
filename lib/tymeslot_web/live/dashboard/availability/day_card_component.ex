@@ -123,16 +123,17 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
               </button>
             </span>
 
-            <button
+            <.action_button
               :if={@show_add_break_form != @day}
+              variant={:ghost}
+              size={:sm}
+              icon="hero-plus"
               phx-click="show_add_break_form"
               phx-value-day={@day}
               phx-target={@myself}
-              class="inline-flex items-center gap-1 rounded-token-lg px-2 py-1 text-token-xs font-bold text-tymeslot-400 hover:text-turquoise-700 hover:bg-turquoise-50 transition-colors"
             >
-              <.icon name="hero-plus-micro" class="w-3.5 h-3.5" />
               {dgettext("dashboard_availability", "Add Break")}
-            </button>
+            </.action_button>
           </div>
 
           <.dropdown
@@ -233,19 +234,16 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
           <%!-- Empty label of the same shape as the fields', so the buttons sit
           on the input line without hard-coding the label's height. --%>
           <span class="label" aria-hidden="true">&nbsp;</span>
-          <div class="flex gap-2">
-            <button type="submit" class="btn-primary py-3 px-4 text-token-sm whitespace-nowrap">
+          <div class="flex items-center gap-2">
+            <.action_button type="submit">
               {dgettext("dashboard_availability", "Add")}
-            </button>
-            <button
-              type="button"
+            </.action_button>
+            <.icon_button
+              icon="hero-x-mark"
+              label={dgettext("dashboard_availability", "Cancel")}
               phx-click="hide_add_break_form"
               phx-target={@myself}
-              class="btn-secondary py-3 px-3"
-              aria-label={dgettext("dashboard_availability", "Cancel")}
-            >
-              <.icon name="hero-x-mark-mini" class="w-4 h-4" />
-            </button>
+            />
           </div>
         </div>
       </form>

@@ -511,9 +511,9 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
       variant={@variant}
       phx-click="show_time_off_form"
       phx-target={@myself}
+      icon="hero-plus"
       data-testid="add-time-off"
     >
-      <.icon name="hero-plus" class="w-4 h-4" />
       {dgettext("dashboard_availability", "Add time off")}
     </.action_button>
     """
@@ -546,29 +546,24 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
       </div>
 
       <div class="flex items-center gap-2 shrink-0">
-        <button
+        <.icon_button
           :if={not @past}
-          type="button"
+          icon="hero-pencil-square"
+          label={dgettext("dashboard_availability", "Edit time off")}
           phx-click="show_time_off_form"
           phx-value-id={@period.id}
           phx-target={@myself}
-          class="flex items-center justify-center h-9 w-9 bg-white text-tymeslot-700 rounded-token-lg border-2 border-tymeslot-100 hover:bg-tymeslot-100 transition-all shadow-sm shadow-tymeslot-500/5"
-          aria-label={dgettext("dashboard_availability", "Edit time off")}
-        >
-          <.icon name="hero-pencil-square" class="w-5 h-5" />
-        </button>
-        <button
-          type="button"
+        />
+        <.icon_button
+          icon="hero-trash"
+          variant={:danger}
+          label={dgettext("dashboard_availability", "Remove time off")}
           phx-click={
             if @past,
               do: remove_past(@period, @myself),
               else: JS.push("show_delete_time_off", value: %{id: @period.id}, target: @myself)
           }
-          class="flex items-center justify-center h-9 w-9 text-tymeslot-500 hover:text-red-500 hover:bg-red-50 rounded-token-lg border-2 border-transparent hover:border-red-100 transition-all"
-          aria-label={dgettext("dashboard_availability", "Remove time off")}
-        >
-          <.icon name="hero-trash" class="w-5 h-5" />
-        </button>
+        />
       </div>
     </li>
     """

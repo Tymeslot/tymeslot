@@ -144,17 +144,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
                   phx-click="edit_question"
                   phx-value-id={q.id}
                   phx-target={@myself}
-                  class="py-1! px-2! text-token-xs"
+                  size={:sm}
                 >
                   {dgettext("dashboard_meeting_form", "Edit")}
                 </CoreComponents.action_button>
                 <CoreComponents.action_button
                   type="button"
-                  variant={:danger}
+                  variant={:danger_soft}
                   phx-click="delete_question"
                   phx-value-id={q.id}
                   phx-target={@myself}
-                  class="py-1! px-2! text-token-xs"
+                  size={:sm}
                 >
                   {dgettext("dashboard_meeting_form", "Delete")}
                 </CoreComponents.action_button>

@@ -162,14 +162,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
                 </option>
               </select>
             </div>
-            <button
-              type="button"
-              phx-click="add_reminder"
-              phx-target={@myself}
-              class="btn btn-primary btn-sm rounded-token-lg!"
-            >
+            <.action_button size={:sm} phx-click="add_reminder" phx-target={@myself}>
               {dgettext("dashboard_meeting_form", "Add")}
-            </button>
+            </.action_button>
           </div>
         <% end %>
       </div>

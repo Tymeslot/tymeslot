@@ -421,15 +421,15 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
               the block rather than breaking mid-token. --%>
         <div class="relative">
           <pre class="bg-tymeslot-900 text-tymeslot-100 rounded-token-lg p-4 pr-20 text-token-xs whitespace-pre overflow-x-auto"><code class="block"><%= @code |> render_slot() |> Phoenix.HTML.Safe.to_iodata() |> IO.iodata_to_binary() |> String.split("\n") |> Enum.map_join("\n", &String.trim/1) |> String.trim() |> Phoenix.HTML.raw() %></code></pre>
-          <button
-            type="button"
+          <.action_button
+            size={:sm}
+            class="absolute top-2 right-2"
             phx-click="copy_code"
             phx-value-type={@type}
             phx-target={@myself}
-            class="absolute top-2 right-2 px-3 py-1 bg-turquoise-600 hover:bg-turquoise-700 text-white text-token-xs font-semibold rounded transition-colors"
           >
             {dgettext("dashboard_embed", "Copy")}
-          </button>
+          </.action_button>
         </div>
 
         <div class="mt-4 flex items-start space-x-2 text-token-xs text-tymeslot-700">

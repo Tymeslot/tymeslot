@@ -407,25 +407,29 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
               phx-value-field="options"
               phx-target={@myself}
             />
-            <button
-              type="button"
-              class="shrink-0 p-1 rounded text-tymeslot-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+            <CoreComponents.icon_button
+              icon="hero-x-mark"
+              variant={:danger}
+              size={:sm}
+              class="shrink-0"
+              label={dgettext("dashboard_meeting_form", "Remove option")}
               phx-click="remove_option"
               phx-value-index={index}
               phx-target={@myself}
-              aria-label={dgettext("dashboard_meeting_form", "Remove option")}
-            >×</button>
+            />
           </div>
         <% end %>
       </div>
-      <button
-        type="button"
-        class="mt-2 flex items-center gap-1.5 text-token-sm font-medium text-tymeslot-600 hover:text-tymeslot-900"
+      <CoreComponents.action_button
+        variant={:ghost}
+        size={:sm}
+        icon="hero-plus"
+        class="mt-2"
         phx-click="add_option"
         phx-target={@myself}
       >
-        + {dgettext("dashboard_meeting_form", "Add option")}
-      </button>
+        {dgettext("dashboard_meeting_form", "Add option")}
+      </CoreComponents.action_button>
       <%= for error <- FormValidationHelpers.field_errors(@field_errors, :options) do %>
         <p class="field-error">{translate_options_error(error)}</p>
       <% end %>
