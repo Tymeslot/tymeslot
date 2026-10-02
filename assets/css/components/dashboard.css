@@ -588,9 +588,22 @@
   --time-axis: 4rem;
 }
 
+/* Narrow screens: 3.5rem is the least that fits a 12-hour label ("06 AM")
+   and "all-day" beside the axis's right padding. */
 @media (max-width: 640px) {
   #calendar-grid {
-    --time-axis: 3rem;
+    --time-axis: 3.5rem;
+  }
+}
+
+/* Below md the dashboard content has no gutter of its own in full-width mode,
+   so the grids take the same 0.75rem inset as the toolbar above them rather
+   than running to the screen edge. */
+@media (width < 48rem) {
+  #calendar-allday-row,
+  #calendar-drag-zone,
+  #calendar-month-grid {
+    margin-inline: 0.75rem;
   }
 }
 
