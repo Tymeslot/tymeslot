@@ -45,7 +45,6 @@ defmodule Tymeslot.Bookings.Reschedule do
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.Approval
-  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Meetings.VideoRooms
@@ -122,7 +121,7 @@ defmodule Tymeslot.Bookings.Reschedule do
              organizer_user_id,
              original_meeting.duration
            ),
-         shared_availability_guests = shared_availability_guests(original_meeting),
+         shared_availability_guests = SharedAvailability.resolve_for_meeting(original_meeting),
          config =
            original_meeting.organizer_user_id
            |> Policy.scheduling_config(meeting_type)
@@ -480,7 +479,7 @@ defmodule Tymeslot.Bookings.Reschedule do
              organizer_user_id
            ),
          :ok <-
-           validate_shared_availability(
+           SharedAvailability.validate_reschedule(
              shared_availability_guests,
              meeting,
              {date, start_datetime, end_datetime, params.user_timezone},
@@ -498,47 +497,6 @@ defmodule Tymeslot.Bookings.Reschedule do
 
       {:error, _reason} = error ->
         error
-    end
-  end
-
-  defp shared_availability_guests(meeting) do
-    meeting.id
-    |> Guests.list_for_meeting()
-    |> Enum.map(& &1.email)
-    |> SharedAvailability.resolve_from_guest_emails(meeting.organizer_user_id)
-  end
-
-  # The same rules a booking with these guests was created under: their
-  # schedule, calendar and hosted bookings, with the meeting's own invitation
-  # left out of their calendars. A calendar that cannot be read at all only
-  # refuses when it reported an incomplete busy set; a transport failure lets
-  # the reschedule through, as `Bookings.Create` does for a new booking.
-  defp validate_shared_availability([], _meeting, _slot, _config), do: :ok
-
-  defp validate_shared_availability(guests, meeting, {date, start_dt, end_dt, user_tz}, config) do
-    case SharedAvailability.validate_guests_available(
-           guests,
-           date,
-           start_dt,
-           end_dt,
-           user_tz,
-           config,
-           SharedAvailability.fresh_events_fetcher(meeting.calendar_uid)
-         ) do
-      :ok ->
-        :ok
-
-      {:error, reason}
-      when reason in [:slot_unavailable, :some_calendars_unavailable, :all_calendars_unavailable] ->
-        {:error, :slot_taken}
-
-      {:error, reason} ->
-        Logger.warning("Guest calendar availability check failed, proceeding with reschedule",
-          reason: LogFormat.reason(reason),
-          meeting_id: meeting.id
-        )
-
-        :ok
     end
   end
 

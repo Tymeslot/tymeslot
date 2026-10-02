@@ -23,7 +23,7 @@ defmodule Tymeslot.Scheduling.SharedAvailability do
 
   Nothing about the link is stored on the booking. When it is rescheduled, the
   users to check are recovered from its guests instead
-  (`resolve_from_guest_emails/2`): every guest whose address belongs to a
+  (`resolve_for_meeting/1`): every guest whose address belongs to a
   Tymeslot user who could have been named in a link counts, whichever way they
   were added.
   """
@@ -31,6 +31,7 @@ defmodule Tymeslot.Scheduling.SharedAvailability do
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Availability.{Calculate, Schedules, TimeSlots}
   alias Tymeslot.Bookings.Validation
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Meetings
@@ -40,6 +41,8 @@ defmodule Tymeslot.Scheduling.SharedAvailability do
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Scheduling.LinkAccessPolicy
+
+  require Logger
 
   @query_param "with"
 
@@ -145,26 +148,32 @@ defmodule Tymeslot.Scheduling.SharedAvailability do
   end
 
   @doc """
-  The users to check when the host's booking `meeting_uid` is rescheduled,
-  recovered from its guests (`resolve_from_guest_emails/2`). A booking that is
-  not the host's has none.
+  The users to check when the host's booking `meeting_uid` is rescheduled
+  (`resolve_for_meeting/1`). A booking that is not the host's has none.
   """
   @spec resolve_for_booking(String.t(), pos_integer()) :: [Guest.t()]
   def resolve_for_booking(meeting_uid, host_user_id)
       when is_binary(meeting_uid) and is_integer(host_user_id) do
     case MeetingQueries.get_meeting_by_uid_for_organizer(meeting_uid, host_user_id) do
-      {:ok, meeting} ->
-        meeting.id
-        |> Guests.list_for_meeting()
-        |> Enum.map(& &1.email)
-        |> resolve_from_guest_emails(host_user_id)
-
-      {:error, _not_found} ->
-        []
+      {:ok, meeting} -> resolve_for_meeting(meeting)
+      {:error, _not_found} -> []
     end
   end
 
   def resolve_for_booking(_meeting_uid, _host_user_id), do: []
+
+  @doc """
+  The users to check when `meeting` is rescheduled, recovered from its guests
+  (`resolve_from_guest_emails/2`).
+  """
+  @spec resolve_for_meeting(%{id: pos_integer(), organizer_user_id: pos_integer()}) ::
+          [Guest.t()]
+  def resolve_for_meeting(%{id: meeting_id, organizer_user_id: host_user_id}) do
+    meeting_id
+    |> Guests.list_for_meeting()
+    |> Enum.map(& &1.email)
+    |> resolve_from_guest_emails(host_user_id)
+  end
 
   @doc """
   An `t:events_fetcher/0` that reads each guest's calendar live, with a five
@@ -369,6 +378,45 @@ defmodule Tymeslot.Scheduling.SharedAvailability do
         {:error, _reason} = error -> {:halt, error}
       end
     end)
+  end
+
+  @doc """
+  Checks on reschedule that `guests` can attend `meeting` at its new slot,
+  under the rules a booking with them was created under: their schedule,
+  calendar and hosted bookings, with the meeting's own invitation left out of
+  their calendars (`fresh_events_fetcher/1`).
+
+  A guest who cannot attend, or a calendar that reported an incomplete busy
+  set, answers `{:error, :slot_taken}`. A calendar that cannot be read at all
+  lets the reschedule through, as `Bookings.Create` does for a new booking.
+  """
+  @spec validate_reschedule(
+          [Guest.t()],
+          %{id: pos_integer(), calendar_uid: String.t() | nil},
+          {Date.t(), DateTime.t(), DateTime.t(), String.t()},
+          map()
+        ) :: :ok | {:error, :slot_taken}
+  def validate_reschedule([], _meeting, _slot, _config), do: :ok
+
+  def validate_reschedule(guests, meeting, {date, start_dt, end_dt, user_tz}, config) do
+    fetcher = fresh_events_fetcher(meeting.calendar_uid)
+
+    case validate_guests_available(guests, date, start_dt, end_dt, user_tz, config, fetcher) do
+      :ok ->
+        :ok
+
+      {:error, reason}
+      when reason in [:slot_unavailable, :some_calendars_unavailable, :all_calendars_unavailable] ->
+        {:error, :slot_taken}
+
+      {:error, reason} ->
+        Logger.warning("Guest calendar availability check failed, proceeding with reschedule",
+          reason: LogFormat.reason(reason),
+          meeting_id: meeting.id
+        )
+
+        :ok
+    end
   end
 
   @doc """
