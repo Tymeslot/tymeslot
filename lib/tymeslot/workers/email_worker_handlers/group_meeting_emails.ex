@@ -29,9 +29,12 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
   are refused for a group meeting.
   """
 
+  require Logger
+
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
@@ -159,7 +162,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
 
       meeting.organizer_email
       |> Config.email_service_module().send_cancellation_email_to_organizer(organizer_details)
-      |> organizer_result("cancellation")
+      |> organizer_result("cancellation", meeting)
     end
   end
 
@@ -186,7 +189,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
 
       meeting.organizer_email
       |> Config.email_service_module().send_appointment_reminder_to_organizer(organizer_details)
-      |> organizer_result("reminder")
+      |> organizer_result("reminder", meeting)
     end
   end
 
@@ -280,13 +283,27 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
     end
   end
 
-  # Preserves `:circuit_open` and `{:recipient_rejected, _}` through
-  # `DeliveryOutcome.from_error/2` rather than flattening every failure into a
-  # string, so `EmailWorker` can snooze past a provider outage or discard a
-  # dead address instead of burning ordinary retries on either.
-  defp organizer_result({:ok, _result}, _label), do: :ok
+  # An organiser address the provider refused outright is settled, as
+  # `SeatEmails` settles it: no retry can deliver it, and the job has more to
+  # do once this returns (the cancellation's guest notices run only after a
+  # successful dispatch), so a rejection must not discard the job with them.
+  # Any other failure preserves `:circuit_open` through
+  # `DeliveryOutcome.from_error/2` rather than flattening it into a string, so
+  # `EmailWorker` can snooze past a provider outage instead of burning
+  # ordinary retries on it.
+  defp organizer_result({:ok, _result}, _label, _meeting), do: :ok
 
-  defp organizer_result({:error, reason}, label),
+  defp organizer_result({:error, {:recipient_rejected, reason}}, label, meeting) do
+    Logger.warning("Organiser address rejected; not retrying the organiser email",
+      meeting_id: meeting.id,
+      label: label,
+      reason: LogFormat.reason(reason)
+    )
+
+    :ok
+  end
+
+  defp organizer_result({:error, reason}, label, _meeting),
     do: DeliveryOutcome.from_error(reason, "Failed to send organiser #{label} email")
 
   defp meeting_started?(meeting) do
