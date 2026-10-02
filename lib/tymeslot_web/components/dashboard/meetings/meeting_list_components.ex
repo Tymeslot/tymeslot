@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Meetings
   alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.Dashboard.Meetings.GuestStatusPill
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingActions
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingStatusBadge
@@ -167,13 +168,14 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
               {@meeting.attendee_company}
             </span>
             <MeetingStatusBadge.status_badges meeting={@meeting} />
-            <span
+            <CoreComponents.pill
               :if={@meeting.meeting_url}
-              class="inline-flex items-center gap-1.5 px-3 py-1 bg-cyan-50 text-cyan-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-cyan-100 shadow-sm"
+              tone={:info}
+              size={:sm}
+              icon="hero-video-camera"
             >
-              <CoreComponents.icon name="hero-video-camera" class="w-3.5 h-3.5" />
               {dgettext("dashboard_bookings", "Video Call")}
-            </span>
+            </CoreComponents.pill>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -249,7 +251,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
                     {guest.name || guest.email}
                   </span>
                 </span>
-                <.guest_status_badge status={guest.status} />
+                <GuestStatusPill.guest_status_pill status={guest.status} />
               </li>
             </ul>
           </div>
@@ -538,33 +540,6 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
     </div>
     """
   end
-
-  # Small coloured pill reflecting a guest's RSVP status.
-  attr :status, :string, required: true
-
-  defp guest_status_badge(assigns) do
-    ~H"""
-    <span class={[
-      "inline-flex flex-none items-center gap-1 rounded-full px-2.5 py-0.5 text-token-xs font-bold",
-      guest_badge_classes(@status)
-    ]}>
-      <CoreComponents.icon name={guest_badge_icon(@status)} class="w-3.5 h-3.5" />
-      {guest_status_label(@status)}
-    </span>
-    """
-  end
-
-  defp guest_badge_classes("accepted"), do: "bg-green-50 text-green-700 border border-green-100"
-  defp guest_badge_classes("declined"), do: "bg-red-50 text-red-600 border border-red-100"
-  defp guest_badge_classes(_pending), do: "bg-amber-50 text-amber-700 border border-amber-100"
-
-  defp guest_badge_icon("accepted"), do: "hero-check-circle-mini"
-  defp guest_badge_icon("declined"), do: "hero-x-circle-mini"
-  defp guest_badge_icon(_pending), do: "hero-clock-mini"
-
-  defp guest_status_label("accepted"), do: dgettext("dashboard_bookings", "Going")
-  defp guest_status_label("declined"), do: dgettext("dashboard_bookings", "Declined")
-  defp guest_status_label(_pending), do: dgettext("dashboard_bookings", "Pending")
 
   defp guest_list(%{guests: guests}) when is_list(guests), do: guests
   defp guest_list(_meeting), do: []

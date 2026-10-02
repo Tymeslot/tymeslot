@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.Dashboard.Meetings.GuestStatusPill
 
   attr :id, :string, required: true
   attr :show, :boolean, required: true
@@ -112,9 +113,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
               class="flex items-center justify-between gap-3 text-tymeslot-600 font-medium"
             >
               <span class="truncate">{guest.email}</span>
-              <span class="shrink-0 text-token-sm text-tymeslot-400">
-                {status_label(guest.status)}
-              </span>
+              <GuestStatusPill.guest_status_pill status={guest.status} />
             </li>
           </ul>
         </div>
@@ -138,8 +137,4 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
     </CoreComponents.modal>
     """
   end
-
-  defp status_label("accepted"), do: dgettext("dashboard_bookings", "Going")
-  defp status_label("declined"), do: dgettext("dashboard_bookings", "Declined")
-  defp status_label(_pending), do: dgettext("dashboard_bookings", "Awaiting reply")
 end
