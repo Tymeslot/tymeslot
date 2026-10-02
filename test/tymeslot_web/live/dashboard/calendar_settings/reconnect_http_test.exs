@@ -428,7 +428,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
       # The needs-reauth warning badge (amber) shows on the collapsed row.
-      assert has_element?(view, "span.text-amber-800", "Reconnect")
+      assert has_element?(view, "span.text-amber-700", "Reconnect")
 
       # Phase 2: the server now accepts the rotated password and the user
       # reconnects through the modal. Unified reconnect always shows the
@@ -464,10 +464,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
       })
       |> render_submit()
 
-      # The needs-reauth warning badge (the amber `span.text-amber-800`) is gone
+      # The needs-reauth warning badge (the amber `span.text-amber-700`) is gone
       # once the credential is refreshed — needs_reauth is cleared, so neither
       # the badge nor the collapsed-header Reconnect control renders any more.
-      refute has_element?(view, "span.text-amber-800", "Reconnect")
+      refute has_element?(view, "span.text-amber-700", "Reconnect")
 
       reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
       assert reloaded.needs_reauth == false

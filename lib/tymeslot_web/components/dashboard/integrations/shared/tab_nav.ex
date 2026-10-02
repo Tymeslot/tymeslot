@@ -4,12 +4,14 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.TabNav do
 
   Renders one patch link per tab with an active turquoise underline, an
   optional count pill, and a small coloured status dot when the tab is not
-  healthy (`status != :ok`). Dot colours mirror `UIComponents.status_badge/1`.
+  healthy (`status != :ok`). Dot colours match the status pills on the rows below, via
+  `UIComponents.status_tone/1`.
   """
   use Phoenix.Component
   use TymeslotWeb, :verified_routes
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
 
   attr :active_tab, :atom, required: true
@@ -41,7 +43,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.TabNav do
         </span>
         <span :if={tab.status != :ok} class="inline-flex items-center">
           <span
-            class={["h-1.5 w-1.5 rounded-token-full", UIComponents.dot_classes(tab.status)]}
+            class={[
+              "h-1.5 w-1.5 rounded-token-full",
+              Feedback.pill_dot_class(UIComponents.status_tone(tab.status))
+            ]}
             aria-hidden="true"
           />
           <span class="sr-only">

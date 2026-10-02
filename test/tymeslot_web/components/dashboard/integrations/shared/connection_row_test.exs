@@ -57,6 +57,35 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRowTest
     end
   end
 
+  describe "status pill" do
+    for {variant, label, pill, dot} <- [
+          {:ok, "Healthy", "bg-green-100 text-green-700", "bg-green-500"},
+          {:warning, "Degraded", "bg-amber-100 text-amber-700", "bg-amber-500"},
+          {:error, "Restricted", "bg-red-100 text-red-700", "bg-red-500"},
+          {:info, "Syncing", "bg-blue-100 text-blue-700", "bg-blue-500"},
+          {:paused, "Paused", "bg-tymeslot-100 text-tymeslot-600", "bg-tymeslot-400"}
+        ] do
+      test "shows a #{variant} status as a #{pill} pill with a #{dot} dot" do
+        doc =
+          [status: {unquote(variant), unquote(label)}]
+          |> render_row()
+          |> LazyHTML.from_fragment()
+
+        [pill] =
+          doc
+          |> LazyHTML.query("span.rounded-token-full")
+          |> Enum.filter(&(LazyHTML.text(&1) =~ unquote(label)))
+
+        assert pill |> LazyHTML.attribute("class") |> hd() =~ unquote(pill)
+
+        assert [dot_class] =
+                 pill |> LazyHTML.query("span[aria-hidden='true']") |> LazyHTML.attribute("class")
+
+        assert dot_class =~ unquote(dot)
+      end
+    end
+  end
+
   defp render_row(overrides) do
     assigns =
       Enum.into(overrides, %{

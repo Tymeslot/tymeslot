@@ -16,8 +16,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow do
   import TymeslotWeb.Components.Icons.ProviderIcon
   import TymeslotWeb.Components.UI.StatusSwitch
 
-  import TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents,
-    only: [status_badge: 1]
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
 
   attr :id, :string, required: true
   attr :icon, :string, required: true
@@ -65,7 +64,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow do
             </p>
             <p :if={@notice} class="mt-1 text-token-sm text-amber-700">{@notice}</p>
           </div>
-          <.status_badge variant={@variant} label={@status_label} class="shrink-0" />
+          <.pill tone={UIComponents.status_tone(@variant)} dot>{@status_label}</.pill>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 sm:justify-end">
