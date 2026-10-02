@@ -105,6 +105,47 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   defp maybe_put_query_param(params, _param_key, value) when value in [nil, ""], do: params
   defp maybe_put_query_param(params, key, value), do: Map.put(params, key, value)
 
+  # The route's own segments, which arrive in `params` beside the query.
+  @path_params ["username", "slug"]
+
+  # What makes a page a reschedule rather than a booking.
+  @reschedule_params ["reschedule_meeting_uid", "reschedule_seat_token"]
+
+  @doc """
+  The query string parameters of a booking page's `params`: everything but
+  the route's own segments, and only the string-valued ones a URL can carry
+  back.
+  """
+  @spec query_params(map()) :: %{String.t() => String.t()}
+  def query_params(params) do
+    for {key, value} <- Map.drop(params, @path_params), is_binary(value), into: %{} do
+      {key, value}
+    end
+  end
+
+  @doc """
+  The host's booking page from the start, as a fresh booking: the page's
+  own query (an embed's parameters, a preview, the timezone) is kept, and
+  only the reschedule it was for is dropped.
+  """
+  @spec restart_path(Phoenix.LiveView.Socket.t()) :: String.t()
+  def restart_path(socket) do
+    base =
+      case socket.assigns[:username_context] do
+        username when is_binary(username) -> "/#{username}"
+        _none -> "/"
+      end
+
+    query = Map.drop(socket.assigns[:page_query_params] || %{}, @reschedule_params)
+    if query == %{}, do: base, else: "#{base}?#{URI.encode_query(query)}"
+  end
+
+  @doc "Whether the page's URL carries a reschedule."
+  @spec reschedule_in_url?(Phoenix.LiveView.Socket.t()) :: boolean()
+  def reschedule_in_url?(socket) do
+    Enum.any?(@reschedule_params, &Map.has_key?(socket.assigns[:page_query_params] || %{}, &1))
+  end
+
   @doc """
   Returns the organizer's scheduling page path for restarting a booking,
   e.g. "/username".

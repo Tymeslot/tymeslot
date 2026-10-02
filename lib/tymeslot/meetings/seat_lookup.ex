@@ -9,7 +9,7 @@ defmodule Tymeslot.Meetings.SeatLookup do
   (`:meeting_cancelled`) are both dead ends, told apart so the page can say
   which. Used by `TymeslotWeb.SeatController` (the public cancel/reschedule
   pages), `Tymeslot.Bookings.CancelSeat` and
-  `Tymeslot.Scheduling.ThemeFlow.live_seat_token?/1` (dropping a spent
+  `Tymeslot.Scheduling.ThemeFlow.seat_move_start/1` (dropping a spent
   token from a booking form).
   """
 

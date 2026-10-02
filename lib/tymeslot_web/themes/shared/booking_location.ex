@@ -391,7 +391,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
         arranged
 
       nil ->
-        not is_nil(submitted_option_id(assigns)) and in_person?(assigns) and
+        not is_nil(shown_option_id(assigns)) and in_person?(assigns) and
           venue_choices(assigns) == []
     end
   end
@@ -426,11 +426,20 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
   """
   @spec stated_location?(map()) :: boolean()
   def stated_location?(assigns) do
-    not is_nil(submitted_option_id(assigns)) and not choice_required?(assigns) and
+    not is_nil(shown_option_id(assigns)) and not choice_required?(assigns) and
       in_person?(assigns)
   end
 
   defp in_person?(assigns), do: match?(%LocationOption{kind: "in_person"}, selected(assigns))
+
+  # The option the page states. On a group participant's seat move it is the
+  # type's one location even though none is submitted: a group type's
+  # location is fixed in advance, so the spot moves to a slot held there, and
+  # the page says where, as it does for a new booking.
+  defp shown_option_id(%{reschedule_seat_token: token} = assigns) when is_binary(token),
+    do: assigns[:selected_location_id]
+
+  defp shown_option_id(assigns), do: submitted_option_id(assigns)
 
   @doc """
   The chosen location as one line, for the confirmation screen: the chosen
@@ -448,7 +457,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
   @spec chosen_display(map()) :: String.t() | nil
   def chosen_display(assigns) do
     cond do
-      is_nil(submitted_option_id(assigns)) -> nil
+      is_nil(shown_option_id(assigns)) -> nil
       booked = booked_in_person(assigns) -> booked.location
       kept = kept_location(assigns) -> kept.location
       venue_choices(assigns) != [] -> submitted_venue_display(assigns)

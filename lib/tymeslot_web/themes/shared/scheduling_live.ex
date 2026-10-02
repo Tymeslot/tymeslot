@@ -451,12 +451,18 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
             # The flow restarts here without navigating, so the reschedule
             # context has to be dropped explicitly or the next submit moves the
             # meeting that was just moved. See `ReschedulePin.abandon/1`.
+            #
+            # The booker is on the overview now, with every meeting type in
+            # front of them, so the date step offers the way back to it
+            # whichever page they first entered on.
             socket =
               socket
               |> GuestBooking.assign_defaults()
               |> ReschedulePin.abandon()
+              |> assign(:entered_via_overview, true)
+              |> transition_to(:overview, %{})
 
-            {:noreply, transition_to(socket, :overview, %{})}
+            {:noreply, ReschedulePin.drop_from_url(socket)}
 
           _other ->
             {:noreply, socket}

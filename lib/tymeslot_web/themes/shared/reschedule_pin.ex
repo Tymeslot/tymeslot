@@ -32,10 +32,12 @@ defmodule TymeslotWeb.Themes.Shared.ReschedulePin do
   """
 
   import Phoenix.Component, only: [assign: 3]
+  import Phoenix.LiveView, only: [push_patch: 2]
 
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Scheduling.ThemeFlow
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
+  alias TymeslotWeb.Themes.Shared.PathHandlers
 
   @doc """
   The meeting type a reschedule is committed to, or `nil` when this is not a
@@ -108,9 +110,26 @@ defmodule TymeslotWeb.Themes.Shared.ReschedulePin do
     socket
     |> assign(:reschedule_meeting_uid, nil)
     |> assign(:reschedule_seat_token, nil)
+    |> assign(:reschedule_seat_from, nil)
     |> assign(:is_rescheduling, false)
     |> clear()
     |> OrganizerHelpers.handle_username_resolution(socket.assigns[:username_context])
+  end
+
+  @doc """
+  Takes an abandoned reschedule out of the address bar.
+
+  `abandon/1` forgets it on the socket, but the URL still names it: reloaded
+  or shared, the page would start the reschedule over (or, its seat link
+  now spent, turn the visitor away). Patched to the host's booking page as a
+  fresh booking, the URL says what the page now is. A page whose URL carries
+  no reschedule is left alone.
+  """
+  @spec drop_from_url(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def drop_from_url(socket) do
+    if PathHandlers.reschedule_in_url?(socket),
+      do: push_patch(socket, to: PathHandlers.restart_path(socket)),
+      else: socket
   end
 
   @doc "Whether the page is pinned to a single meeting type."

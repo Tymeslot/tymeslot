@@ -82,6 +82,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
       with :ok <- ensure_group_type(meeting_type),
            {:ok, new_times} <-
              Validation.prepare_new_times(new_params, old_meeting, meeting_type, config),
+           :ok <- ensure_time_changes(old_meeting, new_times),
            :ok <- verify_calendar_free(old_meeting, new_times, config, guest_emails) do
         move_seat(old_meeting, participant, new_times, meeting_type, guest_emails)
       end
@@ -118,6 +119,15 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
 
   defp ensure_group_type(meeting_type) do
     if MeetingTypeSchema.group?(meeting_type), do: :ok, else: {:error, :seat_not_movable}
+  end
+
+  # The participant's own slot is offered on the page like any other with a
+  # spot free, and picking it moves nothing: their seat would only collide
+  # with itself. Said as what it is rather than as a slot already booked.
+  defp ensure_time_changes(old_meeting, new_times) do
+    if DateTime.compare(old_meeting.start_time, new_times.start_time) == :eq,
+      do: {:error, :seat_time_unchanged},
+      else: :ok
   end
 
   # The meeting type a rescheduled seat is checked and, if it creates a new

@@ -209,6 +209,27 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
     assert Repo.get!(MeetingSchema, old_meeting.id).status == "confirmed"
   end
 
+  # The page offers the participant's own slot like any other with a spot
+  # free; choosing it is not a move, and must not read as "already booked".
+  test "moving a seat to the time it already has changes nothing and says so",
+       %{old_meeting: old_meeting, mover: mover} do
+    same_time = %{
+      date: Date.to_iso8601(Date.add(Date.utc_today(), 2)),
+      time: "14:00",
+      duration: "30min",
+      user_timezone: "America/New_York"
+    }
+
+    assert {:error, :seat_time_unchanged} = move(mover, same_time)
+
+    assert {:ok, %{cancelled_at: nil}} = ParticipantQueries.get(mover.id)
+
+    assert [%{email: "mover@example.com"}] =
+             ParticipantQueries.list_live_for_meeting(old_meeting.id)
+
+    refute_enqueued(worker: EmailWorker, args: %{"action" => "send_seat_reschedule_emails"})
+  end
+
   test "a move drops the organiser's cached availability for both slots",
        %{user: user, mover: mover} do
     cache_key =

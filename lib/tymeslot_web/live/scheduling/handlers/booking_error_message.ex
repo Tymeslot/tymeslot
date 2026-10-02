@@ -99,6 +99,10 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
     )
   end
 
+  def message(:seat_time_unchanged) do
+    dgettext("booking", "This is your current time. Pick a different time to move your spot.")
+  end
+
   # Step-requirement refusals: the booker has not chosen enough yet to move on.
   # `Availability.Calculate` and `MeetingTypes.Duration` used to return this
   # copy themselves, in English, straight into a flash on a public multi-locale

@@ -34,7 +34,9 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: CustomizationHelpers
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine, as: QEngine
   alias TymeslotWeb.Themes.Shared.GuestBooking
+  alias TymeslotWeb.Themes.Shared.PathHandlers
   alias TymeslotWeb.Themes.Shared.ReschedulePin
+  alias TymeslotWeb.Themes.Shared.SeatMoveLink
 
   @doc """
   Shared mounting logic for scheduling themes.
@@ -125,22 +127,29 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
         handle_param_updates_fun,
         handle_state_entry_fun
       ) do
-    socket =
-      socket
-      |> handle_param_updates_fun.(params)
-      |> ThemeUtils.assign_theme_with_preview(params)
-      |> assign_owner_preview(params)
-      |> assign(:current_state, initial_state)
-      |> handle_state_entry_fun.(initial_state, params)
+    socket = handle_param_updates_fun.(socket, params)
 
-    # Re-apply theme customization in case theme changed in preview mode
-    socket = maybe_assign_customization(socket)
-
+    # A spent seat link is sent on to a fresh booking before any step is
+    # entered for it (`handle_param_updates/2`).
     if socket.redirected do
       {:noreply, socket}
     else
-      {:ok, socket} = SlotFetchingHandlerComponent.maybe_reload_slots(socket)
-      {:noreply, socket}
+      socket =
+        socket
+        |> ThemeUtils.assign_theme_with_preview(params)
+        |> assign_owner_preview(params)
+        |> assign(:current_state, initial_state)
+        |> handle_state_entry_fun.(initial_state, params)
+
+      # Re-apply theme customization in case theme changed in preview mode
+      socket = maybe_assign_customization(socket)
+
+      if socket.redirected do
+        {:noreply, socket}
+      else
+        {:ok, socket} = SlotFetchingHandlerComponent.maybe_reload_slots(socket)
+        {:noreply, socket}
+      end
     end
   end
 
@@ -220,28 +229,28 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   """
   @spec handle_param_updates(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def handle_param_updates(socket, params) do
-    seat_token = live_seat_token(params["reschedule_seat_token"])
+    seat_token = params["reschedule_seat_token"]
 
     socket
+    |> assign(:page_query_params, PathHandlers.query_params(params))
     |> maybe_assign_from_params(:duration, normalize_duration_param(params))
     |> maybe_assign_from_params(:selected_duration, normalize_duration_param(params))
     |> maybe_assign_from_params(:selected_date, date_param(params))
     |> maybe_assign_from_params(:selected_time, params["time"])
     |> maybe_assign_from_params(:reschedule_meeting_uid, params["reschedule_meeting_uid"])
-    |> assign(:reschedule_seat_token, seat_token)
-    |> assign(
-      :is_rescheduling,
-      is_binary(params["reschedule_meeting_uid"]) or seat_token != nil
-    )
+    |> SeatMoveLink.assign_from_url(seat_token)
+    |> assign_rescheduling(params)
     |> pin_reschedule_meeting_type()
     |> handle_confirmation_params(params)
+    |> SeatMoveLink.leave_if_spent(seat_token)
   end
 
-  # A spent token in the URL (history, a bookmarked reschedule link, a seat
-  # already moved) must not turn every later submission into a doomed seat
-  # move. Dropping it here lets the visitor book normally instead.
-  defp live_seat_token(token) do
-    if ThemeFlow.live_seat_token?(token), do: token
+  defp assign_rescheduling(socket, params) do
+    assign(
+      socket,
+      :is_rescheduling,
+      is_binary(params["reschedule_meeting_uid"]) or socket.assigns.reschedule_seat_token != nil
+    )
   end
 
   # A reschedule is pinned to the type it booked; `ReschedulePin` says why.

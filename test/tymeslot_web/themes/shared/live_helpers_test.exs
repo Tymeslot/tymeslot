@@ -93,6 +93,9 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpersTest do
 
       assert updated.assigns.reschedule_seat_token == participant.management_token
       assert updated.assigns.is_rescheduling
+      # The time the spot is moving from, for the date step's notice.
+      assert %DateTime{} = updated.assigns.reschedule_seat_from
+      assert updated.redirected == nil
     end
 
     test "drops a token that died mid-session, even though the assign still carries it", %{
@@ -105,16 +108,29 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpersTest do
       # nothing has cleared it yet.
       socket =
         socket_with(%{
+          flash: %{},
+          username_context: "host",
           reschedule_seat_token: participant.management_token,
           is_rescheduling: true
         })
 
-      params = %{"reschedule_seat_token" => participant.management_token}
+      params = %{
+        "username" => "host",
+        "slug" => "workshop",
+        "timezone" => "UTC",
+        "reschedule_seat_token" => participant.management_token
+      }
 
       updated = LiveHelpers.handle_param_updates(socket, params)
 
       assert updated.assigns.reschedule_seat_token == nil
+      assert updated.assigns.reschedule_seat_from == nil
       refute updated.assigns.is_rescheduling
+
+      # Sent on to a fresh booking from the start, without the spent token
+      # but with the rest of the page's query, and told why.
+      assert {:live, :redirect, %{to: "/host?timezone=UTC"}} = updated.redirected
+      assert updated.assigns.flash["info"] =~ "already been used"
     end
   end
 

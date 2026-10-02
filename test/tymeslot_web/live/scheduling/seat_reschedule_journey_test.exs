@@ -35,13 +35,17 @@ defmodule TymeslotWeb.Live.Scheduling.SeatRescheduleJourneyTest do
     context = RescheduleTestSetup.reschedule_journey(tags)
     user = Keyword.fetch!(context, :user)
 
+    # A group type's location is fixed in advance: one venue.
+    venue = insert(:venue, user: user, name: "Main Hall", description: "1 Market Square")
+
     group_type =
       insert(:meeting_type,
         user: user,
         duration_minutes: 30,
         name: "Group Session",
         is_active: true,
-        max_participants: 3
+        max_participants: 3,
+        locations: [in_person_location([venue])]
       )
 
     # Three days out, clear of the setup's own solo meeting a week away.
@@ -88,9 +92,23 @@ defmodule TymeslotWeb.Live.Scheduling.SeatRescheduleJourneyTest do
       assert target == "/#{profile.username}/group-session?reschedule_seat_token=#{token}"
 
       {:ok, view, _html} = live(conn, target <> "&timezone=UTC")
+
+      # The date step says which spot is moving.
+      assert has_element?(view, "[data-testid='seat-move-notice']", "Moving your spot on")
+
       view = walk_from_schedule_to_booking_form(view, "UTC")
 
+      # The details step states where the spot is, as a new booking's does.
+      assert render(view) =~ "Main Hall"
+
       submit_booking(view, "Moving Participant", "mover@example.com")
+
+      # So does the "rescheduled" screen, which also says the booking is one
+      # spot of a group session.
+      wait_until(fn -> has_element?(view, "[data-testid='confirmation-location']") end)
+      html = render(view)
+      assert html =~ "Main Hall"
+      assert html =~ "Group session: you have one of 3 spots."
 
       wait_until(fn ->
         match?({:ok, %{cancelled_at: %DateTime{}}}, ParticipantQueries.get(seat.id))
@@ -114,6 +132,11 @@ defmodule TymeslotWeb.Live.Scheduling.SeatRescheduleJourneyTest do
       # socket, the spent token routed this booking through the seat move,
       # which refused it as "already cancelled or moved".
       view |> element("[data-testid='schedule-another']") |> render_click()
+
+      # The spent token leaves the address bar with the reschedule, so a
+      # reload or a shared link is a fresh booking too.
+      assert_patch(view, "/#{profile.username}?timezone=UTC")
+
       view = walk_to_booking_form(view, "UTC", "group-session")
 
       html = submit_booking(view, "Second Booker", "second@example.com")
@@ -125,6 +148,82 @@ defmodule TymeslotWeb.Live.Scheduling.SeatRescheduleJourneyTest do
 
       assert [%{id: still_moved_id}] = live_participants("mover@example.com")
       assert still_moved_id == moved.id
+    end
+  end
+
+  describe "a seat link already used" do
+    @tag :capture_log
+    test "is sent on to a fresh booking from the start, with a word on why", %{
+      conn: conn,
+      profile: profile,
+      seat: seat
+    } do
+      {:ok, _cancelled} = ParticipantQueries.cancel(seat)
+
+      assert {:error, {:live_redirect, %{to: to, flash: flash}}} =
+               live(
+                 conn,
+                 "/#{profile.username}/group-session?timezone=UTC&reschedule_seat_token=#{seat.management_token}"
+               )
+
+      assert to == "/#{profile.username}?timezone=UTC"
+      assert flash["info"] =~ "already been used"
+
+      {:ok, view, _html} = live(conn, to)
+
+      view
+      |> element("[data-testid='duration-option'][phx-value-duration='group-session']")
+      |> render_click()
+
+      view |> element("[data-testid='next-step']") |> render_click()
+
+      # The normal flow, with its way back to the meeting types.
+      assert has_element?(view, "[data-testid='back-step']")
+      refute has_element?(view, "[data-testid='seat-move-notice']")
+    end
+
+    @tag :capture_log
+    test "picking the spot's own time says it is the current time", %{
+      conn: conn,
+      profile: profile,
+      seat: seat,
+      old_meeting: old_meeting
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          "/#{profile.username}/group-session?timezone=UTC&reschedule_seat_token=#{seat.management_token}"
+        )
+
+      date = DateTime.to_date(old_meeting.start_time)
+      day = "button.calendar-day[phx-value-date='#{date}']"
+
+      unless has_element?(view, "#{day}:not(.calendar-day--other-month)"),
+        do: show_month(view, date)
+
+      wait_until(fn -> has_element?(view, "#{day}:not([disabled])") end)
+      view |> element(day) |> render_click()
+      wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
+
+      own_time =
+        view
+        |> render()
+        |> Floki.parse_document!()
+        |> Floki.attribute("button[data-testid='time-slot']", "phx-value-time")
+        |> Enum.find(&(&1 =~ ~r/^(14:00|0?2:00 PM)/)) ||
+          flunk("expected the spot's own time to be offered")
+
+      view
+      |> element("button[data-testid='time-slot'][phx-value-time='#{own_time}']")
+      |> render_click()
+
+      view |> element("[data-testid='next-step']") |> render_click()
+
+      submit_booking(view, "Moving Participant", "mover@example.com")
+
+      wait_until(fn -> render(view) =~ "This is your current time" end)
+      refute render(view) =~ "already have a spot"
+      assert {:ok, %{cancelled_at: nil}} = ParticipantQueries.get(seat.id)
     end
   end
 

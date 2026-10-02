@@ -15,6 +15,7 @@ defmodule Tymeslot.Scheduling.ThemeFlowSeatTokenTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.Repo
   alias Tymeslot.Scheduling.ThemeFlow
 
   setup do
@@ -36,20 +37,22 @@ defmodule Tymeslot.Scheduling.ThemeFlowSeatTokenTest do
     %{participant: participant}
   end
 
-  describe "live_seat_token?/1" do
-    test "true for a seat still held", %{participant: participant} do
-      assert ThemeFlow.live_seat_token?(participant.management_token)
+  describe "seat_move_start/1" do
+    test "the start of a seat still held", %{participant: participant} do
+      %{start_time: start_time} = Repo.preload(participant, :meeting).meeting
+
+      assert ThemeFlow.seat_move_start(participant.management_token) == start_time
     end
 
-    test "false once the seat has been given up", %{participant: participant} do
+    test "nil once the seat has been given up", %{participant: participant} do
       {:ok, _cancelled} = ParticipantQueries.cancel(participant)
 
-      refute ThemeFlow.live_seat_token?(participant.management_token)
+      assert ThemeFlow.seat_move_start(participant.management_token) == nil
     end
 
-    test "false for an unknown or missing token" do
-      refute ThemeFlow.live_seat_token?("not-a-token")
-      refute ThemeFlow.live_seat_token?(nil)
+    test "nil for an unknown or missing token" do
+      assert ThemeFlow.seat_move_start("not-a-token") == nil
+      assert ThemeFlow.seat_move_start(nil) == nil
     end
   end
 

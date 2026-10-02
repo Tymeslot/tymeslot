@@ -101,6 +101,39 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
     {view, date_str}
   end
 
+  describe "the meeting-type list" do
+    for {theme, name} <- [{"1", "Quill"}, {"2", "Rhythm"}] do
+      @tag :capture_log
+      test "#{name} marks a group type as a group session, and only that type", %{user: user} do
+        {profile, _group} =
+          setup_booking_page(user, unquote(theme), "Workshop", max_participants: 3)
+
+        insert(:meeting_type,
+          user: user,
+          duration_minutes: 45,
+          name: "Solo Call",
+          is_active: true
+        )
+
+        {:ok, view, _html} = live(build_conn(), "/#{profile.username}?timezone=UTC")
+
+        hints =
+          view
+          |> render()
+          |> Floki.parse_document!()
+          |> Floki.find("[data-testid='group-session-hint']")
+
+        assert [hint] = hints
+        assert Floki.text(hint) =~ "Group session · up to 3 people"
+
+        assert has_element?(
+                 view,
+                 "[data-testid='duration-option'][phx-value-duration='workshop'] [data-testid='group-session-hint']"
+               )
+      end
+    end
+  end
+
   describe "Quill (theme 1)" do
     @tag :capture_log
     test "group slots show a seat badge with the full capacity free", %{user: user} do
