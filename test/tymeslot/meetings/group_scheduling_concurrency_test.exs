@@ -26,30 +26,47 @@ defmodule Tymeslot.Meetings.GroupSchedulingConcurrencyTest do
   @moduletag :integration
 
   import Ecto.Query, only: [from: 2]
+  import Mox
+  import Tymeslot.AvailabilityTestHelpers, only: [open_schedule_for: 1]
   import Tymeslot.Factory
 
   alias Ecto.Adapters.SQL
   alias Ecto.Adapters.SQL.Sandbox
   alias Ecto.UUID
   alias Tymeslot.Auth.UserSchema
-  alias Tymeslot.Meetings.GroupMeetingQueries
+  alias Tymeslot.Bookings.RescheduleSeat
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Repo
+  alias Tymeslot.TestMocks
 
   @capacity 3
 
   setup do
+    TestMocks.setup_calendar_mocks()
+
+    stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
+      {:ok, []}
+    end)
+
     {user, meeting_type} =
       unboxed(fn ->
         user = insert(:user)
-        insert(:profile, user: user)
+        open_schedule_for(insert(:profile, user: user))
         {user, insert(:meeting_type, user: user, max_participants: @capacity)}
       end)
 
     on_exit(fn ->
       unboxed(fn ->
+        meeting_ids =
+          Repo.all(from(m in MeetingSchema, where: m.organizer_user_id == ^user.id, select: m.id))
+
+        # A seat move commits its follow-up jobs (emails, calendar sync).
+        Repo.delete_all(
+          from(j in Oban.Job, where: fragment("?->>'meeting_id'", j.args) in ^meeting_ids)
+        )
+
         Repo.delete_all(from(m in MeetingSchema, where: m.organizer_user_id == ^user.id))
         Repo.delete_all(from(u in UserSchema, where: u.id == ^user.id))
       end)
@@ -105,11 +122,13 @@ defmodule Tymeslot.Meetings.GroupSchedulingConcurrencyTest do
              @capacity
   end
 
-  # Mirrors `Tymeslot.Bookings.RescheduleSeat`: the new seat is booked with
-  # the old meeting passed as `:also_lock`, and the old seat is cancelled from
-  # inside the seat transaction under the old meeting's row lock. Two moves in
-  # opposite directions each want both rows; taken in id order they queue,
-  # taken target first they deadlock.
+  # Drives `Tymeslot.Bookings.RescheduleSeat` itself: the new seat is booked
+  # with the old meeting passed as `:also_lock`, and the old seat is cancelled
+  # from inside the seat transaction under the old meeting's row lock. Two
+  # moves in opposite directions each want both rows; taken in id order they
+  # queue, taken target first they deadlock. The move has no hook of its own,
+  # so each contender parks once its new seat is inserted (`park_on_seat/1`),
+  # the point `:on_booked` would hold it at.
   test "two seat moves in opposite directions both complete", ctx do
     slot_a = slot_at(ctx, 8)
     slot_b = slot_at(ctx, 9)
@@ -123,10 +142,12 @@ defmodule Tymeslot.Meetings.GroupSchedulingConcurrencyTest do
         {meeting_a, mover_a, meeting_b, mover_b}
       end)
 
+    park_on_seat()
+
     results =
       race([
-        fn hold -> move(mover_a, meeting_a, slot_b, hold) end,
-        fn hold -> move(mover_b, meeting_b, slot_a, hold) end
+        fn hold -> move(mover_a, slot_b, hold) end,
+        fn hold -> move(mover_b, slot_a, hold) end
       ])
 
     assert [{:ok, _move_a}, {:ok, _move_b}] = results
@@ -144,16 +165,41 @@ defmodule Tymeslot.Meetings.GroupSchedulingConcurrencyTest do
     assert live_emails.(meeting_b) == ["mover-a@example.com", "stays-b@example.com"]
   end
 
-  defp move(participant, old_meeting, new_slot, hold) do
-    book(new_slot, participant.email,
-      also_lock: old_meeting.id,
-      on_booked: fn booking ->
-        {:ok, :released} = hold.(booking)
-        %{status: "confirmed"} = GroupMeetingQueries.lock_for_update(old_meeting.id)
-        {:ok, current} = ParticipantQueries.get(participant.id)
-        ParticipantQueries.cancel(current)
-      end
+  defp move(participant, new_slot, hold) do
+    Process.put(:park_on_seat, hold)
+
+    RescheduleSeat.execute(
+      participant.management_token,
+      %{
+        date: Date.to_iso8601(DateTime.to_date(new_slot.start_time)),
+        time: "09:00",
+        duration: "30",
+        user_timezone: "Etc/UTC"
+      },
+      new_slot.user.id
     )
+  end
+
+  # Parks a contender (a process that stored its `hold` under
+  # `:park_on_seat`) right after it inserts its new participant row, inside
+  # the seat transaction, once.
+  defp park_on_seat do
+    handler_id = "park-on-seat-#{inspect(make_ref())}"
+
+    :telemetry.attach(
+      handler_id,
+      [:tymeslot, :repo, :query],
+      fn _event, _measurements, metadata, _config ->
+        with "meeting_participants" <- metadata[:source],
+             "INSERT" <> _rest <- metadata[:query],
+             hold when is_function(hold, 1) <- Process.delete(:park_on_seat) do
+          {:ok, :released} = hold.(nil)
+        end
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(handler_id) end)
   end
 
   defp slot_at(ctx, days_ahead) do
