@@ -25,7 +25,6 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
   def action_bar(assigns) do
     ~H"""
     <div
-      data-testid="meeting-actions"
       class="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-col gap-3 shrink-0 lg:w-[160px]"
     >
       <%!-- A held request offers exactly two actions. Join, Reschedule and

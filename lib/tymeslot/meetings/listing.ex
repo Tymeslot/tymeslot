@@ -85,12 +85,12 @@ defmodule Tymeslot.Meetings.Listing do
         # column "past" filters on) is often still ahead of it. It falls into
         # "past" honestly once `end_time` catches up, same as any other
         # meeting that has run its course.
-        # Upcoming reads soonest first, the order a host works through them;
-        # every other list stays newest first.
         "upcoming" ->
           [
             time_filter: :upcoming,
             exclude_status: ["cancelled", "awaiting_approval", "expired"],
+            # Soonest first, the order a host works through them; every
+            # other list stays newest first.
             order: :asc
           ]
 

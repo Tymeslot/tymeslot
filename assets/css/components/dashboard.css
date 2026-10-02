@@ -384,7 +384,7 @@
 }
 
 /* Mobile/Tablet optimization - Sidebar as overlay */
-@media (max-width: 1024px) {
+@media (width < 64rem) {
   .dashboard-sidebar {
     backdrop-filter: var(--glass-blur-light);
     -webkit-backdrop-filter: var(--glass-blur-light);
@@ -447,7 +447,7 @@
 }
 
 /* Mobile phone specific adjustments */
-@media (max-width: 768px) {
+@media (width < 48rem) {
   .dashboard-sidebar {
     width: 280px;
     max-width: 80vw;

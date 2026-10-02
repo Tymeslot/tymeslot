@@ -426,7 +426,6 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
               the block rather than breaking mid-token. --%>
         <div class="relative">
           <pre
-            data-testid="embed-code"
             class="bg-tymeslot-900 text-tymeslot-100 rounded-token-lg p-4 pr-20 text-token-xs whitespace-pre overflow-x-auto"
           ><code class="block"><%= @code |> render_slot() |> Phoenix.HTML.Safe.to_iodata() |> IO.iodata_to_binary() |> String.split("\n") |> Enum.map_join("\n", &String.trim/1) |> String.trim() |> Phoenix.HTML.raw() %></code></pre>
           <button
