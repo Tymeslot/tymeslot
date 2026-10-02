@@ -210,5 +210,5 @@ defmodule TymeslotWeb.Components.CoreComponents.Buttons do
   defp size_class(size), do: "action-button--#{size}"
 
   defp icon_size_class(:sm), do: "w-4 h-4"
-  defp icon_size_class(_), do: "w-5 h-5"
+  defp icon_size_class(size) when size in [:md, :lg], do: "w-5 h-5"
 end
