@@ -11,6 +11,7 @@ defmodule TymeslotWeb.GuestRsvpHTML do
 
   @doc "Landing page shown before the guest submits their RSVP (GET step)."
   attr :meeting, :map, required: true
+  attr :timezone, :string, default: nil
   attr :status, :string, required: true
   attr :token, :string, required: true
   attr :response, :string, required: true
@@ -40,7 +41,7 @@ defmodule TymeslotWeb.GuestRsvpHTML do
         end}
       </p>
 
-      <.meeting_summary meeting={@meeting} />
+      <.meeting_summary meeting={@meeting} timezone={@timezone} />
 
       <.form for={%{}} action={~p"/guest/#{@token}/#{@response}"} class="mt-6">
         <.action_button
@@ -59,6 +60,7 @@ defmodule TymeslotWeb.GuestRsvpHTML do
 
   @doc "Shown after a guest successfully accepts or declines their invitation."
   attr :meeting, :map, required: true
+  attr :timezone, :string, default: nil
   attr :status, :string, required: true
   attr :token, :string, required: true
 
@@ -87,7 +89,7 @@ defmodule TymeslotWeb.GuestRsvpHTML do
         end}
       </p>
 
-      <.meeting_summary meeting={@meeting} />
+      <.meeting_summary meeting={@meeting} timezone={@timezone} />
 
       <p class="mt-6 text-token-sm text-tymeslot-500">
         {if accepted?,
@@ -169,6 +171,7 @@ defmodule TymeslotWeb.GuestRsvpHTML do
 
   # The meeting's title, time and host.
   attr :meeting, :map, required: true
+  attr :timezone, :string, default: nil
 
   defp meeting_summary(assigns) do
     ~H"""
@@ -176,7 +179,7 @@ defmodule TymeslotWeb.GuestRsvpHTML do
       <p class="text-token-base font-semibold text-tymeslot-800">{@meeting.title}</p>
       <p class="flex items-center gap-2 text-token-sm text-tymeslot-600">
         <.icon name="hero-calendar-mini" class="h-4 w-4 text-turquoise-500" />
-        {format_when(@meeting)}
+        {MeetingTimeFormat.format_when(@meeting, @timezone)}
       </p>
       <p class="flex items-center gap-2 text-token-sm text-tymeslot-600">
         <.icon name="hero-user-mini" class="h-4 w-4 text-turquoise-500" />
@@ -185,7 +188,4 @@ defmodule TymeslotWeb.GuestRsvpHTML do
     </div>
     """
   end
-
-  defp format_when(meeting),
-    do: MeetingTimeFormat.format_when(meeting, meeting.attendee_timezone)
 end

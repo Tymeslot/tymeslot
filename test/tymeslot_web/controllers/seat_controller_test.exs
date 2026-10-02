@@ -8,9 +8,12 @@ defmodule TymeslotWeb.SeatControllerTest do
   import Tymeslot.AvailabilityTestHelpers, only: [open_schedule_for: 1]
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
+  alias Tymeslot.Bookings.Cancel
   alias Tymeslot.Bookings.Create
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.MeetingTypes.Slugs
+  alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
 
@@ -59,7 +62,24 @@ defmodule TymeslotWeb.SeatControllerTest do
       |> ParticipantQueries.list_live_for_meeting()
       |> Enum.find(&(&1.email == "leaver@example.com"))
 
-    %{leaver: leaver, meeting_type: meeting_type}
+    %{leaver: leaver, meeting: meeting, meeting_type: meeting_type}
+  end
+
+  # Both halves of the cancel link, so a test can hold them to the same page.
+  defp get_and_post(conn, token) do
+    {conn |> recycle() |> get(~p"/seat/#{token}/cancel"),
+     conn |> recycle() |> post(~p"/seat/#{token}/cancel")}
+  end
+
+  defp shift_meeting!(meeting, start_offset_minutes) do
+    start =
+      DateTime.utc_now()
+      |> DateTime.add(start_offset_minutes, :minute)
+      |> DateTime.truncate(:second)
+
+    meeting
+    |> Changeset.change(%{start_time: start, end_time: DateTime.add(start, 30, :minute)})
+    |> Repo.update!()
   end
 
   describe "GET /seat/:token/cancel — confirmation landing page (no mutation)" do
@@ -94,6 +114,109 @@ defmodule TymeslotWeb.SeatControllerTest do
     end
   end
 
+  describe "a link that can no longer be used" do
+    # The organiser cancelled the whole meeting: the participant's own row is
+    # still live, so the old POST went ahead to "cancel" it, failed on the
+    # cancelled meeting, and showed the cancelled page, which promises an
+    # email that nothing sends. The GET said the link was no longer valid.
+    test "a meeting the host cancelled gets the same page from GET and POST, with no promised email",
+         %{conn: conn, leaver: leaver, meeting: meeting} do
+      assert {:ok, %{status: "cancelled"}} = Cancel.execute(meeting, caller: :organizer)
+
+      {get_conn, post_conn} = get_and_post(conn, leaver.management_token)
+
+      for response <- [html_response(get_conn, 410), html_response(post_conn, 410)] do
+        assert response =~ "This meeting has been cancelled"
+        refute response =~ "A confirmation email is on its way"
+      end
+
+      assert {:ok, %{cancelled_at: nil}} =
+               ParticipantQueries.get_by_token(leaver.management_token)
+    end
+
+    test "a seat already given up gets the same page from GET and POST, with no promised email",
+         %{conn: conn, leaver: leaver} do
+      assert conn |> post(~p"/seat/#{leaver.management_token}/cancel") |> html_response(200) =~
+               "A confirmation email is on its way"
+
+      {get_conn, post_conn} = get_and_post(conn, leaver.management_token)
+
+      for response <- [html_response(get_conn, 410), html_response(post_conn, 410)] do
+        assert response =~ "This spot is already cancelled"
+        refute response =~ "A confirmation email is on its way"
+      end
+    end
+
+    test "a meeting under way says it has started, not that it is too close to start",
+         %{conn: conn, leaver: leaver, meeting: meeting} do
+      shift_meeting!(meeting, -5)
+
+      {get_conn, post_conn} = get_and_post(conn, leaver.management_token)
+
+      for response <- [html_response(get_conn, 409), html_response(post_conn, 409)] do
+        assert response =~ "This meeting has already started"
+      end
+
+      assert {:ok, %{cancelled_at: nil}} =
+               ParticipantQueries.get_by_token(leaver.management_token)
+    end
+
+    test "a meeting that is over says it has taken place",
+         %{conn: conn, leaver: leaver, meeting: meeting} do
+      shift_meeting!(meeting, -120)
+
+      {get_conn, post_conn} = get_and_post(conn, leaver.management_token)
+
+      for response <- [html_response(get_conn, 409), html_response(post_conn, 409)] do
+        assert response =~ "This meeting has already taken place"
+        refute response =~ "This meeting has already started"
+      end
+
+      assert {:ok, %{cancelled_at: nil}} =
+               ParticipantQueries.get_by_token(leaver.management_token)
+    end
+  end
+
+  describe "the participant's language" do
+    test "a seat page is written in the language the participant booked in",
+         %{conn: conn, leaver: leaver} do
+      leaver |> Changeset.change(%{locale: "de"}) |> Repo.update!()
+
+      html = conn |> get(~p"/seat/#{leaver.management_token}/cancel") |> html_response(200)
+
+      assert html =~ "Ihren Platz stornieren?"
+      assert html =~ ~s(lang="de")
+    end
+
+    test "an unknown link keeps the request's language", %{conn: conn} do
+      html =
+        conn
+        |> put_req_header("accept-language", "fr")
+        |> get(~p"/seat/nope-not-a-token/cancel")
+        |> html_response(404)
+
+      refute html =~ "This link is no longer valid"
+      assert html =~ ~s(lang="fr")
+    end
+  end
+
+  describe "rate limiting" do
+    test "too many requests from one address get the too-many-attempts page",
+         %{conn: conn, leaver: leaver} do
+      for _attempt <- 1..60 do
+        assert conn
+               |> recycle()
+               |> get(~p"/seat/#{leaver.management_token}/cancel")
+               |> html_response(200)
+      end
+
+      assert conn
+             |> recycle()
+             |> get(~p"/seat/#{leaver.management_token}/cancel")
+             |> html_response(429) =~ "Too many attempts"
+    end
+  end
+
   describe "GET /seat/:token/reschedule — bounces into the public booking picker" do
     test "redirects to the organiser's booking page for this meeting type, carrying the token",
          %{conn: conn, leaver: leaver} do
@@ -109,6 +232,19 @@ defmodule TymeslotWeb.SeatControllerTest do
       conn = get(conn, ~p"/seat/nope-not-a-token/reschedule")
 
       assert html_response(conn, 404) =~ "no longer valid"
+    end
+
+    # The type stopped taking group bookings: its meetings keep their seats
+    # but take no moves, so the picker could only refuse on submit.
+    test "a seat whose type is no longer a group type is told to cancel and book again",
+         %{conn: conn, leaver: leaver, meeting_type: meeting_type} do
+      meeting_type |> Changeset.change(%{max_participants: 1}) |> Repo.update!()
+
+      html = conn |> get(~p"/seat/#{leaver.management_token}/reschedule") |> html_response(200)
+
+      assert html =~ "This spot can&#39;t be moved"
+      assert html =~ "Cancel it and book a new time instead"
+      assert html =~ ~s(href="/seat/#{leaver.management_token}/cancel")
     end
 
     # The picker resolves a meeting type by its effective slug, derived from

@@ -3,9 +3,10 @@ defmodule TymeslotWeb.Helpers.MeetingTimeFormat do
   Formats a meeting's start time for the public token-authenticated pages
   (guest RSVP, seat management).
 
-  These pages render for a recipient who has no session and no locale
-  preference of their own, so the string is built from the request's Gettext
-  locale and an explicit timezone rather than from any stored profile setting.
+  These pages render for a recipient who has no session, so the string is
+  built from the current Gettext locale and an explicit timezone. The caller
+  decides both: the seat pages put the participant's stored locale and pass
+  their stored timezone, the guest RSVP pages keep the request's locale.
   """
 
   alias TymeslotWeb.Helpers.LocaleFormat

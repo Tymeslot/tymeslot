@@ -203,7 +203,8 @@ defmodule Tymeslot.Meetings.Guests do
   @doc """
   Looks up the open invitation behind an RSVP token without mutating anything.
 
-  Returns the guest with its `:meeting` preloaded. Returns
+  Returns the guest with its `:meeting` and `:participant` (the group-booking
+  participant who invited them, or `nil`) preloaded. Returns
   `{:error, :not_found}` for an unknown token, or for a guest whose group
   booking participant has cancelled their seat, and `{:error, :meeting_closed}`
   when the meeting no longer takes responses (see the module doc).
@@ -213,7 +214,7 @@ defmodule Tymeslot.Meetings.Guests do
   def get_open_invitation(token) do
     with {:ok, guest} <- GuestQueries.get_by_token(token),
          :ok <- ensure_participant_open(guest) do
-      guest = Repo.preload(guest, :meeting)
+      guest = Repo.preload(guest, [:meeting, :participant])
 
       if invitations_open?(guest.meeting), do: {:ok, guest}, else: {:error, :meeting_closed}
     end

@@ -32,6 +32,7 @@ defmodule TymeslotWeb.GuestRsvpController do
       |> put_layout(html: false)
       |> render(:confirm,
         meeting: guest.meeting,
+        timezone: timezone(guest),
         status: Map.fetch!(@responses, response),
         token: token,
         response: response
@@ -54,7 +55,12 @@ defmodule TymeslotWeb.GuestRsvpController do
          {:ok, guest} <- Meetings.record_guest_rsvp(token, Map.fetch!(@responses, response)) do
       conn
       |> put_layout(html: false)
-      |> render(:confirmation, meeting: guest.meeting, status: guest.status, token: token)
+      |> render(:confirmation,
+        meeting: guest.meeting,
+        timezone: timezone(guest),
+        status: guest.status,
+        token: token
+      )
     else
       error -> render_error(conn, error)
     end
@@ -65,6 +71,13 @@ defmodule TymeslotWeb.GuestRsvpController do
   # ---------------------------------------------------------------------------
   # Private helpers
   # ---------------------------------------------------------------------------
+
+  # The zone the guest's times are shown in. A group meeting keeps no
+  # attendee timezone of its own, so a guest brought by a participant sees
+  # the times as that participant booked them; a guest of a solo booking
+  # sees the attendee's. Neither known falls back to UTC in the formatter.
+  defp timezone(%{participant: %{timezone: timezone}}) when is_binary(timezone), do: timezone
+  defp timezone(%{meeting: meeting}), do: meeting.attendee_timezone
 
   defp render_error(conn, error) do
     {http_status, template} = error_page(error)

@@ -50,8 +50,8 @@ defmodule Tymeslot.Meetings do
 
   @doc """
   Looks up the open invitation behind a guest's RSVP token, with its meeting
-  preloaded. Returns `{:error, :meeting_closed}` once the meeting no longer
-  takes responses.
+  and inviting participant preloaded. Returns `{:error, :meeting_closed}`
+  once the meeting no longer takes responses.
   """
   defdelegate get_guest_invitation(token), to: Guests, as: :get_open_invitation
 
@@ -159,9 +159,16 @@ defmodule Tymeslot.Meetings do
 
   @doc "Loads a live group-booking seat by its management token. See `Tymeslot.Meetings.SeatLookup`."
   @spec fetch_live_seat(String.t()) ::
-          {:ok, %{participant: ParticipantSchema.t(), meeting: MeetingSchema.t()}}
-          | {:error, :not_found | :already_cancelled}
+          {:ok, SeatLookup.seat()} | {:error, SeatLookup.dead_end()}
   defdelegate fetch_live_seat(token), to: SeatLookup
+
+  @doc """
+  Loads a live seat its participant may still cancel, refusing what
+  `cancel_seat/1` would. See `Tymeslot.Meetings.SeatLookup`.
+  """
+  @spec fetch_cancellable_seat(String.t()) ::
+          {:ok, SeatLookup.seat()} | {:error, SeatLookup.dead_end() | SeatLookup.refusal()}
+  defdelegate fetch_cancellable_seat(token), to: SeatLookup
 
   @doc """
   Works out which refund a host's cancellation choice implies.

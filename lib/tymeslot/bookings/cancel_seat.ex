@@ -33,34 +33,36 @@ defmodule Tymeslot.Bookings.CancelSeat do
   require Logger
 
   alias Tymeslot.Bookings.CalendarJobs
-  alias Tymeslot.Bookings.Policy
   alias Tymeslot.Bookings.SeatRelease
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.GroupMeetingQueries
-  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.SeatBroadcast
+  alias Tymeslot.Meetings.SeatLookup
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Repo
 
+  @doc """
+  Cancels the seat behind `management_token`.
+
+  Refuses what `Tymeslot.Meetings.SeatLookup.fetch_cancellable_seat/1`
+  refuses: an unknown token (`:not_found`), a seat already given up or moved
+  (`:already_cancelled`), a meeting the host cancelled
+  (`:meeting_cancelled`), and a meeting under way or over
+  (`:meeting_started`, `:meeting_past`).
+  """
   @spec execute(String.t()) ::
           {:ok, :seat_cancelled | :meeting_cancelled} | {:error, term()}
   def execute(management_token) when is_binary(management_token) do
-    with {:ok, participant} <- ParticipantQueries.get_by_token(management_token),
-         :ok <- ensure_live(participant),
-         {:ok, meeting} <- MeetingQueries.get_meeting(participant.meeting_id),
-         :ok <- ensure_meeting_live(meeting),
-         :ok <- Policy.can_cancel_meeting?(meeting) do
+    with {:ok, %{participant: participant, meeting: meeting}} <-
+           SeatLookup.fetch_cancellable_seat(management_token) do
       cancel_seat(meeting, participant)
     end
   end
 
   defp ensure_live(%{cancelled_at: nil}), do: :ok
   defp ensure_live(_participant), do: {:error, :already_cancelled}
-
-  defp ensure_meeting_live(%{status: "cancelled"}), do: {:error, :already_cancelled}
-  defp ensure_meeting_live(_meeting), do: :ok
 
   defp cancel_seat(meeting, participant) do
     transaction_result =
