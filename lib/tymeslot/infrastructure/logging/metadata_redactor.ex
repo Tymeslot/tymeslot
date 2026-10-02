@@ -33,9 +33,10 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
   (atom or string). Substring matching catches variants like `stripe_api_key`,
   `refresh_token`, `set_cookie`, `x_authorization`.
 
-  Personal identifiers (`email`, `identifier`) are matched more precisely than
-  secrets, because "email" appears in plenty of key names that carry no address
-  at all. See `@sensitive_key_suffixes` and `@sensitive_exact_keys` below.
+  Personal identifiers (`email`, `identifier`, and an email's `to`,
+  `recipient` and `subject`) are matched more precisely than secrets, because
+  "email" and "to" appear in plenty of key names that carry no address at
+  all. See `@sensitive_key_suffixes` and `@sensitive_exact_keys` below.
 
   A key whose value the writer has already masked is named with a `_masked`
   suffix by convention (`email_masked`, `owner_email_masked`,
@@ -73,8 +74,10 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
   # Matched on the whole key or on a `_`-anchored suffix, never as a bare
   # substring: `attendee_email`, `organizer_email` and `new_email` all carry an
   # address, while `email_action`, `email_type` and `email_masked` do not, and
-  # blanking those would cost diagnostics for no privacy gain.
-  @sensitive_key_suffixes ~w(email)
+  # blanking those would cost diagnostics for no privacy gain. The same holds
+  # for `recipient`: `admin_recipient` is an address, `recipient_domains` is
+  # not.
+  @sensitive_key_suffixes ~w(email recipient recipients)
 
   # Matched on the whole key only. `identifier` is the key the account-lockout
   # and rate-limiter paths use for an email address; `provider_identifier` is an
@@ -83,7 +86,13 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
   # it, and it is the route parameter of those pages, so it reaches request
   # and LiveView params as well as Logger metadata. A bare `uid` is not
   # matched: calendar event UIDs from other calendars carry no authority.
-  @sensitive_exact_keys ~w(identifier meeting_uid)
+  #
+  # The rest are an email's addressing and headline, under the names
+  # `Swoosh.Email` gives them and call sites logging a delivery reach for.
+  # `to`, `cc`, `bcc` and `reply_to` are `{name, address}` pairs, and
+  # `subject` and `title` routinely name the other party ("Meeting Cancelled
+  # with Jane Doe"). `to` is matched whole only: `redirect_to` is a path.
+  @sensitive_exact_keys ~w(identifier meeting_uid to cc bcc reply_to subject title)
 
   @redacted "[REDACTED]"
   @filter_id :tymeslot_metadata_redactor

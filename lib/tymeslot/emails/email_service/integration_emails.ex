@@ -164,8 +164,7 @@ defmodule Tymeslot.Emails.EmailService.IntegrationEmails do
   def send_admin_alert(recipient, category, severity, message, metadata) do
     Logger.info("Sending admin alert email",
       category: category,
-      severity: severity,
-      recipient: recipient
+      severity: severity
     )
 
     html_body = AdminAlert.render(category, severity, message, metadata)
@@ -192,8 +191,7 @@ defmodule Tymeslot.Emails.EmailService.IntegrationEmails do
   @spec send_admin_alert_digest(String.t(), map()) :: {:ok, any()} | {:error, any()}
   def send_admin_alert_digest(recipient, digest) do
     Logger.info("Sending admin alert digest email",
-      entries: length(Map.get(digest, "entries", [])),
-      recipient: recipient
+      entries: length(Map.get(digest, "entries", []))
     )
 
     email =

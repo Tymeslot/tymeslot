@@ -51,10 +51,7 @@ defmodule Tymeslot.Emails.Delivery do
   @spec deliver(Swoosh.Email.t()) :: {:ok, any()} | {:error, any()}
   def deliver(email) do
     with :ok <- check_text_body(email) do
-      Logger.debug("Delivering email via Mailer",
-        to: email.to,
-        subject: email.subject
-      )
+      Logger.debug("Delivering email via Mailer", recipient_domains: recipient_domains(email))
 
       CircuitBreaker.call(
         CircuitBreakerSupervisor.email_breaker_name(),
@@ -112,10 +109,7 @@ defmodule Tymeslot.Emails.Delivery do
   end
 
   defp handle_delivery_result({:ok, _receipt} = result, email) do
-    Logger.info("Email delivered successfully",
-      to: email.to,
-      subject: email.subject
-    )
+    Logger.info("Email delivered successfully", recipient_domains: recipient_domains(email))
 
     result
   end
@@ -131,8 +125,7 @@ defmodule Tymeslot.Emails.Delivery do
   # blocks *all* outbound mail.
   defp handle_delivery_error(:permanent, email, reason) do
     Logger.warning("Email permanently undeliverable — recipient rejected by the provider",
-      to: email.to,
-      subject: email.subject,
+      recipient_domains: recipient_domains(email),
       reason: LogFormat.reason(reason)
     )
 
@@ -146,8 +139,7 @@ defmodule Tymeslot.Emails.Delivery do
   # on timeout; a genuinely lost mail can be re-requested by the user.
   defp handle_delivery_error(:timeout, email, reason) do
     Logger.warning("Email delivery timed out; assuming delivered to avoid duplicate sends",
-      to: email.to,
-      subject: email.subject,
+      recipient_domains: recipient_domains(email),
       reason: LogFormat.reason(reason)
     )
 
@@ -156,8 +148,7 @@ defmodule Tymeslot.Emails.Delivery do
 
   defp handle_delivery_error(:transient, email, reason) do
     Logger.error("Failed to deliver email",
-      to: email.to,
-      subject: email.subject,
+      recipient_domains: recipient_domains(email),
       reason: reason
     )
 
@@ -223,12 +214,28 @@ defmodule Tymeslot.Emails.Delivery do
   end
 
   defp check_text_body(%Swoosh.Email{text_body: body, subject: subject}) when body in [nil, ""] do
-    Logger.error("Refusing to deliver email without a plain-text body",
-      subject: subject
-    )
+    Logger.error("Refusing to deliver email without a plain-text body")
 
     {:error, {:missing_text_body, subject}}
   end
 
   defp check_text_body(%Swoosh.Email{}), do: :ok
+
+  # Where a message went, without saying to whom: these lines are written for
+  # every email, and the recipients are mostly invitees without an account.
+  # The domain is enough to tell a provider-wide problem from one mailbox's.
+  defp recipient_domains(%Swoosh.Email{to: to, cc: cc, bcc: bcc}) do
+    (to ++ cc ++ bcc)
+    |> Enum.map(&recipient_domain/1)
+    |> Enum.uniq()
+  end
+
+  defp recipient_domain({_name, address}) when is_binary(address) do
+    case String.split(address, "@") do
+      [_local, domain] -> String.downcase(domain)
+      _malformed -> "invalid"
+    end
+  end
+
+  defp recipient_domain(_recipient), do: "invalid"
 end

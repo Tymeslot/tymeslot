@@ -39,8 +39,8 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.FilterTest do
     end
 
     test "masks email addresses inside lists of strings" do
-      assert Filter.sanitize(%{"recipients" => ["ann@example.org", "ok"]}) ==
-               %{"recipients" => ["a***@example.org", "ok"]}
+      assert Filter.sanitize(%{"notes" => ["ann@example.org", "ok"]}) ==
+               %{"notes" => ["a***@example.org", "ok"]}
     end
 
     test "masks an email address inside a tuple" do

@@ -92,10 +92,7 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
   """
   @spec send_calendar_invitation(String.t(), map()) :: {:ok, any()} | {:error, any()}
   def send_calendar_invitation(attendee_email, invitation_details) do
-    Logger.info("Sending calendar invitation",
-      title: invitation_details[:event_title],
-      to: attendee_email
-    )
+    Logger.info("Sending calendar invitation")
 
     attendee_email
     |> CalendarInvitation.render(invitation_details)
@@ -107,10 +104,7 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
   """
   @spec send_event_update_notification(String.t(), map()) :: {:ok, any()} | {:error, any()}
   def send_event_update_notification(attendee_email, update_details) do
-    Logger.info("Sending event update notification",
-      title: update_details[:event_title],
-      to: attendee_email
-    )
+    Logger.info("Sending event update notification")
 
     attendee_email
     |> EventUpdateNotification.render(update_details)
@@ -122,10 +116,7 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
   """
   @spec send_reschedule_request(map()) :: {:ok, any()} | {:error, any()}
   def send_reschedule_request(meeting) do
-    Logger.info("Sending reschedule request",
-      meeting_id: meeting.id,
-      to: meeting.attendee_email
-    )
+    Logger.info("Sending reschedule request", meeting_id: meeting.id)
 
     email = RescheduleRequest.render(meeting)
     Delivery.deliver(email)

@@ -135,6 +135,55 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactorTest do
       assert filtered.meta.provider_identifier == "evt_abc123"
     end
 
+    test "redacts an email's recipients, subject and title but keeps keys that only end alike" do
+      recipient = [{"Jane Invitee", "jane@example.com"}]
+
+      filtered =
+        MetadataRedactor.filter(
+          event(%{
+            to: recipient,
+            cc: recipient,
+            bcc: recipient,
+            reply_to: {"Jane Invitee", "jane@example.com"},
+            recipient: "jane@example.com",
+            recipients: ["jane@example.com"],
+            admin_recipient: "ops@example.com",
+            subject: "Meeting Cancelled with Jane Invitee",
+            title: "Intro call with Jane Invitee",
+            redirect_to: "/dashboard",
+            recipient_domains: ["example.com"],
+            meeting_id: 7
+          }),
+          []
+        )
+
+      for key <- [:to, :cc, :bcc, :reply_to, :recipient, :recipients, :admin_recipient] do
+        assert filtered.meta[key] == "[REDACTED]", "expected #{key} to be redacted"
+      end
+
+      assert filtered.meta.subject == "[REDACTED]"
+      assert filtered.meta.title == "[REDACTED]"
+
+      # `to` is matched whole and `recipient` only as a suffix, so a path and
+      # the domains a delivery went to stay readable.
+      assert filtered.meta.redirect_to == "/dashboard"
+      assert filtered.meta.recipient_domains == ["example.com"]
+      assert filtered.meta.meeting_id == 7
+    end
+
+    test "redacts the recipients of a Swoosh email nested in a report" do
+      email = %Swoosh.Email{
+        to: [{"Jane Invitee", "jane@example.com"}],
+        subject: "Meeting Cancelled with Jane Invitee"
+      }
+
+      redacted = MetadataRedactor.redact(%{args: [email]})
+      rendered = inspect(redacted)
+
+      refute rendered =~ "jane@example.com"
+      refute rendered =~ "Jane Invitee"
+    end
+
     test "redacts the meeting uid, a bearer capability, but not a bare calendar event uid" do
       filtered =
         MetadataRedactor.filter(
