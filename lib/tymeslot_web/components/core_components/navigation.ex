@@ -147,7 +147,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
     <div class={[
       "p-1",
       shell_class(@variant),
-      @trailing != [] && "flex items-center gap-2",
+      @trailing != [] && "flex flex-wrap items-center gap-2",
       @class
     ]}>
       <.dynamic_tag
@@ -166,7 +166,8 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
           :for={tab <- @tabs}
           role={!@links? && "presentation"}
           class={[
-            "flex shrink-0 items-center rounded-token-xl transition-colors duration-300",
+            "flex items-center rounded-token-xl transition-colors duration-300",
+            tab_fit_class(@overflow),
             tab_state_class(tab, tab.id == @active_tab)
           ]}
         >
@@ -223,10 +224,10 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
       :if={@tab[:dot] && !@active}
       class={["w-2.5 h-2.5 shrink-0 rounded-token-full", @tab.dot]}
     ></span>
-    <span>{@tab.label}</span>
+    <span class="truncate">{@tab.label}</span>
     <.count_badge :if={@tab[:count]} count={@tab.count} active={@active} />
     <Feedback.pill :if={@tab[:badge]}>{@tab.badge}</Feedback.pill>
-    <span :if={@status} class="inline-flex items-center">
+    <span :if={@status} class="inline-flex shrink-0 items-center">
       <span
         class={["w-2 h-2 shrink-0 rounded-token-full", Feedback.pill_dot_class(elem(@status, 0))]}
         aria-hidden="true"
@@ -299,7 +300,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
 
   defp tab_class(size, with_action?) do
     [
-      "flex items-center gap-2 whitespace-nowrap rounded-token-xl font-bold text-token-sm",
+      "flex min-w-0 items-center gap-2 whitespace-nowrap rounded-token-xl font-bold text-token-sm",
       "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400 disabled:cursor-not-allowed",
       tab_padding(size),
       with_action? && "pr-2 sm:pr-3"
@@ -313,6 +314,12 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
     do: "bg-white rounded-token-2xl border-2 border-tymeslot-100 shadow-sm"
 
   defp shell_class(:attached), do: "border-b-2"
+
+  # A scrolling row keeps every tab whole and scrolls instead. A wrapping one
+  # lets a tab narrower than its label shrink to the row and truncate the
+  # label, so one long name cannot run under whatever sits beside it.
+  defp tab_fit_class(:scroll), do: "shrink-0"
+  defp tab_fit_class(:wrap), do: "min-w-0 max-w-full"
 
   defp strip_class(:scroll), do: @scroll_strip
   defp strip_class(:wrap), do: "flex-wrap"
@@ -422,7 +429,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
   defp count_badge(assigns) do
     ~H"""
     <span class={[
-      "inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-token-full text-token-xs font-bold tabular-nums",
+      "inline-flex shrink-0 items-center justify-center min-w-5 h-5 px-1.5 rounded-token-full text-token-xs font-bold tabular-nums",
       cond do
         @active -> "bg-white/25 text-white"
         @attention -> "bg-amber-100 text-amber-700"

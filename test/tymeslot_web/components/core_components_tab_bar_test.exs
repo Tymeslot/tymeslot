@@ -195,6 +195,21 @@ defmodule TymeslotWeb.Components.CoreComponentsTabBarTest do
 
       assert class =~ "flex-wrap"
       refute class =~ "overflow-x-auto"
+
+      # A tab may then shrink to the row and truncate its label, so a long
+      # name cannot run under whatever sits beside it.
+      wrappers = Floki.find(doc, "#test-tabs [role='presentation']")
+      assert length(wrappers) == 3
+      assert Enum.all?(wrappers, &(hd(Floki.attribute(&1, "class")) =~ "min-w-0"))
+      refute Enum.any?(wrappers, &(hd(Floki.attribute(&1, "class")) =~ "shrink-0"))
+      assert [_label] = Floki.find(doc, "#test-tabs-tab-details span.truncate")
+    end
+
+    test "keeps whole tabs in a scrolling row" do
+      doc = render_bar(panel_tabs(), "details")
+      wrappers = Floki.find(doc, "#test-tabs [role='presentation']")
+
+      assert Enum.all?(wrappers, &(hd(Floki.attribute(&1, "class")) =~ "shrink-0"))
     end
   end
 
@@ -221,6 +236,12 @@ defmodule TymeslotWeb.Components.CoreComponentsTabBarTest do
 
       assert [_button] = Floki.find(doc, "#add-thing")
       assert Floki.find(doc, "#s #add-thing") == []
+
+      # The shell wraps, so on a narrow screen the control drops to its own
+      # row instead of overlapping the tabs.
+      [{"div", shell_attrs, _children}] = doc
+      assert {"class", shell_class} = List.keyfind(shell_attrs, "class", 0)
+      assert shell_class =~ "flex-wrap"
     end
 
     test "render the tab action inside the active tab only, given that tab" do
