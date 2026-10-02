@@ -194,6 +194,16 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
       # Verify profile was updated in DB
       updated_profile = Repo.reload!(profile)
       assert updated_profile.avatar == nil
+
+      # With nothing left to delete, the action goes away.
+      refute has_element?(view, "button", "Delete Photo")
+    end
+
+    test "offers no delete action when no avatar has been uploaded", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      assert has_element?(view, "#avatar-upload-form")
+      refute has_element?(view, "button", "Delete Photo")
     end
   end
 
