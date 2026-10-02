@@ -67,6 +67,13 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.PolicyCardTest do
 
       assert render(view) =~ "Minimum booking notice updated"
       assert Repo.reload!(schedule).min_advance_hours == 6
+
+      # The selected notice chip wears the same brand colour as the buffer and
+      # advance-window chips beside it.
+      assert has_element?(
+               view,
+               "[phx-value-min_advance_hours='6'].btn-tag-selector-primary--active"
+             )
     end
 
     test "entering a custom buffer value outside the allowed range is rejected", %{

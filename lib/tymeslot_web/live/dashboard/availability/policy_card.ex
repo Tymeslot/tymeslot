@@ -278,9 +278,9 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
               phx-value-_preset="true"
               phx-target={@myself}
               class={[
-                "btn-tag-selector btn-tag-selector-tertiary",
+                "btn-tag-selector btn-tag-selector-primary",
                 if(@notice_hours == hours and not @custom_mode,
-                  do: "btn-tag-selector-tertiary--active"
+                  do: "btn-tag-selector-primary--active"
                 )
               ]}
             >
@@ -290,7 +290,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
 
           <%!-- Custom input tag --%>
           <%= if @custom_mode or @notice_hours not in @presets do %>
-            <div class="btn-tag-selector btn-tag-selector-tertiary--active p-0! overflow-hidden">
+            <div class="btn-tag-selector btn-tag-selector-primary--active p-0! overflow-hidden">
               <input
                 type="number"
                 min="0"
@@ -301,7 +301,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
                 class="w-20 px-3 py-2 text-token-sm font-black bg-transparent border-0 focus:ring-0 focus:outline-hidden rounded-l-xl"
                 placeholder="24"
               />
-              <span class="pr-3 py-2 text-token-sm font-black text-blue-700">
+              <span class="pr-3 py-2 text-token-sm font-black text-turquoise-700">
                 {dgettext("dashboard_availability", "hours")}
               </span>
             </div>
@@ -311,7 +311,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
               phx-click="focus_custom_input"
               phx-value-setting="min_advance_hours"
               phx-target={@myself}
-              class="btn-tag-selector btn-tag-selector-tertiary"
+              class="btn-tag-selector btn-tag-selector-primary"
             >
               {dgettext("dashboard_availability", "Custom")}
             </button>
