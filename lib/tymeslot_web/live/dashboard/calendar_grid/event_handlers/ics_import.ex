@@ -12,6 +12,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.IcsImport do
       dashboard LiveView owns (see `CalendarEventHandlers`), which reports
       progress and the result back through `send_update/2`.
 
+  The file input belongs to the grid rather than the modal, so a file dropped
+  anywhere on the calendar is uploaded too, opening the modal on arrival.
+
   Closing the modal while an import runs only hides it: the import carries on
   and reopening shows its progress. When it ends the modal closes and the
   outcome is flashed.
@@ -49,24 +52,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.IcsImport do
 
   @spec handle_show(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_show(_params, %{assigns: %{ics_import: %{stage: :running} = state}} = socket),
-    do: {:noreply, assign(socket, :ics_import, %{state | open: true})}
-
-  def handle_show(_params, socket) do
-    integration_id = EditWorkflow.default_integration_id(socket)
-
-    {:noreply,
-     assign(socket, :ics_import, %{
-       open: true,
-       stage: :choose,
-       error: nil,
-       file_name: nil,
-       plan: nil,
-       integration_id: integration_id,
-       calendar_id: EditWorkflow.default_calendar_id(socket.assigns.integrations, integration_id),
-       done: 0
-     })}
-  end
+  def handle_show(_params, socket), do: {:noreply, open_modal(socket)}
 
   @spec handle_close(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -75,11 +61,21 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.IcsImport do
 
   def handle_close(_params, socket), do: {:noreply, assign(socket, :ics_import, nil)}
 
+  # A file picked in the modal or dropped anywhere on the calendar arrives
+  # here, and a drop can arrive with the modal closed, so the modal is opened
+  # for it. While an import runs a new file is turned away: the modal shows the
+  # running import instead.
+  #
   # A file the upload refused (too large, not an `.ics`) never uploads, so it
   # is reported here and dropped, leaving the input free for another try.
   @spec handle_validate(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_validate(_params, %{assigns: %{ics_import: %{stage: :running}}} = socket),
+    do: {:noreply, socket |> cancel_entries() |> open_modal()}
+
   def handle_validate(_params, socket) do
+    socket = open_modal(socket)
+
     rejected =
       Enum.filter(UploadHandler.upload_entries(socket, @upload), &(not &1.valid?))
 
@@ -206,15 +202,50 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.IcsImport do
 
   # --- Upload ---
 
+  # Opens the modal as `handle_validate/2` does: the file's arrival, not the
+  # form's change event, is what the upload is sure to report.
+  defp handle_upload_progress(
+         _config,
+         _entry,
+         %{assigns: %{ics_import: %{stage: :running}}} = socket
+       ),
+       do: {:noreply, socket |> cancel_entries() |> open_modal()}
+
   defp handle_upload_progress(_config, entry, socket) do
     if entry.done? do
       case UploadHandler.settle_upload(socket, @upload) do
-        {socket, :settled} -> {:noreply, plan_upload(socket)}
+        {socket, :settled} -> {:noreply, socket |> open_modal() |> plan_upload()}
         {socket, :in_progress} -> {:noreply, socket}
       end
     else
       {:noreply, socket}
     end
+  end
+
+  defp cancel_entries(socket) do
+    socket
+    |> UploadHandler.upload_entries(@upload)
+    |> Enum.reduce(socket, &cancel_upload(&2, @upload, &1.ref))
+  end
+
+  # Opens the modal, keeping an import already under way or a file already
+  # chosen; otherwise it starts on the user's default calendar.
+  defp open_modal(%{assigns: %{ics_import: %{} = state}} = socket),
+    do: assign(socket, :ics_import, %{state | open: true})
+
+  defp open_modal(socket) do
+    integration_id = EditWorkflow.default_integration_id(socket)
+
+    assign(socket, :ics_import, %{
+      open: true,
+      stage: :choose,
+      error: nil,
+      file_name: nil,
+      plan: nil,
+      integration_id: integration_id,
+      calendar_id: EditWorkflow.default_calendar_id(socket.assigns.integrations, integration_id),
+      done: 0
+    })
   end
 
   defp plan_upload(socket) do

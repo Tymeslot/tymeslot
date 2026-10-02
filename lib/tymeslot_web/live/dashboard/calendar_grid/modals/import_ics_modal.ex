@@ -65,20 +65,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ImportIcsModal do
           </p>
         </div>
 
-        <form
-          :if={@targets != [] and not @running}
-          id="import-ics-form"
-          phx-change="validate_ics_import"
-          phx-submit="start_ics_import"
-          phx-target={@myself}
-          class="space-y-4"
-        >
-          <label class="flex flex-col items-center justify-center gap-2 px-4 py-6 border-2 border-dashed border-tymeslot-200 rounded-token-lg cursor-pointer hover:border-turquoise-300 hover:bg-tymeslot-50 transition-colors">
+        <div :if={@targets != [] and not @running} id="import-ics-panel" class="space-y-4">
+          <%!-- The file input itself is the calendar grid's, so a file dropped
+                anywhere on the calendar lands in the same upload. --%>
+          <label
+            for={@upload.ref}
+            class="flex flex-col items-center justify-center gap-2 px-4 py-6 border-2 border-dashed border-tymeslot-200 rounded-token-lg cursor-pointer hover:border-turquoise-300 hover:bg-tymeslot-50 transition-colors"
+          >
             <.icon name="hero-arrow-up-tray" class="w-6 h-6 text-tymeslot-400" />
             <span class="text-token-sm font-semibold text-tymeslot-700">
               {if @ics_import.file_name,
                 do: @ics_import.file_name,
-                else: dgettext("dashboard_calendar_events", "Choose an .ics file")}
+                else: dgettext("dashboard_calendar_events", "Choose or drop an .ics file")}
             </span>
             <span class="text-token-xs text-tymeslot-500">
               {dgettext(
@@ -86,8 +84,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ImportIcsModal do
                 "Exported from Google Calendar, Outlook, Apple Calendar or any other calendar app."
               )}
             </span>
-            <.live_file_input upload={@upload} class="sr-only" />
           </label>
+
+          <div
+            :if={@upload.entries != []}
+            class="flex items-center gap-2 text-token-sm text-tymeslot-600"
+          >
+            <.spinner />
+            <span>{dgettext("dashboard_calendar_events", "Reading the file...")}</span>
+          </div>
 
           <.info_box :if={@ics_import.error} variant={:error}>
             <span data-testid="import-ics-error">{@ics_import.error}</span>
@@ -131,17 +136,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ImportIcsModal do
               event_name="select_ics_import_calendar"
             />
           </div>
-        </form>
+        </div>
       </div>
 
       <:footer>
         <div class="flex gap-2">
           <.action_button
             :if={@targets != [] and not @running}
-            type="submit"
-            form="import-ics-form"
             variant={:primary}
             disabled={is_nil(@ics_import.plan)}
+            phx-click="start_ics_import"
+            phx-target={@myself}
           >
             {dgettext("dashboard_calendar_events", "Import")}
           </.action_button>

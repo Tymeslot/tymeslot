@@ -1365,11 +1365,6 @@ msgstr[1] ""
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Choose an .ics file"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
-#, elixir-autogen, elixir-format
 msgid "Close"
 msgstr ""
 
@@ -1482,4 +1477,14 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
 #, elixir-autogen, elixir-format
 msgid "You can close this window; the import carries on."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Choose or drop an .ics file"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Reading the file..."
 msgstr ""

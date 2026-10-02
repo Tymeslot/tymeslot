@@ -400,3 +400,8 @@ msgstr "Importovat"
 #, elixir-autogen, elixir-format
 msgid "Import events from an .ics file"
 msgstr "Importovat události ze souboru .ics"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "Drop an .ics file to import its events"
+msgstr "Přetáhněte sem soubor .ics a importujte jeho události"

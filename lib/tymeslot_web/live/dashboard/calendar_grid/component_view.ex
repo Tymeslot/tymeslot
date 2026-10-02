@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.GridViews
@@ -39,7 +40,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
       class="flex flex-col h-full relative"
       phx-hook="CalendarMobile"
       phx-target={@myself}
+      phx-drop-target={@uploads.ics_file.ref}
     >
+      <%!-- The `.ics` import's file input lives here rather than in its modal,
+            so a file dropped anywhere on the calendar uploads with the modal
+            closed; the upload then opens it. The modal's picker is a label
+            for this input. --%>
+      <form id="import-ics-upload" phx-change="validate_ics_import" phx-target={@myself}>
+        <.live_file_input upload={@uploads.ics_file} class="sr-only" />
+      </form>
+      <div
+        class="hidden phx-drop-target-active:flex absolute inset-0 z-40 flex-col items-center justify-center gap-2 bg-turquoise-50/90 border-2 border-dashed border-turquoise-400 rounded-token-lg pointer-events-none"
+        aria-hidden="true"
+      >
+        <.icon name="hero-arrow-down-tray" class="w-8 h-8 text-turquoise-600" />
+        <p class="text-token-base font-semibold text-turquoise-800">
+          {dgettext("dashboard_calendar", "Drop an .ics file to import its events")}
+        </p>
+      </div>
       <%!-- Drives browser desktop reminders while the calendar is open. The hook
             reads the JSON feed and fires Notifications on its own timer; the feed
             refreshes on every 60s tick. --%>

@@ -1383,11 +1383,6 @@ msgstr[2] "%{count} із них повторюються."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Choose an .ics file"
-msgstr "Виберіть файл .ics"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
-#, elixir-autogen, elixir-format
 msgid "Close"
 msgstr "Закрити"
 
@@ -1504,3 +1499,13 @@ msgstr "Забагато імпортувань. Зачекайте трохи, 
 #, elixir-autogen, elixir-format
 msgid "You can close this window; the import carries on."
 msgstr "Ви можете закрити це вікно; імпорт триватиме."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Choose or drop an .ics file"
+msgstr "Виберіть або перетягніть сюди файл .ics"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Reading the file..."
+msgstr "Читання файлу..."

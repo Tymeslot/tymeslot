@@ -54,10 +54,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
 
   defp upload(lv, content, name \\ "calendar.ics") do
     lv
-    |> file_input("#import-ics-form", :ics_file, [
+    |> file_input("#import-ics-upload", :ics_file, [
       %{name: name, content: content, type: "text/calendar"}
     ])
     |> render_upload(name)
+  end
+
+  defp start_import(lv) do
+    lv |> element("#import-ics-modal button", "Import") |> render_click()
   end
 
   # The import's result reaches the grid in three hops, each a message to the
@@ -91,7 +95,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
       assert summary =~ "Found 2 events."
       assert summary =~ "1 of them repeats."
 
-      lv |> form("#import-ics-form") |> render_submit()
+      start_import(lv)
 
       assert_receive {:written, %{summary: "Dentist"} = dentist, context, task}
       assert_receive {:written, %{summary: "Standup"} = standup, ^context, ^task}
@@ -105,6 +109,61 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
       html = settle(lv)
       assert html =~ "Imported 2 events."
       refute html =~ ~s(data-testid="import-ics-modal")
+    end
+
+    test "makes the whole calendar a drop target for the import's upload", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+
+      [_match, ref] = Regex.run(~r/id="calendar-grid"[^>]*phx-drop-target="([^"]+)"/, render(lv))
+
+      assert has_element?(lv, ~s(#import-ics-upload input[type=file][id="#{ref}"]))
+    end
+
+    test "a file dropped on the calendar opens the import with the file read", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      refute has_element?(lv, ~s([data-testid="import-ics-modal"]))
+
+      # A drop puts the file in the grid's own input; no button is clicked.
+      upload(lv, @two_events, "dropped.ics")
+
+      assert has_element?(lv, ~s([data-testid="import-ics-modal"]))
+
+      assert lv |> element(~s([data-testid="import-ics-summary"])) |> render() =~
+               "Found 2 events."
+
+      assert has_element?(lv, "#import-ics-panel", "dropped.ics")
+    end
+
+    test "a file dropped while an import runs leaves that import alone", %{conn: conn} do
+      test_pid = self()
+
+      stub(Tymeslot.CalendarMock, :create_event, fn data, _context ->
+        send(test_pid, {:writing, self()})
+
+        receive do
+          :continue -> {:ok, CreatedEvent.new(data.uid)}
+        end
+      end)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_import(lv)
+      upload(lv, @two_events)
+      start_import(lv)
+      assert_receive {:writing, task}
+
+      lv |> element("#import-ics-modal button", "Close") |> render_click()
+      upload(lv, @two_events, "second.ics")
+
+      assert has_element?(lv, ~s([data-testid="import-ics-progress"]))
+      refute has_element?(lv, "#import-ics-panel")
+
+      ref = Process.monitor(task)
+      send(task, :continue)
+      assert_receive {:writing, ^task}
+      send(task, :continue)
+      assert_receive {:DOWN, ^ref, :process, ^task, _reason}
+
+      assert settle(lv) =~ "Imported 2 events."
     end
 
     test "says so when the file is not a calendar, and writes nothing", %{conn: conn} do
@@ -135,7 +194,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
       {:ok, lv, _html} = live(conn, ~p"/dashboard")
       open_import(lv)
       upload(lv, @two_events)
-      lv |> form("#import-ics-form") |> render_submit()
+      start_import(lv)
 
       assert_receive {:task, task}
       ref = Process.monitor(task)
@@ -154,6 +213,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
     html = open_import(lv)
 
     assert html =~ "Connect a calendar Tymeslot can write to before importing events."
-    refute has_element?(lv, "#import-ics-form")
+    refute has_element?(lv, "#import-ics-panel")
   end
 end
