@@ -18,9 +18,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     IcsUrlConfig
   }
 
-  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionLabels
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard
-  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Dashboard.CalendarSettings.Helpers
 
@@ -49,9 +48,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     <div id="calendar-config-view" phx-hook="ScrollReset" data-action={@selected_provider}>
       <%= cond do %>
         <% @caldav_family? -> %>
-          <.live_component
-            module={CaldavFamilyConfig}
-            id={CaldavFamilyConfig.component_id(@selected_provider)}
+          <CaldavFamilyConfig.caldav_family_config
             provider={@selected_provider}
             target={@myself}
             form_errors={@form_errors}
@@ -265,7 +262,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     assigns =
       assigns
       |> assign(:calendar_list, calendar_list)
-      |> assign(:status, card_status(integration_status(integration, assigns.health_state)))
+      |> assign(:status, integration_status(integration, assigns.health_state))
       |> assign(:summary, calendar_summary(integration))
       |> assign(:last_synced, last_synced(integration))
       |> assign(:subscription?, subscription?)
@@ -281,14 +278,19 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       title={@display_name}
       type_tag={if @read_only?, do: dgettext("dashboard_calendar_settings", "Read-only")}
       summary={@summary}
-      notice={ConnectionRow.reconnect_reason(@integration)}
+      notice={ConnectionLabels.reconnect_reason(@integration)}
       status={@status}
       active={@integration.is_active}
       toggle_event="toggle_integration"
       target={@myself}
     >
       <:icon>
-        <ProviderIcon.provider_icon provider={@integration.provider} type="calendar" size="medium" />
+        <ProviderIcon.provider_icon
+          provider={@integration.provider}
+          type="calendar"
+          size="medium"
+          alt=""
+        />
       </:icon>
       <:last_activity :if={@last_synced}>{@last_synced}</:last_activity>
       <:actions>
@@ -407,7 +409,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   defp reconnect_button_class(:attention), do: tile_class(:warning)
 
   defp reconnect_button_class(:normal),
-    do: [tile_class(:neutral), "max-sm:h-8 max-sm:w-8 max-sm:px-0 max-sm:py-0"]
+    do: [tile_class(:neutral), "max-sm:h-9 max-sm:w-9 max-sm:px-0 max-sm:py-0"]
 
   # On a phone the routine Reconnect shrinks to its icon so Manage calendars,
   # Reconnect and Delete share one row; a promoted Reconnect is the action the
@@ -439,7 +441,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
     [
       integration.provider_account_email ||
-        ConnectionRow.server_label(Map.get(integration, :base_url)),
+        ConnectionLabels.server_label(Map.get(integration, :base_url)),
       conflict_segment(integration, calendar_list),
       booking_segment(integration)
     ]
@@ -450,14 +452,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   # Status-first badge mapping. Precedence lives in the canonical
   # `HealthCheck.attention_status/2` classifier; this just maps the atom to
   # the card's status tone/label.
-  defp card_status({variant, label}), do: {UIComponents.status_tone(variant), label}
-
   defp integration_status(integration, health) do
     case HealthCheck.attention_status(integration, health) do
-      :paused -> {:paused, dgettext("dashboard_calendar_settings", "Paused")}
+      :paused -> {:neutral, dgettext("dashboard_calendar_settings", "Paused")}
       :needs_reauth -> {:warning, dgettext("dashboard_calendar_settings", "Reconnect")}
       :unhealthy -> {:warning, dgettext("dashboard_calendar_settings", "Connection issues")}
-      :ok -> {:ok, dgettext("dashboard_calendar_settings", "Healthy")}
+      :ok -> {:success, dgettext("dashboard_calendar_settings", "Healthy")}
     end
   end
 
@@ -513,11 +513,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   defp feed_segment,
     do: dgettext("dashboard_calendar_settings", "read-only, blocks time but takes no bookings")
 
-  # `last_external_sync_at` is what every sync worker stamps and what the
-  # staleness banner reads. This used to read a second, never-written column
-  # instead, which silently dropped the segment for every integration; that
-  # column has since been dropped so the mistake cannot be made again.
   # The card's last-activity line; nothing for a connection never synced.
+  # `last_external_sync_at` is what every sync worker stamps and what the
+  # staleness banner reads.
   defp last_synced(%{last_external_sync_at: %DateTime{} = synced_at}),
     do:
       dgettext("dashboard_calendar_settings", "Last synced %{time}",

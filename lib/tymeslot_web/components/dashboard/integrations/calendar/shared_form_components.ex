@@ -20,7 +20,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
   attr :form_values, :map, required: true
   attr :saving, :boolean, required: true
   attr :target, :any, required: true
-  attr :myself, :any, required: true
   attr :suggested_name, :string, required: true
   attr :name_placeholder, :string, default: nil
   attr :url_placeholder, :string, default: nil

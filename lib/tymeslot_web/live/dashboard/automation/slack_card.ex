@@ -37,7 +37,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
       pulse={@pulse}
       summary={location_label(@integration)}
       active={@status != :paused and @status != :auto_disabled}
-      toggle_event={@status in [:active, :paused] && @on_toggle}
+      toggle_event={if(@status in [:active, :paused], do: @on_toggle)}
       toggle_id={"slack-toggle-#{@integration.id}"}
       target={@target}
       tags={@integration.events}

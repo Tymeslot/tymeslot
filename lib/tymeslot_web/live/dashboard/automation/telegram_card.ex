@@ -41,7 +41,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
       }
       summary_mono
       active={@status != :paused and @status != :auto_disabled}
-      toggle_event={@status in [:active, :paused] && @on_toggle}
+      toggle_event={if(@status in [:active, :paused], do: @on_toggle)}
       toggle_id={"telegram-toggle-#{@integration.id}"}
       target={@target}
       tags={@integration.events}

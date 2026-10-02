@@ -11,9 +11,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.KmeetProvider
   alias Tymeslot.Integrations.Video.RoomCreationError
-  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionLabels
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard
-  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Components.Icons.ProviderIcon
 
   @doc """
@@ -35,7 +34,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
 
     assigns =
       assigns
-      |> assign(:status, card_status(video_status(integration, assigns.health_state)))
+      |> assign(:status, video_status(integration, assigns.health_state))
       |> assign(:summary, video_summary(integration))
       |> assign(:type_tag, type_tag(integration.provider))
       |> assign(:oauth?, ProviderConfig.oauth_provider?(integration.provider))
@@ -57,7 +56,12 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
       target={@myself}
     >
       <:icon>
-        <ProviderIcon.provider_icon provider={@integration.provider} type="video" size="medium" />
+        <ProviderIcon.provider_icon
+          provider={@integration.provider}
+          type="video"
+          size="medium"
+          alt=""
+        />
       </:icon>
       <:actions>
         <%!-- While the check runs, the icon becomes a spinning arrow. The spin
@@ -131,7 +135,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   # so the summary carries the server alone: the line is truncated to one row
   # and the server string is the part worth the space.
   defp summary_segments(%{provider: "mirotalk"} = integration) do
-    [ConnectionRow.server_label(integration.base_url)]
+    [ConnectionLabels.server_label(integration.base_url)]
   end
 
   defp summary_segments(%{provider: "custom"} = integration) do
@@ -167,7 +171,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
         dgettext("dashboard_video", "rooms created automatically")
       ]
     else
-      [integration.provider_account_email || ConnectionRow.server_label(integration.base_url)]
+      [integration.provider_account_email || ConnectionLabels.server_label(integration.base_url)]
     end
   end
 
@@ -175,7 +179,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   # is done. Otherwise a provider refusing to create rooms is explained, with
   # its fix: the connection itself is fine, so nothing else would show it.
   defp notice(integration) do
-    ConnectionRow.reconnect_reason(integration) || room_creation_notice(integration) ||
+    ConnectionLabels.reconnect_reason(integration) || room_creation_notice(integration) ||
       meeting_link_notice(integration)
   end
 
@@ -204,11 +208,9 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   # `HealthCheck.attention_status/2` classifier; this just maps the atom to
   # this row's badge variant/label. A connection that works but whose rooms
   # the provider refuses still needs the owner, so it is not shown as healthy.
-  defp card_status({variant, label}), do: {UIComponents.status_tone(variant), label}
-
   defp video_status(integration, health) do
     case HealthCheck.attention_status(integration, health) do
-      :paused -> {:paused, dgettext("dashboard_video", "Paused")}
+      :paused -> {:neutral, dgettext("dashboard_video", "Paused")}
       :needs_reauth -> {:warning, dgettext("dashboard_video", "Reconnect")}
       :unhealthy -> {:warning, dgettext("dashboard_video", "Connection issues")}
       :ok -> healthy_status(integration)
@@ -219,14 +221,14 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
     if Video.meeting_link_template_invalid?(integration) do
       {:warning, dgettext("dashboard_video", "Invalid meeting link")}
     else
-      {:ok, dgettext("dashboard_video", "Healthy")}
+      {:success, dgettext("dashboard_video", "Healthy")}
     end
   end
 
   defp healthy_status(%{room_creation_error: _code}),
     do: {:warning, dgettext("dashboard_video", "No video links")}
 
-  defp healthy_status(_integration), do: {:ok, dgettext("dashboard_video", "Healthy")}
+  defp healthy_status(_integration), do: {:success, dgettext("dashboard_video", "Healthy")}
 
   defp type_tag("mirotalk"), do: dgettext("dashboard_video", "self-hosted")
   defp type_tag("custom"), do: dgettext("dashboard_video", "custom")

@@ -3,18 +3,18 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
   Stripe Connect onboarding status, as the account's integration card.
 
   Stateless function component rendered by `PaymentsSettingsComponent`. Maps a
-  connect account's display state — derived once by
-  `Tymeslot.MeetingPayments.connect_display_state/1` — to a status tone, title, and
-  message.
+  connect account's display state (derived once by
+  `Tymeslot.MeetingPayments.connect_display_state/1`) to a status tone, title
+  and message.
 
   Two states are distinct on purpose:
 
-    * `:incomplete` — the host started connecting but has not finished Stripe
+    * `:incomplete`: the host started connecting but has not finished Stripe
       onboarding (`details_submitted: false`). There is nothing for Stripe to
       review yet, so the card shows a "Finish connecting Stripe" prompt with
       a Continue-onboarding button that re-POSTs to `/dashboard/payments/connect`
       for a fresh Stripe AccountLink.
-    * `:pending_review` — onboarding *is* submitted but charges/payouts are not
+    * `:pending_review`: onboarding *is* submitted but charges/payouts are not
       yet enabled, i.e. Stripe is genuinely reviewing the account.
 
   `needs_onboarding?/1` is exposed so the parent can hide the operational
@@ -40,7 +40,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
       title="Stripe"
       status={{status_tone(@state), state_title(@state)}}
       pulse={@state == :pending_review}
-      summary={state_message(@account, @state)}
+      notice={state_message(@account, @state)}
+      notice_tone={notice_tone(@state)}
     >
       <:icon><.icon name="hero-credit-card" class="w-6 h-6" /></:icon>
       <:actions :if={@state == :incomplete}>
@@ -86,6 +87,11 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
   defp status_tone(:incomplete), do: :warning
   defp status_tone(:restricted), do: :danger
   defp status_tone(_state), do: :neutral
+
+  # The message is a sentence or two, so it goes in the card's notice, which
+  # wraps; only a restriction reads as an alarm.
+  defp notice_tone(:restricted), do: :danger
+  defp notice_tone(_state), do: :neutral
 
   defp state_title(:ready), do: dgettext("dashboard_payments", "Connected and ready")
   defp state_title(:pending_review), do: dgettext("dashboard_payments", "Pending Stripe review")

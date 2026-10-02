@@ -2,7 +2,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ExchangeConfig 
   @moduledoc """
   Configuration form for connecting a Microsoft Exchange mailbox over EWS.
 
-  Deliberately not built on `ConfigBase` or the shared CalDAV `config_form/1`.
+  Deliberately not built on `CaldavFamilyConfig` or the shared CalDAV
+  `config_form/1`.
   Exchange is not a CalDAV server, and three differences make the shared form
   the wrong shape rather than merely a loose fit:
 

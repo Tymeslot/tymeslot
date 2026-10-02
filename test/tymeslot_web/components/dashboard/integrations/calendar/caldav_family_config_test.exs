@@ -12,11 +12,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavFamilyCon
 
   defp render_form(provider) do
     html =
-      render_component(&CaldavFamilyConfig.render/1, %{
-        id: CaldavFamilyConfig.component_id(provider),
+      render_component(&CaldavFamilyConfig.caldav_family_config/1, %{
         provider: provider,
         target: "parent-target",
-        myself: "self-target",
         saving: false,
         form_values: %{},
         form_errors: %{},
@@ -78,17 +76,29 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavFamilyCon
         test "asks for its server address" do
           {_html, doc} = render_form(unquote(provider))
 
-          assert [_url] = Floki.find(doc, "input[placeholder='#{unquote(placeholder)}']")
-          refute Floki.text(doc) =~ "the address cannot be changed"
+          assert [url] = Floki.find(doc, "input#discovery_url[name='integration[url]']")
+          assert Floki.attribute(url, "placeholder") == [unquote(placeholder)]
+          assert Floki.attribute(url, "disabled") == []
+          assert Floki.find(doc, "input[type='hidden'][name='integration[url]']") == []
         end
       else
-        test "shows its fixed server address instead of asking for one" do
-          {html, _doc} = render_form(unquote(provider))
+        test "submits its fixed server address and offers no field to change it" do
+          {_html, doc} = render_form(unquote(provider))
+          url = ProviderConfig.locked_url_for(unquote(provider)).url
 
-          url =
-            ProviderConfig.locked_url_for(unquote(provider)).url
+          assert Floki.find(doc, "input#discovery_url") == []
 
-          assert html =~ ~s(value="#{url}")
+          assert Floki.attribute(
+                   doc,
+                   "input[type='hidden'][name='integration[url]']",
+                   "value"
+                 ) == [url]
+
+          # The visible copy is read-only: disabled and nameless, so only the
+          # hidden field above is submitted.
+          assert [shown] = Floki.find(doc, "input[type='text'][value='#{url}']")
+          assert Floki.attribute(shown, "disabled") != []
+          assert Floki.attribute(shown, "name") == []
         end
       end
     end

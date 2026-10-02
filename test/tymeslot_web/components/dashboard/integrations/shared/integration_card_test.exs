@@ -65,18 +65,23 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCardTe
 
   defp classes(doc, selector), do: doc |> LazyHTML.query(selector) |> LazyHTML.attribute("class")
 
+  defp count(doc, selector), do: doc |> LazyHTML.query(selector) |> Enum.count()
+
+  defp texts(doc, selector),
+    do: doc |> LazyHTML.query(selector) |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
+
   describe "header" do
     test "renders the title, type tag, summary and status label" do
-      html = render_card(type_tag: "CalDAV")
+      doc = doc(render_card(type_tag: "CalDAV"))
 
-      assert html =~ "Team Room"
-      assert html =~ "CalDAV"
-      assert html =~ "localhost:8080/nextcloud"
-      assert html =~ "Healthy"
+      assert texts(doc, "h3") == ["Team Room"]
+      assert texts(doc, "[data-part='type-tag']") == ["CalDAV"]
+      assert texts(doc, "[data-part='summary']") == ["localhost:8080/nextcloud"]
+      assert LazyHTML.text(doc) =~ "Healthy"
     end
 
     test "omits the type tag when not given" do
-      refute render_card(type_tag: nil) =~ "uppercase text-tymeslot-500"
+      assert count(doc(render_card(type_tag: nil)), "[data-part='type-tag']") == 0
     end
 
     # The summary truncates from `sm` up, so the full value has to stay
@@ -89,16 +94,16 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCardTe
 
     test "renders no summary line, and no empty title, when there is no summary" do
       for summary <- [nil, ""] do
-        html = render_card(summary: summary)
+        doc = doc(render_card(summary: summary))
 
-        refute html =~ ~s(title=")
-        refute html =~ "sm:truncate"
+        assert count(doc, "[data-part='summary']") == 0
+        assert count(doc, "[title]") == 0
       end
     end
 
     # On a phone the summary wraps rather than being cut off mid-word.
     test "wraps the summary on a phone and truncates it only from sm up" do
-      [class] = render_card() |> doc() |> classes("p[title]")
+      [class] = render_card() |> doc() |> classes("[data-part='summary']")
 
       assert class =~ "break-words"
       assert class =~ "sm:truncate"
@@ -174,8 +179,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCardTe
         [tags: ["meeting.created", "meeting.cancelled"]]
         |> render_card()
         |> doc()
-        |> LazyHTML.query("span.rounded-token-lg")
-        |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
+        |> texts("[data-part='tag']")
 
       assert chips == ["meeting.created", "meeting.cancelled"]
     end
@@ -185,26 +189,40 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCardTe
         [tags: ["meeting.created"], active: false]
         |> render_card()
         |> doc()
-        |> classes("span.rounded-token-lg")
+        |> classes("[data-part='tag']")
 
       assert class =~ "bg-tymeslot-100"
       refute class =~ "bg-turquoise-50"
     end
 
     test "shows the last activity, in grey italics when muted" do
-      html = render_card(activity: "Last triggered: today")
-      assert html =~ "Last triggered: today"
-      refute html =~ "italic"
+      doc = doc(render_card(activity: "Last triggered: today"))
+      assert texts(doc, "[data-part='last-activity']") == ["Last triggered: today"]
+      assert count(doc, "[data-part='last-activity'][data-muted]") == 0
+      refute doc |> classes("[data-part='last-activity']") |> hd() =~ "italic"
 
-      assert render_card(activity: "Never triggered", muted: true) =~ "italic text-tymeslot-400"
+      doc = doc(render_card(activity: "Never triggered", muted: true))
+      assert [class] = classes(doc, "[data-part='last-activity'][data-muted='true']")
+      assert class =~ "italic"
+      assert class =~ "text-tymeslot-400"
     end
 
-    test "colours the notice by its tone" do
-      assert render_card(notice: "Pick a channel") =~
-               ~r/<p class="[^"]*text-amber-700[^"]*">\s*Pick a channel/
+    test "renders no activity line without the slot" do
+      assert count(doc(render_card()), "[data-part='last-activity']") == 0
+    end
 
-      assert render_card(notice: "Disabled: revoked", notice_tone: :danger) =~
-               ~r/<p class="[^"]*text-red-600[^"]*">\s*Disabled: revoked/
+    for {tone, colour} <- [
+          {:neutral, "text-tymeslot-600"},
+          {:warning, "text-amber-700"},
+          {:danger, "text-red-600"}
+        ] do
+      test "colours a #{tone} notice #{colour}" do
+        doc = doc(render_card(notice: "Pick a channel", notice_tone: unquote(tone)))
+
+        assert texts(doc, "[data-part='notice']") == ["Pick a channel"]
+        assert [class] = classes(doc, "[data-part='notice'][data-tone='#{unquote(tone)}']")
+        assert class =~ unquote(colour)
+      end
     end
   end
 
@@ -212,24 +230,24 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCardTe
     test "puts the leading actions first and pushes the trailing ones to the right" do
       doc = doc(render_card())
 
-      [footer] = doc |> LazyHTML.query("div.border-t") |> Enum.to_list()
+      [footer] = doc |> LazyHTML.query("[data-part='footer']") |> Enum.to_list()
       assert footer |> LazyHTML.query("[data-testid='lead']") |> Enum.count() == 1
 
-      [trailing] = footer |> LazyHTML.query("div.ml-auto") |> Enum.to_list()
+      [trailing] = footer |> LazyHTML.query("[data-part='end-actions']") |> Enum.to_list()
       assert trailing |> LazyHTML.query("[data-testid='trail']") |> Enum.count() == 1
       assert trailing |> LazyHTML.query("[data-testid='lead']") |> Enum.count() == 0
     end
 
     # The footer wraps as a row instead of stacking one button per line.
     test "wraps rather than stacks" do
-      [class] = render_card() |> doc() |> classes("div.border-t")
+      [class] = render_card() |> doc() |> classes("[data-part='footer']")
 
       assert class =~ "flex-wrap"
       refute class =~ "flex-col"
     end
 
     test "is not rendered without actions" do
-      refute render_card(actions?: false) =~ "border-t"
+      assert count(doc(render_card(actions?: false)), "[data-part='footer']") == 0
     end
   end
 
@@ -252,14 +270,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCardTe
 
       doc = doc(html)
 
-      text = LazyHTML.text(doc)
-
-      assert text =~ "Active"
-      assert text =~ "Last triggered: "
-      assert text =~ "Test Workspace · #bookings"
+      assert LazyHTML.text(doc) =~ "Active"
+      assert [activity] = texts(doc, "[data-part='last-activity']")
+      assert activity =~ "Last triggered: "
+      assert texts(doc, "[data-part='summary']") == ["Test Workspace · #bookings"]
       assert doc |> LazyHTML.query("#slack-toggle-7[phx-click='toggle']") |> Enum.count() == 1
 
-      footer = LazyHTML.query(doc, "div.border-t")
+      footer = LazyHTML.query(doc, "[data-part='footer']")
       assert footer |> LazyHTML.query("button[phx-click='test']") |> Enum.count() == 1
       assert footer |> LazyHTML.query("button[phx-click='deliveries']") |> Enum.count() == 1
       assert footer |> LazyHTML.query("button[phx-click='edit']") |> Enum.count() == 1
@@ -293,20 +310,23 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCardTe
 
       doc = doc(html)
 
-      text = LazyHTML.text(doc)
-
-      assert text =~ "Healthy"
-      assert text =~ "Last synced "
+      assert LazyHTML.text(doc) =~ "Healthy"
+      assert [activity] = texts(doc, "[data-part='last-activity']")
+      assert activity =~ "Last synced "
+      # The provider logo is decorative: the title beside it names the connection.
+      assert doc |> LazyHTML.query("img") |> LazyHTML.attribute("alt") == [""]
       # The sync time moved out of the summary onto the activity line.
-      refute doc |> LazyHTML.query("p[title]") |> LazyHTML.text() =~ "synced"
+      refute doc |> texts("[data-part='summary']") |> hd() =~ "synced"
       assert doc |> LazyHTML.query("#toggle-12") |> Enum.count() == 1
 
-      footer = LazyHTML.query(doc, "div.border-t")
+      footer = LazyHTML.query(doc, "[data-part='footer']")
       assert footer |> LazyHTML.query("button[phx-click='manage_calendars']") |> Enum.count() == 1
       assert footer |> LazyHTML.query("button[phx-click='show_reconnect']") |> Enum.count() == 1
 
       assert footer
-             |> LazyHTML.query("div.ml-auto button[phx-target='#delete-calendar-modal']")
+             |> LazyHTML.query(
+               "[data-part='end-actions'] button[phx-target='#delete-calendar-modal']"
+             )
              |> Enum.count() == 1
     end
   end

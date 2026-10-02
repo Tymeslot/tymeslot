@@ -1,4 +1,4 @@
-defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow do
+defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionLabels do
   @moduledoc """
   Content helpers for a calendar or video connection's `IntegrationCard`:
   the reason a connection awaits reconnection, for the card's `notice`, and the

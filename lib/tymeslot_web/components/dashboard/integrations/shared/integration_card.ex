@@ -38,11 +38,21 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard d
     neutral: "bg-tymeslot-100 text-tymeslot-400"
   }
 
-  @notice_classes %{warning: "text-amber-700", danger: "text-red-600"}
+  @tones Map.keys(@tile_classes)
+
+  @notice_classes %{
+    neutral: "text-tymeslot-600",
+    warning: "text-amber-700",
+    danger: "text-red-600"
+  }
 
   attr :id, :string, required: true, doc: "The record's id, sent with the toggle as `id`"
   attr :title, :string, required: true
-  attr :status, :any, required: true, doc: "`{tone, label}`, `tone` being a `pill/1` tone"
+
+  attr :status, :any,
+    required: true,
+    doc: "`{tone, label}`: a `pill/1` tone and the pill's text"
+
   attr :pulse, :boolean, default: false, doc: "Animate the status dot (an awaited step)"
   attr :type_tag, :string, default: nil, doc: "A short descriptor shown beside the title"
   attr :summary, :string, default: nil
@@ -57,7 +67,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard d
   attr :target, :any, default: nil
   attr :tags, :list, default: [], doc: "Event names shown as chips"
   attr :notice, :string, default: nil, doc: "What needs the owner's attention"
-  attr :notice_tone, :atom, default: :warning, values: [:warning, :danger]
+  attr :notice_tone, :atom, default: :warning, values: [:neutral, :warning, :danger]
   attr :class, :any, default: nil, doc: "Layout classes only"
   attr :rest, :global
 
@@ -71,9 +81,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard d
   slot :end_actions, doc: "The footer's trailing actions, pushed to the right"
 
   @spec integration_card(map()) :: Phoenix.LiveView.Rendered.t()
-  def integration_card(assigns) do
-    {tone, label} = assigns.status
-
+  def integration_card(%{status: {tone, label}} = assigns)
+      when tone in @tones and is_binary(label) do
     assigns =
       assign(assigns,
         tone: tone,
@@ -107,6 +116,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard d
             </h3>
             <span
               :if={@type_tag}
+              data-part="type-tag"
               class="rounded-token-sm bg-tymeslot-100 px-1.5 py-0.5 text-token-xs font-semibold uppercase text-tymeslot-500"
             >
               {@type_tag}
@@ -115,6 +125,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard d
           </div>
           <p
             :if={@summary}
+            data-part="summary"
             title={@summary}
             class={[
               "mt-0.5 break-words text-token-sm text-tymeslot-500 sm:truncate",
@@ -140,6 +151,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard d
       <div :if={@tags != []} class="mt-3 flex flex-wrap gap-1.5">
         <span
           :for={tag <- @tags}
+          data-part="tag"
           class={[
             "inline-flex items-center gap-1.5 rounded-token-lg border px-2 py-0.5 text-token-xs font-bold",
             (@active && "border-turquoise-200 bg-turquoise-50 text-turquoise-700") ||
@@ -159,6 +171,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard d
 
       <div
         :for={activity <- @last_activity}
+        data-part="last-activity"
+        data-muted={activity[:muted] && "true"}
         class={[
           "mt-3 flex items-center gap-2 text-token-sm",
           (activity[:muted] && "italic text-tymeslot-400") || "text-tymeslot-500"
@@ -168,14 +182,22 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard d
         <span class="min-w-0">{render_slot(activity)}</span>
       </div>
 
-      <p :if={@notice} class={["mt-2 text-token-sm font-medium", @notice_class]}>{@notice}</p>
+      <p
+        :if={@notice}
+        data-part="notice"
+        data-tone={@notice_tone}
+        class={["mt-2 text-token-sm font-medium", @notice_class]}
+      >
+        {@notice}
+      </p>
 
       <div
         :if={@footer?}
+        data-part="footer"
         class="mt-4 flex flex-wrap items-center gap-2 border-t border-tymeslot-100 pt-3"
       >
         {render_slot(@actions)}
-        <div :if={@end_actions != []} class="ml-auto flex items-center gap-2">
+        <div :if={@end_actions != []} data-part="end-actions" class="ml-auto flex items-center gap-2">
           {render_slot(@end_actions)}
         </div>
       </div>

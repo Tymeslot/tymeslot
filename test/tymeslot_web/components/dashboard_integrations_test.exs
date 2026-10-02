@@ -281,21 +281,30 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     }
 
     html =
-      render_component(&CaldavFamilyConfig.render/1, Map.put(base_assigns, :provider, :caldav))
+      render_component(
+        &CaldavFamilyConfig.caldav_family_config/1,
+        Map.put(base_assigns, :provider, :caldav)
+      )
 
     assert html =~ "CalDAV"
     assert html =~ "Connect any CalDAV-compatible server"
     assert html =~ ~s(name="integration[provider]" value="caldav")
 
     html =
-      render_component(&CaldavFamilyConfig.render/1, Map.put(base_assigns, :provider, :nextcloud))
+      render_component(
+        &CaldavFamilyConfig.caldav_family_config/1,
+        Map.put(base_assigns, :provider, :nextcloud)
+      )
 
     assert html =~ "Nextcloud"
     assert html =~ "Sync calendars from your Nextcloud server"
     assert html =~ ~s(name="integration[provider]" value="nextcloud")
 
     html =
-      render_component(&CaldavFamilyConfig.render/1, Map.put(base_assigns, :provider, :radicale))
+      render_component(
+        &CaldavFamilyConfig.caldav_family_config/1,
+        Map.put(base_assigns, :provider, :radicale)
+      )
 
     assert html =~ "Radicale"
     assert html =~ "Lightweight CalDAV server integration"
@@ -303,7 +312,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
 
     html =
       render_component(
-        &CaldavFamilyConfig.render/1,
+        &CaldavFamilyConfig.caldav_family_config/1,
         Map.put(base_assigns, :provider, :mailbox_org)
       )
 
@@ -327,7 +336,10 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     }
 
     html =
-      render_component(&CaldavFamilyConfig.render/1, Map.put(base_assigns, :provider, :nextcloud))
+      render_component(
+        &CaldavFamilyConfig.caldav_family_config/1,
+        Map.put(base_assigns, :provider, :nextcloud)
+      )
 
     assert html =~ "Create an app password in Nextcloud under"
     assert html =~ "Personal settings → Security"
@@ -339,7 +351,10 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     # login password, so they must keep the neutral label and gain no
     # app-password guidance.
     html =
-      render_component(&CaldavFamilyConfig.render/1, Map.put(base_assigns, :provider, :caldav))
+      render_component(
+        &CaldavFamilyConfig.caldav_family_config/1,
+        Map.put(base_assigns, :provider, :caldav)
+      )
 
     assert html =~ "Password / App Password"
     refute html =~ "Create an app password in Nextcloud under"
@@ -373,24 +388,6 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
              []
 
     assert html =~ "Meeting URL"
-  end
-
-  test "the CalDAV-family form fills in its defaults on update" do
-    {:ok, socket} =
-      CaldavFamilyConfig.update(
-        %{id: "nextcloud-config", provider: :nextcloud, target: "parent-target"},
-        %Phoenix.LiveView.Socket{assigns: %{__changed__: %{}}}
-      )
-
-    assert %{
-             provider: :nextcloud,
-             show_calendar_selection: false,
-             discovered_calendars: [],
-             discovery_credentials: %{},
-             form_values: %{},
-             form_errors: %{},
-             saving: false
-           } = socket.assigns
   end
 
   describe "refresh_all_calendars" do

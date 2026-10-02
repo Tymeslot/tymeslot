@@ -1,22 +1,23 @@
 defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavFamilyConfig do
   @moduledoc """
   The connect form for every CalDAV-family calendar provider: generic CalDAV,
-  Nextcloud, Radicale, Baïkal, Zimbra, mailbox.org and Apple iCloud.
+  Nextcloud, Radicale, Baikal, Zimbra, mailbox.org and Apple iCloud.
 
   They share one form (`SharedFormComponents.config_form/1`) and differ only
   in data, held in `@providers`: the name and tagline, the setup guide, the
-  suggested integration name and placeholders, whether the server address is
-  fixed (mailbox.org and iCloud each run on one host), and which password
-  hint, if any, sits above the form. Pass the provider as `provider`.
+  suggested integration name and placeholders, and which password hint, if
+  any, sits above the form. Whether the server address is fixed (mailbox.org
+  and iCloud each run on one host) comes from
+  `ProviderConfig.locked_url_for/1`. Pass the provider as `provider`.
 
   Exchange and calendar subscriptions have forms of their own
   (`ExchangeConfig`, `IcsUrlConfig`): Exchange takes a different credential
   flow and a subscription has no credentials at all.
 
-  The form's events all go to `target`, the calendar settings component that
-  owns the connection state; this component only renders.
+  A function component: the form's events all go to `target`, the calendar
+  settings component that owns the connection state.
   """
-  use TymeslotWeb, :live_component
+  use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Calendar.ProviderConfig
@@ -29,8 +30,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavFamilyCon
   @domain "dashboard_calendar_providers"
 
   # Copy is held as msgids and translated at render time, in the viewer's
-  # locale. `url_placeholder: nil` marks a provider on a fixed host, whose
-  # address comes from `ProviderConfig.locked_url_for/1` instead.
+  # locale. A provider on a fixed host has no `url_placeholder`.
   @providers %{
     caldav: %{
       dom_id: "caldav",
@@ -93,8 +93,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavFamilyCon
         ),
       guide_slug: "caldav-mailbox-org",
       suggested_name: dgettext_noop("dashboard_calendar_providers", "My mailbox.org"),
-      name_placeholder: dgettext_noop("dashboard_calendar_providers", "My mailbox.org Calendar"),
-      url_placeholder: nil
+      name_placeholder: dgettext_noop("dashboard_calendar_providers", "My mailbox.org Calendar")
     },
     apple: %{
       dom_id: "apple",
@@ -106,8 +105,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavFamilyCon
         ),
       guide_slug: "caldav-apple",
       suggested_name: dgettext_noop("dashboard_calendar_providers", "My Apple iCloud"),
-      name_placeholder: dgettext_noop("dashboard_calendar_providers", "My Apple iCloud Calendar"),
-      url_placeholder: nil
+      name_placeholder: dgettext_noop("dashboard_calendar_providers", "My Apple iCloud Calendar")
     }
   }
 
@@ -115,40 +113,32 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavFamilyCon
   @spec providers() :: [atom()]
   def providers, do: Map.keys(@providers)
 
-  @doc """
-  The component id to mount this form under for `provider`, e.g.
-  `"mailbox-org-config"`. One id per provider, so switching providers mounts a
-  fresh form rather than carrying the last one's state across.
-  """
-  @spec component_id(atom()) :: String.t()
-  def component_id(provider), do: Map.fetch!(@providers, provider).dom_id <> "-config"
+  attr :provider, :atom, required: true
+  attr :target, :any, required: true
+  attr :form_errors, :map, required: true
+  attr :form_values, :map, required: true
+  attr :discovered_calendars, :list, required: true
+  attr :show_calendar_selection, :boolean, required: true
+  attr :discovery_credentials, :map, required: true
+  attr :saving, :boolean, required: true
 
-  @impl Phoenix.LiveComponent
-  def update(assigns, socket) do
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign_new(:show_calendar_selection, fn -> false end)
-     |> assign_new(:discovered_calendars, fn -> [] end)
-     |> assign_new(:discovery_credentials, fn -> %{} end)
-     |> assign_new(:form_values, fn -> %{} end)
-     |> assign_new(:form_errors, fn -> %{} end)
-     |> assign_new(:saving, fn -> false end)}
-  end
-
-  @impl Phoenix.LiveComponent
-  def render(assigns) do
+  @spec caldav_family_config(map()) :: Phoenix.LiveView.Rendered.t()
+  def caldav_family_config(assigns) do
     config = Map.fetch!(@providers, assigns.provider)
+    locked_url = ProviderConfig.locked_url_for(assigns.provider)
 
     assigns =
       assign(assigns,
         config: config,
-        locked_url:
-          config.url_placeholder == nil && ProviderConfig.locked_url_for(assigns.provider)
+        locked_url: locked_url,
+        url_placeholder: locked_url == nil && Map.get(config, :url_placeholder),
+        # The id the form carried as a LiveComponent ("<x>-config" mounted as
+        # "<x>-config"), kept so nothing keyed on it moves.
+        dom_id: "#{config.dom_id}-config-#{config.dom_id}-config"
       )
 
     ~H"""
-    <div id={"#{component_id(@provider)}-#{@id}"} class="space-y-6">
+    <div id={@dom_id} class="space-y-6">
       <UIComponents.provider_config_header
         provider={Atom.to_string(@provider)}
         type="calendar"
@@ -168,11 +158,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavFamilyCon
         form_values={@form_values}
         saving={@saving}
         target={@target}
-        myself={@myself}
         suggested_name={t(@config.suggested_name)}
         name_placeholder={t(@config.name_placeholder)}
-        url_placeholder={@config.url_placeholder && t(@config.url_placeholder)}
-        url_locked={@locked_url != false}
+        url_placeholder={@url_placeholder && t(@url_placeholder)}
+        url_locked={@locked_url != nil}
         url_value={(@locked_url && @locked_url.url) || ""}
         url_locked_tooltip={@locked_url && @locked_url.tooltip}
       />
