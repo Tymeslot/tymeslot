@@ -10,15 +10,41 @@
  *    reader there is more to scroll to.
  *  - Brings the selected item into view when the selection changes, so a
  *    strip whose current tab sits past the edge does not open showing every
- *    tab but that one. An update that leaves the selection alone leaves the
- *    scroll position alone too, so a reader browsing the row is not pulled
- *    back.
+ *    tab but that one. It lands clear of the edge fade, not under it. An
+ *    update that leaves the selection alone leaves the scroll position alone
+ *    too, so a reader browsing the row is not pulled back.
  *  - In a `role="tablist"`, moves between tabs with the arrow keys, Home and
  *    End, selecting the tab it lands on: the keyboard model ARIA expects of a
  *    tablist whose tabs, all but the selected one, are out of the tab order.
  */
 
 const SELECTED = '[aria-selected="true"], [aria-current="page"], [aria-pressed="true"]'
+
+/**
+ * The width of the fade on a clipped edge, in pixels: the `2.5rem` of the
+ * mask in `Navigation`'s strip classes.
+ *
+ * @returns {number}
+ */
+export function fadeWidth() {
+  const rootSize = parseFloat(getComputedStyle(document.documentElement).fontSize)
+  return (Number.isFinite(rootSize) && rootSize > 0 ? rootSize : 16) * 2.5
+}
+
+/**
+ * How far to scroll a row so an item sits clear of both edge fades: negative
+ * to scroll back, positive to scroll on, 0 when it is already clear.
+ *
+ * @param {{left: number, right: number}} row the row's box
+ * @param {{left: number, right: number}} item the item's box
+ * @param {number} fade the fade width
+ * @returns {number}
+ */
+export function revealOffset(row, item, fade) {
+  if (item.left < row.left + fade) return item.left - (row.left + fade)
+  if (item.right > row.right - fade) return item.right - (row.right - fade)
+  return 0
+}
 
 /**
  * Which edges of a scrolling row have content beyond them.
@@ -113,14 +139,16 @@ export const ScrollStrip = {
     this.revealedKey = key
     if (!selected) return
 
-    const row = this.el.getBoundingClientRect()
-    const item = selected.getBoundingClientRect()
+    // A tab's pill is its wrapper, which also holds any tab menu; a
+    // segmented option is a direct child of the row.
+    const pill = selected.parentElement === this.el ? selected : selected.parentElement
+    const offset = revealOffset(
+      this.el.getBoundingClientRect(),
+      pill.getBoundingClientRect(),
+      fadeWidth()
+    )
 
-    if (item.left < row.left) {
-      this.el.scrollLeft -= row.left - item.left
-    } else if (item.right > row.right) {
-      this.el.scrollLeft += item.right - row.right
-    }
+    if (offset !== 0) this.el.scrollLeft = Math.max(0, this.el.scrollLeft + offset)
   },
 
   moveFocus(event) {

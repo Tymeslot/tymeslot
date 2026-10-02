@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, test, afterEach, vi } from 'vitest';
-import { ScrollStrip, overflowEdges, nextTabIndex } from '../hooks/scroll_strip';
+import { ScrollStrip, overflowEdges, nextTabIndex, revealOffset, fadeWidth } from '../hooks/scroll_strip';
 
 describe('overflowEdges', () => {
   test('is null when everything fits', () => {
@@ -26,6 +26,30 @@ describe('overflowEdges', () => {
 
   test('ignores sub-pixel rounding', () => {
     expect(overflowEdges({ scrollLeft: 0.5, scrollWidth: 300.5, clientWidth: 300 })).toBeNull();
+  });
+});
+
+describe('revealOffset', () => {
+  const row = { left: 0, right: 200 };
+
+  test('is 0 for an item clear of both fades', () => {
+    expect(revealOffset(row, { left: 40, right: 160 }, 40)).toBe(0);
+  });
+
+  test('scrolls on until an item under the end fade clears it', () => {
+    expect(revealOffset(row, { left: 120, right: 190 }, 40)).toBe(30);
+  });
+
+  test('scrolls back until an item under the start fade clears it', () => {
+    expect(revealOffset(row, { left: 10, right: 90 }, 40)).toBe(-30);
+  });
+});
+
+describe('fadeWidth', () => {
+  test('is the mask width, 2.5rem', () => {
+    document.documentElement.style.fontSize = '16px';
+    expect(fadeWidth()).toBe(40);
+    document.documentElement.style.fontSize = '';
   });
 });
 
@@ -152,14 +176,15 @@ describe('ScrollStrip hook', () => {
   });
 
   describe('bringing the selected tab into view', () => {
-    // jsdom lays nothing out, so the row is 100px wide and the tabs sit at
-    // fixed offsets from its scroll position.
+    // jsdom lays nothing out, so the row is 200px wide, the tabs 120px each
+    // at fixed offsets from its scroll position, and the fade 40px.
     function layOut(el, tabs) {
-      el.getBoundingClientRect = () => ({ left: 0, right: 100 });
+      document.documentElement.style.fontSize = '16px';
+      el.getBoundingClientRect = () => ({ left: 0, right: 200 });
       tabs.forEach((tab, index) => {
         tab.getBoundingClientRect = () => {
-          const left = index * 80 - el.scrollLeft;
-          return { left, right: left + 80 };
+          const left = index * 120 - el.scrollLeft;
+          return { left, right: left + 120 };
         };
       });
     }
@@ -168,15 +193,25 @@ describe('ScrollStrip hook', () => {
       tabs.forEach((tab, i) => tab.setAttribute('aria-selected', String(i === index)));
     }
 
-    test('scrolls a selected tab past the edge into view on mount', () => {
+    test('scrolls a selected tab past the edge into view, clear of the fade, on mount', () => {
       const { el, tabs } = buildTablist();
       layOut(el, tabs);
       select(tabs, 2);
 
       mount(el);
 
-      // The third tab spans 160-240; the row shows 0-100.
-      expect(el.scrollLeft).toBe(140);
+      // The third tab spans 240-360 and must end before the fade at 160.
+      expect(el.scrollLeft).toBe(200);
+    });
+
+    test('never scrolls back past the start', () => {
+      const { el, tabs } = buildTablist();
+      layOut(el, tabs);
+      select(tabs, 0);
+
+      mount(el);
+
+      expect(el.scrollLeft).toBe(0);
     });
 
     test('leaves the scroll position alone when an update keeps the selection', () => {
@@ -202,7 +237,7 @@ describe('ScrollStrip hook', () => {
       select(tabs, 2);
       hook.updated();
 
-      expect(el.scrollLeft).toBe(140);
+      expect(el.scrollLeft).toBe(200);
     });
   });
 });

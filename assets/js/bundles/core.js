@@ -18,6 +18,7 @@ import { ClipboardCopy } from "../clipboard_hook"
 import { RecaptchaV3Hook } from "../hooks/recaptcha_v3_hook"
 import { EmailLogoUpload } from "../hooks/email_logo_upload"
 import { AutoUpload } from "../hooks/auto_upload"
+import { ScrollStrip } from "../hooks/scroll_strip"
 import { installAnalytics, installEventBridge, installClickTracking, AnalyticsView } from "../analytics"
 import { installImageFallback } from "../image_fallback"
 import { installClipboardCopy } from "../clipboard_copy"
@@ -76,7 +77,12 @@ const CoreHooks = {
   // reaches it. Registered here for the same reason as EmailLogoUpload
   // above; the dashboard bundle still overrides this with its lazy-loaded
   // version for dashboard pages.
-  AutoUpload
+  AutoUpload,
+
+  // Every tab strip and segmented control carries it, and those render on
+  // pages without the dashboard bundle (the analytics page), so it
+  // is registered for every page. It is a few lines.
+  ScrollStrip
 }
 
 // Use /embed-live in cross-site iframes to avoid session cookie dependency

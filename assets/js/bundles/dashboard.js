@@ -8,7 +8,6 @@
 import { initializeBundle } from "./bundle_utils"
 import { lazyHook } from "../dynamic_hooks"
 import { ServerUrlField } from "../hooks/server_url_field"
-import { ScrollStrip } from "../hooks/scroll_strip"
 import { installKeyboardClick } from "../keyboard_click"
 
 // Define dashboard-specific hooks (lazy-loaded to minimize initial bundle size,
@@ -17,9 +16,6 @@ const DashboardHooks = {
   // Registered eagerly: it is a few lines, and it has to be in place before
   // the first submit of an integration form rather than one request later.
   ServerUrlField,
-  // Eager too: every tab strip and segmented control carries it, so the fade
-  // and the arrow keys should be there from the first paint.
-  ScrollStrip,
   AutoUpload: lazyHook("AutoUpload", () => import("../hooks/auto_upload")),
   EmbedPreview: lazyHook("EmbedPreview", () => import("../hooks/embed_preview")),
   MeetingTypeSortable: lazyHook("MeetingTypeSortable", () => import("../hooks/meeting_type_sortable")),
