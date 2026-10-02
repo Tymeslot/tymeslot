@@ -461,6 +461,13 @@ defmodule Tymeslot.Auth do
   end
 
   @doc """
+  Deletes accounts still unverified `days` after sign-up. See
+  `Tymeslot.Auth.AccountDeletion.purge_unverified_accounts/1`.
+  """
+  @spec purge_unverified_accounts(integer()) :: {non_neg_integer(), nil}
+  defdelegate purge_unverified_accounts(days), to: AccountDeletion
+
+  @doc """
   Lists all users in the system, ordered by id ascending.
   """
   defdelegate list_users(), to: AdminUserQueries, as: :list_all_users

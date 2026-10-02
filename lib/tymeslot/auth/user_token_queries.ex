@@ -144,15 +144,22 @@ defmodule Tymeslot.Auth.UserTokenQueries do
     Changeset.change(changeset,
       verified_at: now,
       verification_token: nil,
-      verification_token_used_at: now
+      verification_token_used_at: now,
+      signup_ip: nil
     )
   end
 
   defp verify_through_reset(changeset, _verified_user, _now), do: changeset
 
   @doc """
-  Consumes a verification token: marks the user verified and the token used.
-  Intentionally keeps `signup_ip` for the audit trail and fraud detection.
+  Consumes a verification token: marks the user verified and the token used,
+  and clears `signup_ip`.
+
+  The sign-up address exists only for the same-device check when the
+  verification link is followed, and that check is spent once the account
+  is verified. `Tymeslot.Auth.Verification` compares it against the user as
+  the token found them, before this runs, so clearing it here never turns a
+  same-device verification into a cross-device one.
   """
   @spec consume_verification_token(UserSchema.t()) ::
           {:ok, UserSchema.t()} | {:error, Changeset.t()}
@@ -163,7 +170,8 @@ defmodule Tymeslot.Auth.UserTokenQueries do
     |> Changeset.change(
       verified_at: now,
       verification_token_used_at: now,
-      verification_token: nil
+      verification_token: nil,
+      signup_ip: nil
     )
     |> Repo.update()
   end

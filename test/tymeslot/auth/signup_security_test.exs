@@ -92,7 +92,8 @@ defmodule Tymeslot.Auth.SignupSecurityTest do
 
       assert meta.limit_type == "signup"
       assert meta.email_masked == "r***@example.com"
-      assert meta.ip_address == "203.0.113.5"
+      # Logged as its network: the redactor truncates every client IP.
+      assert meta.ip_address == "203.0.113.0/24"
       assert meta.user_agent == "tymeslot-test/1.0"
       refute inspect(meta) =~ email
     end
@@ -199,7 +200,8 @@ defmodule Tymeslot.Auth.SignupSecurityTest do
                       %{meta: %{event_type: "signup_honeypot_resend"} = meta, msg: {:string, msg}}}
 
       assert IO.iodata_to_binary(msg) == "Security event"
-      assert meta.ip_address == "203.0.113.5"
+      # Logged as its network: the redactor truncates every client IP.
+      assert meta.ip_address == "203.0.113.0/24"
       assert meta.user_agent == "tymeslot-test/1.0"
     end
 
@@ -207,7 +209,8 @@ defmodule Tymeslot.Auth.SignupSecurityTest do
       assert :ok = SignupSecurity.log_honeypot_resend(%{ip: "127.0.0.1"})
 
       assert_receive {:captured_log, %{meta: %{event_type: "signup_honeypot_resend"} = meta}}
-      assert meta.ip_address == "127.0.0.1"
+      # Logged as its network: the redactor truncates every client IP.
+      assert meta.ip_address == "127.0.0.0/24"
       assert meta.user_agent == nil
     end
   end

@@ -67,7 +67,8 @@ defmodule Tymeslot.Auth.SignupRateLimitTest do
 
     assert meta.limit_type == "signup"
     assert meta.email_masked == "g***@example.com"
-    assert meta.ip_address == "203.0.113.9"
+    # Logged as its network: the redactor truncates every client IP.
+    assert meta.ip_address == "203.0.113.0/24"
     refute inspect(meta) =~ "gate-plus-register-16@example.com"
   end
 

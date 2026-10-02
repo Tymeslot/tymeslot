@@ -279,7 +279,8 @@ defmodule Tymeslot.Auth.PasswordResetTest do
 
       assert_receive {:captured_log, %{meta: %{event_type: "password_change"} = meta}}
       assert meta.user_id == user.id
-      assert meta.ip_address == "203.0.113.11"
+      # Logged as its network: the redactor truncates every client IP.
+      assert meta.ip_address == "203.0.113.0/24"
       assert meta.user_agent == "curl/8.0"
     end
 
@@ -373,7 +374,8 @@ defmodule Tymeslot.Auth.PasswordResetTest do
 
       assert meta.limit_type == "password_reset"
       assert meta.email_masked == "r***@example.com"
-      assert meta.ip_address == "192.168.1.101"
+      # Logged as its network: the redactor truncates every client IP.
+      assert meta.ip_address == "192.168.1.0/24"
       refute inspect(meta) =~ "ratelimit-audit@example.com"
     end
   end

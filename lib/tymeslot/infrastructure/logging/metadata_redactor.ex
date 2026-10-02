@@ -38,12 +38,19 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
   "email" and "to" appear in plenty of key names that carry no address at
   all. See `@sensitive_key_suffixes` and `@sensitive_exact_keys` below.
 
+  A visitor's IP address (`ip`, `ip_address`, `client_ip`, `x-forwarded-for`
+  and the rest of `@client_ip_keys`) is the one value truncated rather than
+  blanked: it keeps its /24 or /48 network, so a log line still tells one
+  source of traffic from another without naming the visitor.
+
   A key whose value the writer has already masked is named with a `_masked`
   suffix by convention (`email_masked`, `owner_email_masked`,
   `identifier_masked`); none of the rules below matches such a key, so the
   masked value survives to the log line. Masking at source is the primary
   defence — this filter only catches what a call site forgot.
   """
+
+  alias Tymeslot.Security.IPNormaliser
 
   # `calendar_id`, `calendar_path` and `feed_url` are personal identifiers,
   # not secrets: Google calendar ids are email addresses, CalDAV paths can
@@ -93,6 +100,25 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
   # `subject` and `title` routinely name the other party ("Meeting Cancelled
   # with Jane Doe"). `to` is matched whole only: `redirect_to` is a path.
   @sensitive_exact_keys ~w(identifier meeting_uid to cc bcc reply_to subject title)
+
+  # A visitor's IP address is truncated rather than blanked: the network
+  # (/24 for IPv4, /48 for IPv6, see `IPNormaliser.truncate_for_log/1`) still
+  # tells one source of traffic from another, which is what a security log
+  # line needs, without naming the visitor. Matched on the whole key only:
+  # `origin_ip` is the server's own egress address, verified through a proxy,
+  # and says nothing about a visitor. Rate limiting and account lockout key on
+  # the full address in memory and never pass through here.
+  @client_ip_keys ~w(
+    ip
+    ip_address
+    client_ip
+    remote_ip
+    signup_ip
+    x-forwarded-for
+    x_forwarded_for
+    x-real-ip
+    x_real_ip
+  )
 
   @redacted "[REDACTED]"
   @filter_id :tymeslot_metadata_redactor
@@ -159,7 +185,8 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
   @doc """
   Replaces the value of every sensitive key in `term` with `"[REDACTED]"`,
   walking maps, lists and tuples to the same bounded depth as the logger
-  filter. Atom and string keys are matched alike.
+  filter. Atom and string keys are matched alike. A client IP key keeps its
+  value truncated to the network, as in the logger filter.
 
   Key semantics apply to map entries and to `{key, value}` pairs inside a
   list (keyword lists, proplists, header lists). A tuple anywhere else is
@@ -309,9 +336,11 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
   # A pair inside a list is a keyword, proplist or header entry: the one place
   # outside a map where the first element is a key.
   defp redact_element({key, value}, depth, mode) when depth > 0 and key not in @auth_schemes do
-    if sensitive_key?(key),
-      do: {key, redact_sensitive(value, depth - 1, mode)},
-      else: {redact_term(key, depth - 1, mode), redact_term(value, depth - 1, mode)}
+    case key_class(key) do
+      :sensitive -> {key, redact_sensitive(value, depth - 1, mode)}
+      :client_ip -> {key, truncate_client_ip(value)}
+      :plain -> {redact_term(key, depth - 1, mode), redact_term(value, depth - 1, mode)}
+    end
   end
 
   defp redact_element(term, depth, mode), do: redact_term(term, depth, mode)
@@ -324,9 +353,11 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
     do: :maps.map(fn key, value -> redact_entry(key, value, depth - 1, mode) end, term)
 
   defp redact_entry(key, value, depth, mode) do
-    if sensitive_key?(key),
-      do: redact_sensitive(value, depth, mode),
-      else: redact_term(value, depth, mode)
+    case key_class(key) do
+      :sensitive -> redact_sensitive(value, depth, mode)
+      :client_ip -> truncate_client_ip(value)
+      :plain -> redact_term(value, depth, mode)
+    end
   end
 
   # A changeset error (`password: {"is too short", [count: 8]}`) sits under the
@@ -339,6 +370,18 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
   end
 
   defp redact_sensitive(_value, _depth, _mode), do: @redacted
+
+  # Absent and placeholder values say something about the request and name
+  # nobody. Anything else that does not parse as an address is not logged as
+  # it came: it may be an address in a shape the parser does not know.
+  defp truncate_client_ip(value) when value in [nil, "", "unknown"], do: value
+
+  defp truncate_client_ip(value) do
+    case IPNormaliser.truncate_for_log(value) do
+      {:ok, network} -> network
+      :error -> @redacted
+    end
+  end
 
   defp redact_struct(_module, struct, depth, _mode) when is_exception(struct),
     do: redact_map(struct, depth, :keep)
@@ -388,25 +431,29 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
 
   defp placeholder(module), do: "#" <> inspect(module) <> "<" <> @redacted <> ">"
 
-  defp sensitive_key?(key) when is_atom(key) do
+  defp key_class(key) when is_atom(key) do
     key
     |> Atom.to_string()
-    |> sensitive_key?()
+    |> key_class()
   end
 
   # A key longer than any sensitive name could be is data, not a name (a map
   # keyed by a response body, say), and downcasing it on every log event
   # would cost more than the rest of the walk.
-  defp sensitive_key?(key) when is_binary(key) and byte_size(key) <= @max_key_bytes do
+  defp key_class(key) when is_binary(key) and byte_size(key) <= @max_key_bytes do
     {sensitive, uppercase} = sensitive_patterns()
     downcased = downcase(key, uppercase)
 
-    :binary.match(downcased, sensitive) != :nomatch or
-      downcased in @sensitive_exact_keys or
-      Enum.any?(@sensitive_key_suffixes, &suffix_match?(downcased, &1))
+    cond do
+      :binary.match(downcased, sensitive) != :nomatch -> :sensitive
+      downcased in @sensitive_exact_keys -> :sensitive
+      Enum.any?(@sensitive_key_suffixes, &suffix_match?(downcased, &1)) -> :sensitive
+      downcased in @client_ip_keys -> :client_ip
+      true -> :plain
+    end
   end
 
-  defp sensitive_key?(_other), do: false
+  defp key_class(_other), do: :plain
 
   # Every sensitive name is ASCII, so ASCII case folding is all the match
   # needs, and nearly every key is already lower case: checking for an

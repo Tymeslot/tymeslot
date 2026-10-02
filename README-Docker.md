@@ -569,7 +569,7 @@ ENABLE_GITHUB_AUTH=false     # Enable GitHub login/signup
 
 ### Error tracking
 
-Tymeslot records every unexpected error, process crash and failed background job in its own database, with the user id and the request, LiveView or job it happened in (request path, parameters, headers and client IP included; credentials, tokens, cookies and email addresses are redacted first). Nothing leaves your server unless you enable admin alert emails. Records of an error not seen for 30 days are resolved, and deleted 30 days later.
+Tymeslot records every unexpected error, process crash and failed background job in its own database, with the user id and the request, LiveView or job it happened in (request path, parameters and headers included; credentials, tokens, cookies, email addresses and the client's IP address are redacted first). Nothing leaves your server unless you enable admin alert emails. Records of an error not seen for 30 days are resolved, and deleted 30 days later.
 
 To store nothing, set:
 
@@ -578,6 +578,12 @@ ERROR_TRACKING_ENABLED=false
 ```
 
 Errors are then only logged. See the `ERROR TRACKING` section of [`.env.example`](.env.example) for exactly what is kept and for how long.
+
+### Log retention
+
+Tymeslot writes structured JSON logs to stdout. Personal data is kept out of them: email addresses and the names, recipients and subjects of the emails it sends are redacted, and a visitor's IP address is cut down to its network (the first three parts of an IPv4 address, the first three groups of an IPv6 one) before it is written. Security events (sign-ins, rate-limit hits, lockouts) still record that network and the browser's user agent, so an operator can tell one source of traffic from another. Rate limiting and account lockout use the full address, in memory only, for the few minutes they need it.
+
+How long the logs are kept is up to your container runtime: `docker logs` keeps whatever its logging driver retains, which with the default `json-file` driver is everything until the container is removed, unless you set `max-size` and `max-file` for it. Tymeslot can also write the stream to rotating, gzipped files: set `LOG_FILE_PATH` (and optionally `LOG_FILE_MAX_BYTES` and `LOG_FILE_MAX_FILES`, 10 MB and 30 files by default) as described in the `LOG FILE` section of [`.env.example`](.env.example). Those files rotate by size, not by age.
 
 ### Booking Analytics (optional)
 

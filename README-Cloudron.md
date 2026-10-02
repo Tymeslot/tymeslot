@@ -421,8 +421,13 @@ cloudron logs --app tymeslot.yourdomain.com
 cloudron logs --app tymeslot.yourdomain.com --follow
 ```
 
+### Log Retention
+Tymeslot writes structured JSON logs to stdout. Personal data is kept out of them: email addresses and the names, recipients and subjects of the emails it sends are redacted, and a visitor's IP address is cut down to its network (the first three parts of an IPv4 address, the first three groups of an IPv6 one) before it is written. Security events (sign-ins, rate-limit hits, lockouts) still record that network and the browser's user agent, so an operator can tell one source of traffic from another. Rate limiting and account lockout use the full address, in memory only, for the few minutes they need it.
+
+On Cloudron the same stream is also kept in rotating, gzipped files under `/app/data/logs/` (and so in the app's backups): 30 files of 10 MB each by default, which is a few weeks at typical traffic. The files rotate by size, not by age, so a quiet instance keeps them for longer. Lower `LOG_FILE_MAX_FILES` or `LOG_FILE_MAX_BYTES` in `/app/data/.env` to keep less; the `LOG FILE` section of `.env.example` describes both. Cloudron's own log viewer (`cloudron logs`) is separate and follows Cloudron's retention.
+
 ### Error Tracking
-Tymeslot records every unexpected error, process crash and failed background job in the app's own database, with the user id and the request, LiveView or job it happened in (request path, parameters, headers and client IP included; credentials, tokens, cookies and email addresses are redacted first). Records of an error not seen for 30 days are resolved, and deleted 30 days later. To store nothing, add `ERROR_TRACKING_ENABLED=false` to `/app/data/.env` (or the Environment tab) and restart; errors are then only logged. The `ERROR TRACKING` section of `.env.example` lists exactly what is kept.
+Tymeslot records every unexpected error, process crash and failed background job in the app's own database, with the user id and the request, LiveView or job it happened in (request path, parameters and headers included; credentials, tokens, cookies, email addresses and the client's IP address are redacted first). Records of an error not seen for 30 days are resolved, and deleted 30 days later. To store nothing, add `ERROR_TRACKING_ENABLED=false` to `/app/data/.env` (or the Environment tab) and restart; errors are then only logged. The `ERROR TRACKING` section of `.env.example` lists exactly what is kept.
 
 ### Health Monitoring
 - Cloudron automatically monitors app health via `/healthcheck` endpoint

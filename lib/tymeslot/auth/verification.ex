@@ -50,7 +50,8 @@ defmodule Tymeslot.Auth.Verification do
   end
 
   # Returns the user as the token found them (still carrying `signup_ip`)
-  # alongside the verified user. The token's row is locked while it is
+  # alongside the verified user, whose `signup_ip` verification has cleared:
+  # the same-device check must read the former. The token's row is locked while it is
   # spent, so two clicks on the same link cannot both verify.
   defp verify_by_token(token) do
     result =

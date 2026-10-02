@@ -3,7 +3,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Filter do
   Sanitises an ErrorTracker occurrence's context before it is stored.
 
   The context is whatever the integrations and `ErrorTracker.set_context/1`
-  gathered: request headers and params, LiveView params, Oban job args. Three
+  gathered: request headers and params, LiveView params, Oban job args. Four
   passes, each reusing the rule the rest of the system already applies:
 
   1. `Tymeslot.Infrastructure.Logging.MetadataRedactor.redact/1` blanks every
@@ -19,10 +19,14 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Filter do
      email address in it, and `Tymeslot.Infrastructure.Logging.Redactor`
      blanks credentials embedded in text, such as `code=` and `state=` in a
      recorded `request.query` or a bearer token in a message.
+  4. The visitor's IP address is blanked: ErrorTracker's own `request.ip`,
+     and the forwarding headers that carry it (`x-forwarded-for` and the
+     like). A log line keeps the truncated network, but an occurrence is
+     kept for as long as its error keeps recurring, and nothing about
+     debugging an error needs to know who hit it.
 
-  The first and last walk maps, lists and tuples to the redactor's depth
-  bound. Keys are
-  never rewritten, so the stored context keeps its shape.
+  The first and third walk maps, lists and tuples to the redactor's depth
+  bound. Keys are never rewritten, so the stored context keeps its shape.
 
   ## Failing closed
 
@@ -48,6 +52,15 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Filter do
 
   # Paths ErrorTracker's integrations record, which can carry a capability.
   @path_keys ["request.path", "live_view.uri"]
+
+  # Where ErrorTracker's Plug integration records the client's address.
+  @ip_key "request.ip"
+
+  # Request headers that carry the client's address on its way through a
+  # proxy. ErrorTracker records header names as Plug gives them, lower case.
+  @ip_headers ~w(x-forwarded-for x-real-ip forwarded true-client-ip cf-connecting-ip)
+
+  @redacted "[REDACTED]"
 
   # Request headers whose value is a URL or path. ErrorTracker records header
   # names as Plug gives them, lower case.
@@ -76,6 +89,21 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Filter do
     |> MetadataRedactor.redact()
     |> mask_paths()
     |> scrub_strings(MetadataRedactor.max_depth())
+    |> strip_client_ip()
+  end
+
+  defp strip_client_ip(context) when is_map(context) do
+    context
+    |> blank_keys([@ip_key])
+    |> update_headers(&blank_keys(&1, @ip_headers))
+  end
+
+  defp strip_client_ip(context), do: context
+
+  defp blank_keys(map, keys) do
+    Enum.reduce(keys, map, fn key, acc ->
+      if Map.has_key?(acc, key), do: Map.put(acc, key, @redacted), else: acc
+    end)
   end
 
   defp mask_paths(context) when is_map(context) do
@@ -86,10 +114,12 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Filter do
 
   defp mask_paths(context), do: context
 
-  defp mask_headers(%{"request.headers" => headers} = context) when is_map(headers),
-    do: %{context | "request.headers" => mask_keys(headers, @url_headers)}
+  defp mask_headers(context), do: update_headers(context, &mask_keys(&1, @url_headers))
 
-  defp mask_headers(context), do: context
+  defp update_headers(%{"request.headers" => headers} = context, fun) when is_map(headers),
+    do: %{context | "request.headers" => fun.(headers)}
+
+  defp update_headers(context, _fun), do: context
 
   defp mask_keys(map, keys) do
     Enum.reduce(keys, map, fn key, acc ->

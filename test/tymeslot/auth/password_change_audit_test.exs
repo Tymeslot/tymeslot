@@ -48,7 +48,8 @@ defmodule Tymeslot.Auth.PasswordChangeAuditTest do
 
       assert_receive {:captured_log, %{meta: %{event_type: "password_change"} = meta}}
       assert meta.user_id == user.id
-      assert meta.ip_address == "203.0.113.12"
+      # Logged as its network: the redactor truncates every client IP.
+      assert meta.ip_address == "203.0.113.0/24"
       assert meta.user_agent == "Mozilla/5.0"
     end
 

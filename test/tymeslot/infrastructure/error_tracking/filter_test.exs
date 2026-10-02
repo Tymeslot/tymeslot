@@ -10,6 +10,28 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.FilterTest do
   alias Tymeslot.Infrastructure.Logging.MetadataRedactor
 
   describe "sanitize/1" do
+    test "blanks the client IP and the forwarding headers that carry it" do
+      context = %{
+        "request.ip" => "203.0.113.77",
+        "request.headers" => %{
+          "x-forwarded-for" => "203.0.113.77, 10.0.0.1",
+          "x-real-ip" => "203.0.113.77",
+          "forwarded" => "for=203.0.113.77;proto=https",
+          "accept" => "text/html"
+        }
+      }
+
+      assert Filter.sanitize(context) == %{
+               "request.ip" => "[REDACTED]",
+               "request.headers" => %{
+                 "x-forwarded-for" => "[REDACTED]",
+                 "x-real-ip" => "[REDACTED]",
+                 "forwarded" => "[REDACTED]",
+                 "accept" => "text/html"
+               }
+             }
+    end
+
     test "redacts credentials nested at any depth under string keys" do
       context = %{
         "request" => %{"headers" => %{"authorization" => "Bearer x", "accept" => "text/html"}},

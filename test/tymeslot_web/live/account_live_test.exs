@@ -205,7 +205,8 @@ defmodule TymeslotWeb.AccountLiveTest do
 
       assert_receive {:captured_log, %{meta: %{event_type: "password_change"} = meta}}
       assert meta.user_id == user.id
-      assert meta.ip_address == "127.0.0.1"
+      # Logged as its network: the redactor truncates every client IP.
+      assert meta.ip_address == "127.0.0.0/24"
       assert meta.user_agent == "TymeslotTestAgent/1.0"
     end
 
