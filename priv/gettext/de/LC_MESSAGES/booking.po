@@ -68,6 +68,7 @@ msgstr "%{name}, Ihr Termin %{organizer} wurde verschoben."
 msgid "%{name}, your meeting %{organizer} is all set."
 msgstr "%{name}, Ihr Termin %{organizer} ist bestätigt."
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
@@ -149,6 +150,7 @@ msgstr "Zusätzliche Nachricht (optional)"
 msgid "Afternoon"
 msgstr "Nachmittag"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Appointment host"
@@ -166,11 +168,13 @@ msgstr "Verfügbare Zeiten"
 msgid "Booking confirmed"
 msgstr "Buchung bestätigt"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Bookings available up to %{advance}"
 msgstr "Termine sind %{advance} buchbar"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
@@ -197,6 +201,7 @@ msgstr "Bestätigung gesendet an"
 msgid "Confirming your payment…"
 msgstr "Zahlung wird bestätigt…"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex
@@ -204,6 +209,8 @@ msgstr "Zahlung wird bestätigt…"
 msgid "Continue"
 msgstr "Fortfahren"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/shared/components/meeting_details.ex
@@ -216,11 +223,14 @@ msgstr "Datum"
 msgid "Did the new tab not open?"
 msgstr "Hat sich der neue Tab nicht geöffnet?"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Duration"
 msgstr "Dauer"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Duration: %{duration}"
@@ -236,6 +246,7 @@ msgstr "Früher Morgen"
 msgid "Email Address"
 msgstr "E-Mail-Adresse"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
@@ -310,6 +321,7 @@ msgstr "Verfügbare Zeiten werden geladen…"
 msgid "MON"
 msgstr "MO"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Details"
@@ -341,6 +353,7 @@ msgstr "Montag"
 msgid "Morning"
 msgstr "Vormittag"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
@@ -357,6 +370,7 @@ msgstr "Möchten Sie den Termin verschieben? Prüfen Sie bitte Ihre Bestätigung
 msgid "No"
 msgstr "Nein"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
@@ -364,6 +378,7 @@ msgstr "Nein"
 msgid "No meeting types available"
 msgstr "Keine Termintypen verfügbar"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
@@ -426,6 +441,7 @@ msgstr "Bitte warten Sie, während wir Ihre Buchung bestätigen."
 msgid "Privacy Policy"
 msgstr "Datenschutzerklärung"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex
@@ -458,6 +474,7 @@ msgstr "Sa"
 msgid "Saturday"
 msgstr "Samstag"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
@@ -486,6 +503,7 @@ msgstr "Stadt, Land oder Zeitzone suchen…"
 msgid "Select a Date"
 msgstr "Datum wählen"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
@@ -502,6 +520,7 @@ msgstr "Zeitzone wählen"
 msgid "Select…"
 msgstr "Auswählen…"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
@@ -514,6 +533,7 @@ msgstr "Gesendet an"
 msgid "Service slow"
 msgstr "Dienst reagiert langsam"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Successfully Rescheduled!"
@@ -570,11 +590,15 @@ msgstr "Do"
 msgid "Thursday"
 msgstr "Donnerstag"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Time"
 msgstr "Uhrzeit"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Timezone"
@@ -600,6 +624,7 @@ msgstr "Unbekannte Dauer"
 msgid "Verifying slot availability and creating your meeting..."
 msgstr "Verfügbarkeit wird geprüft und Termin erstellt…"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
@@ -632,6 +657,7 @@ msgstr "Mittwoch"
 msgid "Yes"
 msgstr "Ja"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "You're All Set!"
@@ -662,6 +688,7 @@ msgstr "Ihre Antworten"
 msgid "Your booking is not confirmed. You can return and try again at any time."
 msgstr "Ihre Buchung wurde nicht bestätigt. Sie können jederzeit zurückkehren und es erneut versuchen."
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
@@ -670,6 +697,7 @@ msgstr "Ihre Buchung wurde nicht bestätigt. Sie können jederzeit zurückkehren
 msgid "Your timezone"
 msgstr "Ihre Zeitzone"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Add any details..."
@@ -681,16 +709,19 @@ msgstr "Weitere Details…"
 msgid "Book Meeting"
 msgstr "Termin buchen"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Email"
 msgstr "E-Mail"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "your.email@example.com"
 msgstr "ihr.name@beispiel.de"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Enter your full name"
@@ -711,16 +742,21 @@ msgstr "Termin"
 msgid "Meeting Confirmed!"
 msgstr "Termin bestätigt!"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Message (optional)"
 msgstr "Nachricht (optional)"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr "Name"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/custom_questions_component.ex
+#: lib/tymeslot_web/themes/folio/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/folio/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
@@ -748,6 +784,7 @@ msgstr "Termin verschieben"
 msgid "same day only"
 msgstr "nur am selben Tag"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Submit"
@@ -784,6 +821,7 @@ msgstr "Bitte geben Sie eine gültige E-Mail-Adresse ein."
 msgid "Guest email address"
 msgstr "E-Mail-Adresse des Gastes"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex
@@ -836,6 +874,7 @@ msgstr "Vorschausitzung abgelaufen. Laden Sie die Seite neu, um fortzufahren."
 msgid "%{weekday}, %{date}"
 msgstr "%{weekday}, %{date}"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
@@ -1113,6 +1152,9 @@ msgstr "%{organizer} bestätigt jede Buchung persönlich. Mit dem Absenden sende
 msgid "%{organizer} still has to accept this time. We'll email you either way, and the slot is held for you until then."
 msgstr "%{organizer} muss diesen Termin noch bestätigen. Wir schreiben Ihnen in jedem Fall, und bis dahin ist der Termin für Sie reserviert."
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
+#: lib/tymeslot_web/themes/folio/scheduling/components/custom_questions_component.ex
+#: lib/tymeslot_web/themes/folio/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
@@ -1146,6 +1188,7 @@ msgstr "Zahlung eingegangen"
 msgid "Request meeting"
 msgstr "Termin anfragen"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
@@ -1208,6 +1251,7 @@ msgstr "%{name}, Ihre Anfrage an %{organizer_name} wurde gesendet."
 msgid "%{organizer} confirms each booking personally, so submitting this sends a request rather than booking the time outright. You'll pay now to hold the slot; if %{organizer} declines or doesn't answer in time, you're refunded in full."
 msgstr "%{organizer} bestätigt jede Buchung persönlich. Mit dem Absenden senden Sie also eine Anfrage, statt den Termin direkt zu buchen. Sie zahlen jetzt, um sich das Zeitfenster zu sichern; lehnt %{organizer} ab oder antwortet nicht rechtzeitig, erhalten Sie eine vollständige Rückerstattung."
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
@@ -1215,6 +1259,7 @@ msgstr "%{organizer} bestätigt jede Buchung persönlich. Mit dem Absenden sende
 msgid "Add tentative hold to calendar"
 msgstr "Vorläufigen Termin zum Kalender hinzufügen"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
@@ -1287,6 +1332,7 @@ msgstr "Geben Sie die Nummer an, unter der wir Sie erreichen."
 msgid "In person"
 msgstr "Vor Ort"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
@@ -1318,6 +1364,7 @@ msgstr "Welcher Videodienst?"
 msgid "Your phone number"
 msgstr "Ihre Telefonnummer"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
@@ -1404,6 +1451,7 @@ msgstr "Vorheriger Monat"
 msgid "Organiser is required for booking"
 msgstr "Für die Buchung ist ein Organisator erforderlich"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex

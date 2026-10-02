@@ -283,3 +283,43 @@ msgstr "Questo nome utente è già in uso"
 #, elixir-autogen, elixir-format
 msgid "This username is reserved"
 msgstr "Questo nome utente è riservato"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "A few sentences about you and how you work."
+msgstr "Qualche frase su di te e sul tuo modo di lavorare."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "About You"
+msgstr "Su di te"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Bio"
+msgstr "Biografia"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't save your headline and bio"
+msgstr "Impossibile salvare titolo e biografia"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "For example: Career coach for first-time managers"
+msgstr "Ad esempio: coach di carriera per nuovi manager"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Headline"
+msgstr "Titolo"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Headline and bio saved"
+msgstr "Titolo e biografia salvati"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Shown on your booking page by themes that introduce you, such as Folio. Leave an empty line between paragraphs."
+msgstr "Mostrato nella tua pagina di prenotazione dai temi che ti presentano, come Folio. Lascia una riga vuota tra i paragrafi."

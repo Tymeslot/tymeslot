@@ -654,3 +654,8 @@ msgstr "Personnalisation du thème"
 #, elixir-autogen, elixir-format
 msgid "A calm, neutral booking page: everything on one screen, light and dark modes and your own accent colour."
 msgstr "Une page de réservation sobre et neutre : tout sur un seul écran, modes clair et sombre et votre propre couleur d’accent."
+
+#: lib/tymeslot_web/themes/folio/theme.ex
+#, elixir-autogen, elixir-format
+msgid "An editorial page that introduces you, with a cover image, your portrait, headline and bio, and serif headings."
+msgstr "Une page éditoriale qui vous présente, avec une image de couverture, votre portrait, votre accroche, votre biographie et des titres à empattements."

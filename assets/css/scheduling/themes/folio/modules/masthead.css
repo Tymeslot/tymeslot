@@ -1,0 +1,165 @@
+/* The masthead (Components.Masthead): the cover band, and the organiser's
+   portrait overlapping its lower edge with the name beside or below it.
+   The band's height and the portrait's size follow the card's width (cqi),
+   so a narrow card has a short band and a smaller portrait. */
+
+.folio-masthead {
+  position: relative;
+}
+
+.folio-cover {
+  position: relative;
+  height: var(--folio-cover-height);
+  overflow: hidden;
+  border-radius: calc(var(--radius-card) - var(--border-width-thin)) calc(var(--radius-card) - var(--border-width-thin)) 0 0;
+  background: var(--folio-cover-fallback);
+}
+
+.folio-cover--slim {
+  height: var(--folio-cover-height-slim);
+}
+
+.folio-cover__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: var(--folio-cover-focus, 50% 50%);
+}
+
+/* A fade into the card along the band's lower edge, where the portrait's
+   ring meets it. */
+.folio-cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--folio-cover-fade);
+  pointer-events: none;
+}
+
+/* Each preset's crop: where its subject sits in the image (context,
+   "Cover and portrait"). An uploaded cover is centred. */
+.folio-cover[data-cover="elegant-still-life"] {
+  --folio-cover-focus: 50% 68%;
+}
+
+.folio-cover[data-cover="artistic-studio"] {
+  --folio-cover-focus: 60% 38%;
+}
+
+.folio-cover[data-cover="ocean-sunset"] {
+  /* High enough to keep the surfer's head in the band at every width,
+     with the horizon still in its lower part. */
+  --folio-cover-focus: 50% 28%;
+}
+
+.folio-cover[data-cover="rustic-farmhouse"] {
+  --folio-cover-focus: 50% 72%;
+}
+
+.folio-cover[data-cover="botanical"] {
+  --folio-cover-focus: 50% 50%;
+}
+
+.folio-cover[data-cover="studio-light"] {
+  --folio-cover-focus: 50% 50%;
+}
+
+.folio-cover[data-cover="paper-texture"] {
+  --folio-cover-focus: 50% 50%;
+}
+
+.folio-cover[data-cover="custom"] {
+  --folio-cover-focus: 50% 50%;
+}
+
+/* The identity row: the portrait half over the band, the name to its
+   right, the bio below across the whole row. The portrait is pinned to the
+   row's top, so its centre stays on the band's lower edge however tall the
+   text beside it is; the text sits at the row's bottom, level with the
+   portrait's foot while it is shorter than the portrait's lower half and
+   growing downwards past it when it is taller. */
+.folio-identity {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: end;
+  column-gap: var(--space-md);
+  row-gap: var(--space-md);
+  padding: 0 var(--folio-gutter);
+}
+
+.folio-portrait {
+  position: relative;
+  align-self: start;
+  width: var(--folio-portrait-size);
+  height: var(--folio-portrait-size);
+  margin-top: calc(var(--folio-portrait-size) / -2);
+  box-sizing: border-box;
+  border: var(--border-width-thick) solid var(--theme-surface);
+  border-radius: var(--radius-full);
+  background: var(--theme-surface);
+  box-shadow: var(--shadow-md);
+  object-fit: cover;
+}
+
+.folio-identity__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  min-width: 0;
+  padding-top: var(--space-sm);
+}
+
+.folio-masthead--full .folio-identity__name {
+  font-size: var(--theme-font-size-3xl);
+}
+
+.folio-identity__bio {
+  grid-column: 1 / -1;
+}
+
+/* Slim: a small portrait, the name and one meta line. */
+.folio-masthead--slim .folio-portrait {
+  width: var(--folio-portrait-size-slim);
+  height: var(--folio-portrait-size-slim);
+  margin-top: calc(var(--folio-portrait-size-slim) / -2);
+  border-width: var(--border-width-medium);
+}
+
+.folio-masthead--slim .folio-identity__text {
+  padding-top: var(--space-2xs);
+}
+
+.folio-masthead--slim .folio-identity__name {
+  font-family: var(--theme-font-heading);
+  font-size: var(--theme-font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--theme-line-height-snug);
+  color: var(--theme-text);
+}
+
+.folio-identity__meta {
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-text-secondary);
+}
+
+/* A narrow card centres the full masthead's portrait, name and headline;
+   the bio stays start-aligned for reading. */
+@container scheduling (width < 30rem) {
+  .folio-masthead--full .folio-identity {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    text-align: center;
+  }
+
+  .folio-masthead--full .folio-identity__text {
+    align-items: center;
+    padding-top: 0;
+  }
+
+  .folio-masthead--full .folio-identity__bio {
+    justify-self: stretch;
+    text-align: start;
+  }
+}

@@ -1,0 +1,94 @@
+/* The confirmation step: the outcome with its badge, the ruled details
+   list, and the booker's answers (Shared.Components.CustomAnswers) in the
+   same ruled form. */
+
+.folio-confirmation {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.folio-badge {
+  display: inline-grid;
+  place-items: center;
+  width: calc(var(--folio-control-height) * 1.25);
+  height: calc(var(--folio-control-height) * 1.25);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--theme-success) 14%, var(--theme-surface));
+  color: var(--theme-success);
+}
+
+.folio-badge--pending {
+  background: color-mix(in srgb, var(--theme-warning) 14%, var(--theme-surface));
+  color: var(--theme-warning);
+}
+
+/* Half the badge's width, so the check or clock reads at a glance. */
+.folio-badge__icon {
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+
+.folio-details,
+.custom-answers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding-top: var(--space-md);
+  border-top: var(--border-width-thin) solid var(--folio-line);
+}
+
+.folio-details__list,
+.custom-answers__list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+}
+
+.folio-details__row,
+.custom-answers__row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 30%) minmax(0, 1fr);
+  gap: var(--space-md);
+  padding-block: var(--space-xs);
+  border-bottom: var(--border-width-thin) solid var(--folio-line);
+}
+
+.folio-details__row dt,
+.custom-answers__label {
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-text-secondary);
+}
+
+.folio-details__row dd,
+.custom-answers__value {
+  margin: 0;
+  font-weight: var(--font-weight-medium);
+  color: var(--theme-text);
+}
+
+.folio-details strong {
+  color: var(--theme-text);
+}
+
+.folio-card .custom-answers__heading {
+  font-family: var(--theme-font-family);
+  font-size: var(--theme-font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  color: var(--theme-text-secondary);
+}
+
+.folio-confirmation__help {
+  text-align: center;
+}
+
+@container scheduling (width < 26rem) {
+  .folio-details__row,
+  .custom-answers__row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3xs);
+  }
+}

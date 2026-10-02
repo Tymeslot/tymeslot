@@ -1,0 +1,62 @@
+/* Folio's type: serif headings (the font option's heading stack), body text
+   in the body stack, long words broken anywhere so a long name or heading
+   never widens the card. */
+
+.folio-card {
+  overflow-wrap: anywhere;
+}
+
+.folio-card h1,
+.folio-card h2,
+.folio-card h3 {
+  margin: 0;
+  font-family: var(--theme-font-heading);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--folio-line-height-heading);
+  letter-spacing: var(--folio-letter-spacing-heading);
+  color: var(--theme-text);
+}
+
+.folio-card p {
+  margin: 0;
+}
+
+.folio-title {
+  font-size: var(--theme-font-size-2xl);
+}
+
+.folio-subtitle {
+  font-size: var(--theme-font-size-xl);
+}
+
+.folio-lead {
+  font-size: var(--theme-font-size-md);
+  color: var(--theme-text-secondary);
+}
+
+.folio-muted {
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-text-secondary);
+}
+
+/* A small uppercase label; also on headings, hence the doubled class. */
+.folio-card .folio-eyebrow {
+  font-family: var(--theme-font-family);
+  font-size: var(--theme-font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wide);
+  line-height: var(--theme-line-height-snug);
+  text-transform: uppercase;
+  color: var(--theme-text-secondary);
+}
+
+.folio-error {
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-danger);
+}
+
+.folio-step-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}

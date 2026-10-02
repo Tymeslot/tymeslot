@@ -68,6 +68,7 @@ msgstr "%{name}, vaše schůzka %{organizer} byla přesunuta."
 msgid "%{name}, your meeting %{organizer} is all set."
 msgstr "%{name}, vaše schůzka %{organizer} je připravena."
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
@@ -149,6 +150,7 @@ msgstr "Doplňující zpráva (nepovinné)"
 msgid "Afternoon"
 msgstr "Odpoledne"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Appointment host"
@@ -166,11 +168,13 @@ msgstr "Volné termíny"
 msgid "Booking confirmed"
 msgstr "Rezervace byla potvrzena"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Bookings available up to %{advance}"
 msgstr "Rezervace lze vytvořit %{advance}"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
@@ -197,6 +201,7 @@ msgstr "Potvrzení odesláno na adresu"
 msgid "Confirming your payment…"
 msgstr "Potvrzování platby…"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex
@@ -204,6 +209,8 @@ msgstr "Potvrzování platby…"
 msgid "Continue"
 msgstr "Pokračovat"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/shared/components/meeting_details.ex
@@ -216,11 +223,14 @@ msgstr "Datum"
 msgid "Did the new tab not open?"
 msgstr "Nová karta se neotevřela?"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Duration"
 msgstr "Délka"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Duration: %{duration}"
@@ -236,6 +246,7 @@ msgstr "Noc"
 msgid "Email Address"
 msgstr "E-mailová adresa"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
@@ -310,6 +321,7 @@ msgstr "Načítání volných termínů…"
 msgid "MON"
 msgstr "PO"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Details"
@@ -341,6 +353,7 @@ msgstr "Pondělí"
 msgid "Morning"
 msgstr "Dopoledne"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
@@ -357,6 +370,7 @@ msgstr "Potřebujete schůzku přesunout? Podívejte se do potvrzovacího e-mail
 msgid "No"
 msgstr "Ne"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
@@ -364,6 +378,7 @@ msgstr "Ne"
 msgid "No meeting types available"
 msgstr "Nejsou k dispozici žádné typy schůzek"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
@@ -426,6 +441,7 @@ msgstr "Počkejte prosím, než vaši rezervaci potvrdíme."
 msgid "Privacy Policy"
 msgstr "Zásady ochrany osobních údajů"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex
@@ -458,6 +474,7 @@ msgstr "So"
 msgid "Saturday"
 msgstr "Sobota"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
@@ -486,6 +503,7 @@ msgstr "Hledat města, země nebo časová pásma…"
 msgid "Select a Date"
 msgstr "Vyberte datum"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
@@ -502,6 +520,7 @@ msgstr "Vyberte časové pásmo"
 msgid "Select…"
 msgstr "Vyberte…"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
@@ -514,6 +533,7 @@ msgstr "Odesláno na adresu"
 msgid "Service slow"
 msgstr "Pomalá odezva"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Successfully Rescheduled!"
@@ -570,11 +590,15 @@ msgstr "Čt"
 msgid "Thursday"
 msgstr "Čtvrtek"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Time"
 msgstr "Čas"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Timezone"
@@ -600,6 +624,7 @@ msgstr "Neznámá délka"
 msgid "Verifying slot availability and creating your meeting..."
 msgstr "Ověřujeme dostupnost termínu a vytváříme vaši schůzku…"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
@@ -632,6 +657,7 @@ msgstr "Středa"
 msgid "Yes"
 msgstr "Ano"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "You're All Set!"
@@ -662,6 +688,7 @@ msgstr "Vaše odpovědi"
 msgid "Your booking is not confirmed. You can return and try again at any time."
 msgstr "Vaše rezervace nebyla potvrzena. Kdykoli se můžete vrátit a zkusit to znovu."
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
@@ -670,6 +697,7 @@ msgstr "Vaše rezervace nebyla potvrzena. Kdykoli se můžete vrátit a zkusit 
 msgid "Your timezone"
 msgstr "Vaše časové pásmo"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Add any details..."
@@ -681,16 +709,19 @@ msgstr "Doplňte podrobnosti…"
 msgid "Book Meeting"
 msgstr "Zarezervovat schůzku"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Email"
 msgstr "E-mail"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "your.email@example.com"
 msgstr "vase.jmeno@example.com"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Enter your full name"
@@ -711,16 +742,21 @@ msgstr "schůzky"
 msgid "Meeting Confirmed!"
 msgstr "Schůzka potvrzena!"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Message (optional)"
 msgstr "Zpráva (nepovinné)"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr "Jméno"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/custom_questions_component.ex
+#: lib/tymeslot_web/themes/folio/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/folio/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
@@ -748,6 +784,7 @@ msgstr "Přesunout schůzku"
 msgid "same day only"
 msgstr "pouze na tentýž den"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Submit"
@@ -784,6 +821,7 @@ msgstr "Zadejte platnou e-mailovou adresu."
 msgid "Guest email address"
 msgstr "E-mailová adresa hosta"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex
@@ -836,6 +874,7 @@ msgstr "Platnost náhledu vypršela. Pokračujte obnovením stránky."
 msgid "%{weekday}, %{date}"
 msgstr "%{weekday} %{date}"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
@@ -1112,6 +1151,9 @@ msgstr "%{organizer} potvrzuje každou rezervaci osobně, takže odesláním pos
 msgid "%{organizer} still has to accept this time. We'll email you either way, and the slot is held for you until then."
 msgstr "%{organizer} musí tento termín ještě potvrdit. Napíšeme vám tak či tak a do té doby je termín rezervován pro vás."
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
+#: lib/tymeslot_web/themes/folio/scheduling/components/custom_questions_component.ex
+#: lib/tymeslot_web/themes/folio/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
@@ -1145,6 +1187,7 @@ msgstr "Platba přijata"
 msgid "Request meeting"
 msgstr "Požádat o schůzku"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
@@ -1207,6 +1250,7 @@ msgstr "%{name}, vaše žádost pro %{organizer_name} byla odeslána."
 msgid "%{organizer} confirms each booking personally, so submitting this sends a request rather than booking the time outright. You'll pay now to hold the slot; if %{organizer} declines or doesn't answer in time, you're refunded in full."
 msgstr "%{organizer} potvrzuje každou rezervaci osobně, takže odesláním posíláte žádost, nikoli přímou rezervaci. Platíte ihned, aby byl termín rezervován; pokud %{organizer} žádost zamítne nebo včas neodpoví, platba je vrácena v plné výši."
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
@@ -1214,6 +1258,7 @@ msgstr "%{organizer} potvrzuje každou rezervaci osobně, takže odesláním pos
 msgid "Add tentative hold to calendar"
 msgstr "Přidat předběžnou rezervaci do kalendáře"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
@@ -1286,6 +1331,7 @@ msgstr "Zadejte číslo, na které vám máme zavolat."
 msgid "In person"
 msgstr "Osobně"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
@@ -1317,6 +1363,7 @@ msgstr "Která videoslužba?"
 msgid "Your phone number"
 msgstr "Vaše telefonní číslo"
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
@@ -1403,6 +1450,7 @@ msgstr "Předchozí měsíc"
 msgid "Organiser is required for booking"
 msgstr "Bez organizátora nelze rezervaci vytvořit."
 
+#: lib/tymeslot_web/themes/folio/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex

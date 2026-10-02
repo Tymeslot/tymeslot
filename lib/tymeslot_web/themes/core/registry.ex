@@ -40,7 +40,8 @@ defmodule TymeslotWeb.Themes.Core.Registry do
               %{
                 "1" => TymeslotWeb.Themes.Quill.Theme,
                 "2" => TymeslotWeb.Themes.Rhythm.Theme,
-                "3" => TymeslotWeb.Themes.Paper.Theme
+                "3" => TymeslotWeb.Themes.Paper.Theme,
+                "4" => TymeslotWeb.Themes.Folio.Theme
               },
               @extra_bindings
             )

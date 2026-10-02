@@ -1,0 +1,25 @@
+/* iframe.css: Folio's own embed rules. The shell every theme shares (body
+   sizing, the page grid sized to content, the footer hidden, the slot
+   region released, full width in the column layout) is shared/embed.css,
+   imported just before this file. Scoped to data-embedded, which
+   iframe_embed.js sets, and to data-embed-layout, which the server sets. */
+
+html.folio-theme[data-embedded],
+html.folio-theme[data-embedded] > body {
+  background: var(--theme-canvas);
+}
+
+html.folio-theme[data-embedded] .folio-page > .content-area {
+  padding: var(--space-sm);
+}
+
+/* The card sits on the host's page: no floating shadow. */
+html.folio-theme[data-embedded] .folio-card {
+  box-shadow: none;
+}
+
+/* The column layout uses the embed container's whole width. */
+html.folio-theme[data-embed-layout="column"] .folio-page > .content-area {
+  max-width: 100%;
+  padding-inline: 0;
+}

@@ -650,3 +650,8 @@ msgstr "Dostosowanie motywu"
 #, elixir-autogen, elixir-format
 msgid "A calm, neutral booking page: everything on one screen, light and dark modes and your own accent colour."
 msgstr "Spokojna, neutralna strona rezerwacji: wszystko na jednym ekranie, tryb jasny i ciemny oraz własny kolor akcentu."
+
+#: lib/tymeslot_web/themes/folio/theme.ex
+#, elixir-autogen, elixir-format
+msgid "An editorial page that introduces you, with a cover image, your portrait, headline and bio, and serif headings."
+msgstr "Strona w stylu magazynu, która cię przedstawia: zdjęcie tytułowe, twój portret, nagłówek i biogram oraz tytuły krojem szeryfowym."

@@ -1,0 +1,26 @@
+/* The organiser's headline and bio (Shared.Components.ProfileIntro, whose
+   markup is fixed): the headline in the heading face's italic, the bio as
+   paragraphs at a readable measure. */
+
+.profile-intro__headline {
+  margin: 0;
+  font-family: var(--theme-font-heading);
+  font-size: var(--theme-font-size-lg);
+  font-style: italic;
+  line-height: var(--theme-line-height-snug);
+  color: var(--theme-text-secondary);
+}
+
+.profile-intro__bio {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-width: 38rem;
+  font-size: var(--theme-font-size-base);
+  line-height: var(--folio-line-height-body);
+  color: var(--theme-text);
+}
+
+.profile-intro__paragraph {
+  margin: 0;
+}
