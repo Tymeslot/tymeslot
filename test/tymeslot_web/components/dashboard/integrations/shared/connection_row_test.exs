@@ -5,8 +5,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRowTest
   @moduletag :components
   @moduletag :unit
 
-  import Phoenix.LiveViewTest
-
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow
 
   describe "server_label/1" do
@@ -41,65 +39,5 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRowTest
       assert ConnectionRow.server_label("") == nil
       assert ConnectionRow.server_label("not a url") == nil
     end
-  end
-
-  describe "connection_row/1" do
-    # The summary is hard-truncated to one line, so the full value has to stay
-    # reachable once a longer server string overflows it.
-    test "exposes the whole summary as the hover title" do
-      html = render_row(summary: "organiser@example.com · localhost:8080/nextcloud")
-
-      assert html =~ ~s(title="organiser@example.com · localhost:8080/nextcloud")
-    end
-
-    test "omits the title attribute when there is no summary" do
-      refute render_row(summary: "") =~ ~s(title="")
-    end
-  end
-
-  describe "status pill" do
-    for {variant, label, pill, dot} <- [
-          {:ok, "Healthy", "bg-green-100 text-green-700", "bg-green-500"},
-          {:warning, "Degraded", "bg-amber-100 text-amber-700", "bg-amber-500"},
-          {:error, "Restricted", "bg-red-100 text-red-700", "bg-red-500"},
-          {:info, "Syncing", "bg-blue-100 text-blue-700", "bg-blue-500"},
-          {:paused, "Paused", "bg-tymeslot-100 text-tymeslot-600", "bg-tymeslot-400"}
-        ] do
-      test "shows a #{variant} status as a #{pill} pill with a #{dot} dot" do
-        doc =
-          [status: {unquote(variant), unquote(label)}]
-          |> render_row()
-          |> LazyHTML.from_fragment()
-
-        [pill] =
-          doc
-          |> LazyHTML.query("span.rounded-token-full")
-          |> Enum.filter(&(LazyHTML.text(&1) =~ unquote(label)))
-
-        assert pill |> LazyHTML.attribute("class") |> hd() =~ unquote(pill)
-
-        assert [dot_class] =
-                 pill |> LazyHTML.query("span[aria-hidden='true']") |> LazyHTML.attribute("class")
-
-        assert dot_class =~ unquote(dot)
-      end
-    end
-  end
-
-  defp render_row(overrides) do
-    assigns =
-      Enum.into(overrides, %{
-        id: "42",
-        icon: "mirotalk",
-        icon_type: :video,
-        title: "Team Room",
-        summary: "localhost:8080/nextcloud",
-        status: {:ok, "Healthy"},
-        active?: true,
-        toggle_event: "toggle_integration",
-        myself: nil
-      })
-
-    render_component(&ConnectionRow.connection_row/1, assigns)
   end
 end

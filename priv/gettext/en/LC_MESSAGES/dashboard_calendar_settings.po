@@ -238,11 +238,6 @@ msgstr ""
 msgid "books into %{calendar}"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
-#, elixir-autogen, elixir-format
-msgid "synced %{time}"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot reactivate - another active integration already uses this account"
@@ -314,3 +309,8 @@ msgid "checks %{selected} of %{count} calendar for conflicts"
 msgid_plural "checks %{selected} of %{count} calendars for conflicts"
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Last synced %{time}"
+msgstr ""

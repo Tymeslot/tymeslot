@@ -684,3 +684,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Automation channels"
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Active"
+msgstr ""

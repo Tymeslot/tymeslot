@@ -25,6 +25,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   }
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
+  alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Dashboard.CalendarSettings.Helpers
 
   @doc """
@@ -314,8 +317,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
   @doc """
   Renders a single connected calendar integration as a shared
-  `connection_row`: a status-first, flat row with a one-line summary and an
-  always-visible action cluster — Upgrade (Google scope, when needed), Manage
+  `integration_card`: a status-first card with a one-line summary and an
+  always-visible action bar: Upgrade (Google scope, when needed), Manage
   calendars (opens the selection modal), Reconnect (promoted when the
   integration needs re-authentication), and a Delete icon. There is no
   expand/collapse; every action is one click away.
@@ -340,8 +343,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     assigns =
       assigns
       |> assign(:calendar_list, calendar_list)
-      |> assign(:status, integration_status(integration, assigns.health_state))
+      |> assign(:status, card_status(integration_status(integration, assigns.health_state)))
       |> assign(:summary, calendar_summary(integration))
+      |> assign(:last_synced, last_synced(integration))
       |> assign(:subscription?, subscription?)
       |> assign(:read_only?, read_only?)
       |> assign(
@@ -350,19 +354,21 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       )
 
     ~H"""
-    <ConnectionRow.connection_row
+    <IntegrationCard.integration_card
       id={to_string(@integration.id)}
-      icon={@integration.provider}
-      icon_type={:calendar}
       title={@display_name}
       type_tag={if @read_only?, do: dgettext("dashboard_calendar_settings", "Read-only")}
       summary={@summary}
       notice={ConnectionRow.reconnect_reason(@integration)}
       status={@status}
-      active?={@integration.is_active}
+      active={@integration.is_active}
       toggle_event="toggle_integration"
-      myself={@myself}
+      target={@myself}
     >
+      <:icon>
+        <ProviderIcon.provider_icon provider={@integration.provider} type="calendar" size="medium" />
+      </:icon>
+      <:last_activity :if={@last_synced}>{@last_synced}</:last_activity>
       <:actions>
         <button
           :if={@integration.provider == "google" && Helpers.needs_scope_upgrade?(@integration)}
@@ -411,6 +417,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
           myself={@myself}
           variant={(@integration.needs_reauth && :attention) || :normal}
         />
+      </:actions>
+      <:end_actions>
         <.icon_button
           icon="hero-trash"
           variant={:danger}
@@ -419,8 +427,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
           phx-value-id={@integration.id}
           phx-target="#delete-calendar-modal"
         />
-      </:actions>
-    </ConnectionRow.connection_row>
+      </:end_actions>
+    </IntegrationCard.integration_card>
     """
   end
 
@@ -488,9 +496,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     do: ["icon-button", "icon-button--#{variant}", @collapsing_tile]
 
   @doc """
-  Builds a one-line human summary for a calendar integration — account
-  email, conflict-check coverage, booking target, and last-sync — dropping
-  absent segments gracefully.
+  Builds a one-line human summary for a calendar integration: account
+  email, conflict-check coverage and booking target, dropping absent segments
+  gracefully. When it last synced is the card's last-activity line instead.
 
   Only the OAuth providers record an account email, so a CalDAV-family row
   names its server instead; without it the line would identify neither the
@@ -505,8 +513,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       integration.provider_account_email ||
         ConnectionRow.server_label(Map.get(integration, :base_url)),
       conflict_segment(integration, calendar_list),
-      booking_segment(integration),
-      sync_segment(integration)
+      booking_segment(integration)
     ]
     |> Enum.reject(&is_nil/1)
     |> Enum.join(" · ")
@@ -514,7 +521,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
   # Status-first badge mapping. Precedence lives in the canonical
   # `HealthCheck.attention_status/2` classifier; this just maps the atom to
-  # this row's badge variant/label.
+  # the card's status tone/label.
+  defp card_status({variant, label}), do: {UIComponents.status_tone(variant), label}
+
   defp integration_status(integration, health) do
     case HealthCheck.attention_status(integration, health) do
       :paused -> {:paused, dgettext("dashboard_calendar_settings", "Paused")}
@@ -580,11 +589,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   # staleness banner reads. This used to read a second, never-written column
   # instead, which silently dropped the segment for every integration; that
   # column has since been dropped so the mistake cannot be made again.
-  defp sync_segment(%{last_external_sync_at: %DateTime{} = synced_at}),
+  # The card's last-activity line; nothing for a connection never synced.
+  defp last_synced(%{last_external_sync_at: %DateTime{} = synced_at}),
     do:
-      dgettext("dashboard_calendar_settings", "synced %{time}",
+      dgettext("dashboard_calendar_settings", "Last synced %{time}",
         time: TokenUtils.relative_time(synced_at)
       )
 
-  defp sync_segment(_integration), do: nil
+  defp last_synced(_integration), do: nil
 end

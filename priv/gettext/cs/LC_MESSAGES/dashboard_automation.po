@@ -685,3 +685,8 @@ msgstr "ID doručení je stejné při každém opakování téhož doručení a 
 #, elixir-autogen, elixir-format
 msgid "Automation channels"
 msgstr "Kanály automatizace"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Active"
+msgstr "Aktivní"

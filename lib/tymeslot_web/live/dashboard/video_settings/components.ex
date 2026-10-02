@@ -12,11 +12,14 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   alias Tymeslot.Integrations.Video.Providers.KmeetProvider
   alias Tymeslot.Integrations.Video.RoomCreationError
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
+  alias TymeslotWeb.Components.Icons.ProviderIcon
 
   @doc """
-  Renders a single connected video integration as a shared `connection_row`:
-  a status-first, flat row with a one-line summary and an always-visible action
-  cluster — Test connection (icon), Reconnect (OAuth only, promoted when the
+  Renders a single connected video integration as a shared `integration_card`:
+  a status-first card with a one-line summary and an always-visible action
+  bar: Test connection (icon), Reconnect (OAuth only, promoted when the
   integration needs re-authentication), Edit (icon), and Delete (icon). There is
   no expand/collapse; every action is one click away.
   """
@@ -32,7 +35,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
 
     assigns =
       assigns
-      |> assign(:status, video_status(integration, assigns.health_state))
+      |> assign(:status, card_status(video_status(integration, assigns.health_state)))
       |> assign(:summary, video_summary(integration))
       |> assign(:type_tag, type_tag(integration.provider))
       |> assign(:oauth?, ProviderConfig.oauth_provider?(integration.provider))
@@ -42,19 +45,20 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
       )
 
     ~H"""
-    <ConnectionRow.connection_row
+    <IntegrationCard.integration_card
       id={to_string(@integration.id)}
-      icon={@integration.provider}
-      icon_type={:video}
       title={@display_name}
       type_tag={@type_tag}
       summary={@summary}
       notice={notice(@integration)}
       status={@status}
-      active?={@integration.is_active}
+      active={@integration.is_active}
       toggle_event="toggle_integration"
-      myself={@myself}
+      target={@myself}
     >
+      <:icon>
+        <ProviderIcon.provider_icon provider={@integration.provider} type="video" size="medium" />
+      </:icon>
       <:actions>
         <%!-- While the check runs, the icon becomes a spinning arrow. The spin
              targets the icon span: the tile's own rules set no animation. --%>
@@ -90,6 +94,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
             "Reconnect"
           )}</span>
         </button>
+      </:actions>
+      <:end_actions>
         <.icon_button
           icon="hero-pencil-square"
           label={dgettext("dashboard_video", "Edit integration")}
@@ -105,8 +111,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
           phx-value-id={@integration.id}
           phx-target="#delete-video-modal"
         />
-      </:actions>
-    </ConnectionRow.connection_row>
+      </:end_actions>
+    </IntegrationCard.integration_card>
     """
   end
 
@@ -198,6 +204,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   # `HealthCheck.attention_status/2` classifier; this just maps the atom to
   # this row's badge variant/label. A connection that works but whose rooms
   # the provider refuses still needs the owner, so it is not shown as healthy.
+  defp card_status({variant, label}), do: {UIComponents.status_tone(variant), label}
+
   defp video_status(integration, health) do
     case HealthCheck.attention_status(integration, health) do
       :paused -> {:paused, dgettext("dashboard_video", "Paused")}

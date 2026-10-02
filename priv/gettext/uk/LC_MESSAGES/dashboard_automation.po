@@ -685,3 +685,8 @@ msgstr "Ідентифікатор доставки однаковий для в
 #, elixir-autogen, elixir-format
 msgid "Automation channels"
 msgstr "Канали автоматизації"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Active"
+msgstr "Увімкнено"

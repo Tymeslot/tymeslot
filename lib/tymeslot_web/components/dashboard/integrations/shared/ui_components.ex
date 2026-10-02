@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
 
   @doc """
   Maps a connection status variant to the `Feedback.pill/1` tone that
-  shows it. Shared by `ConnectionRow.connection_row/1` and
+  shows it. Shared by `IntegrationCard.integration_card/1` callers and
   the integrations hub's category tabs so a row's status pill and its tab's status
   dot never drift out of sync.
   """

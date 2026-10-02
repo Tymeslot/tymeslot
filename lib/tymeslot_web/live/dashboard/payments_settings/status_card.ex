@@ -1,17 +1,17 @@
 defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
   @moduledoc """
-  Stripe Connect onboarding status banner.
+  Stripe Connect onboarding status, as the account's integration card.
 
   Stateless function component rendered by `PaymentsSettingsComponent`. Maps a
   connect account's display state — derived once by
-  `Tymeslot.MeetingPayments.connect_display_state/1` — to a variant, title, and
+  `Tymeslot.MeetingPayments.connect_display_state/1` — to a status tone, title, and
   message.
 
   Two states are distinct on purpose:
 
     * `:incomplete` — the host started connecting but has not finished Stripe
       onboarding (`details_submitted: false`). There is nothing for Stripe to
-      review yet, so the banner shows a "Finish connecting Stripe" prompt with
+      review yet, so the card shows a "Finish connecting Stripe" prompt with
       a Continue-onboarding button that re-POSTs to `/dashboard/payments/connect`
       for a fresh Stripe AccountLink.
     * `:pending_review` — onboarding *is* submitted but charges/payouts are not
@@ -19,13 +19,14 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
 
   `needs_onboarding?/1` is exposed so the parent can hide the operational
   sections (currency, payments, stats, disconnect) until onboarding is
-  submitted, off the same single source of truth as the banner.
+  submitted, off the same single source of truth as the card.
   """
 
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.MeetingPayments
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard
 
   attr :account, :map, required: true
 
@@ -34,38 +35,41 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
     assigns = assign(assigns, :state, MeetingPayments.connect_display_state(assigns.account))
 
     ~H"""
-    <div class="space-y-4">
-      <.info_box variant={status_variant(@state)}>
-        <span class="block text-token-xl font-black tracking-tight">{state_title(@state)}</span>
-        <span class="block mt-1">{state_message(@account, @state)}</span>
-      </.info_box>
-
-      <%!--
-        `data-submit-loading` shows a spinner and disables the button while the
-        Stripe redirect is being prepared, preventing rage-clicks on a slow open.
-      --%>
-      <form
-        :if={@state == :incomplete}
-        id="stripe-connect-continue-form"
-        action={~p"/dashboard/payments/connect"}
-        method="post"
-        data-submit-loading
-      >
-        <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
-        <.action_button type="submit" variant={:primary} class="w-full sm:w-auto">
-          <span data-submit-spinner class="hidden items-center gap-2">
-            <.spinner /> {dgettext("dashboard_payments", "Connecting…")}
-          </span>
-          <span data-submit-label>{dgettext("dashboard_payments", "Continue onboarding")}</span>
-        </.action_button>
-      </form>
-    </div>
+    <IntegrationCard.integration_card
+      id="stripe-connect"
+      title="Stripe"
+      status={{status_tone(@state), state_title(@state)}}
+      pulse={@state == :pending_review}
+      summary={state_message(@account, @state)}
+    >
+      <:icon><.icon name="hero-credit-card" class="w-6 h-6" /></:icon>
+      <:actions :if={@state == :incomplete}>
+        <%!--
+          `data-submit-loading` shows a spinner and disables the button while the
+          Stripe redirect is being prepared, preventing rage-clicks on a slow open.
+        --%>
+        <form
+          id="stripe-connect-continue-form"
+          action={~p"/dashboard/payments/connect"}
+          method="post"
+          data-submit-loading
+        >
+          <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
+          <.action_button type="submit" variant={:primary} size={:sm}>
+            <span data-submit-spinner class="hidden items-center gap-2">
+              <.spinner /> {dgettext("dashboard_payments", "Connecting…")}
+            </span>
+            <span data-submit-label>{dgettext("dashboard_payments", "Continue onboarding")}</span>
+          </.action_button>
+        </form>
+      </:actions>
+    </IntegrationCard.integration_card>
     """
   end
 
   @doc """
   True when the account has not yet completed Stripe onboarding, i.e. the
-  banner shows the `:incomplete` "Finish connecting Stripe" prompt.
+  card shows the `:incomplete` "Finish connecting Stripe" prompt.
 
   The parent uses this to decide whether to render the operational sections.
   """
@@ -73,12 +77,15 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
   def needs_onboarding?(account),
     do: MeetingPayments.connect_display_state(account) == :incomplete
 
-  # ── Display mapping (state → variant/title/message) ────────────────
+  # ── Display mapping (state → tone/title/message) ───────────────────
 
-  defp status_variant(:ready), do: :success
-  defp status_variant(:pending_review), do: :warning
-  defp status_variant(:restricted), do: :error
-  defp status_variant(_state), do: :info
+  # Waiting on the host (`:incomplete`) or on Stripe (`:pending_review`) are
+  # both amber; a closed or absent account is simply off.
+  defp status_tone(:ready), do: :success
+  defp status_tone(:pending_review), do: :warning
+  defp status_tone(:incomplete), do: :warning
+  defp status_tone(:restricted), do: :danger
+  defp status_tone(_state), do: :neutral
 
   defp state_title(:ready), do: dgettext("dashboard_payments", "Connected and ready")
   defp state_title(:pending_review), do: dgettext("dashboard_payments", "Pending Stripe review")

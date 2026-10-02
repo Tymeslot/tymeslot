@@ -684,3 +684,8 @@ msgstr "Die Zustellungs-ID ist bei jedem erneuten Versuch derselben Zustellung g
 #, elixir-autogen, elixir-format
 msgid "Automation channels"
 msgstr "Automatisierungskanäle"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Active"
+msgstr "Aktiv"

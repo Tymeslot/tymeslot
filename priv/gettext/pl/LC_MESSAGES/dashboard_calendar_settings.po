@@ -235,11 +235,6 @@ msgstr "Będziemy sprawdzać te kalendarze, aby automatycznie unikać podwójnyc
 msgid "books into %{calendar}"
 msgstr "kalendarz rezerwacji: %{calendar}"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
-#, elixir-autogen, elixir-format
-msgid "synced %{time}"
-msgstr "zsynchronizowano %{time}"
-
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot reactivate - another active integration already uses this account"
@@ -312,3 +307,8 @@ msgid_plural "checks %{selected} of %{count} calendars for conflicts"
 msgstr[0] "kalendarze sprawdzane pod kątem konfliktów: %{selected} z %{count}"
 msgstr[1] "kalendarze sprawdzane pod kątem konfliktów: %{selected} z %{count}"
 msgstr[2] "kalendarze sprawdzane pod kątem konfliktów: %{selected} z %{count}"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Last synced %{time}"
+msgstr "Ostatnia synchronizacja %{time}"

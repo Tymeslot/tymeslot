@@ -681,3 +681,8 @@ msgstr "ID wysyłki jest takie samo przy każdej ponownej próbie tej samej wysy
 #, elixir-autogen, elixir-format
 msgid "Automation channels"
 msgstr "Kanały automatyzacji"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Active"
+msgstr "Aktywny"

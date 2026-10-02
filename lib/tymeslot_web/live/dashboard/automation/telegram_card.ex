@@ -3,8 +3,8 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard
   alias TymeslotWeb.Components.Icons.IconComponents
-  alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
 
   attr :integration, :map, required: true
@@ -22,192 +22,101 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
 
   @spec telegram_card(map()) :: Phoenix.LiveView.Rendered.t()
   def telegram_card(assigns) do
-    ~H"""
-    <div class={[
-      "card-glass p-4 sm:p-6 transition-all duration-300 group",
-      card_style(@integration.status)
-    ]}>
-      <div class="flex flex-col gap-4">
-        <%!-- Top row: Icon + Info + Toggle/Badge --%>
-        <div class="flex items-start gap-4 sm:gap-5">
-          <%!-- Telegram Icon --%>
-          <div class={[
-            "p-3 rounded-2xl transition-colors duration-300 shrink-0",
-            icon_bg(@integration.status)
-          ]}>
-            <IconComponents.icon
-              name={:telegram}
-              class={"w-6 h-6 #{icon_color(@integration.status)}"}
-            />
-          </div>
+    {tone, pulse, label} = status_presentation(assigns.integration.status)
 
-          <%!-- Integration Details --%>
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-3 mb-2">
-              <h3 class={[
-                "text-token-xl font-black tracking-tight",
-                if(@integration.status == :active, do: "text-tymeslot-900", else: "text-tymeslot-500")
-              ]}>
-                {@integration.name}
-              </h3>
-              <.status_pill status={@integration.status} />
-            </div>
-
-            <%= if @integration.chat_id do %>
-              <div class="text-token-sm text-tymeslot-600 font-mono mb-3 truncate">
-                {dgettext("dashboard_automation_chat", "Chat: %{chat_id}",
-                  chat_id: truncate_chat_id(@integration.chat_id)
-                )}
-              </div>
-            <% end %>
-
-            <%!-- Event Tags --%>
-            <div class="flex flex-wrap gap-2 mb-4">
-              <%= for event <- @integration.events do %>
-                <span class={[
-                  "inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-token-lg border",
-                  event_tag_style(@integration.status)
-                ]}>
-                  <div class={["w-1.5 h-1.5 rounded-full", event_dot_style(@integration.status)]} />
-                  {event}
-                </span>
-              <% end %>
-            </div>
-
-            <%!-- Status-specific content --%>
-            <%= if @integration.status == :pending_link do %>
-              <div class="text-token-sm text-amber-600 font-medium">
-                {dgettext(
-                  "dashboard_automation_chat",
-                  "Connect Telegram to start receiving notifications."
-                )}
-              </div>
-            <% else %>
-              <%!-- Last Triggered Info --%>
-              <%= if @integration.last_triggered_at do %>
-                <div class="flex items-center gap-2 text-token-sm text-tymeslot-500">
-                  <.icon name="hero-clock" class="w-4 h-4 shrink-0" />
-                  <span>{dgettext("dashboard_automation_chat", "Last triggered: %{time}",
-                    time:
-                      AutomationHelpers.format_datetime(@integration.last_triggered_at, @time_format)
-                  )}</span>
-                </div>
-              <% else %>
-                <div class="flex items-center gap-2 text-token-sm text-tymeslot-400 italic">
-                  <.icon name="hero-clock" class="w-4 h-4 shrink-0" />
-                  <span>{dgettext("dashboard_automation_chat", "Never triggered")}</span>
-                </div>
-              <% end %>
-
-              <%= if @integration.status == :auto_disabled do %>
-                <div class="mt-2 text-token-sm text-red-600 font-medium">
-                  {dgettext("dashboard_automation_chat", "Disabled: %{reason}",
-                    reason: disabled_reason_label(@integration.disabled_reason)
-                  )}
-                </div>
-              <% end %>
-            <% end %>
-          </div>
-
-          <%!-- Status Toggle (active/paused only) --%>
-          <div class="shrink-0 ml-2">
-            <%= if @integration.status in [:active, :paused] do %>
-              <StatusSwitch.status_switch
-                id={"telegram-toggle-#{@integration.id}"}
-                checked={@integration.is_active}
-                on_change={@on_toggle}
-                target={@target}
-                phx_value_id={"#{@integration.id}"}
-                size={:medium}
-                class="ring-4 ring-tymeslot-50 group-hover:ring-turquoise-50 transition-all duration-300"
-              />
-            <% end %>
-          </div>
-        </div>
-
-        <%!-- Bottom: Actions --%>
-        <div class="flex items-center gap-2 shrink-0 border-t border-tymeslot-100 pt-3">
-          <%!-- Test Button --%>
-          <%= if @integration.status in [:active, :paused] do %>
-            <.loading_button
-              variant={:secondary}
-              size={:sm}
-              icon="hero-bolt"
-              loading={@testing}
-              loading_text={dgettext("dashboard_automation_chat", "Testing")}
-              disabled={@integration.status != :active}
-              phx-click={@on_test}
-            >
-              {dgettext("dashboard_automation_chat", "Test")}
-            </.loading_button>
-          <% end %>
-
-          <%!-- Connect Button (pending_link + shared bot only) --%>
-          <%= if @integration.status == :pending_link && @integration.bot_mode == "shared" && @on_reconnect do %>
-            <.action_button size={:sm} phx-click={@on_reconnect}>
-              {dgettext("dashboard_automation_chat", "Connect")}
-            </.action_button>
-          <% end %>
-
-          <%!-- Re-enable Button (auto_disabled only) --%>
-          <%= if @integration.status == :auto_disabled && @on_reenable do %>
-            <.action_button size={:sm} phx-click={@on_reenable}>
-              {dgettext("dashboard_automation_chat", "Re-enable")}
-            </.action_button>
-          <% end %>
-
-          <%!-- Logs Button --%>
-          <.action_button
-            variant={:secondary}
-            size={:sm}
-            icon="hero-document-text"
-            phx-click={@on_view_deliveries}
-          >
-            {dgettext("dashboard_automation_chat", "Logs")}
-          </.action_button>
-
-          <div class="ml-auto flex items-center gap-2">
-            <%!-- Edit Button --%>
-            <%= if @integration.status != :pending_link do %>
-              <.icon_button
-                icon="hero-pencil-square"
-                label={dgettext("dashboard_automation_chat", "Edit")}
-                phx-click={@on_edit}
-              />
-            <% end %>
-
-            <%!-- Disconnect Button (shared bot mode only) --%>
-            <%= if @on_disconnect && @integration.bot_mode == "shared" && @integration.chat_id do %>
-              <.icon_button
-                icon="hero-link"
-                variant={:warning}
-                label={dgettext("dashboard_automation_chat", "Disconnect Telegram")}
-                phx-click={@on_disconnect}
-              />
-            <% end %>
-
-            <%!-- Delete Button --%>
-            <.icon_button
-              icon="hero-trash"
-              variant={:danger}
-              label={dgettext("dashboard_automation_chat", "Delete")}
-              phx-click={@on_delete}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  attr :status, :atom, required: true
-
-  defp status_pill(assigns) do
-    {tone, pulse, label} = status_presentation(assigns.status)
-    assigns = assign(assigns, tone: tone, pulse: pulse, label: label)
+    assigns =
+      assign(assigns, status: assigns.integration.status, tone: tone, pulse: pulse, label: label)
 
     ~H"""
-    <.pill tone={@tone} dot pulse={@pulse}>{@label}</.pill>
+    <IntegrationCard.integration_card
+      id={"#{@integration.id}"}
+      title={@integration.name}
+      status={{@tone, @label}}
+      pulse={@pulse}
+      summary={
+        @integration.chat_id &&
+          dgettext("dashboard_automation_chat", "Chat: %{chat_id}",
+            chat_id: truncate_chat_id(@integration.chat_id)
+          )
+      }
+      summary_mono
+      active={@status != :paused and @status != :auto_disabled}
+      toggle_event={@status in [:active, :paused] && @on_toggle}
+      toggle_id={"telegram-toggle-#{@integration.id}"}
+      target={@target}
+      tags={@integration.events}
+      notice={notice(@status, @integration)}
+      notice_tone={(@status == :auto_disabled && :danger) || :warning}
+    >
+      <:icon><IconComponents.icon name={:telegram} class="w-6 h-6" /></:icon>
+      <:last_activity :if={@status != :pending_link && @integration.last_triggered_at}>
+        {dgettext("dashboard_automation_chat", "Last triggered: %{time}",
+          time: AutomationHelpers.format_datetime(@integration.last_triggered_at, @time_format)
+        )}
+      </:last_activity>
+      <:last_activity :if={@status != :pending_link && !@integration.last_triggered_at} muted>
+        {dgettext("dashboard_automation_chat", "Never triggered")}
+      </:last_activity>
+      <:actions>
+        <.loading_button
+          :if={@status in [:active, :paused]}
+          variant={:secondary}
+          size={:sm}
+          icon="hero-bolt"
+          loading={@testing}
+          loading_text={dgettext("dashboard_automation_chat", "Testing")}
+          disabled={@status != :active}
+          phx-click={@on_test}
+        >
+          {dgettext("dashboard_automation_chat", "Test")}
+        </.loading_button>
+        <%!-- Shared bot only: the link step is ours to restart. --%>
+        <.action_button
+          :if={@status == :pending_link && @integration.bot_mode == "shared" && @on_reconnect}
+          size={:sm}
+          phx-click={@on_reconnect}
+        >
+          {dgettext("dashboard_automation_chat", "Connect")}
+        </.action_button>
+        <.action_button
+          :if={@status == :auto_disabled && @on_reenable}
+          size={:sm}
+          phx-click={@on_reenable}
+        >
+          {dgettext("dashboard_automation_chat", "Re-enable")}
+        </.action_button>
+        <.action_button
+          variant={:secondary}
+          size={:sm}
+          icon="hero-document-text"
+          phx-click={@on_view_deliveries}
+        >
+          {dgettext("dashboard_automation_chat", "Logs")}
+        </.action_button>
+      </:actions>
+      <:end_actions>
+        <.icon_button
+          :if={@status != :pending_link}
+          icon="hero-pencil-square"
+          label={dgettext("dashboard_automation_chat", "Edit")}
+          phx-click={@on_edit}
+        />
+        <%!-- Shared bot mode only, once a chat is linked. --%>
+        <.icon_button
+          :if={@on_disconnect && @integration.bot_mode == "shared" && @integration.chat_id}
+          icon="hero-link"
+          variant={:warning}
+          label={dgettext("dashboard_automation_chat", "Disconnect Telegram")}
+          phx-click={@on_disconnect}
+        />
+        <.icon_button
+          icon="hero-trash"
+          variant={:danger}
+          label={dgettext("dashboard_automation_chat", "Delete")}
+          phx-click={@on_delete}
+        />
+      </:end_actions>
+    </IntegrationCard.integration_card>
     """
   end
 
@@ -223,25 +132,17 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
   defp status_presentation(:auto_disabled),
     do: {:danger, false, dgettext("dashboard_automation_chat", "Disabled")}
 
-  defp card_style(:active), do: "hover:shadow-xl"
-  defp card_style(:paused), do: "opacity-75 grayscale-[0.3] bg-tymeslot-100/50"
-  defp card_style(:auto_disabled), do: "opacity-75 border-red-200 bg-red-50/30"
-  defp card_style(:pending_link), do: "border-amber-200 bg-amber-50/30"
+  defp notice(:pending_link, _integration),
+    do:
+      dgettext("dashboard_automation_chat", "Connect Telegram to start receiving notifications.")
 
-  defp icon_bg(:active), do: "bg-tymeslot-50 group-hover:bg-white"
-  defp icon_bg(:pending_link), do: "bg-amber-50"
-  defp icon_bg(_status), do: "bg-tymeslot-200"
+  defp notice(:auto_disabled, integration),
+    do:
+      dgettext("dashboard_automation_chat", "Disabled: %{reason}",
+        reason: disabled_reason_label(integration.disabled_reason)
+      )
 
-  defp icon_color(:active), do: "text-turquoise-600"
-  defp icon_color(:pending_link), do: "text-amber-600"
-  defp icon_color(:auto_disabled), do: "text-red-400"
-  defp icon_color(_status), do: "text-tymeslot-400"
-
-  defp event_tag_style(:active), do: "bg-turquoise-50 text-turquoise-700 border-turquoise-200"
-  defp event_tag_style(_status), do: "bg-tymeslot-100 text-tymeslot-500 border-tymeslot-200"
-
-  defp event_dot_style(:active), do: "bg-turquoise-500"
-  defp event_dot_style(_status), do: "bg-tymeslot-400"
+  defp notice(_status, _integration), do: nil
 
   defp disabled_reason_label(nil), do: dgettext("dashboard_automation_chat", "auto-disabled")
   defp disabled_reason_label(""), do: dgettext("dashboard_automation_chat", "auto-disabled")

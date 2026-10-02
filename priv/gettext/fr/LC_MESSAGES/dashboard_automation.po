@@ -684,3 +684,8 @@ msgstr "L'identifiant de livraison est le même à chaque nouvelle tentative d'u
 #, elixir-autogen, elixir-format
 msgid "Automation channels"
 msgstr "Canaux d'automatisation"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Active"
+msgstr "Actif"

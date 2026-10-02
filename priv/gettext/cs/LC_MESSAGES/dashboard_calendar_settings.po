@@ -239,11 +239,6 @@ msgstr "Tyto kalendáře budeme automaticky kontrolovat, aby nedocházelo k dvo
 msgid "books into %{calendar}"
 msgstr "rezervuje do kalendáře %{calendar}"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
-#, elixir-autogen, elixir-format
-msgid "synced %{time}"
-msgstr "synchronizováno %{time}"
-
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot reactivate - another active integration already uses this account"
@@ -316,3 +311,8 @@ msgid_plural "checks %{selected} of %{count} calendars for conflicts"
 msgstr[0] "kontroluje konflikty u %{selected} z %{count} kalendáře"
 msgstr[1] "kontroluje konflikty u %{selected} z %{count} kalendářů"
 msgstr[2] "kontroluje konflikty u %{selected} z %{count} kalendářů"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Last synced %{time}"
+msgstr "Naposledy synchronizováno %{time}"
