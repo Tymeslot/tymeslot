@@ -51,7 +51,7 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
             socket =
               socket
               |> Component.assign(:availability_schedule, schedule)
-              |> Component.assign(:form_errors, %{})
+              |> Component.assign(:form_errors, clear_submitted_errors(socket, params))
 
             {:noreply, socket}
 
@@ -65,10 +65,21 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
         end
 
       {:error, errors} ->
-        socket = Component.assign(socket, :form_errors, errors)
+        form_errors = Map.merge(clear_submitted_errors(socket, params), errors)
 
-        {:noreply, socket}
+        {:noreply, Component.assign(socket, :form_errors, form_errors)}
     end
+  end
+
+  # One step can hold several fields (the buffer step has two), but a change
+  # submits only the field that changed. Its outcome replaces that field's
+  # error alone, so an unsaved value in a sibling field keeps its error.
+  defp clear_submitted_errors(socket, params) do
+    submitted = for {key, error_key, _label} <- fields(), Map.has_key?(params, key), do: error_key
+
+    socket.assigns
+    |> Map.get(:form_errors, %{})
+    |> Map.drop(submitted)
   end
 
   @doc """

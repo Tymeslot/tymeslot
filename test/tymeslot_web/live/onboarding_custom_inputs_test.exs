@@ -145,6 +145,32 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
              |> element("#onboarding-buffer-before")
              |> render() =~ "must be between"
     end
+
+    test "saving one buffer keeps the other buffer's unsaved error", %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding(conn)
+      navigate_to_scheduling_preferences(view)
+
+      view
+      |> element(
+        "button[phx-click='focus_custom_input'][phx-value-setting='buffer_after_minutes']"
+      )
+      |> render_click()
+
+      view
+      |> element("form[phx-change='update_scheduling_preferences']")
+      |> render_change(%{"buffer_after_minutes" => "999"})
+
+      view
+      |> element("#onboarding-buffer-before button[phx-value-buffer_before_minutes='30']")
+      |> render_click()
+
+      schedule = default_schedule(user)
+      assert {schedule.buffer_before_minutes, schedule.buffer_after_minutes} == {30, 20}
+
+      assert view
+             |> element("#onboarding-buffer-after")
+             |> render() =~ "Buffer after must be between 0 and 120 minutes."
+    end
   end
 
   describe "advance_booking_days custom input" do
