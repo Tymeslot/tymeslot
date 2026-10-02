@@ -388,7 +388,7 @@ defmodule Tymeslot.Mailer.ProvidersTest do
 
       assert Providers.tracking_options(Swoosh.Adapters.Postmark, :marketing) == [
                track_opens: true,
-               track_links: "HtmlAndText",
+               track_links: "None",
                message_stream: "broadcast"
              ]
     end
@@ -408,7 +408,7 @@ defmodule Tymeslot.Mailer.ProvidersTest do
 
       assert options.tracking == "yes"
       assert options[:"tracking-opens"] == "yes"
-      assert options[:"tracking-clicks"] == "yes"
+      assert options[:"tracking-clicks"] == "no"
     end
 
     test "AhaSend receives the category as its tracking map" do
@@ -434,9 +434,42 @@ defmodule Tymeslot.Mailer.ProvidersTest do
                Providers.tracking_options(Swoosh.Adapters.AhaSend, :transactional)
     end
 
+    test "no provider rewrites links for click tracking, whatever the category" do
+      click_tracking =
+        for adapter <- [
+              Swoosh.Adapters.Postmark,
+              Swoosh.Adapters.Sendgrid,
+              Swoosh.Adapters.Mailgun,
+              Swoosh.Adapters.AhaSend
+            ],
+            category <- [:transactional, :lifecycle, :marketing] do
+          {adapter, category, click_setting(Providers.tracking_options(adapter, category))}
+        end
+
+      assert length(click_tracking) == 12
+
+      assert Enum.reject(click_tracking, fn {_adapter, _category, setting} -> setting == :off end) ==
+               []
+    end
+
     test "providers without tracking options are left alone" do
       assert Providers.tracking_options(Tymeslot.Mailer.SMTPAdapter, :marketing) == []
       assert Providers.tracking_options(Swoosh.Adapters.Test, :lifecycle) == []
     end
   end
+
+  # Reads the click-tracking switch out of each provider's options shape,
+  # answering :off only for the explicit "never rewrite links" value. An
+  # option missing altogether is not :off: it would fall back to whatever
+  # default the provider account has.
+  defp click_setting(track_opens: _opens, track_links: "None", message_stream: _stream),
+    do: :off
+
+  defp click_setting(tracking_settings: %{click_tracking: %{enable: false}}), do: :off
+
+  defp click_setting(sending_options: %{"tracking-clicks": "no"}), do: :off
+
+  defp click_setting(tracking: %{click: false}), do: :off
+
+  defp click_setting(other), do: {:on_or_unset, other}
 end

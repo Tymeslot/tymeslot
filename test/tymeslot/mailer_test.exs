@@ -60,7 +60,7 @@ defmodule Tymeslot.MailerTest do
       decoded = Jason.decode!(body)
 
       assert decoded["TrackOpens"] == true
-      assert decoded["TrackLinks"] == "HtmlAndText"
+      assert decoded["TrackLinks"] == "None"
       assert decoded["MessageStream"] == "broadcast"
     end
 
