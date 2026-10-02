@@ -338,3 +338,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "This location is the only one of a group meeting type, so it cannot be deleted"
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Group · up to %{count}"
+msgstr ""

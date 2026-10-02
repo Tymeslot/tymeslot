@@ -338,3 +338,8 @@ msgstr "%{name} ist der einzige Ort dieser Gruppen-Termintypen, deren Adresse im
 #, elixir-autogen, elixir-format
 msgid "This location is the only one of a group meeting type, so it cannot be deleted"
 msgstr "Dieser Ort ist der einzige eines Gruppen-Termintyps und kann daher nicht gelöscht werden"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Group · up to %{count}"
+msgstr "Gruppe · bis zu %{count}"

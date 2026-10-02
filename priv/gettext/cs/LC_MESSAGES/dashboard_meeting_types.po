@@ -341,3 +341,8 @@ msgstr "%{name} je jediným místem těchto typů skupinových schůzek, jejich�
 #, elixir-autogen, elixir-format
 msgid "This location is the only one of a group meeting type, so it cannot be deleted"
 msgstr "Toto místo je jediným místem typu skupinové schůzky, proto ho nelze smazat"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Group · up to %{count}"
+msgstr "Skupina · až %{count}"
