@@ -352,49 +352,4 @@ defmodule TymeslotWeb.AuthLiveSignupRecaptchaTest do
       assert result == :ok
     end
   end
-
-  describe "Edge cases - IP address handling" do
-    test "valid IPv4 addresses are accepted" do
-      assert Recaptcha.maybe_put_remote_ip(%{}, "203.0.113.5") == %{"remoteip" => "203.0.113.5"}
-    end
-
-    test "IPv6 with scope ID is rejected (security boundary)" do
-      # IPv6 scope IDs like fe80::1%eth0 should not be sent to Google API
-      params = %{}
-      result = Recaptcha.maybe_put_remote_ip(params, "fe80::1%eth0")
-      # Should NOT add remoteip key
-      refute Map.has_key?(result, "remoteip")
-    end
-
-    test "localhost addresses are accepted" do
-      params = %{}
-      result = Recaptcha.maybe_put_remote_ip(params, "127.0.0.1")
-      assert result == %{"remoteip" => "127.0.0.1"}
-    end
-
-    test "unknown IP is skipped" do
-      params = %{}
-      result = Recaptcha.maybe_put_remote_ip(params, "unknown")
-      # No remoteip added
-      assert result == params
-    end
-
-    test "empty IP is skipped" do
-      params = %{}
-      result = Recaptcha.maybe_put_remote_ip(params, "")
-      assert result == params
-    end
-
-    test "whitespace-only IP is skipped" do
-      params = %{}
-      result = Recaptcha.maybe_put_remote_ip(params, "   ")
-      assert result == params
-    end
-
-    test "nil IP is handled gracefully" do
-      params = %{}
-      result = Recaptcha.maybe_put_remote_ip(params, nil)
-      assert result == params
-    end
-  end
 end

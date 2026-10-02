@@ -5,6 +5,7 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaTest do
 
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Infrastructure.Security.Recaptcha
+  alias Tymeslot.Test.LogCapture
   import Mox
 
   setup :set_mox_from_context
@@ -114,9 +115,13 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaTest do
       assert {:error, :invalid_token} = Recaptcha.verify(large_token)
     end
 
-    test "returns :error when token is empty or nil" do
-      assert {:error, :invalid_token} = Recaptcha.verify("")
-      assert {:error, :invalid_token} = Recaptcha.verify(nil)
+    test "reports an empty or nil token as missing, without calling Google" do
+      assert {:error, :missing_token} = Recaptcha.verify("")
+      assert {:error, :missing_token} = Recaptcha.verify(nil)
+    end
+
+    test "reports a non-binary token as invalid" do
+      assert {:error, :invalid_token} = Recaptcha.verify(123)
     end
 
     test "returns :error when secret key is missing" do
@@ -149,34 +154,62 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaTest do
     end
   end
 
-  describe "maybe_put_remote_ip/2" do
-    test "adds remoteip when valid IPv4" do
-      params = %{"foo" => "bar"}
+  describe "siteverify request" do
+    test "sends only the secret and the token, never the visitor's IP address" do
+      test_pid = self()
 
-      assert %{"foo" => "bar", "remoteip" => "1.2.3.4"} =
-               Recaptcha.maybe_put_remote_ip(params, "1.2.3.4")
+      expect(HTTPClientMock, :post, fn _url, body, _headers, _opts ->
+        send(test_pid, {:siteverify_body, body})
+
+        {:ok,
+         %Req.Response{status: 200, body: Jason.encode!(%{"success" => true, "score" => 0.9})}}
+      end)
+
+      assert {:ok, _details} = Recaptcha.verify("token")
+
+      assert_received {:siteverify_body, body}
+      assert URI.decode_query(body) == %{"secret" => "test_secret", "response" => "token"}
+    end
+  end
+
+  describe "score logging" do
+    setup do
+      LogCapture.attach(logger_level: :info)
+      :ok
     end
 
-    test "adds remoteip when valid IPv6" do
-      params = %{"foo" => "bar"}
+    defp stub_scored_response(score) do
+      body = Jason.encode!(%{"success" => true, "score" => score, "action" => "booking_form"})
 
-      assert %{"foo" => "bar", "remoteip" => "2001:0db8:85a3:0000:0000:8a2e:0370:7334"} =
-               Recaptcha.maybe_put_remote_ip(params, "2001:0db8:85a3:0000:0000:8a2e:0370:7334")
+      expect(HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 200, body: body}}
+      end)
     end
 
-    test "does not add remoteip when invalid or blank" do
-      params = %{"foo" => "bar"}
-      assert ^params = Recaptcha.maybe_put_remote_ip(params, "")
-      assert ^params = Recaptcha.maybe_put_remote_ip(params, "invalid")
-      assert ^params = Recaptcha.maybe_put_remote_ip(params, "unknown")
-      # Scope ID rejected
-      assert ^params = Recaptcha.maybe_put_remote_ip(params, "fe80::1%eth0")
+    test "logs the score and a passed outcome" do
+      stub_scored_response(0.7)
+
+      assert {:ok, _details} = Recaptcha.verify("token", min_score: 0.3)
+
+      meta = LogCapture.user_metadata(LogCapture.await_log("reCAPTCHA verification scored"))
+
+      assert %{
+               event: "recaptcha_verification",
+               outcome: :passed,
+               score: 0.7,
+               threshold: 0.3,
+               action: "booking_form"
+             } = meta
     end
 
-    test "does not add remoteip when string is too large" do
-      params = %{"foo" => "bar"}
-      large_ip = String.duplicate("a", 101)
-      assert ^params = Recaptcha.maybe_put_remote_ip(params, large_ip)
+    test "logs the score and the rejection reason when the score is too low" do
+      stub_scored_response(0.1)
+
+      assert {:error, :recaptcha_score_too_low} = Recaptcha.verify("token", min_score: 0.3)
+
+      meta = LogCapture.user_metadata(LogCapture.await_log("reCAPTCHA verification scored"))
+
+      assert %{outcome: :recaptcha_score_too_low, score: 0.1, threshold: 0.3} = meta
     end
   end
 

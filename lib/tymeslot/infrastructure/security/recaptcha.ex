@@ -1,6 +1,14 @@
 defmodule Tymeslot.Infrastructure.Security.Recaptcha do
   @moduledoc """
   reCAPTCHA v3 verification module for validating tokens.
+
+  Only the token and the secret are sent to Google. The visitor's IP address is
+  deliberately not forwarded as `remoteip`: Google documents it as optional and
+  the score threshold does not depend on it.
+
+  Every response that carries a score is logged once as
+  `event: "recaptcha_verification"` with the score, action and outcome, so the
+  score distribution and rejection rate can be compared over time.
   """
 
   alias Tymeslot.Infrastructure.Config
@@ -19,7 +27,6 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
           {:min_score, float()}
           | {:expected_action, String.t() | nil}
           | {:expected_hostnames, [String.t()]}
-          | {:remote_ip, String.t() | nil}
 
   @spec verify(String.t(), [verify_opt()]) ::
           {:ok, %{score: float(), action: String.t() | nil, hostname: String.t() | nil}}
@@ -44,22 +51,19 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
     end
   end
 
-  @spec verify(any(), any()) :: {:error, :invalid_token}
+  # A missing token is reported apart from a malformed one: a rise in missing
+  # tokens points at the client never fetching one (script never loaded, form
+  # posted before the token arrived), not at a bot.
+  @spec verify(any(), any()) :: {:error, :missing_token | :invalid_token}
+  def verify(token, _opts) when token in [nil, ""], do: {:error, :missing_token}
   def verify(_invalid_token, _opts), do: {:error, :invalid_token}
 
   defp verify_with_secret(token, secret_key, opts) do
     min_score = Keyword.get(opts, :min_score, @default_minimum_score)
     expected_action = Keyword.get(opts, :expected_action, nil)
     expected_hostnames = Keyword.get(opts, :expected_hostnames, [])
-    remote_ip = Keyword.get(opts, :remote_ip, nil)
 
-    body =
-      %{
-        "secret" => secret_key,
-        "response" => token
-      }
-      |> maybe_put_remote_ip(remote_ip)
-      |> URI.encode_query()
+    body = URI.encode_query(%{"secret" => secret_key, "response" => token})
 
     headers = [{"Content-Type", "application/x-www-form-urlencoded"}]
 
@@ -94,13 +98,15 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
         action = Map.get(decoded, "action")
         hostname = Map.get(decoded, "hostname")
 
-        with :ok <- validate_min_score(score, min_score),
-             :ok <- validate_expected_action(action, expected_action),
-             :ok <- validate_expected_hostname(hostname, expected_hostnames) do
-          {:ok, %{score: score, action: action, hostname: hostname}}
-        else
-          {:error, reason} -> {:error, reason}
-        end
+        result =
+          with :ok <- validate_min_score(score, min_score),
+               :ok <- validate_expected_action(action, expected_action),
+               :ok <- validate_expected_hostname(hostname, expected_hostnames) do
+            {:ok, %{score: score, action: action, hostname: hostname}}
+          end
+
+        log_scored_verification(result, score, min_score, action)
+        result
 
       {:ok, %{"success" => false, "error-codes" => error_codes}} ->
         Logger.error("reCAPTCHA verification failed with errors",
@@ -123,60 +129,18 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
     System.get_env("RECAPTCHA_SECRET_KEY")
   end
 
-  @spec maybe_put_remote_ip(%{String.t() => term()}, binary()) :: %{String.t() => term()}
-  def maybe_put_remote_ip(params, remote_ip) when is_binary(remote_ip) do
-    # Reject extremely long strings to prevent memory pressure during validation
-    if byte_size(remote_ip) > 100 do
-      params
-    else
-      trimmed = String.trim(remote_ip)
-
-      cond do
-        trimmed == "" ->
-          params
-
-        trimmed == "unknown" ->
-          # Don't send "unknown" to Google API
-          params
-
-        valid_ip?(trimmed) ->
-          Map.put(params, "remoteip", trimmed)
-
-        true ->
-          # Invalid IP format - don't send it
-          params
-      end
-    end
+  defp log_scored_verification(result, score, min_score, action) do
+    Logger.info("reCAPTCHA verification scored",
+      event: "recaptcha_verification",
+      outcome: verification_outcome(result),
+      score: score,
+      threshold: min_score,
+      action: action
+    )
   end
 
-  @spec maybe_put_remote_ip(%{String.t() => term()}, any()) :: %{String.t() => term()}
-  def maybe_put_remote_ip(params, _other), do: params
-
-  # Validates that a string is a valid IPv4 or IPv6 address.
-  # Rejects IPv6 addresses with scope IDs (e.g., "fe80::1%eth0") as they
-  # should not be sent to external APIs and are link-local only.
-  defp valid_ip?(ip_string) when is_binary(ip_string) do
-    trimmed = String.trim(ip_string)
-
-    # Reject IPv6 with scope IDs (contains %)
-    if String.contains?(trimmed, "%") do
-      false
-    else
-      case :inet.parse_address(String.to_charlist(trimmed)) do
-        {:ok, _parsed_ip} -> true
-        {:error, _parse_error} -> false
-      end
-    end
-  rescue
-    e in ArgumentError ->
-      # Handle string encoding errors (rare but possible with malformed input)
-      Logger.debug("Failed to validate IP address",
-        ip: LogFormat.reason(ip_string),
-        error: LogFormat.reason(e)
-      )
-
-      false
-  end
+  defp verification_outcome({:ok, _details}), do: :passed
+  defp verification_outcome({:error, reason}), do: reason
 
   @spec validate_min_score(number(), number()) :: :ok | {:error, atom()}
   def validate_min_score(score, min_score) when is_number(score) and is_number(min_score) do

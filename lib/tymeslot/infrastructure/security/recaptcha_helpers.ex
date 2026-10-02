@@ -166,8 +166,7 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
     case Recaptcha.verify(token,
            min_score: signup_min_score(),
            expected_action: signup_action(),
-           expected_hostnames: expected_hostnames(),
-           remote_ip: metadata[:ip]
+           expected_hostnames: expected_hostnames()
          ) do
       {:ok, %{score: score, action: action, hostname: hostname}} ->
         Logger.info("Signup reCAPTCHA passed",
@@ -256,8 +255,7 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
     case Recaptcha.verify(token,
            min_score: booking_min_score(),
            expected_action: booking_action(),
-           expected_hostnames: expected_hostnames(),
-           remote_ip: ip
+           expected_hostnames: expected_hostnames()
          ) do
       {:ok, %{score: score, action: action, hostname: hostname}} ->
         Logger.info("Booking reCAPTCHA passed",
