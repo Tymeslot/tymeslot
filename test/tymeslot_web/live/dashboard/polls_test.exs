@@ -73,7 +73,7 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
 
       refute has_element?(view, "[data-testid='polls-empty']")
-      assert has_element?(view, "#polls-container > div > button", "New poll")
+      assert has_element?(view, "[data-testid='new-poll']", "New poll")
     end
 
     test "does not list polls belonging to other users", %{conn: conn} do

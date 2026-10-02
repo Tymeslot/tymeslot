@@ -101,15 +101,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
       <div id="polls-container" class="space-y-6">
         <%!-- With no polls yet, the empty state below carries the action. --%>
         <div :if={!@show_form and @polls != []} class="flex justify-end">
-          <button
-            type="button"
-            phx-click="new_poll"
-            phx-target={@myself}
-            class="btn btn-primary inline-flex items-center gap-1"
-          >
-            <.icon name="hero-plus" class="w-4 h-4" />
-            {dgettext("dashboard_common", "New poll")}
-          </button>
+          <PollList.new_poll_button myself={@myself} data-testid="new-poll" />
         </div>
 
         <.live_component

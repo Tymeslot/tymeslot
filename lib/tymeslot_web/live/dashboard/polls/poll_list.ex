@@ -39,17 +39,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
         )
       }
     >
-      <:action>
-        <button
-          type="button"
-          phx-click="new_poll"
-          phx-target={@myself}
-          class="btn btn-primary inline-flex items-center gap-1"
-        >
-          <Icons.icon name="hero-plus" class="w-4 h-4" />
-          {dgettext("dashboard_common", "New poll")}
-        </button>
-      </:action>
+      <:action><.new_poll_button myself={@myself} /></:action>
     </Feedback.empty_state>
     """
   end
@@ -66,6 +56,29 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
         myself={@myself}
       />
     </div>
+    """
+  end
+
+  @doc """
+  The button that opens the new-poll form: in the empty state while there are
+  no polls, above the list once there are.
+  """
+  attr :myself, :any, required: true
+  attr :rest, :global
+
+  @spec new_poll_button(map()) :: Phoenix.LiveView.Rendered.t()
+  def new_poll_button(assigns) do
+    ~H"""
+    <button
+      type="button"
+      phx-click="new_poll"
+      phx-target={@myself}
+      class="btn btn-primary inline-flex items-center gap-1"
+      {@rest}
+    >
+      <Icons.icon name="hero-plus" class="w-4 h-4" />
+      {dgettext("dashboard_common", "New poll")}
+    </button>
     """
   end
 
