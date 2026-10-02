@@ -21,6 +21,7 @@ defmodule Tymeslot.MeetingTypes.GroupCapacityFollowsTypeTest do
   alias Tymeslot.Availability.GroupSlots
   alias Tymeslot.Bookings.RescheduleSeat
   alias Tymeslot.Meetings.GroupScheduling
+  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.MeetingTypes
@@ -189,22 +190,28 @@ defmodule Tymeslot.MeetingTypes.GroupCapacityFollowsTypeTest do
       assert capacity(solo) == 1
     end
 
-    test "a capacity below the seats taken leaves the slot full without cancelling anyone", ctx do
+    test "a capacity below the seats taken leaves the slot exactly full without cancelling anyone",
+         ctx do
       meeting_type =
         insert(:meeting_type,
           user: ctx.user,
-          max_participants: 4,
+          max_participants: 6,
           duration_minutes: 30,
           locations: [in_person_location([insert(:venue, user: ctx.user)])]
         )
 
-      meeting = meeting_at(ctx, :group_meeting, meeting_type, ctx.start_time, capacity: 4)
+      meeting = meeting_at(ctx, :group_meeting, meeting_type, ctx.start_time, capacity: 6)
 
-      for n <- 1..3, do: insert(:participant, meeting: meeting, email: "p#{n}@example.com")
+      [first | _rest] =
+        for n <- 1..3, do: insert(:participant, meeting: meeting, email: "p#{n}@example.com")
+
+      # A guest takes a seat like their participant does.
+      {:ok, [_guest]} =
+        Guests.create_for_participant(meeting.id, first.id, ["guest@example.com"])
 
       {:ok, lowered} = MeetingTypes.update_meeting_type(meeting_type, %{max_participants: 2})
 
-      assert capacity(meeting) == 2
+      assert capacity(meeting) == 4
       assert length(ParticipantQueries.list_live_for_meeting(meeting.id)) == 3
 
       assert {:error, :slot_full} =

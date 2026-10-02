@@ -90,9 +90,12 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   Sets `capacity` on a meeting type's future, live group meetings
   (`capacity > 1`, start time after `now`), returning how many were updated.
 
-  A capacity may end up below the seats already taken; the slot then simply
-  has no seats left. Solo meetings (`capacity == 1`) are never touched, so a
-  one-to-one booking stays private whatever the type becomes.
+  A meeting never ends up with a capacity below the seats already taken on
+  it (live participants plus their guests, the count
+  `ParticipantQueries.count_seats_taken/1` makes): lowering the limit under
+  that leaves the slot exactly full, and nobody is cancelled. Solo meetings
+  (`capacity == 1`) are never touched, so a one-to-one booking stays private
+  whatever the type becomes.
   """
   @spec set_future_group_capacity(integer(), pos_integer(), DateTime.t()) :: non_neg_integer()
   def set_future_group_capacity(meeting_type_id, capacity, %DateTime{} = now)
@@ -103,7 +106,25 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
       |> where([m], m.meeting_type_id == ^meeting_type_id)
       |> where([m], m.capacity > 1 and m.capacity != ^capacity)
       |> where([m], m.start_time > ^now)
-      |> Repo.update_all(set: [capacity: capacity, updated_at: DateTime.truncate(now, :second)])
+      |> update([m],
+        set: [
+          capacity:
+            fragment(
+              """
+              GREATEST(?::integer, (
+                SELECT count(DISTINCT p.id) + count(g.id)
+                FROM meeting_participants AS p
+                LEFT JOIN meeting_guests AS g ON g.participant_id = p.id
+                WHERE p.meeting_id = ? AND p.cancelled_at IS NULL
+              )::integer)
+              """,
+              ^capacity,
+              m.id
+            ),
+          updated_at: ^DateTime.truncate(now, :second)
+        ]
+      )
+      |> Repo.update_all([])
 
     count
   end

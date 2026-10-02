@@ -315,8 +315,8 @@ defmodule Tymeslot.MeetingTypes do
 
   # Capacity follows the type: a new seat limit above one applies to the
   # type's future group meetings, in the same transaction as the type itself.
-  # A capacity may land below the seats already taken; that slot then has no
-  # seats left and nobody is cancelled. Solo bookings are never touched, so a
+  # A limit below the seats already taken on a meeting leaves that meeting
+  # exactly full rather than over capacity, and nobody is cancelled. Solo bookings are never touched, so a
   # one-to-one booking stays private when its type becomes a group type.
   # Turning group bookings off (a limit of one) leaves existing group
   # meetings' capacity alone; they keep their seats but take no new joins,
