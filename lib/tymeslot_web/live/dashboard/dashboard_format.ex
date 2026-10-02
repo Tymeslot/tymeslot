@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Dashboard.DashboardFormat do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Agenda.Entry
+  alias Tymeslot.Clock
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Helpers.LocaleFormat
@@ -86,20 +87,30 @@ defmodule TymeslotWeb.Dashboard.DashboardFormat do
 
   An entry counts as today's while it covers today (`Entry.covers?/3`), so an
   overnight meeting still running reads as today's rather than yesterday's.
+  `now` anchors "today"; pass the caller's own clock where it has one, so a
+  render and the clock it was built from cannot straddle midnight.
   """
-  @spec day_label(Entry.t(), String.t()) :: String.t()
-  def day_label(%Entry{} = entry, timezone) do
-    today = local_date(DateTime.utc_now(), timezone)
+  @spec day_label(Entry.t(), String.t(), DateTime.t()) :: String.t()
+  def day_label(%Entry{} = entry, timezone, now \\ Clock.utc_now()) do
+    today = local_date(now, timezone)
+    tomorrow = Date.add(today, 1)
 
     cond do
-      Entry.covers?(entry, today, timezone) ->
-        dgettext("dashboard_common", "Today")
+      Entry.covers?(entry, today, timezone) -> relative_date(today, today)
+      Entry.covers?(entry, tomorrow, timezone) -> relative_date(tomorrow, today)
+      true -> short_date(entry.day)
+    end
+  end
 
-      Entry.covers?(entry, Date.add(today, 1), timezone) ->
-        dgettext("dashboard_common", "Tomorrow")
-
-      true ->
-        short_date(entry.day)
+  @doc """
+  `date` relative to `today`: "Today", "Tomorrow", otherwise a short date.
+  """
+  @spec relative_date(Date.t(), Date.t()) :: String.t()
+  def relative_date(date, today) do
+    cond do
+      date == today -> dgettext("dashboard_common", "Today")
+      date == Date.add(today, 1) -> dgettext("dashboard_common", "Tomorrow")
+      true -> short_date(date)
     end
   end
 
@@ -113,7 +124,8 @@ defmodule TymeslotWeb.Dashboard.DashboardFormat do
 
   @doc """
   The full date an entry falls on. A multi-day all-day entry names its first
-  and last days; its `end_at` is the exclusive midnight after the last.
+  and last days; its `end_at` is the exclusive midnight after the last. Like
+  `time_range/4`, each end of that range stays on one line.
   """
   @spec date_label(Entry.t(), String.t()) :: String.t()
   def date_label(%Entry{all_day?: true} = entry, timezone) do
@@ -121,7 +133,7 @@ defmodule TymeslotWeb.Dashboard.DashboardFormat do
     last = entry.end_at |> local_date(timezone) |> Date.add(-1)
 
     case Date.compare(first, last) do
-      :lt -> "#{long_date(first)} – #{long_date(last)}"
+      :lt -> keep_together(long_date(first)) <> @nbsp <> "– " <> keep_together(long_date(last))
       _same_day -> long_date(first)
     end
   end
@@ -156,9 +168,12 @@ defmodule TymeslotWeb.Dashboard.DashboardFormat do
   @spec local_date(DateTime.t(), String.t()) :: Date.t()
   def local_date(datetime, timezone), do: datetime |> local(timezone) |> DateTime.to_date()
 
-  defp dated_clock(local, time_format),
-    do:
-      "#{LocaleFormat.format_short_date(local, locale())}, #{TimeFormat.format(local, time_format)}"
+  defp dated_clock(local, time_format) do
+    dgettext("dashboard_common", "%{date}, %{time}",
+      date: LocaleFormat.format_short_date(local, locale()),
+      time: TimeFormat.format(local, time_format)
+    )
+  end
 
   defp keep_together(text), do: String.replace(text, " ", @nbsp)
 

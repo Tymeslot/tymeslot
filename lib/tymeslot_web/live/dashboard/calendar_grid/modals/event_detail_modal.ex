@@ -17,7 +17,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.VideoPicker
   alias TymeslotWeb.Dashboard.DashboardFormat
-  alias TymeslotWeb.Helpers.LocaleFormat
 
   attr :selected_event, :map, required: true
   attr :integrations, :list, required: true
@@ -34,10 +33,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
 
   @spec event_detail_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def event_detail_modal(assigns) do
-    assigns =
-      assigns
-      |> assign(:attendees, attendees(assigns.selected_event))
-      |> assign(:locale, Gettext.get_locale(TymeslotWeb.Gettext))
+    assigns = assign(assigns, :attendees, attendees(assigns.selected_event))
 
     ~H"""
     <.modal
@@ -205,10 +201,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
             </span>
           </p>
           <p class="text-token-xs text-tymeslot-400 mt-0.5">
-            {LocaleFormat.format_weekday_day_month(
-              Helpers.event_display_date(@selected_event, @user_timezone),
-              @locale
-            )}
+            {DashboardFormat.long_date(Helpers.event_display_date(@selected_event, @user_timezone))}
           </p>
         </div>
       </.detail_line>

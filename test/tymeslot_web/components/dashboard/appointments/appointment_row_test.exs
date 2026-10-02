@@ -1,7 +1,6 @@
 defmodule TymeslotWeb.Components.Dashboard.Appointments.AppointmentRowTest do
   @moduledoc """
-  Covers the appointment row in each of its three shapes, and the click and
-  keyboard bindings every agenda surface opens an appointment with.
+  Covers the appointment row in each of its three shapes.
   """
 
   use TymeslotWeb.ConnCase, async: true
@@ -14,6 +13,7 @@ defmodule TymeslotWeb.Components.Dashboard.Appointments.AppointmentRowTest do
   alias Tymeslot.Agenda.Entry
   alias Tymeslot.Integrations.Calendar.EventColour
   alias TymeslotWeb.Components.Dashboard.Appointments.AppointmentRow
+  alias TymeslotWeb.Components.Dashboard.Appointments.OpenAttrs
 
   @nbsp " "
 
@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Components.Dashboard.Appointments.AppointmentRowTest do
         %{
           entry: entry,
           variant: variant,
-          on_open: AppointmentRow.open_attrs("open_entry", %{"id" => entry.id}),
+          on_open: OpenAttrs.build("open_entry", %{"id" => entry.id}),
           timezone: "Etc/UTC",
           time_format: "12h"
         },
@@ -66,6 +66,8 @@ defmodule TymeslotWeb.Components.Dashboard.Appointments.AppointmentRowTest do
       assert [_join] = Floki.find(doc, ~s(a[href="https://zoom.us/j/1"][target="_blank"]))
       assert attr(doc, "phx-click") == "open_entry"
       assert attr(doc, "phx-value-id") == "meeting-1"
+      assert attr(doc, "role") == "button"
+      assert Floki.attribute(doc, "data-keyboard-click") != []
       assert attr(doc, "aria-label") == "View details for Discovery call"
     end
 
@@ -115,35 +117,6 @@ defmodule TymeslotWeb.Components.Dashboard.Appointments.AppointmentRowTest do
 
     test "labels an untitled event" do
       assert Floki.text(render_row(:list, entry(title: nil))) =~ "(No title)"
-    end
-  end
-
-  describe "open_attrs/3" do
-    test "pushes the event with its values, focusable and on Enter by default" do
-      assert AppointmentRow.open_attrs("open_entry", %{"id" => "e1"}, target: 3) == %{
-               "phx-click" => "open_entry",
-               "phx-value-id" => "e1",
-               "phx-target" => 3,
-               "phx-keydown" => "open_entry",
-               "phx-key" => "Enter",
-               "role" => "button",
-               "tabindex" => "0"
-             }
-    end
-
-    test "leaves Enter to a hook that already turns it into a click" do
-      attrs = AppointmentRow.open_attrs("show_event", %{"event-id" => 7}, keys: :hook)
-
-      assert attrs["role"] == "button"
-      assert attrs["tabindex"] == "0"
-      refute Map.has_key?(attrs, "phx-keydown")
-    end
-
-    test "binds the click alone for an element with its own keyboard route" do
-      assert AppointmentRow.open_attrs("show_event", %{"event-id" => 7}, keys: :none) == %{
-               "phx-click" => "show_event",
-               "phx-value-event-id" => 7
-             }
     end
   end
 end

@@ -210,7 +210,6 @@ msgstr "Changer de vue"
 msgid "Syncing calendars%{progress}..."
 msgstr "Synchronisation des calendriers%{progress}..."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Today"
@@ -220,11 +219,6 @@ msgstr "Aujourd’hui"
 #, elixir-autogen, elixir-format
 msgid "Toggle calendars"
 msgstr "Afficher/masquer les calendriers"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
-#, elixir-autogen, elixir-format
-msgid "Tomorrow"
-msgstr "Demain"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex

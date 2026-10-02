@@ -54,6 +54,24 @@ defmodule Tymeslot.AgendaTest do
       assert synced.calendar == "Work Google"
     end
 
+    test "carries a booking's attendee and their email", %{user: user, tomorrow: tomorrow} do
+      booking(user, at(tomorrow, ~T[12:00:00]),
+        title: "Client call",
+        attendee_name: "Ada Lovelace",
+        attendee_email: "ada@example.com"
+      )
+
+      assert [%Entry{who: "Ada Lovelace", who_email: "ada@example.com"}] =
+               entries(Agenda.day_agenda(user, "Etc/UTC"))
+    end
+
+    test "leaves a missing title for the presentation to label", %{user: user, tomorrow: tomorrow} do
+      booking(user, at(tomorrow, ~T[12:00:00]), title: "  ")
+      external_event(user, at(tomorrow, ~T[13:00:00]), summary: nil)
+
+      assert titles(Agenda.day_agenda(user, "Etc/UTC")) == [nil, nil]
+    end
+
     test "surfaces the earliest timed entry as the hero and excludes it from the groups",
          %{user: user, tomorrow: tomorrow} do
       booking(user, at(tomorrow, ~T[14:00:00]), title: "Later")

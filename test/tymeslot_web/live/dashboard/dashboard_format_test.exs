@@ -125,22 +125,80 @@ defmodule TymeslotWeb.Dashboard.DashboardFormatTest do
     end
   end
 
-  describe "day_label/2" do
+  describe "day_label/3" do
+    # One fixed clock for the whole test: today, tomorrow and the entries are
+    # all derived from `now`, never read from the wall clock.
+    @now ~U[2026-02-05 23:30:00Z]
+
+    defp on(date) do
+      start = DateTime.new!(date, ~T[12:00:00], "Etc/UTC")
+      entry(day: date, start_at: start, end_at: DateTime.add(start, 1800))
+    end
+
     test "says Today and Tomorrow, and a short date beyond" do
-      today = Date.utc_today()
-      at_noon = fn date -> DateTime.new!(date, ~T[12:00:00], "Etc/UTC") end
+      assert DashboardFormat.day_label(on(~D[2026-02-05]), "Etc/UTC", @now) == "Today"
+      assert DashboardFormat.day_label(on(~D[2026-02-06]), "Etc/UTC", @now) == "Tomorrow"
+      assert DashboardFormat.day_label(on(~D[2026-02-08]), "Etc/UTC", @now) == "Sun Feb 8"
+    end
 
-      on = fn date ->
-        entry(day: date, start_at: at_noon.(date), end_at: DateTime.add(at_noon.(date), 1800))
-      end
+    test "decides today in the organiser's timezone" do
+      # 23:30 UTC on the 5th is already the 6th in Berlin.
+      assert DashboardFormat.day_label(on(~D[2026-02-06]), "Europe/Berlin", @now) == "Today"
+    end
 
-      later = Date.add(today, 3)
+    test "keeps an overnight entry still running as today's" do
+      overnight =
+        entry(
+          day: ~D[2026-02-04],
+          start_at: ~U[2026-02-04 22:00:00Z],
+          end_at: ~U[2026-02-05 02:00:00Z]
+        )
 
-      assert DashboardFormat.day_label(on.(today), "Etc/UTC") == "Today"
-      assert DashboardFormat.day_label(on.(Date.add(today, 1)), "Etc/UTC") == "Tomorrow"
+      assert DashboardFormat.day_label(overnight, "Etc/UTC", ~U[2026-02-05 01:00:00Z]) == "Today"
+    end
+  end
 
-      assert DashboardFormat.day_label(on.(later), "Etc/UTC") ==
-               Calendar.strftime(later, "%a %b %-d")
+  describe "relative_date/2" do
+    test "names today and tomorrow, and dates anything else" do
+      assert DashboardFormat.relative_date(~D[2026-02-05], ~D[2026-02-05]) == "Today"
+      assert DashboardFormat.relative_date(~D[2026-02-06], ~D[2026-02-05]) == "Tomorrow"
+      assert DashboardFormat.relative_date(~D[2026-02-04], ~D[2026-02-05]) == "Wed Feb 4"
+    end
+  end
+
+  describe "daylight saving and unknown zones" do
+    test "a range across the spring-forward gap shows the clocks either side" do
+      # 00:30-01:30 UTC on 29 March 2026 is 01:30 CET to 03:30 CEST in Berlin.
+      assert DashboardFormat.time_range(
+               ~U[2026-03-29 00:30:00Z],
+               ~U[2026-03-29 01:30:00Z],
+               "Europe/Berlin",
+               "24h"
+             ) == "01:30#{@nbsp}– 03:30"
+    end
+
+    test "a range across the autumn fall-back reads the repeated hour" do
+      # 00:30-01:30 UTC on 25 October 2026 is 02:30 CEST to 02:30 CET in Berlin.
+      assert DashboardFormat.time_range(
+               ~U[2026-10-25 00:30:00Z],
+               ~U[2026-10-25 01:30:00Z],
+               "Europe/Berlin",
+               "24h"
+             ) == "02:30#{@nbsp}– 02:30"
+
+      assert DashboardFormat.duration(~U[2026-10-25 00:30:00Z], ~U[2026-10-25 01:30:00Z]) ==
+               "1 hr"
+    end
+
+    test "an unknown timezone falls back to UTC rather than crashing" do
+      assert DashboardFormat.time_range(
+               ~U[2026-02-05 14:30:00Z],
+               ~U[2026-02-05 15:00:00Z],
+               "Not/AZone",
+               "24h"
+             ) == "14:30#{@nbsp}– 15:00"
+
+      assert DashboardFormat.local_date(~U[2026-02-05 23:30:00Z], "Not/AZone") == ~D[2026-02-05]
     end
   end
 
@@ -175,7 +233,8 @@ defmodule TymeslotWeb.Dashboard.DashboardFormatTest do
         )
 
       assert DashboardFormat.date_label(leave, "Etc/UTC") ==
-               "Monday, February 2, 2026 – Friday, February 6, 2026"
+               String.replace("Monday, February 2, 2026", " ", @nbsp) <>
+                 "#{@nbsp}– " <> String.replace("Friday, February 6, 2026", " ", @nbsp)
     end
   end
 

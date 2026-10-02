@@ -2,7 +2,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.EventPositioning do
   @moduledoc "CSS positioning helpers for timed calendar events: top offset, height, column layout, and colour assignment."
 
   alias Tymeslot.Integrations.Calendar.EventColour
-  alias TymeslotWeb.Components.Dashboard.Appointments.AppointmentRow
+  alias TymeslotWeb.Components.Dashboard.Appointments.OpenAttrs
 
   @spec top_rem(DateTime.t(), String.t()) :: float()
   def top_rem(dt, tz) do
@@ -57,23 +57,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.EventPositioning do
   every view (timed grid, month, agenda, overflow chip) stays in agreement
   about which modal an entry opens.
 
-  `opts` are `AppointmentRow.open_attrs/3`'s, with `keys: :none` by default.
+  `opts` are `OpenAttrs.build/3`'s, with `keys: :none` by default.
   Inside the grid `CalendarDrag` already turns Enter on a `role="button"` into
-  a click, so a focusable block wants `keys: :hook`, never `:server`.
+  a click, so a focusable block wants `keys: :hook`, never `:own`.
   """
   @spec open_event_attrs(map(), keyword()) :: map()
   def open_event_attrs(event, opts \\ [])
 
   def open_event_attrs(%{kind: :booking} = event, opts),
     do:
-      AppointmentRow.open_attrs(
+      OpenAttrs.build(
         "show_booking",
         %{"meeting-id" => event.meeting_id},
         with_keys(opts)
       )
 
   def open_event_attrs(event, opts),
-    do: AppointmentRow.open_attrs("show_event", %{"event-id" => event.id}, with_keys(opts))
+    do: OpenAttrs.build("show_event", %{"event-id" => event.id}, with_keys(opts))
 
   defp with_keys(opts), do: Keyword.put_new(opts, :keys, :none)
 

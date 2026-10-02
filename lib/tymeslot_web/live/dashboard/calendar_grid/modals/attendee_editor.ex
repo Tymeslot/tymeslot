@@ -39,7 +39,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
           :if={@attendees != [] or @pending_attendees != []}
           class="flex flex-wrap gap-1.5 mb-2"
         >
-          <%!-- Existing (invited) attendees — turquoise --%>
+          <%!-- Existing (invited) attendees: turquoise --%>
           <span
             :for={attendee <- @attendees}
             class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-turquoise-50 border border-turquoise-200 text-token-xs text-turquoise-800"
@@ -55,17 +55,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
                 dgettext("dashboard_calendar_events", "Remove %{email}", email: attendee.email)
               }
             >
-              <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="3"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              <.icon name="hero-x-mark-micro" class="w-2.5 h-2.5" />
             </button>
           </span>
-          <%!-- Pending (unsent) attendees — amber dashed --%>
+          <%!-- Pending (unsent) attendees: amber, dashed --%>
           <span
             :for={email <- @pending_attendees}
             class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-amber-50 border border-dashed border-amber-300 text-token-xs text-amber-800"
@@ -79,14 +72,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
               class="w-4 h-4 rounded-full hover:bg-amber-200 flex items-center justify-center transition-colors"
               aria-label={dgettext("dashboard_calendar_events", "Remove %{email}", email: email)}
             >
-              <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="3"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              <.icon name="hero-x-mark-micro" class="w-2.5 h-2.5" />
             </button>
           </span>
         </div>

@@ -214,7 +214,6 @@ msgstr "Přepnout zobrazení"
 msgid "Syncing calendars%{progress}..."
 msgstr "Synchronizace kalendářů%{progress}…"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Today"
@@ -224,11 +223,6 @@ msgstr "Dnes"
 #, elixir-autogen, elixir-format
 msgid "Toggle calendars"
 msgstr "Zobrazit nebo skrýt kalendáře"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
-#, elixir-autogen, elixir-format
-msgid "Tomorrow"
-msgstr "Zítra"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex

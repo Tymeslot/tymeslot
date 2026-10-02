@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Dashboard.CalendarUpNextStrip do
         <span class="hidden sm:inline">{dgettext("dashboard_home", "Up next")}</span>
       </div>
       <div class="min-w-0 flex-1 truncate text-token-sm font-semibold">
-        {@entry.title}
+        {DashboardFormat.title(@entry.title)}
         <span class="text-white/80 font-medium">
           · {DashboardFormat.day_label(@entry, @timezone)} · {DashboardFormat.start_label(
             @entry,

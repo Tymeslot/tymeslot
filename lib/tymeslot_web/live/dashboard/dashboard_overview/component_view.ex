@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
   alias Tymeslot.Integrations.Calendar.EventColour
   alias TymeslotWeb.Components.Dashboard.Appointments.AppointmentRow
   alias TymeslotWeb.Components.Dashboard.Appointments.JoinLink
+  alias TymeslotWeb.Components.Dashboard.Appointments.OpenAttrs
   alias TymeslotWeb.Dashboard.AgendaDetailModal
   alias TymeslotWeb.Dashboard.AgendaTimeline
   alias TymeslotWeb.Dashboard.DashboardFormat
@@ -86,6 +87,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
             timezone={@agenda.timezone}
             time_format={@time_format}
             then_entry={@then_entry}
+            now={@now}
             more_count={@more_count}
             myself={@myself}
           />
@@ -99,7 +101,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
             <button
               :for={entry <- @all_day_today}
               type="button"
-              {AppointmentRow.open_attrs("open_entry", %{"id" => entry.id}, target: @myself, keys: :none)}
+              {OpenAttrs.build("open_entry", %{"id" => entry.id}, target: @myself, keys: :none)}
               class="inline-flex items-center gap-1.5 rounded-token-full bg-tymeslot-100 px-3 py-1 text-token-xs font-black text-tymeslot-600 cursor-pointer hover:bg-tymeslot-200 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 transition-colors"
             >
               <span
@@ -114,7 +116,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
                 :if={!EventColour.tailwind_class(entry.colour)}
                 name="hero-sun-mini"
                 class="w-4 h-4 text-tymeslot-400"
-              />{entry.title}
+              />{DashboardFormat.title(entry.title)}
             </button>
           </div>
 
@@ -180,7 +182,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
   # Turns any agenda surface into a clickable, keyboard-focusable button that
   # opens the entry's detail modal.
   defp open_attrs(%Entry{id: id}, myself),
-    do: AppointmentRow.open_attrs("open_entry", %{"id" => id}, target: myself)
+    do: OpenAttrs.build("open_entry", %{"id" => id}, target: myself)
 
   # --- Focus cockpit ---------------------------------------------------------
 
@@ -188,6 +190,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
   attr :timezone, :string, required: true
   attr :time_format, :string, required: true
   attr :then_entry, :map, default: nil
+  attr :now, DateTime, required: true
   attr :more_count, :integer, default: 0
   attr :myself, :any, required: true
 
@@ -195,7 +198,11 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
     ~H"""
     <div
       {open_attrs(@entry, @myself)}
-      aria-label={dgettext("dashboard_common", "View details for %{title}", title: @entry.title)}
+      aria-label={
+        dgettext("dashboard_common", "View details for %{title}",
+          title: DashboardFormat.title(@entry.title)
+        )
+      }
       class="relative overflow-hidden rounded-token-2xl bg-linear-to-br from-turquoise-600 via-cyan-600 to-blue-600 p-6 text-white shadow-xl shadow-turquoise-500/20 cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-white/60"
     >
       <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.15),transparent_55%)]">
@@ -205,12 +212,14 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
           <.icon name="hero-bolt-mini" class="w-4 h-4" />
           <span>{dgettext("dashboard_home", "Up next")}</span>
           <span aria-hidden="true">·</span>
-          <span>{DashboardFormat.day_label(@entry, @timezone)}</span>
+          <span>{DashboardFormat.day_label(@entry, @timezone, @now)}</span>
         </div>
 
         <div class="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div class="min-w-0">
-            <h3 class="text-token-2xl font-black tracking-tight truncate">{@entry.title}</h3>
+            <h3 class="text-token-2xl font-black tracking-tight truncate">
+              {DashboardFormat.title(@entry.title)}
+            </h3>
             <p class="mt-1 text-white/90 font-semibold text-token-sm">
               {DashboardFormat.start_label(@entry, @timezone, @time_format)}<span :if={@entry.who}> · {@entry.who}</span>
             </p>
@@ -239,7 +248,11 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
             "dashboard_home",
             "then"
           )}</span>
-          {@then_entry.title} · {DashboardFormat.start_label(@then_entry, @timezone, @time_format)}
+          {DashboardFormat.title(@then_entry.title)} · {DashboardFormat.start_label(
+            @then_entry,
+            @timezone,
+            @time_format
+          )}
           <span :if={@more_count > 0}>
             · {dngettext(
               "dashboard_home",

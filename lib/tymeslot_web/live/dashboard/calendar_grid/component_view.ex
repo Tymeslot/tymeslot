@@ -167,6 +167,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
         <BookingDetailModal.booking_detail_modal
           :if={@selected_booking}
           entry={@selected_booking}
+          now={@current_time}
           user_timezone={@user_timezone}
           time_format={Helpers.time_format(assigns)}
           myself={@myself}

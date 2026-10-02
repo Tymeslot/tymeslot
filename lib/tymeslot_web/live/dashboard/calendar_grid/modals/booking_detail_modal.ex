@@ -20,12 +20,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.BookingDetailModal do
   attr :entry, Entry, required: true
   attr :user_timezone, :string, required: true
   attr :time_format, :string, required: true
+  attr :now, DateTime, required: true, doc: "The grid's clock, anchoring the countdown"
   attr :myself, :any, required: true
 
   @spec booking_detail_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def booking_detail_modal(assigns) do
-    assigns = assign(assigns, :now, DateTime.utc_now())
-
     ~H"""
     <.modal
       id="booking-detail-modal"

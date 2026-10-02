@@ -730,3 +730,8 @@ msgstr "Quand"
 #, elixir-autogen, elixir-format
 msgid "With"
 msgstr "Avec"
+
+#: lib/tymeslot_web/live/dashboard/dashboard_format.ex
+#, elixir-autogen, elixir-format
+msgid "%{date}, %{time}"
+msgstr "%{date}, %{time}"

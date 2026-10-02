@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Components.Dashboard.Appointments.AppointmentRow do
     * `:list`: a row of the calendar's agenda list, led by its time range.
 
   What a click opens is the caller's: `on_open` is the attribute map from
-  `open_attrs/3`.
+  `OpenAttrs.build/3`.
   """
 
   use Phoenix.Component
@@ -22,42 +22,9 @@ defmodule TymeslotWeb.Components.Dashboard.Appointments.AppointmentRow do
   alias TymeslotWeb.Dashboard.DashboardFormat
   alias TymeslotWeb.Dashboard.DashboardOverview.SourcePill
 
-  @doc """
-  The bindings that make an element open something on click: `phx-click`
-  pushing `event` with each of `values` as a `phx-value-*`.
-
-  `:keys` decides how a keyboard reaches it:
-
-    * `:server` (default): focusable as a button, Enter pushes the same event.
-    * `:hook`: focusable as a button, for a surface whose hook turns Enter and
-      Space on a `role="button"` into a click (the calendar grid's
-      `CalendarDrag`); a server key binding there would open it twice.
-    * `:none`: the click only, for a real `<button>` or a surface with its own
-      keyboard route.
-
-  `:target` adds the `phx-target`.
-  """
-  @spec open_attrs(String.t(), map(), keyword()) :: map()
-  def open_attrs(event, values, opts \\ []) do
-    values
-    |> Map.new(fn {name, value} -> {"phx-value-#{name}", value} end)
-    |> Map.put("phx-click", event)
-    |> Map.merge(target_attrs(opts[:target]))
-    |> Map.merge(key_attrs(event, Keyword.get(opts, :keys, :server)))
-  end
-
-  defp target_attrs(nil), do: %{}
-  defp target_attrs(target), do: %{"phx-target" => target}
-
-  defp key_attrs(event, :server),
-    do: %{"phx-keydown" => event, "phx-key" => "Enter", "role" => "button", "tabindex" => "0"}
-
-  defp key_attrs(_event, :hook), do: %{"role" => "button", "tabindex" => "0"}
-  defp key_attrs(_event, :none), do: %{}
-
   attr :entry, Entry, required: true
   attr :variant, :atom, required: true, values: [:spine, :peek, :list]
-  attr :on_open, :map, required: true, doc: "From `open_attrs/3`"
+  attr :on_open, :map, required: true, doc: "From `OpenAttrs.build/3`"
   attr :timezone, :string, required: true
   attr :time_format, :string, required: true
 

@@ -36,11 +36,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AllDayRow do
           id={"allday-event-#{event.id}-#{@day}"}
           phx-hook="StopClickPropagation"
           class={"rounded px-1 text-token-xs font-medium text-white truncate cursor-pointer #{Helpers.color_for_event(@assigns_ref, event)}"}
-          phx-click="show_event"
-          phx-value-event-id={event.id}
-          phx-target={@myself}
-          role="button"
-          tabindex="0"
+          {Helpers.open_event_attrs(event, keys: :hook, target: @myself)}
           aria-label={
             dgettext("dashboard_calendar", "All-day: %{event}",
               event: DashboardFormat.title(event.summary)
@@ -69,11 +65,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AllDayRow do
         <div
           :for={event <- @hidden}
           class={"rounded px-1 text-token-xs font-medium text-white truncate cursor-pointer #{Helpers.color_for_event(@assigns_ref, event)}"}
-          phx-click="show_event"
-          phx-value-event-id={event.id}
-          phx-target={@myself}
-          role="button"
-          tabindex="0"
+          {Helpers.open_event_attrs(event, keys: :hook, target: @myself)}
         >
           {DashboardFormat.title(event.summary)}
         </div>

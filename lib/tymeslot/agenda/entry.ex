@@ -11,7 +11,8 @@ defmodule Tymeslot.Agenda.Entry do
   them sorting ahead of that day's timed entries. `day` is the entry's local
   (user-timezone) date, precomputed so grouping never has to reconvert.
 
-  `who` names the other party (a booking's attendee, an event's organiser);
+  `title` is `nil` when the booking or event has none; the presentation layer
+  labels it. `who` names the other party (a booking's attendee, an event's organiser);
   `who_email` is the attendee's address, known for bookings only.
   """
 
@@ -46,7 +47,7 @@ defmodule Tymeslot.Agenda.Entry do
   @type t :: %__MODULE__{
           id: String.t(),
           source: source(),
-          title: String.t(),
+          title: String.t() | nil,
           day: Date.t(),
           start_at: DateTime.t(),
           end_at: DateTime.t(),

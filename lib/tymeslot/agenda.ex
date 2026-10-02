@@ -175,7 +175,7 @@ defmodule Tymeslot.Agenda do
     %Entry{
       id: "meeting-" <> to_string(meeting.id),
       source: :tymeslot,
-      title: presence(meeting.title) || "Meeting",
+      title: presence(meeting.title),
       day: to_local_date(meeting.start_time, tz),
       start_at: meeting.start_time,
       end_at: meeting.end_time,
@@ -197,7 +197,7 @@ defmodule Tymeslot.Agenda do
     %Entry{
       id: "event-" <> to_string(event.id),
       source: :external,
-      title: presence(event.summary) || "Busy",
+      title: presence(event.summary),
       day: event.start_date,
       start_at: local_midnight(event.start_date, tz),
       end_at: local_midnight(end_date, tz),
@@ -218,7 +218,7 @@ defmodule Tymeslot.Agenda do
     %Entry{
       id: "event-" <> to_string(event.id),
       source: :external,
-      title: presence(event.summary) || "Busy",
+      title: presence(event.summary),
       day: to_local_date(event.start_at, tz),
       start_at: event.start_at,
       end_at: end_at,
