@@ -47,7 +47,11 @@ defmodule Tymeslot.Emails.Shared.Styles.DarkMode do
     rules =
       [
         rules_for(Map.get(colour_map, :text, []), &text_selectors/1, "color"),
-        rules_for(Map.get(colour_map, :background, []), &background_selectors/1, "background-color"),
+        rules_for(
+          Map.get(colour_map, :background, []),
+          &background_selectors/1,
+          "background-color"
+        ),
         rules_for(Map.get(colour_map, :border, []), &border_selectors/1, "border-color"),
         keep_text_rules(Map.get(colour_map, :keep_text, [])),
         Map.get(colour_map, :rules, "")

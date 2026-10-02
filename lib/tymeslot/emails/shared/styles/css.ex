@@ -90,7 +90,10 @@ defmodule Tymeslot.Emails.Shared.Styles.CSS do
         neutral_pairs([:canvas, :canvas_soft, :surface, :hairline]) ++
           Enum.map(intents, fn {_intent, dark} -> dark.tint end),
       border: neutral_pairs([:hairline, :hairline_soft]),
-      keep_text: Enum.map(intents, fn {intent, _dark} -> {Tokens.intent_accent_deep(intent), Tokens.ink()} end),
+      keep_text:
+        Enum.map(intents, fn {intent, _dark} ->
+          {Tokens.intent_accent_deep(intent), Tokens.ink()}
+        end),
       rules: dark_class_rules(intents)
     })
   end
@@ -150,8 +153,10 @@ defmodule Tymeslot.Emails.Shared.Styles.CSS do
     confirmed = Keyword.fetch!(intents, :confirmed)
 
     badges =
-      Enum.map_join([turquoise: :confirmed, amber: :alert, rose: :cancelled], "\n", fn {name, intent} ->
+      Enum.map_join([turquoise: :confirmed, amber: :alert, rose: :cancelled], "\n", fn {name,
+                                                                                        intent} ->
         dark = Keyword.fetch!(intents, intent)
+
         ".badge-#{name} { background: #{elem(dark.tint, 1)} !important; color: #{dark.ink} !important; }"
       end)
 
