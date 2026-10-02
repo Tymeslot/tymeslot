@@ -50,6 +50,7 @@ defmodule TymeslotWeb.Components.CoreComponents do
        :subsection_header
      ]},
     {:Forms, [:input, :form_wrapper, :password_requirements]},
+    {:Page, [:dashboard_page]},
     {:SettingRow, [:setting_row]},
     {:Feedback, [:spinner, :empty_state, :loading_card, :pill]},
     {:Navigation, [:detail_row, :tab_bar, :segmented_control]},

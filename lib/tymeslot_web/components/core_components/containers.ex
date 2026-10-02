@@ -254,8 +254,26 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
     """
   end
 
+  @section_title_classes %{
+    1 => "display-sm text-tymeslot-900",
+    2 => "text-token-2xl font-black tracking-tight text-tymeslot-900",
+    3 => "text-token-xl font-black tracking-tight text-tymeslot-900",
+    4 => "text-token-lg font-bold text-tymeslot-900"
+  }
+
   @doc """
-  Renders a section header with consistent styling. Supports optional icon, count badge, and saving indicator.
+  Renders a section heading: an optional icon tile, the title (or the inner
+  block), an optional count badge, and a saving indicator and actions at the
+  end of the row.
+
+      <.section_header level={2} title="Your Webhooks" count={3}>
+        <:actions><.action_button>Create Webhook</.action_button></:actions>
+      </.section_header>
+
+  `level` picks both the heading tag (`<h1>` to `<h4>`) and its size, so the
+  outline and the look cannot disagree. A dashboard page's own title is level
+  1 and is rendered by `<.dashboard_page>`; reach for this directly only for a
+  heading inside a page. On a narrow screen the actions wrap below the title.
   """
   attr :icon, :any,
     default: nil,
@@ -264,67 +282,65 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
   attr :title, :string, default: nil
   attr :count, :integer, default: nil
   attr :saving, :boolean, default: false
-  attr :level, :integer, default: 1
-  attr :title_class, :string, default: nil
-  attr :class, :string, default: ""
-  slot :inner_block
+  attr :level, :integer, default: 1, values: Map.keys(@section_title_classes)
+  attr :id, :string, default: nil, doc: "The heading's id"
+  attr :class, :any, default: nil, doc: "Layout classes only"
+  slot :inner_block, doc: "The title, when it needs markup; `title` wins when both are given"
+  slot :actions, doc: "Controls at the end of the row"
 
   @spec section_header(map()) :: Phoenix.LiveView.Rendered.t()
   def section_header(assigns) do
-    size_class =
-      case assigns.level do
-        1 -> "text-4xl"
-        2 -> "text-3xl"
-        3 -> "text-2xl"
-        _other -> "text-xl"
-      end
-
-    computed_title_class =
-      assigns.title_class || "#{size_class} font-black text-tymeslot-900 tracking-tight"
-
-    assigns =
-      assigns
-      |> assign(:size_class, size_class)
-      |> assign(:computed_title_class, computed_title_class)
+    assigns = assign(assigns, :title_class, Map.fetch!(@section_title_classes, assigns.level))
 
     ~H"""
-    <div :if={@icon} class={["flex items-center mb-4", @class]}>
-      <div class="w-14 h-14 bg-white rounded-2xl flex items-center justify-center mr-5 shadow-sm border border-tymeslot-100 shrink-0">
-        <%!-- Hero icons arrive as `hero-…` strings; the few brand marks with no
-             Heroicon equivalent (e.g. `:webhook`) arrive as atoms. --%>
-        <Icons.icon :if={is_binary(@icon)} name={@icon} class="w-8 h-8 text-turquoise-600" />
-        <IconComponents.icon :if={is_atom(@icon)} name={@icon} class="w-8 h-8 text-turquoise-600" />
-      </div>
+    <div class={["flex flex-wrap items-center justify-between gap-x-4 gap-y-3", @class]}>
+      <div class="flex min-w-0 items-center gap-3 sm:gap-4">
+        <div
+          :if={@icon}
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-token-xl border border-tymeslot-100 bg-white shadow-sm sm:h-14 sm:w-14 sm:rounded-token-2xl"
+        >
+          <%!-- Hero icons arrive as `hero-…` strings; the few brand marks with no
+               Heroicon equivalent (e.g. `:webhook`) arrive as atoms. --%>
+          <Icons.icon
+            :if={is_binary(@icon)}
+            name={@icon}
+            class="h-6 w-6 text-turquoise-600 sm:h-8 sm:w-8"
+          />
+          <IconComponents.icon
+            :if={is_atom(@icon)}
+            name={@icon}
+            class="h-6 w-6 text-turquoise-600 sm:h-8 sm:w-8"
+          />
+        </div>
 
-      <h1 class={@computed_title_class}>
-        <%= if @title do %>
-          {@title}
-        <% else %>
-          {render_slot(@inner_block)}
-        <% end %>
-      </h1>
+        <.dynamic_tag tag_name={"h#{@level}"} id={@id} class={["min-w-0 break-words", @title_class]}>
+          <%= if @title do %>
+            {@title}
+          <% else %>
+            {render_slot(@inner_block)}
+          <% end %>
+        </.dynamic_tag>
 
-      <%= if @count do %>
-        <span class="ml-4 bg-turquoise-100 text-turquoise-700 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider">
+        <span
+          :if={@count}
+          class="shrink-0 rounded-token-full bg-turquoise-100 px-3 py-1 text-token-xs font-black uppercase tracking-wider text-turquoise-700"
+        >
           {@count}
         </span>
-      <% end %>
+      </div>
 
-      <%= if @saving do %>
-        <div class="ml-auto bg-emerald-50 text-emerald-700 px-4 py-2 rounded-full font-black text-xs uppercase tracking-wider border-2 border-emerald-100 flex items-center">
-          <Feedback.spinner class="h-4 w-4 mr-2" />
+      <div :if={@saving or @actions != []} class="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div
+          :if={@saving}
+          role="status"
+          class="flex items-center rounded-token-full border-2 border-emerald-100 bg-emerald-50 px-4 py-2 text-token-xs font-black uppercase tracking-wider text-emerald-700"
+        >
+          <Feedback.spinner class="mr-2 h-4 w-4" />
           {dgettext("common", "Saving changes...")}
         </div>
-      <% end %>
+        {render_slot(@actions)}
+      </div>
     </div>
-
-    <h1 :if={!@icon} class={[@computed_title_class, "mb-2", @class]}>
-      <%= if @title do %>
-        {@title}
-      <% else %>
-        {render_slot(@inner_block)}
-      <% end %>
-    </h1>
     """
   end
 

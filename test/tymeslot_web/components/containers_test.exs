@@ -47,6 +47,45 @@ defmodule TymeslotWeb.Components.ContainersTest do
     assert Floki.find(doc, "span.bg-turquoise-100") == []
   end
 
+  describe "section_header levels" do
+    for {level, size} <- [
+          {1, "display-sm"},
+          {2, "text-token-2xl"},
+          {3, "text-token-xl"},
+          {4, "text-token-lg"}
+        ] do
+      test "level #{level} renders an h#{level} at its own size" do
+        html =
+          render_component(&Containers.section_header/1, %{
+            title: "Heading",
+            level: unquote(level)
+          })
+
+        doc = Floki.parse_fragment!(html)
+
+        assert [{_tag, attrs, _children}] = Floki.find(doc, "h#{unquote(level)}")
+        assert {"class", class} = List.keyfind(attrs, "class", 0)
+        assert class =~ unquote(size)
+        assert doc |> Floki.find("h1, h2, h3, h4") |> length() == 1
+      end
+    end
+
+    test "renders the actions slot at the end of the row" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <Containers.section_header level={2} title="Your Webhooks">
+          <:actions><button id="create">Create</button></:actions>
+        </Containers.section_header>
+        """)
+
+      doc = Floki.parse_fragment!(html)
+      assert [_button] = Floki.find(doc, "button#create")
+      assert doc |> Floki.find("h2") |> Floki.text() |> String.trim() == "Your Webhooks"
+    end
+  end
+
   test "spinner defaults to h-5 w-5 when no class is given" do
     html = render_component(&Feedback.spinner/1, %{})
     doc = Floki.parse_document!(html)

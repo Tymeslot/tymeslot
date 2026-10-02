@@ -80,7 +80,7 @@
 
 /* Safelist (formerly `safelist`). These classes are produced by runtime string
    interpolation or live only in SaaS templates, so static scanning misses them. */
-@source inline("display-xl display-lg display-md");
+@source inline("display-xl display-lg display-md display-sm");
 @source inline("bg-calendar-{1,2,3,4,5,6,7,8} bg-calendar-fallback");
 @source inline("bg-calendar-{tomato,tangerine,banana,sage,peacock,blueberry,grape,graphite}");
 @source inline("w-6 h-6 w-8 h-8 w-10 h-10 h-16 h-20 box-border");

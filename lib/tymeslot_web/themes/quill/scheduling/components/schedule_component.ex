@@ -174,13 +174,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                   <%!-- Header: title + compact timezone trigger --%>
                   <div class="schedule-card-header">
                     <div class="flex-1 min-w-0">
-                      <.section_header
-                        level={2}
-                        class="mb-1"
-                        title_class="section-header schedule-title"
-                      >
+                      <h1 class="section-header schedule-title">
                         {dgettext("booking", "Select a Date & Time")}
-                      </.section_header>
+                      </h1>
 
                       <%= if @organizer_profile do %>
                         <p class="schedule-advance-notice text-glass-primary">

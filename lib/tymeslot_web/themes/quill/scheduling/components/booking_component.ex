@@ -126,13 +126,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
             <div class="w-full">
               <.glass_morphism_card class="booking-form-card">
                 <div class="booking-card-body">
-                  <.section_header
-                    level={2}
-                    class="booking-heading-wrapper"
-                    title_class="section-header booking-heading"
-                  >
+                  <h1 class="section-header booking-heading booking-heading-wrapper">
                     {dgettext("booking", "Enter Your Details")}
-                  </.section_header>
+                  </h1>
 
                   <p class="booking-subtitle text-quill-primary">
                     <%= if @organizer_profile do %>

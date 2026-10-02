@@ -30,6 +30,11 @@
     @apply text-token-3xl md:text-token-4xl font-black tracking-tight;
   }
 
+  /* A dashboard page title: small enough on a phone to stay on one line. */
+  .display-sm {
+    @apply text-token-2xl sm:text-token-3xl lg:text-token-4xl font-black tracking-tight;
+  }
+
   /* Semantic Tag Components */
   .tag-semantic {
     @apply inline-flex items-center gap-2 px-3 py-1 rounded-token-xl border-2 font-semibold text-token-sm transition-all duration-300;

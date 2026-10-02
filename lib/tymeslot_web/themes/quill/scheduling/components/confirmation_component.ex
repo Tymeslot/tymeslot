@@ -93,12 +93,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                       </div>
                     </div>
                     <div class="flex-1 min-w-0" data-testid="confirmation-heading">
-                      <.section_header
-                        class="mb-1"
-                        title_class="section-header confirmation-title"
-                      >
+                      <h1 class="section-header confirmation-title">
                         {headline(assigns)}
-                      </.section_header>
+                      </h1>
                       <p class="confirmation-subtitle text-quill-primary">
                         {subtitle(assigns)}
                       </p>

@@ -46,13 +46,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.CustomQuestionsComponen
                     </p>
                   <% end %>
 
-                  <.section_header
-                    level={2}
-                    class="booking-heading-wrapper"
-                    title_class="section-header booking-heading"
-                  >
+                  <h1 class="section-header booking-heading booking-heading-wrapper">
                     {@definition["label"]}
-                  </.section_header>
+                  </h1>
 
                   <%= if @definition["help_text"] do %>
                     <p class="text-quill-secondary mb-2">{@definition["help_text"]}</p>
