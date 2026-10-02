@@ -172,16 +172,14 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
                   aria-label={dgettext("dashboard_common", "Candidate time %{n}", n: index + 1)}
                 />
               </div>
-              <button
-                type="button"
+              <.icon_button
+                icon="hero-x-mark"
+                label={dgettext("dashboard_common", "Remove time")}
+                variant={:danger}
                 phx-click="remove_slot"
                 phx-value-key={slot.key}
                 phx-target={@myself}
-                class="p-2 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                aria-label={dgettext("dashboard_common", "Remove time")}
-              >
-                <.icon name="hero-x-mark" class="w-4 h-4" />
-              </button>
+              />
             </div>
             <p
               :if={MapSet.member?(@time_off_keys, slot.key)}
@@ -199,31 +197,30 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
 
           <p :for={error <- error_list(@errors, :slots)} class="form-error">{error}</p>
 
-          <button
-            type="button"
+          <.action_button
+            variant={:secondary}
+            size={:sm}
+            icon="hero-plus"
             phx-click="add_slot"
             phx-target={@myself}
-            class="btn btn-secondary btn-sm inline-flex items-center gap-1"
           >
-            <.icon name="hero-plus" class="w-4 h-4" />
             {dgettext("dashboard_common", "Add time")}
-          </button>
+          </.action_button>
         </div>
 
         <p :for={error <- error_list(@errors, :base)} class="form-error">{error}</p>
 
         <div class="flex justify-end gap-3 pt-2">
-          <button
-            type="button"
+          <.action_button
+            variant={:secondary}
             phx-click="cancel_poll_form"
             phx-target={@parent_myself}
-            class="btn btn-secondary"
           >
             {dgettext("dashboard_common", "Cancel")}
-          </button>
-          <button type="submit" class="btn btn-primary">
+          </.action_button>
+          <.action_button type="submit">
             {dgettext("dashboard_common", "Create poll")}
-          </button>
+          </.action_button>
         </div>
       </form>
     </div>

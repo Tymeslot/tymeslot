@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
 
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
+  alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.CoreComponents.Icons
@@ -113,26 +114,20 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
           />
           <%!-- Wording only, and only while the poll is open: see
                 `Polls.update_details/3` for why the times are not editable. --%>
-          <button
+          <Buttons.icon_button
             :if={@open?}
-            type="button"
+            icon="hero-pencil-square"
+            label={dgettext("dashboard_common", "Edit title and description")}
             phx-click="edit_poll_details"
             phx-target={@myself}
-            class="p-2 rounded-lg bg-white border-2 border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-400 hover:text-turquoise-700 transition-colors"
-            title={dgettext("dashboard_common", "Edit title and description")}
             data-testid="poll-edit-details"
-          >
-            <Icons.icon name="hero-pencil-square" class="w-4 h-4" />
-          </button>
-          <button
-            type="button"
+          />
+          <Buttons.icon_button
+            icon="hero-x-mark"
+            label={dgettext("dashboard_common", "Close results")}
             phx-click="deselect_poll"
             phx-target={@myself}
-            class="p-2 rounded-lg text-tymeslot-500 hover:text-tymeslot-700 hover:bg-tymeslot-100 transition-colors"
-            aria-label={dgettext("dashboard_common", "Close results")}
-          >
-            <Icons.icon name="hero-x-mark" class="w-4 h-4" />
-          </button>
+          />
         </div>
       </div>
 
@@ -176,15 +171,15 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
       </div>
 
       <div :if={@open?} class="flex justify-end pt-2 border-t border-tymeslot-100">
-        <button
-          type="button"
+        <Buttons.action_button
+          variant={:danger_soft}
+          size={:sm}
+          icon="hero-x-circle"
           phx-click="request_cancel_poll"
           phx-target={@myself}
-          class="btn btn-danger btn-sm inline-flex items-center gap-1"
         >
-          <Icons.icon name="hero-x-circle" class="w-4 h-4" />
           {dgettext("dashboard_common", "Cancel poll")}
-        </button>
+        </Buttons.action_button>
       </div>
     </div>
     """
@@ -226,17 +221,17 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
       />
 
       <div class="flex justify-end gap-2">
-        <button
-          type="button"
+        <Buttons.action_button
+          variant={:secondary}
+          size={:sm}
           phx-click="cancel_edit_poll_details"
           phx-target={@myself}
-          class="btn btn-secondary btn-sm"
         >
           {dgettext("dashboard_common", "Cancel")}
-        </button>
-        <button type="submit" class="btn btn-primary btn-sm">
+        </Buttons.action_button>
+        <Buttons.action_button type="submit" size={:sm}>
           {dgettext("dashboard_common", "Save changes")}
-        </button>
+        </Buttons.action_button>
       </div>
     </form>
     """
@@ -344,18 +339,19 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
           </Feedback.pill>
         </div>
 
-        <button
+        <Buttons.action_button
           :if={@open?}
-          type="button"
+          variant={:secondary}
+          size={:sm}
+          icon="hero-check"
+          class="shrink-0"
           phx-click="confirm_slot"
           phx-value-slot={@slot.id}
           phx-target={@myself}
           phx-disable-with={dgettext("common", "Processing...")}
-          class="btn btn-secondary btn-sm inline-flex items-center gap-1 shrink-0"
         >
-          <Icons.icon name="hero-check" class="w-4 h-4" />
           {dgettext("dashboard_common", "Confirm this time")}
-        </button>
+        </Buttons.action_button>
       </div>
 
       <.response_bar counts={@counts} total={@participant_count} />

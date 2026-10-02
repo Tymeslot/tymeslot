@@ -257,13 +257,15 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
               </.input>
             </div>
             <div class="flex items-end">
-              <button
+              <%!-- The fixed height matches the input beside it; the component sets
+                    padding, not height, so this is layout only. --%>
+              <.action_button
                 type="submit"
-                class="btn-primary px-8 whitespace-nowrap h-[52px]"
+                class="h-[52px]"
                 phx-disable-with={dgettext("dashboard_profile", "Saving...")}
               >
                 {dgettext("dashboard_profile", "Update URL")}
-              </button>
+              </.action_button>
             </div>
           </div>
 

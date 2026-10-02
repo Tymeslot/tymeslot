@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollShareLink do
 
   alias Tymeslot.Scheduling.LinkAccessPolicy
   alias Tymeslot.Utils.UrlBuilder
-  alias TymeslotWeb.Components.CoreComponents.Icons
+  alias TymeslotWeb.Components.CoreComponents.Buttons
 
   @doc """
   Renders the copy-to-clipboard button for a poll's public voting link.
@@ -38,28 +38,24 @@ defmodule TymeslotWeb.Dashboard.Polls.PollShareLink do
       |> assign(:share_url, share_url(assigns.profile, assigns.poll))
 
     ~H"""
-    <button
+    <Buttons.icon_button
       :if={@can_link?}
       id={@id}
-      type="button"
+      icon="hero-clipboard"
+      label={dgettext("dashboard_common", "Copy poll link to clipboard")}
       phx-hook="CopyOnClick"
       data-copy-text={@share_url}
       data-copy-feedback={dgettext("dashboard_common", "Poll link copied to clipboard!")}
-      class="p-2 rounded-lg bg-white border-2 border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-400 hover:text-turquoise-700 transition-colors"
-      title={dgettext("dashboard_common", "Copy poll link to clipboard")}
-    >
-      <Icons.icon name="hero-clipboard" class="w-4 h-4" />
-    </button>
-    <button
+    />
+    <%!-- `aria-disabled` rather than `disabled`, so the control stays focusable
+          and its tooltip still explains why the link is unavailable. --%>
+    <Buttons.icon_button
       :if={!@can_link?}
-      type="button"
+      icon="hero-clipboard"
+      label={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
       aria-disabled="true"
-      aria-label={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
-      class="p-2 rounded-lg bg-tymeslot-100 text-tymeslot-400 cursor-not-allowed opacity-60"
-      title={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
-    >
-      <Icons.icon name="hero-clipboard" class="w-4 h-4" />
-    </button>
+      class="opacity-60"
+    />
     """
   end
 

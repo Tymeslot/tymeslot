@@ -109,6 +109,9 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     copy_btn = Floki.find(doc, "button#copy-scheduling-link")
     assert length(copy_btn) == 1
     refute copy_btn |> List.first() |> Floki.attribute("disabled") |> Enum.any?()
+
+    # The icon-only button carries an accessible name
+    assert Floki.attribute(copy_btn, "aria-label") == ["Copy link to clipboard"]
   end
 
   test "disables scheduling link when no username" do
@@ -133,6 +136,9 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     assert length(disabled_copy_btn) == 1
 
     assert disabled_copy_btn |> List.first() |> Floki.attribute("title") |> List.first() =~
+             "Set a username in Settings to enable this feature"
+
+    assert disabled_copy_btn |> Floki.attribute("aria-label") |> List.first() =~
              "Set a username in Settings to enable this feature"
   end
 

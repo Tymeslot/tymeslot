@@ -146,25 +146,16 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.VideoPi
                   upload={@uploads.background_video}
                   class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
                 />
-                <div class="btn-secondary w-full py-4 flex items-center justify-center gap-3">
-                  <svg
-                    class="w-5 h-5 text-turquoise-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2.5"
-                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-                    />
-                  </svg>
+                <div class="action-button action-button--secondary w-full">
+                  <.icon name="hero-arrow-up-tray" class="w-5 h-5 shrink-0 text-turquoise-600" />
                   <span>{dgettext("dashboard_appearance", "Select Video")}</span>
                 </div>
               </div>
             <% else %>
-              <div class="btn-secondary w-full opacity-50 cursor-not-allowed py-4">
+              <div
+                class="action-button action-button--secondary w-full opacity-50"
+                aria-disabled="true"
+              >
                 {dgettext("dashboard_appearance", "Upload not available")}
               </div>
             <% end %>

@@ -98,14 +98,12 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
         </ul>
       </details>
 
-      <button
-        type="button"
+      <.icon_button
+        icon="hero-x-mark"
+        label={dgettext("onboarding_wizard", "Dismiss setup checklist")}
+        size={:sm}
         phx-click="onboarding:dismiss"
-        aria-label={dgettext("onboarding_wizard", "Dismiss setup checklist")}
-        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-token-lg text-tymeslot-400 transition-colors hover:bg-tymeslot-100 hover:text-tymeslot-600"
-      >
-        <.icon name="hero-x-mark" class="h-5 w-5" />
-      </button>
+      />
     </div>
     """
   end
@@ -133,14 +131,12 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
         </div>
         <div class="flex items-center gap-3 shrink-0">
           <.pill tone={:brand} size={:sm}>{@done_count}/{@total}</.pill>
-          <button
-            type="button"
+          <.icon_button
+            icon="hero-x-mark"
+            label={dgettext("onboarding_wizard", "Dismiss setup checklist")}
+            size={:sm}
             phx-click="onboarding:dismiss"
-            aria-label={dgettext("onboarding_wizard", "Dismiss setup checklist")}
-            class="w-8 h-8 flex items-center justify-center rounded-token-lg text-tymeslot-400 hover:text-tymeslot-600 hover:bg-tymeslot-100 transition-colors"
-          >
-            <.icon name="hero-x-mark" class="w-5 h-5" />
-          </button>
+          />
         </div>
       </div>
 
@@ -226,10 +222,10 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
     """
   end
 
-  # Geometry shared by every actionable variant below: full width on phones, so
+  # Layout shared by every actionable variant below: full width on phones, so
   # the control drops onto its own line and leaves the title and description the
   # whole row; one fixed width from `sm` up, so the actions line up in a column.
-  @cta_class "shrink-0 inline-flex items-center justify-center w-full sm:w-32 px-4 py-2 rounded-token-xl text-token-sm font-black transition-colors"
+  @cta_class "shrink-0 w-full sm:w-32"
   defp cta_class, do: @cta_class
 
   # The row's action. A done item shows a static "Done"; the share item copies
@@ -250,38 +246,40 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
 
   defp item_cta(%{item: %{action: :copy, shareable: true}} = assigns) do
     ~H"""
-    <button
-      type="button"
+    <.action_button
       id={"setup-copy-#{@item.key}"}
+      size={:sm}
+      icon="hero-clipboard"
+      class={cta_class()}
       phx-hook="CopyOnClick"
       data-copy-text={@item.copy_url}
       data-copy-feedback={dgettext("onboarding_wizard", "Booking link copied to clipboard!")}
-      class={[cta_class(), "gap-1.5 bg-turquoise-600 hover:bg-turquoise-700 text-white"]}
     >
-      <.icon name="hero-clipboard" class="w-4 h-4" /> {@item.cta}
-    </button>
+      {@item.cta}
+    </.action_button>
     """
   end
 
   defp item_cta(%{item: %{action: :copy}} = assigns) do
     ~H"""
-    <span
-      class={[cta_class(), "gap-1.5 bg-tymeslot-100 text-tymeslot-400 cursor-not-allowed"]}
+    <.action_button
+      variant={:secondary}
+      size={:sm}
+      icon="hero-clipboard"
+      class={cta_class()}
+      disabled
       title={@item.disabled_tooltip}
     >
-      <.icon name="hero-clipboard" class="w-4 h-4" /> {@item.cta}
-    </span>
+      {@item.cta}
+    </.action_button>
     """
   end
 
   defp item_cta(assigns) do
     ~H"""
-    <.link
-      patch={@item.path}
-      class={[cta_class(), "gap-1 bg-turquoise-600 hover:bg-turquoise-700 text-white group"]}
-    >
+    <.action_link patch={@item.path} size={:sm} class={cta_class() <> " group"}>
       {@item.cta} <span class="group-hover:translate-x-0.5 transition-transform">→</span>
-    </.link>
+    </.action_link>
     """
   end
 

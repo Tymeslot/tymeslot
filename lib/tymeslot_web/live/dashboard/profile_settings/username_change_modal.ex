@@ -103,23 +103,22 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameChangeModal do
 
       <:footer>
         <div class="flex gap-4">
-          <button
-            type="button"
+          <.action_button
+            variant={:secondary}
+            class="flex-1"
             phx-click="cancel_username_change"
             phx-target={@myself}
-            class="btn-secondary flex-1 py-4"
           >
             {dgettext("common", "Cancel")}
-          </button>
-          <button
-            type="button"
+          </.action_button>
+          <.action_button
+            class="flex-1"
             phx-click="confirm_username_change"
             phx-target={@myself}
             phx-disable-with={dgettext("dashboard_profile", "Saving...")}
-            class="btn-primary flex-1 py-4"
           >
             {dgettext("dashboard_profile", "Change URL")}
-          </button>
+          </.action_button>
         </div>
       </:footer>
     </.modal>

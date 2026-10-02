@@ -38,44 +38,24 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
 
       <div class="flex items-center justify-between gap-3 md:justify-start">
         <%= if @profile && @profile.username do %>
-          <a
+          <.action_link
             href={PreviewMode.owner_path(@profile.username, @profile.user_id, theme: @theme_id)}
             target="_blank"
             rel="noopener noreferrer"
-            class="btn btn-secondary py-2.5 px-5 text-token-sm"
+            variant={:secondary}
+            icon="hero-eye"
           >
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2.5"
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2.5"
-                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-              />
-            </svg>
             {dgettext("dashboard_appearance", "Live Preview")}
-          </a>
+          </.action_link>
         <% end %>
-        <button
+        <.action_button
+          variant={:outline}
+          icon="hero-x-mark"
           phx-click="close_customization"
           phx-target={@parent_component}
-          class="flex items-center gap-2 px-5 py-2.5 rounded-token-xl bg-tymeslot-50 text-tymeslot-600 font-bold hover:bg-tymeslot-100 transition-all border-2 border-transparent hover:border-tymeslot-200"
         >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2.5"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
           {dgettext("dashboard_appearance", "Close")}
-        </button>
+        </.action_button>
       </div>
     </div>
     """

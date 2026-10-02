@@ -155,15 +155,15 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
                 current={@range}
               />
             </div>
-            <button
-              type="button"
+            <%!-- The arbitrary variant spins the component's icon while a
+                  refresh is in flight; the button itself stays still. --%>
+            <.icon_button
+              icon="hero-arrow-path"
+              label={dgettext("dashboard_analytics", "Refresh analytics")}
+              size={:sm}
+              class={@refreshing? && "[&>svg]:animate-spin"}
               phx-click="refresh"
-              title={dgettext("dashboard_analytics", "Refresh")}
-              aria-label={dgettext("dashboard_analytics", "Refresh analytics")}
-              class="rounded-md bg-tymeslot-50 p-2 text-tymeslot-700 transition-colors hover:bg-tymeslot-100"
-            >
-              <.icon name="hero-arrow-path" class={"h-4 w-4 #{if @refreshing?, do: "animate-spin"}"} />
-            </button>
+            />
           </div>
         </div>
 

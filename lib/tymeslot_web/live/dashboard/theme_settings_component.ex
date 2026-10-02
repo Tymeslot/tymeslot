@@ -148,67 +148,42 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
                 </div>
               </div>
 
-              <div class="flex gap-4">
+              <%!-- Wraps rather than overflows when a narrow card cannot fit both
+                    labels on one line. --%>
+              <div class="flex flex-wrap gap-4">
                 <%= if LinkAccessPolicy.can_link?(@profile, @integration_status) do %>
-                  <a
+                  <.action_link
                     href={
                       PreviewMode.owner_path(@profile.username, @profile.user_id, theme: theme_id)
                     }
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="btn btn-secondary flex-1 py-3 px-4 text-token-sm"
+                    variant={:secondary}
+                    icon="hero-eye"
+                    class="flex-1"
                   >
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                      />
-                    </svg>
                     {dgettext("dashboard_appearance", "Live Preview")}
-                  </a>
+                  </.action_link>
                 <% else %>
-                  <button
-                    type="button"
-                    class="btn btn-secondary flex-1 py-3 px-4 text-token-sm opacity-50 cursor-not-allowed"
+                  <.action_button
+                    variant={:secondary}
+                    icon="hero-lock-closed"
+                    class="flex-1"
                     disabled
                     title={dgettext("dashboard_appearance", "Connect Calendar to Preview")}
                   >
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                      />
-                    </svg>
                     {dgettext("dashboard_appearance", "Live Preview")}
-                  </button>
+                  </.action_button>
                 <% end %>
-                <button
-                  type="button"
-                  class="btn btn-primary flex-1 py-3 px-4 text-token-sm"
+                <.action_button
+                  icon="hero-adjustments-vertical"
+                  class="flex-1"
                   phx-click="show_customization"
                   phx-value-theme={theme_id}
                   phx-target={@myself}
                 >
-                  <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2.5"
-                      d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-                    />
-                  </svg>
                   {dgettext("dashboard_appearance", "Customize Style")}
-                </button>
+                </.action_button>
               </div>
             </div>
           <% end %>

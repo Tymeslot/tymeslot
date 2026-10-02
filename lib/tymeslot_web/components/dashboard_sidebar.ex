@@ -86,6 +86,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             data-copy-feedback={dgettext("dashboard_common", "Scheduling link copied to clipboard!")}
             class="dashboard-nav-link px-4 py-4 rounded-2xl transition-all duration-300 bg-white border-2 border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-400 hover:text-turquoise-700 hover:translate-x-0 shadow-sm hover:shadow-md group"
             title={dgettext("dashboard_common", "Copy link to clipboard")}
+            aria-label={dgettext("dashboard_common", "Copy link to clipboard")}
           >
             <.icon name="hero-clipboard" class="w-5 h-5" />
           </button>
@@ -95,6 +96,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             disabled
             class="px-3 py-3 rounded-lg bg-tymeslot-200 text-tymeslot-500 cursor-not-allowed opacity-60 relative"
             title={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
+            aria-label={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
           >
             <.icon name="hero-clipboard" class="w-5 h-5" />
           </button>
