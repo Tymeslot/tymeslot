@@ -34,6 +34,13 @@ defmodule Tymeslot.MeetingTypes do
   @spec location_options(map() | nil) :: [LocationOption.t()]
   defdelegate location_options(meeting_type), to: LocationSelection, as: :options
 
+  @doc """
+  Whether `meeting_type` lets several people book the same slot. Anything
+  that is not a stored meeting type (`nil`, a demo's plain-map type) is not.
+  """
+  @spec group_type?(MeetingTypeSchema.t() | map() | nil) :: boolean()
+  defdelegate group_type?(meeting_type), to: MeetingTypeSchema, as: :group?
+
   @typedoc """
   What a booker submitted about where to meet. Every key is optional, and
   each is honoured only where the host's own meeting type offers it:

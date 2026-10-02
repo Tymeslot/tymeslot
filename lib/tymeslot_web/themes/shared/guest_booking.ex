@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Themes.Shared.GuestBooking do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Meetings.Guests
-  alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Security.FieldValidators.EmailValidator
   alias TymeslotWeb.Components.MeetingUtils
 
@@ -143,10 +143,11 @@ defmodule TymeslotWeb.Themes.Shared.GuestBooking do
   end
 
   defp trim_notice(before, kept) when length(before) > length(kept) do
-    dgettext(
+    dngettext(
       "booking",
       "This time only has room for %{count} of your guests, so the rest were removed.",
-      count: length(kept)
+      "This time only has room for %{count} of your guests, so the rest were removed.",
+      length(kept)
     )
   end
 
@@ -158,8 +159,7 @@ defmodule TymeslotWeb.Themes.Shared.GuestBooking do
   """
   @spec seat_cap(map()) :: non_neg_integer()
   def seat_cap(assigns) do
-    with %{} = meeting_type <- assigns[:meeting_type],
-         true <- MeetingTypeSchema.group?(meeting_type),
+    with true <- MeetingTypes.group_type?(assigns[:meeting_type]),
          %{seats_left: seats_left} when is_integer(seats_left) <- selected_slot(assigns) do
       max(min(Guests.max_guests(), seats_left - 1), 0)
     else

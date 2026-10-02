@@ -577,10 +577,14 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
 
   @doc """
   True when the meeting type accepts more than one participant per slot.
+
+  Anything that is not a stored meeting type (`nil` before one is resolved,
+  or the plain maps a demo organiser's synthesised types are) is not a group
+  type: group bookings need the seat machinery behind a stored type.
   """
-  @spec group?(t()) :: boolean()
+  @spec group?(t() | map() | nil) :: boolean()
   def group?(%__MODULE__{max_participants: max}) when is_integer(max) and max > 1, do: true
-  def group?(%__MODULE__{}), do: false
+  def group?(_not_a_group_type), do: false
 
   @doc """
   Returns the list of valid icons for meeting types.

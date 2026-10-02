@@ -65,7 +65,7 @@ defmodule Tymeslot.Availability.GroupSlots do
   """
   @spec enrich_day_slots([String.t()], map() | nil, Date.t(), overlay_context()) :: [slot()]
   def enrich_day_slots(slots, meeting_type, date, context) do
-    if group?(meeting_type) do
+    if MeetingTypeSchema.group?(meeting_type) do
       enrich_group_day(slots, meeting_type, date, context)
     else
       solo_slots(slots)
@@ -91,7 +91,7 @@ defmodule Tymeslot.Availability.GroupSlots do
           overlay_context()
         ) :: %{String.t() => boolean()}
   def overlay_range(availability_map, meeting_type, start_date, end_date, context) do
-    if group?(meeting_type) do
+    if MeetingTypeSchema.group?(meeting_type) do
       {from_utc, to_utc} = utc_window(start_date, end_date, context.user_timezone)
       joinable = joinable_meetings(meeting_type, from_utc, to_utc)
 
@@ -158,7 +158,7 @@ defmodule Tymeslot.Availability.GroupSlots do
   end
 
   defp joinable_meetings(meeting_type, from_utc, to_utc) do
-    if group?(meeting_type) do
+    if MeetingTypeSchema.group?(meeting_type) do
       seat_counts = Seats.seat_counts_for_range(meeting_type.id, from_utc, to_utc)
 
       meeting_type
@@ -249,9 +249,6 @@ defmodule Tymeslot.Availability.GroupSlots do
 
     slots
   end
-
-  defp group?(%MeetingTypeSchema{} = meeting_type), do: MeetingTypeSchema.group?(meeting_type)
-  defp group?(_other), do: false
 
   defp utc_window(start_date, end_date, user_timezone) do
     from_local = DateTimeUtils.create_datetime_safe(start_date, ~T[00:00:00], user_timezone)

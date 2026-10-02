@@ -1396,7 +1396,10 @@ msgstr "Це групове бронювання: кожен учасник пе
 #: lib/tymeslot_web/themes/shared/guest_booking.ex
 #, elixir-autogen, elixir-format
 msgid "This time only has room for %{count} of your guests, so the rest were removed."
-msgstr "На цей час є місце лише для %{count} ваших гостей, решту вилучено."
+msgid_plural "This time only has room for %{count} of your guests, so the rest were removed."
+msgstr[0] "На цей час є місце лише для %{count} вашого гостя, інших вилучено."
+msgstr[1] "На цей час є місце лише для %{count} ваших гостей, інших вилучено."
+msgstr[2] "На цей час є місце лише для %{count} ваших гостей, інших вилучено."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
@@ -1413,5 +1416,5 @@ msgstr[2] "Ви можете додати до %{count} гостей."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "This spot can no longer be moved online. Please contact the host to change it."
-msgstr "Це місце більше не можна перенести онлайн. Щоб змінити його, зверніться до організатора."
+msgid "This spot can no longer be moved. Cancel it and book a new time instead, or contact the host."
+msgstr "Це місце більше не можна перенести. Скасуйте його та забронюйте новий час або зв'яжіться з організатором."

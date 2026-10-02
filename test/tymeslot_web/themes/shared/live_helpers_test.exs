@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.Themes.Shared.LiveHelpersTest do
   @moduledoc """
-  Coverage for the seat-token handling in `handle_param_updates/2`.
+  Coverage for the seat-token handling in `handle_param_updates/2`, and for
+  the booking entry with a meeting type that is not a stored one.
 
   The token rides in the picker URL as `reschedule_seat_token`. If the seat it
   names dies mid-session (given up, reassigned), the next `handle_params` must
@@ -15,6 +16,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpersTest do
 
   import Tymeslot.Factory
 
+  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.ParticipantQueries
   alias TymeslotWeb.Themes.Shared.LiveHelpers
 
@@ -113,6 +115,37 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpersTest do
 
       assert updated.assigns.reschedule_seat_token == nil
       refute updated.assigns.is_rescheduling
+    end
+  end
+
+  describe "handle_booking_entry/2 with a plain-map meeting type" do
+    # A demo organiser's meeting types are synthesised as plain maps rather
+    # than stored. The guest cap asked the struct-only group predicate about
+    # one on every entry into the booking step, and the page crashed there.
+    test "enters the booking step with the flat guest cap" do
+      demo_type = %{
+        id: 1,
+        name: "Demo call",
+        duration: "30min",
+        allow_guests: true,
+        max_participants: 3
+      }
+
+      socket =
+        socket_with(%{
+          meeting_type_pinned: true,
+          meeting_type: demo_type,
+          selected_date: Date.add(Date.utc_today(), 1),
+          selected_time: "10:00",
+          available_slots: [%{time: "10:00", seats_left: 1, capacity: 3}],
+          guest_emails: [],
+          organizer_user_id: nil
+        })
+
+      updated = LiveHelpers.handle_booking_entry(socket, %{})
+
+      assert updated.assigns.max_guests == Guests.max_guests()
+      assert %Phoenix.HTML.Form{} = updated.assigns.form
     end
   end
 end

@@ -21,6 +21,12 @@ defmodule TymeslotWeb.Themes.Shared.ReschedulePin do
   turns on: resolved by slug, the page offers slots against one type's schedule
   while the submit validates against the meeting's own.
 
+  A group participant moving their own seat (`:reschedule_seat_token`) is
+  pinned the same way, to the type of the meeting their seat is on:
+  `Tymeslot.Bookings.RescheduleSeat` books the move against that type
+  whatever the page showed, so offering another type's slots would only
+  promise times the move is not checked against.
+
   A type the host has deleted since the booking resolves to `nil`, and then the
   choice is a real one: the page falls back to the full list, as before.
   """
@@ -35,18 +41,26 @@ defmodule TymeslotWeb.Themes.Shared.ReschedulePin do
   The meeting type a reschedule is committed to, or `nil` when this is not a
   reschedule or its type no longer exists.
 
-  Always resolved from the uid. It deliberately does not read `:meeting_type`
-  back off the socket to save the query: the schedule entry assigns that from
-  the URL slug, so trusting it would let a stale link pin the page to a type
-  the meeting is not, and then present it as the one being moved.
+  Always resolved from the seat token or the uid. It deliberately does not
+  read `:meeting_type` back off the socket to save the query: the schedule
+  entry assigns that from the URL slug, so trusting it would let a stale link
+  pin the page to a type the meeting is not, and then present it as the one
+  being moved. A seat token wins over a uid, as it does on submit
+  (`Tymeslot.Bookings.Orchestrator`).
   """
   @spec meeting_type(Phoenix.LiveView.Socket.t()) :: map() | nil
   def meeting_type(socket) do
-    with uid when is_binary(uid) <- socket.assigns[:reschedule_meeting_uid],
-         user_id when is_integer(user_id) <- socket.assigns[:organizer_user_id] do
-      ThemeFlow.resolve_meeting_type_for_reschedule(uid, user_id)
-    else
-      _not_a_reschedule_with_a_type -> nil
+    user_id = socket.assigns[:organizer_user_id]
+
+    case socket.assigns[:reschedule_seat_token] do
+      token when is_binary(token) ->
+        ThemeFlow.resolve_meeting_type_for_seat(token, user_id)
+
+      _not_a_seat_move ->
+        ThemeFlow.resolve_meeting_type_for_reschedule(
+          socket.assigns[:reschedule_meeting_uid],
+          user_id
+        )
     end
   end
 
@@ -78,6 +92,11 @@ defmodule TymeslotWeb.Themes.Shared.ReschedulePin do
   next submit still dispatches on, and the booker moves the meeting they have
   just moved rather than getting the new one they asked for.
 
+  The same holds for a seat move: a `:reschedule_seat_token` left behind
+  routes every later submit back through the seat move, where the spent token
+  can only fail as "already cancelled or moved". With the token gone, the
+  next booking entry builds a blank form rather than the seat's prefilled one.
+
   Clearing `:is_rescheduling` is not enough on its own: the uid is what the
   orchestrator receives, and the pin has replaced `:meeting_types` with the one
   type being moved. The organiser's catalogue is re-resolved the way the mount
@@ -88,6 +107,7 @@ defmodule TymeslotWeb.Themes.Shared.ReschedulePin do
   def abandon(socket) do
     socket
     |> assign(:reschedule_meeting_uid, nil)
+    |> assign(:reschedule_seat_token, nil)
     |> assign(:is_rescheduling, false)
     |> clear()
     |> OrganizerHelpers.handle_username_resolution(socket.assigns[:username_context])

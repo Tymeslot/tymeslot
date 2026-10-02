@@ -95,7 +95,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
   def message(:seat_not_movable) do
     dgettext(
       "booking",
-      "This spot can no longer be moved online. Please contact the host to change it."
+      "This spot can no longer be moved. Cancel it and book a new time instead, or contact the host."
     )
   end
 

@@ -17,7 +17,6 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   alias Tymeslot.CustomFields
   alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.MeetingTypes
-  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.ThemeFlow
   alias TymeslotWeb.Helpers.ClientIP
@@ -209,10 +208,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   # rules the submit will be validated against. Everything else picks by
   # duration, which is what the visitor actually chose.
   defp resolve_meeting_type(socket, duration_str) do
-    ThemeFlow.resolve_meeting_type_for_reschedule(
-      socket.assigns[:reschedule_meeting_uid],
-      socket.assigns[:organizer_user_id]
-    ) ||
+    ReschedulePin.meeting_type(socket) ||
       ThemeFlow.resolve_meeting_type_for_duration(
         socket.assigns[:organizer_user_id],
         duration_str
@@ -625,7 +621,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     meeting_type = socket.assigns[:meeting_type]
     subscribed_ids = socket.assigns[:group_seats_subscribed_ids] || MapSet.new()
 
-    if connected?(socket) && group_type?(meeting_type) &&
+    if connected?(socket) && MeetingTypes.group_type?(meeting_type) &&
          not MapSet.member?(subscribed_ids, meeting_type.id) do
       Phoenix.PubSub.subscribe(Tymeslot.PubSub, SeatBroadcast.topic(meeting_type.id))
       assign(socket, :group_seats_subscribed_ids, MapSet.put(subscribed_ids, meeting_type.id))
@@ -633,9 +629,4 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       socket
     end
   end
-
-  defp group_type?(%MeetingTypeSchema{} = meeting_type),
-    do: MeetingTypeSchema.group?(meeting_type)
-
-  defp group_type?(_other), do: false
 end
