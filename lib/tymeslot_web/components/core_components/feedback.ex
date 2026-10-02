@@ -96,9 +96,16 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
   Renders a small status pill: a rounded label in one of six tones.
 
   `icon` puts a `hero-…` icon before the label; `dot` puts a small status dot
-  there instead, and `pulse` animates that dot (for something happening now).
-  Labels are uppercase by default; pass `uppercase={false}` when the label is
-  user data or a phrase, where capitals would hurt reading. `class` is for layout only (margins, alignment); colour and type come from
+  there instead, and `pulse` animates that dot (for something happening now;
+  it stops when the visitor prefers reduced motion).
+
+  Case rule: uppercase for one-word tags ("Booking", "Pro"), sentence case
+  (`uppercase={false}`) for multi-word phrases and for data such as a
+  timezone, a count or an HTTP status. Pick one case per surface: when any
+  label a wrapper can show is a phrase, the wrapper uses sentence case for
+  all of them, so neighbouring pills never mix.
+
+  `class` is for layout only (margins, alignment); colour and type come from
   `tone` and `size`, so every pill in the dashboard reads the same.
   """
   attr :tone, :atom, default: :neutral, values: @pill_tones
@@ -109,7 +116,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
 
   attr :uppercase, :boolean,
     default: true,
-    doc: "Set to false for labels that are data or a phrase (a timezone, a sentence)"
+    doc: "Uppercase for one-word tags; set false for phrases and data"
 
   attr :class, :any, default: nil, doc: "Layout classes only"
   attr :rest, :global

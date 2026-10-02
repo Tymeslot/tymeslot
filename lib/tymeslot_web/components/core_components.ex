@@ -249,7 +249,7 @@ defmodule TymeslotWeb.Components.CoreComponents do
 
   attr :uppercase, :boolean,
     default: true,
-    doc: "Set to false for labels that are data or a phrase (a timezone, a sentence)"
+    doc: "Uppercase for one-word tags; set false for phrases and data"
 
   attr :class, :any, default: nil, doc: "Layout classes only"
   attr :rest, :global

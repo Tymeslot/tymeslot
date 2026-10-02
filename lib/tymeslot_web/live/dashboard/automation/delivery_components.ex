@@ -76,7 +76,7 @@ defmodule TymeslotWeb.Dashboard.Automation.DeliveryComponents do
                     {delivery.event_type}
                   </span>
                   <%= if delivery.response_status do %>
-                    <.pill tone={response_tone(delivery.response_status)}>
+                    <.pill tone={response_tone(delivery.response_status)} uppercase={false}>
                       {delivery.response_status}
                     </.pill>
                   <% end %>

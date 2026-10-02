@@ -64,7 +64,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow do
             </p>
             <p :if={@notice} class="mt-1 text-token-sm text-amber-700">{@notice}</p>
           </div>
-          <.pill tone={UIComponents.status_tone(@variant)} dot>{@status_label}</.pill>
+          <.pill tone={UIComponents.status_tone(@variant)} dot uppercase={false}>
+            {@status_label}
+          </.pill>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 sm:justify-end">

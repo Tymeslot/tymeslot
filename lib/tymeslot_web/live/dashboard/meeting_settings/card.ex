@@ -55,6 +55,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             <Feedback.pill
               :if={@type.is_private}
               icon="hero-eye-slash-mini"
+              uppercase={false}
               title={
                 dgettext(
                   "dashboard_meeting_types",
@@ -185,6 +186,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
       :if={@warning}
       tone={:warning}
       icon="hero-exclamation-triangle-micro"
+      uppercase={false}
       class="ml-1"
       title={@warning.title}
     >

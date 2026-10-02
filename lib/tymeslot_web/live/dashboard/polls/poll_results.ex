@@ -320,13 +320,19 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
           <span class="font-medium text-tymeslot-800">
             {format_slot(@slot, @timezone, @time_format)}
           </span>
-          <Feedback.pill :if={@winner?} tone={:info} icon="hero-check-circle-mini">
+          <Feedback.pill
+            :if={@winner?}
+            tone={:info}
+            icon="hero-check-circle-mini"
+            uppercase={false}
+          >
             {dgettext("dashboard_common", "Winner")}
           </Feedback.pill>
           <Feedback.pill
             :if={@leader?}
             tone={:brand}
             icon="hero-arrow-trending-up-mini"
+            uppercase={false}
             data-testid="poll-slot-leader"
           >
             {dgettext("dashboard_common", "Most votes")}
@@ -335,6 +341,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
             :if={@health == :conflict}
             tone={:warning}
             icon="hero-exclamation-triangle-mini"
+            uppercase={false}
             title={dgettext("dashboard_common", "This time clashes with an event on your calendar")}
           >
             {dgettext("dashboard_common", "Calendar conflict")}

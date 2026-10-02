@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
         <div class="flex items-center justify-between gap-4 mb-8">
           <div class="flex items-center gap-3">
             <.section_header level={2} title={dgettext("dashboard_home", "Your day")} />
-            <.pill :if={@today_count > 0} tone={:brand}>
+            <.pill :if={@today_count > 0} tone={:brand} uppercase={false}>
               {@today_count} {dgettext("dashboard_home", "today")}
             </.pill>
           </div>

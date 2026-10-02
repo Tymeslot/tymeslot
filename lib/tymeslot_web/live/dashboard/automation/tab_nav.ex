@@ -41,7 +41,9 @@ defmodule TymeslotWeb.Dashboard.Automation.TabNav do
         <div class="flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-token-2xl text-token-sm font-black uppercase tracking-widest transition-all duration-300 border-2 bg-transparent border-transparent text-tymeslot-400 opacity-60 cursor-not-allowed">
           <IconComponents.icon name={:telegram} class="w-5 h-5" />
           <span>{dgettext("dashboard_automation", "Telegram")}</span>
-          <.pill class="ml-2">{dgettext("dashboard_automation_chat", "Disabled")}</.pill>
+          <.pill class="ml-2" uppercase={false}>
+            {dgettext("dashboard_automation_chat", "Disabled")}
+          </.pill>
         </div>
       <% end %>
 

@@ -226,7 +226,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
     assigns = assign(assigns, tone: tone, pulse: pulse, label: label)
 
     ~H"""
-    <.pill tone={@tone} dot pulse={@pulse}>{@label}</.pill>
+    <.pill tone={@tone} dot pulse={@pulse} uppercase={false}>{@label}</.pill>
     """
   end
 
