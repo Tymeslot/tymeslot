@@ -823,3 +823,8 @@ msgstr "Wszystko, co dodasz, pojawi się tutaj."
 #, elixir-autogen, elixir-format
 msgid "No upcoming time off"
 msgstr "Brak nadchodzących nieobecności"
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Schedules"
+msgstr "Harmonogramy"

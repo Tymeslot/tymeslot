@@ -1088,3 +1088,8 @@ msgstr "Nie masz jeszcze zapisanych lokalizacji. Dodaj nową tutaj lub zostaw to
 #, elixir-autogen, elixir-format
 msgid "e.g., Berlin office"
 msgstr "np. biuro w Berlinie"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type settings"
+msgstr "Ustawienia typu spotkania"

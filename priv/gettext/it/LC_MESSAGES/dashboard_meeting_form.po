@@ -1085,3 +1085,8 @@ msgstr "Non hai ancora sedi salvate. Aggiungine una qui, oppure lascia vuoto per
 #, elixir-autogen, elixir-format
 msgid "e.g., Berlin office"
 msgstr "es. Ufficio di Milano"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type settings"
+msgstr "Impostazioni del tipo di riunione"

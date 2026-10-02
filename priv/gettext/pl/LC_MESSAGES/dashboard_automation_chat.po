@@ -184,8 +184,8 @@ msgid "Delete"
 msgstr "Usuń"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
-#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Disabled"
 msgstr "Wyłączona"

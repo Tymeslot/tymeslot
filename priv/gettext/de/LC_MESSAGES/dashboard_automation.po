@@ -324,7 +324,7 @@ msgstr "Wählen Sie aus, welche Ereignisse diesen Webhook auslösen sollen."
 msgid "Set up webhooks to automatically trigger actions in n8n, Zapier, or your custom tools when bookings are created, cancelled, or rescheduled."
 msgstr "Richten Sie Webhooks ein, um automatisch Aktionen in n8n, Zapier oder Ihren eigenen Tools auszulösen, wenn Buchungen erstellt, abgesagt oder verschoben werden."
 
-#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex
+#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Slack"
 msgstr "Slack"
@@ -339,7 +339,7 @@ msgstr "Starten Sie einen neuen Workflow in Ihrer n8n-Instanz"
 msgid "Success"
 msgstr "Erfolgreich"
 
-#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex
+#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Telegram"
 msgstr "Telegram"
@@ -513,7 +513,7 @@ msgstr "Webhook-Test erfolgreich! Überprüfen Sie Ihren Endpunkt."
 msgid "Webhook updated successfully"
 msgstr "Webhook erfolgreich aktualisiert"
 
-#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex
+#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Webhooks"
 msgstr "Webhooks"
@@ -679,3 +679,8 @@ msgstr "Zustellungs-ID"
 #, elixir-autogen, elixir-format
 msgid "The delivery ID is the same on every retry of one delivery and different for every other delivery. A failed or timed-out delivery can be retried, so your endpoint may receive the same event twice: record the delivery ID and ignore a request whose ID you have already processed."
 msgstr "Die Zustellungs-ID ist bei jedem erneuten Versuch derselben Zustellung gleich und bei jeder anderen Zustellung verschieden. Eine fehlgeschlagene oder abgelaufene Zustellung kann wiederholt werden, sodass Ihr Endpunkt dasselbe Ereignis zweimal erhalten kann: Speichern Sie die Zustellungs-ID und ignorieren Sie Anfragen, deren ID Sie bereits verarbeitet haben."
+
+#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Automation channels"
+msgstr "Automatisierungskanäle"

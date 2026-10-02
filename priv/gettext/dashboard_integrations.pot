@@ -307,12 +307,12 @@ msgstr ""
 msgid "Save"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/tab_nav.ex
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
 #, elixir-autogen, elixir-format
 msgid "Error"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/tab_nav.ex
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
 #, elixir-autogen, elixir-format
 msgid "Warning"
 msgstr ""
@@ -329,7 +329,7 @@ msgstr[1] ""
 msgid "%{service} wasn't connected because Calendar permission was not granted. Please try again and tick the box for \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\" - Tymeslot needs this to create meetings and Google Meet links."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/tab_nav.ex
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{status} - needs attention"
 msgstr ""
@@ -436,4 +436,9 @@ msgstr ""
 #: lib/tymeslot/integrations/shared/input_validators.ex
 #, elixir-autogen, elixir-format
 msgid "Enter the address on its own and put the username and password in their own fields."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "Integration categories"
 msgstr ""

@@ -1092,3 +1092,8 @@ msgstr "Zatím nemáte žádná uložená místa. Přidejte ho zde, nebo pole ne
 #, elixir-autogen, elixir-format
 msgid "e.g., Berlin office"
 msgstr "např. Kancelář Praha"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type settings"
+msgstr "Nastavení typu schůzky"

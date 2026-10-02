@@ -824,3 +824,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "No upcoming time off"
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Schedules"
+msgstr ""

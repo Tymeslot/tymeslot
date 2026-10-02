@@ -84,6 +84,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
       >
         <.tab_bar
           :if={@is_edit}
+          id="meeting-type-form-tabs"
+          aria_label={dgettext("dashboard_meeting_form", "Meeting type settings")}
           active_tab={@active_tab}
           target={@myself}
           tabs={form_tabs(@form_errors)}

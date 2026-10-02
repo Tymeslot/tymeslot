@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
   @doc """
   Maps a connection status variant to the `Feedback.pill/1` tone that
   shows it. Shared by `ConnectionRow.connection_row/1` and
-  `TabNav.integrations_tab_nav/1` so a row's status pill and its tab's status
+  the integrations hub's category tabs so a row's status pill and its tab's status
   dot never drift out of sync.
   """
   @spec status_tone(:ok | :warning | :error | :paused | :info) :: atom()

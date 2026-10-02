@@ -1085,3 +1085,8 @@ msgstr "Sie haben noch keine gespeicherten Orte. Fügen Sie hier einen hinzu ode
 #, elixir-autogen, elixir-format
 msgid "e.g., Berlin office"
 msgstr "z. B. Büro Berlin"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type settings"
+msgstr "Einstellungen des Termintyps"

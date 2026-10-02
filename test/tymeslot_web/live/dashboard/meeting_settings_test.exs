@@ -134,6 +134,22 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       assert has_element?(view, "#panel-reminders[hidden]")
     end
 
+    # Five tabs do not fit a phone's width. Wrapping them stacked a ragged
+    # second row of tabs; they stay one row that scrolls sideways instead.
+    test "the tabs stay a single row that scrolls sideways", %{view: view} do
+      [class] =
+        view
+        |> render()
+        |> Floki.parse_document!()
+        |> Floki.attribute("#meeting-type-form-tabs[role='tablist']", "class")
+
+      assert class =~ "flex-nowrap"
+      assert class =~ "overflow-x-auto"
+      refute class =~ "flex-wrap"
+      assert has_element?(view, "#meeting-type-form-tabs[phx-hook='ScrollStrip']")
+      assert has_element?(view, "#meeting-type-form-tabs #tab-reminders.whitespace-nowrap")
+    end
+
     test "switching tabs reveals that panel and hides the previous one", %{view: view} do
       view |> element("#tab-booking") |> render_click()
 

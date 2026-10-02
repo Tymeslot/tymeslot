@@ -98,13 +98,32 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
         )}
       </p>
 
-      <%!-- Tabbed Interface --%>
-      <.tabs active_tab={@active_tab} target={@myself}>
-        <:tab
-          id="options"
-          label={dgettext("dashboard_embed", "Embed Options")}
-          icon="hero-code-bracket"
-        >
+      <div class="space-y-6">
+        <.tab_bar
+          id="embed-settings-tabs"
+          active_tab={@active_tab}
+          target={@myself}
+          aria_label={dgettext("dashboard_embed", "Embed settings")}
+          tabs={[
+            %{
+              id: "options",
+              label: dgettext("dashboard_embed", "Embed Options"),
+              icon: "hero-code-bracket"
+            },
+            %{
+              id: "security",
+              label: dgettext("dashboard_embed", "Security"),
+              icon: "hero-lock-closed"
+            },
+            %{
+              id: "preview",
+              label: dgettext("dashboard_embed", "Live Preview"),
+              icon: "hero-video-camera"
+            }
+          ]}
+        />
+
+        <.embed_panel id="options" active_tab={@active_tab}>
           <OptionsGrid.options_grid
             selected_embed_type={@selected_embed_type}
             username={@username}
@@ -116,20 +135,16 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
             max_width={@max_width}
             myself={@myself}
           />
-        </:tab>
+        </.embed_panel>
 
-        <:tab id="security" label={dgettext("dashboard_embed", "Security")} icon="hero-lock-closed">
+        <.embed_panel id="security" active_tab={@active_tab}>
           <SecuritySection.security_section
             allowed_domains={@allowed_domains}
             myself={@myself}
           />
-        </:tab>
+        </.embed_panel>
 
-        <:tab
-          id="preview"
-          label={dgettext("dashboard_embed", "Live Preview")}
-          icon="hero-video-camera"
-        >
+        <.embed_panel id="preview" active_tab={@active_tab}>
           <LivePreview.live_preview
             selected_embed_type={@selected_embed_type}
             username={@username}
@@ -144,8 +159,28 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
             error_reason={@error_reason}
             myself={@myself}
           />
-        </:tab>
-      </.tabs>
+        </.embed_panel>
+      </div>
+    </div>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :active_tab, :string, required: true
+  slot :inner_block, required: true
+
+  # Every panel stays rendered and only the selected one shows, so the live
+  # preview keeps its loaded frame while another tab is open.
+  defp embed_panel(assigns) do
+    ~H"""
+    <div
+      role="tabpanel"
+      id={"panel-#{@id}"}
+      aria-labelledby={"tab-#{@id}"}
+      hidden={@active_tab != @id}
+      class="animate-in fade-in slide-in-from-bottom-4 duration-500"
+    >
+      {render_slot(@inner_block)}
     </div>
     """
   end

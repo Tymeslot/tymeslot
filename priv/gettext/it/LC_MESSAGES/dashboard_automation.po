@@ -324,7 +324,7 @@ msgstr "Seleziona quali eventi devono attivare questo webhook."
 msgid "Set up webhooks to automatically trigger actions in n8n, Zapier, or your custom tools when bookings are created, cancelled, or rescheduled."
 msgstr "Configura i webhook per attivare automaticamente azioni in n8n, Zapier o nei tuoi strumenti personalizzati quando le prenotazioni vengono create, annullate o riprogrammate."
 
-#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex
+#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Slack"
 msgstr "Slack"
@@ -339,7 +339,7 @@ msgstr "Avvia un nuovo flusso di lavoro nella tua istanza n8n"
 msgid "Success"
 msgstr "Riuscite"
 
-#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex
+#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Telegram"
 msgstr "Telegram"
@@ -513,7 +513,7 @@ msgstr "Prova del webhook riuscita! Controlla il tuo endpoint."
 msgid "Webhook updated successfully"
 msgstr "Webhook aggiornato correttamente"
 
-#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex
+#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Webhooks"
 msgstr "Webhook"
@@ -679,3 +679,8 @@ msgstr "ID di consegna"
 #, elixir-autogen, elixir-format
 msgid "The delivery ID is the same on every retry of one delivery and different for every other delivery. A failed or timed-out delivery can be retried, so your endpoint may receive the same event twice: record the delivery ID and ignore a request whose ID you have already processed."
 msgstr "L'ID di consegna è lo stesso a ogni nuovo tentativo della stessa consegna e diverso per ogni altra consegna. Una consegna non riuscita o scaduta può essere ritentata, quindi il tuo endpoint potrebbe ricevere lo stesso evento due volte: registra l'ID di consegna e ignora le richieste il cui ID hai già elaborato."
+
+#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Automation channels"
+msgstr "Canali di automazione"

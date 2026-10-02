@@ -9,7 +9,6 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
     - `SlackEventHandlers` — all Slack CRUD and operational events
 
   Markup is delegated to focused function-component modules:
-    - `TabNav` — the tab bar
     - `WebhookTab`, `TelegramTab`, `SlackTab` — the body of each tab
   """
   use TymeslotWeb, :live_component
@@ -30,7 +29,6 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   alias TymeslotWeb.Dashboard.Automation.SlackEventHandlers
   alias TymeslotWeb.Dashboard.Automation.SlackFormComponent
   alias TymeslotWeb.Dashboard.Automation.SlackTab
-  alias TymeslotWeb.Dashboard.Automation.TabNav
   alias TymeslotWeb.Dashboard.Automation.TelegramEventHandlers
   alias TymeslotWeb.Dashboard.Automation.TelegramFormComponent
   alias TymeslotWeb.Dashboard.Automation.TelegramTab
@@ -343,15 +341,22 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
             <.section_header icon={:webhook} title={dgettext("dashboard_automation", "Automation")} />
 
             <%!-- Tabs Navigation --%>
-            <TabNav.tab_nav
+            <.tab_bar
+              id="automation-tabs"
+              class="mb-10"
               active_tab={@active_tab}
-              telegram_enabled={@telegram_enabled}
-              slack_enabled={@slack_enabled}
-              myself={@myself}
+              target={@myself}
+              aria_label={dgettext("dashboard_automation", "Automation channels")}
+              tabs={automation_tabs(@telegram_enabled, @slack_enabled)}
             />
 
             <%!-- Tab Content --%>
-            <div class="space-y-12">
+            <div
+              role="tabpanel"
+              id={"panel-#{@active_tab}"}
+              aria-labelledby={"tab-#{@active_tab}"}
+              class="space-y-12"
+            >
               <%= case @active_tab do %>
                 <% :webhooks -> %>
                   <WebhookTab.webhook_tab_content
@@ -418,4 +423,31 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
       _other -> socket
     end
   end
+
+  # One tab per channel. Telegram stays visible, greyed out, when the
+  # integration is switched off on this server, so the option is known to
+  # exist; Slack is left out entirely.
+  defp automation_tabs(telegram_enabled, slack_enabled) do
+    Enum.filter(
+      [
+        %{id: :webhooks, label: dgettext("dashboard_automation", "Webhooks"), icon: :webhook},
+        telegram_tab(telegram_enabled),
+        slack_enabled &&
+          %{id: :slack, label: dgettext("dashboard_automation", "Slack"), icon: :slack}
+      ],
+      & &1
+    )
+  end
+
+  defp telegram_tab(true),
+    do: %{id: :telegram, label: dgettext("dashboard_automation", "Telegram"), icon: :telegram}
+
+  defp telegram_tab(false),
+    do: %{
+      id: :telegram,
+      label: dgettext("dashboard_automation", "Telegram"),
+      icon: :telegram,
+      disabled: true,
+      badge: dgettext("dashboard_automation_chat", "Disabled")
+    }
 end

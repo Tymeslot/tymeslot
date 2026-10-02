@@ -307,12 +307,12 @@ msgstr "Échec de la connexion à %{service}. Veuillez réessayer."
 msgid "Save"
 msgstr "Enregistrer"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/tab_nav.ex
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
 #, elixir-autogen, elixir-format
 msgid "Error"
 msgstr "Erreur"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/tab_nav.ex
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
 #, elixir-autogen, elixir-format
 msgid "Warning"
 msgstr "Avertissement"
@@ -329,7 +329,7 @@ msgstr[1] "%{count} connexions nécessitent votre attention - %{message}"
 msgid "%{service} wasn't connected because Calendar permission was not granted. Please try again and tick the box for \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\" - Tymeslot needs this to create meetings and Google Meet links."
 msgstr "%{service} n’a pas été connecté car l’autorisation d’accès au calendrier n’a pas été accordée. Veuillez réessayer et cocher la case « Voir, modifier, partager et supprimer définitivement tous les calendriers auxquels vous pouvez accéder avec Google Agenda » - Tymeslot en a besoin pour créer des réunions et des liens Google Meet."
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/tab_nav.ex
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{status} - needs attention"
 msgstr "%{status} - nécessite votre attention"
@@ -437,3 +437,8 @@ msgstr "Supprimer également ces conversations de votre serveur Nextcloud. Les p
 #, elixir-autogen, elixir-format
 msgid "Enter the address on its own and put the username and password in their own fields."
 msgstr "Saisissez uniquement l'adresse et renseignez le nom d'utilisateur et le mot de passe dans leurs propres champs."
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "Integration categories"
+msgstr "Catégories d'intégrations"

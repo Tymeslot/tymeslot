@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Components.CoreComponents do
     {:Containers, [:glass_morphism_card, :detail_card, :section_header, :detail_line, :info_box]},
     {:Forms, [:input, :form_wrapper, :password_requirements]},
     {:Feedback, [:spinner, :empty_state, :loading_card, :pill]},
-    {:Navigation, [:detail_row, :tabs, :tab_bar]},
+    {:Navigation, [:detail_row, :tab_bar, :segmented_control]},
     {:Dropdown, [:dropdown, :dropdown_item, :dropdown_divider]},
     {:Flash, [:flash, :flash_group]},
     {:Modal, [:modal, :confirm_modal]},

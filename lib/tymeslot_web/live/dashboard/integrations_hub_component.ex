@@ -3,13 +3,12 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.Dashboard.Integrations.Shared.TabNav
-
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Integrations.Video
   alias Tymeslot.MeetingPayments
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Dashboard.CalendarSettingsComponent
   alias TymeslotWeb.Dashboard.PaymentsSettingsComponent
   alias TymeslotWeb.Dashboard.VideoSettingsComponent
@@ -76,34 +75,46 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
 
   defp build_tabs(calendars, videos, attention, payments_allowed?) do
     [
-      %{
-        id: :calendars,
-        label: dgettext("dashboard_integrations", "Calendars"),
-        count: count_badge(calendars),
-        status: worst_status(for i <- attention, i.tab == :calendars, do: i)
-      },
-      %{
-        id: :video,
-        label: dgettext("dashboard_integrations", "Video"),
-        count: count_badge(videos),
-        status: worst_status(for i <- attention, i.tab == :video, do: i)
-      }
+      tab(:calendars, dgettext("dashboard_integrations", "Calendars"), calendars, attention),
+      tab(:video, dgettext("dashboard_integrations", "Video"), videos, attention)
     ] ++ payments_tab(payments_allowed?, attention)
   end
 
   defp payments_tab(false, _attention), do: []
 
   defp payments_tab(true, attention),
-    do: [
-      %{
-        id: :payments,
-        label: dgettext("dashboard_integrations", "Payments"),
-        count: nil,
-        status: worst_status(for i <- attention, i.tab == :payments, do: i)
-      }
-    ]
+    do: [tab(:payments, dgettext("dashboard_integrations", "Payments"), nil, attention)]
+
+  # Each tab is a link to its own URL, carrying a count of what is connected
+  # and, when something in it needs attention, a dot in the same tone as the
+  # status pills on its rows.
+  defp tab(id, label, integrations, attention) do
+    status = worst_status(for i <- attention, i.tab == id, do: i)
+
+    %{
+      id: id,
+      label: label,
+      patch: ~p"/dashboard/integrations?tab=#{id}",
+      count: count_badge(integrations),
+      status: if(status != :ok, do: UIComponents.status_tone(status)),
+      status_label: if(status != :ok, do: status_hint(status))
+    }
+  end
+
+  defp status_hint(:warning),
+    do:
+      dgettext("dashboard_integrations", "%{status} - needs attention",
+        status: dgettext("dashboard_integrations", "Warning")
+      )
+
+  defp status_hint(:error),
+    do:
+      dgettext("dashboard_integrations", "%{status} - needs attention",
+        status: dgettext("dashboard_integrations", "Error")
+      )
 
   # A `0` badge is noise; only show a count once at least one is connected.
+  defp count_badge(nil), do: nil
   defp count_badge([]), do: nil
   defp count_badge(list), do: length(list)
 
@@ -270,13 +281,13 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
         </.link>
       </.info_box>
 
-      <.integrations_tab_nav active_tab={@active_tab} tabs={@tabs} />
-      <div
-        role="tabpanel"
-        id={"tab-panel-#{@active_tab}"}
-        aria-labelledby={"tab-#{@active_tab}"}
-        data-tab-panel={@active_tab}
-      >
+      <.tab_bar
+        id="integrations-tabs"
+        active_tab={@active_tab}
+        tabs={@tabs}
+        aria_label={dgettext("dashboard_integrations", "Integration categories")}
+      />
+      <div id={"tab-panel-#{@active_tab}"} data-tab-panel={@active_tab}>
         <.live_component
           :if={@active_tab == :calendars}
           module={CalendarSettingsComponent}

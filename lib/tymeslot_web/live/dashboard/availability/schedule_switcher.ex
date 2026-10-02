@@ -53,8 +53,13 @@ defmodule TymeslotWeb.Dashboard.Availability.ScheduleSwitcher do
       "border-2 rounded-token-2xl shadow-xl overflow-hidden transition-colors duration-300",
       @accent.panel
     ]}>
+      <%!-- Wraps rather than scrolls: the active tab carries a menu, and a
+      scrolling row would clip it. --%>
       <.tab_bar
+        id="schedule-tabs"
         variant={:attached}
+        overflow={:wrap}
+        aria_label={dgettext("dashboard_availability", "Schedules")}
         class={@accent.bar}
         active_tab={active_tab(@selected_schedule)}
         target={@myself}

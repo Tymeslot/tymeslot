@@ -826,3 +826,8 @@ msgstr "Tutto ciò che aggiungi appare qui."
 #, elixir-autogen, elixir-format
 msgid "No upcoming time off"
 msgstr "Nessuna assenza in programma"
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Schedules"
+msgstr "Pianificazioni"
