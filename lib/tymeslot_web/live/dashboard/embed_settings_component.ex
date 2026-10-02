@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   alias Tymeslot.Scheduling.LinkAccessPolicy
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.UrlBuilder
+  alias TymeslotWeb.Components.CoreComponents.Navigation
   alias TymeslotWeb.Endpoint
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.LivePreview
@@ -175,8 +176,8 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     ~H"""
     <div
       role="tabpanel"
-      id={"panel-#{@id}"}
-      aria-labelledby={"tab-#{@id}"}
+      id={Navigation.panel_id("embed-settings-tabs", @id)}
+      aria-labelledby={Navigation.tab_id("embed-settings-tabs", @id)}
       hidden={@active_tab != @id}
       class="animate-in fade-in slide-in-from-bottom-4 duration-500"
     >

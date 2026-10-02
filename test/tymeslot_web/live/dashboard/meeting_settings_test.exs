@@ -125,13 +125,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
 
     test "opens on the Details tab with the other panels hidden", %{view: view} do
       assert has_element?(view, "[role='tablist']")
-      assert has_element?(view, "#tab-details[aria-selected='true']")
+      assert has_element?(view, "#meeting-type-form-tabs-tab-details[aria-selected='true']")
 
-      refute has_element?(view, "#panel-details[hidden]")
-      assert has_element?(view, "#panel-location[hidden]")
-      assert has_element?(view, "#panel-booking[hidden]")
-      assert has_element?(view, "#panel-questions[hidden]")
-      assert has_element?(view, "#panel-reminders[hidden]")
+      refute has_element?(view, "#meeting-type-form-tabs-panel-details[hidden]")
+      assert has_element?(view, "#meeting-type-form-tabs-panel-location[hidden]")
+      assert has_element?(view, "#meeting-type-form-tabs-panel-booking[hidden]")
+      assert has_element?(view, "#meeting-type-form-tabs-panel-questions[hidden]")
+      assert has_element?(view, "#meeting-type-form-tabs-panel-reminders[hidden]")
     end
 
     # Five tabs do not fit a phone's width. Wrapping them stacked a ragged
@@ -147,20 +147,24 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       assert class =~ "overflow-x-auto"
       refute class =~ "flex-wrap"
       assert has_element?(view, "#meeting-type-form-tabs[phx-hook='ScrollStrip']")
-      assert has_element?(view, "#meeting-type-form-tabs #tab-reminders.whitespace-nowrap")
+
+      assert has_element?(
+               view,
+               "#meeting-type-form-tabs #meeting-type-form-tabs-tab-reminders.whitespace-nowrap"
+             )
     end
 
     test "switching tabs reveals that panel and hides the previous one", %{view: view} do
-      view |> element("#tab-booking") |> render_click()
+      view |> element("#meeting-type-form-tabs-tab-booking") |> render_click()
 
-      assert has_element?(view, "#tab-booking[aria-selected='true']")
-      assert has_element?(view, "#tab-details[aria-selected='false']")
-      refute has_element?(view, "#panel-booking[hidden]")
-      assert has_element?(view, "#panel-details[hidden]")
+      assert has_element?(view, "#meeting-type-form-tabs-tab-booking[aria-selected='true']")
+      assert has_element?(view, "#meeting-type-form-tabs-tab-details[aria-selected='false']")
+      refute has_element?(view, "#meeting-type-form-tabs-panel-booking[hidden]")
+      assert has_element?(view, "#meeting-type-form-tabs-panel-details[hidden]")
     end
 
     test "an invalid field marks its tab with an error indicator", %{view: view} do
-      view |> element("#tab-reminders") |> render_click()
+      view |> element("#meeting-type-form-tabs-tab-reminders") |> render_click()
 
       # The name input sits in the now-hidden Details panel; an invalid value
       # must still surface there via the tab indicator.
@@ -168,8 +172,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       |> element(~s|input[name="meeting_type[name]"]|)
       |> render_change(%{"meeting_type" => %{"name" => ""}})
 
-      assert has_element?(view, "#tab-details span", "This tab contains errors")
-      refute has_element?(view, "#tab-reminders span", "This tab contains errors")
+      assert has_element?(
+               view,
+               "#meeting-type-form-tabs-tab-details span",
+               "This tab contains errors"
+             )
+
+      refute has_element?(
+               view,
+               "#meeting-type-form-tabs-tab-reminders span",
+               "This tab contains errors"
+             )
     end
 
     test "the visibility toggle lives in the Booking Rules panel and persists", %{
@@ -177,24 +190,24 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       meeting_type: meeting_type,
       user: user
     } do
-      view |> element("#tab-booking") |> render_click()
+      view |> element("#meeting-type-form-tabs-tab-booking") |> render_click()
 
       # A switch must state "false" when off: a boolean false drops the
       # attribute, leaving screen readers with no state at all.
       assert has_element?(
                view,
-               "#panel-booking [phx-click='toggle_private'][aria-checked='false']"
+               "#meeting-type-form-tabs-panel-booking [phx-click='toggle_private'][aria-checked='false']"
              )
 
       view
-      |> element("#panel-booking [phx-click='toggle_private']")
+      |> element("#meeting-type-form-tabs-panel-booking [phx-click='toggle_private']")
       |> render_click()
 
       assert MeetingTypes.get_meeting_type(meeting_type.id, user.id).is_private
 
       assert has_element?(
                view,
-               "#panel-booking [phx-click='toggle_private'][aria-checked='true']"
+               "#meeting-type-form-tabs-panel-booking [phx-click='toggle_private'][aria-checked='true']"
              )
     end
 
@@ -206,12 +219,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       refute has_element?(view, "[role='tablist']")
 
       for panel <- ~w(details location booking questions reminders) do
-        assert has_element?(view, "#panel-#{panel}")
-        refute has_element?(view, "#panel-#{panel}[hidden]")
+        assert has_element?(view, "#meeting-type-form-tabs-panel-#{panel}")
+        refute has_element?(view, "#meeting-type-form-tabs-panel-#{panel}[hidden]")
       end
 
       # The visibility switch needs an existing type; it must not render here.
-      refute has_element?(view, "#panel-booking [phx-click='toggle_private']")
+      refute has_element?(
+               view,
+               "#meeting-type-form-tabs-panel-booking [phx-click='toggle_private']"
+             )
     end
   end
 
@@ -296,7 +312,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       |> element("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
       |> render_click()
 
-      view |> element("#tab-reminders") |> render_click()
+      view |> element("#meeting-type-form-tabs-tab-reminders") |> render_click()
       view |> element("button[phx-click='toggle_custom_reminder']") |> render_click()
 
       view
@@ -332,7 +348,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       |> element("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
       |> render_click()
 
-      view |> element("#tab-reminders") |> render_click()
+      view |> element("#meeting-type-form-tabs-tab-reminders") |> render_click()
       view |> element("button[phx-click='toggle_custom_reminder']") |> render_click()
 
       assert has_element?(
@@ -379,7 +395,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       |> element("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
       |> render_click()
 
-      view |> element("#tab-reminders") |> render_click()
+      view |> element("#meeting-type-form-tabs-tab-reminders") |> render_click()
 
       refute has_element?(view, "button[phx-click='toggle_custom_reminder'][disabled]")
 

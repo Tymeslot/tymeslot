@@ -125,11 +125,6 @@ msgstr "Cerca città, paesi o fusi orari..."
 msgid "Select timezone"
 msgstr "Seleziona il fuso orario"
 
-#: lib/tymeslot_web/components/core_components/navigation.ex
-#, elixir-autogen, elixir-format
-msgid "Tabs"
-msgstr "Schede"
-
 #: lib/tymeslot_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "This %{context} requires a modern browser with ES module support. Please upgrade to the latest version of Chrome, Firefox, Safari, or Edge."

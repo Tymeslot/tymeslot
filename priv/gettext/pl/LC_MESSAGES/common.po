@@ -121,11 +121,6 @@ msgstr "Szukaj miast, krajów lub stref czasowych…"
 msgid "Select timezone"
 msgstr "Wybierz strefę czasową"
 
-#: lib/tymeslot_web/components/core_components/navigation.ex
-#, elixir-autogen, elixir-format
-msgid "Tabs"
-msgstr "Zakładki"
-
 #: lib/tymeslot_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "This %{context} requires a modern browser with ES module support. Please upgrade to the latest version of Chrome, Firefox, Safari, or Edge."

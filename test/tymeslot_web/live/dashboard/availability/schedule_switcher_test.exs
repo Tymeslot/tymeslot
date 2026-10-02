@@ -70,7 +70,7 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ScheduleSwitcherTest do
       duplicate_source = fn ->
         Task.await(
           Task.async(fn ->
-            view |> element("#tab-#{source.id}") |> render_click()
+            view |> element("#schedule-tabs-tab-#{source.id}") |> render_click()
             view |> element("[phx-click='toggle_schedule_menu']") |> render_click()
             view |> element("[phx-click='duplicate_schedule']") |> render_click()
           end),
@@ -125,7 +125,7 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ScheduleSwitcherTest do
 
       # The page follows the new schedule: its tab is the selected one, and the
       # actions only a non-default schedule offers are now available.
-      assert has_element?(view, "#tab-#{created.id}[aria-selected='true']")
+      assert has_element?(view, "#schedule-tabs-tab-#{created.id}[aria-selected='true']")
 
       view |> element("[phx-click='toggle_schedule_menu']") |> render_click()
       assert has_element?(view, "[phx-click='set_default_schedule']")
@@ -140,13 +140,13 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ScheduleSwitcherTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
-      view |> element("#tab-#{other.id}") |> render_click()
+      view |> element("#schedule-tabs-tab-#{other.id}") |> render_click()
 
-      assert has_element?(view, "#tab-#{other.id}[aria-selected='true']")
+      assert has_element?(view, "#schedule-tabs-tab-#{other.id}[aria-selected='true']")
 
-      view |> element("#tab-#{default_schedule.id}") |> render_click()
+      view |> element("#schedule-tabs-tab-#{default_schedule.id}") |> render_click()
 
-      assert has_element?(view, "#tab-#{default_schedule.id}[aria-selected='true']")
+      assert has_element?(view, "#schedule-tabs-tab-#{default_schedule.id}[aria-selected='true']")
     end
 
     test "reopens the schedule named in the query string", %{
@@ -157,7 +157,7 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ScheduleSwitcherTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability?schedule=#{other.id}")
 
-      assert has_element?(view, "#tab-#{other.id}[aria-selected='true']")
+      assert has_element?(view, "#schedule-tabs-tab-#{other.id}[aria-selected='true']")
     end
 
     test "falls back to the default when the query string names a stale schedule", %{
@@ -166,7 +166,7 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ScheduleSwitcherTest do
     } do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability?schedule=999999")
 
-      assert has_element?(view, "#tab-#{default_schedule.id}[aria-selected='true']")
+      assert has_element?(view, "#schedule-tabs-tab-#{default_schedule.id}[aria-selected='true']")
     end
   end
 
@@ -221,7 +221,7 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ScheduleSwitcherTest do
       refute has_element?(view, "[phx-click='show_delete_schedule_modal']")
       refute has_element?(view, "[phx-click='set_default_schedule']")
 
-      view |> element("#tab-#{other.id}") |> render_click()
+      view |> element("#schedule-tabs-tab-#{other.id}") |> render_click()
       view |> element("[phx-click='toggle_schedule_menu']") |> render_click()
 
       assert has_element?(view, "[phx-click='show_delete_schedule_modal']")
@@ -321,7 +321,7 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ScheduleSwitcherTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
-      view |> element("#tab-#{other.id}") |> render_click()
+      view |> element("#schedule-tabs-tab-#{other.id}") |> render_click()
 
       view |> element("[phx-click='toggle_schedule_menu']") |> render_click()
       view |> element("[phx-click='show_delete_schedule_modal']") |> render_click()

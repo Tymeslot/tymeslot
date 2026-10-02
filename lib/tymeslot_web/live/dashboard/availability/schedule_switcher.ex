@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ScheduleSwitcher do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Components.CoreComponents.Navigation
   alias TymeslotWeb.Components.Dashboard.Availability.ScheduleAccents
 
   @doc """
@@ -40,6 +41,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ScheduleSwitcher do
     assigns =
       assigns
       |> assign(:can_create, length(assigns.schedules) < assigns.max_schedules)
+      |> assign(:tabs_id, "schedule-tabs")
       |> assign(
         :accent,
         ScheduleAccents.for_schedule(assigns.schedules, assigns.selected_schedule)
@@ -56,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ScheduleSwitcher do
       <%!-- Wraps rather than scrolls: the active tab carries a menu, and a
       scrolling row would clip it. --%>
       <.tab_bar
-        id="schedule-tabs"
+        id={@tabs_id}
         variant={:attached}
         overflow={:wrap}
         aria_label={dgettext("dashboard_availability", "Schedules")}
@@ -144,7 +146,14 @@ defmodule TymeslotWeb.Dashboard.Availability.ScheduleSwitcher do
         </:tab_action>
       </.tab_bar>
 
-      <div class="p-6 sm:p-8 space-y-8">
+      <%!-- Only the selected schedule's panel is ever rendered: it is the
+      surface every tab edits, refilled when the selection changes. --%>
+      <div
+        role={@selected_schedule && "tabpanel"}
+        id={@selected_schedule && Navigation.panel_id(@tabs_id, @selected_schedule.id)}
+        aria-labelledby={@selected_schedule && Navigation.tab_id(@tabs_id, @selected_schedule.id)}
+        class="p-6 sm:p-8 space-y-8"
+      >
         <p class="text-token-sm text-tymeslot-500 font-medium">
           {usage_summary(@selected_schedule, @meeting_type_names)}
         </p>

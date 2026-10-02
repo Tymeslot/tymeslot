@@ -78,7 +78,7 @@ defmodule TymeslotWeb.Dashboard.EmbedSettingsCompositionTest do
     test "adding an embed domain survives navigating away and back",
          %{conn: conn, profile: profile} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/embed")
-      view |> element("button#tab-security") |> render_click()
+      view |> element("button#embed-settings-tabs-tab-security") |> render_click()
 
       view
       |> form("form[phx-submit='save_embed_domains']", %{
@@ -96,7 +96,7 @@ defmodule TymeslotWeb.Dashboard.EmbedSettingsCompositionTest do
       {:ok, _other_view, _html} = live(conn, ~p"/dashboard")
       {:ok, reopened, _html} = live(conn, ~p"/dashboard/embed")
 
-      reopened |> element("button#tab-security") |> render_click()
+      reopened |> element("button#embed-settings-tabs-tab-security") |> render_click()
       assert render(reopened) =~ "example.com"
     end
   end

@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   alias Phoenix.LiveView.JS
   alias Tymeslot.Slack
   alias Tymeslot.Telegram
+  alias TymeslotWeb.Components.CoreComponents.Navigation
   alias TymeslotWeb.Dashboard.Automation.ChatDeliveriesModal
   alias TymeslotWeb.Dashboard.Automation.Defaults
   alias TymeslotWeb.Dashboard.Automation.DeleteSlackModal
@@ -353,8 +354,8 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
             <%!-- Tab Content --%>
             <div
               role="tabpanel"
-              id={"panel-#{@active_tab}"}
-              aria-labelledby={"tab-#{@active_tab}"}
+              id={Navigation.panel_id("automation-tabs", @active_tab)}
+              aria-labelledby={Navigation.tab_id("automation-tabs", @active_tab)}
               class="space-y-12"
             >
               <%= case @active_tab do %>

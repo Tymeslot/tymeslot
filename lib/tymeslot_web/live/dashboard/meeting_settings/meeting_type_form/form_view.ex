@@ -39,6 +39,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     VisibilitySection
   }
 
+  alias TymeslotWeb.Components.CoreComponents.Navigation
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -73,6 +74,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
   @spec form(map()) :: Phoenix.LiveView.Rendered.t()
   def form(assigns) do
+    assigns = assign(assigns, :tabs_id, "meeting-type-form-tabs")
+
     ~H"""
     <div id={"meeting-type-form-wrapper-#{@id}"}>
       <form
@@ -84,7 +87,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
       >
         <.tab_bar
           :if={@is_edit}
-          id="meeting-type-form-tabs"
+          id={@tabs_id}
           aria_label={dgettext("dashboard_meeting_form", "Meeting type settings")}
           active_tab={@active_tab}
           target={@myself}
@@ -93,9 +96,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
         <%!-- Details --%>
         <div
-          id="panel-details"
+          id={Navigation.panel_id(@tabs_id, "details")}
           role={@is_edit && "tabpanel"}
-          aria-labelledby={@is_edit && "tab-details"}
+          aria-labelledby={@is_edit && Navigation.tab_id(@tabs_id, "details")}
           hidden={@is_edit && @active_tab != "details"}
           class={panel_class(@is_edit, @active_tab, "details")}
         >
@@ -229,9 +232,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
         <%!-- Location & Calendar --%>
         <div
-          id="panel-location"
+          id={Navigation.panel_id(@tabs_id, "location")}
           role={@is_edit && "tabpanel"}
-          aria-labelledby={@is_edit && "tab-location"}
+          aria-labelledby={@is_edit && Navigation.tab_id(@tabs_id, "location")}
           hidden={@is_edit && @active_tab != "location"}
           class={panel_class(@is_edit, @active_tab, "location")}
         >
@@ -261,9 +264,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
         <%!-- Booking Rules --%>
         <div
-          id="panel-booking"
+          id={Navigation.panel_id(@tabs_id, "booking")}
           role={@is_edit && "tabpanel"}
-          aria-labelledby={@is_edit && "tab-booking"}
+          aria-labelledby={@is_edit && Navigation.tab_id(@tabs_id, "booking")}
           hidden={@is_edit && @active_tab != "booking"}
           class={panel_class(@is_edit, @active_tab, "booking")}
         >
@@ -309,9 +312,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
         <%!-- Questions --%>
         <div
-          id="panel-questions"
+          id={Navigation.panel_id(@tabs_id, "questions")}
           role={@is_edit && "tabpanel"}
-          aria-labelledby={@is_edit && "tab-questions"}
+          aria-labelledby={@is_edit && Navigation.tab_id(@tabs_id, "questions")}
           hidden={@is_edit && @active_tab != "questions"}
           class={panel_class(@is_edit, @active_tab, "questions")}
         >
@@ -327,9 +330,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
         <%!-- Reminders --%>
         <div
-          id="panel-reminders"
+          id={Navigation.panel_id(@tabs_id, "reminders")}
           role={@is_edit && "tabpanel"}
-          aria-labelledby={@is_edit && "tab-reminders"}
+          aria-labelledby={@is_edit && Navigation.tab_id(@tabs_id, "reminders")}
           hidden={@is_edit && @active_tab != "reminders"}
           class={panel_class(@is_edit, @active_tab, "reminders")}
         >

@@ -96,7 +96,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.AvailabilitySectionTest do
       |> element("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
       |> render_click()
 
-      view |> element("#tab-booking") |> render_click()
+      view |> element("#meeting-type-form-tabs-tab-booking") |> render_click()
 
       # The blank chip is the "follow the default" one.
       view

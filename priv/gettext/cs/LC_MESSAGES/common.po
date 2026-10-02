@@ -125,11 +125,6 @@ msgstr "Hledat města, země nebo časová pásma…"
 msgid "Select timezone"
 msgstr "Vyberte časové pásmo"
 
-#: lib/tymeslot_web/components/core_components/navigation.ex
-#, elixir-autogen, elixir-format
-msgid "Tabs"
-msgstr "Karty"
-
 #: lib/tymeslot_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "This %{context} requires a modern browser with ES module support. Please upgrade to the latest version of Chrome, Firefox, Safari, or Edge."

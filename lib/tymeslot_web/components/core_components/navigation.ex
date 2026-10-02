@@ -43,16 +43,24 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
   The entries decide which of two kinds of tab it is:
 
     * **Panel tabs** switch content in place. The strip is a `role="tablist"`
-      of `role="tab"` buttons, each with `aria-selected` and `aria-controls`
-      naming `panel-<id>`. The caller renders the panels, each with
-      `role="tabpanel"`, `id="panel-<id>"` and `aria-labelledby="tab-<id>"`, so
-      they can live wherever the layout needs them (inside one shared `<form>`,
-      say). Only the selected tab is in the tab order; the arrow keys, Home and
-      End move between the tabs and select them (the `ScrollStrip` hook). A
-      click pushes `event` to `target` with the tab id under `"tab"`.
+      of `role="tab"` buttons with `aria-selected`; the selected one also
+      carries `aria-controls`, naming its panel. The caller renders the
+      panels, so they can live wherever the layout needs them (inside one
+      shared `<form>`, say), each with `role="tabpanel"`,
+      `id={panel_id(strip_id, tab_id)}` and
+      `aria-labelledby={tab_id(strip_id, tab_id)}`. A caller may render only
+      the selected panel; `aria-controls` names only that one, so it never
+      points at an element that is not there. Only the selected tab is in the
+      tab order; the arrow keys, Home and End move between the tabs and select
+      them (the `ScrollStrip` hook). A click pushes `event` to `target` with
+      the tab id under `"tab"`.
     * **Link tabs**, whose entries carry `:patch` or `:navigate`, change the
       URL. They render as links in a `<nav>`, the current one marked
       `aria-current="page"`: a list of routes is navigation, not a tablist.
+      A strip is one kind or the other; mixing them raises.
+
+  Tab and panel ids are scoped to the strip's `id` (`tab_id/2`, `panel_id/2`),
+  so two strips on one page never share an element id.
 
   Each entry is a map with `:id` and `:label`, and optionally:
 
@@ -86,7 +94,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
     default: "switch_tab",
     doc: "event pushed on click by panel tabs, with the tab id under \"tab\""
 
-  attr :aria_label, :string, default: nil, doc: "what the tabs choose between"
+  attr :aria_label, :string, required: true, doc: "what the tabs choose between"
 
   attr :variant, :atom,
     default: :card,
@@ -131,7 +139,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
   def tab_bar(assigns) do
     assigns =
       assign(assigns,
-        links?: Enum.any?(assigns.tabs, &link_tab?/1),
+        links?: links?(assigns.tabs, assigns.id),
         focus_id: focus_id(assigns.tabs, assigns.active_tab)
       )
 
@@ -146,7 +154,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
         tag_name={if @links?, do: "nav", else: "div"}
         id={@id}
         role={!@links? && "tablist"}
-        aria-label={@aria_label || dgettext("common", "Tabs")}
+        aria-label={@aria_label}
         phx-hook="ScrollStrip"
         class={[
           "flex gap-2 p-1",
@@ -164,7 +172,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
         >
           <.link
             :if={@links?}
-            id={"tab-#{tab.id}"}
+            id={tab_id(@id, tab.id)}
             navigate={tab[:navigate]}
             patch={tab[:patch]}
             aria-current={tab.id == @active_tab && "page"}
@@ -177,9 +185,9 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
             :if={!@links?}
             type="button"
             role="tab"
-            id={"tab-#{tab.id}"}
+            id={tab_id(@id, tab.id)}
             aria-selected={to_string(tab.id == @active_tab)}
-            aria-controls={"panel-#{tab.id}"}
+            aria-controls={tab.id == @active_tab && panel_id(@id, tab.id)}
             tabindex={if tab.id == @focus_id, do: "0", else: "-1"}
             disabled={tab[:disabled]}
             phx-click={@event}
@@ -226,6 +234,34 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
       <span class="sr-only">{elem(@status, 1)}</span>
     </span>
     """
+  end
+
+  @doc "The element id of the tab `tab_id` in the strip `strip_id`."
+  @spec tab_id(String.t(), term()) :: String.t()
+  def tab_id(strip_id, tab_id), do: "#{strip_id}-tab-#{tab_id}"
+
+  @doc """
+  The element id the panel of the tab `tab_id` in the strip `strip_id` must
+  carry, which the selected tab's `aria-controls` names.
+  """
+  @spec panel_id(String.t(), term()) :: String.t()
+  def panel_id(strip_id, tab_id), do: "#{strip_id}-panel-#{tab_id}"
+
+  # A strip is all links or all panel tabs: a link among tablist buttons would
+  # sit in a tablist as navigation, which no assistive technology can describe.
+  defp links?(tabs, strip_id) do
+    case Enum.split_with(tabs, &link_tab?/1) do
+      {[], _panel_tabs} ->
+        false
+
+      {_link_tabs, []} ->
+        true
+
+      _mixed ->
+        raise ArgumentError,
+              "tab_bar #{inspect(strip_id)} mixes link tabs (:patch or :navigate) " <>
+                "with panel tabs; use one kind per strip"
+    end
   end
 
   defp link_tab?(tab), do: Map.has_key?(tab, :patch) or Map.has_key?(tab, :navigate)
@@ -301,7 +337,9 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
   `testid` and `disabled`. Content inside an option renders after its label.
 
   On a narrow screen the row scrolls sideways, fading the clipped edge,
-  instead of wrapping.
+  instead of wrapping. It may shrink below its content (`min-w-0`), so beside
+  a label in a flex row it scrolls rather than pushing the label aside. Focus
+  rings are drawn inside each option, where the scrolling row cannot clip them.
   """
   attr :id, :string, required: true
   attr :value, :any, required: true, doc: "the chosen option's value"
@@ -332,7 +370,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
       aria-label={@aria_label}
       phx-hook="ScrollStrip"
       class={[
-        "inline-flex max-w-full gap-0.5 rounded-token-lg border border-tymeslot-200 bg-white p-0.5",
+        "inline-flex min-w-0 max-w-full gap-0.5 rounded-token-lg border border-tymeslot-200 bg-white p-0.5",
         strip_class(:scroll),
         @class
       ]}
@@ -349,7 +387,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
         {%{"phx-value-#{@param}" => to_string(option.value)}}
         class={[
           "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-token-md font-semibold transition-colors",
-          "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400",
+          "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-turquoise-400",
           "disabled:cursor-not-allowed disabled:opacity-50",
           segment_size_class(@size),
           if(chosen?(option, @value),
@@ -366,9 +404,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
           active={chosen?(option, @value)}
           attention={option[:attention] || false}
         />
-        <%= if option.inner_block do %>
-          {render_slot(option)}
-        <% end %>
+        {option.inner_block && render_slot(option)}
       </button>
     </div>
     """

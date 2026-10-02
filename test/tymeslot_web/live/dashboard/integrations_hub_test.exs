@@ -41,8 +41,8 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubTest do
 
       # The tabs are links to their own URLs, so the active one is the current
       # page rather than a selected tab.
-      assert has_element?(view, "#tab-video[aria-current='page']")
-      refute has_element?(view, "#tab-calendars[aria-current]")
+      assert has_element?(view, "#integrations-tabs-tab-video[aria-current='page']")
+      refute has_element?(view, "#integrations-tabs-tab-calendars[aria-current]")
     end
 
     test "defaults the active tab to calendars", %{conn: conn} do
@@ -157,7 +157,7 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations")
 
       # The count pill inside the Calendars tab link reads "2".
-      assert has_element?(view, "#tab-calendars span", "2")
+      assert has_element?(view, "#integrations-tabs-tab-calendars span", "2")
     end
   end
 

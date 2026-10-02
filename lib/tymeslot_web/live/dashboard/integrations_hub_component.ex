@@ -101,17 +101,14 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
     }
   end
 
-  defp status_hint(:warning),
+  defp status_hint(status),
     do:
       dgettext("dashboard_integrations", "%{status} - needs attention",
-        status: dgettext("dashboard_integrations", "Warning")
+        status: status_word(status)
       )
 
-  defp status_hint(:error),
-    do:
-      dgettext("dashboard_integrations", "%{status} - needs attention",
-        status: dgettext("dashboard_integrations", "Error")
-      )
+  defp status_word(:warning), do: dgettext("dashboard_integrations", "Warning")
+  defp status_word(:error), do: dgettext("dashboard_integrations", "Error")
 
   # A `0` badge is noise; only show a count once at least one is connected.
   defp count_badge(nil), do: nil
@@ -287,7 +284,7 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
         tabs={@tabs}
         aria_label={dgettext("dashboard_integrations", "Integration categories")}
       />
-      <div id={"tab-panel-#{@active_tab}"} data-tab-panel={@active_tab}>
+      <div data-tab-panel={@active_tab}>
         <.live_component
           :if={@active_tab == :calendars}
           module={CalendarSettingsComponent}
