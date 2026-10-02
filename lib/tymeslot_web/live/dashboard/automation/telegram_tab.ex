@@ -8,8 +8,8 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramTab do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.Automation.TelegramCard
-  alias TymeslotWeb.Dashboard.Automation.TelegramEmptyState
 
   attr :integrations, :list, required: true
   attr :time_format, :string, required: true
@@ -69,9 +69,23 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramTab do
         </div>
       </div>
     <% else %>
-      <TelegramEmptyState.telegram_empty_state on_create={
-        JS.push("show_telegram_form", target: @myself)
-      } />
+      <.empty_state
+        size={:lg}
+        title={dgettext("dashboard_automation_chat", "No Telegram Integrations")}
+        description={
+          dgettext(
+            "dashboard_automation_chat",
+            "Connect Telegram to receive instant notifications when meetings are booked, cancelled, or rescheduled."
+          )
+        }
+      >
+        <:graphic><IconComponents.icon name={:telegram} class="w-10 h-10" /></:graphic>
+        <:action>
+          <button phx-click="show_telegram_form" phx-target={@myself} class="btn-primary">
+            {dgettext("dashboard_automation_chat", "Add Telegram Account")}
+          </button>
+        </:action>
+      </.empty_state>
     <% end %>
     """
   end

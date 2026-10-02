@@ -119,7 +119,7 @@ msgstr "Копіювати"
 msgid "Create Webhook"
 msgstr "Створити вебхук"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Create Your First Webhook"
 msgstr "Створіть свій перший вебхук"
@@ -243,7 +243,7 @@ msgstr "Ніколи"
 msgid "Never triggered"
 msgstr "Жодного спрацювання"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_tab.ex
 #, elixir-autogen, elixir-format
 msgid "No Webhooks Yet"
 msgstr "Поки немає вебхуків"
@@ -319,7 +319,7 @@ msgstr "Вибрати події"
 msgid "Select which events should trigger this webhook."
 msgstr "Виберіть події, які запускатимуть цей вебхук."
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Set up webhooks to automatically trigger actions in n8n, Zapier, or your custom tools when bookings are created, cancelled, or rescheduled."
 msgstr "Налаштуйте вебхуки для автоматичного запуску дій у n8n, Zapier або ваших власних інструментах під час створення, скасування чи перенесення бронювань."

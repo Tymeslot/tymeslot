@@ -195,7 +195,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
     test "shows empty state when no meetings are scheduled", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
 
-      assert html =~ "Nothing on your plate today or tomorrow."
+      assert html =~ "Nothing on your plate today or tomorrow"
     end
 
     test "shows upcoming meeting title and attendee name", %{conn: conn, user: user} do
@@ -222,7 +222,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
 
     test "refreshes meeting list after meeting type is changed", %{conn: conn, user: user} do
       {:ok, view, html} = live(conn, ~p"/dashboard/overview")
-      assert html =~ "Nothing on your plate today or tomorrow."
+      assert html =~ "Nothing on your plate today or tomorrow"
 
       insert(:meeting,
         organizer_email: user.email,

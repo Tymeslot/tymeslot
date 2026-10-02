@@ -8,8 +8,8 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackTab do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.Automation.SlackCard
-  alias TymeslotWeb.Dashboard.Automation.SlackEmptyState
 
   attr :integrations, :list, required: true
   attr :time_format, :string, required: true
@@ -84,11 +84,32 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackTab do
         </div>
       </div>
     <% else %>
-      <SlackEmptyState.slack_empty_state
-        oauth_mode_available?={@oauth_mode_available?}
-        oauth_start_path={~p"/api/slack/oauth/start"}
-        on_use_webhook_url={JS.push("slack_show_webhook_form", target: @myself)}
-      />
+      <.empty_state
+        size={:lg}
+        title={dgettext("dashboard_automation_chat", "No Slack Integrations")}
+        description={
+          dgettext(
+            "dashboard_automation_chat",
+            "Connect Slack to receive instant notifications when meetings are booked, cancelled, or rescheduled."
+          )
+        }
+      >
+        <:graphic><IconComponents.icon name={:slack} class="w-10 h-10" /></:graphic>
+        <:action :if={@oauth_mode_available?}>
+          <.link href={~p"/api/slack/oauth/start"} class="btn-primary inline-flex items-center gap-2">
+            <IconComponents.icon name={:slack} class="w-5 h-5" />
+            {dgettext("dashboard_automation_chat", "Add to Slack")}
+          </.link>
+          <button phx-click="slack_show_webhook_form" phx-target={@myself} class="btn-secondary">
+            {dgettext("dashboard_automation_chat", "Add via webhook URL")}
+          </button>
+        </:action>
+        <:action :if={!@oauth_mode_available?}>
+          <button phx-click="slack_show_webhook_form" phx-target={@myself} class="btn-primary">
+            {dgettext("dashboard_automation_chat", "Add Slack via Webhook URL")}
+          </button>
+        </:action>
+      </.empty_state>
     <% end %>
     """
   end

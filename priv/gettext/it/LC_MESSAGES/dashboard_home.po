@@ -130,11 +130,6 @@ msgstr "I pagamenti delle riunioni richiedono un piano superiore."
 
 #: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format
-msgid "Nothing on your plate today or tomorrow."
-msgstr "Niente in programma oggi o domani."
-
-#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
-#, elixir-autogen, elixir-format
 msgid "Now"
 msgstr "Ora"
 
@@ -240,3 +235,8 @@ msgstr "poi"
 #, elixir-autogen, elixir-format
 msgid "today"
 msgstr "oggi"
+
+#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing on your plate today or tomorrow"
+msgstr "Niente in programma oggi o domani"

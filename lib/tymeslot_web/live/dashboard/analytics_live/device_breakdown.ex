@@ -34,9 +34,13 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.DeviceBreakdown do
         >
         </div>
       </div>
-      <div :if={!@loading? and @rows == []} class="text-token-sm text-tymeslot-400">
-        {dgettext("dashboard_analytics", "No traffic in this period yet.")}
-      </div>
+      <.empty_state
+        :if={!@loading? and @rows == []}
+        icon="hero-device-phone-mobile"
+        size={:sm}
+        variant={:plain}
+        title={dgettext("dashboard_analytics", "No traffic in this period yet")}
+      />
       <div :if={!@loading? and @rows != []} class="space-y-3">
         <div :for={row <- @rows}>
           <div class="mb-1 flex items-center justify-between text-token-sm">

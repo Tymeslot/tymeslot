@@ -131,11 +131,6 @@ msgstr "Для прийому платежів за зустрічі потрі�
 
 #: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format
-msgid "Nothing on your plate today or tomorrow."
-msgstr "На сьогодні та завтра у вас немає запланованих справ."
-
-#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
-#, elixir-autogen, elixir-format
 msgid "Now"
 msgstr "Зараз"
 
@@ -241,3 +236,8 @@ msgstr "потім"
 #, elixir-autogen, elixir-format
 msgid "today"
 msgstr "сьогодні"
+
+#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing on your plate today or tomorrow"
+msgstr "На сьогодні та завтра у вас немає запланованих справ"

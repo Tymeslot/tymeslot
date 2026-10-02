@@ -115,8 +115,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   def meetings_list(assigns) do
     ~H"""
     <div>
-      <.loading_spinner :if={@loading} />
-      <.empty_state :if={!@loading and @is_empty} filter={@filter} />
+      <CoreComponents.loading_card :if={@loading} />
+      <.no_meetings :if={!@loading and @is_empty} filter={@filter} />
       <div :if={!@loading and !@is_empty} class="space-y-4" id="meetings" phx-update="stream">
         <div :for={{dom_id, meeting} <- @meetings_stream} id={dom_id}>
           <.meeting_card
@@ -396,63 +396,40 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
 
   attr :filter, :string, required: true
 
-  @spec empty_state(map()) :: Phoenix.LiveView.Rendered.t()
-  def empty_state(assigns) do
+  defp no_meetings(assigns) do
     ~H"""
-    <div class="card-glass py-20">
-      <div class="text-center max-w-sm mx-auto">
-        <div class="w-24 h-24 mx-auto mb-8 rounded-token-3xl bg-tymeslot-50 flex items-center justify-center border-2 border-tymeslot-100 shadow-sm transition-transform hover:scale-110 hover:rotate-3 duration-500">
-          <CoreComponents.icon name="hero-calendar-days" class="w-12 h-12 text-tymeslot-300" />
-        </div>
-        <h3 class="text-token-2xl font-black text-tymeslot-900 tracking-tight mb-3">
-          <%= case @filter do %>
-            <% "upcoming" -> %>
-              {dgettext("dashboard_bookings", "No upcoming meetings")}
-            <% "past" -> %>
-              {dgettext("dashboard_bookings", "No past meetings")}
-            <% "cancelled" -> %>
-              {dgettext("dashboard_bookings", "No cancelled meetings")}
-            <% "awaiting_approval" -> %>
-              {dgettext("dashboard_bookings", "Nothing waiting on you")}
-          <% end %>
-        </h3>
-        <p class="text-tymeslot-500 font-medium text-lg leading-relaxed">
-          <%= case @filter do %>
-            <% "upcoming" -> %>
-              {dgettext(
-                "dashboard_bookings",
-                "Your upcoming appointments will appear here automatically."
-              )}
-            <% "past" -> %>
-              {dgettext("dashboard_bookings", "You haven't had any meetings in this period yet.")}
-            <% "cancelled" -> %>
-              {dgettext(
-                "dashboard_bookings",
-                "You don't have any cancelled appointments to show."
-              )}
-            <% "awaiting_approval" -> %>
-              {dgettext(
-                "dashboard_bookings",
-                "Booking requests you haven't answered yet will appear here."
-              )}
-          <% end %>
-        </p>
-      </div>
-    </div>
+    <CoreComponents.empty_state
+      icon="hero-calendar-days"
+      size={:lg}
+      title={no_meetings_title(@filter)}
+      description={no_meetings_description(@filter)}
+    />
     """
   end
 
-  @doc "Displays a loading spinner inside a card."
-  @spec loading_spinner(map()) :: Phoenix.LiveView.Rendered.t()
-  def loading_spinner(assigns) do
-    ~H"""
-    <div class="card-glass">
-      <div class="flex items-center justify-center py-12">
-        <CoreComponents.spinner class="h-8 w-8 text-turquoise-600" />
-      </div>
-    </div>
-    """
-  end
+  defp no_meetings_title("upcoming"), do: dgettext("dashboard_bookings", "No upcoming meetings")
+  defp no_meetings_title("past"), do: dgettext("dashboard_bookings", "No past meetings")
+  defp no_meetings_title("cancelled"), do: dgettext("dashboard_bookings", "No cancelled meetings")
+
+  defp no_meetings_title("awaiting_approval"),
+    do: dgettext("dashboard_bookings", "Nothing waiting on you")
+
+  defp no_meetings_description("upcoming"),
+    do:
+      dgettext("dashboard_bookings", "Your upcoming appointments will appear here automatically.")
+
+  defp no_meetings_description("past"),
+    do: dgettext("dashboard_bookings", "You haven't had any meetings in this period yet.")
+
+  defp no_meetings_description("cancelled"),
+    do: dgettext("dashboard_bookings", "You don't have any cancelled appointments to show.")
+
+  defp no_meetings_description("awaiting_approval"),
+    do:
+      dgettext(
+        "dashboard_bookings",
+        "Booking requests you haven't answered yet will appear here."
+      )
 
   @doc "Displays an informational panel about meeting management features."
   @spec info_panel(map()) :: Phoenix.LiveView.Rendered.t()

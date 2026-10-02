@@ -130,11 +130,6 @@ msgstr "Les paiements de réunion nécessitent un forfait supérieur."
 
 #: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format
-msgid "Nothing on your plate today or tomorrow."
-msgstr "Rien de prévu aujourd’hui ni demain."
-
-#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
-#, elixir-autogen, elixir-format
 msgid "Now"
 msgstr "Maintenant"
 
@@ -240,3 +235,8 @@ msgstr "puis"
 #, elixir-autogen, elixir-format
 msgid "today"
 msgstr "aujourd’hui"
+
+#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing on your plate today or tomorrow"
+msgstr "Rien de prévu aujourd’hui ni demain"

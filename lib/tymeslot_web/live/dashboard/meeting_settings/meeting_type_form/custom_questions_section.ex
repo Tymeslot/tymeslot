@@ -83,21 +83,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
       </div>
 
       <%= if @custom_fields == [] do %>
-        <div class="card-glass py-6 text-center">
-          <CoreComponents.icon
-            name="hero-question-mark-circle"
-            class="w-8 h-8 mx-auto mb-2 text-tymeslot-400"
-          />
-          <p class="text-token-sm font-medium text-tymeslot-700">
-            {dgettext("dashboard_meeting_form", "No custom questions yet")}
-          </p>
-          <p class="text-token-xs text-tymeslot-500 mt-1">
-            {dgettext(
+        <CoreComponents.empty_state
+          icon="hero-question-mark-circle"
+          size={:sm}
+          title={dgettext("dashboard_meeting_form", "No custom questions yet")}
+          description={
+            dgettext(
               "dashboard_meeting_form",
               "Add a question and bookers will be asked it when they book this meeting type."
-            )}
-          </p>
-        </div>
+            )
+          }
+        />
       <% else %>
         <ul
           id={"custom-questions-list-#{@form_id}"}

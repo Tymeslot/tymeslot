@@ -131,11 +131,6 @@ msgstr "Platby za schůzky vyžadují vyšší tarif."
 
 #: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format
-msgid "Nothing on your plate today or tomorrow."
-msgstr "Dnes ani zítra vás nic nečeká."
-
-#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
-#, elixir-autogen, elixir-format
 msgid "Now"
 msgstr "Nyní"
 
@@ -241,3 +236,8 @@ msgstr "poté"
 #, elixir-autogen, elixir-format
 msgid "today"
 msgstr "dnes"
+
+#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing on your plate today or tomorrow"
+msgstr "Dnes ani zítra vás nic nečeká"

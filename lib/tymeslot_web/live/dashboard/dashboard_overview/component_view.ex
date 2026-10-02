@@ -147,17 +147,12 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
         </div>
 
         <%!-- Empty state --%>
-        <div
+        <.empty_state
           :if={Day.empty?(@agenda)}
-          class="text-center py-12 bg-tymeslot-50/50 rounded-token-2xl border-2 border-dashed border-tymeslot-100"
-        >
-          <div class="w-16 h-16 bg-white rounded-token-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
-            <.icon name="hero-check-circle" class="w-8 h-8 text-tymeslot-300" />
-          </div>
-          <p class="text-tymeslot-500 font-bold">
-            {dgettext("dashboard_home", "Nothing on your plate today or tomorrow.")}
-          </p>
-        </div>
+          icon="hero-check-circle"
+          variant={:dashed}
+          title={dgettext("dashboard_home", "Nothing on your plate today or tomorrow")}
+        />
 
         <%!-- Connect-a-calendar nudge --%>
         <.link

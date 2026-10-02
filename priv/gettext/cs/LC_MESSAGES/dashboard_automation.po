@@ -119,7 +119,7 @@ msgstr "Kopírovat"
 msgid "Create Webhook"
 msgstr "Vytvořit webhook"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Create Your First Webhook"
 msgstr "Vytvořit první webhook"
@@ -243,7 +243,7 @@ msgstr "Nikdy"
 msgid "Never triggered"
 msgstr "Nikdy nespuštěno"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_tab.ex
 #, elixir-autogen, elixir-format
 msgid "No Webhooks Yet"
 msgstr "Zatím žádné webhooky"
@@ -319,7 +319,7 @@ msgstr "Vyberte události"
 msgid "Select which events should trigger this webhook."
 msgstr "Vyberte, které události mají tento webhook spouštět."
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Set up webhooks to automatically trigger actions in n8n, Zapier, or your custom tools when bookings are created, cancelled, or rescheduled."
 msgstr "Nastavte webhooky tak, aby při vytvoření, zrušení nebo přesunutí rezervace automaticky spouštěly akce v nástrojích n8n, Zapier nebo ve vašich vlastních nástrojích."

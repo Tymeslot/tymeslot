@@ -31,26 +31,23 @@ msgstr "Označení zobrazené na vaší nástěnce. Hodí se, pokud propojíte v
 msgid "Active"
 msgstr "Aktivní"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Add Slack via Webhook URL"
 msgstr "Přidat Slack pomocí URL webhooku"
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram_empty_state.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Add Telegram Account"
 msgstr "Přidat účet Telegram"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
 #: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Add to Slack"
 msgstr "Přidat do aplikace Slack"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
 #: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Add via webhook URL"
@@ -144,7 +141,7 @@ msgstr "Nastavte oznámení pro aplikaci Telegram."
 msgid "Connect"
 msgstr "Připojit"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Connect Slack to receive instant notifications when meetings are booked, cancelled, or rescheduled."
 msgstr "Připojte Slack a dostávejte okamžitá oznámení o rezervaci, zrušení nebo přesunutí schůzek."
@@ -154,7 +151,7 @@ msgstr "Připojte Slack a dostávejte okamžitá oznámení o rezervaci, zruš
 msgid "Connect Telegram"
 msgstr "Připojit Telegram"
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Connect Telegram to receive instant notifications when meetings are booked, cancelled, or rescheduled."
 msgstr "Připojte Telegram a dostávejte okamžitá oznámení o rezervaci, zrušení nebo přesunutí schůzek."
@@ -390,12 +387,12 @@ msgstr "Protokoly"
 msgid "Never triggered"
 msgstr "Nikdy nespuštěno"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex
 #, elixir-autogen, elixir-format
 msgid "No Slack Integrations"
 msgstr "Žádné integrace Slack"
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_tab.ex
 #, elixir-autogen, elixir-format
 msgid "No Telegram Integrations"
 msgstr "Žádné integrace Telegram"

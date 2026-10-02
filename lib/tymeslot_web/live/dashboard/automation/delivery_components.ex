@@ -60,11 +60,12 @@ defmodule TymeslotWeb.Dashboard.Automation.DeliveryComponents do
   def delivery_list(assigns) do
     ~H"""
     <%= if @deliveries == [] do %>
-      <div class="text-center py-12 bg-tymeslot-50 rounded-token-2xl border-2 border-dashed border-tymeslot-200">
-        <p class="text-tymeslot-600 font-medium">
-          {dgettext("dashboard_automation", "No deliveries yet")}
-        </p>
-      </div>
+      <.empty_state
+        icon="hero-paper-airplane"
+        size={:sm}
+        variant={:dashed}
+        title={dgettext("dashboard_automation", "No deliveries yet")}
+      />
     <% else %>
       <div class="space-y-3">
         <%= for delivery <- @deliveries do %>

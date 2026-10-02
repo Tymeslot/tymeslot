@@ -105,13 +105,6 @@ msgstr "Zařízení"
 msgid "Mobile"
 msgstr "Mobil"
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex
-#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
-#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex
-#, elixir-autogen, elixir-format
-msgid "No traffic in this period yet."
-msgstr "V tomto období zatím není žádná návštěvnost."
-
 #: lib/tymeslot_web/live/dashboard/analytics_live.ex
 #, elixir-autogen, elixir-format
 msgid "Refresh"
@@ -167,3 +160,10 @@ msgstr "Návštěvy v čase"
 #, elixir-autogen, elixir-format
 msgid "No visits yet"
 msgstr "Zatím žádné návštěvy"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
+#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex
+#, elixir-autogen, elixir-format
+msgid "No traffic in this period yet"
+msgstr "V tomto období zatím není žádná návštěvnost"

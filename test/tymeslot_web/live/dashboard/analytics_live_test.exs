@@ -237,7 +237,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
       assert has_element?(
                view,
                "[data-testid='visits-chart-empty']",
-               "No traffic in this period yet."
+               "No traffic in this period yet"
              )
 
       refute has_element?(view, "svg[role='img']")

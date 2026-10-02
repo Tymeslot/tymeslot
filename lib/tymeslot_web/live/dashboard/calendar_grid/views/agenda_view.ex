@@ -69,20 +69,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView do
         </div>
       </div>
 
-      <div
+      <.empty_state
         :if={@groups == []}
-        class="flex flex-col items-center justify-center h-full px-6 py-16 text-center"
-      >
-        <div class="w-16 h-16 bg-tymeslot-50 rounded-token-2xl flex items-center justify-center mb-4 border-2 border-dashed border-tymeslot-100">
-          <.icon name="hero-calendar-days" class="w-8 h-8 text-tymeslot-300" />
-        </div>
-        <h2 class="text-token-lg font-bold text-tymeslot-800 mb-1">
-          {if @agenda_lens == :bookings,
+        icon="hero-calendar-days"
+        variant={:plain}
+        class="flex flex-col items-center justify-center h-full"
+        title={
+          if @agenda_lens == :bookings,
             do: dgettext("dashboard_calendar", "No upcoming bookings"),
-            else: dgettext("dashboard_calendar", "No upcoming events")}
-        </h2>
-        <p class="text-token-sm text-tymeslot-500 max-w-sm">
-          {if @agenda_lens == :bookings,
+            else: dgettext("dashboard_calendar", "No upcoming events")
+        }
+        description={
+          if @agenda_lens == :bookings,
             do:
               dgettext(
                 "dashboard_calendar",
@@ -92,9 +90,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView do
               dgettext(
                 "dashboard_calendar",
                 "Nothing scheduled in the next 30 days. Events you add or sync will appear here."
-              )}
-        </p>
-      </div>
+              )
+        }
+      />
 
       <ol :if={@groups != []} class="divide-y divide-tymeslot-100 animate-fade-in">
         <li :for={group <- @groups} class="px-3 md:px-4 py-3">

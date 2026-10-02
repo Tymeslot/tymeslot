@@ -127,11 +127,6 @@ msgstr "Płatności za spotkania wymagają wyższego planu."
 
 #: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format
-msgid "Nothing on your plate today or tomorrow."
-msgstr "Nic zaplanowanego na dziś ani jutro."
-
-#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
-#, elixir-autogen, elixir-format
 msgid "Now"
 msgstr "Teraz"
 
@@ -237,3 +232,8 @@ msgstr "potem"
 #, elixir-autogen, elixir-format
 msgid "today"
 msgstr "dziś"
+
+#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing on your plate today or tomorrow"
+msgstr "Nic zaplanowanego na dziś ani jutro"

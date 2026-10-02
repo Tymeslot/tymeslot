@@ -8,9 +8,9 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookTab do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.Automation.WebhookCard
   alias TymeslotWeb.Dashboard.Automation.WebhookDocumentation
-  alias TymeslotWeb.Dashboard.Automation.WebhookEmptyState
 
   attr :webhooks, :list, required: true
   attr :time_format, :string, required: true
@@ -54,7 +54,23 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookTab do
         </div>
       </div>
     <% else %>
-      <WebhookEmptyState.webhook_empty_state on_create={JS.push("show_webhook_form", target: @myself)} />
+      <.empty_state
+        size={:lg}
+        title={dgettext("dashboard_automation", "No Webhooks Yet")}
+        description={
+          dgettext(
+            "dashboard_automation",
+            "Set up webhooks to automatically trigger actions in n8n, Zapier, or your custom tools when bookings are created, cancelled, or rescheduled."
+          )
+        }
+      >
+        <:graphic><IconComponents.icon name={:webhook} class="w-10 h-10" /></:graphic>
+        <:action>
+          <button phx-click="show_webhook_form" phx-target={@myself} class="btn-primary">
+            {dgettext("dashboard_automation", "Create Your First Webhook")}
+          </button>
+        </:action>
+      </.empty_state>
     <% end %>
 
     <WebhookDocumentation.webhook_documentation />

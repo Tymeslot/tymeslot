@@ -27,26 +27,23 @@ msgstr "Etykieta widoczna w panelu. Przydatna, gdy podłączasz więcej niż jed
 msgid "Active"
 msgstr "Aktywna"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Add Slack via Webhook URL"
 msgstr "Dodaj Slack przez adres URL webhooka"
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram_empty_state.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Add Telegram Account"
 msgstr "Dodaj konto Telegram"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
 #: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Add to Slack"
 msgstr "Dodaj do Slacka"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
 #: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Add via webhook URL"
@@ -140,7 +137,7 @@ msgstr "Skonfiguruj ustawienia powiadomień Telegram."
 msgid "Connect"
 msgstr "Podłącz"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Connect Slack to receive instant notifications when meetings are booked, cancelled, or rescheduled."
 msgstr "Podłącz Slack, aby natychmiast otrzymywać powiadomienia o zarezerwowanych, odwołanych i przeniesionych spotkaniach."
@@ -150,7 +147,7 @@ msgstr "Podłącz Slack, aby natychmiast otrzymywać powiadomienia o zarezerwowa
 msgid "Connect Telegram"
 msgstr "Podłącz Telegram"
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Connect Telegram to receive instant notifications when meetings are booked, cancelled, or rescheduled."
 msgstr "Podłącz Telegram, aby natychmiast otrzymywać powiadomienia o zarezerwowanych, odwołanych i przeniesionych spotkaniach."
@@ -386,12 +383,12 @@ msgstr "Logi"
 msgid "Never triggered"
 msgstr "Brak wywołań"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex
 #, elixir-autogen, elixir-format
 msgid "No Slack Integrations"
 msgstr "Brak integracji ze Slackiem"
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_tab.ex
 #, elixir-autogen, elixir-format
 msgid "No Telegram Integrations"
 msgstr "Brak integracji z Telegramem"

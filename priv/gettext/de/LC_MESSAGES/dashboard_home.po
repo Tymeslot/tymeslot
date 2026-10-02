@@ -130,11 +130,6 @@ msgstr "Zahlungen für Termine erfordern einen höheren Tarif."
 
 #: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format
-msgid "Nothing on your plate today or tomorrow."
-msgstr "Heute und morgen steht nichts an."
-
-#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
-#, elixir-autogen, elixir-format
 msgid "Now"
 msgstr "Jetzt"
 
@@ -240,3 +235,8 @@ msgstr "danach"
 #, elixir-autogen, elixir-format
 msgid "today"
 msgstr "heute"
+
+#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing on your plate today or tomorrow"
+msgstr "Heute und morgen steht nichts an"

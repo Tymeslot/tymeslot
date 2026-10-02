@@ -303,23 +303,20 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
     """
   end
 
-  defp shared_bot_step1(assigns) do
+  defp shared_bot_step1(%{link_expired: true} = assigns) do
     ~H"""
-    <div class="card-glass text-center py-12">
-      <div class="w-20 h-20 bg-turquoise-50 rounded-token-3xl mx-auto mb-6 flex items-center justify-center border-2 border-turquoise-100">
-        <IconComponents.icon name={:telegram} class="w-10 h-10 text-turquoise-600" />
-      </div>
-
-      <%= if @link_expired do %>
-        <h3 class="text-token-2xl font-black text-amber-700 mb-3">
-          {dgettext("dashboard_automation_chat", "Link Expired")}
-        </h3>
-        <p class="text-tymeslot-600 font-medium mb-8 max-w-md mx-auto">
-          {dgettext(
-            "dashboard_automation_chat",
-            "The link has expired. Click below to generate a new one."
-          )}
-        </p>
+    <.empty_state
+      size={:lg}
+      title={dgettext("dashboard_automation_chat", "Link Expired")}
+      description={
+        dgettext(
+          "dashboard_automation_chat",
+          "The link has expired. Click below to generate a new one."
+        )
+      }
+    >
+      <:graphic><IconComponents.icon name={:telegram} class="w-10 h-10" /></:graphic>
+      <:action>
         <button
           phx-click="refresh_telegram_link"
           phx-target={@parent_component}
@@ -327,72 +324,71 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
         >
           {dgettext("dashboard_automation_chat", "Generate New Link")}
         </button>
-      <% else %>
-        <h3 class="text-token-2xl font-black text-tymeslot-900 mb-3">
-          {dgettext("dashboard_automation_chat", "Connect Telegram")}
-        </h3>
-        <p class="text-tymeslot-600 font-medium mb-8 max-w-md mx-auto">
-          {dgettext(
+      </:action>
+    </.empty_state>
+    """
+  end
+
+  defp shared_bot_step1(assigns) do
+    ~H"""
+    <.empty_state
+      size={:lg}
+      title={dgettext("dashboard_automation_chat", "Connect Telegram")}
+      description={
+        dgettext(
+          "dashboard_automation_chat",
+          "Click the button below to open Telegram and link your account. Once connected, you'll configure notification preferences."
+        )
+      }
+    >
+      <:graphic><IconComponents.icon name={:telegram} class="w-10 h-10" /></:graphic>
+      <:action :if={@deep_link}>
+        <a
+          href={@deep_link}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="btn-primary inline-flex items-center gap-2"
+        >
+          <IconComponents.icon name={:telegram} class="w-5 h-5" />
+          {dgettext("dashboard_automation_chat", "Open in Telegram")}
+        </a>
+      </:action>
+
+      <%= if @deep_link do %>
+        <div class="flex items-center justify-center gap-2 text-token-sm text-tymeslot-500">
+          <CoreComponents.icon
+            name="hero-clock"
+            class="w-4 h-4 animate-pulse text-turquoise-500"
+          />
+          <span>{dgettext(
             "dashboard_automation_chat",
-            "Click the button below to open Telegram and link your account. Once connected, you'll configure notification preferences."
-          )}
-        </p>
+            "Waiting for Telegram connection... (link expires in 10 minutes)"
+          )}</span>
+        </div>
 
-        <%= if @deep_link do %>
-          <a
-            href={@deep_link}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="btn-primary inline-flex items-center gap-2"
-          >
-            <IconComponents.icon name={:telegram} class="w-5 h-5" />
-            {dgettext("dashboard_automation_chat", "Open in Telegram")}
-          </a>
-
-          <div class="mt-6 flex items-center justify-center gap-2 text-token-sm text-tymeslot-500">
-            <svg
-              class="w-4 h-4 animate-pulse text-turquoise-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span>{dgettext(
+        <div class="mt-6 p-4 rounded-token-xl bg-tymeslot-50 border border-tymeslot-100 text-left max-w-md mx-auto">
+          <p class="text-token-xs font-black text-tymeslot-700 mb-2 uppercase tracking-wide">
+            {dgettext(
               "dashboard_automation_chat",
-              "Waiting for Telegram connection... (link expires in 10 minutes)"
-            )}</span>
-          </div>
-
-          <div class="mt-6 p-4 rounded-token-xl bg-tymeslot-50 border border-tymeslot-100 text-left max-w-md mx-auto">
-            <p class="text-token-xs font-black text-tymeslot-700 mb-2 uppercase tracking-wide">
-              {dgettext(
-                "dashboard_automation_chat",
-                "Button didn't work? Already started the bot before?"
-              )}
-            </p>
-            <p class="text-token-xs text-tymeslot-600 mb-3">
-              {dgettext(
-                "dashboard_automation_chat",
-                "Send this command directly in the Telegram bot chat:"
-              )}
-            </p>
-            <code class="block text-token-xs font-mono bg-white border border-tymeslot-200 rounded-lg px-3 py-2 break-all select-all text-tymeslot-800">
-              /start {String.split(@deep_link, "start=") |> List.last() |> String.trim_trailing("#")}
-            </code>
-          </div>
-        <% else %>
-          <div class="text-tymeslot-500 font-medium">
-            {dgettext("dashboard_automation_chat", "Setting up connection...")}
-          </div>
-        <% end %>
+              "Button didn't work? Already started the bot before?"
+            )}
+          </p>
+          <p class="text-token-xs text-tymeslot-600 mb-3">
+            {dgettext(
+              "dashboard_automation_chat",
+              "Send this command directly in the Telegram bot chat:"
+            )}
+          </p>
+          <code class="block text-token-xs font-mono bg-white border border-tymeslot-200 rounded-lg px-3 py-2 break-all select-all text-tymeslot-800">
+            /start {String.split(@deep_link, "start=") |> List.last() |> String.trim_trailing("#")}
+          </code>
+        </div>
+      <% else %>
+        <div class="text-tymeslot-500 font-medium">
+          {dgettext("dashboard_automation_chat", "Setting up connection...")}
+        </div>
       <% end %>
-    </div>
+    </.empty_state>
     """
   end
 

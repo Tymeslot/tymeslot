@@ -76,13 +76,14 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
       >
       </div>
 
-      <div
+      <.empty_state
         :if={!@loading? and @empty?}
-        class="mt-4 py-8 text-center text-token-sm text-tymeslot-400"
+        icon="hero-chart-bar"
+        size={:sm}
+        variant={:plain}
+        title={dgettext("dashboard_analytics", "No traffic in this period yet")}
         data-testid="visits-chart-empty"
-      >
-        {dgettext("dashboard_analytics", "No traffic in this period yet.")}
-      </div>
+      />
 
       <div :if={!@loading? and not @empty?} class="mt-3 flex gap-2">
         <%!-- y-axis: visits range from 0 at the baseline up to the busiest day --%>

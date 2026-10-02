@@ -193,18 +193,19 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
       </p>
 
       <%= if @venues == [] do %>
-        <div class="card-glass text-center py-8 px-4 space-y-3" data-testid="locations-empty">
-          <.icon name="hero-map-pin" class="w-12 h-12 mx-auto text-tymeslot-400" />
-          <p class="text-tymeslot-700 font-medium">
-            {dgettext("dashboard_meeting_types", "No saved locations yet")}
-          </p>
-          <p class="text-token-sm text-tymeslot-500">
-            {dgettext(
+        <.empty_state
+          icon="hero-map-pin"
+          size={:lg}
+          title={dgettext("dashboard_meeting_types", "No saved locations yet")}
+          description={
+            dgettext(
               "dashboard_meeting_types",
               "Add an office, a studio or any other place you meet people. In-person meeting types can then offer it to bookers."
-            )}
-          </p>
-          <div class="flex justify-center pt-2">
+            )
+          }
+          data-testid="locations-empty"
+        >
+          <:action>
             <.action_button
               variant={:primary}
               phx-click="new_venue"
@@ -214,8 +215,8 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
               <.icon name="hero-plus" class="w-4 h-4" />
               {dgettext("dashboard_meeting_types", "Add location")}
             </.action_button>
-          </div>
-        </div>
+          </:action>
+        </.empty_state>
       <% else %>
         <div class="flex justify-end">
           <.action_button
