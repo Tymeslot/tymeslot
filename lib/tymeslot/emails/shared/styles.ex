@@ -21,8 +21,8 @@ defmodule Tymeslot.Emails.Shared.Styles do
   The palette is **inversion-survivable**: no pure whites, no near-blacks.
   Every base value is chosen so that a client-forced colour inversion (as
   performed by Thunderbird and some mobile clients) still produces a coherent,
-  warm result. There is no separate dark-mode stylesheet — the single palette
-  carries both light and inverted clients coherently.
+  warm result. Clients that honour `prefers-color-scheme` get a dedicated
+  dark palette instead (`Tokens.dark/1`, applied by `Styles.DarkMode`).
 
   ## Intents
 
@@ -65,6 +65,7 @@ defmodule Tymeslot.Emails.Shared.Styles do
 
   defdelegate mjml_base_attributes, to: CSS
   defdelegate email_css_styles, to: CSS
+  defdelegate dark_mode_styles, to: CSS
 
   # ============================================================================
   # LEGACY VOCABULARY — old-name helpers that remain the live public API for
