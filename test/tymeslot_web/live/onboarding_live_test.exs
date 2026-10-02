@@ -332,6 +332,12 @@ defmodule TymeslotWeb.OnboardingLiveTest do
                "button#onboarding-copy-booking-url[phx-hook='CopyOnClick'][data-copy-text]"
              )
 
+      # Icon-only, so it needs an accessible name, not just a tooltip.
+      assert has_element?(
+               view,
+               "button#onboarding-copy-booking-url[aria-label='Copy booking link']"
+             )
+
       button_html = view |> element("#onboarding-copy-booking-url") |> render()
       assert button_html =~ ~s(data-copy-text=")
       assert button_html =~ "/copyuser123"

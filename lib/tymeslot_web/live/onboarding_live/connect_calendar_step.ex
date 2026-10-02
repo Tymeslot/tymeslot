@@ -14,7 +14,8 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.CoreComponents, only: [icon: 1]
+  import TymeslotWeb.Components.CoreComponents,
+    only: [action_button: 1, icon: 1, loading_button: 1]
 
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -258,24 +259,21 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
       <% end %>
 
       <div class="flex gap-3">
-        <button
-          type="button"
+        <.action_button
+          variant={:secondary}
           phx-click="cancel_caldav"
-          class="btn-secondary px-5 py-2.5"
           disabled={@caldav_discovering}
         >
           {dgettext("onboarding_wizard", "Cancel")}
-        </button>
-        <button
+        </.action_button>
+        <.loading_button
           type="submit"
-          class="btn-primary px-5 py-2.5 flex-1 flex items-center justify-center gap-2"
-          disabled={@caldav_discovering}
+          class="flex-1"
+          loading={@caldav_discovering}
+          loading_text={dgettext("onboarding_wizard", "Discovering…")}
         >
-          <.icon :if={@caldav_discovering} name="hero-arrow-path" class="w-5 h-5 animate-spin" />
-          {if @caldav_discovering,
-            do: dgettext("onboarding_wizard", "Discovering…"),
-            else: dgettext("onboarding_wizard", "Discover calendars")}
-        </button>
+          {dgettext("onboarding_wizard", "Discover calendars")}
+        </.loading_button>
       </div>
     </.form>
     """

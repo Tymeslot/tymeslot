@@ -126,9 +126,9 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
       class="inline-flex flex-col items-end gap-1"
       data-testid="last-admin-self-note"
     >
-      <span class="inline-flex items-center text-sm font-bold text-tymeslot-300 cursor-not-allowed select-none">
+      <.action_button variant={:danger_soft} size={:sm} disabled>
         {dgettext("dashboard_admin", "Demote")}
-      </span>
+      </.action_button>
       <span class="text-xs text-tymeslot-500 font-medium max-w-xs text-right">
         {dgettext(
           "dashboard_admin",
@@ -140,29 +140,29 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
     <%!-- @admin_count is loaded per handle_params; the server guard in AdminRoles
          is authoritative and will block the last-admin demote even if this button
          is momentarily visible due to concurrent role changes between sessions. --%>
-    <button
+    <.action_button
       :if={@user.is_admin and not (@is_self and @is_last_admin)}
-      type="button"
+      variant={:danger_soft}
+      size={:sm}
       phx-click="request_demote"
       phx-value-id={@user.id}
       phx-value-email={@user.email}
       aria-label={dgettext("dashboard_admin", "Demote %{email} from admin", email: @user.email)}
-      class="inline-flex items-center text-sm font-bold text-red-600 hover:text-red-800 transition-colors"
     >
       {dgettext("dashboard_admin", "Demote")}
-    </button>
+    </.action_button>
 
-    <button
+    <.action_button
       :if={not @user.is_admin}
-      type="button"
+      variant={:secondary}
+      size={:sm}
       phx-click="request_promote"
       phx-value-id={@user.id}
       phx-value-email={@user.email}
       aria-label={dgettext("dashboard_admin", "Promote %{email} to admin", email: @user.email)}
-      class="inline-flex items-center text-sm font-bold text-turquoise-600 hover:text-turquoise-800 transition-colors"
     >
       {dgettext("dashboard_admin", "Promote")}
-    </button>
+    </.action_button>
     """
   end
 end

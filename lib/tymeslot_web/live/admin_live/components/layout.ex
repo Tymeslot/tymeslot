@@ -25,13 +25,14 @@ defmodule TymeslotWeb.AdminLive.Components.Layout do
       <nav class="brand-nav mb-6 relative">
         <div class="container mx-auto px-4">
           <div class="flex items-center justify-between h-16">
-            <.link
+            <.action_link
               patch={~p"/dashboard"}
-              class="inline-flex items-center space-x-2 btn-secondary text-sm px-4 py-2"
+              variant={:secondary}
+              size={:sm}
+              icon="hero-arrow-left"
             >
-              <.icon name="hero-arrow-left" class="w-4 h-4" />
-              <span>{dgettext("dashboard_admin", "Back to Dashboard")}</span>
-            </.link>
+              {dgettext("dashboard_admin", "Back to Dashboard")}
+            </.action_link>
 
             <div class="relative">
               <.live_component

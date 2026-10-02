@@ -34,13 +34,14 @@ defmodule TymeslotWeb.AccountLive do
         <div class="container mx-auto px-4">
           <div class="flex items-center justify-between h-16">
             <%!-- Back to Dashboard button --%>
-            <.link
+            <.action_link
               patch={~p"/dashboard"}
-              class="inline-flex items-center space-x-2 btn-secondary text-sm px-4 py-2"
+              variant={:secondary}
+              size={:sm}
+              icon="hero-arrow-left"
             >
-              <.icon name="hero-arrow-left" class="w-4 h-4" />
-              <span>{dgettext("account", "Back to Dashboard")}</span>
-            </.link>
+              {dgettext("account", "Back to Dashboard")}
+            </.action_link>
 
             <%!-- User dropdown --%>
             <div class="relative">

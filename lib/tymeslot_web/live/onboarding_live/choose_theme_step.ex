@@ -11,7 +11,7 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.CoreComponents, only: [icon: 1]
+  import TymeslotWeb.Components.CoreComponents, only: [action_button: 1]
 
   alias Tymeslot.ThemeCustomizations.Presets
   alias TymeslotWeb.Themes.Core.Registry
@@ -109,14 +109,13 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
 
       <%!-- Real full-page preview --%>
       <div class="onboarding-form-group">
-        <button
-          type="button"
+        <.action_button
+          variant={:secondary}
+          icon="hero-eye-mini"
           phx-click="preview_booking_page"
-          class="btn-secondary px-5 py-2.5 inline-flex items-center gap-2 whitespace-nowrap"
         >
-          <.icon name="hero-eye-mini" class="w-4 h-4 shrink-0" />
           {dgettext("onboarding_wizard", "Preview booking page")}
-        </button>
+        </.action_button>
         <p class="onboarding-form-helper mt-2">
           {dgettext(
             "onboarding_wizard",
