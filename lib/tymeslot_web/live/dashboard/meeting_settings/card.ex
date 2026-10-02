@@ -145,7 +145,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             size={:small}
             on_change="toggle_type"
             target={@myself}
-            phx_value_id={to_string(@type.id)}
+            phx-value-id={@type.id}
             aria_label={
               dgettext("dashboard_meeting_types", "Toggle %{name} availability", name: @type.name)
             }

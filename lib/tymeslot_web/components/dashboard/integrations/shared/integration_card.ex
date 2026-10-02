@@ -142,7 +142,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard d
           checked={@active}
           on_change={@toggle_event}
           target={@target}
-          phx_value_id={@id}
+          phx-value-id={@id}
           aria_label={@title}
           class="shrink-0"
         />

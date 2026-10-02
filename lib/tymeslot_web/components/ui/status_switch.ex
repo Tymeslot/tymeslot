@@ -15,9 +15,6 @@ defmodule TymeslotWeb.Components.UI.StatusSwitch do
   attr :disabled, :boolean, default: false, doc: "Disabled state"
   attr :class, :string, default: "", doc: "Additional CSS classes"
 
-  # Optional attributes for custom values
-  attr :phx_value_id, :string, default: nil, doc: "Custom phx-value-id attribute"
-
   attr :aria_label, :string,
     default: nil,
     doc: "Accessible label describing what the switch toggles"
@@ -31,7 +28,6 @@ defmodule TymeslotWeb.Components.UI.StatusSwitch do
       type="button"
       phx-click={@on_change}
       phx-target={@target}
-      phx-value-id={@phx_value_id}
       disabled={@disabled}
       class={[
         "status-toggle",
