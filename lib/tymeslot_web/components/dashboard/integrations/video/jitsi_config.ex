@@ -12,7 +12,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig do
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponents,
     as: SharedForm
 
-  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -86,15 +85,20 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig do
         <% end %>
 
         <div class="flex justify-between items-center pt-4 border-t border-tymeslot-100">
-          <button
-            type="button"
+          <.action_button
+            variant={:secondary}
             phx-click="back_to_providers"
             phx-target={@target}
-            class="btn-secondary"
           >
             {dgettext("dashboard_video", "Cancel")}
-          </button>
-          <UIComponents.form_submit_button saving={@saving} />
+          </.action_button>
+          <.loading_button
+            type="submit"
+            loading={@saving}
+            loading_text={dgettext("dashboard_integrations", "Adding...")}
+          >
+            {dgettext("dashboard_integrations", "Add Integration")}
+          </.loading_button>
         </div>
       </form>
     </div>

@@ -316,19 +316,17 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
             <% end %>
 
             <div class="flex justify-end gap-3 pt-4 border-t border-tymeslot-100">
-              <button
-                type="button"
-                phx-click={JS.push("hide", target: @myself)}
-                class="btn btn-secondary"
-              >
+              <.action_button variant={:secondary} phx-click={JS.push("hide", target: @myself)}>
                 {dgettext("dashboard_video", "Cancel")}
-              </button>
+              </.action_button>
 
-              <TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents.form_submit_button
-                saving={@saving}
-                text={dgettext("dashboard_video", "Save Changes")}
-                saving_text={dgettext("dashboard_video", "Saving...")}
-              />
+              <.loading_button
+                type="submit"
+                loading={@saving}
+                loading_text={dgettext("dashboard_video", "Saving...")}
+              >
+                {dgettext("dashboard_video", "Save Changes")}
+              </.loading_button>
             </div>
           </form>
         <% end %>

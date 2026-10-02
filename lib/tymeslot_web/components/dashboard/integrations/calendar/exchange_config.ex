@@ -35,7 +35,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ExchangeConfig 
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormComponents,
     as: SharedForm
 
-  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -216,12 +215,20 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ExchangeConfig 
       />
 
       <div class="flex justify-between items-center pt-4 border-t border-turquoise-200/30">
-        <UIComponents.secondary_button target={@target} />
-        <UIComponents.form_submit_button
-          saving={@saving}
-          text={dgettext("dashboard_calendar_providers", "Discover calendars")}
-          saving_text={dgettext("dashboard_calendar_providers", "Discovering...")}
-        />
+        <.action_button
+          variant={:secondary}
+          phx-click="back_to_providers"
+          phx-target={@target}
+        >
+          {dgettext("dashboard_integrations", "Cancel")}
+        </.action_button>
+        <.loading_button
+          type="submit"
+          loading={@saving}
+          loading_text={dgettext("dashboard_calendar_providers", "Discovering...")}
+        >
+          {dgettext("dashboard_calendar_providers", "Discover calendars")}
+        </.loading_button>
       </div>
     </form>
     """
@@ -317,8 +324,20 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ExchangeConfig 
       />
 
       <div class="flex justify-between items-center pt-4 border-t border-turquoise-200/30">
-        <UIComponents.secondary_button target={@target} />
-        <UIComponents.form_submit_button saving={@saving} />
+        <.action_button
+          variant={:secondary}
+          phx-click="back_to_providers"
+          phx-target={@target}
+        >
+          {dgettext("dashboard_integrations", "Cancel")}
+        </.action_button>
+        <.loading_button
+          type="submit"
+          loading={@saving}
+          loading_text={dgettext("dashboard_integrations", "Adding...")}
+        >
+          {dgettext("dashboard_integrations", "Add Integration")}
+        </.loading_button>
       </div>
     </form>
     """

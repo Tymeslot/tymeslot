@@ -13,7 +13,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.IcsUrlConfig do
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormComponents,
     as: SharedForm
 
-  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -95,12 +94,20 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.IcsUrlConfig do
         />
 
         <div class="flex justify-between items-center pt-4 border-t border-turquoise-200/30">
-          <UIComponents.secondary_button target={@target} />
-          <UIComponents.form_submit_button
-            saving={@saving}
-            text={dgettext("dashboard_calendar_providers", "Subscribe")}
-            saving_text={dgettext("dashboard_calendar_providers", "Subscribing...")}
-          />
+          <.action_button
+            variant={:secondary}
+            phx-click="back_to_providers"
+            phx-target={@target}
+          >
+            {dgettext("dashboard_integrations", "Cancel")}
+          </.action_button>
+          <.loading_button
+            type="submit"
+            loading={@saving}
+            loading_text={dgettext("dashboard_calendar_providers", "Subscribing...")}
+          >
+            {dgettext("dashboard_calendar_providers", "Subscribe")}
+          </.loading_button>
         </div>
       </form>
     </div>

@@ -17,7 +17,6 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormComponents
   alias TymeslotWeb.Components.Dashboard.Integrations.IntegrationForm
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
-  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig
   alias TymeslotWeb.Dashboard.CalendarSettings.Components, as: CalendarComponents
@@ -103,38 +102,49 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     assert html =~ "Manage calendars"
   end
 
-  test "renders shared form_submit_button correctly" do
-    # Non-saving state
-    assigns = %{saving: false, text: "Save Me"}
-    html = render_component(&UIComponents.form_submit_button/1, assigns)
-    doc = Floki.parse_document!(html)
-    assert html =~ "Save Me"
-    # The saving branch renders the spinner plus either `saving_text` or the
-    # "Adding..." default — never the string "Saving...", so refuting that could
-    # never fire. Refute what the branch actually emits.
-    refute html =~ "Adding..."
-    refute html =~ "spinner"
-    assert Floki.find(doc, "button[type='submit'][disabled]") == []
+  test "calendar config form submit button reflects the saving state" do
+    # The form's Cancel and submit controls are the shared design-system
+    # buttons, so this covers their wiring as one caller renders them.
+    assigns = %{
+      provider: "caldav",
+      show_calendar_selection: true,
+      discovered_calendars: [%{name: "Work", path: "/cal1"}],
+      discovery_credentials: %{url: "https://example.com/dav", username: "u", password: "p"},
+      form_errors: %{},
+      form_values: %{},
+      saving: false,
+      target: "parent-target",
+      myself: "self-target",
+      suggested_name: "Suggested"
+    }
 
-    # Saving state
-    assigns = %{saving: true, saving_text: "Saving Now..."}
-    html = render_component(&UIComponents.form_submit_button/1, assigns)
+    # Idle: the default label, enabled, no spinner.
+    html = render_component(&SharedFormComponents.config_form/1, assigns)
     doc = Floki.parse_document!(html)
-    assert html =~ "Saving Now..."
-    # The design-system `<.spinner>` carries the `spinner` class; the spin
-    # animation comes from CSS (`.spinner { @apply animate-spin }`), not from a
-    # utility class in the markup.
-    assert html =~ "spinner"
-    assert Floki.find(doc, "button[type='submit'][disabled]") != []
-  end
+    [submit] = Floki.find(doc, "button[type='submit']")
 
-  test "renders shared secondary_button correctly" do
-    assigns = %{target: "some-target", label: "Back", phx_click: "go_back", icon: "hero-x-mark"}
-    html = render_component(&UIComponents.secondary_button/1, assigns)
+    assert Floki.text(submit) =~ "Add Integration"
+    refute Floki.text(submit) =~ "Adding..."
+    assert Floki.attribute(submit, "disabled") == []
+    assert Floki.find(submit, ".spinner") == []
+
+    assert [cancel] =
+             Floki.find(
+               doc,
+               "button[type='button'][phx-click='back_to_providers'][phx-target='parent-target']"
+             )
+
+    assert Floki.text(cancel) =~ "Cancel"
+
+    # Saving: disabled, with the spinner and the saving label in place of the
+    # default one.
+    html = render_component(&SharedFormComponents.config_form/1, %{assigns | saving: true})
     doc = Floki.parse_document!(html)
+    [submit] = Floki.find(doc, "button[type='submit'][disabled]")
 
-    assert Floki.find(doc, "button[phx-click='go_back'][phx-target='some-target']") != []
-    assert Floki.text(doc) =~ "Back"
+    assert Floki.text(submit) =~ "Adding..."
+    refute Floki.text(submit) =~ "Add Integration"
+    assert Floki.find(submit, ".spinner") != []
   end
 
   test "renders delete_integration_modal copy for calendar and video" do

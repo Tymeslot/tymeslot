@@ -56,40 +56,31 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
       myself={@myself}
     >
       <:actions>
-        <button
+        <%!-- While the check runs, the icon becomes a spinning arrow. The spin
+             targets the icon span: the tile's own rules set no animation. --%>
+        <.icon_button
           :if={@integration.is_active}
-          phx-click="test_connection"
-          phx-value-id={@integration.id}
-          phx-target={@myself}
-          disabled={@testing_connection == @integration.id}
-          aria-busy={(@testing_connection == @integration.id && "true") || "false"}
-          class="flex items-center justify-center h-9 w-9 bg-tymeslot-50 text-tymeslot-700 rounded-token-lg border-2 border-tymeslot-100 hover:bg-tymeslot-100 transition-all shadow-sm shadow-tymeslot-500/5 disabled:opacity-60"
-          title={
-            (@testing_connection == @integration.id &&
-               dgettext("dashboard_video", "Testing…")) ||
-              dgettext("dashboard_video", "Test connection")
-          }
-          aria-label={
+          icon={(@testing_connection == @integration.id && "hero-arrow-path") || "hero-signal"}
+          label={
             (@testing_connection == @integration.id &&
                dgettext("dashboard_video", "Testing connection…")) ||
               dgettext("dashboard_video", "Test connection")
           }
-        >
-          <.icon
-            name={(@testing_connection == @integration.id && "hero-arrow-path") || "hero-signal"}
-            class={"w-5 h-5 #{(@testing_connection == @integration.id && "animate-spin") || ""}"}
-          />
-        </button>
+          disabled={@testing_connection == @integration.id}
+          class={@testing_connection == @integration.id && "[&>span]:animate-spin"}
+          aria-busy={(@testing_connection == @integration.id && "true") || "false"}
+          phx-click="test_connection"
+          phx-value-id={@integration.id}
+          phx-target={@myself}
+        />
         <button
           :if={@oauth?}
           phx-click="reconnect_integration"
           phx-value-id={@integration.id}
           phx-target={@myself}
           class={[
-            "flex items-center justify-center gap-1.5 px-3 py-1.5 lg:h-9 lg:w-9 lg:px-0 lg:py-0 rounded-token-lg font-bold border-2 transition-all shadow-sm",
-            (@integration.needs_reauth &&
-               "bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100 shadow-amber-500/5") ||
-              "bg-tymeslot-50 text-tymeslot-700 border-tymeslot-100 hover:bg-tymeslot-100 shadow-tymeslot-500/5"
+            "icon-button gap-1.5 px-3 py-1.5 font-bold lg:h-9 lg:w-9 lg:px-0 lg:py-0",
+            (@integration.needs_reauth && "icon-button--warning") || "icon-button--neutral"
           ]}
           title={dgettext("dashboard_video", "Reconnect integration")}
           aria-label={dgettext("dashboard_video", "Reconnect integration")}
@@ -99,26 +90,21 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
             "Reconnect"
           )}</span>
         </button>
-        <button
+        <.icon_button
+          icon="hero-pencil-square"
+          label={dgettext("dashboard_video", "Edit integration")}
           phx-click="show"
           phx-value-id={@integration.id}
           phx-target="#edit-video-modal"
-          class="flex items-center justify-center h-9 w-9 bg-tymeslot-50 text-tymeslot-700 rounded-token-lg border-2 border-tymeslot-100 hover:bg-tymeslot-100 transition-all shadow-sm shadow-tymeslot-500/5"
-          title={dgettext("dashboard_video", "Edit integration")}
-          aria-label={dgettext("dashboard_video", "Edit integration")}
-        >
-          <.icon name="hero-pencil-square" class="w-5 h-5" />
-        </button>
-        <button
+        />
+        <.icon_button
+          icon="hero-trash"
+          variant={:danger}
+          label={dgettext("dashboard_video", "Delete integration")}
           phx-click="show"
           phx-value-id={@integration.id}
           phx-target="#delete-video-modal"
-          class="flex items-center justify-center h-9 w-9 text-tymeslot-500 hover:text-red-500 hover:bg-red-50 rounded-token-lg border-2 border-transparent hover:border-red-100 transition-all"
-          title={dgettext("dashboard_video", "Delete integration")}
-          aria-label={dgettext("dashboard_video", "Delete integration")}
-        >
-          <.icon name="hero-trash" class="w-5 h-5" />
-        </button>
+        />
       </:actions>
     </ConnectionRow.connection_row>
     """

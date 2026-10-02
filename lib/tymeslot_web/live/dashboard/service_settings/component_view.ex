@@ -48,21 +48,12 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
                     else: dgettext("dashboard_integrations", "Add Meeting Type")
                 }
               />
-              <button
+              <.icon_button
+                icon="hero-x-mark"
+                label={dgettext("dashboard_integrations", "Close")}
                 phx-click={if @editing_type, do: "close_edit_overlay", else: "toggle_add_form"}
                 phx-target={@myself}
-                class="shrink-0 p-2 rounded-lg text-tymeslot-500 hover:text-tymeslot-700 hover:bg-tymeslot-100 transition-colors"
-                title={dgettext("dashboard_integrations", "Close")}
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2.5"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
+              />
             </div>
 
             <%!-- Direct booking link, always at hand while editing (needs a username) --%>
@@ -75,16 +66,15 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
                   value={"#{booking_base_url(@profile)}/#{MeetingTypes.effective_slug(@editing_type)}"}
                   class="font-mono text-token-sm flex-1 min-w-[12rem] px-4 py-2.5 rounded-token-xl border-2 border-tymeslot-100 bg-tymeslot-50 text-tymeslot-600 cursor-default"
                 />
-                <button
-                  type="button"
+                <.action_button
+                  variant={:secondary}
                   id={"copy-booking-link-#{@editing_type.id}"}
                   phx-hook="CopyOnClick"
                   data-copy-text={"#{booking_base_url(@profile)}/#{MeetingTypes.effective_slug(@editing_type)}"}
                   data-copy-feedback={dgettext("dashboard_integrations", "Booking link copied!")}
-                  class="whitespace-nowrap px-5 py-2.5 rounded-token-xl bg-tymeslot-50 text-tymeslot-600 font-bold hover:bg-tymeslot-100 transition-all border-2 border-transparent hover:border-tymeslot-200"
                 >
                   {dgettext("dashboard_integrations", "Copy")}
-                </button>
+                </.action_button>
                 <.action_button
                   type="button"
                   variant={:secondary}

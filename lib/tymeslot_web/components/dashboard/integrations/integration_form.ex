@@ -16,20 +16,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.IntegrationForm do
         <h3 class="text-lg font-medium text-tymeslot-800">
           {@title}
         </h3>
-        <button
+        <.icon_button
+          icon="hero-x-mark"
+          label={dgettext("dashboard_integrations", "Close")}
           phx-click={@cancel_event}
           phx-target={@target}
-          class="text-tymeslot-500 hover:text-tymeslot-700"
-        >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
+        />
       </div>
 
       <%= if @provider_info do %>
@@ -55,33 +47,19 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.IntegrationForm do
         <% end %>
 
         <div class="flex justify-end space-x-3">
-          <button
-            type="button"
-            phx-click={@cancel_event}
-            phx-target={@target}
-            class="btn btn-secondary"
-          >
+          <.action_button variant={:secondary} phx-click={@cancel_event} phx-target={@target}>
             {dgettext("dashboard_integrations", "Cancel")}
-          </button>
-          <.submit_button saving={@saving} submit_text={@submit_text} />
+          </.action_button>
+          <.loading_button
+            type="submit"
+            loading={@saving}
+            loading_text={dgettext("dashboard_integrations", "Adding...")}
+          >
+            {@submit_text || dgettext("dashboard_integrations", "Add Integration")}
+          </.loading_button>
         </div>
       </form>
     </div>
-    """
-  end
-
-  defp submit_button(assigns) do
-    ~H"""
-    <button type="submit" disabled={@saving} class="btn btn-primary">
-      <%= if @saving do %>
-        <span class="flex items-center">
-          <.spinner class="h-4 w-4 mr-2" />
-          {dgettext("dashboard_integrations", "Adding...")}
-        </span>
-      <% else %>
-        {@submit_text || dgettext("dashboard_integrations", "Add Integration")}
-      <% end %>
-    </button>
     """
   end
 end

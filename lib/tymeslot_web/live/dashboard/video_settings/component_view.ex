@@ -187,18 +187,20 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
     """
   end
 
+  # The header and the empty state offer the same action, so it is defined once.
   attr :myself, :any, required: true
 
   defp connect_button(assigns) do
     ~H"""
-    <button
+    <.action_button
+      size={:sm}
+      icon="hero-plus"
+      class="shrink-0"
       phx-click="show_picker"
       phx-target={@myself}
-      class="inline-flex items-center gap-1.5 rounded-token-lg bg-turquoise-500 px-4 py-2 text-token-sm font-semibold text-white transition-colors hover:bg-turquoise-600 shrink-0"
     >
-      <.icon name="hero-plus" class="w-4 h-4" />
       {dgettext("dashboard_video", "Connect a video provider")}
-    </button>
+    </.action_button>
     """
   end
 end

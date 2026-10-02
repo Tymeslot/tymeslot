@@ -1,65 +1,10 @@
 defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
   @moduledoc """
-  Shared UI components for integration configuration pages.
-  Reduces code duplication across calendar and video integration configs.
+  Shared helpers for integration configuration pages, used by the calendar
+  and video integration configs alike.
   """
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
-
-  @doc """
-  Renders a form submit button with loading state.
-
-  ## Examples
-
-      <.form_submit_button saving={@saving} />
-      <.form_submit_button saving={@saving} text="Save Integration" />
-  """
-  attr :saving, :boolean, required: true
-  attr :text, :string, default: nil
-  attr :saving_text, :string, default: nil
-  attr :class, :string, default: "btn btn-primary"
-
-  @spec form_submit_button(map()) :: Phoenix.LiveView.Rendered.t()
-  def form_submit_button(assigns) do
-    ~H"""
-    <button type="submit" disabled={@saving} class={@class}>
-      <%= if @saving do %>
-        <span class="flex items-center">
-          <.spinner class="h-4 w-4 mr-2" />
-          {@saving_text || dgettext("dashboard_integrations", "Adding...")}
-        </span>
-      <% else %>
-        {@text || dgettext("dashboard_integrations", "Add Integration")}
-      <% end %>
-    </button>
-    """
-  end
-
-  @doc """
-  Renders a secondary button for cancel/back actions.
-  """
-  attr :target, :any, required: true
-  attr :label, :string, default: nil
-  attr :icon, :string, default: nil
-  attr :phx_click, :string, default: "back_to_providers"
-  attr :class, :string, default: "btn btn-secondary"
-
-  @spec secondary_button(map()) :: Phoenix.LiveView.Rendered.t()
-  def secondary_button(assigns) do
-    ~H"""
-    <button
-      type="button"
-      class={@class}
-      phx-click={@phx_click}
-      phx-target={@target}
-    >
-      <%= if @icon do %>
-        <.icon name={@icon} class="w-4 h-4 mr-2" />
-      <% end %>
-      {@label || dgettext("dashboard_integrations", "Cancel")}
-    </button>
-    """
-  end
 
   @doc """
   Maps a connection status variant to the `CoreComponents.pill/1` tone that

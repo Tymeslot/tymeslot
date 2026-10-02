@@ -16,8 +16,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.NextcloudTalkConfi
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
-
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponents,
     as: SharedForm
 
@@ -89,16 +87,15 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.NextcloudTalkConfi
           aria-describedby="nextcloud_talk_copy_help"
           class="flex flex-wrap gap-2"
         >
-          <button
+          <.action_button
             :for={calendar <- @nextcloud_calendars}
-            type="button"
+            variant={:secondary}
             phx-click="copy_nextcloud_login"
             phx-value-id={calendar.id}
             phx-target={@target}
-            class="btn-secondary"
           >
             {dgettext("dashboard_video", "Copy from %{name}", name: calendar.name)}
-          </button>
+          </.action_button>
         </div>
       </div>
 
@@ -145,15 +142,20 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.NextcloudTalkConfi
         <% end %>
 
         <div class="flex justify-between items-center pt-4 border-t border-tymeslot-100">
-          <button
-            type="button"
+          <.action_button
+            variant={:secondary}
             phx-click="back_to_providers"
             phx-target={@target}
-            class="btn-secondary"
           >
             {dgettext("dashboard_video", "Cancel")}
-          </button>
-          <UIComponents.form_submit_button saving={@saving} />
+          </.action_button>
+          <.loading_button
+            type="submit"
+            loading={@saving}
+            loading_text={dgettext("dashboard_integrations", "Adding...")}
+          >
+            {dgettext("dashboard_integrations", "Add Integration")}
+          </.loading_button>
         </div>
       </form>
     </div>

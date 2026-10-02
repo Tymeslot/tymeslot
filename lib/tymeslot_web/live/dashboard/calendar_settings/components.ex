@@ -202,32 +202,21 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             {@url}
           </code>
           <div class="flex flex-wrap gap-2">
-            <button
-              type="button"
-              class="btn btn-secondary"
+            <.action_button
+              variant={:secondary}
               phx-click="regenerate_freebusy"
               phx-target={@myself}
             >
               {dgettext("dashboard_calendar_settings", "Regenerate link")}
-            </button>
-            <button
-              type="button"
-              class="btn btn-ghost"
-              phx-click="disable_freebusy"
-              phx-target={@myself}
-            >
+            </.action_button>
+            <.action_button variant={:ghost} phx-click="disable_freebusy" phx-target={@myself}>
               {dgettext("dashboard_calendar_settings", "Disable feed")}
-            </button>
+            </.action_button>
           </div>
         <% else %>
-          <button
-            type="button"
-            class="btn btn-primary"
-            phx-click="enable_freebusy"
-            phx-target={@myself}
-          >
+          <.action_button phx-click="enable_freebusy" phx-target={@myself}>
             {dgettext("dashboard_calendar_settings", "Enable free/busy feed")}
-          </button>
+          </.action_button>
         <% end %>
       </div>
     </section>
@@ -270,35 +259,17 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             </p>
           </div>
 
-          <button
+          <.loading_button
+            variant={:secondary}
+            icon="hero-arrow-path"
+            loading={@is_refreshing}
+            loading_text={dgettext("dashboard_calendar_settings", "Refreshing...")}
+            class="shrink-0"
             phx-click="refresh_all_calendars"
             phx-target={@myself}
-            class={[
-              "flex items-center gap-2 px-5 py-2.5 rounded-token-xl font-bold transition-all border-2 shrink-0 shadow-sm",
-              @is_refreshing &&
-                "bg-tymeslot-50 text-tymeslot-400 border-tymeslot-100 cursor-not-allowed",
-              !@is_refreshing &&
-                "bg-white text-turquoise-600 border-turquoise-50 hover:bg-turquoise-50 hover:border-turquoise-100 hover:shadow-turquoise-500/10"
-            ]}
-            disabled={@is_refreshing}
           >
-            <svg
-              class={["w-5 h-5", @is_refreshing && "animate-spin"]}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2.5"
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-            {if @is_refreshing,
-              do: dgettext("dashboard_calendar_settings", "Refreshing..."),
-              else: dgettext("dashboard_calendar_settings", "Refresh All")}
-          </button>
+            {dgettext("dashboard_calendar_settings", "Refresh All")}
+          </.loading_button>
         </div>
 
         <div class="grid grid-cols-1 gap-4">
@@ -398,7 +369,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
           phx-click="upgrade_google_scope"
           phx-value-id={@integration.id}
           phx-target={@myself}
-          class="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-token-lg font-bold border-2 border-amber-100 hover:bg-amber-100 transition-all shadow-sm shadow-amber-500/5"
+          class={tile_class(:warning, :labelled)}
           title={dgettext("dashboard_calendar_settings", "Upgrade Google Calendar permissions")}
         >
           <.icon name="hero-bolt" class="w-4 h-4" /> {dgettext(
@@ -416,7 +387,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
           phx-click="manage_calendars"
           phx-value-id={@integration.id}
           phx-target={@myself}
-          class="flex items-center justify-center gap-1.5 px-3 py-1.5 lg:h-9 lg:w-9 lg:px-0 lg:py-0 bg-tymeslot-50 text-tymeslot-700 rounded-token-lg font-bold border-2 border-tymeslot-100 hover:bg-tymeslot-100 transition-all shadow-sm shadow-tymeslot-500/5"
+          class={tile_class(:neutral, :collapsing)}
           title={
             dgettext(
               "dashboard_calendar_settings",
@@ -440,16 +411,14 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
           myself={@myself}
           variant={(@integration.needs_reauth && :attention) || :normal}
         />
-        <button
+        <.icon_button
+          icon="hero-trash"
+          variant={:danger}
+          label={dgettext("dashboard_calendar_settings", "Remove connection")}
           phx-click="show"
           phx-value-id={@integration.id}
           phx-target="#delete-calendar-modal"
-          class="flex items-center justify-center h-9 w-9 text-tymeslot-500 hover:text-red-500 hover:bg-red-50 rounded-token-lg border-2 border-transparent hover:border-red-100 transition-all"
-          title={dgettext("dashboard_calendar_settings", "Remove connection")}
-          aria-label={dgettext("dashboard_calendar_settings", "Remove connection")}
-        >
-          <.icon name="hero-trash" class="w-5 h-5" />
-        </button>
+        />
       </:actions>
     </ConnectionRow.connection_row>
     """
@@ -499,18 +468,24 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     """
   end
 
-  # Shared layout: full padded pill on mobile, compact icon-only square on
-  # desktop (the label collapses via `lg:hidden`). Only the colour palette
-  # differs between the promoted (:attention) and subtle (:normal) variants.
-  @reconnect_button_layout "flex items-center justify-center gap-1.5 px-3 py-1.5 lg:h-9 lg:w-9 lg:px-0 lg:py-0 rounded-token-lg font-bold border-2 transition-all shadow-sm"
+  # The promoted (:attention) style is the amber warning tile; the subtle
+  # (:normal) one is the neutral tile.
+  defp reconnect_button_class(:attention), do: tile_class(:warning, :collapsing)
+  defp reconnect_button_class(:normal), do: tile_class(:neutral, :collapsing)
 
-  defp reconnect_button_class(:attention),
-    do:
-      "#{@reconnect_button_layout} bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100 shadow-amber-500/5"
+  # Row actions that carry a text label as well as an icon, so they cannot be
+  # `icon_button/1`, take its tile look (the `.icon-button` colour rules set no
+  # size or padding) and size themselves here. A `:collapsing` tile shows its
+  # label on small screens, where there is no hover tooltip, and shrinks to the
+  # 36px icon-only square from `lg` up; a `:labelled` tile keeps its label.
+  @labelled_tile "gap-1.5 px-3 py-1.5 font-bold"
+  @collapsing_tile "#{@labelled_tile} lg:h-9 lg:w-9 lg:px-0 lg:py-0"
 
-  defp reconnect_button_class(:normal),
-    do:
-      "#{@reconnect_button_layout} bg-tymeslot-50 text-tymeslot-700 border-tymeslot-100 hover:bg-tymeslot-100 shadow-tymeslot-500/5"
+  defp tile_class(variant, :labelled),
+    do: ["icon-button", "icon-button--#{variant}", @labelled_tile]
+
+  defp tile_class(variant, :collapsing),
+    do: ["icon-button", "icon-button--#{variant}", @collapsing_tile]
 
   @doc """
   Builds a one-line human summary for a calendar integration — account

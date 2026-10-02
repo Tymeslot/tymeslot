@@ -67,16 +67,14 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ProviderPickerMod
       >
         <:header>
           <div class="flex items-center gap-3">
-            <button
+            <.icon_button
               :if={@config_active && @back_event}
-              type="button"
+              icon="hero-arrow-left"
+              label={dgettext("dashboard_integrations", "Back to providers")}
+              class="shrink-0"
               phx-click={@back_event}
               phx-target={@target}
-              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-token-lg bg-tymeslot-50 text-tymeslot-600 transition-colors hover:bg-tymeslot-100"
-              aria-label={dgettext("dashboard_integrations", "Back to providers")}
-            >
-              <.icon name="hero-arrow-left" class="h-5 w-5" />
-            </button>
+            />
             <div>
               <h2 class="text-token-lg font-semibold text-tymeslot-800">{@title}</h2>
               <%!-- The modal renders its :header slot inside the .modal-title heading, so the
