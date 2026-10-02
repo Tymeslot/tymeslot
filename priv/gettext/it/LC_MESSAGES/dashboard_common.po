@@ -23,6 +23,7 @@ msgid "Add a meeting type so guests have something to book"
 msgstr "Aggiungi un tipo di riunione così gli ospiti hanno qualcosa da prenotare"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Analytics"
 msgstr "Statistiche"
@@ -72,11 +73,13 @@ msgid "General"
 msgstr "Generale"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Integrations"
 msgstr "Integrazioni"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Types"
 msgstr "Tipi di riunione"
@@ -99,6 +102,7 @@ msgid "Pro"
 msgstr "Pro"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Profile"
 msgstr "Profilo"
@@ -114,6 +118,7 @@ msgid "Setup recommended"
 msgstr "Configurazione consigliata"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Theme"
 msgstr "Tema"
@@ -190,11 +195,6 @@ msgstr "Dashboard"
 
 #: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
-msgid "Meeting Settings"
-msgstr "Impostazioni delle riunioni"
-
-#: lib/tymeslot_web/helpers/page_titles.ex
-#, elixir-autogen, elixir-format
 msgid "Payments"
 msgstr "Pagamenti"
 
@@ -202,16 +202,6 @@ msgstr "Pagamenti"
 #, elixir-autogen, elixir-format
 msgid "Set a username in Settings to enable this feature"
 msgstr "Imposta un nome utente nelle impostazioni per attivare questa funzionalità"
-
-#: lib/tymeslot_web/helpers/page_titles.ex
-#, elixir-autogen, elixir-format
-msgid "Settings"
-msgstr "Impostazioni"
-
-#: lib/tymeslot_web/helpers/page_titles.ex
-#, elixir-autogen, elixir-format
-msgid "Theme Selection"
-msgstr "Selezione del tema"
 
 #: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
@@ -432,6 +422,7 @@ msgid "Poll link copied to clipboard!"
 msgstr "Link del sondaggio copiato negli appunti!"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "Polls"

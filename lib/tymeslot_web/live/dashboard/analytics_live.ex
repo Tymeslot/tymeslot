@@ -21,12 +21,15 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
   alias TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart
   alias TymeslotWeb.Dashboard.ComponentDispatch
   alias TymeslotWeb.Helpers.LocaleFormat
+  alias TymeslotWeb.Helpers.PageTitles
 
   @ranges %{"7d" => 7, "30d" => 30, "90d" => 90}
   @default_range "30d"
 
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
+    socket = assign(socket, :page_title, PageTitles.dashboard_title(:analytics))
+
     cond do
       not Analytics.enabled?() ->
         {:ok,

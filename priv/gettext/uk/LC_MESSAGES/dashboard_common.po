@@ -23,6 +23,7 @@ msgid "Add a meeting type so guests have something to book"
 msgstr "Додайте тип зустрічі, щоб гості могли її забронювати"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Analytics"
 msgstr "Аналітика"
@@ -72,11 +73,13 @@ msgid "General"
 msgstr "Загальні"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Integrations"
 msgstr "Інтеграції"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Types"
 msgstr "Типи зустрічей"
@@ -99,6 +102,7 @@ msgid "Pro"
 msgstr "Pro"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Profile"
 msgstr "Профіль"
@@ -114,6 +118,7 @@ msgid "Setup recommended"
 msgstr "Рекомендовано налаштувати"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Theme"
 msgstr "Тема"
@@ -190,11 +195,6 @@ msgstr "Панель керування"
 
 #: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
-msgid "Meeting Settings"
-msgstr "Налаштування зустрічей"
-
-#: lib/tymeslot_web/helpers/page_titles.ex
-#, elixir-autogen, elixir-format
 msgid "Payments"
 msgstr "Платежі"
 
@@ -202,16 +202,6 @@ msgstr "Платежі"
 #, elixir-autogen, elixir-format
 msgid "Set a username in Settings to enable this feature"
 msgstr "Встановіть ім'я користувача в налаштуваннях, щоб увімкнути цю функцію"
-
-#: lib/tymeslot_web/helpers/page_titles.ex
-#, elixir-autogen, elixir-format
-msgid "Settings"
-msgstr "Налаштування"
-
-#: lib/tymeslot_web/helpers/page_titles.ex
-#, elixir-autogen, elixir-format
-msgid "Theme Selection"
-msgstr "Вибір теми"
 
 #: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
@@ -436,6 +426,7 @@ msgid "Poll link copied to clipboard!"
 msgstr "Посилання на опитування скопійовано!"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "Polls"

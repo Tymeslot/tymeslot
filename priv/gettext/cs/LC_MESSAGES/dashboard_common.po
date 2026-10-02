@@ -23,6 +23,7 @@ msgid "Add a meeting type so guests have something to book"
 msgstr "Přidejte typ schůzky, aby si hosté měli co rezervovat"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Analytics"
 msgstr "Statistiky"
@@ -72,11 +73,13 @@ msgid "General"
 msgstr "Obecné"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Integrations"
 msgstr "Integrace"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Types"
 msgstr "Typy schůzek"
@@ -99,6 +102,7 @@ msgid "Pro"
 msgstr "Pro"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Profile"
 msgstr "Profil"
@@ -114,6 +118,7 @@ msgid "Setup recommended"
 msgstr "Doporučujeme dokončit nastavení"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Theme"
 msgstr "Motiv"
@@ -190,11 +195,6 @@ msgstr "Nástěnka"
 
 #: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
-msgid "Meeting Settings"
-msgstr "Nastavení schůzek"
-
-#: lib/tymeslot_web/helpers/page_titles.ex
-#, elixir-autogen, elixir-format
 msgid "Payments"
 msgstr "Platby"
 
@@ -202,16 +202,6 @@ msgstr "Platby"
 #, elixir-autogen, elixir-format
 msgid "Set a username in Settings to enable this feature"
 msgstr "Tuto funkci zapnete zadáním uživatelského jména v nastavení"
-
-#: lib/tymeslot_web/helpers/page_titles.ex
-#, elixir-autogen, elixir-format
-msgid "Settings"
-msgstr "Nastavení"
-
-#: lib/tymeslot_web/helpers/page_titles.ex
-#, elixir-autogen, elixir-format
-msgid "Theme Selection"
-msgstr "Výběr motivu"
 
 #: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
@@ -436,6 +426,7 @@ msgid "Poll link copied to clipboard!"
 msgstr "Odkaz na anketu byl zkopírován do schránky!"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "Polls"
