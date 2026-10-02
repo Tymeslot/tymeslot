@@ -6,8 +6,8 @@ defmodule TymeslotWeb.Components.ContainersTest do
   import Phoenix.Component, only: [sigil_H: 2]
   import Phoenix.LiveViewTest
   alias Floki
-  alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.CoreComponents.Containers
+  alias TymeslotWeb.Components.CoreComponents.Feedback
 
   test "section_header renders correctly" do
     assigns = %{
@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Components.ContainersTest do
       saving: true
     }
 
-    html = render_component(&CoreComponents.section_header/1, assigns)
+    html = render_component(&Containers.section_header/1, assigns)
 
     assert html =~ "My Availability"
     assert html =~ "5"
@@ -36,7 +36,7 @@ defmodule TymeslotWeb.Components.ContainersTest do
       saving: false
     }
 
-    html = render_component(&CoreComponents.section_header/1, assigns)
+    html = render_component(&Containers.section_header/1, assigns)
     doc = Floki.parse_document!(html)
 
     assert Floki.text(doc) =~ "My Availability"
@@ -48,7 +48,7 @@ defmodule TymeslotWeb.Components.ContainersTest do
   end
 
   test "spinner defaults to h-5 w-5 when no class is given" do
-    html = render_component(&CoreComponents.spinner/1, %{})
+    html = render_component(&Feedback.spinner/1, %{})
     doc = Floki.parse_document!(html)
 
     assert [{"svg", attrs, _children}] = Floki.find(doc, "svg.spinner")
@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Components.ContainersTest do
   end
 
   test "spinner honours an explicit class override" do
-    html = render_component(&CoreComponents.spinner/1, %{class: "h-8 w-8"})
+    html = render_component(&Feedback.spinner/1, %{class: "h-8 w-8"})
     doc = Floki.parse_document!(html)
 
     assert [{"svg", attrs, _children}] = Floki.find(doc, "svg.spinner")
@@ -104,9 +104,9 @@ defmodule TymeslotWeb.Components.ContainersTest do
       assigns = %{variant: variant}
 
       rendered_to_string(~H"""
-      <CoreComponents.detail_line variant={@variant} icon="hero-clock" label="Time" tone={:info}>
+      <Containers.detail_line variant={@variant} icon="hero-clock" label="Time" tone={:info}>
         2:30 PM
-      </CoreComponents.detail_line>
+      </Containers.detail_line>
       """)
     end
 
@@ -129,9 +129,9 @@ defmodule TymeslotWeb.Components.ContainersTest do
 
       html =
         rendered_to_string(~H"""
-        <CoreComponents.detail_line variant={:compact} icon="hero-bell">
+        <Containers.detail_line variant={:compact} icon="hero-bell">
           Reminders
-        </CoreComponents.detail_line>
+        </Containers.detail_line>
         """)
 
       refute html =~ ~r/<p[\s>]/

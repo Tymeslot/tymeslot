@@ -17,7 +17,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.NewVenueComponen
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Venues
   alias Tymeslot.Venues.VenueSchema
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorComponent
   alias TymeslotWeb.Live.Shared.Flash
 
@@ -86,7 +87,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.NewVenueComponen
         phx-target={@myself}
         class="space-y-3"
       >
-        <CoreComponents.input
+        <Forms.input
           field={@form[:name]}
           label={dgettext("dashboard_meeting_form", "Name")}
           placeholder={dgettext("dashboard_meeting_form", "e.g., Berlin office")}
@@ -94,7 +95,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.NewVenueComponen
           required
         />
 
-        <CoreComponents.input
+        <Forms.input
           field={@form[:description]}
           type="textarea"
           rows={3}
@@ -104,17 +105,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.NewVenueComponen
         />
 
         <div class="flex justify-end gap-2">
-          <CoreComponents.action_button
+          <Buttons.action_button
             type="button"
             variant={:secondary}
             phx-click="toggle_new_venue"
             phx-target={@editor}
           >
             {dgettext("dashboard_meeting_form", "Cancel")}
-          </CoreComponents.action_button>
-          <CoreComponents.action_button type="submit" variant={:primary}>
+          </Buttons.action_button>
+          <Buttons.action_button type="submit" variant={:primary}>
             {dgettext("dashboard_meeting_form", "Add location")}
-          </CoreComponents.action_button>
+          </Buttons.action_button>
         </div>
       </.form>
     </div>

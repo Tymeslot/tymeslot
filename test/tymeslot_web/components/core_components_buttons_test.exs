@@ -10,8 +10,6 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.CoreComponents.Buttons
 
-  # Every test renders through the CoreComponents delegates rather than the
-  # Buttons module, so an attribute the delegate fails to declare shows up here.
   defp render_doc(template, assigns \\ %{}) do
     template |> render_component(assigns) |> LazyHTML.from_fragment()
   end
@@ -29,7 +27,7 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
       doc =
         render_doc(fn assigns ->
           ~H"""
-          <CoreComponents.action_button>Save</CoreComponents.action_button>
+          <Buttons.action_button>Save</Buttons.action_button>
           """
         end)
 
@@ -45,7 +43,7 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
           render_doc(
             fn assigns ->
               ~H"""
-              <CoreComponents.action_button size={@size}>Go</CoreComponents.action_button>
+              <Buttons.action_button size={@size}>Go</Buttons.action_button>
               """
             end,
             %{size: size}
@@ -57,7 +55,7 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
       doc =
         render_doc(fn assigns ->
           ~H"""
-          <CoreComponents.action_button size={:md}>Go</CoreComponents.action_button>
+          <Buttons.action_button size={:md}>Go</Buttons.action_button>
           """
         end)
 
@@ -84,7 +82,7 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
           render_doc(
             fn assigns ->
               ~H"""
-              <CoreComponents.action_button variant={@variant}>Go</CoreComponents.action_button>
+              <Buttons.action_button variant={@variant}>Go</Buttons.action_button>
               """
             end,
             %{variant: variant}
@@ -98,7 +96,7 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
       doc =
         render_doc(fn assigns ->
           ~H"""
-          <CoreComponents.action_button icon="hero-plus" size={:sm}>Add</CoreComponents.action_button>
+          <Buttons.action_button icon="hero-plus" size={:sm}>Add</Buttons.action_button>
           """
         end)
 
@@ -111,9 +109,9 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
       doc =
         render_doc(fn assigns ->
           ~H"""
-          <CoreComponents.action_button type="submit" form="f" disabled phx-click="go" class="w-full">
+          <Buttons.action_button type="submit" form="f" disabled phx-click="go" class="w-full">
             Go
-          </CoreComponents.action_button>
+          </Buttons.action_button>
           """
         end)
 
@@ -130,9 +128,9 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
       doc =
         render_doc(fn assigns ->
           ~H"""
-          <CoreComponents.action_link navigate="/dashboard" variant={:secondary} size={:sm}>
+          <Buttons.action_link navigate="/dashboard" variant={:secondary} size={:sm}>
             Open
-          </CoreComponents.action_link>
+          </Buttons.action_link>
           """
         end)
 
@@ -150,7 +148,7 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
       doc =
         render_doc(fn assigns ->
           ~H"""
-          <CoreComponents.action_link patch="/dashboard?tab=a">Tab</CoreComponents.action_link>
+          <Buttons.action_link patch="/dashboard?tab=a">Tab</Buttons.action_link>
           """
         end)
 
@@ -162,7 +160,7 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
       doc =
         render_doc(fn assigns ->
           ~H"""
-          <CoreComponents.action_link
+          <Buttons.action_link
             href="https://meet.example.com/x"
             target="_blank"
             rel="noopener noreferrer"
@@ -170,7 +168,7 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
             variant={:on_dark}
           >
             Join meeting
-          </CoreComponents.action_link>
+          </Buttons.action_link>
           """
         end)
 
@@ -188,9 +186,9 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
       doc =
         render_doc(fn assigns ->
           ~H"""
-          <CoreComponents.loading_button icon="hero-check" size={:lg} variant={:success}>
+          <Buttons.loading_button icon="hero-check" size={:lg} variant={:success}>
             Save
-          </CoreComponents.loading_button>
+          </Buttons.loading_button>
           """
         end)
 
@@ -205,9 +203,9 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
       doc =
         render_doc(fn assigns ->
           ~H"""
-          <CoreComponents.loading_button loading loading_text="Saving..." icon="hero-check">
+          <Buttons.loading_button loading loading_text="Saving..." icon="hero-check">
             Save
-          </CoreComponents.loading_button>
+          </Buttons.loading_button>
           """
         end)
 
@@ -225,7 +223,7 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
       doc =
         render_doc(fn assigns ->
           ~H"""
-          <CoreComponents.icon_button icon="hero-trash" label="Remove time off" variant={:danger} />
+          <Buttons.icon_button icon="hero-trash" label="Remove time off" variant={:danger} />
           """
         end)
 
@@ -241,7 +239,7 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
       doc =
         render_doc(fn assigns ->
           ~H"""
-          <CoreComponents.icon_button
+          <Buttons.icon_button
             icon="hero-pencil-square"
             label="Edit"
             size={:sm}
@@ -265,7 +263,7 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
       doc =
         render_doc(fn assigns ->
           ~H"""
-          <CoreComponents.icon_button
+          <Buttons.icon_button
             icon="hero-clipboard"
             label="Copy link"
             tooltip="Publish the page to share its link"
@@ -283,13 +281,13 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
 
   describe "button_classes/2" do
     test "gives a non-button element the look of an action button" do
-      assert CoreComponents.button_classes(:secondary, :sm) == [
+      assert Buttons.button_classes(:secondary, :sm) == [
                "action-button",
                "action-button--secondary",
                "action-button--sm"
              ]
 
-      assert CoreComponents.button_classes(:danger_soft) == [
+      assert Buttons.button_classes(:danger_soft) == [
                "action-button",
                "action-button--danger-soft",
                nil
@@ -297,39 +295,23 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
     end
 
     test "rejects an unknown variant rather than emitting a class nothing styles" do
-      assert_raise FunctionClauseError, fn -> CoreComponents.button_classes(:brand, :md) end
+      assert_raise FunctionClauseError, fn -> Buttons.button_classes(:brand, :md) end
     end
   end
 
-  describe "the CoreComponents facade" do
-    # `Facade.expose/2` copies each component's declarations onto the facade.
-    # A facade that declared less than its component would silently reject
-    # the difference at a caller's compile time, so every exposed component
-    # must carry exactly its submodule's attributes and slots.
-    test "declares exactly what each exposed component declares" do
-      core = CoreComponents.__components__()
-      exposed = CoreComponents.__exposed__()
+  describe "use CoreComponents" do
+    test "names only real components of the submodule that renders them" do
+      components = CoreComponents.components()
 
-      assert Enum.sort(Map.keys(exposed)) == Enum.sort(Map.keys(core))
-      assert map_size(exposed) > 20
+      assert map_size(components) > 20
 
-      drifted =
-        for {name, module} <- exposed,
-            summary(core[name]) != summary(module.__components__()[name]),
+      missing =
+        for {name, module} <- components,
+            not Map.has_key?(module.__components__(), name) and
+              name != :dropdown_divider,
             do: name
 
-      assert drifted == []
+      assert missing == []
     end
-  end
-
-  defp summary(%{attrs: attrs, slots: slots}) do
-    {attrs
-     |> Enum.map(
-       &{&1.name, &1.type, &1.required, &1.opts[:default], &1.opts[:values], &1.opts[:include]}
-     )
-     |> Enum.sort(),
-     slots
-     |> Enum.map(&{&1.name, &1.required, Enum.map(&1.attrs, fn attr -> attr.name end)})
-     |> Enum.sort()}
   end
 end

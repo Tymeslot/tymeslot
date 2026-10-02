@@ -11,7 +11,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
 
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Meetings
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents.Containers
+  alias TymeslotWeb.Components.CoreComponents.Feedback
+  alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Components.Dashboard.Meetings.GuestStatusPill
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingActions
@@ -60,18 +63,18 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
               {@meeting.attendee_company}
             </span>
             <MeetingStatusBadge.status_badges meeting={@meeting} />
-            <CoreComponents.pill
+            <Feedback.pill
               :if={@meeting.meeting_url}
               tone={:info}
               size={:sm}
               icon="hero-video-camera"
             >
               {dgettext("dashboard_bookings", "Video Call")}
-            </CoreComponents.pill>
+            </Feedback.pill>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <CoreComponents.detail_line
+            <Containers.detail_line
               variant={:tile}
               icon="hero-calendar-days"
               label={dgettext("dashboard_bookings", "Date & Time")}
@@ -80,8 +83,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
               <span class="block text-turquoise-600">
                 {Helpers.format_meeting_time(@meeting, @timezone, @time_format)}
               </span>
-            </CoreComponents.detail_line>
-            <CoreComponents.detail_line
+            </Containers.detail_line>
+            <Containers.detail_line
               :if={@meeting.meeting_type}
               variant={:tile}
               icon="hero-squares-2x2"
@@ -89,8 +92,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
               data-testid="meeting-type"
             >
               {@meeting.meeting_type}
-            </CoreComponents.detail_line>
-            <CoreComponents.detail_line
+            </Containers.detail_line>
+            <Containers.detail_line
               variant={:tile}
               tone={:info}
               icon="hero-envelope"
@@ -102,7 +105,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
               >
                 {@meeting.attendee_email}
               </a>
-            </CoreComponents.detail_line>
+            </Containers.detail_line>
           </div>
 
           <.sub_panel
@@ -184,7 +187,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
       <div class="flex items-center justify-between gap-4 mb-4">
         <div class="flex items-center gap-4">
           <div class="w-8 h-8 rounded-token-lg bg-white shadow-sm flex items-center justify-center shrink-0 border border-tymeslot-100">
-            <CoreComponents.icon name={@icon} class="w-4 h-4 text-tymeslot-400" />
+            <Icons.icon name={@icon} class="w-4 h-4 text-tymeslot-400" />
           </div>
           <h5 class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest">
             {@title}
@@ -225,7 +228,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
           )}
         </span>
       </p>
-      <CoreComponents.action_button
+      <Buttons.action_button
         variant={:outline}
         size={:sm}
         phx-click="dismiss_calendar_sync_banner"
@@ -234,7 +237,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
         class="shrink-0"
       >
         {dgettext("dashboard_bookings", "Dismiss")}
-      </CoreComponents.action_button>
+      </Buttons.action_button>
     </div>
     """
   end

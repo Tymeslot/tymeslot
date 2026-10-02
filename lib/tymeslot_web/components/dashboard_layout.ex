@@ -130,7 +130,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
 
               <%!-- Logo with Icon and Text --%>
               <div class="flex items-center space-x-3 min-w-0">
-                <TymeslotWeb.Components.CoreComponents.logo
+                <TymeslotWeb.Components.CoreComponents.Brand.logo
                   mode={:full}
                   img_class="h-10 sm:h-16 shrink min-w-0"
                 />

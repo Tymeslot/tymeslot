@@ -12,7 +12,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.VenuePicker do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Ecto.Changeset
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.VenuePicker do
         )}
       </p>
 
-      <CoreComponents.action_button
+      <Buttons.action_button
         type="button"
         variant={:secondary}
         phx-click="toggle_new_venue"
@@ -73,7 +73,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.VenuePicker do
         size={:sm}
       >
         {dgettext("dashboard_meeting_form", "+ New location")}
-      </CoreComponents.action_button>
+      </Buttons.action_button>
     </div>
     """
   end

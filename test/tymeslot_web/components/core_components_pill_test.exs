@@ -7,7 +7,6 @@ defmodule TymeslotWeb.Components.CoreComponentsPillTest do
   import Phoenix.Component
   import Phoenix.LiveViewTest
 
-  alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.CoreComponents.Feedback
 
   @pill_attrs [:tone, :size, :icon, :dot, :pulse, :uppercase, :class]
@@ -30,7 +29,7 @@ defmodule TymeslotWeb.Components.CoreComponentsPillTest do
       &render_component(
         fn assigns ->
           ~H"""
-          <CoreComponents.pill
+          <Feedback.pill
             tone={@tone}
             size={@size}
             icon={@icon}
@@ -41,7 +40,7 @@ defmodule TymeslotWeb.Components.CoreComponentsPillTest do
             {@rest}
           >
             Label
-          </CoreComponents.pill>
+          </Feedback.pill>
           """
         end,
         &1

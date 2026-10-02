@@ -38,7 +38,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
 
     ~H"""
     <div id={@id}>
-      <TymeslotWeb.Components.CoreComponents.modal
+      <TymeslotWeb.Components.CoreComponents.Modal.modal
         id={"#{@id}-modal"}
         show={@show}
         on_cancel={@on_cancel}
@@ -173,7 +173,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
             </.action_button>
           </div>
         </:footer>
-      </TymeslotWeb.Components.CoreComponents.modal>
+      </TymeslotWeb.Components.CoreComponents.Modal.modal>
     </div>
     """
   end

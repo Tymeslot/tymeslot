@@ -9,7 +9,7 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.CoreComponents, only: [action_button: 1, icon: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [action_button: 1, icon: 1]
 
   alias TymeslotWeb.OnboardingLive.StepConfig
 

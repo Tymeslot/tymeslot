@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Dashboard.Automation.DeliveryComponents do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
 
   attr :stats, :map, default: nil
@@ -88,7 +88,7 @@ defmodule TymeslotWeb.Dashboard.Automation.DeliveryComponents do
                   </span>
                 </div>
                 <div class="text-token-sm text-tymeslot-600 font-medium flex items-center gap-1.5">
-                  <CoreComponents.icon name="hero-clock" class="w-4 h-4" />
+                  <Icons.icon name="hero-clock" class="w-4 h-4" />
                   {AutomationHelpers.format_datetime(delivery.inserted_at, @time_format)}
                 </div>
                 <%= if delivery.error_message do %>

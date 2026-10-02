@@ -11,7 +11,10 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.BookingLinkModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents.Containers
+  alias TymeslotWeb.Components.CoreComponents.Icons
+  alias TymeslotWeb.Components.CoreComponents.Modal
 
   @doc """
   Renders the change-booking-link modal.
@@ -33,7 +36,7 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.BookingLinkModal do
   @spec booking_link_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def booking_link_modal(assigns) do
     ~H"""
-    <CoreComponents.modal
+    <Modal.modal
       id="booking-link-modal"
       show={@show && @meeting_type != nil}
       on_cancel={JS.push("close_slug_modal", target: @myself)}
@@ -41,18 +44,18 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.BookingLinkModal do
     >
       <:header>
         <div class="flex items-center gap-2">
-          <CoreComponents.icon name="hero-link" class="w-5 h-5 text-turquoise-500" />
+          <Icons.icon name="hero-link" class="w-5 h-5 text-turquoise-500" />
           <span>{dgettext("dashboard_meeting_types", "Change booking link")}</span>
         </div>
       </:header>
 
       <div :if={@meeting_type} class="space-y-5">
-        <CoreComponents.info_box variant={:warning}>
+        <Containers.info_box variant={:warning}>
           {dgettext(
             "dashboard_meeting_types",
             "Changing this link will stop any links you have already shared for this meeting type from working."
           )}
-        </CoreComponents.info_box>
+        </Containers.info_box>
 
         <form
           id="booking-link-slug-form"
@@ -75,14 +78,14 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.BookingLinkModal do
               spellcheck="false"
               class="font-mono text-token-sm flex-1 min-w-[8rem] px-4 py-2.5 rounded-token-xl border-2 border-tymeslot-100 bg-white text-tymeslot-700 focus:border-turquoise-300 focus:outline-hidden"
             />
-            <CoreComponents.action_button
+            <Buttons.action_button
               type="button"
               variant={:secondary}
               phx-click="randomise_slug"
               phx-target={@myself}
             >
               {dgettext("dashboard_meeting_types", "Randomise")}
-            </CoreComponents.action_button>
+            </Buttons.action_button>
           </div>
           <p class="text-token-sm text-tymeslot-500">
             {dgettext(
@@ -95,21 +98,21 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.BookingLinkModal do
 
       <:footer>
         <div class="flex justify-end gap-3">
-          <CoreComponents.action_button
+          <Buttons.action_button
             variant={:secondary}
             phx-click={JS.push("close_slug_modal", target: @myself)}
           >
             {dgettext("dashboard_meeting_types", "Cancel")}
-          </CoreComponents.action_button>
-          <CoreComponents.action_button
+          </Buttons.action_button>
+          <Buttons.action_button
             variant={:primary}
             phx-click={JS.push("confirm_slug_change", target: @myself)}
           >
             {dgettext("dashboard_meeting_types", "Save link")}
-          </CoreComponents.action_button>
+          </Buttons.action_button>
         </div>
       </:footer>
-    </CoreComponents.modal>
+    </Modal.modal>
     """
   end
 end

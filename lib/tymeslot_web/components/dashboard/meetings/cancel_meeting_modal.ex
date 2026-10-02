@@ -13,7 +13,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.MeetingPayments
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Forms
+  alias TymeslotWeb.Components.CoreComponents.Modal
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
 
   import TymeslotWeb.Components.PaymentHelpers, only: [format_amount: 2]
@@ -50,7 +51,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
     assigns = assign(assigns, :paid?, MeetingPayments.refundable?(assigns[:booking_payment]))
 
     ~H"""
-    <CoreComponents.confirm_modal
+    <Modal.confirm_modal
       id={@id}
       show={@show}
       title={dgettext("dashboard_bookings", "Cancel Meeting")}
@@ -90,7 +91,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
           )}
         </p>
       </form>
-    </CoreComponents.confirm_modal>
+    </Modal.confirm_modal>
     """
   end
 
@@ -135,7 +136,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
         </label>
 
         <div class="ml-6">
-          <CoreComponents.input
+          <Forms.input
             type="number"
             name="cancel_refund_amount"
             label={dgettext("dashboard_bookings", "Partial amount")}

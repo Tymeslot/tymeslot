@@ -20,7 +20,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RemindersSection do
 
   alias Phoenix.LiveComponent
   alias Tymeslot.Notifications.ReminderSchedule
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Icons
 
   attr :meeting, :map, required: true
 
@@ -62,7 +62,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RemindersSection do
       >
         <div class="flex gap-4 items-start mb-4">
           <div class="w-8 h-8 rounded-token-lg bg-white shadow-sm flex items-center justify-center shrink-0 border border-tymeslot-100">
-            <CoreComponents.icon name="hero-bell" class="w-4 h-4 text-tymeslot-400" />
+            <Icons.icon name="hero-bell" class="w-4 h-4 text-tymeslot-400" />
           </div>
           <p class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest mt-2">
             {dgettext("dashboard_bookings", "Reminders")}

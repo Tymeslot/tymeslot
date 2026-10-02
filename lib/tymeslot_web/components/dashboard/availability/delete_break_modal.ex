@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.DeleteBreakModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Modal
 
   @max_break_label_length 80
 
@@ -41,7 +41,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.DeleteBreakModal do
   @spec delete_break_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def delete_break_modal(assigns) do
     ~H"""
-    <CoreComponents.confirm_modal
+    <Modal.confirm_modal
       id={@id}
       show={@show}
       title={dgettext("dashboard_availability", "Delete Break")}
@@ -59,7 +59,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.DeleteBreakModal do
           {dgettext("dashboard_availability", "This action cannot be undone.")}
         </p>
       <% end %>
-    </CoreComponents.confirm_modal>
+    </Modal.confirm_modal>
     """
   end
 

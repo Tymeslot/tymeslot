@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Containers
   alias TymeslotWeb.Components.Dashboard.Profile.DeleteAvatarModal
 
   alias TymeslotWeb.Dashboard.ProfileSettings.{
@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
   def render(assigns) do
     ~H"""
     <div class="space-y-10 pb-20">
-      <CoreComponents.section_header
+      <Containers.section_header
         icon="hero-user"
         title={dgettext("dashboard_profile", "Profile Settings")}
         saving={@saving}

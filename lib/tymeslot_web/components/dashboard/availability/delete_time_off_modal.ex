@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.DeleteTimeOffModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Modal
 
   @doc """
   Renders the delete confirmation for one period.
@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.DeleteTimeOffModal do
   @spec delete_time_off_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def delete_time_off_modal(assigns) do
     ~H"""
-    <CoreComponents.confirm_modal
+    <Modal.confirm_modal
       id={@id}
       show={@show}
       title={dgettext("dashboard_availability", "Remove time off")}
@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.DeleteTimeOffModal do
           {dgettext("dashboard_availability", "Those days become bookable again straight away.")}
         </p>
       <% end %>
-    </CoreComponents.confirm_modal>
+    </Modal.confirm_modal>
     """
   end
 end

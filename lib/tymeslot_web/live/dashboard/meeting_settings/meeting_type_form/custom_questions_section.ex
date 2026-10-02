@@ -15,7 +15,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
   alias Ecto.UUID
   alias Phoenix.LiveView
   alias Tymeslot.CustomFields.FieldDefinition
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
 
   @impl Phoenix.LiveComponent
@@ -72,18 +73,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
             )}
           </p>
         </div>
-        <CoreComponents.action_button
+        <Buttons.action_button
           type="button"
           variant={:secondary}
           phx-click="add_question"
           phx-target={@myself}
         >
           {dgettext("dashboard_meeting_form", "Add question")}
-        </CoreComponents.action_button>
+        </Buttons.action_button>
       </div>
 
       <%= if @custom_fields == [] do %>
-        <CoreComponents.empty_state
+        <Feedback.empty_state
           icon="hero-question-mark-circle"
           size={:sm}
           title={dgettext("dashboard_meeting_form", "No custom questions yet")}
@@ -138,7 +139,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
 
               <%!-- Actions --%>
               <div class="flex items-center gap-1 shrink-0">
-                <CoreComponents.action_button
+                <Buttons.action_button
                   type="button"
                   variant={:secondary}
                   phx-click="edit_question"
@@ -147,8 +148,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
                   size={:sm}
                 >
                   {dgettext("dashboard_meeting_form", "Edit")}
-                </CoreComponents.action_button>
-                <CoreComponents.action_button
+                </Buttons.action_button>
+                <Buttons.action_button
                   type="button"
                   variant={:danger_soft}
                   phx-click="delete_question"
@@ -157,7 +158,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
                   size={:sm}
                 >
                   {dgettext("dashboard_meeting_form", "Delete")}
-                </CoreComponents.action_button>
+                </Buttons.action_button>
               </div>
             </li>
           <% end %>

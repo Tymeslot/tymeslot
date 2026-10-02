@@ -11,7 +11,7 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.CoreComponents, only: [action_button: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [action_button: 1]
 
   alias Tymeslot.ThemeCustomizations.Presets
   alias TymeslotWeb.Themes.Core.Registry

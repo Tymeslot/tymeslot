@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
-  import TymeslotWeb.Components.CoreComponents, only: [pill: 1, spinner: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [pill: 1, spinner: 1]
   import TymeslotWeb.Components.Icons.ProviderIcon
 
   @doc """

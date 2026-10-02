@@ -88,6 +88,6 @@ defmodule CredoChecks.RequireDashboardSectionHeader do
   defp has_section_header?(content) do
     # Check for various ways the component might be called
     String.contains?(content, "<.section_header") or
-      String.contains?(content, "<CoreComponents.section_header")
+      String.contains?(content, "<Containers.section_header")
   end
 end

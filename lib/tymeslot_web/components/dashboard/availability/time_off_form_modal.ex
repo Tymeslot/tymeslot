@@ -19,7 +19,10 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Validation.Constraints
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents.Forms
+  alias TymeslotWeb.Components.CoreComponents.Icons
+  alias TymeslotWeb.Components.CoreComponents.Modal
   alias TymeslotWeb.Components.Shared.TimeOptions
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
@@ -63,10 +66,10 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
       )
 
     ~H"""
-    <CoreComponents.modal id={@id} show={@show} on_cancel={@on_cancel} size={:medium}>
+    <Modal.modal id={@id} show={@show} on_cancel={@on_cancel} size={:medium}>
       <:header>
         <div class="flex items-center gap-2">
-          <CoreComponents.icon name="hero-sun" class="w-5 h-5 text-turquoise-500" />
+          <Icons.icon name="hero-sun" class="w-5 h-5 text-turquoise-500" />
           {header_title(@period_data)}
         </div>
       </:header>
@@ -80,7 +83,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
       >
         <div class="space-y-6">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <CoreComponents.input
+            <Forms.input
               type="date"
               id={"#{@id}-starts-on"}
               name="starts_on"
@@ -90,7 +93,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
               label={dgettext("dashboard_availability", "First day away")}
               errors={field_errors(@period_data, :starts_on)}
             />
-            <CoreComponents.input
+            <Forms.input
               type="date"
               id={"#{@id}-ends-on"}
               name="ends_on"
@@ -103,7 +106,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <CoreComponents.input
+            <Forms.input
               type="select"
               id={"#{@id}-start-time"}
               name="start_time"
@@ -112,7 +115,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
               label={dgettext("dashboard_availability", "Away from (first day)")}
               errors={field_errors(@period_data, :start_time)}
             />
-            <CoreComponents.input
+            <Forms.input
               type="select"
               id={"#{@id}-end-time"}
               name="end_time"
@@ -138,7 +141,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
             class="flex items-start gap-3 rounded-token-xl border-2 border-amber-200 bg-amber-50 px-4 py-4"
             data-testid="time-off-conflicts"
           >
-            <CoreComponents.icon
+            <Icons.icon
               name="hero-exclamation-triangle"
               class="w-5 h-5 shrink-0 text-amber-600"
             />
@@ -192,7 +195,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
             </div>
           </div>
 
-          <CoreComponents.input
+          <Forms.input
             type="text"
             id={"#{@id}-label"}
             name="label"
@@ -206,15 +209,15 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
         </div>
 
         <div class="flex justify-end gap-3 mt-8">
-          <CoreComponents.action_button variant={:secondary} type="button" phx-click={@on_cancel}>
+          <Buttons.action_button variant={:secondary} type="button" phx-click={@on_cancel}>
             {dgettext("dashboard_availability", "Cancel")}
-          </CoreComponents.action_button>
-          <CoreComponents.action_button variant={:primary} type="submit">
+          </Buttons.action_button>
+          <Buttons.action_button variant={:primary} type="submit">
             {dgettext("dashboard_availability", "Save")}
-          </CoreComponents.action_button>
+          </Buttons.action_button>
         </div>
       </form>
-    </CoreComponents.modal>
+    </Modal.modal>
     """
   end
 

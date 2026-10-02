@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Dashboard.Automation.ChatDeliveriesModal do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Modal
   alias TymeslotWeb.Dashboard.Automation.DeliveryComponents
 
   attr :id, :string, required: true
@@ -22,7 +22,7 @@ defmodule TymeslotWeb.Dashboard.Automation.ChatDeliveriesModal do
   @spec chat_deliveries_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def chat_deliveries_modal(assigns) do
     ~H"""
-    <CoreComponents.modal id={@id} show={@show} on_cancel={@on_close} size={:large}>
+    <Modal.modal id={@id} show={@show} on_cancel={@on_close} size={:large}>
       <:header>
         {dgettext("dashboard_automation", "Delivery History - %{name}", name: @integration.name)}
       </:header>
@@ -39,7 +39,7 @@ defmodule TymeslotWeb.Dashboard.Automation.ChatDeliveriesModal do
           </.action_button>
         </div>
       </:footer>
-    </CoreComponents.modal>
+    </Modal.modal>
     """
   end
 end

@@ -157,7 +157,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
   def render(assigns) do
     ~H"""
     <div id={@id}>
-      <TymeslotWeb.Components.CoreComponents.modal
+      <TymeslotWeb.Components.CoreComponents.Modal.modal
         id={"#{@id}-modal"}
         show={@show}
         on_cancel={JS.push("hide", target: @myself)}
@@ -330,7 +330,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
             </div>
           </form>
         <% end %>
-      </TymeslotWeb.Components.CoreComponents.modal>
+      </TymeslotWeb.Components.CoreComponents.Modal.modal>
     </div>
     """
   end

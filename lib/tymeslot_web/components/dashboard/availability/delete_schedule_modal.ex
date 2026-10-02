@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.DeleteScheduleModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Modal
 
   @doc """
   Renders a delete schedule confirmation modal.
@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.DeleteScheduleModal do
   @spec delete_schedule_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def delete_schedule_modal(assigns) do
     ~H"""
-    <CoreComponents.confirm_modal
+    <Modal.confirm_modal
       id={@id}
       show={@show}
       title={dgettext("dashboard_availability", "Delete Schedule")}
@@ -89,7 +89,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.DeleteScheduleModal do
           </div>
         <% end %>
       <% end %>
-    </CoreComponents.confirm_modal>
+    </Modal.confirm_modal>
     """
   end
 end

@@ -14,7 +14,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.CoreComponents,
+  use TymeslotWeb.Components.CoreComponents,
     only: [action_button: 1, icon: 1, loading_button: 1]
 
   alias TymeslotWeb.Live.Shared.FormValidationHelpers

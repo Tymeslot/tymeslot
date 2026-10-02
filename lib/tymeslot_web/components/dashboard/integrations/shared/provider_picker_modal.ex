@@ -59,7 +59,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ProviderPickerMod
   def provider_picker_modal(assigns) do
     ~H"""
     <div id={@id}>
-      <TymeslotWeb.Components.CoreComponents.modal
+      <TymeslotWeb.Components.CoreComponents.Modal.modal
         id={"#{@id}-modal"}
         show={@show}
         on_cancel={@on_cancel}
@@ -110,7 +110,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ProviderPickerMod
             </div>
           </div>
         </div>
-      </TymeslotWeb.Components.CoreComponents.modal>
+      </TymeslotWeb.Components.CoreComponents.Modal.modal>
     </div>
     """
   end

@@ -16,7 +16,7 @@ defmodule TymeslotWeb.Components.Dashboard.Appointments.JoinLink do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Agenda.Entry
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Dashboard.DashboardOverviewFormatters
 
   attr :url, :string, required: true
@@ -39,7 +39,7 @@ defmodule TymeslotWeb.Components.Dashboard.Appointments.JoinLink do
   @spec join_link(map()) :: Phoenix.LiveView.Rendered.t()
   def join_link(assigns) do
     ~H"""
-    <CoreComponents.action_link
+    <Buttons.action_link
       id={@id}
       href={@url}
       target="_blank"
@@ -51,7 +51,7 @@ defmodule TymeslotWeb.Components.Dashboard.Appointments.JoinLink do
       class={[@hidden && "hidden", @class]}
     >
       {dgettext("dashboard_common", "Join meeting")}
-    </CoreComponents.action_link>
+    </Buttons.action_link>
     """
   end
 

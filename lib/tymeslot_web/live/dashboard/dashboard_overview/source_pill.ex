@@ -8,24 +8,24 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.SourcePill do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Feedback
 
   attr :source, :atom, required: true
 
   @spec source_pill(map()) :: Phoenix.LiveView.Rendered.t()
   def source_pill(%{source: :tymeslot} = assigns) do
     ~H"""
-    <CoreComponents.pill tone={:brand} uppercase>
+    <Feedback.pill tone={:brand} uppercase>
       {dgettext("dashboard_home", "Booking")}
-    </CoreComponents.pill>
+    </Feedback.pill>
     """
   end
 
   def source_pill(assigns) do
     ~H"""
-    <CoreComponents.pill tone={:neutral} uppercase>
+    <Feedback.pill tone={:neutral} uppercase>
       {dgettext("dashboard_home", "Calendar")}
-    </CoreComponents.pill>
+    </Feedback.pill>
     """
   end
 end

@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.GuestStatusPill do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Feedback
 
   attr :status, :string, required: true
 
@@ -20,7 +20,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.GuestStatusPill do
     assigns = assign(assigns, tone: tone, icon: icon, label: label)
 
     ~H"""
-    <CoreComponents.pill tone={@tone} icon={@icon}>{@label}</CoreComponents.pill>
+    <Feedback.pill tone={@tone} icon={@icon}>{@label}</Feedback.pill>
     """
   end
 

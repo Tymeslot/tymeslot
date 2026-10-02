@@ -6,7 +6,7 @@ defmodule TymeslotWeb.AccountLive.Forms do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
   alias Tymeslot.Validation.Constraints
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
 
   @doc """
   Renders the email change form.

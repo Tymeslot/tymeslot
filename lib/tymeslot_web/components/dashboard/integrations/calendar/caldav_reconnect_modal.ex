@@ -25,7 +25,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Utils.ChangesetUtils
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Modal
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormComponents,
     as: SharedForm
@@ -176,7 +176,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
   def render(assigns) do
     ~H"""
     <div id={@id}>
-      <CoreComponents.modal
+      <Modal.modal
         :if={@show}
         id={"#{@id}-modal"}
         show={true}
@@ -206,7 +206,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
               target={@myself}
             />
         <% end %>
-      </CoreComponents.modal>
+      </Modal.modal>
     </div>
     """
   end

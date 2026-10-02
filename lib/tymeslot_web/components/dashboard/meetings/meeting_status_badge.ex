@@ -22,7 +22,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingStatusBadge do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Meetings.MeetingState
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
 
   @typep variant ::
@@ -48,9 +48,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingStatusBadge do
       )
 
     ~H"""
-    <CoreComponents.pill tone={@tone} size={:sm} icon={@icon}>
+    <Feedback.pill tone={@tone} size={:sm} icon={@icon}>
       {@label}
-    </CoreComponents.pill>
+    </Feedback.pill>
     """
   end
 

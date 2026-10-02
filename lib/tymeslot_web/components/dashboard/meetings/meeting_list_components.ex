@@ -5,7 +5,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents.Containers
+  alias TymeslotWeb.Components.CoreComponents.Feedback
+  alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingCard
 
   # Filter Tabs
@@ -75,7 +78,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
         )
       ]}
     >
-      <CoreComponents.icon
+      <Icons.icon
         name={@icon}
         class={"hidden sm:block shrink-0 #{if @active, do: "text-white/90"}"}
       />
@@ -109,7 +112,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   def meetings_list(assigns) do
     ~H"""
     <div>
-      <CoreComponents.loading_card
+      <Feedback.loading_card
         :if={@loading}
         label={dgettext("dashboard_bookings", "Loading meetings")}
       />
@@ -146,7 +149,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   def load_more(assigns) do
     ~H"""
     <div :if={@has_more} class="mt-10 text-center">
-      <CoreComponents.loading_button
+      <Buttons.loading_button
         variant={:secondary}
         size={:lg}
         phx-click="load_more"
@@ -155,7 +158,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
         loading_text={dgettext("dashboard_bookings", "Loading...")}
       >
         {dgettext("dashboard_bookings", "Load more meetings")}
-      </CoreComponents.loading_button>
+      </Buttons.loading_button>
     </div>
     """
   end
@@ -164,7 +167,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
 
   defp no_meetings(assigns) do
     ~H"""
-    <CoreComponents.empty_state
+    <Feedback.empty_state
       icon="hero-calendar-days"
       size={:lg}
       heading={:h3}
@@ -208,7 +211,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
 
       <div class="flex flex-col lg:flex-row gap-12 relative z-10">
         <div class="flex-1">
-          <CoreComponents.section_header
+          <Containers.section_header
             level={2}
             icon="hero-calendar-days"
             title={dgettext("dashboard_bookings", "Meeting Management")}
@@ -267,9 +270,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   defp info_card(assigns) do
     ~H"""
     <div class="p-5 rounded-token-2xl bg-white border-2 border-tymeslot-50 shadow-sm hover:border-turquoise-100 transition-all hover:shadow-md">
-      <CoreComponents.detail_line variant={:tile} tone={@tone} icon={@icon} label={@title}>
+      <Containers.detail_line variant={:tile} tone={@tone} icon={@icon} label={@title}>
         {@description}
-      </CoreComponents.detail_line>
+      </Containers.detail_line>
     </div>
     """
   end

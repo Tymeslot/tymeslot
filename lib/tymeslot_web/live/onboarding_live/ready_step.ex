@@ -9,7 +9,7 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.CoreComponents, only: [icon: 1, icon_button: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [icon: 1, icon_button: 1]
 
   @doc """
   Renders the ready step with booking URL display.

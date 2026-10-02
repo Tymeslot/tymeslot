@@ -9,7 +9,8 @@ defmodule TymeslotWeb.OnboardingLive.SkipConfirmationModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents.Modal
 
   @doc """
   Renders the skip confirmation modal component.
@@ -19,7 +20,7 @@ defmodule TymeslotWeb.OnboardingLive.SkipConfirmationModal do
   @spec skip_confirmation_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def skip_confirmation_modal(assigns) do
     ~H"""
-    <CoreComponents.modal
+    <Modal.modal
       id="skip-onboarding-modal"
       show={@show}
       on_cancel={JS.push("hide_skip_modal")}
@@ -50,23 +51,23 @@ defmodule TymeslotWeb.OnboardingLive.SkipConfirmationModal do
 
       <:footer>
         <div class="flex flex-row gap-3">
-          <CoreComponents.action_button
+          <Buttons.action_button
             variant={:danger}
             phx-click="skip_onboarding"
             class="flex-1"
           >
             {dgettext("onboarding_wizard", "Skip anyway")}
-          </CoreComponents.action_button>
-          <CoreComponents.action_button
+          </Buttons.action_button>
+          <Buttons.action_button
             variant={:secondary}
             phx-click="hide_skip_modal"
             class="flex-1"
           >
             {dgettext("onboarding_wizard", "Continue setup")}
-          </CoreComponents.action_button>
+          </Buttons.action_button>
         </div>
       </:footer>
-    </CoreComponents.modal>
+    </Modal.modal>
     """
   end
 end

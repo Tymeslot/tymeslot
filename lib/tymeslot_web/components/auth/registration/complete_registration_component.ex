@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Registration.CompleteRegistrationComponent do
   import TymeslotWeb.Shared.Auth.LayoutComponents
   import TymeslotWeb.Shared.Auth.FormComponents
   import TymeslotWeb.Shared.Auth.ButtonComponents
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
 
   @doc """
   Renders the complete registration form using shared auth components.

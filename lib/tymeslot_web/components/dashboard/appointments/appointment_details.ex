@@ -13,7 +13,9 @@ defmodule TymeslotWeb.Components.Dashboard.Appointments.AppointmentDetails do
   use TymeslotWeb, :verified_routes
 
   alias Tymeslot.Agenda.Entry
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents.Containers
+  alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.Dashboard.Appointments.JoinLink
   alias TymeslotWeb.Dashboard.DashboardFormat
   alias TymeslotWeb.Dashboard.DashboardOverview.SourcePill
@@ -48,37 +50,37 @@ defmodule TymeslotWeb.Components.Dashboard.Appointments.AppointmentDetails do
     <div class="space-y-6">
       <div class="flex flex-wrap items-center gap-2">
         <SourcePill.source_pill source={@entry.source} />
-        <CoreComponents.pill :if={@relative} tone={:brand} icon="hero-clock-mini">
+        <Feedback.pill :if={@relative} tone={:brand} icon="hero-clock-mini">
           {@relative}
-        </CoreComponents.pill>
+        </Feedback.pill>
       </div>
 
       <div class="space-y-4">
-        <CoreComponents.detail_line
+        <Containers.detail_line
           icon="hero-calendar-days"
           label={dgettext("dashboard_common", "When")}
         >
           {DashboardFormat.date_label(@entry, @timezone)}
-        </CoreComponents.detail_line>
-        <CoreComponents.detail_line icon="hero-clock" label={dgettext("dashboard_common", "Time")}>
+        </Containers.detail_line>
+        <Containers.detail_line icon="hero-clock" label={dgettext("dashboard_common", "Time")}>
           {DashboardFormat.entry_time_range(@entry, @timezone, @time_format)}
           <span :if={@duration} class="text-tymeslot-400 font-semibold">· {@duration}</span>
-        </CoreComponents.detail_line>
-        <CoreComponents.detail_line
+        </Containers.detail_line>
+        <Containers.detail_line
           :if={@entry.join_url}
           icon="hero-video-camera"
           label={dgettext("dashboard_common", "Video meeting")}
         >
           {platform_label(@entry.join_url)}
-        </CoreComponents.detail_line>
-        <CoreComponents.detail_line
+        </Containers.detail_line>
+        <Containers.detail_line
           :if={@place}
           icon="hero-map-pin"
           label={dgettext("dashboard_common", "Location")}
         >
           {@place}
-        </CoreComponents.detail_line>
-        <CoreComponents.detail_line
+        </Containers.detail_line>
+        <Containers.detail_line
           :if={@entry.who || @entry.who_email}
           icon="hero-user"
           label={dgettext("dashboard_common", "With")}
@@ -91,13 +93,13 @@ defmodule TymeslotWeb.Components.Dashboard.Appointments.AppointmentDetails do
           >
             {@entry.who_email}
           </a>
-        </CoreComponents.detail_line>
-        <CoreComponents.detail_line
+        </Containers.detail_line>
+        <Containers.detail_line
           icon="hero-calendar"
           label={dgettext("dashboard_common", "Calendar")}
         >
           {calendar_label(@entry)}
-        </CoreComponents.detail_line>
+        </Containers.detail_line>
       </div>
     </div>
     """
@@ -113,14 +115,14 @@ defmodule TymeslotWeb.Components.Dashboard.Appointments.AppointmentDetails do
   def appointment_actions(assigns) do
     ~H"""
     <div class="flex flex-wrap justify-end gap-3">
-      <CoreComponents.action_link
+      <Buttons.action_link
         :if={@entry.source == :tymeslot}
         patch={~p"/dashboard/meetings"}
         variant={:secondary}
         icon="hero-cog-6-tooth"
       >
         {dgettext("dashboard_common", "Manage booking")}
-      </CoreComponents.action_link>
+      </Buttons.action_link>
       <JoinLink.join_link :if={@entry.join_url} url={@entry.join_url} />
     </div>
     """

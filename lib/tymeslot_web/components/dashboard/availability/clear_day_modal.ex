@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.ClearDayModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Modal
 
   @doc """
   Renders a clear day settings confirmation modal.
@@ -39,7 +39,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.ClearDayModal do
   @spec clear_day_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def clear_day_modal(assigns) do
     ~H"""
-    <CoreComponents.confirm_modal
+    <Modal.confirm_modal
       id={@id}
       show={@show}
       title={dgettext("dashboard_availability", "Clear Day Settings")}
@@ -65,7 +65,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.ClearDayModal do
           )}
         </p>
       <% end %>
-    </CoreComponents.confirm_modal>
+    </Modal.confirm_modal>
     """
   end
 end

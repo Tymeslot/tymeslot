@@ -18,7 +18,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.DeclineRequestModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Validation.Constraints
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Forms
+  alias TymeslotWeb.Components.CoreComponents.Modal
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
 
   attr :id, :string, required: true
@@ -34,7 +35,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.DeclineRequestModal do
   @spec decline_request_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def decline_request_modal(assigns) do
     ~H"""
-    <CoreComponents.confirm_modal
+    <Modal.confirm_modal
       id={@id}
       show={@show}
       title={dgettext("dashboard_bookings", "Decline request")}
@@ -62,7 +63,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.DeclineRequestModal do
           )}
         </p>
 
-        <CoreComponents.input
+        <Forms.input
           type="textarea"
           name="reason"
           value=""
@@ -83,7 +84,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.DeclineRequestModal do
           )}
         </p>
       </form>
-    </CoreComponents.confirm_modal>
+    </Modal.confirm_modal>
     """
   end
 end

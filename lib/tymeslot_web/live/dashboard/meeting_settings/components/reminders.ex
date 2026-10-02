@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Utils.ReminderUtils

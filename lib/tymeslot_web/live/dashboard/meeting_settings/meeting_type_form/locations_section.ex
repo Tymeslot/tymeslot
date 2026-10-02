@@ -20,7 +20,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
   alias Phoenix.LiveView
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Venues
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
   alias TymeslotWeb.Helpers.LocationIcons
 
@@ -34,7 +35,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
       <div class="flex items-center justify-between">
         <div>
           <div class="flex items-center gap-2">
-            <CoreComponents.icon name="hero-map-pin" class="w-5 h-5 text-turquoise-500" />
+            <Icons.icon name="hero-map-pin" class="w-5 h-5 text-turquoise-500" />
             <h3 class="text-token-base font-semibold text-tymeslot-800">
               {dgettext("dashboard_meeting_form", "Location")}
             </h3>
@@ -43,7 +44,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
             {location_hint(@locations)}
           </p>
         </div>
-        <CoreComponents.action_button
+        <Buttons.action_button
           type="button"
           variant={:secondary}
           phx-click="add_location"
@@ -51,7 +52,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
           data-testid="add-location"
         >
           {dgettext("dashboard_meeting_form", "Add location")}
-        </CoreComponents.action_button>
+        </Buttons.action_button>
       </div>
 
       <%!-- Reuses the questions list's sortable hook: it is generic over
@@ -84,7 +85,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
               </svg>
             </span>
 
-            <CoreComponents.icon
+            <Icons.icon
               name={LocationIcons.icon(location.kind)}
               class="w-5 h-5 text-turquoise-500 shrink-0"
             />
@@ -99,7 +100,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
             </div>
 
             <div class="flex items-center gap-1 shrink-0">
-              <CoreComponents.action_button
+              <Buttons.action_button
                 type="button"
                 variant={:secondary}
                 phx-click="edit_location"
@@ -108,10 +109,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
                 size={:sm}
               >
                 {dgettext("dashboard_meeting_form", "Edit")}
-              </CoreComponents.action_button>
+              </Buttons.action_button>
               <%!-- A meeting type has to be held somewhere, so the last
                     location cannot be deleted; the host edits it instead. --%>
-              <CoreComponents.action_button
+              <Buttons.action_button
                 :if={length(@locations) > 1}
                 type="button"
                 variant={:danger_soft}
@@ -121,7 +122,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
                 size={:sm}
               >
                 {dgettext("dashboard_meeting_form", "Delete")}
-              </CoreComponents.action_button>
+              </Buttons.action_button>
             </div>
           </li>
         <% end %>

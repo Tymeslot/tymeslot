@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal d
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Modal
 
   @doc """
   Renders a delete confirmation modal for meeting types.
@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal d
   @spec delete_meeting_type_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def delete_meeting_type_modal(assigns) do
     ~H"""
-    <CoreComponents.confirm_modal
+    <Modal.confirm_modal
       id="delete-meeting-type-modal"
       show={@show && @meeting_type != nil}
       title={dgettext("dashboard_meeting_types", "Delete Meeting Type")}
@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal d
           )}
         </p>
       <% end %>
-    </CoreComponents.confirm_modal>
+    </Modal.confirm_modal>
     """
   end
 end

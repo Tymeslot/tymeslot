@@ -17,7 +17,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents.Icons
+  alias TymeslotWeb.Components.CoreComponents.Modal
   alias TymeslotWeb.Components.Dashboard.Meetings.GuestStatusPill
 
   attr :id, :string, required: true
@@ -33,10 +35,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
   @spec add_guests_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def add_guests_modal(assigns) do
     ~H"""
-    <CoreComponents.modal id={@id} show={@show} on_cancel={@on_cancel} size={:medium}>
+    <Modal.modal id={@id} show={@show} on_cancel={@on_cancel} size={:medium}>
       <:header>
         <div class="flex items-center gap-2">
-          <CoreComponents.icon name="hero-user-plus" class="w-5 h-5 text-green-600" />
+          <Icons.icon name="hero-user-plus" class="w-5 h-5 text-green-600" />
           {dgettext("dashboard_bookings", "Add guest")}
         </div>
       </:header>
@@ -68,7 +70,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
                 class="w-5 h-5 rounded-full hover:bg-turquoise-200 flex items-center justify-center transition-colors"
                 aria-label={dgettext("dashboard_bookings", "Remove %{email}", email: email)}
               >
-                <CoreComponents.icon name="hero-x-mark" class="w-3 h-3" />
+                <Icons.icon name="hero-x-mark" class="w-3 h-3" />
               </button>
             </span>
           </div>
@@ -88,9 +90,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
               placeholder="colleague@example.com"
               class="input flex-1"
             />
-            <CoreComponents.action_button type="submit" variant={:secondary}>
+            <Buttons.action_button type="submit" variant={:secondary}>
               {dgettext("dashboard_bookings", "Add")}
-            </CoreComponents.action_button>
+            </Buttons.action_button>
           </form>
 
           <p class="text-tymeslot-500 font-medium mt-2">
@@ -121,20 +123,20 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
 
       <:footer>
         <div class="flex justify-end gap-3">
-          <CoreComponents.action_button variant={:secondary} phx-click={@on_cancel}>
+          <Buttons.action_button variant={:secondary} phx-click={@on_cancel}>
             {dgettext("common", "Cancel")}
-          </CoreComponents.action_button>
-          <CoreComponents.action_button
+          </Buttons.action_button>
+          <Buttons.action_button
             variant={:primary}
             disabled={@staged == []}
             phx-click={@confirm_event}
             phx-target={@target}
           >
             {dgettext("dashboard_bookings", "Send invitation")}
-          </CoreComponents.action_button>
+          </Buttons.action_button>
         </div>
       </:footer>
-    </CoreComponents.modal>
+    </Modal.modal>
     """
   end
 end

@@ -7,7 +7,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RescheduleRequestModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents.Icons
+  alias TymeslotWeb.Components.CoreComponents.Modal
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
 
   @doc """
@@ -46,7 +48,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RescheduleRequestModal do
   @spec reschedule_request_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def reschedule_request_modal(assigns) do
     ~H"""
-    <CoreComponents.modal id={@id} show={@show} on_cancel={@on_cancel} size={:medium}>
+    <Modal.modal id={@id} show={@show} on_cancel={@on_cancel} size={:medium}>
       <:header>
         <div class="flex items-center gap-2">
           <svg
@@ -80,7 +82,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RescheduleRequestModal do
             </p>
             <div class="text-tymeslot-900 font-black text-lg space-y-2">
               <div class="flex items-center gap-3">
-                <CoreComponents.icon name="hero-calendar" class="w-5 h-5 text-turquoise-600" />
+                <Icons.icon name="hero-calendar" class="w-5 h-5 text-turquoise-600" />
                 <span>{Helpers.format_meeting_date(@meeting, @timezone)} • {Helpers.format_meeting_time(
                   @meeting,
                   @timezone,
@@ -88,7 +90,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RescheduleRequestModal do
                 )}</span>
               </div>
               <div class="flex items-center gap-3">
-                <CoreComponents.icon name="hero-clock" class="w-5 h-5 text-turquoise-600" />
+                <Icons.icon name="hero-clock" class="w-5 h-5 text-turquoise-600" />
                 <span>
                   {dngettext(
                     "dashboard_bookings",
@@ -143,20 +145,20 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RescheduleRequestModal do
 
       <:footer>
         <div class="flex justify-end gap-3">
-          <CoreComponents.action_button variant={:secondary} phx-click={@on_cancel}>
+          <Buttons.action_button variant={:secondary} phx-click={@on_cancel}>
             {dgettext("common", "Cancel")}
-          </CoreComponents.action_button>
-          <CoreComponents.loading_button
+          </Buttons.action_button>
+          <Buttons.loading_button
             variant={:primary}
             phx-click={@on_confirm}
             loading={@sending}
             loading_text={dgettext("dashboard_bookings", "Sending...")}
           >
             {dgettext("dashboard_bookings", "Send Request")}
-          </CoreComponents.loading_button>
+          </Buttons.loading_button>
         </div>
       </:footer>
-    </CoreComponents.modal>
+    </Modal.modal>
     """
   end
 

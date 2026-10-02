@@ -10,7 +10,7 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.CoreComponents, only: [button_classes: 2, icon: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [button_classes: 2, icon: 1]
 
   alias Tymeslot.Bookings.Policy
   alias TymeslotWeb.Components.TimezoneDropdown

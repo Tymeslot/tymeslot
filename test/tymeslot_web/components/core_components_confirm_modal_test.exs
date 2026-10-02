@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Components.CoreComponentsConfirmModalTest do
   import Phoenix.LiveViewTest
 
   alias Phoenix.LiveView.JS
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Modal
 
   defp render_confirm(assigns, template) do
     assigns
@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Components.CoreComponentsConfirmModalTest do
       doc =
         render_confirm(%{}, fn assigns ->
           ~H"""
-          <CoreComponents.confirm_modal
+          <Modal.confirm_modal
             id="c"
             show
             title="Delete thing"
@@ -37,7 +37,7 @@ defmodule TymeslotWeb.Components.CoreComponentsConfirmModalTest do
             on_confirm={JS.push("delete")}
           >
             <p>Delete the thing?</p>
-          </CoreComponents.confirm_modal>
+          </Modal.confirm_modal>
           """
         end)
 
@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Components.CoreComponentsConfirmModalTest do
     test "danger uses the warning triangle in a red tile, primary a turquoise one" do
       template = fn assigns ->
         ~H"""
-        <CoreComponents.confirm_modal
+        <Modal.confirm_modal
           id="c"
           show
           title="T"
@@ -65,7 +65,7 @@ defmodule TymeslotWeb.Components.CoreComponentsConfirmModalTest do
           on_confirm={JS.push("go")}
         >
           <p>Body</p>
-        </CoreComponents.confirm_modal>
+        </Modal.confirm_modal>
         """
       end
 
@@ -82,7 +82,7 @@ defmodule TymeslotWeb.Components.CoreComponentsConfirmModalTest do
       doc =
         render_confirm(%{}, fn assigns ->
           ~H"""
-          <CoreComponents.confirm_modal
+          <Modal.confirm_modal
             id="c"
             show
             title="T"
@@ -90,7 +90,7 @@ defmodule TymeslotWeb.Components.CoreComponentsConfirmModalTest do
             on_cancel={@on_cancel}
           >
             <form id="the-form"></form>
-          </CoreComponents.confirm_modal>
+          </Modal.confirm_modal>
           """
         end)
 
@@ -103,7 +103,7 @@ defmodule TymeslotWeb.Components.CoreComponentsConfirmModalTest do
       doc =
         render_confirm(%{}, fn assigns ->
           ~H"""
-          <CoreComponents.confirm_modal
+          <Modal.confirm_modal
             id="c"
             show
             title="T"
@@ -113,7 +113,7 @@ defmodule TymeslotWeb.Components.CoreComponentsConfirmModalTest do
             on_confirm={JS.push("go")}
           >
             <p>Body</p>
-          </CoreComponents.confirm_modal>
+          </Modal.confirm_modal>
           """
         end)
 
@@ -131,7 +131,7 @@ defmodule TymeslotWeb.Components.CoreComponentsConfirmModalTest do
       doc =
         render_confirm(%{}, fn assigns ->
           ~H"""
-          <CoreComponents.confirm_modal
+          <Modal.confirm_modal
             id="c"
             show
             title="T"
@@ -141,7 +141,7 @@ defmodule TymeslotWeb.Components.CoreComponentsConfirmModalTest do
             data-testid="confirm-it"
           >
             <p>Body</p>
-          </CoreComponents.confirm_modal>
+          </Modal.confirm_modal>
           """
         end)
 
@@ -153,7 +153,7 @@ defmodule TymeslotWeb.Components.CoreComponentsConfirmModalTest do
       doc =
         render_confirm(%{}, fn assigns ->
           ~H"""
-          <CoreComponents.confirm_modal
+          <Modal.confirm_modal
             id="c"
             show
             title="T"
@@ -166,7 +166,7 @@ defmodule TymeslotWeb.Components.CoreComponentsConfirmModalTest do
               <button type="button" id="one">One</button>
               <button type="button" id="all">All</button>
             </:actions>
-          </CoreComponents.confirm_modal>
+          </Modal.confirm_modal>
           """
         end)
 
@@ -178,9 +178,9 @@ defmodule TymeslotWeb.Components.CoreComponentsConfirmModalTest do
       doc =
         render_confirm(%{}, fn assigns ->
           ~H"""
-          <CoreComponents.confirm_modal id="c" title="T" on_cancel={@on_cancel} on_confirm={JS.push("go")}>
+          <Modal.confirm_modal id="c" title="T" on_cancel={@on_cancel} on_confirm={JS.push("go")}>
             <p>Body</p>
-          </CoreComponents.confirm_modal>
+          </Modal.confirm_modal>
           """
         end)
 

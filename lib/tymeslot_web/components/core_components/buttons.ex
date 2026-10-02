@@ -209,12 +209,12 @@ defmodule TymeslotWeb.Components.CoreComponents.Buttons do
   element that cannot be one of the components above: a `<label>` wrapping a
   file input. Add `aria-disabled="true"` to such an element when it is inert.
   """
-  @spec classes(atom(), atom()) :: [String.t() | nil]
-  def classes(variant, size \\ :md) when variant in @variants and size in @sizes do
+  @spec button_classes(atom(), atom()) :: [String.t() | nil]
+  def button_classes(variant, size \\ :md) when variant in @variants and size in @sizes do
     ["action-button", variant_class(variant), size_class(size)]
   end
 
-  defp action_classes(variant, size, extra), do: classes(variant, size) ++ [extra]
+  defp action_classes(variant, size, extra), do: button_classes(variant, size) ++ [extra]
 
   defp variant_class(:danger_soft), do: "action-button--danger-soft"
   defp variant_class(:on_dark), do: "action-button--on-dark"

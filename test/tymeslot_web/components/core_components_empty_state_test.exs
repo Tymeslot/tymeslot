@@ -7,7 +7,6 @@ defmodule TymeslotWeb.Components.CoreComponentsEmptyStateTest do
   import Phoenix.Component
   import Phoenix.LiveViewTest
 
-  alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.CoreComponents.Feedback
 
   defp render_empty_state(assigns) do
@@ -27,7 +26,7 @@ defmodule TymeslotWeb.Components.CoreComponentsEmptyStateTest do
       &render_component(
         fn assigns ->
           ~H"""
-          <CoreComponents.empty_state
+          <Feedback.empty_state
             icon={@icon}
             title="No saved locations yet"
             description={@description}
@@ -42,7 +41,7 @@ defmodule TymeslotWeb.Components.CoreComponentsEmptyStateTest do
               <button type="button" phx-click="new_venue">Add location</button>
             </:action>
             <p :if={@with_detail} data-role="detail">Supporting detail</p>
-          </CoreComponents.empty_state>
+          </Feedback.empty_state>
           """
         end,
         &1
@@ -162,15 +161,11 @@ defmodule TymeslotWeb.Components.CoreComponentsEmptyStateTest do
       assert count(doc, "svg") == 1
       assert count(doc, "svg[data-role='brand-mark']") == 1
     end
-
-    test "the CoreComponents delegate declares the same attrs and slots as Feedback" do
-      assert declaration(CoreComponents) == declaration(Feedback)
-    end
   end
 
   describe "loading_card/1" do
     test "renders a spinner in a card, announced as loading" do
-      doc = LazyHTML.from_fragment(render_component(&CoreComponents.loading_card/1, %{}))
+      doc = LazyHTML.from_fragment(render_component(&Feedback.loading_card/1, %{}))
 
       status = LazyHTML.query(doc, "[role='status']")
       assert class_of(status) =~ "card-glass"
@@ -181,7 +176,7 @@ defmodule TymeslotWeb.Components.CoreComponentsEmptyStateTest do
     test "announces a custom label" do
       doc =
         LazyHTML.from_fragment(
-          render_component(&CoreComponents.loading_card/1, %{label: "Loading meetings"})
+          render_component(&Feedback.loading_card/1, %{label: "Loading meetings"})
         )
 
       assert doc |> LazyHTML.query(".sr-only") |> LazyHTML.text() == "Loading meetings"
@@ -194,12 +189,5 @@ defmodule TymeslotWeb.Components.CoreComponentsEmptyStateTest do
 
   defp title_class(assigns) do
     assigns |> render_empty_state() |> LazyHTML.query("p") |> Enum.at(0) |> class_of()
-  end
-
-  defp declaration(module) do
-    %{attrs: attrs, slots: slots} = module.__components__()[:empty_state]
-
-    {Enum.map(attrs, &Map.take(&1, [:name, :type, :required, :opts])),
-     Enum.map(slots, &Map.take(&1, [:name, :required]))}
   end
 end

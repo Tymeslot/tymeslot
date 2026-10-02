@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
   use Gettext, backend: TymeslotWeb.Gettext
 
   @doc """
-  Maps a connection status variant to the `CoreComponents.pill/1` tone that
+  Maps a connection status variant to the `Feedback.pill/1` tone that
   shows it. Shared by `ConnectionRow.connection_row/1` and
   `TabNav.integrations_tab_nav/1` so a row's status pill and its tab's status
   dot never drift out of sync.
@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
 
   Spread onto every server URL input, calendar and video alike, so all of them
   behave the same way: `{UIComponents.server_url_attrs()}` on the element that
-  carries `type="url"`, whether that is a `CoreComponents.input/1` call or the
+  carries `type="url"`, whether that is a `Forms.input/1` call or the
   markup inside a form component.
 
   The element keeps its `type="url"`, and the `ServerUrlField` hook adds two

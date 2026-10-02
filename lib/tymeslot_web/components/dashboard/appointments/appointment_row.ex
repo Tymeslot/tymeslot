@@ -17,7 +17,8 @@ defmodule TymeslotWeb.Components.Dashboard.Appointments.AppointmentRow do
 
   alias Tymeslot.Agenda.Entry
   alias Tymeslot.Integrations.Calendar.EventColour
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Feedback
+  alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Components.Dashboard.Appointments.JoinLink
   alias TymeslotWeb.Dashboard.DashboardFormat
   alias TymeslotWeb.Dashboard.DashboardOverview.SourcePill
@@ -69,9 +70,9 @@ defmodule TymeslotWeb.Components.Dashboard.Appointments.AppointmentRow do
           <span class="text-tymeslot-900 font-black tracking-tight truncate group-hover:text-turquoise-700 transition-colors">
             {@title}
           </span>
-          <CoreComponents.pill :if={@live} tone={:brand} pulse uppercase>
+          <Feedback.pill :if={@live} tone={:brand} pulse uppercase>
             {dgettext("dashboard_common", "Now")}
-          </CoreComponents.pill>
+          </Feedback.pill>
           <SourcePill.source_pill source={@entry.source} />
         </div>
         <div
@@ -151,7 +152,7 @@ defmodule TymeslotWeb.Components.Dashboard.Appointments.AppointmentRow do
           :if={@entry.location}
           class="mt-0.5 flex items-center gap-1 text-token-xs text-tymeslot-500"
         >
-          <CoreComponents.icon name="hero-map-pin-micro" class="w-3 h-3 shrink-0" />
+          <Icons.icon name="hero-map-pin-micro" class="w-3 h-3 shrink-0" />
           <span class="truncate">{@entry.location}</span>
         </span>
       </span>

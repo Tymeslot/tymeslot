@@ -13,7 +13,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
   alias TymeslotWeb.Themes.Shared.SlotGrouping
   alias TymeslotWeb.Themes.Shared.TimezoneHelpers
 
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
   import TymeslotWeb.Components.FlagHelpers
 
   # ========== TIMEZONE SELECTOR ==========

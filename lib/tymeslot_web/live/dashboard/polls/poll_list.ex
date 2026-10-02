@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Polls
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Dashboard.Polls.PollShareLink
@@ -70,9 +70,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
   @spec new_poll_button(map()) :: Phoenix.LiveView.Rendered.t()
   def new_poll_button(assigns) do
     ~H"""
-    <CoreComponents.action_button icon="hero-plus" phx-click="new_poll" phx-target={@myself} {@rest}>
+    <Buttons.action_button icon="hero-plus" phx-click="new_poll" phx-target={@myself} {@rest}>
       {dgettext("dashboard_common", "New poll")}
-    </CoreComponents.action_button>
+    </Buttons.action_button>
     """
   end
 
@@ -148,7 +148,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
             integration_status={@integration_status}
           />
 
-          <CoreComponents.icon_button
+          <Buttons.icon_button
             icon="hero-chart-bar"
             label={dgettext("dashboard_common", "View results")}
             phx-click="select_poll"
