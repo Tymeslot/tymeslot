@@ -28,9 +28,9 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookTab do
             title={dgettext("dashboard_automation", "Your Webhooks")}
             count={length(@webhooks)}
           />
-          <button phx-click="show_webhook_form" phx-target={@myself} class="btn-primary">
+          <.action_button phx-click="show_webhook_form" phx-target={@myself}>
             {dgettext("dashboard_automation", "Create Webhook")}
-          </button>
+          </.action_button>
         </div>
 
         <div class="grid grid-cols-1 gap-6">
@@ -68,9 +68,9 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookTab do
       >
         <:graphic><IconComponents.icon name={:webhook} class="w-10 h-10" /></:graphic>
         <:action>
-          <button phx-click="show_webhook_form" phx-target={@myself} class="btn-primary">
+          <.action_button phx-click="show_webhook_form" phx-target={@myself}>
             {dgettext("dashboard_automation", "Create Your First Webhook")}
-          </button>
+          </.action_button>
         </:action>
       </.empty_state>
     <% end %>

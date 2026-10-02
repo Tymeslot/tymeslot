@@ -75,21 +75,13 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
           class="mb-0"
         />
 
-        <button
+        <.icon_button
+          icon="hero-x-mark"
+          variant={:neutral}
+          label={dgettext("dashboard_automation", "Close")}
           phx-click="close_webhook_form"
           phx-target={@parent_component}
-          class="flex items-center gap-2 px-5 py-2.5 rounded-token-xl bg-tymeslot-50 text-tymeslot-600 font-bold hover:bg-tymeslot-100 transition-all border-2 border-transparent hover:border-tymeslot-200"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2.5"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-          {dgettext("dashboard_automation", "Close")}
-        </button>
+        />
       </div>
 
       <%!-- Form --%>
@@ -197,27 +189,27 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
                   class="font-mono text-token-sm flex-1 px-4 py-2.5 rounded-token-xl border-2 border-tymeslot-100 bg-tymeslot-50 text-tymeslot-600 cursor-default"
                   id="webhook_token_display"
                 />
-                <button
-                  type="button"
+                <.action_button
+                  variant={:secondary}
                   id="copy-webhook-token"
                   phx-hook="CopyOnClick"
                   data-copy-text={@webhook.webhook_token}
                   data-copy-feedback={
                     dgettext("dashboard_automation", "Security token copied to clipboard!")
                   }
-                  class="whitespace-nowrap px-5 py-2.5 rounded-token-xl bg-tymeslot-50 text-tymeslot-600 font-bold hover:bg-tymeslot-100 transition-all border-2 border-transparent hover:border-tymeslot-200"
+                  class="shrink-0"
                 >
                   {dgettext("dashboard_automation", "Copy")}
-                </button>
-                <button
-                  type="button"
+                </.action_button>
+                <.action_button
+                  variant={:danger_soft}
                   phx-click="show_regenerate_token_modal"
                   phx-value-id={@webhook.id}
                   phx-target={@parent_component}
-                  class="whitespace-nowrap px-5 py-2.5 rounded-token-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition-all border-2 border-transparent hover:border-red-200"
+                  class="shrink-0"
                 >
                   {dgettext("dashboard_automation", "Regenerate")}
-                </button>
+                </.action_button>
               </div>
               <p class="text-token-xs text-tymeslot-500 font-medium">
                 {raw(
@@ -283,7 +275,6 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
             type="submit"
             variant={:primary}
             disabled={!@can_submit}
-            class={if !@can_submit, do: "opacity-50 cursor-not-allowed grayscale", else: ""}
             title={if !@can_submit, do: get_disabled_reason(assigns), else: ""}
           >
             {if @mode == :create,

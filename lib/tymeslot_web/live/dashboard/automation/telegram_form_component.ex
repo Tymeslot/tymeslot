@@ -73,21 +73,13 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
           class="mb-0"
         />
 
-        <button
+        <.icon_button
+          icon="hero-x-mark"
+          variant={:neutral}
+          label={dgettext("dashboard_automation_chat", "Close")}
           phx-click="close_telegram_form"
           phx-target={@parent_component}
-          class="flex items-center gap-2 px-5 py-2.5 rounded-token-xl bg-tymeslot-50 text-tymeslot-600 font-bold hover:bg-tymeslot-100 transition-all border-2 border-transparent hover:border-tymeslot-200"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2.5"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-          {dgettext("dashboard_automation_chat", "Close")}
-        </button>
+        />
       </div>
 
       <%= if @shared_bot_mode && @mode == :create && @wizard_step == 1 do %>
@@ -285,7 +277,6 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
                 )
               }
               disabled={!@can_submit}
-              class={if !@can_submit, do: "opacity-50 cursor-not-allowed grayscale", else: ""}
             >
               <%= cond do %>
                 <% !@shared_bot_mode && @mode == :create -> %>
@@ -319,13 +310,9 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
     >
       <:graphic><IconComponents.icon name={:telegram} class="w-10 h-10" /></:graphic>
       <:action>
-        <button
-          phx-click="refresh_telegram_link"
-          phx-target={@parent_component}
-          class="btn-primary"
-        >
+        <.action_button phx-click="refresh_telegram_link" phx-target={@parent_component}>
           {dgettext("dashboard_automation_chat", "Generate New Link")}
-        </button>
+        </.action_button>
       </:action>
     </.empty_state>
     """
@@ -347,15 +334,10 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
     >
       <:graphic><IconComponents.icon name={:telegram} class="w-10 h-10" /></:graphic>
       <:action :if={@deep_link}>
-        <a
-          href={@deep_link}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="btn-primary inline-flex items-center gap-2"
-        >
+        <.action_link href={@deep_link} target="_blank" rel="noopener noreferrer">
           <IconComponents.icon name={:telegram} class="w-5 h-5" />
           {dgettext("dashboard_automation_chat", "Open in Telegram")}
-        </a>
+        </.action_link>
       </:action>
 
       <%= if @deep_link do %>

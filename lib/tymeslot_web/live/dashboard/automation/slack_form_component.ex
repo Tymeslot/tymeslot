@@ -145,14 +145,13 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
         <.section_header icon="hero-bolt" title={form_title(@mode)} class="mb-0" />
 
-        <button
+        <.icon_button
+          icon="hero-x-mark"
+          variant={:neutral}
+          label={dgettext("dashboard_automation_chat", "Close")}
           phx-click="slack_close_form"
           phx-target={@parent_component}
-          class="flex items-center gap-2 px-5 py-2.5 rounded-token-xl bg-tymeslot-50 text-tymeslot-600 font-bold hover:bg-tymeslot-100 transition-all border-2 border-transparent hover:border-tymeslot-200"
-        >
-          <.icon name="hero-x-mark" class="w-5 h-5" />
-          {dgettext("dashboard_automation_chat", "Close")}
-        </button>
+        />
       </div>
 
       <form
@@ -330,7 +329,6 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
             loading={@saving}
             loading_text={dgettext("dashboard_automation_chat", "Saving...")}
             disabled={!@can_submit}
-            class={if !@can_submit, do: "opacity-50 cursor-not-allowed grayscale", else: ""}
           >
             {submit_label(@mode)}
           </CoreComponents.loading_button>
@@ -354,20 +352,20 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
         <label class="block text-token-sm font-black text-tymeslot-900">
           {dgettext("dashboard_automation_chat", "Channel")} <span class="text-red-500">*</span>
         </label>
-        <button
-          type="button"
+        <.action_button
+          variant={:secondary}
+          size={:sm}
           phx-click="slack_refresh_channels"
           phx-target={@target}
           disabled={@loading?}
-          class="flex items-center gap-1.5 px-3 py-1.5 text-token-xs font-bold text-tymeslot-600 bg-tymeslot-50 rounded-token-lg border-2 border-tymeslot-100 hover:bg-tymeslot-100 hover:text-tymeslot-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           title={dgettext("dashboard_automation_chat", "Refresh channel list from Slack")}
         >
           <.icon
             name="hero-arrow-path"
-            class={"w-3.5 h-3.5" <> if(@loading?, do: " animate-spin", else: "")}
+            class={"w-4 h-4 shrink-0" <> if(@loading?, do: " animate-spin", else: "")}
           />
           {dgettext("dashboard_automation_chat", "Refresh")}
-        </button>
+        </.action_button>
       </div>
 
       <p class="text-token-xs text-tymeslot-500 font-medium mb-2 ml-1">

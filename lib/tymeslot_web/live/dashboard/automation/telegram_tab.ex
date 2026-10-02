@@ -27,9 +27,9 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramTab do
             title={dgettext("dashboard_automation_chat", "Your Telegram Integrations")}
             count={length(@integrations)}
           />
-          <button phx-click="show_telegram_form" phx-target={@myself} class="btn-primary">
+          <.action_button phx-click="show_telegram_form" phx-target={@myself}>
             {dgettext("dashboard_automation_chat", "Add Telegram Account")}
-          </button>
+          </.action_button>
         </div>
 
         <div class="grid grid-cols-1 gap-6">
@@ -83,9 +83,9 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramTab do
       >
         <:graphic><IconComponents.icon name={:telegram} class="w-10 h-10" /></:graphic>
         <:action>
-          <button phx-click="show_telegram_form" phx-target={@myself} class="btn-primary">
+          <.action_button phx-click="show_telegram_form" phx-target={@myself}>
             {dgettext("dashboard_automation_chat", "Add Telegram Account")}
-          </button>
+          </.action_button>
         </:action>
       </.empty_state>
     <% end %>

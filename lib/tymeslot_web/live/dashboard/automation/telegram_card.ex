@@ -129,89 +129,70 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
         <div class="flex items-center gap-2 shrink-0 border-t border-tymeslot-100 pt-3">
           <%!-- Test Button --%>
           <%= if @integration.status in [:active, :paused] do %>
-            <button
+            <.loading_button
+              variant={:secondary}
+              size={:sm}
+              icon="hero-bolt"
+              loading={@testing}
+              loading_text={dgettext("dashboard_automation_chat", "Testing")}
+              disabled={@integration.status != :active}
               phx-click={@on_test}
-              disabled={@testing || @integration.status != :active}
-              class={[
-                "inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 font-bold transition-all text-token-sm",
-                if(@integration.status == :active && !@testing,
-                  do:
-                    "bg-white border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-200 hover:bg-turquoise-50",
-                  else:
-                    "bg-tymeslot-50 border-tymeslot-100 text-tymeslot-400 cursor-not-allowed opacity-50"
-                )
-              ]}
             >
-              <%= if @testing do %>
-                <.spinner class="w-4 h-4" />
-                <span class="hidden sm:inline">{dgettext("dashboard_automation_chat", "Testing")}</span>
-              <% else %>
-                <.icon name="hero-bolt" class="w-4 h-4" />
-                {dgettext("dashboard_automation_chat", "Test")}
-              <% end %>
-            </button>
+              {dgettext("dashboard_automation_chat", "Test")}
+            </.loading_button>
           <% end %>
 
           <%!-- Connect Button (pending_link + shared bot only) --%>
           <%= if @integration.status == :pending_link && @integration.bot_mode == "shared" && @on_reconnect do %>
-            <button
-              phx-click={@on_reconnect}
-              class="inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 bg-white border-turquoise-200 text-turquoise-700 hover:bg-turquoise-50 font-bold transition-all text-token-sm"
-            >
+            <.action_button size={:sm} phx-click={@on_reconnect}>
               {dgettext("dashboard_automation_chat", "Connect")}
-            </button>
+            </.action_button>
           <% end %>
 
           <%!-- Re-enable Button (auto_disabled only) --%>
           <%= if @integration.status == :auto_disabled && @on_reenable do %>
-            <button
-              phx-click={@on_reenable}
-              class="inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 bg-white border-turquoise-200 text-turquoise-700 hover:bg-turquoise-50 font-bold transition-all text-token-sm"
-            >
+            <.action_button size={:sm} phx-click={@on_reenable}>
               {dgettext("dashboard_automation_chat", "Re-enable")}
-            </button>
+            </.action_button>
           <% end %>
 
           <%!-- Logs Button --%>
-          <button
+          <.action_button
+            variant={:secondary}
+            size={:sm}
+            icon="hero-document-text"
             phx-click={@on_view_deliveries}
-            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 bg-white border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-200 hover:bg-turquoise-50 font-bold transition-all text-token-sm"
           >
-            <.icon name="hero-document-text" class="w-4 h-4" />
             {dgettext("dashboard_automation_chat", "Logs")}
-          </button>
+          </.action_button>
 
           <div class="ml-auto flex items-center gap-1">
             <%!-- Edit Button --%>
             <%= if @integration.status != :pending_link do %>
-              <button
+              <.icon_button
+                icon="hero-pencil-square"
+                label={dgettext("dashboard_automation_chat", "Edit")}
                 phx-click={@on_edit}
-                class="p-2.5 text-tymeslot-400 hover:text-turquoise-600 hover:bg-turquoise-50 rounded-token-xl transition-all"
-                title={dgettext("dashboard_automation_chat", "Edit")}
-              >
-                <.icon name="hero-pencil-square" class="w-5 h-5" />
-              </button>
+              />
             <% end %>
 
             <%!-- Disconnect Button (shared bot mode only) --%>
             <%= if @on_disconnect && @integration.bot_mode == "shared" && @integration.chat_id do %>
-              <button
+              <.icon_button
+                icon="hero-link"
+                variant={:warning}
+                label={dgettext("dashboard_automation_chat", "Disconnect Telegram")}
                 phx-click={@on_disconnect}
-                class="p-2.5 text-tymeslot-400 hover:text-amber-600 hover:bg-amber-50 rounded-token-xl transition-all"
-                title={dgettext("dashboard_automation_chat", "Disconnect Telegram")}
-              >
-                <.icon name="hero-link" class="w-5 h-5" />
-              </button>
+              />
             <% end %>
 
             <%!-- Delete Button --%>
-            <button
+            <.icon_button
+              icon="hero-trash"
+              variant={:danger}
+              label={dgettext("dashboard_automation_chat", "Delete")}
               phx-click={@on_delete}
-              class="p-2.5 text-tymeslot-300 hover:text-red-500 hover:bg-red-50 rounded-token-xl transition-all"
-              title={dgettext("dashboard_automation_chat", "Delete")}
-            >
-              <.icon name="hero-trash" class="w-5 h-5" />
-            </button>
+            />
           </div>
         </div>
       </div>

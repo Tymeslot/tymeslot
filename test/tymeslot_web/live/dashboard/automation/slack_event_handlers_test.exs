@@ -150,7 +150,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackEventHandlersTest do
       view |> element("button", "Add Slack via Webhook URL") |> render_click()
       assert render(view) =~ "Slack Webhook URL"
 
-      view |> element("button", "Close") |> render_click()
+      view |> element("button[aria-label='Close']") |> render_click()
       assert render(view) =~ "No Slack Integrations"
     end
   end

@@ -30,17 +30,17 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackTab do
           />
           <div class="flex items-center gap-3">
             <%= if @oauth_mode_available? do %>
-              <.link href={~p"/api/slack/oauth/start"} class="btn-primary">
+              <.action_link href={~p"/api/slack/oauth/start"}>
                 {dgettext("dashboard_automation_chat", "Add to Slack")}
-              </.link>
+              </.action_link>
             <% end %>
-            <button
+            <.action_button
+              variant={:secondary}
               phx-click="slack_show_webhook_form"
               phx-target={@myself}
-              class="btn-secondary"
             >
               {dgettext("dashboard_automation_chat", "Add via webhook URL")}
-            </button>
+            </.action_button>
           </div>
         </div>
 
@@ -98,18 +98,22 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackTab do
       >
         <:graphic><IconComponents.icon name={:slack} class="w-10 h-10" /></:graphic>
         <:action :if={@oauth_mode_available?}>
-          <.link href={~p"/api/slack/oauth/start"} class="btn-primary inline-flex items-center gap-2">
+          <.action_link href={~p"/api/slack/oauth/start"}>
             <IconComponents.icon name={:slack} class="w-5 h-5" />
             {dgettext("dashboard_automation_chat", "Add to Slack")}
-          </.link>
-          <button phx-click="slack_show_webhook_form" phx-target={@myself} class="btn-secondary">
+          </.action_link>
+          <.action_button
+            variant={:secondary}
+            phx-click="slack_show_webhook_form"
+            phx-target={@myself}
+          >
             {dgettext("dashboard_automation_chat", "Add via webhook URL")}
-          </button>
+          </.action_button>
         </:action>
         <:action :if={!@oauth_mode_available?}>
-          <button phx-click="slack_show_webhook_form" phx-target={@myself} class="btn-primary">
+          <.action_button phx-click="slack_show_webhook_form" phx-target={@myself}>
             {dgettext("dashboard_automation_chat", "Add Slack via Webhook URL")}
-          </button>
+          </.action_button>
         </:action>
       </.empty_state>
     <% end %>

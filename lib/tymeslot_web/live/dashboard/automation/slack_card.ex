@@ -122,111 +122,84 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
         <div class="flex items-center gap-2 shrink-0 border-t border-tymeslot-100 pt-3">
           <%!-- Pick a channel (pending_oauth only) --%>
           <%= if @status == :pending_oauth && @on_pick_channel do %>
-            <button
-              phx-click={@on_pick_channel}
-              class="inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 bg-turquoise-50 border-turquoise-200 text-turquoise-700 hover:bg-turquoise-100 font-bold transition-all text-token-sm"
-            >
+            <.action_button size={:sm} phx-click={@on_pick_channel}>
               {dgettext("dashboard_automation_chat", "Pick a channel")}
-            </button>
+            </.action_button>
           <% end %>
 
           <%!-- Reconnect (pending_oauth OAuth only — restart OAuth from scratch) --%>
           <%= if @status == :pending_oauth && @integration.app_mode == "oauth" && @on_reconnect do %>
-            <button
+            <.action_button
+              variant={:secondary}
+              size={:sm}
+              icon="hero-arrow-path"
               phx-click={@on_reconnect}
-              class="inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 bg-white border-amber-200 text-amber-700 hover:bg-amber-50 font-bold transition-all text-token-sm"
             >
-              <.icon name="hero-arrow-path" class="w-4 h-4" /> {dgettext(
-                "dashboard_automation_chat",
-                "Reconnect"
-              )}
-            </button>
+              {dgettext("dashboard_automation_chat", "Reconnect")}
+            </.action_button>
           <% end %>
 
           <%!-- Test Button --%>
           <%= if @status in [:active, :paused] do %>
-            <button
+            <.loading_button
+              variant={:secondary}
+              size={:sm}
+              icon="hero-bolt"
+              loading={@testing}
+              loading_text={dgettext("dashboard_automation_chat", "Testing")}
+              disabled={@status != :active}
               phx-click={@on_test}
-              disabled={@testing || @status != :active}
-              class={[
-                "inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 font-bold transition-all text-token-sm",
-                if(@status == :active && !@testing,
-                  do:
-                    "bg-white border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-200 hover:bg-turquoise-50",
-                  else:
-                    "bg-tymeslot-50 border-tymeslot-100 text-tymeslot-400 cursor-not-allowed opacity-50"
-                )
-              ]}
             >
-              <%= if @testing do %>
-                <.icon name="hero-arrow-path" class="w-4 h-4 animate-spin" />
-                <span class="hidden sm:inline">{dgettext("dashboard_automation_chat", "Testing")}</span>
-              <% else %>
-                <.icon name="hero-bolt" class="w-4 h-4" />
-                {dgettext("dashboard_automation_chat", "Test")}
-              <% end %>
-            </button>
+              {dgettext("dashboard_automation_chat", "Test")}
+            </.loading_button>
           <% end %>
 
           <%!-- Re-enable Button (auto_disabled only) --%>
           <%= if @status == :auto_disabled && @on_reenable do %>
-            <button
-              phx-click={@on_reenable}
-              class="inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 bg-white border-turquoise-200 text-turquoise-700 hover:bg-turquoise-50 font-bold transition-all text-token-sm"
-            >
+            <.action_button size={:sm} phx-click={@on_reenable}>
               {dgettext("dashboard_automation_chat", "Re-enable")}
-            </button>
+            </.action_button>
           <% end %>
 
           <%!-- Logs Button --%>
           <%= if @status != :pending_oauth do %>
-            <button
+            <.action_button
+              variant={:secondary}
+              size={:sm}
+              icon="hero-document-text"
               phx-click={@on_view_deliveries}
-              class="inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 bg-white border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-200 hover:bg-turquoise-50 font-bold transition-all text-token-sm"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
               {dgettext("dashboard_automation_chat", "Logs")}
-            </button>
+            </.action_button>
           <% end %>
 
           <div class="ml-auto flex items-center gap-1">
             <%!-- Edit Button --%>
             <%= if @status != :pending_oauth do %>
-              <button
+              <.icon_button
+                icon="hero-pencil-square"
+                label={dgettext("dashboard_automation_chat", "Edit")}
                 phx-click={@on_edit}
-                class="p-2.5 text-tymeslot-400 hover:text-turquoise-600 hover:bg-turquoise-50 rounded-token-xl transition-all"
-                title={dgettext("dashboard_automation_chat", "Edit")}
-              >
-                <.icon name="hero-pencil-square" class="w-5 h-5" />
-              </button>
+              />
             <% end %>
 
             <%!-- Disconnect Button (OAuth mode only, once channel is set) --%>
             <%= if @on_disconnect && @integration.app_mode == "oauth" && @integration.channel_id do %>
-              <button
+              <.icon_button
+                icon="hero-no-symbol"
+                variant={:warning}
+                label={dgettext("dashboard_automation_chat", "Disconnect Slack")}
                 phx-click={@on_disconnect}
-                class="p-2.5 text-tymeslot-400 hover:text-amber-600 hover:bg-amber-50 rounded-token-xl transition-all"
-                title={dgettext("dashboard_automation_chat", "Disconnect Slack")}
-              >
-                <.icon name="hero-no-symbol" class="w-5 h-5" />
-              </button>
+              />
             <% end %>
 
             <%!-- Delete Button --%>
-            <button
+            <.icon_button
+              icon="hero-trash"
+              variant={:danger}
+              label={dgettext("dashboard_automation_chat", "Delete")}
               phx-click={@on_delete}
-              class="p-2.5 text-tymeslot-300 hover:text-red-500 hover:bg-red-50 rounded-token-xl transition-all"
-              title={dgettext("dashboard_automation_chat", "Delete")}
-            >
-              <.icon name="hero-trash" class="w-5 h-5" />
-            </button>
+            />
           </div>
         </div>
       </div>

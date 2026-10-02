@@ -90,7 +90,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlersTest do
       view |> element("button", "Add Telegram Account") |> render_click()
       assert render(view) =~ "Integration Details"
 
-      view |> element("button", "Close") |> render_click()
+      view |> element("button[aria-label='Close']") |> render_click()
       assert render(view) =~ "No Telegram Integrations"
     end
   end
@@ -309,7 +309,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlersTest do
       view |> element("button", "Add Telegram Account") |> render_click()
       assert length(Telegram.list_integrations(user.id)) == 1
 
-      view |> element("button", "Close") |> render_click()
+      view |> element("button[aria-label='Close']") |> render_click()
 
       assert Telegram.list_integrations(user.id) == []
     end
@@ -370,7 +370,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlersTest do
       [stub] = Telegram.list_integrations(user.id)
       {:ok, _linked} = TelegramQueries.update_integration(stub, %{chat_id: "444333222"})
 
-      view |> element("button", "Close") |> render_click()
+      view |> element("button[aria-label='Close']") |> render_click()
 
       assert {:ok, %{chat_id: "444333222"}} = Telegram.get_integration(stub.id, user.id)
     end
