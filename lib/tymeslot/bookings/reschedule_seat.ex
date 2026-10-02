@@ -111,19 +111,19 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   # A type that is no longer a group type (its limit turned back to one)
   # takes no seat moves: its existing group meetings keep their seats but
   # accept nobody new, and a fresh slot would be a one-seat meeting with no
-  # attendee. A deleted type (`nil`) falls back to the old meeting's own
-  # capacity instead, see `max_participants_for/2`.
-  defp ensure_group_type(nil), do: :ok
+  # attendee. A deleted type (`nil`) takes none either: a slot created by the
+  # move would be a group meeting belonging to no type, which no booking page
+  # offers and no type update keeps in step.
+  defp ensure_group_type(nil), do: {:error, :seat_not_movable}
 
   defp ensure_group_type(meeting_type) do
     if MeetingTypeSchema.group?(meeting_type), do: :ok, else: {:error, :seat_not_movable}
   end
 
   # The meeting type a rescheduled seat is checked and, if it creates a new
-  # slot, built against — the same one the offered grid came from. `nil` when
-  # the meeting carries no type or the type has since been deleted; every
-  # caller here already falls back to the old meeting's own snapshotted
-  # values in that case (see `Tymeslot.Meetings.group?/1`).
+  # slot, built against: the same one the offered grid came from. `nil` when
+  # the meeting carries no type or the type has since been deleted, which
+  # `ensure_group_type/1` refuses.
   defp resolve_meeting_type(%{meeting_type_id: nil}), do: nil
 
   defp resolve_meeting_type(old_meeting),
@@ -157,8 +157,13 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     end
   end
 
+  # The live target meeting's own snapshotted capacity governs when the move
+  # joins an existing slot (`GroupScheduling.join_meeting/3` reads it
+  # directly); the type's `max_participants` only seeds the capacity of a
+  # brand-new slot, where the current limit is authoritative rather than the
+  # old meeting's capacity.
   defp move_seat(old_meeting, participant, new_times, meeting_type, guest_emails) do
-    max_participants = max_participants_for(old_meeting, meeting_type)
+    %{max_participants: max_participants} = meeting_type
 
     old_meeting
     |> new_slot_attrs(new_times, participant)
@@ -183,18 +188,6 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
       _gone -> {:error, :already_cancelled}
     end
   end
-
-  # The live target meeting's own snapshotted capacity governs when the move
-  # joins an existing slot (`GroupScheduling.join_meeting/3` reads it
-  # directly); this only matters for the branch that creates a brand-new
-  # slot, where it seeds that slot's capacity. The current meeting type's
-  # `max_participants` is authoritative there — not the old meeting's own
-  # capacity, which may predate a host raising or lowering the limit — falling
-  # back to it only when the type no longer resolves.
-  defp max_participants_for(_old_meeting, %{max_participants: max}) when is_integer(max),
-    do: max
-
-  defp max_participants_for(old_meeting, _meeting_type), do: old_meeting.capacity
 
   defp handle_move({:ok, booked}, old_meeting, participant),
     do: after_commit(old_meeting, participant, booked)

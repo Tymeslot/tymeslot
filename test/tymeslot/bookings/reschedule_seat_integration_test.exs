@@ -307,18 +307,19 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
   end
 
   # `meetings.meeting_type_id` is nilify_all, so deleting a type leaves live
-  # meetings pointing at nothing. Capacity used to be read live off that
-  # association (a MatchError there once took the booking LiveView down with
-  # it); it is now snapshotted onto the meeting row at creation, so a deleted
-  # meeting type no longer affects an in-flight seat move at all.
-  test "a deleted meeting type does not block moving an already-booked seat",
+  # meetings pointing at nothing. Their seats stand, but a move would create
+  # a group meeting belonging to no type, which no booking page offers and
+  # no type update keeps in step, so the move is refused and the seat kept.
+  test "a seat whose meeting type was deleted cannot be moved",
        %{meeting_type: meeting_type, old_meeting: old_meeting, mover: mover} do
     {:ok, _deleted} = MeetingTypes.delete_meeting_type(meeting_type)
+    meetings_before = Repo.aggregate(MeetingSchema, :count)
 
-    assert {:ok, %{meeting: new_meeting}} =
-             move(mover, new_slot_params())
+    assert {:error, :seat_not_movable} = move(mover, new_slot_params())
 
-    assert new_meeting.capacity == old_meeting.capacity
+    assert [%{id: id}] = ParticipantQueries.list_live_for_meeting(old_meeting.id)
+    assert id == mover.id
+    assert Repo.aggregate(MeetingSchema, :count) == meetings_before
   end
 
   # A seat move that lands on a time with no live group meeting used to

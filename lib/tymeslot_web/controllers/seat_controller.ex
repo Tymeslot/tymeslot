@@ -81,21 +81,28 @@ defmodule TymeslotWeb.SeatController do
 
   @spec reschedule(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def reschedule(conn, %{"token" => token}) do
+    # A seat in a meeting under way or over cannot move any more than it can
+    # be given up, so the link answers with the cancel link's pages for it.
     with :ok <- rate_limit(conn),
-         {:ok, %{participant: participant, meeting: meeting}} <- Meetings.fetch_live_seat(token),
-         {:ok, username, meeting_type} <- picker_target(meeting) do
-      if MeetingTypes.group_type?(meeting_type) do
-        path = "/#{username}/#{MeetingTypes.effective_slug(meeting_type)}"
-        redirect(conn, to: path <> "?" <> URI.encode_query(%{"reschedule_seat_token" => token}))
-      else
-        # The type stopped taking group bookings after this seat was booked:
-        # its meetings keep their seats but take no moves
-        # (`Tymeslot.Bookings.RescheduleSeat`), so the picker could only fail
-        # on submit. Say so here, and offer the way that still works.
-        conn
-        |> put_participant_locale(participant)
-        |> seat_page(dgettext("booking_manage", "Spot cannot be moved"))
-        |> render(:not_movable, token: token)
+         {:ok, %{participant: participant, meeting: meeting}} <-
+           Meetings.fetch_cancellable_seat(token) do
+      case picker_path(meeting) do
+        {:ok, path} ->
+          redirect(conn, to: path <> "?" <> URI.encode_query(%{"reschedule_seat_token" => token}))
+
+        :not_movable ->
+          # The type stopped taking group bookings after this seat was
+          # booked, or was deleted: its meetings keep their seats but take
+          # no moves (`Tymeslot.Bookings.RescheduleSeat`), so the picker
+          # could only fail on submit. Say so here, and offer the way that
+          # still works.
+          conn
+          |> put_participant_locale(participant)
+          |> seat_page(dgettext("booking_manage", "Spot cannot be moved"))
+          |> render(:not_movable, token: token)
+
+        {:error, :not_found} = error ->
+          render_error(conn, error)
       end
     else
       error -> render_error(conn, error)
@@ -141,17 +148,32 @@ defmodule TymeslotWeb.SeatController do
 
   defp booking_page_path(_meeting), do: nil
 
-  defp picker_target(%{organizer_user_id: user_id, meeting_type_id: meeting_type_id})
+  # The public booking page for the seat's meeting type, or `:not_movable`
+  # when that type was deleted or no longer takes group bookings.
+  defp picker_path(%{organizer_user_id: user_id, meeting_type_id: meeting_type_id})
        when is_integer(user_id) do
     with {:ok, username} <- organizer_username(user_id),
-         %{} = meeting_type <- MeetingTypes.get_meeting_type(meeting_type_id, user_id) do
-      {:ok, username, meeting_type}
+         {:ok, meeting_type} <- group_type(meeting_type_id, user_id) do
+      {:ok, "/#{username}/#{MeetingTypes.effective_slug(meeting_type)}"}
     else
-      _missing -> {:error, :not_found}
+      :not_movable -> :not_movable
+      :error -> {:error, :not_found}
     end
   end
 
-  defp picker_target(_meeting), do: {:error, :not_found}
+  defp picker_path(_meeting), do: {:error, :not_found}
+
+  defp group_type(nil, _user_id), do: :not_movable
+
+  defp group_type(meeting_type_id, user_id) do
+    case MeetingTypes.get_meeting_type(meeting_type_id, user_id) do
+      %{} = meeting_type ->
+        if MeetingTypes.group_type?(meeting_type), do: {:ok, meeting_type}, else: :not_movable
+
+      nil ->
+        :not_movable
+    end
+  end
 
   defp organizer_username(user_id) do
     case Profiles.get_profile_by_user_id(user_id) do

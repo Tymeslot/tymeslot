@@ -247,6 +247,36 @@ defmodule TymeslotWeb.SeatControllerTest do
       assert html =~ ~s(href="/seat/#{leaver.management_token}/cancel")
     end
 
+    # Deleting a type nilifies `meeting_type_id` on its meetings; the seats
+    # stand, but there is no booking page left to move them on.
+    test "a seat whose type was deleted is told to cancel and book again",
+         %{conn: conn, leaver: leaver, meeting_type: meeting_type} do
+      Repo.delete!(meeting_type)
+
+      html = conn |> get(~p"/seat/#{leaver.management_token}/reschedule") |> html_response(200)
+
+      assert html =~ "This spot can&#39;t be moved"
+      assert html =~ ~s(href="/seat/#{leaver.management_token}/cancel")
+    end
+
+    test "a meeting under way gets the cancel link's started page, not the picker",
+         %{conn: conn, leaver: leaver, meeting: meeting} do
+      shift_meeting!(meeting, -5)
+
+      html = conn |> get(~p"/seat/#{leaver.management_token}/reschedule") |> html_response(409)
+
+      assert html =~ "This meeting has already started"
+    end
+
+    test "a meeting that is over gets the cancel link's past page, not the picker",
+         %{conn: conn, leaver: leaver, meeting: meeting} do
+      shift_meeting!(meeting, -120)
+
+      html = conn |> get(~p"/seat/#{leaver.management_token}/reschedule") |> html_response(409)
+
+      assert html =~ "This meeting has already taken place"
+    end
+
     # The picker resolves a meeting type by its effective slug, derived from
     # the name whenever no custom slug is set — which is the default. Sending
     # a duration-shaped identifier instead ("30min") resolved to nothing, so
