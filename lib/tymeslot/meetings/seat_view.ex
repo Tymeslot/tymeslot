@@ -8,16 +8,17 @@ defmodule Tymeslot.Meetings.SeatView do
   through `Tymeslot.Meetings.Recipient.meeting_as_seen_by/2` (their details
   in `attendee_*`, their seat URLs), narrows a loaded `guests` list to the
   guests that participant invited, and records the seat in the virtual
-  `seat` field: which participant it is, and how many seats were taken on
-  the slot when the event fired.
+  `seat` field: which participant it is, how many seats were taken on the
+  slot when the event fired, and, for a seat a move created, the seat it
+  replaced (`previous`).
 
   A cancelled seat on a meeting that is still on reads as cancelled, at the
   time the seat was given up: to an integration that seat is a booking, and
   the booking is off.
 
   The integration jobs carry only ids, so the dispatch side builds the view
-  with `at_event/2` and the delivery side rebuilds it from the ids with
-  `load/3`.
+  with `at_event/4` and the delivery side rebuilds it from the ids (and the
+  event's snapshot) with `load/4`.
   """
 
   alias Tymeslot.Meetings.MeetingSchema
@@ -25,13 +26,41 @@ defmodule Tymeslot.Meetings.SeatView do
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.Recipient
 
-  @doc """
-  The view of `meeting` as `participant`'s seat, with the seats taken on the
-  slot counted now: for the moment an event about the seat fires.
+  @typedoc """
+  The seat a move replaced: its participant row, the meeting it was on, and
+  that meeting's start time.
   """
-  @spec at_event(MeetingSchema.t(), ParticipantSchema.t()) :: MeetingSchema.t()
-  def at_event(%MeetingSchema{} = meeting, %ParticipantSchema{} = participant),
-    do: build(meeting, participant, ParticipantQueries.count_seats_taken(meeting.id))
+  @type previous :: %{seat_id: binary(), meeting_id: binary(), start_time: DateTime.t()}
+
+  @doc """
+  The view of `meeting` as `participant`'s seat, for the moment an event
+  about the seat fires. `seats_taken` is the count on the slot then; the
+  default counts it now. `previous` is the seat a move replaced, `nil` for
+  any other event.
+  """
+  @spec at_event(
+          MeetingSchema.t(),
+          ParticipantSchema.t(),
+          non_neg_integer() | nil,
+          previous() | nil
+        ) :: MeetingSchema.t()
+  def at_event(
+        %MeetingSchema{} = meeting,
+        %ParticipantSchema{} = participant,
+        seats_taken \\ nil,
+        previous \\ nil
+      ),
+      do: build(meeting, participant, seats_taken || count_now(meeting), previous)
+
+  @doc "The seat a move replaced, from the old seat and the meeting it was on."
+  @spec previous(MeetingSchema.t(), ParticipantSchema.t()) :: previous()
+  def previous(%MeetingSchema{} = old_meeting, %ParticipantSchema{} = old_participant) do
+    %{
+      seat_id: old_participant.id,
+      meeting_id: old_meeting.id,
+      start_time: old_meeting.start_time
+    }
+  end
 
   @doc """
   Rebuilds the view of a delivery job's seat from its participant id.
@@ -39,15 +68,16 @@ defmodule Tymeslot.Meetings.SeatView do
   The participant is loaded whether or not they have cancelled, since an
   event about a cancelled seat is about exactly that participant.
   `seats_taken` is the count the event fired with; `nil` counts again now.
+  `previous` is the seat a move replaced, as the event recorded it.
   Returns `{:error, :not_found}` for a participant that does not exist or
   is not on this meeting.
   """
-  @spec load(MeetingSchema.t(), binary(), non_neg_integer() | nil) ::
+  @spec load(MeetingSchema.t(), binary(), non_neg_integer() | nil, previous() | nil) ::
           {:ok, MeetingSchema.t()} | {:error, :not_found}
-  def load(%MeetingSchema{id: meeting_id} = meeting, participant_id, seats_taken) do
+  def load(%MeetingSchema{id: meeting_id} = meeting, participant_id, seats_taken, previous \\ nil) do
     case ParticipantQueries.get(participant_id) do
       {:ok, %ParticipantSchema{meeting_id: ^meeting_id} = participant} ->
-        {:ok, build(meeting, participant, seats_taken || count_now(meeting))}
+        {:ok, at_event(meeting, participant, seats_taken, previous)}
 
       _missing_or_elsewhere ->
         {:error, :not_found}
@@ -64,13 +94,18 @@ defmodule Tymeslot.Meetings.SeatView do
   def seats_taken(%{seat: %{seats_taken: seats_taken}}), do: seats_taken
   def seats_taken(_meeting), do: nil
 
-  defp build(meeting, participant, seats_taken) do
+  @doc "The seat a seat view's move replaced, or `nil` for any other view or meeting."
+  @spec previous_seat(map()) :: previous() | nil
+  def previous_seat(%{seat: %{previous: previous}}), do: previous
+  def previous_seat(_meeting), do: nil
+
+  defp build(meeting, participant, seats_taken, previous) do
     seen = Recipient.meeting_as_seen_by(meeting, participant)
 
     put_seat_status(
       %{
         seen
-        | seat: %{participant_id: participant.id, seats_taken: seats_taken},
+        | seat: %{participant_id: participant.id, seats_taken: seats_taken, previous: previous},
           guests: seat_guests(seen.guests, participant.id)
       },
       participant

@@ -315,7 +315,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     # still worth having ready, quietly, for whoever opens the new event.
     if booked.created_meeting?, do: SeatEffects.schedule_new_slot_effects(booked.meeting)
 
-    Events.seat_rescheduled(booked.meeting, booked.participant, old_participant,
+    Events.seat_rescheduled(booked.meeting, booked.participant, old_meeting, old_participant,
       old_slot_freed: old_slot_freed?
     )
 

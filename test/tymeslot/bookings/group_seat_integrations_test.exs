@@ -154,7 +154,8 @@ defmodule Tymeslot.Bookings.GroupSeatIntegrationsTest do
       assert first_payload["seat"] == %{
                "id" => first.id,
                "capacity" => 5,
-               "seats_taken" => 2
+               "seats_taken" => 2,
+               "previous" => nil
              }
 
       assert second_payload["attendee"]["name"] == "Second Booker"
@@ -164,7 +165,8 @@ defmodule Tymeslot.Bookings.GroupSeatIntegrationsTest do
       assert second_payload["seat"] == %{
                "id" => second.id,
                "capacity" => 5,
-               "seats_taken" => 4
+               "seats_taken" => 4,
+               "previous" => nil
              }
 
       assert first_payload["id"] == meeting.id
@@ -288,6 +290,14 @@ defmodule Tymeslot.Bookings.GroupSeatIntegrationsTest do
       assert payload["attendee"]["email"] == "mover@example.com"
       assert payload["start_time"] == DateTime.to_iso8601(new_meeting.start_time)
       assert payload["seat"]["id"] == new_seat.id
+
+      # A move gives the seat a new id and a new meeting: the event names the
+      # booking it replaces so a consumer can link the two.
+      assert payload["seat"]["previous"] == %{
+               "seat_id" => mover.id,
+               "meeting_id" => old_meeting.id,
+               "start_time" => DateTime.to_iso8601(old_meeting.start_time)
+             }
 
       # The old slot still has a seat on it, so nothing about it is cancelled.
       assert jobs(WebhookWorker, "meeting.cancelled") == []

@@ -283,12 +283,41 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
       meeting =
         build(:group_meeting,
           capacity: 6,
-          seat: %{participant_id: "seat-1", seats_taken: 3}
+          seat: %{participant_id: "seat-1", seats_taken: 3, previous: nil}
         )
 
       payload = PayloadBuilder.build_payload("meeting.created", meeting, "1")
 
-      assert payload.data.meeting.seat == %{id: "seat-1", capacity: 6, seats_taken: 3}
+      assert payload.data.meeting.seat == %{
+               id: "seat-1",
+               capacity: 6,
+               seats_taken: 3,
+               previous: nil
+             }
+    end
+
+    test "names the seat a move replaced" do
+      meeting =
+        build(:group_meeting,
+          capacity: 6,
+          seat: %{
+            participant_id: "seat-2",
+            seats_taken: 1,
+            previous: %{
+              seat_id: "seat-1",
+              meeting_id: "old-meeting",
+              start_time: ~U[2026-10-05 14:00:00Z]
+            }
+          }
+        )
+
+      payload = PayloadBuilder.build_payload("meeting.rescheduled", meeting, "1")
+
+      assert payload.data.meeting.seat.previous == %{
+               seat_id: "seat-1",
+               meeting_id: "old-meeting",
+               start_time: "2026-10-05T14:00:00Z"
+             }
     end
 
     test "is absent from a solo booking's payload" do

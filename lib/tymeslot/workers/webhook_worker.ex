@@ -76,7 +76,8 @@ defmodule Tymeslot.Workers.WebhookWorker do
   meeting looks like by the time the retry runs.
 
   A group meeting's seat (`Tymeslot.Meetings.SeatView`) also pins the seats
-  taken on the slot when the event fired, under `"seats_taken"`.
+  taken on the slot when the event fired, under `"seats_taken"`, and the
+  seat a move replaced, under `"previous_seat"`.
   """
   @spec snapshot(MeetingSchema.t()) :: map()
   def snapshot(%MeetingSchema{} = meeting) do
@@ -84,10 +85,21 @@ defmodule Tymeslot.Workers.WebhookWorker do
     |> Map.take(@snapshot_fields)
     |> Map.new(fn {field, value} -> {Atom.to_string(field), encode_snapshot_field(value)} end)
     |> maybe_put_seats_taken(SeatView.seats_taken(meeting))
+    |> maybe_put_previous_seat(SeatView.previous_seat(meeting))
   end
 
   defp maybe_put_seats_taken(snapshot, nil), do: snapshot
   defp maybe_put_seats_taken(snapshot, seats), do: Map.put(snapshot, "seats_taken", seats)
+
+  defp maybe_put_previous_seat(snapshot, nil), do: snapshot
+
+  defp maybe_put_previous_seat(snapshot, previous) do
+    Map.put(snapshot, "previous_seat", %{
+      "seat_id" => previous.seat_id,
+      "meeting_id" => previous.meeting_id,
+      "start_time" => DateTime.to_iso8601(previous.start_time)
+    })
+  end
 
   defp encode_snapshot_field(%DateTime{} = dt), do: DateTime.to_iso8601(dt)
   defp encode_snapshot_field(value), do: value
@@ -371,11 +383,35 @@ defmodule Tymeslot.Workers.WebhookWorker do
 
   defp maybe_seat_view(meeting, nil, _snapshot), do: {:ok, meeting}
 
-  defp maybe_seat_view(meeting, participant_id, snapshot),
-    do: SeatView.load(meeting, participant_id, snapshot_seats_taken(snapshot))
+  defp maybe_seat_view(meeting, participant_id, snapshot) do
+    SeatView.load(
+      meeting,
+      participant_id,
+      snapshot_seats_taken(snapshot),
+      snapshot_previous_seat(snapshot)
+    )
+  end
 
   defp snapshot_seats_taken(%{"seats_taken" => seats}) when is_integer(seats), do: seats
   defp snapshot_seats_taken(_snapshot), do: nil
+
+  defp snapshot_previous_seat(%{
+         "previous_seat" => %{
+           "seat_id" => seat_id,
+           "meeting_id" => meeting_id,
+           "start_time" => start_time
+         }
+       }) do
+    case DateTime.from_iso8601(start_time) do
+      {:ok, start_time, _offset} ->
+        %{seat_id: seat_id, meeting_id: meeting_id, start_time: start_time}
+
+      {:error, _reason} ->
+        nil
+    end
+  end
+
+  defp snapshot_previous_seat(_snapshot), do: nil
 
   defp apply_snapshot(meeting, nil), do: meeting
 

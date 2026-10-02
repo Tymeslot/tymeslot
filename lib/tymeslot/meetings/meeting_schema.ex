@@ -31,7 +31,13 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           address_to_arrange: boolean(),
           meeting_type: String.t() | nil,
           capacity: pos_integer(),
-          seat: %{participant_id: binary(), seats_taken: non_neg_integer()} | nil,
+          seat:
+            %{
+              participant_id: binary(),
+              seats_taken: non_neg_integer(),
+              previous: %{seat_id: binary(), meeting_id: binary(), start_time: DateTime.t()} | nil
+            }
+            | nil,
           organizer_name: String.t() | nil,
           organizer_email: String.t() | nil,
           organizer_title: String.t() | nil,
@@ -139,8 +145,9 @@ defmodule Tymeslot.Meetings.MeetingSchema do
 
     # Set only on the view of a group meeting as one seat sees it
     # (`Tymeslot.Meetings.SeatView`), never on a row read from the database:
-    # which seat the view is of, and the seats taken on the slot when the
-    # event about it fired. Integrations read it to address that seat.
+    # which seat the view is of, the seats taken on the slot when the event
+    # about it fired, and the seat a move replaced. Integrations read it to
+    # address that seat.
     field(:seat, :map, virtual: true)
 
     # Organizer details

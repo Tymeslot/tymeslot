@@ -201,17 +201,20 @@ defmodule Tymeslot.Notifications.Events do
   Schedules the reschedule email: a confirmation for the new seat whose
   attachments also cancel the old seat's calendar entry for the participant,
   and the matching cancellation and invitation for their guests.
-  `old_participant` is the seat row the move cancelled; each seat is its own
-  calendar entry, so the old one is named by that row, not by the old
-  meeting. `old_slot_freed: true` says the move emptied, and so cancelled,
-  the old meeting.
+  `old_participant` is the seat row the move cancelled on `old_meeting`;
+  each seat is its own calendar entry, so the old one is named by that row,
+  not by the old meeting. `old_slot_freed: true` says the move emptied, and
+  so cancelled, the old meeting.
 
   Integrations hear `meeting.rescheduled` for the new seat, the way a solo
   booking's move is one rescheduled booking rather than a cancellation and a
-  new one.
+  new one. A move gives the seat a new participant row, and usually a new
+  meeting, so the event names the seat it replaced (`SeatView.previous/2`)
+  for a consumer to link the two.
   """
-  @spec seat_rescheduled(term(), term(), term(), keyword()) :: {:ok, term()} | {:error, term()}
-  def seat_rescheduled(meeting, participant, old_participant, opts \\ []) do
+  @spec seat_rescheduled(term(), term(), term(), term(), keyword()) ::
+          {:ok, term()} | {:error, term()}
+  def seat_rescheduled(meeting, participant, old_meeting, old_participant, opts \\ []) do
     result =
       Orchestrator.schedule_seat_reschedule(
         meeting,
@@ -220,7 +223,12 @@ defmodule Tymeslot.Notifications.Events do
         Keyword.get(opts, :old_slot_freed, false)
       )
 
-    dispatch_seat(:meeting_rescheduled, meeting, participant)
+    dispatch_seat(
+      :meeting_rescheduled,
+      meeting,
+      participant,
+      SeatView.previous(old_meeting, old_participant)
+    )
 
     result
   end
@@ -357,9 +365,12 @@ defmodule Tymeslot.Notifications.Events do
   defp dispatch_integrations(event, %MeetingSchema{} = meeting) do
     if MeetingSchema.group?(meeting) do
       seat_guard(event, meeting, fn ->
+        # Every seat's event fires at the same moment, so they share one count.
+        seats_taken = ParticipantQueries.count_seats_taken(meeting.id)
+
         meeting.id
         |> ParticipantQueries.list_live_for_meeting()
-        |> Enum.each(&dispatch_channels(event, SeatView.at_event(meeting, &1)))
+        |> Enum.each(&dispatch_channels(event, SeatView.at_event(meeting, &1, seats_taken)))
       end)
     else
       dispatch_channels(event, meeting)
@@ -368,9 +379,9 @@ defmodule Tymeslot.Notifications.Events do
 
   defp dispatch_integrations(event, meeting), do: dispatch_channels(event, meeting)
 
-  defp dispatch_seat(event, meeting, participant) do
+  defp dispatch_seat(event, meeting, participant, previous \\ nil) do
     seat_guard(event, meeting, fn ->
-      dispatch_channels(event, SeatView.at_event(meeting, participant))
+      dispatch_channels(event, SeatView.at_event(meeting, participant, nil, previous))
     end)
   end
 
