@@ -67,7 +67,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
               dgettext("dashboard_video", "Test connection")
           }
           disabled={@testing_connection == @integration.id}
-          class={@testing_connection == @integration.id && "[&>span]:animate-spin"}
+          class={@testing_connection == @integration.id && "[&>svg]:animate-spin"}
           aria-busy={(@testing_connection == @integration.id && "true") || "false"}
           phx-click="test_connection"
           phx-value-id={@integration.id}
