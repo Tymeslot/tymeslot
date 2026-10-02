@@ -6,6 +6,10 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
   # Phoenix modules
   alias Phoenix.LiveView.JS
 
+  # Application modules
+  alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents.Icons
+
   # ========== MODAL ==========
 
   @doc """
@@ -167,6 +171,117 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
     </div>
     """
   end
+
+  @doc """
+  Renders a confirmation dialog on top of `modal/1`: an icon tile and title in
+  the header, the caller's explanation in the body, and a fixed footer of
+  Cancel then Confirm.
+
+  Every "are you sure?" in the dashboard goes through this, so destructive
+  questions look and behave the same everywhere. The owning module keeps its
+  own wording and events; this owns the layout.
+
+  Confirm either pushes `on_confirm` or, with `confirm_form`, submits the form
+  of that id rendered in the body. Attributes not declared here (`phx-target`,
+  `phx-value-*`, `phx-disable-with`, `data-testid`) land on the Confirm button.
+  Where the answer is a choice between several actions, the `:actions` slot
+  replaces the single Confirm button; Cancel always stays first.
+
+  ## Examples
+
+      <.confirm_modal
+        id="delete-thing-modal"
+        show={@show_delete}
+        title={dgettext("dashboard_common", "Delete thing")}
+        confirm_label={dgettext("dashboard_common", "Delete thing")}
+        on_cancel={JS.push("hide_delete", target: @myself)}
+        on_confirm={JS.push("confirm_delete", target: @myself)}
+      >
+        <p>{dgettext("dashboard_common", "Delete %{name}?", name: @thing.name)}</p>
+        <:extra>
+          <.info_box variant={:warning}>...</.info_box>
+        </:extra>
+      </.confirm_modal>
+  """
+  attr :id, :string, required: true
+  attr :show, :boolean, default: false
+  attr :title, :string, required: true
+  attr :on_cancel, JS, default: %JS{}, doc: "pushed by Cancel, Escape and a click outside"
+
+  attr :on_confirm, :any,
+    default: nil,
+    doc: "event name or JS pushed by Confirm; leave unset when `confirm_form` submits"
+
+  attr :confirm_form, :string,
+    default: nil,
+    doc: "id of a form in the body; Confirm becomes its submit button"
+
+  attr :confirm_label, :string, default: nil, doc: "defaults to \"Confirm\""
+  attr :cancel_label, :string, default: nil, doc: "defaults to \"Cancel\""
+  attr :confirm_variant, :atom, default: :danger, values: [:danger, :primary]
+  attr :icon, :string, default: "hero-exclamation-triangle", doc: "a `hero-…` icon name"
+  attr :size, :atom, default: :medium, values: [:small, :medium]
+  attr :loading, :boolean, default: false, doc: "shows Confirm's spinner and locks both buttons"
+  attr :loading_label, :string, default: nil
+  attr :confirm_disabled, :boolean, default: false
+  attr :rest, :global, doc: "extra attributes for the Confirm button"
+
+  slot :inner_block, required: true
+  slot :extra, doc: "secondary content under the body, such as an info box or a checkbox"
+  slot :actions, doc: "replaces the Confirm button when the answer is a choice"
+
+  @spec confirm_modal(map()) :: Phoenix.LiveView.Rendered.t()
+  def confirm_modal(assigns) do
+    ~H"""
+    <.modal id={@id} show={@show} on_cancel={@on_cancel} size={@size}>
+      <:header>
+        <span class="flex items-center gap-3">
+          <span class={[
+            "w-10 h-10 shrink-0 rounded-token-xl flex items-center justify-center border",
+            confirm_tile_class(@confirm_variant)
+          ]}>
+            <Icons.icon name={@icon} class="w-6 h-6" />
+          </span>
+          <span>{@title}</span>
+        </span>
+      </:header>
+
+      <div class="space-y-4 text-tymeslot-600 font-medium leading-relaxed">
+        {render_slot(@inner_block)}
+        <div :if={@extra != []} class="space-y-3">
+          {render_slot(@extra)}
+        </div>
+      </div>
+
+      <:footer>
+        <div class="flex flex-wrap justify-end gap-3">
+          <Buttons.action_button variant={:secondary} disabled={@loading} phx-click={@on_cancel}>
+            {@cancel_label || dgettext("common", "Cancel")}
+          </Buttons.action_button>
+          <%= if @actions != [] do %>
+            {render_slot(@actions)}
+          <% else %>
+            <Buttons.loading_button
+              variant={@confirm_variant}
+              type={if @confirm_form, do: "submit", else: "button"}
+              form={@confirm_form}
+              loading={@loading}
+              loading_text={@loading_label}
+              disabled={@confirm_disabled}
+              phx-click={@on_confirm}
+              {@rest}
+            >
+              {@confirm_label || dgettext("common", "Confirm")}
+            </Buttons.loading_button>
+          <% end %>
+        </div>
+      </:footer>
+    </.modal>
+    """
+  end
+
+  defp confirm_tile_class(:danger), do: "bg-red-50 border-red-100 text-red-500"
+  defp confirm_tile_class(:primary), do: "bg-turquoise-50 border-turquoise-100 text-turquoise-600"
 
   # Prefer aria-labelledby (pointing at the rendered header slot); fall back to
   # the caller-supplied aria-label when there is no header to label the dialog.

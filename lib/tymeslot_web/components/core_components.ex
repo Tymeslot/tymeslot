@@ -468,6 +468,33 @@ defmodule TymeslotWeb.Components.CoreComponents do
   @spec modal(map()) :: Phoenix.LiveView.Rendered.t()
   def modal(assigns), do: Modal.modal(assigns)
 
+  @doc """
+  Renders a confirmation dialog: icon tile and title, the caller's body, and a
+  fixed Cancel then Confirm footer. See
+  `TymeslotWeb.Components.CoreComponents.Modal.confirm_modal/1`, which this
+  delegates to; these declarations must stay in step with it.
+  """
+  attr :id, :string, required: true
+  attr :show, :boolean, default: false
+  attr :title, :string, required: true
+  attr :on_cancel, JS, default: %JS{}
+  attr :on_confirm, :any, default: nil
+  attr :confirm_form, :string, default: nil
+  attr :confirm_label, :string, default: nil
+  attr :cancel_label, :string, default: nil
+  attr :confirm_variant, :atom, default: :danger, values: [:danger, :primary]
+  attr :icon, :string, default: "hero-exclamation-triangle"
+  attr :size, :atom, default: :medium, values: [:small, :medium]
+  attr :loading, :boolean, default: false
+  attr :loading_label, :string, default: nil
+  attr :confirm_disabled, :boolean, default: false
+  attr :rest, :global
+  slot :inner_block, required: true
+  slot :extra
+  slot :actions
+  @spec confirm_modal(map()) :: Phoenix.LiveView.Rendered.t()
+  def confirm_modal(assigns), do: Modal.confirm_modal(assigns)
+
   # ========== ICONS ==========
 
   @doc """
