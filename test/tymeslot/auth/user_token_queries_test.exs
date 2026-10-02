@@ -73,6 +73,14 @@ defmodule Tymeslot.Auth.UserTokenQueriesTest do
       assert %DateTime{} = verified.verification_token_used_at
       assert verified.verification_token == nil
     end
+
+    test "clears the signup IP, which only the verification link needed" do
+      user = insert(:unverified_user, signup_ip: "203.0.113.9")
+
+      assert {:ok, _verified} = UserTokenQueries.consume_verification_token(user)
+
+      assert Repo.get!(UserSchema, user.id).signup_ip == nil
+    end
   end
 
   describe "consume_reset_token/2" do
@@ -99,6 +107,23 @@ defmodule Tymeslot.Auth.UserTokenQueriesTest do
       assert updated.pending_email == nil
       assert updated.email_change_token_hash == nil
       assert updated.email_change_sent_at == nil
+    end
+
+    test "verifying an account through a reset clears its signup IP" do
+      user =
+        insert(:unverified_user,
+          signup_ip: "203.0.113.9",
+          reset_token_hash: "one-time-reset-hash"
+        )
+
+      assert {:ok, updated} =
+               UserTokenQueries.consume_reset_token(user, %{
+                 password: "NewSecurePassword123!",
+                 password_confirmation: "NewSecurePassword123!"
+               })
+
+      assert %DateTime{} = updated.verified_at
+      assert Repo.get!(UserSchema, user.id).signup_ip == nil
     end
 
     test "rejects a password that breaks the policy and leaves the token live" do

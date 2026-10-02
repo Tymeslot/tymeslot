@@ -47,6 +47,14 @@ defmodule Tymeslot.Utils.FormHelpers do
     }
   end
 
+  def format_context_error(:invalid_venue) do
+    %{
+      base: [
+        dgettext("dashboard_meeting_form", "A selected location is not one of yours")
+      ]
+    }
+  end
+
   def format_context_error(:invalid_duration) do
     %{duration: [dgettext("dashboard_meeting_form", "Duration must be a valid number")]}
   end

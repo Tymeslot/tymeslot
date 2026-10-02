@@ -238,6 +238,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             id={"locations-section-#{@id}"}
             locations={@locations}
             video_integrations={@video_integrations}
+            venues={@venues}
             form_id={@id}
           />
 
@@ -351,6 +352,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
           type={@type}
           selected_icon={@selected_icon}
           locations={@locations}
+          venues={@venues}
           selected_calendar_integration_id={@selected_calendar_integration_id}
           selected_target_calendar_id={@selected_target_calendar_id}
           selected_availability_schedule_id={@selected_availability_schedule_id}
@@ -420,6 +422,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
           location={@editing_location}
           existing_locations={@locations}
           video_integrations={@video_integrations}
+          venues={@venues}
+          current_user={@current_user}
+          parent_myself={@parent_myself}
           form_id={@id}
           mode={@editing_location_mode}
         />

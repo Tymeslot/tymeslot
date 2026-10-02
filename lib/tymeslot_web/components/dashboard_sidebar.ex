@@ -154,6 +154,15 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
               </.nav_link>
 
               <.nav_link
+                patch={~p"/dashboard/locations"}
+                current={@current_action}
+                action={:locations}
+              >
+                <.icon name="hero-map-pin" class="w-5 h-5" />
+                <span>{dgettext("dashboard_common", "Locations")}</span>
+              </.nav_link>
+
+              <.nav_link
                 patch={~p"/dashboard/availability"}
                 current={@current_action}
                 action={:availability}

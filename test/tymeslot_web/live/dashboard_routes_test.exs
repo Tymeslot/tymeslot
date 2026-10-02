@@ -78,6 +78,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       {"/dashboard/settings", "Profile Settings"},
       {"/dashboard/availability", "Availability"},
       {"/dashboard/meeting-settings", "Meeting Settings"},
+      {"/dashboard/locations", "Locations"},
       {"/dashboard/calendar", "calendar-grid"},
       {"/dashboard/integrations", "Integrations"},
       {"/dashboard/theme", "Choose Your Style"},

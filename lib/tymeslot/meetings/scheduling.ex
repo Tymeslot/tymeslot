@@ -22,6 +22,7 @@ defmodule Tymeslot.Meetings.Scheduling do
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias Tymeslot.Utils.MapKeys
+  alias Tymeslot.Venues
 
   @doc """
   Atomically creates a meeting with conflict checking using database-level locking.
@@ -222,7 +223,7 @@ defmodule Tymeslot.Meetings.Scheduling do
   end
 
   defp create_meeting_in_transaction(attrs) do
-    case MeetingQueries.create_meeting(attrs) do
+    case attrs |> with_held_venue() |> MeetingQueries.create_meeting() do
       {:ok, meeting} -> meeting
       {:error, changeset} -> Repo.rollback({:validation_error, changeset})
     end
@@ -285,11 +286,21 @@ defmodule Tymeslot.Meetings.Scheduling do
   end
 
   defp update_meeting_in_transaction(meeting, attrs) do
-    case MeetingQueries.update_meeting(meeting, attrs) do
+    case MeetingQueries.update_meeting(meeting, with_held_venue(attrs)) do
       {:ok, updated_meeting} -> updated_meeting
       {:error, changeset} -> Repo.rollback({:validation_error, changeset})
     end
   end
+
+  # A venue deleted between resolving the booker's choice and this write
+  # would otherwise refuse the whole booking on its foreign key. The meeting
+  # is written without it instead, keeping the address and the
+  # arranged-after-booking flag it was resolved to: exactly where it would
+  # be had the venue been deleted a moment after the booking.
+  defp with_held_venue(%{venue_id: id} = attrs) when is_integer(id),
+    do: %{attrs | venue_id: Venues.hold_for_meeting(id)}
+
+  defp with_held_venue(attrs), do: attrs
 
   defp log_update_conflict(meeting, start_time, end_time, conflicting_count) do
     Logger.warning("Meeting update blocked due to time conflict",

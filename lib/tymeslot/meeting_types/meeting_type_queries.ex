@@ -287,4 +287,89 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
       end
     end)
   end
+
+  @doc """
+  The owner's meeting types that list `venue_id` in any of their in-person
+  locations, by name. The venue ids live inside the `locations` jsonb array,
+  so this is a containment test on each element; it matches JSON numbers
+  only, as `venue_usage_counts/1` counts them.
+  """
+  @spec list_using_venue(integer(), integer()) :: [MeetingTypeSchema.t()]
+  def list_using_venue(user_id, venue_id) do
+    user_id |> using_venue_query(venue_id) |> Repo.all()
+  end
+
+  @doc """
+  Takes `venue_id` off the in-person locations of the owner's meeting types
+  that list it (`MeetingTypeSchema.without_venue_changeset/2`), returning how
+  many were rewritten. The rows are locked for the transaction it runs in
+  (its own, or the caller's when nested in one, as the venue delete does),
+  so an edit of the same meeting type saved meanwhile is not overwritten
+  with the list read here. All or none are rewritten.
+  """
+  @spec remove_venue_from_locations(integer(), integer()) ::
+          {:ok, non_neg_integer()} | {:error, Ecto.Changeset.t()}
+  def remove_venue_from_locations(user_id, venue_id) do
+    Repo.transaction(fn ->
+      user_id
+      |> using_venue_query(venue_id)
+      |> lock("FOR UPDATE")
+      |> Repo.all()
+      |> Enum.reduce(0, fn meeting_type, count ->
+        case meeting_type
+             |> MeetingTypeSchema.without_venue_changeset(venue_id)
+             |> Repo.update() do
+          {:ok, _updated} -> count + 1
+          {:error, changeset} -> Repo.rollback(changeset)
+        end
+      end)
+    end)
+  end
+
+  defp using_venue_query(user_id, venue_id) do
+    from(mt in MeetingTypeSchema,
+      where: mt.user_id == ^user_id,
+      where:
+        fragment(
+          "EXISTS (SELECT 1 FROM unnest(?) AS loc WHERE loc ->> 'kind' = 'in_person' AND loc -> 'venue_ids' @> jsonb_build_array(?::bigint))",
+          mt.locations,
+          ^venue_id
+        ),
+      order_by: [asc: mt.name]
+    )
+  end
+
+  @doc """
+  For each venue the owner's meeting types list on an in-person location, how
+  many meeting types list it. A meeting type listing a venue on two of its
+  locations counts once. Only ids stored as JSON numbers count, the same ones
+  `list_using_venue/2` matches. Venues no meeting type lists are absent.
+  """
+  @spec venue_usage_counts(integer()) :: %{integer() => pos_integer()}
+  def venue_usage_counts(user_id) do
+    %{rows: rows} =
+      Repo.query!(
+        """
+        SELECT venue.id::text::bigint, count(DISTINCT mt.id)
+        FROM meeting_types AS mt
+        CROSS JOIN LATERAL unnest(mt.locations) AS loc
+        CROSS JOIN LATERAL jsonb_array_elements(
+          CASE WHEN jsonb_typeof(loc -> 'venue_ids') = 'array'
+            THEN loc -> 'venue_ids'
+            ELSE '[]'::jsonb
+          END
+        ) AS venue(id)
+        WHERE mt.user_id = $1
+          AND loc ->> 'kind' = 'in_person'
+          AND jsonb_typeof(venue.id) = 'number'
+          -- A fractional or oversized number is no venue id and would fail
+          -- the bigint cast.
+          AND venue.id::text ~ '^[0-9]{1,18}$'
+        GROUP BY venue.id
+        """,
+        [user_id]
+      )
+
+    Map.new(rows, fn [venue_id, count] -> {venue_id, count} end)
+  end
 end

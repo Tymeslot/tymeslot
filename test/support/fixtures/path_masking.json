@@ -1,0 +1,87 @@
+[
+  {
+    "case": "password-reset link",
+    "path": "/auth/reset-password/7HNitQU4ksua3aSoWzU-djSPUNrKyph37CgxPJhWPuo",
+    "masked": "/auth/reset-password/:id"
+  },
+  {
+    "case": "email-change confirmation link",
+    "path": "/email-change/gdzMFrJu59-6wf9qIt8CTMPOqPnzsMxwaYEVYogkHHY",
+    "masked": "/email-change/:id"
+  },
+  {
+    "case": "guest RSVP link",
+    "path": "/guest/ZOUQ4OIeERHOdmWnHd7HzfF1w8DiHwO5/accepted",
+    "masked": "/guest/:id/accepted"
+  },
+  {
+    "case": "social sign-up confirmation link (signed token)",
+    "path": "/auth/oauth/confirm/SFMyNTY.g2gDdAAAAAJtAAAABWVtYWlsbQAAAA9hbm5AZXhhbXBsZS5jb21tAAAACHByb3ZpZGVybQAAAAZnb29nbGVuBgAAbFDEoAFiAAFRgA.i-YoguZbhOUk-DXsOHqpIEu19LRJile3Ys03JFet3k4",
+    "masked": "/auth/oauth/confirm/:id"
+  },
+  {
+    "case": "email verification link",
+    "path": "/auth/verify-complete/1z0-CLgTcLWVn9AUdFsXHz-tRmv5AaLN8gphYE-2QIQ",
+    "masked": "/auth/verify-complete/:id"
+  },
+  {
+    "case": "poll voting link",
+    "path": "/jane/poll/fxwU20dKoWWL43ubhQ_ktpdcikDD5ziL",
+    "masked": "/jane/poll/:id"
+  },
+  {
+    "case": "marketing unsubscribe link (signed token)",
+    "path": "/u/unsubscribe/SFMyNTY.g2gDYSpuBgAAbFDEoAFiAAFRgA.r4hqihM0G28UDKzmmNzL2XvYQm0YRv6sdLN08973WdI",
+    "masked": "/u/unsubscribe/:id"
+  },
+  {
+    "case": "marketing unsubscribe link (encrypted token)",
+    "path": "/u/unsubscribe/XCP.Dxd4v31Dxe-07rA9z3yKEydFaiUpl019gQndjie0cF5vGj6wHOwEI_C-e0e1Ql_uMDqWhgM0jk-FsVdAdjU",
+    "masked": "/u/unsubscribe/:id"
+  },
+  {
+    "case": "meeting-request approval link (signed token)",
+    "path": "/meeting-request/SFMyNTY.g2gDYSpuBgAAbFDEoAFiAAFRgA.r4hqihM0G28UDKzmmNzL2XvYQm0YRv6sdLN08973WdI",
+    "masked": "/meeting-request/:id"
+  },
+  {
+    "case": "meeting cancel link",
+    "path": "/jane/meeting/0b7e1f3a-4c1d-4a8e-9f3b-2d6c8e1a5b7c/cancel",
+    "masked": "/jane/meeting/:id/cancel"
+  },
+  {
+    "case": "full URL on a dotted host",
+    "path": "https://booking.example-company.co.uk/jane/poll/fxwU20dKoWWL43ubhQ_ktpdcikDD5ziL",
+    "masked": "https://booking.example-company.co.uk/jane/poll/:id"
+  },
+  {
+    "case": "username booking page",
+    "path": "/jane-doe/30min",
+    "masked": "/jane-doe/30min"
+  },
+  {
+    "case": "dashboard page",
+    "path": "/dashboard/settings",
+    "masked": "/dashboard/settings"
+  },
+  {
+    "case": "short token-like segment",
+    "path": "/jane/quick-intro-call",
+    "masked": "/jane/quick-intro-call"
+  },
+  {
+    "case": "digested asset file name (short extension, kept)",
+    "path": "/assets/app-3f2a8b9c0d1e2f3a.js",
+    "masked": "/assets/app-3f2a8b9c0d1e2f3a.js"
+  },
+  {
+    "case": "dotted segment with short parts",
+    "path": "/files/report.v2.final.pdf",
+    "masked": "/files/report.v2.final.pdf"
+  },
+  {
+    "case": "username of 20 or more characters (masked: costs granularity, never a credential)",
+    "path": "/a-very-long-username-indeed/30min",
+    "masked": "/:id/30min"
+  }
+]

@@ -135,6 +135,101 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactorTest do
       assert filtered.meta.provider_identifier == "evt_abc123"
     end
 
+    test "redacts an email's recipients, subject and title but keeps keys that only end alike" do
+      recipient = [{"Jane Invitee", "jane@example.com"}]
+
+      filtered =
+        MetadataRedactor.filter(
+          event(%{
+            to: recipient,
+            cc: recipient,
+            bcc: recipient,
+            reply_to: {"Jane Invitee", "jane@example.com"},
+            recipient: "jane@example.com",
+            recipients: ["jane@example.com"],
+            admin_recipient: "ops@example.com",
+            subject: "Meeting Cancelled with Jane Invitee",
+            title: "Intro call with Jane Invitee",
+            redirect_to: "/dashboard",
+            recipient_domains: ["example.com"],
+            meeting_id: 7
+          }),
+          []
+        )
+
+      for key <- [:to, :cc, :bcc, :reply_to, :recipient, :recipients, :admin_recipient] do
+        assert filtered.meta[key] == "[REDACTED]", "expected #{key} to be redacted"
+      end
+
+      assert filtered.meta.subject == "[REDACTED]"
+      assert filtered.meta.title == "[REDACTED]"
+
+      # `to` is matched whole and `recipient` only as a suffix, so a path and
+      # the domains a delivery went to stay readable.
+      assert filtered.meta.redirect_to == "/dashboard"
+      assert filtered.meta.recipient_domains == ["example.com"]
+      assert filtered.meta.meeting_id == 7
+    end
+
+    test "redacts the recipients of a Swoosh email nested in a report" do
+      email = %Swoosh.Email{
+        to: [{"Jane Invitee", "jane@example.com"}],
+        subject: "Meeting Cancelled with Jane Invitee"
+      }
+
+      redacted = MetadataRedactor.redact(%{args: [email]})
+      rendered = inspect(redacted)
+
+      refute rendered =~ "jane@example.com"
+      refute rendered =~ "Jane Invitee"
+    end
+
+    test "truncates client IP addresses to their network instead of blanking them" do
+      filtered =
+        MetadataRedactor.filter(
+          event(%{
+            "x-forwarded-for" => "203.0.113.77, 10.0.0.1",
+            ip: "203.0.113.77",
+            ip_address: "2001:db8:85a3:8d3:1319:8a2e:370:7348",
+            client_ip: {198, 51, 100, 9},
+            remote_ip: ~c"192.0.2.5",
+            origin_ip: "198.51.100.200"
+          }),
+          []
+        )
+
+      assert filtered.meta.ip == "203.0.113.0/24"
+      assert filtered.meta.ip_address == "2001:db8:85a3::/48"
+      assert filtered.meta.client_ip == "198.51.100.0/24"
+      assert filtered.meta.remote_ip == "192.0.2.0/24"
+      assert filtered.meta["x-forwarded-for"] == "203.0.113.0/24, 10.0.0.0/24"
+
+      # The server's own egress address, not a visitor's.
+      assert filtered.meta.origin_ip == "198.51.100.200"
+    end
+
+    test "keeps absent or unknown client IPs and blanks one it cannot parse" do
+      filtered =
+        MetadataRedactor.filter(
+          event(%{ip: nil, client_ip: "unknown", ip_address: "\"203.0.113.77\""}),
+          []
+        )
+
+      assert filtered.meta.ip == nil
+      assert filtered.meta.client_ip == "unknown"
+      assert filtered.meta.ip_address == "[REDACTED]"
+    end
+
+    test "truncates a client IP nested in a report and in keyword lists" do
+      redacted =
+        MetadataRedactor.redact(%{
+          conn: %{remote_ip: {203, 0, 113, 77}},
+          opts: [ip: "203.0.113.77"]
+        })
+
+      assert redacted == %{conn: %{remote_ip: "203.0.113.0/24"}, opts: [ip: "203.0.113.0/24"]}
+    end
+
     test "redacts the meeting uid, a bearer capability, but not a bare calendar event uid" do
       filtered =
         MetadataRedactor.filter(

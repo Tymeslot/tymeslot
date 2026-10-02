@@ -133,16 +133,37 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   def notify_released(meeting),
     do: notify_cancelled(meeting, AppointmentBuilder.from_meeting(meeting))
 
+  # What the booker told the host and nobody else: their address, their
+  # message, their contact details, and their answers to the booking form
+  # (with the questions, so the guest's calendar entry does not list them
+  # unanswered). The booker's name stays, since a guest is told who arranged
+  # the meeting and the event title already carries it.
+  @booker_private_keys [
+    :attendee_email,
+    :attendee_message,
+    :attendee_phone,
+    :attendee_company,
+    :custom_field_answers,
+    :custom_fields_snapshot
+  ]
+
   @doc """
-  The appointment details for one guest: the shared payload plus the guest's
-  name, personal RSVP links, and who invited them (`:guest_invited_by`,
-  `:booker` or `:organizer`), which decides whom their emails name.
+  The appointment details for one guest: the shared payload, less the booker's
+  private details, plus the guest's name, personal RSVP links, and who invited
+  them (`:guest_invited_by`, `:booker` or `:organizer`), which decides whom
+  their emails name.
+
+  Every guest email, and the calendar entry attached to it, is rendered from
+  this map, so nothing private to the booker can reach a guest through any of
+  them. The fields that make the guest's calendar entry the same event as the
+  booker's (`:uid`, the organiser, `:ical_sequence`) are kept as they are.
   """
   @spec guest_details(map(), map()) :: map()
   def guest_details(appointment_details, guest) do
     urls = Policy.guest_rsvp_urls(guest.rsvp_token)
 
     appointment_details
+    |> Map.drop(@booker_private_keys)
     |> Map.put(:guest_name, guest.name || guest.email)
     |> Map.put(:guest_accept_url, urls.accept_url)
     |> Map.put(:guest_decline_url, urls.decline_url)

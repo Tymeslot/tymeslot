@@ -1,8 +1,8 @@
 defmodule Tymeslot.CalendarGrid.WriteQueueTest do
   @moduledoc """
-  The grid's write queue as plain data: the references it gives writes, and
-  what it can still save for a later sync when it will never be driven to
-  its end. The ordering itself is covered end to end by
+  The grid's write queue as plain data: the references it gives writes,
+  how it waits for an event another driver is writing, and what it can
+  still save for a later sync when it will never be driven to its end. The ordering itself is covered end to end by
   `TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest` and
   `SeriesHoldLiveViewTest`.
   """
@@ -12,7 +12,9 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
   @moduletag :calendar
   @moduletag :unit
 
+  alias Tymeslot.CalendarGrid.WriteHandOver
   alias Tymeslot.CalendarGrid.WriteQueue
+  alias Tymeslot.CalendarGrid.WriteResults
 
   # Outside any series, so no series is held.
   @event %{
@@ -50,12 +52,12 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
     end
   end
 
-  describe "hand_over/1" do
+  describe "WriteHandOver.plans/1" do
     test "saves the edits waiting behind a running one, on top of its change" do
       {queue, _start} = WriteQueue.update(WriteQueue.new(), @event, %{summary: "Renamed"}, [])
       {queue, []} = WriteQueue.update(queue, @event, %{location: "Room 9"}, [])
 
-      assert {[{base, [waiting]}], 0} = WriteQueue.hand_over(queue)
+      assert {[{base, [waiting]}], 0} = WriteHandOver.plans(queue)
       assert %{summary: "Renamed", location: "Room 1"} = base
       assert waiting.changes == %{location: "Room 9"}
     end
@@ -68,7 +70,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
       {queue, []} = WriteQueue.change_video(queue, @event, 3)
       {queue, []} = WriteQueue.update(queue, @event, %{location: "Room 10"}, [])
 
-      assert {[{_base, [waiting]}], 2} = WriteQueue.hand_over(queue)
+      assert {[{_base, [waiting]}], 2} = WriteHandOver.plans(queue)
       assert waiting.changes == %{location: "Room 9"}
     end
 
@@ -76,7 +78,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
       {queue, _start} = WriteQueue.change_video(WriteQueue.new(), @event, 3)
       {queue, []} = WriteQueue.update(queue, @event, %{location: "Room 9"}, [])
 
-      assert WriteQueue.hand_over(queue) == {[], 1}
+      assert WriteHandOver.plans(queue) == {[], 1}
     end
 
     # Whether a held edit may still be made depends on how the series write
@@ -96,76 +98,279 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
       {queue, []} =
         WriteQueue.update(queue, %{occurrence | id: 3, uid: "weekly_x"}, %{summary: "A"}, [])
 
-      assert WriteQueue.hand_over(queue) == {[], 1}
+      assert WriteHandOver.plans(queue) == {[], 1}
     end
 
     test "has nothing to save for a running write alone" do
       {queue, _start} = WriteQueue.update(WriteQueue.new(), @event, %{summary: "Renamed"}, [])
 
-      assert WriteQueue.hand_over(queue) == {[], 0}
+      assert WriteHandOver.plans(queue) == {[], 0}
     end
   end
 
-  describe "merge/2" do
-    # Two occurrences of one series, which the queue holds by its master.
+  describe "an event another driver is writing" do
+    @key {7, "standup"}
+
+    # A whole-series write needs an addressable series.
     @occurrence %{
       id: 2,
       calendar_integration_id: 7,
-      uid: "weekly_1",
-      provider: "google",
-      recurring_event_id: "weekly",
+      uid: "weekly_20260601T090000",
+      provider: "caldav",
+      provider_event_id: "/cal/weekly.ics",
+      recurrence_rule: "FREQ=WEEKLY",
       summary: "Weekly"
     }
-    @other_occurrence %{@occurrence | id: 3, uid: "weekly_2"}
 
-    test "joins queues writing different events, each still waiting on its own write" do
-      {queue, [{:start, mine, _event}]} =
+    # Another occurrence of the same series.
+    @other_occurrence %{@occurrence | id: 3, uid: "weekly_20260608T090000"}
+    @other_key {7, "weekly_20260608T090000"}
+
+    test "keeps its writes until every driver has released it, then makes them onto the event as they left it" do
+      [one, two] = [spawn(fn -> :ok end), spawn(fn -> :ok end)]
+
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{one, [@key]}, {two, [@key]}])
+
+      {queue, []} = WriteQueue.update(queue, @event, %{location: "Room 9"}, [])
+      {queue, []} = WriteQueue.update(queue, @event, %{summary: "Renamed"}, [])
+
+      assert {queue, []} = WriteQueue.resume(queue, {one, @key, {:ok, %{@event | location: "A"}}})
+      refute WriteResults.awaits?(queue, {:event_writes_released, {one, @key, :unknown}})
+
+      left = %{@event | location: "B", summary: "Theirs"}
+
+      assert {queue, [{:show, shown}, {:start, write, ^left}]} =
+               WriteQueue.resume(queue, {two, @key, {:ok, left}})
+
+      assert write.changes == %{location: "Room 9"}
+      assert %{location: "Room 9", summary: "Renamed"} = shown
+
+      # The second waits behind the first, as any second write does.
+      assert {_queue, [{:start, next, %{location: "Room 9"}}]} =
+               WriteQueue.settle(queue, write.ref, {:ok, %{left | location: "Room 9"}})
+
+      assert next.changes == %{summary: "Renamed"}
+    end
+
+    # A guardian releases the events a lender killed outright still owed,
+    # and may do so after the lender's own release.
+    test "makes its writes once, however often the event is released" do
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), [@key]}])
+      {queue, []} = WriteQueue.update(queue, @event, %{location: "Room 9"}, [])
+
+      assert {queue, [{:show, _shown}, {:start, write, _event}]} =
+               WriteQueue.resume(queue, {self(), @key, {:ok, @event}})
+
+      assert {^queue, []} = WriteQueue.resume(queue, {self(), @key, :unknown})
+
+      assert {_queue, []} =
+               WriteQueue.settle(queue, write.ref, {:ok, %{@event | location: "Room 9"}})
+    end
+
+    test "drops and counts its writes once the other driver changed the whole series" do
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), [@key]}])
+      {queue, []} = WriteQueue.update(queue, @event, %{location: "Room 9"}, [])
+
+      assert {queue, [{:dropped, :series_write, 1}, :reload]} =
+               WriteQueue.resume(queue, {self(), @key, :series_changed})
+
+      refute WriteQueue.pending?(queue)
+    end
+
+    test "is not waited for when the queue is writing it itself" do
+      {queue, [{:start, _write, _event}]} =
         WriteQueue.update(WriteQueue.new(), @event, %{summary: "Mine"}, [])
 
-      {other, [{:start, theirs, _event}]} =
-        WriteQueue.update(WriteQueue.new(), @occurrence, %{summary: "Theirs"}, [])
+      queue = WriteQueue.wait_elsewhere(queue, [{self(), [@key]}])
 
-      {other, []} = WriteQueue.update(other, @occurrence, %{location: "Room 9"}, [])
-
-      assert {:ok, merged} = WriteQueue.merge(queue, other)
-      assert WriteQueue.pending_count(merged) == 3
-
-      assert {_merged, [{:start, waiting, %{summary: "Theirs"}}]} =
-               WriteQueue.settle(merged, theirs.ref, {:ok, %{@occurrence | summary: "Theirs"}})
-
-      assert waiting.changes == %{location: "Room 9"}
-      assert {_merged, []} = WriteQueue.settle(merged, mine.ref, {:ok, @event})
+      assert {_queue, []} = WriteQueue.update(queue, @event, %{location: "Room 9"}, [])
+      refute WriteResults.awaits?(queue, {:event_writes_released, {self(), @key, :unknown}})
     end
 
-    test "refuses queues that both write one event" do
-      {queue, _start} = WriteQueue.update(WriteQueue.new(), @event, %{summary: "Mine"}, [])
-      {other, _start} = WriteQueue.update(WriteQueue.new(), @event, %{summary: "Theirs"}, [])
+    # A driver that lends the event back may itself wait for this queue;
+    # waiting for it too would leave each waiting for the other forever.
+    test "is not waited for again from a driver lending it back to a queue already waiting for it" do
+      [first, lent_back] = [spawn(fn -> :ok end), spawn(fn -> :ok end)]
 
-      assert WriteQueue.merge(queue, other) == :conflict
+      queue =
+        WriteQueue.new()
+        |> WriteQueue.wait_elsewhere([{first, [@key]}])
+        |> WriteQueue.wait_elsewhere([{lent_back, [@key]}])
+
+      {queue, []} = WriteQueue.update(queue, @event, %{location: "Room 9"}, [])
+
+      assert {_queue, [{:show, _shown}, {:start, write, @event}]} =
+               WriteQueue.resume(queue, {first, @key, {:ok, @event}})
+
+      assert write.changes == %{location: "Room 9"}
     end
 
-    test "refuses a queue writing an occurrence of a series the other is moving" do
-      {queue, _start} =
-        WriteQueue.update(WriteQueue.new(), @other_occurrence, %{summary: "Mine"}, [])
+    test "is not waited for when the queue holds a write for it behind its series write" do
+      {queue, [{:start, series_write, _event}]} =
+        WriteQueue.update(WriteQueue.new(), @occurrence, %{summary: "All"},
+          recurrence_scope: :all
+        )
 
-      moving = WriteQueue.series_moving(WriteQueue.new(), @occurrence)
+      {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
+      queue = WriteQueue.wait_elsewhere(queue, [{self(), [@other_key]}])
 
-      assert WriteQueue.merge(queue, moving) == :conflict
-      assert WriteQueue.merge(moving, queue) == :conflict
+      # The series was not changed, so the held write starts.
+      assert {_queue, [{:show, _reverted}, {:start, held, @other_occurrence}]} =
+               WriteQueue.settle(queue, series_write.ref, :failed)
+
+      assert held.changes == %{location: "Room 9"}
     end
-  end
 
-  describe "running/1" do
-    test "keeps the write in flight, and nothing waiting behind it" do
+    test "is left as the queue's last write left it once that write has answered" do
       {queue, [{:start, write, _event}]} =
         WriteQueue.update(WriteQueue.new(), @event, %{summary: "Renamed"}, [])
 
-      {queue, []} = WriteQueue.update(queue, @event, %{location: "Room 9"}, [])
-      running = WriteQueue.running(queue)
+      accepted = %{@event | summary: "Renamed"}
+      answer = {:event_update_result, {:ok, write: write.ref, updated_event: accepted}}
+      failure = {:event_update_result, {:error, write: write.ref, retry: :not_queued}}
 
-      assert WriteQueue.pending_count(running) == 1
-      assert {drained, []} = WriteQueue.settle(running, write.ref, {:ok, @event})
-      refute WriteQueue.pending?(drained)
+      assert WriteResults.left_by(queue, @key, [answer]) == {:ok, accepted}
+      assert WriteResults.left_by(queue, @key, [failure]) == {:ok, @event}
+      assert WriteQueue.pending_keys(queue) == [@key]
+    end
+
+    test "is left changed as a whole series after a write to the whole series" do
+      {queue, [{:start, write, _event}]} =
+        WriteQueue.update(WriteQueue.new(), @occurrence, %{summary: "All"},
+          recurrence_scope: :all
+        )
+
+      answer = {:event_update_result, {:ok, write: write.ref, updated_event: @occurrence}}
+
+      assert WriteResults.left_by(queue, {7, @occurrence.uid}, [answer]) == :series_changed
+    end
+
+    # A write held behind the series write is dropped once it succeeds; a
+    # driver kept waiting for that occurrence must drop its own edits too.
+    test "is left changed as a whole series when a held write was dropped by a series write" do
+      {queue, [{:start, write, _event}]} =
+        WriteQueue.update(WriteQueue.new(), @occurrence, %{summary: "All"},
+          recurrence_scope: :all
+        )
+
+      {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
+
+      answer = {:event_update_result, {:ok, write: write.ref, updated_event: @occurrence}}
+      {drained, _effects} = WriteResults.apply_result(queue, answer)
+
+      refute @other_key in WriteQueue.pending_keys(drained)
+      assert WriteResults.left_by(queue, @other_key, [answer]) == :series_changed
+    end
+
+    test "is left changed as a whole series when a held write was dropped by a series move" do
+      queue = WriteQueue.series_moving(WriteQueue.new(), @occurrence)
+      {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
+
+      moved = {:event_move_result, {:ok, %{original_event: @occurrence, series_to: 8}}}
+      {drained, _effects} = WriteResults.apply_result(queue, moved)
+
+      refute @other_key in WriteQueue.pending_keys(drained)
+      assert WriteResults.left_by(queue, @other_key, [moved]) == :series_changed
+    end
+
+    # From `terminate/2` there is no message: the held write may simply be
+    # unsaved, not dropped.
+    test "is left unknown when a held write is given up with no message in hand" do
+      {queue, _start} =
+        WriteQueue.update(WriteQueue.new(), @occurrence, %{summary: "All"},
+          recurrence_scope: :all
+        )
+
+      {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
+
+      assert WriteResults.left_by(queue, @other_key, []) == :unknown
+    end
+
+    test "is handed over, when the queue will never be driven, onto the event its kept writes were made against" do
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), [@key]}])
+      {queue, []} = WriteQueue.update(queue, @event, %{location: "Room 9"}, [])
+      {queue, []} = WriteQueue.change_video(queue, %{@event | location: "Room 9"}, 3)
+
+      assert {[{@event, [kept]}], 1} = WriteHandOver.plans(queue)
+      assert kept.changes == %{location: "Room 9"}
+    end
+  end
+
+  describe "a series another driver is writing the whole of" do
+    setup do
+      {:ok, series: {:series, WriteQueue.series_key(@occurrence)}}
+    end
+
+    test "is lent while the queue writes the whole of it", %{series: series} do
+      {queue, _start} =
+        WriteQueue.update(WriteQueue.new(), @occurrence, %{summary: "All"},
+          recurrence_scope: :all
+        )
+
+      assert series in WriteQueue.pending_keys(queue)
+    end
+
+    test "keeps every write to its events until released, then makes them", %{series: series} do
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), [series]}])
+      {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
+
+      assert WriteQueue.series_busy?(queue, @other_occurrence)
+      assert WriteQueue.series_saving?(queue, @other_occurrence)
+
+      assert {queue, [{:start, kept, @other_occurrence}]} =
+               WriteQueue.resume(queue, {self(), series, :unknown})
+
+      assert kept.changes == %{location: "Room 9"}
+      refute WriteQueue.series_busy?(queue, @other_occurrence)
+    end
+
+    test "drops and counts the writes kept for it once the series changed", %{series: series} do
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), [series]}])
+      {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
+
+      assert {queue, [{:dropped, :series_write, 1}, :reload]} =
+               WriteQueue.resume(queue, {self(), series, :series_changed})
+
+      refute WriteQueue.pending?(queue)
+    end
+
+    test "is left changed once the series write succeeded, and unknown once it failed", %{
+      series: series
+    } do
+      {queue, [{:start, write, _event}]} =
+        WriteQueue.update(WriteQueue.new(), @occurrence, %{summary: "All"},
+          recurrence_scope: :all
+        )
+
+      answer = {:event_update_result, {:ok, write: write.ref, updated_event: @occurrence}}
+      failure = {:event_update_result, {:error, write: write.ref, retry: :not_queued}}
+
+      assert WriteResults.left_by(queue, series, [answer]) == :series_changed
+      assert WriteResults.left_by(queue, series, [failure]) == :unknown
+    end
+
+    # A grid mounted after the borrower waits for the events the borrower
+    # keeps writes for, and drops its own once the series changed.
+    test "lends on the events it keeps writes for, left changed once the series changed", %{
+      series: series
+    } do
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), [series]}])
+      {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
+
+      assert Enum.sort(WriteQueue.pending_keys(queue)) == Enum.sort([series, @other_key])
+
+      released = {:event_writes_released, {self(), series, :series_changed}}
+      assert WriteResults.left_by(queue, @other_key, [released]) == :series_changed
+      assert WriteResults.left_by(queue, series, [released]) == :series_changed
+    end
+
+    test "has the writes kept for it counted as lost when the queue will never be driven", %{
+      series: series
+    } do
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), [series]}])
+      {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
+
+      assert WriteHandOver.plans(queue) == {[], 1}
     end
   end
 

@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Helpers.ThemeUploadHelper do
   alias Phoenix.LiveView
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.Workers.VideoTranscoder
+  alias TymeslotWeb.Helpers.ImageUploadErrors
 
   @doc """
   Process background image upload with logging.
@@ -28,7 +29,7 @@ defmodule TymeslotWeb.Helpers.ThemeUploadHelper do
             {:ok, {:error, "Invalid image format. Please upload a valid image file."}}
 
           {:error, reason} ->
-            {:ok, {:error, reason}}
+            {:ok, {:error, ImageUploadErrors.message(reason) || reason}}
         end
       end)
 
@@ -50,6 +51,9 @@ defmodule TymeslotWeb.Helpers.ThemeUploadHelper do
 
       [] ->
         {:error, "No file was uploaded"}
+
+      [{:error, message}] when is_binary(message) ->
+        {:error, message}
 
       _error ->
         {:error, "Upload failed"}
@@ -124,6 +128,9 @@ defmodule TymeslotWeb.Helpers.ThemeUploadHelper do
 
       [] ->
         {:error, "No file was uploaded"}
+
+      [{:error, message}] when is_binary(message) ->
+        {:error, message}
 
       _error ->
         {:error, "Upload failed"}

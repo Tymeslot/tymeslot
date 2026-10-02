@@ -5,6 +5,8 @@ defmodule Tymeslot.Meetings do
   calendar integration, and email notifications.
   """
 
+  @behaviour Tymeslot.Security.EncryptedStorage
+
   require Logger
 
   alias Tymeslot.Bookings.{BookingTitle, Cancel, Reschedule, RescheduleRequest}
@@ -18,6 +20,7 @@ defmodule Tymeslot.Meetings do
     Cancellation,
     ExternalCalendarChanges,
     Guests,
+    GuestSchema,
     Listing,
     MeetingCalendarQueries,
     MeetingListQueries,
@@ -31,6 +34,12 @@ defmodule Tymeslot.Meetings do
   alias Tymeslot.Notifications.ContentBuilder
 
   alias Tymeslot.Pagination.CursorPage
+  alias Tymeslot.Security.EncryptedString
+
+  # The guests' RSVP tokens.
+  @impl Tymeslot.Security.EncryptedStorage
+  def encrypted_storage,
+    do: {GuestSchema.__schema__(:source), EncryptedString.columns(GuestSchema)}
 
   @doc """
   Looks up the open invitation behind a guest's RSVP token, with its meeting
