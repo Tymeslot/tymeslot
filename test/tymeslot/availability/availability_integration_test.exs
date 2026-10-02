@@ -18,7 +18,12 @@ defmodule Tymeslot.Availability.AvailabilityIntegrationTest do
       profile = insert(:profile)
 
       schedule =
-        insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 15)
+        insert(:availability_schedule,
+          profile: profile,
+          is_default: true,
+          buffer_before_minutes: 15,
+          buffer_after_minutes: 15
+        )
 
       date = next_monday()
 
@@ -38,7 +43,11 @@ defmodule Tymeslot.Availability.AvailabilityIntegrationTest do
         }
       ]
 
-      config = %{schedule_id: schedule.id, buffer_minutes: schedule.buffer_minutes}
+      config = %{
+        schedule_id: schedule.id,
+        buffer_before_minutes: schedule.buffer_before_minutes,
+        buffer_after_minutes: schedule.buffer_after_minutes
+      }
 
       {:ok, slots} =
         Calculate.available_slots(
@@ -74,7 +83,12 @@ defmodule Tymeslot.Availability.AvailabilityIntegrationTest do
       profile = insert(:profile)
 
       schedule =
-        insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 30)
+        insert(:availability_schedule,
+          profile: profile,
+          is_default: true,
+          buffer_before_minutes: 30,
+          buffer_after_minutes: 30
+        )
 
       date = next_monday()
 
@@ -94,7 +108,11 @@ defmodule Tymeslot.Availability.AvailabilityIntegrationTest do
         }
       ]
 
-      config = %{schedule_id: schedule.id, buffer_minutes: schedule.buffer_minutes}
+      config = %{
+        schedule_id: schedule.id,
+        buffer_before_minutes: schedule.buffer_before_minutes,
+        buffer_after_minutes: schedule.buffer_after_minutes
+      }
 
       # A 15-minute duration makes the slot grid finer than the buffer, so the
       # buffer (not the grid) is what decides where bookings resume.

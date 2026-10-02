@@ -301,7 +301,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
       # The nudge modal becomes visible and we're still on the calendar step.
       assert has_element?(view, ~s{#skip-calendar-modal[style*="display: flex"]})
       assert has_element?(view, ".onboarding-provider-cards")
-      refute has_element?(view, "button[phx-value-buffer_minutes]")
+      refute has_element?(view, "button[phx-value-buffer_before_minutes]")
     end
 
     test "confirming the nudge modal advances to buffer_time", %{conn: conn} do
@@ -312,7 +312,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
       view |> element("button[phx-click='next_step']") |> render_click()
       render_click(view, "confirm_skip_calendar")
 
-      assert has_element?(view, "button[phx-value-buffer_minutes]")
+      assert has_element?(view, "button[phx-value-buffer_before_minutes]")
     end
 
     test "dismissing the nudge modal returns to the calendar step", %{conn: conn} do
@@ -327,7 +327,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
       assert has_element?(view, ~s{#skip-calendar-modal[style*="display: none"]})
       assert has_element?(view, ".onboarding-provider-cards")
       assert has_element?(view, ~s{button[phx-value-option="google"]})
-      refute has_element?(view, "button[phx-value-buffer_minutes]")
+      refute has_element?(view, "button[phx-value-buffer_before_minutes]")
     end
   end
 end

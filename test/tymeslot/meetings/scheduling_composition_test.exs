@@ -23,7 +23,14 @@ defmodule Tymeslot.Meetings.SchedulingCompositionTest do
   setup do
     user = insert(:user)
     profile = insert(:profile, user: user)
-    insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 15)
+
+    insert(:availability_schedule,
+      profile: profile,
+      is_default: true,
+      buffer_before_minutes: 15,
+      buffer_after_minutes: 15
+    )
+
     %{user: user, profile: profile}
   end
 
@@ -140,7 +147,13 @@ defmodule Tymeslot.Meetings.SchedulingCompositionTest do
     test "does not see other users' meetings as conflicts", %{user: user} do
       other_user = insert(:user)
       other_profile = insert(:profile, user: other_user)
-      insert(:availability_schedule, profile: other_profile, is_default: true, buffer_minutes: 15)
+
+      insert(:availability_schedule,
+        profile: other_profile,
+        is_default: true,
+        buffer_before_minutes: 15,
+        buffer_after_minutes: 15
+      )
 
       base = future_time(2, :day)
       insert_meeting(other_user, base)

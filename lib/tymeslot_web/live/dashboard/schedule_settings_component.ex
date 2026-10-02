@@ -35,13 +35,15 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
   # The policy settings differ only in which schedule field they write, so the
   # handlers below route through one pair of helpers driven by these tables.
   @policy_events %{
-    "update_buffer_minutes" => :buffer_minutes,
+    "update_buffer_before_minutes" => :buffer_before_minutes,
+    "update_buffer_after_minutes" => :buffer_after_minutes,
     "update_advance_booking_days" => :advance_booking_days,
     "update_min_advance_hours" => :min_advance_hours
   }
 
   @policy_settings %{
-    "buffer_minutes" => :buffer_minutes,
+    "buffer_before_minutes" => :buffer_before_minutes,
+    "buffer_after_minutes" => :buffer_after_minutes,
     "advance_booking_days" => :advance_booking_days,
     "min_advance_hours" => :min_advance_hours
   }
@@ -54,7 +56,8 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
   # `CustomInputModeHelper.presets/1`, the same table the card renders its tags
   # from, so this cannot fall out of step with what the user sees.
   @policy_custom_seed %{
-    buffer_minutes: 45,
+    buffer_before_minutes: 45,
+    buffer_after_minutes: 45,
     advance_booking_days: 120,
     min_advance_hours: 12
   }
@@ -424,8 +427,11 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
     Constraints.scheduling_policy_defaults() |> Map.fetch!(field) |> to_string()
   end
 
-  defp validate_policy(:buffer_minutes, value, opts),
-    do: MeetingSettingsInputValidation.validate_buffer_minutes(value, opts)
+  defp validate_policy(:buffer_before_minutes, value, opts),
+    do: MeetingSettingsInputValidation.validate_buffer_before_minutes(value, opts)
+
+  defp validate_policy(:buffer_after_minutes, value, opts),
+    do: MeetingSettingsInputValidation.validate_buffer_after_minutes(value, opts)
 
   defp validate_policy(:advance_booking_days, value, opts),
     do: MeetingSettingsInputValidation.validate_advance_booking_days(value, opts)
@@ -433,9 +439,15 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
   defp validate_policy(:min_advance_hours, value, opts),
     do: MeetingSettingsInputValidation.validate_min_advance_hours(value, opts)
 
-  defp policy_flash(:buffer_minutes, value),
+  defp policy_flash(:buffer_before_minutes, value),
     do:
-      dgettext("dashboard_availability", "Buffer time updated to %{minutes} minutes",
+      dgettext("dashboard_availability", "Buffer before meetings updated to %{minutes} minutes",
+        minutes: value
+      )
+
+  defp policy_flash(:buffer_after_minutes, value),
+    do:
+      dgettext("dashboard_availability", "Buffer after meetings updated to %{minutes} minutes",
         minutes: value
       )
 
@@ -451,8 +463,11 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
         hours: value
       )
 
-  defp custom_policy_flash(:buffer_minutes),
-    do: dgettext("dashboard_availability", "Buffer time set to custom value")
+  defp custom_policy_flash(:buffer_before_minutes),
+    do: dgettext("dashboard_availability", "Buffer before meetings set to custom value")
+
+  defp custom_policy_flash(:buffer_after_minutes),
+    do: dgettext("dashboard_availability", "Buffer after meetings set to custom value")
 
   defp custom_policy_flash(:advance_booking_days),
     do: dgettext("dashboard_availability", "Advance booking set to custom value")

@@ -35,10 +35,13 @@ defmodule Tymeslot.Availability.Conflicts do
         ) :: [String.t()]
   def filter_available_slots(all_slots, events, duration_minutes, timezone, date, config) do
     %{
-      buffer_minutes: buffer_minutes,
+      buffer_before_minutes: buffer_before_minutes,
+      buffer_after_minutes: buffer_after_minutes,
       min_advance_hours: min_advance_hours,
       max_advance_booking_days: max_advance_booking_days
     } = Calculate.config_policy(config)
+
+    buffers = {buffer_before_minutes, buffer_after_minutes}
 
     current_time = DateTimeUtils.now_in_timezone(timezone)
 
@@ -53,7 +56,7 @@ defmodule Tymeslot.Availability.Conflicts do
         min_advance_hours,
         max_advance_booking_days
       ) and
-        not TimeRange.has_conflict_with_events?(slot_start, slot_end, events, buffer_minutes) and
+        not TimeRange.has_conflict_with_events?(slot_start, slot_end, events, buffers) and
         not limit_blocked?(config, slot_start)
     end)
   end
@@ -114,10 +117,13 @@ defmodule Tymeslot.Availability.Conflicts do
     slot_interval_minutes = Map.get(config, :slot_interval_minutes)
 
     %{
-      buffer_minutes: buffer_minutes,
+      buffer_before_minutes: buffer_before_minutes,
+      buffer_after_minutes: buffer_after_minutes,
       min_advance_hours: min_advance_hours,
       max_advance_booking_days: max_advance_booking_days
     } = Calculate.config_policy(config)
+
+    buffers = {buffer_before_minutes, buffer_after_minutes}
 
     schedule_id = Map.get(config, :schedule_id)
 
@@ -168,12 +174,7 @@ defmodule Tymeslot.Availability.Conflicts do
 
         TimeRange.meets_minimum_notice?(slot_start, now, min_advance_hours * 60) and
           TimeRange.within_booking_window?(slot_start, now, max_advance_booking_days) and
-          not TimeRange.has_conflict_with_events?(
-            slot_start,
-            slot_end,
-            nearby_events,
-            buffer_minutes
-          ) and
+          not TimeRange.has_conflict_with_events?(slot_start, slot_end, nearby_events, buffers) and
           not limit_blocked?(config, slot_start)
       end)
     end)

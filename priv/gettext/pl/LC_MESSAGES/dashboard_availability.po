@@ -334,21 +334,6 @@ msgstr "Na pewno chcesz usunąć harmonogram „%{name}”?"
 
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
-msgid "Buffer Between Appointments"
-msgstr "Bufor między spotkaniami"
-
-#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Buffer time set to custom value"
-msgstr "Ustawiono własny czas bufora"
-
-#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Buffer time updated to %{minutes} minutes"
-msgstr "Zmieniono bufor na %{minutes} min"
-
-#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
-#, elixir-autogen, elixir-format
 msgid "Custom"
 msgstr "Własne"
 
@@ -493,11 +478,6 @@ msgstr "Te typy spotkań przejdą na domyślny harmonogram:"
 #, elixir-autogen, elixir-format
 msgid "These rules apply to every meeting type booked against this schedule."
 msgstr "Te reguły dotyczą każdego typu spotkania korzystającego z tego harmonogramu."
-
-#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
-#, elixir-autogen, elixir-format
-msgid "Time to block after each appointment for preparation, travel, or breaks."
-msgstr "Czas blokowany po każdym spotkaniu na przygotowanie, dojazd lub przerwę."
 
 #: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -822,3 +802,48 @@ msgid_plural "and %{count} more"
 msgstr[0] "i jeszcze 1"
 msgstr[1] "i jeszcze %{count}"
 msgstr[2] "i jeszcze %{count}"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "After each meeting"
+msgstr "Po każdym spotkaniu"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Before each meeting"
+msgstr "Przed każdym spotkaniem"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer Time"
+msgstr "Bufor"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer after meetings set to custom value"
+msgstr "Ustawiono własny bufor po spotkaniach"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer after meetings updated to %{minutes} minutes"
+msgstr "Zmieniono bufor po spotkaniach na %{minutes} min"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer before meetings set to custom value"
+msgstr "Ustawiono własny bufor przed spotkaniami"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer before meetings updated to %{minutes} minutes"
+msgstr "Zmieniono bufor przed spotkaniami na %{minutes} min"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Preparation time kept free before each booking."
+msgstr "Czas na przygotowanie, który pozostaje wolny przed każdą rezerwacją."
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Wrap-up time kept free after each booking."
+msgstr "Czas na podsumowanie, który pozostaje wolny po każdej rezerwacji."
