@@ -161,7 +161,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
     # both are in the replaced-column set, so a real queue row carries neither.
     # These tests reproduce that shape: with no cached ETag the update HEAD-probes,
     # gets a 404, falls back to `If-Match: *`, and reads the resulting 412 as
-    # absence rather than conflict.
+    # absence rather than conflict once a GET has confirmed it.
     #
     # `QueueWiring.tag/3` also stamps `created_by_tymeslot: true` on every row
     # it queues, so the flag is set throughout: what decides a recreate is the
@@ -201,8 +201,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
       )
     end
 
-    # Counts requests and answers the HEAD probe and the `If-Match: *` update
-    # as absence; anything after that is handed to `on_recreate`.
+    # Counts requests and answers the HEAD probe, the `If-Match: *` update and
+    # the GET as absence; anything after that is handed to `on_recreate`.
     defp stub_missing_event(counter, on_recreate) do
       ReqTest.stub(:tymeslot_http, fn conn ->
         :counters.add(counter, 1, 1)
@@ -216,6 +216,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
             assert conn.method == "PUT"
             assert Conn.get_req_header(conn, "if-match") == ["*"]
             Conn.send_resp(conn, 412, "Precondition Failed")
+
+          3 ->
+            assert conn.method == "GET"
+            Conn.send_resp(conn, 404, "")
 
           _further ->
             on_recreate.(conn)
@@ -249,7 +253,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
       assert reloaded.sync_state == "synced"
       assert reloaded.sync_attempts == 0
       assert is_nil(reloaded.sync_last_error)
-      assert :counters.get(counter, 1) == 3
+      assert :counters.get(counter, 1) == 4
     end
 
     test "never recreates an event no meeting claims, whatever the ownership flag says",
@@ -267,7 +271,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
       reloaded = Repo.reload!(row)
       assert reloaded.sync_state == "locally_modified"
       assert reloaded.sync_attempts == 1
-      assert :counters.get(counter, 1) == 2
+      assert :counters.get(counter, 1) == 3
     end
 
     test "never recreates the event of a cancelled meeting",
@@ -286,7 +290,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
       reloaded = Repo.reload!(row)
       assert reloaded.sync_state == "locally_modified"
       assert reloaded.sync_attempts == 1
-      assert :counters.get(counter, 1) == 2
+      assert :counters.get(counter, 1) == 3
     end
 
     test "drops an elapsed row instead of planting a stale event",
@@ -312,7 +316,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
 
       assert is_nil(Repo.reload(row))
       assert QueueQueries.list_pending(integration.id) == []
-      assert :counters.get(counter, 1) == 2
+      assert :counters.get(counter, 1) == 3
     end
 
     test "keeps the row queued when the recreate itself fails",

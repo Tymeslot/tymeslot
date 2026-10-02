@@ -1,4 +1,54 @@
 
+[1.22.0]
+* security: Accept bookings and sign-ups when Google cannot be reached
+* uploads: Say when an image is refused for its size
+* uploads: Keep image quality when removing metadata from uploads
+* security: Stop a rollback bringing back replaced links and secrets
+* security: Stop a form submit hanging when the reCAPTCHA check stalls
+* analytics: Keep encrypted link tokens out of logs and analytics
+* timezones: Correct booking times for Manitoba and the Northwest Territories
+* timezones: Stop production instances contacting data.iana.org
+* payments: Delete payment records once their legal retention ends
+* analytics: Stop storing ad click identifiers on bookings
+* privacy: Stop keeping visitors' IP addresses without limit
+* emails: Stop writing email recipients and subjects to the log
+* security: Stop storing poll, RSVP and free/busy link tokens in plain text
+* email: Stop rewriting email links for click tracking
+* security: Narrow the Content-Security-Policy to the origins the app uses
+* privacy: Load reCAPTCHA only once a visitor starts filling in a form
+* analytics: Stop visitor hashes being reversible to an IP address
+* uploads: Stop publishing the location and device details in uploaded media
+* guests: Keep the booker's private details out of guests' calendar files
+* analytics: Keep reset, RSVP, poll and other link tokens out of analytics
+* calendar: Stop a stuck tab holding up the calendar grid's mount
+* calendar: Hold another tab's occurrence edits while a whole series saves
+* caldav: Recreate a booking's event the calendar reports as gone
+* calendar: Stop an edit being written twice after a quick return to the calendar
+* calendar: Stop an occurrence edit overwriting a whole-series change
+* calendar: Stop two calendar grids waiting on each other's edits
+* calendar: Stop an older calendar grid edit overwriting a newer one after reconnecting
+* calendar: Keep CalDAV event details added outside Tymeslot on reschedule
+* Save in-person locations and let bookers pick one
+
+
+[1.21.0]
+* booking: Show the booking title to guests in their own language
+* calendar: Move the iCloud event when a booking is rescheduled
+* booking: Translate the preview booking title into the host's language
+* calendar: Translate booking event titles into the host's language
+* privacy: Stop loading fonts from Google in booking pages and emails
+* calendar: Write dashboard calendar dates in each language's order
+* Redirect URLs with a trailing slash to the slashless path
+* i18n: Capitalise month headings and use the standalone month name
+* booking: Show the chosen time on the visitor's clock after booking
+* accessibility: Announce required form fields to screen readers
+* calendar: Stop mailbox.org adding your login address to bookings
+* booking: Show the booking page error card in the visitor's language
+* embed: Stop an embed URL opened in its own tab from reloading endlessly
+* auth: Name the Cloudron identity provider on the SSO button
+* i18n: Add Polish translation
+
+
 [1.20.0]
 * calendar: Limit how often quick add can create meetings
 * calendar: Delete a removed event's video room despite shared calendars

@@ -35,6 +35,20 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
       assert email.subject =~ "Product Demo"
     end
 
+    test "names the booking in the attendee's language, not the organiser's" do
+      meeting =
+        insert(:meeting,
+          title: "Consultation mit Sarah Johnson",
+          meeting_type: "Consultation",
+          attendee_name: "Sarah Johnson",
+          attendee_locale: "it"
+        )
+
+      email = RescheduleRequest.render(meeting)
+
+      assert email.subject =~ "Consultation con Sarah Johnson"
+    end
+
     test "includes attendee name in HTML body" do
       meeting = insert(:meeting, attendee_name: "Michael Chen")
       email = RescheduleRequest.render(meeting)
@@ -214,6 +228,25 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
 
       refute email.subject =~ "\r"
       refute email.subject =~ "\n"
+    end
+  end
+
+  describe "an in-person address arranged after booking" do
+    test "is not noted under the cancelled appointment's location, in HTML or text" do
+      note = "The address will be arranged with you after booking."
+
+      meeting =
+        insert(:meeting,
+          location_kind: "in_person",
+          address_to_arrange: true,
+          location: "In person"
+        )
+
+      email = RescheduleRequest.render(meeting)
+
+      refute email.html_body =~ note
+      refute email.text_body =~ note
+      assert email.text_body =~ "Location: In person\n"
     end
   end
 end

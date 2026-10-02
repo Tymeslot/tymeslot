@@ -71,6 +71,30 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefundedTest do
       end)
     end
 
+    # The meeting's stored title is the host's calendar event, in the host's
+    # language; the booker reads it in theirs.
+    test "names the booking in the booker's language" do
+      meeting =
+        insert(:meeting,
+          title: "Discovery Call mit Alice",
+          meeting_type: "Discovery Call",
+          attendee_name: "Alice",
+          attendee_locale: "it"
+        )
+
+      payment = insert_payment(%{meeting_id: meeting.id})
+
+      assert :ok =
+               perform_job(SendBookingPaymentRefunded, %{
+                 "booking_payment_id" => payment.id
+               })
+
+      assert_email_sent(fn email ->
+        refute email.text_body =~ "mit Alice"
+        assert email.text_body =~ "Discovery Call con Alice"
+      end)
+    end
+
     test "discards when booking_payment is missing" do
       assert {:discard, "booking_payment not found"} =
                perform_job(SendBookingPaymentRefunded, %{

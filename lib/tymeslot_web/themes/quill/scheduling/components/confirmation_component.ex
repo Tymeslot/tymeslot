@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
   alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
+  alias TymeslotWeb.Themes.Shared.Components.LocationField
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   import TymeslotWeb.Components.CoreComponents
@@ -135,6 +136,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                           </span>
                         </p>
                       </div>
+                      <LocationField.arranged_note :if={
+                        BookingLocation.arranged_after_booking?(assigns)
+                      } />
                     </div>
 
                     <div class="confirmation-border-top mt-3 pt-3 border-t">

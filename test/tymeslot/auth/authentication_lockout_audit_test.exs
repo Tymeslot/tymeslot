@@ -51,7 +51,8 @@ defmodule Tymeslot.Auth.AuthenticationLockoutAuditTest do
       assert_receive {:captured_log, %{meta: %{event_type: "account_lockout"} = meta}}
       assert meta.lockout_type == "account_throttled"
       assert meta.user_id == user.id
-      assert meta.ip_address == "203.0.113.7"
+      # Logged as its network: the redactor truncates every client IP.
+      assert meta.ip_address == "203.0.113.0/24"
       assert meta.user_agent == "curl/8.0"
       assert meta.email_masked == "#{String.first(user.email)}***@example.com"
       refute inspect(meta) =~ user.email

@@ -632,3 +632,9 @@ msgstr "Цей час припадає на вашу відсутність, т�
 #, elixir-autogen, elixir-format
 msgid "This time falls within your time off. Change or remove the time off to confirm it."
 msgstr "Цей час припадає на вашу відсутність. Змініть або видаліть відсутність, щоб його підтвердити."
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
+#, elixir-autogen, elixir-format
+msgid "Locations"
+msgstr "Місця"

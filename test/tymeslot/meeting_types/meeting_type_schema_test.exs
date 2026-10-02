@@ -153,18 +153,18 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
   end
 
   describe "business rules" do
-    test "prevents meetings longer than 8 hours" do
+    test "prevents meetings longer than 24 hours" do
       user = insert(:user)
 
       attrs = %{
         name: "All Day Meeting",
-        duration_minutes: 481,
+        duration_minutes: 1441,
         user_id: user.id
       }
 
       changeset = MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs)
       refute changeset.valid?
-      assert "must be less than or equal to 480" in errors_on(changeset).duration_minutes
+      assert "must be less than or equal to 1440" in errors_on(changeset).duration_minutes
     end
 
     test "prevents a meeting shorter than the grid can offer" do

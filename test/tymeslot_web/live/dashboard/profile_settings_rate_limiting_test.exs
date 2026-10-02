@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsRateLimitingTest do
   import Tymeslot.DashboardTestHelpers
 
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Test.MediaFixtures
 
   setup :setup_dashboard_user
 
@@ -39,9 +40,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsRateLimitingTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
 
-      png_content =
-        <<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13, "IHDR", 0, 0, 0, 1, 0, 0,
-          0, 1, 8, 2, 0, 0, 0, 0x90, 0x77, 0x53, 0xDE>>
+      png_content = MediaFixtures.png()
 
       avatar = %{
         last_modified: System.system_time(:millisecond),

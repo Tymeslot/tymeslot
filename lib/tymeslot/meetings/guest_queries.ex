@@ -12,6 +12,7 @@ defmodule Tymeslot.Meetings.GuestQueries do
   alias Tymeslot.Meetings.GuestSchema, as: Guest
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Repo
+  alias Tymeslot.Security.Token
 
   @doc "Inserts a single guest for a meeting."
   @spec insert_guest(map()) :: {:ok, Guest.t()} | {:error, Changeset.t()}
@@ -24,7 +25,7 @@ defmodule Tymeslot.Meetings.GuestQueries do
   @doc "Fetches a guest by its RSVP token."
   @spec get_by_token(String.t()) :: {:ok, Guest.t()} | {:error, :not_found}
   def get_by_token(token) when is_binary(token) do
-    case Repo.get_by(Guest, rsvp_token: token) do
+    case Repo.get_by(Guest, rsvp_token_hash: Token.hash_token(token)) do
       nil -> {:error, :not_found}
       guest -> {:ok, guest}
     end

@@ -375,14 +375,12 @@ config :elixir, :time_zone_database, Tz.TimeZoneDatabase
 #
 #     mix tz.download <version> && mix deps.compile tz --force
 #
-# then bump :iana_version to match. Tz.WatchPeriodically logs when a newer
-# release appears upstream; see Tymeslot.Application.
+# then bump :iana_version to match. Running instances never contact IANA, so
+# new rules reach users only through a release: the nightly `tz_freshness`
+# suite (test/tymeslot/timezones/iana_freshness_test.exs, run by the Excluded
+# suites workflow) fails once IANA publishes a release newer than this pin.
 config :tz, :data_dir, Path.expand("../priv/tz", __DIR__)
-config :tz, :iana_version, "2026c"
-
-# Watch data.iana.org for time zone releases newer than the pinned one. Logs
-# only; enabled in prod.exs so dev and test make no outbound calls.
-config :tymeslot, :tz_watch_enabled, false
+config :tz, :iana_version, "2026e"
 
 # Authentication configuration
 config :tymeslot, :auth,
@@ -502,7 +500,15 @@ config :tymeslot, :payments,
     outgoing_webhook_days: 60,
     stripe_event_days: 90,
     analytics_event_days: 90,
-    payload_days: 30
+    payload_days: 30,
+    # Statutory retention for financial records (booking payments, payment
+    # transactions, subscription invoices), in years counted from the end of
+    # the financial year a record belongs to. Ten is the longest period common
+    # in EU and Swiss commercial law; set the period your jurisdiction
+    # requires. See Tymeslot.MeetingPayments.DataRetention.
+    financial_record_years: 10,
+    # The month the financial year starts in (1 = the calendar year).
+    financial_year_start_month: 1
   ]
 
 # HSTS directives sent by TymeslotWeb.Plugs.SecurityHeadersPlug, read via
@@ -554,10 +560,6 @@ config :tymeslot, :booking_analytics_enabled, false
 # rather than broken. `nil` (the default) shows no such notice; the managed
 # SaaS sets its go-live date.
 config :tymeslot, :booking_analytics_launch_date, nil
-
-# Analytics — secret used to derive the daily-rotated visitor fingerprint salt.
-# Required in production; dev/test override with fixed values for repeatability.
-config :tymeslot, :analytics_salt_secret, nil
 
 # Migration safety analysis (excellent_migrations, run as its own gate step
 # rather than a Credo check: migrations are deliberately outside .credo.exs's

@@ -159,9 +159,7 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   @spec send_appointment_confirmations(Tymeslot.Emails.EmailService.appointment_details()) ::
           {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
   def send_appointment_confirmations(appointment_details) do
-    Logger.info("Sending appointment confirmations",
-      title: appointment_details[:title]
-    )
+    Logger.info("Sending appointment confirmations")
 
     organizer_result =
       send_appointment_confirmation_to_organizer(
@@ -243,9 +241,7 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   @spec send_reschedule_emails(Tymeslot.Emails.EmailService.appointment_details()) ::
           {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
   def send_reschedule_emails(appointment_details) do
-    Logger.info("Sending reschedule notices",
-      title: appointment_details[:title]
-    )
+    Logger.info("Sending reschedule notices")
 
     organizer_result =
       send_reschedule_email_to_organizer(
@@ -324,7 +320,6 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
           {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
   def send_appointment_reminders(appointment_details, time_until) do
     Logger.info("Sending appointment reminders",
-      title: appointment_details[:title],
       time_until: time_until
     )
 
@@ -375,9 +370,7 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
         ) ::
           {:ok, any()} | {:error, any()}
   def send_cancellation_email_to_attendee(attendee_email, appointment_details) do
-    Logger.info("Sending appointment cancellation to attendee",
-      title: appointment_details[:title]
-    )
+    Logger.info("Sending appointment cancellation to attendee")
 
     result =
       Delivery.deliver(
@@ -400,9 +393,7 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
         ) ::
           {:ok, any()} | {:error, any()}
   def send_cancellation_email_to_organizer(organizer_email, appointment_details) do
-    Logger.info("Sending appointment cancellation to organizer",
-      title: appointment_details[:title]
-    )
+    Logger.info("Sending appointment cancellation to organizer")
 
     result =
       Delivery.deliver(
@@ -422,9 +413,7 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   @spec send_cancellation_emails(Tymeslot.Emails.EmailService.appointment_details()) ::
           {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
   def send_cancellation_emails(appointment_details) do
-    Logger.info("Sending appointment cancellations",
-      title: appointment_details[:title]
-    )
+    Logger.info("Sending appointment cancellations")
 
     organizer_result =
       send_cancellation_email_to_organizer(

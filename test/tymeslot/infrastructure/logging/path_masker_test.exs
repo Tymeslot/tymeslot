@@ -11,6 +11,23 @@ defmodule Tymeslot.Infrastructure.Logging.PathMaskerTest do
   @uid "0b7e1f3a-4c1d-4a8e-9f3b-2d6c8e1a5b7c"
   @token "Xk3v9Qm2Lp8Rt5Wz1Yb7Nc4Hd6Fg0Js2AeKq-_Uv"
 
+  # Shared with the browser analytics scrubber's tests
+  # (`assets/js/__tests__/analytics.test.js`): both maskers must produce the
+  # same output for every case, so they cannot drift apart again.
+  @fixture_path Path.expand("../../../support/fixtures/path_masking.json", __DIR__)
+  @external_resource @fixture_path
+  @shared_cases @fixture_path |> File.read!() |> JSON.decode!()
+
+  test "the shared fixture has cases to check" do
+    assert length(@shared_cases) > 10
+  end
+
+  for %{"case" => name, "path" => path, "masked" => masked} <- @shared_cases do
+    test "agrees with the analytics scrubber: #{name}" do
+      assert PathMasker.mask(unquote(path)) == unquote(masked)
+    end
+  end
+
   test "masks the meeting uid in a meeting management path" do
     assert PathMasker.mask("/jane/meeting/#{@uid}/cancel") == "/jane/meeting/:id/cancel"
   end

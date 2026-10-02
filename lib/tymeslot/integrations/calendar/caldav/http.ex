@@ -303,8 +303,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
       end)
 
     case result do
-      {:ok, response} -> classify(response, :head, url, success: [200, 204])
-      {:error, _error_reason} -> {:error, :network_error}
+      {:ok, response} ->
+        classify(response, :head, url, success: [200, 204], status_overrides: %{410 => :gone})
+
+      {:error, _error_reason} ->
+        {:error, :network_error}
     end
   end
 

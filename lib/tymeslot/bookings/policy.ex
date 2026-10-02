@@ -12,8 +12,10 @@ defmodule Tymeslot.Bookings.Policy do
   logging.
   """
   alias Tymeslot.Availability.Schedules
+  alias Tymeslot.Bookings.BookingTitle
   alias Tymeslot.Bookings.BuildParams
   alias Tymeslot.Clock
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Locales
@@ -97,6 +99,8 @@ defmodule Tymeslot.Bookings.Policy do
           required(:calendar_integration_id) => integer() | nil,
           required(:calendar_path) => String.t() | nil,
           required(:video_integration_id) => integer() | nil,
+          required(:venue_id) => integer() | nil,
+          required(:address_to_arrange) => boolean(),
           required(:attendee_name) => String.t(),
           required(:attendee_email) => String.t(),
           required(:attendee_message) => String.t() | nil,
@@ -146,7 +150,6 @@ defmodule Tymeslot.Bookings.Policy do
     meeting_uid = params.meeting_uid
     organizer_user_id = params.organizer_user_id
     meeting_type_id = params.meeting_type_id
-    form_data = params.form_data
 
     # Resolve meeting type if ID provided
     meeting_type_record = resolve_meeting_type_record(meeting_type_id, organizer_user_id)
@@ -180,9 +183,6 @@ defmodule Tymeslot.Bookings.Policy do
     # Build complete meeting attributes map
     %{
       uid: meeting_uid,
-      title: "#{meeting_type_name} with #{form_data["name"]}",
-      summary: "#{meeting_type_name} with #{form_data["name"]}",
-      description: (meeting_type_record && meeting_type_record.description) || "",
       start_time: params.start_datetime,
       end_time: params.end_datetime,
       duration: params.duration_minutes,
@@ -198,15 +198,41 @@ defmodule Tymeslot.Bookings.Policy do
       approval_requested_at: requested_at,
       approval_deadline_at: deadline_at,
       reminders: reminders,
-      show_as_free: (meeting_type_record && meeting_type_record.show_as_free) || false,
-      attachments_snapshot: attachments_snapshot(meeting_type_record),
       custom_fields_snapshot: params.custom_fields_snapshot,
       custom_field_answers: params.custom_field_answers
     }
+    |> Map.merge(meeting_type_attributes(meeting_type_record))
+    |> Map.merge(title_attributes(params, meeting_type_name))
     |> Map.merge(attendee_attributes(params, user_timezone))
     |> Map.merge(location_attributes(meeting_type_record, params, video_integration_id))
     |> Map.merge(source_attribution(params))
     |> Map.merge(build_meeting_action_urls(meeting_uid, org_username))
+  end
+
+  # What the booking copies from its meeting type, with the defaults for a
+  # booking made without one.
+  defp meeting_type_attributes(nil),
+    do: %{description: "", show_as_free: false, attachments_snapshot: []}
+
+  defp meeting_type_attributes(meeting_type_record) do
+    %{
+      description: meeting_type_record.description || "",
+      show_as_free: meeting_type_record.show_as_free || false,
+      attachments_snapshot: attachments_snapshot(meeting_type_record)
+    }
+  end
+
+  # The title is stored once and becomes the organiser's calendar event and
+  # dashboard entry, so it is rendered in the organiser's language, matching
+  # the event description `CalendarEventBuilder` writes alongside it. Mail to
+  # the booker renders it again in theirs (`BookingTitle.localise/1`).
+  defp title_attributes(%BuildParams{} = params, meeting_type_name) do
+    title =
+      RecipientLocale.with_user_id_locale(params.organizer_user_id, fn ->
+        BookingTitle.render(meeting_type_name, params.form_data["name"])
+      end)
+
+    %{title: title, summary: title}
   end
 
   # Who the booking is for, as they gave it. `attendee_phone` is deliberately
@@ -224,28 +250,31 @@ defmodule Tymeslot.Bookings.Policy do
   end
 
   # Where the meeting is held, and everything that follows from it: the
-  # display string, the kind, and the video integration a room would be
-  # created on.
+  # display string, the kind, the video integration a room would be created
+  # on, and the saved venue an in-person booking is at.
   #
   # The booker submitted only an option id, and within a video option the
-  # provider they picked. The rest is re-derived here from the host's own
-  # meeting type, so a forged or stale id can only ever select a location,
-  # or a provider, the host already offers.
+  # provider they picked, or within an in-person option the venue. The rest
+  # is re-derived here from the host's own meeting type, so a forged or stale
+  # id can only ever select a location, a provider or a venue the host
+  # already offers.
   defp location_attributes(meeting_type_record, %BuildParams{} = params, fallback_video_id) do
     location =
-      MeetingTypes.resolve_location(
-        meeting_type_record,
-        params.location_option_id,
-        params.location_phone,
-        params.location_video_integration_id
-      )
+      MeetingTypes.resolve_location(meeting_type_record, %{
+        option_id: params.location_option_id,
+        phone: params.location_phone,
+        video_integration_id: params.location_video_integration_id,
+        venue_id: params.location_venue_id
+      })
 
     %{
       location: location.location,
       location_kind: location.location_kind,
       location_option_id: location.location_option_id,
       attendee_phone: location.attendee_phone,
-      video_integration_id: video_integration_for(location, fallback_video_id)
+      video_integration_id: video_integration_for(location, fallback_video_id),
+      venue_id: location.venue_id,
+      address_to_arrange: location.address_to_arrange
     }
   end
 
@@ -286,7 +315,7 @@ defmodule Tymeslot.Bookings.Policy do
 
   # Snapshots host-uploaded meeting-type attachments as plain maps so the
   # calendar event and confirmation email reference a stable file set.
-  defp attachments_snapshot(%{attachments: attachments}) when is_list(attachments) do
+  defp attachments_snapshot(%{attachments: attachments}) do
     Enum.map(attachments, fn a ->
       %{
         "id" => a.id,
@@ -297,8 +326,6 @@ defmodule Tymeslot.Bookings.Policy do
       }
     end)
   end
-
-  defp attachments_snapshot(_meeting_type), do: []
 
   # Resolves the meeting type record if available and active
   defp resolve_meeting_type_record(meeting_type_id, organizer_user_id) do

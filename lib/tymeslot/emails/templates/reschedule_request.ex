@@ -4,6 +4,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
   """
 
   import Swoosh.Email
+  alias Tymeslot.Bookings.BookingTitle
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
 
   alias Tymeslot.Emails.Shared.{
@@ -29,19 +30,25 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
     locale = meeting.attendee_locale || "en"
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+      # The stored title is in the organiser's language; the booker reads it in
+      # theirs.
+      meeting = %{meeting | title: BookingTitle.localise(meeting)}
+
       # Convert time to attendee's timezone if available
       attendee_time = TimezoneHelper.convert_to_attendee_timezone(meeting)
 
-      meeting_details = %{
-        date: attendee_time,
-        start_time: attendee_time,
-        start_time_attendee_tz: attendee_time,
-        duration: meeting.duration,
-        location: meeting.location,
-        location_type: BookingRequestLocation.type(meeting),
-        meeting_type: meeting.meeting_type || dgettext("emails_booking_requests", "Meeting"),
-        timezone: meeting.attendee_timezone || "UTC"
-      }
+      # The appointment is cancelled, so there is no address left to arrange.
+      meeting_details =
+        Formatting.without_location_note(%{
+          date: attendee_time,
+          start_time: attendee_time,
+          start_time_attendee_tz: attendee_time,
+          duration: meeting.duration,
+          location: meeting.location,
+          location_type: BookingRequestLocation.type(meeting),
+          meeting_type: meeting.meeting_type || dgettext("emails_booking_requests", "Meeting"),
+          timezone: meeting.attendee_timezone || "UTC"
+        })
 
       mjml_content = """
       #{Text.section_title(dgettext("emails_booking_requests", "Cancelled Appointment Details"))}

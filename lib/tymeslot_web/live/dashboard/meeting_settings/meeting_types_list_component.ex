@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
   attr :show_add_form, :boolean, default: false
   attr :editing_type, :any, default: nil
   attr :currency, :string, default: "eur"
+  attr :venues, :list, default: []
   attr :parent_myself, :any, required: true
 
   @spec meeting_types_section(map()) :: Phoenix.LiveView.Rendered.t()
@@ -75,7 +76,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
         >
           <%= for type <- @meeting_types do %>
             <div draggable="true" data-meeting-type-id={type.id} class="cursor-move">
-              <Card.meeting_type_card type={type} currency={@currency} myself={@parent_myself} />
+              <Card.meeting_type_card
+                type={type}
+                currency={@currency}
+                venues={@venues}
+                myself={@parent_myself}
+              />
             </div>
           <% end %>
         </div>

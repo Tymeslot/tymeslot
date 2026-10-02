@@ -14,11 +14,17 @@ defmodule Tymeslot.Integrations.Video.AccountKey do
   Rows saved before keys were normalised may still hold the address as typed,
   so the check for a URL-keyed provider compares the normalised form of every
   stored key rather than the stored strings.
+
+  The custom video link is the exception to storing the address: the link is
+  often a personal room carrying its passcode, and is kept encrypted, so its
+  key is the SHA-256 of the normalised address instead (`key_for/2`). Two
+  links still share a key exactly when their normalised addresses match.
   """
 
   alias Ecto.Changeset
   alias Tymeslot.Integrations.Common.OAuth.AccountMatch
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Security.Token
 
   @url_fields %{"mirotalk" => :base_url, "jitsi" => :base_url, "custom" => :custom_meeting_url}
 
@@ -30,7 +36,21 @@ defmodule Tymeslot.Integrations.Video.AccountKey do
   def url_field(provider), do: Map.get(@url_fields, to_string(provider))
 
   @doc """
-  The account key for an address, or `nil` for a blank or missing one.
+  The account key of `provider`'s integration at `url`, or `nil` for a blank
+  or missing address: the normalised address, hashed for the custom video
+  link (see the moduledoc).
+  """
+  @spec key_for(String.t() | atom(), term()) :: String.t() | nil
+  def key_for(provider, url) do
+    case {to_string(provider), from_url(url)} do
+      {_provider, nil} -> nil
+      {"custom", address} -> Token.hash_token(address)
+      {_provider, address} -> address
+    end
+  end
+
+  @doc """
+  The normalised form of an address, or `nil` for a blank or missing one.
 
   An address without a scheme and host is only trimmed of surrounding spaces
   and a trailing `/`, so it still yields a key for the changeset to refuse the
@@ -83,6 +103,9 @@ defmodule Tymeslot.Integrations.Video.AccountKey do
 
     if taken?, do: {:error, :duplicate_integration}, else: :ok
   end
+
+  # A custom link's key is a hash, which normalising would leave as it is.
+  defp comparable("custom", key), do: key
 
   defp comparable(provider, key) do
     if url_field(provider), do: from_url(key), else: key

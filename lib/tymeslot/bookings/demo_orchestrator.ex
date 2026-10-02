@@ -20,10 +20,13 @@ defmodule Tymeslot.Bookings.DemoOrchestrator do
   matches the type actually being previewed.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Ecto.UUID
   alias Tymeslot.Bookings.Validation
   alias Tymeslot.Clock
   alias Tymeslot.Demo
+  alias Tymeslot.Emails.RecipientLocale
 
   require Logger
 
@@ -227,6 +230,14 @@ defmodule Tymeslot.Bookings.DemoOrchestrator do
     "https://demo.#{domain}/meeting/#{meeting_id}"
   end
 
+  # Rendered in the organiser's language, as `Tymeslot.Bookings.Policy` does
+  # for a real booking's title.
+  defp demo_meeting_title(organizer, attendee_name) do
+    RecipientLocale.with_user_locale(organizer, fn ->
+      dgettext("emails", "Meeting with %{name}", name: attendee_name)
+    end)
+  end
+
   defp build_demo_meeting_attributes(
          validated_data,
          meeting_params,
@@ -239,7 +250,7 @@ defmodule Tymeslot.Bookings.DemoOrchestrator do
 
     %{
       uid: uid,
-      title: "Meeting with #{validated_data["name"]}",
+      title: demo_meeting_title(organizer, validated_data["name"]),
       summary: "#{meeting_params.duration}-minute meeting scheduled via Tymeslot",
       start_time: start_time,
       end_time: end_time,

@@ -30,10 +30,6 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormCompositionTest do
     * `update_buffer_minutes` / `update_advance_booking_days`
       boundaries — already covered by `meeting_settings_test.exs`
       (preset + custom out-of-range cases).
-    * `toggle_meeting_mode` invalid mode — the handler stores any
-      mode string into socket state; the only downstream effect is
-      `allow_video` derivation, exercised by the video-integration
-      test below.
     * `select_calendar_integration` → async refresh →
       `select_target_calendar` → save — requires stubbing the Google
       list-calendars round-trip through `start_async`, setting up

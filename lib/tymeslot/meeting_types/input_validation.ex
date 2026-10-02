@@ -13,6 +13,9 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   alias Tymeslot.Security.{SecurityLogger, UniversalSanitizer}
   alias Tymeslot.Validation.Constraints
 
+  @min_duration Constraints.duration_minutes_range().first
+  @max_duration Constraints.duration_minutes_range().last
+
   @doc """
   Validates meeting type form input (name, duration, description, icon).
 
@@ -294,12 +297,12 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
     end
   end
 
-  defp validate_duration_constraints(duration) when duration < 5 do
-    {:error, %{duration: "Duration must be at least 5 minutes"}}
+  defp validate_duration_constraints(duration) when duration < @min_duration do
+    {:error, %{duration: "Duration must be at least #{@min_duration} minutes"}}
   end
 
-  defp validate_duration_constraints(duration) when duration > 480 do
-    {:error, %{duration: "Duration cannot exceed 8 hours (480 minutes)"}}
+  defp validate_duration_constraints(duration) when duration > @max_duration do
+    {:error, %{duration: "Duration cannot exceed 24 hours (#{@max_duration} minutes)"}}
   end
 
   defp validate_duration_constraints(duration) when rem(duration, 5) != 0 do

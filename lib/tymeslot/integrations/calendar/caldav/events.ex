@@ -6,9 +6,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
 
   - **ETag-conditional updates**: callers pass the cached ETag via `:etag`
     in `opts` for a direct conditional PUT with `If-Match`. When no cached
-    ETag is available, the module falls back to a HEAD probe, and finally
-    to `If-Match: *` if HEAD also fails. Prevents lost updates on
-    concurrent edits.
+    ETag is available, the module falls back to a HEAD probe, then a GET
+    for servers that refuse HEAD, and finally to `If-Match: *`. Prevents
+    lost updates on concurrent edits.
   - **Conflict resolution policy**: on `412 Precondition Failed`, the
     caller chooses one of `:fail | :keep_server | :keep_local` via
     `:conflict_resolution` in `opts`. See `ConflictResolution` for the
@@ -157,7 +157,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   # The ETag is genuinely optional. RFC 4791 §5.3.4 only says a server SHOULD
   # return one, and a server that normalised the submitted document must not,
   # so its absence is an ordinary create: the update path still falls back to
-  # a HEAD probe and then to `If-Match: *` exactly as it did before.
+  # the probe (HEAD, then GET) and then to `If-Match: *`.
   defp created_event(uid, calendar_path, url, headers) do
     CreatedEvent.new(uid,
       provider_event_id: href_path(url),
@@ -179,7 +179,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   Uses a conditional `If-Match` write to prevent lost updates when two
   parties edit the same event concurrently. The caller should supply the
   cached ETag via `opts[:etag]`; when absent, the function falls back to a
-  HEAD probe, and finally to `If-Match: *` if HEAD also fails.
+  HEAD probe, then a GET, and finally to `If-Match: *` if neither finds one.
 
   ## Patched versus rebuilt
 
@@ -194,6 +194,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   An event with no `:raw_ical` is **rebuilt**, which is the right writer for a
   booking Tymeslot authored and the only one available before the first sync.
 
+  A patched write replaces the event's `VALARM`s with the payload's
+  `:reminders`, unless the payload sets `keep_stored_alarms: true`, as a
+  booking update does (see `CalDAV.BookingDocument`): then the stored alarms
+  stay, and only a rebuild writes `:reminders`.
+
   A patched write is only ever applied to a document whose ETag we hold: the
   cached pair when the caller supplies both, otherwise the server's current
   copy, read first. A rejected precondition re-reads the event and patches
@@ -205,6 +210,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
           :ok | {:error, Base.error_reason()}
   def update_calendar_event(client, calendar_path, uid, event_data, opts) do
     policy = Keyword.get(opts, :conflict_resolution, ConflictResolution.default())
+    opts = ConditionalWrite.with_deadline(opts)
 
     if ConflictResolution.valid?(policy) do
       with_events_breaker(client, opts, fn ->
@@ -264,7 +270,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
         ical_data = document_to_put(client, raw_ical, uid, event_data)
         ConditionalWrite.put(client, url, ical_data, etag, policy, opts)
 
-      {:error, :not_found} ->
+      # Gone as absent (`:not_found` from a 404, `:gone` from a 410), as
+      # `ConditionalWrite` takes it: the rebuild is what recreates an event
+      # the organiser deleted in their own client.
+      {:error, reason} when reason in [:not_found, :gone] ->
         rebuild_and_put(client, url, uid, event_data, policy, opts)
 
       {:error, reason} ->
@@ -300,11 +309,24 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   # full instead.
   defp document_to_put(client, raw_ical, uid, event_data) do
     if String.contains?(raw_ical, "BEGIN:VEVENT") do
-      ICalBuilder.patch_event_properties(raw_ical, event_data, Scheduling.attendee_mode(client))
+      ICalBuilder.patch_event_properties(
+        raw_ical,
+        patch_payload(event_data),
+        Scheduling.attendee_mode(client)
+      )
     else
       rebuild_document(client, uid, event_data)
     end
   end
+
+  # The patcher replaces every `VALARM` whenever `:reminders` is present, so a
+  # payload that must leave the stored alarms alone drops the key here, and
+  # only here: a rebuild has no alarms of its own to keep and still writes
+  # the payload's.
+  defp patch_payload(%{keep_stored_alarms: true} = event_data),
+    do: Map.delete(event_data, :reminders)
+
+  defp patch_payload(event_data), do: event_data
 
   defp rebuild_document(client, uid, event_data) do
     ICalBuilder.build_simple_event(
@@ -343,6 +365,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
 
   defp do_update_event_colour(client, calendar_path, uid, colour, raw_ical, opts) do
     policy = Keyword.get(opts, :conflict_resolution, ConflictResolution.default())
+    opts = ConditionalWrite.with_deadline(opts)
 
     if ConflictResolution.valid?(policy) do
       with_events_breaker(client, opts, fn ->

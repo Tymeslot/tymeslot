@@ -91,6 +91,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
   end
 
   def render(:guest, guest_email, appointment_details) do
+    appointment_details = TemplateHelper.as_guest_view(appointment_details)
+
     # Guests inherit the booker's locale, as their invitation does.
     locale = Map.get(appointment_details, :attendee_locale, "en")
 
@@ -105,7 +107,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
         location: appointment_details.location,
         location_type: Map.get(appointment_details, :location_type),
         meeting_type: appointment_details.meeting_type,
-        timezone: Map.get(appointment_details, :attendee_timezone)
+        timezone: Map.get(appointment_details, :attendee_timezone),
+        audience: :guest
       }
 
       intro_copy =

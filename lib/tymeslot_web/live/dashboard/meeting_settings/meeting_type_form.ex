@@ -33,6 +33,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   # - type: existing meeting type or nil
   # - is_edit: whether we are editing
   # - video_integrations: list for selection
+  # - venues: the organiser's saved venues, for in-person locations
   # - parent_myself: phx-target for parent events (submit/cancel)
   # - saving: parent's saving state to control the button disabled state
   # - current_user: used for security metadata in validation
@@ -45,6 +46,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:form_data, %{})
      |> assign(:selected_icon, "none")
      |> assign(:locations, [])
+     |> assign(:venues, [])
      |> assign(:selected_calendar_integration_id, nil)
      |> assign(:selected_target_calendar_id, nil)
      |> assign(:selected_availability_schedule_id, nil)

@@ -279,6 +279,29 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
     end
   end
 
+  describe "perform/1 - update the provider cannot apply" do
+    # Issue #158: iCloud reported the event missing to the update while the
+    # recovery create found it present, and the job finished as a success
+    # with the event never moved.
+    test "fails the job rather than counting a contradicted absence as done" do
+      %{meeting: meeting} = setup_calendar_scenario()
+
+      expect(Tymeslot.CalendarMock, :update_event, 2, fn _uid, _data, _ctx ->
+        {:error, :not_found}
+      end)
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _data, _ctx ->
+        {:error, :precondition_failed}
+      end)
+
+      assert {:error, :calendar_event_not_updatable} =
+               perform_job(CalendarEventWorker, %{
+                 "action" => "update",
+                 "meeting_id" => meeting.id
+               })
+    end
+  end
+
   describe "perform/1 - delete action" do
     # Deletion is only ever scheduled once the meeting's slot has already
     # been voided (cancellation, or a pending reschedule request) — mirror

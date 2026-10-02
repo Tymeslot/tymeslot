@@ -1364,6 +1364,16 @@ msgstr "Něco se pokazilo"
 msgid "This page could not be loaded. Please try again."
 msgstr "Tuto stránku se nepodařilo načíst. Zkuste to prosím znovu."
 
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "The address will be arranged with you after booking."
+msgstr "Adresu s vámi domluvíme po rezervaci."
+
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "Which location?"
+msgstr "Které místo?"
+
 #: lib/tymeslot_web/themes/shared/components/seat_badge.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} seat left"

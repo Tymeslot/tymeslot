@@ -99,4 +99,47 @@ defmodule TymeslotWeb.Components.CoreComponentsModalTest do
     assert html =~ ~s(role="dialog")
     refute html =~ "aria-labelledby"
   end
+
+  describe "subtitle" do
+    test "sits in the header under the title and describes the dialog" do
+      html =
+        render_component(
+          fn assigns ->
+            ~H"""
+            <Modal.modal id="sub-modal" show>
+              <:header>Add location</:header>
+              <:subtitle>A place you meet people.</:subtitle>
+              Body
+            </Modal.modal>
+            """
+          end,
+          %{}
+        )
+
+      header = html |> LazyHTML.from_fragment() |> LazyHTML.query(".modal-header")
+
+      assert header |> LazyHTML.query("#sub-modal-subtitle") |> LazyHTML.text() |> String.trim() ==
+               "A place you meet people."
+
+      assert html =~ ~s(aria-describedby="sub-modal-subtitle")
+    end
+
+    test "is left out, with no aria-describedby, when not given" do
+      html =
+        render_component(
+          fn assigns ->
+            ~H"""
+            <Modal.modal id="plain-modal" show>
+              <:header>Add location</:header>
+              Body
+            </Modal.modal>
+            """
+          end,
+          %{}
+        )
+
+      refute html =~ "plain-modal-subtitle"
+      refute html =~ "aria-describedby"
+    end
+  end
 end

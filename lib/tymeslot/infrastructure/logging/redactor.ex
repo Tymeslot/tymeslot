@@ -10,6 +10,9 @@ defmodule Tymeslot.Infrastructure.Logging.Redactor do
   # diagnosis and carry no secret, so only the key names that do are listed.
   @secret_name "[a-z0-9_]*(?:secret|token|password|passcode|api_?key|private_key|encryption_key|signing_key)[a-z0-9_]*"
 
+  # Error reports stored before a change here keep the old masking until
+  # they are masked again: bump `ReasonScrubber`'s `@rules_version` with any
+  # change to these patterns or to `@secret_name`.
   @sensitive_patterns [
     {~r/Bearer\s+[a-zA-Z0-9\-\._~+\/]+=*/i, "Bearer [REDACTED]"},
     {~r/Basic\s+[a-zA-Z0-9\-\._~+\/]+=*/i, "Basic [REDACTED]"},

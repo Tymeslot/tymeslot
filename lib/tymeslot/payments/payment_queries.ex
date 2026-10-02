@@ -159,6 +159,18 @@ defmodule Tymeslot.Payments.PaymentQueries do
   end
 
   @doc """
+  Deletes the payment transactions of deleted hosts whose statutory retention
+  period has ended: every row anonymised by `anonymise_for_host/2` and created
+  before `cutoff`.
+  """
+  @spec delete_retained_before(DateTime.t()) :: {non_neg_integer(), nil}
+  def delete_retained_before(%DateTime{} = cutoff) do
+    PaymentTransaction
+    |> where([t], not is_nil(t.host_deleted_at) and t.inserted_at < ^cutoff)
+    |> Repo.delete_all()
+  end
+
+  @doc """
   Anonymises payment transactions for a deleted host.
 
   Snapshots the host's identity (email and name) from the `users` row into the

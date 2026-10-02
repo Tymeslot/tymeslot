@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   import TymeslotWeb.Components.PaymentHelpers, only: [format_amount: 2]
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.LocationOption
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Components.UI.StatusSwitch
@@ -18,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   attr :myself, :any, required: true
   attr :currency, :string, default: "eur"
   attr :icon_size, :string, default: "mini", values: ["compact", "medium", "large", "mini"]
+  attr :venues, :list, default: [], doc: "the organiser's saved venues, to name them"
 
   @spec meeting_type_card(map()) :: Phoenix.LiveView.Rendered.t()
   def meeting_type_card(assigns) do
@@ -89,7 +91,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
                 {format_amount(@type.price_cents, @currency)}
               </span>
             <% end %>
-            <.location_summary type={@type} icon_size={@icon_size} />
+            <.location_summary type={@type} icon_size={@icon_size} venues={@venues} />
             <%= if @type.calendar_integration do %>
               <span class="flex items-center min-w-0">
                 <span class="mr-1.5 shrink-0">
@@ -229,6 +231,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   # single line of metadata.
   attr :type, :map, required: true
   attr :icon_size, :string, required: true
+  attr :venues, :list, required: true
 
   defp location_summary(assigns) do
     assigns = assign(assigns, :locations, MeetingTypes.location_options(assigns.type))
@@ -261,10 +264,34 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
           class="w-3.5 h-3.5 text-tymeslot-500"
         />
       </span>
-      <span class="truncate max-w-[10rem]">{hd(@locations).label}</span>
+      <span class="truncate max-w-[10rem]">{single_label(hd(@locations), @venues)}</span>
     </span>
     """
   end
+
+  # A single in-person location reads as where the meeting is: its one saved
+  # venue by name, or how many the booker picks between. Venue ids no longer
+  # in the library are ignored, so a deleted venue never shows; with none left
+  # the location's own label stands.
+  defp single_label(%LocationOption{kind: "in_person", venue_ids: ids} = location, venues) do
+    case Enum.filter(venues, &(&1.id in ids)) do
+      [] ->
+        location.label
+
+      [venue] ->
+        venue.name
+
+      several ->
+        dngettext(
+          "dashboard_meeting_types",
+          "%{count} location",
+          "%{count} locations",
+          length(several)
+        )
+    end
+  end
+
+  defp single_label(location, _venues), do: location.label
 
   # The provider whose mark a video location shows, or nil for a location
   # that is not a video call (or whose integration has since been deleted,

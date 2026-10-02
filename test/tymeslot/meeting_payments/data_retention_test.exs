@@ -6,8 +6,17 @@ defmodule Tymeslot.MeetingPayments.DataRetentionTest do
 
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.DataRetention
+  alias Tymeslot.Payments.PaymentTransactionSchema
   alias Tymeslot.Payments.SubscriptionInvoiceQueries
   alias Tymeslot.Payments.SubscriptionInvoiceSchema
+
+  # The default period is ten years from the end of the calendar year, so the
+  # records of 2026 are the last ones kept on 31 December 2036 and the first
+  # ones past their period on 1 January 2037.
+  @last_day_kept ~U[2036-12-31 23:59:59Z]
+  @first_day_purged ~U[2037-01-01 00:00:00Z]
+  @end_of_2026 ~U[2026-12-31 23:59:59Z]
+  @start_of_2027 ~U[2027-01-01 00:00:00Z]
 
   describe "anonymise_host/1" do
     test "scrubs attendee PII, retains host PII, soft-deletes connect, touches both tables" do
@@ -148,5 +157,162 @@ defmodule Tymeslot.MeetingPayments.DataRetentionTest do
       assert reloaded.hosted_invoice_url == "https://invoice.stripe.com/i/anonymise"
       assert reloaded.invoice_pdf_url == "https://pay.stripe.com/invoice/anonymise/pdf"
     end
+  end
+
+  describe "retention_cutoff/3" do
+    test "is the start of the calendar year that began ten years ago, by default" do
+      assert DataRetention.retention_cutoff(~D[2036-12-31]) == ~U[2026-01-01 00:00:00Z]
+      assert DataRetention.retention_cutoff(~D[2037-01-01]) == ~U[2027-01-01 00:00:00Z]
+      assert DataRetention.retention_cutoff(~D[2037-12-31]) == ~U[2027-01-01 00:00:00Z]
+    end
+
+    test "follows a financial year that starts mid-year" do
+      # An April-to-March year, kept seven years: the year ending 31 March
+      # 2027 closes seven years later on 31 March 2034.
+      assert DataRetention.retention_cutoff(~D[2034-03-31], 7, 4) == ~U[2026-04-01 00:00:00Z]
+      assert DataRetention.retention_cutoff(~D[2034-04-01], 7, 4) == ~U[2027-04-01 00:00:00Z]
+    end
+
+    test "handles a leap day" do
+      assert DataRetention.retention_cutoff(~D[2036-02-29]) == ~U[2026-01-01 00:00:00Z]
+    end
+  end
+
+  describe "purge_expired/1 for deleted hosts" do
+    test "deletes a booking payment once the year it was paid in closed ten years ago" do
+      expired = retained_booking_payment(paid_at: @end_of_2026)
+      current = retained_booking_payment(paid_at: @start_of_2027)
+
+      assert {:ok, %{booking_payments_deleted: 1}} =
+               DataRetention.purge_expired(@first_day_purged)
+
+      refute Repo.reload(expired)
+      assert Repo.reload(current)
+    end
+
+    test "counts from the end of the year, so January and December rows expire together" do
+      january = retained_booking_payment(paid_at: ~U[2026-01-03 10:00:00Z])
+      december = retained_booking_payment(paid_at: ~U[2026-12-30 10:00:00Z])
+
+      assert {:ok, %{booking_payments_deleted: 0}} = DataRetention.purge_expired(@last_day_kept)
+      assert Repo.reload(january)
+      assert Repo.reload(december)
+
+      assert {:ok, %{booking_payments_deleted: 2}} =
+               DataRetention.purge_expired(@first_day_purged)
+
+      refute Repo.reload(january)
+      refute Repo.reload(december)
+    end
+
+    test "dates a never-paid booking payment by when it was created" do
+      unpaid = retained_booking_payment(paid_at: nil, inserted_at: @end_of_2026)
+
+      assert {:ok, _counts} = DataRetention.purge_expired(@first_day_purged)
+
+      refute Repo.reload(unpaid)
+    end
+
+    test "deletes a payment transaction once its year closed ten years ago" do
+      expired = retained_transaction(@end_of_2026)
+      current = retained_transaction(@start_of_2027)
+
+      assert {:ok, %{payment_transactions_deleted: 1}} =
+               DataRetention.purge_expired(@first_day_purged)
+
+      refute Repo.get(PaymentTransactionSchema, expired.id)
+      assert Repo.get(PaymentTransactionSchema, current.id)
+    end
+
+    test "deletes a captured invoice once the year it was issued in closed ten years ago" do
+      expired = retained_invoice(issued_at: @end_of_2026)
+      current = retained_invoice(issued_at: @start_of_2027)
+      undated = retained_invoice(issued_at: nil, inserted_at: @end_of_2026)
+
+      assert {:ok, %{subscription_invoices_deleted: 2}} =
+               DataRetention.purge_expired(@first_day_purged)
+
+      refute Repo.get(SubscriptionInvoiceSchema, expired.id)
+      refute Repo.get(SubscriptionInvoiceSchema, undated.id)
+      assert Repo.get(SubscriptionInvoiceSchema, current.id)
+    end
+  end
+
+  describe "purge_expired/1 for hosts who still exist" do
+    test "scrubs the attendee from an expired booking payment but keeps the row" do
+      user = insert(:user)
+
+      expired =
+        insert(:paid_booking_payment,
+          host_user_id: user.id,
+          host_email: "host@example.com",
+          paid_at: @end_of_2026
+        )
+
+      current = insert(:paid_booking_payment, host_user_id: user.id, paid_at: @start_of_2027)
+
+      assert {:ok, %{booking_payment_attendees_scrubbed: 1, booking_payments_deleted: 0}} =
+               DataRetention.purge_expired(@first_day_purged)
+
+      scrubbed = Repo.reload(expired)
+      assert is_nil(scrubbed.attendee_email)
+      assert is_nil(scrubbed.attendee_name)
+      assert scrubbed.host_email == "host@example.com"
+      assert scrubbed.amount_cents == expired.amount_cents
+
+      untouched = Repo.reload(current)
+      assert untouched.attendee_email == current.attendee_email
+      assert untouched.attendee_name == current.attendee_name
+    end
+
+    test "keeps an existing account's payment transactions and invoices, however old" do
+      user = insert(:user)
+
+      transaction =
+        insert(:payment_transaction, user: user, inserted_at: ~U[2015-03-01 00:00:00Z])
+
+      invoice =
+        Repo.insert!(%SubscriptionInvoiceSchema{
+          stripe_invoice_id: "in_live_host",
+          user_id: user.id,
+          issued_at: ~U[2015-03-01 00:00:00Z]
+        })
+
+      assert {:ok, %{payment_transactions_deleted: 0, subscription_invoices_deleted: 0}} =
+               DataRetention.purge_expired(@first_day_purged)
+
+      assert Repo.get(PaymentTransactionSchema, transaction.id)
+      assert Repo.get(SubscriptionInvoiceSchema, invoice.id)
+    end
+  end
+
+  # A booking payment as `anonymise_host/1` leaves it.
+  defp retained_booking_payment(fields) do
+    insert(
+      :paid_booking_payment,
+      [attendee_email: nil, attendee_name: nil, host_deleted_at: ~U[2030-05-01 00:00:00Z]] ++
+        fields
+    )
+  end
+
+  defp retained_transaction(inserted_at) do
+    insert(:payment_transaction,
+      user: nil,
+      host_email: "gone@example.com",
+      host_deleted_at: ~U[2030-05-01 00:00:00Z],
+      inserted_at: inserted_at
+    )
+  end
+
+  defp retained_invoice(fields) do
+    Repo.insert!(
+      struct!(
+        SubscriptionInvoiceSchema,
+        [
+          stripe_invoice_id: "in_#{System.unique_integer([:positive])}",
+          host_deleted_at: ~U[2030-05-01 00:00:00Z]
+        ] ++ fields
+      )
+    )
   end
 end

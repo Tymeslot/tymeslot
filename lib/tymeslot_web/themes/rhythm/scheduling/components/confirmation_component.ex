@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
   alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
+  alias TymeslotWeb.Themes.Shared.Components.LocationField
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   @impl Phoenix.LiveComponent
@@ -148,6 +149,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                     <div class="ticket-info">
                       <span class="ticket-value">{BookingLocation.chosen_display(assigns)}</span>
                       <span class="ticket-sublabel">{dgettext("booking", "Location")}</span>
+                      <LocationField.arranged_note :if={
+                        BookingLocation.arranged_after_booking?(assigns)
+                      } />
                     </div>
                   </div>
 

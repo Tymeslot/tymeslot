@@ -354,6 +354,45 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalEmailsTest do
     end
   end
 
+  # The stored title is the organiser's calendar event title, in their
+  # language. The invitee reads it in theirs.
+  describe "the booking's title in the invitee's language" do
+    defp german_hosted(attrs) do
+      meeting(Map.merge(%{title: "Strategy call mit Alex Guest", attendee_locale: "fr"}, attrs))
+    end
+
+    test "the acknowledgement's subject names the booking in the invitee's language" do
+      email = BookingRequestReceived.render(german_hosted(%{}))
+
+      assert email.subject =~ "Strategy call avec Alex Guest"
+      refute email.subject =~ "mit"
+    end
+
+    test "the outcome's subject names the booking in the invitee's language" do
+      email = BookingRequestOutcome.render(:declined, german_hosted(%{}))
+
+      assert email.subject =~ "Strategy call avec Alex Guest"
+    end
+
+    test "the calendar cancellation carries the title in the language it is tagged with" do
+      email =
+        BookingRequestOutcome.render(
+          :expired,
+          german_hosted(%{first_announced_at: ~U[2026-08-20 10:00:00Z], ical_sequence: 2})
+        )
+
+      ics = Enum.find(email.attachments, &calendar_attachment?/1)
+
+      assert ics.data =~ "SUMMARY;LANGUAGE=fr:Strategy call avec Alex Guest"
+    end
+
+    test "a title the organiser wrote is not rebuilt" do
+      email = BookingRequestReceived.render(german_hosted(%{title: "Q4 planning"}))
+
+      assert email.subject =~ "Q4 planning"
+    end
+  end
+
   describe "held-request location classification" do
     test "a held video request shows Video Call rather than TBD" do
       # `location` and `meeting_url` are both nil on a held request — the
@@ -417,6 +456,41 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalEmailsTest do
       assert html =~ "withdraw your request"
       refute html =~ "javascript:alert(1)"
       assert html =~ ~s(href="#")
+    end
+  end
+
+  describe "an in-person meeting whose address is arranged after booking" do
+    @note "The address will be arranged with you after booking."
+    @host_note "The address is to be arranged with the booker."
+
+    defp to_arrange,
+      do: meeting(%{location_kind: "in_person", address_to_arrange: true, location: "In person"})
+
+    test "each email to the booker notes it under the location, in HTML and text" do
+      for email <- [
+            BookingRequestReceived.render(to_arrange()),
+            BookingRequestOutcome.render(:declined, to_arrange())
+          ] do
+        assert email.html_body =~ @note
+        assert email.text_body =~ "Location: In person\n#{@note}"
+        refute email.html_body =~ @host_note
+        refute email.text_body =~ @host_note
+      end
+    end
+
+    test "the approval request tells the host to arrange it with the booker" do
+      email = BookingApprovalRequest.render(:request, to_arrange(), @urls, "en")
+
+      assert email.html_body =~ @host_note
+      assert email.text_body =~ "Location: In person\n#{@host_note}"
+      refute email.html_body =~ @note
+      refute email.text_body =~ @note
+    end
+
+    test "a meeting at a saved venue carries no note" do
+      at_venue = meeting(%{location_kind: "in_person", venue_id: 7, location: "Office"})
+
+      refute BookingRequestReceived.render(at_venue).text_body =~ @note
     end
   end
 end

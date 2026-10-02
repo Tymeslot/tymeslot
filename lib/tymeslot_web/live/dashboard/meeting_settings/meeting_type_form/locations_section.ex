@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
   alias Ecto.UUID
   alias Phoenix.LiveView
   alias Tymeslot.MeetingTypes.LocationOption
+  alias Tymeslot.Venues
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
   alias TymeslotWeb.Helpers.LocationIcons
@@ -93,7 +94,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
                 {location.label}
               </span>
               <span class="text-token-xs text-tymeslot-500 truncate block">
-                {summary(location, @video_integrations)}
+                {summary(location, @video_integrations, @venues)}
               </span>
             </div>
 
@@ -226,8 +227,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
 
   # The second line of a row: enough to tell two similar options apart at a
   # glance, which for a video option with one provider is the account the
-  # room lands on, and with several, the providers the booker picks between.
-  defp summary(%LocationOption{kind: "video"} = location, video_integrations) do
+  # room lands on, with several the providers the booker picks between, and
+  # for an in-person option its venue, its venues, or the fact that the
+  # address comes later.
+  defp summary(%LocationOption{kind: "video"} = location, video_integrations, _venues) do
     case Enum.filter(video_integrations, &(&1.id in location.video_integration_ids)) do
       [] ->
         dgettext("dashboard_meeting_form", "Video call: integration no longer available")
@@ -244,18 +247,32 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
     end
   end
 
-  defp summary(%LocationOption{kind: "phone", collect_from_guest: true}, _integrations),
+  defp summary(%LocationOption{kind: "in_person", venue_ids: ids}, _integrations, venues) do
+    # `venues` is the library, already in the organiser's order.
+    case Enum.filter(venues, &(&1.id in ids)) do
+      [] ->
+        dgettext("dashboard_meeting_form", "Address arranged after booking")
+
+      [venue] ->
+        Venues.display(venue)
+
+      several ->
+        dgettext("dashboard_meeting_form", "The booker picks: %{providers}",
+          providers: Enum.map_join(several, ", ", & &1.name)
+        )
+    end
+  end
+
+  defp summary(%LocationOption{kind: "phone", collect_from_guest: true}, _integrations, _venues),
     do: dgettext("dashboard_meeting_form", "Phone call: the booker gives their number")
 
-  defp summary(%LocationOption{details: details}, _integrations)
+  defp summary(%LocationOption{details: details}, _integrations, _venues)
        when is_binary(details) and details != "",
        do: details
 
-  defp summary(%LocationOption{kind: "phone"}, _integrations),
+  defp summary(%LocationOption{kind: "phone"}, _integrations, _venues),
     do: dgettext("dashboard_meeting_form", "Phone call")
 
-  defp summary(%LocationOption{kind: "in_person"}, _integrations),
-    do: dgettext("dashboard_meeting_form", "In person")
-
-  defp summary(_location, _integrations), do: dgettext("dashboard_meeting_form", "No details")
+  defp summary(_location, _integrations, _venues),
+    do: dgettext("dashboard_meeting_form", "No details")
 end

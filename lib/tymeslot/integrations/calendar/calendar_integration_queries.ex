@@ -613,7 +613,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
           {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def update_sync_state(integration, attrs) when is_map(attrs) do
     integration
-    |> Changeset.change(attrs)
+    |> CalendarIntegrationSchema.bookkeeping_changeset(attrs)
     |> Repo.update()
   end
 end

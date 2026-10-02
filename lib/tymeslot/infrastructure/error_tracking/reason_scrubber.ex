@@ -40,6 +40,13 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber do
   @event [:error_tracker, :occurrence, :new]
   @rescrub_batch_size 500
 
+  # The version of what `scrub/1` masks. Bump it whenever that changes: a
+  # pattern in `Tymeslot.Infrastructure.Logging.Redactor` or the email
+  # pattern in `PIIScrubber`. The next boot then masks every reason already
+  # stored under the new rules, once (see
+  # `Tymeslot.Workers.ErrorTrackerMaintenanceWorker.enqueue_full_remask/0`).
+  @rules_version 1
+
   @doc """
   Attaches the telemetry handler. Idempotent, so safe to call on
   application restart inside the same BEAM.
@@ -49,6 +56,13 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber do
     _detached = :telemetry.detach(@handler_id)
     :telemetry.attach(@handler_id, @event, &__MODULE__.handle_event/4, nil)
   end
+
+  @doc """
+  The version of the masking rules `scrub/1` applies, raised whenever they
+  change so that every stored reason is masked again under the new ones.
+  """
+  @spec rules_version() :: pos_integer()
+  def rules_version, do: @rules_version
 
   @doc "Masks email addresses and credentials in `text`."
   @spec scrub(String.t()) :: String.t()

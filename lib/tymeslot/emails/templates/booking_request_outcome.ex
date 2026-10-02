@@ -25,6 +25,8 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
 
   import Swoosh.Email
 
+  alias Tymeslot.Bookings.BookingTitle
+
   alias Tymeslot.Emails.Shared.{
     Buttons,
     Formatting,
@@ -34,6 +36,7 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
     Styles,
     TemplateHelper,
     Text,
+    TextBodyHelper,
     TimezoneHelper,
     Urls
   }
@@ -51,6 +54,10 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
     locale = meeting.attendee_locale || "en"
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+      # The stored title is in the organiser's language; the booker reads it in
+      # theirs.
+      meeting = %{meeting | title: BookingTitle.localise(meeting)}
+
       kind = if rescheduled?(meeting), do: :reschedule, else: :booking
       attendee_time = TimezoneHelper.convert_to_attendee_timezone(meeting)
       details = meeting_details(meeting, attendee_time)
@@ -263,7 +270,7 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
     #{dgettext("emails_booking_requests", "REQUESTED TIME:")}
     #{dgettext("emails_booking_requests", "Date:")} #{Formatting.format_date_short(details.date, locale)}
     #{dgettext("emails_booking_requests", "Duration:")} #{Formatting.format_duration(details.duration, locale)}
-    #{dgettext("emails_booking_requests", "Location:")} #{Formatting.format_location(details)}
+    #{dgettext("emails_booking_requests", "Location:")} #{Formatting.format_location(details)}#{TextBodyHelper.location_note_line(details)}
     #{dgettext("emails_booking_requests", "Type:")} #{details.meeting_type}
     #{dgettext("emails_booking_requests", "Timezone:")} #{details.timezone}
     #{text_reason(outcome, meeting)}

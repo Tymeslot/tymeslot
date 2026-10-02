@@ -51,6 +51,7 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.{CalendarManagement, CalendarPrimary}
   alias Tymeslot.Integrations.Providers.Directory
   alias Tymeslot.Integrations.Shared.InputValidators
+  alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Workers.SyncIcsCalendarWorker
 
   @type user_id :: pos_integer()
@@ -69,7 +70,8 @@ defmodule Tymeslot.Integrations.Calendar do
   def encrypted_storage,
     do:
       {CalendarIntegrationSchema.__schema__(:source),
-       CalendarIntegrationSchema.encrypted_credential_fields()}
+       CalendarIntegrationSchema.encrypted_credential_fields() ++
+         EncryptedString.columns(CalendarIntegrationSchema)}
 
   # ---------------------------
   # Public API: Listing/CRUD
@@ -284,21 +286,6 @@ defmodule Tymeslot.Integrations.Calendar do
           optional(atom()) => term()
         }) :: {:ok, CalendarEntry.t()} | {:read_only, CalendarEntry.t()} | :none
   defdelegate booking_target(integration), to: Defaults
-
-  @doc """
-  Finds the calendar entry with the given id. See
-  `Tymeslot.Integrations.Calendar.Selection.find_calendar_by_id/2`.
-  """
-  @spec find_calendar_by_id([CalendarEntry.t()], String.t() | nil) :: CalendarEntry.t() | nil
-  defdelegate find_calendar_by_id(calendar_list, id), to: Selection
-
-  @doc """
-  Finds the calendar entry whose `path` is a prefix of the given
-  provider-side identifier. See
-  `Tymeslot.Integrations.Calendar.Selection.find_calendar_by_path/2`.
-  """
-  @spec find_calendar_by_path([CalendarEntry.t()], String.t() | nil) :: CalendarEntry.t() | nil
-  defdelegate find_calendar_by_path(calendar_list, path), to: Selection
 
   @doc """
   Resolves the calendar entry an event was synced from. See
