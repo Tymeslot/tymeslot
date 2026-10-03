@@ -185,11 +185,14 @@
   }
 
   /* On touch screens, stretch the hit area of the compact controls (icon
-     buttons and small action buttons) to at least 44px around the visual tile,
-     without changing its size or the layout around it. */
+     buttons, small action buttons, the status switch and the check toggle) to
+     at least 44px around the visual tile, without changing its size or the
+     layout around it. Each host is `position: relative`. */
   @media (pointer: coarse) {
     .icon-button::before,
-    .action-button--sm::before {
+    .action-button--sm::before,
+    .status-toggle::before,
+    .check-toggle::before {
       content: "";
       position: absolute;
       top: 50%;

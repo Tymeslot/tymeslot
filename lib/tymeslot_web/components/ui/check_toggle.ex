@@ -35,13 +35,16 @@ defmodule TymeslotWeb.Components.UI.CheckToggle do
       role="checkbox"
       aria-checked={to_string(@checked)}
       aria-label={@label}
-      class={[
-        "shrink-0 flex items-center justify-center rounded-token-md border-2 transition-colors",
-        size_class(@size),
-        state_class(@checked),
-        disabled_class(@disabled),
-        @class
-      ]}
+      class={
+        [
+          # `check-toggle` widens the hit area on touch screens (buttons.css).
+          "check-toggle relative shrink-0 flex items-center justify-center rounded-token-md border-2 transition-colors",
+          size_class(@size),
+          state_class(@checked),
+          disabled_class(@disabled),
+          @class
+        ]
+      }
       id={@id}
     >
       <Icons.icon name="hero-check" class={icon_size_class(@size)} />
