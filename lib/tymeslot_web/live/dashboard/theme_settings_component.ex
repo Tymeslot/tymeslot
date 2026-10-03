@@ -174,30 +174,6 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
             id="booking-text-form"
             profile={@profile}
           />
-
-          <div class="mt-16 bg-tymeslot-50 border-2 border-dashed border-tymeslot-200 rounded-token-3xl p-8 relative overflow-hidden group">
-            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform duration-700">
-              <.icon name="hero-star-solid" class="w-32 h-32 text-tymeslot-900" />
-            </div>
-            <div class="relative z-10">
-              <h2 class="mb-2 text-token-lg font-semibold text-tymeslot-900">
-                {dgettext("dashboard_appearance", "More Styles Coming Soon")}
-              </h2>
-              <p class="text-tymeslot-500 font-medium text-token-lg mb-6">
-                {dgettext(
-                  "dashboard_appearance",
-                  "Our design team is busy crafting new themes to help you express your unique professional style."
-                )}
-              </p>
-              <div class="flex gap-2">
-                <div class="w-2 h-2 bg-turquoise-400 rounded-token-full animate-bounce"></div>
-                <div class="w-2 h-2 bg-turquoise-400 rounded-token-full animate-bounce [animation-delay:0.2s]">
-                </div>
-                <div class="w-2 h-2 bg-turquoise-400 rounded-token-full animate-bounce [animation-delay:0.4s]">
-                </div>
-              </div>
-            </div>
-          </div>
         <% end %>
       </.dashboard_page>
     </div>

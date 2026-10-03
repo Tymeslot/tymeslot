@@ -39,6 +39,15 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
       assert render(view) =~ "Your upcoming appointments will appear here automatically"
     end
 
+    test "ends at the meetings list, with no feature-tour panel below it", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+      html = render(view)
+      assert html =~ "No upcoming meetings"
+      refute html =~ "Meeting Management"
+      refute html =~ "Manage all your scheduled meetings in one place"
+    end
+
     test "shows empty state for the past filter when no past meetings exist", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
 

@@ -127,21 +127,11 @@ msgstr "Podgląd na żywo"
 msgid "MP4 or WebM. Max 20MB."
 msgstr "MP4 lub WebM. Maks. 20 MB."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "More Styles Coming Soon"
-msgstr "Wkrótce więcej stylów"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Or upload your own"
 msgstr "Możesz też przesłać własny plik"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Our design team is busy crafting new themes to help you express your unique professional style."
-msgstr "Nasz zespół projektowy pracuje nad nowymi motywami, które pomogą ci wyrazić swój niepowtarzalny styl zawodowy."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
 #, elixir-autogen, elixir-format

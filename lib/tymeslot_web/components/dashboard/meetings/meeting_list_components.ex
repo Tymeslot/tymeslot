@@ -6,7 +6,6 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Components.CoreComponents.Buttons
-  alias TymeslotWeb.Components.CoreComponents.Containers
   alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.CoreComponents.Navigation
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingCard
@@ -160,81 +159,4 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
         "dashboard_bookings",
         "Booking requests you haven't answered yet will appear here."
       )
-
-  @doc "Displays an informational panel about meeting management features."
-  @spec info_panel(map()) :: Phoenix.LiveView.Rendered.t()
-  def info_panel(assigns) do
-    ~H"""
-    <Containers.card padding={:lg} class="mt-12 relative overflow-hidden group/info">
-      <div class="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-turquoise-500/5 rounded-token-full blur-3xl transition-colors group-hover/info:bg-turquoise-500/10">
-      </div>
-
-      <div class="flex flex-col lg:flex-row gap-12 relative z-10">
-        <div class="flex-1">
-          <Containers.subsection_header
-            size={:lg}
-            level={2}
-            icon="hero-calendar-days"
-            title={dgettext("dashboard_bookings", "Meeting Management")}
-            class="mb-6"
-          />
-
-          <p class="text-tymeslot-500 font-bold text-lg leading-relaxed max-w-2xl mb-8">
-            {dgettext(
-              "dashboard_bookings",
-              "Manage all your scheduled meetings in one place. Filter by status and take quick actions on your appointments."
-            )}
-          </p>
-
-          <div class="flex flex-wrap gap-4">
-            <span class="inline-flex items-center gap-2 px-4 py-2 bg-tymeslot-50 text-tymeslot-600 rounded-token-xl text-token-sm font-black border border-tymeslot-100 shadow-sm">
-              <div class="w-2 h-2 rounded-token-full bg-turquoise-500"></div>
-              {dgettext("dashboard_bookings", "Real-time updates")}
-            </span>
-            <span class="inline-flex items-center gap-2 px-4 py-2 bg-tymeslot-50 text-tymeslot-600 rounded-token-xl text-token-sm font-black border border-tymeslot-100 shadow-sm">
-              <div class="w-2 h-2 rounded-token-full bg-cyan-500"></div>
-              {dgettext("dashboard_bookings", "Auto-notifications")}
-            </span>
-          </div>
-        </div>
-
-        <div class="lg:w-80 space-y-4">
-          <.info_card
-            icon="hero-arrows-right-left"
-            title={dgettext("dashboard_bookings", "Reschedule")}
-            description={dgettext("dashboard_bookings", "Change meeting times")}
-            tone={:brand}
-          />
-          <.info_card
-            icon="hero-x-mark"
-            title={dgettext("dashboard_bookings", "Cancel")}
-            description={dgettext("dashboard_bookings", "With auto notifications")}
-            tone={:danger}
-          />
-          <.info_card
-            icon="hero-video-camera"
-            title={dgettext("dashboard_bookings", "Join Video")}
-            description={dgettext("dashboard_bookings", "Quick meeting access")}
-            tone={:info}
-          />
-        </div>
-      </div>
-    </Containers.card>
-    """
-  end
-
-  attr :icon, :string, required: true
-  attr :title, :string, required: true
-  attr :description, :string, required: true
-  attr :tone, :atom, required: true
-
-  defp info_card(assigns) do
-    ~H"""
-    <div class="p-5 rounded-token-2xl bg-white border-2 border-tymeslot-50 shadow-sm hover:border-turquoise-100 transition-all hover:shadow-md">
-      <Containers.detail_line variant={:tile} tone={@tone} icon={@icon} label={@title}>
-        {@description}
-      </Containers.detail_line>
-    </div>
-    """
-  end
 end

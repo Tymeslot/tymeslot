@@ -46,13 +46,7 @@ msgstr "%{attendee_name} отримає електронний лист із п�
 msgid "Attendee Email"
 msgstr "Електронна пошта учасника"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Auto-notifications"
-msgstr "Автоматичні сповіщення"
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Скасувати"
@@ -77,11 +71,6 @@ msgstr "Скасовано"
 #, elixir-autogen, elixir-format
 msgid "Cancelling..."
 msgstr "Скасування..."
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Change meeting times"
-msgstr "Змінити час зустрічі"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_status_badge.ex
 #, elixir-autogen, elixir-format
@@ -143,11 +132,6 @@ msgstr "Повне повернення коштів."
 msgid "I understand the attendee will not receive a refund."
 msgstr "Я розумію, що учаснику не повернуть кошти."
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Join Video"
-msgstr "Приєднатися до відеодзвінка"
-
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Keep Meeting"
@@ -162,16 +146,6 @@ msgstr "Завантажити більше зустрічей"
 #, elixir-autogen, elixir-format
 msgid "Loading..."
 msgstr "Завантаження..."
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Manage all your scheduled meetings in one place. Filter by status and take quick actions on your appointments."
-msgstr "Керуйте всіма запланованими зустрічами в одному місці. Фільтруйте їх за статусом і швидко виконуйте потрібні дії."
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting Management"
-msgstr "Керування зустрічами"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
@@ -228,16 +202,6 @@ msgstr "Минулі"
 msgid "Processing..."
 msgstr "Обробка..."
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Quick meeting access"
-msgstr "Швидкий доступ до зустрічей"
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Real-time updates"
-msgstr "Оновлення в реальному часі"
-
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Refund amount exceeds the remaining refundable balance."
@@ -254,7 +218,6 @@ msgid "Refunds the remaining balance (%{amount})."
 msgstr "Повертає залишок коштів (%{amount})."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule"
 msgstr "Перенести"
@@ -338,11 +301,6 @@ msgstr "Відеодзвінок"
 #, elixir-autogen, elixir-format
 msgid "What happens next:"
 msgstr "Що буде далі:"
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "With auto notifications"
-msgstr "З автоматичними сповіщеннями"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format

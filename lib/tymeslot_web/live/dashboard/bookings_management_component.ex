@@ -409,10 +409,6 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
           loading_more={@loading_more}
           target={@myself}
         />
-
-        <div class="mt-16">
-          <MeetingListComponents.info_panel />
-        </div>
       </.dashboard_page>
 
       <Modals.booking_modals

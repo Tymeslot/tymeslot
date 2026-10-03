@@ -31,6 +31,15 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       end
     end
 
+    test "offers only the real themes, with no coming-soon teaser", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+
+      assert has_element?(view, "h2", "Quill")
+      html = render(view)
+      refute html =~ "More Styles Coming Soon"
+      refute html =~ "Our design team is busy crafting new themes"
+    end
+
     test "selects a theme and persists it", %{conn: conn, profile: profile} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
