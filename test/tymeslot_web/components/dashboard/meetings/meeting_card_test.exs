@@ -27,7 +27,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCardTest do
 
     doc = Floki.parse_fragment!(html)
 
-    assert doc |> Floki.find("h5") |> Floki.text() |> String.trim() == "Meeting Notes"
+    assert doc |> Floki.find("h3") |> Floki.text() |> String.trim() == "Meeting Notes"
     assert [_icon] = Floki.find(doc, "svg")
     assert Floki.text(doc) =~ "Bring the slides"
   end

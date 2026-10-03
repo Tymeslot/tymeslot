@@ -95,7 +95,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
                     </div>
 
                     <div class="absolute bottom-6 left-6 right-6 flex items-center justify-between">
-                      <h2 class="text-token-2xl font-black text-white tracking-tight drop-shadow-md">
+                      <h2 class="text-token-lg font-semibold text-white drop-shadow-md">
                         {theme_name}
                       </h2>
                       <%= if @profile.booking_theme == theme_id do %>
@@ -201,7 +201,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
               </svg>
             </div>
             <div class="relative z-10">
-              <h2 class="text-token-2xl font-black text-tymeslot-900 tracking-tight mb-2">
+              <h2 class="mb-2 text-token-lg font-semibold text-tymeslot-900">
                 {dgettext("dashboard_appearance", "More Styles Coming Soon")}
               </h2>
               <p class="text-tymeslot-500 font-medium text-token-lg mb-6">

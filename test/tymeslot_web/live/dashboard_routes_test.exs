@@ -121,9 +121,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
 
         assert [h1] = Floki.find(doc, "h1")
         assert squish(h1) == unquote(title)
-
-        assert [active | _labels] = Floki.find(doc, "nav a[aria-current=page] span")
-        assert squish(active) == unquote(title)
+        assert active_nav_label(doc) == unquote(title)
       end
     end
 
@@ -211,6 +209,48 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       |> render_click()
 
       assert has_element?(view, "#theme-background-video-form")
+    end
+  end
+
+  describe "page outline" do
+    # With something on every page, so the cards and list rows render too.
+    setup %{conn: conn} do
+      %{user: user} = context = setup_authenticated_user(conn)
+
+      insert(:meeting_type, user: user)
+      insert(:future_meeting, organizer_user: user, organizer_email: user.email)
+      insert(:video_integration, user: user)
+      insert(:calendar_integration, user: user)
+      insert(:venue, user: user)
+      insert(:webhook, user: user)
+      poll = insert(:poll, user: user)
+      insert(:poll_time_slot, poll: poll)
+
+      {:ok, context}
+    end
+
+    for {path, _title} <- @section_titles do
+      test "#{path} never skips a heading level", %{conn: conn} do
+        {:ok, view, _html} = live(conn, unquote(path))
+
+        levels =
+          view
+          |> render()
+          |> Floki.parse_document!()
+          # A dialog's title belongs to the dialog's own outline.
+          |> Floki.filter_out("[role=dialog]")
+          |> Floki.find("h1, h2, h3, h4, h5, h6")
+          |> Enum.map(fn {"h" <> level, _attrs, _children} -> String.to_integer(level) end)
+
+        assert [1 | _rest] = levels
+
+        skips =
+          levels
+          |> Enum.chunk_every(2, 1, :discard)
+          |> Enum.reject(fn [previous, next] -> next <= previous + 1 end)
+
+        assert skips == []
+      end
     end
   end
 
@@ -500,4 +540,14 @@ defmodule TymeslotWeb.DashboardRoutesTest do
   end
 
   defp squish(node), do: node |> Floki.text() |> String.split() |> Enum.join(" ")
+
+  # The current section's sidebar link, without the badges it may carry.
+  defp active_nav_label(doc) do
+    assert [link] = Floki.find(doc, "aside nav a[aria-current=page]")
+
+    link
+    |> Floki.filter_out(".dashboard-nav-notification")
+    |> Floki.filter_out("[data-testid$=pro-badge]")
+    |> squish()
+  end
 end

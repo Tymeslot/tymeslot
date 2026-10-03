@@ -53,9 +53,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
       <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-3 flex-wrap mb-6">
-            <h4 class="text-token-lg font-semibold text-tymeslot-900">
+            <h2 class="text-token-lg font-semibold text-tymeslot-900">
               {@meeting.attendee_name}
-            </h4>
+            </h2>
             <span
               :if={@meeting.attendee_company}
               class="text-token-sm font-bold text-tymeslot-400 bg-tymeslot-50 px-3 py-1 rounded-token-lg"
@@ -189,9 +189,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
           <div class="w-8 h-8 rounded-token-lg bg-white shadow-sm flex items-center justify-center shrink-0 border border-tymeslot-100">
             <Icons.icon name={@icon} class="w-4 h-4 text-tymeslot-400" />
           </div>
-          <h5 class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest">
+          <h3 class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest">
             {@title}
-          </h5>
+          </h3>
         </div>
         <span :if={@aside != []} class="text-token-sm font-bold text-tymeslot-500">
           {render_slot(@aside)}

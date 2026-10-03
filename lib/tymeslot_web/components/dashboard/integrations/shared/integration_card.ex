@@ -68,6 +68,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard d
   attr :tags, :list, default: [], doc: "Event names shown as chips"
   attr :notice, :string, default: nil, doc: "What needs the owner's attention"
   attr :notice_tone, :atom, default: :warning, values: [:neutral, :warning, :danger]
+
+  attr :heading_level, :integer,
+    default: 3,
+    values: [2, 3],
+    doc:
+      "The title's heading level: 3 under a group heading, 2 when the card sits under the page title"
+
   attr :class, :any, default: nil, doc: "Layout classes only"
   attr :rest, :global
 
@@ -111,9 +118,15 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard d
 
         <div class="min-w-0 flex-1">
           <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <h3 class="min-w-0 break-words text-token-base font-semibold text-tymeslot-900">
+            <.dynamic_tag
+              tag_name={"h#{@heading_level}"}
+              class={[
+                "min-w-0 break-words font-semibold text-tymeslot-900",
+                if(@heading_level == 2, do: "text-token-lg", else: "text-token-base")
+              ]}
+            >
               {@title}
-            </h3>
+            </.dynamic_tag>
             <span
               :if={@type_tag}
               data-part="type-tag"

@@ -98,7 +98,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
       <div class="flex items-start gap-3">
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 min-w-0">
-            <h2 class="text-token-base font-semibold text-tymeslot-800 truncate">
+            <h2 class="text-token-lg font-semibold text-tymeslot-900 truncate">
               {@poll.title}
             </h2>
             <.status_pill status={@poll.status} />

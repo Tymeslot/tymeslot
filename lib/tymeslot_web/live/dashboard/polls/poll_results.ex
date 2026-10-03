@@ -74,7 +74,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
 
       <div :if={!@editing_details?} class="flex items-start justify-between gap-3">
         <div class="min-w-0">
-          <h2 class="text-token-lg font-semibold text-tymeslot-800 truncate">
+          <h2 class="text-token-lg font-semibold text-tymeslot-900 truncate">
             {@poll.title}
           </h2>
           <%!-- The zone qualifies every time in the panel, so it reads as a

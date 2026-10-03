@@ -70,6 +70,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
                     testing_connection={@testing_connection}
                     myself={@myself}
                     health_state={Map.get(@health_states, integration.id)}
+                    heading_level={if show_section_headers, do: 3, else: 2}
                   />
                 <% end %>
               </div>
@@ -90,6 +91,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
                     testing_connection={@testing_connection}
                     myself={@myself}
                     health_state={Map.get(@health_states, integration.id)}
+                    heading_level={if show_section_headers, do: 3, else: 2}
                   />
                 <% end %>
               </div>

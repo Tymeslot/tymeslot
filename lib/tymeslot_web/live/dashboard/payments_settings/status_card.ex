@@ -38,6 +38,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
     <IntegrationCard.integration_card
       id="stripe-connect"
       title="Stripe"
+      heading_level={2}
       status={{status_tone(@state), state_title(@state)}}
       pulse={@state == :pending_review}
       notice={state_message(@account, @state)}

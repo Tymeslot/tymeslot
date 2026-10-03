@@ -17,11 +17,18 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
 
   describe "Theme selection" do
     test "renders theme options", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
-      assert html =~ "Select the interface that best represents your personal brand"
-      assert html =~ "Quill"
-      assert html =~ "Rhythm"
+      # A card per offered theme, named in its heading, each with its own
+      # customise button.
+      for {name, id} <- [{"Quill", "1"}, {"Rhythm", "2"}] do
+        assert has_element?(view, "h2", name)
+
+        assert has_element?(
+                 view,
+                 "button[phx-click='show_customization'][phx-value-theme='#{id}']"
+               )
+      end
     end
 
     test "selects a theme and persists it", %{conn: conn, profile: profile} do
@@ -114,7 +121,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       |> element("button", "Close")
       |> render_click()
 
-      assert render(view) =~ "Select the interface that best represents your personal brand"
+      assert has_element?(view, "button[phx-click='show_customization'][phx-value-theme='1']")
       refute render(view) =~ "Color Palette"
     end
 

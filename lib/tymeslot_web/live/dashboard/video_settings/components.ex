@@ -27,6 +27,10 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   attr :myself, :any, required: true
   attr :health_state, :map, default: nil
 
+  attr :heading_level, :integer,
+    default: 3,
+    doc: "3 under an Active/Inactive group heading, 2 when there is no group heading"
+
   @spec video_connection_row(map()) :: Phoenix.LiveView.Rendered.t()
   def video_connection_row(assigns) do
     integration = assigns.integration
@@ -54,6 +58,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
       active={@integration.is_active}
       toggle_event="toggle_integration"
       target={@myself}
+      heading_level={@heading_level}
     >
       <:icon>
         <ProviderIcon.provider_icon

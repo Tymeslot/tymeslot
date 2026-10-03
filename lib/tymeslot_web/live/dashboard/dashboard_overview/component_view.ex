@@ -37,7 +37,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
           <div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent_50%)]">
           </div>
           <div class="relative z-10">
-            <p class="text-token-3xl lg:text-token-4xl font-black mb-1 tracking-tight">
+            <p class="text-token-xl lg:text-token-2xl font-black mb-1 tracking-tight">
               {if @first_dashboard_visit,
                 do: dgettext("dashboard_home", "Welcome"),
                 else: dgettext("dashboard_home", "Welcome back")}{if @profile.full_name,
