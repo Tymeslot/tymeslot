@@ -20,8 +20,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
   alias Phoenix.LiveView
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Venues
-  alias TymeslotWeb.Components.CoreComponents.Buttons
-  alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
   alias TymeslotWeb.Helpers.LocationIcons
 
@@ -38,7 +36,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
         description={location_hint(@locations)}
       >
         <:actions>
-          <Buttons.action_button
+          <.action_button
             type="button"
             variant={:secondary}
             phx-click="add_location"
@@ -46,7 +44,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
             data-testid="add-location"
           >
             {dgettext("dashboard_meeting_form", "Add location")}
-          </Buttons.action_button>
+          </.action_button>
         </:actions>
       </.subsection_header>
 
@@ -73,10 +71,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
             draggable="true"
           >
             <span class="drag-handle cursor-grab active:cursor-grabbing text-tymeslot-400 shrink-0">
-              <Icons.icon name="hero-bars-2" class="w-4 h-4" />
+              <.icon name="hero-bars-2" class="w-4 h-4" />
             </span>
 
-            <Icons.icon
+            <.icon
               name={LocationIcons.icon(location.kind)}
               class="w-5 h-5 text-turquoise-500 shrink-0"
             />
@@ -91,7 +89,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
             </div>
 
             <div class="flex items-center gap-1 shrink-0">
-              <Buttons.action_button
+              <.action_button
                 type="button"
                 variant={:secondary}
                 phx-click="edit_location"
@@ -100,10 +98,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
                 size={:sm}
               >
                 {dgettext("dashboard_meeting_form", "Edit")}
-              </Buttons.action_button>
+              </.action_button>
               <%!-- A meeting type has to be held somewhere, so the last
                     location cannot be deleted; the host edits it instead. --%>
-              <Buttons.action_button
+              <.action_button
                 :if={length(@locations) > 1}
                 type="button"
                 variant={:danger_soft}
@@ -113,7 +111,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
                 size={:sm}
               >
                 {dgettext("dashboard_meeting_form", "Delete")}
-              </Buttons.action_button>
+              </.action_button>
             </div>
           </.card>
         <% end %>

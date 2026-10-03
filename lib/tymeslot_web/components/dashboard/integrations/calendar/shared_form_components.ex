@@ -7,7 +7,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
-  alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   import Phoenix.HTML, only: [raw: 1]
@@ -293,13 +292,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
       <div class="flex items-center gap-1.5 mb-2">
         <span class="label mb-0">{dgettext("dashboard_calendar_providers", "Server URL")}</span>
         <span class="text-tymeslot-400 shrink-0">
-          <Icons.icon name="hero-information-circle-mini" class="w-3.5 h-3.5" />
+          <.icon name="hero-information-circle-mini" class="w-3.5 h-3.5" />
         </span>
       </div>
       <input type="hidden" name={@name} value={@value} />
       <div class="relative" title={@tooltip}>
         <div class="absolute left-4 top-1/2 -translate-y-1/2 text-tymeslot-300 pointer-events-none">
-          <TymeslotWeb.Components.CoreComponents.Icons.icon name="hero-lock-closed" class="w-5 h-5" />
+          <.icon name="hero-lock-closed" class="w-5 h-5" />
         </div>
         <input
           type="text"
@@ -375,7 +374,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
     ~H"""
     <div class="brand-card p-3 bg-red-50/50 border border-red-200/50">
       <p class="text-sm text-red-600 flex items-center">
-        <Icons.icon name="hero-exclamation-circle-mini" class="w-4 h-4 mr-2" />
+        <.icon name="hero-exclamation-circle-mini" class="w-4 h-4 mr-2" />
         {@error}
       </p>
     </div>

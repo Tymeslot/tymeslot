@@ -15,8 +15,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
   alias Ecto.UUID
   alias Phoenix.LiveView
   alias Tymeslot.CustomFields.FieldDefinition
-  alias TymeslotWeb.Components.CoreComponents.Buttons
-  alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
 
   @impl Phoenix.LiveComponent
@@ -74,19 +72,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
         }
       >
         <:actions>
-          <Buttons.action_button
+          <.action_button
             type="button"
             variant={:secondary}
             phx-click="add_question"
             phx-target={@myself}
           >
             {dgettext("dashboard_meeting_form", "Add question")}
-          </Buttons.action_button>
+          </.action_button>
         </:actions>
       </.subsection_header>
 
       <%= if @custom_fields == [] do %>
-        <Feedback.empty_state
+        <.empty_state
           icon="hero-question-mark-circle"
           size={:sm}
           title={dgettext("dashboard_meeting_form", "No custom questions yet")}
@@ -137,7 +135,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
 
               <%!-- Actions --%>
               <div class="flex items-center gap-1 shrink-0">
-                <Buttons.action_button
+                <.action_button
                   type="button"
                   variant={:secondary}
                   phx-click="edit_question"
@@ -146,8 +144,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
                   size={:sm}
                 >
                   {dgettext("dashboard_meeting_form", "Edit")}
-                </Buttons.action_button>
-                <Buttons.action_button
+                </.action_button>
+                <.action_button
                   type="button"
                   variant={:danger_soft}
                   phx-click="delete_question"
@@ -156,7 +154,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
                   size={:sm}
                 >
                   {dgettext("dashboard_meeting_form", "Delete")}
-                </Buttons.action_button>
+                </.action_button>
               </div>
             </.card>
           <% end %>

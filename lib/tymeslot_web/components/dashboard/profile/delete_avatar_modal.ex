@@ -9,7 +9,6 @@ defmodule TymeslotWeb.Components.Dashboard.Profile.DeleteAvatarModal do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Profiles
-  alias TymeslotWeb.Components.CoreComponents.Modal
   alias TymeslotWeb.Live.Shared.Flash
 
   @impl Phoenix.LiveComponent
@@ -60,7 +59,7 @@ defmodule TymeslotWeb.Components.Dashboard.Profile.DeleteAvatarModal do
   def render(assigns) do
     ~H"""
     <div id={@id}>
-      <Modal.confirm_modal
+      <.confirm_modal
         id={"#{@id}-modal"}
         show={@show}
         title={dgettext("dashboard_profile", "Delete Avatar")}
@@ -74,7 +73,7 @@ defmodule TymeslotWeb.Components.Dashboard.Profile.DeleteAvatarModal do
             "Are you sure you want to delete your profile picture? This action cannot be undone."
           )}
         </p>
-      </Modal.confirm_modal>
+      </.confirm_modal>
     </div>
     """
   end

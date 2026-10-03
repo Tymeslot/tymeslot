@@ -9,7 +9,6 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
   alias Phoenix.LiveView.JS
   alias Tymeslot.Telegram
   alias Tymeslot.Validation.Constraints
-  alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.Automation.EventSubscriptions
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
@@ -172,7 +171,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
                 <div class="p-4 rounded-token-xl bg-turquoise-50/50 border-2 border-turquoise-100">
                   <div class="flex gap-3">
                     <div class="mt-0.5">
-                      <Icons.icon name="hero-information-circle" class="w-5 h-5 text-turquoise-600" />
+                      <.icon name="hero-information-circle" class="w-5 h-5 text-turquoise-600" />
                     </div>
                     <div>
                       <p class="text-token-sm font-black text-turquoise-900">
@@ -302,7 +301,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
 
       <%= if @deep_link do %>
         <div class="flex items-center justify-center gap-2 text-token-sm text-tymeslot-500">
-          <Icons.icon
+          <.icon
             name="hero-clock"
             class="w-4 h-4 animate-pulse text-turquoise-500"
           />

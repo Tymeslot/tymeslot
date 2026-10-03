@@ -22,9 +22,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
   alias Phoenix.LiveView.JS
   alias Tymeslot.CustomFields.FieldDefinition
   alias Tymeslot.CustomFields.FieldOption
-  alias TymeslotWeb.Components.CoreComponents.Buttons
-  alias TymeslotWeb.Components.CoreComponents.Forms
-  alias TymeslotWeb.Components.CoreComponents.Modal
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -170,7 +167,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
   def render(assigns) do
     ~H"""
     <div id={"question-editor-wrapper-#{@id}"}>
-      <Modal.modal
+      <.modal
         id={"question-editor-#{@id}"}
         show
         on_cancel={JS.push("cancel", target: @myself)}
@@ -194,7 +191,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
           class="space-y-4"
           novalidate
         >
-          <Forms.input
+          <.input
             name="definition[label]"
             value={field_value(@changeset, :label)}
             id="definition_label"
@@ -210,9 +207,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
             <:description>
               {dgettext("dashboard_meeting_form", "The question shown to the booker.")}
             </:description>
-          </Forms.input>
+          </.input>
 
-          <Forms.input
+          <.input
             name="definition[help_text]"
             value={field_value(@changeset, :help_text)}
             id="definition_help_text"
@@ -232,9 +229,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
                 "Shown below the question - use it to clarify what you're asking or give an example."
               )}
             </:description>
-          </Forms.input>
+          </.input>
 
-          <Forms.input
+          <.input
             name="definition[type]"
             value={field_value(@changeset, :type)}
             id="definition_type"
@@ -245,9 +242,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
             <:description>
               {dgettext("dashboard_meeting_form", "Controls how the booker enters their answer.")}
             </:description>
-          </Forms.input>
+          </.input>
 
-          <Forms.input
+          <.input
             name="definition[required]"
             value={field_value(@changeset, :required)}
             id="definition_required"
@@ -260,7 +257,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
                 "The booker must answer this question before they can continue."
               )}
             </:description>
-          </Forms.input>
+          </.input>
 
           <%!-- Type-specific config --%>
           <%= case Ecto.Changeset.get_field(@changeset, :type) do %>
@@ -271,7 +268,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
                 myself={@myself}
               />
             <% "note" -> %>
-              <Forms.input
+              <.input
                 name="definition[body]"
                 value={field_value(@changeset, :body)}
                 id="definition_body"
@@ -296,10 +293,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
                     "The notice the booker must read and confirm before they can continue."
                   )}
                 </:description>
-              </Forms.input>
+              </.input>
             <% t when t in ~w(number date time) -> %>
               <div class="grid grid-cols-2 gap-3">
-                <Forms.input
+                <.input
                   name="definition[min]"
                   value={field_value(@changeset, :min)}
                   id="definition_min"
@@ -308,8 +305,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
                   errors={FormValidationHelpers.field_errors(@field_errors, :min)}
                 >
                   <:description>{bound_min_hint(t)}</:description>
-                </Forms.input>
-                <Forms.input
+                </.input>
+                <.input
                   name="definition[max]"
                   value={field_value(@changeset, :max)}
                   id="definition_max"
@@ -318,7 +315,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
                   errors={FormValidationHelpers.field_errors(@field_errors, :max)}
                 >
                   <:description>{bound_max_hint(t)}</:description>
-                </Forms.input>
+                </.input>
               </div>
             <% _ -> %>
               <%!-- No type-specific fields for short_text, yes_no, phone, url --%>
@@ -337,41 +334,41 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
                 )}
               </p>
               <div class="flex gap-2">
-                <Buttons.action_button
+                <.action_button
                   type="button"
                   variant={:secondary}
                   phx-click="cancel_type_change"
                   phx-target={@myself}
                 >
                   {dgettext("dashboard_meeting_form", "Cancel")}
-                </Buttons.action_button>
-                <Buttons.action_button
+                </.action_button>
+                <.action_button
                   type="button"
                   variant={:primary}
                   phx-click="confirm_type_change"
                   phx-target={@myself}
                 >
                   {dgettext("dashboard_meeting_form", "Yes, change type")}
-                </Buttons.action_button>
+                </.action_button>
               </div>
             </div>
           <% end %>
 
           <div class="flex justify-end gap-2 pt-2">
-            <Buttons.action_button
+            <.action_button
               type="button"
               variant={:secondary}
               phx-click="cancel"
               phx-target={@myself}
             >
               {dgettext("dashboard_meeting_form", "Cancel")}
-            </Buttons.action_button>
-            <Buttons.action_button type="submit" variant={:primary}>
+            </.action_button>
+            <.action_button type="submit" variant={:primary}>
               {dgettext("dashboard_meeting_form", "Save question")}
-            </Buttons.action_button>
+            </.action_button>
           </div>
         </.form>
-      </Modal.modal>
+      </.modal>
     </div>
     """
   end
@@ -409,7 +406,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
               phx-value-field="options"
               phx-target={@myself}
             />
-            <Buttons.icon_button
+            <.icon_button
               icon="hero-x-mark"
               variant={:danger}
               size={:sm}
@@ -422,7 +419,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
           </div>
         <% end %>
       </div>
-      <Buttons.action_button
+      <.action_button
         variant={:ghost}
         size={:sm}
         icon="hero-plus"
@@ -431,7 +428,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
         phx-target={@myself}
       >
         {dgettext("dashboard_meeting_form", "Add option")}
-      </Buttons.action_button>
+      </.action_button>
       <%= for error <- FormValidationHelpers.field_errors(@field_errors, :options) do %>
         <p class="field-error">{translate_options_error(error)}</p>
       <% end %>

@@ -11,10 +11,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
   alias Phoenix.LiveView.JS
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
-  alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
-  use TymeslotWeb.Components.CoreComponents, only: [pill: 1, spinner: 1, subsection_header: 1]
+
+  use TymeslotWeb.Components.CoreComponents,
+    only: [icon: 1, pill: 1, spinner: 1, subsection_header: 1]
+
   import TymeslotWeb.Components.Icons.ProviderIcon
 
   @doc """
@@ -48,9 +50,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
             title={icon_name}
           >
             <%= if icon_value == "none" do %>
-              <Icons.icon name="hero-x-mark" class="w-6 h-6 text-tymeslot-400" />
+              <.icon name="hero-x-mark" class="w-6 h-6 text-tymeslot-400" />
             <% else %>
-              <Icons.icon
+              <.icon
                 name={icon_value}
                 class={
                   "w-8 h-8 block " <>
@@ -248,7 +250,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                         )
                       ]}>
                         <%= if @selected_target_calendar_id == (cal.id) do %>
-                          <Icons.icon name="hero-check-mini" class="w-2.5 h-2.5 text-white" />
+                          <.icon name="hero-check-mini" class="w-2.5 h-2.5 text-white" />
                         <% end %>
                       </div>
                       <span class={[

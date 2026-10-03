@@ -36,9 +36,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
   alias Phoenix.LiveView
   alias Phoenix.LiveView.JS
   alias Tymeslot.MeetingTypes.LocationOption
-  alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.CoreComponents.Forms
-  alias TymeslotWeb.Components.CoreComponents.Modal
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.NewVenueComponent
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.VenuePicker
@@ -171,7 +169,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
   def render(assigns) do
     ~H"""
     <div id={"location-editor-wrapper-#{@id}"}>
-      <Modal.modal
+      <.modal
         id={"location-editor-#{@id}"}
         show
         on_cancel={JS.push("cancel", target: @myself)}
@@ -207,7 +205,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
             </:description>
           </.choice_toggle>
 
-          <Forms.input
+          <.input
             name="location[label]"
             value={field_value(@changeset, :label)}
             id="location_label"
@@ -223,7 +221,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
             <:description>
               {dgettext("dashboard_meeting_form", "What the booker sees in the list of locations.")}
             </:description>
-          </Forms.input>
+          </.input>
 
           <%= case field_value(@changeset, :kind) do %>
             <% "video" -> %>
@@ -241,7 +239,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
                 myself={@myself}
               />
             <% "phone" -> %>
-              <Forms.input
+              <.input
                 name="location[collect_from_guest]"
                 value={field_value(@changeset, :collect_from_guest)}
                 id="location_collect_from_guest"
@@ -254,9 +252,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
                     "You call them. Leave this off to publish a number for them to call instead."
                   )}
                 </:description>
-              </Forms.input>
+              </.input>
 
-              <Forms.input
+              <.input
                 :if={!field_value(@changeset, :collect_from_guest)}
                 name="location[details]"
                 value={field_value(@changeset, :details)}
@@ -271,7 +269,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
                 errors={FormValidationHelpers.field_errors(@field_errors, :details)}
               />
             <% _kind -> %>
-              <Forms.input
+              <.input
                 name="location[details]"
                 value={field_value(@changeset, :details)}
                 id="location_details"
@@ -295,7 +293,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
                     "Shown to the booker and written into the calendar invitation."
                   )}
                 </:description>
-              </Forms.input>
+              </.input>
           <% end %>
 
           <%!-- Position travels with the option so a save from the editor
@@ -319,23 +317,23 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
         />
 
         <div class="flex justify-end gap-2 pt-4">
-          <Buttons.action_button
+          <.action_button
             type="button"
             variant={:secondary}
             phx-click="cancel"
             phx-target={@myself}
           >
             {dgettext("dashboard_meeting_form", "Cancel")}
-          </Buttons.action_button>
-          <Buttons.action_button
+          </.action_button>
+          <.action_button
             type="submit"
             form="location-editor-form"
             variant={:primary}
           >
             {dgettext("dashboard_meeting_form", "Save location")}
-          </Buttons.action_button>
+          </.action_button>
         </div>
-      </Modal.modal>
+      </.modal>
     </div>
     """
   end
