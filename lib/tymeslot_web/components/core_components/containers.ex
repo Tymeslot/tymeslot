@@ -338,7 +338,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
         <div role="status">
           <div
             :if={@saving}
-            class="flex items-center rounded-token-full border-2 border-emerald-100 bg-emerald-50 px-4 py-2 text-token-xs font-black uppercase tracking-wider text-emerald-700"
+            class="flex items-center rounded-token-full border-2 border-green-100 bg-green-50 px-4 py-2 text-token-xs font-black uppercase tracking-wider text-green-700"
           >
             <Feedback.spinner class="mr-2 h-4 w-4" />
             {dgettext("common", "Saving changes...")}
@@ -460,10 +460,10 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
   def info_box(assigns) do
     classes =
       case assigns.variant do
-        :success -> "bg-emerald-50 border-emerald-200 text-emerald-800"
+        :success -> "bg-green-50 border-green-200 text-green-800"
         :warning -> "bg-amber-50 border-amber-200 text-amber-800"
         :error -> "bg-red-50 border-red-200 text-red-800"
-        :info -> "bg-sky-50 border-sky-200 text-sky-800"
+        :info -> "bg-blue-50 border-blue-200 text-blue-800"
         _other -> "bg-tymeslot-50 border-tymeslot-200 text-tymeslot-800"
       end
 
@@ -471,9 +471,9 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
 
     ~H"""
     <div class={["rounded-token-2xl p-6 mb-8 border-2", @classes, @class]}>
-      <p class="font-medium">
+      <div class="font-medium">
         {render_slot(@inner_block)}
-      </p>
+      </div>
     </div>
     """
   end

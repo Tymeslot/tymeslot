@@ -166,19 +166,13 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
           )}
         </p>
 
-        <div
-          :if={@partial_window?}
-          class="flex items-start gap-2 rounded-token-lg bg-turquoise-50 px-4 py-3 text-token-sm text-tymeslot-700"
-        >
-          <.icon name="hero-information-circle" class="mt-0.5 h-5 w-5 shrink-0 text-turquoise-500" />
-          <span>
-            {dgettext(
-              "dashboard_analytics",
-              "Booking analytics started collecting on %{date}. Dates before then show no data, so longer ranges will look sparse until more history builds up.",
-              date: format_launch_date(@launch_date)
-            )}
-          </span>
-        </div>
+        <.info_box :if={@partial_window?} variant={:info}>
+          {dgettext(
+            "dashboard_analytics",
+            "Booking analytics started collecting on %{date}. Dates before then show no data, so longer ranges will look sparse until more history builds up.",
+            date: format_launch_date(@launch_date)
+          )}
+        </.info_box>
 
         <SummaryCards.cards
           visits={@visits}
