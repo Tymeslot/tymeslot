@@ -155,6 +155,34 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeCreateJourneyTest do
       refute has_element?(view, "#meeting-type-form-tabs-panel-booking")
     end
 
+    test "a second create submit after the first has landed is ignored", %{
+      conn: conn,
+      user: user
+    } do
+      view = open_add_form(conn)
+
+      view
+      |> form("form[phx-submit='create_meeting_type']", %{
+        "meeting_type" => %{"name" => "Double Click", "duration" => "30"}
+      })
+      |> render_submit()
+
+      # A double click: the second submit reaches the form after it has
+      # already switched to editing the new type.
+      view
+      |> with_target("#meeting-type-form-wrapper-meeting-type-form-new")
+      |> render_submit("create_meeting_type", %{
+        "meeting_type" => %{"name" => "Double Click", "duration" => "30"}
+      })
+
+      assert Process.alive?(view.pid)
+      assert has_element?(view, "form[phx-submit='flush_autosave']")
+
+      assert user.id
+             |> MeetingTypes.get_all_meeting_types()
+             |> Enum.count(&(&1.name == "Double Click")) == 1
+    end
+
     test "cancel returns to the list without creating anything", %{conn: conn, user: user} do
       before = length(MeetingTypes.get_all_meeting_types(user.id))
       view = open_add_form(conn)

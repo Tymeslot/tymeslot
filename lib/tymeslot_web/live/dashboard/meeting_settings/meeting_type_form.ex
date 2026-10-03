@@ -130,6 +130,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     {:noreply, Creation.run(socket, Map.get(params, "meeting_type", %{}))}
   end
 
+  # A second submit can arrive after the first has created the type (a double
+  # click racing the round trip). The type exists now, so there is nothing
+  # left to create.
+  def handle_event("create_meeting_type", _params, socket), do: {:noreply, socket}
+
   @impl Phoenix.LiveComponent
   def handle_event("validate_meeting_type", %{"meeting_type" => params}, socket) do
     metadata = Helpers.get_security_metadata(socket)
