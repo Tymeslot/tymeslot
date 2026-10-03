@@ -14,8 +14,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.AvailabilitySect
   availability page, so "the amber one" is the same thing in both places.
 
   Clicking a chip dispatches `update_availability_schedule` to the parent
-  `MeetingTypeForm` (`@myself`), which owns the socket state and auto-save; the
-  create submit serialises the choice from the hidden field in `HiddenFields`.
+  `MeetingTypeForm` (`@myself`), which owns the socket state and auto-save.
   """
 
   use TymeslotWeb, :html

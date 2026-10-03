@@ -3,9 +3,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   LiveComponent that renders and manages the Meeting Type form UI state.
 
   It handles local UI events (validate, icon selection, calendar destination).
-  When editing an existing meeting type, each change auto-saves via
-  `MeetingTypeForm.Autosave`; when creating a new one, the parent component
-  handles the final "Create" submit/persist event.
+  A new meeting type is created with an explicit submit on the Details tab
+  (`MeetingTypeForm.Creation`), after which the same component carries on in
+  edit mode; from then on each change auto-saves via `MeetingTypeForm.Autosave`.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{
     Autosave,
+    Creation,
     FormView,
     Init,
     Validation
@@ -31,11 +32,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   # Public assigns passed from parent
   # - type: existing meeting type or nil
-  # - is_edit: whether we are editing
+  # - is_edit: whether the meeting type exists yet (set here too, on creation)
   # - video_integrations: list for selection
   # - venues: the organiser's saved venues, for in-person locations
-  # - parent_myself: phx-target for parent events (submit/cancel)
-  # - saving: parent's saving state to control the button disabled state
+  # - parent_myself: phx-target for parent events (cancel, done, visibility)
   # - current_user: used for security metadata in validation
 
   @impl Phoenix.LiveComponent
@@ -112,9 +112,22 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   def render(assigns), do: FormView.form(assigns)
 
   @impl Phoenix.LiveComponent
-  def handle_event("switch_tab", %{"tab" => tab}, socket)
-      when tab in ~w(details location booking questions reminders) do
+  def handle_event("switch_tab", %{"tab" => "details"}, socket) do
+    {:noreply, assign(socket, :active_tab, "details")}
+  end
+
+  # The other tabs are disabled until the meeting type exists, since nothing
+  # on them can save before then; a forged switch is ignored the same way.
+  def handle_event("switch_tab", %{"tab" => tab}, %{assigns: %{is_edit: true}} = socket)
+      when tab in ~w(location booking questions reminders) do
     {:noreply, assign(socket, :active_tab, tab)}
+  end
+
+  def handle_event("switch_tab", _params, socket), do: {:noreply, socket}
+
+  @impl Phoenix.LiveComponent
+  def handle_event("create_meeting_type", params, %{assigns: %{is_edit: false}} = socket) do
+    {:noreply, Creation.run(socket, Map.get(params, "meeting_type", %{}))}
   end
 
   @impl Phoenix.LiveComponent
@@ -456,8 +469,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     socket
   end
 
-  # Creating still saves on submit, and a failed save already shows its own
-  # error, so neither gets a "saved" flash.
+  # A failed save already shows its own error, so it gets no "saved" flash.
   defp flash_schedule_saved(socket), do: socket
 
   # Blank means "follow the profile's default schedule", stored as nil; the

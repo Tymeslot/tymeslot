@@ -4,11 +4,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
 
   Two responsibilities:
 
-    * `build_params/1` mirrors the hidden inputs the form would post, but
-      derives them straight from socket assigns. Auto-save relies on this so
-      it never depends on a DOM round-trip — clicking a control updates an
-      assign synchronously, and the next save reads that assign directly
-      rather than racing the re-rendered hidden input.
+    * `build_params/1` derives the form params straight from socket assigns.
+      Neither creating nor auto-saving depends on a DOM round-trip: clicking
+      a control updates an assign synchronously, and the next save reads
+      that assign directly.
 
     * `persist/4` runs the shared validate → merge → create/update pipeline
       used by both the explicit "Create" submit and edit-mode auto-save, so
@@ -17,19 +16,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
 
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.InputValidation
-  alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Utils.SanitizeMerge
   alias Tymeslot.Venues
 
   @doc """
   Builds the `meeting_type` params map from the form's socket assigns.
 
-  The shape matches what the rendered form posts: string keys, string values,
+  The shape is that of a posted form: string keys, string values,
   `reminder_config` as a list of `%{"value", "unit"}` maps, and `custom_fields`
-  and `locations` as lists of maps. Custom fields and payment fields are
-  omitted under exactly the same conditions as the hidden inputs (paywalled
-  questions and hosts who cannot accept charges), so cast leaves those embeds
-  untouched.
+  and `locations` as lists of maps. Custom fields are omitted while questions
+  are paywalled, and payment fields for hosts who cannot accept charges, so
+  cast leaves those embeds untouched.
 
   `allow_video` and `video_integration_id` are absent by design: the schema
   projects them from `locations`, so posting them would give the same two
@@ -201,18 +198,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
   defp put_optional(map, _key, nil), do: map
   defp put_optional(map, key, value), do: Map.put(map, key, to_string(value))
 
-  @doc """
-  The venue ids an in-person location posts: the ones it lists that are
-  still among the organiser's saved venues, in the location's order.
-
-  Deleting a venue already removes it from every meeting type that offered
-  it, so the two lists normally agree. This is a defence against them
-  disagreeing anyway: the context refuses an id that is not among the
-  organiser's venues, and one such id would make every save of the meeting
-  type fail, so an id missing from `venues` is left out instead of posted.
-  """
-  @spec venue_ids_param(LocationOption.t(), [%{id: integer()}]) :: [String.t()]
-  def venue_ids_param(location, venues) do
+  # The venue ids an in-person location posts: the ones it lists that are
+  # still among the organiser's saved venues, in the location's order.
+  #
+  # Deleting a venue already removes it from every meeting type that offered
+  # it, so the two lists normally agree. This is a defence against them
+  # disagreeing anyway: the context refuses an id that is not among the
+  # organiser's venues, and one such id would make every save of the meeting
+  # type fail, so an id missing from `venues` is left out instead of posted.
+  defp venue_ids_param(location, venues) do
     location.venue_ids |> known_venue_ids(venues) |> Enum.map(&to_string/1)
   end
 

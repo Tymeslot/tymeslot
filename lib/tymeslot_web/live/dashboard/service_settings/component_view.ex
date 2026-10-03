@@ -26,7 +26,6 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
       <.dashboard_page
         icon="hero-squares-2x2"
         title={dgettext("dashboard_common", "Meeting Types")}
-        saving={@saving}
       >
         <:actions :if={!@show_add_form and !@editing_type and @meeting_types != []}>
           <MeetingTypesListComponent.add_meeting_type_button parent_myself={@myself} />
@@ -95,28 +94,23 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
               </div>
             </div>
 
-            <div class={if @editing_type, do: nil, else: "card-glass"}>
-              <.live_component
-                module={MeetingTypeForm}
-                id={
-                  if @editing_type,
-                    do: "meeting-type-form-edit-#{@editing_type.id}",
-                    else: "meeting-type-form-new"
-                }
-                type={@editing_type}
-                is_edit={!!@editing_type}
-                video_integrations={@video_integrations}
-                venues={@venues}
-                calendar_integrations={@calendar_integrations}
-                parent_myself={@myself}
-                saving={@saving}
-                current_user={@current_user}
-                client_ip={@client_ip}
-                user_agent={@user_agent}
-                form_errors={@form_errors}
-                custom_questions_allowed={@custom_questions_allowed}
-              />
-            </div>
+            <%!-- One form for both adding and editing. `form_id` is fixed
+                  when the form opens and survives creation, so a new
+                  meeting type switches to edit mode in place. --%>
+            <.live_component
+              module={MeetingTypeForm}
+              id={@form_id}
+              type={@editing_type}
+              is_edit={!!@editing_type}
+              video_integrations={@video_integrations}
+              venues={@venues}
+              calendar_integrations={@calendar_integrations}
+              parent_myself={@myself}
+              current_user={@current_user}
+              client_ip={@client_ip}
+              user_agent={@user_agent}
+              custom_questions_allowed={@custom_questions_allowed}
+            />
 
             <BookingLinkModal.booking_link_modal
               show={@show_slug_modal}

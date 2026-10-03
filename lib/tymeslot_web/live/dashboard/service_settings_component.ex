@@ -11,7 +11,6 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
-  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission
   alias TymeslotWeb.Dashboard.ServiceSettings.ComponentView
   require Logger
 
@@ -23,8 +22,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
      |> assign(:show_add_form, false)
      |> assign(:editing_type, nil)
      |> assign(:show_edit_overlay, false)
-     |> assign(:form_errors, %{})
-     |> assign(:saving, false)
+     |> assign(:form_id, nil)
      |> assign(:video_integrations, [])
      |> assign(:venues, [])
      |> assign(:toggling_type_id, nil)
@@ -36,6 +34,21 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   end
 
   @impl Phoenix.LiveComponent
+  def update(%{meeting_type_created: meeting_type}, socket) do
+    # Sent by the open form once it has created its meeting type. The form
+    # has already switched itself to edit mode; this makes the new record the
+    # one being edited, keeping `form_id` so the same form instance (and its
+    # state) carries on rather than being remounted.
+    send(self(), {:meeting_type_changed})
+
+    {:ok,
+     assign(socket,
+       editing_type: meeting_type,
+       show_add_form: false,
+       show_edit_overlay: true
+     )}
+  end
+
   def update(assigns, socket) do
     # Merge new assigns into socket
     socket = assign(socket, assigns)
@@ -87,13 +100,14 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
 
   @impl Phoenix.LiveComponent
   def handle_event("toggle_add_form", _params, socket) do
+    show_add_form = !socket.assigns.show_add_form
+
     {:noreply,
-     socket
-     |> assign(:show_add_form, !socket.assigns.show_add_form)
-     |> assign(:editing_type, nil)
-     |> assign(:form_errors, %{})
-     |> assign(:selected_icon, "none")
-     |> assign(:form_data, %{})}
+     assign(socket,
+       show_add_form: show_add_form,
+       editing_type: nil,
+       form_id: if(show_add_form, do: "meeting-type-form-new")
+     )}
   end
 
   def handle_event("edit_type", %{"id" => id}, socket) do
@@ -103,34 +117,18 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
       Flash.error(dgettext("dashboard_integrations", "Meeting type not found"))
       {:noreply, socket}
     else
-      form_data = %{
-        "name" => type.name || "",
-        "duration" => to_string(type.duration_minutes || 30),
-        "description" => type.description || "",
-        "icon" => type.icon || "none"
-      }
-
-      socket =
-        socket
-        |> assign(:editing_type, type)
-        |> assign(:show_add_form, false)
-        |> assign(:show_edit_overlay, true)
-        |> assign(:form_errors, %{})
-        |> assign(:selected_icon, type.icon || "none")
-        |> assign(:form_data, form_data)
-
-      {:noreply, socket}
+      {:noreply,
+       assign(socket,
+         editing_type: type,
+         show_add_form: false,
+         show_edit_overlay: true,
+         form_id: "meeting-type-form-edit-#{type.id}"
+       )}
     end
   end
 
   def handle_event("cancel_edit", _params, socket) do
-    {:noreply,
-     socket
-     |> assign(:editing_type, nil)
-     |> assign(:show_edit_overlay, false)
-     |> assign(:form_errors, %{})
-     |> assign(:selected_icon, "none")
-     |> assign(:form_data, %{})}
+    {:noreply, close_form(socket)}
   end
 
   def handle_event("close_edit_overlay", _params, socket) do
@@ -139,23 +137,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     # — the data is already persisted regardless of how the user leaves.
     send(self(), {:meeting_type_changed})
 
-    {:noreply,
-     socket
-     |> assign(:editing_type, nil)
-     |> assign(:show_edit_overlay, false)
-     |> assign(:form_errors, %{})
-     |> assign(:selected_icon, "none")
-     |> assign(:form_data, %{})}
-  end
-
-  # Validation is now handled inside MeetingTypeForm LiveComponent
-
-  def handle_event("save_meeting_type", %{"meeting_type" => params}, socket) do
-    user_id = socket.assigns.current_user.id
-
-    with_rate_limit(RateLimiter.check_meeting_type_write_rate_limit(user_id), socket, fn ->
-      do_save_meeting_type(params, socket)
-    end)
+    {:noreply, close_form(socket)}
   end
 
   def handle_event("toggle_type", %{"id" => id}, socket) do
@@ -386,6 +368,10 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     |> assign(:editing_type, updated)
   end
 
+  defp close_form(socket) do
+    assign(socket, editing_type: nil, show_edit_overlay: false, form_id: nil)
+  end
+
   defp hide_slug_modal(socket) do
     socket
     |> assign(:show_slug_modal, false)
@@ -399,27 +385,6 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   end
 
   defp with_rate_limit(:ok, _socket, action), do: action.()
-
-  defp do_save_meeting_type(params, socket) do
-    socket = assign(socket, :saving, true)
-    metadata = Helpers.get_security_metadata(socket)
-
-    case Submission.persist(
-           params,
-           metadata,
-           socket.assigns.editing_type,
-           socket.assigns.current_user
-         ) do
-      {:error, {:invalid_form, validation_errors}} ->
-        {:noreply,
-         socket
-         |> assign(:form_errors, validation_errors)
-         |> assign(:saving, false)}
-
-      result ->
-        Helpers.handle_meeting_type_save_result(result, socket)
-    end
-  end
 
   @impl Phoenix.LiveComponent
   def render(assigns), do: ComponentView.settings(assigns)

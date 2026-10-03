@@ -146,12 +146,7 @@ msgstr "Określa, w jaki sposób rezerwujący wpisuje odpowiedź."
 msgid "Couldn't save changes"
 msgstr "Nie udało się zapisać zmian"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
-#, elixir-autogen, elixir-format
-msgid "Create Meeting Type"
-msgstr "Utwórz typ spotkania"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/helpers.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/creation.ex
 #, elixir-autogen, elixir-format
 msgid "Custom booking questions are available on Pro plans."
 msgstr "Własne pytania w rezerwacji są dostępne w planach Pro."
@@ -199,7 +194,7 @@ msgid "Duration (minutes)"
 msgstr "Czas trwania (minuty)"
 
 #: lib/tymeslot/utils/form_helpers.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/helpers.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/creation.ex
 #, elixir-autogen, elixir-format
 msgid "Duration must be a valid number"
 msgstr "Czas trwania musi być prawidłową liczbą"
@@ -240,12 +235,12 @@ msgstr "Edytuj pytanie"
 msgid "Enter a duration between %{min} and %{max} minutes"
 msgstr "Podaj czas trwania od %{min} do %{max} min"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/helpers.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/creation.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a valid price for this meeting type"
 msgstr "Podaj prawidłową cenę dla tego typu spotkania"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/helpers.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/creation.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to save meeting type"
 msgstr "Nie udało się zapisać typu spotkania"
@@ -306,15 +301,10 @@ msgstr "Najniższa wartość, jaką może wpisać rezerwujący."
 msgid "Max"
 msgstr "Maks."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/helpers.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/creation.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting type created"
 msgstr "Typ spotkania utworzony"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/helpers.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting type updated"
-msgstr "Typ spotkania zaktualizowany"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -406,7 +396,7 @@ msgid "Phone"
 msgstr "Telefon"
 
 #: lib/tymeslot/utils/form_helpers.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/helpers.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/creation.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a video provider for video meetings"
 msgstr "Wybierz dostawcę wideo dla spotkań wideo"
@@ -466,11 +456,6 @@ msgstr "Wymagane"
 #, elixir-autogen, elixir-format
 msgid "Save question"
 msgstr "Zapisz pytanie"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
-#, elixir-autogen, elixir-format
-msgid "Saving..."
-msgstr "Zapisywanie…"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/validation.ex
 #, elixir-autogen, elixir-format
@@ -547,7 +532,7 @@ msgstr "Typ"
 msgid "URL"
 msgstr "URL"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/helpers.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/creation.ex
 #, elixir-autogen, elixir-format
 msgid "Unable to verify subscription status. Please try again."
 msgstr "Nie udało się sprawdzić statusu subskrypcji. Spróbuj ponownie."
@@ -1093,3 +1078,18 @@ msgstr "np. biuro w Berlinie"
 #, elixir-autogen, elixir-format
 msgid "Meeting type settings"
 msgstr "Ustawienia typu spotkania"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Create meeting type"
+msgstr "Utwórz typ spotkania"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Create the meeting type to set up the rest."
+msgstr "Utwórz typ spotkania, aby skonfigurować resztę."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Creating…"
+msgstr "Tworzenie…"

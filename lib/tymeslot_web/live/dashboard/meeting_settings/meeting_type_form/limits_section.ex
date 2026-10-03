@@ -5,10 +5,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LimitsSection do
 
   Three optional caps on how many bookings of this type the host accepts
   per day, week, and month; an empty field means no limit. The inputs are
-  part of the surrounding meeting-type form (no nested form element), named
-  so they serialise on the create submit; each change also dispatches
-  `update_booking_limits` back to the parent `MeetingTypeForm` (`@myself`),
-  which owns the socket state and auto-save.
+  part of the surrounding meeting-type form (no nested form element); each
+  change dispatches `update_booking_limits` back to the parent
+  `MeetingTypeForm` (`@myself`), which owns the socket state and auto-save.
   """
 
   use TymeslotWeb, :html

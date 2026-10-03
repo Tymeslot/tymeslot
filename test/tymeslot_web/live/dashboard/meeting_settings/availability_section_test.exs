@@ -30,8 +30,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.AvailabilitySectionTest do
     %{default_schedule: default, evenings: evenings}
   end
 
-  describe "Choosing a schedule while creating a meeting type" do
-    test "persists the chosen availability_schedule_id", %{
+  describe "Choosing a schedule for a new meeting type" do
+    test "persists the chosen availability_schedule_id once the type is created", %{
       conn: conn,
       user: user,
       evenings: evenings
@@ -39,14 +39,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.AvailabilitySectionTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
       view |> element("button", "Add Meeting Type") |> render_click()
 
+      # Schedules live on the Booking Rules tab, which opens once the meeting
+      # type exists.
+      view
+      |> form("form[phx-submit='create_meeting_type']", %{
+        "meeting_type" => %{"name" => "Evening Chat", "duration" => "30"}
+      })
+      |> render_submit()
+
+      view |> element("#meeting-type-form-tabs-tab-booking") |> render_click()
+
       html = render(view)
       assert html =~ "Default (Working hours)"
       assert html =~ "Evenings"
-
-      # Remove the default reminder so the hidden reminder inputs do not break
-      # Plug.Conn.Query re-encoding on submit (the same workaround the other
-      # create-path tests use).
-      view |> element("button[aria-label='Remove reminder']") |> render_click()
 
       view
       |> element(
@@ -60,14 +65,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.AvailabilitySectionTest do
                view,
                "button[phx-value-schedule='#{evenings.id}'][aria-pressed='true']"
              )
-
-      view
-      |> form("form[phx-submit='save_meeting_type']", %{
-        "meeting_type" => %{"name" => "Evening Chat", "duration" => "30"}
-      })
-      |> render_submit()
-
-      assert render(view) =~ "Meeting type created"
 
       created =
         Enum.find(MeetingTypes.get_all_meeting_types(user.id), &(&1.name == "Evening Chat"))

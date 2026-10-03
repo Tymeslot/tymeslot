@@ -8,13 +8,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   unchanged (its `render/1` delegates straight to it), so LiveView change
   tracking is preserved.
 
-  The sections are grouped into five panels. In edit mode a tab bar shows one
-  panel at a time; in create mode the same panels render stacked, so the
-  markup below is the single source of the section grouping and order for
-  both modes. Inactive panels are hidden with CSS rather than conditionally
-  rendered, keeping every input in the DOM (create mode submits the whole
-  form) and preserving the custom-questions component's state across tab
+  The sections are grouped into five panels behind a tab bar, one panel shown
+  at a time. Inactive panels are hidden with CSS rather than conditionally
+  rendered, preserving the custom-questions component's state across tab
   switches.
+
+  A new meeting type uses the same form. Auto-save needs a record to save
+  into, so until it exists only the Details panel renders, the other tabs are
+  shown but disabled, and the footer offers a single "Create meeting type"
+  action in place of the auto-save indicator and "Done".
   """
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
@@ -29,7 +31,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     AvailabilitySection,
     CustomQuestionsSection,
     GuestsSection,
-    HiddenFields,
     LimitsSection,
     LocationEditorComponent,
     LocationsSection,
@@ -49,7 +50,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   import GuestsSection, only: [guests_section: 1]
   import LimitsSection, only: [limits_section: 1]
   import ShowAsFreeSection, only: [show_as_free_section: 1]
-  import HiddenFields, only: [hidden_fields: 1]
   import PaymentsSection, only: [payments_section: 1]
   import VisibilitySection, only: [visibility_section: 1]
   import TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents
@@ -80,27 +80,36 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     <div id={"meeting-type-form-wrapper-#{@id}"}>
       <form
         id={"meeting-type-form-#{@id}"}
-        phx-submit={if @is_edit, do: "flush_autosave", else: "save_meeting_type"}
-        phx-target={if @is_edit, do: @myself, else: @parent_myself}
-        class={if @is_edit, do: "space-y-6", else: "space-y-8"}
+        phx-submit={if @is_edit, do: "flush_autosave", else: "create_meeting_type"}
+        phx-target={@myself}
+        class="space-y-6"
         novalidate
       >
-        <.tab_bar
-          :if={@is_edit}
-          id={@tabs_id}
-          aria_label={dgettext("dashboard_meeting_form", "Meeting type settings")}
-          active_tab={@active_tab}
-          target={@myself}
-          tabs={form_tabs(@form_errors)}
-        />
+        <div class="space-y-2">
+          <.tab_bar
+            id={@tabs_id}
+            aria_label={dgettext("dashboard_meeting_form", "Meeting type settings")}
+            active_tab={@active_tab}
+            target={@myself}
+            tabs={form_tabs(@form_errors, @is_edit)}
+          />
+          <p
+            :if={!@is_edit}
+            id="meeting-type-form-create-hint"
+            class="flex items-center gap-1.5 px-2 text-token-sm text-tymeslot-500"
+          >
+            <.icon name="hero-information-circle-mini" class="w-4 h-4 shrink-0 text-tymeslot-400" />
+            {dgettext("dashboard_meeting_form", "Create the meeting type to set up the rest.")}
+          </p>
+        </div>
 
         <%!-- Details --%>
         <div
           id={Navigation.panel_id(@tabs_id, "details")}
-          role={@is_edit && "tabpanel"}
-          aria-labelledby={@is_edit && Navigation.tab_id(@tabs_id, "details")}
-          hidden={@is_edit && @active_tab != "details"}
-          class={panel_class(@is_edit, @active_tab, "details")}
+          role="tabpanel"
+          aria-labelledby={Navigation.tab_id(@tabs_id, "details")}
+          hidden={@active_tab != "details"}
+          class={panel_class(@active_tab, "details")}
         >
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <.input
@@ -232,11 +241,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
         <%!-- Location & Calendar --%>
         <div
+          :if={@is_edit}
           id={Navigation.panel_id(@tabs_id, "location")}
-          role={@is_edit && "tabpanel"}
-          aria-labelledby={@is_edit && Navigation.tab_id(@tabs_id, "location")}
-          hidden={@is_edit && @active_tab != "location"}
-          class={panel_class(@is_edit, @active_tab, "location")}
+          role="tabpanel"
+          aria-labelledby={Navigation.tab_id(@tabs_id, "location")}
+          hidden={@active_tab != "location"}
+          class={panel_class(@active_tab, "location")}
         >
           <.live_component
             module={LocationsSection}
@@ -264,11 +274,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
         <%!-- Booking Rules --%>
         <div
+          :if={@is_edit}
           id={Navigation.panel_id(@tabs_id, "booking")}
-          role={@is_edit && "tabpanel"}
-          aria-labelledby={@is_edit && Navigation.tab_id(@tabs_id, "booking")}
-          hidden={@is_edit && @active_tab != "booking"}
-          class={panel_class(@is_edit, @active_tab, "booking")}
+          role="tabpanel"
+          aria-labelledby={Navigation.tab_id(@tabs_id, "booking")}
+          hidden={@active_tab != "booking"}
+          class={panel_class(@active_tab, "booking")}
         >
           <.payments_section
             :if={@payments_feature_enabled}
@@ -307,16 +318,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
           <.limits_section booking_limits={@booking_limits} myself={@myself} />
 
-          <.visibility_section :if={@is_edit && @type} type={@type} parent={@parent_myself} />
+          <.visibility_section type={@type} parent={@parent_myself} />
         </div>
 
         <%!-- Questions --%>
         <div
+          :if={@is_edit}
           id={Navigation.panel_id(@tabs_id, "questions")}
-          role={@is_edit && "tabpanel"}
-          aria-labelledby={@is_edit && Navigation.tab_id(@tabs_id, "questions")}
-          hidden={@is_edit && @active_tab != "questions"}
-          class={panel_class(@is_edit, @active_tab, "questions")}
+          role="tabpanel"
+          aria-labelledby={Navigation.tab_id(@tabs_id, "questions")}
+          hidden={@active_tab != "questions"}
+          class={panel_class(@active_tab, "questions")}
         >
           <.live_component
             module={CustomQuestionsSection}
@@ -330,11 +342,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
         <%!-- Reminders --%>
         <div
+          :if={@is_edit}
           id={Navigation.panel_id(@tabs_id, "reminders")}
-          role={@is_edit && "tabpanel"}
-          aria-labelledby={@is_edit && Navigation.tab_id(@tabs_id, "reminders")}
-          hidden={@is_edit && @active_tab != "reminders"}
-          class={panel_class(@is_edit, @active_tab, "reminders")}
+          role="tabpanel"
+          aria-labelledby={Navigation.tab_id(@tabs_id, "reminders")}
+          hidden={@active_tab != "reminders"}
+          class={panel_class(@active_tab, "reminders")}
         >
           <.reminders_section
             reminders={@reminders}
@@ -349,31 +362,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
           />
         </div>
 
-        <%!-- Create-mode form serialisation. Edits auto-save from socket assigns
-           (see Autosave/Submission) and never post the form, so these hidden
-           inputs are only needed when creating. --%>
-        <.hidden_fields
-          :if={!@is_edit}
-          type={@type}
-          selected_icon={@selected_icon}
-          locations={@locations}
-          venues={@venues}
-          selected_calendar_integration_id={@selected_calendar_integration_id}
-          selected_target_calendar_id={@selected_target_calendar_id}
-          selected_availability_schedule_id={@selected_availability_schedule_id}
-          reminders={@reminders}
-          custom_fields={@custom_fields}
-          custom_questions_allowed={@custom_questions_allowed}
-          payments_feature_enabled={@payments_feature_enabled}
-          payments_charges_enabled={@payments_charges_enabled}
-          payment_required={@payment_required}
-          payment_price={@payment_price}
-          allow_guests={@allow_guests}
-          requires_approval={@requires_approval}
-          approval_window_hours={@approval_window_hours}
-          show_as_free={@show_as_free}
-        />
-
         <%= for error <- FormValidationHelpers.field_errors(@form_errors, :base) do %>
           <p class="form-error">{Helpers.format_errors(error)}</p>
         <% end %>
@@ -386,7 +374,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             </.action_button>
           <% else %>
             <span></span>
-            <div class="flex justify-end space-x-3">
+            <div class="flex justify-end gap-3">
               <.action_button
                 variant={:secondary}
                 phx-click="toggle_add_form"
@@ -394,14 +382,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
               >
                 {dgettext("dashboard_meeting_form", "Cancel")}
               </.action_button>
-              <.loading_button
-                type="submit"
-                loading={@saving}
-                loading_text={dgettext("dashboard_meeting_form", "Saving...")}
-                disabled={@refreshing_calendars}
-              >
-                {dgettext("dashboard_meeting_form", "Create Meeting Type")}
-              </.loading_button>
+              <%!-- LiveView marks the form phx-submit-loading and disables
+                    this button for the round trip, which is what swaps the
+                    label for the spinner. --%>
+              <.action_button type="submit" data-testid="create-meeting-type">
+                <span class="hidden items-center gap-2 phx-submit-loading:inline-flex">
+                  <.spinner />
+                  {dgettext("dashboard_meeting_form", "Creating…")}
+                </span>
+                <span class="phx-submit-loading:hidden">
+                  {dgettext("dashboard_meeting_form", "Create meeting type")}
+                </span>
+              </.action_button>
             </div>
           <% end %>
         </div>
@@ -540,7 +532,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
   defp parse_interval(_value), do: nil
 
-  defp form_tabs(form_errors) do
+  defp form_tabs(form_errors, is_edit) do
     tabs = [
       %{
         id: "details",
@@ -569,7 +561,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
       }
     ]
 
-    Enum.map(tabs, &Map.put(&1, :error, tab_has_errors?(form_errors, &1.id)))
+    Enum.map(tabs, fn tab ->
+      tab
+      |> Map.put(:error, tab_has_errors?(form_errors, tab.id))
+      |> Map.put(:disabled, not is_edit and tab.id != "details")
+    end)
   end
 
   defp tab_has_errors?(form_errors, tab_id) do
@@ -578,11 +574,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     |> Enum.any?(&(FormValidationHelpers.field_errors(form_errors, &1) != []))
   end
 
-  # In create mode the panels are invisible groupings in one stacked form;
-  # in edit mode each is a card and only the active one is shown.
-  defp panel_class(false = _is_edit, _active_tab, _panel_id), do: "space-y-4"
-
-  defp panel_class(true = _is_edit, active_tab, panel_id) do
+  defp panel_class(active_tab, panel_id) do
     ["card-glass space-y-6", active_tab != panel_id && "hidden"]
   end
 end

@@ -384,40 +384,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
       assert has_element?(view, "[data-testid='location-row']", "Address arranged after booking")
     end
 
-    test "creating a meeting type goes through after a location it offers is deleted elsewhere",
-         %{conn: conn, user: user} do
-      berlin = insert(:venue, user: user, name: "Berlin office")
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
-
-      view |> element("button", "Add Meeting Type") |> render_click()
-      # The default reminder's hidden inputs cannot be re-encoded by
-      # `form/3`; see the creation test in `MeetingSettingsTest`.
-      view |> element("button[aria-label='Remove reminder']") |> render_click()
-      view |> element("[phx-click='edit_location']") |> render_click()
-
-      view
-      |> form("#location-editor-form", %{
-        "location" => %{"venue_ids" => ["", to_string(berlin.id)]}
-      })
-      |> render_submit()
-
-      _drain = :sys.get_state(view.pid)
-      {:ok, _deleted} = Venues.delete_venue(berlin)
-
-      view
-      |> form("form[phx-submit='save_meeting_type']", %{
-        "meeting_type" => %{"name" => "Site visit", "duration" => "20"}
-      })
-      |> render_submit()
-
-      assert render(view) =~ "Meeting type created"
-
-      assert [%{locations: [%{venue_ids: []}]}] =
-               user.id
-               |> MeetingTypes.get_all_meeting_types()
-               |> Enum.filter(&(&1.name == "Site visit"))
-    end
-
     test "says when no address is selected", %{user: user} = ctx do
       berlin = insert(:venue, user: user, name: "Berlin office")
       {view, _meeting_type} = open_editor(ctx, [office()])

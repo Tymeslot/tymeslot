@@ -179,7 +179,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       |> render_click()
 
       assert render(view) =~ "Add Meeting Type"
-      assert has_element?(view, "form[phx-submit='save_meeting_type']")
+      assert has_element?(view, "form[phx-submit='create_meeting_type']")
     end
 
     test "theme customization can be opened and browsed", %{conn: conn} do

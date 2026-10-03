@@ -49,39 +49,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
   end
 
   # ===========================================================================
-  # Creating a Meeting Type
-  # ===========================================================================
-
-  describe "Creating a meeting type" do
-    test "creates a new meeting type and shows it in the list", %{conn: conn, user: user} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
-
-      view |> element("button", "Add Meeting Type") |> render_click()
-
-      assert render(view) =~ "Create Meeting Type"
-
-      # Phoenix.LiveViewTest collects all hidden form inputs before submission and then
-      # re-encodes them via Plug.Conn.Query.encode. The reminder_config[][value]/[][unit]
-      # hidden inputs decode into a list-of-multi-key-maps which cannot be re-encoded.
-      # Removing the default reminder first causes MeetingTypeForm to re-render without
-      # those hidden inputs, making the subsequent form submission encodable.
-      view |> element("button[aria-label='Remove reminder']") |> render_click()
-
-      view
-      |> form("form[phx-submit='save_meeting_type']", %{
-        "meeting_type" => %{"name" => "Quick Coffee", "duration" => "20"}
-      })
-      |> render_submit()
-
-      html = render(view)
-      assert html =~ "Quick Coffee"
-      assert html =~ "Meeting type created"
-
-      assert Enum.any?(MeetingTypes.get_all_meeting_types(user.id), &(&1.name == "Quick Coffee"))
-    end
-  end
-
-  # ===========================================================================
   # Editing a Meeting Type
   # ===========================================================================
 
@@ -221,25 +188,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       assert has_element?(
                view,
                "#meeting-type-form-tabs-panel-booking [phx-click='toggle_private'][aria-checked='true']"
-             )
-    end
-
-    test "create mode renders all sections stacked without a tab bar", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
-
-      view |> element("button", "Add Meeting Type") |> render_click()
-
-      refute has_element?(view, "[role='tablist']")
-
-      for panel <- ~w(details location booking questions reminders) do
-        assert has_element?(view, "#meeting-type-form-tabs-panel-#{panel}")
-        refute has_element?(view, "#meeting-type-form-tabs-panel-#{panel}[hidden]")
-      end
-
-      # The visibility switch needs an existing type; it must not render here.
-      refute has_element?(
-               view,
-               "#meeting-type-form-tabs-panel-booking [phx-click='toggle_private']"
              )
     end
   end

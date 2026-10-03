@@ -9,8 +9,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
   each mutating event; this module owns the rate-limit guard, the
   serialise-and-persist step, and the resulting `:save_status` transitions.
 
-  Creating a new meeting type is a no-op here — there is no record yet, so the
-  explicit "Create Meeting Type" submit still owns persistence.
+  Creating a new meeting type is a no-op here: there is no record yet, so the
+  explicit "Create meeting type" submit (`MeetingTypeForm.Creation`) owns
+  that first save, after which the form is in edit mode.
 
   ## Save-status atoms
 
