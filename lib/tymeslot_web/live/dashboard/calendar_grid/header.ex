@@ -69,15 +69,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
           >
             {dgettext("dashboard_calendar", "Today")}
           </.action_button>
-          <MiniMonthPopover.mini_month_popover
-            open={@mini_month_open}
-            view={@view}
-            date={@date}
-            cursor={@mini_month_cursor}
-            preferences={@preferences}
-            user_timezone={@user_timezone}
-            myself={@myself}
-          />
+          <%!--
+            min-w-0 lets the period title shrink and truncate with an ellipsis
+            when the row is tight (a long week range on a phone); the dropdown
+            root cannot take the class itself.
+          --%>
+          <div class="ml-1 md:ml-2 min-w-0">
+            <MiniMonthPopover.mini_month_popover
+              open={@mini_month_open}
+              view={@view}
+              date={@date}
+              cursor={@mini_month_cursor}
+              preferences={@preferences}
+              user_timezone={@user_timezone}
+              myself={@myself}
+            />
+          </div>
           <div class="hidden md:block ml-1 min-w-0">
             <AvailabilityHelpers.timezone_display
               timezone_display={@timezone_display}
@@ -100,12 +107,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
           Row 2: tools. Use flex-wrap (not overflow-x-auto) so the toolbar
           reflows on narrow screens. overflow-x-auto forces overflow-y to compute
           to auto, which clips the dropdown panels (calendars, search) that
-          extend below the row via `top-full`. The tighter gap on a phone, and
-          the view menu dropping its icon there, keep the row to one line at
-          390px.
+          extend below the row via `top-full`. Below sm the row does not wrap:
+          the timezone label shrinks and truncates instead, so the row stays on
+          one line at 390px whatever the width of the view menu's label
+          ("Agenda" is wider than "Week").
         --%>
-        <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          <div class="md:hidden">
+        <div class="flex flex-nowrap sm:flex-wrap items-center gap-1.5 sm:gap-2">
+          <div class="md:hidden min-w-0">
             <AvailabilityHelpers.timezone_display
               timezone_display={@timezone_display}
               country_code={@timezone_country_code}
@@ -283,20 +291,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
   attr :myself, :any, required: true
 
   # Opens the `.ics` import modal. Kept off the narrowest screens beside Quick
-  # add, where picking a file to import is rare.
+  # add, where picking a file to import is rare; the label collapses to the
+  # icon below md, as Refresh does.
   defp import_button(assigns) do
     ~H"""
-    <button
-      type="button"
+    <.action_button
+      variant={:secondary}
+      size={:sm}
+      icon="hero-arrow-up-tray-mini"
+      class="hidden sm:inline-flex"
       phx-click="show_ics_import"
       phx-target={@myself}
       data-testid="import-ics-button"
-      class="hidden sm:flex min-w-[40px] min-h-[40px] px-2 md:px-3 md:py-1.5 items-center gap-1.5 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
       aria-label={dgettext("dashboard_calendar", "Import events from an .ics file")}
     >
-      <.icon name="hero-arrow-up-tray-mini" class="w-4 h-4" />
       <span class="hidden md:inline">{dgettext("dashboard_calendar", "Import")}</span>
-    </button>
+    </.action_button>
     """
   end
 

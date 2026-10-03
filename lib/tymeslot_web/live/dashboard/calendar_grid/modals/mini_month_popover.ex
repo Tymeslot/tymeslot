@@ -36,6 +36,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
       |> assign(:weeks, Enum.chunk_every(Helpers.month_matrix(cursor, week_start), 7))
       |> assign(:show_week_numbers, Helpers.show_week_numbers?(assigns))
       |> assign(:locale, Gettext.get_locale(TymeslotWeb.Gettext))
+      |> assign(
+        :period_label,
+        Helpers.period_label(%{
+          view: assigns.view,
+          date: assigns.date,
+          preferences: assigns.preferences,
+          user_timezone: assigns.user_timezone
+        })
+      )
 
     ~H"""
     <.dropdown
@@ -47,25 +56,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
       position={:bottom_start}
       role="dialog"
       panel_label={dgettext("dashboard_calendar_events", "Pick a date")}
-      trigger_class="flex items-center gap-1 ml-1 md:ml-2 min-w-0 rounded px-1.5 py-1 hover:bg-tymeslot-100 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
+      trigger_class="flex items-center gap-1 min-w-0 max-w-full rounded px-1.5 py-1 hover:bg-tymeslot-100 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
       class="bg-white border border-tymeslot-200 rounded-token-xl shadow-lg p-3 w-72"
       aria-label={dgettext("dashboard_calendar_events", "Pick a date")}
     >
       <:trigger>
+        <%!-- `title` keeps the full period readable when it truncates. --%>
         <span
           id="calendar-period-label"
-          class="text-token-sm md:text-token-base font-semibold text-tymeslot-800 truncate"
+          class="min-w-0 text-token-sm md:text-token-base font-semibold text-tymeslot-800 truncate"
+          title={@period_label}
         >
-          {Helpers.period_label(%{
-            view: @view,
-            date: @date,
-            preferences: @preferences,
-            user_timezone: @user_timezone
-          })}
+          {@period_label}
         </span>
         <span
           :if={@show_week_numbers and @view in [:week, :three_day, :day]}
-          class="ml-1 text-token-xs font-normal text-tymeslot-400"
+          class="ml-1 shrink-0 text-token-xs font-normal text-tymeslot-400"
         >{dgettext("dashboard_calendar_events", "W%{week}", week: Helpers.week_number(@date))}</span>
         <.icon name="hero-chevron-down" class="w-3 h-3 text-tymeslot-400 shrink-0" />
       </:trigger>
