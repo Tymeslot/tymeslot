@@ -233,7 +233,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
   # only the same wrap behaviour, so a completed row lines up with the rest.
   defp item_cta(%{item: %{done: true}} = assigns) do
     ~H"""
-    <span class="shrink-0 w-full sm:w-32 text-center text-token-xs font-black uppercase tracking-wider text-emerald-600">
+    <span class="shrink-0 w-full sm:w-32 text-center text-token-xs font-black uppercase tracking-wider text-green-600">
       {dgettext("onboarding_wizard", "Done")}
     </span>
     """

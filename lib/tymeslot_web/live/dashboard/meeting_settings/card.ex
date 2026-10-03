@@ -86,7 +86,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               {dgettext("dashboard_meeting_types", "%{minutes} min", minutes: @type.duration_minutes)}
             </span>
             <%= if paid?(@type) do %>
-              <span class="flex items-center shrink-0 font-medium text-emerald-600">
+              <span class="flex items-center shrink-0 font-medium text-green-600">
                 <Icons.icon name="hero-banknotes-mini" class="w-3.5 h-3.5 mr-1" />
                 {format_amount(@type.price_cents, @currency)}
               </span>

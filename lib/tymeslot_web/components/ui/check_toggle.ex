@@ -57,7 +57,7 @@ defmodule TymeslotWeb.Components.UI.CheckToggle do
   defp icon_size_class(:medium), do: "w-4 h-4"
   defp icon_size_class(:large), do: "w-5 h-5"
 
-  defp state_class(true), do: "bg-emerald-500 border-emerald-500 text-white"
+  defp state_class(true), do: "bg-green-500 border-green-500 text-white"
 
   defp state_class(false),
     do: "bg-white border-tymeslot-300 text-transparent hover:border-turquoise-400"

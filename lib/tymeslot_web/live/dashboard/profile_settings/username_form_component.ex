@@ -277,7 +277,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
             <%= if @profile && @profile.username do %>
               <div class="flex items-center gap-2 text-token-sm font-bold text-tymeslot-500">
                 <svg
-                  class="w-4 h-4 text-emerald-500"
+                  class="w-4 h-4 text-green-500"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"

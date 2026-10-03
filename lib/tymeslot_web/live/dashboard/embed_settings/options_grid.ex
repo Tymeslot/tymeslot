@@ -202,11 +202,11 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
     <%!-- WordPress plugin callout. Hardcoded links: Core standalone has no /docs,
          and the plugin (on WordPress.org, source on GitHub) works against any
          instance, cloud or self-hosted. --%>
-    <div class="mt-8 flex items-start gap-3 rounded-token-xl border-2 border-indigo-200 bg-linear-to-r from-indigo-50 to-blue-50 p-5">
-      <.icon name="hero-puzzle-piece" class="mt-0.5 h-6 w-6 shrink-0 text-indigo-600" />
+    <div class="mt-8 flex items-start gap-3 rounded-token-xl border-2 border-blue-200 bg-blue-50 p-5">
+      <.icon name="hero-puzzle-piece" class="mt-0.5 h-6 w-6 shrink-0 text-blue-600" />
       <div class="space-y-1">
-        <p class="font-semibold text-indigo-900">{dgettext("dashboard_embed", "Using WordPress?")}</p>
-        <p class="text-token-sm text-indigo-800">
+        <p class="font-semibold text-blue-900">{dgettext("dashboard_embed", "Using WordPress?")}</p>
+        <p class="text-token-sm text-blue-800">
           {dgettext(
             "dashboard_embed",
             "Install the official Tymeslot plugin to embed your booking page with a block or shortcode - no code."
@@ -217,18 +217,18 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
             rel="noopener noreferrer"
             data-analytics-event="wordpress_plugin_cta_clicked"
             data-analytics-props={Jason.encode!(%{source_page: "embed_settings"})}
-            class="font-bold text-indigo-700 underline hover:text-indigo-900"
+            class="font-bold text-blue-700 underline hover:text-blue-900"
           >
             {dgettext("dashboard_embed", "Get it on WordPress.org")}
           </a>
-          <span class="text-indigo-400" aria-hidden="true">·</span>
+          <span class="text-blue-400" aria-hidden="true">·</span>
           <a
             href="https://github.com/Tymeslot/tymeslot-wordpress"
             target="_blank"
             rel="noopener noreferrer"
             data-analytics-event="github_cta_clicked"
             data-analytics-props={Jason.encode!(%{source_page: "embed_settings"})}
-            class="font-semibold text-indigo-600 underline hover:text-indigo-900"
+            class="font-semibold text-blue-700 underline hover:text-blue-900"
           >
             {dgettext("dashboard_embed", "source")}
           </a>
