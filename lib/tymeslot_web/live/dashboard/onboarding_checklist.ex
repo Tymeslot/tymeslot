@@ -135,9 +135,9 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
         />
       </:actions>
 
-      <div class="h-2 w-full rounded-full bg-tymeslot-100 overflow-hidden mb-6">
+      <div class="h-2 w-full rounded-token-full bg-tymeslot-100 overflow-hidden mb-6">
         <div
-          class="h-full rounded-full bg-linear-to-r from-turquoise-500 to-cyan-500 transition-all duration-500"
+          class="h-full rounded-token-full bg-linear-to-r from-turquoise-500 to-cyan-500 transition-all duration-500"
           style={"width: #{round(@done_count / @total * 100)}%"}
         >
         </div>

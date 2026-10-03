@@ -126,7 +126,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           <div :if={@creating_event[:guest_emails] != []} class="flex flex-wrap gap-1.5 mb-2">
             <span
               :for={email <- @creating_event[:guest_emails] || []}
-              class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-turquoise-50 border border-turquoise-200 text-token-xs text-turquoise-800"
+              class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-token-full bg-turquoise-50 border border-turquoise-200 text-token-xs text-turquoise-800"
             >
               {email}
               <button
@@ -134,7 +134,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
                 phx-click="remove_create_guest"
                 phx-value-email={email}
                 phx-target={@myself}
-                class="w-4 h-4 rounded-full hover:bg-turquoise-200 flex items-center justify-center transition-colors"
+                class="w-4 h-4 rounded-token-full hover:bg-turquoise-200 flex items-center justify-center transition-colors"
                 aria-label={dgettext("dashboard_calendar_events", "Remove %{email}", email: email)}
               >
                 <.icon name="hero-x-mark" class="w-2.5 h-2.5" />
@@ -156,7 +156,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
               phx-change="update_create_guest_input"
               phx-target={@myself}
               placeholder="colleague@example.com"
-              class="flex-1 rounded-md border-tymeslot-300 text-token-sm focus:border-turquoise-500 focus:ring-turquoise-500"
+              class="flex-1 rounded-token-md border-tymeslot-300 text-token-sm focus:border-turquoise-500 focus:ring-turquoise-500"
             />
             <.action_button type="submit" variant={:secondary} size={:sm}>
               {dgettext("dashboard_calendar_events", "Add")}
@@ -369,7 +369,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           >
             <span
               :for={email <- @creating_event[:attendees] || []}
-              class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-amber-50 border border-dashed border-amber-300 text-token-xs text-amber-800"
+              class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-token-full bg-amber-50 border border-dashed border-amber-300 text-token-xs text-amber-800"
             >
               {email}
               <button
@@ -377,7 +377,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
                 phx-click="remove_create_attendee"
                 phx-value-email={email}
                 phx-target={@myself}
-                class="w-4 h-4 rounded-full hover:bg-amber-200 flex items-center justify-center transition-colors"
+                class="w-4 h-4 rounded-token-full hover:bg-amber-200 flex items-center justify-center transition-colors"
                 aria-label={dgettext("dashboard_calendar_events", "Remove %{email}", email: email)}
               >
                 <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -405,7 +405,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
               phx-change="update_create_attendee_input"
               phx-target={@myself}
               placeholder="attendee@example.com"
-              class="flex-1 rounded-md border-tymeslot-300 text-token-sm focus:border-turquoise-500 focus:ring-turquoise-500"
+              class="flex-1 rounded-token-md border-tymeslot-300 text-token-sm focus:border-turquoise-500 focus:ring-turquoise-500"
             />
             <.action_button type="submit" variant={:secondary} size={:sm}>
               {dgettext("dashboard_calendar_events", "Add")}

@@ -101,7 +101,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
                 <button
                   id="dashboard-sidebar-toggle"
                   type="button"
-                  class="lg:hidden dashboard-mobile-menu-toggle flex items-center justify-center w-12 h-12 rounded-xl bg-tymeslot-50 border-2 border-tymeslot-100 hover:bg-turquoise-50 hover:border-turquoise-100 transition-all shrink-0"
+                  class="lg:hidden dashboard-mobile-menu-toggle flex items-center justify-center w-12 h-12 rounded-token-xl bg-tymeslot-50 border-2 border-tymeslot-100 hover:bg-turquoise-50 hover:border-turquoise-100 transition-all shrink-0"
                   phx-click={
                     JS.toggle_class("dashboard-sidebar-open", to: "#dashboard-sidebar")
                     |> JS.toggle_class("hidden", to: "#dashboard-sidebar-overlay")

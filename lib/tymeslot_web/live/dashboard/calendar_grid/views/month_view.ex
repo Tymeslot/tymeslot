@@ -199,7 +199,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
           />{DashboardFormat.title(event.summary)}<span
             :if={EventBadges.guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event)}
             class={[
-              "inline-block w-1.5 h-1.5 rounded-full ml-0.5 align-middle",
+              "inline-block w-1.5 h-1.5 rounded-token-full ml-0.5 align-middle",
               EventBadges.guest_dot_tone(
                 EventBadges.guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event)
               )
@@ -232,7 +232,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
         >
           <span
             :for={event <- @chips |> Enum.drop(1) |> Enum.take(3)}
-            class={"w-1.5 h-1.5 rounded-full #{Helpers.color_for_event(@assigns_ref, event)}"}
+            class={"w-1.5 h-1.5 rounded-token-full #{Helpers.color_for_event(@assigns_ref, event)}"}
           ></span>
           <span :if={length(@chips) > 4} class="ml-0.5">+{length(@chips) - 4}</span>
         </div>
@@ -263,7 +263,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
 
   defp day_number_class(true = _is_today, _is_current_month),
     do:
-      "w-6 h-6 rounded-full bg-turquoise-600 text-white flex items-center justify-center text-center"
+      "w-6 h-6 rounded-token-full bg-turquoise-600 text-white flex items-center justify-center text-center"
 
   defp day_number_class(_is_today, false = _is_current_month), do: "text-tymeslot-400"
   defp day_number_class(_is_today, _is_current_month), do: "text-tymeslot-800"

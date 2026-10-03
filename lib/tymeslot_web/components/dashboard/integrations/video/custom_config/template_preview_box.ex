@@ -116,14 +116,14 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.Templ
 
   # Container styling based on status
   defp preview_container_class(:valid),
-    do: "rounded-lg border border-turquoise-200 bg-turquoise-50"
+    do: "rounded-token-lg border border-turquoise-200 bg-turquoise-50"
 
-  defp preview_container_class(:warning), do: "rounded-lg border border-amber-200 bg-amber-50"
+  defp preview_container_class(:warning), do: "rounded-token-lg border border-amber-200 bg-amber-50"
 
   defp preview_container_class(:static),
-    do: "rounded-lg border border-tymeslot-200 bg-tymeslot-50"
+    do: "rounded-token-lg border border-tymeslot-200 bg-tymeslot-50"
 
-  defp preview_container_class(:empty), do: "rounded-lg border border-tymeslot-200 bg-tymeslot-50"
+  defp preview_container_class(:empty), do: "rounded-token-lg border border-tymeslot-200 bg-tymeslot-50"
 
   # Title styling based on status
   defp status_title_class(:valid), do: "font-semibold text-turquoise-800"

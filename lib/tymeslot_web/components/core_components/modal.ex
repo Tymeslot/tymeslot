@@ -104,7 +104,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
               # Scrolling and the height cap belong to `.modal-content` in
               # modal.css; an `overflow-hidden` here would win over it and cut a
               # tall dialog off again.
-              "modal-content bg-white rounded-[2.5rem] shadow-2xl border-2 border-tymeslot-50 relative",
+              "modal-content bg-white rounded-token-4xl shadow-2xl border-2 border-tymeslot-50 relative",
               modal_size_class(@size)
             ]
           }
@@ -137,7 +137,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
               </div>
               <button
                 type="button"
-                class="w-10 h-10 rounded-xl bg-tymeslot-50 text-tymeslot-400 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center"
+                class="w-10 h-10 rounded-token-xl bg-tymeslot-50 text-tymeslot-400 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center"
                 aria-label={dgettext("common", "Close modal")}
                 phx-click={@on_cancel}
               >

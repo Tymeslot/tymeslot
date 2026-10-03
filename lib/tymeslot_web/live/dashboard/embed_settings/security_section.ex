@@ -154,14 +154,14 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection do
           <%= if @allowed_domains != [] and @allowed_domains != ["none"] do %>
             <div class="flex flex-wrap gap-2 mt-4">
               <%= for domain <- @allowed_domains do %>
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-turquoise-100 text-turquoise-800 border border-turquoise-200">
+                <span class="inline-flex items-center px-3 py-1 rounded-token-full text-sm font-medium bg-turquoise-100 text-turquoise-800 border border-turquoise-200">
                   {domain}
                   <button
                     type="button"
                     phx-click="remove_domain"
                     phx-value-domain={domain}
                     phx-target={@myself}
-                    class="ml-2 inline-flex items-center p-0.5 rounded-full text-turquoise-400 hover:bg-turquoise-200 hover:text-turquoise-500 focus:outline-hidden"
+                    class="ml-2 inline-flex items-center p-0.5 rounded-token-full text-turquoise-400 hover:bg-turquoise-200 hover:text-turquoise-500 focus:outline-hidden"
                   >
                     <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
                       <path

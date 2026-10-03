@@ -100,7 +100,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.AvailabilitySect
         @selected && "btn-tag-selector-primary--active"
       ]}
     >
-      <span :if={@dot} class={["w-2.5 h-2.5 shrink-0 rounded-full", @dot]}></span>
+      <span :if={@dot} class={["w-2.5 h-2.5 shrink-0 rounded-token-full", @dot]}></span>
       {@label}
     </button>
     """

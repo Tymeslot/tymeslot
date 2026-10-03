@@ -256,7 +256,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
                   aria-hidden="true"
                 >
                   <div class="h-0.5 bg-red-500 relative">
-                    <div class="w-2.5 h-2.5 rounded-full bg-red-500 absolute -left-1.5 -top-[0.1875rem]">
+                    <div class="w-2.5 h-2.5 rounded-token-full bg-red-500 absolute -left-1.5 -top-[0.1875rem]">
                     </div>
                   </div>
                 </div>
@@ -303,7 +303,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
       type="button"
       {@open_attrs}
       phx-target={@myself}
-      class="absolute right-0.5 z-10 px-1.5 py-0.5 rounded-full bg-tymeslot-900/80 hover:bg-tymeslot-900 text-white text-token-xs font-semibold shadow-sm focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
+      class="absolute right-0.5 z-10 px-1.5 py-0.5 rounded-token-full bg-tymeslot-900/80 hover:bg-tymeslot-900 text-white text-token-xs font-semibold shadow-sm focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
       style={"top: #{Helpers.top_rem(@cluster.start_at, @user_timezone)}rem;"}
       aria-label={
         dngettext(

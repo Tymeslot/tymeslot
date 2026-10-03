@@ -48,7 +48,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Flash do
       phx-click={@close && JS.push("lv:clear-flash", value: %{key: @kind}) |> hide_flash(@id)}
       role="alert"
       class={[
-        "w-80 sm:w-96 rounded-2xl p-5 shadow-2xl relative overflow-hidden border-2",
+        "w-80 sm:w-96 rounded-token-2xl p-5 shadow-2xl relative overflow-hidden border-2",
         "transition-all duration-300 hover:scale-[1.02] cursor-pointer",
         flash_variant(@kind)
       ]}
@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Flash do
     >
       <div class="relative z-10 flex items-start gap-4">
         <div class={[
-          "shrink-0 w-10 h-10 rounded-xl flex items-center justify-center shadow-sm border",
+          "shrink-0 w-10 h-10 rounded-token-xl flex items-center justify-center shadow-sm border",
           icon_bg_color(@kind)
         ]}>
           <svg

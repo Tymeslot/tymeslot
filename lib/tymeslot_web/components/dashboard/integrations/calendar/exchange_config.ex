@@ -276,7 +276,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ExchangeConfig 
           <% else %>
             <div
               :for={calendar <- @discovered_calendars}
-              class="flex items-center space-x-3 p-3 rounded-lg hover:bg-white/20 transition-colors"
+              class="flex items-center space-x-3 p-3 rounded-token-lg hover:bg-white/20 transition-colors"
             >
               <.input
                 type="checkbox"

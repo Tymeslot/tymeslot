@@ -57,7 +57,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImagePi
                   </svg>
                 </div>
                 <%= if @customization.background_value == image_id do %>
-                  <div class="absolute top-3 right-3 w-8 h-8 bg-turquoise-500 text-white rounded-full flex items-center justify-center shadow-lg z-10">
+                  <div class="absolute top-3 right-3 w-8 h-8 bg-turquoise-500 text-white rounded-token-full flex items-center justify-center shadow-lg z-10">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         stroke-linecap="round"
@@ -99,7 +99,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImagePi
         </div>
       </div>
 
-      <div class="bg-tymeslot-50 p-8 rounded-[2rem] border-2 border-tymeslot-100 border-dashed">
+      <div class="bg-tymeslot-50 p-8 rounded-token-4xl border-2 border-tymeslot-100 border-dashed">
         <form
           id="theme-background-image-form"
           phx-submit="save_background_image"
@@ -152,7 +152,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImagePi
                     </span>
                     <span class="text-turquoise-600 font-black text-token-xs">{entry.progress}%</span>
                   </div>
-                  <div class="bg-tymeslot-100 rounded-full h-2 overflow-hidden shadow-inner">
+                  <div class="bg-tymeslot-100 rounded-token-full h-2 overflow-hidden shadow-inner">
                     <div
                       class="bg-linear-to-r from-turquoise-500 to-cyan-500 h-full transition-all duration-300"
                       style={"width: #{entry.progress}%"}

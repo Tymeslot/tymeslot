@@ -237,7 +237,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
 
     ~H"""
     <div class={[
-      "mx-auto flex items-center justify-center #{@size_classes} rounded-3xl mb-6 bg-linear-to-br from-turquoise-600 to-cyan-600 shadow-xl shadow-turquoise-500/20 border-4 border-white transform transition-transform hover:scale-110",
+      "mx-auto flex items-center justify-center #{@size_classes} rounded-token-3xl mb-6 bg-linear-to-br from-turquoise-600 to-cyan-600 shadow-xl shadow-turquoise-500/20 border-4 border-white transform transition-transform hover:scale-110",
       @class
     ]}>
       <Icons.icon :if={@icon} name={@icon} class={"#{@icon_size} text-white"} />
@@ -470,7 +470,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
     assigns = assign(assigns, :classes, classes)
 
     ~H"""
-    <div class={["rounded-2xl p-6 mb-8 border-2", @classes, @class]}>
+    <div class={["rounded-token-2xl p-6 mb-8 border-2", @classes, @class]}>
       <p class="font-medium">
         {render_slot(@inner_block)}
       </p>

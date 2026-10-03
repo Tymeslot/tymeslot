@@ -51,7 +51,7 @@ defmodule TymeslotWeb.Components.UI.LocaleButton do
       <%= if @inner_block != [] do %>
         {render_slot(@inner_block)}
       <% else %>
-        <.safe_flag country_code={@locale.country_code} class="w-5 h-auto rounded-xs" />
+        <.safe_flag country_code={@locale.country_code} class="w-5 h-auto rounded-token-sm" />
         <span>{@locale.code}</span>
       <% end %>
     </button>

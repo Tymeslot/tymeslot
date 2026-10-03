@@ -62,7 +62,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
       >
         <select
           name="freq"
-          class="w-full rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
+          class="w-full rounded-token-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
         >
           <option
             :for={{value, label} <- @freq_options}
@@ -85,7 +85,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
               min="1"
               max="999"
               value={@interval}
-              class="w-16 rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
+              class="w-16 rounded-token-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
             />
             <span class="text-token-xs text-tymeslot-600">{interval_unit(@freq)}</span>
           </div>
@@ -94,7 +94,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
             <label
               :for={{day, label} <- @weekdays}
               class={[
-                "px-2 py-1 rounded-md border text-token-xs cursor-pointer transition-all select-none",
+                "px-2 py-1 rounded-token-md border text-token-xs cursor-pointer transition-all select-none",
                 if(day in @by_day,
                   do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 font-semibold",
                   else:
@@ -116,7 +116,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
           <div class="flex flex-wrap items-center gap-2">
             <select
               name="end_type"
-              class="rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
+              class="rounded-token-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
             >
               <option value="never" selected={@end_type == "never"}>
                 {dgettext("dashboard_calendar_events", "Never ends")}
@@ -136,7 +136,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
                 min="1"
                 max="999"
                 value={@count}
-                class="w-16 rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
+                class="w-16 rounded-token-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
               />
               <span class="text-token-xs text-tymeslot-600">{dngettext(
                 "dashboard_calendar_events",
@@ -151,7 +151,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
               type="date"
               name="until"
               value={@until}
-              class="rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
+              class="rounded-token-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
             />
           </div>
         </div>

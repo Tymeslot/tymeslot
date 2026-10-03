@@ -80,7 +80,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.VideoPi
                 </div>
                 <div class="absolute inset-0 bg-black/0 group-hover/video:bg-black/20 transition-all duration-300 flex items-center justify-center z-20 pointer-events-none">
                   <div class="opacity-0 group-hover/video:opacity-100 scale-150 group-hover/video:scale-100 transition-all duration-500">
-                    <div class="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-2xl">
+                    <div class="w-12 h-12 rounded-token-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-2xl">
                       <svg class="w-6 h-6 text-white fill-current" viewBox="0 0 24 24">
                         <path d="M8 5v14l11-7z" />
                       </svg>
@@ -88,7 +88,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.VideoPi
                   </div>
                 </div>
                 <%= if @customization.background_value == video_id do %>
-                  <div class="absolute top-3 right-3 w-8 h-8 bg-turquoise-500 text-white rounded-full flex items-center justify-center shadow-lg z-30">
+                  <div class="absolute top-3 right-3 w-8 h-8 bg-turquoise-500 text-white rounded-token-full flex items-center justify-center shadow-lg z-30">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         stroke-linecap="round"
@@ -130,7 +130,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.VideoPi
         </div>
       </div>
 
-      <div class="bg-tymeslot-50 p-8 rounded-[2rem] border-2 border-tymeslot-100 border-dashed">
+      <div class="bg-tymeslot-50 p-8 rounded-token-4xl border-2 border-tymeslot-100 border-dashed">
         <form
           id="theme-background-video-form"
           phx-submit="save_background_video"
@@ -183,7 +183,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.VideoPi
                     </span>
                     <span class="text-turquoise-600 font-black text-xs">{entry.progress}%</span>
                   </div>
-                  <div class="bg-tymeslot-100 rounded-full h-2 overflow-hidden shadow-inner">
+                  <div class="bg-tymeslot-100 rounded-token-full h-2 overflow-hidden shadow-inner">
                     <div
                       class="bg-linear-to-r from-turquoise-500 to-cyan-500 h-full transition-all duration-300"
                       style={"width: #{entry.progress}%"}

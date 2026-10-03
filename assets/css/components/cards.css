@@ -99,7 +99,7 @@
     backdrop-filter: var(--glass-blur-strong);
     -webkit-backdrop-filter: var(--glass-blur-strong);
     border: 1px solid rgba(156, 163, 175, 0.3);
-    border-radius: 16px;
+    border-radius: var(--radius-2xl);
     padding: var(--spacing-6);
     box-shadow: var(--shadow-glass-card);
     color: var(--color-text-glass-primary);

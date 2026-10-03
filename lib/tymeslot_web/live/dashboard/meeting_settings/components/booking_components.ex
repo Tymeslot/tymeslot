@@ -253,7 +253,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                       ]}
                     >
                       <div class={[
-                        "w-4 h-4 rounded-full border-2 mr-3 flex items-center justify-center",
+                        "w-4 h-4 rounded-token-full border-2 mr-3 flex items-center justify-center",
                         if(@selected_target_calendar_id == cal.id,
                           do: "border-turquoise-50 bg-turquoise-500",
                           else: "border-tymeslot-300"

@@ -46,7 +46,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
       <%!-- Pending-notification banner --%>
       <div
         :if={@pending_notification}
-        class="rounded-lg bg-turquoise-50 border border-turquoise-200 p-2 mb-3 flex items-center justify-between"
+        class="rounded-token-lg bg-turquoise-50 border border-turquoise-200 p-2 mb-3 flex items-center justify-between"
       >
         <span class="text-token-sm text-turquoise-900">
           {dgettext("dashboard_calendar_events", "Attendees will be notified of pending changes.")}
@@ -96,7 +96,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         </h3>
       </div>
 
-      <div class={"h-1 rounded-full w-10 mb-2 #{Helpers.color_for_event(assigns, @selected_event)}"}>
+      <div class={"h-1 rounded-token-full w-10 mb-2 #{Helpers.color_for_event(assigns, @selected_event)}"}>
       </div>
 
       <div

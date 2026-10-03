@@ -208,7 +208,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   defp calendar_sync_banner(assigns) do
     ~H"""
     <div class={[
-      "flex items-start justify-between gap-4 rounded-2xl px-5 py-4 mb-6 border-2",
+      "flex items-start justify-between gap-4 rounded-token-2xl px-5 py-4 mb-6 border-2",
       if(@meeting.calendar_sync_status == "externally_deleted",
         do: "bg-red-50 border-red-200 text-red-800",
         else: "bg-amber-50 border-amber-200 text-amber-800"

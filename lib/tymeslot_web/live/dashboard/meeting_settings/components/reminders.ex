@@ -62,7 +62,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
                     target: @myself
                   )
                 }
-                class="inline-flex items-center justify-center rounded-full border border-turquoise-200 bg-white text-turquoise-600 hover:text-turquoise-700 hover:border-turquoise-300"
+                class="inline-flex items-center justify-center rounded-token-full border border-turquoise-200 bg-white text-turquoise-600 hover:text-turquoise-700 hover:border-turquoise-300"
                 aria-label={dgettext("dashboard_meeting_form", "Remove reminder")}
               >
                 <.icon name="hero-x-mark" class="h-4 w-4" />

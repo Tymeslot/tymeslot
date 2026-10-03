@@ -40,7 +40,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ColourP
           ></canvas>
           <div
             data-cp="canvas-thumb"
-            class="pointer-events-none absolute -ml-2 -mt-2 h-4 w-4 rounded-full ring-2 ring-white shadow-md"
+            class="pointer-events-none absolute -ml-2 -mt-2 h-4 w-4 rounded-token-full ring-2 ring-white shadow-md"
             style="left: 100%; top: 0%;"
           >
           </div>

@@ -337,7 +337,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
               "Send this command directly in the Telegram bot chat:"
             )}
           </p>
-          <code class="block text-token-xs font-mono bg-white border border-tymeslot-200 rounded-lg px-3 py-2 break-all select-all text-tymeslot-800">
+          <code class="block text-token-xs font-mono bg-white border border-tymeslot-200 rounded-token-lg px-3 py-2 break-all select-all text-tymeslot-800">
             /start {String.split(@deep_link, "start=") |> List.last() |> String.trim_trailing("#")}
           </code>
         </div>

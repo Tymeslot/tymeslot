@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
           <%!-- Existing (invited) attendees: turquoise --%>
           <span
             :for={attendee <- @attendees}
-            class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-turquoise-50 border border-turquoise-200 text-token-xs text-turquoise-800"
+            class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-token-full bg-turquoise-50 border border-turquoise-200 text-token-xs text-turquoise-800"
           >
             {attendee.display_name || attendee.email}
             <button
@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
               phx-click="request_remove_attendee"
               phx-value-email={attendee.email}
               phx-target={@myself}
-              class="w-4 h-4 rounded-full hover:bg-red-100 flex items-center justify-center transition-colors"
+              class="w-4 h-4 rounded-token-full hover:bg-red-100 flex items-center justify-center transition-colors"
               aria-label={
                 dgettext("dashboard_calendar_events", "Remove %{email}", email: attendee.email)
               }
@@ -61,7 +61,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
           <%!-- Pending (unsent) attendees: amber, dashed --%>
           <span
             :for={email <- @pending_attendees}
-            class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-amber-50 border border-dashed border-amber-300 text-token-xs text-amber-800"
+            class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-token-full bg-amber-50 border border-dashed border-amber-300 text-token-xs text-amber-800"
           >
             {email}
             <button
@@ -69,7 +69,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
               phx-click="remove_pending_attendee"
               phx-value-email={email}
               phx-target={@myself}
-              class="w-4 h-4 rounded-full hover:bg-amber-200 flex items-center justify-center transition-colors"
+              class="w-4 h-4 rounded-token-full hover:bg-amber-200 flex items-center justify-center transition-colors"
               aria-label={dgettext("dashboard_calendar_events", "Remove %{email}", email: email)}
             >
               <.icon name="hero-x-mark-micro" class="w-2.5 h-2.5" />

@@ -171,7 +171,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
       role="dialog"
       panel_label={dgettext("dashboard_calendar", "My Calendars")}
       trigger_class={Enum.join(button_classes(:secondary, :sm), " ")}
-      class="bg-white border border-tymeslot-200 rounded-xl shadow-lg p-3 w-60"
+      class="bg-white border border-tymeslot-200 rounded-token-xl shadow-lg p-3 w-60"
       aria-label={dgettext("dashboard_calendar", "Toggle calendars")}
     >
       <:trigger>
@@ -208,7 +208,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
         on_close="close_view_menu"
         target={@myself}
         trigger_class={Enum.join(button_classes(:secondary, :sm), " ")}
-        class="bg-white border border-tymeslot-200 rounded-xl shadow-lg py-1 w-36"
+        class="bg-white border border-tymeslot-200 rounded-token-xl shadow-lg py-1 w-36"
         aria-label={dgettext("dashboard_calendar", "Switch view")}
       >
         <:trigger>

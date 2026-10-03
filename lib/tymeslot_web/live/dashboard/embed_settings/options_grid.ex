@@ -47,9 +47,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         <:preview>
           <div class="bg-white rounded shadow-sm p-4">
             <div class="flex items-center space-x-2 mb-3">
-              <div class="w-3 h-3 rounded-full bg-red-400"></div>
-              <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
-              <div class="w-3 h-3 rounded-full bg-green-400"></div>
+              <div class="w-3 h-3 rounded-token-full bg-red-400"></div>
+              <div class="w-3 h-3 rounded-token-full bg-yellow-400"></div>
+              <div class="w-3 h-3 rounded-token-full bg-green-400"></div>
             </div>
             <div class="space-y-2">
               <div class="h-2 bg-tymeslot-200 rounded w-3/4"></div>
@@ -90,9 +90,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         <:preview>
           <div class="bg-white rounded shadow-sm p-4">
             <div class="flex items-center space-x-2 mb-3">
-              <div class="w-3 h-3 rounded-full bg-red-400"></div>
-              <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
-              <div class="w-3 h-3 rounded-full bg-green-400"></div>
+              <div class="w-3 h-3 rounded-token-full bg-red-400"></div>
+              <div class="w-3 h-3 rounded-token-full bg-yellow-400"></div>
+              <div class="w-3 h-3 rounded-token-full bg-green-400"></div>
             </div>
             <div class="space-y-2">
               <div class="h-2 bg-tymeslot-200 rounded w-3/4"></div>
@@ -129,9 +129,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         <:preview>
           <div class="bg-white rounded shadow-sm p-4">
             <div class="flex items-center space-x-2 mb-3">
-              <div class="w-3 h-3 rounded-full bg-red-400"></div>
-              <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
-              <div class="w-3 h-3 rounded-full bg-green-400"></div>
+              <div class="w-3 h-3 rounded-token-full bg-red-400"></div>
+              <div class="w-3 h-3 rounded-token-full bg-yellow-400"></div>
+              <div class="w-3 h-3 rounded-token-full bg-green-400"></div>
             </div>
             <div class="space-y-2">
               <div class="h-2 bg-tymeslot-200 rounded w-3/4"></div>
@@ -169,9 +169,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           <div class="mb-0 bg-tymeslot-50 rounded-token-lg p-0 relative overflow-hidden">
             <div class="bg-white rounded shadow-sm p-4">
               <div class="flex items-center space-x-2 mb-3">
-                <div class="w-3 h-3 rounded-full bg-red-400"></div>
-                <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
-                <div class="w-3 h-3 rounded-full bg-green-400"></div>
+                <div class="w-3 h-3 rounded-token-full bg-red-400"></div>
+                <div class="w-3 h-3 rounded-token-full bg-yellow-400"></div>
+                <div class="w-3 h-3 rounded-token-full bg-green-400"></div>
               </div>
               <div class="space-y-2">
                 <div class="h-2 bg-tymeslot-200 rounded w-3/4"></div>
@@ -181,7 +181,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
             </div>
             <%!-- Floating button preview --%>
             <div class="absolute bottom-4 right-4">
-              <div class="w-8 h-8 rounded-full shadow-lg flex items-center justify-center bg-turquoise-600">
+              <div class="w-8 h-8 rounded-token-full shadow-lg flex items-center justify-center bg-turquoise-600">
                 <.icon name="hero-calendar" class="w-4 h-4 text-white" />
               </div>
             </div>
@@ -399,7 +399,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
     >
       <div
         :if={@selected}
-        class="absolute -top-3 -right-3 w-8 h-8 bg-turquoise-600 rounded-full flex items-center justify-center text-white shadow-lg z-10"
+        class="absolute -top-3 -right-3 w-8 h-8 bg-turquoise-600 rounded-token-full flex items-center justify-center text-white shadow-lg z-10"
       >
         <.icon name="hero-check" class="w-5 h-5" />
       </div>

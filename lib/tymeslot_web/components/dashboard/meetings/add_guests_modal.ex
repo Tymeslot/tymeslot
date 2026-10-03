@@ -59,7 +59,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
           <div :if={@staged != []} class="flex flex-wrap gap-2 mb-3">
             <span
               :for={email <- @staged}
-              class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full bg-turquoise-50 border border-turquoise-200 text-turquoise-800 font-medium"
+              class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-token-full bg-turquoise-50 border border-turquoise-200 text-turquoise-800 font-medium"
             >
               {email}
               <button
@@ -67,7 +67,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
                 phx-click="unstage_guest"
                 phx-value-email={email}
                 phx-target={@target}
-                class="w-5 h-5 rounded-full hover:bg-turquoise-200 flex items-center justify-center transition-colors"
+                class="w-5 h-5 rounded-token-full hover:bg-turquoise-200 flex items-center justify-center transition-colors"
                 aria-label={dgettext("dashboard_bookings", "Remove %{email}", email: email)}
               >
                 <Icons.icon name="hero-x-mark" class="w-3 h-3" />

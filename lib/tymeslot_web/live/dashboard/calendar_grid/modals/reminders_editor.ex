@@ -41,7 +41,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
       <div :if={@reminders != []} class="flex flex-wrap gap-1.5 mb-2">
         <span
           :for={{reminder, index} <- Enum.with_index(@reminders)}
-          class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-turquoise-50 border border-turquoise-200 text-token-xs text-turquoise-800"
+          class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-token-full bg-turquoise-50 border border-turquoise-200 text-token-xs text-turquoise-800"
         >
           {reminder_label(reminder)}
           <button
@@ -49,7 +49,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
             phx-click={@remove_event}
             phx-value-index={index}
             phx-target={@myself}
-            class="w-4 h-4 rounded-full hover:bg-red-100 flex items-center justify-center transition-colors"
+            class="w-4 h-4 rounded-token-full hover:bg-red-100 flex items-center justify-center transition-colors"
             aria-label={
               dgettext("dashboard_calendar_events", "Remove reminder %{label}",
                 label: reminder_label(reminder)
@@ -69,13 +69,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
       >
         <select
           name="minutes"
-          class="rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
+          class="rounded-token-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
         >
           <option :for={{minutes, label} <- @presets} value={minutes}>{label}</option>
         </select>
         <select
           name="method"
-          class="rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
+          class="rounded-token-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
         >
           <option value="popup">{dgettext("dashboard_calendar_events", "Notification")}</option>
           <option value="email">{dgettext("dashboard_calendar_events", "Email")}</option>

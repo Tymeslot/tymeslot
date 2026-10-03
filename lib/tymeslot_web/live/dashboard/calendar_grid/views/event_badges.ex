@@ -15,7 +15,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.EventBadges do
     <span
       :if={@summary}
       class={[
-        "absolute bottom-0.5 left-0.5 inline-flex items-center gap-0.5 rounded-full px-1 py-px text-token-2xs font-bold leading-none",
+        "absolute bottom-0.5 left-0.5 inline-flex items-center gap-0.5 rounded-token-full px-1 py-px text-token-2xs font-bold leading-none",
         guest_badge_tone(@summary)
       ]}
       title={guest_badge_title(@summary)}

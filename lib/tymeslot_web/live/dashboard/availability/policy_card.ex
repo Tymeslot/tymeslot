@@ -115,7 +115,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
                 step="5"
                 value={@buffer_value}
                 name="buffer_minutes"
-                class="w-20 px-3 py-2 text-token-sm font-black bg-transparent border-0 focus:ring-0 focus:outline-hidden rounded-l-xl"
+                class="w-20 px-3 py-2 text-token-sm font-black bg-transparent border-0 focus:ring-0 focus:outline-hidden rounded-l-token-xl"
                 placeholder="0"
               />
               <span class="pr-3 py-2 text-token-sm font-black text-turquoise-700">
@@ -204,7 +204,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
                 step="1"
                 value={@booking_days}
                 name="advance_booking_days"
-                class="w-20 px-3 py-2 text-token-sm font-black bg-transparent border-0 focus:ring-0 focus:outline-hidden rounded-l-xl"
+                class="w-20 px-3 py-2 text-token-sm font-black bg-transparent border-0 focus:ring-0 focus:outline-hidden rounded-l-token-xl"
                 placeholder="90"
               />
               <span class="pr-3 py-2 text-token-sm font-black text-cyan-700">
@@ -293,7 +293,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
                 step="1"
                 value={@notice_hours}
                 name="min_advance_hours"
-                class="w-20 px-3 py-2 text-token-sm font-black bg-transparent border-0 focus:ring-0 focus:outline-hidden rounded-l-xl"
+                class="w-20 px-3 py-2 text-token-sm font-black bg-transparent border-0 focus:ring-0 focus:outline-hidden rounded-l-token-xl"
                 placeholder="24"
               />
               <span class="pr-3 py-2 text-token-sm font-black text-turquoise-700">

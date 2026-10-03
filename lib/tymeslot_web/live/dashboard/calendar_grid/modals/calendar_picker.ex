@@ -32,7 +32,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
         <% is_active_integration = integration.id == @selected_integration_id %>
         <%!-- Integration header --%>
         <div class="flex items-center gap-1.5 mb-1.5">
-          <div class={"w-2 h-2 rounded-full shrink-0 #{Helpers.color_dot(%{integration_colors: @integration_colors}, integration)}"}>
+          <div class={"w-2 h-2 rounded-token-full shrink-0 #{Helpers.color_dot(%{integration_colors: @integration_colors}, integration)}"}>
           </div>
           <ProviderIcon.provider_icon provider={integration.provider} type="calendar" size="mini" />
           <span class="text-token-xs font-semibold text-tymeslot-500 uppercase tracking-wide truncate">
@@ -82,7 +82,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
             phx-click={@event_name}
             phx-value-integration-id={integration.id}
             phx-target={@myself}
-            class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-token-xs transition-all #{if is_active_integration, do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
+            class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-token-lg border text-token-xs transition-all #{if is_active_integration, do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
           >
             <span>{dgettext("dashboard_calendar_events", "Default calendar")}</span>
           </button>

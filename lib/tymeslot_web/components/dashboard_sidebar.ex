@@ -49,7 +49,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
         <div class="lg:hidden flex items-center justify-between mb-6">
           <TymeslotWeb.Components.CoreComponents.Brand.logo mode={:full} img_class="h-12" />
           <button
-            class="dashboard-sidebar-close p-3 rounded-xl bg-tymeslot-50 border-2 border-tymeslot-100 hover:bg-red-50 hover:border-red-100 transition-all"
+            class="dashboard-sidebar-close p-3 rounded-token-xl bg-tymeslot-50 border-2 border-tymeslot-100 hover:bg-red-50 hover:border-red-100 transition-all"
             phx-click={close_sidebar_js()}
             aria-label={dgettext("dashboard_common", "Close sidebar")}
           >
@@ -63,14 +63,14 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             :if={LinkAccessPolicy.can_link?(@profile, @integration_status)}
             href={LinkAccessPolicy.scheduling_path(@profile)}
             target="_blank"
-            class="dashboard-nav-link flex-1 flex items-center space-x-3 px-4 py-4 text-sm font-black rounded-2xl transition-all duration-300 bg-linear-to-br from-turquoise-600 to-cyan-600 text-white hover:text-white hover:translate-x-0 shadow-lg shadow-turquoise-500/30 hover:shadow-xl hover:shadow-turquoise-500/40 hover:from-turquoise-700 hover:to-cyan-700 group"
+            class="dashboard-nav-link flex-1 flex items-center space-x-3 px-4 py-4 text-sm font-black rounded-token-2xl transition-all duration-300 bg-linear-to-br from-turquoise-600 to-cyan-600 text-white hover:text-white hover:translate-x-0 shadow-lg shadow-turquoise-500/30 hover:shadow-xl hover:shadow-turquoise-500/40 hover:from-turquoise-700 hover:to-cyan-700 group"
           >
             <.icon name="hero-arrow-top-right-on-square" class="w-5 h-5 shrink-0 text-white" />
             <span class="text-white whitespace-nowrap">{dgettext("dashboard_common", "View Page")}</span>
           </.link>
           <div
             :if={!LinkAccessPolicy.can_link?(@profile, @integration_status)}
-            class="flex-1 flex items-center space-x-3 px-4 py-4 text-sm font-bold rounded-2xl bg-tymeslot-100 text-tymeslot-400 cursor-not-allowed opacity-60 border-2 border-tymeslot-200"
+            class="flex-1 flex items-center space-x-3 px-4 py-4 text-sm font-bold rounded-token-2xl bg-tymeslot-100 text-tymeslot-400 cursor-not-allowed opacity-60 border-2 border-tymeslot-200"
             title={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
           >
             <.icon name="hero-arrow-top-right-on-square" class="w-5 h-5 shrink-0" />
@@ -84,7 +84,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             phx-hook="CopyOnClick"
             data-copy-text={"#{TymeslotWeb.Endpoint.url()}#{LinkAccessPolicy.scheduling_path(@profile)}"}
             data-copy-feedback={dgettext("dashboard_common", "Scheduling link copied to clipboard!")}
-            class="dashboard-nav-link px-4 py-4 rounded-2xl transition-all duration-300 bg-white border-2 border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-400 hover:text-turquoise-700 hover:translate-x-0 shadow-sm hover:shadow-md group"
+            class="dashboard-nav-link px-4 py-4 rounded-token-2xl transition-all duration-300 bg-white border-2 border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-400 hover:text-turquoise-700 hover:translate-x-0 shadow-sm hover:shadow-md group"
             title={dgettext("dashboard_common", "Copy link to clipboard")}
             aria-label={dgettext("dashboard_common", "Copy link to clipboard")}
           >
@@ -98,7 +98,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             id="copy-scheduling-link-disabled"
             type="button"
             aria-disabled="true"
-            class="px-4 py-4 rounded-2xl bg-tymeslot-100 text-tymeslot-400 border-2 border-tymeslot-200 cursor-not-allowed opacity-60"
+            class="px-4 py-4 rounded-token-2xl bg-tymeslot-100 text-tymeslot-400 border-2 border-tymeslot-200 cursor-not-allowed opacity-60"
             title={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
             aria-label={dgettext("dashboard_common", "Copy link to clipboard")}
           >
@@ -334,7 +334,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
       aria-current={if @current == @action, do: "page"}
       {@rest}
       class={[
-        "dashboard-nav-link flex items-center space-x-3 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200",
+        "dashboard-nav-link flex items-center space-x-3 px-4 py-2 text-sm font-medium rounded-token-lg transition-all duration-200",
         if(@current == @action,
           do: "dashboard-nav-link--active",
           else: ""

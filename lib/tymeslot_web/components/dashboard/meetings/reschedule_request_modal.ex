@@ -110,14 +110,14 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RescheduleRequestModal do
             </p>
             <ul class="text-turquoise-700 font-medium space-y-2">
               <li class="flex items-start gap-2">
-                <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-turquoise-400 shrink-0"></span>
+                <span class="mt-1.5 w-1.5 h-1.5 rounded-token-full bg-turquoise-400 shrink-0"></span>
                 <span>{dgettext(
                   "dashboard_bookings",
                   "The current meeting will be cancelled immediately"
                 )}</span>
               </li>
               <li class="flex items-start gap-2">
-                <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-turquoise-400 shrink-0"></span>
+                <span class="mt-1.5 w-1.5 h-1.5 rounded-token-full bg-turquoise-400 shrink-0"></span>
                 <span>{dgettext(
                   "dashboard_bookings",
                   "%{attendee_name} will receive an email explaining you need to reschedule",
@@ -125,14 +125,14 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RescheduleRequestModal do
                 )}</span>
               </li>
               <li class="flex items-start gap-2">
-                <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-turquoise-400 shrink-0"></span>
+                <span class="mt-1.5 w-1.5 h-1.5 rounded-token-full bg-turquoise-400 shrink-0"></span>
                 <span>{dgettext(
                   "dashboard_bookings",
                   "They can choose a new time from your availability"
                 )}</span>
               </li>
               <li class="flex items-start gap-2">
-                <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-turquoise-400 shrink-0"></span>
+                <span class="mt-1.5 w-1.5 h-1.5 rounded-token-full bg-turquoise-400 shrink-0"></span>
                 <span>{dgettext(
                   "dashboard_bookings",
                   "You'll both receive confirmation once they select a new time"

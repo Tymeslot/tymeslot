@@ -351,7 +351,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
             <%= for calendar <- @payload.calendars do %>
               <% path = calendar.path %>
               <% name = calendar.name || path %>
-              <div class="flex items-center space-x-3 p-3 rounded-lg hover:bg-white/20 transition-colors">
+              <div class="flex items-center space-x-3 p-3 rounded-token-lg hover:bg-white/20 transition-colors">
                 <.input
                   type="checkbox"
                   name="selected_paths[]"

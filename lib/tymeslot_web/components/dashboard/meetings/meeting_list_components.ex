@@ -166,7 +166,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   def info_panel(assigns) do
     ~H"""
     <Containers.card padding={:lg} class="mt-12 relative overflow-hidden group/info">
-      <div class="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-turquoise-500/5 rounded-full blur-3xl transition-colors group-hover/info:bg-turquoise-500/10">
+      <div class="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-turquoise-500/5 rounded-token-full blur-3xl transition-colors group-hover/info:bg-turquoise-500/10">
       </div>
 
       <div class="flex flex-col lg:flex-row gap-12 relative z-10">
@@ -188,11 +188,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
 
           <div class="flex flex-wrap gap-4">
             <span class="inline-flex items-center gap-2 px-4 py-2 bg-tymeslot-50 text-tymeslot-600 rounded-token-xl text-token-sm font-black border border-tymeslot-100 shadow-sm">
-              <div class="w-2 h-2 rounded-full bg-turquoise-500"></div>
+              <div class="w-2 h-2 rounded-token-full bg-turquoise-500"></div>
               {dgettext("dashboard_bookings", "Real-time updates")}
             </span>
             <span class="inline-flex items-center gap-2 px-4 py-2 bg-tymeslot-50 text-tymeslot-600 rounded-token-xl text-token-sm font-black border border-tymeslot-100 shadow-sm">
-              <div class="w-2 h-2 rounded-full bg-cyan-500"></div>
+              <div class="w-2 h-2 rounded-token-full bg-cyan-500"></div>
               {dgettext("dashboard_bookings", "Auto-notifications")}
             </span>
           </div>

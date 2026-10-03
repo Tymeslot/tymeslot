@@ -141,14 +141,14 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
       />
 
       <div class="relative inline-block mb-8" id="avatar-upload-section">
-        <div class="w-40 h-40 rounded-[2.5rem] overflow-hidden bg-tymeslot-100 border-4 border-white shadow-2xl relative z-10 mx-auto">
+        <div class="w-40 h-40 rounded-token-4xl overflow-hidden bg-tymeslot-100 border-4 border-white shadow-2xl relative z-10 mx-auto">
           <img
             src={Profiles.avatar_url(@profile, :thumb)}
             alt={Profiles.avatar_alt_text(@profile)}
             class="w-full h-full object-cover"
           />
         </div>
-        <div class="absolute inset-0 bg-turquoise-400 blur-2xl opacity-20 rounded-full scale-75 transition-opacity">
+        <div class="absolute inset-0 bg-turquoise-400 blur-2xl opacity-20 rounded-token-full scale-75 transition-opacity">
         </div>
       </div>
 
@@ -230,7 +230,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
                 </span>
                 <span class="text-turquoise-600 font-black text-xs">{entry.progress}%</span>
               </div>
-              <div class="bg-white rounded-full h-2 overflow-hidden shadow-inner">
+              <div class="bg-white rounded-token-full h-2 overflow-hidden shadow-inner">
                 <div
                   class="bg-linear-to-r from-turquoise-500 to-cyan-500 h-full transition-all duration-300"
                   style={"width: #{entry.progress}%"}

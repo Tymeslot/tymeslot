@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.ThemePreviewInl
     assigns = assign(assigns, :css_vars, css_vars)
 
     ~H"""
-    <div class={"rounded-lg overflow-hidden border border-tymeslot-200 #{ @class }"}>
+    <div class={"rounded-token-lg overflow-hidden border border-tymeslot-200 #{ @class }"}>
       <%!-- Scope CSS variables to this wrapper via inline style --%>
       <div class="relative" style={"#{@css_vars}"}>
         <%!-- Background layer using the scoped CSS variables --%>
@@ -38,7 +38,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.ThemePreviewInl
         <%!-- Foreground demo card to showcase primary colors and surfaces --%>
         <div class="absolute inset-0 flex items-center justify-center p-4">
           <div
-            class="rounded-xl shadow-lg max-w-sm w-full"
+            class="rounded-token-xl shadow-lg max-w-sm w-full"
             style="
               background: rgba(255,255,255,0.8);
               backdrop-filter: blur(6px);

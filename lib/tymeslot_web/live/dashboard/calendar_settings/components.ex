@@ -169,7 +169,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
         <div class="flex items-center justify-between gap-4 flex-col md:flex-row">
           <div>
             <h2 class="text-token-lg font-semibold text-tymeslot-900 flex items-center gap-3">
-              <div class="w-2 h-2 rounded-full bg-turquoise-500 animate-pulse"></div>
+              <div class="w-2 h-2 rounded-token-full bg-turquoise-500 animate-pulse"></div>
               {dgettext("dashboard_calendar_settings", "Active for Conflict Checking")}
             </h2>
             <p class="text-tymeslot-500 font-medium mt-1 ml-5">
@@ -208,7 +208,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       <div :if={@inactive_integrations != []} class="space-y-6">
         <div>
           <h2 class="text-token-lg font-semibold text-tymeslot-500 flex items-center gap-3">
-            <div class="w-2 h-2 rounded-full bg-tymeslot-300"></div>
+            <div class="w-2 h-2 rounded-token-full bg-tymeslot-300"></div>
             {dgettext("dashboard_calendar_settings", "Paused Calendars")}
           </h2>
           <p class="text-tymeslot-400 font-medium mt-1 ml-5">

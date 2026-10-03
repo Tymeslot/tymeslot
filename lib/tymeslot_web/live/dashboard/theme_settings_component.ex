@@ -99,7 +99,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
                         {theme_name}
                       </h2>
                       <%= if @profile.booking_theme == theme_id do %>
-                        <div class="flex items-center gap-2 bg-turquoise-500 text-white px-4 py-1.5 rounded-full text-token-xs font-black uppercase tracking-wider shadow-lg">
+                        <div class="flex items-center gap-2 bg-turquoise-500 text-white px-4 py-1.5 rounded-token-full text-token-xs font-black uppercase tracking-wider shadow-lg">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path
                               stroke-linecap="round"
@@ -211,10 +211,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
                 )}
               </p>
               <div class="flex gap-2">
-                <div class="w-2 h-2 bg-turquoise-400 rounded-full animate-bounce"></div>
-                <div class="w-2 h-2 bg-turquoise-400 rounded-full animate-bounce [animation-delay:0.2s]">
+                <div class="w-2 h-2 bg-turquoise-400 rounded-token-full animate-bounce"></div>
+                <div class="w-2 h-2 bg-turquoise-400 rounded-token-full animate-bounce [animation-delay:0.2s]">
                 </div>
-                <div class="w-2 h-2 bg-turquoise-400 rounded-full animate-bounce [animation-delay:0.4s]">
+                <div class="w-2 h-2 bg-turquoise-400 rounded-token-full animate-bounce [animation-delay:0.4s]">
                 </div>
               </div>
             </div>

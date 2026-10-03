@@ -134,17 +134,17 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
           >
             <div class="flex items-center gap-2 mb-4 bg-tymeslot-50/50 p-2 rounded-token-xl group-hover/scheme:scale-110 transition-transform">
               <div
-                class="w-6 h-6 rounded-full shadow-sm border border-white"
+                class="w-6 h-6 rounded-token-full shadow-sm border border-white"
                 style={"background-color: #{scheme.colors.primary}"}
               >
               </div>
               <div
-                class="w-6 h-6 rounded-full shadow-sm border border-white"
+                class="w-6 h-6 rounded-token-full shadow-sm border border-white"
                 style={"background-color: #{scheme.colors.secondary}"}
               >
               </div>
               <div
-                class="w-6 h-6 rounded-full shadow-sm border border-white"
+                class="w-6 h-6 rounded-token-full shadow-sm border border-white"
                 style={"background-color: #{scheme.colors.accent}"}
               >
               </div>
@@ -160,7 +160,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
             </p>
 
             <%= if active_scheme_id == scheme_id do %>
-              <div class="absolute top-2 right-2 w-6 h-6 bg-turquoise-500 text-white rounded-full flex items-center justify-center shadow-lg">
+              <div class="absolute top-2 right-2 w-6 h-6 bg-turquoise-500 text-white rounded-token-full flex items-center justify-center shadow-lg">
                 <.icon name="hero-check-mini" class="w-4 h-4" />
               </div>
             <% end %>
