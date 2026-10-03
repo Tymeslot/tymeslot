@@ -115,6 +115,8 @@
 .dashboard-nav-link {
   @apply text-tymeslot-600 font-bold transition-glass flex items-center space-x-3 px-4 py-2 text-sm rounded-token-xl;
   @apply hover:text-turquoise-600 hover:bg-turquoise-50/50 hover:translate-x-1;
+  /* The anchor for the notification badge and the active shimmer. */
+  position: relative;
 }
 
 .dashboard-nav-link--active {
@@ -122,16 +124,21 @@
   @apply hover:text-white hover:from-turquoise-700 hover:to-cyan-700 hover:translate-x-0;
 }
 
-.dashboard-nav-link--active svg {
-  @apply text-white/90;
-}
-
+/* Icons inside nav links. A hovered icon takes the link's own hover colour
+   through currentColor, so it never turns teal on the active link's teal
+   gradient. */
 .dashboard-nav-link svg {
-  @apply w-5 h-5 transition-transform duration-300;
+  @apply w-5 h-5;
+  transition: var(--transition-glass-fast);
+  flex-shrink: 0;
 }
 
 .dashboard-nav-link:hover svg {
   @apply scale-110;
+}
+
+.dashboard-nav-link--active svg {
+  @apply text-white/90;
 }
 
 /* Subtle shimmer effect for active links */
@@ -181,22 +188,6 @@
 
 .dashboard-nav-link--needs-setup svg {
   color: var(--color-primary-600);
-}
-
-/* Icon enhancements within nav links */
-.dashboard-nav-link svg {
-  transition: var(--transition-glass-fast);
-  flex-shrink: 0;
-}
-
-.dashboard-nav-link:hover svg {
-  transform: scale(1.05);
-  color: var(--color-primary-600);
-}
-
-.dashboard-nav-link--active svg {
-  color: rgba(255, 255, 255, 0.9);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 /* Focus states for accessibility: a ring for keyboard focus only, so a
@@ -416,12 +407,6 @@
 .dashboard-nav-link:hover .dashboard-nav-notification {
   opacity: 1;
   transform: translateY(-50%) scale(1.05);
-}
-
-
-/* Ensure parent nav link has position relative for badge positioning */
-.dashboard-nav-link {
-  position: relative;
 }
 
 /* Reduced motion support for notifications */
