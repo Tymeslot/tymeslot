@@ -155,7 +155,8 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpersTest do
           selected_time: "10:00",
           available_slots: [%{time: "10:00", seats_left: 1, capacity: 3}],
           guest_emails: [],
-          organizer_user_id: nil
+          organizer_user_id: nil,
+          attendee_prefill: %{}
         })
 
       updated = LiveHelpers.handle_booking_entry(socket, %{})
