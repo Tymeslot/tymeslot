@@ -20,11 +20,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
   | `:saved`      | "All changes saved"                         | Persist succeeded.                                        |
   | `:unsaved`    | "Unsaved changes"                           | Form is valid but in-flight (e.g. invalid-form pre-save). |
   | `:incomplete` | "Complete the form to save"                 | A required companion field is not yet set (video          |
-  |               |                                             | provider or target calendar absent, or price not yet      |
-  |               |                                             | entered when payment is required). Not a failure — the    |
-  |               |                                             | form is legitimately in progress.                         |
-  | `:throttled`  | "Too many changes — saving shortly…"        | Rate limit hit. A retry is automatically scheduled.       |
-  | `:error`      | "Couldn't save changes"                     | Unexpected persistence failure (changeset or context).    |
+  |               |                                             | provider or target calendar absent, or no price entered   |
+  |               |                                             | yet when payment is required). Not a failure: the form    |
+  |               |                                             | is legitimately in progress.                              |
+  | `:throttled`  | "Too many changes - saving shortly…"        | Rate limit hit. A retry is automatically scheduled.       |
+  | `:error`      | "Couldn't save changes"                     | The save was refused. Either the organiser's own input    |
+  |               |                                             | (an entered price below the currency minimum, shown       |
+  |               |                                             | beside the field and not logged), or an unexpected        |
+  |               |                                             | persistence failure (changeset or context, logged).       |
   """
 
   use TymeslotWeb, :html
@@ -77,12 +80,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
   # per-field validators that already drive inline display.
   #
   # Companion-field-not-yet-set errors (:video_integration_required,
-  # :target_calendar_required) and a price_cents-required changeset error when
-  # payment has just been enabled are expected incomplete states — the form is
+  # :target_calendar_required) and a price_cents error while no price has been
+  # entered after enabling payment are expected incomplete states: the form is
   # legitimately in progress and no alarming error indicator should show.
   #
-  # Genuine persistence failures (unexpected changeset errors, unknown context
-  # errors) are logged and shown as :error.
+  # An entered price the changeset refuses is shown as :error with its message
+  # beside the price input, and is not logged: it is the organiser's input,
+  # not a fault. Genuine persistence failures (unexpected changeset errors,
+  # unknown context errors) are logged and shown as :error.
   defp apply_result({:ok, updated}, socket) do
     socket
     |> assign(:type, updated)

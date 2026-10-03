@@ -117,9 +117,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
   end
 
   # Keeps, in each posted location, only the venue ids still among the
-  # organiser's venues. Locations arrive as a list from `build_params/1` and
-  # as an index-keyed map from the rendered form.
-  defp drop_deleted_venues(%{"locations" => locations} = params, user_id) do
+  # organiser's venues. Locations arrive as the list `build_params/1` makes.
+  defp drop_deleted_venues(%{"locations" => locations} = params, user_id)
+       when is_list(locations) do
     venues = Venues.list_venues(user_id)
 
     keep_known = fn
@@ -130,17 +130,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
         location
     end
 
-    Map.put(params, "locations", map_locations(locations, keep_known))
+    Map.put(params, "locations", Enum.map(locations, keep_known))
   end
 
   defp drop_deleted_venues(params, _user_id), do: params
-
-  defp map_locations(locations, fun) when is_list(locations), do: Enum.map(locations, fun)
-
-  defp map_locations(locations, fun) when is_map(locations),
-    do: Map.new(locations, fn {index, location} -> {index, fun.(location)} end)
-
-  defp map_locations(locations, _fun), do: locations
 
   # Builds the UI-state map the context uses to resolve the icon from the
   # submitted params.

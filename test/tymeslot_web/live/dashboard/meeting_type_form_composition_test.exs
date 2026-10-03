@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Dashboard.MeetingTypeFormCompositionTest do
   @moduledoc """
   Composition tests for the meeting-type form's server-side validation
-  seam — the point where the LiveComponent's UI state and the
+  seam: the point where the LiveComponent's UI state and the
   `MeetingTypes.update_meeting_type_from_form/3` validation chain meet.
 
   The existing coverage is:
@@ -22,7 +22,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormCompositionTest do
   Dropped from the plan with rationale:
 
     * `add_reminder` / `add_quick_reminder` / `remove_reminder` save
-      persistence — covered by the auto-save tests in
+      persistence: covered by the auto-save tests in
       `meeting_settings_test.exs`. Cap + value rules pinned at the unit
       level in `validation_test.exs`.
     * `update_buffer_minutes` / `update_advance_booking_days`
@@ -36,7 +36,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormCompositionTest do
       three IDs missing) surfaces immediately in the happy-path
       `create_meeting_type_from_form` unit tests; a compostion test
       adds cost without new coverage.
-    * `select_icon` / forged `meeting_type[icon]` — the form saves the
+    * `select_icon` / forged `meeting_type[icon]`: the form saves the
       icon from socket state, never from posted params, so a tampered
       icon cannot be injected from this test surface. The validation is pinned
       at the schema level (`MeetingTypeSchema.changeset/2`
@@ -59,7 +59,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormCompositionTest do
 
   setup :setup_dashboard_user
 
-  describe "auto-save — video integration deactivated mid-flow" do
+  describe "auto-save: video integration deactivated mid-flow" do
     @tag :capture_log
     test "rejects the save when the selected video integration was turned off",
          %{conn: conn, user: user} do
