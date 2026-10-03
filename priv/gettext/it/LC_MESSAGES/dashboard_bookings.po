@@ -193,11 +193,6 @@ msgstr "Riunione annullata ma non è stato possibile emettere il rimborso. Emett
 msgid "Meeting cancelled successfully"
 msgstr "Riunione annullata con successo"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
-#, elixir-autogen, elixir-format
-msgid "Meetings"
-msgstr "Riunioni"
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "No cancelled meetings"

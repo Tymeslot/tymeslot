@@ -27,9 +27,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection do
               >
               </path>
             </svg>
-            <h3 class="text-token-lg font-semibold text-tymeslot-900">
+            <h2 class="text-token-lg font-semibold text-tymeslot-900">
               {dgettext("dashboard_embed", "Security & Domain Control")}
-            </h3>
+            </h2>
           </div>
           <p class="text-tymeslot-600">
             {dgettext("dashboard_embed", "Control which websites can embed your booking page")}

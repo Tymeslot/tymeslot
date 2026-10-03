@@ -51,11 +51,6 @@ msgstr "Applica ai giorni lavorativi"
 msgid "Are you sure you want to delete this break%{label}?"
 msgstr "Vuoi davvero eliminare questa pausa%{label}?"
 
-#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Availability"
-msgstr "Disponibilità"
-
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
 #, elixir-autogen, elixir-format
 msgid "Break"

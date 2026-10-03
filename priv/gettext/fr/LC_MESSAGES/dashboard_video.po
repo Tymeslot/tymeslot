@@ -1010,11 +1010,6 @@ msgstr "Utiliser votre connexion de calendrier Nextcloud"
 msgid "Variable name should be: {{meeting_id}}"
 msgstr "Le nom de la variable devrait être : {{meeting_id}}"
 
-#: lib/tymeslot_web/live/dashboard/video_settings/component_view.ex
-#, elixir-autogen, elixir-format
-msgid "Video Integration"
-msgstr "Intégration vidéo"
-
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Video integration added successfully"

@@ -189,11 +189,6 @@ msgstr "Spotkanie odwołane, ale nie udało się zrealizować zwrotu. Wykonaj zw
 msgid "Meeting cancelled successfully"
 msgstr "Spotkanie zostało odwołane"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
-#, elixir-autogen, elixir-format
-msgid "Meetings"
-msgstr "Spotkania"
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "No cancelled meetings"

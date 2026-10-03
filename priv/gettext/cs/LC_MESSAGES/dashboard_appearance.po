@@ -31,11 +31,6 @@ msgstr "Došlo k chybě. Obnovte prosím stránku a zkuste to znovu."
 msgid "Background Design"
 msgstr "Vzhled pozadí"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Choose Your Style"
-msgstr "Vyberte si styl"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a visual style that matches your professional identity."
@@ -192,11 +187,6 @@ msgstr "Vyberte hlavní barvy rozhraní své rezervační stránky."
 #, elixir-autogen, elixir-format
 msgid "Solid Color"
 msgstr "Jednolitá barva"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex
-#, elixir-autogen, elixir-format
-msgid "Theme Customization"
-msgstr "Přizpůsobení motivu"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_preview.ex

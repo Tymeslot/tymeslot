@@ -100,11 +100,6 @@ msgstr "Edytuj"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex
 #, elixir-autogen, elixir-format
-msgid "Meeting Types"
-msgstr "Typy spotkań"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex
-#, elixir-autogen, elixir-format
 msgid "No meeting types configured yet"
 msgstr "Nie skonfigurowano jeszcze żadnego typu spotkania"
 
@@ -231,11 +226,6 @@ msgstr "Usunięto lokalizację"
 #, elixir-autogen, elixir-format
 msgid "Location saved"
 msgstr "Zapisano lokalizację"
-
-#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
-#, elixir-autogen, elixir-format
-msgid "Locations"
-msgstr "Lokalizacje"
 
 #: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
 #, elixir-autogen, elixir-format

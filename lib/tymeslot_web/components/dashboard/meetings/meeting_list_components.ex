@@ -130,7 +130,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
     <Feedback.empty_state
       icon="hero-calendar-days"
       size={:lg}
-      heading={:h3}
+      heading={:h2}
       title={no_meetings_title(@filter)}
       description={no_meetings_description(@filter)}
     />

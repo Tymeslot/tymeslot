@@ -48,7 +48,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponentTest do
   end
 
   describe "meeting_types_section/1 with meeting types listed" do
-    test "offers Add Meeting Type once, in the header, with no empty state" do
+    test "lists them with no empty state and leaves Add Meeting Type to the page header" do
       type = %{
         id: 1,
         name: "Strategy Call",
@@ -68,13 +68,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponentTest do
 
       doc = render_section(%{meeting_types: [type]})
 
-      assert Enum.count(add_buttons(doc)) == 1
+      assert Enum.empty?(add_buttons(doc))
       assert LazyHTML.text(doc) =~ "Strategy Call"
       refute LazyHTML.text(doc) =~ "No meeting types configured yet"
-
-      assert doc
-             |> LazyHTML.query(".card-glass button[phx-click='toggle_add_form']")
-             |> Enum.empty?()
     end
   end
 end

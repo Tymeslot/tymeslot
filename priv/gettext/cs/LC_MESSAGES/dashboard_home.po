@@ -86,11 +86,6 @@ msgstr "Nyní"
 
 #: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format
-msgid "Overview"
-msgstr "Přehled"
-
-#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
-#, elixir-autogen, elixir-format
 msgid "Today"
 msgstr "Dnes"
 

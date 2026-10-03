@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
   @moduledoc """
-  Function components for rendering the Meeting Types section header, add button, empty state,
-  and the grid of meeting type cards, emitting events to the parent via parent_myself.
+  Function components for rendering the Meeting Types add button, empty state,
+  and the list of meeting type cards, emitting events to the parent via parent_myself.
   """
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
@@ -19,17 +19,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
   def meeting_types_section(assigns) do
     ~H"""
     <div>
-      <div class="flex items-center justify-between mb-6">
-        <h2 class="text-token-xl font-semibold text-tymeslot-800">
-          {dgettext("dashboard_meeting_types", "Meeting Types")}
-        </h2>
-        <%!-- With no meeting types yet, the empty state below carries the action. --%>
-        <.add_meeting_type_button
-          :if={!@show_add_form and !@editing_type and @meeting_types != []}
-          parent_myself={@parent_myself}
-        />
-      </div>
-
       <%= if @meeting_types == [] && !@show_add_form do %>
         <.empty_state
           icon="hero-clock"
@@ -71,7 +60,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
 
   attr :parent_myself, :any, required: true
 
-  defp add_meeting_type_button(assigns) do
+  @doc """
+  The button that opens the add form. The page header carries it once there
+  are meeting types; with none yet, the empty state does.
+  """
+  @spec add_meeting_type_button(map()) :: Phoenix.LiveView.Rendered.t()
+  def add_meeting_type_button(assigns) do
     ~H"""
     <.action_button
       size={:sm}

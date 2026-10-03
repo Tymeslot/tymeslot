@@ -201,11 +201,6 @@ msgstr "Integration erfolgreich gelöscht"
 msgid "Integration not found. It may have already been deleted."
 msgstr "Integration nicht gefunden. Möglicherweise wurde sie bereits gelöscht."
 
-#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
-#, elixir-autogen, elixir-format
-msgid "Integrations"
-msgstr "Integrationen"
-
 #: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid authentication response. Please try again."
@@ -215,11 +210,6 @@ msgstr "Ungültige Authentifizierungsantwort. Bitte versuchen Sie es erneut."
 #, elixir-autogen, elixir-format
 msgid "Invalid integration ID"
 msgstr "Ungültige Integrations-ID"
-
-#: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting Settings"
-msgstr "Termineinstellungen"
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex
 #, elixir-autogen, elixir-format

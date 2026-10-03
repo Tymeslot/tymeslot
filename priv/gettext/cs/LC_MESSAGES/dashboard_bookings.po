@@ -193,11 +193,6 @@ msgstr "Schůzka byla zrušena, ale platbu se nepodařilo vrátit. Vraťte ji pr
 msgid "Meeting cancelled successfully"
 msgstr "Schůzka byla zrušena."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
-#, elixir-autogen, elixir-format
-msgid "Meetings"
-msgstr "Schůzky"
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "No cancelled meetings"

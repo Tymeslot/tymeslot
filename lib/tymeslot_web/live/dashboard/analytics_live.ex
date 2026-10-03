@@ -128,34 +128,33 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
         feature_placeholder_components={@feature_placeholder_components}
       />
 
-      <div :if={@analytics_allowed} class="space-y-6">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <h1 class="text-2xl font-black tracking-tight text-tymeslot-900">
-            {dgettext("dashboard_analytics", "Analytics")}
-          </h1>
-          <div class="flex items-center gap-2">
-            <.segmented_control
-              id="analytics-range"
-              value={@range}
-              on_change="set_range"
-              param="range"
-              aria_label={dgettext("dashboard_analytics", "Date range")}
-            >
-              <:option value="7d" label={dgettext("dashboard_analytics", "7 days")} />
-              <:option value="30d" label={dgettext("dashboard_analytics", "30 days")} />
-              <:option value="90d" label={dgettext("dashboard_analytics", "90 days")} />
-            </.segmented_control>
-            <%!-- The arbitrary variant spins the component's icon while a
+      <.dashboard_page
+        :if={@analytics_allowed}
+        icon="hero-chart-bar"
+        title={dgettext("dashboard_common", "Analytics")}
+      >
+        <:actions>
+          <.segmented_control
+            id="analytics-range"
+            value={@range}
+            on_change="set_range"
+            param="range"
+            aria_label={dgettext("dashboard_analytics", "Date range")}
+          >
+            <:option value="7d" label={dgettext("dashboard_analytics", "7 days")} />
+            <:option value="30d" label={dgettext("dashboard_analytics", "30 days")} />
+            <:option value="90d" label={dgettext("dashboard_analytics", "90 days")} />
+          </.segmented_control>
+          <%!-- The arbitrary variant spins the component's icon while a
                   refresh is in flight; the button itself stays still. --%>
-            <.icon_button
-              icon="hero-arrow-path"
-              label={dgettext("dashboard_analytics", "Refresh analytics")}
-              size={:sm}
-              class={@refreshing? && "[&>svg]:animate-spin"}
-              phx-click="refresh"
-            />
-          </div>
-        </div>
+          <.icon_button
+            icon="hero-arrow-path"
+            label={dgettext("dashboard_analytics", "Refresh analytics")}
+            size={:sm}
+            class={@refreshing? && "[&>svg]:animate-spin"}
+            phx-click="refresh"
+          />
+        </:actions>
 
         <p
           :if={@loaded? and @refreshed_at}
@@ -214,7 +213,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
         <DeviceBreakdown.breakdown devices={@devices} loading?={!@loaded?} />
 
         <SourcesTable.table sources={@sources} loading?={!@loaded?} />
-      </div>
+      </.dashboard_page>
     </DashboardLayout.dashboard_layout>
     """
   end

@@ -51,11 +51,6 @@ msgstr "Au moins un abonnement à un événement est requis."
 msgid "Attempt %{count}"
 msgstr "Tentative %{count}"
 
-#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Automation"
-msgstr "Automatisation"
-
 #: lib/tymeslot_web/live/dashboard/automation/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Automation is available on Pro plans."

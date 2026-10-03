@@ -24,18 +24,21 @@ msgstr "Ajoutez un type de réunion pour que les invités puissent réserver"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
 #, elixir-autogen, elixir-format
 msgid "Analytics"
 msgstr "Statistiques"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Automation"
 msgstr "Automatisation"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Availability"
 msgstr "Disponibilités"
@@ -43,6 +46,7 @@ msgstr "Disponibilités"
 #: lib/tymeslot/integrations/calendar/display_helpers.ex
 #: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr "Calendrier"
@@ -64,6 +68,7 @@ msgstr "Distribution"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Embed & Share"
 msgstr "Intégrer et partager"
@@ -75,24 +80,28 @@ msgstr "Général"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
 #, elixir-autogen, elixir-format
 msgid "Integrations"
 msgstr "Intégrations"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Types"
 msgstr "Types de réunion"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
 #, elixir-autogen, elixir-format
 msgid "Meetings"
 msgstr "Réunions"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Overview"
 msgstr "Aperçu"
@@ -104,6 +113,7 @@ msgstr "Pro"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Profile"
 msgstr "Profil"
@@ -120,6 +130,7 @@ msgstr "Configuration recommandée"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Theme"
 msgstr "Thème"
@@ -621,6 +632,7 @@ msgstr "Ce créneau tombe pendant votre absence. Modifiez ou supprimez l'absence
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
 #, elixir-autogen, elixir-format
 msgid "Locations"
 msgstr "Lieux"

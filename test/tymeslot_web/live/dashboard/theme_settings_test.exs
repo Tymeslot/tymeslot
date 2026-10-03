@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
     test "renders theme options", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard/theme")
 
-      assert html =~ "Choose Your Style"
+      assert html =~ "Select the interface that best represents your personal brand"
       assert html =~ "Quill"
       assert html =~ "Rhythm"
     end
@@ -114,7 +114,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       |> element("button", "Close")
       |> render_click()
 
-      assert render(view) =~ "Choose Your Style"
+      assert render(view) =~ "Select the interface that best represents your personal brand"
       refute render(view) =~ "Color Palette"
     end
 

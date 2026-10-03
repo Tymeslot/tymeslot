@@ -381,13 +381,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div id="bookings-management" class="space-y-10 pb-20">
-      <div>
-        <.section_header
-          icon="hero-calendar-days"
-          title={dgettext("dashboard_bookings", "Meetings")}
-        />
-
+    <div id="bookings-management">
+      <.dashboard_page icon="hero-clock" title={dgettext("dashboard_common", "Meetings")}>
         <div class="mb-10">
           <MeetingListComponents.filter_tabs
             active={@filter}
@@ -418,7 +413,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         <div class="mt-16">
           <MeetingListComponents.info_panel />
         </div>
-      </div>
+      </.dashboard_page>
 
       <Modals.booking_modals
         cancel_meeting={@cancel_meeting_modal_data}

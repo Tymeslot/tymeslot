@@ -292,7 +292,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
         />
       <% end %>
 
-      <div class="space-y-10 pb-20">
+      <.dashboard_page icon="hero-bolt" title={dgettext("dashboard_common", "Automation")}>
         <%= cond do %>
           <% @show_webhook_form -> %>
             <div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -339,8 +339,6 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
               />
             </div>
           <% true -> %>
-            <.section_header icon={:webhook} title={dgettext("dashboard_automation", "Automation")} />
-
             <%!-- Tabs Navigation --%>
             <.tab_bar
               id="automation-tabs"
@@ -384,7 +382,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
               <% end %>
             </div>
         <% end %>
-      </div>
+      </.dashboard_page>
     </div>
     """
   end

@@ -49,11 +49,6 @@ msgstr "Усі календарі успішно оновлено"
 msgid "CalDAV servers"
 msgstr "Сервери CalDAV"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/component_view.ex
-#, elixir-autogen, elixir-format
-msgid "Calendar Settings"
-msgstr "Налаштування календаря"
-
 #: lib/tymeslot_web/live/dashboard/calendar_settings/config_view_component.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar integration added successfully"

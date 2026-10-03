@@ -47,11 +47,6 @@ msgstr "Wymagana jest co najmniej jedna subskrypcja zdarzeń."
 msgid "Attempt %{count}"
 msgstr "Próba %{count}"
 
-#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Automation"
-msgstr "Automatyzacja"
-
 #: lib/tymeslot_web/live/dashboard/automation/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Automation is available on Pro plans."

@@ -25,14 +25,11 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
   @spec settings(map()) :: Phoenix.LiveView.Rendered.t()
   def settings(assigns) do
     ~H"""
-    <div class="space-y-10 pb-20">
-      <div class="flex items-center justify-between gap-4 flex-wrap">
-        <.section_header
-          icon="hero-video-camera"
-          title={dgettext("dashboard_video", "Video Integration")}
-        />
-        <%!-- With nothing connected, the empty state below carries the action. --%>
-        <.connect_button :if={@integrations != []} myself={@myself} />
+    <div class="space-y-10">
+      <%!-- The hub's tab names the panel, so it carries no title of its own.
+           With nothing connected, the empty state below carries the action. --%>
+      <div :if={@integrations != []} class="flex justify-end">
+        <.connect_button myself={@myself} />
       </div>
 
       <div>
@@ -62,9 +59,9 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
             <%= if active_integrations != [] do %>
               <div class="space-y-3">
                 <%= if show_section_headers do %>
-                  <h3 class="text-token-lg font-semibold text-tymeslot-900">
+                  <h2 class="text-token-lg font-semibold text-tymeslot-900">
                     {dgettext("dashboard_video", "Active Video Integrations")}
-                  </h3>
+                  </h2>
                 <% end %>
 
                 <%= for integration <- active_integrations do %>
@@ -82,9 +79,9 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
             <%= if inactive_integrations != [] do %>
               <div class="space-y-3">
                 <%= if show_section_headers do %>
-                  <h3 class="text-token-lg font-semibold text-tymeslot-500">
+                  <h2 class="text-token-lg font-semibold text-tymeslot-500">
                     {dgettext("dashboard_video", "Inactive Video Integrations")}
-                  </h3>
+                  </h2>
                 <% end %>
 
                 <%= for integration <- inactive_integrations do %>

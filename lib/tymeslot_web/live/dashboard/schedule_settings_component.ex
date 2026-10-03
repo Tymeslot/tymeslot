@@ -478,66 +478,66 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(assigns) do
     ~H"""
-    <div class="space-y-10 pb-20">
-      <.section_header
-        icon="hero-calendar-days"
-        title={dgettext("dashboard_availability", "Availability")}
+    <div>
+      <.dashboard_page
+        icon="hero-adjustments-horizontal"
+        title={dgettext("dashboard_common", "Availability")}
         saving={@saving}
-      />
-
-      <ScheduleSwitcher.schedule_panel
-        schedules={@schedules}
-        selected_schedule={@selected_schedule}
-        meeting_type_names={@meeting_type_names}
-        max_schedules={Schedules.max_schedules()}
-        menu_open={@schedule_menu_open}
-        myself={@myself}
       >
-        <.live_component
-          module={ListComponent}
-          id="availability-list"
-          weekly_schedule={@weekly_schedule}
-          profile={@profile}
+        <ScheduleSwitcher.schedule_panel
+          schedules={@schedules}
           selected_schedule={@selected_schedule}
-          time_format={@time_format}
-          form_errors={@form_errors}
-          client_ip={@client_ip}
-          user_agent={@user_agent}
-        />
-
-        <PolicyCard.policy_card
-          :if={@selected_schedule}
-          schedule={@selected_schedule}
+          meeting_type_names={@meeting_type_names}
+          max_schedules={Schedules.max_schedules()}
+          menu_open={@schedule_menu_open}
           myself={@myself}
-          custom_input_mode={@custom_input_mode}
-        />
-      </ScheduleSwitcher.schedule_panel>
+        >
+          <.live_component
+            module={ListComponent}
+            id="availability-list"
+            weekly_schedule={@weekly_schedule}
+            profile={@profile}
+            selected_schedule={@selected_schedule}
+            time_format={@time_format}
+            form_errors={@form_errors}
+            client_ip={@client_ip}
+            user_agent={@user_agent}
+          />
 
-      <%!-- Outside the panel on purpose: a period is the profile's, not the
+          <PolicyCard.policy_card
+            :if={@selected_schedule}
+            schedule={@selected_schedule}
+            myself={@myself}
+            custom_input_mode={@custom_input_mode}
+          />
+        </ScheduleSwitcher.schedule_panel>
+
+        <%!-- Outside the panel on purpose: a period is the profile's, not the
       selected schedule's, and inside the frame it would read as switching with
       the tabs. --%>
-      <.live_component
-        module={TimeOffCard}
-        id="availability-time-off"
-        profile={@profile}
-        time_format={@time_format}
-      />
+        <.live_component
+          module={TimeOffCard}
+          id="availability-time-off"
+          profile={@profile}
+          time_format={@time_format}
+        />
 
-      <ScheduleFormModal.schedule_form_modal
-        id="schedule-form-modal"
-        show={@show_schedule_form_modal}
-        schedule_data={@schedule_form_modal_data}
-        on_cancel={JS.push("hide_schedule_form", target: @myself)}
-        myself={@myself}
-      />
+        <ScheduleFormModal.schedule_form_modal
+          id="schedule-form-modal"
+          show={@show_schedule_form_modal}
+          schedule_data={@schedule_form_modal_data}
+          on_cancel={JS.push("hide_schedule_form", target: @myself)}
+          myself={@myself}
+        />
 
-      <DeleteScheduleModal.delete_schedule_modal
-        id="delete-schedule-modal"
-        show={@show_delete_schedule_modal}
-        schedule_data={@delete_schedule_modal_data}
-        on_cancel={JS.push("hide_delete_schedule_modal", target: @myself)}
-        on_confirm={JS.push("confirm_delete_schedule", target: @myself)}
-      />
+        <DeleteScheduleModal.delete_schedule_modal
+          id="delete-schedule-modal"
+          show={@show_delete_schedule_modal}
+          schedule_data={@delete_schedule_modal_data}
+          on_cancel={JS.push("hide_delete_schedule_modal", target: @myself)}
+          on_confirm={JS.push("confirm_delete_schedule", target: @myself)}
+        />
+      </.dashboard_page>
     </div>
     """
   end

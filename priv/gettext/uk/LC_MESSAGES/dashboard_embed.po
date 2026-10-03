@@ -103,11 +103,6 @@ msgstr "Найпростіший"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
-msgid "Embed & Share"
-msgstr "Вбудовування та поширення"
-
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
-#, elixir-autogen, elixir-format
 msgid "Embed Options"
 msgstr "Параметри вбудовування"
 

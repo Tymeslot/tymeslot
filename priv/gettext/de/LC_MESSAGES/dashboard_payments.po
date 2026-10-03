@@ -225,11 +225,6 @@ msgstr "Teilweise erstattet"
 msgid "Payment setup is temporarily unavailable. Please try again later."
 msgstr "Die Zahlungseinrichtung ist vorübergehend nicht verfügbar. Bitte versuchen Sie es später erneut."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Payments"
-msgstr "Zahlungen"
-
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Pending"

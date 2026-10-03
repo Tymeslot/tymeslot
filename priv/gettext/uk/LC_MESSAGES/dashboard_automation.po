@@ -51,11 +51,6 @@ msgstr "Необхідно вибрати принаймні одну подію
 msgid "Attempt %{count}"
 msgstr "Спроба %{count}"
 
-#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Automation"
-msgstr "Автоматизація"
-
 #: lib/tymeslot_web/live/dashboard/automation/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Automation is available on Pro plans."

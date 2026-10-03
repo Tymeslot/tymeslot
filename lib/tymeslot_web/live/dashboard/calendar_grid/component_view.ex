@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.GridViews
@@ -39,6 +40,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
       phx-hook="CalendarMobile"
       phx-target={@myself}
     >
+      <%!-- The full-bleed grid has no room for the page header every other
+           section carries, so its title is for screen readers only. --%>
+      <h1 class="sr-only">{dgettext("dashboard_common", "Calendar")}</h1>
       <%!-- Drives browser desktop reminders while the calendar is open. The hook
             reads the JSON feed and fires Notifications on its own timer; the feed
             refreshes on every 60s tick. --%>

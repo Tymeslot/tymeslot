@@ -86,11 +86,6 @@ msgstr "Зараз"
 
 #: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format
-msgid "Overview"
-msgstr "Огляд"
-
-#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
-#, elixir-autogen, elixir-format
 msgid "Today"
 msgstr "Сьогодні"
 

@@ -31,11 +31,6 @@ msgstr "Ein Fehler ist aufgetreten. Bitte laden Sie die Seite neu und versuchen 
 msgid "Background Design"
 msgstr "Hintergrund-Design"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Choose Your Style"
-msgstr "Wählen Sie Ihren Stil"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a visual style that matches your professional identity."
@@ -192,11 +187,6 @@ msgstr "Wählen Sie die Primärfarben für die Oberfläche Ihrer Buchungsseite."
 #, elixir-autogen, elixir-format
 msgid "Solid Color"
 msgstr "Volltonfarbe"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex
-#, elixir-autogen, elixir-format
-msgid "Theme Customization"
-msgstr "Design-Anpassung"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_preview.ex

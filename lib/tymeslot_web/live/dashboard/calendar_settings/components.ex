@@ -106,6 +106,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     <section class="space-y-4">
       <.subsection_header
         size={:lg}
+        level={2}
         icon="hero-link"
         title={dgettext("dashboard_calendar_settings", "Free/busy feed")}
         description={
@@ -167,10 +168,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       <div :if={@active_integrations != []} class="space-y-6">
         <div class="flex items-center justify-between gap-4 flex-col md:flex-row">
           <div>
-            <h3 class="text-token-lg font-semibold text-tymeslot-900 flex items-center gap-3">
+            <h2 class="text-token-lg font-semibold text-tymeslot-900 flex items-center gap-3">
               <div class="w-2 h-2 rounded-full bg-turquoise-500 animate-pulse"></div>
               {dgettext("dashboard_calendar_settings", "Active for Conflict Checking")}
-            </h3>
+            </h2>
             <p class="text-tymeslot-500 font-medium mt-1 ml-5">
               {dgettext(
                 "dashboard_calendar_settings",
@@ -206,10 +207,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       <%!-- Inactive Calendars Section --%>
       <div :if={@inactive_integrations != []} class="space-y-6">
         <div>
-          <h3 class="text-token-lg font-semibold text-tymeslot-500 flex items-center gap-3">
+          <h2 class="text-token-lg font-semibold text-tymeslot-500 flex items-center gap-3">
             <div class="w-2 h-2 rounded-full bg-tymeslot-300"></div>
             {dgettext("dashboard_calendar_settings", "Paused Calendars")}
-          </h3>
+          </h2>
           <p class="text-tymeslot-400 font-medium mt-1 ml-5">
             {dgettext(
               "dashboard_calendar_settings",

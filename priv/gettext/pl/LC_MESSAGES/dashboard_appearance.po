@@ -27,11 +27,6 @@ msgstr "Wystąpił błąd. Odśwież stronę i spróbuj ponownie."
 msgid "Background Design"
 msgstr "Wygląd tła"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Choose Your Style"
-msgstr "Wybierz swój styl"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a visual style that matches your professional identity."
@@ -188,11 +183,6 @@ msgstr "Wybierz główne kolory interfejsu swojej strony rezerwacji."
 #, elixir-autogen, elixir-format
 msgid "Solid Color"
 msgstr "Kolor jednolity"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex
-#, elixir-autogen, elixir-format
-msgid "Theme Customization"
-msgstr "Dostosowanie motywu"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_preview.ex

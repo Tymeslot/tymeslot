@@ -23,9 +23,9 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
         <div class="p-5 bg-linear-to-br from-turquoise-50 to-cyan-50 rounded-token-2xl border-2 border-turquoise-100">
           <div class="flex items-start gap-3 mb-3">
             <div class="w-2 h-2 rounded-full bg-turquoise-500 animate-pulse mt-1.5"></div>
-            <h4 class="text-token-base font-semibold text-tymeslot-900">
+            <h3 class="text-token-base font-semibold text-tymeslot-900">
               {dgettext("dashboard_automation", "What are webhooks?")}
-            </h4>
+            </h3>
           </div>
           <p class="text-tymeslot-700 font-medium ml-5">
             {dgettext(
@@ -39,9 +39,9 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
         <div>
           <div class="flex items-start gap-3 mb-4">
             <div class="w-2 h-2 rounded-full bg-turquoise-500 animate-pulse mt-1.5"></div>
-            <h4 class="text-token-base font-semibold text-tymeslot-900">
+            <h3 class="text-token-base font-semibold text-tymeslot-900">
               {dgettext("dashboard_automation", "Quick Setup with n8n")}
-            </h4>
+            </h3>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 ml-5">
             <%= for {step, step_index} <- Enum.with_index([
@@ -75,9 +75,9 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
         <div>
           <div class="flex items-start gap-3 mb-4">
             <div class="w-2 h-2 rounded-full bg-turquoise-500 animate-pulse mt-1.5"></div>
-            <h4 class="text-token-base font-semibold text-tymeslot-900">
+            <h3 class="text-token-base font-semibold text-tymeslot-900">
               {dgettext("dashboard_automation", "Available Events")}
-            </h4>
+            </h3>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3 ml-5">
             <%= for {event, icon_path} <- [
@@ -129,9 +129,9 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
         <div>
           <div class="flex items-start gap-3 mb-4">
             <div class="w-2 h-2 rounded-full bg-turquoise-500 animate-pulse mt-1.5"></div>
-            <h4 class="text-token-base font-semibold text-tymeslot-900">
+            <h3 class="text-token-base font-semibold text-tymeslot-900">
               {dgettext("dashboard_automation", "Security & Authentication")}
-            </h4>
+            </h3>
           </div>
           <div class="ml-5 space-y-3">
             <div class="p-4 bg-tymeslot-50 rounded-token-xl border-2 border-tymeslot-100">

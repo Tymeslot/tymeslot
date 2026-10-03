@@ -26,6 +26,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       assert render(view) =~ "Strategy Session"
     end
 
+    test "offers Add Meeting Type once, beside the page title", %{conn: conn, user: user} do
+      insert(:meeting_type, user: user, name: "Strategy Session")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+      doc = view |> render() |> LazyHTML.from_document()
+
+      assert doc |> LazyHTML.query("button[phx-click='toggle_add_form']") |> Enum.count() == 1
+
+      assert doc
+             |> LazyHTML.query("div:has(> div > h1) button[phx-click='toggle_add_form']")
+             |> Enum.count() == 1
+    end
+
     test "auto-creates and shows default meeting types for a new user", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
 

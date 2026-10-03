@@ -111,11 +111,6 @@ msgstr "Elaborazione in corso..."
 msgid "Profile Picture"
 msgstr "Immagine del profilo"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Profile Settings"
-msgstr "Impostazioni del profilo"
-
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format

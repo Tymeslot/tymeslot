@@ -99,11 +99,6 @@ msgstr "Najprostsze"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
-msgid "Embed & Share"
-msgstr "Osadzanie i udostępnianie"
-
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
-#, elixir-autogen, elixir-format
 msgid "Embed Options"
 msgstr "Opcje osadzania"
 

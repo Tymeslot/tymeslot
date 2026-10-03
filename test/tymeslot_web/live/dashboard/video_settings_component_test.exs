@@ -27,7 +27,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
     test "renders initial view with the provider picker options", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
-      assert html =~ "Video Integration"
+      assert html =~ ~s(data-testid="video-empty")
       assert html =~ "Connect a video provider"
 
       # Each provider is a selectable option in the always-rendered picker modal.

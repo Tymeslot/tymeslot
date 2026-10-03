@@ -31,11 +31,6 @@ msgstr "Une erreur s’est produite. Veuillez actualiser la page et réessayer."
 msgid "Background Design"
 msgstr "Style d’arrière-plan"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Choose Your Style"
-msgstr "Choisissez votre style"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a visual style that matches your professional identity."
@@ -192,11 +187,6 @@ msgstr "Choisissez les couleurs principales de l’interface de votre page de r�
 #, elixir-autogen, elixir-format
 msgid "Solid Color"
 msgstr "Couleur unie"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex
-#, elixir-autogen, elixir-format
-msgid "Theme Customization"
-msgstr "Personnalisation du thème"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_preview.ex

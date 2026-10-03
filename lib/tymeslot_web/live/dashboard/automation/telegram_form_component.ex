@@ -65,13 +65,13 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
     assigns = assign(assigns, :can_submit, can_submit?(assigns))
 
     ~H"""
-    <div class="space-y-8 pb-20">
+    <div class="space-y-8">
       <%!-- Toolbar --%>
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
         <.section_header
+          level={2}
           icon="hero-bolt"
           title={form_title(@mode, @shared_bot_mode, @wizard_step)}
-          class="mb-0"
         />
 
         <.icon_button

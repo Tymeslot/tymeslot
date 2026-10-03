@@ -260,61 +260,61 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div id="integrations-hub" class="space-y-8 pb-20">
-      <.section_header title={dgettext("dashboard_integrations", "Integrations")} />
-
-      <%!--
+    <div id="integrations-hub">
+      <.dashboard_page icon="hero-puzzle-piece" title={dgettext("dashboard_common", "Integrations")}>
+        <%!--
         Aggregated attention banner: one line summarising the worst issue
         across all categories, with a jump link to the offending tab. Rendered
         only when something actually needs attention.
       --%>
-      <.info_box :if={@attention != []} variant={worst_status(@attention)}>
-        {attention_headline(@attention)}
-        <.link
-          patch={~p"/dashboard/integrations?tab=#{hd(@attention).tab}"}
-          class="font-semibold underline hover:no-underline"
-        >
-          {dgettext("dashboard_integrations", "Review")}
-        </.link>
-      </.info_box>
+        <.info_box :if={@attention != []} variant={worst_status(@attention)}>
+          {attention_headline(@attention)}
+          <.link
+            patch={~p"/dashboard/integrations?tab=#{hd(@attention).tab}"}
+            class="font-semibold underline hover:no-underline"
+          >
+            {dgettext("dashboard_integrations", "Review")}
+          </.link>
+        </.info_box>
 
-      <.tab_bar
-        id="integrations-tabs"
-        active_tab={@active_tab}
-        tabs={@tabs}
-        aria_label={dgettext("dashboard_integrations", "Integration categories")}
-      />
-      <div data-tab-panel={@active_tab}>
-        <.live_component
-          :if={@active_tab == :calendars}
-          module={CalendarSettingsComponent}
-          id="calendar-settings"
-          current_user={@current_user}
-          integration_status={@integration_status}
-          client_ip={@client_ip}
-          user_agent={@user_agent}
-          integrations={@calendars}
-          health_states={@health_states.calendars}
+        <.tab_bar
+          id="integrations-tabs"
+          active_tab={@active_tab}
+          tabs={@tabs}
+          aria_label={dgettext("dashboard_integrations", "Integration categories")}
         />
-        <.live_component
-          :if={@active_tab == :video}
-          module={VideoSettingsComponent}
-          id="video-settings"
-          current_user={@current_user}
-          integration_status={@integration_status}
-          client_ip={@client_ip}
-          user_agent={@user_agent}
-          integrations={@videos}
-          health_states={@health_states.video}
-        />
-        <.live_component
-          :if={@active_tab == :payments}
-          module={PaymentsSettingsComponent}
-          id="payments-settings"
-          current_user={@current_user}
-          connect_account={@connect_account}
-        />
-      </div>
+        <div data-tab-panel={@active_tab}>
+          <.live_component
+            :if={@active_tab == :calendars}
+            module={CalendarSettingsComponent}
+            id="calendar-settings"
+            current_user={@current_user}
+            integration_status={@integration_status}
+            client_ip={@client_ip}
+            user_agent={@user_agent}
+            integrations={@calendars}
+            health_states={@health_states.calendars}
+          />
+          <.live_component
+            :if={@active_tab == :video}
+            module={VideoSettingsComponent}
+            id="video-settings"
+            current_user={@current_user}
+            integration_status={@integration_status}
+            client_ip={@client_ip}
+            user_agent={@user_agent}
+            integrations={@videos}
+            health_states={@health_states.video}
+          />
+          <.live_component
+            :if={@active_tab == :payments}
+            module={PaymentsSettingsComponent}
+            id="payments-settings"
+            current_user={@current_user}
+            connect_account={@connect_account}
+          />
+        </div>
+      </.dashboard_page>
     </div>
     """
   end

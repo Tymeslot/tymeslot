@@ -31,11 +31,6 @@ msgstr "Si è verificato un errore. Ricarica la pagina e riprova."
 msgid "Background Design"
 msgstr "Design dello sfondo"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Choose Your Style"
-msgstr "Scegli il tuo stile"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a visual style that matches your professional identity."
@@ -192,11 +187,6 @@ msgstr "Seleziona i colori primari per l'interfaccia della tua pagina di prenota
 #, elixir-autogen, elixir-format
 msgid "Solid Color"
 msgstr "Tinta unita"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex
-#, elixir-autogen, elixir-format
-msgid "Theme Customization"
-msgstr "Personalizzazione del tema"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_preview.ex

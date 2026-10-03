@@ -104,11 +104,6 @@ msgstr "Upravit"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex
 #, elixir-autogen, elixir-format
-msgid "Meeting Types"
-msgstr "Typy schůzek"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex
-#, elixir-autogen, elixir-format
 msgid "No meeting types configured yet"
 msgstr "Zatím nemáte žádné typy schůzek"
 
@@ -235,11 +230,6 @@ msgstr "Místo smazáno"
 #, elixir-autogen, elixir-format
 msgid "Location saved"
 msgstr "Místo uloženo"
-
-#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
-#, elixir-autogen, elixir-format
-msgid "Locations"
-msgstr "Místa"
 
 #: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
 #, elixir-autogen, elixir-format

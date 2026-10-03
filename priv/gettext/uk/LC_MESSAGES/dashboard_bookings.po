@@ -193,11 +193,6 @@ msgstr "Зустріч скасовано, але не вдалося повер
 msgid "Meeting cancelled successfully"
 msgstr "Зустріч успішно скасовано"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
-#, elixir-autogen, elixir-format
-msgid "Meetings"
-msgstr "Зустрічі"
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "No cancelled meetings"

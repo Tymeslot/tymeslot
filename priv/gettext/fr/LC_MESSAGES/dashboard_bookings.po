@@ -193,11 +193,6 @@ msgstr "Réunion annulée, mais le remboursement n’a pas pu être effectué. V
 msgid "Meeting cancelled successfully"
 msgstr "Réunion annulée avec succès"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
-#, elixir-autogen, elixir-format
-msgid "Meetings"
-msgstr "Réunions"
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "No cancelled meetings"

@@ -103,11 +103,6 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex
 #, elixir-autogen, elixir-format
-msgid "Meeting Types"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex
-#, elixir-autogen, elixir-format
 msgid "No meeting types configured yet"
 msgstr ""
 
@@ -232,11 +227,6 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
 #, elixir-autogen, elixir-format
 msgid "Location saved"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
-#, elixir-autogen, elixir-format
-msgid "Locations"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/locations/locations_component.ex

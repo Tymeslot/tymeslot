@@ -75,13 +75,13 @@ defmodule TymeslotWeb.DashboardRoutesTest do
     @routes [
       {"/dashboard", "calendar-grid"},
       {"/dashboard/overview", "Welcome back"},
-      {"/dashboard/settings", "Profile Settings"},
+      {"/dashboard/settings", "Basic Information"},
       {"/dashboard/availability", "Availability"},
-      {"/dashboard/meeting-settings", "Meeting Settings"},
+      {"/dashboard/meeting-settings", "Meeting Types"},
       {"/dashboard/locations", "Locations"},
       {"/dashboard/calendar", "calendar-grid"},
       {"/dashboard/integrations", "Integrations"},
-      {"/dashboard/theme", "Choose Your Style"},
+      {"/dashboard/theme", "Booking Page Text"},
       {"/dashboard/meetings", "Meetings"},
       {"/dashboard/automation", "Automation"},
       {"/dashboard/polls", "Polls"}
@@ -91,6 +91,39 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       test "renders #{path}", %{conn: conn} do
         {:ok, _view, html} = live(conn, unquote(path))
         assert html =~ unquote(expected_text)
+      end
+    end
+
+    # Every section names itself once, in an h1 that reads exactly like its
+    # entry in the sidebar, so the page outline and the navigation agree.
+    @section_titles [
+      {"/dashboard", "Calendar"},
+      {"/dashboard/overview", "Overview"},
+      {"/dashboard/meetings", "Meetings"},
+      {"/dashboard/analytics", "Analytics"},
+      {"/dashboard/meeting-settings", "Meeting Types"},
+      {"/dashboard/locations", "Locations"},
+      {"/dashboard/availability", "Availability"},
+      {"/dashboard/polls", "Polls"},
+      {"/dashboard/theme", "Theme"},
+      {"/dashboard/theme/customize/1", "Theme"},
+      {"/dashboard/integrations", "Integrations"},
+      {"/dashboard/integrations?tab=video", "Integrations"},
+      {"/dashboard/embed", "Embed & Share"},
+      {"/dashboard/settings", "Profile"},
+      {"/dashboard/automation", "Automation"}
+    ]
+
+    for {path, title} <- @section_titles do
+      test "#{path} has one h1, named like its sidebar entry", %{conn: conn} do
+        {:ok, view, _html} = live(conn, unquote(path))
+        doc = view |> render() |> Floki.parse_document!()
+
+        assert [h1] = Floki.find(doc, "h1")
+        assert squish(h1) == unquote(title)
+
+        assert [active | _labels] = Floki.find(doc, "nav a[aria-current=page] span")
+        assert squish(active) == unquote(title)
       end
     end
 
@@ -465,4 +498,6 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       assert render(view) =~ "calendar-grid"
     end
   end
+
+  defp squish(node), do: node |> Floki.text() |> String.split() |> Enum.join(" ")
 end

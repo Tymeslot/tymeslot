@@ -57,7 +57,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookTab do
       <.empty_state
         size={:lg}
         tone={:brand}
-        heading={:h3}
+        heading={:h2}
         title={dgettext("dashboard_automation", "No Webhooks Yet")}
         description={
           dgettext(

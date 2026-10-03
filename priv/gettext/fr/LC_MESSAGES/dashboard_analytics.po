@@ -38,11 +38,6 @@ msgstr "7 jours"
 msgid "90 days"
 msgstr "90 jours"
 
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex
-#, elixir-autogen, elixir-format
-msgid "Analytics"
-msgstr "Statistiques"
-
 #: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex
 #, elixir-autogen, elixir-format
 msgid "Bar chart showing daily visit counts for the selected date range."

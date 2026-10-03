@@ -48,182 +48,179 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div class="space-y-10 pb-20">
-      <%= if @show_customization && @customization_theme_id do %>
-        <div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <.live_component
-            module={ThemeCustomizationComponent}
-            id={"theme-customization-#{@customization_theme_id}-#{@customization_timestamp}"}
-            profile={@profile}
-            theme_id={@customization_theme_id}
-            parent_component={@myself}
-          />
-        </div>
-      <% else %>
-        <.section_header
-          icon="hero-paint-brush"
-          title={dgettext("dashboard_appearance", "Choose Your Style")}
-        />
+    <div>
+      <.dashboard_page icon="hero-paint-brush" title={dgettext("dashboard_common", "Theme")}>
+        <%= if @show_customization && @customization_theme_id do %>
+          <div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <.live_component
+              module={ThemeCustomizationComponent}
+              id={"theme-customization-#{@customization_theme_id}-#{@customization_timestamp}"}
+              profile={@profile}
+              theme_id={@customization_theme_id}
+              parent_component={@myself}
+            />
+          </div>
+        <% else %>
+          <div class="mb-16 max-w-2xl">
+            <p class="text-xl text-tymeslot-500 font-medium leading-relaxed">
+              {dgettext(
+                "dashboard_appearance",
+                "Select the interface that best represents your personal brand and creates the best experience for your clients."
+              )}
+            </p>
+          </div>
 
-        <div class="mb-16 max-w-2xl">
-          <p class="text-xl text-tymeslot-500 font-medium leading-relaxed">
-            {dgettext(
-              "dashboard_appearance",
-              "Select the interface that best represents your personal brand and creates the best experience for your clients."
-            )}
-          </p>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
-          <%= for {theme_name, theme_id} <- @themes do %>
-            <div class="group/theme space-y-6">
-              <.card
-                padding={:none}
-                interactive
-                class={[
-                  "overflow-hidden duration-500",
-                  if(@profile.booking_theme == theme_id,
-                    do:
-                      "glass-gradient border-turquoise-400 shadow-turquoise-500/20 ring-4 ring-turquoise-50",
-                    else: "hover:border-turquoise-200 hover:shadow-tymeslot-200/50"
-                  )
-                ]}
-                phx-click="select_theme"
-                phx-value-theme={theme_id}
-                phx-target={@myself}
-              >
-                <div class="h-64 relative overflow-hidden">
-                  <ThemePreview.render theme_id={theme_id} />
-
-                  <div class="absolute inset-0 bg-linear-to-t from-tymeslot-900/60 via-transparent to-transparent opacity-60 group-hover/theme:opacity-40 transition-opacity">
-                  </div>
-
-                  <div class="absolute bottom-6 left-6 right-6 flex items-center justify-between">
-                    <h3 class="text-token-2xl font-black text-white tracking-tight drop-shadow-md">
-                      {theme_name}
-                    </h3>
-                    <%= if @profile.booking_theme == theme_id do %>
-                      <div class="flex items-center gap-2 bg-turquoise-500 text-white px-4 py-1.5 rounded-full text-token-xs font-black uppercase tracking-wider shadow-lg">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="3"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                        {dgettext("dashboard_appearance", "Current Style")}
-                      </div>
-                    <% end %>
-                  </div>
-
-                  <div
-                    :if={!LinkAccessPolicy.can_link?(@profile, @integration_status)}
-                    class="absolute inset-0 bg-tymeslot-900/40 backdrop-blur-[2px] flex flex-col items-center justify-center cursor-not-allowed z-20"
-                  >
-                    <div class="w-12 h-12 bg-white/20 rounded-token-2xl flex items-center justify-center mb-3">
-                      <svg
-                        class="w-6 h-6 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2.5"
-                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                        />
-                      </svg>
-                    </div>
-                    <span class="text-white font-black text-token-xs uppercase tracking-widest">
-                      {dgettext("dashboard_appearance", "Connect Calendar to Preview")}
-                    </span>
-                  </div>
-                </div>
-
-                <div class="p-8">
-                  <p class="text-tymeslot-600 font-medium leading-relaxed line-clamp-2">
-                    {ThemeInfo.get_description(theme_id)}
-                  </p>
-                </div>
-              </.card>
-
-              <%!-- Wraps rather than overflows when a narrow card cannot fit both
-                    labels on one line. --%>
-              <div class="flex flex-wrap gap-4">
-                <%= if LinkAccessPolicy.can_link?(@profile, @integration_status) do %>
-                  <.action_link
-                    href={
-                      PreviewMode.owner_path(@profile.username, @profile.user_id, theme: theme_id)
-                    }
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    variant={:secondary}
-                    icon="hero-eye"
-                    class="flex-1"
-                  >
-                    {dgettext("dashboard_appearance", "Live Preview")}
-                  </.action_link>
-                <% else %>
-                  <%!-- `aria-disabled` rather than `disabled`, so the control
-                        stays focusable and its tooltip says what unlocks it. --%>
-                  <.action_button
-                    variant={:secondary}
-                    icon="hero-lock-closed"
-                    class="flex-1 opacity-60"
-                    aria-disabled="true"
-                    title={dgettext("dashboard_appearance", "Connect Calendar to Preview")}
-                  >
-                    {dgettext("dashboard_appearance", "Live Preview")}
-                  </.action_button>
-                <% end %>
-                <.action_button
-                  icon="hero-adjustments-vertical"
-                  class="flex-1"
-                  phx-click="show_customization"
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <%= for {theme_name, theme_id} <- @themes do %>
+              <div class="group/theme space-y-6">
+                <.card
+                  padding={:none}
+                  interactive
+                  class={[
+                    "overflow-hidden duration-500",
+                    if(@profile.booking_theme == theme_id,
+                      do:
+                        "glass-gradient border-turquoise-400 shadow-turquoise-500/20 ring-4 ring-turquoise-50",
+                      else: "hover:border-turquoise-200 hover:shadow-tymeslot-200/50"
+                    )
+                  ]}
+                  phx-click="select_theme"
                   phx-value-theme={theme_id}
                   phx-target={@myself}
                 >
-                  {dgettext("dashboard_appearance", "Customize Style")}
-                </.action_button>
+                  <div class="h-64 relative overflow-hidden">
+                    <ThemePreview.render theme_id={theme_id} />
+
+                    <div class="absolute inset-0 bg-linear-to-t from-tymeslot-900/60 via-transparent to-transparent opacity-60 group-hover/theme:opacity-40 transition-opacity">
+                    </div>
+
+                    <div class="absolute bottom-6 left-6 right-6 flex items-center justify-between">
+                      <h2 class="text-token-2xl font-black text-white tracking-tight drop-shadow-md">
+                        {theme_name}
+                      </h2>
+                      <%= if @profile.booking_theme == theme_id do %>
+                        <div class="flex items-center gap-2 bg-turquoise-500 text-white px-4 py-1.5 rounded-full text-token-xs font-black uppercase tracking-wider shadow-lg">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="3"
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                          {dgettext("dashboard_appearance", "Current Style")}
+                        </div>
+                      <% end %>
+                    </div>
+
+                    <div
+                      :if={!LinkAccessPolicy.can_link?(@profile, @integration_status)}
+                      class="absolute inset-0 bg-tymeslot-900/40 backdrop-blur-[2px] flex flex-col items-center justify-center cursor-not-allowed z-20"
+                    >
+                      <div class="w-12 h-12 bg-white/20 rounded-token-2xl flex items-center justify-center mb-3">
+                        <svg
+                          class="w-6 h-6 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2.5"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                          />
+                        </svg>
+                      </div>
+                      <span class="text-white font-black text-token-xs uppercase tracking-widest">
+                        {dgettext("dashboard_appearance", "Connect Calendar to Preview")}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="p-8">
+                    <p class="text-tymeslot-600 font-medium leading-relaxed line-clamp-2">
+                      {ThemeInfo.get_description(theme_id)}
+                    </p>
+                  </div>
+                </.card>
+
+                <%!-- Wraps rather than overflows when a narrow card cannot fit both
+                    labels on one line. --%>
+                <div class="flex flex-wrap gap-4">
+                  <%= if LinkAccessPolicy.can_link?(@profile, @integration_status) do %>
+                    <.action_link
+                      href={
+                        PreviewMode.owner_path(@profile.username, @profile.user_id, theme: theme_id)
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      variant={:secondary}
+                      icon="hero-eye"
+                      class="flex-1"
+                    >
+                      {dgettext("dashboard_appearance", "Live Preview")}
+                    </.action_link>
+                  <% else %>
+                    <%!-- `aria-disabled` rather than `disabled`, so the control
+                        stays focusable and its tooltip says what unlocks it. --%>
+                    <.action_button
+                      variant={:secondary}
+                      icon="hero-lock-closed"
+                      class="flex-1 opacity-60"
+                      aria-disabled="true"
+                      title={dgettext("dashboard_appearance", "Connect Calendar to Preview")}
+                    >
+                      {dgettext("dashboard_appearance", "Live Preview")}
+                    </.action_button>
+                  <% end %>
+                  <.action_button
+                    icon="hero-adjustments-vertical"
+                    class="flex-1"
+                    phx-click="show_customization"
+                    phx-value-theme={theme_id}
+                    phx-target={@myself}
+                  >
+                    {dgettext("dashboard_appearance", "Customize Style")}
+                  </.action_button>
+                </div>
+              </div>
+            <% end %>
+          </div>
+
+          <.live_component
+            module={BookingTextForm}
+            id="booking-text-form"
+            profile={@profile}
+          />
+
+          <div class="mt-16 bg-tymeslot-50 border-2 border-dashed border-tymeslot-200 rounded-token-3xl p-8 relative overflow-hidden group">
+            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform duration-700">
+              <svg class="w-32 h-32 text-tymeslot-900" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+              </svg>
+            </div>
+            <div class="relative z-10">
+              <h2 class="text-token-2xl font-black text-tymeslot-900 tracking-tight mb-2">
+                {dgettext("dashboard_appearance", "More Styles Coming Soon")}
+              </h2>
+              <p class="text-tymeslot-500 font-medium text-token-lg mb-6">
+                {dgettext(
+                  "dashboard_appearance",
+                  "Our design team is busy crafting new themes to help you express your unique professional style."
+                )}
+              </p>
+              <div class="flex gap-2">
+                <div class="w-2 h-2 bg-turquoise-400 rounded-full animate-bounce"></div>
+                <div class="w-2 h-2 bg-turquoise-400 rounded-full animate-bounce [animation-delay:0.2s]">
+                </div>
+                <div class="w-2 h-2 bg-turquoise-400 rounded-full animate-bounce [animation-delay:0.4s]">
+                </div>
               </div>
             </div>
-          <% end %>
-        </div>
-
-        <.live_component
-          module={BookingTextForm}
-          id="booking-text-form"
-          profile={@profile}
-        />
-
-        <div class="mt-16 bg-tymeslot-50 border-2 border-dashed border-tymeslot-200 rounded-token-3xl p-8 relative overflow-hidden group">
-          <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform duration-700">
-            <svg class="w-32 h-32 text-tymeslot-900" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-            </svg>
           </div>
-          <div class="relative z-10">
-            <h4 class="text-token-2xl font-black text-tymeslot-900 tracking-tight mb-2">
-              {dgettext("dashboard_appearance", "More Styles Coming Soon")}
-            </h4>
-            <p class="text-tymeslot-500 font-medium text-token-lg mb-6">
-              {dgettext(
-                "dashboard_appearance",
-                "Our design team is busy crafting new themes to help you express your unique professional style."
-              )}
-            </p>
-            <div class="flex gap-2">
-              <div class="w-2 h-2 bg-turquoise-400 rounded-full animate-bounce"></div>
-              <div class="w-2 h-2 bg-turquoise-400 rounded-full animate-bounce [animation-delay:0.2s]">
-              </div>
-              <div class="w-2 h-2 bg-turquoise-400 rounded-full animate-bounce [animation-delay:0.4s]">
-              </div>
-            </div>
-          </div>
-        </div>
-      <% end %>
+        <% end %>
+      </.dashboard_page>
     </div>
     """
   end

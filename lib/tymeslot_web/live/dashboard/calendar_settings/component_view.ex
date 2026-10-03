@@ -27,14 +27,11 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentView do
   @spec settings(map()) :: Phoenix.LiveView.Rendered.t()
   def settings(assigns) do
     ~H"""
-    <div class="space-y-12 pb-24">
-      <div class="flex items-center justify-between gap-4 flex-wrap">
-        <.section_header
-          icon="hero-calendar-days"
-          title={dgettext("dashboard_calendar_settings", "Calendar Settings")}
-        />
-        <%!-- With nothing connected, the empty state below carries the action. --%>
-        <.connect_button :if={@integrations != []} myself={@myself} />
+    <div class="space-y-12">
+      <%!-- The hub's tab names the panel, so it carries no title of its own.
+           With nothing connected, the empty state below carries the action. --%>
+      <div :if={@integrations != []} class="flex justify-end">
+        <.connect_button myself={@myself} />
       </div>
 
       <div class="space-y-12">

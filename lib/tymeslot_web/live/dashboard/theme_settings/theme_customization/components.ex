@@ -31,9 +31,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
     ~H"""
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
       <.section_header
+        level={2}
         icon="hero-paint-brush"
         title={dgettext("dashboard_appearance", "Customize Style")}
-        class="mb-0"
       />
 
       <div class="flex items-center justify-between gap-3 md:justify-start">

@@ -39,14 +39,14 @@ defmodule TymeslotWeb.Components.CoreComponents.PageTest do
   end
 
   test "shows the saving indicator only while saving" do
-    assert render_page(true, false) |> Floki.find("[role=status]") |> Floki.text() =~
+    assert true |> render_page(false) |> Floki.find("[role=status]") |> Floki.text() =~
              "Saving changes..."
 
-    assert render_page(false, false) |> Floki.find("[role=status]") == []
+    assert Floki.find(render_page(false, false), "[role=status]") == []
   end
 
   test "renders header actions" do
-    assert [_button] = render_page(false, true) |> Floki.find("#page-action")
-    assert render_page(false, false) |> Floki.find("#page-action") == []
+    assert [_button] = Floki.find(render_page(false, true), "#page-action")
+    assert Floki.find(render_page(false, false), "#page-action") == []
   end
 end

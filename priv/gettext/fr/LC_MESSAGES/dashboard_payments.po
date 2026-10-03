@@ -225,11 +225,6 @@ msgstr "Partiellement remboursé"
 msgid "Payment setup is temporarily unavailable. Please try again later."
 msgstr "La configuration des paiements est temporairement indisponible. Veuillez réessayer plus tard."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Payments"
-msgstr "Paiements"
-
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Pending"

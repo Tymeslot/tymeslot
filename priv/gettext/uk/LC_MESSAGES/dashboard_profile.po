@@ -111,11 +111,6 @@ msgstr "Обробка..."
 msgid "Profile Picture"
 msgstr "Фото профілю"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Profile Settings"
-msgstr "Налаштування профілю"
-
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
