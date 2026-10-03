@@ -88,12 +88,6 @@
     background: rgba(255, 255, 255, 0.95) !important;
   }
 
-  /* Make unavailable text turquoise */
-  .card-glass-unavailable .availability-status {
-    color: var(--color-primary-600) !important;
-    font-weight: 600 !important;
-  }
-
   /* An account card the visitor cannot change (social sign-in). */
   .card-glass-disabled {
     background: color-mix(in oklab, var(--color-neutral-400) 10%, transparent);
@@ -124,12 +118,6 @@
   position: relative;
   /* Ensure box sizing doesn't change */
   box-sizing: border-box !important;
-}
-
-/* Ensure icon sizing remains consistent */
-[class*="hero-"] {
-  display: inline-block !important;
-  flex-shrink: 0;
 }
 
 .glass-gradient::before {
