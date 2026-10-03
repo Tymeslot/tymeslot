@@ -123,7 +123,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
               <div class="min-w-0">
                 <h3
                   id={"#{@id}-title"}
-                  class="modal-title text-2xl font-black text-tymeslot-900 tracking-tight"
+                  class="modal-title text-token-xl sm:text-token-2xl font-black text-tymeslot-900 tracking-tight break-words"
                 >
                   {render_slot(@header)}
                 </h3>
@@ -137,7 +137,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
               </div>
               <button
                 type="button"
-                class="w-10 h-10 rounded-token-xl bg-tymeslot-50 text-tymeslot-400 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center"
+                class="w-10 h-10 shrink-0 rounded-token-xl bg-tymeslot-50 text-tymeslot-400 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center"
                 aria-label={dgettext("common", "Close modal")}
                 phx-click={@on_cancel}
               >
@@ -250,7 +250,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
           ]}>
             <Icons.icon name={@icon} class="w-6 h-6" />
           </span>
-          <span>{@title}</span>
+          <span class="min-w-0">{@title}</span>
         </span>
       </:header>
 

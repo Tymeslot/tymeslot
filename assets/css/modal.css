@@ -42,8 +42,11 @@
   @apply flex items-center justify-between px-10 py-8 border-b-2 border-slate-50;
 }
 
+/* Size, weight and colour come from the markup's utilities (smaller on a
+   phone, so a long title wraps to fewer lines beside the close button); an
+   unlayered font size here would override them. */
 .modal-title {
-  @apply text-3xl font-black text-slate-900 tracking-tight;
+  overflow-wrap: break-word;
 }
 
 /* Modal Body */
