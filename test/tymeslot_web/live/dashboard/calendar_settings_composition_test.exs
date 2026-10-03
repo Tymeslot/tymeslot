@@ -573,7 +573,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
 
       view
       |> element(
-        "button[phx-click='show'][phx-value-id='#{integration.id}'][phx-target='#delete-calendar-modal']"
+        "button[title='Delete'][aria-label='Delete Keep Me Google'][phx-value-id='#{integration.id}'][phx-target='#delete-calendar-modal']"
       )
       |> render_click()
 

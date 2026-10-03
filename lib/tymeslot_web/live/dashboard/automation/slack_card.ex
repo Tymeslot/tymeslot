@@ -118,7 +118,8 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
         <.icon_button
           icon="hero-trash"
           variant={:danger}
-          label={dgettext("dashboard_automation_chat", "Delete")}
+          label={dgettext("dashboard_automation_chat", "Delete %{name}", name: @integration.name)}
+          tooltip={dgettext("dashboard_automation_chat", "Delete")}
           phx-click={@on_delete}
         />
       </:end_actions>

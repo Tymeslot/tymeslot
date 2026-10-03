@@ -90,7 +90,8 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
         <.icon_button
           icon="hero-trash"
           variant={:danger}
-          label={dgettext("dashboard_automation", "Delete Webhook")}
+          label={dgettext("dashboard_automation", "Delete %{name}", name: @webhook.name)}
+          tooltip={dgettext("dashboard_automation", "Delete")}
           phx-click={@on_delete}
         />
       </:end_actions>

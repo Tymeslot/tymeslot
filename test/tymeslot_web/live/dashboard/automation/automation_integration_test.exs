@@ -106,7 +106,7 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
 
       # 7. Delete webhook
       view
-      |> element("button[title='Delete Webhook']")
+      |> element("button[title='Delete'][aria-label='Delete #{webhook.name}']")
       |> render_click()
 
       assert render(view) =~ "Delete Webhook?"
@@ -160,7 +160,9 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
 
       {:ok, view, _html} = live(conn, "/dashboard/automation")
 
-      view |> element("button[title='Delete Webhook']") |> render_click()
+      view
+      |> element("button[title='Delete'][aria-label='Delete #{webhook.name}']")
+      |> render_click()
 
       assert has_element?(view, "#delete-webhook-modal[style*='display: flex']")
 

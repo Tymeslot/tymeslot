@@ -345,7 +345,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
         <.icon_button
           icon="hero-trash"
           variant={:danger}
-          label={dgettext("dashboard_calendar_settings", "Remove connection")}
+          label={dgettext("dashboard_calendar_settings", "Delete %{name}", name: @display_name)}
+          tooltip={dgettext("dashboard_calendar_settings", "Delete")}
           phx-click="show"
           phx-value-id={@integration.id}
           phx-target="#delete-calendar-modal"

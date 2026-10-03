@@ -115,7 +115,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
         <.icon_button
           icon="hero-trash"
           variant={:danger}
-          label={dgettext("dashboard_video", "Delete integration")}
+          label={dgettext("dashboard_video", "Delete %{name}", name: @display_name)}
+          tooltip={dgettext("dashboard_video", "Delete")}
           phx-click="show"
           phx-value-id={@integration.id}
           phx-target="#delete-video-modal"

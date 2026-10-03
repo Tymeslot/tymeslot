@@ -240,6 +240,13 @@ defmodule TymeslotWeb.Dashboard.VideoDisconnectCleanupTest do
 
     {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
+    # The trash button reads "Delete" like every integration card, with the
+    # integration's name in its accessible label.
+    assert has_element?(
+             view,
+             "button[title='Delete'][aria-label='Delete #{integration.name}'][phx-target='#delete-video-modal']"
+           )
+
     open_delete_modal(view, "delete-video-modal", integration.id)
     tick_delete_rooms(view, "delete-video-modal")
 
