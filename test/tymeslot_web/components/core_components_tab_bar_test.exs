@@ -143,6 +143,18 @@ defmodule TymeslotWeb.Components.CoreComponentsTabBarTest do
       assert attr_of(doc, "#test-tabs-tab-b", "tabindex") == ["-1"]
       assert Floki.text(Floki.find(doc, "#test-tabs-tab-b")) =~ "Off"
     end
+
+    test "point a tab at the element describing it, and only that tab" do
+      tabs = [
+        %{id: "a", label: "A"},
+        %{id: "b", label: "B", disabled: true, describedby: "why-b"}
+      ]
+
+      doc = render_bar(tabs, "a")
+
+      assert attr_of(doc, "#test-tabs-tab-b", "aria-describedby") == ["why-b"]
+      assert attr_of(doc, "#test-tabs-tab-a", "aria-describedby") == []
+    end
   end
 
   describe "link tabs" do

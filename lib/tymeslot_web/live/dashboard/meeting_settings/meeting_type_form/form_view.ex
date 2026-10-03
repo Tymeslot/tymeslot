@@ -74,7 +74,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
   @spec form(map()) :: Phoenix.LiveView.Rendered.t()
   def form(assigns) do
-    assigns = assign(assigns, :tabs_id, "meeting-type-form-tabs")
+    assigns =
+      assign(assigns,
+        tabs_id: "meeting-type-form-tabs",
+        create_hint_id: "meeting-type-form-#{assigns.id}-create-hint"
+      )
 
     ~H"""
     <div id={"meeting-type-form-wrapper-#{@id}"}>
@@ -91,11 +95,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             aria_label={dgettext("dashboard_meeting_form", "Meeting type settings")}
             active_tab={@active_tab}
             target={@myself}
-            tabs={form_tabs(@form_errors, @is_edit)}
+            tabs={form_tabs(@form_errors, @is_edit, @create_hint_id)}
           />
           <p
             :if={!@is_edit}
-            id="meeting-type-form-create-hint"
+            id={@create_hint_id}
             class="flex items-center gap-1.5 px-2 text-token-sm text-tymeslot-500"
           >
             <.icon name="hero-information-circle-mini" class="w-4 h-4 shrink-0 text-tymeslot-400" />
@@ -532,7 +536,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
   defp parse_interval(_value), do: nil
 
-  defp form_tabs(form_errors, is_edit) do
+  # Until the meeting type exists only Details can be used; the others point
+  # at the hint saying why.
+  defp form_tabs(form_errors, is_edit, create_hint_id) do
     tabs = [
       %{
         id: "details",
@@ -562,9 +568,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     ]
 
     Enum.map(tabs, fn tab ->
-      tab
-      |> Map.put(:error, tab_has_errors?(form_errors, tab.id))
-      |> Map.put(:disabled, not is_edit and tab.id != "details")
+      disabled? = not is_edit and tab.id != "details"
+
+      Map.merge(tab, %{
+        error: tab_has_errors?(form_errors, tab.id),
+        disabled: disabled?,
+        describedby: if(disabled?, do: create_hint_id)
+      })
     end)
   end
 

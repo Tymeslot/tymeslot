@@ -72,6 +72,9 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
       uses, with `:status_label` read to screen readers in its place
     * `:error`: shorthand for a `:danger` status saying the tab has errors
     * `:disabled`: shown, but cannot be selected
+    * `:describedby`: the id of an element saying more about the tab, set as
+      the panel tab's `aria-describedby`; typically why a disabled tab is
+      disabled, since a disabled button cannot carry a tooltip
     * `:accent` and `:dot`: for tabs that stand for differently coloured
       things, classes used in place of the default active styling, and a
       background class for a disc shown while the tab is inactive
@@ -191,6 +194,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
             aria-controls={tab.id == @active_tab && panel_id(@id, tab.id)}
             tabindex={if tab.id == @focus_id, do: "0", else: "-1"}
             disabled={tab[:disabled]}
+            aria-describedby={tab[:describedby]}
             phx-click={@event}
             phx-value-tab={tab.id}
             phx-target={@target}
