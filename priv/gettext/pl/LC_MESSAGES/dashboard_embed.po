@@ -436,3 +436,8 @@ msgstr "Podgląd jest wyłączony, bo link do rezerwacji jest obecnie nieaktywny
 #, elixir-autogen, elixir-format
 msgid "Embed settings"
 msgstr "Ustawienia osadzania"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
+#, elixir-autogen, elixir-format
+msgid "Remove %{domain}"
+msgstr "Usuń %{domain}"

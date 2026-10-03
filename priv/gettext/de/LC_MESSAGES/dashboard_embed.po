@@ -440,3 +440,8 @@ msgstr "Die Vorschau ist deaktiviert, weil Ihr Buchungslink derzeit deaktiviert 
 #, elixir-autogen, elixir-format
 msgid "Embed settings"
 msgstr "Einbettungseinstellungen"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
+#, elixir-autogen, elixir-format
+msgid "Remove %{domain}"
+msgstr "%{domain} entfernen"

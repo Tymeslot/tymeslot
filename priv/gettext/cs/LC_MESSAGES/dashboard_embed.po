@@ -440,3 +440,8 @@ msgstr "Náhled je vypnutý, protože váš rezervační odkaz je momentálně n
 #, elixir-autogen, elixir-format
 msgid "Embed settings"
 msgstr "Nastavení vložení"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
+#, elixir-autogen, elixir-format
+msgid "Remove %{domain}"
+msgstr "Odebrat %{domain}"

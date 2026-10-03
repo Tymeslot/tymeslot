@@ -140,7 +140,8 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection do
                     phx-click="remove_domain"
                     phx-value-domain={domain}
                     phx-target={@myself}
-                    class="ml-2 inline-flex items-center p-0.5 rounded-token-full text-turquoise-400 hover:bg-turquoise-200 hover:text-turquoise-500 focus:outline-hidden"
+                    aria-label={dgettext("dashboard_embed", "Remove %{domain}", domain: domain)}
+                    class="ml-2 inline-flex items-center p-0.5 rounded-token-full text-turquoise-700 hover:bg-turquoise-200 hover:text-turquoise-900 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-500"
                   >
                     <.icon name="hero-x-mark-mini" class="h-3 w-3" />
                   </button>
