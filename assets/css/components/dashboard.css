@@ -20,6 +20,7 @@
     flex-shrink: 0;
     border-radius: var(--radius-full);
     transition: all 0.2s ease-in-out;
+    /* Deliberate non-palette black alpha: a neutral shadow, not a brand colour. */
     box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
   }
 
@@ -31,6 +32,7 @@
 
   .status-toggle:not(:disabled):hover {
     transform: scale(1.05);
+    /* Deliberate non-palette black alpha: a neutral shadow, not a brand colour. */
     box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
   }
 
@@ -149,6 +151,7 @@
   left: -100%;
   width: 100%;
   height: 100%;
+  /* Deliberate non-palette white alpha: a neutral highlight, not a brand colour. */
   background: linear-gradient(90deg, 
     transparent, 
     rgba(255, 255, 255, 0.1), 
@@ -274,6 +277,7 @@
     right: 0;
     bottom: 0;
     z-index: 60;
+    /* Deliberate non-palette black alpha: a neutral scrim, not a brand colour. */
     background-color: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
@@ -360,6 +364,7 @@
   font-size: 8px;
   font-weight: 600;
   line-height: 1;
+  /* Deliberate non-palette white alpha: a neutral highlight, not a brand colour. */
   border: 1px solid rgba(255, 255, 255, 0.7);
   box-shadow: 
     0 1px 4px color-mix(in oklab, var(--color-info) 20%, transparent),

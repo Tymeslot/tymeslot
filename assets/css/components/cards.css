@@ -84,6 +84,7 @@
   }
 
   .card-glass-unavailable button[role="switch"] span {
+    /* Deliberate non-palette white alpha: a neutral highlight, not a brand colour. */
     background: rgba(255, 255, 255, 0.95) !important;
   }
 
@@ -157,6 +158,7 @@
 /* Glass Morphism Card — backs the <.glass_morphism_card> component */
 .glass-morphism-card {
   @apply bg-white/80 backdrop-blur-xl rounded-token-3xl border border-white/40 shadow-2xl;
+  /* Deliberate non-palette black alpha: a neutral shadow, not a brand colour. */
   box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.1);
 }
 
