@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
           "w-24 shrink-0 font-bold text-token-sm",
           if(@day_availability.is_available,
             do: "text-tymeslot-900",
-            else: "text-tymeslot-400"
+            else: "text-tymeslot-500"
           )
         ]}>
           {@day_name}
@@ -132,7 +132,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
             on_toggle="toggle_day_menu"
             on_close="close_day_menu"
             target={@myself}
-            trigger_class="flex items-center justify-center w-8 h-8 shrink-0 rounded-token-lg text-tymeslot-400 hover:bg-tymeslot-50 hover:text-turquoise-700 transition-colors focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
+            trigger_class="flex items-center justify-center w-8 h-8 shrink-0 rounded-token-lg text-tymeslot-500 hover:bg-tymeslot-50 hover:text-turquoise-700 transition-colors focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
             trigger_attrs={[{"phx-value-day", @day}]}
             class="bg-white border-2 border-tymeslot-100 rounded-token-xl shadow-lg py-1 w-56"
             aria-label={day_menu_label(@day_name)}
@@ -169,7 +169,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
             </:panel>
           </.dropdown>
         <% else %>
-          <span class="text-token-sm text-tymeslot-400 font-medium">
+          <span class="text-token-sm text-tymeslot-500 font-medium">
             {dgettext("dashboard_availability", "Unavailable")}
           </span>
         <% end %>

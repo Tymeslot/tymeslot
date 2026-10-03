@@ -35,15 +35,18 @@
    same specificity, so these have to come after them to win, and the explicit
    :disabled:hover keeps a greyed-out field from lighting up under the pointer. */
 .input:disabled {
-  @apply text-tymeslot-400 bg-tymeslot-100/60 border-tymeslot-100 shadow-none cursor-not-allowed;
+  @apply text-tymeslot-500 bg-tymeslot-100/60 border-tymeslot-100 shadow-none cursor-not-allowed;
 }
 
 .input:disabled:hover {
   @apply border-tymeslot-100 bg-tymeslot-100/60;
 }
 
+/* A disabled field's placeholder often shows the value that applies instead
+   (a default wording), so it stays readable: tymeslot-500 clears 4.5:1 on the
+   disabled fill. */
 .input:disabled::placeholder {
-  @apply text-tymeslot-300;
+  @apply text-tymeslot-500;
 }
 
 /* Input Variants */
