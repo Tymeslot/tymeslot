@@ -99,7 +99,7 @@
           {CredoChecks.UseCoreModal, []},
           {CredoChecks.UseColorScale, [priority: :low]},
           {CredoChecks.NoArbitraryHexColors, [priority: :low]},
-          {CredoChecks.RequireDashboardSectionHeader, [priority: :low]},
+          {CredoChecks.RequireDashboardPage, [priority: :low]},
           {CredoChecks.Phoenix.RequireComponentAttrs, [priority: :high]},
           {CredoChecks.TestModuleTagRequired, [priority: :high]},
           {CredoChecks.TestGlobalConfigRequiresSync, [priority: :high]},

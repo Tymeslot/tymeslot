@@ -1,16 +1,17 @@
-defmodule CredoChecks.RequireDashboardSectionHeader do
+defmodule CredoChecks.RequireDashboardPage do
   @moduledoc """
-  Ensures that main dashboard page components use `<.section_header>` for consistent UI.
+  Ensures that main dashboard page components render inside `<.dashboard_page>`.
 
-  Page components under `lib/tymeslot_web/live/dashboard/` should provide a
-  consistent heading using the shared component. The same applies to the
+  Page components under `lib/tymeslot_web/live/dashboard/` share one page
+  shell: one root rhythm and one header carrying the page's only `<h1>`, named
+  like the section's sidebar entry. The same applies to the
   dashboard pages a downstream overlay contributes from its own web namespace,
   since they render inside the same dashboard shell.
 
   This is not a "top level only" rule. Page components nested one level down
-  (`automation/`, `theme_settings/`) are checked too. Only
-  the helper directories listed in `@helper_paths` are exempt, because the page
-  component that renders them supplies the heading on their behalf.
+  (`locations/`, `polls/`) are checked too. Only the helpers listed in
+  `@helper_paths` are exempt, because the page component that renders them
+  supplies the page shell on their behalf.
   """
 
   use Credo.Check,
@@ -19,7 +20,8 @@ defmodule CredoChecks.RequireDashboardSectionHeader do
     exit_status: 0,
     explanations: [
       check: """
-      Dashboard page components should use `<.section_header>` for consistent UI.
+      Dashboard page components should render inside `<.dashboard_page>`, so every
+      section has the same root and exactly one `<h1>`.
       """,
       params: []
     ]
@@ -32,15 +34,14 @@ defmodule CredoChecks.RequireDashboardSectionHeader do
     if dashboard_page_component?(filename) do
       content = SourceFile.source(source_file)
 
-      if has_section_header?(content) do
+      if has_dashboard_page?(content) do
         []
       else
         issue_meta = IssueMeta.for(source_file, params)
 
         [
           format_issue(issue_meta,
-            message:
-              "Dashboard page components should use `<.section_header>` for consistent UI.",
+            message: "Dashboard page components should render inside `<.dashboard_page>`.",
             line_no: 1,
             trigger: filename
           )
@@ -59,12 +60,14 @@ defmodule CredoChecks.RequireDashboardSectionHeader do
     "lib/tymeslot_saas_web/live/dashboard/"
   ]
 
-  # Helper components rendered inside a page component, which carries the
-  # section header on their behalf, plus the page components whose `render/1`
-  # delegates to a `ComponentView` that carries it. Every entry below matches a
+  # Helper components rendered inside a page component, which carries the page
+  # shell on their behalf (the integrations hub's tab panels, the automation
+  # forms and the theme customiser among them), plus the page components whose
+  # `render/1` delegates to a `ComponentView` that carries it. Every entry below matches a
   # directory or file that exists; prune it when one is removed, rather than
   # leaving a pattern that silently matches nothing.
   @helper_paths [
+    "/automation/",
     "/availability/",
     "/calendar_grid/",
     "/calendar_settings/",
@@ -76,7 +79,9 @@ defmodule CredoChecks.RequireDashboardSectionHeader do
     "calendar_grid_component",
     "calendar_settings_component",
     "dashboard_overview_component",
+    "payments_settings_component",
     "service_settings_component",
+    "theme_customization_component",
     "video_settings_component"
   ]
 
@@ -86,9 +91,7 @@ defmodule CredoChecks.RequireDashboardSectionHeader do
       not String.contains?(filename, @helper_paths)
   end
 
-  defp has_section_header?(content) do
-    # Check for various ways the component might be called
-    String.contains?(content, "<.section_header") or
-      String.contains?(content, "<Containers.section_header")
+  defp has_dashboard_page?(content) do
+    String.contains?(content, ["<.dashboard_page", "<Page.dashboard_page"])
   end
 end
