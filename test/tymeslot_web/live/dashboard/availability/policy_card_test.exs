@@ -198,6 +198,14 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.PolicyCardTest do
 
       assert render(view) =~ "Advance booking window updated"
       assert Repo.reload!(schedule).advance_booking_days == 30
+
+      # Every chip group on the card shares the turquoise primary style.
+      assert has_element?(
+               view,
+               "[phx-value-advance_booking_days='30'].btn-tag-selector-primary--active"
+             )
+
+      refute has_element?(view, "#advance-booking-days-form .btn-tag-selector-secondary")
     end
 
     test "selecting a minimum notice preset updates the schedule", %{
