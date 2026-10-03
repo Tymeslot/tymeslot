@@ -16,6 +16,7 @@ defmodule Tymeslot.Mocks.Email do
     |> stub(:send_appointment_confirmation_to_organizer, fn _email, _details -> send_result end)
     |> stub(:send_appointment_confirmation_to_attendee, fn _email, _details -> send_result end)
     |> stub(:send_guest_confirmation, fn _email, _details -> send_result end)
+    |> stub(:send_seat_update_to_organizer, fn _variant, _email, _details -> send_result end)
     |> stub(:send_appointment_confirmations, fn _details -> {send_result, send_result} end)
     |> stub(:send_reschedule_email_to_organizer, fn _email, _details -> send_result end)
     |> stub(:send_reschedule_email_to_attendee, fn _email, _details -> send_result end)

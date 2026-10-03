@@ -154,3 +154,11 @@ msgstr "dnes"
 #, elixir-autogen, elixir-format
 msgid "Nothing on your plate today or tomorrow"
 msgstr "Dnes ani zítra vás nic nečeká"
+
+#: lib/tymeslot/agenda.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} participant"
+msgid_plural "%{count} participants"
+msgstr[0] "%{count} účastník"
+msgstr[1] "%{count} účastníci"
+msgstr[2] "%{count} účastníků"

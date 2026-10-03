@@ -298,3 +298,18 @@ msgstr "Цього місця більше не існує"
 #, elixir-autogen, elixir-format
 msgid "A place you meet people, such as an office or a studio. Offer it on any in-person meeting type, and bookers see its name and address when they book."
 msgstr "Місце, де ви зустрічаєтеся з людьми, наприклад офіс чи студія. Пропонуйте його в будь-якому типі особистої зустрічі, і ті, хто бронює, побачать його назву та адресу під час бронювання."
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} is the only location of these group meeting types, whose address must be fixed in advance. Give them another location before deleting it:"
+msgstr "%{name} є єдиним місцем цих типів групових зустрічей, адреса яких має бути визначена заздалегідь. Перш ніж видалити його, призначте їм інше місце:"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "This location is the only one of a group meeting type, so it cannot be deleted"
+msgstr "Це місце є єдиним для типу групової зустрічі, тому його не можна видалити"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Group · up to %{count}"
+msgstr "Група · до %{count}"

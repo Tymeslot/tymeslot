@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.IcsImport
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGridComponent
 
   require Logger
@@ -539,10 +540,27 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   Deletes the event `payload` names, in the scope it names, in the background
   through `Tymeslot.CalendarGrid.delete_event/3`, reporting back with
   `{:delete_event_result, result}`.
+
+  Every way the grid confirms a delete (with or without notifying the
+  attendees) ends here, so the seat lock is checked here once more, against
+  the database: an event a group meeting with live seats sits on is never
+  deleted from the grid, however its delete was confirmed
+  (`Shared.check_seat_lock/2`).
   """
   @spec handle_execute_delete_event(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_execute_delete_event(payload, socket) do
+    case Shared.check_seat_lock(socket, payload) do
+      :ok ->
+        start_delete(payload, socket)
+
+      {:error, :group_booking} ->
+        send_update(CalendarGridComponent, id: "calendar", action: :event_delete_failed)
+        {:noreply, put_flash(socket, :warning, Shared.seat_lock_message())}
+    end
+  end
+
+  defp start_delete(payload, socket) do
     socket
     |> EditWorkflow.run_async(
       :delete_event_result,

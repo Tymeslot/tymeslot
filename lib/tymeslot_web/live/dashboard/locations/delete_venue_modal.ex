@@ -7,7 +7,10 @@ defmodule TymeslotWeb.Dashboard.Locations.DeleteVenueModal do
   be taken off, and of those, the ones left with an in-person location that
   lists no venue, whose bookers are then told the address is arranged after
   booking. Meetings already booked there keep their address. Deleting is
-  allowed either way (see `Tymeslot.Venues.delete_venue/1`).
+  allowed either way, except while the venue is the only one of a group
+  type's location: a group type's address is fixed in advance, so the
+  modal names those types and offers no delete until they name another
+  venue (see `Tymeslot.Venues.delete_venue/1`).
   """
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
@@ -20,6 +23,10 @@ defmodule TymeslotWeb.Dashboard.Locations.DeleteVenueModal do
   attr :left_without, :list,
     required: true,
     doc: "of `in_use`, those left with an in-person location listing no venue"
+
+  attr :blocked_by, :list,
+    default: [],
+    doc: "of `left_without`, the group types, which keep the venue from being deleted"
 
   attr :myself, :any, required: true
 
@@ -35,45 +42,64 @@ defmodule TymeslotWeb.Dashboard.Locations.DeleteVenueModal do
       on_confirm={JS.push("confirm_delete_venue", target: @myself)}
       data-testid="confirm-delete-venue"
     >
-      <%= if @in_use == [] do %>
-        <p>
-          {dgettext("dashboard_meeting_types", "Delete %{name}? This cannot be undone.",
-            name: @venue.name
-          )}
-        </p>
-      <% else %>
-        <div class="space-y-2">
+      <%!-- A blocked delete offers no Confirm: the empty actions slot
+           replaces it. --%>
+      <:actions :if={@blocked_by != []}></:actions>
+      <%= cond do %>
+        <% @blocked_by != [] -> %>
+          <.info_box variant={:error}>
+            <div class="space-y-2">
+              <p>
+                {dgettext(
+                  "dashboard_meeting_types",
+                  "%{name} is the only location of these group meeting types, whose address must be fixed in advance. Give them another location before deleting it:",
+                  name: @venue.name
+                )}
+              </p>
+              <ul class="list-disc pl-5" data-testid="venue-blocked-by">
+                <li :for={meeting_type <- @blocked_by}>{meeting_type.name}</li>
+              </ul>
+            </div>
+          </.info_box>
+        <% @in_use == [] -> %>
           <p>
-            {dgettext(
-              "dashboard_meeting_types",
-              "%{name} is offered by these meeting types. Deleting it removes it from them:",
+            {dgettext("dashboard_meeting_types", "Delete %{name}? This cannot be undone.",
               name: @venue.name
             )}
           </p>
-          <ul class="list-disc pl-5" data-testid="venue-in-use">
-            <li :for={meeting_type <- @in_use}>{meeting_type.name}</li>
-          </ul>
-        </div>
-        <.info_box :if={@left_without != []} variant={:warning}>
+        <% true -> %>
           <div class="space-y-2">
             <p>
               {dgettext(
                 "dashboard_meeting_types",
-                "These are then left with an in-person option that has no address, so their bookers will be told the address is arranged after booking:"
+                "%{name} is offered by these meeting types. Deleting it removes it from them:",
+                name: @venue.name
               )}
             </p>
-            <ul class="list-disc pl-5" data-testid="venue-left-without">
-              <li :for={meeting_type <- @left_without}>{meeting_type.name}</li>
+            <ul class="list-disc pl-5" data-testid="venue-in-use">
+              <li :for={meeting_type <- @in_use}>{meeting_type.name}</li>
             </ul>
           </div>
-        </.info_box>
+          <.info_box :if={@left_without != []} variant={:warning}>
+            <div class="space-y-2">
+              <p>
+                {dgettext(
+                  "dashboard_meeting_types",
+                  "These are then left with an in-person option that has no address, so their bookers will be told the address is arranged after booking:"
+                )}
+              </p>
+              <ul class="list-disc pl-5" data-testid="venue-left-without">
+                <li :for={meeting_type <- @left_without}>{meeting_type.name}</li>
+              </ul>
+            </div>
+          </.info_box>
 
-        <p class="text-token-sm text-tymeslot-500">
-          {dgettext(
-            "dashboard_meeting_types",
-            "Meetings already booked there keep their address. This cannot be undone."
-          )}
-        </p>
+          <p class="text-token-sm text-tymeslot-500">
+            {dgettext(
+              "dashboard_meeting_types",
+              "Meetings already booked there keep their address. This cannot be undone."
+            )}
+          </p>
       <% end %>
     </.confirm_modal>
     """

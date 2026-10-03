@@ -19,6 +19,7 @@ defmodule Tymeslot.Webhooks do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.SeatView
   alias Tymeslot.Notifications.EventTypes
   alias Tymeslot.Security.EncryptedString
 
@@ -293,7 +294,8 @@ defmodule Tymeslot.Webhooks do
         webhook.id,
         event_type,
         meeting.id,
-        WebhookWorker.snapshot(meeting)
+        WebhookWorker.snapshot(meeting),
+        SeatView.participant_id(meeting)
       )
     else
       {:error, :webhook_not_active}

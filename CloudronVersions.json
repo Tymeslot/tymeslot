@@ -4022,6 +4022,53 @@
       },
       "publishState": "published",
       "ts": "Thu, 01 Oct 2026 10:03:06 GMT"
+    },
+    "1.22.0": {
+      "creationDate": "Fri, 02 Oct 2026 13:19:24 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "Hosts can now save in-person venues and let bookers choose one. This release is also a broad privacy and security pass: uploaded photos lose their location data, stored links and secrets are encrypted, and logs and analytics keep far less about visitors. Also fixes for dashboard calendar edits, CalDAV events and time zones in Manitoba and the Northwest Territories.\n* Hosts can save in-person venues on a new Locations page in the dashboard, and bookers pick one on the booking page\n* Uploaded profile pictures and backgrounds no longer publish the photo's location, capture time or device, including files uploaded before updating\n* Booking and sign-up pages load Google's reCAPTCHA only once a visitor starts filling in the form\n* Bookings and sign-ups were refused while Google's reCAPTCHA service was down; they now go through\n* Webhook URLs, custom meeting links, and poll, RSVP and free/busy links are now stored encrypted\n* Guests' calendar invitations no longer include the booker's email address, message or booking-form answers\n* The booking page no longer offers times an hour out in Manitoba and the Northwest Territories from 1 November 2026\n* Self-hosted instances no longer contact data.iana.org at startup and every week to check for time zone updates",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:1.22.0",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!\n\nSet PHX_HOST to your app domain, either on the Environment tab or by editing /app/data/.env, which is pre-filled with every supported variable, commented out (cloudron exec --app <domain> -- vi /app/data/.env). Values set on the Environment tab take precedence over that file. Restart the app after editing it.\n\nThe first user to register becomes the admin.",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "1.22.0",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Fri, 02 Oct 2026 13:19:24 GMT"
     }
   }
 }

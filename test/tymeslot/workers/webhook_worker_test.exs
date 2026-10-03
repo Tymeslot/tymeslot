@@ -384,6 +384,42 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
     end
   end
 
+  describe "seat deliveries" do
+    test "each seat of a meeting is its own job, and a seat is not scheduled twice" do
+      meeting_id = UUID.generate()
+      [first, second] = [UUID.generate(), UUID.generate()]
+
+      for participant_id <- [first, second, first] do
+        assert :ok =
+                 WebhookWorker.schedule_delivery(
+                   123,
+                   "meeting.created",
+                   meeting_id,
+                   nil,
+                   participant_id
+                 )
+      end
+
+      assert all_enqueued(worker: WebhookWorker)
+             |> Enum.map(& &1.args["participant_id"])
+             |> Enum.sort() == Enum.sort([first, second])
+    end
+
+    test "discards a seat delivery whose participant is not on the meeting" do
+      meeting = insert(:group_meeting)
+      elsewhere = insert(:participant, meeting: insert(:group_meeting))
+      webhook = insert(:webhook)
+
+      assert {:discard, "Webhook or meeting not found"} =
+               perform_job(WebhookWorker, %{
+                 "webhook_id" => webhook.id,
+                 "event_type" => "meeting.created",
+                 "meeting_id" => meeting.id,
+                 "participant_id" => elsewhere.id
+               })
+    end
+  end
+
   # A subscriber's endpoint that is gone or rejects our credentials returns the
   # same status on every attempt. Retrying it burns the job's five tries, each
   # recorded by error tracking as an `Oban.PerformError` that can alert an

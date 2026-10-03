@@ -1,8 +1,14 @@
 defmodule Tymeslot.Workers.EmailWorkerHandlers.GuestEmails do
   @moduledoc """
-  Email job handlers for a meeting's guests: inviting the guests a host adds
-  after the booking was made, and the per-guest send that booking
-  confirmations share.
+  Email job handlers and the shared send loops for a meeting's guests: a
+  booking's guests are invited alongside its confirmation and reminded
+  alongside its reminders, and the guests a host adds after the booking was
+  made are invited by a job of their own.
+
+  Split out of `Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails` so the
+  solo and group handlers (`GroupMeetingEmails`) share one send loop. Each
+  guest is stamped on success, so a retry only reaches the guests a previous
+  run missed, and a failed guest send never fails the job that made it.
   """
 
   require Logger
@@ -12,7 +18,10 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GuestEmails do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Meetings.GuestSchema
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Notifications.GuestNotifications
+  alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
   alias Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails
 
@@ -55,6 +64,27 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GuestEmails do
   end
 
   @doc """
+  Invites whichever of the meeting's guests a previous confirmation run did
+  not reach. Builds the payload only when there is somebody to send to, so
+  the already-sent path stays one cheap query.
+  """
+  @spec invite_missed(MeetingSchema.t()) :: :ok
+  def invite_missed(meeting) do
+    case GuestQueries.list_unsent_for_meeting(meeting.id) do
+      [] ->
+        :ok
+
+      unsent ->
+        send_confirmations(
+          unsent,
+          meeting,
+          AppointmentBuilder.from_meeting(meeting),
+          Config.email_service_module()
+        )
+    end
+  end
+
+  @doc """
   Sends each of `guests` their invitation and returns each send's result.
 
   Each guest is claimed before it is sent to (`GuestQueries.claim_confirmation/2`
@@ -68,7 +98,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GuestEmails do
   As with `Tymeslot.Workers.DeliveryClaims`, a node stopping between the claim
   and the send loses that one invitation rather than risking two.
   """
-  @spec send_to_guests(list(), map(), map(), module()) :: [term()]
+  @spec send_to_guests([GuestSchema.t()], MeetingSchema.t(), map(), module()) :: [term()]
   def send_to_guests(guests, meeting, appointment_details, email_service) do
     Enum.map(guests, fn guest ->
       claimed_at = DateTime.utc_now(:second)
@@ -79,6 +109,60 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GuestEmails do
 
         :already_claimed ->
           {:ok, :already_sent}
+      end
+    end)
+  end
+
+  @doc """
+  Sends every guest in `guests` their confirmation through `send_to_guests/4`
+  for a caller whose own result the guests must never change: failures are
+  logged and the guest left unsent for the next run.
+
+  Shared by `MeetingEmails` and `GroupMeetingEmails`: the loop is identical
+  for a meeting's guests and one participant's guests, they only differ in how
+  `guests` was queried (`GuestQueries.list_unsent_for_meeting/1` vs
+  `GuestQueries.list_unsent_for_participant/1`).
+  """
+  @spec send_confirmations([GuestSchema.t()], MeetingSchema.t(), map(), module()) :: :ok
+  def send_confirmations(guests, meeting, appointment_details, email_service) do
+    _results = send_to_guests(guests, meeting, appointment_details, email_service)
+    :ok
+  end
+
+  @doc """
+  Reminds the meeting's guests for one configured offset, stamping each guest
+  per offset so a retry after a partial send re-emails only the guests it has
+  not reached. Failures are logged and never change the caller's result.
+
+  A group-booking guest is reminded from their own participant's view of the
+  meeting (`GuestNotifications.with_inviter_details/4`); `appointment_details`
+  serves every other guest.
+  """
+  @spec send_reminders(MeetingSchema.t(), map(), term(), term()) :: :ok
+  def send_reminders(meeting, appointment_details, reminder_value, reminder_unit) do
+    value = ReminderUtils.parse_reminder_value(reminder_value)
+    unit = ReminderUtils.normalize_reminder_unit(reminder_unit)
+    email_service = Config.email_service_module()
+
+    meeting.id
+    |> GuestQueries.list_for_reminder(value, unit)
+    |> GuestNotifications.with_inviter_details(meeting, appointment_details, %{
+      value: value,
+      unit: unit
+    })
+    |> Enum.each(fn {guest, owner_details} ->
+      details = GuestNotifications.guest_details(owner_details, guest)
+
+      case email_service.send_guest_reminder(guest.email, details) do
+        {:ok, _result} ->
+          GuestQueries.mark_reminder_sent(guest, value, unit)
+
+        other ->
+          Logger.error("Guest reminder email failed",
+            meeting_id: meeting.id,
+            guest_id: guest.id,
+            result: LogFormat.reason(other)
+          )
       end
     end)
   end

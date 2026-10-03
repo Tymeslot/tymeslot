@@ -7,6 +7,7 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
 
   alias Tymeslot.Bookings.Orchestrator
   alias Tymeslot.Demo
+  alias Tymeslot.Meetings
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Security.FieldValidators.EmailValidator
   alias Tymeslot.Security.FieldValidators.NameValidator
@@ -50,6 +51,29 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
   end
 
   def resolve_meeting_type_for_reschedule(_meeting_uid, _organizer_user_id), do: nil
+
+  @doc """
+  The meeting type a group participant's seat move is committed to: the type
+  of the meeting their live seat is on, provided that meeting is this
+  organiser's.
+
+  `nil` for a spent token, a seat on another organiser's meeting (a
+  hand-edited username), or a type that has since been deleted, the same
+  cases in which `resolve_meeting_type_for_reschedule/2` gives up on a uid.
+  """
+  @spec resolve_meeting_type_for_seat(String.t() | nil, integer() | nil) :: map() | nil
+  def resolve_meeting_type_for_seat(seat_token, organizer_user_id)
+      when is_binary(seat_token) and is_integer(organizer_user_id) do
+    with {:ok, %{meeting: %{organizer_user_id: ^organizer_user_id, meeting_type_id: id}}}
+         when is_integer(id) <- Meetings.fetch_live_seat(seat_token),
+         %{} = meeting_type <- MeetingTypes.get_meeting_type(id, organizer_user_id) do
+      meeting_type
+    else
+      _not_resolvable -> nil
+    end
+  end
+
+  def resolve_meeting_type_for_seat(_seat_token, _organizer_user_id), do: nil
 
   @doc """
   The location the meeting being rescheduled was booked at, as the picker
@@ -213,4 +237,46 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
   defp default_booking_form_data do
     %{"name" => "", "email" => "", "message" => ""}
   end
+
+  @doc """
+  Pre-fills the booking form for a seat reschedule from the participant's
+  own data. The token scopes the lookup, so no organizer id is needed and
+  no other booker's PII can be pre-filled.
+  """
+  @spec build_seat_booking_form_data(String.t() | nil) :: %{String.t() => String.t()}
+  def build_seat_booking_form_data(nil), do: default_booking_form_data()
+
+  def build_seat_booking_form_data(seat_token) when is_binary(seat_token) do
+    case Meetings.get_participant_by_token(seat_token) do
+      {:ok, %{cancelled_at: nil} = participant} ->
+        %{
+          "name" => participant.name,
+          "email" => participant.email,
+          "message" => participant.message || ""
+        }
+
+      _cancelled_or_missing ->
+        default_booking_form_data()
+    end
+  end
+
+  @doc """
+  The start of the live seat a seat-management token names: the time the
+  participant is moving their spot from. `nil` when the token is spent.
+
+  The token rides in the picker URL as `reschedule_seat_token`, which browser
+  history keeps long after the seat has been moved or given up. A dead token
+  left in the assigns routes every later submission through the seat-move
+  path, where it can only fail, so the booking page checks it once and
+  forgets it if it is spent, letting the visitor simply book afresh.
+  """
+  @spec seat_move_start(String.t() | nil) :: DateTime.t() | nil
+  def seat_move_start(seat_token) when is_binary(seat_token) do
+    case Meetings.fetch_live_seat(seat_token) do
+      {:ok, %{meeting: meeting}} -> meeting.start_time
+      {:error, _dead_end} -> nil
+    end
+  end
+
+  def seat_move_start(_missing), do: nil
 end

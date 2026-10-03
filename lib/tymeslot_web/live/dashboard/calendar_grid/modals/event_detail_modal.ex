@@ -26,6 +26,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   attr :time_format, :string, default: "12h"
   attr :myself, :any, required: true
   attr :editable, :boolean, default: false
+
+  attr :time_locked, :boolean,
+    default: false,
+    doc:
+      "A live seat is held on this event's meeting, so its time, attendees and deletion are not editable here."
+
   attr :attendee_input, :string, default: ""
   attr :pending_attendees, :list, default: []
   attr :video_integrations, :list, default: []
@@ -121,7 +127,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
       <.detail_line variant={:compact} icon="hero-clock" class="mb-3">
         <% start_parts = Helpers.datetime_to_local_parts(@selected_event.start_at, @user_timezone) %>
         <% end_parts = Helpers.datetime_to_local_parts(@selected_event.end_at, @user_timezone) %>
-        <div :if={@editable} class="flex items-center justify-between mb-2">
+        <div :if={@editable and not @time_locked} class="flex items-center justify-between mb-2">
           <span class="text-token-xs font-medium text-tymeslot-400">{dgettext(
             "dashboard_calendar_events",
             "All day"
@@ -135,7 +141,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           />
         </div>
         <form
-          :if={@editable and @selected_event.all_day}
+          :if={@editable and not @time_locked and @selected_event.all_day}
           id="event-all-day-form"
           phx-change="update_event_all_day_range"
           phx-target={@myself}
@@ -161,7 +167,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           />
         </form>
         <form
-          :if={@editable and not @selected_event.all_day}
+          :if={@editable and not @time_locked and not @selected_event.all_day}
           id="event-time-form"
           phx-change="update_event_time"
           phx-target={@myself}
@@ -200,7 +206,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
             @user_timezone
           )}</span>
         </form>
-        <div :if={!@editable}>
+        <div :if={!@editable or @time_locked}>
           <p class="text-token-sm font-medium text-tymeslot-700">
             {Helpers.format_display_time_range(@selected_event, @time_format, @user_timezone)}
             <span
@@ -212,6 +218,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           </p>
           <p class="text-token-xs text-tymeslot-400 mt-0.5">
             {DashboardFormat.long_date(Helpers.event_display_date(@selected_event, @user_timezone))}
+          </p>
+          <p
+            :if={@time_locked}
+            class="flex items-start gap-1 text-token-xs text-tymeslot-500 mt-1"
+            id="event-time-locked-note"
+          >
+            <.icon name="hero-lock-closed-micro" class="w-3 h-3 mt-px shrink-0" />
+            <span>{Shared.seat_lock_message()}</span>
           </p>
         </div>
       </.detail_line>
@@ -277,7 +291,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
 
       <%!-- Attendees --%>
       <AttendeeEditor.attendee_editor
-        editable={@editable}
+        editable={@editable and not @time_locked}
         attendees={@attendees}
         pending_attendees={@pending_attendees}
         attendee_input={@attendee_input}
@@ -301,7 +315,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
       </.detail_line>
 
       <%!-- Repeat --%>
-      <div :if={@editable} class="mb-3">
+      <div :if={@editable and not @time_locked} class="mb-3">
         <RecurrenceEditor.recurrence_editor
           recurrence_rule={Map.get(@selected_event, :recurrence_rule)}
           timezone={Shared.recurrence_timezone(@selected_event, @user_timezone)}
@@ -310,7 +324,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         />
       </div>
       <.detail_line
-        :if={!@editable and recurrence_summary(@selected_event, @user_timezone) != nil}
+        :if={
+          (!@editable or @time_locked) and
+            recurrence_summary(@selected_event, @user_timezone) != nil
+        }
         variant={:compact}
         icon="hero-arrow-path"
         class="mb-3"
@@ -376,7 +393,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
       </.detail_line>
 
       <%!-- Footer actions --%>
-      <div :if={@editable} class="mt-4 pt-3 border-t border-tymeslot-100 flex items-center">
+      <div
+        :if={@editable and not @time_locked}
+        class="mt-4 pt-3 border-t border-tymeslot-100 flex items-center"
+      >
         <.action_button
           variant={:danger_soft}
           size={:sm}

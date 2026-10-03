@@ -13,12 +13,14 @@ defmodule Tymeslot.Meetings.GuestSchema do
 
   alias Tymeslot.ChangesetValidators.Email, as: EmailChangeset
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.Token
 
   @type t :: %__MODULE__{
           id: binary() | nil,
           meeting_id: binary() | nil,
+          participant_id: binary() | nil,
           email: String.t() | nil,
           name: String.t() | nil,
           status: String.t(),
@@ -54,6 +56,7 @@ defmodule Tymeslot.Meetings.GuestSchema do
     field(:invited_by, Ecto.Enum, values: [:booker, :organizer])
 
     belongs_to(:meeting, MeetingSchema, type: :binary_id)
+    belongs_to(:participant, ParticipantSchema, type: :binary_id)
 
     timestamps(type: :utc_datetime)
   end
@@ -77,7 +80,7 @@ defmodule Tymeslot.Meetings.GuestSchema do
   @spec creation_changeset(t(), map()) :: Ecto.Changeset.t()
   def creation_changeset(guest, attrs) do
     guest
-    |> cast(attrs, [:email, :name, :meeting_id, :status, :invited_by])
+    |> cast(attrs, [:email, :name, :meeting_id, :participant_id, :status, :invited_by])
     |> update_change(:email, &normalize_email/1)
     |> validate_required([:email, :meeting_id])
     |> EmailChangeset.validate_email(:email)
@@ -86,11 +89,20 @@ defmodule Tymeslot.Meetings.GuestSchema do
     |> ensure_rsvp_token()
     |> Token.put_hash(:rsvp_token, :rsvp_token_hash)
     |> unique_constraint(:rsvp_token_hash)
+    # Two indexes, one rule per booking shape: a solo booking cannot invite an
+    # address twice (its guests carry no participant), and on a group slot each
+    # booker cannot invite an address twice, but two bookers inviting the same
+    # colleague is fine, and used to fail the second booking outright.
     |> unique_constraint([:meeting_id, :email],
-      name: :meeting_guests_meeting_id_email_index,
+      name: :meeting_guests_meeting_id_email_solo_index,
+      message: "has already been added"
+    )
+    |> unique_constraint([:meeting_id, :participant_id, :email],
+      name: :meeting_guests_participant_id_email_index,
       message: "has already been added"
     )
     |> foreign_key_constraint(:meeting_id)
+    |> foreign_key_constraint(:participant_id)
   end
 
   @doc """

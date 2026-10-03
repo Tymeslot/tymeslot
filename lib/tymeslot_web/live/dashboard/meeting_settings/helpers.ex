@@ -5,8 +5,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Helpers do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Ecto.Changeset
   alias Phoenix.Component
   alias Tymeslot.Profiles
+  alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
 
   @doc """
@@ -30,6 +32,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Helpers do
   def get_security_metadata(socket) do
     DashboardHelpers.get_security_metadata(socket)
   end
+
+  @doc """
+  The meeting-type form's errors from a refused changeset, keyed by field
+  and translated through the `errors` domain like any other form error
+  (`Forms.translate_error/1`).
+  """
+  @spec changeset_form_errors(Changeset.t()) :: %{atom() => [String.t()]}
+  def changeset_form_errors(%Changeset{} = changeset),
+    do: Changeset.traverse_errors(changeset, &Forms.translate_error/1)
 
   @doc """
   Formats error messages that can be either strings or lists.

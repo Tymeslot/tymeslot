@@ -345,3 +345,13 @@ msgstr "Importer des événements depuis un fichier .ics"
 #, elixir-autogen, elixir-format
 msgid "Drop an .ics file to import its events"
 msgstr "Déposez un fichier .ics pour importer ses événements"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{count}/%{capacity} seats taken"
+msgstr "%{count}/%{capacity} places prises"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Participants"
+msgstr "Participants"

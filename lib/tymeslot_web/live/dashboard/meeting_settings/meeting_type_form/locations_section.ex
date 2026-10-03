@@ -8,6 +8,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
   more and the booker chooses, which the section says explicitly so the host
   can see what adding a second option does before they add it.
 
+  A group type offers exactly one location, so while group bookings are on
+  (`group_bookings_enabled`) the section says so and offers no "Add
+  location"; `add_location` refuses a stale or forged event the same way.
+  What that one location may be is checked by the editor
+  (`LocationEditorComponent`).
+
   Mutating actions push assigns directly into the parent `MeetingTypeForm`
   LiveComponent via `send_update/2`, the same single-hop round-trip
   `CustomQuestionsSection` uses so `render_click/1` observes the updated
@@ -24,19 +30,26 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
   alias TymeslotWeb.Helpers.LocationIcons
 
   @impl Phoenix.LiveComponent
-  def update(assigns, socket), do: {:ok, assign(socket, assigns)}
+  def update(assigns, socket) do
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign_new(:group_bookings_enabled, fn -> false end)
+     |> assign_new(:errors, fn -> [] end)}
+  end
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <section class="space-y-4">
+    <section id={"locations-section-#{@form_id}"} class="space-y-4">
       <.subsection_header
         icon="hero-map-pin"
         title={dgettext("dashboard_meeting_form", "Location")}
-        description={location_hint(@locations)}
+        description={location_hint(@locations, @group_bookings_enabled)}
       >
         <:actions>
           <.action_button
+            :if={can_add?(@locations, @group_bookings_enabled)}
             type="button"
             variant={:secondary}
             phx-click="add_location"
@@ -116,23 +129,27 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
           </.card>
         <% end %>
       </ul>
+
+      <p :for={error <- @errors} class="form-error">{error}</p>
     </section>
     """
   end
 
   @impl Phoenix.LiveComponent
   def handle_event("add_location", _params, socket) do
-    empty = %LocationOption{
-      id: UUID.generate(),
-      kind: "in_person",
-      position: length(socket.assigns.locations)
-    }
+    if can_add?(socket.assigns.locations, socket.assigns.group_bookings_enabled) do
+      empty = %LocationOption{
+        id: UUID.generate(),
+        kind: "in_person",
+        position: length(socket.assigns.locations)
+      }
 
-    LiveView.send_update(MeetingTypeForm,
-      id: socket.assigns.form_id,
-      editing_location: empty,
-      editing_location_mode: :add
-    )
+      LiveView.send_update(MeetingTypeForm,
+        id: socket.assigns.form_id,
+        editing_location: empty,
+        editing_location_mode: :add
+      )
+    end
 
     {:noreply, socket}
   end
@@ -203,6 +220,20 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
     |> Enum.with_index()
     |> Enum.map(fn {location, index} -> %{location | position: index} end)
   end
+
+  # A group type holds exactly one location: no second one, but a first one
+  # if the list is somehow empty.
+  defp can_add?(locations, group_bookings_enabled),
+    do: not group_bookings_enabled or locations == []
+
+  defp location_hint(_locations, true = _group_bookings_enabled) do
+    dgettext(
+      "dashboard_meeting_form",
+      "Where this meeting is held. Group bookings use one location, fixed in advance, so everyone in a slot meets in the same place."
+    )
+  end
+
+  defp location_hint(locations, _group_bookings_enabled), do: location_hint(locations)
 
   defp location_hint([_single]) do
     dgettext(

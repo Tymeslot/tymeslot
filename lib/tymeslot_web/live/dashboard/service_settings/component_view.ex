@@ -110,6 +110,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
               client_ip={@client_ip}
               user_agent={@user_agent}
               custom_questions_allowed={@custom_questions_allowed}
+              group_bookings_allowed={@group_bookings_allowed}
             />
 
             <BookingLinkModal.booking_link_modal

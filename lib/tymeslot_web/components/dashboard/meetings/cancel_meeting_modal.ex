@@ -74,25 +74,52 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
         class="space-y-4"
       >
         <p>
-          {dgettext(
-            "dashboard_bookings",
-            "Are you sure you want to cancel the meeting with %{name} scheduled for %{when}?",
-            name: @meeting.attendee_name,
-            when:
-              "#{Helpers.format_meeting_date(@meeting, @timezone)} • #{Helpers.format_meeting_time(@meeting, @timezone, @time_format)}"
-          )}
+          {confirm_question(@meeting, @timezone, @time_format)}
         </p>
 
         <.paid_options :if={@paid?} booking_payment={@booking_payment} />
         <p :if={not @paid?} class="text-tymeslot-500">
-          {dgettext(
-            "dashboard_bookings",
-            "This action cannot be undone. The attendee will be notified of the cancellation."
-          )}
+          {if Helpers.group_meeting?(@meeting),
+            do:
+              dgettext(
+                "dashboard_bookings",
+                "This action cannot be undone. Every participant will be notified of the cancellation."
+              ),
+            else:
+              dgettext(
+                "dashboard_bookings",
+                "This action cannot be undone. The attendee will be notified of the cancellation."
+              )}
         </p>
       </form>
     </Modal.confirm_modal>
     """
+  end
+
+  # A group meeting has no single attendee to name: it is with however many
+  # people currently hold a seat on it.
+  defp confirm_question(meeting, timezone, time_format) do
+    scheduled_for =
+      "#{Helpers.format_meeting_date(meeting, timezone)} • #{Helpers.format_meeting_time(meeting, timezone, time_format)}"
+
+    if Helpers.group_meeting?(meeting) do
+      count = length(Helpers.participants(meeting))
+
+      dngettext(
+        "dashboard_bookings",
+        "Are you sure you want to cancel this group meeting with %{count} participant scheduled for %{when}?",
+        "Are you sure you want to cancel this group meeting with %{count} participants scheduled for %{when}?",
+        count,
+        when: scheduled_for
+      )
+    else
+      dgettext(
+        "dashboard_bookings",
+        "Are you sure you want to cancel the meeting with %{name} scheduled for %{when}?",
+        name: meeting.attendee_name,
+        when: scheduled_for
+      )
+    end
   end
 
   defp paid_options(assigns) do

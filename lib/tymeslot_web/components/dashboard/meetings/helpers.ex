@@ -4,8 +4,29 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
   """
 
   alias Tymeslot.Bookings.Policy
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Meetings.MeetingSchema
   alias TymeslotWeb.Dashboard.DashboardFormat
+
+  @doc """
+  Whether `meeting` is a group meeting: it has no single attendee, and its
+  people are its participants. Anything but a stored meeting is not.
+  """
+  @spec group_meeting?(MeetingSchema.t() | map()) :: boolean()
+  def group_meeting?(%MeetingSchema{} = meeting), do: Meetings.group?(meeting)
+  def group_meeting?(_not_a_stored_meeting), do: false
+
+  @doc """
+  The participants loaded onto a group meeting, or `[]` when none are
+  loaded. These are the live ones (see
+  `Tymeslot.Meetings.with_live_participants/1`), except on a cancelled
+  meeting in the meetings list, which also carries those who released their
+  spot before it was cancelled.
+  """
+  @spec participants(Ecto.Schema.t() | map()) :: [Ecto.Schema.t()]
+  def participants(%{participants: participants}) when is_list(participants), do: participants
+  def participants(_meeting), do: []
 
   # Status helpers
   @spec past_meeting?(Ecto.Schema.t()) :: boolean()
@@ -24,7 +45,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
 
   @doc """
   Whether the host may still add guests to this booking: the meeting takes
-  guests (`Guests.invitations_open?/1`) and has room for another.
+  guests from the host (`Guests.host_can_invite?/1`, which rules out a group
+  meeting) and has room for another.
 
   The meeting type's `allow_guests` is deliberately not consulted — it governs
   what the person booking may do on the public form, not whom the host may
@@ -35,9 +57,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
   """
   @spec can_add_guests?(Ecto.Schema.t() | map()) :: boolean()
   def can_add_guests?(%{guests: guests} = meeting) when is_list(guests),
-    do: Guests.invitations_open?(meeting) and length(guests) < Guests.max_guests()
+    do: Guests.host_can_invite?(meeting) and length(guests) < Guests.max_guests()
 
-  def can_add_guests?(meeting), do: Guests.invitations_open?(meeting)
+  def can_add_guests?(meeting), do: Guests.host_can_invite?(meeting)
 
   @spec can_reschedule?(Ecto.Schema.t()) :: boolean()
   def can_reschedule?(meeting) do

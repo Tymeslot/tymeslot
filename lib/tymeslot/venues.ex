@@ -6,7 +6,8 @@ defmodule Tymeslot.Venues do
   An in-person location option on a meeting type lists venues by id, the
   way a video option lists video integrations. With one, the booker is told
   where the meeting is; with several, the booker picks; with none, the
-  address is arranged after booking. The meeting records the venue it was
+  address is arranged after booking (never for a group type, whose address
+  is fixed in advance). The meeting records the venue it was
   booked at (`meetings.venue_id`) and a one-line snapshot of it
   (`meetings.location`, from `display/1`), so editing or deleting a venue
   later never rewrites a past meeting.
@@ -104,7 +105,8 @@ defmodule Tymeslot.Venues do
   defp not_found_if_stale(result), do: result
 
   @doc """
-  Deletes a venue, even while meeting types list it.
+  Deletes a venue, even while meeting types list it, unless it is the
+  address of a group type.
 
   In one transaction, the venue is first taken off every in-person location
   of the owner's meeting types that lists it (the other venues keep their
@@ -113,14 +115,34 @@ defmodule Tymeslot.Venues do
   address is arranged after booking" from then on; the Locations page warns
   about those first (`meeting_types_left_without/1`).
 
+  A group type cannot be left like that: everyone booked into a slot shares
+  one meeting, so its address is fixed in advance
+  (`Tymeslot.MeetingTypes.GroupLocationRule`). While the venue is the only
+  one of a group type's location, the delete is refused with
+  `{:error, {:group_meeting_types, meeting_types}}` naming them, and nothing
+  changes; the organiser gives those types another venue first
+  (`blocking_group_types/1` says which, before a delete is tried). The
+  rewrite itself refuses the same case on the locked rows
+  (`MeetingTypeSchema.without_venue_changeset/2`), so a type turned into a
+  group type meanwhile is caught too.
+
   Meetings already booked there keep their `location` text and their
   `address_to_arrange` flag; the foreign key clears their `venue_id`.
 
   `{:error, :not_found}` when the venue is already gone.
   """
   @spec delete_venue(VenueSchema.t()) ::
-          {:ok, VenueSchema.t()} | {:error, :not_found | Ecto.Changeset.t()}
-  def delete_venue(%VenueSchema{id: id, user_id: user_id} = venue) do
+          {:ok, VenueSchema.t()}
+          | {:error,
+             :not_found | {:group_meeting_types, [MeetingTypeSchema.t()]} | Ecto.Changeset.t()}
+  def delete_venue(%VenueSchema{} = venue) do
+    case blocking_group_types(venue) do
+      [] -> venue |> delete_in_transaction() |> group_types_from_rewrite()
+      group_types -> {:error, {:group_meeting_types, group_types}}
+    end
+  end
+
+  defp delete_in_transaction(%VenueSchema{id: id, user_id: user_id} = venue) do
     Repo.transaction(fn ->
       with {:ok, _rewritten} <- MeetingTypes.remove_venue_from_locations(user_id, id),
            {:ok, deleted} <- VenueQueries.delete_venue(venue) do
@@ -130,6 +152,26 @@ defmodule Tymeslot.Venues do
       end
     end)
   end
+
+  # The rewrite refused a group type that became one after the check above.
+  defp group_types_from_rewrite(
+         {:error, %Ecto.Changeset{data: %MeetingTypeSchema{} = meeting_type} = changeset}
+       ) do
+    if Keyword.has_key?(changeset.errors, :locations),
+      do: {:error, {:group_meeting_types, [meeting_type]}},
+      else: {:error, changeset}
+  end
+
+  defp group_types_from_rewrite(result), do: result
+
+  @doc """
+  The owner's group meeting types, by name, whose location lists `venue` as
+  its only venue, and which therefore keep it from being deleted
+  (`delete_venue/1`).
+  """
+  @spec blocking_group_types(VenueSchema.t()) :: [MeetingTypeSchema.t()]
+  def blocking_group_types(%VenueSchema{id: id, user_id: user_id}),
+    do: MeetingTypes.group_types_left_without_venue(user_id, id)
 
   @doc """
   The venue a meeting about to be written refers to, or nil when it has

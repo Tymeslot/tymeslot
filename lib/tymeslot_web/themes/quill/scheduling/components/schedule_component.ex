@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Live.Scheduling.CalendarHelpers
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels
+  alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   use TymeslotWeb.Components.CoreComponents
@@ -198,6 +199,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                           )}
                         <% end %>
                       </p>
+
+                      <GroupSession.seat_move_notice
+                        from={assigns[:reschedule_seat_from]}
+                        timezone={@user_timezone}
+                        class="mt-2"
+                      />
                     </div>
 
                     <div class="schedule-timezone-area">

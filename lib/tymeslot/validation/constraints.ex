@@ -64,20 +64,34 @@ defmodule Tymeslot.Validation.Constraints do
   always shown five as its minimum; this is the rule behind it.
   """
   @spec duration_minutes_range() :: Range.t()
-  def duration_minutes_range, do: 5..480
+  def duration_minutes_range, do: 5..1440
 
   @doc """
   How long a poll's proposed meeting may be, in minutes.
 
-  Same floor as `duration_minutes_range/0`, and for the same reason. The
-  ceiling is higher: a poll is how a whole-day workshop gets scheduled, which
-  is not something a meeting type is asked to express.
+  Same floor and ceiling as `duration_minutes_range/0`, and for the same
+  reasons: a whole-day workshop is a legitimate thing to schedule either way.
   """
   @spec poll_duration_minutes_range() :: Range.t()
   def poll_duration_minutes_range, do: 5..1440
 
   @spec slot_interval_minutes_range() :: Range.t()
   def slot_interval_minutes_range, do: 5..480
+
+  @spec max_participants_range() :: Range.t()
+  def max_participants_range, do: 1..999
+
+  @doc """
+  The participant limit a *group* meeting type may carry.
+
+  `max_participants_range/0` starts at 1 because that is how a solo meeting
+  type is stored. A type with group bookings switched on is a different
+  question: 1 seat is not a small group, it is the toggle being off, so the
+  form must reject it rather than silently store a solo type behind an
+  enabled toggle.
+  """
+  @spec group_participants_range() :: Range.t()
+  def group_participants_range, do: 2..max_participants_range().last
 
   @spec booking_limit_range() :: Range.t()
   def booking_limit_range, do: 1..500
@@ -175,6 +189,12 @@ defmodule Tymeslot.Validation.Constraints do
   @spec duration_minutes_opts() :: keyword()
   def duration_minutes_opts do
     range = duration_minutes_range()
+    [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
+  end
+
+  @spec max_participants_opts() :: keyword()
+  def max_participants_opts do
+    range = max_participants_range()
     [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
   end
 

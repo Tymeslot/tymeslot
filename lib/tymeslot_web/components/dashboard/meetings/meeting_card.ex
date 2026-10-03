@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
 
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.Seats
   alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.CoreComponents.Containers
   alias TymeslotWeb.Components.CoreComponents.Feedback
@@ -37,6 +38,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
       assign(assigns,
         timezone: timezone,
         guests: guest_list(assigns.meeting),
+        group?: Helpers.group_meeting?(assigns.meeting),
+        participants: Helpers.participants(assigns.meeting),
         answered_fields: answered_fields(assigns.meeting)
       )
 
@@ -54,7 +57,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-3 flex-wrap mb-6">
             <h2 class="text-token-lg font-semibold text-tymeslot-900">
-              {@meeting.attendee_name}
+              {meeting_title(@meeting)}
             </h2>
             <span
               :if={@meeting.attendee_company}
@@ -63,6 +66,15 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
               {@meeting.attendee_company}
             </span>
             <MeetingStatusBadge.status_badges meeting={@meeting} />
+            <Feedback.pill
+              :if={@group?}
+              tone={:brand}
+              size={:sm}
+              icon="hero-users"
+              data-testid="group-seats-badge"
+            >
+              {seats_label(@meeting, @guests)}
+            </Feedback.pill>
             <Feedback.pill
               :if={@meeting.meeting_url}
               tone={:info}
@@ -93,7 +105,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
             >
               {@meeting.meeting_type}
             </Containers.detail_line>
+            <%!-- A group slot has no single attendee: every booker is listed
+                 in the participants panel below. --%>
             <Containers.detail_line
+              :if={not @group? and @meeting.attendee_email}
               variant={:tile}
               tone={:info}
               icon="hero-envelope"
@@ -108,6 +123,42 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
             </Containers.detail_line>
           </div>
 
+          <%!-- Participants panel, group meetings only. The preload keeps to
+               live participants, except on a cancelled meeting, where it also
+               brings those who left the slot (released or moved their seat),
+               marked as such. --%>
+          <.sub_panel
+            :if={@participants != []}
+            icon="hero-users"
+            title={dgettext("dashboard_bookings", "Participants")}
+          >
+            <ul class="space-y-2.5">
+              <li :for={participant <- @participants} class="flex items-center justify-between gap-3">
+                <span class="flex items-center gap-2.5 min-w-0">
+                  <span class="flex h-7 w-7 flex-none items-center justify-center rounded-token-full bg-turquoise-100 text-token-xs font-bold uppercase text-turquoise-700">
+                    {person_initial(participant)}
+                  </span>
+                  <span class="truncate text-token-sm font-medium text-tymeslot-700">
+                    {participant.name}
+                  </span>
+                  <Feedback.pill
+                    :if={participant.cancelled_at}
+                    class="flex-none"
+                    data-testid="participant-released"
+                  >
+                    {dgettext("dashboard_bookings", "Left this slot")}
+                  </Feedback.pill>
+                </span>
+                <a
+                  href={"mailto:#{participant.email}"}
+                  class="truncate text-token-sm font-medium text-tymeslot-500 hover:text-turquoise-600 transition-colors"
+                >
+                  {participant.email}
+                </a>
+              </li>
+            </ul>
+          </.sub_panel>
+
           <.sub_panel
             :if={@guests != []}
             icon="hero-user-group"
@@ -118,7 +169,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
               <li :for={guest <- @guests} class="flex items-center justify-between gap-3">
                 <span class="flex items-center gap-2.5 min-w-0">
                   <span class="flex h-7 w-7 flex-none items-center justify-center rounded-token-full bg-turquoise-100 text-token-xs font-bold uppercase text-turquoise-700">
-                    {guest_initial(guest)}
+                    {person_initial(guest)}
                   </span>
                   <span class="truncate text-token-sm font-medium text-tymeslot-700">
                     {guest.name || guest.email}
@@ -252,13 +303,60 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   defp guest_list(%{guests: guests}) when is_list(guests), do: guests
   defp guest_list(_meeting), do: []
 
-  defp guest_initial(%{name: name}) when is_binary(name) and name != "",
+  # A cancelled group meeting holds no seats any more, so "0/3" would only
+  # say that it is cancelled. What the host wants to know is who was still
+  # booked when it was called off: the participants whose own seat was never
+  # released (the host cancelled the slot, or its calendar event was deleted).
+  # A slot cancelled because its last seat was released had nobody left.
+  defp seats_label(%{status: "cancelled"} = meeting, _guests) do
+    case Enum.count(Helpers.participants(meeting), &is_nil(&1.cancelled_at)) do
+      0 ->
+        dgettext("dashboard_bookings", "Every spot was released")
+
+      booked ->
+        dngettext(
+          "dashboard_bookings",
+          "%{count} person was booked",
+          "%{count} people were booked",
+          booked
+        )
+    end
+  end
+
+  # Seats, not headcount. A booker who brings a guest occupies two of the
+  # slot's seats, which is what the public booking page counts down and what
+  # the organiser needs to read here: a card saying "1/4" beside a slot
+  # advertising "2 seats left" is two answers to the same question.
+  defp seats_label(meeting, guests) do
+    dgettext("dashboard_bookings", "%{count}/%{capacity} seats taken",
+      count: Seats.seats_taken(Helpers.participants(meeting), guests),
+      capacity: meeting.capacity
+    )
+  end
+
+  # A solo card is titled after its attendee. A group card has no single
+  # attendee, so it is named after what was booked: `title` is a required
+  # field on every meeting, snapshotted at creation, so it survives the
+  # meeting type being edited or deleted.
+  defp meeting_title(meeting) do
+    if Helpers.group_meeting?(meeting),
+      do: group_title(meeting),
+      else: solo_title(meeting)
+  end
+
+  defp solo_title(%{attendee_name: name}) when is_binary(name) and name != "", do: name
+  defp solo_title(meeting), do: group_title(meeting)
+
+  defp group_title(%{title: title}) when is_binary(title) and title != "", do: title
+  defp group_title(_meeting), do: dgettext("dashboard_bookings", "Group booking")
+
+  defp person_initial(%{name: name}) when is_binary(name) and name != "",
     do: name |> String.first() |> String.upcase()
 
-  defp guest_initial(%{email: email}) when is_binary(email) and email != "",
+  defp person_initial(%{email: email}) when is_binary(email) and email != "",
     do: email |> String.first() |> String.upcase()
 
-  defp guest_initial(_guest), do: "?"
+  defp person_initial(_person), do: "?"
 
   defp guest_summary_label(guests) do
     summary = Meetings.guest_rsvp_summary(guests)

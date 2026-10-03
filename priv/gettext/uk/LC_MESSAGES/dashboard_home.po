@@ -154,3 +154,11 @@ msgstr "сьогодні"
 #, elixir-autogen, elixir-format
 msgid "Nothing on your plate today or tomorrow"
 msgstr "На сьогодні та завтра у вас немає запланованих справ"
+
+#: lib/tymeslot/agenda.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} participant"
+msgid_plural "%{count} participants"
+msgstr[0] "%{count} учасник"
+msgstr[1] "%{count} учасники"
+msgstr[2] "%{count} учасників"

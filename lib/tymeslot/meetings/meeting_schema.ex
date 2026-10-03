@@ -30,6 +30,14 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           venue_id: integer() | nil,
           address_to_arrange: boolean(),
           meeting_type: String.t() | nil,
+          capacity: pos_integer(),
+          seat:
+            %{
+              participant_id: binary(),
+              seats_taken: non_neg_integer(),
+              previous: %{seat_id: binary(), meeting_id: binary(), start_time: DateTime.t()} | nil
+            }
+            | nil,
           organizer_name: String.t() | nil,
           organizer_email: String.t() | nil,
           organizer_title: String.t() | nil,
@@ -128,6 +136,19 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     field(:location_kind, :string)
     field(:location_option_id, :string)
     field(:meeting_type, :string)
+
+    # Seats this slot was booked with, snapshotted once at creation (like
+    # `title`/`organizer_name`) rather than re-read from the meeting type.
+    # A solo meeting is always `1`. `Tymeslot.Meetings.group?/1` is the one
+    # place that turns this into a group/solo predicate — see its @doc.
+    field(:capacity, :integer, default: 1)
+
+    # Set only on the view of a group meeting as one seat sees it
+    # (`Tymeslot.Meetings.SeatView`), never on a row read from the database:
+    # which seat the view is of, the seats taken on the slot when the event
+    # about it fired, and the seat a move replaced. Integrations read it to
+    # address that seat.
+    field(:seat, :map, virtual: true)
 
     # Organizer details
     field(:organizer_name, :string)
@@ -279,6 +300,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
       on_delete: :delete_all
     )
 
+    has_many(:participants, Tymeslot.Meetings.ParticipantSchema, foreign_key: :meeting_id)
+
     # Source attribution
     field(:utm_source, :string)
     field(:utm_medium, :string)
@@ -314,6 +337,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :location_option_id,
     :meeting_type,
     :meeting_type_id,
+    :capacity,
     :organizer_title,
     :organizer_user_id,
     :calendar_integration_id,
@@ -376,6 +400,16 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :visitor_hash
   ]
 
+  @group_required_fields [
+    :uid,
+    :title,
+    :start_time,
+    :end_time,
+    :organizer_name,
+    :organizer_email,
+    :capacity
+  ]
+
   @organizer_note_max_length 2000
 
   @valid_statuses [
@@ -398,13 +432,66 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   @spec organizer_note_max_length() :: pos_integer()
   def organizer_note_max_length, do: @organizer_note_max_length
 
-  @doc false
+  @doc """
+  Changeset for a solo meeting, and for updates to any meeting.
+
+  An already-persisted group meeting carries no attendee (its bookers live
+  in `meeting_participants`), so updating one must not demand the attendee
+  fields: it dispatches on the same `capacity > 1` predicate as
+  `Tymeslot.Meetings.group?/1`. `group_changeset/2` is not usable here,
+  because it also forces `status` back to `"confirmed"`.
+  """
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
+  def changeset(%__MODULE__{capacity: capacity} = meeting, attrs) when capacity > 1 do
+    base_changeset(meeting, attrs, @group_required_fields)
+  end
+
   def changeset(meeting, attrs) do
+    base_changeset(meeting, attrs, @required_fields)
+  end
+
+  @doc """
+  Changeset for creating a group meeting's slot row.
+
+  Group meetings hold no attendee — bookers live in `meeting_participants` —
+  so `attendee_name`/`attendee_email` are not required. Status is always
+  forced to `"confirmed"`, regardless of what the caller passes: group
+  meetings never wait on payment, and the single-live-row invariant (backed
+  by `unique_confirmed_meeting_per_organizer_at_time`, which only indexes
+  confirmed rows) depends on every group meeting landing in that status.
+  """
+  @spec group_changeset(t(), map()) :: Ecto.Changeset.t()
+  def group_changeset(meeting, attrs) do
+    meeting
+    |> base_changeset(attrs, @group_required_fields)
+    |> put_change(:status, "confirmed")
+  end
+
+  @status_transition_fields [:status, :cancelled_at, :cancellation_reason]
+
+  @doc """
+  Changeset for a bare status transition (cancel, external auto-cancel).
+
+  Deliberately narrower than `changeset/2`: it casts and validates only the
+  fields a status transition ever touches, so it works identically for solo
+  meetings (attendee fields already set) and group meetings (which
+  legitimately carry no `attendee_name`/`attendee_email` — see
+  `group_changeset/2`). Reusing the full `changeset/2` here would wrongly
+  demand attendee data the transition never changes; reusing
+  `group_changeset/2` would silently force `status` back to `"confirmed"`.
+  """
+  @spec status_changeset(t(), map()) :: Ecto.Changeset.t()
+  def status_changeset(meeting, attrs) do
+    meeting
+    |> cast(attrs, @status_transition_fields)
+    |> validate_inclusion(:status, @valid_statuses)
+  end
+
+  defp base_changeset(meeting, attrs, required_fields) do
     meeting
     |> cast(attrs, @required_fields ++ @optional_fields)
     |> ensure_calendar_uid()
-    |> validate_required([:calendar_uid | @required_fields])
+    |> validate_required([:calendar_uid | required_fields])
     |> EmailChangeset.validate_email(:organizer_email)
     |> EmailChangeset.validate_email(:attendee_email)
     |> validate_inclusion(:status, @valid_statuses)
@@ -412,6 +499,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     |> validate_inclusion(:attendee_locale, supported_locale_codes(),
       message: "is not a supported locale"
     )
+    |> validate_number(:capacity, greater_than: 0)
     |> TimeOrder.validate_time_order(:start_time, :end_time)
     |> validate_length(:utm_source, max: 255)
     |> validate_length(:utm_medium, max: 255)
@@ -466,6 +554,18 @@ defmodule Tymeslot.Meetings.MeetingSchema do
       end
     end
   end
+
+  @doc """
+  Whether the meeting was booked with room for more than one seat.
+
+  The single owner of this predicate: `capacity` is snapshotted onto the
+  row at creation and never re-derived from live participant counts or the
+  meeting type, so the answer never flips later. Use
+  `Tymeslot.MeetingTypes.MeetingTypeSchema.group?/1` instead where no
+  meeting row exists yet.
+  """
+  @spec group?(t()) :: boolean
+  def group?(%__MODULE__{capacity: capacity}), do: capacity > 1
 
   defp supported_locale_codes, do: Locales.supported_codes()
 end

@@ -44,6 +44,25 @@ defmodule Tymeslot.Meetings.GuestQueries do
     |> Repo.all()
   end
 
+  @doc """
+  Lists the guests for a meeting whose invitation still stands, oldest first,
+  with `:participant` preloaded.
+
+  On a group meeting a guest belongs to the participant who brought them, and
+  cancelling (or moving) that seat voids the guest's invitation while the
+  meeting carries on: the guest row stays, but nobody should email it about
+  this meeting again. A guest with no participant (a solo booking's) always
+  stands.
+  """
+  @spec list_live_for_meeting(binary()) :: [Guest.t()]
+  def list_live_for_meeting(meeting_id) do
+    Guest
+    |> where([g], g.meeting_id == ^meeting_id)
+    |> live_owner()
+    |> order_by([g], asc: g.inserted_at, asc: g.email)
+    |> Repo.all()
+  end
+
   @doc "Applies an RSVP changeset and persists the guest."
   @spec update_rsvp(Guest.t(), map()) :: {:ok, Guest.t()} | {:error, Changeset.t()}
   def update_rsvp(%Guest{} = guest, attrs) when is_map(attrs) do
@@ -60,6 +79,27 @@ defmodule Tymeslot.Meetings.GuestQueries do
     Guest
     |> where([g], g.meeting_id == ^meeting_id and is_nil(g.confirmation_sent_at))
     |> order_by([g], asc: g.inserted_at, asc: g.email)
+    |> Repo.all()
+  end
+
+  @doc "Lists the guests belonging to one participant, oldest first."
+  @spec list_for_participant(binary()) :: [Guest.t()]
+  def list_for_participant(participant_id) do
+    Guest
+    |> where([g], g.participant_id == ^participant_id)
+    |> order_by([g], asc: g.inserted_at)
+    |> Repo.all()
+  end
+
+  @doc """
+  Lists the guests belonging to one participant whose confirmation email has
+  not yet been sent.
+  """
+  @spec list_unsent_for_participant(binary()) :: [Guest.t()]
+  def list_unsent_for_participant(participant_id) do
+    Guest
+    |> where([g], g.participant_id == ^participant_id and is_nil(g.confirmation_sent_at))
+    |> order_by([g], asc: g.inserted_at)
     |> Repo.all()
   end
 
@@ -148,7 +188,9 @@ defmodule Tymeslot.Meetings.GuestQueries do
   @doc """
   Guests to send the reminder for one configured offset to.
 
-  Excludes guests who were never invited (no confirmation), guests who have
+  Excludes guests whose group-booking participant has cancelled or moved
+  their seat (see `list_live_for_meeting/1`), guests who were never invited
+  (no confirmation), guests who have
   declined (the time has not changed, so their answer still stands), and
   guests already stamped for this very offset. The last is what makes an Oban
   retry safe: a meeting is reminded once per configured offset, so a partial
@@ -158,6 +200,7 @@ defmodule Tymeslot.Meetings.GuestQueries do
   def list_for_reminder(meeting_id, value, unit) do
     Guest
     |> where([g], g.meeting_id == ^meeting_id)
+    |> live_owner()
     |> where([g], not is_nil(g.confirmation_sent_at))
     |> where([g], g.status != "declined")
     |> order_by([g], asc: g.inserted_at, asc: g.email)
@@ -181,6 +224,15 @@ defmodule Tymeslot.Meetings.GuestQueries do
       |> Guest.reminders_sent_changeset(List.wrap(guest.reminders_sent) ++ [entry])
       |> Repo.update()
     end
+  end
+
+  # Keeps guests with no participant, or whose participant still holds their
+  # seat, and preloads that participant so a caller can name the booker.
+  defp live_owner(query) do
+    query
+    |> join(:left, [g], p in assoc(g, :participant), as: :owner)
+    |> where([g, owner: p], is_nil(g.participant_id) or is_nil(p.cancelled_at))
+    |> preload([owner: p], participant: p)
   end
 
   # Entries are written as string-keyed maps and read back from jsonb the same

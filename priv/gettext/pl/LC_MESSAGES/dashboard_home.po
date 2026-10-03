@@ -150,3 +150,11 @@ msgstr "dziś"
 #, elixir-autogen, elixir-format
 msgid "Nothing on your plate today or tomorrow"
 msgstr "Nic zaplanowanego na dziś ani jutro"
+
+#: lib/tymeslot/agenda.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} participant"
+msgid_plural "%{count} participants"
+msgstr[0] "%{count} uczestnik"
+msgstr[1] "%{count} uczestnicy"
+msgstr[2] "%{count} uczestników"

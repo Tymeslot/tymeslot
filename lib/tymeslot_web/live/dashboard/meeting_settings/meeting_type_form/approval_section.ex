@@ -11,6 +11,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ApprovalSection 
   parent `MeetingTypeForm` (`@myself`), which owns the socket state and
   auto-save.
 
+  Approval and group bookings are mutually exclusive: while group bookings are
+  on, the toggle renders disabled with a hint, the parent guards the event
+  server-side and the changeset enforces the rule. Turning approval off is
+  never blocked.
+
   The copy is deliberate about what the invitee sees: a host turning this on is
   changing what their booking page promises, and the two emails are the visible
   half of that change.
@@ -22,13 +27,20 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ApprovalSection 
   alias Tymeslot.Validation.Constraints
 
   attr :requires_approval, :boolean, required: true
+  attr :group_bookings_enabled, :boolean, default: false
   attr :approval_window_hours, :any, default: nil
   attr :errors, :list, default: []
   attr :myself, :any, required: true
 
   @spec approval_section(map()) :: Phoenix.LiveView.Rendered.t()
   def approval_section(assigns) do
-    assigns = assign(assigns, :window_range, Constraints.approval_window_hours_range())
+    assigns =
+      assigns
+      |> assign(:window_range, Constraints.approval_window_hours_range())
+      |> assign(
+        :toggle_disabled,
+        assigns.group_bookings_enabled and not assigns.requires_approval
+      )
 
     ~H"""
     <section class="space-y-4">
@@ -47,10 +59,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ApprovalSection 
           )
         }
         checked={@requires_approval}
+        disabled={@toggle_disabled}
         on_change="toggle_requires_approval"
         target={@myself}
         data-testid="requires-approval-toggle"
-      />
+      >
+        <:disabled_reason>
+          {dgettext("dashboard_meeting_form", "Turn off group bookings to require approval.")}
+        </:disabled_reason>
+      </.setting_row>
 
       <.card :if={@requires_approval} variant={:flat} padding={:sm} class="space-y-2">
         <label class="label" for="approval-window-hours">

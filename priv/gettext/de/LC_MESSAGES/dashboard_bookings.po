@@ -646,3 +646,66 @@ msgstr "Termintyp"
 #, elixir-autogen, elixir-format
 msgid "Show meetings"
 msgstr "Termine anzeigen"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "%{count}/%{capacity} seats taken"
+msgstr "%{count}/%{capacity} Plätze belegt"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Group booking"
+msgstr "Gruppenbuchung"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Participants"
+msgstr "Teilnehmer"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to cancel this group meeting with %{count} participant scheduled for %{when}?"
+msgid_plural "Are you sure you want to cancel this group meeting with %{count} participants scheduled for %{when}?"
+msgstr[0] "Möchten Sie diesen Gruppentermin mit %{count} teilnehmenden Person am %{when} wirklich absagen?"
+msgstr[1] "Möchten Sie diesen Gruppentermin mit %{count} Teilnehmenden am %{when} wirklich absagen?"
+
+#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Each participant will receive an email explaining you need to reschedule"
+msgstr "Jede teilnehmende Person erhält eine E-Mail mit der Erklärung, dass Sie den Termin verschieben müssen"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/reschedule_request.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule request sent to %{count} participant"
+msgid_plural "Reschedule request sent to %{count} participants"
+msgstr[0] "Verschiebungsanfrage an %{count} teilnehmende Person gesendet"
+msgstr[1] "Verschiebungsanfrage an %{count} Teilnehmende gesendet"
+
+#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Send a reschedule request to the %{count} participant of this group meeting?"
+msgid_plural "Send a reschedule request to the %{count} participants of this group meeting?"
+msgstr[0] "Eine Verschiebungsanfrage an die %{count} teilnehmende Person dieses Gruppentermins senden?"
+msgstr[1] "Eine Verschiebungsanfrage an die %{count} Teilnehmenden dieses Gruppentermins senden?"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This action cannot be undone. Every participant will be notified of the cancellation."
+msgstr "Diese Aktion kann nicht rückgängig gemacht werden. Alle Teilnehmenden werden über die Absage benachrichtigt."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} person was booked"
+msgid_plural "%{count} people were booked"
+msgstr[0] "%{count} Person war gebucht"
+msgstr[1] "%{count} Personen waren gebucht"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Every spot was released"
+msgstr "Alle Plätze wurden freigegeben"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Left this slot"
+msgstr "Hat diesen Termin verlassen"

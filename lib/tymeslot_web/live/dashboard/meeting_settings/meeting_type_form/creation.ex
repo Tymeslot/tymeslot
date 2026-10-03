@@ -111,7 +111,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Creation do
   end
 
   def apply_result({:error, %Ecto.Changeset{} = changeset}, socket) do
-    Component.assign(socket, :form_errors, FormHelpers.format_changeset_errors(changeset))
+    Component.assign(socket, :form_errors, Helpers.changeset_form_errors(changeset))
   end
 
   # Gated features refuse the whole save without naming a field.
@@ -134,6 +134,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Creation do
 
   defp error_message(:invalid_price),
     do: dgettext("dashboard_meeting_form", "Enter a valid price for this meeting type")
+
+  defp error_message(:group_bookings_not_allowed),
+    do: FormHelpers.group_bookings_not_allowed_message()
 
   defp error_message(:insufficient_plan),
     do: dgettext("dashboard_meeting_form", "Custom booking questions are available on Pro plans.")

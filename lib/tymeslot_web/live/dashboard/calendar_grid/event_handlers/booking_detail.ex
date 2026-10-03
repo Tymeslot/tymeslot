@@ -3,7 +3,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.BookingDetail do
 
   import Phoenix.Component, only: [assign: 3]
 
-  alias Tymeslot.Agenda
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   @spec handle_show_booking(map(), Phoenix.LiveView.Socket.t()) ::
@@ -11,16 +10,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.BookingDetail do
   def handle_show_booking(%{"meeting-id" => id_str}, socket) when is_binary(id_str) do
     # Meeting ids are UUIDs, so the incoming param is matched as a string
     # rather than parsed. An unknown id simply selects nothing. The modal
-    # describes the booking as an agenda entry, like the overview's.
+    # describes the booking as an agenda entry, like the overview's, and
+    # reads a group booking's seats from the booking itself.
     booking =
       Enum.find(
         socket.assigns.events,
         &(Helpers.booking?(&1) and to_string(&1.meeting_id) == id_str)
       )
 
-    entry = booking && Agenda.entry_for_grid_event(booking, socket.assigns.user_timezone)
-
-    {:noreply, assign(socket, :selected_booking, entry)}
+    {:noreply, assign(socket, :selected_booking, booking)}
   end
 
   @spec handle_close_booking_detail(map(), Phoenix.LiveView.Socket.t()) ::

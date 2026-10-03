@@ -6,7 +6,9 @@ defmodule Tymeslot.Bookings.Validation do
   All validation is based on the data passed in as parameters.
   """
 
-  alias Tymeslot.Availability.{Calculate, TimeSlots}
+  alias Tymeslot.Availability.{Calculate, Offer, TimeSlots}
+  alias Tymeslot.Bookings.Errors
+  alias Tymeslot.Bookings.ScheduleCheck
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Utils.{DateTimeUtils, TimeRange}
@@ -154,6 +156,67 @@ defmodule Tymeslot.Bookings.Validation do
       meeting.status == "cancelled" -> {:error, "Cannot reschedule a cancelled meeting"}
       meeting.status == "completed" -> {:error, "Cannot reschedule a completed meeting"}
       true -> {:ok, meeting}
+    end
+  end
+
+  @doc """
+  Parses and validates the requested new time for a reschedule off
+  `old_meeting`, returning the new slot's times.
+
+  Shared by the whole-meeting reschedule (`Tymeslot.Bookings.Reschedule`)
+  and move-my-seat (`Tymeslot.Bookings.RescheduleSeat`), so both agree on
+  what counts as a valid new slot. The new slot keeps the old meeting's
+  duration, never `params.duration`: a reschedule moves a meeting in time,
+  it does not change its length, and `params.duration` is an
+  attendee-supplied URL slug with no binding to what the meeting is (this
+  holds even when the meeting type has been deleted and `meeting_type` is
+  `nil`). `ScheduleCheck` is stepped by the duration the booking page's grid
+  is drawn with (`Offer.duration_minutes/2`, the meeting type's current
+  one), so a slot the page just offered is not refused after a host edits
+  the type; only the check's step size follows the type.
+
+  `meeting_type` and `config` are resolved once by the caller and threaded
+  through rather than re-fetched: two reads of the same rows leave a window
+  in which a host edit between them is answered differently by each, and
+  the calendar check that follows needs the same buffer and notice rules.
+  """
+  @spec prepare_new_times(map(), map(), map() | nil, map()) ::
+          {:ok, %{start_time: DateTime.t(), end_time: DateTime.t(), duration_minutes: integer()}}
+          | {:error, term()}
+  def prepare_new_times(params, old_meeting, meeting_type, config) do
+    duration_minutes = old_meeting.duration
+    schedule_check_duration_minutes = Offer.duration_minutes(meeting_type, duration_minutes)
+
+    with {:ok, {start_datetime, end_datetime}} <-
+           parse_meeting_times(
+             params.date,
+             params.time,
+             duration_minutes,
+             params.user_timezone
+           ),
+         {:ok, date} <- parse_date(params.date),
+         :ok <- validate_booking_time(start_datetime, params.user_timezone, config),
+         :ok <-
+           ScheduleCheck.validate_slot_on_schedule(
+             date,
+             start_datetime,
+             schedule_check_duration_minutes,
+             params.user_timezone,
+             config,
+             old_meeting.organizer_user_id
+           ) do
+      {:ok,
+       %{
+         start_time: start_datetime,
+         end_time: end_datetime,
+         duration_minutes: duration_minutes
+       }}
+    else
+      {:error, reason} when is_atom(reason) ->
+        {:error, Errors.classify_schedule_check_reason(reason) || reason}
+
+      {:error, _reason} = error ->
+        error
     end
   end
 

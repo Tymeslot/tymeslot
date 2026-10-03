@@ -19,7 +19,7 @@ defmodule TymeslotWeb.SavedLocationsJourneyTest do
        the Locations page warns first, the booked meeting keeps its address,
        and the next booker is told the address will be arranged.
 
-  "+ New location" in the meeting-type editor (journey 6) is covered by
+  "+ New saved location" in the meeting-type editor (journey 6) is covered by
   `LocationsEditorTest`.
   """
   use TymeslotWeb.LiveCase, async: false

@@ -85,6 +85,56 @@ defmodule Tymeslot.AgendaTest do
     end
   end
 
+  describe "day_agenda/2 who a booking is with" do
+    # A group meeting keeps no attendee of its own, so the agenda had no one
+    # to name and showed the booking with nobody.
+    defp group_booking(user, start, participants) do
+      meeting =
+        insert(:group_meeting,
+          organizer_email: user.email,
+          title: "Workshop",
+          capacity: 4,
+          start_time: start,
+          end_time: DateTime.add(start, 3600, :second)
+        )
+
+      for {name, live?} <- participants do
+        insert(:participant,
+          meeting: meeting,
+          name: name,
+          cancelled_at: if(live?, do: nil, else: DateTime.utc_now(:second))
+        )
+      end
+
+      meeting
+    end
+
+    test "a group meeting with one live participant names them", %{user: user, tomorrow: tomorrow} do
+      group_booking(user, at(tomorrow, ~T[12:00:00]), [{"Ada", true}, {"Gone", false}])
+
+      assert [%{title: "Workshop", who: "Ada"}] = entries(Agenda.day_agenda(user, "Etc/UTC"))
+    end
+
+    test "a group meeting with several live participants counts them", %{
+      user: user,
+      tomorrow: tomorrow
+    } do
+      group_booking(user, at(tomorrow, ~T[12:00:00]), [
+        {"Ada", true},
+        {"Ben", true},
+        {"Gone", false}
+      ])
+
+      assert [%{who: "2 participants"}] = entries(Agenda.day_agenda(user, "Etc/UTC"))
+    end
+
+    test "a solo booking still names its attendee", %{user: user, tomorrow: tomorrow} do
+      booking(user, at(tomorrow, ~T[12:00:00]), attendee_name: "Solo Sam")
+
+      assert [%{who: "Solo Sam"}] = entries(Agenda.day_agenda(user, "Etc/UTC"))
+    end
+  end
+
   describe "day_agenda/2 deduplication and filtering" do
     test "drops external events that are our own synced bookings", %{
       user: user,

@@ -295,6 +295,14 @@ defmodule Tymeslot.Security.RateLimiter do
   def check_guest_rsvp_rate_limit(client_ip), do: Bookings.check_guest_rsvp(client_ip)
 
   @doc """
+  Rate limit a group participant's seat-management pages and actions.
+  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+  """
+  @spec check_seat_manage_rate_limit(String.t()) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def check_seat_manage_rate_limit(client_ip), do: Bookings.check_seat_manage(client_ip)
+
+  @doc """
   Rate limit meeting keep/uncancel attempts.
   Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
 

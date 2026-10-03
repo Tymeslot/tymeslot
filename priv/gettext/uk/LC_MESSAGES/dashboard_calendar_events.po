@@ -724,7 +724,6 @@ msgstr "Назва"
 msgid "Toggle this help"
 msgstr "Показати/сховати цю довідку"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/drag_drop.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
 #, elixir-autogen, elixir-format
@@ -1495,3 +1494,8 @@ msgstr "Не вдалося завершити імпорт. Деякі його
 #, elixir-autogen, elixir-format
 msgid "The import stopped because your calendar is not responding. Please try again later."
 msgstr "Імпорт зупинено, бо ваш календар не відповідає. Спробуйте пізніше."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
+#, elixir-autogen, elixir-format
+msgid "This is a group booking. Move it, cancel it or change who attends from the meeting instead."
+msgstr "Це групове бронювання. Перенесіть його, скасуйте або змініть учасників у самій зустрічі."
