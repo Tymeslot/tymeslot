@@ -35,7 +35,7 @@
    same specificity, so these have to come after them to win, and the explicit
    :disabled:hover keeps a greyed-out field from lighting up under the pointer. */
 .input:disabled {
-  @apply text-tymeslot-500 bg-tymeslot-100/60 border-tymeslot-100 shadow-none cursor-not-allowed;
+  @apply text-tymeslot-600 bg-tymeslot-100/60 border-tymeslot-100 shadow-none cursor-not-allowed;
 }
 
 .input:disabled:hover {
