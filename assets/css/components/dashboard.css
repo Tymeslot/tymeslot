@@ -417,6 +417,23 @@
 }
 
 /* ===================================
+   OVERVIEW SHEEN
+   =================================== */
+
+/* A soft light in the corner of the overview's gradient panels (the welcome
+   banner and the focus cockpit). The panel is the positioning parent. */
+.dashboard-sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 30% 20%, var(--color-glass-bg-overlay), transparent 50%);
+}
+
+.dashboard-sheen--wide {
+  background: radial-gradient(circle at 20% 20%, var(--color-glass-bg-overlay), transparent 55%);
+}
+
+/* ===================================
    CALENDAR GRID RESPONSIVE
    =================================== */
 

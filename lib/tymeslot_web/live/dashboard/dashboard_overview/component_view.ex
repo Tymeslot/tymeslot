@@ -34,8 +34,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
       <.dashboard_page icon="hero-home" title={dgettext("dashboard_common", "Overview")}>
         <%!-- Welcome Section --%>
         <div class="bg-linear-to-br from-turquoise-600 via-cyan-600 to-blue-600 rounded-token-3xl px-8 py-3 lg:px-12 lg:py-4 text-white shadow-2xl shadow-turquoise-500/20 relative overflow-hidden">
-          <div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent_50%)]">
-          </div>
+          <div class="dashboard-sheen" aria-hidden="true"></div>
           <div class="relative z-10">
             <p class="text-token-xl lg:text-token-2xl font-black mb-1 tracking-tight">
               {if @first_dashboard_visit,
@@ -207,8 +206,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
       }
       class="relative overflow-hidden rounded-token-2xl bg-linear-to-br from-turquoise-600 via-cyan-600 to-blue-600 p-6 text-white shadow-xl shadow-turquoise-500/20 cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-white/60"
     >
-      <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.15),transparent_55%)]">
-      </div>
+      <div class="dashboard-sheen dashboard-sheen--wide" aria-hidden="true"></div>
       <div class="relative z-10">
         <div class="flex items-center gap-2 text-token-xs font-black uppercase tracking-widest text-white/80">
           <.icon name="hero-bolt-mini" class="w-4 h-4" />
