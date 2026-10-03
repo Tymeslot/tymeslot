@@ -20,8 +20,8 @@ defmodule TymeslotWeb.Assets.StatusSwitchCssTest do
       |> rules_with_ancestors()
       |> Enum.filter(fn {selector, _ancestors} -> selector =~ ".status-toggle" end)
 
-    assert Enum.any?(rules, fn {selector, _} -> selector == ".status-toggle" end)
-    assert Enum.any?(rules, fn {selector, _} -> selector == ".status-toggle-slider" end)
+    assert Enum.any?(rules, fn {selector, _ancestors} -> selector == ".status-toggle" end)
+    assert Enum.any?(rules, fn {selector, _ancestors} -> selector == ".status-toggle-slider" end)
 
     assert Enum.reject(rules, fn {_selector, ancestors} ->
              "@layer components" in ancestors
