@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
     <div class={["relative", @class]}>
       <%!-- Visual label only: it names no control (the trigger below carries its
            own accessible name), so it must not be a <label> element. --%>
-      <div :if={@show_label} class="label text-tymeslot-700 mb-3 block">
+      <div :if={@show_label} class="label">
         <div class="flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -58,11 +58,11 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
         role="dialog"
         panel_label={dgettext("common", "Select timezone")}
         trigger_class="group relative cursor-pointer z-50 w-full text-left"
-        class="right-0 max-h-64 brand-card rounded-xl shadow-lg border border-white/30 overflow-hidden"
+        class="right-0 max-h-64 brand-card overflow-hidden"
       >
         <:trigger>
           <span class="sr-only">{dgettext("common", "Your Timezone")}:</span>
-          <div class="input p-4 hover:bg-white transition-all duration-200">
+          <div class="input">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3 flex-1 min-w-0">
                 <%= if country_code = Timezones.country_code((@profile && @profile.timezone) || "UTC") do %>

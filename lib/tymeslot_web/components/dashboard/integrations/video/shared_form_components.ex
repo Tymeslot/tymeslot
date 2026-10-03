@@ -159,7 +159,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
     ~H"""
     <div class="group/field">
       <div class="flex items-center gap-1.5 mb-2">
-        <label for={@id} class="label mb-0!">
+        <label for={@id} class="label mb-0">
           {dgettext("dashboard_video", "Server URL")}
         </label>
         <span class="group relative inline-flex text-tymeslot-500 shrink-0">

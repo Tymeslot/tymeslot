@@ -339,7 +339,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
 
       <div class="space-y-3">
         <h4 class="label">{dgettext("dashboard_calendar_providers", "Select calendars to sync:")}</h4>
-        <div class="brand-card p-4">
+        <div class="brand-card">
           <%= if @payload.calendars == [] do %>
             <p class="text-sm text-tymeslot-500">
               {dgettext(

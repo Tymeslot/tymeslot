@@ -251,7 +251,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
             Phoenix.HTML.Form.normalize_value("checkbox", @checked_value)
         end
       }
-      class="checkbox w-5 h-5 rounded border-tymeslot-300 text-turquoise-600 focus:ring-turquoise-500"
+      class="checkbox w-5 h-5"
       {@rest}
     />
     """
@@ -318,7 +318,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   @spec label(map()) :: Phoenix.LiveView.Rendered.t()
   def label(assigns) do
     ~H"""
-    <label for={@for} class="label mb-2 block">
+    <label for={@for} class="label">
       {render_slot(@inner_block)}
     </label>
     """

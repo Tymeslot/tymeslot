@@ -100,63 +100,63 @@
     color: var(--color-text-glass-primary);
     transition: var(--transition-glass);
   }
-}
 
-/* Auth Card - High Contrast */
-.auth-glass-card {
-  @apply bg-white/95 backdrop-blur-md border-2 border-tymeslot-100 rounded-token-5xl p-6 sm:p-8 shadow-2xl shadow-tymeslot-900/10 w-full max-w-[480px] mx-auto;
-}
+  /* Auth Card - High Contrast */
+  .auth-glass-card {
+    @apply bg-white/95 backdrop-blur-md border-2 border-tymeslot-100 rounded-token-5xl p-6 sm:p-8 shadow-2xl shadow-tymeslot-900/10 w-full max-w-[480px] mx-auto;
+  }
 
-/* Selected State Glass Gradient */
-.glass-gradient {
-  background: linear-gradient(
-    135deg,
-    color-mix(in oklab, var(--color-primary-500) 15%, transparent) 0%,
-    color-mix(in oklab, var(--color-primary-600) 10%, transparent) 100%
-  ) !important;
-  border-color: var(--color-primary-500) !important;
-  position: relative;
-  /* Ensure box sizing doesn't change */
-  box-sizing: border-box !important;
-}
+  /* Selected State Glass Gradient */
+  .glass-gradient {
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--color-primary-500) 15%, transparent) 0%,
+      color-mix(in oklab, var(--color-primary-600) 10%, transparent) 100%
+    ) !important;
+    border-color: var(--color-primary-500) !important;
+    position: relative;
+    /* Ensure box sizing doesn't change */
+    box-sizing: border-box !important;
+  }
 
-.glass-gradient::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    135deg,
-    color-mix(in oklab, var(--color-primary-500) 10%, transparent) 0%,
-    transparent 50%,
-    color-mix(in oklab, var(--color-primary-600) 5%, transparent) 100%
-  );
-  border-radius: inherit;
-  pointer-events: none;
-}
+  .glass-gradient::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--color-primary-500) 10%, transparent) 0%,
+      transparent 50%,
+      color-mix(in oklab, var(--color-primary-600) 5%, transparent) 100%
+    );
+    border-radius: inherit;
+    pointer-events: none;
+  }
 
-/* Brand Card */
-.brand-card {
-  @apply bg-white border-2 border-tymeslot-100 rounded-token-3xl p-6 shadow-xl shadow-tymeslot-200/50 transition-glass;
-}
+  /* Brand Card */
+  .brand-card {
+    @apply bg-white border-2 border-tymeslot-100 rounded-token-3xl p-6 shadow-xl shadow-tymeslot-200/50 transition-glass;
+  }
 
-.brand-card:hover {
-  @apply border-turquoise-100 shadow-xl shadow-turquoise-500/10;
-}
+  .brand-card:hover {
+    @apply border-turquoise-100 shadow-xl shadow-turquoise-500/10;
+  }
 
-/* Glass Morphism Card — backs the <.glass_morphism_card> component */
-.glass-morphism-card {
-  @apply bg-white/80 backdrop-blur-xl rounded-token-3xl border border-white/40 shadow-2xl;
-  /* Deliberate non-palette black alpha: a neutral shadow, not a brand colour. */
-  box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.1);
-}
+  /* Glass Morphism Card — backs the <.glass_morphism_card> component */
+  .glass-morphism-card {
+    @apply bg-white/80 backdrop-blur-xl rounded-token-3xl border border-white/40 shadow-2xl;
+    /* Deliberate non-palette black alpha: a neutral shadow, not a brand colour. */
+    box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.1);
+  }
 
-/* Meeting Details Card */
-.meeting-details-card {
-  @apply bg-linear-to-br from-turquoise-50 to-cyan-50 border border-turquoise-100 rounded-token-2xl p-6 shadow-sm;
-}
-
-@media (min-width: 640px) {
+  /* Meeting Details Card */
   .meeting-details-card {
-    padding: 1rem;
+    @apply bg-linear-to-br from-turquoise-50 to-cyan-50 border border-turquoise-100 rounded-token-2xl p-6 shadow-sm;
+  }
+
+  @media (min-width: 640px) {
+    .meeting-details-card {
+      padding: 1rem;
+    }
   }
 }

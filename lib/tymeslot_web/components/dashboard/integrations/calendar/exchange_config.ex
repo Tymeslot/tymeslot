@@ -265,7 +265,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ExchangeConfig 
           {dgettext("dashboard_calendar_providers", "Select calendars to show on your dashboard:")}
         </h4>
 
-        <div class="brand-card p-4">
+        <div class="brand-card">
           <%= if @discovered_calendars == [] do %>
             <p class="text-sm text-tymeslot-500">
               {dgettext(

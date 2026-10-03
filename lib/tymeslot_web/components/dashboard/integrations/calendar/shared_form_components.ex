@@ -246,7 +246,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
     ~H"""
     <div class="space-y-3">
       <h4 class="label">{dgettext("dashboard_calendar_providers", "Select calendars to sync:")}</h4>
-      <div class="brand-card p-4">
+      <div class="brand-card">
         <%= if @discovered_calendars == [] do %>
           <p class="text-sm text-tymeslot-500">
             {dgettext(
@@ -291,7 +291,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
     ~H"""
     <div class="form-field-wrapper">
       <div class="flex items-center gap-1.5 mb-2">
-        <span class="label mb-0!">{dgettext("dashboard_calendar_providers", "Server URL")}</span>
+        <span class="label mb-0">{dgettext("dashboard_calendar_providers", "Server URL")}</span>
         <span class="text-tymeslot-400 shrink-0">
           <Icons.icon name="hero-information-circle-mini" class="w-3.5 h-3.5" />
         </span>
