@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
           {dgettext("dashboard_analytics", "Visits over time")}
         </div>
         <div class="flex items-center gap-1.5 text-token-xs text-tymeslot-500">
-          <span class="inline-block h-2.5 w-2.5 rounded-sm bg-turquoise-500" aria-hidden="true"></span>
+          <span class="inline-block h-2.5 w-2.5 rounded-token-sm bg-turquoise-500" aria-hidden="true"></span>
           {dgettext("dashboard_analytics", "Daily visits")}
         </div>
       </div>
