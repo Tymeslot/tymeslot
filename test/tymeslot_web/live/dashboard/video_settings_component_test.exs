@@ -261,10 +261,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       refute has_element?(view, "#mirotalk_base_url-help")
     end
 
-    test "shows a message when adding a duplicate custom video integration", %{
-      conn: conn,
-      user: user
-    } do
+    test "shows a message for a duplicate custom video integration", %{conn: conn, user: user} do
       insert(:video_integration,
         user: user,
         provider: "custom",

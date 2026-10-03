@@ -259,7 +259,7 @@ defmodule TymeslotWeb.Dashboard.VideoDisconnectCleanupTest do
     assert {:ok, kept} = VideoIntegrationQueries.get(integration.id)
     refute kept.deleted_at
     assert Repo.reload!(meeting).video_room_id == "666"
-    assert [_] = VideoIntegrationQueries.list_all_for_user(user.id)
+    assert [_kept] = VideoIntegrationQueries.list_all_for_user(user.id)
   end
 
   test "ticking the box shows the box as ticked", %{conn: conn, user: user} do
