@@ -89,7 +89,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   def update(assigns, socket) do
     socket =
       socket
-      |> assign(assigns)
+      |> assign(keep_created_type(assigns, socket))
       |> Init.maybe_initialize()
 
     # Custom-question and location edits arrive here as a `send_update`
@@ -476,6 +476,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   # A failed save already shows its own error, so it gets no "saved" flash.
   defp flash_schedule_saved(socket), do: socket
+
+  # Once this form has created its meeting type, the parent may still render
+  # once more with the props it had while the type was new (`type: nil`,
+  # `is_edit: false`) before it learns of the record. Taking those would flip
+  # the form back to create mode and offer a second create, so they are
+  # dropped while the form holds a persisted type.
+  defp keep_created_type(%{type: nil} = assigns, %{assigns: %{type: %{id: id}}})
+       when is_integer(id),
+       do: Map.drop(assigns, [:type, :is_edit])
+
+  defp keep_created_type(assigns, _socket), do: assigns
 
   # Blank means "follow the profile's default schedule", stored as nil; the
   # same goes for anything unparseable, since the chips only ever offer the

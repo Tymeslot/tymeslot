@@ -17,9 +17,14 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeCreateJourneyTest do
 
   import Tymeslot.DashboardTestHelpers
 
+  alias Phoenix.LiveView
   alias Tymeslot.MeetingTypes
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
 
   setup :setup_dashboard_user
+
+  # The hint explaining the disabled tabs, scoped to the new-type form's id.
+  @hint_id "meeting-type-form-meeting-type-form-new-create-hint"
 
   # The tabs that need a saved record.
   @later_tabs ~w(location booking questions reminders)
@@ -46,15 +51,17 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeCreateJourneyTest do
       refute has_element?(view, "#meeting-type-form-tabs-tab-details[disabled]")
 
       for tab <- @later_tabs do
-        assert has_element?(view, "#meeting-type-form-tabs-tab-#{tab}[disabled]")
+        # Each disabled tab points screen readers at the hint saying why.
+        assert has_element?(
+                 view,
+                 "#meeting-type-form-tabs-tab-#{tab}[disabled][aria-describedby='#{@hint_id}']"
+               )
+
         refute has_element?(view, "#meeting-type-form-tabs-panel-#{tab}")
       end
 
-      assert has_element?(
-               view,
-               "#meeting-type-form-create-hint",
-               "Create the meeting type to set up the rest."
-             )
+      refute has_element?(view, "#meeting-type-form-tabs-tab-details[aria-describedby]")
+      assert has_element?(view, "##{@hint_id}", "Create the meeting type to set up the rest.")
 
       assert has_element?(view, "button[type='submit']", "Create meeting type")
       refute has_element?(view, "button", "Done")
@@ -82,11 +89,13 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeCreateJourneyTest do
       assert render(view) =~ "Edit Meeting Type"
       assert has_element?(view, "#meeting-type-form-meeting-type-form-new")
       assert has_element?(view, "form[phx-submit='flush_autosave']")
-      refute has_element?(view, "#meeting-type-form-create-hint")
+      refute has_element?(view, "##{@hint_id}")
 
       for tab <- @later_tabs do
         refute has_element?(view, "#meeting-type-form-tabs-tab-#{tab}[disabled]")
       end
+
+      refute has_element?(view, "#meeting-type-form-tabs [aria-describedby]")
 
       # Carry on to another tab; a change there auto-saves.
       view |> element("#meeting-type-form-tabs-tab-booking") |> render_click()
@@ -181,6 +190,52 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeCreateJourneyTest do
       assert user.id
              |> MeetingTypes.get_all_meeting_types()
              |> Enum.count(&(&1.name == "Double Click")) == 1
+    end
+
+    test "stale new-type props arriving after creation leave the form editing", %{
+      conn: conn,
+      user: user
+    } do
+      view = open_add_form(conn)
+
+      view
+      |> form("form[phx-submit='create_meeting_type']", %{
+        "meeting_type" => %{"name" => "Stale Props", "duration" => "30"}
+      })
+      |> render_submit()
+
+      # The parent rendering once more with the props it had while the type
+      # was new, before it has heard about the record.
+      LiveView.send_update(view.pid, MeetingTypeForm,
+        id: "meeting-type-form-new",
+        type: nil,
+        is_edit: false
+      )
+
+      assert has_element?(view, "form[phx-submit='flush_autosave']")
+      refute has_element?(view, "#meeting-type-form-tabs-tab-booking[disabled]")
+      assert %{name: "Stale Props"} = created_type(user, "Stale Props")
+    end
+
+    test "choosing \"Custom…\" as the interval does not block creating", %{
+      conn: conn,
+      user: user
+    } do
+      view = open_add_form(conn)
+
+      # The dropdown's custom entry names a mode, not an interval, so it must
+      # not reach validation as one.
+      view
+      |> form("form[phx-submit='create_meeting_type']", %{
+        "meeting_type" => %{
+          "name" => "Custom Interval",
+          "duration" => "30",
+          "slot_interval" => "custom"
+        }
+      })
+      |> render_submit()
+
+      assert %{slot_interval_minutes: nil} = created_type(user, "Custom Interval")
     end
 
     test "cancel returns to the list without creating anything", %{conn: conn, user: user} do

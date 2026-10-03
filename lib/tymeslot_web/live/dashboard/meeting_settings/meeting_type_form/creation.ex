@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Creation do
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.FormHelpers
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission
   alias TymeslotWeb.Live.Shared.Flash
 
@@ -52,13 +53,32 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Creation do
       {:error, :rate_limited, message} ->
         Flash.error(message)
         socket
+
+      {:error, :invalid_user_id} ->
+        Flash.error(error_message(:invalid_user_id))
+        socket
     end
   end
 
   defp merge_posted_details(socket, posted_params) do
-    posted = Map.take(posted_params, @detail_fields)
+    posted =
+      posted_params
+      |> Map.take(@detail_fields)
+      |> drop_interval_mode_sentinel()
+
     Component.assign(socket, :form_data, Map.merge(socket.assigns.form_data, posted))
   end
+
+  # The interval dropdown's "Custom…" entry names a mode, not a duration (see
+  # `MeetingTypeForm`'s validate handler), so it never stands in for the
+  # value: whatever the form already holds is kept.
+  defp drop_interval_mode_sentinel(%{"slot_interval" => value} = posted) do
+    if value == FormView.custom_interval_option(),
+      do: Map.delete(posted, "slot_interval"),
+      else: posted
+  end
+
+  defp drop_interval_mode_sentinel(posted), do: posted
 
   @doc """
   Applies the outcome of a create to the form: on success the form switches

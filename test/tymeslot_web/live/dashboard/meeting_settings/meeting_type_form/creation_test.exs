@@ -12,6 +12,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CreationTest do
     }
   end
 
+  describe "run/2" do
+    test "refuses an invalid user id with a flash and leaves the form as it was" do
+      socket = mock_socket(%{current_user: %{id: nil}, form_data: %{"name" => "Kept"}})
+
+      assert Creation.run(socket, %{"name" => "Ignored"}) == socket
+      assert_receive {:flash, {:error, "Failed to save meeting type"}}
+    end
+  end
+
   describe "apply_result/2 on failure" do
     test "routes form validation errors to the fields, without a flash" do
       socket =
