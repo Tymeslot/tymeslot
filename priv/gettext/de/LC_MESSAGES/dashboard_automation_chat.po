@@ -832,3 +832,9 @@ msgstr "Die Webhook-URL wurde in Slack widerrufen. Erstellen Sie eine neue."
 #, elixir-autogen, elixir-format
 msgid "Slack error: %{error}"
 msgstr "Slack-Fehler: %{error}"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}"
+msgstr "%{name} löschen"

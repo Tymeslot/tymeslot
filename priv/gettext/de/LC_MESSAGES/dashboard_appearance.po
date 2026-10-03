@@ -67,11 +67,6 @@ msgstr "Für die Vorschau Kalender verbinden"
 msgid "Current"
 msgstr "Aktuell"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Current Style"
-msgstr "Aktueller Stil"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/color_picker.ex
 #, elixir-autogen, elixir-format
@@ -344,3 +339,8 @@ msgstr "Formular ausfüllen, um zu speichern"
 #, elixir-autogen, elixir-format
 msgid "Background type"
 msgstr "Hintergrundtyp"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Current style"
+msgstr "Aktueller Stil"

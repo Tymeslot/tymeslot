@@ -146,7 +146,6 @@ msgid "Delete Telegram Integration?"
 msgstr "Supprimer l’intégration Telegram ?"
 
 #: lib/tymeslot_web/live/dashboard/automation/delete_webhook_modal.ex
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
 msgid "Delete Webhook"
 msgstr "Supprimer le webhook"
@@ -684,3 +683,13 @@ msgstr "Canaux d'automatisation"
 #, elixir-autogen, elixir-format
 msgid "Active"
 msgstr "Actif"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Delete"
+msgstr "Supprimer"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}"
+msgstr "Supprimer %{name}"

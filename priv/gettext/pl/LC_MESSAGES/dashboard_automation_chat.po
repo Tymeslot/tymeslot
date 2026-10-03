@@ -828,3 +828,9 @@ msgstr "Adres URL webhooka został unieważniony w Slacku. Wygeneruj nowy."
 #, elixir-autogen, elixir-format
 msgid "Slack error: %{error}"
 msgstr "Błąd Slacka: %{error}"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}"
+msgstr "Usuń %{name}"

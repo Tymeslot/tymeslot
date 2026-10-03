@@ -63,11 +63,6 @@ msgstr "Podłącz kalendarz, aby zobaczyć podgląd"
 msgid "Current"
 msgstr "Bieżący"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Current Style"
-msgstr "Bieżący styl"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/color_picker.ex
 #, elixir-autogen, elixir-format
@@ -340,3 +335,8 @@ msgstr "Uzupełnij formularz, aby zapisać"
 #, elixir-autogen, elixir-format
 msgid "Background type"
 msgstr "Rodzaj tła"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Current style"
+msgstr "Bieżący styl"

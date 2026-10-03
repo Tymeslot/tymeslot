@@ -637,11 +637,6 @@ msgstr "Non planifié"
 msgid "Loading meetings"
 msgstr "Chargement des réunions"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Join meeting"
-msgstr "Rejoindre la réunion"
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting type"

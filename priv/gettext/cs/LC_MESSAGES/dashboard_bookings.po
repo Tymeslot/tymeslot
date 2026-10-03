@@ -643,11 +643,6 @@ msgstr "Nenaplánováno"
 msgid "Loading meetings"
 msgstr "Načítání schůzek"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Join meeting"
-msgstr "Připojit se ke schůzce"
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting type"

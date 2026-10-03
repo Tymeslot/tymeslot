@@ -832,3 +832,9 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Slack error: %{error}"
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}"
+msgstr ""

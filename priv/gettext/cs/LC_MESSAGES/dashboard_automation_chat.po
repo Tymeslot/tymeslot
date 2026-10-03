@@ -832,3 +832,9 @@ msgstr "URL webhooku byla ve službě Slack odvolána. Vygenerujte novou."
 #, elixir-autogen, elixir-format
 msgid "Slack error: %{error}"
 msgstr "Chyba služby Slack: %{error}"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}"
+msgstr "Smazat %{name}"

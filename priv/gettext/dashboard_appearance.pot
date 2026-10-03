@@ -67,11 +67,6 @@ msgstr ""
 msgid "Current"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Current Style"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/color_picker.ex
 #, elixir-autogen, elixir-format
@@ -343,4 +338,9 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #, elixir-autogen, elixir-format
 msgid "Background type"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Current style"
 msgstr ""

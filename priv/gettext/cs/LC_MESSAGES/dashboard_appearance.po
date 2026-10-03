@@ -67,11 +67,6 @@ msgstr "Pro náhled připojte kalendář"
 msgid "Current"
 msgstr "Aktuální"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Current Style"
-msgstr "Aktuální styl"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/color_picker.ex
 #, elixir-autogen, elixir-format
@@ -344,3 +339,8 @@ msgstr "Vyplňte formulář, aby se změny uložily"
 #, elixir-autogen, elixir-format
 msgid "Background type"
 msgstr "Typ pozadí"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Current style"
+msgstr "Aktuální styl"

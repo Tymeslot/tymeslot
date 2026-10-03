@@ -153,3 +153,8 @@ msgstr "Brak wizyt"
 #, elixir-autogen, elixir-format
 msgid "No traffic in this period yet"
 msgstr "Brak ruchu w tym okresie"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
+#, elixir-autogen, elixir-format
+msgid "Traffic sources"
+msgstr "Źródła ruchu"

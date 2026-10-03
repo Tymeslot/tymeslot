@@ -832,3 +832,9 @@ msgstr "URL вебхука відкликано у Slack. Створіть но�
 #, elixir-autogen, elixir-format
 msgid "Slack error: %{error}"
 msgstr "Помилка Slack: %{error}"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}"
+msgstr "Видалити %{name}"

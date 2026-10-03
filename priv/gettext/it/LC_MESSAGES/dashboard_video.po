@@ -232,11 +232,6 @@ msgstr "Link video personalizzato"
 msgid "Custom meeting URL is required"
 msgstr "L'URL personalizzato della riunione è obbligatorio"
 
-#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
-#, elixir-autogen, elixir-format
-msgid "Delete integration"
-msgstr "Elimina integrazione"
-
 #: lib/tymeslot_web/components/dashboard/integrations/video/jitsi_config.ex
 #, elixir-autogen, elixir-format
 msgid "Deletes the stored App ID and App secret. Links then open the room without a token, which only works on a server that lets anyone in."
@@ -1144,3 +1139,13 @@ msgstr "⚠ Sintassi non valida"
 #, elixir-autogen, elixir-format
 msgid "✓ Valid Template"
 msgstr "✓ Template valido"
+
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Delete"
+msgstr "Elimina"
+
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}"
+msgstr "Elimina %{name}"

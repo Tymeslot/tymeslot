@@ -157,3 +157,8 @@ msgstr "Відвідувань ще немає"
 #, elixir-autogen, elixir-format
 msgid "No traffic in this period yet"
 msgstr "За цей період ще немає трафіку"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
+#, elixir-autogen, elixir-format
+msgid "Traffic sources"
+msgstr "Джерела трафіку"

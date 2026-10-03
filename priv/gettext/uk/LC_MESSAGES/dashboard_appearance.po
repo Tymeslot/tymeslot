@@ -67,11 +67,6 @@ msgstr "Підключіть календар для попереднього п
 msgid "Current"
 msgstr "Поточний"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Current Style"
-msgstr "Поточний стиль"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/color_picker.ex
 #, elixir-autogen, elixir-format
@@ -344,3 +339,8 @@ msgstr "Заповніть форму, щоб зберегти"
 #, elixir-autogen, elixir-format
 msgid "Background type"
 msgstr "Тип фону"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Current style"
+msgstr "Поточний стиль"

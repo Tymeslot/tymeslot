@@ -185,11 +185,6 @@ msgstr "Link neu generieren"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
-msgid "Remove connection"
-msgstr "Verbindung entfernen"
-
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
-#, elixir-autogen, elixir-format
 msgid "Share a read-only link that publishes when you're busy (not the event details) as a standard iCalendar feed, so other calendar systems can overlay your availability."
 msgstr "Teilen Sie einen schreibgeschützten Link, der als standardisierter iCalendar-Feed veröffentlicht, wann Sie beschäftigt sind (nicht die Ereignisdetails), sodass andere Kalendersysteme Ihre Verfügbarkeit einblenden können."
 
@@ -309,3 +304,13 @@ msgstr[1] "prüft %{selected} von %{count} Kalendern auf Konflikte"
 #, elixir-autogen, elixir-format
 msgid "Last synced %{time}"
 msgstr "Zuletzt synchronisiert %{time}"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Delete"
+msgstr "Löschen"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}"
+msgstr "%{name} löschen"

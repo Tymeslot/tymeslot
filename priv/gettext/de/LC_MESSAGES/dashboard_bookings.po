@@ -637,11 +637,6 @@ msgstr "Nicht geplant"
 msgid "Loading meetings"
 msgstr "Termine werden geladen"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Join meeting"
-msgstr "Meeting beitreten"
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting type"
