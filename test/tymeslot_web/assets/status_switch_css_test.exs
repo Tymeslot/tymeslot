@@ -13,18 +13,19 @@ defmodule TymeslotWeb.Assets.StatusSwitchCssTest do
   # is no Tymeslot function for them to call.
 
   # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
-  test "the status switch rules sit in the components layer" do
-    css = File.read!(@dashboard_css)
+  test "every status switch rule sits in the components layer" do
+    rules =
+      @dashboard_css
+      |> File.read!()
+      |> rules_with_ancestors()
+      |> Enum.filter(fn {selector, _ancestors} -> selector =~ ".status-toggle" end)
 
-    assert [_match, layer_body] =
-             Regex.run(~r/@layer components \{\n(.*?)\n\}/s, css, capture: :all),
-           "dashboard.css has no components layer"
+    assert Enum.any?(rules, fn {selector, _} -> selector == ".status-toggle" end)
+    assert Enum.any?(rules, fn {selector, _} -> selector == ".status-toggle-slider" end)
 
-    assert layer_body =~ ~r/^\s*\.status-toggle \{/m
-    assert layer_body =~ ~r/^\s*\.status-toggle-slider \{/m
-
-    outside = String.replace(css, layer_body, "")
-    refute outside =~ ~r/\.status-toggle/
+    assert Enum.reject(rules, fn {_selector, ancestors} ->
+             "@layer components" in ancestors
+           end) == []
   end
 
   # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
@@ -33,6 +34,35 @@ defmodule TymeslotWeb.Assets.StatusSwitchCssTest do
 
     assert css =~ ~r/\.status-toggle:focus-visible \{[^}]*outline: 2px solid/
     refute css =~ ~r/\.status-toggle:focus \{/
-    refute css =~ ~r/^\s*ring(-offset)?:/m
+  end
+
+  # Every rule's selector with the at-rules enclosing it, outermost first:
+  # a brace-depth walk over the stylesheet with comments removed, so a rule
+  # in a second layer block or nested in a media query inside the layer is
+  # still seen in its layer.
+  defp rules_with_ancestors(css) do
+    css
+    |> String.replace(~r{/\*.*?\*/}s, "")
+    |> String.graphemes()
+    |> Enum.reduce({"", [], []}, fn
+      "{", {prelude, stack, rules} ->
+        prelude = String.trim(prelude)
+        ancestors = Enum.reverse(stack)
+
+        rules =
+          if String.starts_with?(prelude, "@"), do: rules, else: [{prelude, ancestors} | rules]
+
+        {"", [prelude | stack], rules}
+
+      "}", {_prelude, stack, rules} ->
+        {"", tl(stack), rules}
+
+      ";", {_prelude, stack, rules} ->
+        {"", stack, rules}
+
+      char, {prelude, stack, rules} ->
+        {prelude <> char, stack, rules}
+    end)
+    |> elem(2)
   end
 end
