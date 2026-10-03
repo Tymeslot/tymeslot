@@ -67,21 +67,21 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
     ~H"""
     <div class="space-y-8">
       <%!-- Toolbar --%>
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
-        <.section_header
-          level={2}
-          icon="hero-bolt"
-          title={form_title(@mode, @shared_bot_mode, @wizard_step)}
-        />
-
-        <.icon_button
-          icon="hero-x-mark"
-          variant={:neutral}
-          label={dgettext("dashboard_automation_chat", "Close")}
-          phx-click="close_telegram_form"
-          phx-target={@parent_component}
-        />
-      </div>
+      <.section_header
+        icon="hero-bolt"
+        title={form_title(@mode, @shared_bot_mode, @wizard_step)}
+        class="mb-10"
+      >
+        <:actions>
+          <.icon_button
+            icon="hero-x-mark"
+            variant={:neutral}
+            label={dgettext("dashboard_automation_chat", "Close")}
+            phx-click="close_telegram_form"
+            phx-target={@parent_component}
+          />
+        </:actions>
+      </.section_header>
 
       <%= if @shared_bot_mode && @mode == :create && @wizard_step == 1 do %>
         <%!-- Shared Bot: Step 1 — Deep Link --%>

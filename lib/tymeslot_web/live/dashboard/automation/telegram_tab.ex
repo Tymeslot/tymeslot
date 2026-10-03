@@ -21,16 +21,16 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramTab do
     ~H"""
     <%= if @integrations != [] do %>
       <div class="space-y-6">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <.section_header
-            level={2}
-            title={dgettext("dashboard_automation_chat", "Your Telegram Integrations")}
-            count={length(@integrations)}
-          />
-          <.action_button phx-click="show_telegram_form" phx-target={@myself}>
-            {dgettext("dashboard_automation_chat", "Add Telegram Account")}
-          </.action_button>
-        </div>
+        <.section_header
+          title={dgettext("dashboard_automation_chat", "Your Telegram Integrations")}
+          count={length(@integrations)}
+        >
+          <:actions>
+            <.action_button phx-click="show_telegram_form" phx-target={@myself}>
+              {dgettext("dashboard_automation_chat", "Add Telegram Account")}
+            </.action_button>
+          </:actions>
+        </.section_header>
 
         <div class="grid grid-cols-1 gap-6">
           <%= for integration <- @integrations do %>

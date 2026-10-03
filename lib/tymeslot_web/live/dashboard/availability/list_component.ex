@@ -447,13 +447,11 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
     ~H"""
     <div id={@id}>
       <%!-- Timezone Display Header --%>
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 space-y-2 sm:space-y-0">
-        <.section_header
-          level={2}
-          title={dgettext("dashboard_availability", "Weekly Schedule")}
-        />
-        <Helpers.timezone_display timezone_display={@timezone_display} country_code={@country_code} />
-      </div>
+      <.section_header title={dgettext("dashboard_availability", "Weekly Schedule")} class="mb-6">
+        <:actions>
+          <Helpers.timezone_display timezone_display={@timezone_display} country_code={@country_code} />
+        </:actions>
+      </.section_header>
 
       <%!-- Weekly Schedule --%>
       <div class="space-y-2">

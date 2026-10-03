@@ -30,8 +30,9 @@
     @apply text-token-3xl md:text-token-4xl font-black tracking-tight;
   }
 
-  /* A dashboard page title: small enough on a phone to stay on one line. */
-  .display-sm {
+  /* A dashboard page's h1 (section_header level 1): small enough on a phone
+     to stay on one line. */
+  .dashboard-title {
     @apply text-token-2xl sm:text-token-3xl lg:text-token-4xl font-black tracking-tight;
   }
 

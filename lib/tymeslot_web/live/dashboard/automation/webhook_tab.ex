@@ -22,16 +22,16 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookTab do
     ~H"""
     <%= if @webhooks != [] do %>
       <div class="space-y-6">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <.section_header
-            level={2}
-            title={dgettext("dashboard_automation", "Your Webhooks")}
-            count={length(@webhooks)}
-          />
-          <.action_button phx-click="show_webhook_form" phx-target={@myself}>
-            {dgettext("dashboard_automation", "Create Webhook")}
-          </.action_button>
-        </div>
+        <.section_header
+          title={dgettext("dashboard_automation", "Your Webhooks")}
+          count={length(@webhooks)}
+        >
+          <:actions>
+            <.action_button phx-click="show_webhook_form" phx-target={@myself}>
+              {dgettext("dashboard_automation", "Create Webhook")}
+            </.action_button>
+          </:actions>
+        </.section_header>
 
         <div class="grid grid-cols-1 gap-6">
           <%= for webhook <- @webhooks do %>

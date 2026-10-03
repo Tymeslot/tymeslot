@@ -22,18 +22,14 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackTab do
     ~H"""
     <%= if @integrations != [] do %>
       <div class="space-y-6">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <.section_header
-            level={2}
-            title={dgettext("dashboard_automation_chat", "Your Slack Integrations")}
-            count={length(@integrations)}
-          />
-          <div class="flex flex-wrap items-center gap-3">
-            <%= if @oauth_mode_available? do %>
-              <.action_link href={~p"/api/slack/oauth/start"}>
-                {dgettext("dashboard_automation_chat", "Add to Slack")}
-              </.action_link>
-            <% end %>
+        <.section_header
+          title={dgettext("dashboard_automation_chat", "Your Slack Integrations")}
+          count={length(@integrations)}
+        >
+          <:actions>
+            <.action_link :if={@oauth_mode_available?} href={~p"/api/slack/oauth/start"}>
+              {dgettext("dashboard_automation_chat", "Add to Slack")}
+            </.action_link>
             <.action_button
               variant={:secondary}
               phx-click="slack_show_webhook_form"
@@ -41,8 +37,8 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackTab do
             >
               {dgettext("dashboard_automation_chat", "Add via webhook URL")}
             </.action_button>
-          </div>
-        </div>
+          </:actions>
+        </.section_header>
 
         <div class="grid grid-cols-1 gap-6">
           <%= for integration <- @integrations do %>

@@ -52,6 +52,7 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
     ~H"""
     <div>
       <.section_header
+        level={1}
         title={dgettext("booking_manage", "Booking request")}
         icon="hero-inbox-arrow-down"
       />

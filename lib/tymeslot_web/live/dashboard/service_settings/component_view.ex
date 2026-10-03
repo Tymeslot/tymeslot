@@ -40,23 +40,23 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
             class="space-y-8"
           >
             <div class="bg-white p-6 rounded-token-3xl border-2 border-tymeslot-50 shadow-sm space-y-4">
-              <div class="flex items-start justify-between">
-                <.section_header
-                  level={2}
-                  icon="hero-squares-2x2"
-                  title={
-                    if @editing_type,
-                      do: dgettext("dashboard_integrations", "Edit Meeting Type"),
-                      else: dgettext("dashboard_integrations", "Add Meeting Type")
-                  }
-                />
-                <.icon_button
-                  icon="hero-x-mark"
-                  label={dgettext("dashboard_integrations", "Close")}
-                  phx-click={if @editing_type, do: "close_edit_overlay", else: "toggle_add_form"}
-                  phx-target={@myself}
-                />
-              </div>
+              <.section_header
+                icon="hero-squares-2x2"
+                title={
+                  if @editing_type,
+                    do: dgettext("dashboard_integrations", "Edit Meeting Type"),
+                    else: dgettext("dashboard_integrations", "Add Meeting Type")
+                }
+              >
+                <:actions>
+                  <.icon_button
+                    icon="hero-x-mark"
+                    label={dgettext("dashboard_integrations", "Close")}
+                    phx-click={if @editing_type, do: "close_edit_overlay", else: "toggle_add_form"}
+                    phx-target={@myself}
+                  />
+                </:actions>
+              </.section_header>
 
               <%!-- Direct booking link, always at hand while editing (needs a username) --%>
               <div :if={@editing_type && booking_base_url(@profile)} class="space-y-2">
@@ -160,9 +160,6 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
             myself={@myself}
           />
         <% end %>
-
-        <%!-- Add spacing after content to prevent flush bottom --%>
-        <div class="pb-8"></div>
       </.dashboard_page>
     </div>
     """

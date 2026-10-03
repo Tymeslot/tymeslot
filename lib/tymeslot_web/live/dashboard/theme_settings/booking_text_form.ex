@@ -86,7 +86,6 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
     ~H"""
     <div id={@id} class="mt-16">
       <.section_header
-        level={2}
         icon="hero-chat-bubble-bottom-center-text"
         title={dgettext("dashboard_appearance", "Booking Page Text")}
       />

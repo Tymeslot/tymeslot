@@ -31,18 +31,20 @@ defmodule TymeslotWeb.Components.CoreComponents.PageTest do
     assert doc |> Floki.find("#page > section h2") |> Floki.text() == "Card"
   end
 
-  test "gives the root the shared spacing and bottom padding" do
-    assert [{"div", attrs, _children}] = render_page(false, false)
-    assert {"class", class} = List.keyfind(attrs, "class", 0)
-    assert class =~ "space-y-8"
-    assert class =~ "pb-20"
+  test "puts the header and the inner block under one root carrying the global attributes" do
+    assert [{"div", attrs, [header, body]}] = render_page(false, false)
+    assert {"id", "page"} in attrs
+    assert header |> Floki.find("h1") |> length() == 1
+    assert {"section", _attrs, _children} = body
   end
 
   test "shows the saving indicator only while saving" do
     assert true |> render_page(false) |> Floki.find("[role=status]") |> Floki.text() =~
              "Saving changes..."
 
-    assert Floki.find(render_page(false, false), "[role=status]") == []
+    # The status region stays, empty, so the indicator is announced when it appears.
+    assert [status] = Floki.find(render_page(false, false), "[role=status]")
+    assert Floki.text(status) == ""
   end
 
   test "renders header actions" do

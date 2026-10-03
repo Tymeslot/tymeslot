@@ -44,15 +44,17 @@ defmodule TymeslotWeb.Components.ContainersTest do
     # the test above); refuting anything else can never fire.
     refute html =~ "Saving changes..."
     refute html =~ "spinner"
+    assert [status] = Floki.find(doc, "[role=status]")
+    assert Floki.text(status) == ""
     assert Floki.find(doc, "span.bg-turquoise-100") == []
   end
 
   describe "section_header levels" do
     for {level, size} <- [
-          {1, "display-sm"},
-          {2, "text-token-2xl"},
-          {3, "text-token-xl"},
-          {4, "text-token-lg"}
+          {1, "dashboard-title"},
+          {2, "text-token-lg"},
+          {3, "text-token-base"},
+          {4, "text-token-sm"}
         ] do
       test "level #{level} renders an h#{level} at its own size" do
         html =
@@ -68,6 +70,12 @@ defmodule TymeslotWeb.Components.ContainersTest do
         assert class =~ unquote(size)
         assert doc |> Floki.find("h1, h2, h3, h4") |> length() == 1
       end
+    end
+
+    test "defaults to an h2, the heading of a part of a page" do
+      html = render_component(&Containers.section_header/1, %{title: "Your Webhooks"})
+
+      assert [_h2] = html |> Floki.parse_fragment!() |> Floki.find("h2")
     end
 
     test "renders the actions slot at the end of the row" do
