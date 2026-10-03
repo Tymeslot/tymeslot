@@ -15,7 +15,8 @@ defmodule TymeslotWeb.Components.UITest do
 
       assert html =~ ~s(aria-checked="true")
       assert html =~ "status-toggle--active"
-      assert html =~ "status-toggle-slider--active"
+      # The slider has travelled to the "on" end of the medium track.
+      assert "translate-x-5" in slider_classes(html)
       # Active icon (checkmark) should be visible
       assert html =~ "status-toggle-icon--visible"
     end
@@ -30,7 +31,8 @@ defmodule TymeslotWeb.Components.UITest do
       # with no state at all.
       assert html =~ ~s(aria-checked="false")
       assert html =~ "status-toggle--inactive"
-      refute html =~ "status-toggle-slider--active"
+      # The slider rests at the "off" end: no travel at all.
+      refute Enum.any?(slider_classes(html), &String.starts_with?(&1, "translate-x-"))
     end
 
     test "renders an explicit button type so it can sit inside a form" do
@@ -97,10 +99,7 @@ defmodule TymeslotWeb.Components.UITest do
             size: size
           })
 
-        assert [slider_class] =
-                 Floki.attribute(Floki.parse_fragment!(on), ".status-toggle-slider", "class")
-
-        assert travel in String.split(slider_class)
+        assert travel in slider_classes(on)
         refute off =~ "translate-x-"
       end
     end
@@ -142,5 +141,10 @@ defmodule TymeslotWeb.Components.UITest do
       assert html =~ "Sending..."
       refute html =~ "Submit"
     end
+  end
+
+  defp slider_classes(html) do
+    [class] = html |> Floki.parse_fragment!() |> Floki.attribute(".status-toggle-slider", "class")
+    String.split(class)
   end
 end

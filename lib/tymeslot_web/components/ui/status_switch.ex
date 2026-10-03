@@ -92,8 +92,8 @@ defmodule TymeslotWeb.Components.UI.StatusSwitch do
   # The slider travels the track's inner width less its own: 2.25rem - 2px -
   # 1rem on the small track, 2.75rem - 4px - 1.25rem on the medium and
   # 3rem - 4px - 1.5rem on the large.
-  defp slider_state_class(true, :small), do: "status-toggle-slider--active translate-x-4.5"
-  defp slider_state_class(true, _size), do: "status-toggle-slider--active translate-x-5"
+  defp slider_state_class(true, :small), do: "translate-x-4.5"
+  defp slider_state_class(true, _size), do: "translate-x-5"
   defp slider_state_class(false, _size), do: nil
 
   defp icon_visibility_class(true), do: "status-toggle-icon--visible"
