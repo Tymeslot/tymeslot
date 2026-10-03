@@ -145,11 +145,6 @@ msgstr "Questo fuso orario verrà utilizzato per la tua disponibilità e per la 
 msgid "Tymeslot logo"
 msgstr "Logo di Tymeslot"
 
-#: lib/tymeslot_web/components/core_components/layout.ex
-#, elixir-autogen, elixir-format
-msgid "Tymeslot team"
-msgstr "Team di Tymeslot"
-
 #: lib/tymeslot_web/components/timezone_dropdown.ex
 #, elixir-autogen, elixir-format
 msgid "Your Timezone"
@@ -169,11 +164,6 @@ msgstr "ora locale"
 #, elixir-autogen, elixir-format
 msgid "scheduling page"
 msgstr "pagina di prenotazione"
-
-#: lib/tymeslot_web/components/core_components/layout.ex
-#, elixir-autogen, elixir-format
-msgid "Made with %{heart} by the %{team}"
-msgstr "Fatto con %{heart} dal %{team}"
 
 #: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format

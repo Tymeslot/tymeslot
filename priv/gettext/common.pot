@@ -145,11 +145,6 @@ msgstr ""
 msgid "Tymeslot logo"
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/layout.ex
-#, elixir-autogen, elixir-format
-msgid "Tymeslot team"
-msgstr ""
-
 #: lib/tymeslot_web/components/timezone_dropdown.ex
 #, elixir-autogen, elixir-format
 msgid "Your Timezone"
@@ -168,11 +163,6 @@ msgstr ""
 #: lib/tymeslot_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "scheduling page"
-msgstr ""
-
-#: lib/tymeslot_web/components/core_components/layout.ex
-#, elixir-autogen, elixir-format
-msgid "Made with %{heart} by the %{team}"
 msgstr ""
 
 #: lib/tymeslot_web/components/site_components.ex

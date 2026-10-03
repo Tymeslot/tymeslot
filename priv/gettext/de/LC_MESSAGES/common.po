@@ -145,11 +145,6 @@ msgstr "Diese Zeitzone wird für Ihre Verfügbarkeit und Terminplanung verwendet
 msgid "Tymeslot logo"
 msgstr "Tymeslot-Logo"
 
-#: lib/tymeslot_web/components/core_components/layout.ex
-#, elixir-autogen, elixir-format
-msgid "Tymeslot team"
-msgstr "Tymeslot-Team"
-
 #: lib/tymeslot_web/components/timezone_dropdown.ex
 #, elixir-autogen, elixir-format
 msgid "Your Timezone"
@@ -169,11 +164,6 @@ msgstr "Ortszeit"
 #, elixir-autogen, elixir-format
 msgid "scheduling page"
 msgstr "Terminplanungsseite"
-
-#: lib/tymeslot_web/components/core_components/layout.ex
-#, elixir-autogen, elixir-format
-msgid "Made with %{heart} by the %{team}"
-msgstr "Mit %{heart} vom %{team} erstellt"
 
 #: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format

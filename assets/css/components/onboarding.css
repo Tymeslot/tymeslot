@@ -134,20 +134,6 @@
   flex: 1;
 }
 
-.onboarding-skip-link {
-  display: block;
-  text-align: center;
-  margin-top: var(--spacing-3);
-  font-size: var(--font-size-sm);
-  color: var(--color-neutral-400);
-  cursor: pointer;
-  transition: color 0.15s ease;
-}
-
-.onboarding-skip-link:hover {
-  color: var(--color-neutral-600);
-}
-
 /* Welcome step feature list */
 .onboarding-feature-list {
   display: flex;
@@ -210,39 +196,6 @@
   font-size: var(--font-size-sm);
   color: var(--color-neutral-400);
   margin-top: 2px;
-}
-
-/* Preference sections */
-.onboarding-preference-section {
-  padding: var(--spacing-5);
-  border-radius: var(--radius-token-xl);
-  border-left: 3px solid var(--color-neutral-200);
-  background-color: var(--color-neutral-50);
-}
-
-.onboarding-preference-section--primary {
-  border-left-color: var(--color-primary-400);
-}
-
-.onboarding-preference-section--secondary {
-  border-left-color: var(--color-cyan-400);
-}
-
-.onboarding-preference-section--tertiary {
-  border-left-color: var(--color-info);
-}
-
-.onboarding-preference-title {
-  font-size: var(--font-size-base);
-  font-weight: 700;
-  color: var(--color-neutral-800);
-  margin-bottom: var(--spacing-1);
-}
-
-.onboarding-preference-benefit {
-  font-size: var(--font-size-sm);
-  color: var(--color-neutral-500);
-  line-height: 1.5;
 }
 
 .onboarding-preference-example {
@@ -374,25 +327,10 @@
   animation: onboarding-slide-left 0.25s ease-out;
 }
 
-.onboarding-slide-in-right {
-  animation: onboarding-slide-right 0.25s ease-out;
-}
-
 @keyframes onboarding-slide-left {
   from {
     opacity: 0;
     transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes onboarding-slide-right {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
   }
   to {
     opacity: 1;

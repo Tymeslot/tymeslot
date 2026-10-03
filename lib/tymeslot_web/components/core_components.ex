@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Components.CoreComponents do
   # built once, here, at compile time.
   @shared [
     {:Brand, [:logo]},
-    {:Layout, [:page_layout, :footer]},
+    {:Layout, [:page_layout]},
     {:Buttons,
      [
        :action_button,

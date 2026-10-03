@@ -19,14 +19,6 @@ body {
   min-height: 100vh;
 }
 
-/* Footer gradient */
-.footer-gradient {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-  padding: 20px;
-}
-
 /* Glass morphism cards */
 .glass-card {
   background: var(--color-glass-bg-card-enhanced);

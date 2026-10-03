@@ -9,66 +9,6 @@
   margin-bottom: 2rem;
 }
 
-.section-icon {
-  width: 2rem;
-  height: 2rem;
-  margin-right: 0.75rem;
-  color: var(--color-text-glass-secondary);
-}
-
-.page-title {
-  @apply text-4xl font-black text-tymeslot-900 tracking-tight;
-}
-
-/* Integration Card Components */
-.integration-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 1rem;
-}
-
-.integration-info {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex: 1;
-}
-
-.integration-details {
-  flex: 1;
-}
-
-.integration-title-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.25rem;
-}
-
-.integration-name {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--color-text-glass-primary);
-}
-
-.status-badge {
-  @apply px-3 py-1 text-xs font-black rounded-full uppercase tracking-wider;
-}
-
-.status-badge--active {
-  @apply bg-emerald-100 text-emerald-700 border border-emerald-200;
-}
-
-.status-badge--inactive {
-  @apply bg-tymeslot-100 text-tymeslot-500 border border-tymeslot-200;
-}
-
-.integration-provider {
-  font-size: 0.875rem;
-  color: var(--color-text-glass-secondary);
-}
-
 /* Status Toggle */
 .status-toggle {
   position: relative;
@@ -161,78 +101,6 @@
 
 .status-icon--white {
   color: white;
-}
-
-/* Integration Content */
-.integration-content {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  flex: 1;
-}
-
-.calendar-details {
-  margin-bottom: 1rem;
-}
-
-.calendar-details-title {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-text-glass-secondary);
-  margin-bottom: 0.5rem;
-}
-
-.calendar-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.calendar-badge {
-  padding: 0.25rem 0.5rem;
-  background: rgba(59, 130, 246, 0.1);
-  color: var(--color-primary-600);
-  font-size: 0.75rem;
-  border-radius: 9999px;
-}
-
-.calendar-details-empty,
-.integration-disabled-note {
-  font-size: 0.875rem;
-  color: var(--color-text-glass-light);
-  font-style: italic;
-}
-
-.integration-disabled-note {
-  margin-top: 0.5rem;
-}
-
-/* Integration Actions */
-.integration-actions {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-
-.action-icon {
-  width: 0.75rem;
-  height: 0.75rem;
-  margin-right: 0.25rem;
-}
-
-
-.action-icon--spinning {
-  animation: spin 1s linear infinite;
-}
-
-.spinner-circle {
-  opacity: 0.25;
-}
-
-.spinner-path {
-  opacity: 0.75;
 }
 
 /* Dashboard Sidebar */
@@ -549,15 +417,6 @@
   border-color: var(--color-primary-400) !important;
   color: var(--color-text-on-glass) !important;
   @apply shadow-lg shadow-turquoise-500/20;
-}
-
-.glass-selector--active .selector-icon {
-  color: white !important;
-}
-
-.selector-icon {
-  @apply w-5 h-5 mr-2 transition-colors duration-300;
-  @apply text-tymeslot-500;
 }
 
 /* Subtle hover effect for badges */

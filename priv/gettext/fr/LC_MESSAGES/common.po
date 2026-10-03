@@ -145,11 +145,6 @@ msgstr "Ce fuseau horaire sera utilisé pour vos disponibilités et votre planif
 msgid "Tymeslot logo"
 msgstr "Logo Tymeslot"
 
-#: lib/tymeslot_web/components/core_components/layout.ex
-#, elixir-autogen, elixir-format
-msgid "Tymeslot team"
-msgstr "équipe Tymeslot"
-
 #: lib/tymeslot_web/components/timezone_dropdown.ex
 #, elixir-autogen, elixir-format
 msgid "Your Timezone"
@@ -169,11 +164,6 @@ msgstr "heure locale"
 #, elixir-autogen, elixir-format
 msgid "scheduling page"
 msgstr "page de planification"
-
-#: lib/tymeslot_web/components/core_components/layout.ex
-#, elixir-autogen, elixir-format
-msgid "Made with %{heart} by the %{team}"
-msgstr "Créé avec %{heart} par l’%{team}"
 
 #: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format

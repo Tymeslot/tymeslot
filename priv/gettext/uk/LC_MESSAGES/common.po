@@ -145,11 +145,6 @@ msgstr "Цей часовий пояс використовуватиметьс�
 msgid "Tymeslot logo"
 msgstr "Логотип Tymeslot"
 
-#: lib/tymeslot_web/components/core_components/layout.ex
-#, elixir-autogen, elixir-format
-msgid "Tymeslot team"
-msgstr "командою Tymeslot"
-
 #: lib/tymeslot_web/components/timezone_dropdown.ex
 #, elixir-autogen, elixir-format
 msgid "Your Timezone"
@@ -169,11 +164,6 @@ msgstr "місцевий час"
 #, elixir-autogen, elixir-format
 msgid "scheduling page"
 msgstr "сторінка бронювання"
-
-#: lib/tymeslot_web/components/core_components/layout.ex
-#, elixir-autogen, elixir-format
-msgid "Made with %{heart} by the %{team}"
-msgstr "Створено з %{heart} %{team}"
 
 #: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format

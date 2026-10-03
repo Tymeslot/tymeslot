@@ -112,23 +112,6 @@
   @apply bg-white/95 backdrop-blur-md border-2 border-slate-100 rounded-[2.5rem] p-6 sm:p-8 shadow-2xl shadow-slate-900/10 w-full max-w-[480px] mx-auto;
 }
 
-/* Flash Message Cards - Modernized */
-.flash-card {
-  @apply rounded-2xl p-4 mb-5 shadow-lg border-2 font-bold flex items-center gap-3;
-}
-
-.flash-card.flash-info {
-  @apply bg-sky-50 border-sky-100 text-sky-800;
-}
-
-.flash-card.flash-error {
-  @apply bg-red-50 border-red-100 text-red-800;
-}
-
-.flash-card.flash-success {
-  @apply bg-emerald-50 border-emerald-100 text-emerald-800;
-}
-
 /* Selected State Glass Gradient */
 .glass-gradient {
   background: linear-gradient(

@@ -52,10 +52,6 @@
   @apply focus:border-red-400 focus:bg-white focus:shadow-red-500/10;
 }
 
-.input-valid {
-  @apply border-emerald-200 bg-emerald-50 text-emerald-900;
-}
-
 /* Label - Modern Typography */
 .label {
   @apply block text-sm font-black text-slate-800 uppercase tracking-wider mb-2;
@@ -82,27 +78,12 @@
 }
 
 /* Select Dropdowns */
-select.glass-input,
 select.input {
   @apply cursor-pointer pr-10 bg-no-repeat transition-all;
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
   background-position: right 1rem center;
   background-size: 1.25rem;
 }
-
-/* Glass Dropdown */
-.glass-dropdown {
-  @apply block w-full px-4 py-3 text-sm font-bold text-slate-900 bg-white border-2 border-slate-100 rounded-2xl transition-all duration-300 shadow-sm cursor-pointer;
-  @apply hover:border-turquoise-100 hover:bg-slate-50;
-  @apply focus:outline-hidden focus:border-turquoise-400 focus:shadow-lg focus:shadow-turquoise-500/10;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2314b8a6' stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-  background-position: right 1rem center;
-  background-size: 1.25rem;
-}
-
 
 /* Range slider — dark background variant (used on marketing calculator) */
 .slider-dark {
@@ -162,19 +143,6 @@ select.input {
 /* Form Field — labelled input group with branded label + input */
 .form-field {
   @apply mb-5;
-}
-
-.form-field__label {
-  @apply block text-token-sm font-black mb-2 text-tymeslot-800 uppercase tracking-wider;
-}
-
-.form-field__input {
-  @apply w-full px-4 py-3 rounded-token-2xl border-2 border-tymeslot-100 bg-tymeslot-50/50 transition-glass font-medium;
-  @apply focus:outline-hidden focus:border-turquoise-400 focus:bg-white focus:shadow-lg focus:shadow-turquoise-500/10;
-}
-
-.form-field__input--error {
-  @apply border-red-200 bg-red-50 text-red-900 focus:border-red-400 focus:shadow-red-500/10;
 }
 
 /* ===================================

@@ -141,11 +141,6 @@ msgstr "Ta strefa czasowa będzie używana dla dostępności i rezerwacji."
 msgid "Tymeslot logo"
 msgstr "Logo Tymeslot"
 
-#: lib/tymeslot_web/components/core_components/layout.ex
-#, elixir-autogen, elixir-format
-msgid "Tymeslot team"
-msgstr "zespół Tymeslot"
-
 #: lib/tymeslot_web/components/timezone_dropdown.ex
 #, elixir-autogen, elixir-format
 msgid "Your Timezone"
@@ -165,11 +160,6 @@ msgstr "czas lokalny"
 #, elixir-autogen, elixir-format
 msgid "scheduling page"
 msgstr "strona rezerwacji"
-
-#: lib/tymeslot_web/components/core_components/layout.ex
-#, elixir-autogen, elixir-format
-msgid "Made with %{heart} by the %{team}"
-msgstr "Stworzone z %{heart} przez %{team}"
 
 #: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format
