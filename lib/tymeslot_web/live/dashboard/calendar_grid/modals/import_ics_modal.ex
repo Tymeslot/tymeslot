@@ -47,7 +47,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ImportIcsModal do
           )}
         </.info_box>
 
-        <div :if={@targets != [] and @running} class="space-y-2" data-testid="import-ics-progress">
+        <div
+          :if={@targets != [] and @running}
+          class="space-y-2"
+          role="status"
+          data-testid="import-ics-progress"
+        >
           <div class="flex items-center gap-2 text-token-sm text-tymeslot-700">
             <.spinner />
             <span>
@@ -75,7 +80,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ImportIcsModal do
             type="button"
             id="import-ics-choose"
             phx-click={JS.dispatch("click", to: "##{@upload.ref}")}
-            class="w-full flex flex-col items-center justify-center gap-2 px-4 py-6 border-2 border-dashed border-tymeslot-200 rounded-token-lg cursor-pointer hover:border-turquoise-300 hover:bg-tymeslot-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-turquoise-500 transition-colors"
+            class="w-full flex flex-col items-center justify-center gap-2 px-4 py-6 border-2 border-dashed border-tymeslot-200 rounded-token-lg cursor-pointer hover:border-turquoise-300 hover:bg-tymeslot-50 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-500 transition-colors"
           >
             <.icon name="hero-arrow-up-tray" class="w-6 h-6 text-tymeslot-400" />
             <span class="text-token-sm font-semibold text-tymeslot-700">
@@ -94,6 +99,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ImportIcsModal do
           <div
             :if={@upload.entries != [] or @ics_import.reading}
             class="flex items-center gap-2 text-token-sm text-tymeslot-600"
+            role="status"
           >
             <.spinner />
             <span>{dgettext("dashboard_calendar_events", "Reading the file...")}</span>
@@ -129,7 +135,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ImportIcsModal do
           </div>
 
           <div :if={@ics_import.plan}>
-            <p class="mb-2 text-token-sm font-semibold text-tymeslot-700">
+            <p class="mb-2 text-token-sm font-medium text-tymeslot-700">
               {dgettext("dashboard_calendar_events", "Import into")}
             </p>
             <CalendarPicker.calendar_picker
