@@ -109,7 +109,7 @@
 
 /* Auth Card - High Contrast */
 .auth-glass-card {
-  @apply bg-white/95 backdrop-blur-md border-2 border-tymeslot-100 rounded-token-4xl p-6 sm:p-8 shadow-2xl shadow-tymeslot-900/10 w-full max-w-[480px] mx-auto;
+  @apply bg-white/95 backdrop-blur-md border-2 border-tymeslot-100 rounded-token-5xl p-6 sm:p-8 shadow-2xl shadow-tymeslot-900/10 w-full max-w-[480px] mx-auto;
 }
 
 /* Selected State Glass Gradient */

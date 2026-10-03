@@ -187,6 +187,7 @@
   --radius-token-2xl: var(--radius-2xl);
   --radius-token-3xl: var(--radius-3xl);
   --radius-token-4xl: var(--radius-4xl);
+  --radius-token-5xl: var(--radius-5xl);
   --radius-token-full: var(--radius-full);
 
   /* --- Glass shadows → shadow-glass-* (values inlined to avoid the

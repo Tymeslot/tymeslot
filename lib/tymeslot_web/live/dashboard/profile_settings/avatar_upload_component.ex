@@ -141,7 +141,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
       />
 
       <div class="relative inline-block mb-8" id="avatar-upload-section">
-        <div class="w-40 h-40 rounded-token-4xl overflow-hidden bg-tymeslot-100 border-4 border-white shadow-2xl relative z-10 mx-auto">
+        <div class="w-40 h-40 rounded-token-5xl overflow-hidden bg-tymeslot-100 border-4 border-white shadow-2xl relative z-10 mx-auto">
           <img
             src={Profiles.avatar_url(@profile, :thumb)}
             alt={Profiles.avatar_alt_text(@profile)}

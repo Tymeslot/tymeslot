@@ -104,7 +104,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
               # Scrolling and the height cap belong to `.modal-content` in
               # modal.css; an `overflow-hidden` here would win over it and cut a
               # tall dialog off again.
-              "modal-content bg-white rounded-token-4xl shadow-2xl border-2 border-tymeslot-50 relative",
+              "modal-content bg-white rounded-token-5xl shadow-2xl border-2 border-tymeslot-50 relative",
               modal_size_class(@size)
             ]
           }
