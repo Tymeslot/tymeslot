@@ -16,7 +16,7 @@ defmodule TymeslotWeb.Components.CoreComponents do
   which makes this module a compile-time dependant of every component.
 
   Adding a shared component: write it in the submodule it belongs to (or a new
-  one), then add its name to `@components`.
+  one), then add its name to `@shared`.
 
   `use` takes `only: [name: 1, …]` to import a subset. `button_classes/1,2`,
   the classes of an action button for an element that cannot be one, comes
