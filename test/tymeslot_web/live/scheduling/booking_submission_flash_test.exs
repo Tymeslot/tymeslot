@@ -73,7 +73,8 @@ defmodule TymeslotWeb.Live.Scheduling.BookingSubmissionFlashTest do
         is_default: true,
         advance_booking_days: 30,
         min_advance_hours: 0,
-        buffer_minutes: 0
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0
       )
 
     insert(:calendar_integration, user: user, provider: "google", is_active: true)
@@ -217,6 +218,15 @@ defmodule TymeslotWeb.Live.Scheduling.BookingSubmissionFlashTest do
     } do
       enable_recaptcha()
       view = navigate_to_booking_form(conn, profile, event_type)
+
+      # The marker is verified like any token, and Google refuses it.
+      stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body: Jason.encode!(%{"success" => false, "error-codes" => ["invalid-input-response"]})
+         }}
+      end)
 
       # The client-side hook reports that the script never loaded, the branch a
       # privacy extension or restrictive CSP produces.

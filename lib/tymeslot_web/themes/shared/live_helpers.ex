@@ -56,6 +56,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       socket
       |> assign_initial_state_fun.()
       |> ThemeUtils.assign_user_timezone(params)
+      |> ThemeUtils.assign_attendee_prefill()
       |> ThemeUtils.assign_theme_with_preview(params)
 
     # Resolve the username context (which sets meeting_types) unless the
@@ -543,10 +544,14 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     client_ip = ClientIP.get(socket)
     submission_token = SubmissionToken.generate()
 
-    # Pre-fill form if rescheduling, scoped to the organizer to prevent PII leaks
-    reschedule_uid = socket.assigns[:reschedule_meeting_uid]
-    organizer_user_id = socket.assigns[:organizer_user_id]
-    form_data = ThemeFlow.build_booking_form_data(reschedule_uid, organizer_user_id)
+    # Pre-fill form if rescheduling, scoped to the organizer to prevent PII
+    # leaks; otherwise from the booking link's fragment, if it carried one
+    form_data =
+      ThemeFlow.build_booking_form_data(
+        socket.assigns[:reschedule_meeting_uid],
+        socket.assigns[:organizer_user_id],
+        socket.assigns.attendee_prefill
+      )
 
     socket
     |> OrganizerHelpers.setup_form_state(form_data, as: :booking)

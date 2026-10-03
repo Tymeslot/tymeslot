@@ -569,7 +569,7 @@ ENABLE_GITHUB_AUTH=false     # Enable GitHub login/signup
 
 ### Error tracking
 
-Tymeslot records every unexpected error, process crash and failed background job in its own database, with the user id and the request, LiveView or job it happened in (request path, parameters, headers and client IP included; credentials, tokens, cookies and email addresses are redacted first). Nothing leaves your server unless you enable admin alert emails. Records of an error not seen for 30 days are resolved, and deleted 30 days later.
+Tymeslot records every unexpected error, process crash and failed background job in its own database, with the user id and the request, LiveView or job it happened in (request path, parameters and headers included; credentials, tokens, cookies, email addresses and the client's IP address are redacted first). Nothing leaves your server unless you enable admin alert emails. Records of an error not seen for 30 days are resolved, and deleted 30 days later.
 
 To store nothing, set:
 
@@ -578,6 +578,12 @@ ERROR_TRACKING_ENABLED=false
 ```
 
 Errors are then only logged. See the `ERROR TRACKING` section of [`.env.example`](.env.example) for exactly what is kept and for how long.
+
+### Log retention
+
+Tymeslot writes structured JSON logs to stdout. Personal data is kept out of them: email addresses and the names, recipients and subjects of the emails it sends are redacted, and a visitor's IP address is cut down to its network (the first three parts of an IPv4 address, the first three groups of an IPv6 one) before it is written. Security events (sign-ins, rate-limit hits, lockouts) still record that network and the browser's user agent, so an operator can tell one source of traffic from another. Rate limiting and account lockout use the full address, in memory only, for the few minutes they need it.
+
+How long the logs are kept is up to your container runtime: `docker logs` keeps whatever its logging driver retains, which with the default `json-file` driver is everything until the container is removed, unless you set `max-size` and `max-file` for it. Tymeslot can also write the stream to rotating, gzipped files: set `LOG_FILE_PATH` (and optionally `LOG_FILE_MAX_BYTES` and `LOG_FILE_MAX_FILES`, 10 MB and 30 files by default) as described in the `LOG FILE` section of [`.env.example`](.env.example). Those files rotate by size, not by age.
 
 ### Booking Analytics (optional)
 
@@ -710,6 +716,8 @@ docker compose up -d --build
 ```
 
 > **Upgrading an older install — database volume renamed to `tymeslot_pg`.** Earlier versions named the PostgreSQL volume `postgres_data` (build script / manual `docker run`) or `<project>_postgres_data` (Docker Compose). Both now use `tymeslot_pg`. If you started Tymeslot before this change, your existing data is in the old volume — re-point the new mount at it, e.g. `-v postgres_data:/var/lib/postgresql/data`, or migrate the data into `tymeslot_pg` once, so the upgrade doesn't start against an empty database.
+
+> **Upgrading to a release that strips upload metadata.** Avatars and theme backgrounds no longer keep the location, capture time and camera or phone details that photos and videos often carry. Files uploaded before the update are cleaned automatically, once, in the background on the first start after updating; the log reports `Upload metadata sweep finished` when it is done. To run the clean-up again by hand, for instance after restoring an old copy of the uploads, run it as the app's user so the files keep their owner: `docker exec -u app tymeslot bin/tymeslot eval 'Tymeslot.Release.strip_upload_metadata()'`. It is safe to repeat. QuickTime (`.mov`) videos are no longer accepted as theme backgrounds; a `.mov` background you already have keeps working.
 
 ---
 

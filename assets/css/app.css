@@ -71,6 +71,11 @@
   .phx-change-loading& { @slot; }
   .phx-change-loading & { @slot; }
 }
+/* While files are dragged over a `phx-drop-target`. */
+@custom-variant phx-drop-target-active {
+  .phx-drop-target-active& { @slot; }
+  .phx-drop-target-active & { @slot; }
+}
 
 /* Content sources (formerly the `content` globs). v4 auto-detects file
    extensions; paths are relative to this file. */

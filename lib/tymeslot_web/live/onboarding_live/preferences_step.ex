@@ -2,7 +2,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   @moduledoc """
   Scheduling preference step components for the onboarding flow.
 
-  Each preference (buffer time, booking window, minimum notice) is
+  Each preference (buffers, booking window, minimum notice) is
   rendered as its own step with preset/custom toggle behaviour.
   """
 
@@ -16,13 +16,21 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   alias TymeslotWeb.OnboardingLive.TextHelpers
 
   @doc """
-  Renders the buffer time preference step.
+  Renders the buffer step: a row for the time kept free before each booking,
+  and one for the time kept free after it. Both sit in one form, so the step's
+  change event carries whichever row was edited.
   """
-  attr :buffer_minutes, :integer, required: true
+  attr :buffer_before_minutes, :integer, required: true
+  attr :buffer_after_minutes, :integer, required: true
   attr :form_errors, :map, required: true
 
   attr :custom_input_mode, :map,
-    default: %{buffer_minutes: false, advance_booking_days: false, min_advance_hours: false}
+    default: %{
+      buffer_before_minutes: false,
+      buffer_after_minutes: false,
+      advance_booking_days: false,
+      min_advance_hours: false
+    }
 
   @spec buffer_time_step(map()) :: Phoenix.LiveView.Rendered.t()
   def buffer_time_step(assigns) do
@@ -34,23 +42,61 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
       class="onboarding-form"
     >
       <p class="onboarding-preference-example">
-        {buffer_example(@buffer_minutes)}
+        {buffer_example(@buffer_before_minutes, @buffer_after_minutes)}
       </p>
 
-      <div class="onboarding-preference-presets">
-        <%= for {label, value} <- StepConfig.buffer_time_options() do %>
+      <.buffer_row
+        id="onboarding-buffer-before"
+        field={:buffer_before_minutes}
+        label={dpgettext("onboarding_wizard", "buffer", "Before")}
+        aria_label={dgettext("onboarding_wizard", "Custom buffer before, in minutes")}
+        value={@buffer_before_minutes}
+        form_errors={@form_errors}
+        custom_input_mode={@custom_input_mode}
+      />
+
+      <.buffer_row
+        id="onboarding-buffer-after"
+        field={:buffer_after_minutes}
+        label={dpgettext("onboarding_wizard", "buffer", "After")}
+        aria_label={dgettext("onboarding_wizard", "Custom buffer after, in minutes")}
+        value={@buffer_after_minutes}
+        form_errors={@form_errors}
+        custom_input_mode={@custom_input_mode}
+      />
+    </form>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :field, :atom, required: true
+  attr :label, :string, required: true
+  attr :aria_label, :string, required: true
+  attr :value, :integer, required: true
+  attr :form_errors, :map, required: true
+  attr :custom_input_mode, :map, required: true
+
+  defp buffer_row(assigns) do
+    assigns =
+      assign(assigns,
+        param: Atom.to_string(assigns.field),
+        custom_mode: Map.get(assigns.custom_input_mode, assigns.field, false)
+      )
+
+    ~H"""
+    <div id={@id} class="onboarding-form-group">
+      <p id={"#{@id}-label"} class="label">{@label}</p>
+
+      <div class="onboarding-preference-presets" role="group" aria-labelledby={"#{@id}-label"}>
+        <%= for {label, value} <- StepConfig.buffer_time_options(@field) do %>
           <button
             type="button"
             phx-click="update_scheduling_preferences"
-            phx-value-buffer_minutes={value}
+            {%{"phx-value-#{@param}" => value}}
             phx-value-_preset="true"
             class={[
               "btn-tag-selector btn-tag-selector-primary",
-              if(
-                @buffer_minutes == value and
-                  not Map.get(@custom_input_mode, :buffer_minutes, false),
-                do: "btn-tag-selector-primary--active"
-              )
+              if(@value == value and not @custom_mode, do: "btn-tag-selector-primary--active")
             ]}
           >
             {label}
@@ -58,19 +104,20 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
         <% end %>
 
         <.custom_input_toggle
-          field_name="buffer_minutes"
-          current_value={@buffer_minutes}
-          preset_values={CustomInputModeHelper.presets(:buffer_minutes)}
-          constraints={StepConfig.buffer_minutes_constraints()}
+          field_name={@param}
+          current_value={@value}
+          preset_values={CustomInputModeHelper.presets(@field)}
+          constraints={StepConfig.buffer_constraints()}
           style_variant="primary"
-          custom_mode={Map.get(@custom_input_mode, :buffer_minutes, false)}
+          custom_mode={@custom_mode}
+          aria_label={@aria_label}
         />
       </div>
 
-      <%= for message <- FormValidationHelpers.field_errors(@form_errors, :buffer_minutes) do %>
+      <%= for message <- FormValidationHelpers.field_errors(@form_errors, @field) do %>
         <p class="mt-2 text-token-sm text-red-600 font-bold">{message}</p>
       <% end %>
-    </form>
+    </div>
     """
   end
 
@@ -81,7 +128,12 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   attr :form_errors, :map, required: true
 
   attr :custom_input_mode, :map,
-    default: %{buffer_minutes: false, advance_booking_days: false, min_advance_hours: false}
+    default: %{
+      buffer_before_minutes: false,
+      buffer_after_minutes: false,
+      advance_booking_days: false,
+      min_advance_hours: false
+    }
 
   @spec booking_window_step(map()) :: Phoenix.LiveView.Rendered.t()
   def booking_window_step(assigns) do
@@ -140,7 +192,12 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   attr :form_errors, :map, required: true
 
   attr :custom_input_mode, :map,
-    default: %{buffer_minutes: false, advance_booking_days: false, min_advance_hours: false}
+    default: %{
+      buffer_before_minutes: false,
+      buffer_after_minutes: false,
+      advance_booking_days: false,
+      min_advance_hours: false
+    }
 
   @spec minimum_notice_step(map()) :: Phoenix.LiveView.Rendered.t()
   def minimum_notice_step(assigns) do
@@ -198,6 +255,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   attr :constraints, :map, required: true
   attr :style_variant, :string, required: true
   attr :custom_mode, :boolean, required: true
+  attr :aria_label, :string, default: nil
 
   defp custom_input_toggle(assigns) do
     ~H"""
@@ -210,6 +268,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
           step={@constraints.step}
           value={@current_value}
           name={@field_name}
+          aria-label={@aria_label}
           class="w-20 px-3 py-2 text-token-sm font-black bg-transparent border-0 focus:ring-0 focus:outline-hidden rounded-l-xl"
           placeholder={to_string(@constraints.min)}
         />
@@ -222,6 +281,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
         type="button"
         phx-click="focus_custom_input"
         phx-value-setting={@field_name}
+        aria-label={@aria_label}
         class={"btn-tag-selector btn-tag-selector-#{@style_variant}"}
       >
         {dgettext("onboarding_wizard", "Custom")}
@@ -235,27 +295,30 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   # explanation stays accurate as the user clicks through presets/custom.
   # -------------------------------------------------------------------
 
+  @example_meeting_start ~T[13:00:00]
   @example_meeting_end ~T[14:00:00]
 
-  defp buffer_example(nil), do: buffer_example(15)
-
-  defp buffer_example(0),
+  defp buffer_example(0, 0),
     do:
       dgettext(
         "onboarding_wizard",
-        "With no buffer, the next available slot starts as soon as a meeting ends."
+        "With no buffers, a new booking can sit right next to an existing meeting."
       )
 
-  defp buffer_example(minutes) do
-    next_start = Time.add(@example_meeting_end, minutes * 60)
+  # A new booking needs its before-buffer clear after an existing meeting ends,
+  # and its after-buffer clear before one starts.
+  defp buffer_example(buffer_before, buffer_after) do
     locale = Gettext.get_locale(TymeslotWeb.Gettext)
 
     dgettext(
       "onboarding_wizard",
-      "If someone books a meeting that ends at %{end_time} and your buffer is %{minutes} min, the next available slot starts at %{next_start}.",
+      "If you have a meeting from %{start_time} to %{end_time}, a new booking after it can start at %{next_start} at the earliest, and one before it must end by %{latest_end}.",
+      start_time: LocaleFormat.format_time(@example_meeting_start, locale),
       end_time: LocaleFormat.format_time(@example_meeting_end, locale),
-      minutes: minutes,
-      next_start: LocaleFormat.format_time(next_start, locale)
+      next_start:
+        LocaleFormat.format_time(Time.add(@example_meeting_end, buffer_before * 60), locale),
+      latest_end:
+        LocaleFormat.format_time(Time.add(@example_meeting_start, -buffer_after * 60), locale)
     )
   end
 

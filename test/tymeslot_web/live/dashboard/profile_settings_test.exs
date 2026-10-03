@@ -132,6 +132,30 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
       assert MediaFixtures.image_dimensions(response.resp_body) == {16, 32}
     end
 
+    test "refuses an image over 40 megapixels and says how large it may be", %{
+      conn: conn,
+      profile: profile
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      avatar = %{
+        last_modified: System.system_time(:millisecond),
+        name: "huge.png",
+        content: MediaFixtures.png_declaring(20_000, 20_000),
+        type: "image/png"
+      }
+
+      view
+      |> file_input("#avatar-upload-form", :avatar, [avatar])
+      |> render_upload("huge.png")
+
+      assert render(view) =~
+               "This image is too large (400.0 megapixels). " <>
+                 "Please upload an image of at most 40 megapixels."
+
+      assert Repo.reload!(profile).avatar == nil
+    end
+
     test "does not show error when no files are provided on submit (auto-upload fallback)", %{
       conn: conn
     } do

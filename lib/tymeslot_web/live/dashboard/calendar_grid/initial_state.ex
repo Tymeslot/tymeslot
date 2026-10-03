@@ -41,6 +41,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InitialState do
       show_settings: false,
       show_shortcuts_help: false,
       creating_event: nil,
+      # The `.ics` import modal's state; see `EventHandlers.IcsImport`.
+      ics_import: nil,
       recurrence_prompt: nil,
       # A move of a whole series awaiting confirmation; see `SeriesMove`.
       series_move_prompt: nil,

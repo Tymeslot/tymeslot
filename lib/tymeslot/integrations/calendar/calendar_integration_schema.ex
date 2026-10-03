@@ -25,7 +25,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Shared.PathUtils
+  alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Security.LegacyPlainColumn
   alias Tymeslot.Security.SsrfGuard
 
   # The partial unique index allowing one active integration per user,
@@ -117,22 +119,45 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     field(:google_channel_id, :string)
     field(:google_channel_resource_id, :string)
     field(:google_channel_expires_at, :utc_datetime)
-    # Stored as plaintext: random verification token with no credential reuse risk.
-    # Used solely to verify webhook authenticity. Follow _encrypted pattern if threat model changes.
-    # Redacted like the virtual credential fields below: Google and Outlook
-    # hand this whole struct to the availability fan-out as the provider
-    # client, so it reaches anything that inspects a client — including an OTP
-    # crash report. It is the token inbound webhooks are verified against.
-    field(:google_channel_secret, :string, redact: true)
+    # The token inbound Google notifications are verified against, so holding
+    # it is enough to forge a sync callback: encrypted at rest, and redacted
+    # because Google and Outlook hand this whole struct to the availability
+    # fan-out as the provider client, where anything that inspects a client
+    # (an OTP crash report included) would print it. The plain
+    # `google_channel_secret` column predates this and is no longer read; it
+    # is only emptied when the secret changes (see
+    # `Tymeslot.Security.LegacyPlainColumn`).
+    field(:google_channel_secret, EncryptedString,
+      source: :google_channel_secret_encrypted,
+      redact: true
+    )
+
+    field(:legacy_google_channel_secret, :string,
+      source: :google_channel_secret,
+      load_in_query: false,
+      redact: true
+    )
+
     field(:google_sync_token, :string)
     field(:last_google_notification_at, :utc_datetime)
 
     # Outlook subscription fields
     field(:graph_subscription_id, :string)
     field(:graph_subscription_expires_at, :utc_datetime)
-    # Stored as plaintext: random verification token with no credential reuse risk.
-    # Used solely to verify webhook authenticity. Follow _encrypted pattern if threat model changes.
-    field(:graph_client_state, :string)
+    # The Outlook counterpart of `google_channel_secret`, kept the same way.
+    # It is encrypted rather than hashed because renewing a subscription sends
+    # it back to Graph.
+    field(:graph_client_state, EncryptedString,
+      source: :graph_client_state_encrypted,
+      redact: true
+    )
+
+    field(:legacy_graph_client_state, :string,
+      source: :graph_client_state,
+      load_in_query: false,
+      redact: true
+    )
+
     field(:graph_delta_link, :string)
     field(:last_outlook_notification_at, :utc_datetime)
 
@@ -297,6 +322,24 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     |> unique_constraint([:user_id, :provider],
       name: :unique_active_calendar_null_account_per_user,
       message: dgettext_noop("errors", "an integration for this provider already exists")
+    )
+  end
+
+  @doc """
+  Changeset for the state the application itself records on an integration:
+  the push channel or Graph subscription, sync tokens and timestamps. `attrs`
+  are trusted and applied without `changeset/2`'s validation.
+
+  A new push secret empties its legacy plain column, as
+  `Tymeslot.Security.LegacyPlainColumn` describes.
+  """
+  @spec bookkeeping_changeset(t(), map()) :: Ecto.Changeset.t()
+  def bookkeeping_changeset(%__MODULE__{} = integration, attrs) when is_map(attrs) do
+    integration
+    |> change(attrs)
+    |> LegacyPlainColumn.clear_on_change(
+      google_channel_secret: :legacy_google_channel_secret,
+      graph_client_state: :legacy_graph_client_state
     )
   end
 

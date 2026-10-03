@@ -329,21 +329,6 @@ msgstr "Opravdu chcete smazat %{name}?"
 
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
-msgid "Buffer Between Appointments"
-msgstr "Časová rezerva mezi schůzkami"
-
-#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Buffer time set to custom value"
-msgstr "Časová rezerva nastavena na vlastní hodnotu."
-
-#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Buffer time updated to %{minutes} minutes"
-msgstr "Časová rezerva změněna na %{minutes} minut."
-
-#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
-#, elixir-autogen, elixir-format
 msgid "Custom"
 msgstr "Vlastní"
 
@@ -488,11 +473,6 @@ msgstr "Tyto typy schůzek budou používat váš výchozí rozvrh:"
 #, elixir-autogen, elixir-format
 msgid "These rules apply to every meeting type booked against this schedule."
 msgstr "Tato pravidla platí pro každý typ schůzky, který používá tento rozvrh."
-
-#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
-#, elixir-autogen, elixir-format
-msgid "Time to block after each appointment for preparation, travel, or breaks."
-msgstr "Čas, který se po každé schůzce zablokuje na přípravu, cestu nebo přestávku."
 
 #: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -829,3 +809,48 @@ msgstr "Žádné nadcházející volno"
 #, elixir-autogen, elixir-format
 msgid "Schedules"
 msgstr "Rozvrhy"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "After each meeting"
+msgstr "Po každé schůzce"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Before each meeting"
+msgstr "Před každou schůzkou"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer Time"
+msgstr "Časová rezerva"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer after meetings set to custom value"
+msgstr "Časová rezerva po schůzkách nastavena na vlastní hodnotu."
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer after meetings updated to %{minutes} minutes"
+msgstr "Časová rezerva po schůzkách změněna na %{minutes} minut."
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer before meetings set to custom value"
+msgstr "Časová rezerva před schůzkami nastavena na vlastní hodnotu."
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer before meetings updated to %{minutes} minutes"
+msgstr "Časová rezerva před schůzkami změněna na %{minutes} minut."
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Preparation time kept free before each booking."
+msgstr "Čas na přípravu, který zůstane volný před každou rezervací."
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Wrap-up time kept free after each booking."
+msgstr "Čas na dokončení, který zůstane volný po každé rezervaci."

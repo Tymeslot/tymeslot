@@ -23,16 +23,6 @@
   visibility: hidden;
 }
 
-/* Honeypot security field - visually hidden from humans, accessible to bots */
-.honeypot-field {
-  position: absolute !important;
-  left: -9999px !important;
-  top: auto !important;
-  width: 1px !important;
-  height: 1px !important;
-  overflow: hidden !important;
-}
-
 /* Awaiting-payment view — used by embedded paid bookings while Stripe
    Checkout is open in a new tab. Kept theme-agnostic on purpose so both
    Quill and Rhythm render the same neutral wait-state. */

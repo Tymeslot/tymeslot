@@ -122,7 +122,9 @@ defmodule Tymeslot.Availability.SchedulesTest do
   describe "duplicate/1 copying" do
     test "copies the weekly pattern and policy but not the date overrides", %{profile: profile} do
       {:ok, source} = Schedules.create_default(profile.id)
-      {:ok, source} = Schedules.update_policy(source, %{buffer_minutes: 45})
+
+      {:ok, source} =
+        Schedules.update_policy(source, %{buffer_before_minutes: 45, buffer_after_minutes: 45})
 
       {:ok, _override} =
         AvailabilityOverrideQueries.create_override(%{
@@ -140,7 +142,7 @@ defmodule Tymeslot.Availability.SchedulesTest do
       refute copy.is_default
       assert length(copy_days) == 7
       assert Enum.map(copy_days, & &1.is_available) == Enum.map(source_days, & &1.is_available)
-      assert copy.buffer_minutes == 45
+      assert {copy.buffer_before_minutes, copy.buffer_after_minutes} == {45, 45}
 
       assert AvailabilityOverrideQueries.get_overrides_by_schedule_and_date_range(
                copy.id,
@@ -237,17 +239,18 @@ defmodule Tymeslot.Availability.SchedulesTest do
   end
 
   describe "update_policy/2" do
-    test "updates the three policy fields from string params", %{profile: profile} do
+    test "updates the policy fields from string params", %{profile: profile} do
       {:ok, schedule} = Schedules.create_default(profile.id)
 
       {:ok, updated} =
         Schedules.update_policy(schedule, %{
-          "buffer_minutes" => "30",
+          "buffer_before_minutes" => "30",
+          "buffer_after_minutes" => "10",
           "min_advance_hours" => "48",
           "advance_booking_days" => "60"
         })
 
-      assert updated.buffer_minutes == 30
+      assert {updated.buffer_before_minutes, updated.buffer_after_minutes} == {30, 10}
       assert updated.min_advance_hours == 48
       assert updated.advance_booking_days == 60
     end
@@ -255,8 +258,10 @@ defmodule Tymeslot.Availability.SchedulesTest do
     test "rejects an out-of-range value", %{profile: profile} do
       {:ok, schedule} = Schedules.create_default(profile.id)
 
-      assert {:error, changeset} = Schedules.update_policy(schedule, %{"buffer_minutes" => "999"})
-      assert Map.has_key?(errors_on(changeset), :buffer_minutes)
+      assert {:error, changeset} =
+               Schedules.update_policy(schedule, %{"buffer_after_minutes" => "999"})
+
+      assert Map.has_key?(errors_on(changeset), :buffer_after_minutes)
     end
   end
 
@@ -271,7 +276,7 @@ defmodule Tymeslot.Availability.SchedulesTest do
       {:ok, schedule} = Schedules.create_default(profile.id)
       key = seed_cache(user.id)
 
-      {:ok, _updated} = Schedules.update_policy(schedule, %{"buffer_minutes" => "45"})
+      {:ok, _updated} = Schedules.update_policy(schedule, %{"buffer_before_minutes" => "45"})
 
       assert cache_missing?(key)
     end
@@ -307,7 +312,7 @@ defmodule Tymeslot.Availability.SchedulesTest do
       key = seed_cache(user.id)
 
       assert {:error, _changeset} =
-               Schedules.update_policy(schedule, %{"buffer_minutes" => "999"})
+               Schedules.update_policy(schedule, %{"buffer_before_minutes" => "999"})
 
       refute cache_missing?(key)
     end

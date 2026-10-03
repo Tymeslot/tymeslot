@@ -83,7 +83,7 @@ async function rasterise(file, renderWidth) {
 }
 
 // The picked file is read as a data: URL rather than an object URL. The app's
-// Content-Security-Policy sets `img-src 'self' data: https:`, which does not
+// Content-Security-Policy sets `img-src 'self' data:`, which does not
 // include blob:, so an object URL is blocked before the image ever decodes.
 // A data: URL is permitted, is same-origin for canvas purposes (so the canvas
 // is never tainted), and costs only the base64 overhead on a file we already

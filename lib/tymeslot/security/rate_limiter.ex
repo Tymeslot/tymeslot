@@ -419,6 +419,18 @@ defmodule Tymeslot.Security.RateLimiter do
     do: Calendar.check_event_edit(user_id)
 
   @doc """
+  Rate limit importing an `.ics` file into a calendar. Each import may write up
+  to a thousand events to the user's calendar provider.
+  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+
+  Limit: 5 imports per hour per user.
+  """
+  @spec check_calendar_ics_import_rate_limit(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_calendar_ics_import_rate_limit(user_id),
+    do: Calendar.check_ics_import(user_id)
+
+  @doc """
   Rate limit moving events between calendars (delete + create).
   Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
 

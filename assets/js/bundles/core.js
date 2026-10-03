@@ -22,6 +22,7 @@ import { ScrollStrip } from "../hooks/scroll_strip"
 import { installAnalytics, installEventBridge, installClickTracking, AnalyticsView } from "../analytics"
 import { installImageFallback } from "../image_fallback"
 import { installClipboardCopy } from "../clipboard_copy"
+import { takeAttendeePrefill } from "../attendee_prefill"
 
 // Reveal image fallbacks on load error (replaces inline onerror handlers).
 installImageFallback()
@@ -91,10 +92,18 @@ const socketPath = (window.self !== window.top) ? "/embed-live" : "/live"
 
 // Initialize LiveSocket with core hooks
 // Route-specific bundles will extend this with additional hooks before connecting
+// A booking link's `#name=…&email=…` fragment, read before the socket
+// connects. Only booking pages take it (attendee_prefill.js), so a fragment on
+// any other page is left alone.
+const attendeePrefill = document.documentElement.classList.contains("scheduling-app")
+  ? takeAttendeePrefill()
+  : {}
+
 let liveSocket = new LiveSocket(socketPath, Socket, {
   params: {
     _csrf_token: csrfToken,
-    timezone: getUserTimezone()
+    timezone: getUserTimezone(),
+    attendee_prefill: attendeePrefill
   },
   hooks: CoreHooks
 })

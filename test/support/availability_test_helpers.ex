@@ -7,6 +7,7 @@ defmodule Tymeslot.AvailabilityTestHelpers do
 
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Availability.AvailabilityScheduleSchema
+  alias Tymeslot.Availability.Offer
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
   alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.MeetingTestHelpers
@@ -166,5 +167,20 @@ defmodule Tymeslot.AvailabilityTestHelpers do
       7 -> Date.add(date, 1)
       _weekday -> date
     end
+  end
+
+  @doc """
+  The times the booking page offers, through its own pipeline.
+  """
+  @spec offered(ProfileSchema.t(), Date.t(), String.t() | integer(), keyword()) :: [map()]
+  def offered(profile, date, duration, opts \\ []) do
+    request = %{
+      profile: profile,
+      user_timezone: Keyword.get(opts, :timezone, profile.timezone),
+      meeting_type: Keyword.get(opts, :meeting_type)
+    }
+
+    {:ok, slots} = Offer.slots_for_date(request, Date.to_iso8601(date), duration)
+    slots
   end
 end

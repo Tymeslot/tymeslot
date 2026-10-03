@@ -476,6 +476,15 @@ defmodule TymeslotWeb.DashboardLive do
       |> CalendarEventHandlers.handle_create_ad_hoc_meeting_result(socket)
       |> rebuild_agenda()
 
+  def handle_info({:execute_ics_import, payload}, socket),
+    do: CalendarEventHandlers.handle_execute_ics_import(payload, socket)
+
+  def handle_info({:ics_import_progress, done}, socket),
+    do: CalendarEventHandlers.handle_ics_import_progress(done, socket)
+
+  def handle_info({:ics_import_result, result}, socket),
+    do: CalendarEventHandlers.handle_ics_import_result(result, socket)
+
   def handle_info({:execute_delete_event, payload}, socket),
     do: CalendarEventHandlers.handle_execute_delete_event(payload, socket)
 

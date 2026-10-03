@@ -276,11 +276,72 @@ defmodule Tymeslot.Availability.FilterAvailableSlotsTest do
     end
   end
 
+  # The buffers pad the candidate slot: `before` ahead of its start, `after`
+  # behind its end. The first two cases are the spec's worked example; the
+  # third uses a pair that a swapped implementation gets wrong in both
+  # directions.
+  describe "asymmetric buffers" do
+    test "the before-buffer hides a slot that starts too soon after a busy block" do
+      date = Date.add(Date.utc_today(), 7)
+      events = [build_conflict_map(date, ~T[09:00:00], ~T[10:00:00])]
+
+      result =
+        filter_slots(["10:00 AM", "10:15 AM"], events, %{
+          date: date,
+          buffer_before_minutes: 15,
+          buffer_after_minutes: 5
+        })
+
+      assert result == ["10:15 AM"]
+    end
+
+    test "the after-buffer hides a slot that ends too close to the next busy block" do
+      date = Date.add(Date.utc_today(), 7)
+
+      events = [
+        build_conflict_map(date, ~T[09:00:00], ~T[10:00:00]),
+        build_conflict_map(date, ~T[11:00:00], ~T[12:00:00])
+      ]
+
+      result =
+        filter_slots(["10:15 AM", "10:30 AM"], events, %{
+          date: date,
+          buffer_before_minutes: 15,
+          buffer_after_minutes: 5
+        })
+
+      # 10:30-11:00 leaves no five minutes before 11:00; 10:15-10:45 leaves 15.
+      assert result == ["10:15 AM"]
+    end
+
+    test "each buffer applies only on its own side" do
+      date = Date.add(Date.utc_today(), 7)
+      events = [build_conflict_map(date, ~T[10:00:00], ~T[10:30:00])]
+
+      result =
+        filter_slots(["9:30 AM", "10:30 AM", "11:00 AM"], events, %{
+          date: date,
+          buffer_before_minutes: 30,
+          buffer_after_minutes: 0
+        })
+
+      # 9:30 ends as the block starts and needs nothing after it; 10:30 starts
+      # as the block ends and needs thirty minutes before it. Swapped, the
+      # answer for both would flip.
+      assert result == ["9:30 AM", "11:00 AM"]
+    end
+  end
+
   defp conflict_slots(buffer_minutes \\ 0) do
     slots = ["9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM"]
     date = Date.add(Date.utc_today(), 7)
     events = [build_conflict_map(date, ~T[10:00:00], ~T[10:30:00])]
-    filter_slots(slots, events, %{date: date, buffer_minutes: buffer_minutes})
+
+    filter_slots(slots, events, %{
+      date: date,
+      buffer_before_minutes: buffer_minutes,
+      buffer_after_minutes: buffer_minutes
+    })
   end
 
   defp filter_slots(slots, events, overrides) do
@@ -299,6 +360,14 @@ defmodule Tymeslot.Availability.FilterAvailableSlotsTest do
   end
 
   defp filter_opts(overrides) do
-    Map.merge(%{min_advance_hours: 0, max_advance_booking_days: 90, buffer_minutes: 0}, overrides)
+    Map.merge(
+      %{
+        min_advance_hours: 0,
+        max_advance_booking_days: 90,
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0
+      },
+      overrides
+    )
   end
 end

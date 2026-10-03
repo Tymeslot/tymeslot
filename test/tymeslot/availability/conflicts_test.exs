@@ -64,7 +64,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
           "Etc/UTC",
           events,
           DateTime.utc_now(),
-          %{buffer_minutes: 0}
+          %{buffer_before_minutes: 0, buffer_after_minutes: 0}
         )
 
       assert result == true
@@ -82,7 +82,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
           "Etc/UTC",
           events,
           DateTime.utc_now(),
-          %{buffer_minutes: 0}
+          %{buffer_before_minutes: 0, buffer_after_minutes: 0}
         )
 
       assert result == false
@@ -133,7 +133,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
           "Etc/UTC",
           events_in_tz,
           DateTime.utc_now(),
-          %{buffer_minutes: 0}
+          %{buffer_before_minutes: 0, buffer_after_minutes: 0}
         )
 
       assert result == true
@@ -213,7 +213,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
           "Etc/UTC",
           events_in_tz,
           DateTime.utc_now(),
-          %{buffer_minutes: 0, min_advance_hours: 0}
+          %{buffer_before_minutes: 0, buffer_after_minutes: 0, min_advance_hours: 0}
         )
 
       # All-day event covers 00:00–00:00 next day, should block the entire day
@@ -286,7 +286,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
           %{start_time: start_dt, end_time: end_dt}
         end)
 
-      config = %{buffer_minutes: 15, min_advance_hours: 0}
+      config = %{buffer_before_minutes: 15, buffer_after_minutes: 15, min_advance_hours: 0}
 
       check = fn ->
         Conflicts.date_has_slots_with_events?(

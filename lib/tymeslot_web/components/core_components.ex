@@ -49,7 +49,7 @@ defmodule TymeslotWeb.Components.CoreComponents do
        :card,
        :subsection_header
      ]},
-    {:Forms, [:input, :form_wrapper, :password_requirements]},
+    {:Forms, [:input, :form_wrapper, :password_requirements, :honeypot_field]},
     {:Page, [:dashboard_page]},
     {:SettingRow, [:setting_row]},
     {:Feedback, [:spinner, :empty_state, :loading_card, :pill]},

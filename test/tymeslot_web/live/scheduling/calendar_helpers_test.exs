@@ -127,7 +127,8 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpersTest do
         schedule_id: schedule.id,
         max_advance_booking_days: schedule.advance_booking_days,
         min_advance_hours: schedule.min_advance_hours,
-        buffer_minutes: schedule.buffer_minutes,
+        buffer_before_minutes: schedule.buffer_before_minutes,
+        buffer_after_minutes: schedule.buffer_after_minutes,
         owner_timezone: "Etc/UTC"
       }
     end
@@ -294,7 +295,8 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpersTest do
           is_default: true,
           advance_booking_days: 90,
           min_advance_hours: 0,
-          buffer_minutes: 0
+          buffer_before_minutes: 0,
+          buffer_after_minutes: 0
         )
 
       for day_of_week <- 1..7 do

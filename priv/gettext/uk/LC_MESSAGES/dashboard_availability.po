@@ -329,21 +329,6 @@ msgstr "Ви впевнені, що хочете видалити %{name}?"
 
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
-msgid "Buffer Between Appointments"
-msgstr "Перерва між зустрічами"
-
-#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Buffer time set to custom value"
-msgstr "Для перерви встановлено власне значення"
-
-#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Buffer time updated to %{minutes} minutes"
-msgstr "Час перерви оновлено: %{minutes} хв"
-
-#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
-#, elixir-autogen, elixir-format
 msgid "Custom"
 msgstr "Власне"
 
@@ -488,11 +473,6 @@ msgstr "Ці типи зустрічей використовуватимуть 
 #, elixir-autogen, elixir-format
 msgid "These rules apply to every meeting type booked against this schedule."
 msgstr "Ці правила застосовуються до кожного типу зустрічі, який використовує цей розклад."
-
-#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
-#, elixir-autogen, elixir-format
-msgid "Time to block after each appointment for preparation, travel, or breaks."
-msgstr "Час, який резервується після кожної зустрічі для підготовки, дороги або перерви."
 
 #: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -828,3 +808,48 @@ msgstr "Немає запланованих відсутностей"
 #, elixir-autogen, elixir-format
 msgid "Schedules"
 msgstr "Розклади"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "After each meeting"
+msgstr "Після кожної зустрічі"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Before each meeting"
+msgstr "Перед кожною зустріччю"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer Time"
+msgstr "Перерви"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer after meetings set to custom value"
+msgstr "Для перерви після зустрічей встановлено власне значення"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer after meetings updated to %{minutes} minutes"
+msgstr "Перерву після зустрічей оновлено: %{minutes} хв"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer before meetings set to custom value"
+msgstr "Для перерви перед зустрічами встановлено власне значення"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer before meetings updated to %{minutes} minutes"
+msgstr "Перерву перед зустрічами оновлено: %{minutes} хв"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Preparation time kept free before each booking."
+msgstr "Час на підготовку, що залишається вільним перед кожним бронюванням."
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Wrap-up time kept free after each booking."
+msgstr "Час на завершення, що залишається вільним після кожного бронювання."

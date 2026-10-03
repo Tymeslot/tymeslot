@@ -48,7 +48,8 @@ defmodule Tymeslot.Availability.OfferTest do
       schedule =
         schedule
         |> Changeset.change(
-          buffer_minutes: 15,
+          buffer_before_minutes: 20,
+          buffer_after_minutes: 5,
           min_advance_hours: 6,
           advance_booking_days: 21
         )
@@ -68,7 +69,7 @@ defmodule Tymeslot.Availability.OfferTest do
       assert Map.drop(offer, [:limit_checker, :duration_minutes]) ==
                Map.drop(submit, [:owner_timezone])
 
-      assert offer.buffer_minutes == 15
+      assert {offer.buffer_before_minutes, offer.buffer_after_minutes} == {20, 5}
       assert offer.min_advance_hours == 6
       assert offer.max_advance_booking_days == 21
       assert offer.slot_interval_minutes == 20

@@ -29,10 +29,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AdminEmails do
            metadata
          ) do
       {:ok, _result} ->
-        Logger.info("Admin alert email delivered",
-          category: category,
-          recipient: recipient
-        )
+        Logger.info("Admin alert email delivered", category: category)
 
         :ok
 
@@ -53,8 +50,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AdminEmails do
     case Config.email_service_module().send_admin_alert_digest(recipient, digest) do
       {:ok, _result} ->
         Logger.info("Admin alert digest email delivered",
-          entries: length(Map.get(digest, "entries", [])),
-          recipient: recipient
+          entries: length(Map.get(digest, "entries", []))
         )
 
         :ok

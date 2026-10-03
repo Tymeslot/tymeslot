@@ -12,6 +12,11 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
   6. Hourly calendar availability refusal counters (30 days retention)
   7. Abandoned Telegram setup stubs (own minute-scale TTL, not a day count)
   8. Analytics visitor-hash salts (each kept only for its own UTC day)
+  9. Accounts still unverified 30 days after sign-up, with the email address
+     and sign-up IP they hold
+  10. Financial records past their statutory retention period (years, counted
+      from the end of the financial year; see
+      `Tymeslot.MeetingPayments.DataRetention`)
 
   Ensures the database doesn't grow indefinitely by removing
   old records based on configured retention periods.
@@ -25,7 +30,10 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
   require Logger
 
   alias Tymeslot.Analytics
+  alias Tymeslot.Auth
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.HealthCheck.AvailabilityRefusalQueries
+  alias Tymeslot.MeetingPayments.DataRetention
   alias Tymeslot.Slack
   alias Tymeslot.Telegram
   alias Tymeslot.Webhooks.WebhookQueries
@@ -80,6 +88,13 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
       config_key: :availability_refusal_days,
       default_days: 30,
       prune: {AvailabilityRefusalQueries, :prune_older_than}
+    },
+    %{
+      name: "unverified account",
+      args_key: "unverified_account_retention_days",
+      config_key: :unverified_account_days,
+      default_days: 30,
+      prune: {Auth, :purge_unverified_accounts}
     }
   ]
 
@@ -91,6 +106,8 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
     prune_orphaned_telegram_stubs()
 
     prune_expired_analytics_salts()
+
+    purge_expired_financial_records()
 
     Enum.each(@retention_jobs, &run_cleanup(&1, args))
 
@@ -152,6 +169,21 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
   defp prune_expired_analytics_salts do
     {count, _rows} = Analytics.prune_expired_salts()
     Logger.info("Pruned expired analytics salts", deleted_count: count)
+  end
+
+  # Not a `@retention_jobs` entry: the statutory period is counted in years
+  # from the end of a financial year, not as a rolling window of days, and it
+  # is fixed by law rather than tunable per run.
+  defp purge_expired_financial_records do
+    case DataRetention.purge_expired() do
+      {:ok, counts} ->
+        Logger.info("Purged financial records past their retention period", Map.to_list(counts))
+
+      {:error, reason} ->
+        Logger.error("Failed to purge financial records past their retention period",
+          reason: LogFormat.reason(reason)
+        )
+    end
   end
 
   defp nullify_stale_payloads(args) do

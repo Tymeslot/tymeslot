@@ -123,6 +123,55 @@ defmodule Tymeslot.Auth.AccountDeletion do
 
   defp delete_uploaded_files(result, _profile), do: result
 
+  # A daily run deletes at most this many, so a sign-up flood cannot turn one
+  # run into an unbounded loop of deletions; the rest go on the following days.
+  @purge_batch_size 500
+
+  @doc """
+  Deletes accounts still unverified `days` after sign-up, through
+  `delete_account/1`, so each goes exactly as an erasure request would.
+
+  An unverified account cannot sign in, so after a month it is an abandoned
+  sign-up, or one made with somebody else's address, holding an email
+  address and the IP it was registered from. An account sent a fresh
+  verification link within the window is spared. At most #{@purge_batch_size}
+  are deleted per call, and none for a `days` below one.
+
+  Returns `{deleted_count, nil}`, the shape `Tymeslot.Workers.DataRetentionWorker`
+  expects of a prune function.
+  """
+  @spec purge_unverified_accounts(integer()) :: {non_neg_integer(), nil}
+  def purge_unverified_accounts(days) when is_integer(days) and days > 0 do
+    cutoff = DateTime.add(DateTime.utc_now(), -days, :day)
+
+    deleted =
+      cutoff
+      |> UserQueries.list_stale_unverified_users(@purge_batch_size)
+      |> Enum.count(&purged?/1)
+
+    {deleted, nil}
+  end
+
+  # A zero or negative window would select every unverified account, however
+  # new: the retention worker passes such values through from job args, and
+  # they must delete nothing.
+  def purge_unverified_accounts(_days), do: {0, nil}
+
+  defp purged?(user) do
+    case delete_account(user) do
+      {:ok, _deleted} ->
+        true
+
+      {:error, reason} ->
+        Logger.error("Could not purge an unverified account",
+          user_id: user.id,
+          reason: LogFormat.reason(reason)
+        )
+
+        false
+    end
+  end
+
   defp run_account_deletion_hook(user_id) do
     case Application.get_env(:tymeslot, :account_deletion_hook) do
       nil -> :ok
