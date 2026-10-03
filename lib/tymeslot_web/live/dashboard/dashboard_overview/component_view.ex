@@ -73,7 +73,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
           <:actions>
             <.link
               patch={~p"/dashboard"}
-              class="text-turquoise-600 hover:text-turquoise-700 font-bold text-token-sm transition-colors flex items-center gap-1 group shrink-0"
+              class="text-turquoise-600 hover:text-turquoise-700 font-bold text-token-sm transition-colors flex items-center gap-1 group shrink-0 -my-3 -mx-2 py-3 px-2 rounded-token-md"
             >
               {dgettext("dashboard_home", "View calendar")}
               <span class="group-hover:translate-x-1 transition-transform">→</span>
@@ -217,7 +217,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
 
         <div class="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div class="min-w-0">
-            <h3 class="text-token-2xl font-black tracking-tight truncate">
+            <h3 class="text-token-base font-semibold truncate">
               {DashboardFormat.title(@entry.title)}
             </h3>
             <p class="mt-1 text-white/90 font-semibold text-token-sm">
@@ -374,9 +374,9 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
 
   defp group_heading(assigns) do
     ~H"""
-    <h4 class="mb-3 text-token-xs font-black uppercase tracking-widest text-tymeslot-400">
+    <h3 class="mb-3 text-token-base font-semibold text-tymeslot-900">
       {@label}
-    </h4>
+    </h3>
     """
   end
 end

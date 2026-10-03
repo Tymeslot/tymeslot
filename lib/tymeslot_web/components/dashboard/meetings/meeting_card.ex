@@ -189,7 +189,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
           <div class="w-8 h-8 rounded-token-lg bg-white shadow-sm flex items-center justify-center shrink-0 border border-tymeslot-100">
             <Icons.icon name={@icon} class="w-4 h-4 text-tymeslot-400" />
           </div>
-          <h3 class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest">
+          <h3 class="text-token-base font-semibold text-tymeslot-900">
             {@title}
           </h3>
         </div>

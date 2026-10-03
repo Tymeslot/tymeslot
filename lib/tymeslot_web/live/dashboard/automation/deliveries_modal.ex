@@ -5,8 +5,6 @@ defmodule TymeslotWeb.Dashboard.Automation.DeliveriesModal do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias TymeslotWeb.Components.CoreComponents.Icons
-  alias TymeslotWeb.Components.CoreComponents.Modal
   alias TymeslotWeb.Dashboard.Automation.DeliveryComponents
 
   attr :show, :boolean, default: false
@@ -19,7 +17,7 @@ defmodule TymeslotWeb.Dashboard.Automation.DeliveriesModal do
   @spec deliveries_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def deliveries_modal(assigns) do
     ~H"""
-    <Modal.modal
+    <.modal
       id="deliveries-modal"
       show={@show}
       on_cancel={@on_close}
@@ -36,16 +34,18 @@ defmodule TymeslotWeb.Dashboard.Automation.DeliveriesModal do
         <DeliveryComponents.delivery_stats_grid stats={@stats} />
 
         <div>
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-black text-tymeslot-900 flex items-center gap-2">
-              <Icons.icon name="hero-list-bullet" class="w-5 h-5" />
-              {dgettext("dashboard_automation", "Recent Deliveries")}
-            </h3>
-            <div class="flex items-center gap-1.5 text-token-xs text-tymeslot-500 font-medium bg-tymeslot-50 px-2 py-1 rounded-token-lg border border-tymeslot-100">
-              <Icons.icon name="hero-information-circle" class="w-3.5 h-3.5" />
-              {dgettext("dashboard_automation", "Test calls are not logged")}
-            </div>
-          </div>
+          <.subsection_header
+            icon="hero-list-bullet"
+            title={dgettext("dashboard_automation", "Recent Deliveries")}
+            class="mb-4"
+          >
+            <:actions>
+              <div class="flex items-center gap-1.5 text-token-xs text-tymeslot-500 font-medium bg-tymeslot-50 px-2 py-1 rounded-token-lg border border-tymeslot-100">
+                <.icon name="hero-information-circle" class="w-3.5 h-3.5" />
+                {dgettext("dashboard_automation", "Test calls are not logged")}
+              </div>
+            </:actions>
+          </.subsection_header>
           <DeliveryComponents.delivery_list deliveries={@deliveries} time_format={@time_format} />
         </div>
       </div>
@@ -57,7 +57,7 @@ defmodule TymeslotWeb.Dashboard.Automation.DeliveriesModal do
           </.action_button>
         </div>
       </:footer>
-    </Modal.modal>
+    </.modal>
     """
   end
 end
