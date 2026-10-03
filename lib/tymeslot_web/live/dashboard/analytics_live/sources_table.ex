@@ -6,8 +6,9 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SourcesTable do
 
   Two layouts share one precomputed row set: a column table from the `sm`
   breakpoint up, and stacked cards below it so the four columns don't overflow
-  a narrow phone screen. While `loading?` is true a skeleton stands in for both,
-  and with no rows one empty state replaces them.
+  a narrow phone screen, both under the card's title. While `loading?` is
+  true a skeleton stands in for both, and with no rows one empty state
+  replaces them; the title stays in every state.
   """
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
@@ -32,7 +33,10 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SourcesTable do
     assigns = assign(assigns, :rows, rows)
 
     ~H"""
-    <.card padding={:none} class="overflow-hidden">
+    <.card padding={:none} class="overflow-hidden" data-testid="analytics-sources">
+      <div class="px-6 pt-6 pb-4 text-token-xs font-black uppercase tracking-widest text-tymeslot-400">
+        {dgettext("dashboard_analytics", "Traffic sources")}
+      </div>
       <div :if={@loading?} class="space-y-3 p-4" aria-hidden="true">
         <div
           :for={i <- 1..3}

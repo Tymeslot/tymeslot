@@ -158,7 +158,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
 
         <p
           :if={@loaded? and @refreshed_at}
-          class="text-token-xs tabular-nums text-tymeslot-400"
+          class="text-token-xs tabular-nums text-tymeslot-500"
           aria-live="polite"
         >
           {dgettext("dashboard_analytics", "Updated %{time}",
@@ -182,7 +182,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
           loading?={!@loaded?}
         />
 
-        <p class="text-token-xs leading-relaxed text-tymeslot-400">
+        <p class="text-token-xs leading-relaxed text-tymeslot-500">
           <%!--
             Be honest about the cookieless model: the daily-rotated fingerprint
             means a visitor is counted once per UTC day, so multi-day "unique

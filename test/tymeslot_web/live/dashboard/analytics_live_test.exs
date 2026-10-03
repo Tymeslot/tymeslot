@@ -79,6 +79,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
 
       assert html =~ "linkedin"
       assert html =~ "twitter"
+      assert html =~ "Traffic sources"
     end
 
     test "switching to the 7-day range makes it the active range", %{conn: conn, user: user} do
@@ -242,6 +243,18 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
              )
 
       refute has_element?(view, "svg[role='img']")
+    end
+
+    test "keeps the sources card titled when it has no rows", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/analytics")
+
+      assert has_element?(
+               view,
+               "[data-testid='analytics-sources']",
+               "No traffic in this period yet"
+             )
+
+      assert has_element?(view, "[data-testid='analytics-sources'] > div", "Traffic sources")
     end
 
     test "shows a conversion rate once there are visitors", %{conn: conn, user: user} do
