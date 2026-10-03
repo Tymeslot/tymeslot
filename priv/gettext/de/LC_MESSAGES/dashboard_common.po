@@ -124,11 +124,6 @@ msgid "Scheduling"
 msgstr "Terminplanung"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
-#, elixir-autogen, elixir-format
-msgid "Setup recommended"
-msgstr "Einrichtung empfohlen"
-
-#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format

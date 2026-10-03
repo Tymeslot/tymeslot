@@ -169,35 +169,6 @@
     left: 100%;
   }
 
-  /* Nav row that still needs a setup action — gentle full-row highlight.
-     Never applied to the active row (see sidebar component), so the solid
-     active gradient always wins and the two tiers stay visually distinct. */
-  .dashboard-nav-link--needs-setup {
-    @apply bg-turquoise-50/70 text-turquoise-700;
-  }
-
-  /* Short, vertically-centred accent pill — reads as an indicator,
-     not a full-height frame edge. */
-  .dashboard-nav-link--needs-setup::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 3px;
-    height: 55%;
-    border-radius: var(--radius-full);
-    background: var(--color-primary-500);
-  }
-
-  .dashboard-nav-link--needs-setup:hover::before {
-    background: var(--color-primary-600);
-  }
-
-  .dashboard-nav-link--needs-setup svg {
-    color: var(--color-primary-600);
-  }
-
   /* Focus states for accessibility: a ring for keyboard focus only, so a
      mouse click does not leave one behind. */
   .dashboard-nav-link:focus {
@@ -355,46 +326,14 @@
   }
 }
 
-/* Dashboard Navigation Notification Badge */
+/* Dashboard navigation setup dot: positions the small dot at the row's end.
+   The dot itself is drawn in the sidebar component. */
 .dashboard-nav-notification {
   position: absolute;
   top: 50%;
-  right: 8px;
+  right: 12px;
   transform: translateY(-50%);
-  background: var(--gradient-blue);
-  color: white;
-  border-radius: 50%;
-  width: 14px;
-  height: 14px;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 8px;
-  font-weight: 600;
-  line-height: 1;
-  /* Deliberate non-palette white alpha: a neutral highlight, not a brand colour. */
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  box-shadow: 
-    0 1px 4px color-mix(in oklab, var(--color-info) 20%, transparent),
-    0 0 0 1px color-mix(in oklab, var(--color-info) 10%, transparent);
-  z-index: 10;
-  opacity: 0.8;
-  transition: opacity 0.2s ease;
-}
-
-.dashboard-nav-notification--warning {
-  background: var(--gradient-amber);
-  box-shadow: 
-    0 1px 4px color-mix(in oklab, var(--color-warning) 20%, transparent),
-    0 0 0 1px color-mix(in oklab, var(--color-warning) 10%, transparent);
-}
-
-.dashboard-nav-notification--info {
-  background: var(--gradient-turquoise);
-  box-shadow:
-    0 1px 4px color-mix(in oklab, var(--color-primary-500) 25%, transparent),
-    0 0 0 1px color-mix(in oklab, var(--color-primary-600) 15%, transparent);
-  opacity: 1;
 }
 
 /* Selector Buttons - Used for mode selection in forms */
@@ -414,19 +353,6 @@
   border-color: var(--color-primary-400) !important;
   color: var(--color-text-on-glass) !important;
   @apply shadow-lg shadow-turquoise-500/20;
-}
-
-/* Subtle hover effect for badges */
-.dashboard-nav-link:hover .dashboard-nav-notification {
-  opacity: 1;
-  transform: translateY(-50%) scale(1.05);
-}
-
-/* Reduced motion support for notifications */
-@media (prefers-reduced-motion: reduce) {
-  .dashboard-nav-notification {
-    animation: none;
-  }
 }
 
 /* ===================================

@@ -150,7 +150,6 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 current={@current_action}
                 action={:meeting_settings}
                 show_notification={not (@integration_status[:has_meeting_types] || false)}
-                notification_type="info"
                 notification_title={
                   dgettext("dashboard_common", "Add a meeting type so guests have something to book")
                 }
@@ -205,7 +204,6 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 current={integrations_current(@current_action)}
                 action={:integrations}
                 show_notification={@missing_integrations != []}
-                notification_type="info"
                 notification_title={integration_setup_title(@missing_integrations)}
               >
                 <.icon name="hero-puzzle-piece" class="w-5 h-5" />
@@ -318,8 +316,11 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
   attr :current, :atom, required: true
   attr :action, :atom, required: true
   attr :show_notification, :boolean, default: false
-  attr :notification_type, :string, default: "critical"
-  attr :notification_title, :string, default: nil
+
+  attr :notification_title, :string,
+    default: nil,
+    doc: "Why the row carries a setup dot; required whenever `show_notification` is true."
+
   attr :locked, :boolean, default: false
   attr :rest, :global
   slot :inner_block, required: true
@@ -335,33 +336,29 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
       {@rest}
       class={[
         "dashboard-nav-link",
-        if(@current == @action,
-          do: "dashboard-nav-link--active",
-          else: ""
-        ),
-        if(@show_notification and @current != @action,
-          do: "dashboard-nav-link--needs-setup",
-          else: ""
-        ),
+        if(@current == @action, do: "dashboard-nav-link--active", else: ""),
         if(@locked, do: "opacity-75", else: "")
       ]}
     >
       {render_slot(@inner_block)}
-      <%!-- Notification Badge --%>
-      <div
+      <%!-- Setup reminder: a small dot and nothing more, so the row never reads
+            as a second selected item. Only the current section is styled as
+            active. The reason is carried as text for screen readers and as a
+            tooltip for pointers. --%>
+      <span
         :if={@show_notification}
-        class={[
-          "dashboard-nav-notification",
-          case @notification_type do
-            "warning" -> "dashboard-nav-notification--warning"
-            "info" -> "dashboard-nav-notification--info"
-            _other -> ""
-          end
-        ]}
-        title={@notification_title || dgettext("dashboard_common", "Setup recommended")}
+        class="dashboard-nav-notification"
+        title={@notification_title}
       >
-        !
-      </div>
+        <span
+          class={[
+            "block w-2 h-2 rounded-token-full",
+            if(@current == @action, do: "bg-white", else: "bg-turquoise-500")
+          ]}
+          aria-hidden="true"
+        ></span>
+        <span class="sr-only">{@notification_title}</span>
+      </span>
     </.link>
     """
   end

@@ -192,7 +192,70 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
            ) == 1
 
     assert length(Floki.find(doc, ".dashboard-nav-notification")) == 2
-    assert html =~ "!"
+
+    # Each badge is a bare dot: hidden from assistive technology, with its
+    # reason spoken from screen-reader-only text instead.
+    assert doc
+           |> Floki.find(
+             "a[href='/dashboard/meeting-settings'] .dashboard-nav-notification .sr-only"
+           )
+           |> Floki.text() == "Add a meeting type so guests have something to book"
+
+    assert length(Floki.find(doc, ".dashboard-nav-notification [aria-hidden=true]")) == 2
+    refute html =~ ~r/dashboard-nav-notification[^>]*>\s*!/
+  end
+
+  describe "Integrations item styling" do
+    @needs_setup %{has_calendar: false, has_video: false, has_meeting_types: true}
+    @all_connected %{has_calendar: true, has_video: true, has_meeting_types: true}
+
+    test "carries no highlight on another page while setup is outstanding" do
+      link = integrations_link(:overview, @needs_setup)
+
+      assert link_classes(link) == ["dashboard-nav-link"]
+      assert Floki.attribute(link, "aria-current") == []
+      assert length(Floki.find(link, ".dashboard-nav-notification")) == 1
+    end
+
+    test "carries no highlight and no dot on another page once everything is connected" do
+      link = integrations_link(:polls, @all_connected)
+
+      assert link_classes(link) == ["dashboard-nav-link"]
+      assert Floki.attribute(link, "aria-current") == []
+      assert Floki.find(link, ".dashboard-nav-notification") == []
+    end
+
+    test "is styled as active on the Integrations page, with or without outstanding setup" do
+      for status <- [@needs_setup, @all_connected] do
+        link = integrations_link(:integrations, status)
+
+        assert link_classes(link) == ["dashboard-nav-link", "dashboard-nav-link--active"]
+        assert Floki.attribute(link, "aria-current") == ["page"]
+      end
+    end
+
+    test "only the current section is highlighted on any page while setup is outstanding" do
+      for action <- [:overview, :meetings, :polls, :theme, :settings] do
+        doc =
+          (&DashboardSidebar.sidebar/1)
+          |> render_component(%{
+            current_action: action,
+            integration_status: %{has_calendar: false, has_video: false, has_meeting_types: false},
+            profile: %{username: "testuser"}
+          })
+          |> Floki.parse_document!()
+
+        highlighted =
+          doc
+          |> Floki.find("aside nav a.dashboard-nav-link")
+          |> Enum.reject(&(link_classes(&1) == ["dashboard-nav-link"]))
+          |> Enum.flat_map(&Floki.attribute(&1, "href"))
+
+        assert length(highlighted) == 1, "#{action}: #{inspect(highlighted)}"
+        refute "/dashboard/integrations" in highlighted
+        refute "/dashboard/meeting-settings" in highlighted
+      end
+    end
   end
 
   test "Integrations badge shows when only one of calendar/video is unconnected" do
@@ -298,11 +361,22 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     assert html =~ "Some Untranslated Extension"
   end
 
-  # The badge is a hover affordance, so what it says lives in the `title`
-  # attribute rather than in the rendered text.
+  # The badge is a bare dot, so what it says is carried twice: as
+  # screen-reader-only text and as a hover tooltip. Both must agree.
   defp integrations_badge_title(integration_status) do
+    badge =
+      :overview
+      |> integrations_link(integration_status)
+      |> Floki.find(".dashboard-nav-notification")
+
+    [title] = Floki.attribute(badge, "title")
+    assert badge |> Floki.find(".sr-only") |> Floki.text() == title
+    title
+  end
+
+  defp integrations_link(current_action, integration_status) do
     assigns = %{
-      current_action: :overview,
+      current_action: current_action,
       integration_status: integration_status,
       profile: %{username: "testuser"}
     }
@@ -310,9 +384,11 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     (&DashboardSidebar.sidebar/1)
     |> render_component(assigns)
     |> Floki.parse_document!()
-    |> Floki.find("a[href='/dashboard/integrations'] .dashboard-nav-notification")
-    |> Floki.attribute("title")
-    |> List.first()
+    |> Floki.find("aside nav a[href='/dashboard/integrations']")
+  end
+
+  defp link_classes(link) do
+    link |> Floki.attribute("class") |> Enum.join(" ") |> String.split()
   end
 
   # In the umbrella build the SaaS config repoints :dashboard_extension_gettext at
