@@ -268,7 +268,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
   def pill(assigns) do
     assigns =
       assign(assigns,
-        tone_class: Map.fetch!(@pill_tone_classes, assigns.tone),
+        tone_class: pill_tone_class(assigns.tone),
         size_class: Map.fetch!(@pill_size_classes, assigns.size),
         icon_class: Map.fetch!(@pill_icon_classes, assigns.size),
         dot_class: (assigns.dot or assigns.pulse) && pill_dot_class(assigns.tone)
@@ -302,4 +302,11 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
   """
   @spec pill_dot_class(atom()) :: String.t()
   def pill_dot_class(tone), do: Map.fetch!(@pill_dot_classes, tone)
+
+  @doc """
+  The background and text classes of a pill in `tone`, for a surface that has
+  to carry the same status colour as the pill beside it (an icon tile, say).
+  """
+  @spec pill_tone_class(atom()) :: String.t()
+  def pill_tone_class(tone), do: Map.fetch!(@pill_tone_classes, tone)
 end

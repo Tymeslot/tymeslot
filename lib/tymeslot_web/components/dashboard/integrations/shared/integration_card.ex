@@ -25,20 +25,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard d
   """
   use TymeslotWeb, :html
 
+  alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.UI.StatusSwitch
 
-  # The icon tile carries the status colour, so a card reads at a glance even
-  # before the pill is read.
-  @tile_classes %{
-    brand: "bg-turquoise-50 text-turquoise-600",
-    success: "bg-turquoise-50 text-turquoise-600",
-    warning: "bg-amber-50 text-amber-600",
-    danger: "bg-red-50 text-red-500",
-    info: "bg-blue-50 text-blue-600",
-    neutral: "bg-tymeslot-100 text-tymeslot-400"
-  }
-
-  @tones Map.keys(@tile_classes)
+  # The icon tile carries the status pill's colour, so a card reads at a glance
+  # even before the pill is read.
+  @tones [:brand, :success, :warning, :danger, :info, :neutral]
 
   @notice_classes %{
     neutral: "text-tymeslot-600",
@@ -94,7 +86,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard d
       assign(assigns,
         tone: tone,
         status_label: label,
-        tile_class: Map.fetch!(@tile_classes, tone),
+        tile_class: Feedback.pill_tone_class(tone),
         notice_class: Map.fetch!(@notice_classes, assigns.notice_tone),
         toggle_id: assigns.toggle_id || "toggle-#{assigns.id}",
         summary: present(assigns.summary),

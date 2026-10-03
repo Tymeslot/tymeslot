@@ -112,14 +112,16 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCardTe
   end
 
   describe "status" do
-    for {tone, pill, dot, tile} <- [
-          {:success, "bg-green-100 text-green-700", "bg-green-500", "bg-turquoise-50"},
-          {:warning, "bg-amber-100 text-amber-700", "bg-amber-500", "bg-amber-50"},
-          {:danger, "bg-red-100 text-red-700", "bg-red-500", "bg-red-50"},
-          {:info, "bg-blue-100 text-blue-700", "bg-blue-500", "bg-blue-50"},
-          {:neutral, "bg-tymeslot-100 text-tymeslot-600", "bg-tymeslot-400", "bg-tymeslot-100"}
+    # The icon tile wears the pill's own colours, so the two always agree.
+    for {tone, pill, dot} <- [
+          {:brand, "bg-turquoise-100 text-turquoise-700", "bg-turquoise-500"},
+          {:success, "bg-green-100 text-green-700", "bg-green-500"},
+          {:warning, "bg-amber-100 text-amber-700", "bg-amber-500"},
+          {:danger, "bg-red-100 text-red-700", "bg-red-500"},
+          {:info, "bg-blue-100 text-blue-700", "bg-blue-500"},
+          {:neutral, "bg-tymeslot-100 text-tymeslot-600", "bg-tymeslot-400"}
         ] do
-      test "shows a #{tone} status as a #{pill} pill and a #{tile} icon tile" do
+      test "shows a #{tone} status as a #{pill} pill and icon tile" do
         doc = [status: {unquote(tone), "Label"}] |> render_card() |> doc()
 
         [pill] =
@@ -135,7 +137,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCardTe
         assert dot_class =~ unquote(dot)
 
         assert [tile] = classes(doc, "div.h-11.w-11")
-        assert tile =~ unquote(tile)
+        assert tile =~ unquote(pill)
       end
     end
   end
