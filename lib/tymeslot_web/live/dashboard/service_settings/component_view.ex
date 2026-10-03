@@ -38,7 +38,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
             data-action={if @editing_type, do: "edit-#{@editing_type.id}", else: "new"}
             class="space-y-8"
           >
-            <div class="bg-white p-6 rounded-token-3xl border-2 border-tymeslot-50 shadow-sm space-y-4">
+            <.card class="space-y-4">
               <.section_header
                 icon="hero-squares-2x2"
                 title={
@@ -92,7 +92,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
                   )}
                 </p>
               </div>
-            </div>
+            </.card>
 
             <%!-- One form for both adding and editing. `form_id` is fixed
                   when the form opens and survives creation, so a new

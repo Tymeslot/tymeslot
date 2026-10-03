@@ -48,7 +48,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       |> render_click()
 
       assert Repo.reload!(profile).booking_theme == "2"
-      assert render(view) =~ "Current Style"
+      assert render(view) =~ "Current style"
     end
 
     test "locks Live Preview, focusable and explained, until a calendar is connected", %{

@@ -68,9 +68,9 @@ defmodule TymeslotWeb.Dashboard.EmbedSettingsCompositionTest do
 
       # Fresh mount — the view re-reads the profile, so a regression
       # in how the theme page derives "selected" from the DB would
-      # surface as a missing "Current Style" badge on the fresh mount.
+      # surface as a missing "Current style" badge on the fresh mount.
       {:ok, fresh_view, html} = live(conn, ~p"/dashboard/theme")
-      assert html =~ "Current Style"
+      assert html =~ "Current style"
       assert has_element?(fresh_view, "[phx-value-theme='2']")
     end
 

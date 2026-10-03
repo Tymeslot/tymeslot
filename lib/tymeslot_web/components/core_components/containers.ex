@@ -326,23 +326,15 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
           <% end %>
         </.dynamic_tag>
 
-        <span
-          :if={@count}
-          class="shrink-0 rounded-token-full bg-turquoise-100 px-3 py-1 text-token-xs font-black uppercase tracking-wider text-turquoise-700"
-        >
-          {@count}
-        </span>
+        <Feedback.pill :if={@count} tone={:brand} size={:sm}>{@count}</Feedback.pill>
       </div>
 
       <div class="flex flex-wrap items-center gap-2 sm:gap-3">
         <div role="status">
-          <div
-            :if={@saving}
-            class="flex items-center rounded-token-full border-2 border-green-100 bg-green-50 px-4 py-2 text-token-xs font-black uppercase tracking-wider text-green-700"
-          >
-            <Feedback.spinner class="mr-2 h-4 w-4" />
+          <Feedback.pill :if={@saving} tone={:success} size={:sm}>
+            <Feedback.spinner class="h-3.5 w-3.5" />
             {dgettext("common", "Saving changes...")}
-          </div>
+          </Feedback.pill>
         </div>
         {render_slot(@actions)}
       </div>

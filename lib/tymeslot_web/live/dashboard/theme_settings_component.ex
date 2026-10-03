@@ -99,10 +99,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
                         {theme_name}
                       </h2>
                       <%= if @profile.booking_theme == theme_id do %>
-                        <div class="flex items-center gap-2 bg-turquoise-500 text-white px-4 py-1.5 rounded-token-full text-token-xs font-black uppercase tracking-wider shadow-lg">
-                          <.icon name="hero-check" class="w-4 h-4" />
-                          {dgettext("dashboard_appearance", "Current Style")}
-                        </div>
+                        <.pill tone={:brand} size={:sm} icon="hero-check">
+                          {dgettext("dashboard_appearance", "Current style")}
+                        </.pill>
                       <% end %>
                     </div>
 
