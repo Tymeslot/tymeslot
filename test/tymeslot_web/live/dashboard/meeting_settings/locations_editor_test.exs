@@ -384,6 +384,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
       assert has_element?(view, "[data-testid='location-row']", "Address arranged after booking")
     end
 
+    # There is no create-time counterpart to the two tests above. A new meeting
+    # type renders only its Details tab: the Location panel, and with it the
+    # locations section that opens this editor, exists only once the record
+    # does, so creation always posts the default in-person location, which
+    # names no venue. Deleting a venue mid-create therefore cannot reach the
+    # create; the edit-time case is what the tests above cover.
+
     test "says when no address is selected", %{user: user} = ctx do
       berlin = insert(:venue, user: user, name: "Berlin office")
       {view, _meeting_type} = open_editor(ctx, [office()])
