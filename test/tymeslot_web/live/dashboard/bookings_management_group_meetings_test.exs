@@ -193,7 +193,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementGroupMeetingsTest do
       refute html =~ "Participants"
     end
 
-    test "a group card gives the date its whole row, so the time range stays on one line",
+    test "a group card keeps the time range on one line",
          %{conn: conn, user: user} do
       meeting_type = insert(:meeting_type, user: user, max_participants: 3)
 
@@ -209,7 +209,9 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementGroupMeetingsTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
 
-      assert has_element?(view, "div.md\\:col-span-2 span.whitespace-nowrap")
+      # The range is joined with non-breaking spaces, so it never wraps
+      # mid-range however narrow the date tile is.
+      assert render(view) =~ "\u00A0– "
     end
   end
 

@@ -4,9 +4,9 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
   the user journey where an organiser lets multiple people book the same
   slot and sets the participant limit.
 
-  Edit mode auto-saves every change; create mode serialises the toggle and
-  limit through hidden inputs. Group bookings and payments are mutually
-  exclusive (covered in the dedicated describe below).
+  Edit mode auto-saves every change. A new type is created from its Details
+  tab first, so group bookings are set up once it exists. Group bookings and
+  payments are mutually exclusive (covered in the dedicated describe below).
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -177,15 +177,22 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
   end
 
   describe "Creating" do
-    test "the hidden fields persist the limit on submit", %{conn: conn, user: user} do
+    test "a new type offers group bookings once it is created and its location is fixed",
+         %{conn: conn, user: user} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
       view |> element("button", "Add Meeting Type") |> render_click()
-      hold_at_fixed_location(view)
 
-      # Remove the default reminder so the hidden reminder inputs do not
-      # break Plug.Conn.Query re-encoding on submit (same workaround the
-      # payments create test uses).
-      view |> element("button[aria-label='Remove reminder']") |> render_click()
+      # Only Details renders until the type exists.
+      refute has_element?(view, "input[phx-click='toggle_group_bookings']")
+
+      view
+      |> form("form[phx-submit='create_meeting_type']", %{
+        "meeting_type" => %{"name" => "Group Workshop", "duration" => "60"}
+      })
+      |> render_submit()
+
+      assert render(view) =~ "Meeting type created"
+      hold_at_fixed_location(view)
 
       view
       |> element("input[phx-click='toggle_group_bookings']")
@@ -195,17 +202,6 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
       |> element("input[phx-change='change_max_participants']")
       |> render_change(%{"meeting_type" => %{"max_participants_input" => "12"}})
 
-      view
-      |> form("form[phx-submit='save_meeting_type']", %{
-        "meeting_type" => %{
-          "name" => "Group Workshop",
-          "duration" => "60"
-        }
-      })
-      |> render_submit()
-
-      assert render(view) =~ "Meeting type created"
-
       created =
         Enum.find(
           MeetingTypes.get_all_meeting_types(user.id),
@@ -213,25 +209,6 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
         )
 
       assert created.max_participants == 12
-    end
-
-    test "an invalid pending limit disables the submit button", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
-      view |> element("button", "Add Meeting Type") |> render_click()
-      hold_at_fixed_location(view)
-
-      view
-      |> element("input[phx-click='toggle_group_bookings']")
-      |> render_click()
-
-      refute has_element?(view, "button[type='submit'][disabled]")
-
-      view
-      |> element("input[phx-change='change_max_participants']")
-      |> render_change(%{"meeting_type" => %{"max_participants_input" => "1"}})
-
-      assert render(view) =~ "Participant limit must be at least 2"
-      assert has_element?(view, "button[type='submit'][disabled]")
     end
   end
 
@@ -259,10 +236,10 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
       :ok
     end
 
-    test "requiring payment disables the group toggle and blocks the event", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
-      view |> element("button", "Add Meeting Type") |> render_click()
-      hold_at_fixed_location(view)
+    test "requiring payment disables the group toggle and blocks the event",
+         %{conn: conn, user: user} do
+      meeting_type = insert_type(user)
+      view = edit(conn, meeting_type)
 
       view
       |> element("input[phx-click='toggle_payment_required']")
@@ -276,17 +253,16 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
       # (mirroring the pattern in payments_settings_test.exs) rather than
       # clicking the disabled DOM element, which LiveViewTest itself refuses.
       view
-      |> with_target("#meeting-type-form-wrapper-meeting-type-form-new")
+      |> with_target("#meeting-type-form-wrapper-meeting-type-form-edit-#{meeting_type.id}")
       |> render_click("toggle_group_bookings", %{})
 
       refute render(view) =~ "Participant limit"
     end
 
     test "enabling group bookings disables the payments toggle and blocks the event",
-         %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
-      view |> element("button", "Add Meeting Type") |> render_click()
-      hold_at_fixed_location(view)
+         %{conn: conn, user: user} do
+      meeting_type = insert_type(user)
+      view = edit(conn, meeting_type)
 
       view
       |> element("input[phx-click='toggle_group_bookings']")
@@ -300,7 +276,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
       # (mirroring the pattern in payments_settings_test.exs) rather than
       # clicking the disabled DOM element, which LiveViewTest itself refuses.
       view
-      |> with_target("#meeting-type-form-wrapper-meeting-type-form-new")
+      |> with_target("#meeting-type-form-wrapper-meeting-type-form-edit-#{meeting_type.id}")
       |> render_click("toggle_payment_required", %{})
 
       refute render(view) =~ "Price (USD)"
@@ -366,8 +342,18 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
     insert(:meeting_type, [user: user, locations: [in_person_location([venue])]] ++ attrs)
   end
 
-  # The new-type form opens on an in-person location with no venue, which a
-  # group type cannot offer; turn it into a written one.
+  defp edit(conn, meeting_type) do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+    view
+    |> element("button[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
+    |> render_click()
+
+    view
+  end
+
+  # A new type starts on an in-person location with no venue, which a group
+  # type cannot offer; turn it into a written one.
   defp hold_at_fixed_location(view) do
     view
     |> element("[data-testid='location-row'] button[phx-click='edit_location']")

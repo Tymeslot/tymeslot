@@ -339,31 +339,21 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupRulesTest do
   end
 
   describe "creating after a failed save" do
-    test "an error no field clears does not leave the create button disabled",
-         %{conn: conn, user: user} do
+    test "a refused create does not block the next one", %{conn: conn, user: user} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
       view |> element("button", "Add Meeting Type") |> render_click()
-      view |> element("button[aria-label='Remove reminder']") |> render_click()
 
-      # A video location naming no valid integration (a stale or forged
-      # post) is refused as a `:base` error, which no field's own validation
-      # ever clears.
       view
-      |> form("form[phx-submit='save_meeting_type']", %{
-        "meeting_type" => %{"name" => "Office Hours", "duration" => "30"}
+      |> form("form[phx-submit='create_meeting_type']", %{
+        "meeting_type" => %{"name" => "", "duration" => "30"}
       })
-      |> render_submit(%{
-        "meeting_type" => %{
-          "locations" => %{"0" => %{"kind" => "video", "video_integration_ids" => ["abc"]}}
-        }
-      })
+      |> render_submit()
 
-      assert has_element?(view, "p.form-error", "Invalid location")
       refute Enum.any?(MeetingTypes.get_all_meeting_types(user.id), &(&1.name == "Office Hours"))
       refute has_element?(view, "button[type='submit'][disabled]")
 
       view
-      |> form("form[phx-submit='save_meeting_type']", %{
+      |> form("form[phx-submit='create_meeting_type']", %{
         "meeting_type" => %{"name" => "Office Hours", "duration" => "30"}
       })
       |> render_submit()
