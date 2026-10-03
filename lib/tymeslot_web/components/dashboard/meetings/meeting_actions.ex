@@ -12,7 +12,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Meetings.MeetingState
-  alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.Dashboard.Appointments.JoinLink
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
 
   attr :meeting, :map, required: true
@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
               the action the card is for and must not outweigh it. The solid red
               button is the confirm inside the modal each one opens. --%>
       <div :if={MeetingState.awaiting_approval?(@meeting)} class="contents">
-        <Buttons.loading_button
+        <.loading_button
           id={"approve-request-#{@meeting.id}"}
           phx-click="approve_request"
           phx-value-id={@meeting.id}
@@ -46,9 +46,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
           class="w-full"
         >
           {dgettext("dashboard_bookings", "Approve")}
-        </Buttons.loading_button>
+        </.loading_button>
 
-        <Buttons.action_button
+        <.action_button
           phx-click="show_decline_modal"
           phx-value-id={@meeting.id}
           phx-target={@target}
@@ -60,7 +60,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
           class="w-full"
         >
           {dgettext("dashboard_bookings", "Decline")}
-        </Buttons.action_button>
+        </.action_button>
       </div>
 
       <div
@@ -70,19 +70,14 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
         }
         class="contents"
       >
-        <Buttons.action_link
+        <JoinLink.join_link
           :if={@meeting.meeting_url}
-          href={@meeting.meeting_url}
-          target="_blank"
-          rel="noopener noreferrer"
+          url={@meeting.meeting_url}
           size={:sm}
-          icon="hero-video-camera"
           class="w-full"
-        >
-          {dgettext("dashboard_bookings", "Join meeting")}
-        </Buttons.action_link>
+        />
 
-        <Buttons.action_button
+        <.action_button
           :if={Helpers.can_add_guests?(@meeting)}
           id={"add-guests-#{@meeting.id}"}
           phx-click="show_add_guests_modal"
@@ -95,9 +90,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
           class="w-full"
         >
           {dgettext("dashboard_bookings", "Add guest")}
-        </Buttons.action_button>
+        </.action_button>
 
-        <Buttons.action_button
+        <.action_button
           phx-click="show_reschedule_modal"
           phx-value-id={@meeting.id}
           phx-target={@target}
@@ -108,9 +103,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
           class="w-full"
         >
           {dgettext("dashboard_bookings", "Reschedule")}
-        </Buttons.action_button>
+        </.action_button>
 
-        <Buttons.loading_button
+        <.loading_button
           id={"cancel-meeting-#{@meeting.id}"}
           phx-click="show_cancel_modal"
           phx-value-id={@meeting.id}
@@ -124,7 +119,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
           class="w-full"
         >
           {dgettext("dashboard_bookings", "Cancel")}
-        </Buttons.loading_button>
+        </.loading_button>
       </div>
       <div
         :if={
