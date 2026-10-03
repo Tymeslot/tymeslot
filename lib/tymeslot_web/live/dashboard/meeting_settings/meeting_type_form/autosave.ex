@@ -103,33 +103,37 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
     assign(socket, :save_status, :incomplete)
   end
 
-  # Changeset failure where price_cents is the only missing required field:
-  # payment was just toggled on but the user hasn't entered a price yet.
-  # Treat as :incomplete (guidance) so the "Couldn't save" indicator doesn't
-  # fire before they've had a chance to fill in the price.
+  # Changeset failure where price_cents is the only failing field and no
+  # price has been entered yet: payment was just toggled on. Treat as
+  # :incomplete (guidance) so the "Couldn't save" indicator doesn't fire
+  # before they've had a chance to fill in the price. A price that has been
+  # entered but is refused (below the currency minimum, say) is a real error
+  # and shows beside the price input like any other.
   defp apply_result({:error, %Ecto.Changeset{} = changeset}, socket)
        when socket.assigns.payment_required == true do
     errors = FormHelpers.format_changeset_errors(changeset)
 
-    if Map.keys(errors) == [:price_cents] do
-      assign(socket, :save_status, :incomplete)
-    else
-      Logger.warning("Autosave changeset failure",
-        user_id: socket.assigns.current_user.id,
-        meeting_type_id: socket.assigns.type.id
-      )
+    cond do
+      Map.keys(errors) != [:price_cents] ->
+        log_changeset_failure(socket)
 
-      socket
-      |> assign(:form_errors, errors)
-      |> assign(:save_status, :error)
+        socket
+        |> assign(:form_errors, errors)
+        |> assign(:save_status, :error)
+
+      price_blank?(socket.assigns.payment_price) ->
+        assign(socket, :save_status, :incomplete)
+
+      # The organiser's own input was refused, not a fault worth logging.
+      true ->
+        socket
+        |> assign(:form_errors, errors)
+        |> assign(:save_status, :error)
     end
   end
 
   defp apply_result({:error, %Ecto.Changeset{} = changeset}, socket) do
-    Logger.warning("Autosave changeset failure",
-      user_id: socket.assigns.current_user.id,
-      meeting_type_id: socket.assigns.type.id
-    )
+    log_changeset_failure(socket)
 
     socket
     |> assign(:form_errors, FormHelpers.format_changeset_errors(changeset))
@@ -147,6 +151,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
     |> assign(:form_errors, FormHelpers.format_context_error(reason))
     |> assign(:save_status, :error)
   end
+
+  defp log_changeset_failure(socket) do
+    Logger.warning("Autosave changeset failure",
+      user_id: socket.assigns.current_user.id,
+      meeting_type_id: socket.assigns.type.id
+    )
+  end
+
+  defp price_blank?(price) when is_binary(price), do: String.trim(price) == ""
+  defp price_blank?(_price), do: true
 
   # A save can go through without venues the form still listed, when they
   # were deleted elsewhere meanwhile (see `Submission.persist/4`). The form

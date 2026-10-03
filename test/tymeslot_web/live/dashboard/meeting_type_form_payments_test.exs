@@ -98,7 +98,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormPaymentsTest do
       assert saved.price_cents == 2500
     end
 
-    test "a below-minimum price is not persisted",
+    test "a below-minimum price surfaces an error beside the price and does not persist",
          %{conn: conn, user: user} do
       meeting_type = insert(:meeting_type, user: user, name: "Too Cheap")
       view = open_editor(conn, meeting_type)
@@ -115,7 +115,35 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormPaymentsTest do
 
       refute saved.payment_required
       assert is_nil(saved.price_cents)
-      refute render(view) =~ "All changes saved"
+
+      assert has_element?(
+               view,
+               "#meeting-type-form-tabs-panel-booking",
+               "must be at least USD 0.50"
+             )
+
+      assert has_element?(view, "[aria-live='polite']", "Couldn't save changes")
+    end
+  end
+
+  describe "Turning payment on before entering a price" do
+    setup %{user: user} do
+      Application.put_env(:tymeslot, :meeting_payments_enabled, true)
+      insert(:connect_account, user: user, charges_enabled: true, default_currency: "usd")
+      :ok
+    end
+
+    test "asks for the price without reporting an error", %{conn: conn, user: user} do
+      meeting_type = insert(:meeting_type, user: user, name: "Not priced yet")
+      view = open_editor(conn, meeting_type)
+
+      view
+      |> element("input[phx-click='toggle_payment_required']")
+      |> render_click()
+
+      refute MeetingTypes.get_meeting_type(meeting_type.id, user.id).payment_required
+      assert has_element?(view, "[aria-live='polite']", "Complete the form to save")
+      refute render(view) =~ "must be at least"
     end
   end
 
