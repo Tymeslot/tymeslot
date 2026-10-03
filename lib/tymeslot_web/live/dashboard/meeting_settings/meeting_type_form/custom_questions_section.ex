@@ -117,7 +117,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
             >
               <%!-- Drag handle --%>
               <span class="drag-handle cursor-grab active:cursor-grabbing text-tymeslot-400 shrink-0">
-                <.icon name="hero-equals" class="w-4 h-4" />
+                <.icon name="hero-bars-2" class="w-4 h-4" />
               </span>
 
               <%!-- Question info --%>

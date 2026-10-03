@@ -61,7 +61,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Flash do
           icon_bg_color(@kind)
         ]}>
           <Icons.icon :if={@kind == :info} name="hero-information-circle" class="h-6 w-6" />
-          <Icons.icon :if={@kind == :error} name="hero-exclamation-triangle" class="h-6 w-6" />
+          <Icons.icon :if={@kind == :error} name="hero-exclamation-circle" class="h-6 w-6" />
           <Icons.icon :if={@kind == :warning} name="hero-exclamation-triangle" class="h-6 w-6" />
         </div>
 

@@ -137,7 +137,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
                 class="w-4 h-4 rounded-token-full hover:bg-turquoise-200 flex items-center justify-center transition-colors"
                 aria-label={dgettext("dashboard_calendar_events", "Remove %{email}", email: email)}
               >
-                <.icon name="hero-x-mark" class="w-2.5 h-2.5" />
+                <.icon name="hero-x-mark-micro" class="w-2.5 h-2.5" />
               </button>
             </span>
           </div>
@@ -380,7 +380,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
                 class="w-4 h-4 rounded-token-full hover:bg-amber-200 flex items-center justify-center transition-colors"
                 aria-label={dgettext("dashboard_calendar_events", "Remove %{email}", email: email)}
               >
-                <.icon name="hero-x-mark" class="w-2.5 h-2.5" />
+                <.icon name="hero-x-mark-micro" class="w-2.5 h-2.5" />
               </button>
             </span>
           </div>

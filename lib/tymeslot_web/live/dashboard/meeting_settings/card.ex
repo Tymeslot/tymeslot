@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
       <div class="flex items-center gap-3">
         <%!-- Drag Handle --%>
         <div class="cursor-grab active:cursor-grabbing text-tymeslot-400 shrink-0">
-          <Icons.icon name="hero-equals" class="w-5 h-5" />
+          <Icons.icon name="hero-bars-2" class="w-5 h-5" />
         </div>
 
         <%= if @type.icon && @type.icon != "none" do %>
