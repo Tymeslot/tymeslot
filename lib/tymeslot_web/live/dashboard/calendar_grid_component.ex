@@ -18,14 +18,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   - `:profile`      — optional, only its `:timezone` field is read.
 
   Additional assigns forwarded from the parent dashboard LiveView:
-  - `:shared_data`               — map of shared cross-component data, defaults to `%{}`.
-  - `:integration_status`        — current calendar integration status.
-  - `:saving`                    — boolean, whether the parent is persisting something.
-  - `:client_ip`                 — client IP string, used for audit / rate-limit context.
-  - `:user_agent`                — client user-agent string.
-  - `:live_action`               — current route live action atom.
-  - `:params`                    — current URL params map.
-  - `:custom_questions_allowed`  — boolean feature flag.
+  - `:shared_data`: map of shared cross-component data, defaults to `%{}`.
+  - `:integration_status`: current calendar integration status.
+  - `:saving`: boolean, whether the parent is persisting something.
+  - `:client_ip`: client IP string, used for audit / rate-limit context.
+  - `:user_agent`: client user-agent string.
+  - `:live_action`: current route live action atom.
+  - `:params`: current URL params map.
+  - `:custom_questions_allowed`: boolean feature flag.
+  - `:group_bookings_allowed`: boolean feature flag.
 
   Parent-to-component messages travel through `send_update/2` with an `:action` key.
   These bypass attr validation and are dispatched in the `update/2` clauses below:
@@ -190,7 +191,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
 
   @impl Phoenix.LiveComponent
   def update(%{action: :refresh_guest_summaries}, socket),
-    do: {:ok, assign_guest_rsvp_summaries(socket)}
+    do: {:ok, assign_meeting_overlays(socket)}
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
@@ -200,7 +201,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
 
     socket =
       if just_initialized do
-        assign_guest_rsvp_summaries(socket)
+        assign_meeting_overlays(socket)
       else
         socket
       end
@@ -208,9 +209,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     {:ok, socket}
   end
 
-  # Loads the `meeting_uid => RSVP summary` map for the calendar owner so
-  # Tymeslot-created event blocks can show a guest indicator.
-  defp assign_guest_rsvp_summaries(socket) do
+  # Loads the uid-keyed RSVP summaries behind the guest indicator the grid
+  # overlays onto Tymeslot-created event blocks. The group meetings shown
+  # locked are loaded with the events instead (`DataLoading.load_events/1`),
+  # so that set follows the visible range.
+  defp assign_meeting_overlays(socket) do
     case socket.assigns[:current_user] do
       %{id: user_id} ->
         assign(socket, :guest_rsvp_summaries, Meetings.guest_rsvp_summaries_for_user(user_id))
@@ -318,6 +321,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   @impl Phoenix.LiveComponent
   def handle_event("event_dropped", params, socket),
     do: DragDrop.handle_event_dropped(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("locked_event_drag", params, socket),
+    do: DragDrop.handle_locked_event_drag(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("event_resized", params, socket),

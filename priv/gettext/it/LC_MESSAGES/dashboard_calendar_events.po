@@ -742,7 +742,6 @@ msgstr "Titolo"
 msgid "Toggle this help"
 msgstr "Attiva/disattiva questa guida"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/drag_drop.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
 #, elixir-autogen, elixir-format
@@ -1503,3 +1502,8 @@ msgstr "Non è stato possibile completare l’importazione. Alcuni dei suoi even
 #, elixir-autogen, elixir-format
 msgid "The import stopped because your calendar is not responding. Please try again later."
 msgstr "L’importazione si è interrotta perché il tuo calendario non risponde. Riprova più tardi."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
+#, elixir-autogen, elixir-format
+msgid "This is a group booking. Move it, cancel it or change who attends from the meeting instead."
+msgstr "Questa è una prenotazione di gruppo. Spostala, annullala o modifica i partecipanti dalla riunione."

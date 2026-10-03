@@ -117,6 +117,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           sync_completed={@sync_completed}
           date={@date}
           guest_rsvp_summaries={@guest_rsvp_summaries}
+          group_booking_uids={@group_booking_uids}
           myself={@myself}
         />
         <GridViews.month_view
@@ -186,6 +187,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           time_format={Helpers.time_format(assigns)}
           myself={@myself}
           editable={EditWorkflow.event_editable?(assigns, @selected_event)}
+          time_locked={MapSet.member?(@group_booking_uids, @selected_event.uid)}
           attendee_input={@attendee_input}
           pending_attendees={@pending_attendees}
           video_integrations={@video_integrations}

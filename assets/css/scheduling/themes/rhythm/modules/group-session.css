@@ -1,0 +1,61 @@
+/* ==========================================================================
+   Group session: the marks of a group meeting type on the booking page
+
+   Matching the shared component
+   (TymeslotWeb.Themes.Shared.Components.GroupSession):
+
+     .group-session-hint  - beside a group type in the meeting-type list
+     .group-session-line  - on the confirmation screen
+     .group-session-move  - on the date step of a participant moving their spot
+
+   Neutral surfaces in the text colour around them: these are facts about the
+   booking, not states to warn about or celebrate. The hint inherits its colour
+   so it reads on a selected card as on an unselected one.
+   ========================================================================== */
+
+.group-session-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  margin-top: var(--space-3xs);
+  padding: var(--space-hairline) var(--space-2xs);
+  border: var(--border-width-thin) solid var(--border-light);
+  border-radius: var(--radius-full);
+  background: var(--surface-light);
+  color: inherit;
+  font-size: var(--theme-font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--theme-line-height-snug);
+  white-space: nowrap;
+}
+
+.group-session-hint-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex-shrink: 0;
+}
+
+.group-session-line,
+.group-session-move {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  border: var(--border-width-thin) solid var(--border-light);
+  border-radius: var(--radius-lg);
+  background: var(--surface-light);
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-sm);
+  line-height: var(--theme-line-height-snug);
+  text-align: left;
+}
+
+.group-session-move {
+  margin-bottom: var(--space-sm);
+}
+
+.group-session-line-icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}

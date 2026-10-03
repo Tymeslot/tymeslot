@@ -12,7 +12,9 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponentTest do
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Venues
 
@@ -123,6 +125,78 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponentTest do
                Venues.get_venue(user.id, venue.id)
 
       assert has_element?(view, "[data-testid='venue-card']", "The studio")
+    end
+
+    test "refuses to delete the only location of a group meeting type, naming it",
+         %{conn: conn, user: user} do
+      venue = insert(:venue, user: user, name: "Studio")
+
+      workshop =
+        insert(:meeting_type,
+          user: user,
+          name: "Group workshop",
+          max_participants: 6,
+          locations: [in_person_location([venue])]
+        )
+
+      locations_before = workshop.locations
+      view = open(conn)
+
+      view |> element("[phx-click='delete_venue'][phx-value-id='#{venue.id}']") |> render_click()
+
+      assert has_element?(view, "[data-testid='venue-blocked-by']", "Group workshop")
+
+      assert has_element?(
+               view,
+               "#delete-venue-modal",
+               "Studio is the only location of these group meeting types"
+             )
+
+      refute has_element?(view, "[data-testid='confirm-delete-venue']")
+
+      # A confirmation that arrives anyway, say from a page opened before the
+      # type became a group type, is refused by the context and says so.
+      view
+      |> with_target("[data-testid='locations-page']")
+      |> render_click("confirm_delete_venue", %{})
+
+      drain(view)
+
+      assert render(view) =~
+               "This location is the only one of a group meeting type, so it cannot be deleted"
+
+      assert has_element?(view, "[data-testid='venue-blocked-by']", "Group workshop")
+      assert {:ok, _still_there} = Venues.get_venue(user.id, venue.id)
+      assert MeetingTypes.get_meeting_type(workshop.id, user.id).locations == locations_before
+    end
+
+    test "a stale confirmation for a type that became a group type is refused with the modal kept open",
+         %{conn: conn, user: user} do
+      venue = insert(:venue, user: user, name: "Studio")
+
+      consultation =
+        insert(:meeting_type,
+          user: user,
+          name: "Consultation",
+          locations: [in_person_location([venue])]
+        )
+
+      view = open(conn)
+      view |> element("[phx-click='delete_venue'][phx-value-id='#{venue.id}']") |> render_click()
+      assert has_element?(view, "[data-testid='confirm-delete-venue']")
+
+      # Turned into a group type from another tab while the modal was open.
+      consultation |> Changeset.change(max_participants: 4) |> Repo.update!()
+
+      view |> element("[data-testid='confirm-delete-venue']") |> render_click()
+      drain(view)
+
+      assert render(view) =~
+               "This location is the only one of a group meeting type, so it cannot be deleted"
+
+      assert has_element?(view, "[data-testid='venue-blocked-by']", "Consultation")
+      refute has_element?(view, "[data-testid='confirm-delete-venue']")
+      assert {:ok, _still_there} = Venues.get_venue(user.id, venue.id)
     end
 
     test "does not open for a location that is not the organiser's", %{conn: conn} do

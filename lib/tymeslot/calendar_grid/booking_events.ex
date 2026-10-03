@@ -11,6 +11,7 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
 
   alias Tymeslot.CalendarGrid.BookingEvent
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.Seats
 
   @doc """
   Returns the user's live bookings overlapping `[start_dt, end_dt)` as
@@ -36,6 +37,7 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
     user_id
     |> Meetings.list_meetings_in_range_for_organizer(start_dt, end_dt)
     |> Enum.reject(&Meetings.linked_to_calendar_event?(&1, synced_identifiers))
+    |> Meetings.with_live_participants()
     |> Enum.map(&to_event/1)
   end
 
@@ -53,8 +55,23 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
       attendee_email: presence(meeting.attendee_email),
       join_url: presence(meeting.organizer_video_url) || presence(meeting.meeting_url),
       provider_event_id: meeting.provider_event_id,
+      participants: participants(meeting),
+      capacity: meeting.capacity,
+      seats_taken: seats_taken(meeting),
       status: meeting.status
     }
+  end
+
+  # Counted like the meetings list and the booking page count them: a
+  # booker's guests hold seats too.
+  defp seats_taken(meeting) do
+    if Meetings.group?(meeting), do: Seats.seats_taken(meeting.id), else: 0
+  end
+
+  defp participants(meeting) do
+    if Meetings.group?(meeting),
+      do: Enum.map(meeting.participants, &%{name: presence(&1.name), email: &1.email}),
+      else: []
   end
 
   defp presence(value) when is_binary(value) do

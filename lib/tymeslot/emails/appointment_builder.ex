@@ -10,6 +10,9 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Shared.BookingRequestLocation
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.Recipient
+  alias Tymeslot.Meetings.Seats
   alias Tymeslot.Meetings.VideoRooms
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.DateTimeUtils
@@ -22,6 +25,78 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
 
   @spec from_meeting(map(), map() | nil) :: Tymeslot.Emails.EmailService.appointment_details()
   def from_meeting(meeting, reminder_interval \\ nil) do
+    build(meeting, reminder_interval)
+  end
+
+  @doc """
+  Appointment details as `recipient` sees them.
+
+  For a `:participant` recipient this overlays their own name, email, phone,
+  company, message, timezone, locale, custom-field answers, tokenised seat
+  URLs and their seat's own calendar identity (UID and SEQUENCE) onto the
+  meeting before the payload is built. `:attendee` recipients see the
+  meeting unchanged. See `Recipient.as_seen_by/2`.
+  """
+  @spec from_meeting(MeetingSchema.t(), Recipient.t(), map() | nil) ::
+          Tymeslot.Emails.EmailService.appointment_details()
+  def from_meeting(%MeetingSchema{} = meeting, %Recipient{} = recipient, reminder_interval) do
+    meeting
+    |> Recipient.as_seen_by(recipient)
+    |> build(reminder_interval)
+  end
+
+  @doc """
+  The organiser's copy of an email about one seat of a group meeting.
+
+  Built from the seat's participant, so the organiser is told who booked,
+  left or moved (name, email, phone, company, message, answers), but never
+  carries that participant's seat links: the organiser's way to act on the
+  meeting is their dashboard, and the seat links are the participant's
+  credentials. `:seats_taken` and `:capacity` say how full the slot is now.
+  """
+  @spec for_organizer_of_seat(MeetingSchema.t(), Recipient.t()) ::
+          Tymeslot.Emails.EmailService.appointment_details()
+  def for_organizer_of_seat(%MeetingSchema{} = meeting, %Recipient{kind: :participant} = seat) do
+    meeting
+    |> from_meeting(seat, nil)
+    |> Map.merge(organizer_group_links())
+    |> Map.merge(%{seats_taken: Seats.seats_taken(meeting.id), capacity: meeting.capacity})
+  end
+
+  @doc """
+  The organiser's copy of a meeting-level email about a whole group meeting
+  (its reminder, its cancellation): the slot itself, named after how many
+  people are on it in the organiser's own language, with its links pointing
+  at the organiser's dashboard, since the public booking links are refused
+  for a group meeting.
+  """
+  @spec for_organizer_of_group(MeetingSchema.t(), non_neg_integer(), map() | nil) ::
+          Tymeslot.Emails.EmailService.appointment_details()
+  def for_organizer_of_group(%MeetingSchema{} = meeting, participant_count, reminder \\ nil) do
+    details = from_meeting(meeting, reminder)
+
+    label =
+      Gettext.with_locale(TymeslotWeb.Gettext, details.organizer_locale, fn ->
+        dngettext("emails", "%{count} participant", "%{count} participants", participant_count,
+          count: participant_count
+        )
+      end)
+
+    details
+    |> Map.merge(organizer_group_links())
+    |> Map.put(:attendee_name, label)
+  end
+
+  defp organizer_group_links do
+    %{
+      cancel_url: nil,
+      reschedule_url: nil,
+      view_url: nil,
+      dashboard_url: UrlBuilder.build_url("/dashboard/meetings")
+    }
+  end
+
+  defp build(meeting, reminder_interval) do
     attendee_locale = Map.get(meeting, :attendee_locale, "en")
 
     Gettext.with_locale(TymeslotWeb.Gettext, attendee_locale, fn ->
@@ -81,6 +156,14 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     end
   end
 
+  # A group meeting's row never carries an attendee: its people are its
+  # participants, whose own timezone comes in through the recipient overlay.
+  # A payload built from the bare slot (the organiser's copy) has no attendee
+  # timezone by design, so falling back to the organiser's is not a defect.
+  defp attendee_timezone(%MeetingSchema{attendee_timezone: nil} = meeting, owner_timezone)
+       when meeting.capacity > 1,
+       do: owner_timezone
+
   defp attendee_timezone(meeting, owner_timezone) do
     case meeting.attendee_timezone do
       nil ->
@@ -97,9 +180,12 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   end
 
   # `uid` here is the calendar event's UID (the `.ics` UID and the attachment
-  # filename), so it is the meeting's `calendar_uid`: the attendee's copy has to
-  # match the organiser's event, and the booking's own `uid` is the capability
-  # behind the cancel and reschedule links, which travel as their own fields.
+  # filename), so it is the `calendar_uid` of the meeting as this recipient
+  # sees it: a solo attendee's copy matches the organiser's event, while a
+  # group participant's overlay (`Tymeslot.Meetings.Recipient`) carries their
+  # seat's own UID, since each seat is its own calendar entry. The booking's
+  # own `uid` is the capability behind the cancel and reschedule links, which
+  # travel as their own fields.
   #
   # The title is the attendee's: this payload is built in their locale, and
   # the attendee and guest copies carry it into the `.ics` they import. The
@@ -120,6 +206,9 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       location_type: determine_location_type(meeting),
       location_details: format_location_details(meeting),
       meeting_type: meeting.meeting_type,
+      # Above 1 for a group meeting, whose participants' emails say they hold
+      # one of these spots (`Tymeslot.Emails.Shared.GroupSession`).
+      capacity: Map.get(meeting, :capacity),
       ical_sequence: Map.get(meeting, :ical_sequence) || 0,
       custom_fields_snapshot: Map.get(meeting, :custom_fields_snapshot) || [],
       custom_field_answers: Map.get(meeting, :custom_field_answers) || %{}

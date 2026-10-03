@@ -91,6 +91,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
                 {format_amount(@type.price_cents, @currency)}
               </span>
             <% end %>
+            <span
+              :if={MeetingTypes.group_type?(@type)}
+              class="flex items-center shrink-0"
+              data-testid="group-type-marker"
+            >
+              <Icons.icon name="hero-users-mini" class="w-3.5 h-3.5 mr-1 text-tymeslot-500" />
+              {dgettext("dashboard_meeting_types", "Group · up to %{count}",
+                count: @type.max_participants
+              )}
+            </span>
             <.location_summary type={@type} icon_size={@icon_size} venues={@venues} />
             <%= if @type.calendar_integration do %>
               <span class="flex items-center min-w-0">

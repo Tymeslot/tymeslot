@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
   alias Tymeslot.MeetingTypes.InputValidation
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Utils.SanitizeMerge
+  alias Tymeslot.Validation.Constraints
   alias Tymeslot.Venues
 
   @doc """
@@ -67,6 +68,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
     }
     |> maybe_put_custom_fields(assigns)
     |> maybe_put_payment(assigns)
+    |> maybe_put_max_participants(assigns)
   end
 
   @doc """
@@ -157,6 +159,64 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
 
   defp to_param(nil), do: ""
   defp to_param(value), do: to_string(value)
+
+  # Toggle off means a solo type — the canonical param is always "1" then,
+  # regardless of what the (hidden) input last held.
+  #
+  # Toggle on posts the pending limit only when it actually satisfies the
+  # *group* range (2..999). The visible input's own validation
+  # (`InputValidation.validate_field(:group_participants, ...)`) already
+  # rejects out-of-range values inline, but a rejected value is left sitting
+  # in the assign so the input still shows what was typed — a later
+  # auto-save triggered by an unrelated field must forward the *last
+  # persisted* limit instead, not the stale invalid one.
+  #
+  # This can only run from `Autosave` (edit mode — `build_params/1` is never
+  # called while creating), so `assigns.type` is always the meeting type
+  # being edited. Omitting the key entirely would not help here the way it
+  # does for `custom_fields`/`payment`: unlike those, `FormMapper` always
+  # defaults an absent `max_participants` to 1 (the correct behaviour on
+  # create, where there is no existing type to fall back on), so a missing
+  # key would silently downgrade the type exactly like the invalid value
+  # would have.
+  defp maybe_put_max_participants(params, %{group_bookings_enabled: true} = assigns) do
+    value =
+      case group_participants_param(assigns.max_participants) do
+        {:ok, value} -> value
+        :error -> to_string(assigns.type.max_participants)
+      end
+
+    Map.put(params, "max_participants", value)
+  end
+
+  defp maybe_put_max_participants(params, _assigns), do: Map.put(params, "max_participants", "1")
+
+  @doc """
+  Whether group bookings are on with a participant limit outside the group
+  range still in the input. The inline validator has already said so; the
+  create form's submit button stays disabled until it is fixed, rather than
+  posting a limit the host can see is wrong.
+
+  Derived from the current state rather than from the form's errors, so an
+  error no field handler clears (a `:base` error from a failed save, say)
+  can never leave the button disabled for good.
+  """
+  @spec pending_group_limit_invalid?(boolean(), String.t() | integer() | nil) :: boolean()
+  def pending_group_limit_invalid?(true = _group_bookings_enabled, max_participants),
+    do: group_participants_param(to_string(max_participants)) == :error
+
+  def pending_group_limit_invalid?(_group_bookings_enabled, _max_participants), do: false
+
+  defp group_participants_param(value) when is_binary(value) do
+    range = Constraints.group_participants_range()
+
+    case Integer.parse(value) do
+      {parsed, ""} when parsed >= range.first and parsed <= range.last -> {:ok, to_string(parsed)}
+      _invalid -> :error
+    end
+  end
+
+  defp group_participants_param(_value), do: :error
 
   defp reminder_param(%{value: value, unit: unit}),
     do: %{"value" => to_string(value), "unit" => unit}

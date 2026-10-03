@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Meetings
   alias Tymeslot.Timezones
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers
 
@@ -89,8 +90,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
 
     events = Selection.visible_events(cached, integrations) ++ booking_events
 
+    # The group meetings with live seats in the same range, shown locked:
+    # their time belongs to the bookers rather than the calendar. Loaded with
+    # the events so the set always covers what is on screen; the handlers
+    # re-check the lock against the database before acting.
+    group_booking_uids =
+      Meetings.group_booking_uids_for_user(socket.assigns.current_user.id, start_dt, end_dt)
+
     socket
     |> assign(:events, events)
+    |> assign(:group_booking_uids, group_booking_uids)
     |> precompute_derived()
   end
 

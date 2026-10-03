@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocationTest do
   @moduletag :scheduling
 
   alias Phoenix.LiveView.Socket
+  alias Tymeslot.MeetingTypes.GroupLocationRule
   alias Tymeslot.MeetingTypes.LocationOption
   alias TymeslotWeb.Themes.Shared.BookingLocation
 
@@ -70,6 +71,45 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocationTest do
 
       assert BookingLocation.venue_choices(without_venue) == []
       refute BookingLocation.venue_choice_required?(without_venue)
+    end
+  end
+
+  describe "choice_required?/1 for a group type's location" do
+    # Every location a group type may offer, with what the booking page would
+    # load for it: the one provider or the one venue it names.
+    defp admitted_group_locations do
+      [
+        {%LocationOption{id: "v", kind: "video", label: "Video", video_integration_ids: [7]},
+         %{"v" => [%{id: 7}]}, %{}},
+        {%LocationOption{id: "o", kind: "in_person", label: "Office", venue_ids: [1]}, %{},
+         %{"o" => [@berlin]}},
+        {%LocationOption{id: "p", kind: "phone", label: "Phone", details: "+44 20 7946 0000"},
+         %{}, %{}},
+        {%LocationOption{id: "c", kind: "custom", label: "Main hall"}, %{}, %{}}
+      ]
+    end
+
+    test "never asks the booker anything about a location GroupLocationRule admits" do
+      for {option, video_choices, venue_choices} <- admitted_group_locations() do
+        assert GroupLocationRule.check([option]) == :ok
+
+        refute BookingLocation.choice_required?(
+                 assigns(%{
+                   location_options: [option],
+                   location_video_choices: video_choices,
+                   location_venue_choices: venue_choices,
+                   selected_location_id: option.id
+                 })
+               )
+      end
+    end
+
+    test "every choice the picker would offer is a location GroupLocationRule refuses" do
+      assert BookingLocation.choice_required?(assigns())
+      assert {:error, :not_single_location} = GroupLocationRule.check(assigns().location_options)
+
+      assert BookingLocation.choice_required?(assigns(%{location_options: [offices()]}))
+      assert {:error, :venue_choice} = GroupLocationRule.check([offices()])
     end
   end
 

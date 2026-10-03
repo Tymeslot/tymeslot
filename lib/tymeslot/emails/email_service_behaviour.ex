@@ -24,6 +24,14 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
               {:ok, any()} | {:error, any()}
   @callback send_guest_confirmation(String.t(), appointment_details()) ::
               {:ok, any()} | {:error, any()}
+  @callback send_seat_reschedule_to_participant(String.t(), appointment_details(), map()) ::
+              {:ok, any()} | {:error, any()}
+  @callback send_seat_update_to_organizer(
+              :booked | :cancelled | :moved,
+              String.t(),
+              appointment_details()
+            ) ::
+              {:ok, any()} | {:error, any()}
   @callback send_guest_reschedule(String.t(), appointment_details()) ::
               {:ok, any()} | {:error, any()}
   @callback send_guest_cancellation(String.t(), appointment_details()) ::
@@ -50,6 +58,10 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
               {:ok, any()} | {:error, any()}
   @callback send_cancellation_emails(appointment_details()) ::
               {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
+  @callback send_cancellation_email_to_attendee(String.t(), appointment_details()) ::
+              {:ok, any()} | {:error, any()}
+  @callback send_cancellation_email_to_organizer(String.t(), appointment_details()) ::
+              {:ok, any()} | {:error, any()}
   @callback send_calendar_sync_error(map(), any()) :: {:ok, any()} | {:error, any()}
 
   @callback send_email_verification(user_map(), String.t()) :: {:ok, any()} | {:error, any()}

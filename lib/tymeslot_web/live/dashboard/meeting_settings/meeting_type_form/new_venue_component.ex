@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.NewVenueComponent do
   @moduledoc """
-  The small form behind "+ New location" in the location editor: a name and
+  The small form behind "+ New saved location" in the location editor: a name and
   an address, saved as one of the organiser's venues without leaving the
   meeting-type form.
 
@@ -74,7 +74,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.NewVenueComponen
     ~H"""
     <div class="card-glass p-4 mt-4 space-y-3" data-testid="new-venue">
       <h4 class="text-token-sm font-semibold text-tymeslot-800">
-        {dgettext("dashboard_meeting_form", "New location")}
+        {dgettext("dashboard_meeting_form", "New saved location")}
       </h4>
 
       <.form
@@ -113,7 +113,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.NewVenueComponen
             {dgettext("dashboard_meeting_form", "Cancel")}
           </CoreComponents.action_button>
           <CoreComponents.action_button type="submit" variant={:primary}>
-            {dgettext("dashboard_meeting_form", "Add location")}
+            {dgettext("dashboard_meeting_form", "Add to saved locations")}
           </CoreComponents.action_button>
         </div>
       </.form>

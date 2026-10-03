@@ -64,6 +64,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InitialState do
       owned_integration_ids: MapSet.new(),
       visible_events: [],
       guest_rsvp_summaries: %{},
+      group_booking_uids: MapSet.new(),
       visible_days: [],
       # Overwritten from the profile in `UpdateHandlers.handle_initial/2` before
       # the first render, on the static pass as much as the connected one. These

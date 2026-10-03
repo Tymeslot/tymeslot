@@ -84,7 +84,8 @@ defmodule Tymeslot.Bookings.CalendarCheck do
   Options:
 
     * `:exclude` - a meeting whose own provider event must not count as a
-      conflict. See the module doc.
+      conflict: the meeting being moved, or the group meeting a seat joins.
+      See the module doc.
   """
   @spec probe(slot(), map(), keyword()) :: :ok | {:error, probe_reason()}
   def probe(slot, config, opts \\ [])
@@ -101,12 +102,9 @@ defmodule Tymeslot.Bookings.CalendarCheck do
 
     case Task.yield(fetch, @fetch_timeout_ms) || Task.shutdown(fetch) do
       {:ok, {:ok, events}} ->
-        Validation.validate_no_conflicts(
-          start_datetime,
-          end_datetime,
-          Meetings.reject_calendar_event_mirrors(events, Keyword.get(opts, :exclude)),
-          config
-        )
+        blocking = Meetings.reject_calendar_event_mirrors(events, Keyword.get(opts, :exclude))
+
+        Validation.validate_no_conflicts(start_datetime, end_datetime, blocking, config)
 
       {:ok, {:error, reason}} ->
         {:error, reason}

@@ -1,11 +1,11 @@
-## "msgid"s in this file come from POT (.pot) files.
-###
-### Do not add, change, or remove "msgid"s manually here as
-### they're tied to the ones in the corresponding POT file
-### (with the same domain).
-###
-### Use "mix gettext.extract --merge" or "mix gettext.merge"
-### to merge POT files into PO files.
+#  "msgid"s in this file come from POT (.pot) files.
+# #
+# # Do not add, change, or remove "msgid"s manually here as
+# # they're tied to the ones in the corresponding POT file
+# # (with the same domain).
+# #
+# # Use "mix gettext.extract --merge" or "mix gettext.merge"
+# # to merge POT files into PO files.
 msgid ""
 msgstr ""
 "Language: it\n"
@@ -185,6 +185,7 @@ msgid "Great! Your meeting is still scheduled as planned."
 msgstr "Perfetto! La tua riunione rimane programmata come previsto."
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#: lib/tymeslot_web/controllers/seat_html.ex
 #, elixir-autogen, elixir-format
 msgid "Hosted by %{name}"
 msgstr "Organizzato da %{name}"
@@ -243,7 +244,7 @@ msgstr "Nessuno ha risposto in tempo, quindi l'orario è stato liberato e %{name
 msgid "Not set"
 msgstr "Non impostato"
 
-#: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#: lib/tymeslot_web/components/shared/token_page.ex
 #, elixir-autogen, elixir-format
 msgid "Please wait a moment and try again."
 msgstr "Attendi un momento e riprova."
@@ -347,7 +348,8 @@ msgstr "Questa richiesta è cambiata da quando la pagina è stata aperta, quindi
 msgid "Too late to answer"
 msgstr "Troppo tardi per rispondere"
 
-#: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#: lib/tymeslot_web/components/shared/token_page.ex
+#: lib/tymeslot_web/controllers/seat_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Too many attempts"
 msgstr "Troppi tentativi"
@@ -424,3 +426,143 @@ msgstr "La tua risposta è stata inviata a %{name}."
 #, elixir-autogen, elixir-format
 msgid "the person who booked"
 msgstr "la persona che ha prenotato"
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "Book another time"
+msgstr "Prenota un altro orario"
+
+#: lib/tymeslot_web/controllers/seat_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel your spot"
+msgstr "Annulla il tuo posto"
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel your spot?"
+msgstr "Annullare il tuo posto?"
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm to give up your spot in this meeting with %{name}."
+msgstr "Conferma per rinunciare al tuo posto in questo incontro con %{name}."
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "Keep my spot"
+msgstr "Mantieni il mio posto"
+
+#: lib/tymeslot_web/controllers/seat_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Link no longer valid"
+msgstr "Link non più valido"
+
+#: lib/tymeslot_web/controllers/seat_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Spot cancelled"
+msgstr "Posto annullato"
+
+#: lib/tymeslot_web/controllers/seat_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Spot cannot be cancelled"
+msgstr "Questo posto non può essere annullato"
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "The link may have expired or already been used. Please contact the meeting host."
+msgstr "Il link di invito potrebbe essere scaduto o già stato utilizzato. Contatta l'organizzatore."
+
+#: lib/tymeslot_web/components/shared/token_page.ex
+#, elixir-autogen, elixir-format
+msgid "This link is no longer valid"
+msgstr "Questo link non è più valido"
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "This spot can no longer be cancelled online"
+msgstr "Questo posto non può più essere annullato online"
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "We've let %{name} know. A confirmation email is on its way."
+msgstr "Abbiamo avvisato %{name}. Un'email di conferma è in arrivo."
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "Yes, cancel my spot"
+msgstr "Sì, annulla il mio posto"
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "Your spot has been cancelled"
+msgstr "Il tuo posto è stato annullato"
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel my spot"
+msgstr "Annulla il mio posto"
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "It was cancelled or moved to another time, so there is nothing left to do here. If you moved it, the email confirming your new time has links to manage it."
+msgstr "È stato annullato o spostato a un altro orario, quindi qui non c'è altro da fare. Se l'hai spostato, l'email che conferma il nuovo orario contiene i link per gestirlo."
+
+#: lib/tymeslot_web/controllers/seat_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting cancelled"
+msgstr "Riunione annullata"
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "Please contact the host directly."
+msgstr "Contatta direttamente l'organizzatore."
+
+#: lib/tymeslot_web/controllers/seat_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Spot already cancelled"
+msgstr "Posto già annullato"
+
+#: lib/tymeslot_web/controllers/seat_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Spot cannot be moved"
+msgstr "Il posto non può essere spostato"
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "The host cancelled this meeting, so your spot no longer needs cancelling. Please contact the meeting host if you have any questions."
+msgstr "L'organizzatore ha annullato questa riunione, quindi non è più necessario annullare il tuo posto. Per qualsiasi domanda, contatta l'organizzatore."
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "There is no spot left to cancel."
+msgstr "Non c'è più alcun posto da annullare."
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting has already started"
+msgstr "Questa riunione è già iniziata"
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting has already taken place"
+msgstr "Questa riunione si è già svolta"
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting has been cancelled"
+msgstr "Questa riunione è stata annullata"
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "This spot can't be moved"
+msgstr "Questo posto non può essere spostato"
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "This spot is already cancelled"
+msgstr "Questo posto è già stato annullato"
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "Your spot can no longer be cancelled online. Please contact the host directly."
+msgstr "Il tuo posto non può più essere annullato online. Contatta direttamente l'organizzatore."

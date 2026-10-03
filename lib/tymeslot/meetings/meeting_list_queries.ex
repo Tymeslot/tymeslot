@@ -11,8 +11,10 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
 
   import Ecto.Query, warn: false
 
+  alias Tymeslot.Meetings.GuestSchema
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Repo
 
   # Query building helpers
@@ -54,6 +56,31 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
 
   defp order_by_start_desc_id_desc(query),
     do: from(m in query, order_by: [desc: m.start_time, desc: m.id])
+
+  # Live (non-cancelled) participants only, oldest booking first — mirrors
+  # the guests preload_order and keeps the dashboard from ever rendering a
+  # cancelled participant.
+  defp live_participants_preload do
+    from(p in ParticipantSchema,
+      where: is_nil(p.cancelled_at),
+      order_by: [asc: p.inserted_at]
+    )
+  end
+
+  # Guests whose booker is still on the meeting. A participant who cancels
+  # their seat leaves their guest rows behind — deliberately, since the rows
+  # record who was invited — but those guests no longer hold seats and their
+  # RSVP links are inert, so showing them on the organiser's card would count
+  # people who are not coming. Guests of a solo booking carry no participant
+  # and are always live.
+  defp live_guests_preload do
+    from(g in GuestSchema,
+      left_join: p in ParticipantSchema,
+      on: p.id == g.participant_id,
+      where: is_nil(g.participant_id) or is_nil(p.cancelled_at),
+      order_by: [asc: g.inserted_at]
+    )
+  end
 
   @doc """
   Returns upcoming meetings that should have a video room link but do not.
@@ -232,8 +259,20 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> for_user_email(user_email)
     |> order_by_start_asc()
     |> apply_limit(limit)
+    |> preload(participants: ^live_participants_preload())
     |> Repo.all()
   end
+
+  @doc """
+  Loads the live participants of `meeting`, or of each of a list of
+  meetings, into `:participants`, oldest booking first, the same set the
+  dashboard lists show. A list is loaded in one query.
+  """
+  @spec preload_live_participants(Meeting.t()) :: Meeting.t()
+  @spec preload_live_participants([Meeting.t()]) :: [Meeting.t()]
+  def preload_live_participants(meeting_or_meetings),
+    do:
+      Repo.preload(meeting_or_meetings, [participants: live_participants_preload()], force: true)
 
   @doc """
   Returns the organiser's live bookings overlapping the `[from_utc, to_utc)`
@@ -295,7 +334,24 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> order_by_start_desc_id_desc()
     |> cursor_after(after_start, after_id)
     |> apply_limit(limit)
-    |> preload(:guests)
+    |> preload(
+      guests: ^live_guests_preload(),
+      participants: ^card_participants_preload()
+    )
     |> Repo.all()
+  end
+
+  # The participants a dashboard card lists: the live ones, and on a
+  # cancelled meeting every one, since a cancelled card records who had
+  # booked it. Whoever released their spot before the meeting was cancelled
+  # carries their own `cancelled_at`; those still booked when it was called
+  # off do not (cancelling a meeting leaves its participant rows alone).
+  defp card_participants_preload do
+    from(p in ParticipantSchema,
+      join: m in Meeting,
+      on: m.id == p.meeting_id,
+      where: is_nil(p.cancelled_at) or m.status == "cancelled",
+      order_by: [asc: p.inserted_at]
+    )
   end
 end

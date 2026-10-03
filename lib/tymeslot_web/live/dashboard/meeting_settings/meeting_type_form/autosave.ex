@@ -82,12 +82,22 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
   #
   # Genuine persistence failures (unexpected changeset errors, unknown context
   # errors) are logged and shown as :error.
+  #
+  # A participant limit the host is still typing is not part of the save
+  # (`Submission` keeps the stored one), so its error and the "unsaved"
+  # state outlive a save of the other fields.
   defp apply_result({:ok, updated}, socket) do
+    pending_limit? =
+      Submission.pending_group_limit_invalid?(
+        socket.assigns.group_bookings_enabled,
+        socket.assigns.max_participants
+      )
+
     socket
     |> assign(:type, updated)
     |> follow_dropped_venues(updated)
-    |> assign(:form_errors, %{})
-    |> assign(:save_status, :saved)
+    |> assign(:form_errors, pending_limit_errors(socket.assigns.form_errors, pending_limit?))
+    |> assign(:save_status, if(pending_limit?, do: :unsaved, else: :saved))
   end
 
   defp apply_result({:error, {:invalid_form, _errors}}, socket) do
@@ -108,7 +118,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
   # fire before they've had a chance to fill in the price.
   defp apply_result({:error, %Ecto.Changeset{} = changeset}, socket)
        when socket.assigns.payment_required == true do
-    errors = FormHelpers.format_changeset_errors(changeset)
+    errors = Helpers.changeset_form_errors(changeset)
 
     if Map.keys(errors) == [:price_cents] do
       assign(socket, :save_status, :incomplete)
@@ -131,7 +141,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
     )
 
     socket
-    |> assign(:form_errors, FormHelpers.format_changeset_errors(changeset))
+    |> assign(:form_errors, Helpers.changeset_form_errors(changeset))
     |> assign(:save_status, :error)
   end
 
@@ -146,6 +156,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
     |> assign(:form_errors, FormHelpers.format_context_error(reason))
     |> assign(:save_status, :error)
   end
+
+  defp pending_limit_errors(form_errors, true = _pending_limit?),
+    do: Map.take(form_errors, [:max_participants])
+
+  defp pending_limit_errors(_form_errors, _pending_limit?), do: %{}
 
   # A save can go through without venues the form still listed, when they
   # were deleted elsewhere meanwhile (see `Submission.persist/4`). The form

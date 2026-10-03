@@ -801,11 +801,6 @@ msgstr "Rimuovi l'ospite %{email}"
 
 #: lib/tymeslot_web/themes/shared/guest_booking.ex
 #, elixir-autogen, elixir-format
-msgid "You can add up to %{count} guests."
-msgstr "Puoi aggiungere fino a %{count} ospiti."
-
-#: lib/tymeslot_web/themes/shared/guest_booking.ex
-#, elixir-autogen, elixir-format
 msgid "You don't need to add your own email as a guest."
 msgstr "Non è necessario aggiungere la tua email come ospite."
 
@@ -1379,3 +1374,73 @@ msgstr "L'indirizzo verrà concordato con te dopo la prenotazione."
 #, elixir-autogen, elixir-format
 msgid "Which location?"
 msgstr "Quale sede?"
+
+#: lib/tymeslot_web/themes/shared/components/seat_badge.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} seat left"
+msgid_plural "%{count} seats left"
+msgstr[0] "%{count} posto libero"
+msgstr[1] "%{count} posti liberi"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This booking has already been cancelled or moved."
+msgstr "Questa prenotazione è già stata annullata o spostata."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This is a group booking, so each participant moves their own spot from their confirmation email."
+msgstr "Questa è una prenotazione di gruppo: ogni partecipante sposta il proprio posto dalla propria e-mail di conferma."
+
+#: lib/tymeslot_web/themes/shared/guest_booking.ex
+#, elixir-autogen, elixir-format
+msgid "This time only has room for %{count} of your guests, so the rest were removed."
+msgid_plural "This time only has room for %{count} of your guests, so the rest were removed."
+msgstr[0] "Questo orario ha posto solo per %{count} dei tuoi ospiti, gli altri sono stati rimossi."
+msgstr[1] "Questo orario ha posto solo per %{count} dei tuoi ospiti, gli altri sono stati rimossi."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a spot at this time. Check your email for your booking confirmation."
+msgstr "Hai già un posto a quest'ora. Controlla la tua e-mail per la conferma della prenotazione."
+
+#: lib/tymeslot_web/themes/shared/guest_booking.ex
+#, elixir-autogen, elixir-format
+msgid "You can add up to %{count} guest."
+msgid_plural "You can add up to %{count} guests."
+msgstr[0] "Puoi aggiungere fino a %{count} ospite."
+msgstr[1] "Puoi aggiungere fino a %{count} ospiti."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This spot can no longer be moved. Cancel it and book a new time instead, or contact the host."
+msgstr "Questo posto non può più essere spostato. Annullalo e prenota un nuovo orario, oppure contatta l'organizzatore."
+
+#: lib/tymeslot_web/themes/shared/components/group_session.ex
+#, elixir-autogen, elixir-format
+msgid "Group session · up to %{count} person"
+msgid_plural "Group session · up to %{count} people"
+msgstr[0] "Sessione di gruppo · fino a %{count} persona"
+msgstr[1] "Sessione di gruppo · fino a %{count} persone"
+
+#: lib/tymeslot_web/themes/shared/components/group_session.ex
+#, elixir-autogen, elixir-format
+msgid "Group session: you have one of %{count} spot."
+msgid_plural "Group session: you have one of %{count} spots."
+msgstr[0] "Sessione di gruppo: hai uno dei %{count} posti."
+msgstr[1] "Sessione di gruppo: hai uno dei %{count} posti."
+
+#: lib/tymeslot_web/themes/shared/components/group_session.ex
+#, elixir-autogen, elixir-format
+msgid "Moving your spot on %{datetime}. Pick a new time below."
+msgstr "Stai spostando il tuo posto del %{datetime}. Scegli un nuovo orario qui sotto."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This is your current time. Pick a different time to move your spot."
+msgstr "Questo è il tuo orario attuale. Scegli un orario diverso per spostare il tuo posto."
+
+#: lib/tymeslot_web/themes/shared/seat_move_link.ex
+#, elixir-autogen, elixir-format
+msgid "This link to move your spot has already been used. You can book a new time below."
+msgstr "Questo link per spostare il tuo posto è già stato usato. Qui sotto puoi prenotare un nuovo orario."

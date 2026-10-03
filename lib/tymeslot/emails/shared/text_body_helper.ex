@@ -82,6 +82,16 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
           links
         end
 
+      links =
+        if appointment_details[:dashboard_url] do
+          [
+            "#{dgettext("emails", "Open in dashboard:")} #{appointment_details.dashboard_url}"
+            | links
+          ]
+        else
+          links
+        end
+
       if Enum.empty?(links) do
         ""
       else

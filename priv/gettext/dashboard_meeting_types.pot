@@ -328,3 +328,18 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "A place you meet people, such as an office or a studio. Offer it on any in-person meeting type, and bookers see its name and address when they book."
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} is the only location of these group meeting types, whose address must be fixed in advance. Give them another location before deleting it:"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "This location is the only one of a group meeting type, so it cannot be deleted"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Group · up to %{count}"
+msgstr ""
