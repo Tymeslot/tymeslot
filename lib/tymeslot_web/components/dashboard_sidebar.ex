@@ -32,13 +32,15 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
     <div
       id="dashboard-sidebar-overlay"
       class="lg:hidden fixed inset-0 bg-black/50 z-30 dashboard-sidebar-overlay hidden"
-      phx-click={close_sidebar_js()}
+      phx-click={dismiss_sidebar_js()}
     >
     </div>
 
     <aside
       id="dashboard-sidebar"
       data-tour="sidebar-nav"
+      phx-hook="SidebarEscape"
+      data-dismiss={dismiss_sidebar_js()}
       class="dashboard-sidebar lg:w-64 w-80 h-screen lg:h-full overflow-y-auto overscroll-contain [scrollbar-width:thin] lg:shrink-0 lg:relative fixed top-0 left-0 z-40 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out"
     >
       <div class="p-6 lg:px-4 lg:pt-4">
@@ -46,8 +48,9 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
         <div class="lg:hidden flex items-center justify-between mb-6">
           <TymeslotWeb.Components.CoreComponents.Brand.logo mode={:full} img_class="h-12" />
           <button
+            type="button"
             class="dashboard-sidebar-close p-3 rounded-token-xl bg-tymeslot-50 border-2 border-tymeslot-100 hover:bg-red-50 hover:border-red-100 transition-all"
-            phx-click={close_sidebar_js()}
+            phx-click={dismiss_sidebar_js()}
             aria-label={dgettext("dashboard_common", "Close sidebar")}
           >
             <.icon name="hero-x-mark" class="w-6 h-6 text-tymeslot-700" />
@@ -309,6 +312,13 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
     |> JS.remove_class("dashboard-sidebar-open", to: "#dashboard-sidebar")
     |> JS.add_class("hidden", to: "#dashboard-sidebar-overlay")
     |> JS.set_attribute({"aria-expanded", "false"}, to: "#dashboard-sidebar-toggle")
+  end
+
+  # Dismissing the drawer (Escape, the close button, the backdrop) hands focus
+  # back to the menu toggle that opened it. Following a nav link does not: that
+  # navigates, and focus belongs to the new page.
+  defp dismiss_sidebar_js do
+    JS.focus(close_sidebar_js(), to: "#dashboard-sidebar-toggle")
   end
 
   # Private component for navigation links

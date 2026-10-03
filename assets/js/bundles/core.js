@@ -12,7 +12,7 @@ import topbar from "../../vendor/topbar.cjs"
 
 // Core utility hooks used everywhere
 import { initializeBundle } from "./bundle_utils"
-import { PageReload, VideoHoverPreview, StopClickPropagation, ModalFocusTrap } from "../ui_interaction_hooks"
+import { PageReload, VideoHoverPreview, StopClickPropagation, ModalFocusTrap, SidebarEscape } from "../ui_interaction_hooks"
 import { Flash, ConnectionStatus, AutoFocus, ScrollReset, CopyOnClick, scrollPageToTop, shouldScrollToTopOnNavigate } from "../utility_hooks"
 import { ClipboardCopy } from "../clipboard_hook"
 import { RecaptchaV3Hook } from "../hooks/recaptcha_v3_hook"
@@ -49,6 +49,7 @@ const CoreHooks = {
   VideoHoverPreview,
   StopClickPropagation,
   ModalFocusTrap,
+  SidebarEscape,
 
   // Utilities
   Flash,
@@ -124,6 +125,14 @@ window.addEventListener("phx:navigate", ({ detail }) => {
 window.addEventListener("phx:reset-form", (e) => {
   const form = document.getElementById(e.detail.id);
   if (form) form.reset();
+});
+
+// Move focus to an element by id, for when the server replaces the control
+// that held it (`push_event(socket, "focus", %{id: ...})`). Events dispatch
+// after the patch, so the target is already in the DOM.
+window.addEventListener("phx:focus", (e) => {
+  const el = document.getElementById(e.detail.id);
+  if (el) el.focus();
 });
 
 // Inline "Saved" pulse for the admin settings autosave inputs. The flash

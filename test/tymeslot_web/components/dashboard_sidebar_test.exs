@@ -56,6 +56,42 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
              ["/dashboard/availability"]
   end
 
+  test "dismissing the mobile drawer hands focus back to the menu toggle" do
+    assigns = %{
+      current_action: :overview,
+      integration_status: %{has_calendar: true, has_video: true, has_meeting_types: true},
+      profile: %{username: "testuser"}
+    }
+
+    doc =
+      (&DashboardSidebar.sidebar/1)
+      |> render_component(assigns)
+      |> Floki.parse_document!()
+
+    focuses_toggle? = fn value ->
+      value
+      |> Jason.decode!()
+      |> Enum.any?(&match?(["focus", %{"to" => "#dashboard-sidebar-toggle"}], &1))
+    end
+
+    # Escape runs the command the hook reads from data-dismiss.
+    [aside] = Floki.find(doc, "aside#dashboard-sidebar")
+    assert Floki.attribute(aside, "phx-hook") == ["SidebarEscape"]
+    assert [dismiss] = Floki.attribute(aside, "data-dismiss")
+    assert focuses_toggle?.(dismiss)
+
+    for selector <- ["#dashboard-sidebar-overlay", "button.dashboard-sidebar-close"] do
+      assert [click] = doc |> Floki.find(selector) |> Floki.attribute("phx-click")
+      assert focuses_toggle?.(click), "#{selector} does not return focus to the toggle"
+    end
+
+    # Following a nav link navigates; focus belongs to the new page.
+    [nav_click | _rest] =
+      doc |> Floki.find("a.dashboard-nav-link") |> Floki.attribute("phx-click")
+
+    refute focuses_toggle?.(nav_click)
+  end
+
   test "renders active link correctly for different actions" do
     # The merged Integrations item is current for the hub action and for every
     # legacy action that redirects into it, so all four highlight the same link.
