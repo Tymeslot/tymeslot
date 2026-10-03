@@ -37,6 +37,39 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponentTest do
 
       assert has_element?(view, "#venue-form")
     end
+
+    test "the empty state carries the only Add location button", %{conn: conn} do
+      doc = conn |> open() |> render() |> LazyHTML.from_document()
+
+      assert doc |> LazyHTML.query("button[phx-click='new_venue']") |> Enum.count() == 1
+
+      assert doc
+             |> LazyHTML.query("[data-testid='locations-empty'] button[phx-click='new_venue']")
+             |> Enum.count() == 1
+    end
+  end
+
+  describe "with saved locations" do
+    test "offers Add location once, beside the page title", %{conn: conn, user: user} do
+      insert(:venue, user: user, name: "Studio")
+
+      doc = conn |> open() |> render() |> LazyHTML.from_document()
+
+      assert doc |> LazyHTML.query("button[phx-click='new_venue']") |> Enum.count() == 1
+
+      assert doc
+             |> LazyHTML.query("div:has(> div > h1) button[phx-click='new_venue']")
+             |> Enum.count() == 1
+    end
+
+    test "edits and deletes from labelled icon buttons on each card", %{conn: conn, user: user} do
+      venue = insert(:venue, user: user, name: "Studio")
+      view = open(conn)
+
+      card = "[data-testid='venue-card'][data-venue-id='#{venue.id}']"
+      assert has_element?(view, "#{card} button[phx-click='edit_venue'][aria-label='Edit']")
+      assert has_element?(view, "#{card} button[phx-click='delete_venue'][aria-label='Delete']")
+    end
   end
 
   describe "adding a location" do

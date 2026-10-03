@@ -41,25 +41,24 @@ defmodule TymeslotWeb.Dashboard.Locations.VenueCard do
         </p>
       </div>
 
-      <div class="flex shrink-0 gap-2">
-        <.action_button
-          variant={:secondary}
+      <div class="flex shrink-0 items-center gap-2">
+        <.icon_button
+          icon="hero-pencil-square"
+          size={:sm}
+          label={dgettext("dashboard_meeting_types", "Edit")}
           phx-click="edit_venue"
           phx-value-id={@venue.id}
           phx-target={@myself}
+        />
+        <.icon_button
+          icon="hero-trash"
+          variant={:danger}
           size={:sm}
-        >
-          {dgettext("dashboard_meeting_types", "Edit")}
-        </.action_button>
-        <.action_button
-          variant={:danger_soft}
+          label={dgettext("dashboard_meeting_types", "Delete")}
           phx-click="delete_venue"
           phx-value-id={@venue.id}
           phx-target={@myself}
-          size={:sm}
-        >
-          {dgettext("dashboard_meeting_types", "Delete")}
-        </.action_button>
+        />
       </div>
     </.card>
     """

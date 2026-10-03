@@ -85,6 +85,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
     ~H"""
     <div>
       <.dashboard_page icon="hero-hand-raised" title={dgettext("dashboard_common", "Polls")}>
+        <%!-- With no polls yet, the empty state below carries the action. --%>
+        <:actions :if={!@show_form and @polls != []}>
+          <PollList.new_poll_button myself={@myself} data-testid="new-poll" />
+        </:actions>
         <p class="text-tymeslot-600 mb-6">
           {dgettext(
             "dashboard_common",
@@ -93,11 +97,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
         </p>
 
         <div id="polls-container" class="space-y-6">
-          <%!-- With no polls yet, the empty state below carries the action. --%>
-          <div :if={!@show_form and @polls != []} class="flex justify-end">
-            <PollList.new_poll_button myself={@myself} data-testid="new-poll" />
-          </div>
-
           <.live_component
             :if={@show_form}
             module={PollForm}

@@ -180,6 +180,18 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
     ~H"""
     <div data-testid="locations-page">
       <.dashboard_page icon="hero-map-pin" title={dgettext("dashboard_common", "Locations")}>
+        <%!-- With no venues yet, the empty state carries the add button instead. --%>
+        <:actions :if={@venues != []}>
+          <.action_button
+            variant={:primary}
+            phx-click="new_venue"
+            phx-target={@myself}
+            icon="hero-plus"
+            data-testid="add-venue"
+          >
+            {dgettext("dashboard_meeting_types", "Add location")}
+          </.action_button>
+        </:actions>
         <p class="text-tymeslot-600">
           {dgettext(
             "dashboard_meeting_types",
@@ -213,18 +225,6 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
             </:action>
           </.empty_state>
         <% else %>
-          <div class="flex justify-end">
-            <.action_button
-              variant={:primary}
-              phx-click="new_venue"
-              phx-target={@myself}
-              icon="hero-plus"
-              data-testid="add-venue"
-            >
-              {dgettext("dashboard_meeting_types", "Add location")}
-            </.action_button>
-          </div>
-
           <%!-- One column, because the sortable hook places a dragged card by
              its vertical position. --%>
           <div

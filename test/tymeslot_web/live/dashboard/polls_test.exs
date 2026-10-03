@@ -67,13 +67,23 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
       refute has_element?(view, "[data-testid='polls-empty']")
     end
 
-    test "with polls listed, New poll sits above the list", %{conn: conn, user: user} do
+    test "with polls listed, New poll sits once beside the page title", %{
+      conn: conn,
+      user: user
+    } do
       insert(:poll, user: user, title: "Team sync", status: :open)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
 
       refute has_element?(view, "[data-testid='polls-empty']")
       assert has_element?(view, "[data-testid='new-poll']", "New poll")
+
+      doc = view |> render() |> LazyHTML.from_document()
+      assert doc |> LazyHTML.query("button[phx-click='new_poll']") |> Enum.count() == 1
+
+      assert doc
+             |> LazyHTML.query("div:has(> div > h1) [data-testid='new-poll']")
+             |> Enum.count() == 1
     end
 
     test "does not list polls belonging to other users", %{conn: conn} do
