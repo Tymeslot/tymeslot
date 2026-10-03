@@ -172,19 +172,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
                 <div class="p-4 rounded-token-xl bg-turquoise-50/50 border-2 border-turquoise-100">
                   <div class="flex gap-3">
                     <div class="mt-0.5">
-                      <svg
-                        class="w-5 h-5 text-turquoise-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2.5"
-                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
+                      <Icons.icon name="hero-information-circle" class="w-5 h-5 text-turquoise-600" />
                     </div>
                     <div>
                       <p class="text-token-sm font-black text-turquoise-900">

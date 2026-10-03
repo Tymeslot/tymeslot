@@ -380,14 +380,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
                 class="w-4 h-4 rounded-token-full hover:bg-amber-200 flex items-center justify-center transition-colors"
                 aria-label={dgettext("dashboard_calendar_events", "Remove %{email}", email: email)}
               >
-                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="3"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
+                <.icon name="hero-x-mark" class="w-2.5 h-2.5" />
               </button>
             </span>
           </div>

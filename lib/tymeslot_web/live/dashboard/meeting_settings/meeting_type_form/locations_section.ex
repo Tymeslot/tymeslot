@@ -73,14 +73,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
             draggable="true"
           >
             <span class="drag-handle cursor-grab active:cursor-grabbing text-tymeslot-400 shrink-0">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M4 8h16M4 16h16"
-                />
-              </svg>
+              <Icons.icon name="hero-equals" class="w-4 h-4" />
             </span>
 
             <Icons.icon

@@ -141,14 +141,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
                 aria-label={dgettext("common", "Close modal")}
                 phx-click={@on_cancel}
               >
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2.5"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
+                <Icons.icon name="hero-x-mark" class="w-6 h-6" />
               </button>
             </div>
           <% end %>

@@ -42,30 +42,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImagePi
                   data-img-fallback
                 />
                 <div class="absolute inset-0 bg-linear-to-br from-tymeslot-100 to-tymeslot-200 items-center justify-center hidden">
-                  <svg
-                    class="w-12 h-12 text-tymeslot-300"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                  </svg>
+                  <.icon name="hero-photo" class="w-12 h-12 text-tymeslot-300" />
                 </div>
                 <%= if @customization.background_value == image_id do %>
                   <div class="absolute top-3 right-3 w-8 h-8 bg-turquoise-500 text-white rounded-token-full flex items-center justify-center shadow-lg z-10">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="3"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
+                    <.icon name="hero-check" class="w-5 h-5" />
                   </div>
                 <% end %>
               </div>
@@ -132,14 +113,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImagePi
             <%= if @uploads && @uploads[:background_image] do %>
               <%= for err <- upload_errors(@uploads.background_image) do %>
                 <div class="mt-4 p-3 bg-red-50 border border-red-100 rounded-token-xl text-red-600 text-xs font-bold flex items-center gap-2">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2.5"
-                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
+                  <.icon name="hero-exclamation-circle" class="w-4 h-4" />
                   {Phoenix.Naming.humanize(err)}
                 </div>
               <% end %>
@@ -162,14 +136,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImagePi
 
                   <%= for err <- upload_errors(@uploads.background_image, entry) do %>
                     <div class="mt-2 p-3 bg-red-50 border border-red-100 rounded-token-xl text-red-600 text-xs font-bold flex items-center gap-2">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2.5"
-                          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
+                      <.icon name="hero-exclamation-circle" class="w-4 h-4" />
                       {Phoenix.Naming.humanize(err)}
                     </div>
                   <% end %>
@@ -188,19 +155,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImagePi
 
         <%= if @customization.background_image_path && @customization.background_value == "custom" do %>
           <div class="mt-8 p-4 bg-amber-50 border border-amber-100 rounded-token-2xl flex items-center gap-3">
-            <svg
-              class="w-5 h-5 text-amber-600 shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2.5"
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-              />
-            </svg>
+            <.icon name="hero-exclamation-triangle" class="w-5 h-5 text-amber-600 shrink-0" />
             <p class="text-token-sm font-bold text-amber-800">
               {dgettext(
                 "dashboard_appearance",

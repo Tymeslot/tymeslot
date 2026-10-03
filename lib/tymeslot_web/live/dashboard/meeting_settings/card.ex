@@ -34,14 +34,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
       <div class="flex items-center gap-3">
         <%!-- Drag Handle --%>
         <div class="cursor-grab active:cursor-grabbing text-tymeslot-400 shrink-0">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 8h16M4 16h16"
-            />
-          </svg>
+          <Icons.icon name="hero-equals" class="w-5 h-5" />
         </div>
 
         <%= if @type.icon && @type.icon != "none" do %>
@@ -75,14 +68,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
           </p>
           <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-token-xs text-tymeslot-600">
             <span class="flex items-center shrink-0">
-              <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+              <Icons.icon name="hero-clock" class="w-3.5 h-3.5 mr-1" />
               {dgettext("dashboard_meeting_types", "%{minutes} min", minutes: @type.duration_minutes)}
             </span>
             <%= if paid?(@type) do %>

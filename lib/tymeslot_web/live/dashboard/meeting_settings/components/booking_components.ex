@@ -48,19 +48,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
             title={icon_name}
           >
             <%= if icon_value == "none" do %>
-              <svg
-                class="w-6 h-6 text-tymeslot-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              <Icons.icon name="hero-x-mark" class="w-6 h-6 text-tymeslot-400" />
             <% else %>
               <Icons.icon
                 name={icon_value}
@@ -260,9 +248,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                         )
                       ]}>
                         <%= if @selected_target_calendar_id == (cal.id) do %>
-                          <svg class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
-                          </svg>
+                          <Icons.icon name="hero-check-mini" class="w-2.5 h-2.5 text-white" />
                         <% end %>
                       </div>
                       <span class={[

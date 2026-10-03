@@ -276,19 +276,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
           <div class="mt-4">
             <%= if @profile && @profile.username do %>
               <div class="flex items-center gap-2 text-token-sm font-bold text-tymeslot-500">
-                <svg
-                  class="w-4 h-4 text-green-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2.5"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
+                <.icon name="hero-check" class="w-4 h-4 text-green-500" />
                 {dgettext("dashboard_profile", "Live at:")}
                 <a
                   href={"#{Policy.app_url()}/#{@profile.username}"}

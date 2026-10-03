@@ -18,15 +18,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection do
       <div class="flex items-start justify-between mb-6">
         <div class="flex-1">
           <div class="flex items-center space-x-3 mb-2">
-            <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-              >
-              </path>
-            </svg>
+            <.icon name="hero-lock-closed" class="w-6 h-6 text-amber-600" />
             <h2 class="text-token-lg font-semibold text-tymeslot-900">
               {dgettext("dashboard_embed", "Security & Domain Control")}
             </h2>
@@ -41,20 +33,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection do
         <%!-- Explanation --%>
         <div class="bg-linear-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-token-xl p-6">
           <div class="flex items-start space-x-3">
-            <svg
-              class="w-6 h-6 text-blue-600 shrink-0 mt-1"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              >
-              </path>
-            </svg>
+            <.icon name="hero-information-circle" class="w-6 h-6 text-blue-600 shrink-0 mt-1" />
             <div class="space-y-2 text-token-sm">
               <p class="font-semibold text-blue-900">
                 {dgettext("dashboard_embed", "How Domain Whitelisting Works")}
@@ -163,13 +142,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection do
                     phx-target={@myself}
                     class="ml-2 inline-flex items-center p-0.5 rounded-token-full text-turquoise-400 hover:bg-turquoise-200 hover:text-turquoise-500 focus:outline-hidden"
                   >
-                    <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fill-rule="evenodd"
-                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                        clip-rule="evenodd"
-                      />
-                    </svg>
+                    <.icon name="hero-x-mark-mini" class="h-3 w-3" />
                   </button>
                 </span>
               <% end %>
@@ -183,39 +156,13 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection do
             </p>
             <div class="flex items-center space-x-2">
               <%= if @allowed_domains == [] or @allowed_domains == ["none"] do %>
-                <svg
-                  class="w-5 h-5 text-red-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M18.364 5.636l-12.728 12.728M6.343 6.343l12.728 12.728"
-                  >
-                  </path>
-                </svg>
+                <.icon name="hero-x-mark" class="w-5 h-5 text-red-600" />
                 <span class="text-token-sm text-tymeslot-700">
                   <strong>{dgettext("dashboard_embed", "Disabled:")}</strong>
                   {dgettext("dashboard_embed", "Embedding is blocked everywhere (default)")}
                 </span>
               <% else %>
-                <svg
-                  class="w-5 h-5 text-amber-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  >
-                  </path>
-                </svg>
+                <.icon name="hero-lock-closed" class="w-5 h-5 text-amber-600" />
                 <span class="text-token-sm text-tymeslot-700">
                   <strong>{dgettext("dashboard_embed", "Restricted:")}</strong>
                   {dgettext("dashboard_embed", "Only your whitelisted domains can embed")}
