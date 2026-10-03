@@ -9,98 +9,91 @@
   margin-bottom: 2rem;
 }
 
-/* Status Toggle */
-.status-toggle {
-  position: relative;
-  display: inline-flex;
-  height: 1.5rem;
-  width: 2.75rem;
-  flex-shrink: 0;
-  cursor: pointer;
-  border-radius: 9999px;
-  border: 2px solid;
-  transition: all 0.2s ease-in-out;
-  outline: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
+/* Status switch: backs the StatusSwitch component, which sets each size's
+   track and slider dimensions, border width and slider travel as utilities.
+   These rules sit in the components layer, below Tailwind's utilities, so
+   those size classes apply instead of losing to an unlayered rule. */
+@layer components {
+  .status-toggle {
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+    border-radius: var(--radius-full);
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
+  }
 
-.status-toggle:focus {
-  ring: 2px solid var(--color-primary-500);
-  ring-offset: 2px;
-  box-shadow: 0 0 0 2px var(--color-primary-500), 0 0 0 4px rgba(20, 184, 166, 0.1);
-}
+  /* A ring for keyboard focus only, so a click does not leave one behind. */
+  .status-toggle:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+  }
 
-.status-toggle:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
+  .status-toggle:not(:disabled):hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
+  }
 
-.status-toggle--active {
-  background: var(--color-primary-500);
-  border-color: var(--color-primary-500);
-  box-shadow: 0 2px 8px rgba(20, 184, 166, 0.3);
-}
+  .status-toggle--active {
+    background: var(--color-primary-500);
+    border-color: var(--color-primary-500);
+    box-shadow: 0 2px 8px color-mix(in oklab, var(--color-primary-500) 30%, transparent);
+  }
 
-.status-toggle--active:hover {
-  background: var(--color-primary-600);
-  border-color: var(--color-primary-600);
-  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.4);
-}
+  .status-toggle--active:not(:disabled):hover {
+    background: var(--color-primary-600);
+    border-color: var(--color-primary-600);
+    box-shadow: 0 4px 12px color-mix(in oklab, var(--color-primary-500) 40%, transparent);
+  }
 
-.status-toggle--inactive {
-  background: var(--color-glass-bg-overlay);
-  border-color: var(--color-border-glass-dark);
-}
+  .status-toggle--inactive {
+    background: var(--color-glass-bg-overlay);
+    border-color: var(--color-border-glass-dark);
+  }
 
-.status-toggle--inactive:hover {
-  border-color: var(--color-primary-300);
-  background: rgba(20, 184, 166, 0.05);
-}
+  .status-toggle--inactive:not(:disabled):hover {
+    border-color: var(--color-primary-300);
+    background: color-mix(in oklab, var(--color-primary-500) 5%, transparent);
+  }
 
-.status-toggle-slider {
-  pointer-events: none;
-  position: relative;
-  display: inline-block;
-  height: 1.25rem;
-  width: 1.25rem;
-  transform: translateX(0);
-  border-radius: 9999px;
-  background: white;
-  box-shadow: var(--shadow-glass-sm);
-  transition: transform 0.2s ease-in-out;
-}
+  /* The travel (a translate utility) is the component's, per size: the track
+     width less its borders and the slider. */
+  .status-toggle-slider {
+    pointer-events: none;
+    position: relative;
+    display: inline-block;
+    border-radius: var(--radius-full);
+    background: white;
+    box-shadow: var(--shadow-glass-sm);
+    transition: translate 0.2s ease-in-out;
+  }
 
-.status-toggle-slider--active {
-  transform: translateX(1.25rem);
-}
+  .status-toggle-icon {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    height: 100%;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s ease-in-out;
+  }
 
-.status-toggle-icon {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  height: 100%;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 0.2s ease-in-out;
-}
+  .status-toggle-icon--visible {
+    opacity: 1;
+  }
 
-.status-toggle-icon--visible {
-  opacity: 1;
-}
+  .status-toggle-icon--hidden {
+    opacity: 0;
+  }
 
-.status-toggle-icon--hidden {
-  opacity: 0;
-}
+  .status-icon {
+    color: var(--color-text-glass-secondary);
+  }
 
-.status-icon {
-  height: 0.75rem;
-  width: 0.75rem;
-  color: var(--color-text-glass-secondary);
-}
-
-.status-icon--white {
-  color: white;
+  .status-icon--white {
+    color: white;
+  }
 }
 
 /* Dashboard Sidebar */

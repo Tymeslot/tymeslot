@@ -73,6 +73,37 @@ defmodule TymeslotWeb.Components.UITest do
         end
       end
     end
+
+    # The slider's travel is the track's inner width less the slider: the small
+    # track has 1px borders, the others 2px, so a single shared travel would run
+    # the small slider past its track.
+    test "each size moves the slider exactly across its own track" do
+      travels = %{small: "translate-x-4.5", medium: "translate-x-5", large: "translate-x-5"}
+
+      for {size, travel} <- travels do
+        on =
+          render_component(&StatusSwitch.status_switch/1, %{
+            id: "on",
+            checked: true,
+            on_change: "toggle",
+            size: size
+          })
+
+        off =
+          render_component(&StatusSwitch.status_switch/1, %{
+            id: "off",
+            checked: false,
+            on_change: "toggle",
+            size: size
+          })
+
+        assert [slider_class] =
+                 Floki.attribute(Floki.parse_fragment!(on), ".status-toggle-slider", "class")
+
+        assert travel in String.split(slider_class)
+        refute off =~ "translate-x-"
+      end
+    end
   end
 
   describe "Buttons" do
