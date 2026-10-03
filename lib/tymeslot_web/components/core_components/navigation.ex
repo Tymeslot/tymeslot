@@ -1,5 +1,5 @@
 defmodule TymeslotWeb.Components.CoreComponents.Navigation do
-  @moduledoc "Navigation components: definition rows, tab strips and segmented controls."
+  @moduledoc "Navigation components: tab strips and segmented controls."
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -8,22 +8,6 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
   alias TymeslotWeb.Components.Icons.IconComponents
 
   # ========== NAVIGATION ==========
-
-  @doc """
-  Renders a detail row for definition lists.
-  """
-  attr :label, :string, required: true
-  attr :value, :string, required: true
-
-  @spec detail_row(map()) :: Phoenix.LiveView.Rendered.t()
-  def detail_row(assigns) do
-    ~H"""
-    <div class="flex justify-between">
-      <dt style="color: rgba(255,255,255,0.7);">{@label}:</dt>
-      <dd class="font-medium" style="color: white;">{@value}</dd>
-    </div>
-    """
-  end
 
   # The fade a sideways-scrolling strip shows on an edge with more content
   # beyond it. The `ScrollStrip` hook sets `data-overflow` to `start`, `end` or

@@ -53,7 +53,7 @@ defmodule TymeslotWeb.Components.CoreComponents do
     {:Page, [:dashboard_page]},
     {:SettingRow, [:setting_row]},
     {:Feedback, [:spinner, :empty_state, :loading_card, :pill]},
-    {:Navigation, [:detail_row, :tab_bar, :segmented_control]},
+    {:Navigation, [:tab_bar, :segmented_control]},
     {:Dropdown, [:dropdown, :dropdown_item, :dropdown_divider]},
     {:Flash, [:flash, :flash_group]},
     {:Modal, [:modal, :confirm_modal]},
