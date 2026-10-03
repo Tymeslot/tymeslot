@@ -27,9 +27,6 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
 
   @spec sidebar(map()) :: Phoenix.LiveView.Rendered.t()
   def sidebar(assigns) do
-    assigns =
-      assign(assigns, :missing_integrations, missing_integrations(assigns.integration_status))
-
     ~H"""
     <%!-- Mobile Overlay --%>
     <div
@@ -149,10 +146,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 patch={~p"/dashboard/meeting-settings"}
                 current={@current_action}
                 action={:meeting_settings}
-                show_notification={not (@integration_status[:has_meeting_types] || false)}
-                notification_title={
-                  dgettext("dashboard_common", "Add a meeting type so guests have something to book")
-                }
+                setup_reminder={meeting_types_setup_reminder(@integration_status)}
               >
                 <.icon name="hero-squares-2x2" class="w-5 h-5" />
                 <span>{dgettext("dashboard_common", "Meeting Types")}</span>
@@ -203,8 +197,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 patch={~p"/dashboard/integrations"}
                 current={integrations_current(@current_action)}
                 action={:integrations}
-                show_notification={@missing_integrations != []}
-                notification_title={integration_setup_title(@missing_integrations)}
+                setup_reminder={integrations_setup_reminder(@integration_status)}
               >
                 <.icon name="hero-puzzle-piece" class="w-5 h-5" />
                 <span>{dgettext("dashboard_common", "Integrations")}</span>
@@ -286,10 +279,13 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
   # when either is still unconnected. Which of the two is outstanding has to
   # travel with the marker: once one is connected, a badge that only says
   # "something is missing" reads as if the connection never registered.
-  defp missing_integrations(status) do
-    for {kind, key} <- [calendar: :has_calendar, video: :has_video],
-        not Map.get(status, key, false),
-        do: kind
+  defp integrations_setup_reminder(status) do
+    missing =
+      for {kind, key} <- [calendar: :has_calendar, video: :has_video],
+          not Map.get(status, key, false),
+          do: kind
+
+    integration_setup_title(missing)
   end
 
   defp integration_setup_title([]), do: nil
@@ -303,6 +299,11 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
   defp integration_setup_title([:calendar, :video]),
     do: dgettext("dashboard_common", "Connect a calendar and a video provider to finish setup")
 
+  defp meeting_types_setup_reminder(%{has_meeting_types: true}), do: nil
+
+  defp meeting_types_setup_reminder(_status),
+    do: dgettext("dashboard_common", "Add a meeting type so guests have something to book")
+
   defp close_sidebar_js do
     %JS{}
     |> JS.remove_class("dashboard-sidebar-open", to: "#dashboard-sidebar")
@@ -315,11 +316,10 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
   attr :navigate, :string, default: nil
   attr :current, :atom, required: true
   attr :action, :atom, required: true
-  attr :show_notification, :boolean, default: false
 
-  attr :notification_title, :string,
+  attr :setup_reminder, :string,
     default: nil,
-    doc: "Why the row carries a setup dot; required whenever `show_notification` is true."
+    doc: "Why the row carries a setup dot, or nil for no dot."
 
   attr :locked, :boolean, default: false
   attr :rest, :global
@@ -333,6 +333,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
       navigate={@navigate}
       phx-click={close_sidebar_js()}
       aria-current={if @current == @action, do: "page"}
+      title={@setup_reminder}
       {@rest}
       class={[
         "dashboard-nav-link",
@@ -343,21 +344,18 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
       {render_slot(@inner_block)}
       <%!-- Setup reminder: a small dot and nothing more, so the row never reads
             as a second selected item. Only the current section is styled as
-            active. The reason is carried as text for screen readers and as a
-            tooltip for pointers. --%>
-      <span
-        :if={@show_notification}
-        class="dashboard-nav-notification"
-        title={@notification_title}
-      >
+            active. The reason is a tooltip on the link for pointers, and
+            screen-reader-only text after the label, led by a comma so it is
+            read as a pause rather than run into the label. --%>
+      <span :if={@setup_reminder} class="dashboard-nav-notification">
         <span
           class={[
             "block w-2 h-2 rounded-token-full",
-            if(@current == @action, do: "bg-white", else: "bg-turquoise-500")
+            if(@current == @action, do: "bg-white", else: "bg-turquoise-600")
           ]}
           aria-hidden="true"
         ></span>
-        <span class="sr-only">{@notification_title}</span>
+        <span class="sr-only">, {@setup_reminder}</span>
       </span>
     </.link>
     """

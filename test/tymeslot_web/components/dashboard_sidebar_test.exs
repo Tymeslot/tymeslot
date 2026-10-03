@@ -199,7 +199,7 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
            |> Floki.find(
              "a[href='/dashboard/meeting-settings'] .dashboard-nav-notification .sr-only"
            )
-           |> Floki.text() == "Add a meeting type so guests have something to book"
+           |> Floki.text() == ", Add a meeting type so guests have something to book"
 
     assert length(Floki.find(doc, ".dashboard-nav-notification [aria-hidden=true]")) == 2
     refute html =~ ~r/dashboard-nav-notification[^>]*>\s*!/
@@ -212,7 +212,7 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     test "carries no highlight on another page while setup is outstanding" do
       link = integrations_link(:overview, @needs_setup)
 
-      assert link_classes(link) == ["dashboard-nav-link"]
+      assert modifier_classes(link) == []
       assert Floki.attribute(link, "aria-current") == []
       assert length(Floki.find(link, ".dashboard-nav-notification")) == 1
     end
@@ -220,16 +220,17 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     test "carries no highlight and no dot on another page once everything is connected" do
       link = integrations_link(:polls, @all_connected)
 
-      assert link_classes(link) == ["dashboard-nav-link"]
+      assert modifier_classes(link) == []
       assert Floki.attribute(link, "aria-current") == []
       assert Floki.find(link, ".dashboard-nav-notification") == []
+      assert Floki.attribute(link, "title") == []
     end
 
     test "is styled as active on the Integrations page, with or without outstanding setup" do
       for status <- [@needs_setup, @all_connected] do
         link = integrations_link(:integrations, status)
 
-        assert link_classes(link) == ["dashboard-nav-link", "dashboard-nav-link--active"]
+        assert modifier_classes(link) == ["dashboard-nav-link--active"]
         assert Floki.attribute(link, "aria-current") == ["page"]
       end
     end
@@ -248,7 +249,7 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
         highlighted =
           doc
           |> Floki.find("aside nav a.dashboard-nav-link")
-          |> Enum.reject(&(link_classes(&1) == ["dashboard-nav-link"]))
+          |> Enum.reject(&(modifier_classes(&1) == []))
           |> Enum.flat_map(&Floki.attribute(&1, "href"))
 
         assert length(highlighted) == 1, "#{action}: #{inspect(highlighted)}"
@@ -361,16 +362,17 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     assert html =~ "Some Untranslated Extension"
   end
 
-  # The badge is a bare dot, so what it says is carried twice: as
-  # screen-reader-only text and as a hover tooltip. Both must agree.
+  # The badge is a bare dot, so what it says is carried twice: as a tooltip
+  # on the link and as screen-reader-only text after the label, led by a
+  # comma so the label and the reason are read with a pause. Both must agree.
   defp integrations_badge_title(integration_status) do
-    badge =
-      :overview
-      |> integrations_link(integration_status)
-      |> Floki.find(".dashboard-nav-notification")
+    link = integrations_link(:overview, integration_status)
 
-    [title] = Floki.attribute(badge, "title")
-    assert badge |> Floki.find(".sr-only") |> Floki.text() == title
+    [title] = Floki.attribute(link, "title")
+
+    assert link |> Floki.find(".dashboard-nav-notification .sr-only") |> Floki.text() ==
+             ", " <> title
+
     title
   end
 
@@ -387,8 +389,14 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     |> Floki.find("aside nav a[href='/dashboard/integrations']")
   end
 
-  defp link_classes(link) do
-    link |> Floki.attribute("class") |> Enum.join(" ") |> String.split()
+  # The BEM modifiers on a nav link (`dashboard-nav-link--active` and any
+  # other variant that restyles the row).
+  defp modifier_classes(link) do
+    link
+    |> Floki.attribute("class")
+    |> Enum.join(" ")
+    |> String.split()
+    |> Enum.filter(&String.starts_with?(&1, "dashboard-nav-link--"))
   end
 
   # In the umbrella build the SaaS config repoints :dashboard_extension_gettext at
