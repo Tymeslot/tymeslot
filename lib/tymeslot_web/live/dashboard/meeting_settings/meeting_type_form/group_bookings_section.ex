@@ -26,9 +26,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
   `change_max_participants` back to the parent `MeetingTypeForm`
   (`@myself`), which owns the socket state and auto-save. The visible input
   posts as `max_participants_input`; the canonical `max_participants` param
-  is serialised from socket state (hidden input in create mode,
-  `Submission.build_params/1` in edit mode), mirroring the payments
-  section's `price_input`/`price` split.
+  is serialised from socket state by `Submission.build_params/1`, mirroring
+  the payments section's `price_input`/`price` split.
   """
 
   use TymeslotWeb, :html
@@ -66,11 +65,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
       <% else %>
         <%!-- No placeholder registered: a minimal notice rather than nothing,
               so a misconfiguration is noticed. --%>
-        <div class="card-glass py-6 text-center">
+        <.card class="text-center">
           <p class="text-token-sm text-tymeslot-500">
             {FormHelpers.group_bookings_not_allowed_message()}
           </p>
-        </div>
+        </.card>
       <% end %>
     </section>
     """
@@ -86,62 +85,46 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
 
     ~H"""
     <section class="space-y-4">
-      <div class="flex items-center gap-2">
-        <.icon name="hero-users" class="w-5 h-5 text-turquoise-500" />
-        <h3 class="text-token-base font-semibold text-tymeslot-800">
-          {dgettext("dashboard_meeting_form", "Group bookings")}
-        </h3>
-      </div>
+      <.subsection_header
+        icon="hero-users"
+        title={dgettext("dashboard_meeting_form", "Group bookings")}
+      />
 
-      <.info_box :if={!@group_bookings_enabled and @blocker != nil} variant={:info} class="mb-0!">
-        {blocker_message(@blocker)}
-      </.info_box>
+      <.setting_row
+        id={"group-bookings-toggle-#{@form_id}"}
+        label={dgettext("dashboard_meeting_form", "Let multiple people book the same time slot")}
+        description={
+          dgettext(
+            "dashboard_meeting_form",
+            "Each slot stays open until the participant limit is reached, and everyone booked into it meets together."
+          )
+        }
+        checked={@group_bookings_enabled}
+        disabled={@toggle_disabled}
+        on_change="toggle_group_bookings"
+        target={@myself}
+      >
+        <:disabled_reason>{blocker_message(@blocker)}</:disabled_reason>
+      </.setting_row>
 
-      <label class={[
-        "card-glass flex items-start gap-3 p-4",
-        if(@toggle_disabled, do: "opacity-60 cursor-not-allowed", else: "cursor-pointer")
-      ]}>
-        <input
-          type="checkbox"
-          class="checkbox mt-0.5"
-          checked={@group_bookings_enabled}
-          disabled={@toggle_disabled}
-          phx-click="toggle_group_bookings"
+      <div :if={@group_bookings_enabled and not @payment_required} class="max-w-xs">
+        <.input
+          type="number"
+          name="meeting_type[max_participants_input]"
+          label={dgettext("dashboard_meeting_form", "Participant limit")}
+          value={@max_participants}
+          min={Constraints.group_participants_range().first}
+          max={Constraints.group_participants_range().last}
+          step="1"
+          phx-change="change_max_participants"
+          phx-debounce="500"
           phx-target={@myself}
+          errors={
+            FormValidationHelpers.field_errors(@form_errors, :max_participants)
+            |> Enum.map(&Helpers.format_errors/1)
+          }
         />
-        <div class="space-y-1">
-          <p class="text-token-sm font-medium text-tymeslot-700">
-            {dgettext("dashboard_meeting_form", "Let multiple people book the same time slot")}
-          </p>
-          <p class="text-token-sm text-tymeslot-500">
-            {dgettext(
-              "dashboard_meeting_form",
-              "Each slot stays open until the participant limit is reached, and everyone booked into it meets together."
-            )}
-          </p>
-        </div>
-      </label>
-
-      <div :if={@group_bookings_enabled and not @payment_required} class="card-glass p-4">
-        <div class="max-w-xs">
-          <.input
-            type="number"
-            name="meeting_type[max_participants_input]"
-            label={dgettext("dashboard_meeting_form", "Participant limit")}
-            value={@max_participants}
-            min={Constraints.group_participants_range().first}
-            max={Constraints.group_participants_range().last}
-            step="1"
-            phx-change="change_max_participants"
-            phx-debounce="500"
-            phx-target={@myself}
-            errors={
-              FormValidationHelpers.field_errors(@form_errors, :max_participants)
-              |> Enum.map(&Helpers.format_errors/1)
-            }
-          />
-        </div>
-        <p class="mt-1 text-token-sm text-tymeslot-500">
+        <p class="mt-1 text-token-sm text-tymeslot-600">
           {dgettext("dashboard_meeting_form", "Between %{min} and %{max} participants per slot.",
             min: Constraints.group_participants_range().first,
             max: Constraints.group_participants_range().last
@@ -151,9 +134,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
 
       <%!-- The number input above only renders while the toggle is on and
            payment is not required. A cross-field error can still land on
-           this same field while it's hidden — e.g. the changeset's mutual
+           this same field while it's hidden, such as the changeset's mutual
            exclusion check on `:max_participants` when payment becomes
-           required — so mirror the payments section's unconditional error
+           required, so mirror the payments section's unconditional error
            outlet rather than let it go silently invisible. --%>
       <%= if not (@group_bookings_enabled and not @payment_required) do %>
         <%= for error <- FormValidationHelpers.field_errors(@form_errors, :max_participants) do %>
