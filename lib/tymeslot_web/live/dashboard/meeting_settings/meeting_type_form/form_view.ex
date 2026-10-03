@@ -72,11 +72,20 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     "reminders" => [:reminder_config]
   }
 
+  @tabs_id "meeting-type-form-tabs"
+
+  @doc """
+  The element id of the tab button for `tab` in the form's tab strip, so a
+  caller can move focus onto it.
+  """
+  @spec tab_element_id(String.t()) :: String.t()
+  def tab_element_id(tab), do: Navigation.tab_id(@tabs_id, tab)
+
   @spec form(map()) :: Phoenix.LiveView.Rendered.t()
   def form(assigns) do
     assigns =
       assign(assigns,
-        tabs_id: "meeting-type-form-tabs",
+        tabs_id: @tabs_id,
         create_hint_id: "meeting-type-form-#{assigns.id}-create-hint"
       )
 
@@ -108,7 +117,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
         </div>
 
         <%!-- Details --%>
-        <div
+        <.card
           id={Navigation.panel_id(@tabs_id, "details")}
           role="tabpanel"
           aria-labelledby={Navigation.tab_id(@tabs_id, "details")}
@@ -241,10 +250,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             form_errors={@form_errors}
             myself={@myself}
           />
-        </div>
+        </.card>
 
         <%!-- Location & Calendar --%>
-        <div
+        <.card
           :if={@is_edit}
           id={Navigation.panel_id(@tabs_id, "location")}
           role="tabpanel"
@@ -274,10 +283,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
           />
 
           <.show_as_free_section show_as_free={@show_as_free} myself={@myself} />
-        </div>
+        </.card>
 
         <%!-- Booking Rules --%>
-        <div
+        <.card
           :if={@is_edit}
           id={Navigation.panel_id(@tabs_id, "booking")}
           role="tabpanel"
@@ -323,10 +332,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
           <.limits_section booking_limits={@booking_limits} myself={@myself} />
 
           <.visibility_section type={@type} parent={@parent_myself} />
-        </div>
+        </.card>
 
         <%!-- Questions --%>
-        <div
+        <.card
           :if={@is_edit}
           id={Navigation.panel_id(@tabs_id, "questions")}
           role="tabpanel"
@@ -342,10 +351,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             allowed={@custom_questions_allowed}
             current_user={@current_user}
           />
-        </div>
+        </.card>
 
         <%!-- Reminders --%>
-        <div
+        <.card
           :if={@is_edit}
           id={Navigation.panel_id(@tabs_id, "reminders")}
           role="tabpanel"
@@ -364,7 +373,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             form_errors={@form_errors}
             myself={@myself}
           />
-        </div>
+        </.card>
 
         <%= for error <- FormValidationHelpers.field_errors(@form_errors, :base) do %>
           <p class="form-error">{Helpers.format_errors(error)}</p>
@@ -585,6 +594,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   end
 
   defp panel_class(active_tab, panel_id) do
-    ["card-glass space-y-6", active_tab != panel_id && "hidden"]
+    ["space-y-6", active_tab != panel_id && "hidden"]
   end
 end

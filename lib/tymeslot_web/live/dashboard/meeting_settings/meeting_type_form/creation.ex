@@ -93,12 +93,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Creation do
     LiveView.send_update(socket.assigns.parent_myself, meeting_type_created: meeting_type)
     Flash.info(dgettext("dashboard_meeting_form", "Meeting type created"))
 
-    Component.assign(socket,
+    # The "Create meeting type" button the organiser pressed is replaced by
+    # the auto-save footer, which would drop focus to the page body. Hand it
+    # to the selected tab instead, now that the whole strip is enabled.
+    socket
+    |> Component.assign(
       type: meeting_type,
       is_edit: true,
       form_errors: %{},
       save_status: :saved
     )
+    |> LiveView.push_event("focus", %{id: FormView.tab_element_id(socket.assigns.active_tab)})
   end
 
   def apply_result({:error, {:invalid_form, errors}}, socket) do

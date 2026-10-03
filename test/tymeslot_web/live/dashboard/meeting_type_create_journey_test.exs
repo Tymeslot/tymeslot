@@ -83,6 +83,11 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeCreateJourneyTest do
       assert created.duration_minutes == 20
       assert render(view) =~ "Meeting type created"
 
+      # The pressed "Create" button is gone, so focus moves to the selected
+      # tab rather than falling back to the page body.
+      assert_push_event(view, "focus", %{id: "meeting-type-form-tabs-tab-details"})
+      assert has_element?(view, "#meeting-type-form-tabs-tab-details[aria-selected='true']")
+
       # Same page and the same form instance, now editing the new type: no
       # navigation happened, the tabs are open and auto-save has taken over.
       :ok = refute_redirected(view)
@@ -133,6 +138,9 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeCreateJourneyTest do
 
       assert length(MeetingTypes.get_all_meeting_types(user.id)) == before
 
+      # The Create button is still there holding focus, so it is not moved.
+      refute_push_event(view, "focus", %{})
+
       # Still creating, on Details, with the error beside the field.
       assert has_element?(view, "#meeting-type-form-tabs-tab-details[aria-selected='true']")
       refute has_element?(view, "#meeting-type-form-tabs-panel-details[hidden]")
@@ -163,6 +171,14 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeCreateJourneyTest do
       assert has_element?(view, "#meeting-type-form-tabs-tab-details[aria-selected='true']")
       refute has_element?(view, "#meeting-type-form-tabs-panel-booking")
     end
+
+    # No test covers a video integration deactivated while the create form is
+    # open: the create cannot reference one. Video integrations are chosen per
+    # location, and until the record exists the Location panel is not rendered
+    # (forged tab switches are ignored, as above), so creation always posts the
+    # default in-person location with no video integration ids, and
+    # `allow_video`/`video_integration_id` are projected from those locations
+    # rather than posted.
 
     test "a second create submit after the first has landed is ignored", %{
       conn: conn,
