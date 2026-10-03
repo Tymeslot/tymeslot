@@ -12,6 +12,21 @@ defmodule CredoChecks.RequireDashboardPage do
   (`locations/`, `polls/`) are checked too. Only the helpers listed in
   `@helper_paths` are exempt, because the page component that renders them
   supplies the page shell on their behalf.
+
+  ## Limitations
+
+  It is a text match, deliberately cheap, so it is only as precise as that:
+
+    * Only files ending in `_component.ex` are checked. A page rendered by a
+      LiveView of its own (Analytics) or by a `ComponentView` module is not;
+      the `ComponentView` delegators are listed in `@helper_paths` and their
+      views are trusted to carry the shell.
+    * Exemptions are path substrings, so a new file under an exempt
+      directory is exempt too, page or not.
+    * `#` comments, `@moduledoc`/`@doc` heredocs and HEEx comments are
+      stripped before matching, but a `<.dashboard_page` inside any other
+      string still counts, and nothing checks that the call is the page's
+      root or that it renders.
   """
 
   use Credo.Check,
@@ -92,6 +107,16 @@ defmodule CredoChecks.RequireDashboardPage do
   end
 
   defp has_dashboard_page?(content) do
-    String.contains?(content, ["<.dashboard_page", "<Page.dashboard_page"])
+    content
+    |> strip_commentary()
+    |> String.contains?(["<.dashboard_page", "<Page.dashboard_page"])
+  end
+
+  # Mentions in documentation and comments are not calls.
+  defp strip_commentary(content) do
+    content
+    |> String.replace(~r/@(?:module)?doc\s+~?[sS]?"""[\s\S]*?"""/, "")
+    |> String.replace(~r/<%!--[\s\S]*?--%>/, "")
+    |> String.replace(~r/^\s*#.*$/m, "")
   end
 end

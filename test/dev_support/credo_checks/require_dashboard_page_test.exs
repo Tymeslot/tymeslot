@@ -53,6 +53,29 @@ defmodule CredoChecks.RequireDashboardPageTest do
     |> refute_issues()
   end
 
+  test "does not count a mention in a comment or the moduledoc" do
+    """
+    defmodule TymeslotWeb.Dashboard.PollsComponent do
+      @moduledoc \"\"\"
+      Renders inside <.dashboard_page>, one day.
+      \"\"\"
+
+      # TODO: <.dashboard_page title="Polls">
+      def render(assigns) do
+        ~H\"\"\"
+        <div>
+          <%!-- <.dashboard_page title="Polls"> --%>
+          <.section_header title="Polls" />
+        </div>
+        \"\"\"
+      end
+    end
+    """
+    |> to_source_file("lib/tymeslot_web/live/dashboard/polls/polls_component.ex")
+    |> run_check(RequireDashboardPage)
+    |> assert_issue()
+  end
+
   test "leaves a helper the page renders on its behalf alone" do
     ~s(<.section_header level={2} title="Create Webhook" />)
     |> source()
