@@ -61,7 +61,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         </button>
       </div>
 
-      <%!-- Custom header: title gets full width, close button is absolute top-right --%>
+      <%!--
+        Custom header: title gets full width, close button is absolute top-right.
+        A text input cannot wrap, so a long editable title steps down a size on a
+        phone and ends in an ellipsis while unfocused, with the full text in
+        `title`; the read-only heading wraps instead. Both take the shared modal
+        title's scale, since this header stands in for it.
+      --%>
       <div class="relative mb-1">
         <.icon_button
           icon="hero-x-mark"
@@ -84,14 +90,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
             id="event-title-input"
             name="value"
             value={@selected_event.summary || ""}
+            title={@selected_event.summary}
             placeholder={dgettext("dashboard_calendar_events", "(No title)")}
             phx-blur="update_event_title"
             phx-target={@myself}
             phx-debounce="500"
-            class="w-full bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-2xl font-black text-tymeslot-900 tracking-tight px-0 py-0 placeholder:text-tymeslot-400 transition-colors cursor-text"
+            class="w-full bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-xl sm:text-token-2xl text-ellipsis font-black text-tymeslot-900 tracking-tight px-0 py-0 placeholder:text-tymeslot-400 transition-colors cursor-text"
           />
         </form>
-        <h3 :if={!@editable} class="text-token-2xl font-black text-tymeslot-900 tracking-tight pr-8">
+        <h3
+          :if={!@editable}
+          class="text-token-xl sm:text-token-2xl font-black text-tymeslot-900 tracking-tight pr-8 break-words"
+        >
           {DashboardFormat.title(@selected_event.summary)}
         </h3>
       </div>

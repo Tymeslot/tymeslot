@@ -33,9 +33,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.BookingDetailModal do
       size={:medium}
     >
       <:header>
-        <div class="flex items-center gap-2 min-w-0">
-          <img src="/images/brand/logo.svg" alt="" class="w-5 h-5 shrink-0" />
-          <span class="truncate">{DashboardFormat.title(@entry.title)}</span>
+        <%!-- A long booking title wraps rather than truncating, so it stays readable. --%>
+        <div class="flex items-start gap-2 min-w-0">
+          <img src="/images/brand/logo.svg" alt="" class="w-5 h-5 mt-1 sm:mt-1.5 shrink-0" />
+          <span class="min-w-0 break-words">{DashboardFormat.title(@entry.title)}</span>
         </div>
       </:header>
 
