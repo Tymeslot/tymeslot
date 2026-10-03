@@ -556,6 +556,38 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
     end
   end
 
+  describe "cancelling a calendar disconnect" do
+    test "keeps the integration when the confirmation is cancelled", %{
+      conn: conn,
+      user: user
+    } do
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          name: "Keep Me Google",
+          is_active: true
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+
+      view
+      |> element(
+        "button[phx-click='show'][phx-value-id='#{integration.id}'][phx-target='#delete-calendar-modal']"
+      )
+      |> render_click()
+
+      assert has_element?(view, "#delete-calendar-modal-modal[style*='display: flex']")
+
+      view |> element("#delete-calendar-modal-modal button", "Cancel") |> render_click()
+
+      refute has_element?(view, "#delete-calendar-modal-modal[style*='display: flex']")
+      assert Repo.get(CalendarIntegrationSchema, integration.id)
+      assert render(view) =~ "Keep Me Google"
+      refute render(view) =~ "Integration deleted successfully"
+    end
+  end
+
   describe "free/busy feed" do
     test "enable_freebusy generates a token, renders the feed URL, and persists it", %{
       conn: conn,

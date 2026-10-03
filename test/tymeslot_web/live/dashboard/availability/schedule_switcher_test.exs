@@ -334,5 +334,28 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ScheduleSwitcherTest do
       assert render(view) =~ "Schedule deleted"
       refute Enum.any?(Schedules.list_for_profile(profile.id), &(&1.id == other.id))
     end
+
+    test "cancelling the confirmation keeps the schedule", %{
+      conn: conn,
+      profile: profile
+    } do
+      other = insert(:availability_schedule, profile: profile, name: "Evening hours")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      view |> element("#schedule-tabs-tab-#{other.id}") |> render_click()
+      view |> element("[phx-click='toggle_schedule_menu']") |> render_click()
+      view |> element("[phx-click='show_delete_schedule_modal']") |> render_click()
+
+      assert has_element?(view, "#delete-schedule-modal[style*='display: flex']")
+
+      view |> element("#delete-schedule-modal button", "Cancel") |> render_click()
+
+      refute has_element?(view, "#delete-schedule-modal[style*='display: flex']")
+      assert has_element?(view, "#delete-schedule-modal[style*='display: none']")
+      assert Enum.any?(Schedules.list_for_profile(profile.id), &(&1.id == other.id))
+      assert has_element?(view, "#schedule-tabs-tab-#{other.id}")
+      refute render(view) =~ "Schedule deleted"
+    end
   end
 end

@@ -225,6 +225,36 @@ defmodule TymeslotWeb.Dashboard.VideoDisconnectCleanupTest do
     assert {:error, :not_found} = VideoIntegrationQueries.get(integration.id)
   end
 
+  test "cancelling the disconnect keeps the integration and its rooms", %{
+    conn: conn,
+    user: user
+  } do
+    integration = insert(:video_integration, user: user, provider: "zoom", is_active: true)
+
+    meeting =
+      insert_meeting_for_user(user, %{
+        video_integration_id: integration.id,
+        video_provider: "zoom",
+        video_room_id: "666"
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+    open_delete_modal(view, "delete-video-modal", integration.id)
+    tick_delete_rooms(view, "delete-video-modal")
+
+    assert has_element?(view, "#delete-video-modal-modal[style*='display: flex']")
+
+    view |> element("#delete-video-modal-modal button", "Cancel") |> render_click()
+
+    refute has_element?(view, "#delete-video-modal-modal[style*='display: flex']")
+    refute_enqueued(worker: VideoIntegrationDisconnectWorker)
+    assert {:ok, kept} = VideoIntegrationQueries.get(integration.id)
+    refute kept.deleted_at
+    assert Repo.reload!(meeting).video_room_id == "666"
+    assert [_] = VideoIntegrationQueries.list_all_for_user(user.id)
+  end
+
   test "ticking the box shows the box as ticked", %{conn: conn, user: user} do
     integration = insert(:video_integration, user: user, provider: "zoom", is_active: true)
 

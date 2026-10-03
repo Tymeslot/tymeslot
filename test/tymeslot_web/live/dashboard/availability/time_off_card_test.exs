@@ -603,6 +603,28 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCardTest do
     end
   end
 
+  describe "cancelling a removal" do
+    test "keeps the period when the confirmation is cancelled", %{conn: conn, profile: profile} do
+      period = insert(:time_off_period, profile: profile, label: "Portugal")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      view
+      |> element("#time-off-#{period.id} button[aria-label='Remove time off']")
+      |> render_click()
+
+      assert has_element?(view, "#delete-time-off-modal[style*='display: flex']")
+
+      view |> element("#delete-time-off-modal button", "Cancel") |> render_click()
+
+      refute has_element?(view, "#delete-time-off-modal[style*='display: flex']")
+      assert [%{id: id}] = TimeOff.list(profile.id)
+      assert id == period.id
+      assert has_element?(view, "#time-off-#{period.id}")
+      refute render(view) =~ "No time off booked"
+    end
+  end
+
   defp booking(user, start_time, title) do
     insert(:meeting,
       organizer_user_id: user.id,

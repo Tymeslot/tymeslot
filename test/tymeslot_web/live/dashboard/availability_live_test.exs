@@ -254,6 +254,44 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       assert breaks == []
     end
 
+    test "cancelling the delete break confirmation keeps the break", %{
+      conn: conn,
+      schedule: schedule
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      view
+      |> element("button[phx-click='show_add_break_form'][phx-value-day='1']")
+      |> render_click()
+
+      view
+      |> form("form[phx-submit='add_break']", %{
+        "day" => "1",
+        "start" => "12:00",
+        "end" => "13:00",
+        "label" => "Lunch"
+      })
+      |> render_submit()
+
+      day = WeeklySchedule.get_day_availability(schedule.id, 1)
+      [break] = breaks_for_day(day.id)
+
+      view
+      |> element("button[phx-click='show_delete_break_modal'][phx-value-break_id='#{break.id}']")
+      |> render_click()
+
+      assert has_element?(view, "#delete-break-modal[style*='display: flex']")
+
+      view |> element("#delete-break-modal button", "Cancel") |> render_click()
+
+      refute has_element?(view, "#delete-break-modal[style*='display: flex']")
+      assert [%{id: id, label: "Lunch"}] = breaks_for_day(day.id)
+      assert id == break.id
+      assert has_element?(view, "button[phx-click='show_delete_break_modal']")
+      assert render(view) =~ "Lunch"
+      refute render(view) =~ "Break deleted"
+    end
+
     test "adds a break without a label", %{conn: conn, schedule: schedule} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 

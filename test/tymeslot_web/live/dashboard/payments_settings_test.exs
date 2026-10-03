@@ -228,6 +228,30 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       refute has_element?(view, "#disconnect-modal")
     end
 
+    test "cancelling the disconnect modal keeps the connect_account", %{conn: conn} do
+      user = create_onboarded_user()
+
+      insert(:connect_account,
+        user: user,
+        stripe_account_id: "acct_keep",
+        charges_enabled: true,
+        payouts_enabled: true,
+        details_submitted: true
+      )
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, "/dashboard/integrations?tab=payments")
+
+      view |> element("button[phx-click=open_disconnect_modal]") |> render_click()
+      assert has_element?(view, "#disconnect-modal")
+
+      view |> element("#disconnect-modal button", "Cancel") |> render_click()
+
+      refute has_element?(view, "#disconnect-modal")
+      assert %{stripe_account_id: "acct_keep"} = ConnectAccountQueries.live_for_user(user.id)
+      assert has_element?(view, "button[phx-click=open_disconnect_modal]")
+    end
+
     test "change_currency updates the account currency and resets paid event types", %{conn: conn} do
       user = create_onboarded_user()
 

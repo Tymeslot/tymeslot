@@ -223,6 +223,26 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
       refute has_element?(view, "button", "Delete Photo")
     end
 
+    test "cancelling the delete avatar confirmation keeps the avatar", %{
+      conn: conn,
+      profile: profile
+    } do
+      profile = Repo.update!(Changeset.change(profile, avatar: "test_avatar.png"))
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      view |> element("button", "Delete Photo") |> render_click()
+
+      assert has_element?(view, "#delete-avatar-modal-modal[style*='display: flex']")
+
+      view |> element("#delete-avatar-modal-modal button", "Cancel") |> render_click()
+
+      refute has_element?(view, "#delete-avatar-modal-modal[style*='display: flex']")
+      assert Repo.reload!(profile).avatar == "test_avatar.png"
+      assert has_element?(view, "button", "Delete Photo")
+      refute render(view) =~ "Avatar deleted successfully"
+    end
+
     test "offers no delete action when no avatar has been uploaded", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
 
