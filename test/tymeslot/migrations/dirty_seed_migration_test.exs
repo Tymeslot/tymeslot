@@ -112,6 +112,7 @@ defmodule Tymeslot.Migrations.DirtySeedMigrationTest do
         assert run_remaining_migrations!() == versions_under_test
 
         assert_availability_rekeyed!(seeded)
+        assert_buffers_split!()
       after
         # Always restore clean state for other tests
         reset_database!()
@@ -282,6 +283,34 @@ defmodule Tymeslot.Migrations.DirtySeedMigrationTest do
     # Breaks are reached only through their weekly row's id, so an unchanged
     # count proves the rekey updated those rows rather than replacing them.
     assert scalar!("SELECT COUNT(*) FROM availability_breaks") == seeded.breaks
+  end
+
+  # Each seeded profile's single buffer became an equal before/after pair on
+  # its default schedule: 15 copied, 0 copied, NULL COALESCEd to 15 by the
+  # schedule migration, and 500 clamped to 120. The last row is the only thing
+  # that proves the clamp ran, because without it the range constraints would
+  # never meet a value they reject.
+  defp assert_buffers_split! do
+    %{rows: rows} =
+      SQL.query!(
+        Tymeslot.Repo,
+        """
+        SELECT u.email, s.buffer_before_minutes, s.buffer_after_minutes
+        FROM availability_schedules AS s
+        JOIN profiles AS p ON p.id = s.profile_id
+        JOIN users AS u ON u.id = p.user_id
+        WHERE s.is_default AND u.email LIKE 'seed-user-%@example.com'
+        ORDER BY u.email
+        """,
+        []
+      )
+
+    assert rows == [
+             ["seed-user-1@example.com", 15, 15],
+             ["seed-user-2@example.com", 0, 0],
+             ["seed-user-3@example.com", 15, 15],
+             ["seed-user-4@example.com", 120, 120]
+           ]
   end
 
   defp count_by_profile!(table) do

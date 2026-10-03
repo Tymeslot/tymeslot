@@ -322,7 +322,8 @@ defmodule Tymeslot.Factory do
     %AvailabilityScheduleSchema{
       name: sequence(:availability_schedule_name, &"Schedule #{&1}"),
       is_default: false,
-      buffer_minutes: 15,
+      buffer_before_minutes: 15,
+      buffer_after_minutes: 15,
       min_advance_hours: 3,
       advance_booking_days: 90,
       profile: build(:profile)

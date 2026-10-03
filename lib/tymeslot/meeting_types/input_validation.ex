@@ -104,18 +104,34 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
     do: {:error, %{base: "Invalid field"}}
 
   @doc """
-  Validates buffer minutes setting input.
+  Validates the buffer kept free before each booking.
 
   ## Parameters
-  - `buffer_str` - String containing buffer minutes value
+  - `value_str` - String containing the buffer in minutes
   - `opts` - Options including metadata for logging
 
   ## Returns
   - `{:ok, validated_integer}` | `{:error, validation_error}`
   """
-  @spec validate_buffer_minutes(String.t(), keyword()) :: {:ok, integer()} | {:error, String.t()}
-  def validate_buffer_minutes(buffer_str, opts \\ []) do
-    validate_numeric_setting(buffer_str, 0, 120, "Buffer minutes", "buffer_minutes", opts)
+  @spec validate_buffer_before_minutes(String.t(), keyword()) ::
+          {:ok, integer()} | {:error, String.t()}
+  def validate_buffer_before_minutes(value_str, opts \\ []),
+    do: validate_buffer(value_str, "Buffer before", "buffer_before_minutes", opts)
+
+  @doc """
+  Validates the buffer kept free after each booking. Same rule and return
+  shape as `validate_buffer_before_minutes/2`.
+  """
+  @spec validate_buffer_after_minutes(String.t(), keyword()) ::
+          {:ok, integer()} | {:error, String.t()}
+  def validate_buffer_after_minutes(value_str, opts \\ []),
+    do: validate_buffer(value_str, "Buffer after", "buffer_after_minutes", opts)
+
+  # Both buffers share one range, read from `Constraints` so this check and
+  # the schema's cannot disagree.
+  defp validate_buffer(value_str, label, event_name, opts) do
+    range = Constraints.buffer_minutes_range()
+    validate_numeric_setting(value_str, range.first, range.last, label, event_name, opts)
   end
 
   @doc """

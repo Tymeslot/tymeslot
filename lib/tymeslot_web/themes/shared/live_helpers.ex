@@ -59,6 +59,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       socket
       |> assign_initial_state_fun.()
       |> ThemeUtils.assign_user_timezone(params)
+      |> ThemeUtils.assign_attendee_prefill()
       |> ThemeUtils.assign_theme_with_preview(params)
 
     # Resolve the username context (which sets meeting_types) unless the
@@ -579,16 +580,19 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     client_ip = ClientIP.get(socket)
     submission_token = SubmissionToken.generate()
 
-    # Pre-fill form if rescheduling, scoped to the organizer to prevent PII leaks
-    reschedule_uid = socket.assigns[:reschedule_meeting_uid]
-    seat_token = socket.assigns[:reschedule_seat_token]
-    organizer_user_id = socket.assigns[:organizer_user_id]
-
+    # Pre-fill form if rescheduling, scoped to the organizer to prevent PII
+    # leaks; otherwise from the booking link's fragment, if it carried one
     form_data =
-      if seat_token do
-        ThemeFlow.build_seat_booking_form_data(seat_token)
-      else
-        ThemeFlow.build_booking_form_data(reschedule_uid, organizer_user_id)
+      case socket.assigns[:reschedule_seat_token] do
+        nil ->
+          ThemeFlow.build_booking_form_data(
+            socket.assigns[:reschedule_meeting_uid],
+            socket.assigns[:organizer_user_id],
+            socket.assigns.attendee_prefill
+          )
+
+        seat_token ->
+          ThemeFlow.build_seat_booking_form_data(seat_token)
       end
 
     socket

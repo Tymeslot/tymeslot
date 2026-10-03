@@ -43,22 +43,24 @@ defmodule Tymeslot.MeetingTypes.InputValidationPropertyTest do
     end
   end
 
-  describe "validate_buffer_minutes/1" do
-    property "valid buffer values (0..120) always pass" do
-      check all(n <- integer(0..120)) do
-        assert {:ok, ^n} = InputValidation.validate_buffer_minutes(to_string(n))
+  for fun <- [:validate_buffer_before_minutes, :validate_buffer_after_minutes] do
+    describe "#{fun}/2" do
+      property "valid buffer values (0..120) always pass" do
+        check all(n <- integer(0..120)) do
+          assert {:ok, ^n} = InputValidation.unquote(fun)(to_string(n))
+        end
       end
-    end
 
-    property "values above 120 always fail" do
-      check all(n <- integer(121..1000)) do
-        assert {:error, _msg} = InputValidation.validate_buffer_minutes(to_string(n))
+      property "values above 120 always fail" do
+        check all(n <- integer(121..1000)) do
+          assert {:error, _msg} = InputValidation.unquote(fun)(to_string(n))
+        end
       end
-    end
 
-    property "negative values always fail" do
-      check all(n <- integer(-1000..-1)) do
-        assert {:error, _msg} = InputValidation.validate_buffer_minutes(to_string(n))
+      property "negative values always fail" do
+        check all(n <- integer(-1000..-1)) do
+          assert {:error, _msg} = InputValidation.unquote(fun)(to_string(n))
+        end
       end
     end
   end

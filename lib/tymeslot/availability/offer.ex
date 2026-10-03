@@ -41,10 +41,10 @@ defmodule Tymeslot.Availability.Offer do
 
   # How far outside the dates being rendered the booking fetch reaches. A
   # booking ending shortly before the window can still block its first slot
-  # through the host's buffer (two hours at most), and the window's own bounds
-  # are UTC while the days are the host's, so either edge can sit up to a
-  # timezone offset away. A day either side covers both; nothing further out
-  # can touch a slot inside.
+  # through the host's buffers (two hours at most on either side), and the
+  # window's own bounds are UTC while the days are the host's, so either edge
+  # can sit up to a timezone offset away. A day either side covers both;
+  # nothing further out can touch a slot inside.
   @busy_window_padding_days 1
 
   @typedoc """

@@ -34,7 +34,8 @@ defmodule Tymeslot.Availability.GroupSlotsTest do
       profile_id: profile_id,
       max_advance_booking_days: 90,
       min_advance_hours: 3,
-      buffer_minutes: 15
+      buffer_before_minutes: 15,
+      buffer_after_minutes: 15
     }
 
     %{user: user, meeting_type: meeting_type, date: date, config: config}

@@ -9,6 +9,10 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
   alias Tymeslot.Demo
   alias Tymeslot.Meetings
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.Security.FieldValidators.EmailValidator
+  alias Tymeslot.Security.FieldValidators.NameValidator
+
+  @prefill_validators %{"name" => NameValidator, "email" => EmailValidator}
 
   @spec resolve_meeting_type_for_duration(pos_integer(), String.t()) :: map() | nil
   def resolve_meeting_type_for_duration(user_id, duration) do
@@ -112,12 +116,52 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
 
   def reschedule_location_choice(_meeting_uid, _organizer_user_id), do: nil
 
-  @spec build_booking_form_data(String.t() | nil, integer() | nil) :: map()
-  def build_booking_form_data(nil, _organizer_user_id), do: default_booking_form_data()
+  @doc """
+  The attendee details a booking link carried in its URL fragment
+  (`/:username#name=…&email=…`), reduced to what may seed the booking form.
 
-  def build_booking_form_data(_reschedule_uid, nil), do: default_booking_form_data()
+  The fragment never reaches the server in a request, so the name and email
+  stay out of access logs and `Referer` headers; the browser reads it and
+  passes it on with the LiveView connection. Only `name` and `email` are kept,
+  each trimmed and stripped of null bytes, and only when the booking form's
+  own validator accepts it: a value that would fail on submit is left for the
+  visitor to type rather than shown already wrong. Anything else (no map, a
+  non-string value) yields no prefill.
+  """
+  @spec attendee_prefill(any()) :: %{optional(String.t()) => String.t()}
+  def attendee_prefill(%{} = params) do
+    for {field, validator} <- @prefill_validators,
+        value = clean_prefill(params[field]),
+        validator.validate(value) == :ok,
+        into: %{},
+        do: {field, value}
+  end
 
-  def build_booking_form_data(reschedule_uid, organizer_user_id)
+  def attendee_prefill(_params), do: %{}
+
+  defp clean_prefill(value) when is_binary(value),
+    do: value |> String.replace("\x00", "") |> String.trim()
+
+  defp clean_prefill(_value), do: nil
+
+  @doc """
+  The booking form's starting values.
+
+  A reschedule starts from the details of the booking being moved, looked up
+  scoped to the organiser so a uid cannot reveal another organiser's attendee.
+  Any other booking starts blank, overlaid with `prefill` (see
+  `attendee_prefill/1`); a reschedule ignores it, since the attendee is
+  already known.
+  """
+  @spec build_booking_form_data(String.t() | nil, integer() | nil, map()) :: map()
+  def build_booking_form_data(reschedule_uid, organizer_user_id, prefill \\ %{})
+
+  def build_booking_form_data(nil, _organizer_user_id, prefill),
+    do: Map.merge(default_booking_form_data(), prefill)
+
+  def build_booking_form_data(_reschedule_uid, nil, _prefill), do: default_booking_form_data()
+
+  def build_booking_form_data(reschedule_uid, organizer_user_id, _prefill)
       when is_binary(reschedule_uid) and is_integer(organizer_user_id) do
     case Orchestrator.get_meeting_for_reschedule(reschedule_uid, organizer_user_id) do
       {:ok, meeting} ->

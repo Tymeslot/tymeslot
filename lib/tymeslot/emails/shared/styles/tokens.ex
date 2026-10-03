@@ -9,8 +9,8 @@ defmodule Tymeslot.Emails.Shared.Styles.Tokens do
   The palette is **inversion-survivable**: no pure whites, no pure blacks.
   Every base value sits a few steps off the extremes so that a client-forced
   inversion (Thunderbird, iOS Mail, Gmail Android) produces a coherent warm
-  result rather than washed-out neon. There is no separate dark-mode
-  stylesheet — the single palette carries both light and inverted clients.
+  result rather than washed-out neon. Clients that honour
+  `prefers-color-scheme` get the dedicated dark palette (`dark/1`) instead.
   """
 
   alias Tymeslot.Emails.Shared.Styles.BrandPalette
@@ -34,6 +34,22 @@ defmodule Tymeslot.Emails.Shared.Styles.Tokens do
   @ink_soft "#2d3339"
   @ink_muted "#4a5058"
   @ink_whisper "#6d737a"
+
+  # Dark palette, applied under `prefers-color-scheme: dark` by
+  # `Styles.DarkMode`. A warm charcoal rather than pure black, mirroring the
+  # light side's cream. Every ink tier clears WCAG AA against `canvas_soft`
+  # and against each intent's dark tint, the lightest surfaces text sits on.
+  @dark %{
+    canvas: "#131518",
+    canvas_soft: "#24282c",
+    surface: "#1b1e21",
+    hairline: "#3a3f45",
+    hairline_soft: "#2c3035",
+    ink: "#f2eee4",
+    ink_soft: "#d8d4ca",
+    ink_muted: "#aeb2b8",
+    ink_whisper: "#9ca1a8"
+  }
 
   # ============================================================================
   # BRAND ACCENTS — intent families
@@ -154,6 +170,13 @@ defmodule Tymeslot.Emails.Shared.Styles.Tokens do
   @doc "Whisper ink — the quietest text (legal, tertiary)."
   @spec ink_whisper() :: String.t()
   def ink_whisper, do: @ink_whisper
+
+  @doc """
+  The dark counterpart of a neutral token (`:canvas`, `:surface`, `:ink`, …),
+  used by the dark-mode stylesheet.
+  """
+  @spec dark(atom()) :: String.t()
+  def dark(key), do: Map.fetch!(@dark, key)
 
   @doc "Platform font stack; no web font, so opening an email fetches nothing."
   @spec font_family() :: String.t()

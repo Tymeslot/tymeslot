@@ -43,11 +43,13 @@ defmodule Tymeslot.Availability.Conflicts do
         ) :: [String.t()]
   def filter_available_slots(all_slots, events, duration_minutes, timezone, date, config) do
     %{
-      buffer_minutes: buffer_minutes,
+      buffer_before_minutes: buffer_before_minutes,
+      buffer_after_minutes: buffer_after_minutes,
       min_advance_hours: min_advance_hours,
       max_advance_booking_days: max_advance_booking_days
     } = Calculate.config_policy(config)
 
+    buffers = {buffer_before_minutes, buffer_after_minutes}
     ignore_event_uids = Map.get(config, :ignore_event_uids, MapSet.new())
 
     current_time = DateTimeUtils.now_in_timezone(timezone)
@@ -67,7 +69,7 @@ defmodule Tymeslot.Availability.Conflicts do
           slot_start,
           slot_end,
           events_for_slot(events, slot_start, ignore_event_uids),
-          buffer_minutes
+          buffers
         ) and
         not limit_blocked?(config, slot_start)
     end)
@@ -203,7 +205,8 @@ defmodule Tymeslot.Availability.Conflicts do
 
   defp slot_bookable?(slot, date, user_timezone, duration_minutes, now, nearby_events, config) do
     %{
-      buffer_minutes: buffer_minutes,
+      buffer_before_minutes: buffer_before_minutes,
+      buffer_after_minutes: buffer_after_minutes,
       min_advance_hours: min_advance_hours,
       max_advance_booking_days: max_advance_booking_days
     } = Calculate.config_policy(config)
@@ -220,7 +223,7 @@ defmodule Tymeslot.Availability.Conflicts do
         slot_start,
         slot_end,
         events_for_slot(nearby_events, slot_start, ignore_event_uids),
-        buffer_minutes
+        {buffer_before_minutes, buffer_after_minutes}
       ) and
       not limit_blocked?(config, slot_start)
   end

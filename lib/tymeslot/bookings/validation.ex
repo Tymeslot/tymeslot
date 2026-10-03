@@ -6,8 +6,7 @@ defmodule Tymeslot.Bookings.Validation do
   All validation is based on the data passed in as parameters.
   """
 
-  alias Tymeslot.Availability.Offer
-  alias Tymeslot.Availability.TimeSlots
+  alias Tymeslot.Availability.{Calculate, Offer, TimeSlots}
   alias Tymeslot.Bookings.Errors
   alias Tymeslot.Bookings.ScheduleCheck
   alias Tymeslot.Clock
@@ -24,7 +23,8 @@ defmodule Tymeslot.Bookings.Validation do
   @type scheduling_config :: %{
           optional(:min_advance_hours) => non_neg_integer(),
           optional(:max_advance_booking_days) => non_neg_integer(),
-          optional(:buffer_minutes) => non_neg_integer(),
+          optional(:buffer_before_minutes) => non_neg_integer(),
+          optional(:buffer_after_minutes) => non_neg_integer(),
           optional(atom()) => term()
         }
 
@@ -88,14 +88,21 @@ defmodule Tymeslot.Bookings.Validation do
   @doc """
   Checks if a time slot has conflicts with existing events.
 
+  `buffers` is `{before, after}`: the minutes that must stay free before the
+  slot starts and after it ends. They pad the slot, never the events.
+
   Events are first filtered through `CalendarEvent.blocking?/1` so that
   cancelled, declined, and `TRANSP:TRANSPARENT` (free/busy = free) events
-  never block a booking — matching the contract that `Availability.Conflicts`
+  never block a booking, matching the contract that `Availability.Conflicts`
   enforces for the display path.
   """
-  @spec check_slot_availability(DateTime.t(), DateTime.t(), [calendar_event()], non_neg_integer()) ::
-          :ok | {:error, :slot_unavailable}
-  def check_slot_availability(start_datetime, end_datetime, events, buffer_minutes \\ 0) do
+  @spec check_slot_availability(
+          DateTime.t(),
+          DateTime.t(),
+          [calendar_event()],
+          TimeRange.buffers()
+        ) :: :ok | {:error, :slot_unavailable}
+  def check_slot_availability(start_datetime, end_datetime, events, buffers \\ {0, 0}) do
     normalized_events =
       events
       |> Enum.filter(&CalendarEvent.blocking?/1)
@@ -112,7 +119,7 @@ defmodule Tymeslot.Bookings.Validation do
          start_datetime,
          end_datetime,
          normalized_events,
-         buffer_minutes
+         buffers
        ) do
       {:error, :slot_unavailable}
     else
@@ -128,8 +135,12 @@ defmodule Tymeslot.Bookings.Validation do
   @spec validate_no_conflicts(DateTime.t(), DateTime.t(), [calendar_event()], scheduling_config()) ::
           :ok | {:error, :slot_unavailable}
   def validate_no_conflicts(start_datetime, end_datetime, events, config) do
-    buffer_minutes = Map.get(config, :buffer_minutes, 15)
-    check_slot_availability(start_datetime, end_datetime, events, buffer_minutes)
+    check_slot_availability(
+      start_datetime,
+      end_datetime,
+      events,
+      Calculate.config_buffers(config)
+    )
   end
 
   @doc """

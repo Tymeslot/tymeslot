@@ -134,7 +134,8 @@ defmodule Tymeslot.Availability.TimeOffTimezoneTest do
       time_off: time_off,
       min_advance_hours: 0,
       max_advance_booking_days: 3650,
-      buffer_minutes: 0
+      buffer_before_minutes: 0,
+      buffer_after_minutes: 0
     }
   end
 end

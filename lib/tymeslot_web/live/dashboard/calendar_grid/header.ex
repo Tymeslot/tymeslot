@@ -41,7 +41,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
         (which forced the view switcher to wrap onto its own detached line and
         looked scrambled), we keep two stable rows:
           Row 1: navigation + period title, with the view switcher pinned right.
-          Row 2: search, quick-add, calendars, refresh and settings.
+          Row 2: search, quick-add, import, calendars, refresh and settings.
         flex-wrap on each row lets it reflow gracefully when space is tight.
       --%>
       <div class="flex flex-col gap-1 md:gap-2 px-3 py-2 md:px-4 md:py-3">
@@ -120,6 +120,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
             myself={@myself}
           />
           <.quick_add myself={@myself} />
+          <.import_button myself={@myself} />
           <.view_menu view={@view} show_view_menu={@show_view_menu} myself={@myself} />
           <.calendar_list_dropdown
             :if={@integrations != []}
@@ -277,6 +278,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
     >
       <.icon name="hero-plus-circle-mini" class="w-4 h-4" />
       <span>{dgettext("dashboard_calendar", "Quick add")}</span>
+    </button>
+    """
+  end
+
+  attr :myself, :any, required: true
+
+  # Opens the `.ics` import modal. Kept off the narrowest screens beside Quick
+  # add, where picking a file to import is rare.
+  defp import_button(assigns) do
+    ~H"""
+    <button
+      type="button"
+      phx-click="show_ics_import"
+      phx-target={@myself}
+      data-testid="import-ics-button"
+      class="hidden sm:flex min-w-[40px] min-h-[40px] px-2 md:px-3 md:py-1.5 items-center gap-1.5 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
+      aria-label={dgettext("dashboard_calendar", "Import events from an .ics file")}
+    >
+      <.icon name="hero-arrow-up-tray-mini" class="w-4 h-4" />
+      <span class="hidden md:inline">{dgettext("dashboard_calendar", "Import")}</span>
     </button>
     """
   end

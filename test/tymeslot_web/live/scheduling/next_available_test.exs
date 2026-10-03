@@ -65,7 +65,8 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
           is_default: true,
           advance_booking_days: 90,
           min_advance_hours: 0,
-          buffer_minutes: 0
+          buffer_before_minutes: 0,
+          buffer_after_minutes: 0
         )
 
       insert(:meeting_type,

@@ -306,13 +306,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
+      before = lv |> render() |> occurrences("existing@example.com")
+
       html =
         lv
         |> element("#calendar-grid")
         |> render_hook("add_event_attendee", %{"email" => "existing@example.com"})
 
-      # Should not appear as a pending attendee (dashed border = pending tag)
-      refute html =~ "border-dashed"
+      # Listed once still, and not invited a second time.
+      assert occurrences(html, "existing@example.com") == before
+      refute render(lv) =~ "Attendee added and invited."
     end
 
     test "rejects an existing attendee typed in a different case", %{

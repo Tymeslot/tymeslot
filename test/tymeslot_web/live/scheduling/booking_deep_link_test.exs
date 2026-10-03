@@ -55,7 +55,8 @@ defmodule TymeslotWeb.Live.Scheduling.BookingDeepLinkTest do
         is_default: true,
         advance_booking_days: 30,
         min_advance_hours: 0,
-        buffer_minutes: 0
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0
       )
 
     Enum.each(1..7, fn day_of_week ->

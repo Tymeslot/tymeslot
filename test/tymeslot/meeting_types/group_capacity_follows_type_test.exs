@@ -37,7 +37,8 @@ defmodule Tymeslot.MeetingTypes.GroupCapacityFollowsTypeTest do
       profile_id: profile_id,
       max_advance_booking_days: 90,
       min_advance_hours: 3,
-      buffer_minutes: 15
+      buffer_before_minutes: 15,
+      buffer_after_minutes: 15
     }
 
     %{user: user, date: date, config: config, start_time: DateTime.new!(date, ~T[11:00:00])}
