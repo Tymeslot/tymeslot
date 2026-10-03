@@ -362,8 +362,8 @@
   line-height: 1;
   border: 1px solid rgba(255, 255, 255, 0.7);
   box-shadow: 
-    0 1px 4px rgba(59, 130, 246, 0.2),
-    0 0 0 1px rgba(37, 99, 235, 0.1);
+    0 1px 4px color-mix(in oklab, var(--color-info) 20%, transparent),
+    0 0 0 1px color-mix(in oklab, var(--color-info) 10%, transparent);
   z-index: 10;
   opacity: 0.8;
   transition: opacity 0.2s ease;
@@ -372,15 +372,15 @@
 .dashboard-nav-notification--warning {
   background: var(--gradient-amber);
   box-shadow: 
-    0 1px 4px rgba(245, 158, 11, 0.2),
-    0 0 0 1px rgba(217, 119, 6, 0.1);
+    0 1px 4px color-mix(in oklab, var(--color-warning) 20%, transparent),
+    0 0 0 1px color-mix(in oklab, var(--color-warning) 10%, transparent);
 }
 
 .dashboard-nav-notification--info {
   background: var(--gradient-turquoise);
   box-shadow:
-    0 1px 4px rgba(20, 184, 166, 0.25),
-    0 0 0 1px rgba(13, 148, 136, 0.15);
+    0 1px 4px color-mix(in oklab, var(--color-primary-500) 25%, transparent),
+    0 0 0 1px color-mix(in oklab, var(--color-primary-600) 15%, transparent);
   opacity: 1;
 }
 

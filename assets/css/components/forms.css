@@ -4,9 +4,9 @@
 
 /* Input Fields - Modern Branding */
 .input {
-  @apply block w-full text-sm font-medium text-slate-900 bg-slate-50/50 border-2 border-slate-100 rounded-2xl transition-all duration-300;
+  @apply block w-full text-sm font-medium text-tymeslot-900 bg-tymeslot-50/50 border-2 border-tymeslot-100 rounded-token-2xl transition-all duration-300;
   @apply focus:outline-hidden focus:border-turquoise-400 focus:bg-white focus:shadow-xl focus:shadow-turquoise-500/10;
-  @apply hover:border-slate-200 hover:bg-slate-50;
+  @apply hover:border-tymeslot-200 hover:bg-tymeslot-50;
   padding: 0.75rem 1rem;
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -28,22 +28,22 @@
 }
 
 .input::placeholder {
-  @apply text-slate-400 font-medium;
+  @apply text-tymeslot-400 font-medium;
 }
 
 /* Disabled: visible but inert. The hover and focus rules above match at the
    same specificity, so these have to come after them to win, and the explicit
    :disabled:hover keeps a greyed-out field from lighting up under the pointer. */
 .input:disabled {
-  @apply text-slate-400 bg-slate-100/60 border-slate-100 shadow-none cursor-not-allowed;
+  @apply text-tymeslot-400 bg-tymeslot-100/60 border-tymeslot-100 shadow-none cursor-not-allowed;
 }
 
 .input:disabled:hover {
-  @apply border-slate-100 bg-slate-100/60;
+  @apply border-tymeslot-100 bg-tymeslot-100/60;
 }
 
 .input:disabled::placeholder {
-  @apply text-slate-300;
+  @apply text-tymeslot-300;
 }
 
 /* Input Variants */
@@ -54,7 +54,7 @@
 
 /* Label - Modern Typography */
 .label {
-  @apply block text-sm font-black text-slate-800 uppercase tracking-wider mb-2;
+  @apply block text-sm font-black text-tymeslot-800 uppercase tracking-wider mb-2;
 }
 
 .form-error {
@@ -68,19 +68,19 @@
 
 /* Checkbox Styling */
 .checkbox {
-  @apply rounded border-2 border-slate-200 text-turquoise-600 focus:ring-turquoise-500 transition-all;
+  @apply rounded border-2 border-tymeslot-200 text-turquoise-600 focus:ring-turquoise-500 transition-all;
 }
 
 /* Textarea */
 .textarea {
-  @apply block w-full px-4 py-3 text-sm font-medium text-slate-900 bg-slate-50/50 border-2 border-slate-100 rounded-2xl transition-all duration-300 min-h-[120px] resize-y;
+  @apply block w-full px-4 py-3 text-sm font-medium text-tymeslot-900 bg-tymeslot-50/50 border-2 border-tymeslot-100 rounded-token-2xl transition-all duration-300 min-h-[120px] resize-y;
   @apply focus:outline-hidden focus:border-turquoise-400 focus:bg-white focus:shadow-xl focus:shadow-turquoise-500/10;
 }
 
 /* Select Dropdowns */
 select.input {
   @apply cursor-pointer pr-10 bg-no-repeat transition-all;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2371717a' stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
   background-position: right 1rem center;
   background-size: 1.25rem;
 }
@@ -104,7 +104,7 @@ select.input {
   border-radius: 50%;
   background: var(--color-primary-500);
   cursor: pointer;
-  box-shadow: 0 0 10px rgba(20, 184, 166, 0.45);
+  box-shadow: 0 0 10px color-mix(in oklab, var(--color-primary-500) 45%, transparent);
   transition: background 0.15s, transform 0.1s;
 }
 
@@ -126,7 +126,7 @@ select.input {
   border-radius: 50%;
   background: var(--color-primary-500);
   cursor: pointer;
-  box-shadow: 0 0 10px rgba(20, 184, 166, 0.45);
+  box-shadow: 0 0 10px color-mix(in oklab, var(--color-primary-500) 45%, transparent);
   transition: background 0.15s, transform 0.1s;
 }
 

@@ -54,8 +54,8 @@
   }
 
   .card-glass-unavailable {
-    background: rgba(107, 114, 128, 0.25);
-    border-color: rgba(156, 163, 175, 0.5);
+    background: color-mix(in oklab, var(--color-neutral-500) 25%, transparent);
+    border-color: color-mix(in oklab, var(--color-neutral-400) 50%, transparent);
     opacity: 0.7;
     transition: var(--transition-glass);
     position: relative;
@@ -66,8 +66,8 @@
     position: absolute;
     inset: 0;
     background: linear-gradient(135deg,
-      rgba(107, 114, 128, 0.1) 0%,
-      rgba(75, 85, 99, 0.05) 100%);
+      color-mix(in oklab, var(--color-neutral-500) 10%, transparent) 0%,
+      color-mix(in oklab, var(--color-neutral-600) 5%, transparent) 100%);
     border-radius: inherit;
     pointer-events: none;
   }
@@ -75,7 +75,7 @@
   .card-glass-unavailable h3,
   .card-glass-unavailable span,
   .card-glass-unavailable label {
-    color: rgba(107, 114, 128, 0.8) !important;
+    color: color-mix(in oklab, var(--color-neutral-500) 80%, transparent) !important;
   }
 
   /* Keep toggle button visible and clickable on unavailable days */
@@ -95,10 +95,10 @@
 
   /* An account card the visitor cannot change (social sign-in). */
   .card-glass-disabled {
-    background: rgba(156, 163, 175, 0.1);
+    background: color-mix(in oklab, var(--color-neutral-400) 10%, transparent);
     backdrop-filter: var(--glass-blur-strong);
     -webkit-backdrop-filter: var(--glass-blur-strong);
-    border: 1px solid rgba(156, 163, 175, 0.3);
+    border: 1px solid color-mix(in oklab, var(--color-neutral-400) 30%, transparent);
     border-radius: var(--radius-2xl);
     padding: var(--spacing-6);
     box-shadow: var(--shadow-glass-card);
@@ -109,15 +109,15 @@
 
 /* Auth Card - High Contrast */
 .auth-glass-card {
-  @apply bg-white/95 backdrop-blur-md border-2 border-slate-100 rounded-[2.5rem] p-6 sm:p-8 shadow-2xl shadow-slate-900/10 w-full max-w-[480px] mx-auto;
+  @apply bg-white/95 backdrop-blur-md border-2 border-tymeslot-100 rounded-token-4xl p-6 sm:p-8 shadow-2xl shadow-tymeslot-900/10 w-full max-w-[480px] mx-auto;
 }
 
 /* Selected State Glass Gradient */
 .glass-gradient {
   background: linear-gradient(
     135deg,
-    rgba(20, 184, 166, 0.15) 0%,
-    rgba(13, 148, 136, 0.1) 100%
+    color-mix(in oklab, var(--color-primary-500) 15%, transparent) 0%,
+    color-mix(in oklab, var(--color-primary-600) 10%, transparent) 100%
   ) !important;
   border-color: var(--color-primary-500) !important;
   position: relative;
@@ -137,9 +137,9 @@
   inset: 0;
   background: linear-gradient(
     135deg,
-    rgba(20, 184, 166, 0.1) 0%,
+    color-mix(in oklab, var(--color-primary-500) 10%, transparent) 0%,
     transparent 50%,
-    rgba(13, 148, 136, 0.05) 100%
+    color-mix(in oklab, var(--color-primary-600) 5%, transparent) 100%
   );
   border-radius: inherit;
   pointer-events: none;
