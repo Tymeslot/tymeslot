@@ -464,3 +464,58 @@ describe('CalendarDrag: scroll-to-current survives the post-refresh reset', () =
     expect(hook.el.scrollTop).toBe(0);
   });
 });
+
+describe('CalendarDrag: switching into a timed view scrolls to the current time', () => {
+  // The drag zone stays mounted but hidden while month or agenda is shown, and a
+  // hidden element cannot scroll, so the grid used to reappear at midnight when
+  // the user switched back to week or day. `updated()` detects the hidden →
+  // visible transition through `data-timed` and scrolls as on first mount.
+  //
+  // currentTopRem 54 → 54 * 16 (rem fallback) − 64 (HOUR_HEIGHT_PX) = 800.
+  const EXPECTED_TOP = 800;
+
+  beforeEach(() => {
+    vi.stubGlobal('requestAnimationFrame', () => {});
+    vi.stubGlobal('cancelAnimationFrame', () => {});
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function makeHook(timed) {
+    const el = { scrollTop: 0, dataset: { currentTopRem: '54', timed: String(timed) } };
+    const hook = Object.assign(Object.create(CalendarDrag), {
+      el,
+      _updateJumpToNowVisibility: vi.fn(),
+    });
+    hook._wasTimed = hook._isTimed();
+    return hook;
+  }
+
+  test('scrolls when the zone goes from hidden to timed', () => {
+    const hook = makeHook(false);
+
+    hook.el.dataset.timed = 'true';
+    hook.updated();
+
+    expect(hook.el.scrollTop).toBe(EXPECTED_TOP);
+  });
+
+  test('leaves the scroll alone on an ordinary update within a timed view', () => {
+    const hook = makeHook(true);
+    hook.el.scrollTop = 300;
+
+    hook.updated();
+
+    expect(hook.el.scrollTop).toBe(300);
+  });
+
+  test('does not scroll while the zone stays hidden', () => {
+    const hook = makeHook(false);
+
+    hook.updated();
+
+    expect(hook.el.scrollTop).toBe(0);
+  });
+});

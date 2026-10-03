@@ -94,6 +94,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
         class="flex-1 overflow-y-auto overflow-x-auto relative"
         data-current-top-rem={@current_top_rem}
         data-show-now={to_string(@today_visible?)}
+        data-timed={to_string(@is_timed)}
       >
         <%!-- Day column headers (sticky) --%>
         <div

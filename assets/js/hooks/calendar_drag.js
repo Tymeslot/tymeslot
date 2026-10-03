@@ -55,6 +55,7 @@ export const CalendarDrag = {
     this.el.addEventListener('scroll', this._onScroll, { passive: true })
 
     this._scrollAssertRaf = null
+    this._wasTimed = this._isTimed()
     this._scrollToCurrentTime()
     this._onScrollToCurrent = this._handleScrollToCurrent.bind(this)
     this.el.addEventListener('calendar:scroll-to-current', this._onScrollToCurrent)
@@ -64,8 +65,22 @@ export const CalendarDrag = {
   },
 
   updated() {
-    // Data attributes may change when the user navigates periods — recheck.
+    // The zone stays mounted but hidden (display: none) while a non-timed view
+    // (month, agenda) is shown, and a hidden element cannot scroll. Switching
+    // back into a timed view would otherwise leave the grid at midnight, so
+    // scroll to the current time as on first mount.
+    const timed = this._isTimed()
+    if (timed && !this._wasTimed) this._handleScrollToCurrent()
+    this._wasTimed = timed
+
+    // Data attributes may change when the user navigates periods, so recheck.
     this._updateJumpToNowVisibility()
+  },
+
+  // `data-timed` is absent on markup that predates it; treat that as timed so
+  // the hook never re-scrolls on an ordinary update.
+  _isTimed() {
+    return this.el.dataset.timed !== 'false'
   },
 
   destroyed() {
