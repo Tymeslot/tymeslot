@@ -350,7 +350,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupRulesTest do
       |> render_submit()
 
       refute Enum.any?(MeetingTypes.get_all_meeting_types(user.id), &(&1.name == "Office Hours"))
-      refute has_element?(view, "button[type='submit'][disabled]")
+      assert has_element?(view, "button[type='submit']:not([disabled])", "Create meeting type")
 
       view
       |> form("form[phx-submit='create_meeting_type']", %{

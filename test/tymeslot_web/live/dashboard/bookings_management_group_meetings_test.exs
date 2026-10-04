@@ -211,7 +211,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementGroupMeetingsTest do
 
       # The range is joined with non-breaking spaces, so it never wraps
       # mid-range however narrow the date tile is.
-      assert render(view) =~ "\u00A0– "
+      assert has_element?(view, "[data-testid='meeting-date-time']", "\u00A0– ")
     end
   end
 

@@ -90,6 +90,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
               variant={:tile}
               icon="hero-calendar-days"
               label={dgettext("dashboard_bookings", "Date & Time")}
+              data-testid="meeting-date-time"
             >
               {Helpers.format_meeting_date(@meeting, @timezone)}
               <span class="block text-turquoise-600">
