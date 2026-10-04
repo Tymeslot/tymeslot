@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingState
   alias TymeslotWeb.Components.Dashboard.Appointments.JoinLink
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
@@ -23,6 +24,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
   @doc "The action column for one booking card."
   @spec action_bar(map()) :: Phoenix.LiveView.Rendered.t()
   def action_bar(assigns) do
+    assigns = assign(assigns, :join_url, Meetings.organizer_join_url(assigns.meeting))
+
     ~H"""
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-col gap-3 shrink-0 lg:w-[160px]">
       <%!-- A held request offers exactly two actions. Join, Reschedule and
@@ -71,8 +74,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
         class="contents"
       >
         <JoinLink.join_link
-          :if={@meeting.meeting_url}
-          url={@meeting.meeting_url}
+          :if={@join_url}
+          url={@join_url}
           size={:sm}
           class="w-full"
         />

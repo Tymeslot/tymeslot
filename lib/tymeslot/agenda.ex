@@ -183,7 +183,7 @@ defmodule Tymeslot.Agenda do
       end_at: meeting.end_time,
       all_day?: false,
       location: presence(meeting.location),
-      join_url: presence(meeting.organizer_video_url) || presence(meeting.meeting_url),
+      join_url: Meetings.organizer_join_url(meeting),
       who: who(meeting),
       who_email: who_email(meeting),
       calendar: nil,

@@ -100,6 +100,24 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
       assert render(view) =~ "https://tymeslot.com/join/active"
     end
 
+    test "joins with the organiser's own room link where the provider issued one",
+         %{conn: conn, user: user} do
+      insert(:meeting,
+        organizer_user_id: user.id,
+        organizer_email: user.email,
+        attendee_name: "Host Link Meeting",
+        meeting_url: "https://video.example.com/room-1",
+        organizer_video_url: "https://video.example.com/room-1?role=host",
+        start_time: DateTime.add(DateTime.utc_now(), -5, :minute),
+        end_time: DateTime.add(DateTime.utc_now(), 25, :minute)
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+      assert has_element?(view, ~s(a[href="https://video.example.com/room-1?role=host"]))
+      refute has_element?(view, ~s(a[href="https://video.example.com/room-1"]))
+    end
+
     test "shows Completed badge for past meetings", %{conn: conn, user: user} do
       insert(:past_meeting,
         organizer_user_id: user.id,

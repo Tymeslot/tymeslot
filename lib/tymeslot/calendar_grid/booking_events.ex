@@ -53,7 +53,7 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
       end_at: meeting.end_time,
       attendee_name: presence(meeting.attendee_name),
       attendee_email: presence(meeting.attendee_email),
-      join_url: presence(meeting.organizer_video_url) || presence(meeting.meeting_url),
+      join_url: Meetings.organizer_join_url(meeting),
       provider_event_id: meeting.provider_event_id,
       participants: participants(meeting),
       capacity: meeting.capacity,

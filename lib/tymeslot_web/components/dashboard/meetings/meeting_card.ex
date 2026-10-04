@@ -76,7 +76,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
               {seats_label(@meeting, @guests)}
             </Feedback.pill>
             <Feedback.pill
-              :if={@meeting.meeting_url}
+              :if={Meetings.organizer_join_url(@meeting)}
               tone={:info}
               size={:sm}
               icon="hero-video-camera"

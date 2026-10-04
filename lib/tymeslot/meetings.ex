@@ -90,6 +90,9 @@ defmodule Tymeslot.Meetings do
   @doc "Whether `meeting` was booked with room for more than one seat."
   defdelegate group?(meeting), to: MeetingSchema
 
+  @doc "The video link the organiser joins `meeting` with, or `nil` without video."
+  defdelegate organizer_join_url(meeting), to: MeetingSchema
+
   @doc """
   `meeting` (or each of a list of meetings) with its live participants
   loaded into `:participants`, oldest booking first: the people a group
