@@ -425,3 +425,8 @@ msgstr "групові бронювання не можуть вимагати �
 #, elixir-autogen, elixir-format
 msgid "group bookings cannot require payment"
 msgstr "групові бронювання не можуть вимагати оплати"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a meeting type with this name"
+msgstr "У вас уже є тип зустрічі з такою назвою"

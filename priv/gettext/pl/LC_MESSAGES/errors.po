@@ -428,3 +428,8 @@ msgstr "rezerwacje grupowe nie mogą wymagać zatwierdzenia"
 #, elixir-autogen, elixir-format
 msgid "group bookings cannot require payment"
 msgstr "rezerwacje grupowe nie mogą wymagać płatności"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a meeting type with this name"
+msgstr "Masz już typ spotkania o tej nazwie"

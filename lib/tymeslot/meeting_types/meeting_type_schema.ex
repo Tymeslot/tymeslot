@@ -202,7 +202,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> validate_payment_fields(opts)
     |> validate_group_rules()
     |> unique_constraint([:user_id, :name],
-      message: "You already have a meeting type with this name"
+      error_key: :name,
+      message: dgettext_noop("errors", "You already have a meeting type with this name")
     )
     |> unique_constraint([:user_id, :slug],
       name: :meeting_types_user_id_slug_index,

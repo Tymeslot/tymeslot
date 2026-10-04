@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeCreateJourneyTest do
   @moduletag :live
 
   import Tymeslot.DashboardTestHelpers
+  import Tymeslot.Factory
 
   alias Phoenix.LiveView
   alias Tymeslot.MeetingTypes
@@ -158,6 +159,34 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeCreateJourneyTest do
 
       assert has_element?(view, "button[type='submit']", "Create meeting type")
       assert has_element?(view, "#meeting-type-form-tabs-tab-booking[disabled]")
+    end
+
+    test "a name the host already uses is refused beside the name field", %{
+      conn: conn,
+      user: user
+    } do
+      insert(:meeting_type, user: user, name: "Weekly Sync")
+      before = length(MeetingTypes.get_all_meeting_types(user.id))
+      view = open_add_form(conn)
+
+      view
+      |> form("form[phx-submit='create_meeting_type']", %{
+        "meeting_type" => %{"name" => "Weekly Sync", "duration" => "20"}
+      })
+      |> render_submit()
+
+      assert length(MeetingTypes.get_all_meeting_types(user.id)) == before
+
+      assert has_element?(
+               view,
+               ~s|#meeting-type-form-tabs-panel-details input.input-error[name="meeting_type[name]"]|
+             )
+
+      assert has_element?(
+               view,
+               "#meeting-type-form-tabs-panel-details",
+               "You already have a meeting type with this name"
+             )
     end
 
     test "a forged switch to a disabled tab is ignored while creating", %{conn: conn} do

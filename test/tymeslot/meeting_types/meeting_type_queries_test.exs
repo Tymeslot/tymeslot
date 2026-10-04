@@ -177,7 +177,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueriesTest do
       }
 
       assert {:error, changeset} = MeetingTypeQueries.create_meeting_type(attrs2)
-      assert "You already have a meeting type with this name" in errors_on(changeset).user_id
+      assert "You already have a meeting type with this name" in errors_on(changeset).name
     end
 
     test "allows same name for different users" do
@@ -251,7 +251,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueriesTest do
       attrs = %{name: "First Meeting"}
 
       assert {:error, changeset} = MeetingTypeQueries.update_meeting_type(meeting_type2, attrs)
-      assert "You already have a meeting type with this name" in errors_on(changeset).user_id
+      assert "You already have a meeting type with this name" in errors_on(changeset).name
     end
 
     test "allows updating to same name (no-op)" do

@@ -207,7 +207,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
         })
         |> Repo.insert()
 
-      assert "You already have a meeting type with this name" in errors_on(changeset).user_id
+      assert "You already have a meeting type with this name" in errors_on(changeset).name
     end
 
     test "schema allows non-divisible-by-5 durations (form layer enforces this)" do

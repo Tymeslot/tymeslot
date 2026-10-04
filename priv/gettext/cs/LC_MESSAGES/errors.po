@@ -432,3 +432,8 @@ msgstr "skupinové rezervace nemohou vyžadovat schválení"
 #, elixir-autogen, elixir-format
 msgid "group bookings cannot require payment"
 msgstr "skupinové rezervace nemohou vyžadovat platbu"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a meeting type with this name"
+msgstr "Typ schůzky s tímto názvem už máte"

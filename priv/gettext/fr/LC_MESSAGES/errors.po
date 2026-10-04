@@ -407,3 +407,8 @@ msgstr "les réservations de groupe ne peuvent pas exiger de validation"
 #, elixir-autogen, elixir-format
 msgid "group bookings cannot require payment"
 msgstr "les réservations de groupe ne peuvent pas exiger de paiement"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a meeting type with this name"
+msgstr "Vous avez déjà un type de réunion portant ce nom"
