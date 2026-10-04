@@ -85,7 +85,7 @@ defmodule TymeslotWeb.Dashboard.DashboardFormatTest do
                "Europe/Berlin",
                "24h"
              ) ==
-               "Jul#{@nbsp}1,#{@nbsp}23:30#{@nbsp}– Jul#{@nbsp}2,#{@nbsp}01:30"
+               "1#{@nbsp}Jul,#{@nbsp}23:30#{@nbsp}– 2#{@nbsp}Jul,#{@nbsp}01:30"
     end
 
     test "orders the dates of a cross-midnight range by the reader's language" do
@@ -138,7 +138,7 @@ defmodule TymeslotWeb.Dashboard.DashboardFormatTest do
     test "says Today and Tomorrow, and a short date beyond" do
       assert DashboardFormat.day_label(on(~D[2026-02-05]), "Etc/UTC", @now) == "Today"
       assert DashboardFormat.day_label(on(~D[2026-02-06]), "Etc/UTC", @now) == "Tomorrow"
-      assert DashboardFormat.day_label(on(~D[2026-02-08]), "Etc/UTC", @now) == "Sun Feb 8"
+      assert DashboardFormat.day_label(on(~D[2026-02-08]), "Etc/UTC", @now) == "Sun 8 Feb"
     end
 
     test "decides today in the organiser's timezone" do
@@ -162,7 +162,7 @@ defmodule TymeslotWeb.Dashboard.DashboardFormatTest do
     test "names today and tomorrow, and dates anything else" do
       assert DashboardFormat.relative_date(~D[2026-02-05], ~D[2026-02-05]) == "Today"
       assert DashboardFormat.relative_date(~D[2026-02-06], ~D[2026-02-05]) == "Tomorrow"
-      assert DashboardFormat.relative_date(~D[2026-02-04], ~D[2026-02-05]) == "Wed Feb 4"
+      assert DashboardFormat.relative_date(~D[2026-02-04], ~D[2026-02-05]) == "Wed 4 Feb"
     end
   end
 
@@ -204,8 +204,8 @@ defmodule TymeslotWeb.Dashboard.DashboardFormatTest do
 
   describe "short_date/1 and long_date/1" do
     test "follow English order" do
-      assert DashboardFormat.short_date(~D[2026-02-05]) == "Thu Feb 5"
-      assert DashboardFormat.long_date(~D[2026-02-05]) == "Thursday, February 5, 2026"
+      assert DashboardFormat.short_date(~D[2026-02-05]) == "Thu 5 Feb"
+      assert DashboardFormat.long_date(~D[2026-02-05]) == "Thursday, 5 February 2026"
     end
 
     test "follow German order" do
@@ -221,7 +221,7 @@ defmodule TymeslotWeb.Dashboard.DashboardFormatTest do
       # 23:30 UTC on the 5th is already the 6th in Berlin.
       late = entry(start_at: ~U[2026-02-05 23:30:00Z], end_at: ~U[2026-02-06 00:00:00Z])
 
-      assert DashboardFormat.date_label(late, "Europe/Berlin") == "Friday, February 6, 2026"
+      assert DashboardFormat.date_label(late, "Europe/Berlin") == "Friday, 6 February 2026"
     end
 
     test "names the first and last days of a multi-day all-day entry" do
@@ -233,8 +233,8 @@ defmodule TymeslotWeb.Dashboard.DashboardFormatTest do
         )
 
       assert DashboardFormat.date_label(leave, "Etc/UTC") ==
-               String.replace("Monday, February 2, 2026", " ", @nbsp) <>
-                 "#{@nbsp}– " <> String.replace("Friday, February 6, 2026", " ", @nbsp)
+               String.replace("Monday, 2 February 2026", " ", @nbsp) <>
+                 "#{@nbsp}– " <> String.replace("Friday, 6 February 2026", " ", @nbsp)
     end
   end
 

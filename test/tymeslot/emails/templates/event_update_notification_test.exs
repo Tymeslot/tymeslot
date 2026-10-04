@@ -202,7 +202,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotificationTest do
 
       assert email.html_body =~ "All day"
       assert email.html_body =~ "1 day"
-      assert email.text_body =~ "Time: October 05, 2026 → October 12, 2026"
+      assert email.text_body =~ "Time: 5 October 2026 → 12 October 2026"
 
       [ics] = Enum.filter(email.attachments, &(&1.content_type == "text/calendar"))
       assert ics.data =~ "DTSTART;VALUE=DATE:20261012"

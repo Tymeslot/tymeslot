@@ -46,7 +46,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormattingTest do
       }
 
       result = TimeFormatting.format_display_time_range(event, "12h", "Etc/UTC")
-      assert result == "Apr\u00A010,\u00A010:00\u00A0PM\u00A0– Apr\u00A011,\u00A02:00\u00A0AM"
+      assert result == "10\u00A0Apr,\u00A010:00\u00A0PM\u00A0– 11\u00A0Apr,\u00A02:00\u00A0AM"
     end
 
     test "returns 'All day' for all-day events" do
@@ -100,7 +100,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormattingTest do
     end
 
     for {locale, expected} <- [
-          {"en", "Feb\u00A05,\u00A017:30\u00A0– Feb\u00A06,\u00A009:00"},
+          {"en", "5\u00A0Feb,\u00A017:30\u00A0– 6\u00A0Feb,\u00A009:00"},
           {"de", "5.\u00A0Feb,\u00A017:30\u00A0– 6.\u00A0Feb,\u00A009:00"},
           {"fr", "5\u00A0févr.,\u00A017:30\u00A0– 6\u00A0févr.,\u00A009:00"},
           {"cs", "5.\u00A0úno,\u00A017:30\u00A0– 6.\u00A0úno,\u00A009:00"},

@@ -55,7 +55,7 @@ defmodule TymeslotWeb.Dashboard.DashboardFormat do
 
   A range whose ends fall on different local days names each day, so an
   overnight event does not read as running backwards:
-  "Feb 5, 11:30 PM – Feb 6, 12:30 AM".
+  "5 Feb, 11:30 PM – 6 Feb, 12:30 AM".
   """
   @spec time_range(DateTime.t(), DateTime.t(), String.t(), String.t()) :: String.t()
   def time_range(start_at, end_at, timezone, time_format) do
@@ -83,7 +83,7 @@ defmodule TymeslotWeb.Dashboard.DashboardFormat do
 
   @doc """
   The day an entry occupies, relative to today where that reads better:
-  "Today", "Tomorrow", otherwise a short date ("Mon Feb 5").
+  "Today", "Tomorrow", otherwise a short date ("Mon 5 Feb").
 
   An entry counts as today's while it covers today (`Entry.covers?/3`), so an
   overnight meeting still running reads as today's rather than yesterday's.
@@ -114,11 +114,11 @@ defmodule TymeslotWeb.Dashboard.DashboardFormat do
     end
   end
 
-  @doc ~s(A compact date led by its weekday: "Mon Feb 5", "Mo 5. Feb".)
+  @doc ~s(A compact date led by its weekday: "Mon 5 Feb", "Mo 5. Feb".)
   @spec short_date(Date.t()) :: String.t()
   def short_date(date), do: LocaleFormat.format_short_weekday_date(date, locale())
 
-  @doc ~s(A full date led by its weekday: "Monday, February 5, 2026", "Montag, 5. Februar 2026".)
+  @doc ~s(A full date led by its weekday: "Monday, 5 February 2026", "Montag, 5. Februar 2026".)
   @spec long_date(Date.t()) :: String.t()
   def long_date(date), do: LocaleFormat.format_weekday_date(date, locale())
 

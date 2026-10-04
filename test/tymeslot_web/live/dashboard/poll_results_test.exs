@@ -136,7 +136,7 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
       select_poll(view, poll)
 
-      assert has_element?(view, "#poll-slot-#{slot.id}", "Mon Mar 4, 2:30 PM")
+      assert has_element?(view, "#poll-slot-#{slot.id}", "Mon 4 Mar, 2:30 PM")
       refute has_element?(view, "#poll-slot-#{slot.id}", "14:30")
     end
 

@@ -215,7 +215,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
       {:ok, _view, html} = live(conn, ~p"/dashboard/analytics")
 
       assert html =~ "Booking analytics started collecting on"
-      assert html =~ Calendar.strftime(launch, "%A, %B %-d, %Y")
+      assert html =~ Calendar.strftime(launch, "%A, %-d %B %Y")
     end
 
     test "shows no notice once the window starts after the launch date", %{conn: conn} do

@@ -83,7 +83,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmedTest do
 
       html = EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, is_old_email)
 
-      assert html =~ "January 15, 2025 at 11:00 AM UTC"
+      assert html =~ "15 January 2025 at 11:00 AM UTC"
     end
 
     test "includes instructions for using new email" do

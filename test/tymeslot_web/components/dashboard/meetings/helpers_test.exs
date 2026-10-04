@@ -30,7 +30,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.HelpersTest do
       Gettext.put_locale(TymeslotWeb.Gettext, "en")
       m = meeting(~U[2026-01-05 14:30:00Z], ~U[2026-01-05 15:00:00Z])
 
-      assert Helpers.format_meeting_date(m, "Etc/UTC") == "Monday, January 5, 2026"
+      assert Helpers.format_meeting_date(m, "Etc/UTC") == "Monday, 5 January 2026"
     end
 
     test "formats in German day-first order for the de locale" do

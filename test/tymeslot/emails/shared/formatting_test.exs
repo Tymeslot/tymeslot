@@ -9,14 +9,14 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
       datetime = DateTime.from_naive!(~N[2024-11-25 14:30:00], "America/New_York")
       result = Formatting.format_datetime(datetime, "en")
 
-      assert result =~ "November 25, 2024"
+      assert result =~ "25 November 2024"
       assert result =~ " at "
       assert result =~ "02:30 PM"
     end
 
     test "combines date and time formatting" do
       assert Formatting.format_datetime(~U[2024-01-15 09:00:00Z], "en") ==
-               "January 15, 2024 at 09:00 AM UTC"
+               "15 January 2024 at 09:00 AM UTC"
     end
 
     # The payment timestamp on a paid booking confirmation used to render through
@@ -224,7 +224,7 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
     end
 
     test "formats Date in English locale" do
-      assert Formatting.format_date(~D[2024-11-25], "en") == "November 25, 2024"
+      assert Formatting.format_date(~D[2024-11-25], "en") == "25 November 2024"
     end
 
     test "formats DateTime in German locale" do

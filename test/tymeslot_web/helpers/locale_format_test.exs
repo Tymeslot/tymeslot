@@ -12,7 +12,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
   describe "format_date/2" do
     test "formats date in English" do
       date = ~D[2026-03-15]
-      assert LocaleFormat.format_date(date, "en") == "March 15, 2026"
+      assert LocaleFormat.format_date(date, "en") == "15 March 2026"
     end
 
     test "formats date in German" do
@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
 
     test "falls back to English for unknown locale" do
       date = ~D[2026-03-15]
-      assert LocaleFormat.format_date(date, "es") == "March 15, 2026"
+      assert LocaleFormat.format_date(date, "es") == "15 March 2026"
     end
   end
 
@@ -503,27 +503,27 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       time = ~T[14:30:00]
 
       # Should fall back to English
-      assert LocaleFormat.format_date(date, nil) == "March 15, 2026"
+      assert LocaleFormat.format_date(date, nil) == "15 March 2026"
       assert LocaleFormat.format_time(time, nil) == "02:30 PM"
     end
 
     test "handles empty string locale" do
       date = ~D[2026-03-15]
-      assert LocaleFormat.format_date(date, "") == "March 15, 2026"
+      assert LocaleFormat.format_date(date, "") == "15 March 2026"
     end
 
     test "handles unusual but valid dates" do
       # Leap year
       leap_date = ~D[2024-02-29]
-      assert LocaleFormat.format_date(leap_date, "en") == "February 29, 2024"
+      assert LocaleFormat.format_date(leap_date, "en") == "29 February 2024"
 
       # New Year
       new_year = ~D[2026-01-01]
-      assert LocaleFormat.format_date(new_year, "en") == "January 01, 2026"
+      assert LocaleFormat.format_date(new_year, "en") == "1 January 2026"
 
       # New Year's Eve
       nye = ~D[2026-12-31]
-      assert LocaleFormat.format_date(nye, "en") == "December 31, 2026"
+      assert LocaleFormat.format_date(nye, "en") == "31 December 2026"
     end
   end
 
@@ -580,7 +580,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
     @date ~D[2026-02-05]
 
     for {locale, weekday_date, weekday_day_month, short, short_weekday} <- [
-          {"en", "Thursday, February 5, 2026", "Thursday, February 5", "Feb 5", "Thu Feb 5"},
+          {"en", "Thursday, 5 February 2026", "Thursday, 5 February", "5 Feb", "Thu 5 Feb"},
           {"de", "Donnerstag, 5. Februar 2026", "Donnerstag, 5. Februar", "5. Feb", "Do 5. Feb"},
           {"fr", "jeudi 5 février 2026", "jeudi 5 février", "5 févr.", "jeu 5 févr."},
           {"it", "giovedì 5 febbraio 2026", "giovedì 5 febbraio", "5 feb", "gio 5 feb"},
@@ -599,7 +599,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
     end
 
     test "an unknown locale falls back to English order" do
-      assert LocaleFormat.format_weekday_date(@date, "xx") == "Thursday, February 5, 2026"
+      assert LocaleFormat.format_weekday_date(@date, "xx") == "Thursday, 5 February 2026"
     end
   end
 end
