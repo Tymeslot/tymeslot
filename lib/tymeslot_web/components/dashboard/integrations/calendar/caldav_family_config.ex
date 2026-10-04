@@ -131,7 +131,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavFamilyCon
       assign(assigns,
         config: config,
         locked_url: locked_url,
-        url_placeholder: locked_url == nil && Map.get(config, :url_placeholder),
+        url_placeholder: if(locked_url == nil, do: Map.get(config, :url_placeholder)),
         # The id the form carried as a LiveComponent ("<x>-config" mounted as
         # "<x>-config"), kept so nothing keyed on it moves.
         dom_id: "#{config.dom_id}-config-#{config.dom_id}-config"
