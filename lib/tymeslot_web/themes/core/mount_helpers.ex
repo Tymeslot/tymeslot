@@ -114,6 +114,15 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
 
         {:ok, socket}
 
+      # A group meeting's uid names the shared slot, which nobody on it may
+      # cancel or move from here; the visitor is sent to the host's booking
+      # page, told where their own spot's links are.
+      {:error, :group_meeting} ->
+        {:ok,
+         socket
+         |> LiveView.put_flash(:error, MeetingManagement.group_meeting_message())
+         |> LiveView.redirect(to: ~p"/#{profile.username}")}
+
       {:error, reason} ->
         {:ok,
          socket

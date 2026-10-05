@@ -86,6 +86,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
     |> assign(:page_query_params, %{})
     |> assign(:is_rescheduling, false)
     |> assign(:meeting_uid, nil)
+    |> assign(:seat_calendar_url, nil)
     |> assign(:name, "")
     |> assign(:email, "")
     |> assign(:submitting, false)

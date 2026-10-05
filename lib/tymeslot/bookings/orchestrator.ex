@@ -9,6 +9,8 @@ defmodule Tymeslot.Bookings.Orchestrator do
   alias Tymeslot.Bookings.{Create, Errors, RescheduleSeat, Validation}
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.SeatView
 
   @typedoc "Parameters for `submit_booking/2`."
   @type booking_submission_params :: %{
@@ -23,7 +25,9 @@ defmodule Tymeslot.Bookings.Orchestrator do
   - Meeting creation or rescheduling
 
   Returns:
-    * `{:ok, meeting}` for free bookings (confirmed)
+    * `{:ok, meeting}` for free bookings (confirmed); for a seat on a group
+      meeting, booked or moved, the meeting as that seat
+      (`Tymeslot.Meetings.SeatView`)
     * `{:ok, :payment_required, %{meeting: meeting, checkout_url: url}}` when
       the meeting type requires payment — caller should redirect the
       attendee to the Stripe Checkout URL
@@ -112,8 +116,11 @@ defmodule Tymeslot.Bookings.Orchestrator do
   defp submit_action(seat_token, _rescheduling?, _uid, meeting_params, _form_data, org_id)
        when is_binary(seat_token) do
     case RescheduleSeat.execute(seat_token, meeting_params, org_id) do
-      {:ok, %{meeting: meeting}} -> {:ok, meeting}
-      {:error, reason} -> {:error, reason}
+      {:ok, %{meeting: meeting, participant: participant}} ->
+        {:ok, SeatView.at_event(meeting, participant)}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -145,12 +152,27 @@ defmodule Tymeslot.Bookings.Orchestrator do
 
   defp create_meeting(meeting_params, sanitized_data) do
     # Use the appropriate creation method based on context
-    if meeting_params[:with_video_room] do
-      Create.execute_with_video_room(meeting_params, sanitized_data)
-    else
-      Create.execute(meeting_params, sanitized_data)
-    end
+    result =
+      if meeting_params[:with_video_room] do
+        Create.execute_with_video_room(meeting_params, sanitized_data)
+      else
+        Create.execute(meeting_params, sanitized_data)
+      end
+
+    as_booked_seat(result, sanitized_data)
   end
+
+  # A booking on a group meeting type returns the shared slot; the booker's
+  # booking is their seat on it, so that is what the booking page is handed.
+  # A seat already gone again by now leaves the slot, which the page then
+  # offers nothing from (`Meetings.booker_calendar/1`).
+  defp as_booked_seat({:ok, %MeetingSchema{} = meeting} = result, form_data) do
+    if Meetings.group?(meeting),
+      do: {:ok, SeatView.for_booker(meeting, form_data["email"]) || meeting},
+      else: result
+  end
+
+  defp as_booked_seat(result, _form_data), do: result
 
   defp reschedule_meeting(_meeting_uid, _meeting_params, _sanitized_data, nil),
     do: {:error, :meeting_not_found}

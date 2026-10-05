@@ -9,7 +9,7 @@ defmodule Tymeslot.Meetings do
 
   require Logger
 
-  alias Tymeslot.Bookings.{BookingTitle, Cancel, CancelSeat, Reschedule, RescheduleRequest}
+  alias Tymeslot.Bookings.{Cancel, CancelSeat, Reschedule, RescheduleRequest}
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
 
@@ -17,6 +17,7 @@ defmodule Tymeslot.Meetings do
     BusyPeriods,
     CalendarEventLink,
     CalendarEvents,
+    CalendarExport,
     Cancellation,
     ExternalCalendarChanges,
     Guests,
@@ -28,15 +29,11 @@ defmodule Tymeslot.Meetings do
     MeetingListQueries,
     MeetingQueries,
     MeetingSchema,
-    MeetingState,
     ParticipantSchema,
     Recipient,
     SeatLookup,
     VideoRooms
   }
-
-  alias Tymeslot.Integrations.Calendar.IcsGenerator
-  alias Tymeslot.Notifications.ContentBuilder
 
   alias Tymeslot.Pagination.CursorPage
   alias Tymeslot.Security.EncryptedString
@@ -399,59 +396,20 @@ defmodule Tymeslot.Meetings do
           {:ok, MeetingSchema.t()} | {:error, :not_found}
   defdelegate get_meeting_by_uid_for_organizer(uid, organizer_user_id), to: MeetingAccess
 
-  @doc """
-  Exports a single meeting as iCalendar (`.ics`) content, scoped to its
-  organizer via the same IDOR-safe lookup as `get_meeting_by_uid_for_organizer/2`.
-
-  Returns `{:error, :not_found}` for meetings with no live calendar event
-  expected right now — cancelled, completed, or under a pending reschedule
-  request (`MeetingState.expects_calendar_event?/1`) — so the public download
-  URL can't be used to confirm a cancelled booking ever existed, or to
-  produce an .ics for a voided time slot.
-
-  Note that nothing writes the `"completed"` status: a booking that has
-  happened is still `"confirmed"`, so a past meeting stays exportable and
-  only the other two arms of that predicate are reachable today.
-
-  Runs the meeting through `ContentBuilder.build_appointment_details/1` — the
-  same transformation the confirmation/reminder emails use for timezone
-  conversion, location, and organizer contact info — carrying over the
-  description and custom question answers so the download matches what was
-  emailed. The attendee's own video join link is preferred over the generic
-  meeting URL, and the title is rendered in the attendee's language, since
-  the attendee is exporting their own event.
-
-  A held request (`MeetingState.awaiting_approval?/1`) is exportable — it
-  occupies its slot — but must not read as a confirmed meeting to whichever
-  calendar it lands on, so it is exported with `STATUS:TENTATIVE`.
-  """
+  @doc "Exports a solo meeting's `.ics` file. See `Tymeslot.Meetings.CalendarExport.meeting/2`."
   @spec calendar_export(String.t(), integer()) :: {:ok, String.t()} | {:error, :not_found}
-  def calendar_export(uid, organizer_user_id) do
-    with {:ok, meeting} <- get_meeting_by_uid_for_organizer(uid, organizer_user_id),
-         true <- exportable?(meeting) do
-      details =
-        meeting
-        |> ContentBuilder.build_appointment_details()
-        |> Map.merge(%{
-          title: BookingTitle.localise(meeting, meeting.attendee_locale),
-          description: meeting.description,
-          custom_fields_snapshot: meeting.custom_fields_snapshot,
-          custom_field_answers: meeting.custom_field_answers,
-          meeting_url: meeting.attendee_video_url || meeting.meeting_url,
-          status: ics_export_status(meeting)
-        })
+  defdelegate calendar_export(uid, organizer_user_id), to: CalendarExport, as: :meeting
 
-      {:ok, IcsGenerator.generate_ics(details, details.attendee_locale)}
-    else
-      _not_found_or_inactive -> {:error, :not_found}
-    end
-  end
+  @doc "Exports a group-booking seat's own `.ics` file. See `Tymeslot.Meetings.CalendarExport.seat/1`."
+  @spec seat_calendar_export(String.t()) :: {:ok, String.t()} | {:error, :not_found}
+  defdelegate seat_calendar_export(token), to: CalendarExport, as: :seat
 
-  defp ics_export_status(meeting) do
-    if MeetingState.awaiting_approval?(meeting), do: "TENTATIVE", else: "CONFIRMED"
-  end
-
-  defp exportable?(meeting), do: MeetingState.expects_calendar_event?(meeting)
+  @doc """
+  Where the booker of `meeting` downloads its calendar file. See
+  `Tymeslot.Meetings.CalendarExport.for_booker/1`.
+  """
+  @spec booker_calendar(map()) :: {:seat, String.t()} | {:meeting, String.t()} | :none
+  defdelegate booker_calendar(meeting), to: CalendarExport, as: :for_booker
 
   @doc """
   Dismisses the calendar sync status banner for a meeting by recording the current timestamp.

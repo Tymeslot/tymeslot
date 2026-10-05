@@ -144,15 +144,23 @@ defmodule Tymeslot.Meetings.Recipient do
     }
   end
 
+  @doc """
+  The public URL of a seat's own calendar file
+  (`Tymeslot.Meetings.seat_calendar_export/1`), beside the seat-management
+  links its participant's emails carry.
+  """
+  @spec seat_calendar_url(String.t()) :: String.t()
+  def seat_calendar_url(token) when is_binary(token), do: seat_url(token, "calendar.ics")
+
   # The public seat-management links carried by a participant's own emails.
   defp seat_urls(token) when is_binary(token) do
-    base = Policy.app_url()
-
     %{
-      cancel_url: base <> "/seat/#{token}/cancel",
-      reschedule_url: base <> "/seat/#{token}/reschedule"
+      cancel_url: seat_url(token, "cancel"),
+      reschedule_url: seat_url(token, "reschedule")
     }
   end
+
+  defp seat_url(token, action), do: Policy.app_url() <> "/seat/#{token}/#{action}"
 
   defp attendee_recipients(%MeetingSchema{attendee_email: email}) when email in [nil, ""], do: []
 

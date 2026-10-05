@@ -52,6 +52,23 @@ defmodule Tymeslot.Meetings.SeatView do
       ),
       do: build(meeting, participant, seats_taken || count_now(meeting), previous)
 
+  @doc """
+  The view of a group meeting as the seat its booker holds, found by the
+  email address they booked with (a slot holds one live seat per address),
+  or `nil` when that address holds no live seat on it.
+  """
+  @spec for_booker(MeetingSchema.t(), String.t() | nil) :: MeetingSchema.t() | nil
+  def for_booker(%MeetingSchema{id: meeting_id} = meeting, email) when is_binary(email) do
+    address = ParticipantSchema.normalize_email(email)
+
+    case Enum.find(ParticipantQueries.list_live_for_meeting(meeting_id), &(&1.email == address)) do
+      nil -> nil
+      participant -> at_event(meeting, participant)
+    end
+  end
+
+  def for_booker(%MeetingSchema{}, _email), do: nil
+
   @doc "The seat a move replaced, from the old seat and the meeting it was on."
   @spec previous(MeetingSchema.t(), ParticipantSchema.t()) :: previous()
   def previous(%MeetingSchema{} = old_meeting, %ParticipantSchema{} = old_participant) do

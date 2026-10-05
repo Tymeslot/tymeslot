@@ -37,6 +37,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   alias Tymeslot.CustomFields
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Security.Honeypot
   alias Tymeslot.Security.InputProcessor
@@ -146,7 +147,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     socket =
       socket
       |> assign(:submitting, false)
-      |> assign(:meeting_uid, meeting.uid)
+      |> assign_booked_identity(meeting)
       |> assign(:meeting_status, meeting.status)
       |> BookingLocation.assign_booked(meeting)
       |> assign(:name, validated_data["name"])
@@ -157,6 +158,23 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       |> Flash.put_flash(:info, success_message)
 
     {:ok, socket}
+  end
+
+  # A seat on a group meeting is the booker's own booking: its calendar file
+  # is the seat's, under its management token. The meeting uid of a group
+  # meeting names the shared slot, which a booker must never be handed: it
+  # opens the slot's public cancel and reschedule pages.
+  defp assign_booked_identity(socket, meeting) do
+    {meeting_uid, seat_calendar_url} =
+      case Meetings.booker_calendar(meeting) do
+        {:meeting, uid} -> {uid, nil}
+        {:seat, url} -> {nil, url}
+        :none -> {nil, nil}
+      end
+
+    socket
+    |> assign(:meeting_uid, meeting_uid)
+    |> assign(:seat_calendar_url, seat_calendar_url)
   end
 
   # Handles booking submission errors: updates the socket with the

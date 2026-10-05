@@ -119,6 +119,9 @@ defmodule TymeslotWeb.Live.Scheduling.SeatRescheduleJourneyTest do
       assert moved.meeting_id != seat.meeting_id
       assert moved.management_token != token
 
+      # "Add to calendar" downloads the moved seat's own entry.
+      assert html =~ ~s(/seat/#{moved.management_token}/calendar.ics")
+
       assert_enqueued(
         worker: EmailWorker,
         args: %{
