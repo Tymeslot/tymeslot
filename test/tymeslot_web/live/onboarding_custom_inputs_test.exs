@@ -195,6 +195,45 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
              |> render() =~ "must be between"
     end
 
+    # Both rows sit in one form, so editing one resubmits the other's refused
+    # value. The refused field must go on showing what was typed beside its
+    # error, never the saved value under an error that does not describe it.
+    for {refused, edited} <- [
+          {"buffer_before_minutes", "buffer_after_minutes"},
+          {"buffer_after_minutes", "buffer_before_minutes"}
+        ] do
+      test "#{refused} keeps its refused value beside its error while #{edited} saves", %{
+        conn: conn
+      } do
+        refused = unquote(refused)
+        edited = unquote(edited)
+        refused_row = "#onboarding-buffer-#{if refused =~ "before", do: "before", else: "after"}"
+        {:ok, view, _html, user} = setup_onboarding(conn)
+        navigate_to_scheduling_preferences(view)
+        focus_custom_buffer(view, "buffer_before_minutes")
+        focus_custom_buffer(view, "buffer_after_minutes")
+        saved_refused = Map.fetch!(default_schedule(user), String.to_existing_atom(refused))
+
+        form = element(view, "form[phx-change='update_scheduling_preferences']")
+        render_change(form, %{refused => "130", edited => "20"})
+        render_change(form, %{refused => "130", edited => "35"})
+
+        schedule = default_schedule(user)
+        assert Map.fetch!(schedule, String.to_existing_atom(edited)) == 35
+        assert Map.fetch!(schedule, String.to_existing_atom(refused)) == saved_refused
+
+        assert has_element?(view, "#{refused_row} input[name='#{refused}'][value='130']")
+        assert view |> element(refused_row) |> render() =~ "must be between 0 and 120 minutes."
+
+        # Correcting the refused value saves it, and the error goes with it.
+        render_change(form, %{refused => "40", edited => "35"})
+
+        assert Map.fetch!(default_schedule(user), String.to_existing_atom(refused)) == 40
+        assert has_element?(view, "#{refused_row} input[name='#{refused}'][value='40']")
+        refute view |> element(refused_row) |> render() =~ "must be between"
+      end
+    end
+
     test "a preset leaves custom mode while the other buffer holds an error", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding(conn)
       navigate_to_scheduling_preferences(view)

@@ -144,6 +144,7 @@ defmodule TymeslotWeb.OnboardingLive do
             buffer_before_minutes={policy_value(@availability_schedule, :buffer_before_minutes)}
             buffer_after_minutes={policy_value(@availability_schedule, :buffer_after_minutes)}
             form_errors={@form_errors}
+            rejected_inputs={@rejected_inputs}
             custom_input_mode={@custom_input_mode}
           />
         <% :booking_window -> %>
