@@ -197,9 +197,12 @@ defmodule Tymeslot.BookingTestHelpers do
     |> render_click()
   end
 
-  # Bring `target_date` into the displayed range, driving whichever control the
-  # rendered theme actually offers.
-  defp advance_calendar_to(view, target_date) do
+  @doc """
+  Brings `target_date` into the displayed range, driving whichever control the
+  rendered theme actually offers: Quill's month arrows or Rhythm's week arrows.
+  """
+  @spec advance_calendar_to(Phoenix.LiveViewTest.View.t(), Date.t()) :: :ok
+  def advance_calendar_to(view, target_date) do
     wait_until(fn -> has_element?(view, @calendar_day) end)
 
     cond do
@@ -207,6 +210,8 @@ defmodule Tymeslot.BookingTestHelpers do
       has_element?(view, @next_week) -> advance_week(view, target_date)
       true -> :ok
     end
+
+    :ok
   end
 
   @doc """
