@@ -104,7 +104,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormattingTest do
           {"de", "5.\u00A0Feb,\u00A017:30\u00A0– 6.\u00A0Feb,\u00A009:00"},
           {"fr", "5\u00A0févr.,\u00A017:30\u00A0– 6\u00A0févr.,\u00A009:00"},
           {"cs", "5.\u00A0úno,\u00A017:30\u00A0– 6.\u00A0úno,\u00A009:00"},
-          {"pl", "5\u00A0lut,\u00A017:30\u00A0– 6\u00A0lut,\u00A009:00"}
+          {"pl", "5\u00A0lut,\u00A017:30\u00A0– 6\u00A0lut,\u00A009:00"},
+          {"pt", "5\u00A0de\u00A0fev,\u00A017:30\u00A0– 6\u00A0de\u00A0fev,\u00A009:00"}
         ] do
       test "#{locale}: puts each day before its time in the locale's order", %{event: event} do
         Gettext.put_locale(TymeslotWeb.Gettext, unquote(locale))

@@ -112,6 +112,11 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
       assert Formatting.format_date_short(~D[2024-01-05], "it") == "5/1"
     end
 
+    test "Portuguese locale uses slash-separated day/month format" do
+      assert Formatting.format_date_short(~D[2024-11-25], "pt") == "25/11"
+      assert Formatting.format_date_short(~D[2024-01-05], "pt") == "5/1"
+    end
+
     test "works with DateTime input" do
       assert Formatting.format_date_short(~U[2024-11-25 14:30:00Z], "en") == "25 Nov"
       assert Formatting.format_date_short(~U[2024-11-25 14:30:00Z], "de") == "25.11."

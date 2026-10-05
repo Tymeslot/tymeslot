@@ -190,7 +190,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
         {"it", "Gennaio 2026"},
         {"uk", "Січень 2026"},
         {"cs", "Leden 2026"},
-        {"pl", "Styczeń 2026"}
+        {"pl", "Styczeń 2026"},
+        {"pt", "Janeiro de 2026"}
       ]
 
       for {locale, label} <- expected do

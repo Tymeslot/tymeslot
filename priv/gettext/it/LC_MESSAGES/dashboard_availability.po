@@ -836,21 +836,6 @@ msgstr "Margine prima delle riunioni aggiornato a %{minutes} minuti"
 msgid "A new booking can start this long after your previous meeting ends, at the earliest."
 msgstr "Una nuova prenotazione può iniziare al più presto trascorso questo tempo dalla fine della tua riunione precedente."
 
-#: lib/tymeslot/availability/input_validation.ex
-#, elixir-autogen, elixir-format
-msgid "End time must be after start time. To run past midnight, pick an end time marked (+1)."
-msgstr "L'ora di fine deve essere successiva all'ora di inizio. Per andare oltre la mezzanotte, scegli un'ora di fine contrassegnata con (+1)."
-
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
-#, elixir-autogen, elixir-format
-msgid "Ends the next day"
-msgstr "Termina il giorno dopo"
-
-#: lib/tymeslot/availability/input_validation.ex
-#, elixir-autogen, elixir-format
-msgid "Hours that end the next day can last at most 24 hours"
-msgstr "Gli orari che terminano il giorno dopo possono durare al massimo 24 ore"
-
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
 msgid "A new booking must end at least this long before your next meeting starts."
@@ -865,3 +850,18 @@ msgstr "Dopo una nuova prenotazione"
 #, elixir-autogen, elixir-format
 msgid "Before a new booking"
 msgstr "Prima di una nuova prenotazione"
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "End time must be after start time. To run past midnight, pick an end time marked (+1)."
+msgstr "L'ora di fine deve essere successiva all'ora di inizio. Per andare oltre la mezzanotte, scegli un'ora di fine contrassegnata con (+1)."
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Ends the next day"
+msgstr "Termina il giorno dopo"
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Hours that end the next day can last at most 24 hours"
+msgstr "Gli orari che terminano il giorno dopo possono durare al massimo 24 ore"

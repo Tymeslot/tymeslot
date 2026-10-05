@@ -838,21 +838,6 @@ msgstr "Перерву перед зустрічами оновлено: %{minut
 msgid "A new booking can start this long after your previous meeting ends, at the earliest."
 msgstr "Нове бронювання може розпочатися щонайраніше через стільки часу після завершення вашої попередньої зустрічі."
 
-#: lib/tymeslot/availability/input_validation.ex
-#, elixir-autogen, elixir-format
-msgid "End time must be after start time. To run past midnight, pick an end time marked (+1)."
-msgstr "Час завершення має бути пізнішим за час початку. Щоб вийти за північ, виберіть час завершення з позначкою (+1)."
-
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
-#, elixir-autogen, elixir-format
-msgid "Ends the next day"
-msgstr "Закінчується наступного дня"
-
-#: lib/tymeslot/availability/input_validation.ex
-#, elixir-autogen, elixir-format
-msgid "Hours that end the next day can last at most 24 hours"
-msgstr "Години, що закінчуються наступного дня, можуть тривати щонайбільше 24 години"
-
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
 msgid "A new booking must end at least this long before your next meeting starts."
@@ -867,3 +852,18 @@ msgstr "Після нового бронювання"
 #, elixir-autogen, elixir-format
 msgid "Before a new booking"
 msgstr "Перед новим бронюванням"
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "End time must be after start time. To run past midnight, pick an end time marked (+1)."
+msgstr "Час завершення має бути пізнішим за час початку. Щоб вийти за північ, виберіть час завершення з позначкою (+1)."
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Ends the next day"
+msgstr "Закінчується наступного дня"
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Hours that end the next day can last at most 24 hours"
+msgstr "Години, що закінчуються наступного дня, можуть тривати щонайбільше 24 години"

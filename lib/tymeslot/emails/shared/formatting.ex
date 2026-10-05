@@ -76,12 +76,13 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   @doc """
   Formats a date into a short locale-aware format.
   English: "25 Nov" (day before month, as in British English),
-  French and Italian: "25/11", others: "25.11."
+  French, Italian and Portuguese: "25/11", others: "25.11."
   """
   @spec format_date_short(Date.t() | DateTime.t() | NaiveDateTime.t(), String.t()) :: String.t()
   def format_date_short(%Date{} = date, "en"), do: "#{date.day} #{Calendar.strftime(date, "%b")}"
   def format_date_short(%Date{} = date, "fr"), do: "#{date.day}/#{date.month}"
   def format_date_short(%Date{} = date, "it"), do: "#{date.day}/#{date.month}"
+  def format_date_short(%Date{} = date, "pt"), do: "#{date.day}/#{date.month}"
   def format_date_short(%Date{} = date, _locale), do: "#{date.day}.#{date.month}."
 
   def format_date_short(%DateTime{} = datetime, locale) do

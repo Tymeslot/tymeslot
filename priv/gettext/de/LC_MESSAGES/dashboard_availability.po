@@ -836,21 +836,6 @@ msgstr "Puffer vor Terminen auf %{minutes} Minuten aktualisiert"
 msgid "A new booking can start this long after your previous meeting ends, at the earliest."
 msgstr "Eine neue Buchung kann frühestens so lange nach dem Ende Ihres vorherigen Termins beginnen."
 
-#: lib/tymeslot/availability/input_validation.ex
-#, elixir-autogen, elixir-format
-msgid "End time must be after start time. To run past midnight, pick an end time marked (+1)."
-msgstr "Die Endzeit muss nach der Startzeit liegen. Für Zeiten über Mitternacht hinaus wählen Sie eine mit (+1) markierte Endzeit."
-
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
-#, elixir-autogen, elixir-format
-msgid "Ends the next day"
-msgstr "Endet am nächsten Tag"
-
-#: lib/tymeslot/availability/input_validation.ex
-#, elixir-autogen, elixir-format
-msgid "Hours that end the next day can last at most 24 hours"
-msgstr "Zeiten, die am nächsten Tag enden, dürfen höchstens 24 Stunden dauern"
-
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
 msgid "A new booking must end at least this long before your next meeting starts."
@@ -865,3 +850,18 @@ msgstr "Nach einer neuen Buchung"
 #, elixir-autogen, elixir-format
 msgid "Before a new booking"
 msgstr "Vor einer neuen Buchung"
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "End time must be after start time. To run past midnight, pick an end time marked (+1)."
+msgstr "Die Endzeit muss nach der Startzeit liegen. Für Zeiten über Mitternacht hinaus wählen Sie eine mit (+1) markierte Endzeit."
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Ends the next day"
+msgstr "Endet am nächsten Tag"
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Hours that end the next day can last at most 24 hours"
+msgstr "Zeiten, die am nächsten Tag enden, dürfen höchstens 24 Stunden dauern"

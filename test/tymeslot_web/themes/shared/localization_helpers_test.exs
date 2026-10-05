@@ -265,7 +265,9 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
           {"it", "Settembre 2026", "Settembre - ottobre 2026", "Dicembre 2025 - gennaio 2026"},
           {"uk", "Вересень 2026", "Вересень - жовтень 2026", "Грудень 2025 - січень 2026"},
           {"cs", "Září 2026", "Září – říjen 2026", "Prosinec 2025 – leden 2026"},
-          {"pl", "Wrzesień 2026", "Wrzesień – październik 2026", "Grudzień 2025 – styczeń 2026"}
+          {"pl", "Wrzesień 2026", "Wrzesień – październik 2026", "Grudzień 2025 – styczeń 2026"},
+          {"pt", "Setembro de 2026", "Setembro – outubro de 2026",
+           "Dezembro de 2025 – janeiro de 2026"}
         ] do
       test "#{locale}: capitalises only the start of the heading, in the nominative" do
         Gettext.put_locale(TymeslotWeb.Gettext, unquote(locale))

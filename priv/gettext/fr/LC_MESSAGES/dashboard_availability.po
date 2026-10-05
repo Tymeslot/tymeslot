@@ -836,21 +836,6 @@ msgstr "Marge avant les réunions mise à jour à %{minutes} minutes"
 msgid "A new booking can start this long after your previous meeting ends, at the earliest."
 msgstr "Une nouvelle réservation peut commencer, au plus tôt, ce laps de temps après la fin de votre réunion précédente."
 
-#: lib/tymeslot/availability/input_validation.ex
-#, elixir-autogen, elixir-format
-msgid "End time must be after start time. To run past midnight, pick an end time marked (+1)."
-msgstr "L’heure de fin doit être postérieure à l’heure de début. Pour dépasser minuit, choisissez une heure de fin marquée (+1)."
-
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
-#, elixir-autogen, elixir-format
-msgid "Ends the next day"
-msgstr "Se termine le lendemain"
-
-#: lib/tymeslot/availability/input_validation.ex
-#, elixir-autogen, elixir-format
-msgid "Hours that end the next day can last at most 24 hours"
-msgstr "Des horaires qui se terminent le lendemain ne peuvent pas dépasser 24 heures"
-
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
 msgid "A new booking must end at least this long before your next meeting starts."
@@ -865,3 +850,18 @@ msgstr "Après une nouvelle réservation"
 #, elixir-autogen, elixir-format
 msgid "Before a new booking"
 msgstr "Avant une nouvelle réservation"
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "End time must be after start time. To run past midnight, pick an end time marked (+1)."
+msgstr "L’heure de fin doit être postérieure à l’heure de début. Pour dépasser minuit, choisissez une heure de fin marquée (+1)."
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Ends the next day"
+msgstr "Se termine le lendemain"
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Hours that end the next day can last at most 24 hours"
+msgstr "Des horaires qui se terminent le lendemain ne peuvent pas dépasser 24 heures"
