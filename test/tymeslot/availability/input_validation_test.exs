@@ -1,6 +1,8 @@
 defmodule Tymeslot.Availability.InputValidationTest do
   use Tymeslot.DataCase, async: true
 
+  @end_before_start "End time must be after start time. To run past midnight, pick an end time marked (+1)."
+
   @moduletag :availability
 
   alias Tymeslot.Availability.InputValidation
@@ -33,15 +35,42 @@ defmodule Tymeslot.Availability.InputValidationTest do
     test "rejects end time equal to start time" do
       params = %{"start" => "09:00", "end" => "09:00"}
       assert {:error, errors} = InputValidation.validate_day_hours(params)
-      assert errors[:start_time] == "End time must be after start time"
-      assert errors[:end_time] == "End time must be after start time"
+      assert errors[:start_time] == @end_before_start
+      assert errors[:end_time] == @end_before_start
     end
 
     test "rejects end time before start time" do
       params = %{"start" => "17:00", "end" => "09:00"}
       assert {:error, errors} = InputValidation.validate_day_hours(params)
-      assert errors[:start_time] == "End time must be after start time"
-      assert errors[:end_time] == "End time must be after start time"
+      assert errors[:start_time] == @end_before_start
+      assert errors[:end_time] == @end_before_start
+    end
+
+    test "accepts hours that end the next day" do
+      assert {:ok, %{"start" => "22:00", "end" => "02:00+1"}} =
+               InputValidation.validate_day_hours(%{"start" => "22:00", "end" => "02:00+1"})
+    end
+
+    test "accepts a full 24 hours" do
+      assert {:ok, _result} =
+               InputValidation.validate_day_hours(%{"start" => "00:00", "end" => "00:00+1"})
+    end
+
+    test "points to the next-day ends when the end is before the start" do
+      assert {:error, %{end_time: message}} =
+               InputValidation.validate_day_hours(%{"start" => "18:00", "end" => "17:00"})
+
+      assert message == @end_before_start
+    end
+
+    test "refuses next-day hours longer than 24 hours" do
+      assert {:error, %{end_time: "Hours that end the next day can last at most 24 hours"}} =
+               InputValidation.validate_day_hours(%{"start" => "09:00", "end" => "10:00+1"})
+    end
+
+    test "refuses a next-day suffix on the start" do
+      assert {:error, %{start_time: _message}} =
+               InputValidation.validate_day_hours(%{"start" => "22:00+1", "end" => "02:00+1"})
     end
 
     test "rejects non-string time values" do
@@ -84,11 +113,20 @@ defmodule Tymeslot.Availability.InputValidationTest do
       assert Map.has_key?(errors, :label)
     end
 
-    test "rejects invalid time range in break" do
-      params = %{"start" => "13:00", "end" => "12:00", "label" => "Lunch"}
-      assert {:error, errors} = InputValidation.validate_break_input(params)
-      assert errors[:start_time] == "End time must be after start time"
-      assert errors[:end_time] == "End time must be after start time"
+    test "leaves a break's order to the day's hours" do
+      # 23:30 to 00:30 is a valid break inside an overnight day, so only the
+      # domain, which knows the day, can judge the order.
+      assert {:ok, %{"start" => "23:30", "end" => "00:30"}} =
+               InputValidation.validate_break_input(%{
+                 "start" => "23:30",
+                 "end" => "00:30",
+                 "label" => "Tea"
+               })
+    end
+
+    test "still rejects a malformed break time" do
+      assert {:error, %{end_time: _message}} =
+               InputValidation.validate_break_input(%{"start" => "12:00", "end" => "13:00+1"})
     end
   end
 

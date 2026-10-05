@@ -368,7 +368,8 @@ defmodule Tymeslot.Availability.Schedules do
           day_of_week: day.day_of_week,
           is_available: day.is_available,
           start_time: day.start_time,
-          end_time: day.end_time
+          end_time: day.end_time,
+          ends_next_day: day.ends_next_day
         })
 
       copy_breaks(day.breaks, copy.id)
