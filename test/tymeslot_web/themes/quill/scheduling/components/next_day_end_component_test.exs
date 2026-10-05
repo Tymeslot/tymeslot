@@ -47,7 +47,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.NextDayEndComponentTest
       selected_video_id: nil,
       submitting: false,
       validation_errors: %{},
-      calendar_ics_path: nil,
+      seat_calendar_url: nil,
       custom_field_answers: %{},
       custom_fields_snapshot: []
     }

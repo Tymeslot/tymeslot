@@ -8,10 +8,6 @@ defmodule TymeslotWeb.SeatController do
   write. The reschedule action redirects into the public booking picker for
   the same meeting type, carrying the token as `reschedule_seat_token`.
 
-  `calendar/2` serves the seat's own event as an `.ics` download for the
-  booking confirmation screen's "Add to calendar" link
-  (`Meetings.seat_calendar_export/1`).
-
   The GET and the POST answer a link that can no longer be used with the same
   page, decided by the same domain checks (`Meetings.fetch_cancellable_seat/1`
   and `Meetings.cancel_seat/1`): a seat already given up or moved, a meeting
@@ -114,32 +110,8 @@ defmodule TymeslotWeb.SeatController do
   end
 
   # ---------------------------------------------------------------------------
-  # GET — the seat's own calendar event, as an .ics download
-  # ---------------------------------------------------------------------------
-
-  @spec calendar(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def calendar(conn, %{"token" => token}) do
-    with :ok <- rate_limit(conn),
-         {:ok, ics} <- Meetings.seat_calendar_export(token) do
-      conn
-      |> put_resp_content_type("text/calendar")
-      |> put_resp_header("content-disposition", ~s(attachment; filename="meeting.ics"))
-      |> send_resp(200, ics)
-    else
-      {:error, :rate_limited, _message} -> send_bare_status(conn, 429)
-      {:error, :not_found} -> send_bare_status(conn, 404)
-    end
-  end
-
-  # ---------------------------------------------------------------------------
   # Private helpers
   # ---------------------------------------------------------------------------
-
-  # The download answers a dead link as the meeting-level one does, with an
-  # empty body: a calendar client fetching it has no page to show.
-  defp send_bare_status(conn, status) do
-    conn |> put_resp_content_type("text/plain") |> send_resp(status, "")
-  end
 
   defp rate_limit(conn), do: RateLimiter.check_seat_manage_rate_limit(ClientIP.get(conn))
 

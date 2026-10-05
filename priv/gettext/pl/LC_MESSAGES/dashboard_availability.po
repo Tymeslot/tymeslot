@@ -805,16 +805,6 @@ msgstr "Harmonogramy"
 
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
-msgid "After each meeting"
-msgstr "Po każdym spotkaniu"
-
-#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
-#, elixir-autogen, elixir-format
-msgid "Before each meeting"
-msgstr "Przed każdym spotkaniem"
-
-#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
-#, elixir-autogen, elixir-format
 msgid "Buffer Time"
 msgstr "Bufor"
 
@@ -840,13 +830,8 @@ msgstr "Zmieniono bufor przed spotkaniami na %{minutes} min"
 
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
-msgid "Preparation time kept free before each booking."
-msgstr "Czas na przygotowanie, który pozostaje wolny przed każdą rezerwacją."
-
-#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
-#, elixir-autogen, elixir-format
-msgid "Wrap-up time kept free after each booking."
-msgstr "Czas na podsumowanie, który pozostaje wolny po każdej rezerwacji."
+msgid "A new booking can start this long after your previous meeting ends, at the earliest."
+msgstr "Nowa rezerwacja może się zacząć najwcześniej po upływie tego czasu od zakończenia twojego poprzedniego spotkania."
 
 #: lib/tymeslot/availability/input_validation.ex
 #, elixir-autogen, elixir-format
@@ -862,3 +847,18 @@ msgstr "Kończy się następnego dnia"
 #, elixir-autogen, elixir-format
 msgid "Hours that end the next day can last at most 24 hours"
 msgstr "Godziny kończące się następnego dnia mogą trwać najwyżej 24 godziny"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "A new booking must end at least this long before your next meeting starts."
+msgstr "Nowa rezerwacja musi się skończyć co najmniej tyle czasu przed rozpoczęciem twojego następnego spotkania."
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "After a new booking"
+msgstr "Po nowej rezerwacji"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Before a new booking"
+msgstr "Przed nową rezerwacją"

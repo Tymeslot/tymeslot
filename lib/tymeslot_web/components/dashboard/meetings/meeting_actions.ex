@@ -73,11 +73,13 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
         }
         class="contents"
       >
+        <%!-- Wraps rather than overflowing the 160px desktop column: most
+              translations of "Join meeting" are wider than it. --%>
         <JoinLink.join_link
           :if={@join_url}
           url={@join_url}
           size={:sm}
-          class="w-full"
+          class="w-full whitespace-normal text-center"
         />
 
         <.action_button

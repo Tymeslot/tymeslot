@@ -193,9 +193,6 @@ defmodule TymeslotWeb.Router do
     get "/seat/:token/cancel", SeatController, :cancel_confirm
     post "/seat/:token/cancel", SeatController, :cancel_submit
     get "/seat/:token/reschedule", SeatController, :reschedule
-    # The seat's own "Add to calendar" download, linked from the booking
-    # confirmation screen.
-    get "/seat/:token/calendar.ics", SeatController, :calendar
 
     # OAuth routes (must remain as controllers for external redirects)
     get "/auth/:provider", OAuthController, :request
@@ -490,13 +487,18 @@ defmodule TymeslotWeb.Router do
   end
 
   # Public per-meeting calendar download (.ics). Access is gated by the
-  # unguessable meeting UID scoped to the organiser's username (IDOR-safe).
+  # unguessable meeting UID scoped to the organiser's username (IDOR-safe),
+  # or for a group-booking seat by the seat's management token.
   # Runs through :public_feed (accepts the `ics` format) and must be declared
   # before the `/:username` catch-all so it isn't shadowed by a username route.
   scope "/", TymeslotWeb do
     pipe_through :public_feed
 
     get "/:username/meeting/:meeting_uid/calendar.ics", MeetingCalendarController, :show
+
+    # A group-booking seat's own calendar entry, under its management token
+    # (the shared slot's uid is never handed to a participant).
+    get "/seat/:token/calendar.ics", MeetingCalendarController, :seat
   end
 
   # Public poll voting page. Declared before `:username_scheduling` so the

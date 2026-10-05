@@ -237,7 +237,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeEmailDeliveryTest do
                [[{"", "ana@example.com"}], [{"", "ben@example.com"}]]
 
       for email <- emails do
-        assert email.subject == "Cancelled - Standup on Nov 3"
+        assert email.subject == "Cancelled - Standup on 3 Nov"
         assert email.text_body =~ "Event Cancelled"
         assert email.text_body =~ "Olive Organiser has cancelled an event you were invited to."
         assert email.text_body =~ "Date: 3 November 2026\nTime: 09:30 AM UTC"
@@ -296,7 +296,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeEmailDeliveryTest do
 
       assert [email] = deliver_all("send_calendar_invitation")
       assert email.to == [{"", "gone@example.com"}]
-      assert email.subject == "Cancelled - Standup on Nov 3"
+      assert email.subject == "Cancelled - Standup on 3 Nov"
       refute email.text_body =~ "You're Invited"
       assert calendar_attachment(email).data =~ "STATUS:CANCELLED"
     end

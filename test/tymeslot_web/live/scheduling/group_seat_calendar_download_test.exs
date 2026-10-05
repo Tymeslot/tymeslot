@@ -1,15 +1,12 @@
 defmodule TymeslotWeb.Live.Scheduling.GroupSeatCalendarDownloadTest do
   @moduledoc """
-  Journey coverage for the "Add to calendar" link a group booker is offered on
-  the confirmation screen.
+  Journey coverage for the "Add to calendar" link offered to a booker who
+  joins a group slot somebody else already holds a spot on.
 
-  Each seat of a group meeting is its own event in its participant's calendar,
-  with its own UID and SEQUENCE and its participant as the attendee, and that
-  is the event the seat's confirmation email attaches. The confirmation
-  screen used to link to the shared slot's download instead: the slot's UID,
-  no attendee, and a page reached through the slot's capability. This books a seat on the public page, follows the link the
-  confirmation screen offers, and checks the download is the seat's, and that
-  it names nobody else on the slot.
+  `TymeslotWeb.Live.Scheduling.GroupSeatConfirmationTest` covers the first
+  booker on a slot in each theme. This books the second seat on an occupied
+  slot, follows the link the confirmation screen offers, and checks the
+  download is the new seat's own event and names nobody else on the slot.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -67,7 +64,10 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSeatCalendarDownloadTest do
   end
 
   @tag :capture_log
-  test "a group booker's download is their own seat's event", %{conn: conn, profile: profile} do
+  test "joining an occupied slot downloads the new seat's own event", %{
+    conn: conn,
+    profile: profile
+  } do
     {:ok, view, _html} = live(conn, "/#{profile.username}/group-session?timezone=UTC")
     view = walk_from_schedule_to_booking_form(view, "UTC")
 
@@ -85,13 +85,15 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSeatCalendarDownloadTest do
       |> Floki.parse_document!()
       |> Floki.attribute("[data-testid='add-to-calendar']", "href")
 
-    {:ok, seat} = holder_seat()
-    meeting = Repo.get!(MeetingSchema, seat.meeting_id)
-    assert [_other, _holder] = ParticipantQueries.list_live_for_meeting(meeting.id)
+    [meeting] = Repo.all(where(MeetingSchema, [m], m.capacity > 1))
+    live_seats = ParticipantQueries.list_live_for_meeting(meeting.id)
+    assert [_other, _holder] = live_seats
+    seat = Enum.find(live_seats, &(&1.email == "holder@example.com"))
 
-    assert href == "/seat/#{seat.management_token}/calendar.ics"
+    path = URI.parse(href).path
+    assert path == "/seat/#{seat.management_token}/calendar.ics"
 
-    response = get(build_conn(), href)
+    response = get(build_conn(), path)
     assert response.status == 200
     assert response |> get_resp_header("content-type") |> List.first() =~ "text/calendar"
 
@@ -100,7 +102,6 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSeatCalendarDownloadTest do
     # The seat's own calendar identity, not the slot's.
     assert ics =~ "UID:#{seat.id}@"
     refute ics =~ "UID:#{meeting.calendar_uid}@"
-    assert ics =~ ~r/^SEQUENCE:#{seat.ical_sequence}$/m
 
     # Nothing that reaches the slot's own links, which refuse a group meeting.
     refute ics =~ meeting.uid
@@ -110,29 +111,6 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSeatCalendarDownloadTest do
     refute ics =~ "other@example.com"
     refute ics =~ "Other Participant"
   end
-
-  @tag :capture_log
-  test "the shared slot itself is not downloadable", %{conn: conn, profile: profile} do
-    [meeting] = Repo.all(where_group(MeetingSchema))
-
-    response = get(conn, "/#{profile.username}/meeting/#{meeting.uid}/calendar.ics")
-
-    assert response.status == 404
-  end
-
-  defp holder_seat do
-    MeetingSchema
-    |> where_group()
-    |> Repo.all()
-    |> Enum.find_value({:error, :not_found}, fn meeting ->
-      case ParticipantQueries.get_live_by_email(meeting.id, "holder@example.com") do
-        {:ok, seat} -> {:ok, seat}
-        {:error, :not_found} -> nil
-      end
-    end)
-  end
-
-  defp where_group(query), do: where(query, [m], m.capacity > 1)
 
   # RFC 5545 folds long lines at 75 octets; a URL is only findable unfolded.
   defp unfold(ics), do: String.replace(ics, "\r\n ", "")

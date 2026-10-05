@@ -33,28 +33,6 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
     end
   end
 
-  @doc """
-  The live seat `email` holds on a meeting, matched case-insensitively as
-  `meeting_participants_live_email_index` matches it: there is at most one.
-  """
-  @spec get_live_by_email(binary(), String.t()) :: {:ok, Participant.t()} | {:error, :not_found}
-  def get_live_by_email(meeting_id, email) when is_binary(meeting_id) and is_binary(email) do
-    normalized = email |> String.trim() |> String.downcase()
-
-    query =
-      where(
-        Participant,
-        [p],
-        p.meeting_id == ^meeting_id and is_nil(p.cancelled_at) and
-          fragment("lower(?)", p.email) == ^normalized
-      )
-
-    case Repo.one(query) do
-      nil -> {:error, :not_found}
-      participant -> {:ok, participant}
-    end
-  end
-
   @doc "Fetches a participant by primary key."
   @spec get(binary()) :: {:ok, Participant.t()} | {:error, :not_found}
   def get(id) do

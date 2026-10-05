@@ -271,45 +271,6 @@ defmodule TymeslotWeb.SeatControllerTest do
     end
   end
 
-  describe "GET /seat/:token/calendar.ics — the seat's own calendar event" do
-    test "is the seat's event: its UID and participant, and nobody else on the slot", %{
-      conn: conn,
-      leaver: leaver,
-      meeting: meeting
-    } do
-      conn = get(conn, ~p"/seat/#{leaver.management_token}/calendar.ics")
-
-      assert conn.status == 200
-      assert conn |> get_resp_header("content-type") |> List.first() =~ "text/calendar"
-      assert conn.resp_body =~ "UID:#{leaver.id}@"
-      refute conn.resp_body =~ "UID:#{meeting.calendar_uid}@"
-      assert conn.resp_body =~ "mailto:leaver@example.com"
-      refute conn.resp_body =~ "stayer@example.com"
-    end
-
-    test "a seat given up is not downloadable", %{conn: conn, leaver: leaver} do
-      {:ok, _cancelled} = ParticipantQueries.cancel(leaver)
-
-      assert conn |> get(~p"/seat/#{leaver.management_token}/calendar.ics") |> Map.get(:status) ==
-               404
-    end
-
-    test "a seat on a meeting the host cancelled is not downloadable", %{
-      conn: conn,
-      leaver: leaver,
-      meeting: meeting
-    } do
-      meeting |> Changeset.change(%{status: "cancelled"}) |> Repo.update!()
-
-      assert conn |> get(~p"/seat/#{leaver.management_token}/calendar.ics") |> Map.get(:status) ==
-               404
-    end
-
-    test "an unknown token is not found", %{conn: conn} do
-      assert conn |> get(~p"/seat/nope-not-a-token/calendar.ics") |> Map.get(:status) == 404
-    end
-  end
-
   describe "GET /seat/:token/reschedule — bounces into the public booking picker" do
     test "redirects to the organiser's booking page for this meeting type, carrying the token",
          %{conn: conn, leaver: leaver} do

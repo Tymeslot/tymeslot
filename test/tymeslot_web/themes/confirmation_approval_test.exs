@@ -114,31 +114,43 @@ defmodule TymeslotWeb.Themes.ConfirmationApprovalTest do
     end
   end
 
-  # The link goes wherever `TymeslotWeb.Themes.Shared.CalendarDownload` says:
-  # a group booker's own seat rather than the shared slot, and nowhere when
-  # there is nothing to download.
+  # The link goes wherever `TymeslotWeb.Themes.Shared.CalendarDownload.href/1`
+  # says: a group booker's own seat rather than the shared slot, a solo
+  # booking's meeting, and nowhere when there is nothing to download.
   describe "the \"Add to calendar\" link" do
     for {theme, render} <- [quill: :render_quill, rhythm: :render_rhythm] do
-      test "#{theme}: points at the assigned download, the seat's for a group booking" do
+      test "#{theme}: points at the seat's own file for a group booking" do
+        seat_url = "https://tymeslot.example/seat/tok/calendar.ics"
+
         html =
           unquote(render)(
-            Map.put(confirmed_assigns(), :calendar_ics_path, "/seat/tok/calendar.ics")
+            Map.merge(confirmed_assigns(), %{meeting_uid: nil, seat_calendar_url: seat_url})
           )
 
-        assert [href] =
-                 html
-                 |> Floki.parse_fragment!()
-                 |> Floki.attribute("[data-testid='add-to-calendar']", "href")
+        assert calendar_href(html) == seat_url
+      end
 
-        assert href == "/seat/tok/calendar.ics"
+      test "#{theme}: points at the meeting's file for a solo booking" do
+        html = unquote(render)(confirmed_assigns())
+
+        assert calendar_href(html) == "/hostuser/meeting/abc123/calendar.ics"
       end
 
       test "#{theme}: is hidden when there is nothing to download" do
-        html = unquote(render)(Map.put(confirmed_assigns(), :calendar_ics_path, nil))
+        html = unquote(render)(Map.put(confirmed_assigns(), :meeting_uid, nil))
 
         refute html =~ ~s(data-testid="add-to-calendar")
       end
     end
+  end
+
+  defp calendar_href(html) do
+    assert [href] =
+             html
+             |> Floki.parse_fragment!()
+             |> Floki.attribute("[data-testid='add-to-calendar']", "href")
+
+    href
   end
 
   defp held_assigns do
@@ -164,7 +176,7 @@ defmodule TymeslotWeb.Themes.ConfirmationApprovalTest do
       organizer_profile: build(:profile, full_name: "Jane Organizer"),
       meeting_type: build(:meeting_type, requires_approval: false),
       meeting_uid: "abc123",
-      calendar_ics_path: "/hostuser/meeting/abc123/calendar.ics",
+      seat_calendar_url: nil,
       custom_fields_snapshot: [],
       custom_field_answers: %{},
       is_rescheduling: false

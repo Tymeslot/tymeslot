@@ -86,10 +86,10 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
   end
 
   describe "format_date_short/2" do
-    test "English locale uses abbreviated month name" do
-      assert Formatting.format_date_short(~D[2024-11-25], "en") == "Nov 25"
-      assert Formatting.format_date_short(~D[2024-01-05], "en") == "Jan 5"
-      assert Formatting.format_date_short(~D[2024-12-31], "en") == "Dec 31"
+    test "English locale puts the day before the abbreviated month" do
+      assert Formatting.format_date_short(~D[2024-11-25], "en") == "25 Nov"
+      assert Formatting.format_date_short(~D[2024-01-05], "en") == "5 Jan"
+      assert Formatting.format_date_short(~D[2024-12-31], "en") == "31 Dec"
     end
 
     test "de/uk locales use dot-separated day.month. format" do
@@ -113,7 +113,7 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
     end
 
     test "works with DateTime input" do
-      assert Formatting.format_date_short(~U[2024-11-25 14:30:00Z], "en") == "Nov 25"
+      assert Formatting.format_date_short(~U[2024-11-25 14:30:00Z], "en") == "25 Nov"
       assert Formatting.format_date_short(~U[2024-11-25 14:30:00Z], "de") == "25.11."
     end
 

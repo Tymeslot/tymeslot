@@ -66,8 +66,9 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
   end
 
   @doc """
-  The buffer section: preparation time kept free before each booking, and
-  wrap-up time kept free after it, stacked as two settings.
+  The buffer section, stacked as two settings. Buffers pad the booking being
+  offered, not the meetings already in the calendar: a slot is offered only
+  when the before-buffer ahead of it and the after-buffer behind it are free.
   """
   attr :schedule, :map, required: true
   attr :myself, :any, required: true
@@ -377,16 +378,24 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
   # tag, which is the failure we want to hear about.
 
   defp buffer_title(:buffer_before_minutes),
-    do: dgettext("dashboard_availability", "Before each meeting")
+    do: dgettext("dashboard_availability", "Before a new booking")
 
   defp buffer_title(:buffer_after_minutes),
-    do: dgettext("dashboard_availability", "After each meeting")
+    do: dgettext("dashboard_availability", "After a new booking")
 
   defp buffer_help(:buffer_before_minutes),
-    do: dgettext("dashboard_availability", "Preparation time kept free before each booking.")
+    do:
+      dgettext(
+        "dashboard_availability",
+        "A new booking can start this long after your previous meeting ends, at the earliest."
+      )
 
   defp buffer_help(:buffer_after_minutes),
-    do: dgettext("dashboard_availability", "Wrap-up time kept free after each booking.")
+    do:
+      dgettext(
+        "dashboard_availability",
+        "A new booking must end at least this long before your next meeting starts."
+      )
 
   defp buffer_label(0), do: dgettext("dashboard_availability", "No buffer")
 

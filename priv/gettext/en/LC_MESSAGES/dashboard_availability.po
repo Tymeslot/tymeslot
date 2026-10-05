@@ -806,16 +806,6 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
-msgid "After each meeting"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
-#, elixir-autogen, elixir-format
-msgid "Before each meeting"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
-#, elixir-autogen, elixir-format
 msgid "Buffer Time"
 msgstr ""
 
@@ -841,12 +831,22 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
-msgid "Preparation time kept free before each booking."
+msgid "A new booking can start this long after your previous meeting ends, at the earliest."
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
-msgid "Wrap-up time kept free after each booking."
+msgid "A new booking must end at least this long before your next meeting starts."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "After a new booking"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Before a new booking"
 msgstr ""
 
 #: lib/tymeslot/availability/input_validation.ex

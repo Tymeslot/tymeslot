@@ -84,12 +84,26 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
   # one field never holds back its sibling. A field's outcome replaces its own
   # error alone, so an unsaved value in a field that was not submitted keeps
   # its error. Returns the params that were saved.
+  #
+  # A rejected value is kept in `rejected_inputs` beside its error, so the
+  # field goes on showing what was typed rather than the saved value: a
+  # re-render caused by the sibling field would otherwise put the saved value
+  # back into the input under an error that no longer describes it.
   defp save_preferences(params, socket) do
     {valid_params, errors} = validate_scheduling_preferences(params)
-    form_errors = Map.merge(clear_submitted_errors(socket, params), errors)
+    submitted = submitted_error_keys(params)
+
+    rejected =
+      for {key, error_key, _label} <- fields(), Map.has_key?(errors, error_key), into: %{} do
+        {error_key, params[key]}
+      end
 
     socket
-    |> Component.assign(:form_errors, form_errors)
+    |> Component.assign(:form_errors, merge_outcome(socket, :form_errors, submitted, errors))
+    |> Component.assign(
+      :rejected_inputs,
+      merge_outcome(socket, :rejected_inputs, submitted, rejected)
+    )
     |> persist(valid_params)
   end
 
@@ -112,12 +126,16 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
     end
   end
 
-  defp clear_submitted_errors(socket, params) do
-    submitted = for {key, error_key, _label} <- fields(), Map.has_key?(params, key), do: error_key
+  defp submitted_error_keys(params),
+    do: for({key, error_key, _label} <- fields(), Map.has_key?(params, key), do: error_key)
 
+  # Replaces the submitted fields' entries in a per-field assign with this
+  # submission's outcome, leaving the other fields' entries as they were.
+  defp merge_outcome(socket, assign, submitted, outcome) do
     socket.assigns
-    |> Map.get(:form_errors, %{})
+    |> Map.get(assign, %{})
     |> Map.drop(submitted)
+    |> Map.merge(outcome)
   end
 
   # Private helpers

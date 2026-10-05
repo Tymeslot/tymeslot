@@ -783,7 +783,7 @@ end
 - `:selected_duration`, `:selected_date`, `:selected_time`
 - `:available_slots`, `:loading_slots`, `:calendar_error`
 - `:timezone_dropdown_open`, `:timezone_search`
-- `:reschedule_meeting_uid`, `:is_rescheduling`, `:meeting_uid`
+- `:reschedule_meeting_uid`, `:is_rescheduling`, `:meeting_uid`, `:seat_calendar_url` (a booked group seat's own calendar file; `Shared.CalendarDownload.href/1` picks the confirmation step's link from these)
 - `:name`, `:email`, `:submitting`, `:submission_processed`
 
 ### BookingFlow

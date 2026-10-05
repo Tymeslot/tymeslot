@@ -74,8 +74,8 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCardTest do
       html = render(view)
 
       assert html =~ "Portugal"
-      assert html =~ "July 5, 2027"
-      assert html =~ "July 12, 2027"
+      assert html =~ "5 July 2027"
+      assert html =~ "12 July 2027"
       # A whole-day period must not be dressed up with the times it does not have.
       refute html =~ "from 00:00"
       refute html =~ "until 23:59"

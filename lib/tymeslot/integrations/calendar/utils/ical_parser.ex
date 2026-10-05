@@ -180,10 +180,12 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     |> String.split("\n")
     |> Enum.reduce([], fn line, acc ->
       # Continuation line (starts with space or tab)
-      if String.match?(line, ~r/^[\s\t]/) && acc != [] do
+      if acc != [] and match?(<<c, _::binary>> when c in [?\s, ?\t], line) do
         [last | rest] = acc
-        # RFC 5545 §3.1: unfold by removing the leading whitespace, no extra space
-        [last <> String.trim_leading(line) | rest]
+        # RFC 5545 §3.1: unfold by removing the line break and exactly ONE
+        # whitespace character; any further whitespace belongs to the value
+        <<_fold, continuation::binary>> = line
+        [last <> continuation | rest]
       else
         # New line
         [line | acc]

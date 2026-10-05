@@ -1,6 +1,8 @@
 defmodule TymeslotWeb.Themes.Core.MeetingManagement do
   @moduledoc "Meeting cancel/keep/reschedule flow helpers for the scheduling dispatcher."
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [put_flash: 3, redirect: 2]
 
@@ -17,9 +19,14 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
   The `organizer_user_id` from the resolved profile is used to scope the lookup,
   ensuring that only the meeting belonging to the profile owner can be accessed.
   This prevents IDOR attacks on the cancel and reschedule routes.
+
+  A group meeting is refused for both with `{:error, :group_meeting}`: its
+  uid names the shared slot, which `Tymeslot.Bookings.Cancel` and
+  `Tymeslot.Bookings.Reschedule` refuse to act on for a visitor. Each
+  participant manages their own spot from the links in their emails.
   """
   @spec validate_and_load_meeting(String.t(), atom(), integer()) ::
-          {:ok, map()} | {:error, String.t()}
+          {:ok, map()} | {:error, String.t() | :group_meeting}
   def validate_and_load_meeting(meeting_uid, action, organizer_user_id) do
     case Meetings.get_meeting_by_uid_for_organizer(meeting_uid, organizer_user_id) do
       {:ok, meeting} ->
@@ -33,18 +40,33 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
     end
   end
 
-  # Validates whether the given action is permitted for the meeting.
-  @spec validate_meeting_action(map(), atom()) :: :ok | {:error, String.t()}
-  defp validate_meeting_action(meeting, :cancel) do
-    Policy.can_cancel_meeting?(meeting)
+  @doc "What a visitor is told when they open a group meeting's cancel or reschedule page."
+  @spec group_meeting_message() :: String.t()
+  def group_meeting_message do
+    dgettext(
+      "booking_manage",
+      "This is a group session, so it cannot be changed from this link. To cancel or move your spot, use the links in your confirmation email."
+    )
   end
 
-  defp validate_meeting_action(meeting, :reschedule) do
-    Policy.can_reschedule_meeting?(meeting)
+  # Validates whether the given action is permitted for the meeting.
+  @spec validate_meeting_action(map(), atom()) :: :ok | {:error, String.t() | :group_meeting}
+  defp validate_meeting_action(meeting, action) when action in [:cancel, :reschedule] do
+    if Meetings.group?(meeting),
+      do: {:error, :group_meeting},
+      else: permitted(meeting, action)
   end
 
   defp validate_meeting_action(_unused_meeting, :cancel_confirmed) do
     :ok
+  end
+
+  defp permitted(meeting, :cancel) do
+    Policy.can_cancel_meeting?(meeting)
+  end
+
+  defp permitted(meeting, :reschedule) do
+    Policy.can_reschedule_meeting?(meeting)
   end
 
   @doc "Handles cancel_meeting and keep_meeting events."
@@ -63,7 +85,7 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
               {:noreply, redirect(socket, to: cancel_confirmed_url)}
 
             {:error, reason} ->
-              {:noreply, put_flash(socket, :error, "Failed to cancel meeting: #{reason}")}
+              {:noreply, put_flash(socket, :error, cancel_error_message(reason))}
           end
 
         {:error, :rate_limited, message} ->
@@ -103,6 +125,12 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
 
   def assign_action_specific_data(socket, _other_action, _unused_meeting, _unused_params),
     do: socket
+
+  # A refusal reason is a code that must never reach the visitor as it stands.
+  defp cancel_error_message(:group_meeting_not_cancellable), do: group_meeting_message()
+
+  defp cancel_error_message(_reason),
+    do: dgettext("booking_manage", "The meeting could not be cancelled. Please try again.")
 
   # Builds the URL to redirect to after a meeting is cancelled.
   @spec build_cancel_confirmed_url(Phoenix.LiveView.Socket.t(), map()) :: String.t()

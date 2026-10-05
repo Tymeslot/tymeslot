@@ -34,6 +34,16 @@ defmodule Tymeslot.Scheduling.ThemeFlowAttendeePrefillTest do
              }) == %{"email" => "ada@example.com"}
     end
 
+    test "ignores oversized values without choking on them" do
+      huge = String.duplicate("a", 20_000)
+      long_email = String.duplicate("a", 250) <> "@example.com"
+
+      assert ThemeFlow.attendee_prefill(%{"name" => huge, "email" => huge}) == %{}
+
+      assert ThemeFlow.attendee_prefill(%{"name" => "Ada", "email" => long_email}) ==
+               %{"name" => "Ada"}
+    end
+
     test "ignores keys other than name and email" do
       assert ThemeFlow.attendee_prefill(%{"name" => "Ada", "message" => "Hello"}) ==
                %{"name" => "Ada"}

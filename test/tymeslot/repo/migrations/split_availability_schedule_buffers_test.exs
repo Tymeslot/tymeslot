@@ -9,6 +9,10 @@ defmodule Tymeslot.Repo.Migrations.SplitAvailabilityScheduleBuffersTest do
   holds. The constraint tests round-trip it too, because the test database is
   already migrated and would otherwise only show whatever constraint it
   happens to carry. See `Tymeslot.Test.MigrationRunner`.
+
+  The old column survives `up/0`, because the previous release still selects
+  it; the tests below pin that, including the default a row gets when this
+  release inserts it without naming the column.
   """
 
   use Tymeslot.DataCase, async: false
@@ -31,6 +35,23 @@ defmodule Tymeslot.Repo.Migrations.SplitAvailabilityScheduleBuffersTest do
     MigrationRunner.up!(@version)
 
     assert buffers_of(schedule.id) == {30, 30}
+  end
+
+  test "keeps the old buffer column and its value for the previous release" do
+    schedule = insert(:availability_schedule)
+    MigrationRunner.down!(@version)
+    set_old_buffer(schedule.id, 500)
+
+    MigrationRunner.up!(@version)
+
+    assert old_buffer_of(schedule.id) == 500
+  end
+
+  test "a schedule inserted without the old buffer gets its default of 15" do
+    MigrationRunner.rerun!(@version)
+    schedule = insert(:availability_schedule, buffer_before_minutes: 5, buffer_after_minutes: 40)
+
+    assert old_buffer_of(schedule.id) == 15
   end
 
   test "clamps an old buffer outside 0..120 into range" do
@@ -73,10 +94,16 @@ defmodule Tymeslot.Repo.Migrations.SplitAvailabilityScheduleBuffersTest do
 
     MigrationRunner.down!(@version)
 
-    %{rows: [[buffer]]} =
-      Repo.query!("SELECT buffer_minutes FROM availability_schedules WHERE id = $1", [schedule.id])
+    assert old_buffer_of(schedule.id) == 40
+  end
 
-    assert buffer == 40
+  test "rolling back restores the old buffer where an earlier draft dropped it" do
+    schedule = insert(:availability_schedule, buffer_before_minutes: 10, buffer_after_minutes: 40)
+    Repo.query!("ALTER TABLE availability_schedules DROP COLUMN buffer_minutes")
+
+    MigrationRunner.down!(@version)
+
+    assert old_buffer_of(schedule.id) == 40
   end
 
   defp set_old_buffer(id, minutes) do
@@ -84,6 +111,13 @@ defmodule Tymeslot.Repo.Migrations.SplitAvailabilityScheduleBuffersTest do
       minutes,
       id
     ])
+  end
+
+  defp old_buffer_of(id) do
+    %{rows: [[buffer]]} =
+      Repo.query!("SELECT buffer_minutes FROM availability_schedules WHERE id = $1", [id])
+
+    buffer
   end
 
   defp buffers_of(id) do
