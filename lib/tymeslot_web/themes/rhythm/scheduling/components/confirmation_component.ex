@@ -202,8 +202,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
 
               <div class="confirmation-actions-section">
                 <a
-                  :if={@meeting_uid not in [nil, ""] and @username_context not in [nil, ""]}
-                  href={~p"/#{@username_context}/meeting/#{@meeting_uid}/calendar.ics"}
+                  :if={@calendar_ics_path}
+                  href={@calendar_ics_path}
                   download
                   class="action-button-primary action-button-secondary calendar-download-button"
                   data-testid="add-to-calendar"

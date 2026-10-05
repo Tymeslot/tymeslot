@@ -114,6 +114,33 @@ defmodule TymeslotWeb.Themes.ConfirmationApprovalTest do
     end
   end
 
+  # The link goes wherever `TymeslotWeb.Themes.Shared.CalendarDownload` says:
+  # a group booker's own seat rather than the shared slot, and nowhere when
+  # there is nothing to download.
+  describe "the \"Add to calendar\" link" do
+    for {theme, render} <- [quill: :render_quill, rhythm: :render_rhythm] do
+      test "#{theme}: points at the assigned download, the seat's for a group booking" do
+        html =
+          unquote(render)(
+            Map.put(confirmed_assigns(), :calendar_ics_path, "/seat/tok/calendar.ics")
+          )
+
+        assert [href] =
+                 html
+                 |> Floki.parse_fragment!()
+                 |> Floki.attribute("[data-testid='add-to-calendar']", "href")
+
+        assert href == "/seat/tok/calendar.ics"
+      end
+
+      test "#{theme}: is hidden when there is nothing to download" do
+        html = unquote(render)(Map.put(confirmed_assigns(), :calendar_ics_path, nil))
+
+        refute html =~ ~s(data-testid="add-to-calendar")
+      end
+    end
+  end
+
   defp held_assigns do
     Map.put(base_assigns(), :meeting_status, "awaiting_approval")
   end
@@ -137,6 +164,7 @@ defmodule TymeslotWeb.Themes.ConfirmationApprovalTest do
       organizer_profile: build(:profile, full_name: "Jane Organizer"),
       meeting_type: build(:meeting_type, requires_approval: false),
       meeting_uid: "abc123",
+      calendar_ics_path: "/hostuser/meeting/abc123/calendar.ics",
       custom_fields_snapshot: [],
       custom_field_answers: %{},
       is_rescheduling: false

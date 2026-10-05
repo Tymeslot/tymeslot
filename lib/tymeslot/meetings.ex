@@ -31,6 +31,7 @@ defmodule Tymeslot.Meetings do
     MeetingState,
     ParticipantSchema,
     Recipient,
+    SeatCalendarExport,
     SeatLookup,
     VideoRooms
   }
@@ -424,6 +425,10 @@ defmodule Tymeslot.Meetings do
   A held request (`MeetingState.awaiting_approval?/1`) is exportable — it
   occupies its slot — but must not read as a confirmed meeting to whichever
   calendar it lands on, so it is exported with `STATUS:TENTATIVE`.
+
+  A group meeting is not exportable here: its events are its seats, each
+  downloaded through `seat_calendar_export/1`, and the shared slot carries no
+  attendee and links that refuse a group meeting.
   """
   @spec calendar_export(String.t(), integer()) :: {:ok, String.t()} | {:error, :not_found}
   def calendar_export(uid, organizer_user_id) do
@@ -451,7 +456,23 @@ defmodule Tymeslot.Meetings do
     if MeetingState.awaiting_approval?(meeting), do: "TENTATIVE", else: "CONFIRMED"
   end
 
-  defp exportable?(meeting), do: MeetingState.expects_calendar_event?(meeting)
+  defp exportable?(meeting),
+    do: not group?(meeting) and MeetingState.expects_calendar_event?(meeting)
+
+  @doc """
+  One group seat's "Add to calendar" download, addressed by its management
+  token. See `Tymeslot.Meetings.SeatCalendarExport.export/1`.
+  """
+  @spec seat_calendar_export(String.t()) :: {:ok, String.t()} | {:error, :not_found}
+  defdelegate seat_calendar_export(token), to: SeatCalendarExport, as: :export
+
+  @doc """
+  The management token of the seat `email` holds on the group meeting just
+  booked. See `Tymeslot.Meetings.SeatCalendarExport.booker_seat_token/2`.
+  """
+  @spec booker_seat_token(MeetingSchema.t(), String.t() | nil) ::
+          {:ok, String.t()} | {:error, :not_found}
+  defdelegate booker_seat_token(meeting, email), to: SeatCalendarExport
 
   @doc """
   Dismisses the calendar sync status banner for a meeting by recording the current timestamp.

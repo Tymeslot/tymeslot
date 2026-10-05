@@ -193,6 +193,9 @@ defmodule TymeslotWeb.Router do
     get "/seat/:token/cancel", SeatController, :cancel_confirm
     post "/seat/:token/cancel", SeatController, :cancel_submit
     get "/seat/:token/reschedule", SeatController, :reschedule
+    # The seat's own "Add to calendar" download, linked from the booking
+    # confirmation screen.
+    get "/seat/:token/calendar.ics", SeatController, :calendar
 
     # OAuth routes (must remain as controllers for external redirects)
     get "/auth/:provider", OAuthController, :request

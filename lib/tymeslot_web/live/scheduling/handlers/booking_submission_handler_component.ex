@@ -46,6 +46,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingGuards
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Themes.Shared.BookingLocation
+  alias TymeslotWeb.Themes.Shared.CalendarDownload
 
   require Logger
 
@@ -149,6 +150,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       |> assign(:meeting_uid, meeting.uid)
       |> assign(:meeting_status, meeting.status)
       |> BookingLocation.assign_booked(meeting)
+      |> CalendarDownload.assign_booked(meeting, validated_data["email"])
       |> assign(:name, validated_data["name"])
       |> assign(:email, validated_data["email"])
       |> assign(:custom_fields_snapshot, Map.get(validated_data, "custom_fields_snapshot", []))

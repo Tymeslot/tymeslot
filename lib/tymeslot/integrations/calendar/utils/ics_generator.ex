@@ -34,9 +34,21 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   """
   @spec generate_ics_attachment(map(), String.t(), String.t()) :: Swoosh.Attachment.t()
   def generate_ics_attachment(meeting_details, locale \\ "en", filename \\ "meeting.ics") do
+    meeting_details
+    |> generate_invitation_ics(locale)
+    |> attachment(filename)
+  end
+
+  @doc """
+  The content `generate_ics_attachment/3` attaches, for serving the same
+  invitation as a download: a group participant's "Add to calendar" link
+  hands them exactly the event their confirmation email carried.
+  """
+  @spec generate_invitation_ics(map(), String.t()) :: String.t()
+  def generate_invitation_ics(meeting_details, locale \\ "en") do
     sequence = Map.get(meeting_details, :ical_sequence) || 0
 
-    build_attachment(meeting_details, :request, sequence, locale, filename)
+    generate_ics_with(meeting_details, :request, sequence, locale)
   end
 
   @doc """
@@ -75,8 +87,12 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   end
 
   defp build_attachment(meeting_details, method, sequence, locale, filename) do
-    ics_content = generate_ics_with(meeting_details, method, sequence, locale)
+    meeting_details
+    |> generate_ics_with(method, sequence, locale)
+    |> attachment(filename)
+  end
 
+  defp attachment(ics_content, filename) do
     # Bare `text/calendar`, no inline params. Swoosh splits the attachment
     # content_type on "/", so a value like "text/calendar; method=PUBLISH"
     # lands the params inside the subtype and the MIME encoder emits an
