@@ -13,13 +13,21 @@
  * receives them in its connect params, and the server decides what to use.
  */
 
-const PREFILL_KEYS = ["name", "email"]
+// Longest value kept per key, mirroring the booking form's own limits
+// (NameValidator 100, EmailValidator 254 characters). A longer value would be
+// refused on submit anyway, and carrying it in the connect params makes the
+// websocket URL too long to open, leaving the page without a live connection.
+const PREFILL_LIMITS = { name: 100, email: 254 }
+const PREFILL_KEYS = Object.keys(PREFILL_LIMITS)
+
+// Counted in code points, as the server counts characters.
+const withinLimit = (value, limit) => value.length <= limit || [...value].length <= limit
 
 /**
  * Reads the prefill keys from the fragment and strips them from the URL,
  * leaving any other fragment content in place.
  *
- * @returns {Object} the non-empty prefill values, keyed by name; `{}` when the
+ * @returns {Object} the non-empty prefill values within their length limit, keyed by name; `{}` when the
  *   fragment carries none, in which case the URL is left untouched
  */
 export function takeAttendeePrefill(loc = window.location, hist = window.history) {
@@ -31,7 +39,7 @@ export function takeAttendeePrefill(loc = window.location, hist = window.history
   const prefill = {}
   for (const key of PREFILL_KEYS) {
     const value = params.get(key)
-    if (value) prefill[key] = value
+    if (value && withinLimit(value, PREFILL_LIMITS[key])) prefill[key] = value
     params.delete(key)
   }
 
