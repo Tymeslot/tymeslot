@@ -12,8 +12,8 @@ defmodule Tymeslot.Utils.DateTimeUtils.TimeFormat do
 
   A `nil` stored value means the organiser has never touched the setting, so
   their language decides: English gets a 12-hour clock, German, French, Italian,
-  Ukrainian, Czech and Polish get a 24-hour one. Once they pick a format in settings,
-  that value is stored and wins regardless of language.
+  Ukrainian, Czech, Polish and Portuguese get a 24-hour one. Once they pick a format
+  in settings, that value is stored and wins regardless of language.
 
   ## Audience
 
