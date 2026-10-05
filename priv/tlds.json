@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "delegated_count": 1438,
-    "iana_version": "2026082600",
-    "last_updated": "2026-08-27",
+    "delegated_count": 1437,
+    "iana_version": "2026100500",
+    "last_updated": "2026-10-05",
     "source": "https://data.iana.org/TLD/tlds-alpha-by-domain.txt"
   },
   "tlds": {
@@ -700,7 +700,6 @@
       "jpmorgan",
       "jprs",
       "juegos",
-      "juniper",
       "kaufen",
       "kddi",
       "ke",
