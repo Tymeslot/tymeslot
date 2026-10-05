@@ -142,7 +142,7 @@ msgstr "Não esperava por isto?"
 #: lib/tymeslot/emails/templates/email_change_verification.ex
 #, elixir-autogen, elixir-format
 msgid "Didn't request this change? You can safely ignore this email - nothing will happen to your account."
-msgstr "Não pediu esta mudança? Pode ignorar este e-mail com tranquilidade — nada vai acontecer com sua conta."
+msgstr "Não pediu esta mudança? Pode ignorar este e-mail com tranquilidade: nada vai acontecer com sua conta."
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex
 #, elixir-autogen, elixir-format
@@ -217,7 +217,7 @@ msgstr "Se você não pediu para redefinir sua senha, pode ignorar este e-mail. 
 #: lib/tymeslot/emails/templates/password_reset.ex
 #, elixir-autogen, elixir-format
 msgid "If you didn't request this change, your account is still secure - you can simply delete this email."
-msgstr "Se você não pediu esta mudança, sua conta continua segura — é só apagar este e-mail."
+msgstr "Se você não pediu esta mudança, sua conta continua segura, é só apagar este e-mail."
 
 #: lib/tymeslot/emails/templates/password_reset.ex
 #, elixir-autogen, elixir-format
@@ -243,7 +243,7 @@ msgstr "Agora mesmo"
 #: lib/tymeslot/emails/templates/email_verification.ex
 #, elixir-autogen, elixir-format
 msgid "Let's get you scheduling in under a minute."
-msgstr "Vamos deixar você agendando em menos de um minuto."
+msgstr "Em menos de um minuto você já está agendando."
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex
 #: lib/tymeslot/emails/templates/email_change_notification.ex
@@ -280,7 +280,7 @@ msgstr "Falta só um passo"
 #: lib/tymeslot/emails/templates/email_change_notification.ex
 #, elixir-autogen, elixir-format
 msgid "Pending verification"
-msgstr "Esperando verificação"
+msgstr "Aguardando verificação"
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex
 #, elixir-autogen, elixir-format
@@ -477,7 +477,7 @@ msgstr "Que bom ter você aqui! Para começar a agendar reuniões e simplificar 
 #: lib/tymeslot/emails/templates/email_verification.ex
 #, elixir-autogen, elixir-format
 msgid "We're glad you're here. One quick step and your calendar will be ready to go - please confirm your email below."
-msgstr "Que bom ter você aqui. Um passo rápido e seu calendário fica pronto — confirme seu e-mail abaixo."
+msgstr "Que bom ter você aqui. Um passo rápido e seu calendário fica pronto. Confirme seu e-mail abaixo."
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex
 #, elixir-autogen, elixir-format
@@ -498,7 +498,7 @@ msgstr "Boas-vindas ao Tymeslot"
 #: lib/tymeslot/emails/templates/email_verification.ex
 #, elixir-autogen, elixir-format
 msgid "Welcome to Tymeslot - please verify your email."
-msgstr "Boas-vindas ao Tymeslot — verifique seu e-mail."
+msgstr "Boas-vindas ao Tymeslot! Verifique seu e-mail."
 
 #: lib/tymeslot/emails/templates/email_verification.ex
 #, elixir-autogen, elixir-format

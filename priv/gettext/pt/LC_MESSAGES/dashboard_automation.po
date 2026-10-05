@@ -39,7 +39,7 @@ msgstr "Todas as requisições de webhook trazem um token de segurança único n
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "Are you sure? The current security token will be immediately invalidated and any existing integrations using it will stop working."
-msgstr "Tem certeza? O token de segurança atual é invalidado na hora e qualquer integração que o use para de funcionar."
+msgstr "Tem certeza? O token de segurança atual será invalidado imediatamente, e todas as integrações que o usam vão parar de funcionar."
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
@@ -281,7 +281,7 @@ msgstr "Gerar um token novo?"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Request timestamp"
-msgstr "Carimbo de hora da requisição"
+msgstr "Data e hora da requisição"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
@@ -296,7 +296,7 @@ msgstr "Token de segurança"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Security token"
-msgstr "token de segurança"
+msgstr "Token de segurança"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
@@ -306,7 +306,7 @@ msgstr "Token de segurança copiado!"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Security token regenerated"
-msgstr "Token de segurança gerado de novo"
+msgstr "Novo token de segurança gerado"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
@@ -361,7 +361,7 @@ msgstr "As chamadas de teste não entram nos registros"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Test connection"
-msgstr "Testar a conexão"
+msgstr "Testar conexão"
 
 #: lib/tymeslot_web/live/dashboard/automation/helpers.ex
 #, elixir-autogen, elixir-format
@@ -444,7 +444,7 @@ msgstr "Verifique o token na sua ferramenta de automação para garantir que as 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Verify the webhook is working correctly"
-msgstr "Confira se o webhook está funcionando direito"
+msgstr "Confira se o webhook está funcionando corretamente"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
@@ -519,7 +519,7 @@ msgstr "Webhooks"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Webhooks send real-time HTTP POST notifications to your automation tools whenever booking events occur. Perfect for triggering automated workflows, sending custom emails, syncing data, or building integrations."
-msgstr "Webhooks mandam notificações HTTP POST em tempo real para suas ferramentas de automação sempre que acontece um evento de agendamento. Ideal para disparar fluxos automáticos, mandar e-mails próprios, sincronizar dados ou construir integrações."
+msgstr "Webhooks enviam notificações HTTP POST em tempo real para suas ferramentas de automação sempre que acontece um evento de agendamento. Ideais para disparar fluxos automáticos, enviar e-mails personalizados, sincronizar dados ou criar integrações."
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
@@ -556,12 +556,12 @@ msgstr[1] "Últimos %{days} dias"
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "Delivery History - %{name}"
-msgstr "Histórico de entregas — %{name}"
+msgstr "Histórico de entregas: %{name}"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Too many requests. Please slow down."
-msgstr "Requisições demais. Vá mais devagar."
+msgstr "Muitas requisições. Aguarde um pouco e tente novamente."
 
 #: lib/tymeslot/webhooks.ex
 #, elixir-autogen, elixir-format
@@ -596,12 +596,12 @@ msgstr "Falhou: %{reason}"
 #: lib/tymeslot_web/live/dashboard/automation/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Still checking — please try again in a moment."
-msgstr "Ainda verificando — tente de novo num instante."
+msgstr "Ainda verificando. Tente de novo num instante."
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
 msgid "Succeeded"
-msgstr "Deu certo"
+msgstr "Sucesso"
 
 #: lib/tymeslot/webhooks.ex
 #, elixir-autogen, elixir-format
@@ -616,7 +616,7 @@ msgstr "O webhook redirecionou para um endereço privado ou restrito"
 #: lib/tymeslot/webhooks.ex
 #, elixir-autogen, elixir-format
 msgid "The webhook redirected too many times"
-msgstr "O webhook redirecionou vezes demais"
+msgstr "O webhook fez redirecionamentos demais"
 
 #: lib/tymeslot/webhooks.ex
 #, elixir-autogen, elixir-format
@@ -676,4 +676,4 @@ msgstr "ID da entrega"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "The delivery ID is the same on every retry of one delivery and different for every other delivery. A failed or timed-out delivery can be retried, so your endpoint may receive the same event twice: record the delivery ID and ignore a request whose ID you have already processed."
-msgstr "O ID da entrega é o mesmo em todas as novas tentativas de uma entrega e diferente em qualquer outra entrega. Uma entrega que falhou ou passou do tempo limite pode ser repetida, então seu endpoint pode receber o mesmo evento duas vezes: guarde o ID da entrega e ignore a requisição cujo ID você já processou."
+msgstr "O ID da entrega é o mesmo em todas as novas tentativas de uma entrega e diferente em qualquer outra entrega. Uma entrega que falhou ou passou do tempo limite pode ser repetida, então seu endpoint pode receber o mesmo evento duas vezes: registre o ID da entrega e ignore as requisições cujo ID você já processou."

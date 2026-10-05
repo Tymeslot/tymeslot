@@ -14,7 +14,7 @@ msgstr ""
 #: lib/tymeslot_web/themes/shared/components/error_component.ex
 #, elixir-autogen
 msgid "We can't show this scheduling page yet"
-msgstr "Ainda não dá para mostrar esta página de agendamento"
+msgstr "Ainda não é possível exibir esta página de agendamento"
 
 #: lib/tymeslot_web/themes/shared/components/error_component.ex
 #, elixir-autogen
@@ -347,7 +347,7 @@ msgstr[1] "%{count} horas"
 #: lib/tymeslot/security/rate_limiter/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "You've reached the limit of %{limit} %{action} per %{window}. Please try again in %{wait}."
-msgstr "Você atingiu o limite de %{limit} %{action} por %{window}. Tente novamente em %{wait}."
+msgstr "Você atingiu o limite de %{limit} %{action} a cada %{window}. Tente novamente em %{wait}."
 
 #: lib/tymeslot/security/rate_limiter/helpers.ex
 #, elixir-autogen, elixir-format
@@ -361,14 +361,14 @@ msgstr[1] "%{count} dias"
 msgid "hour"
 msgid_plural "%{count} hours"
 msgstr[0] "hora"
-msgstr[1] "horas"
+msgstr[1] "%{count} horas"
 
 #: lib/tymeslot/security/rate_limiter/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "minute"
 msgid_plural "%{count} minutes"
 msgstr[0] "minuto"
-msgstr[1] "minutos"
+msgstr[1] "%{count} minutos"
 
 #: lib/tymeslot_web/helpers/image_upload_errors.ex
 #, elixir-autogen, elixir-format

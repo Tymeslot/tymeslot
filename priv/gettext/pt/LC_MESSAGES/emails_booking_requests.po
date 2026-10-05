@@ -49,7 +49,7 @@ msgstr "%{organizer} confirma cada mudança pessoalmente, então o novo horário
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "%{organizer} didn't get to your request in time, so the time has been released. You are welcome to pick another slot."
-msgstr "%{organizer} não chegou ao seu pedido a tempo, então o horário foi liberado. Fique à vontade para escolher outro."
+msgstr "%{organizer} não respondeu ao seu pedido a tempo, então o horário foi liberado. Fique à vontade para escolher outro."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
@@ -89,7 +89,7 @@ msgstr "Aprovar:"
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "Awaiting confirmation"
-msgstr "Esperando confirmação"
+msgstr "Aguardando confirmação"
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
@@ -120,7 +120,7 @@ msgstr "Pedido de agendamento ainda esperando"
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
 msgid "Booking request: %{name} - %{date}"
-msgstr "Pedido de agendamento: %{name} — %{date}"
+msgstr "Pedido de agendamento: %{name} - %{date}"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
@@ -188,7 +188,7 @@ msgstr "Duração:"
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
 msgid "For %{name}, that's %{time}."
-msgstr "Para %{name}, isso é %{time}."
+msgstr "No fuso horário de %{name}, isso corresponde a %{time}."
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #: lib/tymeslot/emails/templates/reschedule_request_expired.ex
@@ -206,12 +206,12 @@ msgstr "Olá %{name},"
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name}, %{organizer} can't make the new time."
-msgstr "Olá %{name}, %{organizer} não pode no novo horário."
+msgstr "Olá %{name}, %{organizer} não pode comparecer no novo horário."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name}, %{organizer} can't make this time."
-msgstr "Olá %{name}, %{organizer} não pode neste horário."
+msgstr "Olá %{name}, %{organizer} não pode comparecer neste horário."
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
@@ -241,7 +241,7 @@ msgstr "Olá %{name}, este pedido não foi respondido a tempo."
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name}, we've passed your request to %{organizer}. It isn't confirmed yet."
-msgstr "Olá %{name}, passamos seu pedido para %{organizer}. Ele ainda não está confirmado."
+msgstr "Olá %{name}, passamos seu pedido para %{organizer}. O pedido ainda não foi confirmado."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
@@ -319,18 +319,18 @@ msgstr "Assim que você escolher um novo horário, vai receber um e-mail de conf
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "Pick another time"
-msgstr "Escolha outro horário"
+msgstr "Escolher outro horário"
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "Pick another time:"
-msgstr "Escolha outro horário:"
+msgstr "Escolher outro horário:"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "Previously scheduled for %{time}."
-msgstr "Estava marcada para %{time}."
+msgstr "Horário anterior: %{time}."
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
@@ -343,22 +343,22 @@ msgstr "HORÁRIO PEDIDO:"
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
 msgid "Reminder - booking request: %{name} - %{date}"
-msgstr "Lembrete — pedido de agendamento: %{name} — %{date}"
+msgstr "Lembrete - pedido de agendamento: %{name} - %{date}"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
 msgid "Reminder - reschedule request: %{name} - %{date}"
-msgstr "Lembrete — pedido de remarcação: %{name} — %{date}"
+msgstr "Lembrete - pedido de remarcação: %{name} - %{date}"
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "Request declined: %{title} - %{date}"
-msgstr "Pedido recusado: %{title} — %{date}"
+msgstr "Pedido recusado: %{title} - %{date}"
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "Request expired: %{title} - %{date}"
-msgstr "Pedido expirado: %{title} — %{date}"
+msgstr "Pedido expirado: %{title} - %{date}"
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
@@ -368,7 +368,7 @@ msgstr "Pedido recebido"
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "Request received: %{title} - %{date}"
-msgstr "Pedido recebido: %{title} — %{date}"
+msgstr "Pedido recebido: %{title} - %{date}"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
@@ -414,12 +414,12 @@ msgstr "Pedido de remarcação recebido"
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule Request: %{title} - %{date}"
-msgstr "Pedido de remarcação: %{title} — %{date}"
+msgstr "Pedido de remarcação: %{title} - %{date}"
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule declined, booking cancelled: %{title} - %{date}"
-msgstr "Remarcação recusada, agendamento cancelado: %{title} — %{date}"
+msgstr "Remarcação recusada, agendamento cancelado: %{title} - %{date}"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
@@ -429,12 +429,12 @@ msgstr "Pedido de remarcação"
 #: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule request expired, booking cancelled: %{name} - %{date}"
-msgstr "Pedido de remarcação expirado, agendamento cancelado: %{name} — %{date}"
+msgstr "Pedido de remarcação expirado, agendamento cancelado: %{name} - %{date}"
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule request expired, booking cancelled: %{title} - %{date}"
-msgstr "Pedido de remarcação expirado, agendamento cancelado: %{title} — %{date}"
+msgstr "Pedido de remarcação expirado, agendamento cancelado: %{title} - %{date}"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
@@ -444,7 +444,7 @@ msgstr "Pedido de remarcação ainda esperando"
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule request: %{name} - %{date}"
-msgstr "Pedido de remarcação: %{name} — %{date}"
+msgstr "Pedido de remarcação: %{name} - %{date}"
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
@@ -454,7 +454,7 @@ msgstr "Remarcação pedida"
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule requested: %{title} - %{date}"
-msgstr "Remarcação pedida: %{title} — %{date}"
+msgstr "Remarcação pedida: %{title} - %{date}"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
@@ -464,7 +464,7 @@ msgstr "Ainda esperando"
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
 msgid "Thank you for your understanding and flexibility."
-msgstr "Obrigado pela compreensão e pela flexibilidade."
+msgstr "Agradeço a compreensão e a flexibilidade."
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
@@ -474,7 +474,7 @@ msgstr "O novo horário fica reservado para você enquanto isso, então ninguém
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
 msgid "The slot is held until you answer. If you haven't replied by %{deadline}, the request lapses and %{name} is told the time is free again."
-msgstr "O horário fica reservado até você responder. Se você não responder até %{deadline}, o pedido expira e %{name} é avisado de que o horário voltou a ficar livre."
+msgstr "O horário fica reservado até você responder. Se você não responder até %{deadline}, o pedido expira e %{name} recebe um aviso de que o horário voltou a ficar livre."
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
@@ -521,7 +521,7 @@ msgstr "Tipo:"
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "Withdraw your request:"
-msgstr "Retirar seu pedido:"
+msgstr "Cancelar seu pedido:"
 
 #: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
@@ -536,4 +536,4 @@ msgstr "uma reunião"
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "withdraw your request"
-msgstr "retirar seu pedido"
+msgstr "cancelar seu pedido"

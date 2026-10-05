@@ -14,12 +14,12 @@ msgstr ""
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "Continue to vote"
-msgstr "Continuar para votar"
+msgstr "Ir para a votação"
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "If need be"
-msgstr "Se precisar"
+msgstr "Se necessário"
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
@@ -54,7 +54,7 @@ msgstr "Salvar minhas respostas"
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "Scheduled for %{time}"
-msgstr "Marcada para %{time}"
+msgstr "Reunião marcada para %{time}"
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
@@ -74,7 +74,7 @@ msgstr "Esta enquete foi cancelada e não aceita mais respostas."
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "This poll has been scheduled."
-msgstr "Esta enquete já virou reunião marcada."
+msgstr "A reunião desta enquete já foi marcada."
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
@@ -89,7 +89,7 @@ msgstr "Horários mostrados em %{timezone}"
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Too many attempts. Please wait a moment and try again."
-msgstr "Tentativas demais. Espere um instante e tente de novo."
+msgstr "Muitas tentativas. Espere um instante e tente de novo."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
@@ -99,7 +99,7 @@ msgstr "Votando como %{name}"
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "Voting closes %{deadline}"
-msgstr "A votação fecha %{deadline}"
+msgstr "Votação aberta até %{deadline}"
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
@@ -124,7 +124,7 @@ msgstr "Sim"
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "You're registered. Your responses are saved as you vote."
-msgstr "Você está cadastrado. Suas respostas são salvas conforme você vota."
+msgstr "Cadastro concluído. Suas respostas são salvas conforme você vota."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format

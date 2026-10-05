@@ -187,12 +187,12 @@ msgstr "Somente leitura"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar this meeting type books into is no longer on the connected account. Edit it and choose another calendar."
-msgstr "O calendário em que este tipo de reunião agenda não está mais na conta conectada. Edite o tipo de reunião e escolha outro calendário."
+msgstr "O calendário em que este tipo de reunião registra os agendamentos não está mais na conta conectada. Edite o tipo de reunião e escolha outro calendário."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting type books into a calendar you can no longer write to. Edit it and choose another calendar."
-msgstr "Este tipo de reunião agenda em um calendário em que você não pode mais gravar. Edite o tipo de reunião e escolha outro calendário."
+msgstr "Este tipo de reunião registra os agendamentos em um calendário em que você não pode mais gravar. Edite o tipo de reunião e escolha outro calendário."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format

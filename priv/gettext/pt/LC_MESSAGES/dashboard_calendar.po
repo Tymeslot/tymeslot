@@ -14,7 +14,7 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/event_badges.ex
 #, elixir-autogen, elixir-format
 msgid "%{accepted} of %{total} guests going"
-msgstr "%{accepted} de %{total} convidados vão"
+msgstr "%{accepted} de %{total} convidados confirmaram presença"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/event_badges.ex
 #, elixir-autogen, elixir-format
@@ -82,8 +82,8 @@ msgstr "(Sem título)"
 #, elixir-autogen, elixir-format
 msgid "+%{count} more"
 msgid_plural "+%{count} more"
-msgstr[0] "+%{count} a mais"
-msgstr[1] "+%{count} a mais"
+msgstr[0] "Mais %{count}"
+msgstr[1] "Mais %{count}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
@@ -180,7 +180,7 @@ msgstr "Nenhum evento encontrado"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
 #, elixir-autogen, elixir-format
 msgid "No upcoming events"
-msgstr "Nenhum evento à frente"
+msgstr "Nenhum evento futuro"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
 #, elixir-autogen, elixir-format
@@ -270,7 +270,7 @@ msgstr "Semana"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/month_view.ex
 #, elixir-autogen, elixir-format
 msgid "Wk"
-msgstr "Sem"
+msgstr "Sem."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex
 #, elixir-autogen, elixir-format
@@ -380,7 +380,7 @@ msgstr "As reuniões agendadas pela sua página do Tymeslot aparecem aqui."
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
 #, elixir-autogen, elixir-format
 msgid "No upcoming bookings"
-msgstr "Nenhum agendamento à frente"
+msgstr "Nenhum agendamento futuro"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/empty_state.ex
 #, elixir-autogen, elixir-format

@@ -44,7 +44,7 @@ msgstr "Adicionar"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Add Custom"
-msgstr "Adicionar personalizado"
+msgstr "Lembrete personalizado"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #, elixir-autogen, elixir-format
@@ -65,7 +65,7 @@ msgstr "Adicionar pergunta"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex
 #, elixir-autogen, elixir-format
 msgid "Added %{label} before"
-msgstr "%{label} antes adicionado"
+msgstr "Lembrete adicionado: %{label} antes"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/autosave.ex
 #, elixir-autogen, elixir-format
@@ -85,7 +85,7 @@ msgstr "Faça perguntas extras a quem agenda durante o fluxo de agendamento."
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Body text"
-msgstr "Texto do corpo"
+msgstr "Texto do aviso"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
@@ -113,12 +113,12 @@ msgstr "Cancelar"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel Custom"
-msgstr "Cancelar personalizado"
+msgstr "Cancelar"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Changing the type will clear the configuration you've defined (options, body, min/max). Past bookings keep their original answers. Continue?"
-msgstr "Mudar o tipo apaga a configuração que você definiu (opções, corpo, mín./máx.). Os agendamentos antigos mantêm as respostas originais. Continuar?"
+msgstr "Mudar o tipo apaga a configuração que você definiu (opções, texto, mín./máx.). Os agendamentos antigos mantêm as respostas originais. Continuar?"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
@@ -195,7 +195,7 @@ msgstr "Descrição (opcional)"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
 msgid "Done"
-msgstr "Pronto"
+msgstr "Concluir"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
@@ -221,12 +221,12 @@ msgstr "Cada convidado recebe por e-mail uma confirmação com o próprio link p
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Earliest date the booker may choose."
-msgstr "Data mais cedo que quem agenda pode escolher."
+msgstr "Primeira data que quem agenda pode escolher."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Earliest time the booker may choose."
-msgstr "Horário mais cedo que quem agenda pode escolher."
+msgstr "Primeiro horário que quem agenda pode escolher."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
@@ -267,7 +267,7 @@ msgstr "Texto de ajuda (opcional)"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Highest value the booker may enter."
-msgstr "Valor mais alto que quem agenda pode digitar."
+msgstr "Valor máximo que quem agenda pode digitar."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
 #, elixir-autogen, elixir-format
@@ -288,12 +288,12 @@ msgstr "Rótulo"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Latest date the booker may choose."
-msgstr "Data mais tarde que quem agenda pode escolher."
+msgstr "Última data que quem agenda pode escolher."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Latest time the booker may choose."
-msgstr "Horário mais tarde que quem agenda pode escolher."
+msgstr "Último horário que quem agenda pode escolher."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
 #, elixir-autogen, elixir-format
@@ -303,7 +303,7 @@ msgstr "Deixe quem agenda adicionar até %{max_guests} convidados a esta reuniã
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Lowest value the booker may enter."
-msgstr "Valor mais baixo que quem agenda pode digitar."
+msgstr "Valor mínimo que quem agenda pode digitar."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -600,12 +600,12 @@ msgstr "Conecte o Stripe na página %{payments_link} para cobrar por este tipo d
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Shown below the question - use it to clarify what you're asking or give an example."
-msgstr "Aparece abaixo da pergunta — use para esclarecer o que você está perguntando ou dar um exemplo."
+msgstr "Aparece abaixo da pergunta. Use-o para esclarecer o que você está perguntando ou dar um exemplo."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/autosave.ex
 #, elixir-autogen, elixir-format
 msgid "Too many changes - saving shortly…"
-msgstr "Alterações demais — salvando daqui a pouco…"
+msgstr "Muitas alterações. Salvando em instantes…"
 
 #: lib/tymeslot/utils/form_helpers.ex
 #, elixir-autogen, elixir-format
@@ -725,7 +725,7 @@ msgstr "Visibilidade"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
 #, elixir-autogen, elixir-format
 msgid "When on, this meeting type is reachable only through its direct link."
-msgstr "Quando ligado, este tipo de reunião só é acessível pelo link direto."
+msgstr "Quando ativado, este tipo de reunião só é acessível pelo link direto."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
 #, elixir-autogen, elixir-format
@@ -770,7 +770,7 @@ msgstr "Aprovação"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/approval_section.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm each booking myself"
-msgstr "Confirmar cada agendamento eu mesmo"
+msgstr "Confirmar cada agendamento manualmente"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/approval_section.ex
 #, elixir-autogen, elixir-format
@@ -780,7 +780,7 @@ msgstr "Se você não responder a tempo, o pedido expira, o horário é liberado
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/approval_section.ex
 #, elixir-autogen, elixir-format
 msgid "Invitees get a \"request received\" email instead of a confirmation, and the slot is held so nobody else can take it. They get the confirmation and the calendar invite once you accept."
-msgstr "Quem agenda recebe um e-mail de “pedido recebido” em vez de uma confirmação, e o horário fica reservado para ninguém mais tomar. A confirmação e o convite de calendário chegam quando você aceitar."
+msgstr "Quem agenda recebe um e-mail de “pedido recebido” em vez de uma confirmação, e o horário fica reservado para que ninguém mais o ocupe. A confirmação e o convite de calendário chegam quando você aceitar."
 
 #: lib/tymeslot/utils/form_helpers.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex
@@ -851,18 +851,18 @@ msgstr[1] "Adicione até %{count} e-mails de lembrete para este tipo de reunião
 #, elixir-autogen, elixir-format
 msgid "Maximum of %{count} reminder allowed"
 msgid_plural "Maximum of %{count} reminders allowed"
-msgstr[0] "No máximo %{count} lembrete"
-msgstr[1] "No máximo %{count} lembretes"
+msgstr[0] "É permitido no máximo %{count} lembrete"
+msgstr[1] "São permitidos no máximo %{count} lembretes"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar this meeting type books into is no longer on this account. Choose another calendar."
-msgstr "O calendário em que este tipo de reunião agenda não está mais nesta conta. Escolha outro calendário."
+msgstr "O calendário em que este tipo de reunião registra os agendamentos não está mais nesta conta. Escolha outro calendário."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar this meeting type books into is now read-only. Choose another calendar."
-msgstr "O calendário em que este tipo de reunião agenda agora é somente leitura. Escolha outro calendário."
+msgstr "O calendário em que este tipo de reunião registra os agendamentos agora é somente leitura. Escolha outro calendário."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/validation.ex
 #, elixir-autogen, elixir-format
@@ -874,7 +874,7 @@ msgstr[1] "Você pode configurar até %{count} lembretes"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
 msgid "The price of %{amount} is kept and applies again once Stripe is connected."
-msgstr "O preço de %{amount} fica guardado e volta a valer quando o Stripe estiver conectado."
+msgstr "O preço de %{amount} fica salvo e volta a valer quando o Stripe estiver conectado."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/new_venue_component.ex
 #, elixir-autogen, elixir-format
@@ -1008,7 +1008,7 @@ msgstr "Onde esta reunião acontece. Adicione um segundo local e quem agenda vai
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "You call them. Leave this off to publish a number for them to call instead."
-msgstr "Você liga para a pessoa. Deixe desligado para publicar um número para ela ligar."
+msgstr "Você liga para a pessoa. Deixe desativado para publicar um número para ela ligar."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format

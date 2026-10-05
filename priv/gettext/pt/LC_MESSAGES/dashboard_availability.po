@@ -90,12 +90,12 @@ msgstr "Limpar todas as configurações"
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
 #, elixir-autogen, elixir-format
 msgid "Clear Day"
-msgstr "Limpar o dia"
+msgstr "Limpar dia"
 
 #: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Clear Day Settings"
-msgstr "Limpar as configurações do dia"
+msgstr "Limpar configurações do dia"
 
 #: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
@@ -223,7 +223,7 @@ msgstr "O rótulo da pausa precisa ser texto"
 #: lib/tymeslot/availability/input_validation.ex
 #, elixir-autogen, elixir-format
 msgid "Duration cannot exceed 8 hours (480 minutes)"
-msgstr "A duração não pode passar de 8 horas (480 minutos)"
+msgstr "A duração não pode exceder 8 horas (480 minutos)"
 
 #: lib/tymeslot/availability/input_validation.ex
 #, elixir-autogen, elixir-format
@@ -239,7 +239,7 @@ msgstr "A duração precisa ser maior que 0 minutos"
 #: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "End time must be after start time"
-msgstr "O horário de término precisa ser depois do de início"
+msgstr "O horário de término precisa ser posterior ao de início"
 
 #: lib/tymeslot/availability/input_validation.ex
 #, elixir-autogen, elixir-format
@@ -521,7 +521,7 @@ msgstr "horas"
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
 msgid "instant"
-msgstr "na hora"
+msgstr "sem antecedência"
 
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
@@ -726,7 +726,7 @@ msgstr "Essa ausência não existe mais"
 #: lib/tymeslot_web/components/dashboard/availability/delete_time_off_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Those days become bookable again straight away."
-msgstr "Esses dias voltam na hora a aceitar agendamentos."
+msgstr "Esses dias voltam a aceitar agendamentos imediatamente."
 
 #: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
 #, elixir-autogen, elixir-format
@@ -756,12 +756,12 @@ msgstr "Você já tem o máximo de %{count} períodos de ausência"
 #: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Away from (first day)"
-msgstr "Fora a partir das (primeiro dia)"
+msgstr "Fora a partir de (primeiro dia)"
 
 #: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Back at (last day)"
-msgstr "De volta às (último dia)"
+msgstr "De volta a partir de (último dia)"
 
 #: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
 #, elixir-autogen, elixir-format
@@ -781,7 +781,7 @@ msgstr "Atuais e próximas"
 #: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
 #, elixir-autogen, elixir-format
 msgid "No upcoming time off. Anything you add appears here."
-msgstr "Nenhuma ausência pela frente. O que você adicionar aparece aqui."
+msgstr "Nenhuma ausência futura. O que você adicionar aparece aqui."
 
 #: lib/tymeslot/availability/schedules.ex
 #, elixir-autogen, elixir-format

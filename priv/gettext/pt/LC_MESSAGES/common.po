@@ -24,7 +24,7 @@ msgstr "Sim"
 #: lib/tymeslot/custom_fields/answer_renderer.ex
 #, elixir-autogen, elixir-format
 msgid "✓ Acknowledged (%{at})"
-msgstr "✓ Confirmado (%{at})"
+msgstr "✓ Ciente (%{at})"
 
 #: lib/tymeslot_web/components/core_components/flash.ex
 #, elixir-autogen, elixir-format

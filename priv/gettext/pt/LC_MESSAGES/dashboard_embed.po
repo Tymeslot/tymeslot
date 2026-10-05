@@ -114,7 +114,7 @@ msgstr "Opções de incorporação"
 #: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Embed directly into your webpage"
-msgstr "Incorpore direto na sua página"
+msgstr "Incorpore diretamente na sua página"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
@@ -189,7 +189,7 @@ msgstr "Só os domínios da sua lista podem incorporar"
 #: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Placeholder shown before the iframe auto-resizes. Inline only."
-msgstr "Espaço reservado mostrado antes de o iframe se ajustar sozinho. Só na incorporação na página."
+msgstr "Espaço reservado mostrado antes de o iframe se ajustar automaticamente. Só na incorporação na página."
 
 #: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -274,7 +274,7 @@ msgstr "É assim que seu widget de agendamento aparece em sites externos"
 #: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Too many updates. Please wait a moment before trying again."
-msgstr "Atualizações demais. Espere um pouco antes de tentar de novo."
+msgstr "Muitas atualizações. Aguarde um momento antes de tentar de novo."
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
@@ -314,7 +314,7 @@ msgstr "guia de incorporação"
 #: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "source"
-msgstr "fonte"
+msgstr "código-fonte"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
@@ -384,37 +384,37 @@ msgstr "Use %{wildcard} para liberar todos os subdomínios"
 #: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "A floating button stays visible as visitors scroll - like a chat widget, but for booking."
-msgstr "Um botão flutuante fica visível enquanto a pessoa rola a página — como um widget de chat, mas para agendar."
+msgstr "Um botão flutuante fica visível enquanto a pessoa rola a página, como um widget de chat, mas para agendar."
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Auto - visitor's browser"
-msgstr "Automático — navegador de quem visita"
+msgstr "Automático (navegador de quem visita)"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Column - wide canvas, fills the container (recommended)"
-msgstr "Coluna — tela larga, preenche o contêiner (recomendado)"
+msgstr "Coluna: área larga, preenche o contêiner (recomendado)"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Column adapts to any container width. Default centres the booker - useful when you want a self-contained card inside a wide page."
-msgstr "A coluna se adapta a qualquer largura de contêiner. O padrão centraliza o agendador — útil quando você quer um cartão independente dentro de uma página larga."
+msgstr "A coluna se adapta a qualquer largura de contêiner. O padrão centraliza o widget de agendamento, o que é útil quando você quer um cartão independente dentro de uma página larga."
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Default - centred with a ~640px cap (standalone-style)"
-msgstr "Padrão — centralizado com limite de ~640px (estilo independente)"
+msgstr "Padrão: centralizado com limite de ~640px (estilo independente)"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Install the official Tymeslot plugin to embed your booking page with a block or shortcode - no code."
-msgstr "Instale o plugin oficial do Tymeslot para incorporar sua página de agendamento com um bloco ou shortcode — sem código."
+msgstr "Instale o plugin oficial do Tymeslot para incorporar sua página de agendamento com um bloco ou shortcode, sem programar."
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Updates every snippet below. Defaults work for most embeds - adjust when your site needs them."
-msgstr "Atualiza todos os trechos abaixo. Os padrões servem para a maioria das incorporações — ajuste quando seu site precisar."
+msgstr "Atualiza todos os trechos abaixo. Os padrões servem para a maioria das incorporações; ajuste quando seu site precisar."
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex
 #, elixir-autogen, elixir-format

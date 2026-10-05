@@ -149,7 +149,7 @@ msgstr "Desconhecido"
 #: lib/tymeslot_web/live/dashboard/analytics_live.ex
 #, elixir-autogen, elixir-format
 msgid "Updated %{time}"
-msgstr "Atualizado %{time}"
+msgstr "Atualizado às %{time}"
 
 #: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
 #: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex

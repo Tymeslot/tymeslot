@@ -121,7 +121,7 @@ msgstr "Coloque seu nome, sua foto e uma bio curta para quem agenda saber com qu
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
 #, elixir-autogen, elixir-format
 msgid "All your availability and bookings will be shown in this timezone."
-msgstr "Toda sua disponibilidade e seus agendamentos aparecem neste fuso horário."
+msgstr "Toda a sua disponibilidade e todos os seus agendamentos vão aparecer neste fuso horário."
 
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
@@ -151,7 +151,7 @@ msgstr "Agendar"
 #: lib/tymeslot_web/live/onboarding_live/live_preview.ex
 #, elixir-autogen, elixir-format
 msgid "Bookable up to %{days}"
-msgstr "Agendável até %{days}"
+msgstr "Agendável com até %{days} de antecedência"
 
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
@@ -352,7 +352,7 @@ msgstr "Dispensar a lista de primeiros passos"
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
 msgid "Done"
-msgstr "Pronto"
+msgstr "Concluído"
 
 #: lib/tymeslot_web/live/onboarding_live/live_preview.ex
 #, elixir-autogen, elixir-format
@@ -377,7 +377,7 @@ msgstr "Google Calendar"
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "How far into the future clients can schedule with you."
-msgstr "Até quando no futuro os clientes podem agendar com você."
+msgstr "Com quanta antecedência os clientes podem agendar com você."
 
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
@@ -412,12 +412,12 @@ msgstr "Deixe sua página de agendamento com sua cara"
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
 msgid "Mark %{title} as done"
-msgstr "Marcar %{title} como feito"
+msgstr "Marcar %{title} como concluído"
 
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
 msgid "Mark %{title} as not done"
-msgstr "Marcar %{title} como não feito"
+msgstr "Marcar %{title} como não concluído"
 
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
@@ -538,7 +538,7 @@ msgstr "A URL do servidor é obrigatória"
 #: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
 #, elixir-autogen, elixir-format
 msgid "Set the accent colour that ties your page together."
-msgstr "Defina a cor de destaque que amarra sua página."
+msgstr "Defina a cor de destaque que dá unidade à sua página."
 
 #: lib/tymeslot_web/live/onboarding_live/welcome_step.ex
 #, elixir-autogen, elixir-format
@@ -689,7 +689,7 @@ msgstr "Sem antecedência mínima, alguém pode agendar um horário que comece a
 #: lib/tymeslot_web/live/onboarding_live/skip_calendar_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Without a connected calendar you'll have to manage clashes yourself. You can still carry on and connect one later from your dashboard."
-msgstr "Sem um calendário conectado, você vai ter de cuidar dos conflitos sozinho. Dá para seguir assim mesmo e conectar um depois pelo painel."
+msgstr "Sem um calendário conectado, você vai ter de cuidar dos conflitos por conta própria. Você ainda pode seguir assim e conectar um depois pelo painel."
 
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
@@ -785,37 +785,37 @@ msgstr "seu-usuario"
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
 msgid "A few recommended steps - tick off the ones you don't need."
-msgstr "Alguns passos recomendados — marque os que você não precisa."
+msgstr "Alguns passos recomendados: marque os de que você não precisa."
 
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
 msgid "One click - connect %{email}"
-msgstr "Um clique — conectar %{email}"
+msgstr "Um clique: conectar %{email}"
 
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Pick the look and feel of your booking page - then preview the real thing."
-msgstr "Escolha a aparência da sua página de agendamento — e veja a coisa de verdade."
+msgstr "Escolha a aparência da sua página de agendamento e depois veja como ela fica de verdade."
 
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
 #, elixir-autogen, elixir-format
 msgid "Someone visiting your page today can only book up to %{period} ahead - no further."
-msgstr "Quem visitar sua página hoje só consegue agendar até %{period} à frente — não mais que isso."
+msgstr "Quem visitar sua página hoje só consegue agendar com até %{period} de antecedência, não mais que isso."
 
 #: lib/tymeslot_web/live/onboarding_live/skip_calendar_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Tymeslot is built around your calendar. Once it's connected, we read your real availability so you're never double-booked and write every new booking back automatically - that's what makes Tymeslot worthwhile."
-msgstr "O Tymeslot é construído em volta do seu calendário. Depois de conectado, lemos sua disponibilidade de verdade para você nunca ter dois compromissos no mesmo horário, e escrevemos cada novo agendamento de volta automaticamente — é isso que faz o Tymeslot valer a pena."
+msgstr "O Tymeslot é construído em volta do seu calendário. Depois de conectado, lemos sua disponibilidade de verdade para você nunca ter dois compromissos no mesmo horário, e escrevemos cada novo agendamento de volta automaticamente. É isso que faz o Tymeslot valer a pena."
 
 #: lib/tymeslot_web/live/onboarding_live/live_preview.ex
 #, elixir-autogen, elixir-format
 msgid "You're all set - %{link} is live"
-msgstr "Tudo pronto — %{link} está no ar"
+msgstr "Tudo pronto: %{link} está no ar"
 
 #: lib/tymeslot_web/live/onboarding_live/live_preview.ex
 #, elixir-autogen, elixir-format
 msgid "Your calendar is synced - these slots are live"
-msgstr "Seu calendário está sincronizado — estes horários estão no ar"
+msgstr "Seu calendário está sincronizado: estes horários estão no ar"
 
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format

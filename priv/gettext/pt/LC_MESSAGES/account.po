@@ -125,7 +125,7 @@ msgstr "Digite sua senha atual"
 #: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Last changed: %{last_changed}"
-msgstr "Última troca: %{last_changed}"
+msgstr "Última alteração: %{last_changed}"
 
 #: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format

@@ -207,7 +207,7 @@ msgstr "%{name} convidou você para um evento."
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar Invitation - %{title} on %{date}"
-msgstr "Convite de calendário — %{title} em %{date}"
+msgstr "Convite de calendário - %{title} em %{date}"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
@@ -327,7 +327,7 @@ msgstr "quarta-feira"
 #: lib/tymeslot/emails/shared/mjml_email.ex
 #, elixir-autogen, elixir-format
 msgid "Sent with care by"
-msgstr "Enviado com cuidado por"
+msgstr "Enviado com carinho por"
 
 #: lib/tymeslot/emails/shared/layouts.ex
 #: lib/tymeslot/emails/shared/mjml_email.ex
@@ -363,12 +363,12 @@ msgstr "Entrar na chamada de vídeo"
 #: lib/tymeslot/emails/email_service/calendar_emails.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar Owner"
-msgstr "Dono do calendário"
+msgstr "Responsável pelo calendário"
 
 #: lib/tymeslot/emails/email_service/account_emails.ex
 #, elixir-autogen, elixir-format
 msgid "Email Address Changed - Tymeslot Account"
-msgstr "Endereço de e-mail trocado — conta do Tymeslot"
+msgstr "Endereço de e-mail trocado - conta do Tymeslot"
 
 #: lib/tymeslot/emails/email_service/account_emails.ex
 #, elixir-autogen, elixir-format
@@ -383,12 +383,12 @@ msgstr "Verifique seu endereço de e-mail"
 #: lib/tymeslot/emails/email_service/calendar_emails.ex
 #, elixir-autogen, elixir-format
 msgid "⚠️ Calendar Sync Error - Manual Action Required"
-msgstr "⚠️ Erro de sincronização de calendário — precisa de ação manual"
+msgstr "⚠️ Erro de sincronização de calendário - ação manual necessária"
 
 #: lib/tymeslot/emails/email_service/account_emails.ex
 #, elixir-autogen, elixir-format
 msgid "⚠️ Email Change Request - Security Alert"
-msgstr "⚠️ Pedido de troca de e-mail — alerta de segurança"
+msgstr "⚠️ Pedido de troca de e-mail - alerta de segurança"
 
 #: lib/tymeslot/emails/appointment_builder.ex
 #, elixir-autogen, elixir-format
@@ -516,12 +516,12 @@ msgstr "Cancelado"
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "Cancelled - %{title} (every occurrence)"
-msgstr "Cancelado — %{title} (todas as ocorrências)"
+msgstr "Cancelado - %{title} (todas as ocorrências)"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "Cancelled - %{title} on %{date}"
-msgstr "Cancelado — %{title} em %{date}"
+msgstr "Cancelado - %{title} em %{date}"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format

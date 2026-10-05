@@ -200,7 +200,7 @@ msgstr "Fuso horário desconhecido"
 #: lib/tymeslot/profiles.ex
 #, elixir-autogen, elixir-format
 msgid "Too many username change attempts. Please try again later."
-msgstr "Tentativas demais de trocar o nome de usuário. Tente novamente mais tarde."
+msgstr "Muitas tentativas de trocar o nome de usuário. Tente novamente mais tarde."
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex
 #, elixir-autogen, elixir-format
@@ -262,7 +262,7 @@ msgstr "Depois de liberado, %{username} pode ser tomado por qualquer outra pesso
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This breaks:"
-msgstr "Isto quebra:"
+msgstr "Isto vai deixar de funcionar:"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
 #, elixir-autogen, elixir-format
@@ -272,7 +272,7 @@ msgstr "os links dentro dos e-mails de confirmação e lembrete já enviados"
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
 #, elixir-autogen, elixir-format
 msgid "your booking page and every event link on it"
-msgstr "sua página de agendamento e todos os links de evento nela"
+msgstr "sua página de agendamento e todos os links de tipos de reunião nela"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format

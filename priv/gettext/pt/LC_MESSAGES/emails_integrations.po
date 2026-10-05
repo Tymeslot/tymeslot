@@ -24,17 +24,17 @@ msgstr "Não foi possível adicionar uma reunião ao seu calendário."
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
 msgid "ACTION REQUIRED:"
-msgstr "PRECISA DA SUA AÇÃO:"
+msgstr "AÇÃO NECESSÁRIA:"
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
 msgid "Action Required"
-msgstr "Precisa da sua ação"
+msgstr "Ação necessária"
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
 msgid "Action required"
-msgstr "Precisa da sua ação"
+msgstr "Ação necessária"
 
 #: lib/tymeslot/emails/templates/video_room_creation_error.ex
 #, elixir-autogen, elixir-format
@@ -54,7 +54,7 @@ msgstr "Erro de sincronização de calendário"
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar Sync Error - Manual Action Required"
-msgstr "Erro de sincronização de calendário — precisa de ação manual"
+msgstr "Erro de sincronização de calendário - ação manual necessária"
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
@@ -104,7 +104,7 @@ msgstr "Detalhes do erro"
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
 msgid "I was unable to add this meeting to your calendar. The appointment has been successfully confirmed in Tymeslot and both you and the attendee have received confirmation emails. However, you'll need to manually add it to your calendar."
-msgstr "Não consegui adicionar esta reunião ao seu calendário. O compromisso foi confirmado no Tymeslot e tanto você quanto o participante receberam os e-mails de confirmação. Mas você vai precisar adicioná-lo ao seu calendário à mão."
+msgstr "Não consegui adicionar esta reunião ao seu calendário. O compromisso foi confirmado no Tymeslot e tanto você quanto o participante receberam os e-mails de confirmação. Mas você vai precisar adicioná-lo ao seu calendário manualmente."
 
 #: lib/tymeslot/emails/templates/video_room_creation_error.ex
 #, elixir-autogen, elixir-format
@@ -149,12 +149,12 @@ msgstr "Abrir as configurações de vídeo"
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
 msgid "Please manually add this meeting to your calendar to ensure you don't miss it. Both you and the attendee have already received your confirmation emails - this is purely a technical calendar sync issue that doesn't affect the booking itself."
-msgstr "Adicione esta reunião ao seu calendário à mão para não perdê-la. Você e o participante já receberam os e-mails de confirmação — isto é só um problema técnico de sincronização de calendário, que não afeta o agendamento em si."
+msgstr "Adicione esta reunião ao seu calendário manualmente para não perdê-la. Você e o participante já receberam os e-mails de confirmação: isto é só um problema técnico de sincronização de calendário, que não afeta o agendamento em si."
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
 msgid "The booking is safe - but please add it to your calendar manually."
-msgstr "O agendamento está a salvo — mas adicione-o ao seu calendário à mão."
+msgstr "O agendamento está garantido, mas adicione-o ao seu calendário manualmente."
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format

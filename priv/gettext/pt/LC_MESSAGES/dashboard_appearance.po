@@ -145,12 +145,12 @@ msgstr "Mais estilos em breve"
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Or upload your own"
-msgstr "Ou envie seu"
+msgstr "Ou envie seu próprio arquivo"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Our design team is busy crafting new themes to help you express your unique professional style."
-msgstr "Nosso time de design está criando novos temas para você expressar seu estilo profissional."
+msgstr "Nossa equipe de design está criando novos temas para você expressar seu estilo profissional."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
 #, elixir-autogen, elixir-format
@@ -217,7 +217,7 @@ msgstr "Esta prévia mostra seu esquema de cores e o fundo atuais."
 #: lib/tymeslot_web/live/dashboard/theme_settings/background_uploads.ex
 #, elixir-autogen, elixir-format
 msgid "Too many upload attempts. Please wait a few minutes and try again."
-msgstr "Tentativas demais de envio. Espere alguns minutos e tente novamente."
+msgstr "Muitas tentativas de envio. Aguarde alguns minutos e tente novamente."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
 #, elixir-autogen, elixir-format
@@ -243,12 +243,12 @@ msgstr "Vídeo"
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
 #, elixir-autogen, elixir-format
 msgid "You have a custom image. Selecting a preset will remove it."
-msgstr "Você tem uma imagem própria. Escolher um preset vai removê-la."
+msgstr "Você tem uma imagem personalizada. Escolher uma opção da coleção vai removê-la."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "You have a custom video. Selecting a preset will remove it."
-msgstr "Você tem um vídeo próprio. Escolher um preset vai removê-lo."
+msgstr "Você tem um vídeo personalizado. Escolher uma opção da coleção vai removê-lo."
 
 #: lib/tymeslot_web/themes/quill/theme.ex
 #, elixir-autogen, elixir-format
@@ -268,7 +268,7 @@ msgstr "Não foi possível salvar a personalização do tema. Tente novamente."
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
 msgid "(your current theme)"
-msgstr "(Seu tema atual)"
+msgstr "(seu tema atual)"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
@@ -343,12 +343,12 @@ msgstr "A prévia se atualiza conforme as alterações são salvas."
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
 msgid "Too many changes - saving shortly…"
-msgstr "Alterações demais — salvando daqui a pouco…"
+msgstr "Muitas alterações. Salvando em instantes…"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
 msgid "Turn this off to go back to the built-in text, which is translated into every language Tymeslot supports. Your own wording is discarded."
-msgstr "Desligue para voltar ao texto embutido, que é traduzido para todos os idiomas que o Tymeslot suporta. Seu texto é descartado."
+msgstr "Desative para voltar ao texto embutido, que é traduzido para todos os idiomas que o Tymeslot oferece. Seu texto é descartado."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format

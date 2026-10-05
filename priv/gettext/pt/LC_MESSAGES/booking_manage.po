@@ -30,7 +30,7 @@ msgstr "Um e-mail de cancelamento vai ser enviado a todos os participantes"
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "Able to make it after all?"
-msgstr "No fim das contas vai dar?"
+msgstr "Vai poder comparecer, afinal?"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
@@ -115,12 +115,12 @@ msgstr "Confirmar recusa"
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm to let %{name} know you can't make it."
-msgstr "Confirme para avisar %{name} de que você não vai poder."
+msgstr "Confirme para avisar %{name} de que você não poderá comparecer."
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm to let %{name} know you'll be attending."
-msgstr "Confirme para avisar %{name} de que você vai."
+msgstr "Confirme para avisar %{name} de que você vai comparecer."
 
 #: lib/tymeslot_web/themes/quill/meeting/reschedule.ex
 #, elixir-autogen, elixir-format
@@ -161,7 +161,7 @@ msgstr "Recusando…"
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex
 #, elixir-autogen, elixir-format
 msgid "Done"
-msgstr "Pronto"
+msgstr "Concluir"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
@@ -236,7 +236,7 @@ msgstr "Mensagem"
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Nobody answered in time, so the slot was released and %{name} was told."
-msgstr "Ninguém respondeu a tempo, então o horário foi liberado e %{name} foi avisado."
+msgstr "Ninguém respondeu a tempo, então o horário foi liberado e avisamos %{name}."
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
@@ -252,7 +252,7 @@ msgstr "Espere um instante e tente de novo."
 #: lib/tymeslot_web/themes/rhythm/meeting/reschedule.ex
 #, elixir-autogen, elixir-format
 msgid "Ready to pick a new time? Let's find one that works better for you."
-msgstr "Pronto para escolher outro horário? Vamos achar um que sirva melhor para você."
+msgstr "Quer escolher outro horário? Vamos encontrar um que sirva melhor para você."
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
@@ -285,17 +285,17 @@ msgstr "Escolha um novo horário para sua reunião"
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Shared with %{name}."
-msgstr "Vai para %{name}."
+msgstr "Será compartilhado com %{name}."
 
 #: lib/tymeslot_web/live/meeting_request_live.ex
 #, elixir-autogen, elixir-format
 msgid "That time has since been booked by somebody else, so this request can no longer be approved."
-msgstr "Esse horário já foi agendado por outra pessoa desde então, então este pedido não pode mais ser aprovado."
+msgstr "Nesse meio-tempo, outra pessoa agendou esse horário, por isso este pedido não pode mais ser aprovado."
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "The deadline to answer this request has passed, so it can no longer be confirmed. The slot will be released shortly; %{name} has not been told yet."
-msgstr "O prazo para responder a este pedido passou, então ele não pode mais ser confirmado. O horário vai ser liberado em breve; %{name} ainda não foi avisado."
+msgstr "O prazo para responder a este pedido passou, então ele não pode mais ser confirmado. O horário vai ser liberado em breve; ainda não avisamos %{name}."
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
@@ -305,7 +305,7 @@ msgstr "A reunião já aconteceu, foi cancelada ou não foi confirmada. Fale com
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "The slot is free again and %{name} has been told."
-msgstr "O horário está livre de novo e %{name} foi avisado."
+msgstr "O horário está livre de novo e avisamos %{name}."
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
@@ -350,12 +350,12 @@ msgstr "Tarde demais para responder"
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "Too many attempts"
-msgstr "Tentativas demais"
+msgstr "Muitas tentativas"
 
 #: lib/tymeslot_web/live/meeting_request_live.ex
 #, elixir-autogen, elixir-format
 msgid "Too many attempts. Try again in a moment."
-msgstr "Tentativas demais. Tente de novo num instante."
+msgstr "Muitas tentativas. Tente de novo em instantes."
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
@@ -376,7 +376,7 @@ msgstr "Esperamos você no horário marcado."
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "We've let %{name} know you can't make it."
-msgstr "Avisamos %{name} de que você não vai poder."
+msgstr "Avisamos %{name} de que você não poderá comparecer."
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
@@ -402,7 +402,7 @@ msgstr "Você está prestes a recusar"
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "You're going!"
-msgstr "Você vai!"
+msgstr "Presença confirmada!"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format

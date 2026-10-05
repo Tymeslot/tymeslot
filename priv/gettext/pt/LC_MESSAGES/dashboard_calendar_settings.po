@@ -31,7 +31,7 @@ msgstr "Já existe uma integração de calendário com esta configuração"
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "Active for Conflict Checking"
-msgstr "Ativo para verificação de conflitos"
+msgstr "Calendários ativos na verificação de conflitos"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -76,7 +76,7 @@ msgstr "Conectar um calendário"
 #: lib/tymeslot_web/live/dashboard/calendar_settings/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar so Tymeslot can read your availability and stop meetings being booked when you're already busy."
-msgstr "Conecte um calendário para o Tymeslot ler sua disponibilidade e impedir que marquem reuniões quando você já tem compromisso."
+msgstr "Conecte um calendário para o Tymeslot ler sua disponibilidade e evitar que reuniões sejam agendadas quando você já tem compromisso."
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
@@ -236,7 +236,7 @@ msgstr "Vamos consultar estes calendários para evitar agendamentos duplicados a
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "books into %{calendar}"
-msgstr "agenda em %{calendar}"
+msgstr "registra os agendamentos em %{calendar}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
@@ -251,7 +251,7 @@ msgstr "sincronizado %{time}"
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot reactivate - another active integration already uses this account"
-msgstr "Não dá para reativar — outra integração ativa já usa esta conta"
+msgstr "Não é possível reativar: outra integração ativa já usa esta conta"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format

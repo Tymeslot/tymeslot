@@ -24,7 +24,7 @@ msgstr "Valor"
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Amount exceeds the remaining refundable balance."
-msgstr "O valor passa do saldo que ainda dá para reembolsar."
+msgstr "O valor excede o saldo que ainda pode ser reembolsado."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
@@ -107,7 +107,7 @@ msgstr "Moeda atualizada."
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Currency updated. Paid event-type prices have been reset."
-msgstr "Moeda atualizada. Os preços dos tipos de evento pagos foram zerados."
+msgstr "Moeda atualizada. Os preços dos tipos de reunião pagos foram zerados."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
@@ -301,7 +301,7 @@ msgstr "Reembolsos com mais de 60 dias precisam ser feitos no painel do Stripe."
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Remaining refundable:"
-msgstr "Ainda dá para reembolsar:"
+msgstr "Saldo reembolsável:"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
@@ -331,7 +331,7 @@ msgstr "O Stripe ainda não capturou uma cobrança para este agendamento. Tente 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
 msgid "Stripe is reviewing your account. Charges switch on automatically once approved."
-msgstr "O Stripe está analisando sua conta. As cobranças são ativadas automaticamente assim que for aprovada."
+msgstr "O Stripe está analisando sua conta. As cobranças são ativadas automaticamente assim que a conta for aprovada."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
@@ -341,7 +341,7 @@ msgstr "O participante recebe o valor integral que você reembolsar. A taxa de p
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "This booking has not been paid yet, so it cannot be refunded."
-msgstr "Este agendamento ainda não foi pago, então não dá para reembolsar."
+msgstr "Este agendamento ainda não foi pago, então não pode ser reembolsado."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -367,8 +367,8 @@ msgstr "Total recebido"
 #, elixir-autogen, elixir-format
 msgid "You have %{count} pending booking awaiting payment. Disconnecting will cancel it."
 msgid_plural "You have %{count} pending bookings awaiting payment. Disconnecting will cancel them."
-msgstr[0] "Você tem %{count} agendamento pendente esperando pagamento. Desconectar vai cancelá-lo."
-msgstr[1] "Você tem %{count} agendamentos pendentes esperando pagamento. Desconectar vai cancelá-los."
+msgstr[0] "Você tem %{count} agendamento pendente aguardando pagamento. Desconectar vai cancelá-lo."
+msgstr[1] "Você tem %{count} agendamentos pendentes aguardando pagamento. Desconectar vai cancelá-los."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
@@ -388,12 +388,12 @@ msgstr "Reembolsar %{attendee} por %{meeting_type}."
 #: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex
 #, elixir-autogen, elixir-format
 msgid "Changing the currency will reset every paid event type to free - existing prices are recorded in the previous currency and would otherwise be charged at the new one."
-msgstr "Trocar a moeda zera todo tipo de evento pago — os preços existentes estão registrados na moeda anterior e passariam a ser cobrados na nova."
+msgstr "Trocar a moeda torna gratuitos todos os tipos de reunião pagos, porque os preços existentes estão registrados na moeda anterior e, do contrário, seriam cobrados na nova."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
 msgid "Cancelled"
-msgstr "Cancelada"
+msgstr "Cancelado em"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
@@ -413,7 +413,7 @@ msgstr "Reembolsos em aberto"
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
 msgid "These bookings were cancelled while you still held the attendee's money. Cancelling never refunds on its own."
-msgstr "Estes agendamentos foram cancelados enquanto o dinheiro do participante ainda estava com você. Cancelar nunca reembolsa sozinho."
+msgstr "Estes agendamentos foram cancelados enquanto o dinheiro do participante ainda estava com você. O cancelamento nunca gera reembolso automaticamente."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format

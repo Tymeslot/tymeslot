@@ -166,7 +166,7 @@ msgstr "Ícone do %{provider}"
 #: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "%{section} - Dashboard"
-msgstr "%{section} — Painel"
+msgstr "%{section} - Painel"
 
 #: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
@@ -227,7 +227,7 @@ msgstr "Assinatura de calendário"
 #, elixir-autogen, elixir-format
 msgid "%{count} of %{max} time"
 msgid_plural "%{count} of %{max} times"
-msgstr[0] "%{count} de %{max} horário"
+msgstr[0] "%{count} de %{max} horários"
 msgstr[1] "%{count} de %{max} horários"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
@@ -368,7 +368,7 @@ msgstr "Encontre um horário que sirva para todo mundo. Proponha alguns horário
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "If need be"
-msgstr "Se precisar"
+msgstr "Se necessário"
 
 #: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
@@ -465,7 +465,7 @@ msgstr "Esta enquete foi cancelada. A votação está encerrada."
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "This time clashes with an event on your calendar"
-msgstr "Este horário bate com um evento do seu calendário"
+msgstr "Este horário conflita com um evento do seu calendário"
 
 #: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
@@ -531,7 +531,7 @@ msgstr "Sim"
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "e.g., Team sync"
-msgstr "ex.: Alinhamento do time"
+msgstr "ex.: Alinhamento da equipe"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
@@ -552,8 +552,8 @@ msgstr "Conecte um provedor de vídeo para concluir a configuração"
 #, elixir-autogen, elixir-format
 msgid "%{count} guest has already voted. Their responses will be discarded."
 msgid_plural "%{count} guests have already voted. Their responses will be discarded."
-msgstr[0] "%{count} convidado já votou. As respostas dele serão descartadas."
-msgstr[1] "%{count} convidados já votaram. As respostas deles serão descartadas."
+msgstr[0] "%{count} convidado já votou. As respostas serão descartadas."
+msgstr[1] "%{count} convidados já votaram. As respostas serão descartadas."
 
 #: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
 #, elixir-autogen, elixir-format

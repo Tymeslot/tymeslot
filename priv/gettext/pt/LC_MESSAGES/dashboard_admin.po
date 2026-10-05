@@ -14,17 +14,17 @@ msgstr ""
 #: lib/tymeslot_web/live/admin_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} disabled."
-msgstr "%{name} desativado."
+msgstr "Configuração desativada: %{name}."
 
 #: lib/tymeslot_web/live/admin_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} enabled."
-msgstr "%{name} ativado."
+msgstr "Configuração ativada: %{name}."
 
 #: lib/tymeslot_web/live/admin_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} updated."
-msgstr "%{name} atualizado."
+msgstr "Configuração atualizada: %{name}."
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
@@ -82,7 +82,7 @@ msgstr "Voltar ao painel"
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Booking min score"
-msgstr "Score mínimo no agendamento"
+msgstr "Pontuação mínima no agendamento"
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
@@ -97,12 +97,12 @@ msgstr "Cancelar"
 #: lib/tymeslot_web/live/admin_live.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot demote the last admin. Promote someone else first."
-msgstr "Não dá para rebaixar o último administrador. Promova outra pessoa antes."
+msgstr "Não é possível rebaixar o último administrador. Promova outra pessoa antes."
 
 #: lib/tymeslot_web/live/admin_live/components/settings.ex
 #, elixir-autogen, elixir-format
 msgid "Changes here take effect immediately and override the matching environment variables and application configuration (e.g. REGISTRATION_ENABLED, PASSWORD_AUTH_ENABLED) for this install."
-msgstr "As mudanças aqui valem na hora e se sobrepõem às variáveis de ambiente e à configuração da aplicação correspondentes (por exemplo REGISTRATION_ENABLED, PASSWORD_AUTH_ENABLED) nesta instalação."
+msgstr "As alterações feitas aqui entram em vigor imediatamente e se sobrepõem às variáveis de ambiente e à configuração da aplicação correspondentes (ex.: REGISTRATION_ENABLED, PASSWORD_AUTH_ENABLED) nesta instalação."
 
 #: lib/tymeslot_web/live/admin_live.ex
 #, elixir-autogen, elixir-format
@@ -138,17 +138,17 @@ msgstr "Rebaixar administrador"
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Demote me"
-msgstr "Rebaixar a mim"
+msgstr "Remover meu acesso"
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Demote yourself"
-msgstr "Rebaixar você mesmo"
+msgstr "Remover seu próprio acesso"
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Demote yourself from admin?"
-msgstr "Rebaixar você mesmo de administrador?"
+msgstr "Remover seu acesso de administrador?"
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
 #, elixir-autogen, elixir-format
@@ -216,7 +216,7 @@ msgstr "ID de usuário inválido."
 #: lib/tymeslot_web/live/admin_live/components/layout.ex
 #, elixir-autogen, elixir-format
 msgid "Manage this self-hosted Tymeslot install."
-msgstr "Gerencie esta instalação própria do Tymeslot."
+msgstr "Gerencie esta instalação auto-hospedada do Tymeslot."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
@@ -283,12 +283,12 @@ msgstr "Definir %{name}"
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Signup min score"
-msgstr "Score mínimo no cadastro"
+msgstr "Pontuação mínima no cadastro"
 
 #: lib/tymeslot_web/live/admin_live.ex
 #, elixir-autogen, elixir-format
 msgid "That change would lock everyone out and was not applied."
-msgstr "Essa mudança trancaria todo mundo do lado de fora e não foi aplicada."
+msgstr "Essa alteração bloquearia o acesso de todos e não foi aplicada."
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
 #, elixir-autogen, elixir-format
@@ -333,7 +333,7 @@ msgstr "Usuários"
 #: lib/tymeslot_web/live/admin_live.ex
 #, elixir-autogen, elixir-format
 msgid "You have been demoted from admin."
-msgstr "Você foi rebaixado de administrador."
+msgstr "Seu acesso de administrador foi removido."
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
 #, elixir-autogen, elixir-format
@@ -343,7 +343,7 @@ msgstr "Você perde o acesso às configurações de administração e ao gerenci
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
 msgid "You're the only admin. Promote someone else before demoting yourself."
-msgstr "Você é o único administrador. Promova outra pessoa antes de se rebaixar."
+msgstr "Só há um administrador: você. Promova outra pessoa antes de remover seu próprio acesso."
 
 #: lib/tymeslot_web/live/admin_live/components/settings.ex
 #, elixir-autogen, elixir-format
@@ -383,22 +383,22 @@ msgstr "Permite entrar com e-mail e senha. Quando desativado, os usuários só c
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Allow new users to sign up via the public registration page. Disable for a private install where admins create accounts manually."
-msgstr "Permite que novos usuários se cadastrem pela página pública de cadastro. Desative para uma instalação privada em que os administradores criam as contas à mão."
+msgstr "Permite que novos usuários se cadastrem pela página pública de cadastro. Desative para uma instalação privada em que os administradores criam as contas manualmente."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot disable this login provider while it is the only working sign-in path for admins. Enable password authentication or another credentialed SSO provider first."
-msgstr "Não dá para desativar este provedor de login enquanto ele for o único caminho de entrada que funciona para os administradores. Ative a autenticação por senha ou outro provedor SSO com credencial antes."
+msgstr "Não é possível desativar este provedor de login enquanto ele for a única forma de entrada que funciona para os administradores. Ative antes a autenticação por senha ou outro provedor SSO com credenciais configuradas."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Email address that receives admin alerts when the toggle above is enabled. Leave blank to fall back to the ADMIN_ALERT_EMAIL environment variable."
-msgstr "Endereço de e-mail que recebe os alertas de administração quando a chave acima está ativada. Deixe em branco para cair na variável de ambiente ADMIN_ALERT_EMAIL."
+msgstr "Endereço de e-mail que recebe os alertas de administração quando a opção acima está ativada. Deixe em branco para usar a variável de ambiente ADMIN_ALERT_EMAIL."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Email operational alerts (webhook failures, integration health issues, background job errors) to the admin alert recipient. Requires a recipient address to be set below."
-msgstr "Manda alertas operacionais por e-mail (falhas de webhook, problemas de saúde de integração, erros em tarefas de segundo plano) para o destinatário dos alertas de administração. Exige um endereço definido abaixo."
+msgstr "Envia alertas operacionais por e-mail (falhas de webhook, problemas de saúde de integrações, erros em tarefas em segundo plano) para o destinatário dos alertas de administração. Exige um endereço definido abaixo."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
@@ -408,12 +408,12 @@ msgstr "Ativa o login único OAuth 2.0 / OIDC genérico (Keycloak, Authentik, Le
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Minimum reCAPTCHA v3 score (0.0–1.0) required to accept a booking. Lower values are more permissive; 0.3 is the default and matches Google's recommendation for forms with low abuse risk."
-msgstr "Score mínimo do reCAPTCHA v3 (0,0–1,0) para aceitar um agendamento. Valores menores são mais permissivos; 0,3 é o padrão e segue a recomendação do Google para formulários com baixo risco de abuso."
+msgstr "Pontuação mínima do reCAPTCHA v3 (0,0–1,0) para aceitar um agendamento. Valores menores são mais permissivos; 0,3 é o padrão e segue a recomendação do Google para formulários com baixo risco de abuso."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Minimum reCAPTCHA v3 score (0.0–1.0) required to accept a signup. Lower values are more permissive; 0.3 is the default and matches Google's recommendation for forms with low abuse risk."
-msgstr "Score mínimo do reCAPTCHA v3 (0,0–1,0) para aceitar um cadastro. Valores menores são mais permissivos; 0,3 é o padrão e segue a recomendação do Google para formulários com baixo risco de abuso."
+msgstr "Pontuação mínima do reCAPTCHA v3 (0,0–1,0) para aceitar um cadastro. Valores menores são mais permissivos; 0,3 é o padrão e segue a recomendação do Google para formulários com baixo risco de abuso."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
@@ -454,32 +454,32 @@ msgstr "É preciso ter acesso de administrador."
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot disable password authentication while at least one admin signs in with email and password - doing so would lock them out. Demote those admins or have them switch to an OAuth login first."
-msgstr "Não dá para desativar a autenticação por senha enquanto pelo menos um administrador entrar com e-mail e senha — isso o trancaria do lado de fora. Rebaixe esses administradores ou peça que troquem para um login OAuth antes."
+msgstr "Não é possível desativar a autenticação por senha enquanto pelo menos um administrador entrar com e-mail e senha, porque isso bloquearia o acesso dessas pessoas. Rebaixe esses administradores ou peça que passem a usar um login OAuth antes."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Collect privacy-friendly analytics for booking pages on this instance: page views, traffic source (UTM/referrer), and conversion. Counts unique visitors with a daily-rotating, cookieless fingerprint - no raw IP is stored. Off by default; review your privacy policy before enabling."
-msgstr "Coleta análises respeitosas da privacidade para as páginas de agendamento desta instância: visualizações, origem do tráfego (UTM/referenciador) e conversão. Conta visitantes únicos com uma impressão digital sem cookies, que gira todo dia — nenhum IP bruto é guardado. Desligado por padrão; revise sua política de privacidade antes de ativar."
+msgstr "Coleta análises que respeitam a privacidade nas páginas de agendamento desta instância: visualizações, origem do tráfego (UTM/referenciador) e conversão. Conta visitantes únicos com um identificador sem cookies, renovado diariamente; o endereço IP em si nunca é armazenado. Desativado por padrão; revise sua política de privacidade antes de ativar."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment - without them the toggle stays locked."
-msgstr "Deixa os anfitriões desta instância receberem pagamentos de quem agenda, pelo Stripe Connect. Exige STRIPE_SECRET_KEY e STRIPE_CONNECT_WEBHOOK_SECRET definidos no ambiente — sem eles a chave fica travada."
+msgstr "Permite que os anfitriões desta instância recebam pagamentos de quem agenda pelo Stripe Connect. Exige STRIPE_SECRET_KEY e STRIPE_CONNECT_WEBHOOK_SECRET definidos no ambiente; sem essas variáveis, a opção fica bloqueada."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Require a passing reCAPTCHA v3 score on the public booking form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment - when keys are missing the toggle is honoured but verification is silently skipped."
-msgstr "Exige uma pontuação aprovada do reCAPTCHA v3 no formulário público de agendamento. Exige RECAPTCHA_SITE_KEY e RECAPTCHA_SECRET_KEY definidos no ambiente — quando faltam as chaves, a opção é respeitada mas a verificação é pulada em silêncio."
+msgstr "Exige uma pontuação aprovada do reCAPTCHA v3 no formulário público de agendamento. Exige RECAPTCHA_SITE_KEY e RECAPTCHA_SECRET_KEY definidos no ambiente. Se as chaves estiverem ausentes, a opção é respeitada, mas a verificação é ignorada sem aviso."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Require a passing reCAPTCHA v3 score on the public signup form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment - when keys are missing the toggle is honoured but verification is silently skipped."
-msgstr "Exige uma pontuação aprovada do reCAPTCHA v3 no formulário público de cadastro. Exige RECAPTCHA_SITE_KEY e RECAPTCHA_SECRET_KEY definidos no ambiente — quando faltam as chaves, a opção é respeitada mas a verificação é pulada em silêncio."
+msgstr "Exige uma pontuação aprovada do reCAPTCHA v3 no formulário público de cadastro. Exige RECAPTCHA_SITE_KEY e RECAPTCHA_SECRET_KEY definidos no ambiente. Se as chaves estiverem ausentes, a opção é respeitada, mas a verificação é ignorada sem aviso."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Accent colour used across transactional emails: buttons, links, the confirmation banner, and badge backgrounds. The darker and lighter shades of the family are derived from it. Amber and red are not affected - they signal \"needs attention\" and \"cancelled\", and recolouring them would make a cancellation read as a confirmation. Leave blank for the stock turquoise."
-msgstr "Cor de destaque usada em todos os e-mails transacionais: botões, links, a faixa de confirmação e o fundo dos selos. Os tons mais escuros e mais claros da família saem dela. Âmbar e vermelho não são afetados — eles sinalizam “precisa de atenção” e “cancelado”, e recolori-los faria um cancelamento parecer uma confirmação. Deixe em branco para o turquesa de fábrica."
+msgstr "Cor de destaque usada em todos os e-mails transacionais: botões, links, a faixa de confirmação e o fundo dos selos. Os tons mais escuros e mais claros da mesma família são derivados dela. Âmbar e vermelho não são afetados: eles sinalizam “precisa de atenção” e “cancelado”, e mudar a cor deles faria um cancelamento parecer uma confirmação. Deixe em branco para usar o turquesa padrão."
 
 #: lib/tymeslot_web/live/admin_live.ex
 #, elixir-autogen, elixir-format
@@ -534,12 +534,12 @@ msgstr "Digite uma cor em hexadecimal, como #14b8a6."
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Logo shown at the top of every transactional email. Converted to a PNG in your browser before upload and attached inline, so it renders even in clients that block remote images. SVG, PNG, JPEG, and WebP sources are all accepted."
-msgstr "Logo mostrado no topo de todo e-mail transacional. Convertido em PNG no seu navegador antes do envio e anexado embutido, para aparecer até em clientes que bloqueiam imagens remotas. Aceita SVG, PNG, JPEG e WebP como origem."
+msgstr "Logo mostrado no topo de todos os e-mails transacionais. É convertido em PNG no seu navegador antes do envio e incorporado à mensagem, para aparecer até em clientes de e-mail que bloqueiam imagens remotas. Aceita arquivos SVG, PNG, JPEG e WebP."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Name shown in the inbox preview line, the logo's alt text, and the email title. Does not change the sender name - set EMAIL_FROM_NAME for that. Leave blank to use \"Tymeslot\"."
-msgstr "Nome mostrado na linha de prévia da caixa de entrada, no texto alternativo do logo e no título do e-mail. Não muda o nome do remetente — para isso, defina EMAIL_FROM_NAME. Deixe em branco para usar “Tymeslot”."
+msgstr "Nome mostrado na linha de prévia da caixa de entrada, no texto alternativo do logo e no título do e-mail. Não muda o nome do remetente (para isso, defina EMAIL_FROM_NAME). Deixe em branco para usar “Tymeslot”."
 
 #: lib/tymeslot_web/live/admin_live/components/settings.ex
 #, elixir-autogen, elixir-format
@@ -604,7 +604,7 @@ msgstr "Essa imagem é grande demais. Escolha uma abaixo de %{limit}."
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Booking page fallback language"
-msgstr "Idioma de reserva da página de agendamento"
+msgstr "Idioma padrão da página de agendamento"
 
 #: lib/tymeslot_web/live/admin_live.ex
 #, elixir-autogen, elixir-format
@@ -614,7 +614,7 @@ msgstr "Escolha um dos idiomas suportados."
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Dashboard fallback language"
-msgstr "Idioma de reserva do painel"
+msgstr "Idioma padrão do painel"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
@@ -634,12 +634,12 @@ msgstr "Padrão da instalação (%{language})"
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Language public booking pages fall back to, along with booking emails and calendar invites for an attendee whose language is unknown. Detection still comes first: a visitor whose browser asks for a language this install supports gets that language regardless of this setting. Left unset it resolves to %{language}, this install's configured default."
-msgstr "Idioma para o qual as páginas públicas de agendamento recorrem, junto com os e-mails de agendamento e os convites de calendário para um participante cujo idioma é desconhecido. A detecção continua vindo primeiro: quem visita com um navegador que pede um idioma suportado por esta instalação recebe esse idioma, independentemente desta configuração. Sem definir, resolve para %{language}, o padrão configurado desta instalação."
+msgstr "Idioma usado nas páginas públicas de agendamento, nos e-mails de agendamento e nos convites de calendário quando o idioma do participante é desconhecido. A detecção vem primeiro: quem visita com um navegador que pede um idioma suportado por esta instalação recebe esse idioma, independentemente desta configuração. Se não for definido, usa %{language}, o padrão configurado desta instalação."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Language the dashboard, account pages, and account emails fall back to. Detection still comes first: a signed-in user's own language setting and the browser's Accept-Language header both win, and this is only what resolves when neither offers a language this install supports. Left unset it resolves to %{language}, this install's configured default."
-msgstr "Idioma para o qual o painel, as páginas de conta e os e-mails de conta recorrem. A detecção continua vindo primeiro: a configuração de idioma do próprio usuário logado e o cabeçalho Accept-Language do navegador ganham dela, e isto é só o que resolve quando nenhum dos dois oferece um idioma suportado por esta instalação. Sem definir, resolve para %{language}, o padrão configurado desta instalação."
+msgstr "Idioma usado no painel, nas páginas de conta e nos e-mails de conta quando nenhum outro se aplica. A detecção vem primeiro: a configuração de idioma do próprio usuário conectado e o cabeçalho Accept-Language do navegador têm prioridade, e este idioma só é usado quando nenhum dos dois oferece um idioma suportado por esta instalação. Se não for definido, usa %{language}, o padrão configurado desta instalação."
 
 #: lib/tymeslot_web/live/admin_live/tabs.ex
 #, elixir-autogen, elixir-format
