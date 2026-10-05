@@ -3,6 +3,9 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent.BreakHelpers do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Availability.Window
+  alias TymeslotWeb.Components.Shared.TimeOptions
+
   # Fields the add-break form renders an inline error under; everything else
   # has no home in the form and is surfaced as a flash instead.
   @form_fields [:label, :start_time, :end_time]
@@ -39,6 +42,21 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent.BreakHelpers do
   @spec format_time(Time.t() | nil) :: String.t()
   def format_time(nil), do: ""
   def format_time(time), do: Calendar.strftime(time, "%H:%M")
+
+  @doc """
+  A break's times for its chip, with "(+1)" on a time that falls on the day
+  after the day's own date (hours that end the next day).
+  """
+  @spec break_time_label(map(), map(), String.t() | nil) :: String.t()
+  def break_time_label(day_availability, break, time_format) do
+    start_label = clock(day_availability, break.start_time, :start, time_format)
+    end_label = clock(day_availability, break.end_time, :end, time_format)
+    "#{start_label} - #{end_label}"
+  end
+
+  defp clock(day_availability, time, edge, time_format) do
+    TimeOptions.time_label(time, Window.next_day?(day_availability, time, edge), time_format)
+  end
 
   @doc """
   Parse a day-of-week integer from a string or a params map containing a \"day\" key.

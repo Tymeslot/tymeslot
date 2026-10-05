@@ -226,7 +226,6 @@ msgstr "La durée doit être un nombre de minutes valide"
 msgid "Duration must be greater than 0 minutes"
 msgstr "La durée doit être supérieure à 0 minute"
 
-#: lib/tymeslot/availability/input_validation.ex
 #: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "End time must be after start time"
@@ -851,3 +850,18 @@ msgstr "Temps de préparation laissé libre avant chaque réservation."
 #, elixir-autogen, elixir-format
 msgid "Wrap-up time kept free after each booking."
 msgstr "Temps de clôture laissé libre après chaque réservation."
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "End time must be after start time. To run past midnight, pick an end time marked (+1)."
+msgstr "L’heure de fin doit être postérieure à l’heure de début. Pour dépasser minuit, choisissez une heure de fin marquée (+1)."
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Ends the next day"
+msgstr "Se termine le lendemain"
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Hours that end the next day can last at most 24 hours"
+msgstr "Des horaires qui se terminent le lendemain ne peuvent pas dépasser 24 heures"

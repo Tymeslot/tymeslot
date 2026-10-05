@@ -226,7 +226,6 @@ msgstr "Тривалість має бути коректною кількіст
 msgid "Duration must be greater than 0 minutes"
 msgstr "Тривалість має бути більшою за 0 хвилин"
 
-#: lib/tymeslot/availability/input_validation.ex
 #: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "End time must be after start time"
@@ -853,3 +852,18 @@ msgstr "Час на підготовку, що залишається вільн
 #, elixir-autogen, elixir-format
 msgid "Wrap-up time kept free after each booking."
 msgstr "Час на завершення, що залишається вільним після кожного бронювання."
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "End time must be after start time. To run past midnight, pick an end time marked (+1)."
+msgstr "Час завершення має бути пізнішим за час початку. Щоб вийти за північ, виберіть час завершення з позначкою (+1)."
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Ends the next day"
+msgstr "Закінчується наступного дня"
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Hours that end the next day can last at most 24 hours"
+msgstr "Години, що закінчуються наступного дня, можуть тривати щонайбільше 24 години"
