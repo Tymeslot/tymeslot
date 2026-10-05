@@ -173,9 +173,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
   defp axis_label(nil), do: nil
 
   defp axis_label(%{day: day}) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-    day_num = String.pad_leading(to_string(day.day), 2, "0")
-    "#{day_num} #{LocaleFormat.format_month_name(day.month, locale, :short)}"
+    LocaleFormat.format_short_date(day, Gettext.get_locale(TymeslotWeb.Gettext))
   end
 
   defp max_visits([]), do: 1
