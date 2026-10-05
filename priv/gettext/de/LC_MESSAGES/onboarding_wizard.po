@@ -862,11 +862,6 @@ msgstr "Kein Puffer um Termine"
 msgid "No buffer before, %{after_minutes} min after"
 msgstr "Kein Puffer davor, %{after_minutes} Min. danach"
 
-#: lib/tymeslot_web/live/onboarding_live/step_config.ex
-#, elixir-autogen, elixir-format
-msgid "Time to prepare before each meeting and to wrap up after it."
-msgstr "Zeit zur Vorbereitung vor jedem Termin und zur Nachbereitung danach."
-
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
 #, elixir-autogen, elixir-format
 msgid "With no buffers, a new booking can sit right next to an existing meeting."
@@ -883,3 +878,8 @@ msgstr "Nach dem Termin"
 msgctxt "buffer"
 msgid "Before"
 msgstr "Vor dem Termin"
+
+#: lib/tymeslot_web/live/onboarding_live/step_config.ex
+#, elixir-autogen, elixir-format
+msgid "How much free time a new booking needs before and after it."
+msgstr "Wie viel freie Zeit eine neue Buchung davor und danach benötigt."

@@ -236,7 +236,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
     do:
       dgettext(
         "onboarding_wizard",
-        "Time to prepare before each meeting and to wrap up after it."
+        "How much free time a new booking needs before and after it."
       )
 
   def step_description(:booking_window),

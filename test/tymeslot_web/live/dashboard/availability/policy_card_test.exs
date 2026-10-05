@@ -40,16 +40,28 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.PolicyCardTest do
                "form#buffer-after-form[phx-change='update_buffer_after_minutes']"
              )
 
-      assert render(view) =~ "Before each meeting"
-      assert render(view) =~ "After each meeting"
+      assert render(view) =~ "Before a new booking"
+      assert render(view) =~ "After a new booking"
+    end
+
+    # The buffers pad the booking being offered, not existing meetings, so the
+    # help text must describe them that way round.
+    test "each buffer's help text describes what it does to a new booking", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      assert view |> element("#buffer-before-form + p") |> render() =~
+               "A new booking can start this long after your previous meeting ends, at the earliest."
+
+      assert view |> element("#buffer-after-form + p") |> render() =~
+               "A new booking must end at least this long before your next meeting starts."
     end
 
     test "each buffer's group and custom input are labelled by its own title", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
       for {form_id, field, title} <- [
-            {"buffer-before-form", "buffer_before_minutes", "Before each meeting"},
-            {"buffer-after-form", "buffer_after_minutes", "After each meeting"}
+            {"buffer-before-form", "buffer_before_minutes", "Before a new booking"},
+            {"buffer-after-form", "buffer_after_minutes", "After a new booking"}
           ] do
         label_id = "#{form_id}-label"
 

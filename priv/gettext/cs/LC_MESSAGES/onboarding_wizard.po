@@ -867,11 +867,6 @@ msgstr "Bez časové rezervy kolem schůzek"
 msgid "No buffer before, %{after_minutes} min after"
 msgstr "Bez časové rezervy před, %{after_minutes} min po"
 
-#: lib/tymeslot_web/live/onboarding_live/step_config.ex
-#, elixir-autogen, elixir-format
-msgid "Time to prepare before each meeting and to wrap up after it."
-msgstr "Čas na přípravu před každou schůzkou a na dokončení po ní."
-
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
 #, elixir-autogen, elixir-format
 msgid "With no buffers, a new booking can sit right next to an existing meeting."
@@ -888,3 +883,8 @@ msgstr "Po schůzce"
 msgctxt "buffer"
 msgid "Before"
 msgstr "Před schůzkou"
+
+#: lib/tymeslot_web/live/onboarding_live/step_config.ex
+#, elixir-autogen, elixir-format
+msgid "How much free time a new booking needs before and after it."
+msgstr "Kolik volného času potřebuje nová rezervace před sebou a po sobě."

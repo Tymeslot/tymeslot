@@ -809,16 +809,6 @@ msgstr "Zeitpläne"
 
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
-msgid "After each meeting"
-msgstr "Nach jedem Termin"
-
-#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
-#, elixir-autogen, elixir-format
-msgid "Before each meeting"
-msgstr "Vor jedem Termin"
-
-#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
-#, elixir-autogen, elixir-format
 msgid "Buffer Time"
 msgstr "Pufferzeit"
 
@@ -844,10 +834,20 @@ msgstr "Puffer vor Terminen auf %{minutes} Minuten aktualisiert"
 
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
-msgid "Preparation time kept free before each booking."
-msgstr "Vorbereitungszeit, die vor jeder Buchung frei bleibt."
+msgid "A new booking can start this long after your previous meeting ends, at the earliest."
+msgstr "Eine neue Buchung kann frühestens so lange nach dem Ende Ihres vorherigen Termins beginnen."
 
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
-msgid "Wrap-up time kept free after each booking."
-msgstr "Nachbereitungszeit, die nach jeder Buchung frei bleibt."
+msgid "A new booking must end at least this long before your next meeting starts."
+msgstr "Eine neue Buchung muss mindestens so lange vor dem Beginn Ihres nächsten Termins enden."
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "After a new booking"
+msgstr "Nach einer neuen Buchung"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Before a new booking"
+msgstr "Vor einer neuen Buchung"

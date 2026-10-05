@@ -812,16 +812,6 @@ msgstr "Rozvrhy"
 
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
-msgid "After each meeting"
-msgstr "Po každé schůzce"
-
-#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
-#, elixir-autogen, elixir-format
-msgid "Before each meeting"
-msgstr "Před každou schůzkou"
-
-#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
-#, elixir-autogen, elixir-format
 msgid "Buffer Time"
 msgstr "Časová rezerva"
 
@@ -847,10 +837,20 @@ msgstr "Časová rezerva před schůzkami změněna na %{minutes} minut."
 
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
-msgid "Preparation time kept free before each booking."
-msgstr "Čas na přípravu, který zůstane volný před každou rezervací."
+msgid "A new booking can start this long after your previous meeting ends, at the earliest."
+msgstr "Nová rezervace může začít nejdříve takto dlouho po skončení vaší předchozí schůzky."
 
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
-msgid "Wrap-up time kept free after each booking."
-msgstr "Čas na dokončení, který zůstane volný po každé rezervaci."
+msgid "A new booking must end at least this long before your next meeting starts."
+msgstr "Nová rezervace musí skončit nejméně takto dlouho před začátkem vaší další schůzky."
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "After a new booking"
+msgstr "Po nové rezervaci"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Before a new booking"
+msgstr "Před novou rezervací"
