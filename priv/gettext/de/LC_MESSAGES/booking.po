@@ -51,11 +51,6 @@ msgstr "%{minutes} Minuten"
 msgid "%{months} months in advance"
 msgstr "%{months} Monate im Voraus"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "%{month} %{day}, %{year}"
-msgstr "%{day}. %{month} %{year}"
-
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{name}, your meeting %{organizer} has been rescheduled."

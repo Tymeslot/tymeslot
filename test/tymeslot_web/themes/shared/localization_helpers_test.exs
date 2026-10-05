@@ -139,12 +139,12 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
     test "builds a weekday + date label from an ISO date string" do
       # 2026-06-15 is a Monday.
       assert LocalizationHelpers.format_full_date_label("2026-06-15") ==
-               "Monday, June 15, 2026"
+               "Monday, 15 June 2026"
     end
 
     test "accepts a Date struct" do
       assert LocalizationHelpers.format_full_date_label(~D[2026-06-15]) ==
-               "Monday, June 15, 2026"
+               "Monday, 15 June 2026"
     end
 
     test "returns an empty string for nil" do
@@ -153,6 +153,35 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
 
     test "falls back to the raw input when the string is not a valid date" do
       assert LocalizationHelpers.format_full_date_label("not-a-date") == "not-a-date"
+    end
+
+    test "follows the German and Czech word order and punctuation" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+      assert LocalizationHelpers.format_full_date_label(~D[2026-06-15]) == "Montag, 15. Juni 2026"
+
+      Gettext.put_locale(TymeslotWeb.Gettext, "cs")
+      assert LocalizationHelpers.format_full_date_label(~D[2026-06-15]) =~ "15. června 2026"
+    end
+  end
+
+  describe "format_date/1" do
+    test "writes English dates day before month" do
+      assert LocalizationHelpers.format_date(~D[2026-10-06]) == "6 October 2026"
+      assert LocalizationHelpers.format_date("2026-10-06") == "6 October 2026"
+      assert LocalizationHelpers.format_date(~U[2026-10-06 09:00:00Z]) == "6 October 2026"
+    end
+
+    test "puts a period after the day in German and Czech" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+      assert LocalizationHelpers.format_date(~D[2026-10-06]) == "6. Oktober 2026"
+
+      Gettext.put_locale(TymeslotWeb.Gettext, "cs")
+      assert LocalizationHelpers.format_date(~D[2026-10-06]) == "6. října 2026"
+    end
+
+    test "returns an unparseable string unchanged and nil as empty" do
+      assert LocalizationHelpers.format_date("not-a-date") == "not-a-date"
+      assert LocalizationHelpers.format_date(nil) == ""
     end
   end
 

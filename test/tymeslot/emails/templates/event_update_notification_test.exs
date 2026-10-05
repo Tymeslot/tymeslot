@@ -25,7 +25,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotificationTest do
       email = EventUpdateNotification.render("a@example.com", details)
 
       assert email.subject =~ "Planning Session"
-      assert email.subject =~ "Apr 15"
+      assert email.subject =~ "15 Apr"
     end
 
     test "HTML body contains change summary" do

@@ -144,7 +144,8 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   def to_attendee_datetime(_other, _timezone), do: :error
 
   @doc """
-  Formats date string or struct for display.
+  Formats a date string or struct for display in the current locale's word
+  order, via `LocaleFormat.format_date/2`: "15 July 2026", "15. Juli 2026".
   """
   @spec format_date(String.t() | Date.t() | DateTime.t() | nil) :: String.t()
   def format_date(nil), do: ""
@@ -158,8 +159,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
   @spec format_date(Date.t()) :: String.t()
   def format_date(%Date{} = date) do
-    month = month_in_date(date.month)
-    dgettext("booking", "%{month} %{day}, %{year}", month: month, day: date.day, year: date.year)
+    LocaleFormat.format_date(date, current_locale())
   end
 
   @spec format_date(DateTime.t()) :: String.t()
@@ -169,7 +169,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
   @doc """
   Builds a full, screen-reader-friendly date label — the localized weekday
-  followed by the localized date, e.g. "Monday, July 15, 2026". Accepts an ISO
+  followed by the localized date, e.g. "Monday, 15 July 2026". Accepts an ISO
   date string (as carried in the calendar day maps) or a `Date`, and falls back
   to the raw input on a parse failure so a day button is never left unlabelled.
   """
