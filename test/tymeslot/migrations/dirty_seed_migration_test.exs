@@ -113,6 +113,7 @@ defmodule Tymeslot.Migrations.DirtySeedMigrationTest do
 
         assert_availability_rekeyed!(seeded)
         assert_buffers_split!()
+        assert_midnight_windows_rewritten!()
       after
         # Always restore clean state for other tests
         reset_database!()
@@ -311,6 +312,70 @@ defmodule Tymeslot.Migrations.DirtySeedMigrationTest do
              ["seed-user-2@example.com", 0, 0, 0],
              ["seed-user-3@example.com", 15, 15, 15],
              ["seed-user-4@example.com", 500, 120, 120]
+           ]
+  end
+
+  # The seed's "until the end of the day" rows arrive ending at midnight the
+  # next day, and the ordinary 09:00-17:30 weekday, its lunch break and the
+  # 10:00-14:00 override arrive as they were.
+  defp assert_midnight_windows_rewritten! do
+    %{rows: days} =
+      SQL.query!(
+        Tymeslot.Repo,
+        """
+        SELECT wa.day_of_week, wa.start_time, wa.end_time, wa.ends_next_day
+        FROM weekly_availability AS wa
+        JOIN availability_schedules AS s ON s.id = wa.schedule_id
+        JOIN profiles AS p ON p.id = s.profile_id
+        JOIN users AS u ON u.id = p.user_id
+        WHERE u.email = 'seed-user-1@example.com' AND wa.day_of_week IN (1, 6, 7)
+        ORDER BY wa.day_of_week
+        """,
+        []
+      )
+
+    assert days == [
+             [1, ~T[09:00:00], ~T[17:30:00], false],
+             [6, ~T[00:00:00], ~T[00:00:00], true],
+             [7, ~T[18:00:00], ~T[00:00:00], true]
+           ]
+
+    %{rows: breaks} =
+      SQL.query!(
+        Tymeslot.Repo,
+        """
+        SELECT wa.day_of_week, b.start_time, b.end_time
+        FROM availability_breaks AS b
+        JOIN weekly_availability AS wa ON wa.id = b.weekly_availability_id
+        JOIN availability_schedules AS s ON s.id = wa.schedule_id
+        JOIN profiles AS p ON p.id = s.profile_id
+        JOIN users AS u ON u.id = p.user_id
+        WHERE u.email = 'seed-user-1@example.com'
+        ORDER BY wa.day_of_week
+        """,
+        []
+      )
+
+    assert breaks == [[1, ~T[12:00:00], ~T[13:00:00]], [6, ~T[22:00:00], ~T[00:00:00]]]
+
+    %{rows: overrides} =
+      SQL.query!(
+        Tymeslot.Repo,
+        """
+        SELECT date, end_time, ends_next_day, COUNT(*)
+        FROM availability_overrides
+        WHERE override_type = 'custom_hours'
+        GROUP BY date, end_time, ends_next_day
+        ORDER BY date
+        """,
+        []
+      )
+
+    profiles = scalar!("SELECT COUNT(*) FROM profiles")
+
+    assert overrides == [
+             [~D[2026-12-31], ~T[14:00:00], false, profiles],
+             [~D[2027-01-05], ~T[00:00:00], true, profiles]
            ]
   end
 
