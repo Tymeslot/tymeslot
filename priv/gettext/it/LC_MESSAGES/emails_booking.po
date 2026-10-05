@@ -1253,3 +1253,23 @@ msgstr "Il tuo posto è stato spostato a %{to}."
 #, elixir-autogen, elixir-format
 msgid "Your spot has moved."
 msgstr "Il tuo posto è stato spostato."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "A group meeting cannot be moved for everyone at once. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
+msgstr "Una riunione di gruppo non può essere spostata per tutti in una volta. Per mantenere l'orario originale, riporta l'evento al suo posto nel tuo calendario. Per cambiarlo, invia ai partecipanti una richiesta di riprogrammazione dalla tua dashboard, oppure annulla lì la riunione così che ogni partecipante venga avvisato."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "Please review the group meeting in Tymeslot."
+msgstr "Controlla la riunione di gruppo su Tymeslot."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "The group meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original time for every participant, and a group meeting cannot be moved for everyone at once."
+msgstr "La riunione di gruppo «%{title}» è stata riprogrammata nel tuo calendario esterno. Tymeslot mantiene ancora l'orario originale per ogni partecipante, e una riunione di gruppo non può essere spostata per tutti in una volta."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "This group meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above, and its participants still expect it. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
+msgstr "Questa riunione di gruppo è stata <strong>riprogrammata nel tuo calendario esterno</strong>. Tymeslot mostra ancora l'orario originale qui sopra, e i partecipanti si aspettano ancora quell'orario. Per mantenere l'orario originale, riporta l'evento al suo posto nel tuo calendario. Per cambiarlo, invia ai partecipanti una richiesta di riprogrammazione dalla tua dashboard, oppure annulla lì la riunione così che ogni partecipante venga avvisato."

@@ -1254,3 +1254,23 @@ msgstr "Vaše místo bylo přesunuto na %{to}."
 #, elixir-autogen, elixir-format
 msgid "Your spot has moved."
 msgstr "Vaše místo bylo přesunuto."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "A group meeting cannot be moved for everyone at once. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
+msgstr "Skupinovou schůzku nelze přesunout pro všechny najednou. Chcete-li zachovat původní čas, vraťte událost ve svém kalendáři zpět. Chcete-li ho změnit, pošlete účastníkům z nástěnky žádost o přesunutí, nebo tam schůzku zrušte, aby byl každý účastník informován."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "Please review the group meeting in Tymeslot."
+msgstr "Zkontrolujte prosím skupinovou schůzku ve službě Tymeslot."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "The group meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original time for every participant, and a group meeting cannot be moved for everyone at once."
+msgstr "Skupinová schůzka „%{title}“ byla přesunuta ve vašem externím kalendáři. Služba Tymeslot stále eviduje původní čas pro všechny účastníky a skupinovou schůzku nelze přesunout pro všechny najednou."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "This group meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above, and its participants still expect it. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
+msgstr "Tato skupinová schůzka byla <strong>přesunuta ve vašem externím kalendáři</strong>. Služba Tymeslot výše stále zobrazuje původní čas a účastníci s ním stále počítají. Chcete-li zachovat původní čas, vraťte událost ve svém kalendáři zpět. Chcete-li ho změnit, pošlete účastníkům z nástěnky žádost o přesunutí, nebo tam schůzku zrušte, aby byl každý účastník informován."

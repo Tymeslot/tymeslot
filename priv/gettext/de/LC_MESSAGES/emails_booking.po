@@ -1253,3 +1253,23 @@ msgstr "Ihr Platz wurde auf %{to} verschoben."
 #, elixir-autogen, elixir-format
 msgid "Your spot has moved."
 msgstr "Ihr Platz wurde verschoben."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "A group meeting cannot be moved for everyone at once. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
+msgstr "Ein Gruppentermin lässt sich nicht für alle auf einmal verschieben. Um die ursprüngliche Zeit beizubehalten, verschieben Sie den Kalendereintrag in Ihrem Kalender zurück. Um sie zu ändern, senden Sie den Teilnehmenden über Ihr Dashboard eine Verschiebungsanfrage oder sagen Sie den Termin dort ab, damit alle Teilnehmenden benachrichtigt werden."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "Please review the group meeting in Tymeslot."
+msgstr "Bitte überprüfen Sie den Gruppentermin in Tymeslot."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "The group meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original time for every participant, and a group meeting cannot be moved for everyone at once."
+msgstr "Der Gruppentermin „%{title}“ wurde in Ihrem externen Kalender verschoben. Tymeslot hält für alle Teilnehmenden weiterhin die ursprüngliche Zeit fest, und ein Gruppentermin lässt sich nicht für alle auf einmal verschieben."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "This group meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above, and its participants still expect it. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
+msgstr "Dieser Gruppentermin wurde <strong>in Ihrem externen Kalender verschoben</strong>. Tymeslot zeigt oben weiterhin die ursprüngliche Zeit, und die Teilnehmenden rechnen weiterhin damit. Um die ursprüngliche Zeit beizubehalten, verschieben Sie den Kalendereintrag in Ihrem Kalender zurück. Um sie zu ändern, senden Sie den Teilnehmenden über Ihr Dashboard eine Verschiebungsanfrage oder sagen Sie den Termin dort ab, damit alle Teilnehmenden benachrichtigt werden."

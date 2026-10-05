@@ -1254,3 +1254,23 @@ msgstr "Ваше місце перенесено на %{to}."
 #, elixir-autogen, elixir-format
 msgid "Your spot has moved."
 msgstr "Ваше місце перенесено."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "A group meeting cannot be moved for everyone at once. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
+msgstr "Групову зустріч не можна перенести для всіх одночасно. Щоб зберегти початковий час, поверніть подію на місце у своєму календарі. Щоб змінити його, надішліть учасникам запит на перенесення з панелі керування або скасуйте там зустріч, щоб кожен учасник отримав сповіщення."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "Please review the group meeting in Tymeslot."
+msgstr "Будь ласка, перегляньте групову зустріч у Tymeslot."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "The group meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original time for every participant, and a group meeting cannot be moved for everyone at once."
+msgstr "Групову зустріч «%{title}» перенесено у вашому зовнішньому календарі. У Tymeslot для кожного учасника досі збережено початковий час, а групову зустріч не можна перенести для всіх одночасно."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "This group meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above, and its participants still expect it. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
+msgstr "Цю групову зустріч <strong>перенесено у вашому зовнішньому календарі</strong>. У Tymeslot вище досі показано початковий час, і учасники досі на нього розраховують. Щоб зберегти початковий час, поверніть подію на місце у своєму календарі. Щоб змінити його, надішліть учасникам запит на перенесення з панелі керування або скасуйте там зустріч, щоб кожен учасник отримав сповіщення."

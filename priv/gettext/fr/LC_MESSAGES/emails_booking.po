@@ -1253,3 +1253,23 @@ msgstr "Votre place a été déplacée au %{to}."
 #, elixir-autogen, elixir-format
 msgid "Your spot has moved."
 msgstr "Votre place a été déplacée."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "A group meeting cannot be moved for everyone at once. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
+msgstr "Un rendez-vous de groupe ne peut pas être déplacé pour tout le monde à la fois. Pour conserver l’horaire d’origine, remettez l’événement à sa place dans votre calendrier. Pour le modifier, envoyez aux participants une demande de reprogrammation depuis votre tableau de bord, ou annulez-y le rendez-vous afin que chaque participant soit prévenu."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "Please review the group meeting in Tymeslot."
+msgstr "Veuillez vérifier le rendez-vous de groupe dans Tymeslot."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "The group meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original time for every participant, and a group meeting cannot be moved for everyone at once."
+msgstr "Le rendez-vous de groupe « %{title} » a été reporté dans votre calendrier externe. Tymeslot conserve l’horaire d’origine pour chaque participant, et un rendez-vous de groupe ne peut pas être déplacé pour tout le monde à la fois."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "This group meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above, and its participants still expect it. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
+msgstr "Ce rendez-vous de groupe a été <strong>reporté dans votre calendrier externe</strong>. Tymeslot affiche encore l’horaire d’origine ci-dessus, et ses participants comptent toujours dessus. Pour conserver l’horaire d’origine, remettez l’événement à sa place dans votre calendrier. Pour le modifier, envoyez aux participants une demande de reprogrammation depuis votre tableau de bord, ou annulez-y le rendez-vous afin que chaque participant soit prévenu."

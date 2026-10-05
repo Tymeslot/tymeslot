@@ -1254,3 +1254,23 @@ msgstr "Twoje miejsce zostało przeniesione na %{to}."
 #, elixir-autogen, elixir-format
 msgid "Your spot has moved."
 msgstr "Twoje miejsce zostało przeniesione."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "A group meeting cannot be moved for everyone at once. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
+msgstr "Spotkania grupowego nie można przenieść dla wszystkich naraz. Aby zachować pierwotny termin, przenieś wydarzenie z powrotem w swoim kalendarzu. Aby go zmienić, wyślij uczestnikom prośbę o zmianę terminu z panelu lub odwołaj tam spotkanie, aby każdy uczestnik został powiadomiony."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "Please review the group meeting in Tymeslot."
+msgstr "Sprawdź spotkanie grupowe w Tymeslot."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "The group meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original time for every participant, and a group meeting cannot be moved for everyone at once."
+msgstr "Spotkanie grupowe „%{title}” zostało przeniesione w zewnętrznym kalendarzu. Tymeslot wciąż przechowuje pierwotny termin dla każdego uczestnika, a spotkania grupowego nie można przenieść dla wszystkich naraz."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "This group meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above, and its participants still expect it. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
+msgstr "To spotkanie grupowe zostało <strong>przeniesione w zewnętrznym kalendarzu</strong>. Tymeslot wciąż pokazuje powyżej pierwotny termin, a uczestnicy nadal na niego liczą. Aby zachować pierwotny termin, przenieś wydarzenie z powrotem w swoim kalendarzu. Aby go zmienić, wyślij uczestnikom prośbę o zmianę terminu z panelu lub odwołaj tam spotkanie, aby każdy uczestnik został powiadomiony."
