@@ -72,10 +72,10 @@ defmodule Tymeslot.MeetingTypes.InputValidationTest do
       assert Map.has_key?(errors, :duration)
     end
 
-    test "rejects duration above 480 minutes" do
+    test "rejects duration above 1440 minutes" do
       params = %{
         "name" => "Chat",
-        "duration" => "481",
+        "duration" => "1441",
         "icon" => "none",
         "meeting_mode" => "personal"
       }
@@ -107,10 +107,10 @@ defmodule Tymeslot.MeetingTypes.InputValidationTest do
       assert {:ok, _sanitized} = InputValidation.validate_meeting_type_form(params)
     end
 
-    test "accepts maximum valid duration (480 minutes)" do
+    test "accepts maximum valid duration (1440 minutes)" do
       params = %{
         "name" => "Chat",
-        "duration" => "480",
+        "duration" => "1440",
         "icon" => "none",
         "meeting_mode" => "personal"
       }
