@@ -391,4 +391,25 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
       assert Formatting.format_currency(-50, "eur") == "€-0.50"
     end
   end
+
+  describe "format_next_day_end/4" do
+    test "is nil for a meeting ending the same day" do
+      start = DateTime.new!(~D[2027-06-14], ~T[21:00:00], "Europe/London")
+      assert Formatting.format_next_day_end(start, 60, "en", nil) == nil
+    end
+
+    test "names the end and its date when it falls on a later date" do
+      start = DateTime.new!(~D[2027-06-14], ~T[23:00:00], "Europe/London")
+      note = Formatting.format_next_day_end(start, 120, "en", nil)
+
+      assert note == "ends 01:00 AM on Tue 15 Jun"
+    end
+
+    test "is localised to the recipient" do
+      start = DateTime.new!(~D[2027-06-14], ~T[23:00:00], "Europe/Berlin")
+
+      assert Formatting.format_next_day_end(start, 120, "de", nil) ==
+               "endet um 01:00 am Di 15. Jun"
+    end
+  end
 end

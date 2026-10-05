@@ -595,3 +595,8 @@ msgid_plural "Group session: you have one of %{count} spots."
 msgstr[0] "Групова зустріч: у вас одне з %{count} місць."
 msgstr[1] "Групова зустріч: у вас одне з %{count} місць."
 msgstr[2] "Групова зустріч: у вас одне з %{count} місць."
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "ends %{time} on %{date}"
+msgstr "завершення: %{date}, %{time}"

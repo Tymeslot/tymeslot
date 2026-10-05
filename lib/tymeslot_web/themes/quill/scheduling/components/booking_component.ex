@@ -113,6 +113,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
+    assigns = assign(assigns, :next_day_end, LocalizationHelpers.booking_next_day_end(assigns))
+
     ~H"""
     <div class="container flex-1" data-locale={@locale}>
       <.page_layout
@@ -157,6 +159,13 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       @selected_time,
                       @user_timezone
                     )}
+                  </p>
+                  <p
+                    :if={@next_day_end}
+                    class="booking-datetime text-quill-secondary"
+                    data-testid="booking-next-day-end"
+                  >
+                    {@next_day_end}
                   </p>
 
                   <LocationField.location_field

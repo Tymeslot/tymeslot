@@ -1444,3 +1444,8 @@ msgstr "Das ist Ihre aktuelle Zeit. Wählen Sie eine andere Zeit, um Ihren Platz
 #, elixir-autogen, elixir-format
 msgid "This link to move your spot has already been used. You can book a new time below."
 msgstr "Dieser Link zum Verschieben Ihres Platzes wurde bereits verwendet. Unten können Sie einen neuen Termin buchen."
+
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Ends %{time} on %{weekday} %{day} %{month}"
+msgstr "Endet um %{time} am %{weekday}, %{day}. %{month}"

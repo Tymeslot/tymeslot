@@ -261,4 +261,84 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
       assert LocalizationHelpers.get_month_year_display(2026, 9) == "Septembre 2026"
     end
   end
+
+  describe "format_next_day_end/4" do
+    test "is nil when the meeting ends on the day it starts" do
+      assert LocalizationHelpers.format_next_day_end(
+               "2027-06-14",
+               "10:00 PM",
+               60,
+               "Europe/London"
+             ) ==
+               nil
+    end
+
+    test "names the end when it falls on a later date" do
+      note =
+        LocalizationHelpers.format_next_day_end("2027-06-14", "11:00 PM", 120, "Europe/London")
+
+      assert note == "Ends 01:00 AM on Tuesday 15 June"
+    end
+
+    test "a 24-hour meeting from midnight ends at midnight the next day" do
+      assert LocalizationHelpers.format_next_day_end(
+               "2027-06-14",
+               "12:00 AM",
+               "1440min",
+               "Europe/Berlin"
+             ) =~ "Tuesday"
+    end
+
+    test "is nil without a duration or with an unreadable time" do
+      assert LocalizationHelpers.format_next_day_end(
+               "2027-06-14",
+               "11:00 PM",
+               nil,
+               "Europe/London"
+             ) ==
+               nil
+
+      assert LocalizationHelpers.format_next_day_end(
+               "2027-06-14",
+               "not a time",
+               60,
+               "Europe/London"
+             ) == nil
+    end
+  end
+
+  describe "format_next_day_end/4 across locales and DST" do
+    test "reads naturally in French, with the weekday in lower case" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "fr")
+
+      assert LocalizationHelpers.format_next_day_end(
+               "2027-06-14",
+               "11:00 PM",
+               120,
+               "Europe/Paris"
+             ) ==
+               "Fin : mardi 15 juin, 01:00"
+    end
+
+    test "keeps the capital German nouns take" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+
+      assert LocalizationHelpers.format_next_day_end(
+               "2027-06-14",
+               "11:00 PM",
+               120,
+               "Europe/Berlin"
+             ) ==
+               "Endet um 01:00 am Dienstag, 15. Juni"
+    end
+
+    test "a 24-hour meeting from midnight on the 23-hour night ends at 01:00 on Monday" do
+      assert LocalizationHelpers.format_next_day_end(
+               "2027-03-28",
+               "12:00 AM",
+               "1440min",
+               "Europe/Berlin"
+             ) == "Ends 01:00 AM on Monday 29 March"
+    end
+  end
 end

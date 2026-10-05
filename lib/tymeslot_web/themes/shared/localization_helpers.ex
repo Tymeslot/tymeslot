@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   """
   use Gettext, backend: TymeslotWeb.Gettext
   alias Calendar
+  alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.DateTimeUtils.Display
   alias TymeslotWeb.Helpers.LocaleFormat
@@ -67,6 +68,60 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
   def format_booking_datetime(_date, _time, _timezone),
     do: dgettext("booking", "Invalid date/time")
+
+  @doc """
+  When a meeting starting at `time` on `date` (the booker's clock) ends on a
+  later date, a short line saying when; nil when it ends the day it starts or
+  the inputs cannot be read. `duration` is minutes or a slug such as "60min".
+  """
+  @spec format_next_day_end(
+          String.t() | nil,
+          String.t() | nil,
+          integer() | String.t() | nil,
+          String.t() | nil
+        ) :: String.t() | nil
+  def format_next_day_end(_date, _time, nil, _timezone), do: nil
+
+  def format_next_day_end(date, time, duration, timezone)
+      when is_binary(date) and is_binary(time) and is_binary(timezone) do
+    with {:ok, start_date} <- parse_date(date),
+         {:ok, start_time} <- DateTimeUtils.parse_time_string(time),
+         {:ok, start} <- DateTimeUtils.resolve_local(start_date, start_time, timezone),
+         finish = DateTime.add(start, TimeSlots.parse_duration(duration), :minute),
+         :gt <- Date.compare(DateTime.to_date(finish), start_date) do
+      dgettext("booking", "Ends %{time} on %{weekday} %{day} %{month}",
+        time: format_time_by_locale(finish),
+        weekday: mid_sentence_weekday(Date.day_of_week(DateTime.to_date(finish))),
+        day: finish.day,
+        month: month_in_date(finish.month)
+      )
+    else
+      _same_day_or_unreadable -> nil
+    end
+  end
+
+  def format_next_day_end(_date, _time, _duration, _timezone), do: nil
+
+  @doc """
+  `format_next_day_end/4` for a booking or confirmation step's assigns: the
+  chosen date and time, the meeting type's duration (or the bare `duration`)
+  and the booker's timezone.
+  """
+  @spec booking_next_day_end(map()) :: String.t() | nil
+  def booking_next_day_end(assigns) do
+    duration =
+      case assigns[:meeting_type] do
+        %{duration_minutes: minutes} -> minutes
+        _no_meeting_type -> assigns[:duration]
+      end
+
+    format_next_day_end(
+      assigns[:selected_date],
+      assigns[:selected_time],
+      duration,
+      assigns[:user_timezone]
+    )
+  end
 
   @doc """
   Formats a meeting start time for the payment return pages — localized and
@@ -236,6 +291,13 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   end
 
   defp current_locale, do: Gettext.get_locale(TymeslotWeb.Gettext)
+
+  # German nouns and English weekdays keep their capital inside a sentence; the
+  # other catalogues capitalise them only for use as a heading.
+  defp mid_sentence_weekday(day) do
+    name = get_weekday_name(day)
+    if current_locale() in ["en", "de"], do: name, else: String.downcase(name)
+  end
 
   @spec get_weekday_name(integer()) :: String.t()
   defp get_weekday_name(day) do

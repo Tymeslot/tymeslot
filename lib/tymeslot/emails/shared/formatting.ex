@@ -43,6 +43,37 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   end
 
   @doc """
+  When a meeting starting at `start_time` (already in the recipient's zone)
+  ends on a later date, "ends 01:00 AM on Tue 15 Jun" in the recipient's
+  locale and clock; nil otherwise.
+  """
+  @spec format_next_day_end(DateTime.t(), integer() | nil, String.t(), String.t() | nil) ::
+          String.t() | nil
+  def format_next_day_end(%DateTime{} = start_time, duration, locale, time_format)
+      when is_integer(duration) do
+    finish = DateTime.add(start_time, duration, :minute)
+    day = DateTime.to_date(finish)
+
+    if Date.compare(day, DateTime.to_date(start_time)) == :gt do
+      # No zone and no year: the time line already names the zone, and a
+      # meeting never ends more than a few days after it starts.
+      date = LocaleFormat.format_short_weekday_date(day, locale)
+
+      Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+        dgettext("emails", "ends %{time} on %{date}",
+          time: clock(finish, locale, time_format),
+          date: date
+        )
+      end)
+    end
+  end
+
+  def format_next_day_end(_start_time, _duration, _locale, _time_format), do: nil
+
+  defp clock(finish, locale, nil), do: LocaleFormat.format_time(DateTime.to_time(finish), locale)
+  defp clock(finish, _locale, time_format), do: TimeFormat.format(finish, time_format)
+
+  @doc """
   Formats a date into a short locale-aware format.
   English: "Nov 25", others: "25.11."
   """

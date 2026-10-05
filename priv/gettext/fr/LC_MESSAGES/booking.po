@@ -1444,3 +1444,8 @@ msgstr "C'est votre créneau actuel. Choisissez un autre créneau pour déplacer
 #, elixir-autogen, elixir-format
 msgid "This link to move your spot has already been used. You can book a new time below."
 msgstr "Ce lien pour déplacer votre place a déjà été utilisé. Vous pouvez réserver un nouveau créneau ci-dessous."
+
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Ends %{time} on %{weekday} %{day} %{month}"
+msgstr "Fin : %{weekday} %{day} %{month}, %{time}"

@@ -253,9 +253,12 @@ defmodule Tymeslot.Slack.MessageBuilder do
 
     date = Calendar.strftime(start_time, "%a %d %b %Y")
     start_str = Calendar.strftime(start_time, "%H:%M")
-    end_str = Calendar.strftime(end_time, "%H:%M")
 
-    "#{date}, #{start_str}–#{end_str} (#{timezone})"
+    if DateTime.to_date(end_time) == DateTime.to_date(start_time) do
+      "#{date}, #{start_str}–#{Calendar.strftime(end_time, "%H:%M")} (#{timezone})"
+    else
+      "#{date}, #{start_str} – #{Calendar.strftime(end_time, "%a %d %b %H:%M")} (#{timezone})"
+    end
   end
 
   defp format_single_time(datetime, timezone) do

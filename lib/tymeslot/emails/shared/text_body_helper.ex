@@ -201,7 +201,17 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
       time_format = Map.get(appointment_details, :time_format)
       time_str = Formatting.format_time(appointment_details[time_key], locale, time_format)
       duration_str = Formatting.format_duration(appointment_details.duration, locale)
-      "#{dgettext("emails", "Time:")} #{time_str} (#{duration_str})"
+      line = "#{dgettext("emails", "Time:")} #{time_str} (#{duration_str})"
+
+      case Formatting.format_next_day_end(
+             appointment_details[time_key],
+             appointment_details.duration,
+             locale,
+             time_format
+           ) do
+        nil -> line
+        note -> "#{line}, #{note}"
+      end
     end
   end
 

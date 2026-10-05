@@ -31,6 +31,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
+    assigns = assign(assigns, :next_day_end, LocalizationHelpers.booking_next_day_end(assigns))
+
     ~H"""
     <div class="scheduling-box" data-locale={@locale}>
       <div class="slide-container">
@@ -124,6 +126,13 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                         {LocalizationHelpers.format_slot_label(@selected_time)}
                       </span>
                       <span class="ticket-sublabel">{Timezones.format(@user_timezone)}</span>
+                      <span
+                        :if={@next_day_end}
+                        class="ticket-sublabel"
+                        data-testid="booking-next-day-end"
+                      >
+                        {@next_day_end}
+                      </span>
                     </div>
                   </div>
 

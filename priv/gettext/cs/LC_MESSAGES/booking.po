@@ -1448,3 +1448,8 @@ msgstr "Toto je váš současný termín. Pro přesunutí místa vyberte jiný �
 #, elixir-autogen, elixir-format
 msgid "This link to move your spot has already been used. You can book a new time below."
 msgstr "Tento odkaz na přesunutí místa už byl použit. Níže si můžete rezervovat nový termín."
+
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Ends %{time} on %{weekday} %{day} %{month}"
+msgstr "Konec: %{weekday} %{day}. %{month}, %{time}"

@@ -287,6 +287,14 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
       |> assign_new(:formatted_duration, fn ->
         LocalizationHelpers.format_duration(assigns.duration)
       end)
+      |> assign_new(:next_day_end, fn ->
+        LocalizationHelpers.format_next_day_end(
+          assigns.date,
+          assigns.time,
+          assigns.duration,
+          assigns.timezone
+        )
+      end)
       |> assign_new(:formatted_timezone, fn -> Timezones.format(assigns.timezone) end)
 
     ~H"""
@@ -298,6 +306,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
       <div>
         <p class="booking-detail-label">{@time_label}</p>
         <p class="booking-detail-value">{@formatted_time}</p>
+        <p :if={@next_day_end} class="booking-detail-value" data-testid="booking-next-day-end">
+          {@next_day_end}
+        </p>
       </div>
       <div>
         <p class="booking-detail-label">{@duration_label}</p>
