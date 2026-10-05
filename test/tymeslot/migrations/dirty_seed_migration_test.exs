@@ -289,13 +289,14 @@ defmodule Tymeslot.Migrations.DirtySeedMigrationTest do
   # its default schedule: 15 copied, 0 copied, NULL COALESCEd to 15 by the
   # schedule migration, and 500 clamped to 120. The last row is the only thing
   # that proves the clamp ran, because without it the range constraints would
-  # never meet a value they reject.
+  # never meet a value they reject. The old column survives untouched, 500
+  # included, because the previous release still reads it.
   defp assert_buffers_split! do
     %{rows: rows} =
       SQL.query!(
         Tymeslot.Repo,
         """
-        SELECT u.email, s.buffer_before_minutes, s.buffer_after_minutes
+        SELECT u.email, s.buffer_minutes, s.buffer_before_minutes, s.buffer_after_minutes
         FROM availability_schedules AS s
         JOIN profiles AS p ON p.id = s.profile_id
         JOIN users AS u ON u.id = p.user_id
@@ -306,10 +307,10 @@ defmodule Tymeslot.Migrations.DirtySeedMigrationTest do
       )
 
     assert rows == [
-             ["seed-user-1@example.com", 15, 15],
-             ["seed-user-2@example.com", 0, 0],
-             ["seed-user-3@example.com", 15, 15],
-             ["seed-user-4@example.com", 120, 120]
+             ["seed-user-1@example.com", 15, 15, 15],
+             ["seed-user-2@example.com", 0, 0, 0],
+             ["seed-user-3@example.com", 15, 15, 15],
+             ["seed-user-4@example.com", 500, 120, 120]
            ]
   end
 
