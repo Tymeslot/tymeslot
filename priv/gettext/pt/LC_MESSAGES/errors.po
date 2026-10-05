@@ -1,0 +1,381 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: pt\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/themes/shared/components/error_component.ex
+#, elixir-autogen
+msgid "We can't show this scheduling page yet"
+msgstr "Ainda não dá para mostrar esta página de agendamento"
+
+#: lib/tymeslot_web/themes/shared/components/error_component.ex
+#, elixir-autogen
+msgid "If you are the organizer, please connect a calendar in your dashboard."
+msgstr "Se você organiza estas reuniões, conecte um calendário no seu painel."
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "are still associated with this entry"
+msgstr "ainda estão associados a este registro"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "can't be blank"
+msgstr "não pode ficar em branco"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "does not exist"
+msgstr "não existe"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "does not match confirmation"
+msgstr "não confere com a confirmação"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "has already been taken"
+msgstr "já está em uso"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "has an invalid entry"
+msgstr "tem um valor inválido"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "has invalid format"
+msgstr "tem formato inválido"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "is invalid"
+msgstr "é inválido"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "is reserved"
+msgstr "é reservado"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "is still associated with this entry"
+msgstr "ainda está associado a este registro"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "must be accepted"
+msgstr "precisa ser aceito"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "must be equal to %{number}"
+msgstr "deve ser igual a %{number}"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "must be greater than %{number}"
+msgstr "deve ser maior que %{number}"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "must be greater than or equal to %{number}"
+msgstr "deve ser maior ou igual a %{number}"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "must be less than %{number}"
+msgstr "deve ser menor que %{number}"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "must be less than or equal to %{number}"
+msgstr "deve ser menor ou igual a %{number}"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "must be not equal to %{number}"
+msgstr "deve ser diferente de %{number}"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should be %{count} byte(s)"
+msgid_plural "should be %{count} byte(s)"
+msgstr[0] "deve ter %{count} byte"
+msgstr[1] "deve ter %{count} bytes"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should be %{count} character(s)"
+msgid_plural "should be %{count} character(s)"
+msgstr[0] "deve ter %{count} caractere"
+msgstr[1] "deve ter %{count} caracteres"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should be at least %{count} byte(s)"
+msgid_plural "should be at least %{count} byte(s)"
+msgstr[0] "deve ter pelo menos %{count} byte"
+msgstr[1] "deve ter pelo menos %{count} bytes"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should be at least %{count} character(s)"
+msgid_plural "should be at least %{count} character(s)"
+msgstr[0] "deve ter pelo menos %{count} caractere"
+msgstr[1] "deve ter pelo menos %{count} caracteres"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should be at most %{count} byte(s)"
+msgid_plural "should be at most %{count} byte(s)"
+msgstr[0] "deve ter no máximo %{count} byte"
+msgstr[1] "deve ter no máximo %{count} bytes"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should be at most %{count} character(s)"
+msgid_plural "should be at most %{count} character(s)"
+msgstr[0] "deve ter no máximo %{count} caractere"
+msgstr[1] "deve ter no máximo %{count} caracteres"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should have %{count} item(s)"
+msgid_plural "should have %{count} item(s)"
+msgstr[0] "deve ter %{count} item"
+msgstr[1] "deve ter %{count} itens"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should have at least %{count} item(s)"
+msgid_plural "should have at least %{count} item(s)"
+msgstr[0] "deve ter pelo menos %{count} item"
+msgstr[1] "deve ter pelo menos %{count} itens"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should have at most %{count} item(s)"
+msgid_plural "should have at most %{count} item(s)"
+msgstr[0] "deve ter no máximo %{count} item"
+msgstr[1] "deve ter no máximo %{count} itens"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "violates an exclusion constraint"
+msgstr "viola uma restrição de exclusão"
+
+#: lib/tymeslot_web/controllers/error_html/404.html.heex
+#, elixir-autogen, elixir-format
+msgid "Error 404"
+msgstr "Erro 404"
+
+#: lib/tymeslot_web/controllers/error_html/404.html.heex
+#, elixir-autogen, elixir-format
+msgid "Go to Tymeslot"
+msgstr "Ir para o Tymeslot"
+
+#: lib/tymeslot_web/controllers/error_html/404.html.heex
+#: lib/tymeslot_web/live/scheduling/organizer_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Page not found"
+msgstr "Página não encontrada"
+
+#: lib/tymeslot_web/controllers/error_html/404.html.heex
+#, elixir-autogen, elixir-format
+msgid "The link may be broken, or the page may have moved."
+msgstr "O link pode estar quebrado ou a página pode ter mudado de lugar."
+
+#: lib/tymeslot_web/controllers/error_html/404.html.heex
+#, elixir-autogen, elixir-format
+msgid "This page doesn't exist"
+msgstr "Esta página não existe"
+
+#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex
+#: lib/tymeslot/integrations/video/video_integration_schema.ex
+#, elixir-autogen, elixir-format
+msgid "an integration for this account already exists"
+msgstr "já existe uma integração para esta conta"
+
+#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex
+#: lib/tymeslot/integrations/video/video_integration_schema.ex
+#, elixir-autogen, elixir-format
+msgid "an integration for this provider already exists"
+msgstr "já existe uma integração para este provedor"
+
+#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is not a valid colour"
+msgstr "não é uma cor válida"
+
+#: lib/tymeslot/availability/time_off_period_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be after the start time"
+msgstr "precisa ser depois do horário de início"
+
+#: lib/tymeslot/availability/time_off_period_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must not be before the start date"
+msgstr "não pode ser antes da data de início"
+
+#: lib/tymeslot/availability/time_off_period_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must not be in the past"
+msgstr "não pode estar no passado"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "1 minute"
+msgid_plural "%{count} minutes"
+msgstr[0] "1 minuto"
+msgstr[1] "%{count} minutos"
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "This username is reserved"
+msgstr "Este nome de usuário é reservado"
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username is required"
+msgstr "O nome de usuário é obrigatório"
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username must be a text value"
+msgstr "O nome de usuário precisa ser um valor de texto"
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username must be at least %{count} character long"
+msgid_plural "Username must be at least %{count} characters long"
+msgstr[0] "O nome de usuário precisa ter pelo menos %{count} caractere"
+msgstr[1] "O nome de usuário precisa ter pelo menos %{count} caracteres"
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username must be at most %{count} character long"
+msgid_plural "Username must be at most %{count} characters long"
+msgstr[0] "O nome de usuário precisa ter no máximo %{count} caractere"
+msgstr[1] "O nome de usuário precisa ter no máximo %{count} caracteres"
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username must start with a letter or number and contain only lowercase letters, numbers, underscores, and hyphens"
+msgstr "O nome de usuário precisa começar com uma letra ou um número e ter só letras minúsculas, números, sublinhados e hifens"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "a moment"
+msgstr "instantes"
+
+#: lib/tymeslot/security/rate_limiter/integrations.ex
+#, elixir-autogen, elixir-format
+msgid "calendar lookups"
+msgstr "consultas de calendário"
+
+#: lib/tymeslot/security/rate_limiter/integrations.ex
+#, elixir-autogen, elixir-format
+msgid "calendar server checks"
+msgstr "verificações de servidor de calendário"
+
+#: lib/tymeslot/security/rate_limiter/integrations.ex
+#, elixir-autogen, elixir-format
+msgid "connection tests"
+msgstr "testes de conexão"
+
+#: lib/tymeslot/availability/time_off_period_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be within %{count} years"
+msgid_plural "must be within %{count} years"
+msgstr[0] "não pode passar de %{count} ano a partir de hoje"
+msgstr[1] "não pode passar de %{count} anos a partir de hoje"
+
+#: lib/tymeslot/security/rate_limiter/integrations.ex
+#, elixir-autogen, elixir-format
+msgid "video server checks"
+msgstr "verificações de servidor de vídeo"
+
+#: lib/tymeslot/security/rate_limiter/bookings.ex
+#, elixir-autogen, elixir-format
+msgid "bookings"
+msgstr "agendamentos"
+
+#: lib/tymeslot/security/rate_limiter/calendar.ex
+#, elixir-autogen, elixir-format
+msgid "calendar event moves"
+msgstr "movimentações de eventos do calendário"
+
+#: lib/tymeslot/security/rate_limiter/auth.ex
+#, elixir-autogen, elixir-format
+msgid "password reset requests"
+msgstr "pedidos de redefinição de senha"
+
+#: lib/tymeslot/security/rate_limiter/auth.ex
+#, elixir-autogen, elixir-format
+msgid "signup attempts"
+msgstr "tentativas de cadastro"
+
+#: lib/tymeslot/security/rate_limiter/auth.ex
+#, elixir-autogen, elixir-format
+msgid "verification emails"
+msgstr "e-mails de verificação"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "1 day"
+msgid_plural "%{count} days"
+msgstr[0] "1 dia"
+msgstr[1] "%{count} dias"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "1 hour"
+msgid_plural "%{count} hours"
+msgstr[0] "1 hora"
+msgstr[1] "%{count} horas"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "You've reached the limit of %{limit} %{action} per %{window}. Please try again in %{wait}."
+msgstr "Você atingiu o limite de %{limit} %{action} por %{window}. Tente novamente em %{wait}."
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "day"
+msgid_plural "%{count} days"
+msgstr[0] "dia"
+msgstr[1] "%{count} dias"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "hour"
+msgid_plural "%{count} hours"
+msgstr[0] "hora"
+msgstr[1] "horas"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "minute"
+msgid_plural "%{count} minutes"
+msgstr[0] "minuto"
+msgstr[1] "minutos"
+
+#: lib/tymeslot_web/helpers/image_upload_errors.ex
+#, elixir-autogen, elixir-format
+msgid "This image is too large (%{size} megapixels). Please upload an image of at most %{limit} megapixels."
+msgstr "Esta imagem é grande demais (%{size} megapixels). Envie uma imagem de no máximo %{limit} megapixels."
+
+#: lib/tymeslot_web/helpers/image_upload_errors.ex
+#, elixir-autogen, elixir-format
+msgid "We are busy processing other uploads. Please try again in a moment."
+msgstr "Estamos ocupados processando outros envios. Tente novamente daqui a pouco."

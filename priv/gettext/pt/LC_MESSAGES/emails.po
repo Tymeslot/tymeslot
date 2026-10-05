@@ -1,0 +1,564 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: pt\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "ACTIONS:"
+msgstr "AÇÕES:"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "ATTENDEE INFORMATION:"
+msgstr "DADOS DO PARTICIPANTE:"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel:"
+msgstr "Cancelar:"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Date:"
+msgstr "Data:"
+
+#: lib/tymeslot/emails/shared/meeting/hero.ex
+#, elixir-autogen, elixir-format
+msgid "Duration"
+msgstr "Duração"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Email:"
+msgstr "E-mail:"
+
+#: lib/tymeslot/emails/shared/greeting.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name},"
+msgstr "Olá %{name},"
+
+#: lib/tymeslot/emails/appointment_builder.ex
+#, elixir-autogen, elixir-format
+msgid "I'll send you a reminder %{label} before our appointment."
+msgstr "Vou mandar um lembrete %{label} antes do nosso compromisso."
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "JOIN VIDEO MEETING:"
+msgstr "ENTRAR NA REUNIÃO POR VÍDEO:"
+
+#: lib/tymeslot/emails/shared/meeting/video_section.ex
+#, elixir-autogen, elixir-format
+msgid "Join Meeting"
+msgstr "Entrar na reunião"
+
+#: lib/tymeslot/emails/shared/meeting/video_section.ex
+#, elixir-autogen, elixir-format
+msgid "Join Video Meeting"
+msgstr "Entrar na reunião por vídeo"
+
+#: lib/tymeslot/emails/shared/meeting/hero.ex
+#, elixir-autogen, elixir-format
+msgid "Location"
+msgstr "Local"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Location:"
+msgstr "Local:"
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "MEETING DETAILS:"
+msgstr "DETALHES DA REUNIÃO:"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "MESSAGE FROM ATTENDEE:"
+msgstr "MENSAGEM DO PARTICIPANTE:"
+
+#: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting"
+msgstr "Reunião"
+
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
+#: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
+#, elixir-autogen, elixir-format
+msgid "Message from %{name}:"
+msgstr "Mensagem de %{name}:"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Name:"
+msgstr "Nome:"
+
+#: lib/tymeslot/emails/appointment_builder.ex
+#, elixir-autogen, elixir-format
+msgid "No reminder emails are scheduled for this appointment."
+msgstr "Nenhum e-mail de lembrete está agendado para este compromisso."
+
+#: lib/tymeslot/emails/appointment_builder.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder %{label} before the appointment."
+msgstr "Lembrete %{label} antes do compromisso."
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule:"
+msgstr "Remarcar:"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#: lib/tymeslot/emails/shared/meeting/hero.ex
+#, elixir-autogen, elixir-format
+msgid "TBD"
+msgstr "A definir"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting room opens 5 minutes before your scheduled time."
+msgstr "A sala de reunião abre 5 minutos antes do horário marcado."
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Time:"
+msgstr "Horário:"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Type:"
+msgstr "Tipo:"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
+#, elixir-autogen, elixir-format
+msgid "Video Call"
+msgstr "Chamada de vídeo"
+
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
+#: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
+#, elixir-autogen, elixir-format
+msgid "Video meeting:"
+msgstr "Reunião por vídeo:"
+
+#: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
+#, elixir-autogen, elixir-format
+msgid "attendee"
+msgstr "participante"
+
+#: lib/tymeslot/emails/appointment_builder.ex
+#, elixir-autogen, elixir-format
+msgid "in %{label}"
+msgstr "em %{label}"
+
+#: lib/tymeslot/emails/appointment_builder.ex
+#, elixir-autogen, elixir-format
+msgid "in 30 minutes"
+msgstr "em 30 minutos"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "minute"
+msgid_plural "minutes"
+msgstr[0] "minuto"
+msgstr[1] "minutos"
+
+#: lib/tymeslot/emails/appointment_builder.ex
+#, elixir-autogen, elixir-format
+msgid "reply to this email"
+msgstr "responda a este e-mail"
+
+#: lib/tymeslot/emails/shared/text.ex
+#, elixir-autogen, elixir-format
+msgid "Having trouble with the button? Copy and paste this link into your browser:"
+msgstr "O botão não funcionou? Copie e cole este link no seu navegador:"
+
+#: lib/tymeslot/emails/shared/meeting/video_section.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting will start at the scheduled time"
+msgstr "A reunião começa no horário marcado"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "hour"
+msgid_plural "hours"
+msgstr[0] "hora"
+msgstr[1] "horas"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "Phone Call"
+msgstr "Ligação telefônica"
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} has invited you to an event."
+msgstr "%{name} convidou você para um evento."
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar Invitation - %{title} on %{date}"
+msgstr "Convite de calendário — %{title} em %{date}"
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "You're Invited"
+msgstr "Um convite para você"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "(none)"
+msgstr "(nenhum)"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Description updated"
+msgstr "Descrição atualizada"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Title:"
+msgstr "Título:"
+
+#: lib/tymeslot/emails/shared/meeting/attendee.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee Information"
+msgstr "Dados do participante"
+
+#: lib/tymeslot/emails/shared/meeting/attendee.ex
+#, elixir-autogen, elixir-format
+msgid "Company"
+msgstr "Empresa"
+
+#: lib/tymeslot/emails/shared/meeting/attendee.ex
+#, elixir-autogen, elixir-format
+msgid "Email"
+msgstr "E-mail"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "Friday"
+msgstr "sexta-feira"
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Invited"
+msgstr "Convidado"
+
+#: lib/tymeslot/emails/shared/meeting/hero.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type"
+msgstr "Tipo de reunião"
+
+#: lib/tymeslot/emails/shared/meeting/attendee.ex
+#, elixir-autogen, elixir-format
+msgid "Message from attendee"
+msgstr "Mensagem do participante"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "Monday"
+msgstr "segunda-feira"
+
+#: lib/tymeslot/emails/shared/meeting/attendee.ex
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr "Nome"
+
+#: lib/tymeslot/emails/shared/meeting/attendee.ex
+#, elixir-autogen, elixir-format
+msgid "Phone"
+msgstr "Telefone"
+
+#: lib/tymeslot/emails/email_service/auth_emails.ex
+#, elixir-autogen, elixir-format
+msgid "Reset your password"
+msgstr "Redefinir sua senha"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "Saturday"
+msgstr "sábado"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "Sunday"
+msgstr "domingo"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "Thursday"
+msgstr "quinta-feira"
+
+#: lib/tymeslot/emails/shared/meeting/attendee.ex
+#, elixir-autogen, elixir-format
+msgid "Timezone"
+msgstr "Fuso horário"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "Tuesday"
+msgstr "terça-feira"
+
+#: lib/tymeslot/emails/email_service/account_emails.ex
+#, elixir-autogen, elixir-format
+msgid "Verify your new email address"
+msgstr "Verifique seu novo endereço de e-mail"
+
+#: lib/tymeslot/emails/shared/meeting/video_section.ex
+#, elixir-autogen, elixir-format
+msgid "Video call"
+msgstr "Chamada de vídeo"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "Wednesday"
+msgstr "quarta-feira"
+
+#: lib/tymeslot/emails/shared/mjml_email.ex
+#, elixir-autogen, elixir-format
+msgid "Sent with care by"
+msgstr "Enviado com cuidado por"
+
+#: lib/tymeslot/emails/shared/layouts.ex
+#: lib/tymeslot/emails/shared/mjml_email.ex
+#, elixir-autogen, elixir-format
+msgid "scheduling that respects your time"
+msgstr "agendamento que respeita seu tempo"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "%{date} at %{time}"
+msgstr "%{date} às %{time}"
+
+#: lib/tymeslot/emails/shared/greeting.ex
+#, elixir-autogen, elixir-format
+msgid "Hi there,"
+msgstr "Olá,"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "ADDITIONAL DETAILS:"
+msgstr "DETALHES ADICIONAIS:"
+
+#: lib/tymeslot/emails/shared/meeting/custom_answers.ex
+#, elixir-autogen, elixir-format
+msgid "Additional details"
+msgstr "Detalhes adicionais"
+
+#: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
+#, elixir-autogen, elixir-format
+msgid "Join the video call"
+msgstr "Entrar na chamada de vídeo"
+
+#: lib/tymeslot/emails/email_service/calendar_emails.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar Owner"
+msgstr "Dono do calendário"
+
+#: lib/tymeslot/emails/email_service/account_emails.ex
+#, elixir-autogen, elixir-format
+msgid "Email Address Changed - Tymeslot Account"
+msgstr "Endereço de e-mail trocado — conta do Tymeslot"
+
+#: lib/tymeslot/emails/email_service/account_emails.ex
+#, elixir-autogen, elixir-format
+msgid "Email Address Changed Successfully"
+msgstr "Endereço de e-mail trocado"
+
+#: lib/tymeslot/emails/email_service/auth_emails.ex
+#, elixir-autogen, elixir-format
+msgid "Verify your email address"
+msgstr "Verifique seu endereço de e-mail"
+
+#: lib/tymeslot/emails/email_service/calendar_emails.ex
+#, elixir-autogen, elixir-format
+msgid "⚠️ Calendar Sync Error - Manual Action Required"
+msgstr "⚠️ Erro de sincronização de calendário — precisa de ação manual"
+
+#: lib/tymeslot/emails/email_service/account_emails.ex
+#, elixir-autogen, elixir-format
+msgid "⚠️ Email Change Request - Security Alert"
+msgstr "⚠️ Pedido de troca de e-mail — alerta de segurança"
+
+#: lib/tymeslot/emails/appointment_builder.ex
+#, elixir-autogen, elixir-format
+msgid "You'll receive %{count} reminder before the appointment."
+msgid_plural "You'll receive %{count} reminders before the appointment."
+msgstr[0] "Você vai receber %{count} lembrete antes do compromisso."
+msgstr[1] "Você vai receber %{count} lembretes antes do compromisso."
+
+#: lib/tymeslot/emails/appointment_builder.ex
+#, elixir-autogen, elixir-format
+msgctxt "time until"
+msgid "day"
+msgid_plural "days"
+msgstr[0] "dia"
+msgstr[1] "dias"
+
+#: lib/tymeslot/emails/appointment_builder.ex
+#, elixir-autogen, elixir-format
+msgctxt "time until"
+msgid "hour"
+msgid_plural "hours"
+msgstr[0] "hora"
+msgstr[1] "horas"
+
+#: lib/tymeslot/emails/appointment_builder.ex
+#, elixir-autogen, elixir-format
+msgctxt "time until"
+msgid "minute"
+msgid_plural "minutes"
+msgstr[0] "minuto"
+msgstr[1] "minutos"
+
+#: lib/tymeslot/emails/shared/mjml_email.ex
+#, elixir-autogen, elixir-format
+msgid "Message from %{name}"
+msgstr "Mensagem de %{name}"
+
+#: lib/tymeslot/emails/shared/mjml_email.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} via %{brand}"
+msgstr "%{name} via %{brand}"
+
+#: lib/tymeslot/emails/shared/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Important notification from %{brand}"
+msgstr "Aviso importante de %{brand}"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} day"
+msgid_plural "%{count} days"
+msgstr[0] "%{count} dia"
+msgstr[1] "%{count} dias"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "All day"
+msgstr "Dia todo"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "All day, until %{date}"
+msgstr "Dia todo, até %{date}"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Description:"
+msgstr "Descrição:"
+
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
+#, elixir-autogen, elixir-format
+msgid "Additional details:"
+msgstr "Detalhes adicionais:"
+
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
+#, elixir-autogen, elixir-format
+msgid "Attachments:"
+msgstr "Anexos:"
+
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee: %{attendee}"
+msgstr "Participante: %{attendee}"
+
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
+#, elixir-autogen, elixir-format
+msgid "Message from attendee:"
+msgstr "Mensagem do participante:"
+
+#: lib/tymeslot/emails/email_service/auth_emails.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a Tymeslot account"
+msgstr "Você já tem uma conta no Tymeslot"
+
+#: lib/tymeslot/emails/email_service/auth_emails.ex
+#, elixir-autogen, elixir-format
+msgid "Your Tymeslot account has no password"
+msgstr "Sua conta do Tymeslot não tem senha"
+
+#: lib/tymeslot/emails/shared/sign_in_provider.ex
+#, elixir-autogen, elixir-format
+msgid "single sign-on"
+msgstr "login único"
+
+#: lib/tymeslot/emails/email_service/auth_emails.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your email to finish signing up"
+msgstr "Confirme seu e-mail para terminar o cadastro"
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} has cancelled a recurring event you were invited to. Every occurrence is cancelled."
+msgstr "%{name} cancelou um evento recorrente para o qual tinha convidado você. Todas as ocorrências foram canceladas."
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} has cancelled an event you were invited to."
+msgstr "%{name} cancelou um evento para o qual tinha convidado você."
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled"
+msgstr "Cancelado"
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled - %{title} (every occurrence)"
+msgstr "Cancelado — %{title} (todas as ocorrências)"
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled - %{title} on %{date}"
+msgstr "Cancelado — %{title} em %{date}"
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Event Cancelled"
+msgstr "Evento cancelado"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "NOTE FROM THE ORGANISER:"
+msgstr "NOTA DE QUEM ORGANIZA:"
+
+#: lib/tymeslot/emails/shared/meeting/notes.ex
+#, elixir-autogen, elixir-format
+msgid "Note from the organiser"
+msgstr "Nota de quem organiza"
+
+#: lib/tymeslot/bookings/booking_title.ex
+#, elixir-autogen, elixir-format
+msgid "%{meeting_type} with %{name}"
+msgstr "%{meeting_type} com %{name}"
+
+#: lib/tymeslot/bookings/demo_orchestrator.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting with %{name}"
+msgstr "Reunião com %{name}"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "The address is to be arranged with the booker."
+msgstr "O endereço vai ser combinado com quem agendou."
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "The address will be arranged after booking."
+msgstr "O endereço vai ser combinado depois do agendamento."
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "The address will be arranged with you after booking."
+msgstr "O endereço vai ser combinado com você depois do agendamento."

@@ -430,6 +430,16 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
                "30 kwietnia – 2 maja 2026"
     end
 
+    test "links day, month and year with \"de\" in Portuguese" do
+      assert LocaleFormat.format_date(~D[2026-04-05], "pt") == "5 de abril de 2026"
+
+      assert LocaleFormat.format_date_range(~D[2026-04-10], ~D[2026-04-12], "pt") ==
+               "10–12 de abril de 2026"
+
+      assert LocaleFormat.format_date_range(~D[2026-04-30], ~D[2026-05-02], "pt") ==
+               "30 de abril – 2 de maio de 2026"
+    end
+
     test "keeps the period after the day in Czech" do
       assert LocaleFormat.format_date_range(~D[2026-04-10], ~D[2026-04-12], "cs") ==
                "10.–12. dubna 2026"
@@ -532,6 +542,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       assert LocaleFormat.format_month_year(1, 2026, "cs") == "Leden 2026"
       assert LocaleFormat.format_month_year(9, 2026, "uk") == "Вересень 2026"
       assert LocaleFormat.format_month_year(10, 2026, "pl") == "Październik 2026"
+      assert LocaleFormat.format_month_year(10, 2026, "pt") == "Outubro de 2026"
     end
 
     test "capitalises the heading in languages that lowercase month names" do
@@ -596,6 +607,16 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
         assert LocaleFormat.format_short_date(@date, locale) == unquote(short)
         assert LocaleFormat.format_short_weekday_date(@date, locale) == unquote(short_weekday)
       end
+    end
+
+    test "pt: links day, month and year with \"de\"" do
+      assert LocaleFormat.format_weekday_date(@date, "pt") ==
+               "quinta-feira, 5 de fevereiro de 2026"
+
+      assert LocaleFormat.format_weekday_day_month(@date, "pt") == "quinta-feira, 5 de fevereiro"
+
+      assert LocaleFormat.format_short_date(@date, "pt") == "5 de fev"
+      assert LocaleFormat.format_short_weekday_date(@date, "pt") == "qui 5 de fev"
     end
 
     test "an unknown locale falls back to English order" do
