@@ -128,6 +128,42 @@ flow and in the dashboard.
 | login name (Nextcloud) | nome de login |
 | reschedule request | pedido de remarcação |
 | outstanding (refund) | em aberto |
+| registration / sign-up (the record or process) | cadastro · never *registro* |
+| withdraw (a request) | cancelar (*retirar* is not product Portuguese) |
+| attend · make it (to a meeting) | participar · comparecer; never bare *ir* (*"Você vai?"*) |
+| acknowledge (a notice) | estar ciente · *"Li e estou ciente"*, *"✓ Ciente"*; not *concordar*, which adds consent |
+| payout schedule (Stripe) | cronograma de repasses (Stripe's pt-BR term) |
+| Action required | Ação necessária |
+| If need be (poll answer) | Se necessário |
+| Early Morning · Late Night (slot groups, 0–5h · 21–24h) | Madrugada · Fim da noite |
+| fallback language | idioma padrão |
+| busy time(s) | horários ocupados |
+| stored credentials | credenciais armazenadas |
+| decrypt | descriptografar |
+| reset (a link, a password) | redefinido |
+| linked (account) | vinculada |
+| upcoming | **Próximas** as a label; *futuro(s)* in an empty state |
+| deployment (a self-hosted install) | instalação |
+| reCAPTCHA score | pontuação |
+| preset (background image or video) | opção da coleção |
+| custom webhook | webhook personalizado |
+| guest status Going · Declined | Confirmou · Recusou |
+| Wk (week, abbreviated) | Sem. |
+| Demote yourself | Remover seu acesso de administrador |
+| books into (a calendar) | registra os agendamentos em |
+| self-hosted (adj.) · self-hosting (noun) | auto-hospedado · auto-hospedagem; *to self-host* is **hospedar no seu próprio servidor**. Never *hospedagem própria* or *hospedar por conta própria*. |
+| two-way sync | sincronização bidirecional |
+| free/busy | livre/ocupado |
+| payout | repasse |
+| custom domain | domínio próprio |
+
+**Settings flash messages** put the name after a colon, *"Configuração ativada: %{name}."*
+(also *desativada*, *atualizada*), so the participle agrees with *configuração* and never
+with whatever `%{name}` turns out to be.
+
+**Known issue, not yet settled:** *schedule* is **agenda** in `availability` and
+`meeting_form`, which collides with the calendar's **Agenda** view. Leave both as they
+are until the two are decided together.
 
 ### Third-party UI labels — never guess
 
@@ -167,7 +203,100 @@ Submit→Enviar · Done/Finish→Concluir · Add→Adicionar · Close→Fechar �
 Got it→Entendi · Required fields→Campos obrigatórios · Select→Selecionar ·
 Learn more→Saiba mais · Try again→Tentar novamente · Copy→Copiar · Copied→Copiado ·
 Privacy Policy→Política de Privacidade · Terms of Service→Termos de Serviço ·
-Search→Buscar · Loading…→Carregando… · Optional→Opcional.
+Search→Buscar · Loading…→Carregando… · Optional→Opcional. Done as a status
+(a finished checklist item) → Concluído. Email call-to-action buttons use the
+infinitive, like the dashboard: Escolher outro horário · Votar · Definir nova senha.
+
+### Marketing and subscription terms
+
+The SaaS dashboard, its emails and the marketing site.
+
+| English | pt-BR |
+|---|---|
+| subscription · subscribe | assinatura · assinar |
+| trial | período de teste (never *teste grátis*) |
+| billing period · monthly / annual billing | período de cobrança · cobrança mensal / anual |
+| payment method | forma de pagamento |
+| upgrade (to Pro) | fazer upgrade (*"Fazer upgrade para o Pro"*) |
+| Pro plan · Pro feature | Plano Pro · Recurso Pro |
+| no contracts | sem fidelidade |
+| branding mark | marca |
+| Contact support | Fale com o suporte |
+| VAT | IVA (kept literal: the English is an EU VAT statement, and Brazil has no VAT) |
+| feature (marketing) · Features (nav) | recurso · Recursos |
+| Resources (nav) · changelog (nav) · Legal (footer) | Conteúdos · Novidades · Jurídico |
+| FAQ | Perguntas frequentes |
+| open source | código aberto (keep *open source* only inside a product or licence name) |
+| managed cloud | nuvem gerenciada |
+| per-seat | por usuário |
+| white-label | marca própria (no Tymeslot logo) |
+| deposit (payment) | sinal |
+| no-show · no-show fee | falta · taxa de não comparecimento |
+| discovery call | conversa inicial (never *chamada de descoberta*) |
+| intake form · intake questions | formulário de pré-atendimento · perguntas de pré-atendimento (health pages may use *anamnese* where it is the natural clinical term) |
+| platform fee · Stripe balance · receipt | taxa de plataforma · saldo do Stripe · recibo |
+| popup modal · inline embed · floating button | janela pop-up · incorporação na página · botão flutuante |
+| deploy · deployment (cloud) | implantar · implantação |
+| staging · go-live | homologação · entrada em produção |
+| lock-in | aprisionamento |
+| single sign-on · dedicated instance | login único (SSO) · instância dedicada |
+| DPA | *Contrato de Processamento de Dados (DPA)* on first use |
+| EU data residency | armazenamento de dados na UE |
+| procurement · purchase order | setor de compras · pedido de compra |
+| ROI Calculator | Calculadora de ROI |
+| Breaking changes | Mudanças incompatíveis |
+| routing forms | formulários de roteamento |
+
+- **Plan names stay in English**: Cloud Free, Cloud Pro, Pro, Enterprise, Self-Hosted,
+  Free. The price word *Free* on a pricing card is **Grátis**.
+- Loanwords kept: **round-robin**, **workflows**, **fork**, **stack**, **copyleft**.
+- **Competitors in their own words.** Competitor plan and feature names keep the
+  competitor's wording; Calendly's *"tipos de evento"* appears only when naming
+  Calendly's feature. Ours is always *tipo de reunião*.
+
+### Data protection: LGPD (firm rule)
+
+**Never claim LGPD compliance.** The English says *GDPR* or *GDPR-compliant*; LGPD is a
+different law, and the product makes no claim under it. Never write *"em conformidade
+com a LGPD"*, *"conformidade total com a LGPD"*, *"LGPD-compliant"*, or a bare *"Sim"*
+to *"is it LGPD-compliant?"*. Write **"pensado para a LGPD"**, **"ajuda no cumprimento
+da LGPD"** or **"controle total dos dados"**, or state the facts the English gives (data
+minimisation, self-hosting keeps the data on your own server, see the privacy policy).
+A FAQ question may ask about LGPD; its answer must not say yes.
+
+**GDPR** stays *GDPR* where it refers to the EU law.
+
+### The /for profession pages
+
+| English | pt-BR |
+|---|---|
+| drop-in class | aula avulsa |
+| class pass · lesson pack | pacote de aulas |
+| recurring membership | mensalidade recorrente |
+| trial lesson · makeup lesson | aula experimental · aula de reposição |
+| weekly check-in | alinhamento semanal |
+| follow-up (health) | retorno |
+| initial assessment | avaliação inicial |
+| telehealth | teleconsulta |
+| peak season | alta temporada |
+| walk-in · regulars | cliente sem hora marcada · clientes fiéis |
+| retainer clients | clientes fixos / contrato mensal |
+| retainer fee (legal, financial) | adiantamento de honorários |
+| prepayment | pagamento antecipado |
+| site visit · property viewing | visita técnica · visita |
+| vendor (events) · wedding planner | fornecedor · cerimonialista |
+| pet owner | tutor |
+| tutor (private teacher) | professor particular |
+| hiring manager · screening call | gestor da vaga · triagem |
+| informal payment request (*"PayPal link"*) | Pix |
+| DST | horário de verão |
+
+- **Appointment or service type** in profession prose is *tipo de consulta*, *de
+  atendimento* or *de sessão*, as the profession calls it; the product setting is
+  always **tipo de reunião**.
+- **Money is in reais**, converted so that the English arithmetic still holds.
+- Brazil has **no daylight saving time**: avoid examples that assume a Brazilian
+  clock change.
 
 ---
 
@@ -205,11 +334,10 @@ being told to find a checkbox, and the checkbox is in Portuguese:
     "…tick the box for \"See, edit, share, and permanently delete all the
      calendars you can access using Google Calendar\"…"
 
-It is left as **Google Calendar** for now, because inventing Google's Brazilian
-consent wording without seeing that screen would be exactly the guessing §2 forbids.
-Whoever has a Brazilian Google account in front of them should read the real consent
-text and correct this one msgstr — and then decide whether the do-not-translate list
-wants a "Google Calendar → Google Agenda" exception written into it.
+**Settled:** that consent-screen string is the one place that says **Google Agenda**,
+because it is the product name the reader sees in Google's pt-BR interface. It
+paraphrases the checkbox rather than quoting it. Every other reference keeps **Google
+Calendar**.
 
 ---
 
@@ -223,6 +351,15 @@ wants a "Google Calendar → Google Agenda" exception written into it.
   - `"You're booking a %{duration} meeting with %{name}"` →
     `"Você está agendando uma reunião de %{duration} com %{name}"`
 - A dropped or invented placeholder is a runtime crash, not a typo.
+
+**Fragments filled into other strings:** read the call site and translate for the
+assembled sentence. Examples settled so far: the booking page's
+`"Bookings available up to %{advance}"` is `"Agendamentos disponíveis %{advance}"`, so
+each `"… in advance"` fragment carries its own preposition (`"com até 90 dias de
+antecedência"`, `"só para o mesmo dia"`); the Rhythm summary's `"meeting"` after a
+duration is `"de reunião"`; `"%{hour_text} %{minute_text}"` is
+`"%{hour_text} e %{minute_text}"`; the rate-limit window's plural form keeps
+`%{count}` and the sentence reads `"… a cada %{window}"`.
 
 **`{{meeting_id}}` is a second kind of placeholder, and nothing checks it.**
 `dashboard_integrations` has twenty strings that teach the reader to type a URL
@@ -240,8 +377,15 @@ correct them. Translating or "fixing" one of those turns the message into nonsen
 **Typography — use these characters:**
 - Ellipsis **`…`** (U+2026), never `...`, and **no space before it** — `Carregando…`,
   `Selecionar…`. Project convention across every domain.
-- En dash **`–`** for ranges (`14h–15h`) and subject-line separators.
-- Em dash **`—`**, space-padded, for parenthetical asides, mirroring the English.
+- En dash **`–`** for ranges (`14h–15h`).
+- **No em dash `—`.** The English source has almost none, and an introduced one reads
+  as machine-made. Write commas, a colon, parentheses or a full stop instead. Where the
+  msgid itself has a dash, keep the msgid's character in the same position: the
+  subject-line separator `"Booking request: %{name} - %{date}"` is
+  `"Pedido de agendamento: %{name} - %{date}"`, and a spaced hyphen inside an English
+  sentence (`"Hi %{name} - our appointment…"`) stays a spaced hyphen, followed by
+  lowercase (`"Olá %{name} - nosso compromisso…"`).
+- Lowercase after a colon inside a sentence or subject: `"Lembrete: nossa reunião…"`.
 - Brazilian quotes are the **curly double** `“…”` (U+201C / U+201D). **Not** the
   guillemets `«…»`, which are European Portuguese and would mark the translation as
   foreign on sight.
@@ -295,6 +439,16 @@ Both forms must be filled. Placeholders present in a form must appear in that fo
   System feedback is clean declarative: **"Não foi possível atualizar a configuração."**
   — this impersonal construction is the Brazilian product idiom for failure and avoids
   both blame and gender. No filler, no exclamation marks except genuine success.
+  For a refusal, *"Cannot cancel…"* is **"Não é possível cancelar…"**, never the
+  colloquial *"Não dá para…"*. *"Too many X attempts"* is **"Muitas tentativas de X."**,
+  not the calque *"Tentativas de X demais"*.
+- **People of unknown gender after a name.** Put the name in object position rather
+  than give it a participle: *"%{name} was told"* → **"avisamos %{name}"**, *"%{name}
+  is told"* → **"%{name} recebe um aviso"**, *"you're refunded"* → **"você recebe o
+  reembolso"**. The same goes for the reader: **"Tudo certo para entrar?"**, not
+  *"Pronto para entrar?"*.
+- **Amounts take singular agreement**: *"%{amount} devolvido"*, *"%{amount} do seu
+  pagamento foi reembolsado"*, as with *"%{amount} pago"*.
 - **Transactional email** — polite, clear, human. Greeting **"Olá %{name},"**.
   **Unlike German, Portuguese capitalises the sentence after the comma** — `"Olá Ana,"`
   then `"Sua reunião foi confirmada."` Keep the capital; the msgid's capital is right.
@@ -419,5 +573,5 @@ than picking one. **No article before a possessive** (*seu e-mail*, not *o seu e
 **tipo de reunião** · **horário** (slot) · **folga** (buffer) · **anfitrião** (host) ·
 **participante** (attendee) · **convidado** (guest/invitee) · **compromisso**
 (appointment). Keep **Tymeslot / brand names / env vars / `%{…}`** verbatim. Use `“…”`,
-`–`, `—`, `…`, decimal comma, 24-hour clock, day-first dates, lowercase month names.
+`–` for ranges, no `—` (keep the msgid's ` - ` where it has one), `…`, decimal comma, 24-hour clock, day-first dates, lowercase month names.
 `msgstr[0]` is one only; zero takes `msgstr[1]`. Never drop or invent a placeholder.
