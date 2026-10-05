@@ -382,9 +382,10 @@ correct them. Translating or "fixing" one of those turns the message into nonsen
   as machine-made. Write commas, a colon, parentheses or a full stop instead. Where the
   msgid itself has a dash, keep the msgid's character in the same position: the
   subject-line separator `"Booking request: %{name} - %{date}"` is
-  `"Pedido de agendamento: %{name} - %{date}"`, and a spaced hyphen inside an English
-  sentence (`"Hi %{name} - our appointment…"`) stays a spaced hyphen, followed by
-  lowercase (`"Olá %{name} - nosso compromisso…"`).
+  `"Pedido de agendamento: %{name} - %{date}"`. The one exception is a greeting run into
+  a sentence with a hyphen (`"Hi %{name} - our appointment…"`): Portuguese sets the
+  vocative off with a comma and starts a new sentence, `"Olá, %{name}. Nosso
+  compromisso…"`.
 - Lowercase after a colon inside a sentence or subject: `"Lembrete: nossa reunião…"`.
 - Brazilian quotes are the **curly double** `“…”` (U+201C / U+201D). **Not** the
   guillemets `«…»`, which are European Portuguese and would mark the translation as
