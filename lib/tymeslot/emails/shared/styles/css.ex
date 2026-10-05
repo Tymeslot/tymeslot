@@ -16,10 +16,14 @@ defmodule Tymeslot.Emails.Shared.Styles.CSS do
   is chosen to survive; see `Tokens` for the notes.
   """
 
+  alias Tymeslot.Emails.Branding
   alias Tymeslot.Emails.Shared.Styles.{DarkMode, Tokens}
   alias Tymeslot.Utils.Colour
 
   @intents [:confirmed, :alert, :cancelled]
+
+  # Class on the header logo's wrapper; see `dark_logo_plate_rule/0`.
+  @logo_plate_class "email-logo-plate"
 
   # How much of an intent's accent tints the dark surface for its callout and
   # badge backgrounds: enough to read as the intent. A luminous custom accent
@@ -62,6 +66,10 @@ defmodule Tymeslot.Emails.Shared.Styles.CSS do
     </mj-style>
     """
   end
+
+  @doc "The class the header logo's wrapper carries, which the dark stylesheet may target."
+  @spec logo_plate_class() :: String.t()
+  def logo_plate_class, do: @logo_plate_class
 
   @doc """
   The dark-mode `<style>` element. Rendered on every call because the
@@ -169,7 +177,28 @@ defmodule Tymeslot.Emails.Shared.Styles.CSS do
     }
     .hairline { background: #{Tokens.dark(:hairline)} !important; }
     #{badges}
+    #{dark_logo_plate_rule()}
     """
+  end
+
+  # A custom logo may carry dark lettering on a transparent PNG, which
+  # vanishes on the dark canvas. Only then does it sit on a light rounded
+  # plate (the light surface token). The stock logo is teal and reads on
+  # either canvas, so it gets no plate. The plate lives in this media query
+  # alone: clients that ignore it keep the light canvas and need none.
+  defp dark_logo_plate_rule do
+    if Branding.custom_logo_path() do
+      """
+      .#{@logo_plate_class} img {
+        background: #{Tokens.surface()} !important;
+        border-radius: 12px !important;
+        box-sizing: border-box !important;
+        padding: 8px 12px !important;
+      }
+      """
+    else
+      ""
+    end
   end
 
   # ============================================================================

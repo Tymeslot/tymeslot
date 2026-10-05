@@ -23,7 +23,7 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   alias Swoosh.Attachment
   alias Tymeslot.Emails.Branding
   alias Tymeslot.Emails.Shared.{AvatarHelper, Frame, Sanitise, Stage, Styles, Urls}
-  alias Tymeslot.Emails.Shared.Styles.Tokens
+  alias Tymeslot.Emails.Shared.Styles.{CSS, Tokens}
   alias Tymeslot.Mailer
   alias Tymeslot.Mailer.Providers
 
@@ -221,6 +221,7 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
           align="center"
           padding="0"
           border="0"
+          css-class="#{CSS.logo_plate_class()}"
         />
       </mj-column>
     </mj-section>
