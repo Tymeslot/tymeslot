@@ -83,8 +83,9 @@ defmodule Tymeslot.Bookings.CalendarCheck do
 
   Options:
 
-    * `:exclude` - a meeting whose own provider event must not count as a
-      conflict: the meeting being moved, or the group meeting a seat joins.
+    * `:exclude` - a meeting, or a list of meetings, whose own provider
+      events must not count as a conflict: the meeting being moved, the
+      group meeting a seat joins, or the one a seat move vacates.
       See the module doc.
   """
   @spec probe(slot(), map(), keyword()) :: :ok | {:error, probe_reason()}

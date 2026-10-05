@@ -317,6 +317,29 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupRulesTest do
       assert reload(meeting_type).max_participants == 4
     end
 
+    test "an existing group type's card says it is paused, and a one-to-one type's does not",
+         %{conn: conn, user: user} do
+      locations = at_venue(user)
+      group = insert(:meeting_type, user: user, max_participants: 4, locations: locations)
+      solo = insert(:meeting_type, user: user, locations: locations)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      group_card = "[data-meeting-type-id='#{group.id}']"
+      solo_card = "[data-meeting-type-id='#{solo.id}']"
+
+      assert has_element?(view, "#{group_card} [data-testid='group-type-paused']", "Paused")
+
+      assert has_element?(
+               view,
+               "#{group_card} [data-testid='group-type-paused-notice']",
+               "set the participant limit to 1"
+             )
+
+      refute has_element?(view, "#{solo_card} [data-testid='group-type-paused']")
+      refute has_element?(view, "#{solo_card} [data-testid='group-type-paused-notice']")
+    end
+
     test "Core's own default leaves the section unlocked", %{conn: conn, user: user} do
       setup_config(:tymeslot,
         feature_access_checker: Tymeslot.Features.DefaultAccessChecker,
@@ -328,7 +351,14 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupRulesTest do
           )
       )
 
-      meeting_type = insert(:meeting_type, user: user, locations: at_venue(user))
+      locations = at_venue(user)
+      group = insert(:meeting_type, user: user, max_participants: 4, locations: locations)
+
+      {:ok, list_view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+      assert has_element?(list_view, "[data-meeting-type-id='#{group.id}']")
+      refute has_element?(list_view, "[data-testid='group-type-paused']")
+
+      meeting_type = insert(:meeting_type, user: user, locations: locations)
       view = edit(conn, meeting_type)
 
       refute has_element?(view, "[data-testid='group-bookings-locked']")

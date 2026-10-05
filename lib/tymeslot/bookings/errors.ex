@@ -43,12 +43,16 @@ defmodule Tymeslot.Bookings.Errors do
   # `:host_not_found`/`:host_missing` and `:meeting_type_not_found`/
   # `:meeting_type_missing` are likewise distinct upstream reasons that share
   # one user-facing meaning, so they collapse to a single atom each.
+  # `:group_bookings_paused` (a group type whose host has lost access to group
+  # bookings) reads to the booker exactly as an inactive type does: the page
+  # no longer offers it, and a refresh shows as much.
   # `ScheduleCheck`'s own reasons (`:slot_not_offered`,
   # `:slot_availability_unverifiable`) are deliberately absent: they are
   # classified once, by `classify_schedule_check_reason/1` below, which
   # `classify_error/1` falls back to for any other atom.
   @error_classifications %{
     meeting_type_inactive: :meeting_type_inactive,
+    group_bookings_paused: :meeting_type_inactive,
     meeting_type_not_found: :meeting_type_not_found,
     meeting_type_missing: :meeting_type_not_found,
     time_conflict: :slot_taken,

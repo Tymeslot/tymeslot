@@ -12,6 +12,7 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
 
   use Oban.Testing, repo: Tymeslot.Repo
 
+  import Ecto.Query, only: [from: 2]
   import Mox
 
   import Tymeslot.AvailabilityTestHelpers,
@@ -148,13 +149,13 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
     assert_enqueued(worker: CalendarEventWorker, args: %{"meeting_id" => new_meeting.id})
   end
 
-  # `SeatRelease.release/1` cannot be driven into its error branch through
-  # the public API (its own status-transition attrs are always valid), so
-  # the failure is forced with :meck. The move itself must still succeed —
-  # only the old meeting's emptiness check failed — and the old meeting
-  # must be treated the same as "seats remain" (calendar refreshed, not
-  # left stale), never crash the caller.
-  test "the old meeting's emptiness check failing does not crash the move and still refreshes its calendar event",
+  # The emptied old meeting is cancelled inside the move transaction, and its
+  # status flip cannot be driven to fail through the public API (its own
+  # attrs are always valid), so the failure is forced with :meck. The move
+  # left the old meeting's time out of its conflict check on the promise
+  # that the meeting goes with it, so a flip that fails takes the whole move
+  # back: the seat stays where it was, and no new slot or job is left behind.
+  test "the emptied old meeting failing to cancel rolls the whole move back",
        %{old_meeting: old_meeting, mover: mover} do
     :meck.new(MeetingQueries, [:passthrough])
 
@@ -178,18 +179,109 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
         :meck.unload(MeetingQueries)
       end
 
-    assert {:ok, %{meeting: new_meeting}} = result
+    assert {:error, :failed_to_update_meeting} = result
 
-    # The status flip rolled back — the old meeting is still confirmed, not
-    # cancelled and not left in some third, undefined state.
     assert Repo.get!(MeetingSchema, old_meeting.id).status == "confirmed"
 
-    assert_enqueued(
-      worker: CalendarEventWorker,
-      args: %{"action" => "update", "meeting_id" => old_meeting.id}
-    )
+    assert [%{id: mover_id, cancelled_at: nil}] =
+             ParticipantQueries.list_live_for_meeting(old_meeting.id)
 
-    assert_enqueued(worker: CalendarEventWorker, args: %{"meeting_id" => new_meeting.id})
+    assert mover_id == mover.id
+    assert [_only_the_old_meeting] = Repo.all(MeetingSchema)
+    refute_enqueued(worker: EmailWorker, args: %{"action" => "send_seat_reschedule_emails"})
+  end
+
+  describe "a move overlapping the seat's own meeting" do
+    # An hour-long meeting at 14:00 New York time, offered every half hour,
+    # so 14:30 is a slot the page offers that overlaps the meeting's second
+    # half.
+    setup %{user: user, meeting_type: meeting_type, base_params: base_params} do
+      {:ok, meeting_type} =
+        MeetingTypes.update_meeting_type(meeting_type, %{
+          duration_minutes: 60,
+          slot_interval_minutes: 30
+        })
+
+      hour_params =
+        Map.merge(base_params, %{
+          date: Date.add(Date.utc_today(), 4),
+          time: "14:00",
+          duration: "60min",
+          meeting_type_id: meeting_type.id,
+          organizer_user_id: user.id
+        })
+
+      {:ok, hour_meeting} =
+        Create.execute(hour_params, %{"name" => "Hour", "email" => "hour@example.com"})
+
+      [hour_mover] = ParticipantQueries.list_live_for_meeting(hour_meeting.id)
+
+      %{hour_params: hour_params, hour_meeting: hour_meeting, hour_mover: hour_mover}
+    end
+
+    defp half_hour_later do
+      %{
+        date: Date.to_iso8601(Date.add(Date.utc_today(), 4)),
+        time: "14:30",
+        duration: "60min",
+        user_timezone: "America/New_York"
+      }
+    end
+
+    test "is allowed for the meeting's only seat, which takes the old meeting with it",
+         %{hour_meeting: hour_meeting, hour_mover: hour_mover} do
+      # The organiser's calendar holds the old meeting's own event, as
+      # Tymeslot wrote it there; it must not block the move either.
+      assert byte_size(hour_meeting.calendar_uid) > 0
+
+      stub_calendar_events([
+        %{
+          uid: hour_meeting.calendar_uid,
+          summary: "Hour",
+          start_time: hour_meeting.start_time,
+          end_time: hour_meeting.end_time
+        }
+      ])
+
+      assert {:ok, %{meeting: new_meeting, created_meeting?: true}} =
+               move(hour_mover, half_hour_later())
+
+      assert DateTime.diff(new_meeting.start_time, hour_meeting.start_time, :minute) == 30
+      assert Repo.get!(MeetingSchema, hour_meeting.id).status == "cancelled"
+
+      assert [%{email: "hour@example.com"}] =
+               ParticipantQueries.list_live_for_meeting(new_meeting.id)
+
+      assert_enqueued(
+        worker: CalendarEventWorker,
+        args: %{"action" => "delete", "meeting_id" => hour_meeting.id}
+      )
+    end
+
+    # With another seat on it, the old meeting goes ahead at its old time and
+    # still occupies the host: a new slot overlapping it would double-book
+    # them, so the move is refused and nothing changes.
+    test "is refused while another seat keeps the old meeting going",
+         %{hour_params: hour_params, hour_meeting: hour_meeting, hour_mover: hour_mover} do
+      {:ok, _joined} =
+        Create.execute(hour_params, %{"name" => "Stayer", "email" => "s@example.com"})
+
+      assert {:error, :slot_taken} = move(hour_mover, half_hour_later())
+
+      assert Repo.get!(MeetingSchema, hour_meeting.id).status == "confirmed"
+
+      assert ["hour@example.com", "s@example.com"] =
+               hour_meeting.id
+               |> ParticipantQueries.list_live_for_meeting()
+               |> Enum.map(& &1.email)
+               |> Enum.sort()
+
+      refute Repo.exists?(
+               from(m in MeetingSchema,
+                 where: m.start_time == ^DateTime.add(hour_meeting.start_time, 30, :minute)
+               )
+             )
+    end
   end
 
   test "a full new slot changes nothing and reports :slot_taken",

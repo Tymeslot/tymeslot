@@ -10,7 +10,7 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
   import Mox
   import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.Factory
-  import Tymeslot.WorkerTestHelpers, only: [expect_mirotalk_success: 0]
+  import Tymeslot.WorkerTestHelpers, only: [expect_mirotalk_group_success: 0]
 
   alias Tymeslot.Bookings.Create
   alias Tymeslot.EmailServiceMock
@@ -18,6 +18,7 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
@@ -206,7 +207,9 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
       assert {:ok, meeting} = execute(ctx, "one@example.com")
       assert [participant] = ParticipantQueries.list_live_for_meeting(meeting.id)
 
-      expect_mirotalk_success()
+      # One join token, the organiser's: the participants share a link that
+      # names nobody, which for MiroTalk is the room URL.
+      expect_mirotalk_group_success()
 
       assert :ok =
                perform_job(VideoRoomWorker, %{"meeting_id" => meeting.id, "announce" => true})
@@ -256,7 +259,9 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
       assert {:ok, meeting} = execute(ctx, "one@example.com")
       assert length(all_enqueued(worker: WebhookWorker)) == 1
 
-      expect_mirotalk_success()
+      # One join token, the organiser's: the participants share a link that
+      # names nobody, which for MiroTalk is the room URL.
+      expect_mirotalk_group_success()
 
       assert :ok =
                perform_job(VideoRoomWorker, %{"meeting_id" => meeting.id, "announce" => true})
@@ -301,5 +306,89 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
     assert {:error, :slot_taken} = execute(ctx, "three@example.com")
 
     refute_receive {:seat_update, ^type_id}, 100
+  end
+
+  describe "the seat and the jobs it owes commit together" do
+    # Stands in for the email scheduler with the seat confirmation's job
+    # insert failing; the reminder jobs, scheduled earlier in the same
+    # transaction, go through the real scheduler.
+    defmodule FailingSeatConfirmations do
+      @moduledoc false
+      alias Tymeslot.Emails.EmailScheduler
+
+      @spec schedule_seat_confirmation_emails(term(), term()) :: {:error, String.t()}
+      def schedule_seat_confirmation_emails(_meeting_id, _participant_id),
+        do: {:error, "Failed to schedule job"}
+
+      defdelegate schedule_reminder_emails(meeting_id, value, unit, scheduled_at),
+        to: EmailScheduler
+    end
+
+    defp fail_seat_confirmations do
+      original = Application.get_env(:tymeslot, :email_worker_module)
+      Application.put_env(:tymeslot, :email_worker_module, FailingSeatConfirmations)
+
+      on_exit(fn ->
+        case original do
+          nil -> Application.delete_env(:tymeslot, :email_worker_module)
+          worker -> Application.put_env(:tymeslot, :email_worker_module, worker)
+        end
+      end)
+    end
+
+    test "a first seat enqueues its calendar, confirmation and reminder jobs", ctx do
+      assert {:ok, meeting} = execute(ctx, "one@example.com")
+      assert [participant] = ParticipantQueries.list_live_for_meeting(meeting.id)
+
+      assert_enqueued(
+        worker: CalendarEventWorker,
+        args: %{"action" => "create", "meeting_id" => meeting.id}
+      )
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_seat_confirmation_emails",
+          "meeting_id" => meeting.id,
+          "participant_id" => participant.id
+        }
+      )
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_reminder_emails", "meeting_id" => meeting.id}
+      )
+    end
+
+    test "a first seat whose confirmation cannot be enqueued is rolled back with every job",
+         ctx do
+      fail_seat_confirmations()
+
+      assert {:error, _reason} = execute(ctx, "one@example.com")
+
+      assert Repo.all(MeetingSchema) == []
+      assert Repo.all(ParticipantSchema) == []
+      # The calendar and reminder jobs were inserted before the failing one,
+      # inside the same transaction, and went with it.
+      assert all_enqueued() == []
+    end
+
+    test "a joining seat whose confirmation cannot be enqueued leaves the slot as it was",
+         ctx do
+      {:ok, meeting} = execute(ctx, "one@example.com")
+      jobs_before = all_enqueued()
+
+      fail_seat_confirmations()
+
+      assert {:error, _reason} = execute(ctx, "two@example.com")
+
+      assert [%{email: "one@example.com"}] = ParticipantQueries.list_live_for_meeting(meeting.id)
+      assert length(all_enqueued()) == length(jobs_before)
+
+      refute_enqueued(
+        worker: CalendarEventWorker,
+        args: %{"action" => "update", "meeting_id" => meeting.id}
+      )
+    end
   end
 end

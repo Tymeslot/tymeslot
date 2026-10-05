@@ -14,6 +14,7 @@ defmodule Tymeslot.MeetingTypes do
   alias Tymeslot.MeetingTypes.Duration
   alias Tymeslot.MeetingTypes.FormMapper
   alias Tymeslot.MeetingTypes.FormValidation
+  alias Tymeslot.MeetingTypes.GroupAccess
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.LocationSelection
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
@@ -223,10 +224,15 @@ defmodule Tymeslot.MeetingTypes do
   host's account, and a host with no meeting types must show the booking page's
   empty state rather than be given two bookable durations they never created
   (which would also silently resurrect defaults a host had deleted on purpose).
+
+  A paused group type (`Tymeslot.MeetingTypes.GroupAccess`) is left out, as an
+  inactive one is: it takes no new bookings, so the page must not offer it.
   """
   @spec get_public_meeting_types(integer()) :: [Ecto.Schema.t()]
   def get_public_meeting_types(user_id) do
-    MeetingTypeQueries.list_public_meeting_types(user_id)
+    user_id
+    |> MeetingTypeQueries.list_public_meeting_types()
+    |> GroupAccess.reject_paused()
   end
 
   # The two owner-facing listings above differ only in which query they run;

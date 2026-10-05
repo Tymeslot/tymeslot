@@ -122,6 +122,75 @@ defmodule Tymeslot.Meetings.GroupSchedulingConcurrencyTest do
              @capacity
   end
 
+  # The other interleaving of two first bookers: the late one reads the slot
+  # empty, then the early one commits the slot's meeting before the late
+  # one's conflict check runs. That check sees the early meeting as a clash,
+  # so the late booker used to be told the slot was taken with seats still
+  # free on it. It is the same lost race as the unique-index one, and must
+  # end the same way: the late booker joins the early one's meeting.
+  test "a first booker overtaken between its slot read and its conflict check joins the meeting",
+       ctx do
+    slot = slot_at(ctx, 10)
+    park_after_slot_read()
+    conductor = self()
+
+    late =
+      Task.async(fn ->
+        unboxed(fn ->
+          Process.put(:park_after_slot_read, fn ->
+            send(conductor, {:parked, self()})
+
+            receive do
+              :release -> :ok
+            end
+          end)
+
+          book(slot, "late@example.com")
+        end)
+      end)
+
+    assert_receive {:parked, late_pid}, 5_000
+
+    assert {:ok, %{created_meeting?: true, meeting: meeting}} =
+             unboxed(fn -> book(slot, "early@example.com") end)
+
+    send(late_pid, :release)
+
+    assert {:ok, %{created_meeting?: false, meeting: joined}} = Task.await(late, 30_000)
+    assert joined.id == meeting.id
+
+    assert ["early@example.com", "late@example.com"] =
+             unboxed(fn ->
+               meeting.id
+               |> ParticipantQueries.list_live_for_meeting()
+               |> Enum.map(& &1.email)
+               |> Enum.sort()
+             end)
+  end
+
+  # Parks a contender (a process that stored a zero-arity hold under
+  # `:park_after_slot_read`) right after its seat transaction's locked read
+  # of the slot (`GroupMeetingQueries.get_live_for_update/2`), once.
+  defp park_after_slot_read do
+    handler_id = "park-after-slot-read-#{inspect(make_ref())}"
+
+    :telemetry.attach(
+      handler_id,
+      [:tymeslot, :repo, :query],
+      fn _event, _measurements, metadata, _config ->
+        with "meetings" <- metadata[:source],
+             query when is_binary(query) <- metadata[:query],
+             true <- query =~ "FOR UPDATE" and not (query =~ "NOWAIT"),
+             hold when is_function(hold, 0) <- Process.delete(:park_after_slot_read) do
+          hold.()
+        end
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(handler_id) end)
+  end
+
   # Drives `Tymeslot.Bookings.RescheduleSeat` itself: the new seat is booked
   # with the old meeting passed as `:also_lock`, and the old seat is cancelled
   # from inside the seat transaction under the old meeting's row lock. Two

@@ -224,6 +224,7 @@ defmodule Tymeslot.Bookings.Create do
       user_id ->
         # Meeting type active check
         with :ok <- validate_meeting_type_active(booking_data),
+             :ok <- CreateGroup.ensure_taking_seats(booking_data),
              :ok <- validate_payments_available(booking_data, user_id) do
           config = scheduling_config(booking_data)
 

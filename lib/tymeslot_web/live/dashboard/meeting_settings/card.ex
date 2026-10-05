@@ -24,6 +24,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   attr :icon_size, :string, default: "mini", values: ["compact", "medium", "large", "mini"]
   attr :venues, :list, default: [], doc: "the organiser's saved venues, to name them"
 
+  attr :group_bookings_allowed, :boolean,
+    default: true,
+    doc: "whether the host may take group bookings; a group type without it is paused"
+
   @spec meeting_type_card(map()) :: Phoenix.LiveView.Rendered.t()
   def meeting_type_card(assigns) do
     ~H"""
@@ -58,6 +62,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               }
             >
               {dgettext("dashboard_meeting_types", "Unlisted")}
+            </Feedback.pill>
+            <Feedback.pill
+              :if={group_paused?(@type, @group_bookings_allowed)}
+              tone={:warning}
+              icon="hero-pause-circle-mini"
+              data-testid="group-type-paused"
+            >
+              {dgettext("dashboard_meeting_types", "Paused")}
             </Feedback.pill>
           </div>
           <p
@@ -112,6 +124,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               </span>
             <% end %>
           </div>
+          <p
+            :if={group_paused?(@type, @group_bookings_allowed)}
+            class="mt-1 text-token-xs text-amber-700 leading-relaxed"
+            data-testid="group-type-paused-notice"
+          >
+            {dgettext(
+              "dashboard_meeting_types",
+              "Group bookings are not included in your current plan, so this meeting type is taking no new bookings. Existing bookings are unaffected. Upgrade, or set the participant limit to 1, to take bookings again."
+            )}
+          </p>
         </div>
 
         <%!-- Actions --%>
@@ -202,6 +224,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
         }
     end
   end
+
+  # A group type saved while the host had group bookings, kept after they lost
+  # access: it keeps its bookings but takes no new ones (see
+  # `Tymeslot.MeetingTypes.GroupAccess`).
+  defp group_paused?(type, group_bookings_allowed),
+    do: not group_bookings_allowed and MeetingTypes.group_type?(type)
 
   defp paid?(%{payment_required: true, price_cents: cents}) when is_integer(cents), do: true
   defp paid?(_type), do: false

@@ -132,6 +132,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
                 editing_type={@editing_type}
                 currency={@payment_currency}
                 venues={@venues}
+                group_bookings_allowed={@group_bookings_allowed}
                 parent_myself={@myself}
               />
             </div>

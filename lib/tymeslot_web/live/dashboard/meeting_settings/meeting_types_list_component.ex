@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
   attr :editing_type, :any, default: nil
   attr :currency, :string, default: "eur"
   attr :venues, :list, default: []
+  attr :group_bookings_allowed, :boolean, default: true
   attr :parent_myself, :any, required: true
 
   @spec meeting_types_section(map()) :: Phoenix.LiveView.Rendered.t()
@@ -48,6 +49,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
                 type={type}
                 currency={@currency}
                 venues={@venues}
+                group_bookings_allowed={@group_bookings_allowed}
                 myself={@parent_myself}
               />
             </div>

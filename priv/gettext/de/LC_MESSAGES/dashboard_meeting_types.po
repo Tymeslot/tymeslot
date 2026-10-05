@@ -310,3 +310,13 @@ msgstr "Dieser Ort ist der einzige eines Gruppen-Termintyps und kann daher nicht
 #, elixir-autogen, elixir-format
 msgid "Group · up to %{count}"
 msgstr "Gruppe · bis zu %{count}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Group bookings are not included in your current plan, so this meeting type is taking no new bookings. Existing bookings are unaffected. Upgrade, or set the participant limit to 1, to take bookings again."
+msgstr "Gruppenbuchungen sind in Ihrem aktuellen Tarif nicht enthalten, daher nimmt dieser Termintyp keine neuen Buchungen an. Bestehende Buchungen bleiben bestehen. Führen Sie ein Upgrade durch oder setzen Sie das Teilnehmerlimit auf 1, um wieder Buchungen anzunehmen."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Paused"
+msgstr "Pausiert"

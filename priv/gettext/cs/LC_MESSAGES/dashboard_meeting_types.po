@@ -313,3 +313,13 @@ msgstr "Toto místo je jediným místem typu skupinové schůzky, proto ho nelze
 #, elixir-autogen, elixir-format
 msgid "Group · up to %{count}"
 msgstr "Skupina · až %{count}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Group bookings are not included in your current plan, so this meeting type is taking no new bookings. Existing bookings are unaffected. Upgrade, or set the participant limit to 1, to take bookings again."
+msgstr "Skupinové rezervace nejsou součástí vašeho aktuálního tarifu, proto tento typ schůzky nepřijímá nové rezervace. Stávající rezervace zůstávají beze změny. Přejděte na vyšší tarif nebo nastavte limit účastníků na 1, abyste znovu přijímali rezervace."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Paused"
+msgstr "Pozastaveno"

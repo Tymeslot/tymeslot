@@ -313,3 +313,13 @@ msgstr "Це місце є єдиним для типу групової зус�
 #, elixir-autogen, elixir-format
 msgid "Group · up to %{count}"
 msgstr "Група · до %{count}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Group bookings are not included in your current plan, so this meeting type is taking no new bookings. Existing bookings are unaffected. Upgrade, or set the participant limit to 1, to take bookings again."
+msgstr "Групові бронювання не входять до вашого поточного тарифу, тому цей тип зустрічі не приймає нових бронювань. Наявні бронювання залишаються без змін. Оновіть тариф або встановіть ліміт учасників 1, щоб знову приймати бронювання."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Paused"
+msgstr "Призупинено"

@@ -17,7 +17,9 @@ defmodule Tymeslot.Bookings.SeatEffects do
   caller enqueues it at the point that matches its own transaction shape
   (`CreateGroup` inside `book_seat/3`'s `:on_booked` callback, atomically
   with the seat; `RescheduleSeat` after commit, since its own `:on_booked`
-  is busy cancelling the old seat).
+  is busy cancelling the old seat). The broadcast and cache invalidation are
+  not durable and always run after commit, so nobody is told about a seat
+  that then rolls back.
   """
 
   alias Tymeslot.Bookings.Activation
@@ -99,26 +101,32 @@ defmodule Tymeslot.Bookings.SeatEffects do
     * `:with_video_room` — force room creation for any configured provider,
       not just the auto-create allow-list.
 
-  Returns whether the caller's own confirmation should be deferred to the
-  video-room worker — always `false` unless `:announce` was requested and
-  the room was actually scheduled.
+  Returns `{:ok, defer_confirmation?}`, where `defer_confirmation?` says
+  whether the caller's own confirmation is now the video-room worker's job:
+  always `false` unless `:announce` was requested and a room is wanted. A
+  job that could not be scheduled returns `{:error, reason}` (and is
+  logged), so a caller running this inside its seat transaction can roll
+  the seat back rather than commit a slot that owes jobs it never got.
   """
-  @spec schedule_new_slot_effects(map(), keyword()) :: boolean()
+  @spec schedule_new_slot_effects(map(), keyword()) :: {:ok, boolean()} | {:error, term()}
   def schedule_new_slot_effects(meeting, opts \\ []) do
-    schedule_reminders(meeting)
-    schedule_video_room(meeting, opts)
+    with :ok <- schedule_reminders(meeting) do
+      schedule_video_room(meeting, opts)
+    end
   end
 
   defp schedule_video_room(meeting, opts) do
     if wants_video_room?(meeting, opts) do
-      if Keyword.get(opts, :announce, false) do
-        VideoRoomWorker.schedule_video_room_creation_with_announcement(meeting.id) == :ok
-      else
-        VideoRoomWorker.schedule_video_room_creation(meeting.id)
-        false
-      end
+      announce? = Keyword.get(opts, :announce, false)
+
+      result =
+        if announce?,
+          do: VideoRoomWorker.schedule_video_room_creation_with_announcement(meeting.id),
+          else: VideoRoomWorker.schedule_video_room_creation(meeting.id)
+
+      with :ok <- result, do: {:ok, announce?}
     else
-      false
+      {:ok, false}
     end
   end
 
@@ -138,13 +146,13 @@ defmodule Tymeslot.Bookings.SeatEffects do
       {:ok, _result} ->
         :ok
 
-      {:error, reason} ->
+      {:error, reason} = error ->
         Logger.error("Failed to schedule reminder jobs for a new group slot",
           meeting_id: meeting.id,
           reason: LogFormat.reason(reason)
         )
 
-        :ok
+        error
     end
   end
 end

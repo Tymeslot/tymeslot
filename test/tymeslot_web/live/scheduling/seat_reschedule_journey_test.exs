@@ -30,6 +30,7 @@ defmodule TymeslotWeb.Live.Scheduling.SeatRescheduleJourneyTest do
   alias Tymeslot.Repo
   alias Tymeslot.RescheduleTestSetup
   alias Tymeslot.Workers.EmailWorker
+  alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
 
   setup tags do
     context = RescheduleTestSetup.reschedule_journey(tags)
@@ -80,6 +81,28 @@ defmodule TymeslotWeb.Live.Scheduling.SeatRescheduleJourneyTest do
   end
 
   describe "a participant moving their seat from the email link" do
+    # `Offer` leaves the seat's own meeting out of the busy times when the
+    # seat is its last (see `Tymeslot.Availability.OfferSeatMoveTest`), which
+    # it can only do if the page hands it the token.
+    @tag :capture_log
+    test "the page asks for the times the seat's own move can take", %{
+      conn: conn,
+      profile: profile,
+      seat: seat
+    } do
+      token = seat.management_token
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          "/#{profile.username}/group-session?reschedule_seat_token=#{token}&timezone=UTC"
+        )
+
+      %{socket: socket} = :sys.get_state(view.pid)
+
+      assert AvailabilityHelpers.request(socket).reschedule_seat_token == token
+    end
+
     @tag :capture_log
     test "moves the seat, and \"Schedule another meeting\" then books afresh", %{
       conn: conn,

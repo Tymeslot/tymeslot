@@ -25,7 +25,7 @@ defmodule Tymeslot.Availability.Offer do
   """
 
   alias Tymeslot.Availability.{Calculate, GroupSlots, Schedules, TimeSlots}
-  alias Tymeslot.Bookings.Orchestrator
+  alias Tymeslot.Bookings.{Orchestrator, RescheduleSeat}
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
@@ -61,6 +61,12 @@ defmodule Tymeslot.Availability.Offer do
       `Tymeslot.Bookings.Reschedule` leaves it out of both when the move is
       submitted, but only once it is proven to be a movable meeting of this
       organiser; any other value is ignored.
+    * `:reschedule_seat_token` - the group seat a seat-move page is moving.
+      Its meeting is left out the same way, but only when the seat is that
+      meeting's last live one, which is when `Tymeslot.Bookings.RescheduleSeat`
+      cancels it with the move and leaves it out on submit; with other seats
+      on it, the meeting keeps its time and stays busy. Wins over
+      `:reschedule_uid`, as it does on submit.
     * `:demo_mode?` - whether the page is running as a demo.
     * `:debug_calendar_module` - a calendar module override, for development.
   """
@@ -69,6 +75,7 @@ defmodule Tymeslot.Availability.Offer do
           required(:user_timezone) => String.t(),
           optional(:meeting_type) => map() | nil,
           optional(:reschedule_uid) => String.t() | nil,
+          optional(:reschedule_seat_token) => String.t() | nil,
           optional(:demo_mode?) => boolean() | nil,
           optional(:debug_calendar_module) => module() | nil
         }
@@ -355,6 +362,13 @@ defmodule Tymeslot.Availability.Offer do
   # the uid, and the events read back from their connected calendar, where the
   # meeting appears as the provider event Tymeslot wrote and is matched by
   # whichever identifier that provider family preserves.
+  #
+  # A seat move vacates its meeting only when the mover is its last seat;
+  # `RescheduleSeat.vacated_meeting/2` is the submit's own rule for that.
+  defp moving_meeting(%{reschedule_seat_token: token, profile: %{user_id: user_id}})
+       when is_binary(token) and is_integer(user_id),
+       do: RescheduleSeat.vacated_meeting(token, user_id)
+
   defp moving_meeting(%{reschedule_uid: uid, profile: %{user_id: user_id}})
        when is_binary(uid) and is_integer(user_id) do
     case Orchestrator.get_meeting_for_reschedule(uid, user_id) do

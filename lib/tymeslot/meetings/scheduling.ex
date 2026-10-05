@@ -67,6 +67,13 @@ defmodule Tymeslot.Meetings.Scheduling do
 
   Used for the first booker of a group meeting type, where a fresh meeting
   row is created together with the first seat.
+
+  Takes the options `create_meeting_with_conflict_check/2` does, plus
+  `:exclude_uid`: a meeting left out of both the conflict check and the
+  booking-limit count, as an update leaves out the meeting it moves. Only
+  for a meeting the caller's own transaction is about to cancel (a seat
+  move vacating its old meeting); anything else it names would be
+  double-booked.
   """
   @spec create_group_meeting_with_conflict_check(map(), keyword()) ::
           {:ok, Meeting.t()}
@@ -91,20 +98,22 @@ defmodule Tymeslot.Meetings.Scheduling do
     organizer_user_id = MapKeys.get(attrs, :organizer_user_id)
 
     if start_time && end_time do
+      exclude_uid = Keyword.get(opts, :exclude_uid)
+
       limit_check =
         build_limit_check(
           organizer_user_id,
           start_time,
           MapKeys.get(attrs, :meeting_type_id),
-          nil,
+          exclude_uid,
           opts
         )
 
       execute_conflict_checked_transaction(
-        start_time,
-        end_time,
+        {start_time, end_time},
         organizer_user_id,
         MapKeys.get(attrs, :meeting_type_id),
+        exclude_uid,
         limit_check,
         fn ->
           persist_fn.(attrs)
@@ -162,10 +171,10 @@ defmodule Tymeslot.Meetings.Scheduling do
   # Private functions
 
   defp execute_conflict_checked_transaction(
-         start_time,
-         end_time,
+         {start_time, end_time},
          organizer_user_id,
          meeting_type_id,
+         exclude_uid,
          limit_check,
          operation_fn
        ) do
@@ -178,7 +187,7 @@ defmodule Tymeslot.Meetings.Scheduling do
              MeetingConflictQueries.count_locked_conflicts(
                buffered_start,
                buffered_end,
-               nil,
+               exclude_uid,
                organizer_user_id
              ) do
         operation_fn.()

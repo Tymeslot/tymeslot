@@ -27,14 +27,26 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   The move is checked like any other booking of the new time: the
   organiser's connected calendar is re-read (ignoring the group meeting the
   seat joins, whose event already holds the time), and a move that creates a
-  new slot is subject to the host's booking limits inside `Scheduling`'s
-  transaction. A move onto an existing slot adds no meeting row and so is
-  not limit-checked. The seat keeps the old meeting's duration, type and
-  organiser; the booking page it was submitted from must belong to that
-  organiser.
+  new slot is subject to the host's conflict check and booking limits inside
+  `Scheduling`'s transaction. A move onto an existing slot adds no meeting
+  row and so is not limit-checked. The seat keeps the old meeting's
+  duration, type and organiser; the booking page it was submitted from must
+  belong to that organiser.
 
-  Once the move has committed, `Tymeslot.Bookings.SeatRelease.release/1`
-  cancels the old meeting if the mover was the last one on it.
+  ## A move off the old meeting's last seat
+
+  When the mover is the old meeting's only live seat, the old meeting is
+  cancelled inside the move transaction (`SeatRelease.cancel_if_emptied/1`,
+  under the row lock the move already holds), and its time is therefore
+  not a conflict for the move: a lone participant can shift their seat by
+  half an hour within their own hour. Both the calendar re-read and the
+  conflict check leave the old meeting out in that case, and only then.
+  While other seats remain on it, the old meeting goes ahead at its old time
+  and still occupies the host, so a new slot overlapping it is refused like
+  any other clash. Cancelling it in the same transaction is what makes
+  leaving it out safe: committed separately, a booker could join the old
+  meeting between the move and its cancellation, and the host would hold
+  two overlapping meetings.
   """
 
   require Logger
@@ -42,11 +54,13 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   alias Tymeslot.Bookings.BuildParams
   alias Tymeslot.Bookings.CalendarCheck
   alias Tymeslot.Bookings.CalendarJobs
+  alias Tymeslot.Bookings.Cancel
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Bookings.SeatEffects
   alias Tymeslot.Bookings.SeatRelease
   alias Tymeslot.Bookings.Validation
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.GuestQueries
@@ -83,7 +97,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
            {:ok, new_times} <-
              Validation.prepare_new_times(new_params, old_meeting, meeting_type, config),
            :ok <- ensure_time_changes(old_meeting, new_times),
-           :ok <- verify_calendar_free(old_meeting, new_times, config, guest_emails) do
+           :ok <- verify_calendar_free(old_meeting, participant, new_times, config, guest_emails) do
         move_seat(old_meeting, participant, new_times, meeting_type, guest_emails)
       end
     else
@@ -91,6 +105,33 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
       error -> error
     end
   end
+
+  @doc """
+  The meeting a move of the seat behind `management_token` would cancel
+  with it: the seat's meeting when the seat is its only live one and the
+  meeting is `organizer_user_id`'s, otherwise `nil`.
+
+  The seat-move booking page leaves this meeting out of the host's busy
+  times and booking-limit counts, as the submit does (see "A move off the
+  old meeting's last seat" above), so it offers exactly the times the move
+  can take: a lone participant sees their own hour as free, while a seat
+  sharing its meeting with others sees it busy. An unlocked read, for
+  display only; the submit decides again under the old meeting's row lock.
+  """
+  @spec vacated_meeting(String.t() | nil, integer() | nil) :: struct() | nil
+  def vacated_meeting(management_token, organizer_user_id)
+      when is_binary(management_token) and is_integer(organizer_user_id) do
+    with {:ok, %{participant: participant, meeting: meeting}} <-
+           Meetings.fetch_live_seat(management_token),
+         :ok <- ensure_same_organizer(meeting, organizer_user_id),
+         true <- last_live_seat?(meeting, participant) do
+      meeting
+    else
+      _not_vacated -> nil
+    end
+  end
+
+  def vacated_meeting(_management_token, _organizer_user_id), do: nil
 
   defp ensure_live(%{cancelled_at: nil}), do: :ok
   defp ensure_live(_participant), do: {:error, :already_cancelled}
@@ -143,11 +184,14 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   # (`Create`) and a whole-meeting reschedule (`Reschedule`) make, through the
   # same module, so a time the host has since blocked elsewhere cannot be
   # moved onto. When the move joins a live group slot, that meeting's own
-  # event is excluded, exactly as `Create` excludes it for a joining seat;
-  # the old meeting is not, since it keeps its time (and its other seats)
-  # whatever this seat does, and the move's own conflict check inside the
-  # seat transaction counts it too. Both refusals collapse to `:slot_taken`.
-  defp verify_calendar_free(old_meeting, new_times, config, guest_emails) do
+  # event is excluded, exactly as `Create` excludes it for a joining seat.
+  # The old meeting's event is excluded only when the mover is its last seat
+  # (see the module doc); with other seats on it, it keeps its time whatever
+  # this seat does. That read is unlocked: should someone join the old
+  # meeting meanwhile, the conflict check inside the seat transaction
+  # re-decides under the lock and counts the old meeting after all. Both
+  # refusals collapse to `:slot_taken`.
+  defp verify_calendar_free(old_meeting, participant, new_times, config, guest_emails) do
     slot = %{
       organizer_user_id: old_meeting.organizer_user_id,
       start_datetime: new_times.start_time,
@@ -161,7 +205,9 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
         1 + length(guest_emails)
       )
 
-    case CalendarCheck.enforce(slot, config, exclude: join_target) do
+    vacated = if last_live_seat?(old_meeting, participant), do: old_meeting
+
+    case CalendarCheck.enforce(slot, config, exclude: [join_target, vacated]) do
       :ok -> :ok
       {:error, _reason} -> {:error, :slot_taken}
     end
@@ -179,9 +225,33 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     |> new_slot_attrs(new_times, participant)
     |> GroupScheduling.book_seat(seat_request(participant, guest_emails, max_participants),
       also_lock: old_meeting.id,
-      on_booked: fn _booking -> cancel_old_seat(old_meeting, participant) end
+      exclude_from_conflicts: fn ->
+        if last_live_seat?(old_meeting, participant), do: old_meeting.uid
+      end,
+      on_booked: fn _booking -> vacate_old_seat(old_meeting, participant) end
     )
     |> handle_move(old_meeting, participant)
+  end
+
+  # Whether the mover is the old meeting's only live seat, so the move
+  # cancels the old meeting with it. Asked inside the seat transaction under
+  # the old meeting's row lock (`:also_lock`), where nobody can join or leave
+  # the old meeting before the move commits, so the old meeting is left out
+  # of the conflict check only when `vacate_old_seat/2` does cancel it.
+  defp last_live_seat?(old_meeting, participant) do
+    ParticipantQueries.count_live_for_meeting(old_meeting.id) == 1 and
+      match?({:ok, %{cancelled_at: nil}}, ParticipantQueries.get(participant.id))
+  end
+
+  # Runs inside the seat transaction: cancels the old seat, then the old
+  # meeting if that seat was its last. The outcome reaches `after_commit/3`
+  # as the booking's `:on_booked_result`. A failure to cancel an emptied old
+  # meeting rolls the whole move back: its time may already have been
+  # treated as free.
+  defp vacate_old_seat(old_meeting, participant) do
+    with {:ok, _cancelled_seat} <- cancel_old_seat(old_meeting, participant) do
+      SeatRelease.cancel_if_emptied(old_meeting)
+    end
   end
 
   # Runs inside the seat transaction, after the new seat is taken. The old
@@ -313,7 +383,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     # per organiser, and both slots are theirs.
     SeatEffects.broadcast_and_invalidate(old_meeting)
 
-    old_slot_freed? = release_old_meeting(old_meeting)
+    old_slot_freed? = finish_old_meeting(old_meeting, booked.on_booked_result)
 
     SeatEffects.schedule_calendar_job(booked.meeting, booked.created_meeting?)
 
@@ -332,27 +402,18 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     {:ok, booked}
   end
 
-  # If the move emptied the old meeting it is cancelled (calendar event
-  # deleted) and this returns `true`: the organiser's one email about the
-  # move then also says the old slot is empty and free. Otherwise the old
-  # event is refreshed so its attendee list drops the mover.
-  defp release_old_meeting(old_meeting) do
-    case SeatRelease.release(old_meeting) do
-      {:ok, :meeting_cancelled} ->
-        true
+  # If the move emptied the old meeting, it was cancelled with the move and
+  # its cancellation is finished here (calendar event deleted), returning
+  # `true`: the organiser's one email about the move then also says the old
+  # slot is empty and free. Otherwise the old event is refreshed so its
+  # attendee list drops the mover.
+  defp finish_old_meeting(_old_meeting, {:cancelled, cancelled_meeting}) do
+    Cancel.finalise_cancellation(cancelled_meeting)
+    true
+  end
 
-      {:ok, :seats_remain} ->
-        CalendarJobs.schedule_job(old_meeting, "update")
-        false
-
-      {:error, :release_check_failed} ->
-        # The emptiness check failed rather than the status transition, so
-        # the old meeting is still confirmed either way (its transaction
-        # rolled back) — refresh its calendar event the same as the
-        # `:seats_remain` case rather than leaving it stale. `SeatRelease`
-        # has already alerted on the check itself failing.
-        CalendarJobs.schedule_job(old_meeting, "update")
-        false
-    end
+  defp finish_old_meeting(old_meeting, :seats_remain) do
+    CalendarJobs.schedule_job(old_meeting, "update")
+    false
   end
 end
