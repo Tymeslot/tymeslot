@@ -246,11 +246,35 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
       assert {:error, :invalid_time_format} = result
     end
 
-    test "returns clear error when duration wraps past midnight", %{day: day} do
-      # 480 min (8h) starting at 20:00 wraps to 04:00 next day
-      result = AvailabilityActions.add_quick_break(day.id, "20:00", 480)
+    test "refuses a quick break that runs past the end of a same-day window", %{day: day} do
+      # day: 09:00-17:00, as create_profile_with_day/0 creates it
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               AvailabilityActions.add_quick_break(day.id, "16:30", 60)
 
-      assert {:error, "Break duration extends past end of day"} = result
+      assert "cannot be after work hours" in errors_on(changeset).end_time
+    end
+
+    test "refuses a quick break that wraps past midnight in a same-day window", %{day: day} do
+      # 480 min (8h) starting at 20:00 wraps to 04:00, before the start
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               AvailabilityActions.add_quick_break(day.id, "20:00", 480)
+
+      assert "must be after start time" in errors_on(changeset).end_time
+    end
+
+    test "accepts a quick break that crosses midnight inside an overnight window", %{
+      schedule: schedule
+    } do
+      {:ok, night} =
+        WeeklySchedule.upsert_day_availability(schedule.id, 6, %{
+          is_available: true,
+          start_time: ~T[22:00:00],
+          end_time: ~T[04:00:00],
+          ends_next_day: true
+        })
+
+      assert {:ok, break} = AvailabilityActions.add_quick_break(night.id, "23:30", 60)
+      assert {break.start_time, break.end_time} == {~T[23:30:00], ~T[00:30:00]}
     end
   end
 
