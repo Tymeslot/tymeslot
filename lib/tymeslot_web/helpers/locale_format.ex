@@ -375,6 +375,18 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   end
 
   @doc """
+  `format_short_date/2` with the year, for compact table cells.
+  - en: Feb 5, 2026
+  - de: 5. Feb 2026
+  - fr: 5 févr. 2026
+  - pt: 5 de fev de 2026
+  """
+  @spec format_short_date_with_year(Calendar.date(), String.t()) :: String.t()
+  def format_short_date_with_year(date, locale) do
+    with_year(format_short_date(date, locale), date.year, locale)
+  end
+
+  @doc """
   `format_short_date/2` led by the abbreviated weekday.
   - en: Mon Feb 5
   - de: Mo 5. Feb
@@ -415,8 +427,8 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   end
 
   @doc """
-  Formats a datetime as a full weekday-led date beside its clock time:
-  "Monday, 5 April 2026 · 14:30".
+  Formats a datetime as `format_weekday_date/2` beside its clock time:
+  "Monday, April 5, 2026 · 02:30 PM", "Montag, 5. April 2026 · 14:30".
 
   Shared by the attendee-facing surfaces that show a single meeting's slot (the
   guest RSVP page and the host's request review page). A guest is an attendee,
@@ -425,16 +437,8 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   """
   @spec format_weekday_datetime(Calendar.datetime(), String.t()) :: String.t()
   def format_weekday_datetime(datetime, locale) do
-    weekday = format_weekday_name(Date.day_of_week(datetime), locale, :full)
-    month = format_month_name(datetime.month, locale, :full)
-
-    "#{weekday}, #{weekday_date(datetime.day, month, datetime.year, locale)} · #{format_time(datetime, locale)}"
+    "#{format_weekday_date(datetime, locale)} · #{format_time(datetime, locale)}"
   end
-
-  # Portuguese cannot drop the linking "de" ("5 abril 2026" is ungrammatical).
-  # Every other locale keeps the bare order this function has always rendered.
-  defp weekday_date(day, month, year, "pt"), do: "#{day} de #{month} de #{year}"
-  defp weekday_date(day, month, year, _locale), do: "#{day} #{month} #{year}"
 
   @doc """
   Formats a number according to locale conventions, to `decimals` decimal

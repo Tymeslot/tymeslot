@@ -74,9 +74,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.PaymentsTable do
   defp connect_account_deleted?(_account), do: false
 
   defp format_payment_date(inserted_at) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-    month = LocaleFormat.format_month_name(inserted_at.month, locale, :short)
-    "#{inserted_at.day} #{month} #{inserted_at.year}"
+    LocaleFormat.format_short_date_with_year(inserted_at, Gettext.get_locale(TymeslotWeb.Gettext))
   end
 
   defp format_status("paid"), do: dgettext("dashboard_payments", "Paid")
