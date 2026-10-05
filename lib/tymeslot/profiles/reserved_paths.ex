@@ -37,6 +37,7 @@ defmodule Tymeslot.Profiles.ReservedPaths do
       extensions themes templates layouts components assets static media
       uploads downloads files images icons fonts scripts styles
       meeting meetings meeting-request schedule user users www home app
+      guest seat
     )
   end
 
