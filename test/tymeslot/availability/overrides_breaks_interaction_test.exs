@@ -212,8 +212,8 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
     end
 
     test "scenario E: available override with nil times falls through to weekly schedule, unavailable Saturday yields no slots" do
-      # BusinessHours.get_business_hours_in_timezone guards on
-      # `start_time != nil and end_time != nil` before using override times.
+      # BusinessHours.owner_windows/4 only takes an override's hours when both
+      # `start_time` and `end_time` are set.
       # A nil-time `available` override therefore falls through to `_no_override`
       # and consults the weekly schedule. When the weekly row marks the day
       # unavailable, the result must be an empty slot list — pinning the nil-guard

@@ -22,6 +22,7 @@ defmodule Tymeslot.Availability.Audit do
   alias Tymeslot.Availability.AvailabilityOverrideQueries
   alias Tymeslot.Availability.AvailabilityScheduleQueries
   alias Tymeslot.Availability.Calculate
+  alias Tymeslot.Availability.Reach
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Availability.TimeOffPeriodQueries
   alias Tymeslot.Availability.WeeklyAvailabilityQueries
@@ -104,13 +105,19 @@ defmodule Tymeslot.Availability.Audit do
     schedule = AvailabilityScheduleQueries.get_default(profile.id)
     schedule_id = schedule && schedule.id
 
+    # Padded by the engine's reach: a date's slots read the hours, time off
+    # and events of the days around it (an overnight window from the day
+    # before, a meeting running on into the next), so a horizon read to its
+    # exact edges would judge its first and last days on partial data.
+    {read_from, read_to} = padded(start_date, end_date)
+
     config =
       schedule
       |> Schedules.config(nil)
       |> Map.merge(%{duration_minutes: duration_minutes, owner_timezone: timezone})
-      |> Map.merge(prefetched(schedule_id, start_date, end_date))
+      |> Map.merge(prefetched(schedule_id, read_from, read_to))
 
-    range_events = CalendarEventQueries.in_range(integration_ids, {start_date, end_date})
+    range_events = CalendarEventQueries.in_range(integration_ids, {read_from, read_to})
 
     {:ok, month_view} =
       Calculate.range_availability(start_date, end_date, timezone, timezone, range_events, config)
@@ -129,6 +136,11 @@ defmodule Tymeslot.Availability.Audit do
       checked_days: Date.diff(end_date, start_date) + 1,
       disagreements: disagreements
     }
+  end
+
+  defp padded(start_date, end_date) do
+    reach = Reach.owner_days()
+    {Date.add(start_date, -reach), Date.add(end_date, reach)}
   end
 
   # Preloaded so the per-date walk below does not re-query. Left out entirely
@@ -153,7 +165,7 @@ defmodule Tymeslot.Availability.Audit do
   defp compare_one_date(date, month_view, integration_ids, config, timezone) do
     month_says = Map.get(month_view, Date.to_iso8601(date), false)
 
-    day_events = CalendarEventQueries.in_range(integration_ids, {date, date})
+    day_events = CalendarEventQueries.in_range(integration_ids, padded(date, date))
 
     {:ok, slots} =
       Calculate.available_slots(

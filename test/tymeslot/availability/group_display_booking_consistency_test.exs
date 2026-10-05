@@ -45,10 +45,10 @@ defmodule Tymeslot.Availability.GroupDisplayBookingConsistencyTest do
   end
 
   defp displayed_slots(ctx, events) do
-    {:ok, slots} =
-      Calculate.available_slots(ctx.date, 30, @timezone, @timezone, events, ctx.config)
+    {:ok, starts} =
+      Calculate.available_starts(ctx.date, 30, @timezone, @timezone, events, ctx.config)
 
-    GroupSlots.enrich_day_slots(slots, ctx.meeting_type, ctx.date, %{
+    GroupSlots.enrich_day_slots(starts, ctx.meeting_type, ctx.date, %{
       user_timezone: @timezone,
       owner_timezone: @timezone,
       events: events,

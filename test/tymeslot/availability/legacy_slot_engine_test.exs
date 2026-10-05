@@ -1,8 +1,8 @@
 defmodule Tymeslot.Availability.LegacySlotEngineTest do
   @moduledoc """
-  Pins `Tymeslot.Test.LegacySlotEngine` to the engine it copies. While this
-  passes, the oracle is a faithful record of what existing schedules offered,
-  and the properties that compare the new engine against it mean something.
+  Compares the slot engine with `Tymeslot.Test.LegacySlotEngine`, the frozen
+  copy of the engine as it stood before overnight windows, so that existing
+  schedules keep the slots they offered wherever the spec promises no change.
   """
 
   use ExUnit.Case, async: true
@@ -10,23 +10,32 @@ defmodule Tymeslot.Availability.LegacySlotEngineTest do
 
   @moduletag :availability
 
-  import Tymeslot.Test.ClockHelpers
   import Tymeslot.Test.SlotGridHelpers
 
-  alias Tymeslot.Availability.Calculate
   alias Tymeslot.Test.LegacySlotEngine
   alias Tymeslot.Test.ScheduleGenerators, as: Gen
 
-  # The real engine applies notice and the booking window against the clock,
-  # so the clock is frozen before every generated date and both rules are
-  # opened wide: the comparison is about the schedule alone.
-  setup do
-    freeze_clock(~U[2027-01-01 00:00:00Z])
-    on_exit(&unfreeze_clock/0)
-    :ok
-  end
+  # The spec promises identical offers wherever the booker's midnight cuts no
+  # window; where it does, the straddling slot and the realigned grid are the
+  # intended change (pinned by example in `SlotGridTest`). The new engine also
+  # lists only labels that resolve back to their own instant, which the old
+  # one did not guarantee in a fall-back hour, so the comparison is against
+  # those labels.
+  #
+  # Windows ending at 23:59 or 23:59:59 are generated as stored, unflagged:
+  # that is what existing schedules hold until the rewrite migration
+  # (Task 8A), and the new engine must read them exactly as the old one did
+  # (23:59:59 reads as 23:59, which changes no minute-aligned slot). What the
+  # rewrite itself changes is pinned separately, by
+  # `MidnightRewritePropertyTest`.
+  #
+  # Only runs where the old engine listed something are counted towards the
+  # floor below: an empty day on both sides compares nothing.
+  @compared :legacy_property_compared
 
-  property "the oracle offers exactly what the engine offers" do
+  property "existing schedules keep their slots wherever the booker's midnight cuts no window" do
+    Process.put(@compared, 0)
+
     check all(
             date <- Gen.date(),
             owner_tz <- Gen.zone(),
@@ -36,23 +45,59 @@ defmodule Tymeslot.Availability.LegacySlotEngineTest do
             days <- Gen.week(Gen.legacy_window()),
             overrides <- Gen.overrides(date, Gen.legacy_window()),
             time_off <- Gen.time_off(date),
-            max_runs: 400
+            max_runs: 3_000
           ) do
       config =
         pure_config(days: days, overrides: overrides, time_off: time_off, interval: interval)
 
-      {:ok, engine} =
-        Calculate.available_slots(
-          date,
-          duration,
-          user_tz,
-          owner_tz,
-          [],
-          Map.merge(config, %{min_advance_hours: 0, max_advance_booking_days: 3650})
-        )
+      unless LegacySlotEngine.cuts_window?(date, owner_tz, user_tz, config) do
+        legacy = LegacySlotEngine.round_trip_slots(date, duration, owner_tz, user_tz, config)
+        if legacy != [], do: Process.put(@compared, Process.get(@compared) + 1)
 
-      assert LegacySlotEngine.slots(date, duration, owner_tz, user_tz, config) == engine
+        assert labels(date, duration, owner_tz, user_tz, config) == legacy
+      end
     end
+
+    assert Process.get(@compared) > 300, "too few runs compared any slot; the generators drifted"
+  end
+
+  # Where the booker's midnight does cut a window, the spec promises a pure
+  # addition when the interval divides the hour: the old engine restarted the
+  # grid at the booker's midnight but aligned it on the owner's clock, which
+  # is the same lattice the window's own grid steps along, and it only ever
+  # dropped the slot that ran past the booker's midnight. So every slot the
+  # old engine listed is still listed. A nil interval or one of 45, 90 or 120
+  # minutes moves later starts instead (spec example 4), so those runs are
+  # left out.
+  @cut_compared :legacy_cut_property_compared
+
+  property "where the booker's midnight cuts a window, an interval that divides the hour only adds slots" do
+    Process.put(@cut_compared, 0)
+
+    check all(
+            date <- Gen.date(),
+            owner_tz <- Gen.zone(),
+            user_tz <- Gen.zone(),
+            duration <- Gen.duration(),
+            interval <- member_of([15, 30, 60]),
+            days <- Gen.week(Gen.legacy_window()),
+            overrides <- Gen.overrides(date, Gen.legacy_window()),
+            time_off <- Gen.time_off(date),
+            max_runs: 1_500
+          ) do
+      config =
+        pure_config(days: days, overrides: overrides, time_off: time_off, interval: interval)
+
+      if LegacySlotEngine.cuts_window?(date, owner_tz, user_tz, config) do
+        legacy = LegacySlotEngine.round_trip_slots(date, duration, owner_tz, user_tz, config)
+        if legacy != [], do: Process.put(@cut_compared, Process.get(@cut_compared) + 1)
+
+        assert legacy -- labels(date, duration, owner_tz, user_tz, config) == []
+      end
+    end
+
+    assert Process.get(@cut_compared) > 200,
+           "too few runs compared any slot; the generators drifted"
   end
 
   test "the oracle is not vacuous: it offers slots and cuts windows at the booker's midnight" do

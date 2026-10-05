@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.Availability.OvernightHoursJourneyTest do
   alias Tymeslot.Availability.AvailabilityBreakSchema
   alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.Repo
+  alias Tymeslot.TestMocks
 
   setup :setup_dashboard_user
 
@@ -160,8 +161,6 @@ defmodule TymeslotWeb.Dashboard.Availability.OvernightHoursJourneyTest do
     assert {day.start_time, day.end_time, day.ends_next_day} == {~T[22:00:00], ~T[02:00:00], true}
   end
 
-  # Needs the slot engine to offer post-midnight slots (Task 6).
-  @tag :skip
   test "hours and a break set in the editor decide the night's slots on both dates",
        %{conn: conn, profile: profile} do
     {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
@@ -184,6 +183,7 @@ defmodule TymeslotWeb.Dashboard.Availability.OvernightHoursJourneyTest do
     |> render_submit()
 
     monday = next_monday()
+    TestMocks.stub_no_calendar_events()
 
     # Grid 22:00, 23:00, 00:00, 01:00; 01:00 overlaps the break, which sits on
     # Tuesday, so Tuesday keeps only 12:00 AM (ending as the break starts).

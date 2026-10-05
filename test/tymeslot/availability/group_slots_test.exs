@@ -11,6 +11,7 @@ defmodule Tymeslot.Availability.GroupSlotsTest do
   alias Ecto.UUID
   alias Tymeslot.Availability.Calculate
   alias Tymeslot.Availability.GroupSlots
+  alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.MeetingTypes
@@ -84,10 +85,12 @@ defmodule Tymeslot.Availability.GroupSlotsTest do
     %{uid: meeting.calendar_uid, start_time: meeting.start_time, end_time: meeting.end_time}
   end
 
-  defp base_slots(date, events, config) do
-    {:ok, slots} = Calculate.available_slots(date, 30, @timezone, @timezone, events, config)
-    slots
+  defp base_starts(date, events, config) do
+    {:ok, starts} = Calculate.available_starts(date, 30, @timezone, @timezone, events, config)
+    starts
   end
+
+  defp labels(starts), do: Enum.map(starts, &TimeSlots.format_datetime_slot/1)
 
   test "solo enrichment wraps slots with nil seat data" do
     assert GroupSlots.solo_slots(["11:00 AM", "11:30 AM"]) == [
@@ -97,14 +100,14 @@ defmodule Tymeslot.Availability.GroupSlotsTest do
   end
 
   test "an empty day offers full capacity on every slot", ctx do
-    slots = base_slots(ctx.date, [], ctx.config)
-    assert slots != []
+    starts = base_starts(ctx.date, [], ctx.config)
+    assert starts != []
 
     enriched =
-      GroupSlots.enrich_day_slots(slots, ctx.meeting_type, ctx.date, context([], ctx.config))
+      GroupSlots.enrich_day_slots(starts, ctx.meeting_type, ctx.date, context([], ctx.config))
 
     assert Enum.all?(enriched, &(&1.capacity == 3 and &1.seats_left == 3))
-    assert Enum.map(enriched, & &1.time) == slots
+    assert Enum.map(enriched, & &1.time) == labels(starts)
   end
 
   test "a partially filled meeting is joinable when the provider reports its own event id",
@@ -120,11 +123,11 @@ defmodule Tymeslot.Availability.GroupSlotsTest do
 
     events = [%{uid: "google-event-abc", start_time: start_time, end_time: meeting.end_time}]
 
-    slots = base_slots(ctx.date, events, ctx.config)
-    refute "11:00 AM" in slots
+    starts = base_starts(ctx.date, events, ctx.config)
+    refute "11:00 AM" in labels(starts)
 
     enriched =
-      GroupSlots.enrich_day_slots(slots, ctx.meeting_type, ctx.date, context(events, ctx.config))
+      GroupSlots.enrich_day_slots(starts, ctx.meeting_type, ctx.date, context(events, ctx.config))
 
     assert %{seats_left: 2, capacity: 3} = Enum.find(enriched, &(&1.time == "11:00 AM"))
   end
@@ -135,13 +138,13 @@ defmodule Tymeslot.Availability.GroupSlotsTest do
     %{meeting: meeting} = book_seat!(ctx, start_time, "one@example.com")
     events = [own_event(meeting)]
 
-    slots = base_slots(ctx.date, events, ctx.config)
+    starts = base_starts(ctx.date, events, ctx.config)
     # The meeting's own event hides its slot and the buffered neighbours.
-    refute "11:00 AM" in slots
-    refute "11:30 AM" in slots
+    refute "11:00 AM" in labels(starts)
+    refute "11:30 AM" in labels(starts)
 
     enriched =
-      GroupSlots.enrich_day_slots(slots, ctx.meeting_type, ctx.date, context(events, ctx.config))
+      GroupSlots.enrich_day_slots(starts, ctx.meeting_type, ctx.date, context(events, ctx.config))
 
     joinable = Enum.find(enriched, &(&1.time == "11:00 AM"))
     assert %{seats_left: 2, capacity: 3} = joinable
@@ -157,10 +160,10 @@ defmodule Tymeslot.Availability.GroupSlotsTest do
       book_seat!(ctx, start_time, "host@example.com", ["g1@example.com"])
 
     events = [own_event(meeting)]
-    slots = base_slots(ctx.date, events, ctx.config)
+    starts = base_starts(ctx.date, events, ctx.config)
 
     enriched =
-      GroupSlots.enrich_day_slots(slots, ctx.meeting_type, ctx.date, context(events, ctx.config))
+      GroupSlots.enrich_day_slots(starts, ctx.meeting_type, ctx.date, context(events, ctx.config))
 
     assert %{seats_left: 1} = Enum.find(enriched, &(&1.time == "11:00 AM"))
   end
@@ -173,12 +176,12 @@ defmodule Tymeslot.Availability.GroupSlotsTest do
 
     # Without the synced event the base pipeline still offers 11:00 AM; the
     # seat overlay must drop it.
-    no_event_slots = base_slots(ctx.date, [], ctx.config)
-    assert "11:00 AM" in no_event_slots
+    no_event_starts = base_starts(ctx.date, [], ctx.config)
+    assert "11:00 AM" in labels(no_event_starts)
 
     enriched =
       GroupSlots.enrich_day_slots(
-        no_event_slots,
+        no_event_starts,
         ctx.meeting_type,
         ctx.date,
         context([], ctx.config)
@@ -188,11 +191,11 @@ defmodule Tymeslot.Availability.GroupSlotsTest do
 
     # With the synced event it is hidden by the base pipeline and must not be
     # added back either.
-    with_event_slots = base_slots(ctx.date, [own_event(meeting)], ctx.config)
+    with_event_starts = base_starts(ctx.date, [own_event(meeting)], ctx.config)
 
     enriched_with_event =
       GroupSlots.enrich_day_slots(
-        with_event_slots,
+        with_event_starts,
         ctx.meeting_type,
         ctx.date,
         context([own_event(meeting)], ctx.config)
@@ -212,10 +215,10 @@ defmodule Tymeslot.Availability.GroupSlotsTest do
     }
 
     events = [own_event(meeting), external]
-    slots = base_slots(ctx.date, events, ctx.config)
+    starts = base_starts(ctx.date, events, ctx.config)
 
     enriched =
-      GroupSlots.enrich_day_slots(slots, ctx.meeting_type, ctx.date, context(events, ctx.config))
+      GroupSlots.enrich_day_slots(starts, ctx.meeting_type, ctx.date, context(events, ctx.config))
 
     refute Enum.any?(enriched, &(&1.time == "11:00 AM"))
   end
@@ -225,15 +228,56 @@ defmodule Tymeslot.Availability.GroupSlotsTest do
     start_time = slot_start(ctx.date, ~T[11:00:00])
     %{meeting: meeting} = book_seat!(ctx, start_time, "one@example.com")
     events = [own_event(meeting)]
-    slots = base_slots(ctx.date, events, ctx.config)
+    starts = base_starts(ctx.date, events, ctx.config)
 
     {:ok, lowered_type} =
       MeetingTypes.update_meeting_type(ctx.meeting_type, %{max_participants: 2})
 
     enriched =
-      GroupSlots.enrich_day_slots(slots, lowered_type, ctx.date, context(events, ctx.config))
+      GroupSlots.enrich_day_slots(starts, lowered_type, ctx.date, context(events, ctx.config))
 
     assert %{capacity: 2, seats_left: 1} = Enum.find(enriched, &(&1.time == "11:00 AM"))
+  end
+
+  test "a joinable meeting after midnight in an overnight window is offered under the date it starts on",
+       ctx do
+    night_date = ctx.date
+    next_date = Date.add(night_date, 1)
+
+    %{user: user, profile_id: profile_id, schedule_id: schedule_id} =
+      create_bookable_profile(
+        timezone: @timezone,
+        days: [Date.day_of_week(night_date)],
+        hours: %{
+          is_available: true,
+          start_time: ~T[22:00:00],
+          end_time: ~T[02:00:00],
+          ends_next_day: true
+        }
+      )
+
+    meeting_type = insert(:meeting_type, user: user, max_participants: 3, duration_minutes: 30)
+    night = %{ctx | user: user, meeting_type: meeting_type}
+    config = Map.merge(ctx.config, %{profile_id: profile_id, schedule_id: schedule_id})
+
+    %{meeting: meeting} =
+      book_seat!(night, slot_start(next_date, ~T[00:30:00]), "one@example.com")
+
+    events = [own_event(meeting)]
+
+    next_day =
+      next_date
+      |> base_starts(events, config)
+      |> GroupSlots.enrich_day_slots(meeting_type, next_date, context(events, config))
+
+    night_day =
+      night_date
+      |> base_starts(events, config)
+      |> GroupSlots.enrich_day_slots(meeting_type, night_date, context(events, config))
+
+    assert %{seats_left: 2, capacity: 3} = Enum.find(next_day, &(&1.time == "12:30 AM"))
+    assert "10:00 PM" in Enum.map(night_day, & &1.time)
+    refute "12:30 AM" in Enum.map(night_day, & &1.time)
   end
 
   test "overlay_range flips a day back to available when a joinable meeting exists", ctx do

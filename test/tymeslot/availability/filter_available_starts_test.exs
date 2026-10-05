@@ -1,6 +1,6 @@
-defmodule Tymeslot.Availability.FilterAvailableSlotsTest do
+defmodule Tymeslot.Availability.FilterAvailableStartsTest do
   @moduledoc """
-  Tests for Conflicts.filter_available_slots/6 — slot conflict detection and filtering.
+  Tests for Conflicts.filter_available_starts/5, slot conflict detection and filtering.
   """
 
   use ExUnit.Case, async: true
@@ -8,7 +8,9 @@ defmodule Tymeslot.Availability.FilterAvailableSlotsTest do
   @moduletag :availability
 
   alias Tymeslot.Availability.{Conflicts, Events}
+  alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Integrations.Calendar.CalendarEvent
+  alias Tymeslot.Utils.DateTimeUtils
 
   # Builds a timed CalendarEvent struct for use in tests that go through
   # the full pipeline (which expects CalendarEvent structs).
@@ -39,7 +41,7 @@ defmodule Tymeslot.Availability.FilterAvailableSlotsTest do
     }
   end
 
-  describe "filter_available_slots/6 - basic filtering" do
+  describe "filter_available_starts/5 - basic filtering" do
     test "returns all slots when no events" do
       slots = ["9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM"]
       events = []
@@ -97,7 +99,7 @@ defmodule Tymeslot.Availability.FilterAvailableSlotsTest do
     end
   end
 
-  describe "filter_available_slots/6 - transparency via CalendarEvent.blocking?/1" do
+  describe "filter_available_starts/5 - transparency via CalendarEvent.blocking?/1" do
     setup do
       date = Date.add(Date.utc_today(), 7)
       slots = ["9:00 AM", "10:00 AM", "11:00 AM"]
@@ -172,7 +174,7 @@ defmodule Tymeslot.Availability.FilterAvailableSlotsTest do
     end
   end
 
-  describe "filter_available_slots/6 - edge cases" do
+  describe "filter_available_starts/5 - edge cases" do
     test "handles empty slots list" do
       events = []
       date = Date.add(Date.utc_today(), 7)
@@ -223,7 +225,7 @@ defmodule Tymeslot.Availability.FilterAvailableSlotsTest do
   end
 
   describe "all-day events with CalendarEvent structs" do
-    test "filter_available_slots blocks slots when all-day event covers the date" do
+    test "filter_available_starts blocks slots when all-day event covers the date" do
       date = Date.add(Date.utc_today(), 7)
       slots = ["9:00 AM", "10:00 AM", "11:00 AM"]
 
@@ -248,7 +250,7 @@ defmodule Tymeslot.Availability.FilterAvailableSlotsTest do
       assert result == [], "All slots should be blocked by an all-day event"
     end
 
-    test "filter_available_slots handles mixed all-day and timed CalendarEvents" do
+    test "filter_available_starts handles mixed all-day and timed CalendarEvents" do
       date = Date.add(Date.utc_today(), 7)
       slots = ["9:00 AM", "2:00 PM"]
 
@@ -332,6 +334,44 @@ defmodule Tymeslot.Availability.FilterAvailableSlotsTest do
     end
   end
 
+  describe "instants" do
+    test "returns the surviving candidates themselves, not copies re-derived from labels" do
+      date = Date.add(Date.utc_today(), 7)
+      zone = "America/New_York"
+
+      starts =
+        for h <- [9, 10, 11],
+            do: DateTimeUtils.create_datetime_safe(date, Time.new!(h, 0, 0), zone)
+
+      events = [
+        %{start_time: Enum.at(starts, 1), end_time: DateTime.add(Enum.at(starts, 1), 30, :minute)}
+      ]
+
+      result =
+        Conflicts.filter_available_starts(starts, events, 30, zone, filter_opts(%{}))
+
+      assert result == [Enum.at(starts, 0), Enum.at(starts, 2)]
+    end
+
+    test "a start after the booker's midnight is judged against the event at that instant" do
+      date = Date.add(Date.utc_today(), 7)
+      late = DateTime.new!(Date.add(date, 1), ~T[00:30:00], "Etc/UTC")
+      before_midnight = DateTime.new!(date, ~T[23:30:00], "Etc/UTC")
+      events = [%{start_time: late, end_time: DateTime.add(late, 30, :minute)}]
+
+      result =
+        Conflicts.filter_available_starts(
+          [before_midnight, late],
+          events,
+          30,
+          "Etc/UTC",
+          filter_opts(%{})
+        )
+
+      assert result == [before_midnight]
+    end
+  end
+
   defp conflict_slots(buffer_minutes \\ 0) do
     slots = ["9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM"]
     date = Date.add(Date.utc_today(), 7)
@@ -344,18 +384,37 @@ defmodule Tymeslot.Availability.FilterAvailableSlotsTest do
     })
   end
 
+  # Builds the candidate instants from the labels each test lists on `date`,
+  # filters them, and returns the surviving labels.
   defp filter_slots(slots, events, overrides) do
+    slots
+    |> filter_starts(events, overrides)
+    |> Enum.map(&TimeSlots.format_datetime_slot/1)
+  end
+
+  defp filter_starts(slots, events, overrides) do
     duration = Map.get(overrides, :duration, 30)
     timezone = Map.get(overrides, :timezone, "Etc/UTC")
     date = Map.get(overrides, :date, Date.add(Date.utc_today(), 7))
+    starts = Enum.map(slots, &label_start(date, &1, timezone))
 
-    Conflicts.filter_available_slots(
-      slots,
+    Conflicts.filter_available_starts(
+      starts,
       events,
       duration,
       timezone,
-      date,
       filter_opts(Map.drop(overrides, [:duration, :timezone, :date]))
+    )
+  end
+
+  defp label_start(date, label, timezone) do
+    [_label, hour, minute, meridiem] = Regex.run(~r/^(\d+):(\d+) (AM|PM)$/, label)
+    hour = rem(String.to_integer(hour), 12) + if(meridiem == "PM", do: 12, else: 0)
+
+    DateTimeUtils.create_datetime_safe(
+      date,
+      Time.new!(hour, String.to_integer(minute), 0),
+      timezone
     )
   end
 

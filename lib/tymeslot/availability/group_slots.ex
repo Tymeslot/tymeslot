@@ -2,7 +2,7 @@ defmodule Tymeslot.Availability.GroupSlots do
   @moduledoc """
   Seat-aware slot enrichment for group meeting types.
 
-  `Calculate.available_slots/6` and `Calculate.range_availability/6` own
+  `Calculate.available_starts/6` and `Calculate.range_availability/6` own
   every timing rule: minimum notice, the booking window, and buffered
   event-conflict checking. This module never re-derives them; instead it
   tells `Calculate` which live meetings of this type still have a seat free
@@ -19,9 +19,10 @@ defmodule Tymeslot.Availability.GroupSlots do
       a seat on it adds no meeting row, so a cap the slot itself already
       counts towards must not hide it. A new slot is still limit-checked.
 
-  Slots are returned as `%{time: t, seats_left: n, capacity: c}` where `time`
-  is the existing display string (e.g. `"9:00 AM"`); solo meeting types carry
-  `seats_left: nil, capacity: nil`.
+  Slots are built from the engine's instants (`Calculate.available_starts/6`)
+  and returned as `%{time: t, seats_left: n, capacity: c}`, where `time` is
+  the start's display label (e.g. `"9:00 AM"`), listed under the date the
+  start falls on; solo meeting types carry `seats_left: nil, capacity: nil`.
   """
 
   alias Tymeslot.Availability.Calculate
@@ -58,17 +59,18 @@ defmodule Tymeslot.Availability.GroupSlots do
   def solo_slots(slots), do: Enum.map(slots, &%{time: &1, seats_left: nil, capacity: nil})
 
   @doc """
-  Enriches one day's filtered slot list for a meeting type.
+  Enriches one day's bookable starts (the booker's `date`, as returned by
+  `Calculate.available_starts/6`) for a meeting type.
 
-  Solo (or unknown) types pass through `solo_slots/1`; group types get the
-  seat overlay described in the module doc.
+  Solo (or unknown) types are labelled and passed through `solo_slots/1`;
+  group types get the seat overlay described in the module doc.
   """
-  @spec enrich_day_slots([String.t()], map() | nil, Date.t(), overlay_context()) :: [slot()]
-  def enrich_day_slots(slots, meeting_type, date, context) do
+  @spec enrich_day_slots([DateTime.t()], map() | nil, Date.t(), overlay_context()) :: [slot()]
+  def enrich_day_slots(starts, meeting_type, date, context) do
     if MeetingTypeSchema.group?(meeting_type) do
-      enrich_group_day(slots, meeting_type, date, context)
+      enrich_group_day(starts, meeting_type, date, context)
     else
-      solo_slots(slots)
+      starts |> Enum.map(&TimeSlots.format_datetime_slot/1) |> solo_slots()
     end
   end
 
@@ -166,27 +168,25 @@ defmodule Tymeslot.Availability.GroupSlots do
 
   # --- Group day enrichment ---
 
-  defp enrich_group_day(slots, meeting_type, date, context) do
+  defp enrich_group_day(starts, meeting_type, date, context) do
     {from_utc, to_utc} = utc_window(date, date, context.user_timezone)
     slot_ctx = slot_context(meeting_type, from_utc, to_utc)
 
-    (slots ++ joinable_slots(meeting_type, date, context, slot_ctx.joinable))
-    |> Enum.uniq()
-    |> Enum.map(fn slot ->
-      start_time = slot_start_utc(date, slot, context.user_timezone)
+    (starts ++ joinable_starts(meeting_type, date, context, slot_ctx.joinable))
+    |> Enum.uniq_by(&DateTime.to_unix/1)
+    |> Enum.sort(DateTime)
+    |> Enum.map(fn start ->
+      key = meeting_key(start)
       # An existing meeting carries its own capacity (kept in step with the
       # type by `MeetingTypes.update_meeting_type/3`); a slot with no meeting
       # yet takes the type's current value, which is what a new meeting would
       # be created with.
-      capacity = Map.get(slot_ctx.capacities, start_time, meeting_type.max_participants)
+      capacity = Map.get(slot_ctx.capacities, key, meeting_type.max_participants)
+      seats_left = Map.get(slot_ctx.seats_left, key, meeting_type.max_participants)
 
-      seats_left =
-        Map.get(slot_ctx.seats_left, start_time, meeting_type.max_participants)
-
-      %{time: slot, seats_left: seats_left, capacity: capacity}
+      %{time: TimeSlots.format_datetime_slot(start), seats_left: seats_left, capacity: capacity}
     end)
     |> Enum.filter(&(&1.seats_left > 0))
-    |> Enum.sort_by(&TimeSlots.parse_time_slot(&1.time), Time)
   end
 
   defp live_meetings(meeting_type, from_utc, to_utc),
@@ -215,11 +215,11 @@ defmodule Tymeslot.Availability.GroupSlots do
   # Re-runs the day's slot calculation with any joinable-by-seats meeting's
   # own event ignored, so its slot passes the same notice/window/buffer
   # checks as everything else instead of a second, hand-rolled copy of them.
-  defp joinable_slots(_meeting_type, _date, _context, []), do: []
+  defp joinable_starts(_meeting_type, _date, _context, []), do: []
 
-  defp joinable_slots(meeting_type, date, context, joinable) do
-    {:ok, slots} =
-      Calculate.available_slots(
+  defp joinable_starts(meeting_type, date, context, joinable) do
+    {:ok, starts} =
+      Calculate.available_starts(
         date,
         meeting_type.duration_minutes,
         context.user_timezone,
@@ -228,8 +228,11 @@ defmodule Tymeslot.Availability.GroupSlots do
         joinable_config(context.config, joinable)
       )
 
-    slots
+    starts
   end
+
+  # Meetings are keyed by their stored start: UTC, whole seconds.
+  defp meeting_key(start), do: start |> DateTime.shift_zone!(@utc) |> DateTime.truncate(:second)
 
   defp utc_window(start_date, end_date, user_timezone) do
     from_local = DateTimeUtils.create_datetime_safe(start_date, ~T[00:00:00], user_timezone)
@@ -241,14 +244,5 @@ defmodule Tymeslot.Availability.GroupSlots do
       DateTime.shift_zone!(from_local, @utc),
       to_local |> DateTime.add(-1, :second) |> DateTime.shift_zone!(@utc)
     }
-  end
-
-  defp slot_start_utc(date, slot, user_timezone) do
-    time = TimeSlots.parse_time_slot(slot)
-
-    date
-    |> DateTimeUtils.create_datetime_safe(time, user_timezone)
-    |> DateTime.shift_zone!(@utc)
-    |> DateTime.truncate(:second)
   end
 end

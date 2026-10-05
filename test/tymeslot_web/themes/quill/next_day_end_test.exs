@@ -65,9 +65,6 @@ defmodule TymeslotWeb.Themes.Quill.NextDayEndTest do
     profile
   end
 
-  # Skipped until Task 5 (the engine offering a window that ends the next day)
-  # and Task 4 (the ends_next_day field) land; remove the tag then.
-  @tag :skip
   @tag :capture_log
   test "names the end of a meeting that runs past midnight", %{conn: conn} do
     profile = host([start_time: ~T[23:00:00], end_time: ~T[01:00:00], ends_next_day: true], 120)

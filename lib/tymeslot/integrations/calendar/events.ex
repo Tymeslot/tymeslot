@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   configured behaviour module (defaults to `Calendar.Operations`).
   """
 
+  alias Tymeslot.Availability.Reach
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
@@ -32,6 +33,10 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   # Failures a later replay cannot recover: queueing them would only keep a
   # dead row in the offline queue.
   @non_queueable_errors [:unauthorized, :not_found, :meeting_not_found, :rate_limited]
+
+  # A meeting booked on the last bookable date can run for up to a day past
+  # it, plus its after-buffer, so the fetch reaches that much further.
+  @meeting_reach_days Reach.meeting_days()
 
   @type user_id :: pos_integer()
   @type integration_id :: pos_integer()
@@ -540,11 +545,11 @@ defmodule Tymeslot.Integrations.Calendar.Events do
     case profile_result do
       {:ok, profile} ->
         today = Date.utc_today()
-        {today, Date.add(today, booking_window_days(profile))}
+        {today, Date.add(today, booking_window_days(profile) + @meeting_reach_days)}
 
       {:error, _reason} ->
         today = Date.utc_today()
-        {today, Date.add(today, 30)}
+        {today, Date.add(today, 30 + @meeting_reach_days)}
     end
   end
 

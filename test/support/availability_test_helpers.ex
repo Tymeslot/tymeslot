@@ -20,7 +20,9 @@ defmodule Tymeslot.AvailabilityTestHelpers do
   }
 
   # Narrower window (11:00–17:00) used by the display/booking consistency tests;
-  # deliberately away from the day boundary so timezone conversions never clip.
+  # deliberately away from the day boundary so a booker's midnight never cuts
+  # the window, which keeps the existing property about rules rather than day
+  # boundaries; `OvernightDisplayBookingPropertyTest` covers those.
   @bookable_day_attrs %{
     is_available: true,
     start_time: ~T[11:00:00],

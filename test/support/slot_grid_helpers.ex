@@ -8,6 +8,8 @@ defmodule Tymeslot.Test.SlotGridHelpers do
   are absent, so a config built here keeps every lookup in memory.
   """
 
+  alias Tymeslot.Availability.{SlotGrid, TimeSlots}
+
   @schedule_id 1
 
   @typedoc "One weekday: `%{day_of_week:, start_time:, end_time:}` plus optional `:ends_next_day`, `:breaks`, `:is_available`."
@@ -33,6 +35,13 @@ defmodule Tymeslot.Test.SlotGridHelpers do
   @doc "The same hours on all seven weekdays."
   @spec every_day(map()) :: [day_attrs()]
   def every_day(attrs), do: for(day <- 1..7, do: Map.put(attrs, :day_of_week, day))
+
+  @doc "The labels `SlotGrid` lists on `date` for the booker, schedule rules only."
+  @spec labels(Date.t(), pos_integer(), String.t(), String.t(), map()) :: [String.t()]
+  def labels(date, duration, owner_tz, user_tz, config) do
+    {:ok, starts} = SlotGrid.starts_for_date(date, duration, owner_tz, user_tz, config)
+    Enum.map(starts, &TimeSlots.format_datetime_slot/1)
+  end
 
   defp day(attrs) do
     Map.merge(%{is_available: true, ends_next_day: false, breaks: []}, attrs)

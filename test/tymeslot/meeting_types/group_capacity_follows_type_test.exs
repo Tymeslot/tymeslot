@@ -19,6 +19,7 @@ defmodule Tymeslot.MeetingTypes.GroupCapacityFollowsTypeTest do
   alias Ecto.UUID
   alias Tymeslot.Availability.Calculate
   alias Tymeslot.Availability.GroupSlots
+  alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Bookings.RescheduleSeat
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.Guests
@@ -129,8 +130,10 @@ defmodule Tymeslot.MeetingTypes.GroupCapacityFollowsTypeTest do
 
       # Even before the booking's calendar event has synced (no events at
       # all), the slot is not offered with seats.
-      {:ok, slots} = Calculate.available_slots(ctx.date, 30, @timezone, @timezone, [], ctx.config)
-      assert "11:00 AM" in slots
+      {:ok, starts} =
+        Calculate.available_starts(ctx.date, 30, @timezone, @timezone, [], ctx.config)
+
+      assert "11:00 AM" in Enum.map(starts, &TimeSlots.format_datetime_slot/1)
 
       context = %{
         user_timezone: @timezone,
@@ -139,7 +142,7 @@ defmodule Tymeslot.MeetingTypes.GroupCapacityFollowsTypeTest do
         config: ctx.config
       }
 
-      enriched = GroupSlots.enrich_day_slots(slots, group_type, ctx.date, context)
+      enriched = GroupSlots.enrich_day_slots(starts, group_type, ctx.date, context)
       refute Enum.any?(enriched, &(&1.time == "11:00 AM"))
 
       assert {:error, :slot_full} =
@@ -255,8 +258,8 @@ defmodule Tymeslot.MeetingTypes.GroupCapacityFollowsTypeTest do
         end_time: meeting.end_time
       }
 
-      {:ok, slots} =
-        Calculate.available_slots(ctx.date, 30, @timezone, @timezone, [event], ctx.config)
+      {:ok, starts} =
+        Calculate.available_starts(ctx.date, 30, @timezone, @timezone, [event], ctx.config)
 
       context = %{
         user_timezone: @timezone,
@@ -266,7 +269,7 @@ defmodule Tymeslot.MeetingTypes.GroupCapacityFollowsTypeTest do
       }
 
       refute Enum.any?(
-               GroupSlots.enrich_day_slots(slots, solo_type, ctx.date, context),
+               GroupSlots.enrich_day_slots(starts, solo_type, ctx.date, context),
                &(&1.time == "11:00 AM")
              )
 
