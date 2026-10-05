@@ -61,6 +61,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
     |> Component.assign(:timezone_search, "")
     |> Component.assign(:page_title, dgettext("onboarding_wizard", "Welcome"))
     |> Component.assign(:form_errors, %{})
+    |> Component.assign(:rejected_inputs, %{})
     |> Component.assign(:custom_input_mode, CustomInputModeHelper.default_custom_mode())
     |> Component.assign(:calendar_state, :selecting)
     |> Component.assign(:calendar_choice, nil)

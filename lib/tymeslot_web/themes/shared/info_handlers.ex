@@ -16,7 +16,6 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   alias TymeslotWeb.Live.Scheduling.NextAvailable
   alias TymeslotWeb.Themes.Shared.BookingFlow
   alias TymeslotWeb.Themes.Shared.BookingLocation
-  alias TymeslotWeb.Themes.Shared.CalendarDownload
   alias TymeslotWeb.Themes.Shared.GuestBooking
 
   @doc """
@@ -282,8 +281,8 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
         socket =
           socket
           |> assign(:meeting_uid, meeting.uid)
+          |> assign(:seat_calendar_url, nil)
           |> BookingLocation.assign_booked(meeting)
-          |> CalendarDownload.assign_booked(meeting, meeting.attendee_email)
           |> assign(:name, meeting.attendee_name)
           |> assign(:email, meeting.attendee_email)
 

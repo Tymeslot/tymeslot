@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
   alias TymeslotWeb.Themes.Shared.BookingLocation
+  alias TymeslotWeb.Themes.Shared.CalendarDownload
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.LocationField
@@ -211,8 +212,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
 
               <div class="confirmation-actions-section">
                 <a
-                  :if={@calendar_ics_path}
-                  href={@calendar_ics_path}
+                  :if={CalendarDownload.href(assigns)}
+                  href={CalendarDownload.href(assigns)}
                   download
                   class="action-button-primary action-button-secondary calendar-download-button"
                   data-testid="add-to-calendar"

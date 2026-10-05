@@ -566,3 +566,13 @@ msgstr "To miejsce jest już anulowane"
 #, elixir-autogen, elixir-format
 msgid "Your spot can no longer be cancelled online. Please contact the host directly."
 msgstr "Twojego miejsca nie można już anulować online. Skontaktuj się bezpośrednio z gospodarzem."
+
+#: lib/tymeslot_web/themes/core/meeting_management.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting could not be cancelled. Please try again."
+msgstr "Nie udało się odwołać spotkania. Spróbuj ponownie."
+
+#: lib/tymeslot_web/themes/core/meeting_management.ex
+#, elixir-autogen, elixir-format
+msgid "This is a group session, so it cannot be changed from this link. To cancel or move your spot, use the links in your confirmation email."
+msgstr "To sesja grupowa, więc nie można jej zmienić za pomocą tego linku. Aby odwołać lub przenieść rezerwację miejsca, użyj linków z e-maila z potwierdzeniem."

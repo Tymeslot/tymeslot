@@ -174,9 +174,11 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
     end
   end
 
-  defp normalize_email(nil), do: nil
+  @doc "An email address as a participant row stores it: trimmed and lower-cased."
+  @spec normalize_email(String.t() | nil) :: String.t() | nil
+  def normalize_email(nil), do: nil
 
-  defp normalize_email(email) when is_binary(email) do
+  def normalize_email(email) when is_binary(email) do
     email |> String.trim() |> String.downcase()
   end
 

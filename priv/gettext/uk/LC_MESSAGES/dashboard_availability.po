@@ -810,16 +810,6 @@ msgstr "Розклади"
 
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
-msgid "After each meeting"
-msgstr "Після кожної зустрічі"
-
-#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
-#, elixir-autogen, elixir-format
-msgid "Before each meeting"
-msgstr "Перед кожною зустріччю"
-
-#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
-#, elixir-autogen, elixir-format
 msgid "Buffer Time"
 msgstr "Перерви"
 
@@ -845,13 +835,8 @@ msgstr "Перерву перед зустрічами оновлено: %{minut
 
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
-msgid "Preparation time kept free before each booking."
-msgstr "Час на підготовку, що залишається вільним перед кожним бронюванням."
-
-#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
-#, elixir-autogen, elixir-format
-msgid "Wrap-up time kept free after each booking."
-msgstr "Час на завершення, що залишається вільним після кожного бронювання."
+msgid "A new booking can start this long after your previous meeting ends, at the earliest."
+msgstr "Нове бронювання може розпочатися щонайраніше через стільки часу після завершення вашої попередньої зустрічі."
 
 #: lib/tymeslot/availability/input_validation.ex
 #, elixir-autogen, elixir-format
@@ -867,3 +852,18 @@ msgstr "Закінчується наступного дня"
 #, elixir-autogen, elixir-format
 msgid "Hours that end the next day can last at most 24 hours"
 msgstr "Години, що закінчуються наступного дня, можуть тривати щонайбільше 24 години"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "A new booking must end at least this long before your next meeting starts."
+msgstr "Нове бронювання має завершитися щонайменше за стільки часу до початку вашої наступної зустрічі."
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "After a new booking"
+msgstr "Після нового бронювання"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Before a new booking"
+msgstr "Перед новим бронюванням"

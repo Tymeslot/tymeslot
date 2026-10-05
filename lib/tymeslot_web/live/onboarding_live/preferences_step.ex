@@ -16,13 +16,17 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   alias TymeslotWeb.OnboardingLive.TextHelpers
 
   @doc """
-  Renders the buffer step: a row for the time kept free before each booking,
-  and one for the time kept free after it. Both sit in one form, so the step's
-  change event carries whichever row was edited.
+  Renders the buffer step: a row for the free time a new booking needs before
+  it, and one for the free time it needs after it. Both sit in one form, so
+  every change event carries both rows' current values.
   """
   attr :buffer_before_minutes, :integer, required: true
   attr :buffer_after_minutes, :integer, required: true
   attr :form_errors, :map, required: true
+
+  attr :rejected_inputs, :map,
+    default: %{},
+    doc: "the value last typed into a field and refused, keyed by field, shown beside its error"
 
   attr :custom_input_mode, :map,
     default: %{
@@ -52,6 +56,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
         aria_label={dgettext("onboarding_wizard", "Custom buffer before, in minutes")}
         value={@buffer_before_minutes}
         form_errors={@form_errors}
+        rejected_inputs={@rejected_inputs}
         custom_input_mode={@custom_input_mode}
       />
 
@@ -62,6 +67,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
         aria_label={dgettext("onboarding_wizard", "Custom buffer after, in minutes")}
         value={@buffer_after_minutes}
         form_errors={@form_errors}
+        rejected_inputs={@rejected_inputs}
         custom_input_mode={@custom_input_mode}
       />
     </form>
@@ -74,13 +80,17 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   attr :aria_label, :string, required: true
   attr :value, :integer, required: true
   attr :form_errors, :map, required: true
+  attr :rejected_inputs, :map, required: true
   attr :custom_input_mode, :map, required: true
 
+  # A refused value stays in the input beside its error until the field is
+  # saved, so the error always describes the value the field shows.
   defp buffer_row(assigns) do
     assigns =
       assign(assigns,
         param: Atom.to_string(assigns.field),
-        custom_mode: Map.get(assigns.custom_input_mode, assigns.field, false)
+        custom_mode: Map.get(assigns.custom_input_mode, assigns.field, false),
+        input_value: Map.get(assigns.rejected_inputs, assigns.field, assigns.value)
       )
 
     ~H"""
@@ -105,7 +115,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
 
         <.custom_input_toggle
           field_name={@param}
-          current_value={@value}
+          current_value={@input_value}
           preset_values={CustomInputModeHelper.presets(@field)}
           constraints={StepConfig.buffer_constraints()}
           style_variant="primary"
@@ -250,7 +260,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   end
 
   attr :field_name, :string, required: true
-  attr :current_value, :integer, required: true
+  attr :current_value, :any, required: true, doc: "the saved value, or a refused one as typed"
   attr :preset_values, :list, required: true
   attr :constraints, :map, required: true
   attr :style_variant, :string, required: true

@@ -14,6 +14,18 @@ defmodule Tymeslot.Repo.Migrations.SplitAvailabilityScheduleBuffers do
   clamps them into 0..120 before the range constraints are added, which is
   what lets those constraints be created over existing rows.
 
+  This is the expand half of an expand/contract change: `buffer_minutes`
+  stays in place, unread, so the previous release keeps working against this
+  schema. Its schema selects the column on every slot calculation, so it must
+  exist for an image rolled back without running `down/0`, and for the
+  previous release still serving requests while a zero-downtime deploy
+  overlaps the two. The column keeps its `NOT NULL DEFAULT 15`, so inserts
+  from this release, which no longer set it, still succeed. Nothing keeps it
+  in sync with the new pair: an image rollback sees each schedule's buffer as
+  it stood at upgrade time (15 for schedules created since), the same
+  trade-off the theme settings migration made. The column is dropped in a
+  later release.
+
   Rolling back keeps the larger of the two buffers, so a schedule never
   offers a slot after rollback that its asymmetric pair would have refused.
   """
@@ -25,10 +37,10 @@ defmodule Tymeslot.Repo.Migrations.SplitAvailabilityScheduleBuffers do
   # Migrations run offline: start.sh executes them in a one-shot VM before
   # Phoenix starts, so no request contends for the locks. The defaults are
   # constants, which Postgres 11+ records in the catalogue without rewriting
-  # the table. The raw SQL is the single backfill UPDATE below, and every row
-  # satisfies the range constraints by the time they are created. The old
-  # column is removed only after its values are copied out, and nothing in
-  # the application reads it from this release on.
+  # the table. The raw SQL is the backfill UPDATE in each direction, and every
+  # row satisfies the range constraints by the time they are created. Only
+  # `down/0` removes columns, the two this migration added, after their
+  # values are folded back into `buffer_minutes`; `up/0` removes nothing.
 
   def up do
     alter table(:availability_schedules) do
@@ -54,14 +66,14 @@ defmodule Tymeslot.Repo.Migrations.SplitAvailabilityScheduleBuffers do
       )
     )
 
-    alter table(:availability_schedules) do
-      remove(:buffer_minutes)
-    end
+    # `buffer_minutes` is deliberately left in place; see the moduledoc.
   end
 
   def down do
+    # Restores the column on a database that ran the earlier draft of this
+    # migration, which dropped it; a no-op everywhere else.
     alter table(:availability_schedules) do
-      add(:buffer_minutes, :integer, null: false, default: 15)
+      add_if_not_exists(:buffer_minutes, :integer, null: false, default: 15)
     end
 
     execute("""
