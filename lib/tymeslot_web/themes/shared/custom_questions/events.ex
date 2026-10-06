@@ -10,7 +10,8 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Events do
   The events are `answer`, `multi_toggle`, `next_step` and `back_step` (the
   canonical navigation names every step uses, `Shared.StepEvents`), plus a
   theme's own `theme:<name>` events, relayed untouched; anything else is
-  dropped with a warning.
+  dropped with a warning. Events are relayed under the moment the component
+  renders (`StepEvents.moment/1`), `:questions` when it has none.
   """
 
   import Phoenix.Component, only: [assign: 3]
@@ -27,7 +28,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Events do
     id = definition["id"]
     raw = Map.get(params, "value", params)
     value = AnswerNormaliser.normalise(raw, definition["type"])
-    send(self(), {:step_event, :questions, :answer, {id, value}})
+    send(self(), {:step_event, moment(socket), :answer, {id, value}})
     {:noreply, socket}
   end
 
@@ -36,23 +37,23 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Events do
     id = Engine.current_definition(engine)["id"]
     current = Map.get(engine.answers, id) || []
     next = if key in current, do: List.delete(current, key), else: [key | current]
-    send(self(), {:step_event, :questions, :answer, {id, next}})
+    send(self(), {:step_event, moment(socket), :answer, {id, next}})
     {:noreply, socket}
   end
 
   def handle_event("next_step", _params, socket) do
-    send(self(), {:step_event, :questions, :next_step, nil})
+    send(self(), {:step_event, moment(socket), :next_step, nil})
     {:noreply, socket}
   end
 
   def handle_event("back_step", _params, socket) do
-    send(self(), {:step_event, :questions, :back_step, nil})
+    send(self(), {:step_event, moment(socket), :back_step, nil})
     {:noreply, socket}
   end
 
   # A theme's own event, relayed untouched like `Shared.StepEvents` does.
   def handle_event("theme:" <> _name = event, params, socket) do
-    send(self(), {:step_event, :questions, event, params})
+    send(self(), {:step_event, moment(socket), event, params})
     {:noreply, socket}
   end
 
@@ -60,8 +61,14 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Events do
   # a public page. It leaves a warning, since it means a template sends a
   # name this step does not know.
   def handle_event(event, _params, socket) do
-    StepEvents.log_ignored(socket.assigns, :questions, event)
+    StepEvents.log_ignored(socket.assigns, moment(socket), event)
     {:noreply, socket}
+  end
+
+  # The questions component's moment; `:questions`, the classic journey's,
+  # when it was rendered without one.
+  defp moment(socket) do
+    StepEvents.moment(socket.assigns) || :questions
   end
 
   @spec assign_render_state(Phoenix.LiveView.Socket.assigns()) ::

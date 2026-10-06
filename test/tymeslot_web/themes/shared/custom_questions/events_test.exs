@@ -28,6 +28,13 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.EventsTest do
     assert_received {:step_event, :questions, :back_step, nil}
   end
 
+  test "relays under the moment the page gives the questions component" do
+    socket = %Socket{assigns: %{__changed__: %{}, moment: :ask}}
+
+    assert {:noreply, _socket} = Events.handle_event("next_step", %{}, socket)
+    assert_received {:step_event, :ask, :next_step, nil}
+  end
+
   test "no longer knows the old names next and back" do
     for event <- ["next", "back"] do
       assert {:noreply, _socket} = Events.handle_event(event, %{}, socket())

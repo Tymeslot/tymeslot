@@ -34,6 +34,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
 
   alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine, as: QEngine
+  alias TymeslotWeb.Themes.Shared.Journey.Facts.Answers
   alias TymeslotWeb.Themes.Shared.PathHandlers
   alias TymeslotWeb.Themes.Shared.ReschedulePin
 
@@ -334,16 +335,8 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
     end
   end
 
-  # Answers a reschedule carried over are shown, never submitted unseen.
-  # They validate, so the unanswered-required arm alone would skip the one
-  # screen that displays them.
-  defp needs_questions_step?(%QEngine{} = engine) do
-    not QEngine.skipped?(engine) &&
-      (QEngine.pending_review?(engine) ||
-         match?({:error, _errors}, QEngine.validate_all(engine)))
-  end
-
-  defp needs_questions_step?(_engine), do: false
+  # The rule is `Answers.known?/1`'s: a booking needs the step until it holds.
+  defp needs_questions_step?(engine), do: not Answers.known?(%{engine: engine})
 
   defp do_handle_booking_entry(socket, _params) do
     # Set up form and rate limiting

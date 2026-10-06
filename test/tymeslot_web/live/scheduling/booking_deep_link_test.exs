@@ -130,6 +130,29 @@ defmodule TymeslotWeb.Live.Scheduling.BookingDeepLinkTest do
     assert assigns.meeting_type.id == meeting_type.id
   end
 
+  @tag :capture_log
+  test "a link to the booking step with no day and no time goes back to the schedule",
+       %{conn: conn, profile: profile} do
+    assert {:error, {:redirect, %{to: to}}} =
+             live(conn, "/#{profile.username}/deep-dive/book")
+
+    assert String.starts_with?(to, "/#{profile.username}/")
+    refute String.ends_with?(to, "/book")
+  end
+
+  @tag :capture_log
+  test "a reschedule link to the booking step with no day and no time is not sent back",
+       %{conn: conn, profile: profile} do
+    {:ok, view, _html} =
+      live(
+        conn,
+        "/#{profile.username}/deep-dive/book?reschedule_meeting_uid=does-not-exist"
+      )
+
+    # The meeting type has no questions, so the link opens the booking form.
+    assert has_element?(view, "[data-testid='booking-form']")
+  end
+
   describe "query parameters of an unexpected shape" do
     @tag :capture_log
     test "a list-shaped date is dropped and the day is picked for the booker instead",

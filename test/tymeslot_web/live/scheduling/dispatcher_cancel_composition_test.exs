@@ -198,6 +198,32 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
     assert Repo.get!(MeetingSchema, meeting.id).status == "confirmed"
   end
 
+  # The cancel page has no booking journey: a booking event pushed at it is
+  # ignored, never an error card.
+  @tag :capture_log
+  test "a step-indicator click or a step event pushed at the cancel page leaves it as it was",
+       %{conn: conn, user: user, profile: profile} do
+    meeting =
+      insert(:meeting,
+        organizer_user: user,
+        organizer_user_id: user.id,
+        organizer_name: user.name,
+        attendee_timezone: profile.timezone,
+        status: "confirmed"
+      )
+
+    {:ok, view, _html} =
+      live(conn, "/#{profile.username}/meeting/#{meeting.uid}/cancel")
+
+    render_hook(view, "navigate_to_step", %{"step" => "1"})
+    send(view.pid, {:step_event, :schedule, :next_step, nil})
+
+    assert has_element?(view, "[data-testid='cancel-meeting']")
+    assert has_element?(view, "[data-testid='keep-meeting']")
+    refute has_element?(view, "#scheduling-error")
+    assert Repo.get!(MeetingSchema, meeting.id).status == "confirmed"
+  end
+
   for theme <- ThemeTestMatrix.all() do
     @tag :capture_log
     test "#{theme.name}: the cancel page states the duration in the visitor's language",

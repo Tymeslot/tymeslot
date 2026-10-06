@@ -1,35 +1,42 @@
 defmodule TymeslotWeb.Themes.Shared.SchedulingPage do
   @moduledoc """
-  The page a scheduling theme renders: its wrapper around the current step.
+  The page a scheduling theme renders: its wrapper around what its journey
+  shows.
 
   `SchedulingLive` generates each theme's `render/1` from this, given the
-  theme's wrapper component and step components, so every theme handles the
-  same states the same way: a readiness or error message in place of the
-  flow, the step component for `:current_state`, the shared awaiting-payment
-  screen, and the overview for a state it does not recognise.
+  theme's wrapper component and journey (`Shared.Journey`), so every theme
+  handles the same states the same way: a readiness or error message in place
+  of the booking; for an outcome (`:confirmation`, `:awaiting_payment`) its
+  component, or the shared awaiting-payment screen when the journey's
+  `awaiting_payment` is `:shared`; otherwise each moment the journey's
+  navigator makes visible (`Navigator.visible/2`), which for a state the
+  journey does not know is its first moment.
 
-  Each step component receives the LiveView's assigns minus this module's
-  own; the ones a step may rely on are the table in
+  A component gets the id `"<key>-step"` (the ids every theme's hand-written
+  render used, which tests and CSS rely on) and the LiveView's assigns minus
+  this module's own. A moment's component also gets `moment`, its key, and
+  `moment_state`, `:current`, `:done` or `:open`; an outcome's gets neither.
+  The assigns a component may rely on are the table in
   `docs/THEME_DEVELOPMENT_GUIDE.md` §"Step Components".
 
   On a demo page the shared theme switcher (`Components.DemoThemeSwitcher`)
-  leads the content, above the step, so every theme carries it without a
+  leads the content, above the moments, so every theme carries it without a
   wrapper of its own changing.
   """
 
   use Phoenix.Component
 
   alias TymeslotWeb.Themes.Shared.Components.{AwaitingPayment, DemoThemeSwitcher, ErrorComponent}
+  alias TymeslotWeb.Themes.Shared.Journey
   alias TymeslotWeb.Themes.Shared.PathHandlers
 
-  @page_keys [:page_wrapper, :step_module, :step_id]
+  @page_keys [:page_wrapper, :page_parts]
 
-  @doc "Renders `wrapper` around the step component `steps` holds for `:current_state`."
-  @spec render(map(), (map() -> Phoenix.LiveView.Rendered.t()), %{atom() => module()}) ::
+  @doc "Renders `wrapper` around the outcome or the visible moments of `journey`."
+  @spec render(map(), (map() -> Phoenix.LiveView.Rendered.t()), Journey.t()) ::
           Phoenix.LiveView.Rendered.t()
-  def render(assigns, wrapper, steps) do
-    {step_module, step_id} = step_component(steps, assigns[:current_state] || :overview)
-    assigns = assign(assigns, page_wrapper: wrapper, step_module: step_module, step_id: step_id)
+  def render(assigns, wrapper, journey) do
+    assigns = assign(assigns, page_wrapper: wrapper, page_parts: parts(journey, assigns))
 
     ~H"""
     <.wrapper
@@ -55,10 +62,15 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingPage do
             id="scheduling-error"
             message={@scheduling_error_message}
           />
-        <% assigns[:current_state] == :awaiting_payment -> %>
+        <% @page_parts == :awaiting_payment -> %>
           <AwaitingPayment.awaiting_payment checkout_url={@awaiting_payment_checkout_url} />
         <% true -> %>
-          <.live_component module={@step_module} id={@step_id} {step_assigns(assigns)} />
+          <.live_component
+            :for={{module, id, extra} <- @page_parts}
+            module={module}
+            id={id}
+            {step_assigns(assigns, extra)}
+          />
       <% end %>
     </.wrapper>
     """
@@ -71,15 +83,26 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingPage do
     wrapper.(assigns)
   end
 
-  # Unknown states fall back to the overview, as every theme's hand-written
-  # render did; the ids are the ones those renders used, which tests and CSS
-  # rely on.
-  defp step_component(steps, state) do
-    case Map.fetch(steps, state) do
-      {:ok, module} -> {module, "#{state}-step"}
-      :error -> {Map.fetch!(steps, :overview), "overview-step"}
+  # What the page shows: `:awaiting_payment` for the shared payment screen,
+  # else `{component, id, extra assigns}` for each component, the outcome's
+  # or the visible moments'.
+  defp parts(journey, assigns) do
+    state = assigns[:current_state]
+
+    case Map.fetch(journey.outcomes, state) do
+      {:ok, :shared} ->
+        :awaiting_payment
+
+      {:ok, component} ->
+        [{component, "#{state}-step", %{}}]
+
+      :error ->
+        for {moment, moment_state} <- journey.navigator.visible(journey, assigns),
+            do:
+              {moment.component, "#{moment.key}-step",
+               %{moment: moment.key, moment_state: moment_state}}
     end
   end
 
-  defp step_assigns(assigns), do: Map.drop(assigns, @page_keys)
+  defp step_assigns(assigns, extra), do: assigns |> Map.drop(@page_keys) |> Map.merge(extra)
 end

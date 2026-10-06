@@ -6,8 +6,10 @@ defmodule TymeslotWeb.Themes.Shared.StepEvents do
   delegate `update/2` and `handle_event/3` here, so the event names a
   template may use, and what each one tells the LiveView, are the same in
   every theme. Events are relayed to the scheduling LiveView as
-  `{:step_event, step, event, data}` under the step on screen, which is
-  `:current_state` (every step component receives the LiveView's assigns).
+  `{:step_event, moment, event, data}` under the moment the component
+  renders (`moment/1`): its `moment` assign, which `SchedulingPage` gives
+  every moment's component, else the step on screen (`:current_state`; an
+  outcome's component has no `moment`).
   The custom-questions step has its own module,
   `Shared.CustomQuestions.Events`.
 
@@ -64,15 +66,22 @@ defmodule TymeslotWeb.Themes.Shared.StepEvents do
         relay(socket, name, data)
 
       :ignore ->
-        log_ignored(socket.assigns, socket.assigns[:current_state], event)
+        log_ignored(socket.assigns, moment(socket.assigns), event)
         {:noreply, socket}
     end
   end
 
   defp relay(socket, name, data) do
-    send(self(), {:step_event, socket.assigns.current_state, name, data})
+    send(self(), {:step_event, moment(socket.assigns), name, data})
     {:noreply, socket}
   end
+
+  @doc """
+  The moment a step component reports itself as: its `moment` assign, which
+  `SchedulingPage` gives every moment's component, else the step on screen.
+  """
+  @spec moment(map()) :: atom() | nil
+  def moment(assigns), do: assigns[:moment] || assigns[:current_state]
 
   # The name comes from the browser: logged truncated, and each page view
   # (one LiveView process: the step components run in it) logs a name once

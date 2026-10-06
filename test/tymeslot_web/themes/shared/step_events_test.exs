@@ -59,6 +59,15 @@ defmodule TymeslotWeb.Themes.Shared.StepEventsTest do
     end
   end
 
+  test "relays under the moment the page gives a component, which may not be the step on screen" do
+    socket = socket(%{current_state: :when, moment: :you})
+
+    assert {:noreply, _socket} =
+             StepEvents.handle_event("field_blur", %{"field" => "email"}, socket)
+
+    assert_received {:step_event, :you, :field_blur, "email"}
+  end
+
   test "submitting relays the form and shows the submitting state at once" do
     socket = socket(%{current_state: :booking})
 

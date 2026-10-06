@@ -59,6 +59,37 @@ defmodule TymeslotWeb.PrivateBookingTest do
   end
 
   @tag :capture_log
+  test "scheduling another from a private link stays on that meeting type", %{conn: conn} do
+    %{user: user, profile: profile} = bookable_host("anotherhost", with_type: "Public Chat")
+
+    insert(:meeting_type,
+      user: user,
+      duration_minutes: 45,
+      name: "Investor Call",
+      is_active: true,
+      is_private: true
+    )
+
+    {:ok, view, _html} =
+      live(conn, ~p"/#{profile.username}/investor-call?timezone=#{@timezone}")
+
+    book_selected_slot(view, "again@example.com")
+    wait_until(fn -> has_element?(view, "[data-testid='schedule-another']") end)
+
+    view |> element("[data-testid='schedule-another']") |> render_click()
+
+    # The schedule of the type just booked, with no slot chosen ...
+    assert has_element?(view, "button[phx-click='next_month']")
+
+    assert %{meeting_type: %{name: "Investor Call"}, selected_time: nil} =
+             :sys.get_state(view.pid).socket.assigns
+
+    # ... and never the overview's list of the organiser's types.
+    refute has_element?(view, "button[data-testid='duration-option']")
+    refute render(view) =~ "Public Chat"
+  end
+
+  @tag :capture_log
   test "private type is hidden from the public overview but reachable by its link", %{conn: conn} do
     %{user: user, profile: profile} = bookable_host("mixedhost")
 

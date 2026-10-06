@@ -21,11 +21,10 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
   }
 
   alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
+  alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry
   alias TymeslotWeb.Themes.Shared.ReschedulePin
-  alias TymeslotWeb.Themes.Shared.SchedulingFlow
   alias TymeslotWeb.Themes.Shared.SchedulingInit
-  alias TymeslotWeb.Themes.Shared.StateMachineHelpers, as: StateMachine
   alias TymeslotWeb.Themes.Shared.TimezoneHelpers
 
   @doc """
@@ -36,7 +35,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
   @spec mount_scheduling_view(Phoenix.LiveView.Socket.t(), map()) ::
           Phoenix.LiveView.Socket.t()
   def mount_scheduling_view(socket, params) do
-    initial_state = StateMachine.determine_initial_state(socket.assigns[:live_action])
+    initial_state = entry(socket)
 
     socket =
       socket
@@ -80,7 +79,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
     # the static pass would throw the result away and query twice for nothing.
     socket =
       if connected?(socket) do
-        setup_initial_state(socket, initial_state, params)
+        Runtime.transition_to(socket, initial_state, params)
       else
         socket
       end
@@ -96,19 +95,27 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
     end
   end
 
-  @doc "Applies the URL parameters and enters the step the route names."
+  @doc """
+  Applies the URL parameters and enters the moment the route opens on.
+
+  On the payment wait (`:awaiting_payment`) it applies nothing: a client may
+  patch this socket to any URL the page serves, and only the payment webhook
+  (`:paid`, `:expired`) ends the wait. A reload is a fresh mount, not this.
+  """
   @spec handle_scheduling_params(Phoenix.LiveView.Socket.t(), map()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_scheduling_params(%{assigns: %{current_state: :awaiting_payment}} = socket, _params),
+    do: {:noreply, socket}
+
   def handle_scheduling_params(socket, params) do
-    initial_state = StateMachine.determine_initial_state(socket.assigns[:live_action])
+    initial_state = entry(socket)
 
     socket =
       socket
       |> handle_param_updates(params)
       |> ThemeUtils.assign_theme_with_preview(params)
       |> assign_owner_preview(params)
-      |> assign(:current_state, initial_state)
-      |> SchedulingFlow.handle_state_entry(initial_state, params)
+      |> Runtime.transition_to(initial_state, params)
 
     if socket.redirected do
       {:noreply, socket}
@@ -192,12 +199,12 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
     end
   end
 
-  defp setup_initial_state(socket, initial_state, params) do
-    if initial_state in [:overview, :schedule, :booking, :confirmation] do
-      SchedulingFlow.transition_to(socket, initial_state, params)
-    else
-      socket
-    end
+  # The moment, or outcome, the route opens on: the journey's navigator
+  # decides (`Navigator.entry/3`). `SchedulingLive` assigns the journey
+  # before it calls this module.
+  defp entry(socket) do
+    journey = socket.assigns.journey
+    journey.navigator.entry(journey, socket.assigns[:live_action], socket.assigns)
   end
 
   defp maybe_subscribe_to_calendar_events(socket) do

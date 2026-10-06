@@ -306,7 +306,7 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
       end
     end
 
-    describe "#{theme.name}: submission rejects when custom-field answers are missing at booking time" do
+    describe "#{theme.name}: an answer sent once the questions are off screen" do
       @describetag theme_id: theme.id
 
       setup %{user: user} do
@@ -335,11 +335,10 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
       end
 
       @tag :capture_log
-      test "blank required answer in engine state stops booking creation and surfaces an error",
+      test "is dropped, and the booking keeps the answer given on the questions step",
            %{conn: conn, profile: profile} do
         view = navigate_to_booking_form_with_questions(conn, profile)
 
-        # Walk through the wizard normally, supplying a valid answer.
         view
         |> form("form[phx-submit='next_step']", %{"value" => "Acme Corp"})
         |> render_change()
@@ -347,14 +346,13 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
         view |> element("button[phx-click='next_step'][phx-target]") |> render_click()
 
         assert has_element?(view, @booking_form)
+        before = render(view)
 
-        # Now wipe the answer from engine state (simulates tampered params /
-        # corrupted client state reaching the submit handler). The parent
-        # LiveView's `:step_event` info handler stores the new value without
-        # re-validating, so the engine.answers map ends up missing the
-        # required field by the time validate_and_submit runs.
+        # A blank answer relayed as if from the questions step, which is no
+        # longer on screen: the page does not take it.
         send(view.pid, {:step_event, :questions, :answer, {"cf-text-001", ""}})
-        _drain = :sys.get_state(view.pid)
+
+        assert render(view) == before
 
         view
         |> form("form[phx-submit='submit']", %{
@@ -368,15 +366,12 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
 
         _drain = :sys.get_state(view.pid)
 
-        # No booking was created — the error branch short-circuited before
-        # `Bookings.Create.execute/3`.
-        assert Repo.all_by(MeetingSchema, attendee_email: "mallory@example.com") == []
-
         html = render(view)
+        assert html =~ "Your answers"
+        assert html =~ "Acme Corp"
 
-        # The form stays visible (no transition to :confirmation).
-        assert has_element?(view, @booking_form)
-        refute html =~ "Your answers"
+        [meeting] = Repo.all_by(MeetingSchema, attendee_email: "mallory@example.com")
+        assert meeting.custom_field_answers["cf-text-001"] == "Acme Corp"
       end
     end
 

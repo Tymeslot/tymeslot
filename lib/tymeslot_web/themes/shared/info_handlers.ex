@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
   alias TymeslotWeb.Live.Scheduling.NextAvailable
   alias TymeslotWeb.Live.Scheduling.WeekSlots
-  alias TymeslotWeb.Themes.Shared.SchedulingFlow
+  alias TymeslotWeb.Themes.Shared.Journey.Runtime
 
   @doc """
   Routes a message the scheduling LiveView received to its handler.
@@ -216,7 +216,7 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
           |> assign(:name, meeting.attendee_name)
           |> assign(:email, meeting.attendee_email)
 
-        {:noreply, SchedulingFlow.transition_to(socket, :confirmation, %{})}
+        {:noreply, Runtime.transition_to(socket, :confirmation, %{})}
 
       _other ->
         {:noreply, socket}
@@ -243,7 +243,7 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
         dgettext("booking", "Payment was cancelled. Please try booking again.")
       )
 
-    {:noreply, SchedulingFlow.transition_to(socket, :booking, %{})}
+    {:noreply, Runtime.transition_to(socket, :booking, %{})}
   end
 
   @doc """
