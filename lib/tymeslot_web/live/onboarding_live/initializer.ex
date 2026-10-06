@@ -47,36 +47,52 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
     {customization, color_scheme} = ThemeHandlers.initial_theme_state(profile)
 
     socket
-    |> Component.assign(:profile, profile)
-    |> Component.assign(:availability_schedule, load_default_schedule(profile))
-    |> Component.assign(:time_format, load_time_format(socket, user))
+    |> Component.assign(
+      profile: profile,
+      availability_schedule: load_default_schedule(profile),
+      time_format: load_time_format(socket, user)
+    )
     |> assign_form_data(profile)
-    |> Component.assign(:current_step, :welcome)
-    |> Component.assign(:step_data, %{})
-    |> Component.assign(:show_skip_modal, false)
-    |> Component.assign(:show_skip_calendar_modal, false)
-    |> Component.assign(:show_theme_preview, false)
-    |> Component.assign(:theme_preview_url, nil)
-    |> Component.assign(:steps, StepConfig.steps(connected_calendars != []))
-    |> Component.assign(:timezone_options, Timezones.all_options())
-    |> Component.assign(:timezone_dropdown_open, false)
-    |> Component.assign(:timezone_search, "")
-    |> Component.assign(:page_title, dgettext("onboarding_wizard", "Welcome"))
-    |> Component.assign(:form_errors, %{})
-    |> Component.assign(:rejected_inputs, %{})
-    |> Component.assign(:custom_input_mode, CustomInputModeHelper.default_custom_mode())
-    |> Component.assign(:calendar_state, :selecting)
-    |> Component.assign(:calendar_choice, nil)
-    |> Component.assign(:connected_calendars, connected_calendars)
-    |> Component.assign(:google_signup_email, Auth.google_signup_login_hint(user))
-    |> Component.assign(:caldav_form_data, %{})
-    |> Component.assign(:caldav_form_errors, %{})
-    |> Component.assign(:caldav_discovering, false)
-    |> Component.assign(:booking_url, build_booking_url(profile))
-    |> Component.assign(:theme_options, ThemeInfo.theme_options())
-    |> Component.assign(:theme_customization, customization)
-    |> Component.assign(:color_scheme, color_scheme)
-    |> allow_upload(:avatar,
+    |> Component.assign(initial_ui_state())
+    |> Component.assign(
+      steps: StepConfig.steps(connected_calendars != []),
+      connected_calendars: connected_calendars,
+      google_signup_email: Auth.google_signup_login_hint(user),
+      booking_url: build_booking_url(profile),
+      theme_customization: customization,
+      color_scheme: color_scheme
+    )
+    |> allow_avatar_upload()
+  end
+
+  # The wizard's state before the organiser has done anything: the first
+  # step, every modal and dropdown closed, and every form empty.
+  defp initial_ui_state do
+    [
+      current_step: :welcome,
+      step_data: %{},
+      show_skip_modal: false,
+      show_skip_calendar_modal: false,
+      show_theme_preview: false,
+      theme_preview_url: nil,
+      timezone_options: Timezones.all_options(),
+      timezone_dropdown_open: false,
+      timezone_search: "",
+      page_title: dgettext("onboarding_wizard", "Welcome"),
+      form_errors: %{},
+      rejected_inputs: %{},
+      custom_input_mode: CustomInputModeHelper.default_custom_mode(),
+      calendar_state: :selecting,
+      calendar_choice: nil,
+      caldav_form_data: %{},
+      caldav_form_errors: %{},
+      caldav_discovering: false,
+      theme_options: ThemeInfo.theme_options()
+    ]
+  end
+
+  defp allow_avatar_upload(socket) do
+    allow_upload(socket, :avatar,
       accept: Avatars.accepted_extensions(),
       max_entries: 1,
       max_file_size: Avatars.max_file_size(),
