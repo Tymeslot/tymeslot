@@ -225,7 +225,6 @@ defmodule Tymeslot.Emails.Shared.Styles.CSS do
       font-weight: 700;
       letter-spacing: 0.14em;
       text-transform: uppercase;
-      opacity: 0.78;
     }
     .stage-band-title {
       /* 32px matches Tokens.font_size(:display); this CSS rule is a fallback
