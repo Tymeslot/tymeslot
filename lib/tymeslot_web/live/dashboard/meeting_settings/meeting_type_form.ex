@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     GroupRules,
     Init,
     ReminderHandlers,
+    SlotIntervalField,
     Validation
   }
 
@@ -535,7 +536,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   defp drop_interval_mode_sentinel(params), do: params
 
-  defp custom_interval_sentinel?(value), do: value == FormView.custom_interval_option()
+  defp custom_interval_sentinel?(value), do: value == SlotIntervalField.custom_interval_option()
 
   defp off_preset_interval?(value) when is_binary(value) do
     case Integer.parse(String.trim(value)) do

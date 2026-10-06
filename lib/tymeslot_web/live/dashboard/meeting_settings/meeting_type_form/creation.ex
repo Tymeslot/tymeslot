@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Creation do
   alias Tymeslot.Utils.FormHelpers
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SlotIntervalField
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission
   alias TymeslotWeb.Live.Shared.Flash
 
@@ -73,7 +74,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Creation do
   # `MeetingTypeForm`'s validate handler), so it never stands in for the
   # value: whatever the form already holds is kept.
   defp drop_interval_mode_sentinel(%{"slot_interval" => value} = posted) do
-    if value == FormView.custom_interval_option(),
+    if value == SlotIntervalField.custom_interval_option(),
       do: Map.delete(posted, "slot_interval"),
       else: posted
   end

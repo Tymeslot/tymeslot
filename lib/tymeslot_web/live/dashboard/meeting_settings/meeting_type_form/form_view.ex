@@ -39,13 +39,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     PaymentsSection,
     QuestionEditorComponent,
     ShowAsFreeSection,
+    SlotIntervalField,
     VisibilitySection
   }
 
   alias TymeslotWeb.Components.CoreComponents.Navigation
-  alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
-  alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   import ApprovalSection, only: [approval_section: 1]
   import AvailabilitySection, only: [availability_section: 1]
@@ -57,14 +56,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   import VisibilitySection, only: [visibility_section: 1]
   import TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents
   import TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders
-
-  # The dropdown value that opens the custom number input. Not a duration, so
-  # it can never collide with one: every real value parses as an integer.
-  @custom_interval_option "custom"
-
-  # The clock the hint's example times are drawn from. Any hour would do; a
-  # round morning start reads as an illustration rather than as real data.
-  @hint_start_time ~T[09:00:00]
 
   # Which form-error fields surface an indicator on which tab. Errors on
   # fields absent here (e.g. :base) render below the panels and need no dot.
@@ -183,16 +174,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
               "slot_interval",
               if(@type, do: @type.slot_interval_minutes, else: "")
             ) %>
-          <% slot_interval_custom? = slot_interval_custom?(assigns, slot_interval_value) %>
+          <% slot_interval_custom? = SlotIntervalField.custom?(assigns, slot_interval_value) %>
           <div>
             <.input
               type="select"
               name="meeting_type[slot_interval]"
               label={dgettext("dashboard_meeting_form", "Booking slot interval")}
               value={
-                if(slot_interval_custom?, do: custom_interval_option(), else: slot_interval_value)
+                if(slot_interval_custom?,
+                  do: SlotIntervalField.custom_interval_option(),
+                  else: slot_interval_value
+                )
               }
-              options={slot_interval_options(slot_interval_value, slot_interval_custom?)}
+              options={SlotIntervalField.options(slot_interval_value, slot_interval_custom?)}
               phx-change="validate_meeting_type"
               phx-target={@myself}
               errors={
@@ -228,7 +222,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
               />
             </div>
             <p class="mt-1 text-token-sm text-tymeslot-600">
-              {slot_interval_hint(slot_interval_value, Map.get(@form_data, "duration"))}
+              {SlotIntervalField.hint(slot_interval_value, Map.get(@form_data, "duration"))}
             </p>
           </div>
 
@@ -474,139 +468,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     </div>
     """
   end
-
-  @doc false
-  @spec custom_interval_option() :: String.t()
-  def custom_interval_option, do: @custom_interval_option
-
-  # Whether the custom number input is on screen.
-  #
-  # Two ways in, and both must be honoured. The organiser can pick "Custom" in
-  # the dropdown, which the component records on `:custom_input_mode`. Or the
-  # stored value can simply not be one this dropdown offers — written by a
-  # seed, an import or a support fix — in which case the input opens on its own
-  # so the value stays editable rather than being silently unreachable.
-  defp slot_interval_custom?(assigns, current_value) do
-    chosen? =
-      assigns
-      |> Map.get(:custom_input_mode, %{})
-      |> Map.get(:slot_interval_minutes, false)
-
-    chosen? or off_preset?(parse_interval(current_value))
-  end
-
-  defp off_preset?(nil), do: false
-
-  defp off_preset?(interval),
-    do: not CustomInputModeHelper.preset_value?(:slot_interval_minutes, interval)
-
-  # `current_value` is whatever is currently stored/selected for this meeting
-  # type. It is folded into the option list even when it falls outside the
-  # preset table, so a value written by something other than this form (a seed,
-  # an import, a support fix) still renders as itself instead of silently
-  # falling back to "Same as meeting length" — which the next autosave of any
-  # other field would then persist as the value's erasure.
-  defp slot_interval_options(current_value, custom?) do
-    range = Constraints.slot_interval_minutes_range()
-
-    intervals =
-      :slot_interval_minutes
-      |> CustomInputModeHelper.presets()
-      |> Enum.filter(&(&1 in range))
-      |> add_stored_interval(parse_interval(current_value), custom?)
-      |> Enum.sort()
-      |> Enum.map(
-        &{dgettext("dashboard_meeting_form", "%{minutes} min", minutes: &1), to_string(&1)}
-      )
-
-    [{dgettext("dashboard_meeting_form", "Same as meeting length"), ""}] ++
-      intervals ++
-      [{dgettext("dashboard_meeting_form", "Custom…"), @custom_interval_option}]
-  end
-
-  # While the custom input is open the dropdown reads "Custom…", so folding the
-  # stored value in as well would list a value nothing has selected.
-  defp add_stored_interval(intervals, _interval, true), do: intervals
-  defp add_stored_interval(intervals, nil, _custom?), do: intervals
-  defp add_stored_interval(intervals, interval, _custom?), do: Enum.uniq([interval | intervals])
-
-  # Spells out what the current choice produces. An interval is an abstraction
-  # until it is three clock times, and five minutes is a very different booking
-  # page from sixty; this is where an organiser sees which one they picked.
-  defp slot_interval_hint(interval_value, duration_value) do
-    interval = parse_in_range(interval_value, Constraints.slot_interval_minutes_range())
-    duration = parse_in_range(duration_value, Constraints.duration_minutes_range())
-
-    case {interval, duration} do
-      {minutes, _duration} when is_integer(minutes) ->
-        dgettext(
-          "dashboard_meeting_form",
-          "Times will be offered every %{minutes} minutes: %{examples}…",
-          minutes: minutes,
-          examples: interval_examples(minutes)
-        )
-
-      {nil, minutes} when is_integer(minutes) ->
-        dgettext(
-          "dashboard_meeting_form",
-          "Matching the meeting length, times will be offered every %{minutes} minutes: %{examples}…",
-          minutes: minutes,
-          examples: interval_examples(minutes)
-        )
-
-      _no_valid_value ->
-        dgettext(
-          "dashboard_meeting_form",
-          "How far apart booking start times are offered. Leave as default to match the meeting length."
-        )
-    end
-  end
-
-  # Steps through real datetimes rather than a bare time of day: once an
-  # interval reaches twelve hours the clock repeats itself, so a time on a
-  # later day carries a marker instead of reading as a duplicate.
-  defp interval_examples(minutes) do
-    start = NaiveDateTime.new!(~D[2000-01-01], @hint_start_time)
-
-    start
-    |> Stream.iterate(&NaiveDateTime.add(&1, minutes, :minute))
-    |> Enum.take(3)
-    |> Enum.map_join(", ", &format_example(&1, Date.diff(NaiveDateTime.to_date(&1), start)))
-  end
-
-  defp format_example(datetime, 0),
-    do: LocalizationHelpers.format_time_by_locale(NaiveDateTime.to_time(datetime))
-
-  defp format_example(datetime, days) do
-    dngettext(
-      "dashboard_meeting_form",
-      "%{time} (+%{count} day)",
-      "%{time} (+%{count} days)",
-      days,
-      time: LocalizationHelpers.format_time_by_locale(NaiveDateTime.to_time(datetime))
-    )
-  end
-
-  # A blank (or the "Custom" mode before a number is typed) means no value of
-  # its own; an out-of-range number is one the form is already rejecting, so it
-  # has no schedule worth previewing and must not fall back to another one.
-  defp parse_in_range(value, range) do
-    case parse_interval(value) do
-      nil -> nil
-      minutes -> if minutes in range, do: minutes, else: :invalid
-    end
-  end
-
-  defp parse_interval(value) when is_integer(value), do: value
-
-  defp parse_interval(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {interval, ""} -> interval
-      _invalid -> nil
-    end
-  end
-
-  defp parse_interval(_value), do: nil
 
   # Until the meeting type exists only Details can be used; the others point
   # at the hint saying why.
