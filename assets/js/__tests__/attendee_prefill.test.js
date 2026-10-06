@@ -24,6 +24,32 @@ describe('takeAttendeePrefill', () => {
     });
   });
 
+  test('keeps a literal + in a value, as a fragment is not form-encoded', () => {
+    const loc = fakeLocation('#name=Ada&email=ada+test@example.com');
+
+    expect(takeAttendeePrefill(loc, fakeHistory())).toEqual({
+      name: 'Ada',
+      email: 'ada+test@example.com',
+    });
+  });
+
+  test('drops a value with a malformed escape and still strips its key', () => {
+    const hist = fakeHistory();
+
+    expect(takeAttendeePrefill(fakeLocation('#name=%E0%A4%A&email=ada%40example.com'), hist)).toEqual({
+      email: 'ada@example.com',
+    });
+    expect(hist.replaceState).toHaveBeenCalledWith({ live: true }, '', '/ada');
+  });
+
+  test('leaves the rest of the fragment exactly as it was', () => {
+    const hist = fakeHistory();
+
+    takeAttendeePrefill(fakeLocation('#a=1+2&name=Ada&b=%20x'), hist);
+
+    expect(hist.replaceState).toHaveBeenCalledWith({ live: true }, '', '/ada#a=1+2&b=%20x');
+  });
+
   test('strips the fragment from the URL, keeping path, query and history state', () => {
     const loc = fakeLocation('#name=Ada&email=ada%40example.com', {
       pathname: '/ada/intro',

@@ -23,9 +23,21 @@ const PREFILL_KEYS = Object.keys(PREFILL_LIMITS)
 // Counted in code points, as the server counts characters.
 const withinLimit = (value, limit) => value.length <= limit || [...value].length <= limit
 
+// Decodes one fragment component. A fragment is not form-encoded, so a
+// literal `+` stays a `+` (`ada+test@example.com`), unlike in
+// URLSearchParams, which would turn it into a space. Returns null for a
+// malformed escape.
+const decode = (raw) => {
+  try {
+    return decodeURIComponent(raw)
+  } catch {
+    return null
+  }
+}
+
 /**
  * Reads the prefill keys from the fragment and strips them from the URL,
- * leaving any other fragment content in place.
+ * leaving any other fragment content in place, byte for byte.
  *
  * @returns {Object} the non-empty prefill values within their length limit, keyed by name; `{}` when the
  *   fragment carries none, in which case the URL is left untouched
@@ -33,18 +45,28 @@ const withinLimit = (value, limit) => value.length <= limit || [...value].length
 export function takeAttendeePrefill(loc = window.location, hist = window.history) {
   if (!loc.hash || loc.hash.length < 2) return {}
 
-  const params = new URLSearchParams(loc.hash.slice(1))
-  if (!PREFILL_KEYS.some(key => params.has(key))) return {}
+  const segments = loc.hash.slice(1).split("&")
+  const keyOf = (segment) => decode(segment.split("=", 1)[0])
+  if (!segments.some(segment => PREFILL_KEYS.includes(keyOf(segment)))) return {}
 
   const prefill = {}
-  for (const key of PREFILL_KEYS) {
-    const value = params.get(key)
+  const seen = new Set()
+  const rest = []
+  for (const segment of segments) {
+    const key = keyOf(segment)
+    if (!PREFILL_KEYS.includes(key)) {
+      if (segment) rest.push(segment)
+      continue
+    }
+    if (seen.has(key)) continue
+    seen.add(key)
+    const eq = segment.indexOf("=")
+    const value = eq === -1 ? "" : decode(segment.slice(eq + 1))
     if (value && withinLimit(value, PREFILL_LIMITS[key])) prefill[key] = value
-    params.delete(key)
   }
 
-  const rest = params.toString()
-  hist.replaceState(hist.state, "", loc.pathname + loc.search + (rest ? `#${rest}` : ""))
+  const remaining = rest.join("&")
+  hist.replaceState(hist.state, "", loc.pathname + loc.search + (remaining ? `#${remaining}` : ""))
 
   return prefill
 }
