@@ -32,7 +32,13 @@ defmodule Tymeslot.Integrations.Calendar.Events do
 
   # Failures a later replay cannot recover: queueing them would only keep a
   # dead row in the offline queue.
-  @non_queueable_errors [:unauthorized, :not_found, :meeting_not_found, :rate_limited]
+  # The organiser has no calendar Tymeslot can write to: none connected, or the
+  # one a meeting names is gone. Nothing changes that but the organiser
+  # connecting one, and a meeting booked before then never had an event.
+  @no_calendar_errors [:no_calendar_client, :no_calendar_integration]
+
+  @non_queueable_errors [:unauthorized, :not_found, :meeting_not_found, :rate_limited] ++
+                          @no_calendar_errors
 
   # A meeting booked on the last bookable date can run for up to a day past
   # it, plus its after-buffer, so the fetch reaches that much further.
@@ -487,6 +493,16 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   @spec queueable_error?(term()) :: boolean()
   def queueable_error?(reason) when reason in @non_queueable_errors, do: false
   def queueable_error?(_reason), do: true
+
+  @doc """
+  Whether a failed calendar write failed because the organiser has no calendar
+  to write it to, rather than because a calendar refused it.
+
+  Such a write has nothing to retry: a meeting booked while no calendar was
+  connected simply has no calendar event.
+  """
+  @spec no_calendar_error?(term()) :: boolean()
+  def no_calendar_error?(reason), do: reason in @no_calendar_errors
 
   @doc """
   Returns the booking calendar integration info for a user, meeting type or meeting (id and path) used for event creation.

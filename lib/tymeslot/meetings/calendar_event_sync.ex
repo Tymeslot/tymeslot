@@ -32,6 +32,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
   alias Tymeslot.Integrations.Calendar.CreatedEvent
+  alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.CalendarEventCache
   alias Tymeslot.Meetings.MeetingQueries
@@ -508,7 +509,15 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
     end
   end
 
+  # No calendar to write to is not a sync failure: the owner is never emailed
+  # about it, and the worker ends the job without retrying.
   defp handle_create_event_error(error_type, meeting, meeting_id, attempt) do
+    if CalendarEvents.no_calendar_error?(error_type),
+      do: {:error, error_type},
+      else: handle_sync_failure(error_type, meeting, meeting_id, attempt)
+  end
+
+  defp handle_sync_failure(error_type, meeting, meeting_id, attempt) do
     case error_type do
       :rate_limited ->
         {:error, :rate_limited}

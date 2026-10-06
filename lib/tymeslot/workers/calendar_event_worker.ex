@@ -69,10 +69,13 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   # refusing authentication is recorded.
   @meeting_gone "Meeting not found"
   @queued_for_replay "Conflicting server-side change; queued for offline replay"
+  @no_calendar "No calendar to write the event to"
 
   @impl ExpectedJobOutcome
   def expected_outcome?(reason),
-    do: reason in [@meeting_gone, @queued_for_replay] or reason == ReauthHandling.discard_reason()
+    do:
+      reason in [@meeting_gone, @queued_for_replay, @no_calendar] or
+        reason == ReauthHandling.discard_reason()
 
   @impl Oban.Worker
   def perform(
@@ -220,8 +223,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
         :ok
 
       {:error, error_type} ->
-        tag_for_offline_queue(job, error_type)
-        handle_error_result(error_type, job)
+        handle_failure(error_type, job)
 
       {:error, error_type, message} when is_binary(message) ->
         tag_for_offline_queue(job, error_type)
@@ -232,6 +234,23 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
 
       _unexpected ->
         handle_unexpected_result(result)
+    end
+  end
+
+  # The organiser has no calendar Tymeslot can write to (none connected, or the
+  # one the meeting named is gone). Retrying cannot change that, so the job ends
+  # here rather than failing through every attempt.
+  defp handle_failure(error_type, job) do
+    if CalendarEvents.no_calendar_error?(error_type) do
+      Logger.info("No calendar to write to, skipping calendar event job",
+        action: job.args["action"],
+        meeting_id: job.args["meeting_id"]
+      )
+
+      {:discard, @no_calendar}
+    else
+      tag_for_offline_queue(job, error_type)
+      handle_error_result(error_type, job)
     end
   end
 
