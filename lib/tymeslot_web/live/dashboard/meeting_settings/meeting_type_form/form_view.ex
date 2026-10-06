@@ -534,36 +534,67 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   # until it is three clock times, and five minutes is a very different booking
   # page from sixty; this is where an organiser sees which one they picked.
   defp slot_interval_hint(interval_value, duration_value) do
-    case {parse_interval(interval_value), parse_interval(duration_value)} do
-      {nil, nil} ->
+    interval = parse_in_range(interval_value, Constraints.slot_interval_minutes_range())
+    duration = parse_in_range(duration_value, Constraints.duration_minutes_range())
+
+    case {interval, duration} do
+      {minutes, _duration} when is_integer(minutes) ->
+        dgettext(
+          "dashboard_meeting_form",
+          "Times will be offered every %{minutes} minutes: %{examples}…",
+          minutes: minutes,
+          examples: interval_examples(minutes)
+        )
+
+      {nil, minutes} when is_integer(minutes) ->
+        dgettext(
+          "dashboard_meeting_form",
+          "Matching the meeting length, times will be offered every %{minutes} minutes: %{examples}…",
+          minutes: minutes,
+          examples: interval_examples(minutes)
+        )
+
+      _no_valid_value ->
         dgettext(
           "dashboard_meeting_form",
           "How far apart booking start times are offered. Leave as default to match the meeting length."
         )
-
-      {nil, duration} ->
-        dgettext(
-          "dashboard_meeting_form",
-          "Matching the meeting length, times will be offered every %{minutes} minutes: %{examples}…",
-          minutes: duration,
-          examples: interval_examples(duration)
-        )
-
-      {interval, _duration} ->
-        dgettext(
-          "dashboard_meeting_form",
-          "Times will be offered every %{minutes} minutes: %{examples}…",
-          minutes: interval,
-          examples: interval_examples(interval)
-        )
     end
   end
 
+  # Steps through real datetimes rather than a bare time of day: once an
+  # interval reaches twelve hours the clock repeats itself, so a time on a
+  # later day carries a marker instead of reading as a duplicate.
   defp interval_examples(minutes) do
-    @hint_start_time
-    |> Stream.iterate(&Time.add(&1, minutes, :minute))
+    start = NaiveDateTime.new!(~D[2000-01-01], @hint_start_time)
+
+    start
+    |> Stream.iterate(&NaiveDateTime.add(&1, minutes, :minute))
     |> Enum.take(3)
-    |> Enum.map_join(", ", &LocalizationHelpers.format_time_by_locale/1)
+    |> Enum.map_join(", ", &format_example(&1, Date.diff(NaiveDateTime.to_date(&1), start)))
+  end
+
+  defp format_example(datetime, 0),
+    do: LocalizationHelpers.format_time_by_locale(NaiveDateTime.to_time(datetime))
+
+  defp format_example(datetime, days) do
+    dngettext(
+      "dashboard_meeting_form",
+      "%{time} (+%{count} day)",
+      "%{time} (+%{count} days)",
+      days,
+      time: LocalizationHelpers.format_time_by_locale(NaiveDateTime.to_time(datetime))
+    )
+  end
+
+  # A blank (or the "Custom" mode before a number is typed) means no value of
+  # its own; an out-of-range number is one the form is already rejecting, so it
+  # has no schedule worth previewing and must not fall back to another one.
+  defp parse_in_range(value, range) do
+    case parse_interval(value) do
+      nil -> nil
+      minutes -> if minutes in range, do: minutes, else: :invalid
+    end
   end
 
   defp parse_interval(value) when is_integer(value), do: value
