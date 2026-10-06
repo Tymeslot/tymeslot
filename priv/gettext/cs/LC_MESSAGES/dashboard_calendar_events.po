@@ -504,11 +504,6 @@ msgstr[0] "Informovat o této změně %{count} účastníka?"
 msgstr[1] "Informovat o této změně %{count} účastníky?"
 msgstr[2] "Informovat o této změně %{count} účastníků?"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Notify attendees?"
-msgstr "Informovat účastníky?"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "On date"
@@ -647,11 +642,6 @@ msgid_plural "Send cancellation to %{count} attendees?"
 msgstr[0] "Odeslat oznámení o zrušení %{count} účastníkovi?"
 msgstr[1] "Odeslat oznámení o zrušení %{count} účastníkům?"
 msgstr[2] "Odeslat oznámení o zrušení %{count} účastníkům?"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Send cancellation?"
-msgstr "Odeslat oznámení o zrušení?"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
 #, elixir-autogen, elixir-format
@@ -1498,3 +1488,18 @@ msgstr "Import se zastavil, protože váš kalendář neodpovídá. Zkuste to pr
 #, elixir-autogen, elixir-format
 msgid "This is a group booking. Move it, cancel it or change who attends from the meeting instead."
 msgstr "Toto je skupinová rezervace. Přesunout, zrušit nebo změnit účastníky můžete ve schůzce."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Notify attendees"
+msgstr "Informovat účastníky"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Send cancellation"
+msgstr "Odeslat oznámení o zrušení"
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a meeting at this time. Please choose a different time."
+msgstr "V tuto dobu už máte schůzku. Vyberte prosím jiný čas."

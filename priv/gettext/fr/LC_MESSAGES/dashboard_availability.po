@@ -83,11 +83,6 @@ msgstr "Réinitialiser tous les paramètres"
 msgid "Clear Day"
 msgstr "Réinitialiser le jour"
 
-#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Clear Day Settings"
-msgstr "Réinitialiser les paramètres du jour"
-
 #: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
 #, elixir-autogen, elixir-format
@@ -865,3 +860,18 @@ msgstr "Se termine le lendemain"
 #, elixir-autogen, elixir-format
 msgid "Hours that end the next day can last at most 24 hours"
 msgstr "Des horaires qui se terminent le lendemain ne peuvent pas dépasser 24 heures"
+
+#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Clear day settings"
+msgstr "Réinitialiser les paramètres du jour"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete break"
+msgstr "Supprimer la pause"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete schedule"
+msgstr "Supprimer le planning"

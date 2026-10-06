@@ -320,3 +320,18 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Paused"
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete meeting type"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Edit %{name}"
+msgstr ""

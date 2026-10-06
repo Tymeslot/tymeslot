@@ -135,24 +135,9 @@ msgstr ""
 msgid "Delete Integration"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/delete_slack_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Delete Slack Integration?"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/automation/delete_telegram_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Delete Telegram Integration?"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/automation/delete_webhook_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Delete Webhook"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/automation/delete_webhook_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Delete Webhook?"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
@@ -266,11 +251,6 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Regenerate"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/automation/regenerate_token_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Regenerate Token?"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
@@ -692,4 +672,24 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
 msgid "Delete %{name}"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/delete_slack_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Slack integration"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/delete_telegram_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Telegram integration"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/delete_webhook_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete webhook"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/regenerate_token_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Regenerate token"
 msgstr ""

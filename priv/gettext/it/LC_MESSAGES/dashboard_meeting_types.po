@@ -320,3 +320,18 @@ msgstr "Le prenotazioni di gruppo non sono incluse nel tuo piano attuale, quindi
 #, elixir-autogen, elixir-format
 msgid "Paused"
 msgstr "In pausa"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}"
+msgstr "Elimina %{name}"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete meeting type"
+msgstr "Elimina tipo di riunione"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Edit %{name}"
+msgstr "Modifica %{name}"

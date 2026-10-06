@@ -135,25 +135,10 @@ msgstr "Workflow erstellen"
 msgid "Delete Integration"
 msgstr "Integration löschen"
 
-#: lib/tymeslot_web/live/dashboard/automation/delete_slack_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Delete Slack Integration?"
-msgstr "Slack-Integration löschen?"
-
-#: lib/tymeslot_web/live/dashboard/automation/delete_telegram_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Delete Telegram Integration?"
-msgstr "Telegram-Integration löschen?"
-
 #: lib/tymeslot_web/live/dashboard/automation/delete_webhook_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Delete Webhook"
 msgstr "Webhook löschen"
-
-#: lib/tymeslot_web/live/dashboard/automation/delete_webhook_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Delete Webhook?"
-msgstr "Webhook löschen?"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
@@ -267,11 +252,6 @@ msgstr "Letzte Zustellungen"
 #, elixir-autogen, elixir-format
 msgid "Regenerate"
 msgstr "Neu generieren"
-
-#: lib/tymeslot_web/live/dashboard/automation/regenerate_token_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Regenerate Token?"
-msgstr "Token neu generieren?"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
@@ -693,3 +673,23 @@ msgstr "Löschen"
 #, elixir-autogen, elixir-format
 msgid "Delete %{name}"
 msgstr "%{name} löschen"
+
+#: lib/tymeslot_web/live/dashboard/automation/delete_slack_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Slack integration"
+msgstr "Slack-Integration löschen"
+
+#: lib/tymeslot_web/live/dashboard/automation/delete_telegram_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Telegram integration"
+msgstr "Telegram-Integration löschen"
+
+#: lib/tymeslot_web/live/dashboard/automation/delete_webhook_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete webhook"
+msgstr "Webhook löschen"
+
+#: lib/tymeslot_web/live/dashboard/automation/regenerate_token_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Regenerate token"
+msgstr "Token neu generieren"

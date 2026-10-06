@@ -135,25 +135,10 @@ msgstr "Vytvořte pracovní postup"
 msgid "Delete Integration"
 msgstr "Smazat integraci"
 
-#: lib/tymeslot_web/live/dashboard/automation/delete_slack_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Delete Slack Integration?"
-msgstr "Smazat integraci Slack?"
-
-#: lib/tymeslot_web/live/dashboard/automation/delete_telegram_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Delete Telegram Integration?"
-msgstr "Smazat integraci Telegram?"
-
 #: lib/tymeslot_web/live/dashboard/automation/delete_webhook_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Delete Webhook"
 msgstr "Smazat webhook"
-
-#: lib/tymeslot_web/live/dashboard/automation/delete_webhook_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Delete Webhook?"
-msgstr "Smazat webhook?"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
@@ -267,11 +252,6 @@ msgstr "Poslední doručení"
 #, elixir-autogen, elixir-format
 msgid "Regenerate"
 msgstr "Vygenerovat znovu"
-
-#: lib/tymeslot_web/live/dashboard/automation/regenerate_token_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Regenerate Token?"
-msgstr "Vygenerovat token znovu?"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
@@ -694,3 +674,23 @@ msgstr "Smazat"
 #, elixir-autogen, elixir-format
 msgid "Delete %{name}"
 msgstr "Smazat %{name}"
+
+#: lib/tymeslot_web/live/dashboard/automation/delete_slack_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Slack integration"
+msgstr "Smazat integraci Slack"
+
+#: lib/tymeslot_web/live/dashboard/automation/delete_telegram_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Telegram integration"
+msgstr "Smazat integraci Telegram"
+
+#: lib/tymeslot_web/live/dashboard/automation/delete_webhook_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete webhook"
+msgstr "Smazat webhook"
+
+#: lib/tymeslot_web/live/dashboard/automation/regenerate_token_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Regenerate token"
+msgstr "Vygenerovat token znovu"

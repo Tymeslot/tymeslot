@@ -135,25 +135,10 @@ msgstr "Crea un flusso di lavoro"
 msgid "Delete Integration"
 msgstr "Elimina integrazione"
 
-#: lib/tymeslot_web/live/dashboard/automation/delete_slack_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Delete Slack Integration?"
-msgstr "Eliminare l'integrazione Slack?"
-
-#: lib/tymeslot_web/live/dashboard/automation/delete_telegram_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Delete Telegram Integration?"
-msgstr "Eliminare l'integrazione Telegram?"
-
 #: lib/tymeslot_web/live/dashboard/automation/delete_webhook_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Delete Webhook"
 msgstr "Elimina webhook"
-
-#: lib/tymeslot_web/live/dashboard/automation/delete_webhook_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Delete Webhook?"
-msgstr "Eliminare il webhook?"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
@@ -267,11 +252,6 @@ msgstr "Consegne recenti"
 #, elixir-autogen, elixir-format
 msgid "Regenerate"
 msgstr "Rigenera"
-
-#: lib/tymeslot_web/live/dashboard/automation/regenerate_token_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Regenerate Token?"
-msgstr "Rigenerare il token?"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
@@ -693,3 +673,23 @@ msgstr "Elimina"
 #, elixir-autogen, elixir-format
 msgid "Delete %{name}"
 msgstr "Elimina %{name}"
+
+#: lib/tymeslot_web/live/dashboard/automation/delete_slack_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Slack integration"
+msgstr "Elimina integrazione Slack"
+
+#: lib/tymeslot_web/live/dashboard/automation/delete_telegram_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Telegram integration"
+msgstr "Elimina integrazione Telegram"
+
+#: lib/tymeslot_web/live/dashboard/automation/delete_webhook_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete webhook"
+msgstr "Elimina webhook"
+
+#: lib/tymeslot_web/live/dashboard/automation/regenerate_token_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Regenerate token"
+msgstr "Rigenera token"

@@ -1444,3 +1444,13 @@ msgstr "Questo link per spostare il tuo posto è già stato usato. Qui sotto puo
 #, elixir-autogen, elixir-format
 msgid "Ends %{time} on %{weekday} %{day} %{month}"
 msgstr "Fine: %{weekday} %{day} %{month}, alle %{time}"
+
+#: lib/tymeslot/meeting_types/location_selection.ex
+#, elixir-autogen, elixir-format
+msgid "Phone call"
+msgstr "Telefonata"
+
+#: lib/tymeslot/meeting_types/location_selection.ex
+#, elixir-autogen, elixir-format
+msgid "Somewhere else"
+msgstr "Altro luogo"

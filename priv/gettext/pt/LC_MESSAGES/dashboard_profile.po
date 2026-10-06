@@ -268,3 +268,8 @@ msgstr "Este nome de usuário já está em uso"
 #, elixir-autogen, elixir-format
 msgid "This username is reserved"
 msgstr "Este nome de usuário é reservado"
+
+#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete avatar"
+msgstr "Excluir foto de perfil"

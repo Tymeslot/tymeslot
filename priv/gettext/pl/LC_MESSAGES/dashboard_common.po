@@ -556,11 +556,6 @@ msgstr[2] "%{count} gości już zagłosowało. Ich odpowiedzi zostaną odrzucone
 
 #: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Cancel this poll?"
-msgstr "Anulować tę ankietę?"
-
-#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
-#, elixir-autogen, elixir-format
 msgid "Keep poll"
 msgstr "Zachowaj ankietę"
 
@@ -744,3 +739,8 @@ msgstr "Z kim"
 #, elixir-autogen, elixir-format
 msgid "%{date}, %{time}"
 msgstr "%{date}, %{time}"
+
+#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel this poll"
+msgstr "Anuluj tę ankietę"

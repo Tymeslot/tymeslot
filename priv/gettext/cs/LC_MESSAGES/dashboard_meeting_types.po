@@ -323,3 +323,18 @@ msgstr "Skupinové rezervace nejsou součástí vašeho aktuálního tarifu, pro
 #, elixir-autogen, elixir-format
 msgid "Paused"
 msgstr "Pozastaveno"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}"
+msgstr "Smazat %{name}"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete meeting type"
+msgstr "Smazat typ schůzky"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Edit %{name}"
+msgstr "Upravit %{name}"

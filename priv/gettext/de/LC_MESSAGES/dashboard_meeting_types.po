@@ -320,3 +320,18 @@ msgstr "Gruppenbuchungen sind in Ihrem aktuellen Tarif nicht enthalten, daher ni
 #, elixir-autogen, elixir-format
 msgid "Paused"
 msgstr "Pausiert"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}"
+msgstr "%{name} löschen"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete meeting type"
+msgstr "Termintyp löschen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Edit %{name}"
+msgstr "%{name} bearbeiten"

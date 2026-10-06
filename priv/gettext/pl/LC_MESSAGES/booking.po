@@ -1444,3 +1444,13 @@ msgstr "Ten link do przeniesienia miejsca został już użyty. Poniżej możesz 
 #, elixir-autogen, elixir-format
 msgid "Ends %{time} on %{weekday} %{day} %{month}"
 msgstr "Koniec: %{weekday}, %{day} %{month}, %{time}"
+
+#: lib/tymeslot/meeting_types/location_selection.ex
+#, elixir-autogen, elixir-format
+msgid "Phone call"
+msgstr "Rozmowa telefoniczna"
+
+#: lib/tymeslot/meeting_types/location_selection.ex
+#, elixir-autogen, elixir-format
+msgid "Somewhere else"
+msgstr "Inne miejsce"

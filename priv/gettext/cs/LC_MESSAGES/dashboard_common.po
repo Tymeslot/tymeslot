@@ -560,11 +560,6 @@ msgstr[2] "%{count} hostů už hlasovalo. Jejich odpovědi budou smazány."
 
 #: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Cancel this poll?"
-msgstr "Zrušit tuto anketu?"
-
-#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
-#, elixir-autogen, elixir-format
 msgid "Keep poll"
 msgstr "Ponechat anketu"
 
@@ -748,3 +743,8 @@ msgstr "S kým"
 #, elixir-autogen, elixir-format
 msgid "%{date}, %{time}"
 msgstr "%{date}, %{time}"
+
+#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel this poll"
+msgstr "Zrušit tuto anketu"

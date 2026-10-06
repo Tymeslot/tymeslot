@@ -1236,3 +1236,11 @@ msgstr "Збережені місця"
 #, elixir-autogen, elixir-format
 msgid "You have no saved locations yet. Add one here: group bookings need the address up front."
 msgstr "У вас ще немає збережених місць. Додайте місце тут: груповим бронюванням потрібна адреса заздалегідь."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "%{time} (+%{count} day)"
+msgid_plural "%{time} (+%{count} days)"
+msgstr[0] "%{time} (+%{count} день)"
+msgstr[1] "%{time} (+%{count} дні)"
+msgstr[2] "%{time} (+%{count} днів)"

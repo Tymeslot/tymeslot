@@ -1449,3 +1449,13 @@ msgstr "Це посилання для перенесення місця вже 
 #, elixir-autogen, elixir-format
 msgid "Ends %{time} on %{weekday} %{day} %{month}"
 msgstr "Завершення: %{weekday}, %{day} %{month}, %{time}"
+
+#: lib/tymeslot/meeting_types/location_selection.ex
+#, elixir-autogen, elixir-format
+msgid "Phone call"
+msgstr "Телефонний дзвінок"
+
+#: lib/tymeslot/meeting_types/location_selection.ex
+#, elixir-autogen, elixir-format
+msgid "Somewhere else"
+msgstr "Інше місце"

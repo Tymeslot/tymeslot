@@ -709,3 +709,8 @@ msgstr "Todas as vagas foram liberadas"
 #, elixir-autogen, elixir-format
 msgid "Left this slot"
 msgstr "Saiu deste horário"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel meeting"
+msgstr "Cancelar reunião"

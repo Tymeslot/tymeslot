@@ -83,11 +83,6 @@ msgstr "Очистити всі налаштування"
 msgid "Clear Day"
 msgstr "Очистити день"
 
-#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Clear Day Settings"
-msgstr "Очистити налаштування дня"
-
 #: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
 #, elixir-autogen, elixir-format
@@ -867,3 +862,18 @@ msgstr "Закінчується наступного дня"
 #, elixir-autogen, elixir-format
 msgid "Hours that end the next day can last at most 24 hours"
 msgstr "Години, що закінчуються наступного дня, можуть тривати щонайбільше 24 години"
+
+#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Clear day settings"
+msgstr "Очистити налаштування дня"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete break"
+msgstr "Видалити перерву"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete schedule"
+msgstr "Видалити розклад"

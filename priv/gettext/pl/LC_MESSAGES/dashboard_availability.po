@@ -79,11 +79,6 @@ msgstr "Wyczyść wszystkie ustawienia"
 msgid "Clear Day"
 msgstr "Wyczyść dzień"
 
-#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Clear Day Settings"
-msgstr "Wyczyść ustawienia dnia"
-
 #: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
 #, elixir-autogen, elixir-format
@@ -862,3 +857,18 @@ msgstr "Kończy się następnego dnia"
 #, elixir-autogen, elixir-format
 msgid "Hours that end the next day can last at most 24 hours"
 msgstr "Godziny kończące się następnego dnia mogą trwać najwyżej 24 godziny"
+
+#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Clear day settings"
+msgstr "Wyczyść ustawienia dnia"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete break"
+msgstr "Usuń przerwę"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete schedule"
+msgstr "Usuń harmonogram"

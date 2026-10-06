@@ -500,11 +500,6 @@ msgstr[0] "Powiadomić %{count} uczestnika o tej zmianie?"
 msgstr[1] "Powiadomić %{count} uczestników o tej zmianie?"
 msgstr[2] "Powiadomić %{count} uczestników o tej zmianie?"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Notify attendees?"
-msgstr "Powiadomić uczestników?"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "On date"
@@ -643,11 +638,6 @@ msgid_plural "Send cancellation to %{count} attendees?"
 msgstr[0] "Wysłać odwołanie do %{count} uczestnika?"
 msgstr[1] "Wysłać odwołanie do %{count} uczestników?"
 msgstr[2] "Wysłać odwołanie do %{count} uczestników?"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Send cancellation?"
-msgstr "Wysłać odwołanie?"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
 #, elixir-autogen, elixir-format
@@ -1494,3 +1484,18 @@ msgstr "Import został przerwany, ponieważ Twój kalendarz nie odpowiada. Spró
 #, elixir-autogen, elixir-format
 msgid "This is a group booking. Move it, cancel it or change who attends from the meeting instead."
 msgstr "To rezerwacja grupowa. Przenieś ją, anuluj lub zmień uczestników ze spotkania."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Notify attendees"
+msgstr "Powiadom uczestników"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Send cancellation"
+msgstr "Wyślij odwołanie"
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a meeting at this time. Please choose a different time."
+msgstr "Masz już spotkanie o tej porze. Wybierz inną godzinę."

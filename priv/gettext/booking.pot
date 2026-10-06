@@ -1442,3 +1442,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Ends %{time} on %{weekday} %{day} %{month}"
 msgstr ""
+
+#: lib/tymeslot/meeting_types/location_selection.ex
+#, elixir-autogen, elixir-format
+msgid "Phone call"
+msgstr ""
+
+#: lib/tymeslot/meeting_types/location_selection.ex
+#, elixir-autogen, elixir-format
+msgid "Somewhere else"
+msgstr ""

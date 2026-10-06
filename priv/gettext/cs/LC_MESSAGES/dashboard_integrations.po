@@ -153,11 +153,6 @@ msgstr "Váš účet Zoom se nepodařilo identifikovat. Zkuste to prosím znovu.
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Delete %{type} Integration"
-msgstr "Smazat integraci typu %{type}"
-
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
-#, elixir-autogen, elixir-format
 msgid "Delete Integration"
 msgstr "Smazat integraci"
 
@@ -440,3 +435,8 @@ msgstr "Kategorie integrací"
 #, elixir-autogen, elixir-format
 msgid "Setup guide"
 msgstr "Návod k nastavení"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{type} integration"
+msgstr "Smazat integraci typu %{type}"

@@ -1442,3 +1442,13 @@ msgstr "Este link para remarcar sua vaga já foi usado. Você pode agendar um no
 #, elixir-autogen, elixir-format
 msgid "Ends %{time} on %{weekday} %{day} %{month}"
 msgstr "Termina às %{time} de %{weekday}, %{day} de %{month}"
+
+#: lib/tymeslot/meeting_types/location_selection.ex
+#, elixir-autogen, elixir-format
+msgid "Phone call"
+msgstr "Ligação telefônica"
+
+#: lib/tymeslot/meeting_types/location_selection.ex
+#, elixir-autogen, elixir-format
+msgid "Somewhere else"
+msgstr "Outro local"

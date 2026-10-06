@@ -709,3 +709,8 @@ msgstr "Toutes les places ont été libérées"
 #, elixir-autogen, elixir-format
 msgid "Left this slot"
 msgstr "A quitté ce créneau"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel meeting"
+msgstr "Annuler la réunion"

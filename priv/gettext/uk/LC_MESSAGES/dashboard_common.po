@@ -560,11 +560,6 @@ msgstr[2] "%{count} гостей уже проголосували. Їхні в�
 
 #: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Cancel this poll?"
-msgstr "Скасувати це опитування?"
-
-#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
-#, elixir-autogen, elixir-format
 msgid "Keep poll"
 msgstr "Залишити опитування"
 
@@ -748,3 +743,8 @@ msgstr "З ким"
 #, elixir-autogen, elixir-format
 msgid "%{date}, %{time}"
 msgstr "%{date}, %{time}"
+
+#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel this poll"
+msgstr "Скасувати це опитування"

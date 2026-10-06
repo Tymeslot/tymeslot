@@ -499,11 +499,6 @@ msgid_plural "Notify %{count} attendees of this change?"
 msgstr[0] "Avisar %{count} participante desta mudança?"
 msgstr[1] "Avisar %{count} participantes desta mudança?"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Notify attendees?"
-msgstr "Avisar os participantes?"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "On date"
@@ -636,11 +631,6 @@ msgid "Send cancellation to %{count} attendee?"
 msgid_plural "Send cancellation to %{count} attendees?"
 msgstr[0] "Enviar o cancelamento para %{count} participante?"
 msgstr[1] "Enviar o cancelamento para %{count} participantes?"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Send cancellation?"
-msgstr "Enviar o cancelamento?"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
 #, elixir-autogen, elixir-format
@@ -1478,3 +1468,18 @@ msgstr "A importação parou porque seu calendário não está respondendo. Tent
 #, elixir-autogen, elixir-format
 msgid "This is a group booking. Move it, cancel it or change who attends from the meeting instead."
 msgstr "Este é um agendamento em grupo. Para movê-lo, cancelá-lo ou mudar quem participa, use a própria reunião."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Notify attendees"
+msgstr "Avisar os participantes"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Send cancellation"
+msgstr "Enviar cancelamento"
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a meeting at this time. Please choose a different time."
+msgstr "Você já tem uma reunião marcada nesse horário. Escolha outro."

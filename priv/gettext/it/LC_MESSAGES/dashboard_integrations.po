@@ -153,11 +153,6 @@ msgstr "Impossibile identificare il tuo account Zoom. Riprova."
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Delete %{type} Integration"
-msgstr "Elimina integrazione %{type}"
-
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
-#, elixir-autogen, elixir-format
 msgid "Delete Integration"
 msgstr "Elimina integrazione"
 
@@ -437,3 +432,8 @@ msgstr "Categorie di integrazioni"
 #, elixir-autogen, elixir-format
 msgid "Setup guide"
 msgstr "Guida alla configurazione"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{type} integration"
+msgstr "Elimina integrazione %{type}"

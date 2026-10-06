@@ -715,3 +715,8 @@ msgstr "Wszystkie miejsca zostały zwolnione"
 #, elixir-autogen, elixir-format
 msgid "Left this slot"
 msgstr "Opuścił(a) ten termin"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel meeting"
+msgstr "Odwołaj spotkanie"

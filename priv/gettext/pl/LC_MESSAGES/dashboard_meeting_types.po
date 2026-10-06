@@ -319,3 +319,18 @@ msgstr "Rezerwacje grupowe nie są objęte Twoim obecnym planem, dlatego ten typ
 #, elixir-autogen, elixir-format
 msgid "Paused"
 msgstr "Wstrzymany"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}"
+msgstr "Usuń %{name}"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete meeting type"
+msgstr "Usuń typ spotkania"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Edit %{name}"
+msgstr "Edytuj %{name}"

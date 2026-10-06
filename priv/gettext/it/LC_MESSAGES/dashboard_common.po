@@ -555,11 +555,6 @@ msgstr[1] "%{count} ospiti hanno già votato. Le loro risposte andranno perse."
 
 #: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Cancel this poll?"
-msgstr "Annullare questo sondaggio?"
-
-#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
-#, elixir-autogen, elixir-format
 msgid "Keep poll"
 msgstr "Mantieni il sondaggio"
 
@@ -742,3 +737,8 @@ msgstr "Con"
 #, elixir-autogen, elixir-format
 msgid "%{date}, %{time}"
 msgstr "%{date}, %{time}"
+
+#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel this poll"
+msgstr "Annulla questo sondaggio"

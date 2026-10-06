@@ -153,11 +153,6 @@ msgstr "Не вдалося ідентифікувати ваш облікови
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Delete %{type} Integration"
-msgstr "Видалити інтеграцію %{type}"
-
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
-#, elixir-autogen, elixir-format
 msgid "Delete Integration"
 msgstr "Видалити інтеграцію"
 
@@ -440,3 +435,8 @@ msgstr "Категорії інтеграцій"
 #, elixir-autogen, elixir-format
 msgid "Setup guide"
 msgstr "Посібник із налаштування"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{type} integration"
+msgstr "Видалити інтеграцію %{type}"

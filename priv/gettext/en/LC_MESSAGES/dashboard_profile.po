@@ -268,3 +268,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "This username is reserved"
 msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete avatar"
+msgstr ""

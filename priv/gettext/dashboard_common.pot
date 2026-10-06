@@ -555,11 +555,6 @@ msgstr[1] ""
 
 #: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Cancel this poll?"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
-#, elixir-autogen, elixir-format
 msgid "Keep poll"
 msgstr ""
 
@@ -741,4 +736,9 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/dashboard_format.ex
 #, elixir-autogen, elixir-format
 msgid "%{date}, %{time}"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel this poll"
 msgstr ""

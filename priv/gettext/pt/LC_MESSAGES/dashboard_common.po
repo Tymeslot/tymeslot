@@ -555,11 +555,6 @@ msgstr[1] "%{count} convidados já votaram. As respostas serão descartadas."
 
 #: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Cancel this poll?"
-msgstr "Cancelar esta enquete?"
-
-#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
-#, elixir-autogen, elixir-format
 msgid "Keep poll"
 msgstr "Manter enquete"
 
@@ -742,3 +737,8 @@ msgstr "Com"
 #, elixir-autogen, elixir-format
 msgid "%{date}, %{time}"
 msgstr "%{date}, %{time}"
+
+#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel this poll"
+msgstr "Cancelar esta enquete"

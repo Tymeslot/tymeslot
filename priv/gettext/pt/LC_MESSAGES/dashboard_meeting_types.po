@@ -320,3 +320,18 @@ msgstr "Agendamentos em grupo não estão incluídos no seu plano atual, por iss
 #, elixir-autogen, elixir-format
 msgid "Paused"
 msgstr "Pausado"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}"
+msgstr "Excluir %{name}"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete meeting type"
+msgstr "Excluir tipo de reunião"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Edit %{name}"
+msgstr "Editar %{name}"
