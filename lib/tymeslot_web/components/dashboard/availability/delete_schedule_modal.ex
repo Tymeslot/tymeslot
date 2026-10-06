@@ -46,7 +46,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.DeleteScheduleModal do
     <Modal.confirm_modal
       id={@id}
       show={@show}
-      title={dgettext("dashboard_availability", "Delete Schedule")}
+      title={dgettext("dashboard_availability", "Delete schedule")}
       confirm_label={dgettext("dashboard_availability", "Delete Schedule")}
       on_cancel={@on_cancel}
       on_confirm={@on_confirm}

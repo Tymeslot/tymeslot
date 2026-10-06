@@ -54,7 +54,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
     <Modal.confirm_modal
       id={@id}
       show={@show}
-      title={dgettext("dashboard_bookings", "Cancel Meeting")}
+      title={dgettext("dashboard_bookings", "Cancel meeting")}
       confirm_label={
         if @paid?,
           do: dgettext("dashboard_bookings", "Confirm cancellation"),

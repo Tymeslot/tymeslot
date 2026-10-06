@@ -16,7 +16,7 @@ defmodule TymeslotWeb.Dashboard.Automation.DeleteTelegramModal do
       id="delete-telegram-modal"
       show={@show}
       size={:small}
-      title={dgettext("dashboard_automation", "Delete Telegram Integration?")}
+      title={dgettext("dashboard_automation", "Delete Telegram integration")}
       confirm_label={dgettext("dashboard_automation", "Delete Integration")}
       on_cancel={@on_cancel}
       on_confirm={@on_confirm}

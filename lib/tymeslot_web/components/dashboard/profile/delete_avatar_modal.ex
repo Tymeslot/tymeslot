@@ -62,7 +62,7 @@ defmodule TymeslotWeb.Components.Dashboard.Profile.DeleteAvatarModal do
       <.confirm_modal
         id={"#{@id}-modal"}
         show={@show}
-        title={dgettext("dashboard_profile", "Delete Avatar")}
+        title={dgettext("dashboard_profile", "Delete avatar")}
         confirm_label={dgettext("dashboard_profile", "Delete Avatar")}
         on_cancel={JS.push("hide", target: @myself)}
         on_confirm={JS.push("confirm", target: @myself)}

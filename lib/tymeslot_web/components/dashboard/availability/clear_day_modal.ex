@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.ClearDayModal do
     <Modal.confirm_modal
       id={@id}
       show={@show}
-      title={dgettext("dashboard_availability", "Clear Day Settings")}
+      title={dgettext("dashboard_availability", "Clear day settings")}
       confirm_label={dgettext("dashboard_availability", "Clear All Settings")}
       on_cancel={@on_cancel}
       on_confirm={@on_confirm}

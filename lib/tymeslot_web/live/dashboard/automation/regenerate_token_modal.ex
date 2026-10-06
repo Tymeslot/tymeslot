@@ -16,7 +16,7 @@ defmodule TymeslotWeb.Dashboard.Automation.RegenerateTokenModal do
       id="regenerate-token-modal"
       show={@show}
       size={:small}
-      title={dgettext("dashboard_automation", "Regenerate Token?")}
+      title={dgettext("dashboard_automation", "Regenerate token")}
       confirm_label={dgettext("dashboard_automation", "Regenerate")}
       on_cancel={@on_cancel}
       on_confirm={@on_confirm}

@@ -184,7 +184,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlersTest do
       open_telegram_tab(view)
 
       view |> element("button[title='Delete']") |> render_click()
-      assert render(view) =~ "Delete Telegram Integration?"
+      assert render(view) =~ "Delete Telegram integration"
 
       view |> element("#delete-telegram-modal button", "Delete Integration") |> render_click()
 

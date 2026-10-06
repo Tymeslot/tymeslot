@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Dashboard.Polls.CancelPollModal do
       :if={@open && @poll}
       id="cancel-poll-modal"
       show
-      title={dgettext("dashboard_common", "Cancel this poll?")}
+      title={dgettext("dashboard_common", "Cancel this poll")}
       confirm_label={dgettext("dashboard_common", "Cancel poll")}
       cancel_label={dgettext("dashboard_common", "Keep poll")}
       on_cancel={JS.push("close_cancel_poll_modal", target: @myself)}

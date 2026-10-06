@@ -109,7 +109,7 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
       |> element("button[title='Delete'][aria-label='Delete #{webhook.name}']")
       |> render_click()
 
-      assert render(view) =~ "Delete Webhook?"
+      assert render(view) =~ "Delete webhook"
 
       view
       |> element("#delete-webhook-modal button", "Delete Webhook")
@@ -231,7 +231,7 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
       |> element("button[phx-click='show_regenerate_token_modal']")
       |> render_click()
 
-      assert render(view) =~ "Regenerate Token?"
+      assert render(view) =~ "Regenerate token"
 
       # Confirm the regeneration via the danger button in the modal
       view

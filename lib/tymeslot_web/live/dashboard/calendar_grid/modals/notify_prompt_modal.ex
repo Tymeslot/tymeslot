@@ -30,8 +30,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.NotifyPromptModal do
     """
   end
 
-  defp header_text(:delete), do: dgettext("dashboard_calendar_events", "Send cancellation?")
-  defp header_text(_update), do: dgettext("dashboard_calendar_events", "Notify attendees?")
+  defp header_text(:delete), do: dgettext("dashboard_calendar_events", "Send cancellation")
+  defp header_text(_update), do: dgettext("dashboard_calendar_events", "Notify attendees")
 
   defp body_text(:delete, attendees) do
     dngettext(

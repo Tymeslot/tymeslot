@@ -36,7 +36,7 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal d
     <Modal.confirm_modal
       id="delete-meeting-type-modal"
       show={@show && @meeting_type != nil}
-      title={dgettext("dashboard_meeting_types", "Delete Meeting Type")}
+      title={dgettext("dashboard_meeting_types", "Delete meeting type")}
       confirm_label={dgettext("dashboard_meeting_types", "Delete Meeting Type")}
       on_cancel={JS.push("hide_delete_modal", target: @myself)}
       on_confirm={JS.push("confirm_delete_meeting_type", target: @myself)}

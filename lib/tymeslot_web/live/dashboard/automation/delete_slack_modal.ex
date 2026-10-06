@@ -16,7 +16,7 @@ defmodule TymeslotWeb.Dashboard.Automation.DeleteSlackModal do
       id="delete-slack-modal"
       show={@show}
       size={:small}
-      title={dgettext("dashboard_automation", "Delete Slack Integration?")}
+      title={dgettext("dashboard_automation", "Delete Slack integration")}
       confirm_label={dgettext("dashboard_automation", "Delete Integration")}
       on_cancel={@on_cancel}
       on_confirm={@on_confirm}

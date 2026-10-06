@@ -457,13 +457,13 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
 
       # Cancelling is irreversible, so the destructive button must only open the
       # confirmation, never perform the cancellation.
-      assert html =~ "Cancel this poll?"
+      assert html =~ "Cancel this poll"
       assert {:ok, %{status: :open}} = Polls.get_poll_for_host(poll.id, user.id)
 
       html =
         view |> element("#cancel-poll-modal .modal-footer button", "Keep poll") |> render_click()
 
-      refute html =~ "Cancel this poll?"
+      refute html =~ "Cancel this poll"
       assert {:ok, %{status: :open}} = Polls.get_poll_for_host(poll.id, user.id)
     end
 
@@ -484,7 +484,7 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
         |> render_click()
 
       assert html =~ "This poll was cancelled"
-      refute html =~ "Cancel this poll?"
+      refute html =~ "Cancel this poll"
 
       {:ok, reloaded} = Polls.get_poll_for_host(poll.id, user.id)
       assert reloaded.status == :cancelled

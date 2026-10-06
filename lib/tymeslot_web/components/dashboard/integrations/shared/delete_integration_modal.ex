@@ -155,8 +155,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
         show={@show}
         size={:small}
         title={
-          dgettext("dashboard_integrations", "Delete %{type} Integration",
-            type: format_integration_type(@integration_type)
+          dgettext("dashboard_integrations", "Delete %{type} integration",
+            type: format_integration_type(@integration_type) |> String.downcase()
           )
         }
         confirm_label={dgettext("dashboard_integrations", "Delete Integration")}

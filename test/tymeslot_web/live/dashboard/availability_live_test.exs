@@ -240,7 +240,7 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       |> render_click()
 
       html = render(view)
-      assert html =~ "Delete Break"
+      assert html =~ "Delete break"
 
       # Confirm deletion
       view
@@ -333,7 +333,7 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       |> render_click()
 
       html = render(view)
-      assert html =~ "Clear Day Settings"
+      assert html =~ "Clear day settings"
     end
 
     test "clears a workday after confirmation", %{conn: conn, schedule: schedule} do

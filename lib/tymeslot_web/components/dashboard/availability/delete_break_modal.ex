@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.DeleteBreakModal do
     <Modal.confirm_modal
       id={@id}
       show={@show}
-      title={dgettext("dashboard_availability", "Delete Break")}
+      title={dgettext("dashboard_availability", "Delete break")}
       confirm_label={dgettext("dashboard_availability", "Delete Break")}
       on_cancel={@on_cancel}
       on_confirm={@on_confirm}

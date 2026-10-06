@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Dashboard.Automation.DeleteWebhookModal do
       id={@id}
       show={@show}
       size={:small}
-      title={dgettext("dashboard_automation", "Delete Webhook?")}
+      title={dgettext("dashboard_automation", "Delete webhook")}
       confirm_label={dgettext("dashboard_automation", "Delete Webhook")}
       on_cancel={@on_cancel}
       on_confirm={@on_confirm}

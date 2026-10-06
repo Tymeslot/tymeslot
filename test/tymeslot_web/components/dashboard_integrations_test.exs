@@ -149,7 +149,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
 
     html = render_component(DeleteIntegrationModal, base_assigns)
 
-    assert html =~ "Delete Calendar Integration"
+    assert html =~ "Delete calendar integration"
     assert html =~ "calendar data"
     assert html =~ "Delete Integration"
 
@@ -159,7 +159,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
         | integration_type: :video
       })
 
-    assert html =~ "Delete Video Integration"
+    assert html =~ "Delete video integration"
     assert html =~ "video conferencing configuration"
     assert html =~ "Delete Integration"
   end
