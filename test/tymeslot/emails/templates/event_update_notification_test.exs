@@ -5,7 +5,9 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotificationTest do
 
   import Tymeslot.EmailTestHelpers
 
+  alias Tymeslot.Emails.Shared.Styles.Tokens
   alias Tymeslot.Emails.Templates.EventUpdateNotification
+  alias Tymeslot.Utils.Colour
 
   describe "render/2" do
     test "returns a valid Swoosh email" do
@@ -154,6 +156,20 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotificationTest do
 
       refute email.subject =~ "\r"
       refute email.subject =~ "\n"
+    end
+
+    test "the change table's column labels read at WCAG AA on the card tint" do
+      details = build_event_update_details(%{changes: [{:location, "Room A", "Room B"}]})
+      html = EventUpdateNotification.render("a@example.com", details).html_body
+      tint = Tokens.intent(:confirmed).tint
+
+      for label <- ["Field", "Before", "After"] do
+        [_, colour] =
+          Regex.run(~r/<th style="[^"]*color:\s*(#[0-9a-f]{6});[^"]*">#{label}<\/th>/i, html)
+
+        assert Colour.contrast_ratio(colour, tint) >= 4.5,
+               "#{label}: #{colour} on #{tint} fails 4.5:1"
+      end
     end
 
     test "a first notification states current details with no before column" do
