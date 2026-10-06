@@ -63,7 +63,10 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
       things, classes used in place of the default active styling, and a
       background class for a disc shown while the tab is inactive
 
-  On a narrow screen the strip stays a single row and scrolls sideways,
+  Below `sm` a tab shows its label without its icon, and the default size
+  pads it more tightly, as `segmented_control/1` does: on a phone the icons
+  are what push a three-tab strip past the screen's width. Beyond that, the
+  strip stays a single row and scrolls sideways,
   fading whichever edge has more tabs beyond it, rather than wrapping into a
   ragged block. A strip whose tabs open a menu (`tab_action`) passes
   `overflow={:wrap}` instead, because a scrolling row clips anything that
@@ -207,7 +210,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
     assigns = assign(assigns, :status, tab_status(assigns.tab))
 
     ~H"""
-    <.strip_icon :if={@tab[:icon]} icon={@tab.icon} class="w-5 h-5" />
+    <.strip_icon :if={@tab[:icon]} icon={@tab.icon} class="hidden sm:block w-5 h-5" />
     <span
       :if={@tab[:dot] && !@active}
       class={["w-2.5 h-2.5 shrink-0 rounded-token-full", @tab.dot]}
@@ -295,7 +298,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
     ]
   end
 
-  defp tab_padding(:md), do: "px-4 py-2.5 sm:px-6 sm:py-3"
+  defp tab_padding(:md), do: "px-3 py-2.5 sm:px-6 sm:py-3"
   defp tab_padding(:sm), do: "px-3 py-2"
 
   defp shell_class(:card),

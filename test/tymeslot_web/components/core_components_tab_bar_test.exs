@@ -217,6 +217,18 @@ defmodule TymeslotWeb.Components.CoreComponentsTabBarTest do
       assert [_label] = Floki.find(doc, "#test-tabs-tab-details span.truncate")
     end
 
+    test "drops tab icons below sm, so a short strip fits a phone without scrolling" do
+      doc = render_bar(panel_tabs(), "details")
+      [icon] = Floki.find(doc, "#test-tabs-tab-details svg")
+      icon_class = icon |> Floki.attribute("class") |> hd() |> String.split()
+
+      assert "hidden" in icon_class
+      assert "sm:block" in icon_class
+
+      # The label itself always shows.
+      assert Floki.text(Floki.find(doc, "#test-tabs-tab-details span.truncate")) == "Details"
+    end
+
     test "keeps whole tabs in a scrolling row" do
       doc = render_bar(panel_tabs(), "details")
       wrappers = Floki.find(doc, "#test-tabs [role='presentation']")
