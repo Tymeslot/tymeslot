@@ -40,6 +40,58 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     assert Floki.attribute(active_link, "href") == ["/dashboard/overview"]
   end
 
+  test "marks only the active link as the current page for assistive technology" do
+    assigns = %{
+      current_action: :availability,
+      integration_status: %{has_calendar: true, has_video: true, has_meeting_types: true},
+      profile: %{username: "testuser"}
+    }
+
+    doc =
+      (&DashboardSidebar.sidebar/1)
+      |> render_component(assigns)
+      |> Floki.parse_document!()
+
+    assert doc |> Floki.find("a[aria-current='page']") |> Floki.attribute("href") ==
+             ["/dashboard/availability"]
+  end
+
+  test "dismissing the mobile drawer hands focus back to the menu toggle" do
+    assigns = %{
+      current_action: :overview,
+      integration_status: %{has_calendar: true, has_video: true, has_meeting_types: true},
+      profile: %{username: "testuser"}
+    }
+
+    doc =
+      (&DashboardSidebar.sidebar/1)
+      |> render_component(assigns)
+      |> Floki.parse_document!()
+
+    focuses_toggle? = fn value ->
+      value
+      |> Jason.decode!()
+      |> Enum.any?(&match?(["focus", %{"to" => "#dashboard-sidebar-toggle"}], &1))
+    end
+
+    # Escape runs the command the hook reads from data-dismiss.
+    [aside] = Floki.find(doc, "aside#dashboard-sidebar")
+    assert Floki.attribute(aside, "phx-hook") == ["SidebarEscape"]
+    assert [dismiss] = Floki.attribute(aside, "data-dismiss")
+    assert focuses_toggle?.(dismiss)
+
+    for selector <- ["#dashboard-sidebar-overlay", "button.dashboard-sidebar-close"] do
+      assert [click] = doc |> Floki.find(selector) |> Floki.attribute("phx-click")
+      assert focuses_toggle?.(click), "#{selector} does not return focus to the toggle"
+    end
+
+    # Following a nav link navigates; focus belongs to the new page.
+    [nav_click | _rest] =
+      doc |> Floki.find("a.dashboard-nav-link") |> Floki.attribute("phx-click")
+
+    refute focuses_toggle?.(nav_click)
+  end
+
   test "renders active link correctly for different actions" do
     # The merged Integrations item is current for the hub action and for every
     # legacy action that redirects into it, so all four highlight the same link.
@@ -93,6 +145,9 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     copy_btn = Floki.find(doc, "button#copy-scheduling-link")
     assert length(copy_btn) == 1
     refute copy_btn |> List.first() |> Floki.attribute("disabled") |> Enum.any?()
+
+    # The icon-only button carries an accessible name
+    assert Floki.attribute(copy_btn, "aria-label") == ["Copy link to clipboard"]
   end
 
   test "disables scheduling link when no username" do
@@ -112,11 +167,15 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     # No clickable scheduling link
     assert Floki.find(doc, "a[href='/testuser']") == []
 
-    # Copy button disabled with tooltip
-    disabled_copy_btn = Floki.find(doc, "button[disabled][title]")
+    # Copy button inert but focusable: named for the action, the tooltip says why
+    disabled_copy_btn = Floki.find(doc, "button#copy-scheduling-link-disabled")
     assert length(disabled_copy_btn) == 1
+    assert Floki.attribute(disabled_copy_btn, "aria-disabled") == ["true"]
+    assert Floki.attribute(disabled_copy_btn, "disabled") == []
+    assert Floki.attribute(disabled_copy_btn, "phx-hook") == []
+    assert Floki.attribute(disabled_copy_btn, "aria-label") == ["Copy link to clipboard"]
 
-    assert disabled_copy_btn |> List.first() |> Floki.attribute("title") |> List.first() =~
+    assert disabled_copy_btn |> Floki.attribute("title") |> List.first() =~
              "Set a username in Settings to enable this feature"
   end
 
@@ -137,11 +196,13 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     # No clickable scheduling link
     assert Floki.find(doc, "a[href='/testuser']") == []
 
-    # Copy button disabled with tooltip
-    disabled_copy_btn = Floki.find(doc, "button[disabled][title]")
+    # Copy button inert but focusable: named for the action, the tooltip says why
+    disabled_copy_btn = Floki.find(doc, "button#copy-scheduling-link-disabled")
     assert length(disabled_copy_btn) == 1
+    assert Floki.attribute(disabled_copy_btn, "aria-disabled") == ["true"]
+    assert Floki.attribute(disabled_copy_btn, "aria-label") == ["Copy link to clipboard"]
 
-    assert disabled_copy_btn |> List.first() |> Floki.attribute("title") |> List.first() =~
+    assert disabled_copy_btn |> Floki.attribute("title") |> List.first() =~
              "Connect a calendar in Calendar settings to enable this feature"
   end
 
@@ -167,7 +228,71 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
            ) == 1
 
     assert length(Floki.find(doc, ".dashboard-nav-notification")) == 2
-    assert html =~ "!"
+
+    # Each badge is a bare dot: hidden from assistive technology, with its
+    # reason spoken from screen-reader-only text instead.
+    assert doc
+           |> Floki.find(
+             "a[href='/dashboard/meeting-settings'] .dashboard-nav-notification .sr-only"
+           )
+           |> Floki.text() == ", Add a meeting type so guests have something to book"
+
+    assert length(Floki.find(doc, ".dashboard-nav-notification [aria-hidden=true]")) == 2
+    refute html =~ ~r/dashboard-nav-notification[^>]*>\s*!/
+  end
+
+  describe "Integrations item styling" do
+    @needs_setup %{has_calendar: false, has_video: false, has_meeting_types: true}
+    @all_connected %{has_calendar: true, has_video: true, has_meeting_types: true}
+
+    test "carries no highlight on another page while setup is outstanding" do
+      link = integrations_link(:overview, @needs_setup)
+
+      assert modifier_classes(link) == []
+      assert Floki.attribute(link, "aria-current") == []
+      assert length(Floki.find(link, ".dashboard-nav-notification")) == 1
+    end
+
+    test "carries no highlight and no dot on another page once everything is connected" do
+      link = integrations_link(:polls, @all_connected)
+
+      assert modifier_classes(link) == []
+      assert Floki.attribute(link, "aria-current") == []
+      assert Floki.find(link, ".dashboard-nav-notification") == []
+      assert Floki.attribute(link, "title") == []
+    end
+
+    test "is styled as active on the Integrations page, with or without outstanding setup" do
+      for status <- [@needs_setup, @all_connected] do
+        link = integrations_link(:integrations, status)
+
+        assert modifier_classes(link) == ["dashboard-nav-link--active"]
+        assert Floki.attribute(link, "aria-current") == ["page"]
+      end
+    end
+
+    test "only the current section is highlighted on any page while setup is outstanding" do
+      for action <- [:overview, :meetings, :polls, :theme, :settings] do
+        doc =
+          (&DashboardSidebar.sidebar/1)
+          |> render_component(%{
+            current_action: action,
+            integration_status: %{has_calendar: false, has_video: false, has_meeting_types: false},
+            profile: %{username: "testuser"}
+          })
+          |> Floki.parse_document!()
+
+        highlighted =
+          doc
+          |> Floki.find("aside nav a.dashboard-nav-link")
+          |> Enum.reject(&(modifier_classes(&1) == []))
+          |> Enum.flat_map(&Floki.attribute(&1, "href"))
+
+        assert length(highlighted) == 1, "#{action}: #{inspect(highlighted)}"
+        refute "/dashboard/integrations" in highlighted
+        refute "/dashboard/meeting-settings" in highlighted
+      end
+    end
   end
 
   test "Integrations badge shows when only one of calendar/video is unconnected" do
@@ -273,11 +398,23 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     assert html =~ "Some Untranslated Extension"
   end
 
-  # The badge is a hover affordance, so what it says lives in the `title`
-  # attribute rather than in the rendered text.
+  # The badge is a bare dot, so what it says is carried twice: as a tooltip
+  # on the link and as screen-reader-only text after the label, led by a
+  # comma so the label and the reason are read with a pause. Both must agree.
   defp integrations_badge_title(integration_status) do
+    link = integrations_link(:overview, integration_status)
+
+    [title] = Floki.attribute(link, "title")
+
+    assert link |> Floki.find(".dashboard-nav-notification .sr-only") |> Floki.text() ==
+             ", " <> title
+
+    title
+  end
+
+  defp integrations_link(current_action, integration_status) do
     assigns = %{
-      current_action: :overview,
+      current_action: current_action,
       integration_status: integration_status,
       profile: %{username: "testuser"}
     }
@@ -285,9 +422,17 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     (&DashboardSidebar.sidebar/1)
     |> render_component(assigns)
     |> Floki.parse_document!()
-    |> Floki.find("a[href='/dashboard/integrations'] .dashboard-nav-notification")
-    |> Floki.attribute("title")
-    |> List.first()
+    |> Floki.find("aside nav a[href='/dashboard/integrations']")
+  end
+
+  # The BEM modifiers on a nav link (`dashboard-nav-link--active` and any
+  # other variant that restyles the row).
+  defp modifier_classes(link) do
+    link
+    |> Floki.attribute("class")
+    |> Enum.join(" ")
+    |> String.split()
+    |> Enum.filter(&String.starts_with?(&1, "dashboard-nav-link--"))
   end
 
   # In the umbrella build the SaaS config repoints :dashboard_extension_gettext at

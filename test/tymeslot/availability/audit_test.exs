@@ -127,5 +127,55 @@ defmodule Tymeslot.Availability.AuditTest do
       # the same nil schedule, so they still have to agree with each other.
       assert result.disagreements == []
     end
+
+    test "judges a slot running into the next day against that day's events too" do
+      # Monday 22:00 – 02:00 (+1) offers 90-minute starts at 22:00 and 23:30.
+      # One event blocks 22:00 on Monday, another blocks 23:30 after midnight,
+      # so Monday has nothing left. The per-day read has to fetch Tuesday's
+      # events as the month view does, or it calls Monday bookable and the
+      # audit reports a disagreement that is not there.
+      user = insert(:user)
+      profile = insert(:profile, user: user, username: "audit-overnight", timezone: "Etc/UTC")
+      schedule = insert(:availability_schedule, profile: profile, is_default: true)
+
+      Enum.each(1..7, fn day_of_week ->
+        insert(:weekly_availability,
+          schedule: schedule,
+          day_of_week: day_of_week,
+          is_available: day_of_week == 1,
+          start_time: ~T[22:00:00],
+          end_time: ~T[02:00:00],
+          ends_next_day: true
+        )
+      end)
+
+      integration = insert(:calendar_integration, user: user)
+      monday = future_monday()
+
+      for {date, from, to} <- [
+            {monday, ~T[22:00:00], ~T[22:30:00]},
+            {Date.add(monday, 1), ~T[00:15:00], ~T[00:45:00]}
+          ] do
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          start_at: DateTime.new!(date, from, "Etc/UTC"),
+          end_at: DateTime.new!(date, to, "Etc/UTC")
+        )
+      end
+
+      result = Audit.audit(profile, start_date: monday, horizon_days: 3, duration_minutes: 90)
+      assert result.disagreements == []
+
+      # The same with Monday as the horizon's last day: the month view's own
+      # read has to reach past the horizon for Tuesday's event.
+      ending_monday =
+        Audit.audit(profile,
+          start_date: Date.add(monday, -2),
+          horizon_days: 2,
+          duration_minutes: 90
+        )
+
+      assert ending_monday.disagreements == []
+    end
   end
 end

@@ -127,6 +127,7 @@ config :tymeslot, :announcement_catalogs, [Tymeslot.Announcements.Catalog]
 config :tymeslot, :feature_assigns,
   automations_allowed: true,
   custom_questions_allowed: true,
+  group_bookings_allowed: true,
   analytics_allowed: true,
   meeting_payments: false
 

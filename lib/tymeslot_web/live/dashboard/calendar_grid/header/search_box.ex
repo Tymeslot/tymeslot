@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.SearchBox do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
-  alias TymeslotWeb.Helpers.LocaleFormat
+  alias TymeslotWeb.Dashboard.DashboardFormat
 
   attr :search_term, :string, required: true
   attr :search_results, :list, required: true
@@ -52,7 +52,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.SearchBox do
           placeholder={dgettext("dashboard_calendar", "Search events")}
           aria-label={dgettext("dashboard_calendar", "Search events")}
           phx-debounce="300"
-          class="w-40 lg:w-52 pl-8 pr-2 py-1.5 text-token-sm text-tymeslot-700 placeholder:text-tymeslot-400 border border-tymeslot-200 rounded-md focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 focus:border-turquoise-400"
+          class="w-40 lg:w-52 pl-8 pr-2 py-1.5 text-token-sm text-tymeslot-700 placeholder:text-tymeslot-400 border border-tymeslot-200 rounded-token-md focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 focus:border-turquoise-400"
         />
       </form>
       <div
@@ -60,7 +60,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.SearchBox do
         id="calendar-search-results"
         phx-window-keydown={JS.push("close_search", target: @myself)}
         phx-key="Escape"
-        class="absolute top-full left-0 mt-1 w-72 max-h-80 overflow-y-auto bg-white border border-tymeslot-200 rounded-xl shadow-lg py-1 z-30"
+        class="absolute top-full left-0 mt-1 w-72 max-h-80 overflow-y-auto bg-white border border-tymeslot-200 rounded-token-xl shadow-lg py-1 z-30"
         role="listbox"
       >
         <button
@@ -74,12 +74,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.SearchBox do
           role="option"
         >
           <span
-            class={"mt-1 w-2.5 h-2.5 rounded-full shrink-0 #{Helpers.color_class_for_integration(@integration_colors, event.calendar_integration_id)}"}
+            class={"mt-1 w-2.5 h-2.5 rounded-token-full shrink-0 #{Helpers.color_class_for_integration(@integration_colors, event.calendar_integration_id)}"}
             aria-hidden="true"
           ></span>
           <span class="min-w-0">
             <span class="block text-token-sm text-tymeslot-800 truncate">
-              {event.summary || dgettext("dashboard_calendar", "Untitled event")}
+              {DashboardFormat.title(event.summary)}
             </span>
             <span class="block text-token-xs text-tymeslot-500">
               {result_time_label(event, @user_timezone, @preferences)}
@@ -112,20 +112,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.SearchBox do
   defp result_date_iso(_event, _tz), do: ""
 
   # Short "date · time-range" label for a search result row.
-  defp result_time_label(%{all_day: true, start_date: %Date{} = date}, _tz, _prefs) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-
-    LocaleFormat.format_short_weekday_date(date, locale) <>
-      " · " <> dgettext("dashboard_calendar", "All day")
-  end
+  defp result_time_label(%{all_day: true, start_date: %Date{} = date}, _tz, _prefs),
+    do: DashboardFormat.short_date(date) <> " · " <> DashboardFormat.all_day()
 
   defp result_time_label(%{start_at: %DateTime{} = start_at} = event, tz, prefs) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-    fmt = Helpers.time_format(prefs)
-    local_date = start_at |> DateTime.shift_zone!(tz) |> DateTime.to_date()
-
-    LocaleFormat.format_short_weekday_date(local_date, locale) <>
-      " · " <> Helpers.format_time_range_in_tz(event, tz, fmt)
+    DashboardFormat.short_date(DashboardFormat.local_date(start_at, tz)) <>
+      " · " <> Helpers.format_display_time_range(event, Helpers.time_format(prefs), tz)
   end
 
   defp result_time_label(_event, _tz, _prefs), do: ""

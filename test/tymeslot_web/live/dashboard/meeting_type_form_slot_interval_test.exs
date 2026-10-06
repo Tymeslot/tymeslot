@@ -260,5 +260,68 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormSlotIntervalTest do
       assert html =~ "every 45 minutes"
       assert html =~ "09:00 AM, 09:45 AM, 10:30 AM"
     end
+
+    test "marks times that fall on a later day once the interval reaches twelve hours",
+         %{conn: conn, user: user} do
+      meeting_type =
+        insert(:meeting_type, user: user, duration_minutes: 720, slot_interval_minutes: nil)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      html = open_edit_form(view, meeting_type)
+
+      assert html =~ "09:00 AM, 09:00 PM, 09:00 AM (+1 day)"
+    end
+
+    test "a day-long meeting does not read as the same time three times",
+         %{conn: conn, user: user} do
+      meeting_type =
+        insert(:meeting_type, user: user, duration_minutes: 1440, slot_interval_minutes: nil)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      html = open_edit_form(view, meeting_type)
+
+      assert html =~ "09:00 AM, 09:00 AM (+1 day), 09:00 AM (+2 days)"
+    end
+
+    test "does not preview a duration outside the allowed range", %{conn: conn, user: user} do
+      meeting_type =
+        insert(:meeting_type, user: user, duration_minutes: 60, slot_interval_minutes: nil)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      open_edit_form(view, meeting_type)
+
+      html =
+        view
+        |> element(~s|input[name="meeting_type[duration]"]|)
+        |> render_change(%{"meeting_type" => %{"duration" => "1445"}})
+
+      refute html =~ "every 1445 minutes"
+      assert html =~ "How far apart booking start times are offered."
+    end
+
+    test "does not fall back to the meeting length for an out-of-range custom interval",
+         %{conn: conn, user: user} do
+      meeting_type =
+        insert(:meeting_type, user: user, duration_minutes: 60, slot_interval_minutes: nil)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      open_edit_form(view, meeting_type)
+
+      view
+      |> element(~s|select[name="meeting_type[slot_interval]"]|)
+      |> render_change(%{"meeting_type" => %{"slot_interval" => "custom"}})
+
+      html =
+        view
+        |> element(custom_input_selector())
+        |> render_change(%{"meeting_type" => %{"slot_interval" => "3"}})
+
+      refute html =~ "Matching the meeting length"
+      refute html =~ "every 3 minutes"
+    end
   end
 end

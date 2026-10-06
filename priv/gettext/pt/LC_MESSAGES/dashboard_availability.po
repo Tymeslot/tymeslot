@@ -51,11 +51,6 @@ msgstr "Aplicar aos dias úteis"
 msgid "Are you sure you want to delete this break%{label}?"
 msgstr "Tem certeza de que quer excluir esta pausa%{label}?"
 
-#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Availability"
-msgstr "Disponibilidade"
-
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
 #, elixir-autogen, elixir-format
 msgid "Break"
@@ -71,10 +66,6 @@ msgstr "Pausa adicionada"
 msgid "Break deleted"
 msgstr "Pausa excluída"
 
-#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex
-#: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex
-#: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
-#: lib/tymeslot_web/components/dashboard/availability/delete_time_off_modal.ex
 #: lib/tymeslot_web/components/dashboard/availability/schedule_form_modal.ex
 #: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
@@ -91,11 +82,6 @@ msgstr "Limpar todas as configurações"
 #, elixir-autogen, elixir-format
 msgid "Clear Day"
 msgstr "Limpar dia"
-
-#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Clear Day Settings"
-msgstr "Limpar configurações do dia"
 
 #: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
@@ -235,7 +221,6 @@ msgstr "A duração precisa ser um número válido de minutos"
 msgid "Duration must be greater than 0 minutes"
 msgstr "A duração precisa ser maior que 0 minutos"
 
-#: lib/tymeslot/availability/input_validation.ex
 #: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "End time must be after start time"
@@ -335,21 +320,6 @@ msgstr "Janela de antecedência atualizada para %{days} dias"
 #, elixir-autogen, elixir-format
 msgid "Are you sure you want to delete %{name}?"
 msgstr "Tem certeza de que quer excluir %{name}?"
-
-#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
-#, elixir-autogen, elixir-format
-msgid "Buffer Between Appointments"
-msgstr "Folga entre compromissos"
-
-#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Buffer time set to custom value"
-msgstr "Folga definida com um valor personalizado"
-
-#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Buffer time updated to %{minutes} minutes"
-msgstr "Folga atualizada para %{minutes} minutos"
 
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
@@ -497,11 +467,6 @@ msgstr "Estes tipos de reunião voltam para sua agenda padrão:"
 #, elixir-autogen, elixir-format
 msgid "These rules apply to every meeting type booked against this schedule."
 msgstr "Estas regras valem para todo tipo de reunião que segue esta agenda."
-
-#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
-#, elixir-autogen, elixir-format
-msgid "Time to block after each appointment for preparation, travel, or breaks."
-msgstr "Tempo a bloquear depois de cada compromisso para preparação, deslocamento ou pausa."
 
 #: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -778,11 +743,6 @@ msgstr "Ausências que terminaram nos últimos %{count} dias. Elas não afetam m
 msgid "Current and upcoming"
 msgstr "Atuais e próximas"
 
-#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
-#, elixir-autogen, elixir-format
-msgid "No upcoming time off. Anything you add appears here."
-msgstr "Nenhuma ausência futura. O que você adicionar aparece aqui."
-
 #: lib/tymeslot/availability/schedules.ex
 #, elixir-autogen, elixir-format
 msgid "(copy)"
@@ -823,3 +783,93 @@ msgid "and 1 more"
 msgid_plural "and %{count} more"
 msgstr[0] "e mais 1"
 msgstr[1] "e mais %{count}"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Anything you add appears here."
+msgstr "Tudo o que você adicionar aparece aqui."
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "No upcoming time off"
+msgstr "Nenhuma ausência futura"
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Schedules"
+msgstr "Agendas"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer Time"
+msgstr "Folga entre reuniões"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer after meetings set to custom value"
+msgstr "Folga depois das reuniões definida com um valor personalizado"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer after meetings updated to %{minutes} minutes"
+msgstr "Folga depois das reuniões atualizada para %{minutes} minutos"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer before meetings set to custom value"
+msgstr "Folga antes das reuniões definida com um valor personalizado"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer before meetings updated to %{minutes} minutes"
+msgstr "Folga antes das reuniões atualizada para %{minutes} minutos"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "A new booking can start this long after your previous meeting ends, at the earliest."
+msgstr "Um novo agendamento pode começar, no mínimo, este tempo depois do fim da sua reunião anterior."
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "A new booking must end at least this long before your next meeting starts."
+msgstr "Um novo agendamento precisa terminar pelo menos este tempo antes do início da sua próxima reunião."
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "After a new booking"
+msgstr "Depois de um novo agendamento"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Before a new booking"
+msgstr "Antes de um novo agendamento"
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "End time must be after start time. To run past midnight, pick an end time marked (+1)."
+msgstr "O horário de término precisa ser posterior ao de início. Para passar da meia-noite, escolha um horário de término marcado com (+1)."
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Ends the next day"
+msgstr "Termina no dia seguinte"
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Hours that end the next day can last at most 24 hours"
+msgstr "Horários que terminam no dia seguinte podem durar no máximo 24 horas"
+
+#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Clear day settings"
+msgstr "Limpar configurações do dia"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete break"
+msgstr "Excluir pausa"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete schedule"
+msgstr "Excluir agenda"

@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Analytics.EventQueries
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.Security.RateLimiter
 
   setup %{conn: conn} do
@@ -28,6 +29,32 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
   end
 
   describe "page rendering" do
+    test "titles the page as the analytics section", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/analytics")
+
+      assert page_title(view) =~ "Analytics - Dashboard"
+    end
+
+    test "shows the refresh time on the organiser's 12-hour clock", %{conn: conn, user: user} do
+      {:ok, _prefs} = CalendarGrid.save_preferences(user.id, %{time_format: "12h"})
+      seed_visit(user, "linkedin", "hash-a")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/analytics")
+
+      assert render(view) =~ ~r/Updated \d{1,2}:\d{2} (AM|PM)/
+    end
+
+    test "shows the refresh time on the organiser's 24-hour clock", %{conn: conn, user: user} do
+      {:ok, _prefs} = CalendarGrid.save_preferences(user.id, %{time_format: "24h"})
+      seed_visit(user, "linkedin", "hash-a")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/analytics")
+
+      html = render(view)
+      assert html =~ ~r/Updated \d{2}:\d{2}\s*</
+      refute html =~ ~r/Updated [^<]*(AM|PM)/
+    end
+
     test "renders summary cards and date-range controls", %{conn: conn, user: user} do
       seed_visit(user, "linkedin", "hash-a")
 
@@ -52,6 +79,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
 
       assert html =~ "linkedin"
       assert html =~ "twitter"
+      assert html =~ "Traffic sources"
     end
 
     test "switching to the 7-day range makes it the active range", %{conn: conn, user: user} do
@@ -59,14 +87,15 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/analytics")
 
-      # 30 days is the default range.
-      assert has_element?(view, ~s(button[phx-value-range="30d"][aria-pressed]))
-      refute has_element?(view, ~s(button[phx-value-range="7d"][aria-pressed]))
+      # 30 days is the default range. Every option carries aria-pressed, so the
+      # chosen one is the one where it is true.
+      assert has_element?(view, ~s(button[phx-value-range="30d"][aria-pressed="true"]))
+      refute has_element?(view, ~s(button[phx-value-range="7d"][aria-pressed="true"]))
 
       view |> element(~s(button[phx-value-range="7d"])) |> render_click()
 
-      assert has_element?(view, ~s(button[phx-value-range="7d"][aria-pressed]))
-      refute has_element?(view, ~s(button[phx-value-range="30d"][aria-pressed]))
+      assert has_element?(view, ~s(button[phx-value-range="7d"][aria-pressed="true"]))
+      refute has_element?(view, ~s(button[phx-value-range="30d"][aria-pressed="true"]))
     end
 
     test "renders the device breakdown with per-device labels", %{conn: conn, user: user} do
@@ -186,7 +215,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
       {:ok, _view, html} = live(conn, ~p"/dashboard/analytics")
 
       assert html =~ "Booking analytics started collecting on"
-      assert html =~ Calendar.strftime(launch, "%d %b %Y")
+      assert html =~ Calendar.strftime(launch, "%A, %-d %B %Y")
     end
 
     test "shows no notice once the window starts after the launch date", %{conn: conn} do
@@ -201,13 +230,40 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
 
   describe "empty / zero-data state" do
     test "renders zeroed summary and empty-state messaging with no data", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard/analytics")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/analytics")
 
-      assert html =~ "Analytics"
-      # Conversion with zero unique visitors is guarded to 0.0%
-      assert html =~ "0.0%"
-      # Both the chart and the sources table show the empty-state copy
-      assert html =~ "No traffic in this period yet."
+      # With no visitors there is no conversion rate: a dash, not "0.0%".
+      assert has_element?(view, "[data-testid='conversion-card']", "—")
+      refute has_element?(view, "[data-testid='conversion-card']", "0.0%")
+      # The chart says so rather than drawing an empty 0 to 1 axis.
+      assert has_element?(
+               view,
+               "[data-testid='visits-chart-empty']",
+               "No traffic in this period yet"
+             )
+
+      refute has_element?(view, "svg[role='img']")
+    end
+
+    test "keeps the sources card titled when it has no rows", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/analytics")
+
+      assert has_element?(
+               view,
+               "[data-testid='analytics-sources']",
+               "No traffic in this period yet"
+             )
+
+      assert has_element?(view, "[data-testid='analytics-sources'] > div", "Traffic sources")
+    end
+
+    test "shows a conversion rate once there are visitors", %{conn: conn, user: user} do
+      seed_visit(user, "linkedin", "hash-a")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/analytics")
+
+      assert has_element?(view, "[data-testid='conversion-card']", "0.0%")
+      refute has_element?(view, "[data-testid='visits-chart-empty']")
     end
   end
 

@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Themes.Quill.Scheduling.Wrapper
 
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
   import TymeslotWeb.Themes.Shared.Components.MeetingDetails, only: [meeting_detail_rows: 1]
 
   attr :theme_customization, :map, required: true

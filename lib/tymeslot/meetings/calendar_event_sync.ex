@@ -32,6 +32,8 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
   alias Tymeslot.Integrations.Calendar.CreatedEvent
+  alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.CalendarEventCache
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
@@ -92,7 +94,11 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
           provider_identifier: calendar_event_identifier(meeting)
         )
 
-        event_data = CalendarEventBuilder.build_event_data(meeting)
+        event_data =
+          CalendarEventBuilder.build_event_data(meeting,
+            attendees: Meetings.attendees_for_calendar(meeting)
+          )
+
         update_or_create_calendar_event(meeting, event_data, attempt)
 
       {:error, :not_found} ->
@@ -228,7 +234,10 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   defp create_replacement(meeting, event_id, attempt) do
     Logger.info("Replacing calendar event", meeting_id: meeting.id)
 
-    event_data = CalendarEventBuilder.build_event_data(meeting)
+    event_data =
+      CalendarEventBuilder.build_event_data(meeting,
+        attendees: Meetings.attendees_for_calendar(meeting)
+      )
 
     with {:ok, created} <- calendar_module().create_event(event_data, meeting) do
       case record_replacement(meeting, event_id, created) do
@@ -408,7 +417,10 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   defp create_event_for_meeting(meeting, meeting_id, attempt) do
     Logger.info("Creating calendar event", meeting_id: meeting_id)
 
-    event_data = CalendarEventBuilder.build_event_data(meeting)
+    event_data =
+      CalendarEventBuilder.build_event_data(meeting,
+        attendees: Meetings.attendees_for_calendar(meeting)
+      )
 
     # Use the meeting context to create in the correct calendar
     case calendar_module().create_event(event_data, meeting) do
@@ -497,7 +509,15 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
     end
   end
 
+  # No calendar to write to is not a sync failure: the owner is never emailed
+  # about it, and the worker ends the job without retrying.
   defp handle_create_event_error(error_type, meeting, meeting_id, attempt) do
+    if CalendarEvents.no_calendar_error?(error_type),
+      do: {:error, error_type},
+      else: handle_sync_failure(error_type, meeting, meeting_id, attempt)
+  end
+
+  defp handle_sync_failure(error_type, meeting, meeting_id, attempt) do
     case error_type do
       :rate_limited ->
         {:error, :rate_limited}

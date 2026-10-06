@@ -5,7 +5,9 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotificationTest do
 
   import Tymeslot.EmailTestHelpers
 
+  alias Tymeslot.Emails.Shared.Styles.Tokens
   alias Tymeslot.Emails.Templates.EventUpdateNotification
+  alias Tymeslot.Utils.Colour
 
   describe "render/2" do
     test "returns a valid Swoosh email" do
@@ -25,7 +27,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotificationTest do
       email = EventUpdateNotification.render("a@example.com", details)
 
       assert email.subject =~ "Planning Session"
-      assert email.subject =~ "Apr 15"
+      assert email.subject =~ "15 Apr"
     end
 
     test "HTML body contains change summary" do
@@ -156,6 +158,20 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotificationTest do
       refute email.subject =~ "\n"
     end
 
+    test "the change table's column labels read at WCAG AA on the card tint" do
+      details = build_event_update_details(%{changes: [{:location, "Room A", "Room B"}]})
+      html = EventUpdateNotification.render("a@example.com", details).html_body
+      tint = Tokens.intent(:confirmed).tint
+
+      for label <- ["Field", "Before", "After"] do
+        [_, colour] =
+          Regex.run(~r/<th style="[^"]*color:\s*(#[0-9a-f]{6});[^"]*">#{label}<\/th>/i, html)
+
+        assert Colour.contrast_ratio(colour, tint) >= 4.5,
+               "#{label}: #{colour} on #{tint} fails 4.5:1"
+      end
+    end
+
     test "a first notification states current details with no before column" do
       details =
         build_event_update_details(%{
@@ -202,7 +218,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotificationTest do
 
       assert email.html_body =~ "All day"
       assert email.html_body =~ "1 day"
-      assert email.text_body =~ "Time: October 05, 2026 → October 12, 2026"
+      assert email.text_body =~ "Time: 5 October 2026 → 12 October 2026"
 
       [ics] = Enum.filter(email.attachments, &(&1.content_type == "text/calendar"))
       assert ics.data =~ "DTSTART;VALUE=DATE:20261012"

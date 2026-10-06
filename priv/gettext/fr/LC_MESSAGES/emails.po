@@ -562,3 +562,32 @@ msgstr "L'adresse sera convenue après la réservation."
 #, elixir-autogen, elixir-format
 msgid "The address will be arranged with you after booking."
 msgstr "L'adresse sera convenue avec vous après la réservation."
+
+#: lib/tymeslot/emails/appointment_builder.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} participant"
+msgid_plural "%{count} participants"
+msgstr[0] "%{count} participant"
+msgstr[1] "%{count} participants"
+
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
+#, elixir-autogen, elixir-format
+msgid "Attendees (%{count}):"
+msgstr "Participants (%{count}) :"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Open in dashboard:"
+msgstr "Ouvrir dans le tableau de bord :"
+
+#: lib/tymeslot/emails/shared/group_session.ex
+#, elixir-autogen, elixir-format
+msgid "Group session: you have one of %{count} spot."
+msgid_plural "Group session: you have one of %{count} spots."
+msgstr[0] "Session de groupe : vous avez l'une des %{count} places."
+msgstr[1] "Session de groupe : vous avez l'une des %{count} places."
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "ends %{time} on %{date}"
+msgstr "se termine à %{time} le %{date}"

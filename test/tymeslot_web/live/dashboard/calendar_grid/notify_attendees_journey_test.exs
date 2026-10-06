@@ -110,7 +110,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.NotifyAttendeesJourneyTest do
     assert email.to == [{"", "guest@example.com"}]
     assert email.subject =~ "Team offsite"
 
-    last_day = today |> Date.add(1) |> Calendar.strftime("%B %d, %Y")
+    last_day = today |> Date.add(1) |> Calendar.strftime("%-d %B %Y")
     assert email.text_body =~ "Time: All day, until #{last_day}"
     assert email.text_body =~ "Current Details"
     assert email.text_body =~ "Title: Team offsite"

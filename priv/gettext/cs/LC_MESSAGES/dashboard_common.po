@@ -23,24 +23,30 @@ msgid "Add a meeting type so guests have something to book"
 msgstr "Přidejte typ schůzky, aby si hosté měli co rezervovat"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
 #, elixir-autogen, elixir-format
 msgid "Analytics"
 msgstr "Statistiky"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Automation"
 msgstr "Automatizace"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Availability"
 msgstr "Dostupnost"
 
 #: lib/tymeslot/integrations/calendar/display_helpers.ex
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr "Kalendář"
@@ -62,6 +68,7 @@ msgstr "Distribuce"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Embed & Share"
 msgstr "Vložení a sdílení"
@@ -72,23 +79,29 @@ msgid "General"
 msgstr "Obecné"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
 #, elixir-autogen, elixir-format
 msgid "Integrations"
 msgstr "Integrace"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Types"
 msgstr "Typy schůzek"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
 #, elixir-autogen, elixir-format
 msgid "Meetings"
 msgstr "Schůzky"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Overview"
 msgstr "Přehled"
@@ -99,6 +112,8 @@ msgid "Pro"
 msgstr "Pro"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Profile"
 msgstr "Profil"
@@ -109,11 +124,8 @@ msgid "Scheduling"
 msgstr "Plánování"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
-#, elixir-autogen, elixir-format
-msgid "Setup recommended"
-msgstr "Doporučujeme dokončit nastavení"
-
-#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Theme"
 msgstr "Motiv"
@@ -190,11 +202,6 @@ msgstr "Nástěnka"
 
 #: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
-msgid "Meeting Settings"
-msgstr "Nastavení schůzek"
-
-#: lib/tymeslot_web/helpers/page_titles.ex
-#, elixir-autogen, elixir-format
 msgid "Payments"
 msgstr "Platby"
 
@@ -202,16 +209,6 @@ msgstr "Platby"
 #, elixir-autogen, elixir-format
 msgid "Set a username in Settings to enable this feature"
 msgstr "Tuto funkci zapnete zadáním uživatelského jména v nastavení"
-
-#: lib/tymeslot_web/helpers/page_titles.ex
-#, elixir-autogen, elixir-format
-msgid "Settings"
-msgstr "Nastavení"
-
-#: lib/tymeslot_web/helpers/page_titles.ex
-#, elixir-autogen, elixir-format
-msgid "Theme Selection"
-msgstr "Výběr motivu"
 
 #: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
@@ -385,7 +382,7 @@ msgid "Meeting type (optional)"
 msgstr "Typ schůzky (nepovinné)"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
 #, elixir-autogen, elixir-format
 msgid "New poll"
 msgstr "Nová anketa"
@@ -436,6 +433,7 @@ msgid "Poll link copied to clipboard!"
 msgstr "Odkaz na anketu byl zkopírován do schránky!"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "Polls"
@@ -562,11 +560,6 @@ msgstr[2] "%{count} hostů už hlasovalo. Jejich odpovědi budou smazány."
 
 #: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Cancel this poll?"
-msgstr "Zrušit tuto anketu?"
-
-#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
-#, elixir-autogen, elixir-format
 msgid "Keep poll"
 msgstr "Ponechat anketu"
 
@@ -635,6 +628,123 @@ msgstr "Tento čas spadá do vaší nepřítomnosti. Upravte nebo odeberte nepř
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
 #, elixir-autogen, elixir-format
 msgid "Locations"
 msgstr "Místa"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_row.ex
+#, elixir-autogen, elixir-format
+msgid "%{event}, %{time}"
+msgstr "%{event}, %{time}"
+
+#: lib/tymeslot_web/live/dashboard/dashboard_format.ex
+#, elixir-autogen, elixir-format
+msgid "%{hours} hr"
+msgstr "%{hours} h"
+
+#: lib/tymeslot_web/live/dashboard/dashboard_format.ex
+#, elixir-autogen, elixir-format
+msgid "%{hours} hr %{mins} min"
+msgstr "%{hours} h %{mins} min"
+
+#: lib/tymeslot_web/live/dashboard/dashboard_format.ex
+#, elixir-autogen, elixir-format
+msgid "%{minutes} min"
+msgstr "%{minutes} min"
+
+#: lib/tymeslot_web/live/dashboard/dashboard_format.ex
+#, elixir-autogen, elixir-format
+msgid "(No title)"
+msgstr "(Bez názvu)"
+
+#: lib/tymeslot_web/live/dashboard/dashboard_format.ex
+#, elixir-autogen, elixir-format
+msgid "All day"
+msgstr "Celý den"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
+#, elixir-autogen, elixir-format
+msgid "Booked through your Tymeslot page"
+msgstr "Zarezervováno přes vaši stránku Tymeslot"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
+#, elixir-autogen, elixir-format
+msgid "External calendar"
+msgstr "Externí kalendář"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
+#, elixir-autogen, elixir-format
+msgid "In progress"
+msgstr "Probíhá"
+
+#: lib/tymeslot_web/components/dashboard/appointments/join_link.ex
+#, elixir-autogen, elixir-format
+msgid "Join meeting"
+msgstr "Připojit se ke schůzce"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
+#, elixir-autogen, elixir-format
+msgid "Location"
+msgstr "Místo"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
+#, elixir-autogen, elixir-format
+msgid "Manage booking"
+msgstr "Spravovat rezervaci"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_row.ex
+#, elixir-autogen, elixir-format
+msgid "Now"
+msgstr "Nyní"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
+#, elixir-autogen, elixir-format
+msgid "Time"
+msgstr "Čas"
+
+#: lib/tymeslot_web/live/dashboard/dashboard_format.ex
+#, elixir-autogen, elixir-format
+msgid "Today"
+msgstr "Dnes"
+
+#: lib/tymeslot_web/live/dashboard/dashboard_format.ex
+#, elixir-autogen, elixir-format
+msgid "Tomorrow"
+msgstr "Zítra"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
+#, elixir-autogen, elixir-format
+msgid "Video call"
+msgstr "Videohovor"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
+#, elixir-autogen, elixir-format
+msgid "Video meeting"
+msgstr "Videoschůzka"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_row.ex
+#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "View details for %{title}"
+msgstr "Zobrazit podrobnosti: %{title}"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
+#, elixir-autogen, elixir-format
+msgid "When"
+msgstr "Kdy"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
+#, elixir-autogen, elixir-format
+msgid "With"
+msgstr "S kým"
+
+#: lib/tymeslot_web/live/dashboard/dashboard_format.ex
+#, elixir-autogen, elixir-format
+msgid "%{date}, %{time}"
+msgstr "%{date}, %{time}"
+
+#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel this poll"
+msgstr "Zrušit tuto anketu"

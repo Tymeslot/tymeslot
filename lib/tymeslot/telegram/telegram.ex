@@ -10,6 +10,7 @@ defmodule Tymeslot.Telegram do
   require Logger
 
   alias Tymeslot.Features
+  alias Tymeslot.Meetings.SeatView
   alias Tymeslot.Repo
   alias Tymeslot.Security.SharedSecret
   alias Tymeslot.Telegram.{API, MessageBuilder, TelegramDeliverySchema, TelegramIntegrationSchema}
@@ -176,7 +177,12 @@ defmodule Tymeslot.Telegram do
   def trigger_integration(integration, event_type, meeting) do
     if TelegramIntegrationSchema.should_be_active?(integration) and
          TelegramIntegrationSchema.subscribed_to?(integration, event_type) do
-      TelegramWorker.schedule_delivery(integration.id, event_type, meeting.id)
+      TelegramWorker.schedule_delivery(
+        integration.id,
+        event_type,
+        meeting.id,
+        SeatView.participant_id(meeting)
+      )
     else
       {:error, :integration_not_active}
     end

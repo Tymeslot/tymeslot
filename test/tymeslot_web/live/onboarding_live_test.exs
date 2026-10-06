@@ -71,7 +71,7 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       render_click(view, "confirm_skip_calendar")
 
       # Should now be at buffer_time step
-      assert has_element?(view, "button[phx-value-buffer_minutes]")
+      assert has_element?(view, "button[phx-value-buffer_before_minutes]")
 
       # Steps 4-6: Buffer Time -> Booking Window -> Minimum Notice -> Ready
       view |> element("button[phx-click='next_step']") |> render_click()
@@ -103,9 +103,41 @@ defmodule TymeslotWeb.OnboardingLiveTest do
 
       # Scheduling defaults are preserved when not changed
       schedule = default_schedule(user)
-      assert schedule.buffer_minutes == 15
+      assert schedule.buffer_before_minutes == 15
+      assert schedule.buffer_after_minutes == 15
       assert schedule.advance_booking_days == 90
       assert schedule.min_advance_hours == 3
+    end
+
+    test "the before and after buffers chosen on the buffer step persist separately", %{
+      conn: conn
+    } do
+      {:ok, view, _html, user} = setup_onboarding(conn)
+      navigate_to_scheduling_steps(view)
+
+      view
+      |> element(
+        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_before_minutes='10']"
+      )
+      |> render_click()
+
+      view
+      |> element(
+        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_after_minutes='30']"
+      )
+      |> render_click()
+
+      # buffer_time -> booking_window -> minimum_notice -> ready -> dashboard
+      view |> element("button[phx-click='next_step']") |> render_click()
+      view |> element("button[phx-click='next_step']") |> render_click()
+      view |> element("button[phx-click='next_step']") |> render_click()
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      assert_redirect(view, ~p"/dashboard")
+
+      schedule = default_schedule(user)
+      assert {schedule.buffer_before_minutes, schedule.buffer_after_minutes} == {10, 30}
+      assert %DateTime{} = Repo.reload!(user).onboarding_completed_at
     end
 
     test "onboarding persists all fields including detected timezone", %{conn: conn} do
@@ -210,7 +242,9 @@ defmodule TymeslotWeb.OnboardingLiveTest do
 
       # Buffer time step — click custom
       view
-      |> element("button[phx-click='focus_custom_input'][phx-value-setting='buffer_minutes']")
+      |> element(
+        "button[phx-click='focus_custom_input'][phx-value-setting='buffer_before_minutes']"
+      )
       |> render_click()
 
       # Continue to booking_window
@@ -239,7 +273,8 @@ defmodule TymeslotWeb.OnboardingLiveTest do
 
       # Verify custom values were persisted (defaults from step_config.ex: 20, 120, 8)
       schedule = default_schedule(user)
-      assert schedule.buffer_minutes == 20
+      assert schedule.buffer_before_minutes == 20
+      assert schedule.buffer_after_minutes == 15
       assert schedule.advance_booking_days == 120
       assert schedule.min_advance_hours == 8
 
@@ -330,6 +365,12 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       assert has_element?(
                view,
                "button#onboarding-copy-booking-url[phx-hook='CopyOnClick'][data-copy-text]"
+             )
+
+      # Icon-only, so it needs an accessible name, not just a tooltip.
+      assert has_element?(
+               view,
+               "button#onboarding-copy-booking-url[aria-label='Copy booking link']"
              )
 
       button_html = view |> element("#onboarding-copy-booking-url") |> render()

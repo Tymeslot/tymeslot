@@ -22,6 +22,9 @@ defmodule Tymeslot.Meetings.BookingLimits.Checker do
 
   Options:
     * `:exclude_uid` — omit one meeting from the counts (reschedule self-exclusion).
+    * `:booker_timezone` — the dates are the booker's, in this zone, and are
+      widened to every host date their slots can fall on
+      (`BookingLimits.host_dates/4`). Without it the dates are the host's.
   """
   @spec build_slot_checker(integer(), map() | nil, map() | nil, Date.t(), Date.t(), keyword()) ::
           (DateTime.t() -> boolean()) | nil
@@ -44,6 +47,16 @@ defmodule Tymeslot.Meetings.BookingLimits.Checker do
         &BookingLimits.slot_blocked?(context, &1)
       end
     )
+  end
+
+  defp host_date_range(start_date, end_date, host_timezone, opts) do
+    case Keyword.get(opts, :booker_timezone) do
+      nil ->
+        {start_date, end_date}
+
+      booker_timezone ->
+        BookingLimits.host_dates(start_date, end_date, booker_timezone, host_timezone)
+    end
   end
 
   @doc """
@@ -93,9 +106,10 @@ defmodule Tymeslot.Meetings.BookingLimits.Checker do
 
     if BookingLimits.enabled?(limits) do
       host_timezone = host_timezone(profile_settings)
+      {first_date, last_date} = host_date_range(start_date, end_date, host_timezone, opts)
 
       {from_utc, to_utc} =
-        BookingLimits.expanded_query_window(start_date, end_date, host_timezone)
+        BookingLimits.expanded_query_window(first_date, last_date, host_timezone)
 
       rows =
         MeetingQueries.list_live_booking_starts(

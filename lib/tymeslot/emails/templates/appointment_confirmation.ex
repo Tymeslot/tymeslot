@@ -17,6 +17,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
   alias Tymeslot.Emails.Shared.{
     Callouts,
     Formatting,
+    GroupSession,
     MeetingComponents,
     MjmlEmail,
     Sanitise,
@@ -61,6 +62,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
       mjml_content = """
       #{Text.centered_text(intro_copy, padding: "8px 0 16px 0")}
+
+      #{if line = GroupSession.line(appointment_details), do: Text.centered_text(line, font_size: "14px", padding: "0 0 16px 0")}
 
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 
@@ -295,7 +298,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
     #{dgettext("emails_booking", "I'm looking forward to our meeting. I've blocked the time on my calendar and will be ready for you.")}
 
-    #{dgettext("emails_booking", "MEETING DETAILS:")}
+    #{GroupSession.text(appointment_details)}#{dgettext("emails_booking", "MEETING DETAILS:")}
     #{meeting_details}#{TextBodyHelper.format_organizer_note(appointment_details, locale)}#{video_section}#{custom_answers}
     #{action_links}#{payment_section}
     #{if appointment_details.organizer_contact_info, do: "\n#{dgettext("emails_booking", "QUESTIONS?")}\n#{appointment_details.organizer_contact_info}\n"}

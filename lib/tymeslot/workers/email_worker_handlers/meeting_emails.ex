@@ -9,13 +9,16 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Notifications.GuestNotifications
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
+  alias Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.GuestEmails
 
   # The meeting is gone, started, or changed state since the email was
@@ -120,13 +123,17 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     end)
   end
 
-  @doc false
-  # Fetches the meeting and runs `fun` with it, or discards the job with a
-  # consistent log line when the meeting no longer exists. `action` names the
-  # email action for the warning (e.g. "confirmation emails"). Public so
-  # `BookingApprovalEmails` can share it rather than duplicating it.
-  @spec with_meeting(String.t(), String.t(), (Tymeslot.Meetings.MeetingSchema.t() -> term())) ::
-          term()
+  @doc """
+  Fetches the meeting and runs `fun` with it, or discards the job with a
+  consistent log line when the meeting no longer exists. `action` names the
+  email action for the warning (e.g. "confirmation emails").
+
+  Public so the per-seat handlers (`SeatJobs`) and
+  `BookingApprovalEmails` share this instead of carrying their own copy — the
+  meeting-lookup contract is identical for all of them, only what runs on
+  success differs.
+  """
+  @spec with_meeting(term(), String.t(), (MeetingSchema.t() -> term())) :: term()
   def with_meeting(meeting_id, action, fun) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
@@ -148,7 +155,9 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   # attendee pair, which the email service sends in one call, and one for each
   # guest, so a rescue part-way through the guests still tells the rest. A
   # retry after both participant emails failed releases the first claim and
-  # sends them again, as before.
+  # sends them again, as before. On a group meeting the first claim covers the
+  # per-seat fan-out instead, which is itself safe to repeat (see
+  # `GroupMeetingEmails`).
   defp send_cancellation_emails_for_meeting(meeting, job_id) do
     appointment_details = AppointmentBuilder.from_meeting(meeting)
 
@@ -174,29 +183,32 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   defp send_participant_cancellations(meeting, appointment_details) do
     Logger.info("Sending cancellation emails", meeting_id: meeting.id)
 
-    case Config.email_service_module().send_cancellation_emails(appointment_details) do
-      {{:ok, _organizer}, {:ok, _attendee}} ->
-        Logger.info("Cancellation emails sent successfully", meeting_id: meeting.id)
-        :ok
-
-      {organizer_result, attendee_result} ->
-        Logger.warning("Some cancellation emails may have failed",
-          meeting_id: meeting.id,
-          organizer_result: LogFormat.reason(organizer_result),
-          attendee_result: LogFormat.reason(attendee_result)
-        )
-
-        if match?({:ok, _}, organizer_result) or match?({:ok, _}, attendee_result) do
-          {:discard,
-           "Partial cancellation email failure: one email succeeded, retry would duplicate"}
-        else
-          reason =
-            DeliveryOutcome.first_actionable([organizer_result, attendee_result]) ||
-              "Failed to send cancellation emails"
-
-          {:error, reason}
-        end
+    if Meetings.group?(meeting) do
+      # `group?/1` is capacity-based, not "has live participants": a meeting
+      # emptied by every participant leaving is still a group meeting. Each of
+      # them was told when they left, and so was the organiser: the last
+      # leaver's seat email (or the last mover's) says the slot is now empty
+      # and free. A second, meeting-level email here would only repeat that
+      # with nobody to name, so the emptied meeting sends nothing more.
+      case Meetings.recipients(meeting) do
+        [] -> :ok
+        participants -> GroupMeetingEmails.send_group_cancellation_emails(meeting, participants)
+      end
+    else
+      send_solo_cancellation_emails(meeting, appointment_details)
     end
+  end
+
+  defp send_solo_cancellation_emails(meeting, appointment_details) do
+    {organizer_result, attendee_result} =
+      Config.email_service_module().send_cancellation_emails(appointment_details)
+
+    DeliveryOutcome.from_dual_send(
+      "cancellation",
+      [meeting_id: meeting.id],
+      organizer_result,
+      attendee_result
+    )
   end
 
   defp send_confirmation_emails(meeting) do
@@ -210,7 +222,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
       # The participants' flags say nothing about the guests: each guest is
       # stamped on its own, so a retry that finds both participants already
       # stamped still has to invite whoever the previous attempt missed.
-      invite_missed_guests(meeting)
+      GuestEmails.invite_missed(meeting)
 
       :ok
     else
@@ -282,43 +294,73 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
       # Each guest is stamped with `confirmation_sent_at` after a successful
       # send, so only unsent guests are ever re-attempted. Failures are logged
       # but never block the organiser/attendee confirmation result.
-      send_guest_confirmations(meeting, appointment_details, email_service)
+      meeting.id
+      |> GuestQueries.list_unsent_for_meeting()
+      |> GuestEmails.send_confirmations(meeting, appointment_details, email_service)
 
       process_email_results(meeting, organizer_result, attendee_result, :confirmation)
     end
   end
 
-  # Builds the payload only when there is somebody to send to, so the
-  # already-sent path stays one cheap query.
-  defp invite_missed_guests(meeting) do
-    case GuestQueries.list_unsent_for_meeting(meeting.id) do
-      [] ->
-        :ok
+  # Group reminders are dispatched (one per-seat job per live participant,
+  # plus the organiser reminder sent inline) rather than sent inline here, so
+  # there is no per-recipient success/failure pair to feed
+  # `process_email_results/4`. `reminders_sent` is instead marked as soon as
+  # dispatch succeeds — actual per-recipient delivery is now Oban's job to
+  # retry, not this job's. The live participants' guests are reminded inline,
+  # as on a solo meeting, each stamped per offset so a retry skips them.
+  defp send_reminder_emails(meeting, reminder_value, reminder_unit) do
+    Logger.info("Sending reminder emails", meeting_id: meeting.id)
 
-      _unsent ->
-        send_guest_confirmations(
-          meeting,
-          AppointmentBuilder.from_meeting(meeting),
-          Config.email_service_module()
-        )
+    if Meetings.group?(meeting) do
+      participants = Meetings.recipients(meeting)
+
+      case GroupMeetingEmails.send_group_reminder_emails(
+             meeting,
+             participants,
+             reminder_value,
+             reminder_unit
+           ) do
+        :ok ->
+          remind_group_guests(meeting, reminder_value, reminder_unit)
+
+          with :ok <-
+                 update_email_sent_flags(
+                   meeting,
+                   {:reminder, reminder_value, reminder_unit},
+                   true,
+                   true
+                 ) do
+            Logger.info("Reminder emails dispatched",
+              meeting_id: meeting.id,
+              reminder_value: reminder_value,
+              reminder_unit: reminder_unit,
+              participant_count: length(participants)
+            )
+
+            :ok
+          end
+
+        {:error, reason} ->
+          {:error, reason}
+      end
+    else
+      send_solo_reminder_emails(meeting, reminder_value, reminder_unit)
     end
   end
 
-  defp send_guest_confirmations(meeting, appointment_details, email_service) do
-    meeting.id
-    |> GuestQueries.list_unsent_for_meeting()
-    |> GuestEmails.send_to_guests(meeting, appointment_details, email_service)
+  defp remind_group_guests(meeting, reminder_value, reminder_unit) do
+    appointment_details =
+      AppointmentBuilder.from_meeting(meeting, %{value: reminder_value, unit: reminder_unit})
 
-    :ok
+    GuestEmails.send_reminders(meeting, appointment_details, reminder_value, reminder_unit)
   end
 
   # Sends only to the recipient(s) not yet recorded as sent for this specific
   # reminder config. A meeting can be re-enqueued after a partial send (e.g.
   # the organizer succeeded and the attendee hit an open circuit breaker);
   # without this, a retry would re-email the recipient who already got it.
-  defp send_reminder_emails(meeting, reminder_value, reminder_unit) do
-    Logger.info("Sending reminder emails", meeting_id: meeting.id)
-
+  defp send_solo_reminder_emails(meeting, reminder_value, reminder_unit) do
     status = reminder_sent_status(meeting, reminder_value, reminder_unit)
     need_organizer? = !status.organizer
     need_attendee? = !status.attendee
@@ -354,7 +396,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     # specific offset, so a retry after a partial send re-emails only the
     # guests it has not reached. Failures are logged but never change the
     # organiser/attendee result.
-    send_guest_reminders(meeting, appointment_details, reminder_value, reminder_unit)
+    GuestEmails.send_reminders(meeting, appointment_details, reminder_value, reminder_unit)
 
     process_email_results(
       meeting,
@@ -364,33 +406,21 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     )
   end
 
-  defp send_guest_reminders(meeting, appointment_details, reminder_value, reminder_unit) do
-    value = ReminderUtils.parse_reminder_value(reminder_value)
-    unit = ReminderUtils.normalize_reminder_unit(reminder_unit)
-    email_service = Config.email_service_module()
-
-    meeting.id
-    |> GuestQueries.list_for_reminder(value, unit)
-    |> Enum.each(fn guest ->
-      details = GuestNotifications.guest_details(appointment_details, guest)
-
-      case email_service.send_guest_reminder(guest.email, details) do
-        {:ok, _result} ->
-          GuestQueries.mark_reminder_sent(guest, value, unit)
-
-        other ->
-          Logger.error("Guest reminder email failed",
-            meeting_id: meeting.id,
-            guest_id: guest.id,
-            result: LogFormat.reason(other)
-          )
-      end
-    end)
-  end
-
   defp send_reschedule_request_email(meeting) do
     Logger.info("Sending reschedule request email", meeting_id: meeting.id)
 
+    if Meetings.group?(meeting) do
+      participants = Meetings.recipients(meeting)
+      GroupMeetingEmails.send_group_reschedule_requests(meeting, participants)
+    else
+      send_solo_reschedule_request(meeting)
+    end
+  end
+
+  # The solo counterpart to `GroupMeetingEmails.send_group_reschedule_requests/2`,
+  # kept here (not there) since it is solo-only and this module already owns
+  # every other solo-meeting send.
+  defp send_solo_reschedule_request(meeting) do
     case Config.email_service_module().send_reschedule_request(meeting) do
       {:ok, _result} ->
         Logger.info("Reschedule request email sent successfully", meeting_id: meeting.id)
@@ -407,25 +437,6 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     end
   end
 
-  # Confirmation flags are already updated inline in send_confirmation_emails/1
-  # immediately after each email succeeds, so no flag tracking step is needed.
-  defp process_email_results(meeting, organizer_result, attendee_result, :confirmation) do
-    organizer_success = match?({:ok, _result}, organizer_result)
-    attendee_success = match?({:ok, _result}, attendee_result)
-
-    case check_email_errors(organizer_result, attendee_result) do
-      nil ->
-        log_email_results(meeting, :confirmation, organizer_success, attendee_success)
-
-        if organizer_success && attendee_success,
-          do: :ok,
-          else: {:error, "Failed to send all emails"}
-
-      error ->
-        error
-    end
-  end
-
   # The per-recipient sent flags are recorded before the error is inspected,
   # not after: a partial send (e.g. organizer succeeds, attendee hits an open
   # circuit breaker) must be persisted even though the overall result is an
@@ -436,6 +447,10 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   # too, even though nothing was actually delivered: no retry can ever reach
   # a dead address, so leaving its flag false would have the job keep
   # re-attempting that recipient on every retry of the other, still-live one.
+  #
+  # Confirmation flags are the exception: they are updated inline in
+  # send_confirmation_emails/1 as each email succeeds, so
+  # update_email_sent_flags/4 no-ops for that type below.
   defp process_email_results(meeting, organizer_result, attendee_result, email_type) do
     organizer_delivered = match?({:ok, _result}, organizer_result)
     attendee_delivered = match?({:ok, _result}, attendee_result)
@@ -492,6 +507,9 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     end
   end
 
+  defp update_email_sent_flags(_meeting, :confirmation, _organizer_success, _attendee_success),
+    do: :ok
+
   defp update_email_sent_flags(
          meeting,
          {:reminder, reminder_value, reminder_unit},
@@ -524,22 +542,21 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   end
 
   defp log_email_results(meeting, {:reminder, val, unit}, organizer_success, attendee_success) do
+    metadata = [
+      reminder_value: val,
+      reminder_unit: unit,
+      meeting_id: meeting.id,
+      organizer_sent: organizer_success,
+      attendee_sent: attendee_success
+    ]
+
     if organizer_success != attendee_success do
-      Logger.warning("Partial reminder delivery — one recipient did not receive the email",
-        reminder_value: val,
-        reminder_unit: unit,
-        meeting_id: meeting.id,
-        organizer_sent: organizer_success,
-        attendee_sent: attendee_success
+      Logger.warning(
+        "Partial reminder delivery — one recipient did not receive the email",
+        metadata
       )
     else
-      Logger.info("Reminder emails sent",
-        reminder_value: val,
-        reminder_unit: unit,
-        meeting_id: meeting.id,
-        organizer_sent: organizer_success,
-        attendee_sent: attendee_success
-      )
+      Logger.info("Reminder emails sent", metadata)
     end
   end
 

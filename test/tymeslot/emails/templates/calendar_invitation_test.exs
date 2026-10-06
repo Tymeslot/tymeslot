@@ -39,9 +39,9 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
 
       email = CalendarInvitation.render("guest@example.com", details)
 
-      assert email.html_body =~ "All day, until October 14, 2026"
+      assert email.html_body =~ "All day, until 14 October 2026"
       assert email.html_body =~ "3 days"
-      assert email.text_body =~ "Time: All day, until October 14, 2026"
+      assert email.text_body =~ "Time: All day, until 14 October 2026"
 
       [ics] = Enum.filter(email.attachments, &(&1.content_type == "text/calendar"))
       assert ics.data =~ "DTSTART;VALUE=DATE:20261012"

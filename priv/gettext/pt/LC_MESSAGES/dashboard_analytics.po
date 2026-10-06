@@ -38,11 +38,6 @@ msgstr "7 dias"
 msgid "90 days"
 msgstr "90 dias"
 
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex
-#, elixir-autogen, elixir-format
-msgid "Analytics"
-msgstr "Análises"
-
 #: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex
 #, elixir-autogen, elixir-format
 msgid "Bar chart showing daily visit counts for the selected date range."
@@ -104,18 +99,6 @@ msgstr "Dispositivos"
 msgid "Mobile"
 msgstr "Celular"
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex
-#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
-#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex
-#, elixir-autogen, elixir-format
-msgid "No traffic in this period yet."
-msgstr "Ainda não houve tráfego neste período."
-
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex
-#, elixir-autogen, elixir-format
-msgid "Refresh"
-msgstr "Atualizar"
-
 #: lib/tymeslot_web/live/dashboard/analytics_live.ex
 #, elixir-autogen, elixir-format
 msgid "Refresh analytics"
@@ -161,3 +144,20 @@ msgstr "Visitas"
 #, elixir-autogen, elixir-format
 msgid "Visits over time"
 msgstr "Visitas ao longo do tempo"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex
+#, elixir-autogen, elixir-format
+msgid "No visits yet"
+msgstr "Ainda sem visitas"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
+#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex
+#, elixir-autogen, elixir-format
+msgid "No traffic in this period yet"
+msgstr "Ainda sem tráfego neste período"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
+#, elixir-autogen, elixir-format
+msgid "Traffic sources"
+msgstr "Origens do tráfego"

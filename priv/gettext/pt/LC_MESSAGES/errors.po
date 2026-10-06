@@ -379,3 +379,43 @@ msgstr "Esta imagem é grande demais (%{size} megapixels). Envie uma imagem de n
 #, elixir-autogen, elixir-format
 msgid "We are busy processing other uploads. Please try again in a moment."
 msgstr "Estamos ocupados processando outros envios. Tente novamente daqui a pouco."
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "a group meeting type cannot ask each booker for their phone number"
+msgstr "um tipo de reunião em grupo não pode pedir o número de telefone de quem agenda"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "a group meeting type must offer exactly one location"
+msgstr "um tipo de reunião em grupo deve oferecer exatamente um local"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "a group meeting type's in-person location must name a venue"
+msgstr "a opção presencial de um tipo de reunião em grupo deve indicar um local"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "a group meeting type's in-person location must name exactly one venue"
+msgstr "a opção presencial de um tipo de reunião em grupo deve indicar exatamente um local"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "a group meeting type's video call must use exactly one provider"
+msgstr "a videochamada de um tipo de reunião em grupo deve usar exatamente um provedor"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "group bookings cannot require approval"
+msgstr "agendamentos em grupo não podem exigir aprovação"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "group bookings cannot require payment"
+msgstr "agendamentos em grupo não podem exigir pagamento"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a meeting type with this name"
+msgstr "Você já tem um tipo de reunião com este nome"

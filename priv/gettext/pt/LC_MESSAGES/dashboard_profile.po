@@ -36,11 +36,6 @@ msgstr "Foto de perfil atualizada"
 msgid "Basic Information"
 msgstr "Informações básicas"
 
-#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Cancel"
-msgstr "Cancelar"
-
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a unique username for your personal booking page."
@@ -116,11 +111,6 @@ msgstr "Processando…"
 msgid "Profile Picture"
 msgstr "Foto de perfil"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Profile Settings"
-msgstr "Configurações do perfil"
-
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
@@ -181,11 +171,6 @@ msgstr "Enviando…"
 #, elixir-autogen, elixir-format
 msgid "Username updated! Your booking page: %{url}"
 msgstr "Nome de usuário atualizado! Sua página de agendamento: %{url}"
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
-#, elixir-autogen, elixir-format
-msgid "Your Custom URL"
-msgstr "Sua URL personalizada"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
@@ -283,3 +268,8 @@ msgstr "Este nome de usuário já está em uso"
 #, elixir-autogen, elixir-format
 msgid "This username is reserved"
 msgstr "Este nome de usuário é reservado"
+
+#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete avatar"
+msgstr "Excluir foto de perfil"

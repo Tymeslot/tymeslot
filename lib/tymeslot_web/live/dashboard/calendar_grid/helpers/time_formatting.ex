@@ -1,54 +1,23 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormatting do
   @moduledoc "Date/time formatting utilities for the calendar grid: time ranges, timezone abbreviations, and local date parts."
 
-  use Gettext, backend: TymeslotWeb.Gettext
-
   alias Phoenix.HTML
-  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers
-  alias TymeslotWeb.Helpers.LocaleFormat
+  alias TymeslotWeb.Dashboard.DashboardFormat
 
   @doc """
-  Formats the time range using the original (unclamped) times when available.
-  Multi-day events include a short date (e.g. "10:30 Apr 1 – 11:00 Apr 2")
-  so the label isn't misleading about duration.
+  An event's time range in the organiser's timezone and clock, from its
+  original times when the grid has clamped it to one day, so the label is not
+  misleading about duration. See `DashboardFormat.time_range/4`, which names
+  both days of a range crossing midnight.
   """
   @spec format_display_time_range(map(), String.t(), String.t()) :: String.t()
+  def format_display_time_range(%{all_day: true}, _fmt, _timezone), do: DashboardFormat.all_day()
+
   def format_display_time_range(event, fmt, timezone) do
     start_at = Map.get(event, :display_start_at, event.start_at)
     end_at = Map.get(event, :display_end_at, event.end_at)
-
-    if event.all_day do
-      dgettext("dashboard_calendar", "All day")
-    else
-      start_local = DateTime.shift_zone!(start_at, timezone)
-      end_local = DateTime.shift_zone!(end_at, timezone)
-      start_date = DateTime.to_date(start_local)
-      end_date = DateTime.to_date(end_local)
-
-      if Date.compare(start_date, end_date) == :eq do
-        start_str = format_datetime(start_local, fmt)
-        end_str = format_datetime(end_local, fmt)
-        "#{start_str} \u2013 #{end_str}"
-      else
-        start_str = format_datetime_with_date(start_local, fmt)
-        end_str = format_datetime_with_date(end_local, fmt)
-        "#{start_str} \u2013 #{end_str}"
-      end
-    end
-  end
-
-  @spec format_time_range_in_tz(map(), String.t(), String.t()) :: String.t()
-  def format_time_range_in_tz(event, timezone, fmt) do
-    if event.all_day do
-      dgettext("dashboard_calendar", "All day")
-    else
-      start_local = DateTime.shift_zone!(event.start_at, timezone)
-      end_local = DateTime.shift_zone!(event.end_at, timezone)
-      start_str = format_datetime(start_local, fmt)
-      end_str = format_datetime(end_local, fmt)
-      "#{start_str} \u2013 #{end_str}"
-    end
+    DashboardFormat.time_range(start_at, end_at, timezone, fmt)
   end
 
   @spec tz_abbr(String.t()) :: String.t()
@@ -115,16 +84,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormatting do
       end)
 
     HTML.raw(html)
-  end
-
-  # Private helpers
-
-  defp format_datetime(dt, time_format), do: TimeFormat.format(dt, time_format)
-
-  defp format_datetime_with_date(dt, time_format) do
-    date = LocaleFormat.format_short_date(dt, Gettext.get_locale(TymeslotWeb.Gettext))
-
-    "#{date}, #{TimeFormat.format(dt, time_format)}"
   end
 
   defdelegate time_format(assigns), to: PreferenceHelpers

@@ -150,7 +150,7 @@ defmodule Tymeslot.Integrations.Calendar.MailboxOrg.ProviderTest do
   describe "setup_component/0" do
     test "points at the matching LiveComponent" do
       assert Provider.setup_component() ==
-               TymeslotWeb.Components.Dashboard.Integrations.Calendar.MailboxOrgConfig
+               TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavFamilyConfig
     end
   end
 end

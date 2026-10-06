@@ -540,6 +540,23 @@ INSERT INTO profiles (user_id, timezone, buffer_minutes, advance_booking_days, m
 SELECT id, 'America/New_York', NULL, NULL, NULL, NOW(), NOW() FROM users WHERE email = 'seed-user-3@example.com';
 
 -- ============================================================================
+-- PROFILE WITH AN OUT-OF-RANGE BUFFER
+-- ============================================================================
+--
+-- profiles.buffer_minutes never had a range constraint, so a self-hosted
+-- database can hold a value no form would accept.
+-- 20260811180804_create_availability_schedules copies it onto the profile's
+-- default schedule unchanged, and split_availability_schedule_buffers has to
+-- clamp it into 0..120 before it adds the range constraints, or that migration
+-- fails on this row. Seeded before the weekly section so the profile also gets
+-- availability rows like every other one.
+INSERT INTO users (email, password_hash, verified_at, inserted_at, updated_at)
+VALUES ('seed-user-4@example.com', '$2b$12$K4fE6xkGz0qYkN2wQpYDOeG0G0G0G0G0G0G0G0G0G0G0G0G0G0', NOW(), NOW(), NOW());
+
+INSERT INTO profiles (user_id, timezone, buffer_minutes, advance_booking_days, min_advance_hours, inserted_at, updated_at)
+SELECT id, 'UTC', 500, 90, 3, NOW(), NOW() FROM users WHERE email = 'seed-user-4@example.com';
+
+-- ============================================================================
 -- WEEKLY AVAILABILITY, BREAKS AND OVERRIDES
 -- ============================================================================
 --
@@ -582,3 +599,25 @@ SELECT p.id, DATE '2026-12-31', 'custom_hours', TIME '10:00', TIME '14:00', 'Sho
 
 INSERT INTO availability_overrides (profile_id, date, override_type, start_time, end_time, reason, inserted_at, updated_at)
 SELECT p.id, DATE '2027-01-02', 'available', NULL, NULL, NULL, NOW(), NOW() FROM profiles p;
+
+-- Hours written as "until the end of the day" before they could end on the
+-- next day: 23:59, and 23:59:59 as a self-hosted database might hold it, with
+-- a break running to the end. The midnight rewrite has to turn these into
+-- "00:00 (+1)" and leave every other window, break and override alone.
+UPDATE weekly_availability SET is_available = true, start_time = TIME '00:00', end_time = TIME '23:59'
+WHERE day_of_week = 6
+  AND profile_id IN (SELECT p.id FROM profiles p JOIN users u ON u.id = p.user_id WHERE u.email = 'seed-user-1@example.com');
+
+UPDATE weekly_availability SET is_available = true, start_time = TIME '18:00', end_time = TIME '23:59:59'
+WHERE day_of_week = 7
+  AND profile_id IN (SELECT p.id FROM profiles p JOIN users u ON u.id = p.user_id WHERE u.email = 'seed-user-1@example.com');
+
+INSERT INTO availability_breaks (weekly_availability_id, start_time, end_time, label, sort_order, inserted_at, updated_at)
+SELECT wa.id, TIME '22:00', TIME '23:59', 'Wind down', 0, NOW(), NOW()
+FROM weekly_availability wa
+JOIN profiles p ON p.id = wa.profile_id
+JOIN users u ON u.id = p.user_id
+WHERE wa.day_of_week = 6 AND u.email = 'seed-user-1@example.com';
+
+INSERT INTO availability_overrides (profile_id, date, override_type, start_time, end_time, reason, inserted_at, updated_at)
+SELECT p.id, DATE '2027-01-05', 'custom_hours', TIME '18:00', TIME '23:59', 'Late night', NOW(), NOW() FROM profiles p;

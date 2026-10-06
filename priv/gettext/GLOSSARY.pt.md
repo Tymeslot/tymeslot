@@ -70,6 +70,10 @@ flow and in the dashboard.
 | **invitee** | **convidado** | Same word as *guest*. English distinguishes them in 2 strings out of 3,438; Portuguese gains nothing by inventing a second term. |
 | **slot** / **time slot** | **horário** | "the slot is released" → "o horário é liberado". Never "espaço" or "vaga". |
 | **buffer** (between meetings) | **folga** | **[DECIDED]** Not "intervalo", which is already needed for *interval* ("Booking slot interval" → "Intervalo entre horários"). "Folga entre reuniões" / "Sem folga" is natural Brazilian and keeps the two apart. |
+| **group booking** | **agendamento em grupo** | "Group · up to %{count}" → "Grupo · até %{count}". |
+| **seat** / **spot** (in a group booking) | **vaga** | A place in a group slot, not the slot itself: "3/10 seats taken" → "3/10 vagas ocupadas". The *slot* stays **horário**. |
+| **participant limit** | **limite de participantes** | |
+| **saved location** | **local salvo** | |
 | **availability** | **disponibilidade** | |
 | **available times** | **horários disponíveis** | |
 | **reschedule** | **remarcar** | Not "reagendar" — both exist, "remarcar" is the one Brazilians say. |

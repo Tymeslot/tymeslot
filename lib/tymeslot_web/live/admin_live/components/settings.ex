@@ -96,9 +96,9 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
         {Formatters.section_label(@section)}
       </h3>
 
-      <div class="card-glass p-0! overflow-hidden divide-y divide-tymeslot-100">
-        <.setting_row :for={key <- @keys} key={key} effective_values={@effective_values} />
-      </div>
+      <.card padding={:none} class="overflow-hidden divide-y divide-tymeslot-100">
+        <.admin_setting_row :for={key <- @keys} key={key} effective_values={@effective_values} />
+      </.card>
     </section>
     """
   end
@@ -124,8 +124,8 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
         {Formatters.section_label(:email_branding)}
       </h3>
 
-      <div class="card-glass p-0! overflow-hidden divide-y divide-tymeslot-100">
-        <.setting_row key={:email_brand_name} effective_values={@effective_values} />
+      <.card padding={:none} class="overflow-hidden divide-y divide-tymeslot-100">
+        <.admin_setting_row key={:email_brand_name} effective_values={@effective_values} />
         <.brand_accent_row
           effective={Map.fetch!(@effective_values, :email_brand_accent)}
           stock_accent={@stock_accent}
@@ -138,7 +138,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
           errors={@logo_errors}
           max_bytes={@max_logo_bytes}
         />
-      </div>
+      </.card>
     </section>
     """
   end
@@ -146,7 +146,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   attr :key, :atom, required: true
   attr :effective_values, :map, required: true
 
-  defp setting_row(assigns) do
+  defp admin_setting_row(assigns) do
     effective = Map.fetch!(assigns.effective_values, assigns.key)
     kind = Formatters.kind(assigns.key)
 
@@ -294,7 +294,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
       <.action_button
         type="submit"
         variant={:secondary}
-        class="py-1.5! px-3! text-token-xs!"
+        size={:sm}
         disabled={@disabled}
       >
         {dgettext("dashboard_admin", "Save")}
@@ -324,7 +324,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
       <.action_button
         type="submit"
         variant={:secondary}
-        class="py-1.5! px-3! text-token-xs!"
+        size={:sm}
         disabled={@disabled}
       >
         {dgettext("dashboard_admin", "Save")}
@@ -404,7 +404,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
             aria-describedby="email-brand-accent-feedback"
             class={text_input_classes("w-32 font-mono", false)}
           />
-          <.action_button type="submit" variant={:secondary} class="py-1.5! px-3! text-token-xs!">
+          <.action_button type="submit" variant={:secondary} size={:sm}>
             {dgettext("dashboard_admin", "Save")}
           </.action_button>
         </form>
@@ -461,13 +461,9 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
             alt={dgettext("dashboard_admin", "Current email logo")}
             class="h-10 w-auto max-w-[150px] object-contain"
           />
-          <button
-            type="button"
-            phx-click="remove_email_logo"
-            class="text-token-xs font-black uppercase tracking-wider text-red-600 hover:text-red-700 cursor-pointer"
-          >
+          <.action_button variant={:danger_soft} size={:sm} phx-click="remove_email_logo">
             {dgettext("dashboard_admin", "Remove")}
-          </button>
+          </.action_button>
         </div>
 
         <form id="admin-email-logo-form" phx-change="validate_email_logo">
@@ -478,7 +474,10 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
           --%>
           <.live_file_input upload={@upload} class="hidden" />
 
-          <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-token-lg border-2 border-tymeslot-100 bg-white text-token-xs font-black uppercase tracking-wider text-tymeslot-700 hover:bg-tymeslot-50 cursor-pointer focus-within:outline-hidden focus-within:ring-2 focus-within:ring-turquoise-500 focus-within:ring-offset-2">
+          <label class={[
+            button_classes(:secondary, :sm),
+            "focus-within:outline-hidden focus-within:ring-2 focus-within:ring-turquoise-500 focus-within:ring-offset-2"
+          ]}>
             <.icon name="hero-arrow-up-tray-mini" class="w-4 h-4" />
             {if @logo_url,
               do: dgettext("dashboard_admin", "Replace"),

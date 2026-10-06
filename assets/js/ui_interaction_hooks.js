@@ -163,3 +163,24 @@ export const ModalFocusTrap = {
     }
   }
 };
+
+// Closes the mobile dashboard sidebar on Escape. A `phx-window-keydown`
+// binding cannot do this alone: it fires whether or not the drawer is open,
+// and the dismiss command returns focus to the menu toggle, which would pull
+// focus out of whatever the organiser was doing. So the hook acts only while
+// the drawer carries its open class, and runs the server-rendered command in
+// `data-dismiss`, the one the close button and the backdrop run as well.
+export const SidebarEscape = {
+  mounted() {
+    this.onKeydown = (e) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      if (!this.el.classList.contains('dashboard-sidebar-open')) return;
+      this.liveSocket.execJS(this.el, this.el.dataset.dismiss);
+    };
+    window.addEventListener('keydown', this.onKeydown);
+  },
+
+  destroyed() {
+    window.removeEventListener('keydown', this.onKeydown);
+  }
+};

@@ -60,7 +60,7 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   # `message` is persisted as its English msgid, never translated here: the
   # flagging process's locale belongs to whoever happened to trigger the flag,
   # not to the owner who reads it. The dashboard translates it into the
-  # viewer's locale when it renders (`ConnectionRow.reconnect_reason/1`).
+  # viewer's locale when it renders (`ConnectionLabels.reconnect_reason/1`).
   @causes %{
     credentials_undecryptable: %{
       log: "Integration credentials cannot be decrypted — flagging for reauth",

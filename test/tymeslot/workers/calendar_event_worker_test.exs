@@ -279,6 +279,43 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
     end
   end
 
+  describe "perform/1 - organiser with no calendar to write to" do
+    test "a create ends the job without retrying or emailing the owner" do
+      meeting = insert(:meeting)
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _meeting ->
+        {:error, :no_calendar_client}
+      end)
+
+      # The final attempt is the one that would email the owner; with no
+      # calendar there is nothing to tell them, so the email mock is never set.
+      assert {:discard, reason} =
+               perform_job(
+                 CalendarEventWorker,
+                 %{"action" => "create", "meeting_id" => meeting.id},
+                 attempt: 5
+               )
+
+      assert CalendarEventWorker.expected_outcome?(reason)
+    end
+
+    test "an update ends the job without retrying" do
+      %{meeting: meeting} = setup_calendar_scenario()
+
+      expect(Tymeslot.CalendarMock, :update_event, fn _uid, _data, _meeting ->
+        {:error, :no_calendar_integration}
+      end)
+
+      assert {:discard, reason} =
+               perform_job(CalendarEventWorker, %{
+                 "action" => "update",
+                 "meeting_id" => meeting.id
+               })
+
+      assert CalendarEventWorker.expected_outcome?(reason)
+    end
+  end
+
   describe "perform/1 - update the provider cannot apply" do
     # Issue #158: iCloud reported the event missing to the update while the
     # recovery create found it present, and the job finished as a success

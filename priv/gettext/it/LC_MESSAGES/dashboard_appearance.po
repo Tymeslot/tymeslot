@@ -31,11 +31,6 @@ msgstr "Si è verificato un errore. Ricarica la pagina e riprova."
 msgid "Background Design"
 msgstr "Design dello sfondo"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Choose Your Style"
-msgstr "Scegli il tuo stile"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a visual style that matches your professional identity."
@@ -71,11 +66,6 @@ msgstr "Collega il calendario per l'anteprima"
 #, elixir-autogen, elixir-format
 msgid "Current"
 msgstr "Attuale"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Current Style"
-msgstr "Stile attuale"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/color_picker.ex
@@ -136,21 +126,11 @@ msgstr "Anteprima in tempo reale"
 msgid "MP4 or WebM. Max 20MB."
 msgstr "MP4 o WebM. Massimo 20 MB."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "More Styles Coming Soon"
-msgstr "Altri stili in arrivo"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Or upload your own"
 msgstr "Oppure carica il tuo"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Our design team is busy crafting new themes to help you express your unique professional style."
-msgstr "Il nostro team di design è al lavoro su nuovi temi per aiutarti a esprimere il tuo stile professionale unico."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
 #, elixir-autogen, elixir-format
@@ -192,11 +172,6 @@ msgstr "Seleziona i colori primari per l'interfaccia della tua pagina di prenota
 #, elixir-autogen, elixir-format
 msgid "Solid Color"
 msgstr "Tinta unita"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex
-#, elixir-autogen, elixir-format
-msgid "Theme Customization"
-msgstr "Personalizzazione del tema"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_preview.ex
@@ -359,3 +334,13 @@ msgstr "Modifiche non salvate"
 #, elixir-autogen, elixir-format
 msgid "Complete the form to save"
 msgstr "Completa il modulo per salvare"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#, elixir-autogen, elixir-format
+msgid "Background type"
+msgstr "Tipo di sfondo"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Current style"
+msgstr "Stile attuale"

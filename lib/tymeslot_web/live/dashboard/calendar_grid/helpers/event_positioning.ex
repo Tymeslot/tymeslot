@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.EventPositioning do
   @moduledoc "CSS positioning helpers for timed calendar events: top offset, height, column layout, and colour assignment."
 
   alias Tymeslot.Integrations.Calendar.EventColour
+  alias TymeslotWeb.Components.Dashboard.Appointments.OpenAttrs
 
   @spec top_rem(DateTime.t(), String.t()) :: float()
   def top_rem(dt, tz) do
@@ -50,16 +51,31 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.EventPositioning do
   def booking?(%{kind: :booking}), do: true
   def booking?(_event), do: false
 
-  # Click wiring for an event block. Bookings open the read-only booking
-  # detail modal; provider events open the editable event detail modal. One
-  # helper so every view (timed grid, month, agenda, overflow chip) stays in
-  # agreement about which modal an entry opens.
-  @spec open_event_attrs(map()) :: keyword()
-  def open_event_attrs(%{kind: :booking} = event),
-    do: ["phx-click": "show_booking", "phx-value-meeting-id": event.meeting_id]
+  @doc """
+  Click wiring for an event block. Bookings open the read-only booking detail
+  modal; provider events open the editable event detail modal. One helper so
+  every view (timed grid, month, agenda, overflow chip) stays in agreement
+  about which modal an entry opens.
 
-  def open_event_attrs(event),
-    do: ["phx-click": "show_event", "phx-value-event-id": event.id]
+  `opts` are `OpenAttrs.build/3`'s, with `keys: :none` by default.
+  Inside the grid `CalendarDrag` already turns Enter on a `role="button"` into
+  a click, so a focusable block wants `keys: :hook`, never `:own`.
+  """
+  @spec open_event_attrs(map(), keyword()) :: map()
+  def open_event_attrs(event, opts \\ [])
+
+  def open_event_attrs(%{kind: :booking} = event, opts),
+    do:
+      OpenAttrs.build(
+        "show_booking",
+        %{"meeting-id" => event.meeting_id},
+        with_keys(opts)
+      )
+
+  def open_event_attrs(event, opts),
+    do: OpenAttrs.build("show_event", %{"event-id" => event.id}, with_keys(opts))
+
+  defp with_keys(opts), do: Keyword.put_new(opts, :keys, :none)
 
   @spec color_for_event(map(), map()) :: String.t()
   def color_for_event(_assigns, %{kind: :booking}), do: "bg-turquoise-600"

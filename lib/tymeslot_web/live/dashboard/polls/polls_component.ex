@@ -83,78 +83,67 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div class="space-y-10 pb-20">
-      <%!-- Header --%>
-      <.section_header
-        icon="hero-hand-raised"
-        title={dgettext("dashboard_common", "Polls")}
-        class="mb-4"
-      />
+    <div>
+      <.dashboard_page icon="hero-hand-raised" title={dgettext("dashboard_common", "Polls")}>
+        <%!-- With no polls yet, the empty state below carries the action. --%>
+        <:actions :if={!@show_form and @polls != []}>
+          <PollList.new_poll_button myself={@myself} data-testid="new-poll" />
+        </:actions>
+        <p class="text-tymeslot-600 mb-6">
+          {dgettext(
+            "dashboard_common",
+            "Find a time that works for everyone. Propose a few slots and let your guests vote."
+          )}
+        </p>
 
-      <p class="text-tymeslot-600 mb-6">
-        {dgettext(
-          "dashboard_common",
-          "Find a time that works for everyone. Propose a few slots and let your guests vote."
-        )}
-      </p>
+        <div id="polls-container" class="space-y-6">
+          <.live_component
+            :if={@show_form}
+            module={PollForm}
+            id="poll-form"
+            current_user={@current_user}
+            profile={@profile}
+            meeting_types={@meeting_types}
+            parent_id={@id}
+            parent_myself={@myself}
+          />
 
-      <div id="polls-container" class="space-y-6">
-        <div :if={!@show_form} class="flex justify-end">
-          <button
-            type="button"
-            phx-click="new_poll"
-            phx-target={@myself}
-            class="btn btn-primary inline-flex items-center gap-1"
-          >
-            <.icon name="hero-plus" class="w-4 h-4" />
-            {dgettext("dashboard_common", "New poll")}
-          </button>
+          <PollResults.results_panel
+            :if={@selected_poll}
+            poll={@selected_poll}
+            tallies={@tallies}
+            slot_health={@slot_health}
+            slot_health_loading={@slot_health_loading}
+            slot_errors={@slot_errors}
+            winning_slot_id={@winning_slot_id}
+            expanded_slots={@expanded_slots}
+            editing_details?={@editing_details?}
+            detail_errors={@detail_errors}
+            profile={@profile}
+            integration_status={@integration_status}
+            meetings_path={~p"/dashboard/meetings"}
+            time_format={@time_format}
+            myself={@myself}
+          />
+
+          <CancelPollModal.cancel_poll_modal
+            :if={@selected_poll}
+            open={@show_cancel_modal}
+            poll={@selected_poll}
+            participant_count={length(@selected_poll.participants)}
+            myself={@myself}
+          />
+
+          <PollList.poll_list
+            :if={!@show_form or @polls != []}
+            polls={@polls}
+            profile={@profile}
+            integration_status={@integration_status}
+            selected_poll_id={@selected_poll_id}
+            myself={@myself}
+          />
         </div>
-
-        <.live_component
-          :if={@show_form}
-          module={PollForm}
-          id="poll-form"
-          current_user={@current_user}
-          profile={@profile}
-          meeting_types={@meeting_types}
-          parent_id={@id}
-          parent_myself={@myself}
-        />
-
-        <PollResults.results_panel
-          :if={@selected_poll}
-          poll={@selected_poll}
-          tallies={@tallies}
-          slot_health={@slot_health}
-          slot_health_loading={@slot_health_loading}
-          slot_errors={@slot_errors}
-          winning_slot_id={@winning_slot_id}
-          expanded_slots={@expanded_slots}
-          editing_details?={@editing_details?}
-          detail_errors={@detail_errors}
-          profile={@profile}
-          integration_status={@integration_status}
-          meetings_path={~p"/dashboard/meetings"}
-          myself={@myself}
-        />
-
-        <CancelPollModal.cancel_poll_modal
-          :if={@selected_poll}
-          open={@show_cancel_modal}
-          poll={@selected_poll}
-          participant_count={length(@selected_poll.participants)}
-          myself={@myself}
-        />
-
-        <PollList.poll_list
-          polls={@polls}
-          profile={@profile}
-          integration_status={@integration_status}
-          selected_poll_id={@selected_poll_id}
-          myself={@myself}
-        />
-      </div>
+      </.dashboard_page>
     </div>
     """
   end

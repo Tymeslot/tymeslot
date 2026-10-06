@@ -52,6 +52,7 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
     ~H"""
     <div>
       <.section_header
+        level={1}
         title={dgettext("booking_manage", "Booking request")}
         icon="hero-inbox-arrow-down"
       />
@@ -62,19 +63,26 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
         )}
       </p>
 
-      <div class="mt-6 space-y-3">
-        <.detail_row label={dgettext("booking_manage", "When")} value={when_line(@meeting)} />
-        <.detail_row label={dgettext("booking_manage", "Duration")} value={duration_line(@meeting)} />
-        <.detail_row
-          label={dgettext("booking_manage", "Type")}
-          value={@meeting.meeting_type || dgettext("booking_manage", "Meeting")}
-        />
-        <.detail_row label={dgettext("booking_manage", "From")} value={from_line(@meeting)} />
-        <.detail_row
+      <div class="mt-6 space-y-4">
+        <.detail_line icon="hero-calendar" label={dgettext("booking_manage", "When")}>
+          {when_line(@meeting)}
+        </.detail_line>
+        <.detail_line icon="hero-clock" label={dgettext("booking_manage", "Duration")}>
+          {duration_line(@meeting)}
+        </.detail_line>
+        <.detail_line icon="hero-tag" label={dgettext("booking_manage", "Type")}>
+          {@meeting.meeting_type || dgettext("booking_manage", "Meeting")}
+        </.detail_line>
+        <.detail_line icon="hero-user" label={dgettext("booking_manage", "From")}>
+          {from_line(@meeting)}
+        </.detail_line>
+        <.detail_line
           :if={@meeting.attendee_message not in [nil, ""]}
+          icon="hero-chat-bubble-left-ellipsis"
           label={dgettext("booking_manage", "Message")}
-          value={@meeting.attendee_message}
-        />
+        >
+          {@meeting.attendee_message}
+        </.detail_line>
       </div>
 
       <.info_box :if={@meeting.approval_deadline_at} variant={:warning} class="mt-6">

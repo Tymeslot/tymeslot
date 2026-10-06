@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.CalendarListPanel do
           class="rounded"
         />
         <div
-          class={"w-3 h-3 rounded-full shrink-0 #{Helpers.color_class_for_integration(@integration_colors, integration.id)}"}
+          class={"w-3 h-3 rounded-token-full shrink-0 #{Helpers.color_class_for_integration(@integration_colors, integration.id)}"}
           aria-hidden="true"
         >
         </div>

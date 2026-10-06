@@ -2,13 +2,16 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   @moduledoc """
   Provides locale-aware formatting for dates, times, and durations.
   Handles different formatting conventions for different languages.
+
+  English is British English: the day comes before the month ("5 February
+  2026"), as in every other supported language.
   """
 
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
 
   @doc """
   Formats a date according to locale conventions.
-  - en: January 15, 2026
+  - en: 15 January 2026
   - de: 15. Januar 2026
   - uk: 15 січня 2026
   - pt: 15 de janeiro de 2026
@@ -23,32 +26,24 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   Orders a day, month name, and year according to locale word-order
   conventions, given a bare (unpadded) day number. Shared by `format_date/2`
   and callers that build their own day/month/year pieces (e.g. date ranges).
-  Matches `format_date/2`'s per-locale padding: `en`/unknown locales
-  zero-pad the day; `de`/`cs`/`uk`/`fr`/`it`/`pl`/`pt` do not.
-  - en: April 05, 2026
   - de/cs: 5. April 2026 / 5. dubna 2026
-  - uk/fr/it/pl: 5 квітня 2026 (day before month, no period)
+  - en/uk/fr/it/pl: 5 April 2026 / 5 квітня 2026 (day before month, no period)
   - pt: 5 de abril de 2026 (the linking "de" is not optional)
   """
   @spec order_date_parts(String.t() | integer(), String.t(), integer(), String.t()) :: String.t()
-  def order_date_parts(day, month_name, year, locale) do
-    case locale do
-      loc when loc in ["de", "cs"] -> "#{day}. #{month_name} #{year}"
-      loc when loc in ["uk", "fr", "it", "pl"] -> "#{day} #{month_name} #{year}"
-      "pt" -> "#{day} de #{month_name} de #{year}"
-      _other_locale -> "#{month_name} #{pad_day(day)}, #{year}"
-    end
-  end
+  def order_date_parts(day, month_name, year, locale) when locale in ["de", "cs"],
+    do: "#{day}. #{month_name} #{year}"
 
-  defp pad_day(day), do: day |> to_string() |> String.pad_leading(2, "0")
+  def order_date_parts(day, month_name, year, "pt"),
+    do: "#{day} de #{month_name} de #{year}"
+
+  def order_date_parts(day, month_name, year, _other_locale),
+    do: "#{day} #{month_name} #{year}"
 
   @doc """
-  Formats a start/end date range according to locale word-order conventions,
-  without the zero-padded day that `format_date/2` applies (ranges read more
-  naturally with bare day numbers, e.g. "April 10 – 12, 2026").
-  - en: April 10 – 12, 2026 / April 30 – May 2, 2026
+  Formats a start/end date range according to locale word-order conventions.
   - de/cs: 10.–12. April 2026 / 30. April – 2. Mai 2026
-  - uk/fr/it/pl: 10–12 квітня 2026 / 30 квітня – 2 травня 2026 (day before month, no period)
+  - en/uk/fr/it/pl: 10–12 April 2026 / 30 April – 2 May 2026 (day before month, no period)
   - pt: 10–12 de abril de 2026 / 30 de abril – 2 de maio de 2026
   """
   @spec format_date_range(Calendar.date(), Calendar.date(), String.t()) :: String.t()
@@ -57,17 +52,12 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
     end_month = format_month_name(end_date.month, locale)
 
     case locale do
-      loc when loc in ["de", "cs"] ->
-        day_first_range(start_date, start_month, end_date, end_month, ".")
-
-      loc when loc in ["uk", "fr", "it", "pl"] ->
-        day_first_range(start_date, start_month, end_date, end_month, "")
-
       "pt" ->
         portuguese_range(start_date, start_month, end_date, end_month)
 
-      _other ->
-        month_first_range(start_date, start_month, end_date, end_month)
+      _other_locale ->
+        day_suffix = if locale in ["de", "cs"], do: ".", else: ""
+        day_first_range(start_date, start_month, end_date, end_month, day_suffix)
     end
   end
 
@@ -86,14 +76,6 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
       "#{start_date.day}–#{end_date.day} de #{end_month} de #{end_date.year}"
     else
       "#{start_date.day} de #{start_month} – #{end_date.day} de #{end_month} de #{end_date.year}"
-    end
-  end
-
-  defp month_first_range(start_date, start_month, end_date, end_month) do
-    if start_date.month == end_date.month do
-      "#{start_month} #{start_date.day} – #{end_date.day}, #{end_date.year}"
-    else
-      "#{start_month} #{start_date.day} – #{end_month} #{end_date.day}, #{end_date.year}"
     end
   end
 
@@ -334,7 +316,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   Formats a date led by its full weekday name, in the locale's order and
   punctuation. The weekday keeps the case the locale gives it, so French and
   Italian start lowercase.
-  - en: Monday, February 5, 2026
+  - en: Monday, 5 February 2026
   - de: Montag, 5. Februar 2026
   - cs: pondělí 5. února 2026
   - fr: lundi 5 février 2026
@@ -349,7 +331,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
 
   @doc """
   Formats a date led by its full weekday name, without the year.
-  - en: Monday, February 5
+  - en: Monday, 5 February
   - de: Montag, 5. Februar
   - cs: pondělí 5. února
   - fr: lundi 5 février
@@ -363,7 +345,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
 
   @doc """
   Formats a compact day and abbreviated month, without the year.
-  - en: Feb 5
+  - en: 5 Feb
   - de: 5. Feb
   - cs: 5. úno
   - fr: 5 févr.
@@ -376,7 +358,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
 
   @doc """
   `format_short_date/2` with the year, for compact table cells.
-  - en: Feb 5, 2026
+  - en: 5 Feb 2026
   - de: 5. Feb 2026
   - fr: 5 févr. 2026
   - pt: 5 de fev de 2026
@@ -388,7 +370,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
 
   @doc """
   `format_short_date/2` led by the abbreviated weekday.
-  - en: Mon Feb 5
+  - en: Mon 5 Feb
   - de: Mo 5. Feb
   - fr: lun 5 févr.
   """
@@ -403,20 +385,13 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   defp day_month(date, month_name, locale) when locale in ["de", "cs"],
     do: "#{date.day}. #{month_name}"
 
-  defp day_month(date, month_name, locale) when locale in ["uk", "fr", "it", "pl"],
-    do: "#{date.day} #{month_name}"
-
   # Portuguese links day and month with "de" ("5 de fevereiro").
   defp day_month(date, month_name, "pt"), do: "#{date.day} de #{month_name}"
 
-  defp day_month(date, month_name, _other_locale), do: "#{month_name} #{date.day}"
-
-  defp with_year(day_month, year, locale) when locale in ["de", "cs", "uk", "fr", "it", "pl"],
-    do: "#{day_month} #{year}"
+  defp day_month(date, month_name, _other_locale), do: "#{date.day} #{month_name}"
 
   defp with_year(day_month, year, "pt"), do: "#{day_month} de #{year}"
-
-  defp with_year(day_month, year, _other_locale), do: "#{day_month}, #{year}"
+  defp with_year(day_month, year, _other_locale), do: "#{day_month} #{year}"
 
   # French, Italian and Czech run the weekday straight into the date; the
   # others set it off with a comma.
@@ -428,7 +403,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
 
   @doc """
   Formats a datetime as `format_weekday_date/2` beside its clock time:
-  "Monday, April 5, 2026 · 02:30 PM", "Montag, 5. April 2026 · 14:30".
+  "Monday, 5 April 2026 · 02:30 PM", "Montag, 5. April 2026 · 14:30".
 
   Shared by the attendee-facing surfaces that show a single meeting's slot (the
   guest RSVP page and the host's request review page). A guest is an attendee,

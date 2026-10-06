@@ -110,6 +110,44 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCardTest do
     end
   end
 
+  describe "message" do
+    # Several sentences long, so it sits in the card's notice, which wraps,
+    # rather than the one-line summary, which truncates from sm up.
+    test "is the card's notice, not its summary" do
+      doc =
+        %{
+          deleted_at: nil,
+          disabled_reason: nil,
+          charges_enabled: false,
+          payouts_enabled: false,
+          details_submitted: true,
+          default_currency: "eur"
+        }
+        |> render_card()
+        |> LazyHTML.from_fragment()
+
+      assert doc |> LazyHTML.query("[data-part='notice']") |> LazyHTML.text() =~
+               "Stripe is reviewing your account."
+
+      assert doc |> LazyHTML.query("[data-part='summary']") |> Enum.count() == 0
+    end
+
+    test "is marked as a fault only for a restricted account" do
+      doc =
+        %{
+          deleted_at: nil,
+          disabled_reason: "rejected.fraud",
+          details_submitted: true,
+          default_currency: "eur"
+        }
+        |> render_card()
+        |> LazyHTML.from_fragment()
+
+      assert doc |> LazyHTML.query("[data-part='notice'][data-tone='danger']") |> Enum.count() ==
+               1
+    end
+  end
+
   describe "needs_onboarding?/1" do
     test "true only while onboarding is incomplete" do
       incomplete = %{deleted_at: nil, disabled_reason: nil, details_submitted: false}

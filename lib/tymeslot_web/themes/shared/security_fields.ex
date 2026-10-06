@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Themes.Shared.SecurityFields do
   Shared reCAPTCHA field components for booking forms.
 
   The honeypot these forms also carry is
-  `TymeslotWeb.Components.CoreComponents.honeypot_field/1`, shared with every
+  `TymeslotWeb.Components.CoreComponents.Forms.honeypot_field/1`, shared with every
   other public form.
   """
   use Phoenix.Component

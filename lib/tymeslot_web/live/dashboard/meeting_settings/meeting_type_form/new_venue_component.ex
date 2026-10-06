@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.NewVenueComponent do
   @moduledoc """
-  The small form behind "+ New location" in the location editor: a name and
+  The small form behind "+ New saved location" in the location editor: a name and
   an address, saved as one of the organiser's venues without leaving the
   meeting-type form.
 
@@ -17,7 +17,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.NewVenueComponen
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Venues
   alias Tymeslot.Venues.VenueSchema
-  alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorComponent
   alias TymeslotWeb.Live.Shared.Flash
 
@@ -72,51 +71,54 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.NewVenueComponen
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div class="card-glass p-4 mt-4 space-y-3" data-testid="new-venue">
-      <h4 class="text-token-sm font-semibold text-tymeslot-800">
-        {dgettext("dashboard_meeting_form", "New location")}
-      </h4>
-
-      <.form
-        for={@form}
-        id="new-venue-form"
-        novalidate
-        phx-change="validate"
-        phx-submit="save"
-        phx-target={@myself}
-        class="space-y-3"
-      >
-        <CoreComponents.input
-          field={@form[:name]}
-          label={dgettext("dashboard_meeting_form", "Name")}
-          placeholder={dgettext("dashboard_meeting_form", "e.g., Berlin office")}
-          maxlength={VenueSchema.name_max_length()}
-          required
+    <div class="mt-4" data-testid="new-venue">
+      <.card variant={:flat} padding={:sm} class="space-y-3">
+        <.subsection_header
+          level={4}
+          title={dgettext("dashboard_meeting_form", "New saved location")}
         />
 
-        <CoreComponents.input
-          field={@form[:description]}
-          type="textarea"
-          rows={3}
-          label={dgettext("dashboard_meeting_form", "Address and directions (optional)")}
-          placeholder={dgettext("dashboard_meeting_form", "12 High Street, London EC1A 1BB")}
-          maxlength={VenueSchema.description_max_length()}
-        />
+        <.form
+          for={@form}
+          id="new-venue-form"
+          novalidate
+          phx-change="validate"
+          phx-submit="save"
+          phx-target={@myself}
+          class="space-y-3"
+        >
+          <.input
+            field={@form[:name]}
+            label={dgettext("dashboard_meeting_form", "Name")}
+            placeholder={dgettext("dashboard_meeting_form", "e.g., Berlin office")}
+            maxlength={VenueSchema.name_max_length()}
+            required
+          />
 
-        <div class="flex justify-end gap-2">
-          <CoreComponents.action_button
-            type="button"
-            variant={:secondary}
-            phx-click="toggle_new_venue"
-            phx-target={@editor}
-          >
-            {dgettext("dashboard_meeting_form", "Cancel")}
-          </CoreComponents.action_button>
-          <CoreComponents.action_button type="submit" variant={:primary}>
-            {dgettext("dashboard_meeting_form", "Add location")}
-          </CoreComponents.action_button>
-        </div>
-      </.form>
+          <.input
+            field={@form[:description]}
+            type="textarea"
+            rows={3}
+            label={dgettext("dashboard_meeting_form", "Address and directions (optional)")}
+            placeholder={dgettext("dashboard_meeting_form", "12 High Street, London EC1A 1BB")}
+            maxlength={VenueSchema.description_max_length()}
+          />
+
+          <div class="flex justify-end gap-2">
+            <.action_button
+              type="button"
+              variant={:secondary}
+              phx-click="toggle_new_venue"
+              phx-target={@editor}
+            >
+              {dgettext("dashboard_meeting_form", "Cancel")}
+            </.action_button>
+            <.action_button type="submit" variant={:primary}>
+              {dgettext("dashboard_meeting_form", "Add to saved locations")}
+            </.action_button>
+          </div>
+        </.form>
+      </.card>
     </div>
     """
   end

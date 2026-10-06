@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
     test "renders initial view with the provider picker options", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
-      assert html =~ "Video Integration"
+      assert html =~ ~s(data-testid="video-empty")
       assert html =~ "Connect a video provider"
 
       # Each provider is a selectable option in the always-rendered picker modal.
@@ -90,6 +90,28 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       refute html =~ "No video providers connected yet"
+    end
+
+    test "with nothing connected, offers the connect button once, in the empty state",
+         %{conn: conn} do
+      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      assert buttons_labelled(html, "Connect a video provider") == 1
+
+      assert has_element?(
+               view,
+               "[data-testid='video-empty'] button[phx-click='show_picker']",
+               "Connect a video provider"
+             )
+    end
+
+    test "once connected, offers the connect button in the header", %{conn: conn, user: user} do
+      insert(:video_integration, user: user, is_active: true)
+
+      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      assert buttons_labelled(html, "Connect a video provider") == 1
+      refute has_element?(view, "[data-testid='video-empty']")
     end
 
     test "lists connected integrations", %{conn: conn, user: user} do
@@ -239,10 +261,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       refute has_element?(view, "#mirotalk_base_url-help")
     end
 
-    test "shows a message when adding a duplicate custom video integration", %{
-      conn: conn,
-      user: user
-    } do
+    test "shows a message for a duplicate custom video integration", %{conn: conn, user: user} do
       insert(:video_integration,
         user: user,
         provider: "custom",
@@ -617,5 +636,12 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       refute render(view) =~ "To Delete"
       assert Repo.get(VideoIntegrationSchema, integration.id) == nil
     end
+  end
+
+  defp buttons_labelled(html, label) do
+    html
+    |> LazyHTML.from_fragment()
+    |> LazyHTML.query("button")
+    |> Enum.count(&(LazyHTML.text(&1) =~ label))
   end
 end

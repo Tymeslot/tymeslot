@@ -15,6 +15,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
   alias Phoenix.Component
   alias Tymeslot.Auth
   alias Tymeslot.Availability.Schedules
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
@@ -48,6 +49,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
     socket
     |> Component.assign(:profile, profile)
     |> Component.assign(:availability_schedule, load_default_schedule(profile))
+    |> Component.assign(:time_format, load_time_format(socket, user))
     |> assign_form_data(profile)
     |> Component.assign(:current_step, :welcome)
     |> Component.assign(:step_data, %{})
@@ -61,6 +63,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
     |> Component.assign(:timezone_search, "")
     |> Component.assign(:page_title, dgettext("onboarding_wizard", "Welcome"))
     |> Component.assign(:form_errors, %{})
+    |> Component.assign(:rejected_inputs, %{})
     |> Component.assign(:custom_input_mode, CustomInputModeHelper.default_custom_mode())
     |> Component.assign(:calendar_state, :selecting)
     |> Component.assign(:calendar_choice, nil)
@@ -88,6 +91,13 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
     Component.assign(socket, :form_data, BasicSettingsShared.build_form_data(socket))
   end
 
+  # The clock the organiser reads times in: their stored choice, or the one
+  # their language implies. The static render skips the query.
+  defp load_time_format(socket, user) do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+    CalendarGrid.get_user_time_format(if(connected?(socket), do: user.id), locale)
+  end
+
   defp load_profile(socket, user) do
     if connected?(socket) do
       {:ok, loaded} = Onboarding.get_or_create_profile(user.id)
@@ -98,7 +108,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
     end
   end
 
-  # The buffer, booking window and minimum notice edited by the preference
+  # The buffers, booking window and minimum notice edited by the preference
   # steps live on the profile's default availability schedule. There is no
   # profile during the disconnected render, so there is no schedule either.
   defp load_default_schedule(nil), do: nil

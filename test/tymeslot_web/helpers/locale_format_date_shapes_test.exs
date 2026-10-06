@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatDateShapesTest do
     @date ~D[2026-02-05]
 
     for {locale, weekday_date, weekday_day_month, short, short_weekday} <- [
-          {"en", "Thursday, February 5, 2026", "Thursday, February 5", "Feb 5", "Thu Feb 5"},
+          {"en", "Thursday, 5 February 2026", "Thursday, 5 February", "5 Feb", "Thu 5 Feb"},
           {"de", "Donnerstag, 5. Februar 2026", "Donnerstag, 5. Februar", "5. Feb", "Do 5. Feb"},
           {"fr", "jeudi 5 février 2026", "jeudi 5 février", "5 févr.", "jeu 5 févr."},
           {"it", "giovedì 5 febbraio 2026", "giovedì 5 febbraio", "5 feb", "gio 5 feb"},
@@ -38,13 +38,13 @@ defmodule TymeslotWeb.Helpers.LocaleFormatDateShapesTest do
     end
 
     test "an unknown locale falls back to English order" do
-      assert LocaleFormat.format_weekday_date(@date, "xx") == "Thursday, February 5, 2026"
+      assert LocaleFormat.format_weekday_date(@date, "xx") == "Thursday, 5 February 2026"
     end
   end
 
   describe "format_short_date_with_year/2" do
     for {locale, expected} <- [
-          {"en", "Feb 5, 2026"},
+          {"en", "5 Feb 2026"},
           {"de", "5. Feb 2026"},
           {"fr", "5 févr. 2026"},
           {"cs", "5. úno 2026"},
@@ -63,7 +63,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatDateShapesTest do
     @datetime ~U[2026-02-05 14:30:00Z]
 
     for {locale, expected} <- [
-          {"en", "Thursday, February 5, 2026 · 02:30 PM"},
+          {"en", "Thursday, 5 February 2026 · 02:30 PM"},
           {"de", "Donnerstag, 5. Februar 2026 · 14:30"},
           {"fr", "jeudi 5 février 2026 · 14:30"},
           {"cs", "čtvrtek 5. února 2026 · 14:30"},

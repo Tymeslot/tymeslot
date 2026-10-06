@@ -31,26 +31,23 @@ msgstr "Um rótulo mostrado no seu painel. Útil se você conectar mais de um es
 msgid "Active"
 msgstr "Ativo"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Add Slack via Webhook URL"
 msgstr "Adicionar o Slack por URL de webhook"
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram_empty_state.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Add Telegram Account"
 msgstr "Adicionar conta do Telegram"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
 #: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Add to Slack"
 msgstr "Adicionar ao Slack"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
 #: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Add via webhook URL"
@@ -144,7 +141,7 @@ msgstr "Configure suas notificações do Telegram."
 msgid "Connect"
 msgstr "Conectar"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Connect Slack to receive instant notifications when meetings are booked, cancelled, or rescheduled."
 msgstr "Conecte o Slack para receber notificações instantâneas quando reuniões forem agendadas, canceladas ou remarcadas."
@@ -154,7 +151,7 @@ msgstr "Conecte o Slack para receber notificações instantâneas quando reuniõ
 msgid "Connect Telegram"
 msgstr "Conectar o Telegram"
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Connect Telegram to receive instant notifications when meetings are booked, cancelled, or rescheduled."
 msgstr "Conecte o Telegram para receber notificações instantâneas quando reuniões forem agendadas, canceladas ou remarcadas."
@@ -191,8 +188,8 @@ msgid "Delete"
 msgstr "Excluir"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
-#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Disabled"
 msgstr "Desativado"
@@ -228,12 +225,6 @@ msgstr "Editar a integração com o Slack"
 #, elixir-autogen, elixir-format
 msgid "Edit Telegram Integration"
 msgstr "Editar a integração com o Telegram"
-
-#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
-#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
-#, elixir-autogen, elixir-format
-msgid "Event Subscriptions"
-msgstr "Assinaturas de eventos"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack/crud_handlers.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram/crud_handlers.ex
@@ -390,12 +381,12 @@ msgstr "Registros"
 msgid "Never triggered"
 msgstr "Nunca disparou"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex
 #, elixir-autogen, elixir-format
 msgid "No Slack Integrations"
 msgstr "Nenhuma integração com o Slack"
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_tab.ex
 #, elixir-autogen, elixir-format
 msgid "No Telegram Integrations"
 msgstr "Nenhuma integração com o Telegram"
@@ -841,3 +832,9 @@ msgstr "A URL de webhook foi revogada no Slack. Gere uma nova."
 #, elixir-autogen, elixir-format
 msgid "Slack error: %{error}"
 msgstr "Erro do Slack: %{error}"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}"
+msgstr "Excluir %{name}"

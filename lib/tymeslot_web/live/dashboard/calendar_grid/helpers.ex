@@ -29,12 +29,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
   defdelegate color_for_event(assigns, event), to: EventPositioning
   defdelegate event_display_date(event, timezone), to: EventPositioning
   defdelegate booking?(event), to: EventPositioning
-  defdelegate open_event_attrs(event), to: EventPositioning
+  defdelegate open_event_attrs(event, opts \\ []), to: EventPositioning
 
   # Time formatting
 
   defdelegate format_display_time_range(event, fmt, timezone), to: TimeFormatting
-  defdelegate format_time_range_in_tz(event, timezone, fmt), to: TimeFormatting
   defdelegate tz_abbr(timezone), to: TimeFormatting
   defdelegate datetime_to_local_parts(dt, timezone), to: TimeFormatting
   defdelegate format_hour(hour, assigns), to: TimeFormatting

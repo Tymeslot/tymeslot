@@ -87,16 +87,16 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefunds do
                   {format_amount(MeetingPayments.refundable_remaining_cents(p), p.currency)}
                 </td>
                 <td class="p-2 text-right">
-                  <button
+                  <.action_button
                     :if={can_refund_here?(p, @account)}
-                    type="button"
-                    class="text-token-sm text-turquoise-700 font-semibold underline"
+                    variant={:secondary}
+                    size={:sm}
                     phx-click="open_refund_modal"
                     phx-value-id={p.id}
                     phx-target={@myself}
                   >
                     {dgettext("dashboard_payments", "Refund")}
-                  </button>
+                  </.action_button>
                   <span
                     :if={not can_refund_here?(p, @account)}
                     class="text-token-xs text-tymeslot-500"

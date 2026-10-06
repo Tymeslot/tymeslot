@@ -32,7 +32,6 @@ msgstr "O valor excede o saldo que ainda pode ser reembolsado."
 msgid "Attendee"
 msgstr "Participante"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
@@ -225,11 +224,6 @@ msgstr "Parcialmente reembolsado"
 #, elixir-autogen, elixir-format
 msgid "Payment setup is temporarily unavailable. Please try again later."
 msgstr "A configuração de pagamentos está indisponível no momento. Tente novamente mais tarde."
-
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Payments"
-msgstr "Pagamentos"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format

@@ -36,7 +36,7 @@ msgstr "Tentando reconectar"
 msgid "Browser Not Supported"
 msgstr "Navegador não compatível"
 
-#: lib/tymeslot_web/components/confirmation_modal.ex
+#: lib/tymeslot_web/components/core_components/modal.ex
 #: lib/tymeslot_web/components/dashboard/meetings/add_guests_modal.ex
 #: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
@@ -59,7 +59,7 @@ msgstr "Fechar"
 msgid "Close modal"
 msgstr "Fechar janela"
 
-#: lib/tymeslot_web/components/confirmation_modal.ex
+#: lib/tymeslot_web/components/core_components/modal.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm"
 msgstr "Confirmar"
@@ -99,7 +99,6 @@ msgstr "Uma letra maiúscula"
 msgid "Password must contain:"
 msgstr "A senha deve conter:"
 
-#: lib/tymeslot_web/components/confirmation_modal.ex
 #: lib/tymeslot_web/components/core_components/buttons.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
@@ -126,11 +125,6 @@ msgstr "Buscar cidades, países ou fusos horários…"
 msgid "Select timezone"
 msgstr "Selecionar fuso horário"
 
-#: lib/tymeslot_web/components/core_components/navigation.ex
-#, elixir-autogen, elixir-format
-msgid "Tabs"
-msgstr "Abas"
-
 #: lib/tymeslot_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "This %{context} requires a modern browser with ES module support. Please upgrade to the latest version of Chrome, Firefox, Safari, or Edge."
@@ -151,11 +145,6 @@ msgstr "Este fuso horário será usado para sua disponibilidade e seus agendamen
 msgid "Tymeslot logo"
 msgstr "Logo do Tymeslot"
 
-#: lib/tymeslot_web/components/core_components/layout.ex
-#, elixir-autogen, elixir-format
-msgid "Tymeslot team"
-msgstr "equipe do Tymeslot"
-
 #: lib/tymeslot_web/components/timezone_dropdown.ex
 #, elixir-autogen, elixir-format
 msgid "Your Timezone"
@@ -175,11 +164,6 @@ msgstr "horário local"
 #, elixir-autogen, elixir-format
 msgid "scheduling page"
 msgstr "Esta página de agendamento"
-
-#: lib/tymeslot_web/components/core_components/layout.ex
-#, elixir-autogen, elixir-format
-msgid "Made with %{heart} by the %{team}"
-msgstr "Feito com %{heart} pela %{team}"
 
 #: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format
@@ -255,3 +239,8 @@ msgstr "Reproduzir vídeo de fundo"
 #, elixir-autogen, elixir-format
 msgid "Search timezones"
 msgstr "Buscar fusos horários"
+
+#: lib/tymeslot_web/components/core_components/feedback.ex
+#, elixir-autogen, elixir-format
+msgid "Loading"
+msgstr "Carregando"

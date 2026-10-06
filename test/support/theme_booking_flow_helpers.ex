@@ -38,7 +38,8 @@ defmodule Tymeslot.ThemeBookingFlowHelpers do
         is_default: true,
         advance_booking_days: 30,
         min_advance_hours: 0,
-        buffer_minutes: 0
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0
       )
 
     insert(:meeting_type, user: user, duration_minutes: 30, name: "Quick Chat", is_active: true)

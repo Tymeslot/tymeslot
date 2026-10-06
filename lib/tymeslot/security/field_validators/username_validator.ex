@@ -24,7 +24,12 @@ defmodule Tymeslot.Security.FieldValidators.UsernameValidator do
   # username has (`Profiles.Usernames.generate_default_username/1` builds
   # "user_<id>"), so the profile form refused to submit for any account that
   # had never customised its URL.
-  @username_pattern "[a-z0-9][a-z0-9_-]*"
+  #
+  # The hyphen in the class is escaped because browsers compile `pattern` with
+  # the `v` flag, where a bare `-` that is not part of a range is a syntax
+  # error; the browser then skips the attribute entirely. PCRE reads `\-` as a
+  # literal hyphen, so the server-side regex means exactly the same.
+  @username_pattern "[a-z0-9][a-z0-9_\\-]*"
   @username_regex ~r/^#{@username_pattern}$/
 
   @doc """

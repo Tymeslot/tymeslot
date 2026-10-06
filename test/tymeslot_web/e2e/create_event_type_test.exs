@@ -14,10 +14,13 @@ defmodule TymeslotWeb.E2E.CreateEventTypeTest do
       |> click(css("button", text: "Add Meeting Type"))
       |> fill_in(css("input[name='meeting_type[name]']"), with: "Quick Chat")
       |> fill_in(css("input[name='meeting_type[duration]']"), with: "30")
-      |> click(css("button[type='submit']", text: "Create Meeting Type"))
+      |> click(css("button[type='submit']", text: "Create meeting type"))
+      # Creating switches the same form to editing the new type.
+      |> assert_has(css("[aria-live='polite']", text: "All changes saved"))
+      |> click(css("button", text: "Done"))
 
-    # Should see the new type in the list (name is in an h3)
-    session = assert_has(session, css("h3", text: "Quick Chat"))
+    # Should see the new type in the list (name is in an h2)
+    session = assert_has(session, css("h2", text: "Quick Chat"))
 
     # The populated list at the narrowest supported viewport. Asserting on the
     # row keeps this honest: an empty list would fit trivially.
@@ -25,7 +28,7 @@ defmodule TymeslotWeb.E2E.CreateEventTypeTest do
     |> resize_to_mobile()
     |> visit("/dashboard/meeting-settings")
     |> wait_for_live()
-    |> assert_has(css("h3", text: "Quick Chat"))
+    |> assert_has(css("h2", text: "Quick Chat"))
     |> assert_no_horizontal_overflow("meeting settings at 320px")
   end
 end

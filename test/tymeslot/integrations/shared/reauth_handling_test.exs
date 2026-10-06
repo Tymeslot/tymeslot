@@ -15,7 +15,7 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandlingTest do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Integrations.Video.Providers.ZoomProvider.Scopes
-  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionLabels
 
   describe "flag/2" do
     test "logs a warning, persists the flag, and returns :ok" do
@@ -95,7 +95,7 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandlingTest do
       assert reloaded.sync_error ==
                "Access to the connected account has expired or been revoked. Please reconnect the integration."
 
-      assert ConnectionRow.reconnect_reason(reloaded) ==
+      assert ConnectionLabels.reconnect_reason(reloaded) ==
                "Der Zugriff auf das verbundene Konto ist abgelaufen oder wurde widerrufen. Bitte verbinden Sie die Integration erneut."
     end
 
@@ -109,7 +109,7 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandlingTest do
         message = Scopes.reauth_message(operation)
         assert message =~ ~r/^Zoom is missing the permission/
 
-        translated = ConnectionRow.reconnect_reason(%{needs_reauth: true, sync_error: message})
+        translated = ConnectionLabels.reconnect_reason(%{needs_reauth: true, sync_error: message})
         assert translated =~ ~r/^Zoom fehlt die für das .+ erforderliche Berechtigung/
       end
     end

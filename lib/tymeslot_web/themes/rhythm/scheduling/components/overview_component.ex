@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
   alias Tymeslot.Profiles
   alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
+  alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   import TymeslotWeb.Components.FlagHelpers
@@ -105,6 +106,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                         <div class="duration-time">
                           {LocalizationHelpers.format_duration(meeting_type.duration_minutes)}
                         </div>
+                        <GroupSession.hint meeting_type={meeting_type} />
                         <div class="duration-description">
                           {meeting_type.description}
                         </div>

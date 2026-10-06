@@ -13,9 +13,9 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [connected?: 1, put_flash: 3, redirect: 2]
 
-  alias Tymeslot.Analytics
   alias Tymeslot.Bookings.SubmissionToken
   alias Tymeslot.CustomFields
+  alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.ThemeFlow
@@ -33,7 +33,10 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: CustomizationHelpers
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine, as: QEngine
+  alias TymeslotWeb.Themes.Shared.GuestBooking
+  alias TymeslotWeb.Themes.Shared.PathHandlers
   alias TymeslotWeb.Themes.Shared.ReschedulePin
+  alias TymeslotWeb.Themes.Shared.SeatMoveLink
 
   @doc """
   Shared mounting logic for scheduling themes.
@@ -56,6 +59,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       socket
       |> assign_initial_state_fun.()
       |> ThemeUtils.assign_user_timezone(params)
+      |> ThemeUtils.assign_attendee_prefill()
       |> ThemeUtils.assign_theme_with_preview(params)
 
     # Resolve the username context (which sets meeting_types) unless the
@@ -124,22 +128,29 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
         handle_param_updates_fun,
         handle_state_entry_fun
       ) do
-    socket =
-      socket
-      |> handle_param_updates_fun.(params)
-      |> ThemeUtils.assign_theme_with_preview(params)
-      |> assign_owner_preview(params)
-      |> assign(:current_state, initial_state)
-      |> handle_state_entry_fun.(initial_state, params)
+    socket = handle_param_updates_fun.(socket, params)
 
-    # Re-apply theme customization in case theme changed in preview mode
-    socket = maybe_assign_customization(socket)
-
+    # A spent seat link is sent on to a fresh booking before any step is
+    # entered for it (`handle_param_updates/2`).
     if socket.redirected do
       {:noreply, socket}
     else
-      {:ok, socket} = SlotFetchingHandlerComponent.maybe_reload_slots(socket)
-      {:noreply, socket}
+      socket =
+        socket
+        |> ThemeUtils.assign_theme_with_preview(params)
+        |> assign_owner_preview(params)
+        |> assign(:current_state, initial_state)
+        |> handle_state_entry_fun.(initial_state, params)
+
+      # Re-apply theme customization in case theme changed in preview mode
+      socket = maybe_assign_customization(socket)
+
+      if socket.redirected do
+        {:noreply, socket}
+      else
+        {:ok, socket} = SlotFetchingHandlerComponent.maybe_reload_slots(socket)
+        {:noreply, socket}
+      end
     end
   end
 
@@ -207,10 +218,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   # rules the submit will be validated against. Everything else picks by
   # duration, which is what the visitor actually chose.
   defp resolve_meeting_type(socket, duration_str) do
-    ThemeFlow.resolve_meeting_type_for_reschedule(
-      socket.assigns[:reschedule_meeting_uid],
-      socket.assigns[:organizer_user_id]
-    ) ||
+    ReschedulePin.meeting_type(socket) ||
       ThemeFlow.resolve_meeting_type_for_duration(
         socket.assigns[:organizer_user_id],
         duration_str
@@ -222,15 +230,28 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   """
   @spec handle_param_updates(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def handle_param_updates(socket, params) do
+    seat_token = params["reschedule_seat_token"]
+
     socket
+    |> assign(:page_query_params, PathHandlers.query_params(params))
     |> maybe_assign_from_params(:duration, normalize_duration_param(params))
     |> maybe_assign_from_params(:selected_duration, normalize_duration_param(params))
     |> maybe_assign_from_params(:selected_date, date_param(params))
     |> maybe_assign_from_params(:selected_time, params["time"])
     |> maybe_assign_from_params(:reschedule_meeting_uid, params["reschedule_meeting_uid"])
-    |> assign(:is_rescheduling, is_binary(params["reschedule_meeting_uid"]))
+    |> SeatMoveLink.assign_from_url(seat_token)
+    |> assign_rescheduling(params)
     |> pin_reschedule_meeting_type()
     |> handle_confirmation_params(params)
+    |> SeatMoveLink.leave_if_spent(seat_token)
+  end
+
+  defp assign_rescheduling(socket, params) do
+    assign(
+      socket,
+      :is_rescheduling,
+      is_binary(params["reschedule_meeting_uid"]) or socket.assigns.reschedule_seat_token != nil
+    )
   end
 
   # A reschedule is pinned to the type it booked; `ReschedulePin` says why.
@@ -385,6 +406,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     socket
     |> assign(:meeting_type, meeting_type)
     |> assign(:engine, refreshed_engine(socket, meeting_type))
+    |> maybe_subscribe_to_group_seats()
     |> BookingLocation.assign_for_meeting_type(
       meeting_type,
       ThemeFlow.reschedule_location_choice(
@@ -479,17 +501,9 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   """
   @spec handle_booking_entry(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def handle_booking_entry(socket, params) do
-    has_selection =
-      (socket.assigns[:selected_date] != nil ||
-         (is_binary(params["date"]) && params["date"] != "")) &&
-        (socket.assigns[:selected_time] != nil ||
-           (is_binary(params["time"]) && params["time"] != ""))
+    is_reschedule = reschedule?(socket, params)
 
-    is_reschedule =
-      socket.assigns[:reschedule_meeting_uid] != nil ||
-        is_binary(params["reschedule_meeting_uid"])
-
-    if has_selection || is_reschedule do
+    if selection_made?(socket, params) || is_reschedule do
       case resolve_entry_meeting_type(socket, params) do
         {:unresolvable, socket} ->
           socket
@@ -500,14 +514,37 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
           |> do_handle_booking_entry(params)
       end
     else
-      username = socket.assigns[:username_context]
-      slug = socket.assigns[:selected_duration] || params["slug"]
+      redirect_to_schedule_step(socket, params)
+    end
+  end
 
-      if is_binary(username) && is_binary(slug) do
-        redirect(socket, to: ~p"/#{username}/#{slug}")
-      else
-        redirect(socket, to: ~p"/")
-      end
+  # Either half of the selection can arrive on the socket (carried from an
+  # earlier step) or in the params (a deep link straight to `/book`).
+  defp selection_made?(socket, params) do
+    selected?(socket.assigns[:selected_date], params["date"]) &&
+      selected?(socket.assigns[:selected_time], params["time"])
+  end
+
+  defp selected?(assigned, param), do: assigned != nil || (is_binary(param) && param != "")
+
+  # A whole-meeting reschedule carries a meeting uid; a group participant
+  # moving their own seat carries a seat token instead. Either one enters the
+  # booking step without a prior date/time selection.
+  defp reschedule?(socket, params) do
+    socket.assigns[:reschedule_meeting_uid] != nil ||
+      is_binary(params["reschedule_meeting_uid"]) ||
+      socket.assigns[:reschedule_seat_token] != nil ||
+      is_binary(params["reschedule_seat_token"])
+  end
+
+  defp redirect_to_schedule_step(socket, params) do
+    username = socket.assigns[:username_context]
+    slug = socket.assigns[:selected_duration] || params["slug"]
+
+    if is_binary(username) && is_binary(slug) do
+      redirect(socket, to: ~p"/#{username}/#{slug}")
+    else
+      redirect(socket, to: ~p"/")
     end
   end
 
@@ -543,90 +580,27 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     client_ip = ClientIP.get(socket)
     submission_token = SubmissionToken.generate()
 
-    # Pre-fill form if rescheduling, scoped to the organizer to prevent PII leaks
-    reschedule_uid = socket.assigns[:reschedule_meeting_uid]
-    organizer_user_id = socket.assigns[:organizer_user_id]
-    form_data = ThemeFlow.build_booking_form_data(reschedule_uid, organizer_user_id)
+    # Pre-fill form if rescheduling, scoped to the organizer to prevent PII
+    # leaks; otherwise from the booking link's fragment, if it carried one
+    form_data =
+      case socket.assigns[:reschedule_seat_token] do
+        nil ->
+          ThemeFlow.build_booking_form_data(
+            socket.assigns[:reschedule_meeting_uid],
+            socket.assigns[:organizer_user_id],
+            socket.assigns.attendee_prefill
+          )
+
+        seat_token ->
+          ThemeFlow.build_seat_booking_form_data(seat_token)
+      end
 
     socket
     |> OrganizerHelpers.setup_form_state(form_data, as: :booking)
+    |> GuestBooking.assign_seat_cap()
     |> assign(:client_ip, client_ip)
     |> assign(:submission_token, submission_token)
     |> assign(:submission_processed, false)
-  end
-
-  @doc """
-  Captures UTM and arbitrary tracking params plus the referrer host from
-  the request, and assigns the combined map under `:tracking`. The shape
-  matches what `Tymeslot.Bookings.Create.execute/3` expects on the
-  meeting params, so merging this assign into the meeting params at
-  submit time persists the attribution on the booking.
-
-  **First-touch attribution only.** This function is called once in `mount/3`.
-  Internal LiveView navigations within the same session (e.g. schedule →
-  booking → confirmation) do not invoke `mount/3` again, so the tracking
-  assign is never refreshed mid-session. The UTM and referrer values
-  recorded here reflect the URL the visitor first arrived on.
-  """
-  @spec assign_tracking(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
-  def assign_tracking(socket, params) do
-    if Analytics.enabled?() do
-      referrer = raw_referrer_from_socket(socket)
-
-      tracking =
-        params
-        |> Analytics.extract_attribution(referrer)
-        |> maybe_put_visitor_hash(socket)
-
-      assign(socket, :tracking, tracking)
-    else
-      assign(socket, :tracking, %{})
-    end
-  end
-
-  # `PageViewHook` (an on_mount hook, so it runs before this mount/3 helper)
-  # computes the cookieless visitor hash and assigns it. Carry it into the
-  # tracking map so it persists onto the booking and lets analytics join the
-  # booking back to its page-view. Absent when the visit was not tracked
-  # (e.g. dead render); then no hash is attached.
-  defp maybe_put_visitor_hash(tracking, socket) do
-    case socket.assigns[:visitor_hash] do
-      hash when is_binary(hash) -> Map.put(tracking, :visitor_hash, hash)
-      _other -> tracking
-    end
-  end
-
-  @doc """
-  Appends preserved tracking params to a path so UTM and custom URL
-  params survive cross-route navigation in the scheduling flow.
-
-  The `:referrer_host` key is local to the visitor's session (captured
-  from the request header at mount) and is therefore omitted — it is
-  not a query-string-shaped value.
-  """
-  @spec tracking_path(String.t(), map() | nil) :: String.t()
-  def tracking_path(path, nil), do: path
-
-  def tracking_path(path, tracking) do
-    query =
-      tracking
-      |> Enum.flat_map(fn
-        {:tracking_params, custom} when is_map(custom) -> Map.to_list(custom)
-        {:referrer_host, _value} -> []
-        {_key, nil} -> []
-        {key, value} -> [{to_string(key), value}]
-      end)
-      |> URI.encode_query()
-
-    cond do
-      query == "" -> path
-      String.contains?(path, "?") -> path <> "&" <> query
-      true -> path <> "?" <> query
-    end
-  end
-
-  defp raw_referrer_from_socket(socket) do
-    socket.assigns[:scheduling_referrer]
   end
 
   defp maybe_subscribe_to_calendar_events(socket) do
@@ -636,6 +610,34 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
          !socket.assigns[:calendar_pubsub_subscribed] do
       Phoenix.PubSub.subscribe(Tymeslot.PubSub, "calendar_events:#{organizer_user_id}")
       assign(socket, :calendar_pubsub_subscribed, true)
+    else
+      socket
+    end
+  end
+
+  @doc """
+  Subscribes the booking page to live seat updates for the resolved meeting
+  type. Group types only; mirrors `maybe_subscribe_to_calendar_events/1`.
+
+  Re-invoked whenever a meeting type is assigned. Switching between group
+  types adds a subscription per type without unsubscribing — the
+  `{:seat_update, id}` handler matches on the current meeting type's id, so
+  broadcasts for a previously viewed type are no-ops. Every id subscribed to
+  this session is tracked (not just the most recent one), so returning to a
+  type visited earlier is a no-op rather than a second `PubSub.subscribe/2`
+  to the same topic — which would otherwise double every later broadcast for
+  that type, once per subscription.
+  """
+  @spec maybe_subscribe_to_group_seats(Phoenix.LiveView.Socket.t()) ::
+          Phoenix.LiveView.Socket.t()
+  def maybe_subscribe_to_group_seats(socket) do
+    meeting_type = socket.assigns[:meeting_type]
+    subscribed_ids = socket.assigns[:group_seats_subscribed_ids] || MapSet.new()
+
+    if connected?(socket) && MeetingTypes.group_type?(meeting_type) &&
+         not MapSet.member?(subscribed_ids, meeting_type.id) do
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, SeatBroadcast.topic(meeting_type.id))
+      assign(socket, :group_seats_subscribed_ids, MapSet.put(subscribed_ids, meeting_type.id))
     else
       socket
     end

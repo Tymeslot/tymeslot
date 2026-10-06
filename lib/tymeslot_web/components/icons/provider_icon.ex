@@ -49,7 +49,9 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
   attr :class, :string, default: ""
   attr :icon_class, :string, default: ""
   attr :loading, :string, default: "lazy", values: ["lazy", "eager"]
-  attr :alt, :string, default: nil, doc: "Alt text; defaults to one built from the provider key"
+  attr :alt, :string,
+    default: nil,
+    doc: "Defaults to naming the provider; pass \"\" where the name is already written beside it"
 
   @spec provider_icon(map()) :: Phoenix.LiveView.Rendered.t()
   def provider_icon(assigns) do

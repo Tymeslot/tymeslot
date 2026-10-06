@@ -7,7 +7,10 @@ defmodule TymeslotWeb.Dashboard.Locations.DeleteVenueModal do
   be taken off, and of those, the ones left with an in-person location that
   lists no venue, whose bookers are then told the address is arranged after
   booking. Meetings already booked there keep their address. Deleting is
-  allowed either way (see `Tymeslot.Venues.delete_venue/1`).
+  allowed either way, except while the venue is the only one of a group
+  type's location: a group type's address is fixed in advance, so the
+  modal names those types and offers no delete until they name another
+  venue (see `Tymeslot.Venues.delete_venue/1`).
   """
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
@@ -21,32 +24,50 @@ defmodule TymeslotWeb.Dashboard.Locations.DeleteVenueModal do
     required: true,
     doc: "of `in_use`, those left with an in-person location listing no venue"
 
+  attr :blocked_by, :list,
+    default: [],
+    doc: "of `left_without`, the group types, which keep the venue from being deleted"
+
   attr :myself, :any, required: true
 
   @spec delete_venue_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def delete_venue_modal(assigns) do
     ~H"""
-    <.modal
+    <.confirm_modal
       id="delete-venue-modal"
       show
+      title={dgettext("dashboard_meeting_types", "Delete location")}
+      confirm_label={dgettext("dashboard_meeting_types", "Delete location")}
       on_cancel={JS.push("close_delete_venue", target: @myself)}
-      size={:medium}
+      on_confirm={JS.push("confirm_delete_venue", target: @myself)}
+      data-testid="confirm-delete-venue"
     >
-      <:header>
-        <div class="flex items-center gap-2">
-          <.icon name="hero-exclamation-triangle" class="w-5 h-5 text-red-500" />
-          <span>{dgettext("dashboard_meeting_types", "Delete location")}</span>
-        </div>
-      </:header>
-
-      <%= if @in_use == [] do %>
-        <p class="text-tymeslot-700">
-          {dgettext("dashboard_meeting_types", "Delete %{name}? This cannot be undone.",
-            name: @venue.name
-          )}
-        </p>
-      <% else %>
-        <div class="space-y-4 text-tymeslot-700">
+      <%!-- A blocked delete offers no Confirm: the empty actions slot
+           replaces it. --%>
+      <:actions :if={@blocked_by != []}></:actions>
+      <%= cond do %>
+        <% @blocked_by != [] -> %>
+          <.info_box variant={:error}>
+            <div class="space-y-2">
+              <p>
+                {dgettext(
+                  "dashboard_meeting_types",
+                  "%{name} is the only location of these group meeting types, whose address must be fixed in advance. Give them another location before deleting it:",
+                  name: @venue.name
+                )}
+              </p>
+              <ul class="list-disc pl-5" data-testid="venue-blocked-by">
+                <li :for={meeting_type <- @blocked_by}>{meeting_type.name}</li>
+              </ul>
+            </div>
+          </.info_box>
+        <% @in_use == [] -> %>
+          <p>
+            {dgettext("dashboard_meeting_types", "Delete %{name}? This cannot be undone.",
+              name: @venue.name
+            )}
+          </p>
+        <% true -> %>
           <div class="space-y-2">
             <p>
               {dgettext(
@@ -59,7 +80,6 @@ defmodule TymeslotWeb.Dashboard.Locations.DeleteVenueModal do
               <li :for={meeting_type <- @in_use}>{meeting_type.name}</li>
             </ul>
           </div>
-
           <.info_box :if={@left_without != []} variant={:warning}>
             <div class="space-y-2">
               <p>
@@ -74,31 +94,14 @@ defmodule TymeslotWeb.Dashboard.Locations.DeleteVenueModal do
             </div>
           </.info_box>
 
-          <p class="text-token-sm">
+          <p class="text-token-sm text-tymeslot-500">
             {dgettext(
               "dashboard_meeting_types",
               "Meetings already booked there keep their address. This cannot be undone."
             )}
           </p>
-        </div>
       <% end %>
-
-      <:footer>
-        <div class="flex justify-end gap-3">
-          <.action_button variant={:secondary} phx-click="close_delete_venue" phx-target={@myself}>
-            {dgettext("dashboard_meeting_types", "Cancel")}
-          </.action_button>
-          <.action_button
-            variant={:danger}
-            phx-click="confirm_delete_venue"
-            phx-target={@myself}
-            data-testid="confirm-delete-venue"
-          >
-            {dgettext("dashboard_meeting_types", "Delete location")}
-          </.action_button>
-        </div>
-      </:footer>
-    </.modal>
+    </.confirm_modal>
     """
   end
 end

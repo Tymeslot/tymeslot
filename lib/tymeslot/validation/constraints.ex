@@ -21,6 +21,7 @@ defmodule Tymeslot.Validation.Constraints do
 
   # Scheduling bounds
 
+  @doc "The bounds both buffers share, in minutes."
   @spec buffer_minutes_range() :: Range.t()
   def buffer_minutes_range, do: 0..120
 
@@ -77,6 +78,21 @@ defmodule Tymeslot.Validation.Constraints do
   @spec slot_interval_minutes_range() :: Range.t()
   def slot_interval_minutes_range, do: 5..480
 
+  @spec max_participants_range() :: Range.t()
+  def max_participants_range, do: 1..999
+
+  @doc """
+  The participant limit a *group* meeting type may carry.
+
+  `max_participants_range/0` starts at 1 because that is how a solo meeting
+  type is stored. A type with group bookings switched on is a different
+  question: 1 seat is not a small group, it is the toggle being off, so the
+  form must reject it rather than silently store a solo type behind an
+  enabled toggle.
+  """
+  @spec group_participants_range() :: Range.t()
+  def group_participants_range, do: 2..max_participants_range().last
+
   @spec booking_limit_range() :: Range.t()
   def booking_limit_range, do: 1..500
 
@@ -128,17 +144,32 @@ defmodule Tymeslot.Validation.Constraints do
   the ones its bookings are validated against.
   """
   @spec scheduling_policy_defaults() :: %{
-          buffer_minutes: non_neg_integer(),
+          buffer_before_minutes: non_neg_integer(),
+          buffer_after_minutes: non_neg_integer(),
           min_advance_hours: non_neg_integer(),
           advance_booking_days: pos_integer()
         }
   def scheduling_policy_defaults,
-    do: %{buffer_minutes: 15, min_advance_hours: 3, advance_booking_days: 90}
+    do: %{
+      buffer_before_minutes: 15,
+      buffer_after_minutes: 15,
+      min_advance_hours: 3,
+      advance_booking_days: 90
+    }
 
   # Ecto-ready options (for validate_number/3)
 
-  @spec buffer_minutes_opts() :: keyword()
-  def buffer_minutes_opts do
+  @doc "Bounds for the buffer kept free before each booking."
+  @spec buffer_before_minutes_opts() :: keyword()
+  def buffer_before_minutes_opts, do: buffer_minutes_opts()
+
+  @doc "Bounds for the buffer kept free after each booking."
+  @spec buffer_after_minutes_opts() :: keyword()
+  def buffer_after_minutes_opts, do: buffer_minutes_opts()
+
+  # Both buffers share `buffer_minutes_range/0`, which the migration's check
+  # constraints repeat.
+  defp buffer_minutes_opts do
     range = buffer_minutes_range()
     [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
   end
@@ -158,6 +189,12 @@ defmodule Tymeslot.Validation.Constraints do
   @spec duration_minutes_opts() :: keyword()
   def duration_minutes_opts do
     range = duration_minutes_range()
+    [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
+  end
+
+  @spec max_participants_opts() :: keyword()
+  def max_participants_opts do
+    range = max_participants_range()
     [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
   end
 

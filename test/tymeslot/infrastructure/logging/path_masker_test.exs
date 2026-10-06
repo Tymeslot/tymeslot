@@ -18,6 +18,9 @@ defmodule Tymeslot.Infrastructure.Logging.PathMaskerTest do
   @external_resource @fixture_path
   @shared_cases @fixture_path |> File.read!() |> JSON.decode!()
 
+  # Guards the generated tests below: an empty or unreadable fixture would
+  # otherwise generate no tests and pass silently.
+  # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
   test "the shared fixture has cases to check" do
     assert length(@shared_cases) > 10
   end

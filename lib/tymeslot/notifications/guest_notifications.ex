@@ -23,6 +23,12 @@ defmodule Tymeslot.Notifications.GuestNotifications do
       a cancellation email, but only for a booking that was ever confirmed. A
       request that was never approved never invited anyone.
 
+  On a group meeting only the guests of participants still holding their seat
+  are written to (`GuestQueries.list_live_for_meeting/1`), and each guest's
+  email is rendered from their own participant's view of the meeting
+  (`with_inviter_details/4`): that participant's language, timezone and seat
+  calendar entry, not the slot row's.
+
   Guest emails never fail the operation that triggered them: a failed send is
   logged, and the booking and the host's and booker's emails are unaffected.
   """
@@ -35,6 +41,9 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.GuestSchema
+  alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.ParticipantSchema
+  alias Tymeslot.Meetings.Recipient
 
   @doc """
   Resets the guests' answers and reminder history, and sends each guest the
@@ -45,14 +54,16 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   """
   @spec notify_rescheduled(map(), map()) :: :ok
   def notify_rescheduled(%{id: meeting_id} = _meeting, content) do
-    case GuestQueries.list_for_meeting(meeting_id) do
+    case GuestQueries.list_live_for_meeting(meeting_id) do
       [] ->
         :ok
 
       guests ->
         GuestQueries.reset_for_new_time(meeting_id)
 
-        send_to_guests(guests, content, meeting_id, "reschedule", fn guest, details ->
+        guests
+        |> Enum.map(&{&1, content})
+        |> send_to_guests(meeting_id, "reschedule", fn guest, details ->
           Config.email_service_module().send_guest_reschedule(guest.email, details)
         end)
     end
@@ -80,20 +91,21 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   """
   @spec notify_reapproved(map()) :: :ok
   def notify_reapproved(%{id: meeting_id} = meeting) do
-    case Enum.reject(GuestQueries.list_for_meeting(meeting_id), &is_nil(&1.confirmation_sent_at)) do
+    case Enum.reject(
+           GuestQueries.list_live_for_meeting(meeting_id),
+           &is_nil(&1.confirmation_sent_at)
+         ) do
       [] ->
         :ok
 
       invited ->
-        send_to_guests(
-          invited,
-          AppointmentBuilder.from_meeting(meeting),
-          meeting_id,
-          "reschedule",
-          fn guest, details ->
-            Config.email_service_module().send_guest_reschedule(guest.email, details)
-          end
-        )
+        details = AppointmentBuilder.from_meeting(meeting)
+
+        invited
+        |> Enum.map(&{&1, details})
+        |> send_to_guests(meeting_id, "reschedule", fn guest, details ->
+          Config.email_service_module().send_guest_reschedule(guest.email, details)
+        end)
     end
   end
 
@@ -110,17 +122,91 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   @spec notify_cancelled(map(), map(), (String.t(), (-> term()) -> term())) :: :ok
   def notify_cancelled(meeting, appointment_details, once \\ fn _key, send -> send.() end)
 
-  def notify_cancelled(%{first_announced_at: nil}, _appointment_details, _once), do: :ok
+  def notify_cancelled(meeting, appointment_details, once) do
+    if ever_confirmed?(meeting),
+      do: send_cancellations(meeting, appointment_details, once),
+      else: :ok
+  end
 
-  def notify_cancelled(%{id: meeting_id}, appointment_details, once) do
+  defp send_cancellations(%{id: meeting_id} = meeting, appointment_details, once) do
     meeting_id
-    |> GuestQueries.list_for_meeting()
-    |> send_to_guests(appointment_details, meeting_id, "cancellation", fn guest, details ->
+    |> GuestQueries.list_live_for_meeting()
+    |> with_inviter_details(meeting, appointment_details)
+    |> send_to_guests(meeting_id, "cancellation", fn guest, details ->
       once.("cancellation:guest:#{guest.id}", fn ->
         Config.email_service_module().send_guest_cancellation(guest.email, details)
       end)
     end)
   end
+
+  @doc """
+  Sends each of `guests` of `meeting` the cancellation of the seat that
+  brought them, from `seat_details`, that seat's payload (its calendar entry,
+  its participant's language and timezone). Used when a participant cancels or moves their
+  seat while the meeting carries on: the meeting-level cancellation never
+  reaches these guests, since their seat is no longer live.
+
+  Only guests who were sent an invitation are told; one never invited has
+  nothing in their calendar to cancel. Declined guests are told like the
+  others, as on a cancelled booking: the entry may still be in their
+  calendar. `once` wraps each send as in `notify_cancelled/3`.
+  """
+  @spec notify_seat_cancelled(
+          map(),
+          [GuestSchema.t()],
+          map(),
+          (String.t(), (-> term()) -> term())
+        ) :: :ok
+  def notify_seat_cancelled(%{id: meeting_id}, guests, seat_details, once) do
+    guests
+    |> Enum.reject(&is_nil(&1.confirmation_sent_at))
+    |> Enum.map(&{&1, seat_details})
+    |> send_to_guests(meeting_id, "seat cancellation", fn guest, details ->
+      once.("seat_cancellation:guest:#{guest.id}", fn ->
+        Config.email_service_module().send_guest_cancellation(guest.email, details)
+      end)
+    end)
+  end
+
+  @doc """
+  Pairs each guest with the payload their emails are rendered from.
+
+  A group-booking guest (`:participant` preloaded, as
+  `GuestQueries.list_live_for_meeting/1` and `list_for_reminder/3` return
+  them) gets their own participant's view of the meeting, built once per
+  participant: that participant's locale and timezone, and the seat's own
+  calendar UID and revision, so the entry in the guest's calendar is the
+  same event as their participant's. Any other guest gets `fallback`, the
+  meeting's own payload. `reminder` is passed through to the builder.
+  """
+  @spec with_inviter_details([GuestSchema.t()], map(), map(), map() | nil) ::
+          [{GuestSchema.t(), map()}]
+  def with_inviter_details(guests, meeting, fallback, reminder \\ nil)
+
+  def with_inviter_details(guests, %MeetingSchema{} = meeting, fallback, reminder) do
+    by_participant =
+      guests
+      |> Enum.flat_map(fn
+        %{participant: %ParticipantSchema{} = participant} -> [participant]
+        _guest -> []
+      end)
+      |> Enum.uniq_by(& &1.id)
+      |> Map.new(fn participant ->
+        {participant.id,
+         AppointmentBuilder.from_meeting(
+           meeting,
+           Recipient.from_participant(participant),
+           reminder
+         )}
+      end)
+
+    Enum.map(guests, fn guest ->
+      {guest, Map.get(by_participant, guest.participant_id, fallback)}
+    end)
+  end
+
+  def with_inviter_details(guests, _meeting, fallback, _reminder),
+    do: Enum.map(guests, &{&1, fallback})
 
   @doc """
   Tells the guests of a held request the host declined, or that expired, that
@@ -157,6 +243,10 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   this map, so nothing private to the booker can reach a guest through any of
   them. The fields that make the guest's calendar entry the same event as the
   booker's (`:uid`, the organiser, `:ical_sequence`) are kept as they are.
+
+  A group-booking guest was invited by their own participant, not by whoever
+  the meeting row names as its attendee, so when the guest arrives with its
+  participant loaded that participant is who the email says invited them.
   """
   @spec guest_details(map(), map()) :: map()
   def guest_details(appointment_details, guest) do
@@ -164,14 +254,27 @@ defmodule Tymeslot.Notifications.GuestNotifications do
 
     appointment_details
     |> Map.drop(@booker_private_keys)
+    |> put_inviting_participant(guest)
     |> Map.put(:guest_name, guest.name || guest.email)
     |> Map.put(:guest_accept_url, urls.accept_url)
     |> Map.put(:guest_decline_url, urls.decline_url)
     |> Map.put(:guest_invited_by, GuestSchema.inviter(guest))
   end
 
-  defp send_to_guests(guests, appointment_details, meeting_id, kind, send_fun) do
-    Enum.each(guests, fn guest ->
+  defp put_inviting_participant(details, %{participant: %ParticipantSchema{} = participant}),
+    do: Map.put(details, :attendee_name, participant.name || participant.email)
+
+  defp put_inviting_participant(details, _guest), do: details
+
+  # A group meeting is confirmed from its first seat and never passes through
+  # the announcement claim (each seat is announced on its own), so it carries
+  # no `first_announced_at` even though its guests were invited.
+  defp ever_confirmed?(%{first_announced_at: %DateTime{}}), do: true
+  defp ever_confirmed?(%MeetingSchema{} = meeting), do: MeetingSchema.group?(meeting)
+  defp ever_confirmed?(_meeting), do: false
+
+  defp send_to_guests(guests_with_details, meeting_id, kind, send_fun) do
+    Enum.each(guests_with_details, fn {guest, appointment_details} ->
       case send_fun.(guest, guest_details(appointment_details, guest)) do
         {:ok, _result} ->
           :ok

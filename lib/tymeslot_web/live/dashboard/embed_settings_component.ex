@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   alias Tymeslot.Scheduling.LinkAccessPolicy
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.UrlBuilder
+  alias TymeslotWeb.Components.CoreComponents.Navigation
   alias TymeslotWeb.Endpoint
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.LivePreview
@@ -83,69 +84,99 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div class="space-y-10 pb-20">
-      <%!-- Header --%>
-      <.section_header
-        icon="hero-code-bracket"
-        title={dgettext("dashboard_embed", "Embed & Share")}
-        class="mb-4"
-      />
+    <div>
+      <.dashboard_page icon="hero-code-bracket" title={dgettext("dashboard_common", "Embed & Share")}>
+        <p class="text-tymeslot-600 mb-6">
+          {dgettext(
+            "dashboard_embed",
+            "Add your booking page to any website. Choose the option that works best for you."
+          )}
+        </p>
 
-      <p class="text-tymeslot-600 mb-6">
-        {dgettext(
-          "dashboard_embed",
-          "Add your booking page to any website. Choose the option that works best for you."
-        )}
-      </p>
-
-      <%!-- Tabbed Interface --%>
-      <.tabs active_tab={@active_tab} target={@myself}>
-        <:tab
-          id="options"
-          label={dgettext("dashboard_embed", "Embed Options")}
-          icon="hero-code-bracket"
-        >
-          <OptionsGrid.options_grid
-            selected_embed_type={@selected_embed_type}
-            username={@username}
-            base_url={@base_url}
-            booking_url={@booking_url}
-            embed_layout={@embed_layout}
-            embed_locale={@embed_locale}
-            initial_height={@initial_height}
-            max_width={@max_width}
-            myself={@myself}
+        <div class="space-y-6">
+          <.tab_bar
+            id="embed-settings-tabs"
+            active_tab={@active_tab}
+            target={@myself}
+            aria_label={dgettext("dashboard_embed", "Embed settings")}
+            tabs={[
+              %{
+                id: "options",
+                label: dgettext("dashboard_embed", "Embed Options"),
+                icon: "hero-code-bracket"
+              },
+              %{
+                id: "security",
+                label: dgettext("dashboard_embed", "Security"),
+                icon: "hero-lock-closed"
+              },
+              %{
+                id: "preview",
+                label: dgettext("dashboard_embed", "Live Preview"),
+                icon: "hero-video-camera"
+              }
+            ]}
           />
-        </:tab>
 
-        <:tab id="security" label={dgettext("dashboard_embed", "Security")} icon="hero-lock-closed">
-          <SecuritySection.security_section
-            allowed_domains={@allowed_domains}
-            myself={@myself}
-          />
-        </:tab>
+          <.embed_panel id="options" active_tab={@active_tab}>
+            <OptionsGrid.options_grid
+              selected_embed_type={@selected_embed_type}
+              username={@username}
+              base_url={@base_url}
+              booking_url={@booking_url}
+              embed_layout={@embed_layout}
+              embed_locale={@embed_locale}
+              initial_height={@initial_height}
+              max_width={@max_width}
+              myself={@myself}
+            />
+          </.embed_panel>
 
-        <:tab
-          id="preview"
-          label={dgettext("dashboard_embed", "Live Preview")}
-          icon="hero-video-camera"
-        >
-          <LivePreview.live_preview
-            selected_embed_type={@selected_embed_type}
-            username={@username}
-            base_url={@base_url}
-            preview_token={@preview_token}
-            embed_script_url={@embed_script_url}
-            embed_layout={@embed_layout}
-            embed_locale={@embed_locale}
-            initial_height={@initial_height}
-            max_width={@max_width}
-            is_ready={@is_ready}
-            error_reason={@error_reason}
-            myself={@myself}
-          />
-        </:tab>
-      </.tabs>
+          <.embed_panel id="security" active_tab={@active_tab}>
+            <SecuritySection.security_section
+              allowed_domains={@allowed_domains}
+              myself={@myself}
+            />
+          </.embed_panel>
+
+          <.embed_panel id="preview" active_tab={@active_tab}>
+            <LivePreview.live_preview
+              selected_embed_type={@selected_embed_type}
+              username={@username}
+              base_url={@base_url}
+              preview_token={@preview_token}
+              embed_script_url={@embed_script_url}
+              embed_layout={@embed_layout}
+              embed_locale={@embed_locale}
+              initial_height={@initial_height}
+              max_width={@max_width}
+              is_ready={@is_ready}
+              error_reason={@error_reason}
+              myself={@myself}
+            />
+          </.embed_panel>
+        </div>
+      </.dashboard_page>
+    </div>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :active_tab, :string, required: true
+  slot :inner_block, required: true
+
+  # Every panel stays rendered and only the selected one shows, so the live
+  # preview keeps its loaded frame while another tab is open.
+  defp embed_panel(assigns) do
+    ~H"""
+    <div
+      role="tabpanel"
+      id={Navigation.panel_id("embed-settings-tabs", @id)}
+      aria-labelledby={Navigation.tab_id("embed-settings-tabs", @id)}
+      hidden={@active_tab != @id}
+      class="animate-in fade-in slide-in-from-bottom-4 duration-500"
+    >
+      {render_slot(@inner_block)}
     </div>
     """
   end

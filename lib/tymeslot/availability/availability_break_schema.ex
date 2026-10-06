@@ -7,6 +7,7 @@ defmodule Tymeslot.Availability.AvailabilityBreakSchema do
 
   alias Tymeslot.Availability.AvailabilityBreakQueries
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
+  alias Tymeslot.Availability.Window
   alias Tymeslot.ChangesetValidators.TimeOrder
   alias Tymeslot.Validation.Constraints
 
@@ -34,38 +35,45 @@ defmodule Tymeslot.Availability.AvailabilityBreakSchema do
   end
 
   @doc false
-  @spec changeset(t(), map()) :: Ecto.Changeset.t()
-  def changeset(break, attrs) do
+  # `work_hours:` passes the day's hours (as `AvailabilityBreakQueries.get_work_hours/1`
+  # returns them) when the caller has already read them; otherwise they are
+  # read here.
+  @spec changeset(t(), map(), keyword()) :: Ecto.Changeset.t()
+  def changeset(break, attrs, opts \\ []) do
     break
     |> cast(attrs, [:weekly_availability_id, :start_time, :end_time, :label, :sort_order])
     |> validate_required([:weekly_availability_id, :start_time, :end_time])
-    |> TimeOrder.validate_time_order(:start_time, :end_time)
-    |> validate_within_work_hours()
+    |> validate_against_window(opts)
     |> validate_label()
     |> foreign_key_constraint(:weekly_availability_id)
   end
 
-  defp validate_within_work_hours(changeset) do
+  # Inside a same-day window these are the old rules (end after start, start
+  # and end within the hours), each reported independently as before. Inside
+  # an overnight window the order is read through midnight, so 23:30 to 00:30
+  # is a valid break.
+  defp validate_against_window(changeset, opts) do
     with id when is_integer(id) <- get_field(changeset, :weekly_availability_id),
          %Time{} = start_time <- get_field(changeset, :start_time),
          %Time{} = end_time <- get_field(changeset, :end_time),
-         {wa_start, wa_end} <- AvailabilityBreakQueries.get_work_hours(id) do
-      changeset =
-        if wa_start && Time.compare(start_time, wa_start) == :lt do
-          add_error(changeset, :start_time, "must be within work hours")
-        else
-          changeset
-        end
+         %{start_time: %Time{}, end_time: %Time{}} = window <-
+           Keyword.get_lazy(opts, :work_hours, fn ->
+             AvailabilityBreakQueries.get_work_hours(id)
+           end) do
+      {from, to} = Window.break_offsets(window, start_time, end_time)
+      span = Window.span_seconds(window)
 
-      if wa_end && Time.compare(end_time, wa_end) == :gt do
-        add_error(changeset, :end_time, "must be within work hours")
-      else
-        changeset
-      end
+      changeset
+      |> add_error_if(from >= to, :end_time, "must be after start time")
+      |> add_error_if(from < 0, :start_time, "must be within work hours")
+      |> add_error_if(to > span, :end_time, "must be within work hours")
     else
-      _not_found -> changeset
+      _no_window -> TimeOrder.validate_time_order(changeset, :start_time, :end_time)
     end
   end
+
+  defp add_error_if(changeset, true, field, message), do: add_error(changeset, field, message)
+  defp add_error_if(changeset, false, _field, _message), do: changeset
 
   defp validate_label(changeset) do
     max = Constraints.break_label_max_length()

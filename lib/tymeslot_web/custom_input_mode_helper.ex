@@ -8,7 +8,8 @@ defmodule TymeslotWeb.CustomInputModeHelper do
   ## Fields
 
   The scheduling preference fields that support custom input mode:
-  - `:buffer_minutes` - Time buffer between appointments
+  - `:buffer_before_minutes` - Time kept free before each booking
+  - `:buffer_after_minutes` - Time kept free after each booking
   - `:advance_booking_days` - How far in advance bookings are allowed
   - `:min_advance_hours` - Minimum notice required for booking
   - `:slot_interval_minutes` - How far apart booking start times are offered
@@ -23,7 +24,8 @@ defmodule TymeslotWeb.CustomInputModeHelper do
 
   @typedoc "A scheduling preference field that supports preset tags and custom input."
   @type field ::
-          :buffer_minutes
+          :buffer_before_minutes
+          | :buffer_after_minutes
           | :advance_booking_days
           | :min_advance_hours
           | :slot_interval_minutes
@@ -45,8 +47,11 @@ defmodule TymeslotWeb.CustomInputModeHelper do
   # taken as authoritative — the card's minimum-notice list did not even contain
   # 3, the schema's own default, so a new user's card opened in custom-input
   # mode. Unifying by union means no value stopped being offered anywhere.
+  @buffer_presets [0, 5, 10, 15, 30, 45, 60]
+
   @presets %{
-    buffer_minutes: [0, 5, 10, 15, 30, 45, 60],
+    buffer_before_minutes: @buffer_presets,
+    buffer_after_minutes: @buffer_presets,
     advance_booking_days: [7, 14, 30, 60, 90, 180, 365],
     min_advance_hours: [0, 1, 3, 6, 12, 24, 48, 168],
     slot_interval_minutes: [5, 10, 15, 20, 30, 45, 60, 90, 120]
@@ -92,7 +97,7 @@ defmodule TymeslotWeb.CustomInputModeHelper do
   ## Parameters
 
   - `socket` - The LiveView socket
-  - `field` - The field atom (`:buffer_minutes`, `:advance_booking_days`, or `:min_advance_hours`)
+  - `field` - The field atom, one of `fields/0`
   - `params` - The event parameters from the client
   - `value` - The submitted value (for verification)
 
@@ -103,10 +108,10 @@ defmodule TymeslotWeb.CustomInputModeHelper do
   ## Examples
 
       # Preset button clicked - disable custom mode
-      socket = toggle_custom_mode(socket, :buffer_minutes, %{"_preset" => "true", "buffer_minutes" => "15"}, 15)
+      socket = toggle_custom_mode(socket, :buffer_before_minutes, %{"_preset" => "true", "buffer_before_minutes" => "15"}, 15)
 
       # Custom input changed - keep custom mode active
-      socket = toggle_custom_mode(socket, :buffer_minutes, %{"buffer_minutes" => "20"}, 20)
+      socket = toggle_custom_mode(socket, :buffer_before_minutes, %{"buffer_before_minutes" => "20"}, 20)
   """
   @spec toggle_custom_mode(Phoenix.LiveView.Socket.t(), field(), map(), integer() | nil) ::
           Phoenix.LiveView.Socket.t()
@@ -147,7 +152,7 @@ defmodule TymeslotWeb.CustomInputModeHelper do
 
   ## Examples
 
-      socket = enable_custom_mode(socket, :buffer_minutes)
+      socket = enable_custom_mode(socket, :buffer_before_minutes)
   """
   @spec enable_custom_mode(Phoenix.LiveView.Socket.t(), field()) :: Phoenix.LiveView.Socket.t()
   def enable_custom_mode(socket, field), do: set_custom_mode(socket, field, true)
@@ -184,10 +189,10 @@ defmodule TymeslotWeb.CustomInputModeHelper do
 
   ## Examples
 
-      iex> preset_value?(:buffer_minutes, 15)
+      iex> preset_value?(:buffer_before_minutes, 15)
       true
 
-      iex> preset_value?(:buffer_minutes, 20)
+      iex> preset_value?(:buffer_before_minutes, 20)
       false
   """
   @spec preset_value?(field(), integer() | nil) :: boolean()

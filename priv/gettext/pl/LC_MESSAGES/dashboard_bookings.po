@@ -7,55 +7,42 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "%{going} of %{total} going"
 msgstr "%{going} z %{total} weźmie udział"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Custom answers"
 msgstr "Odpowiedzi z formularza"
 
-#: lib/tymeslot_web/components/dashboard/meetings/add_guests_modal.ex
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/guest_status_pill.ex
 #, elixir-autogen, elixir-format
 msgid "Declined"
 msgstr "Nie weźmie udziału"
 
-#: lib/tymeslot_web/components/dashboard/meetings/add_guests_modal.ex
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/guest_status_pill.ex
 #, elixir-autogen, elixir-format
 msgid "Going"
 msgstr "Weźmie udział"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Guests"
 msgstr "Goście"
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Pending"
-msgstr "Bez odpowiedzi"
 
 #: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
 #, elixir-autogen, elixir-format
 msgid "%{attendee_name} will receive an email explaining you need to reschedule"
 msgstr "%{attendee_name} otrzyma e-mail z informacją, że musisz zmienić termin"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee Email"
 msgstr "E-mail uczestnika"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Auto-notifications"
-msgstr "Automatyczne powiadomienia"
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Odwołaj"
@@ -81,11 +68,6 @@ msgstr "Odwołane"
 msgid "Cancelling..."
 msgstr "Odwoływanie…"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Change meeting times"
-msgstr "Zmiana terminów spotkań"
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_status_badge.ex
 #, elixir-autogen, elixir-format
 msgid "Completed"
@@ -101,12 +83,12 @@ msgstr "Potwierdź odwołanie"
 msgid "Current Meeting"
 msgstr "Obecne spotkanie"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Date & Time"
 msgstr "Data i godzina"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Dismiss"
 msgstr "Zamknij"
@@ -146,16 +128,6 @@ msgstr "Pełny zwrot."
 msgid "I understand the attendee will not receive a refund."
 msgstr "Rozumiem, że uczestnik nie otrzyma zwrotu."
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Join Meeting"
-msgstr "Dołącz do spotkania"
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Join Video"
-msgstr "Dołącz do spotkania wideo"
-
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Keep Meeting"
@@ -171,17 +143,7 @@ msgstr "Wczytaj więcej spotkań"
 msgid "Loading..."
 msgstr "Wczytywanie…"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Manage all your scheduled meetings in one place. Filter by status and take quick actions on your appointments."
-msgstr "Zarządzaj wszystkimi zaplanowanymi spotkaniami w jednym miejscu. Filtruj je według statusu i szybko wykonuj na nich akcje."
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting Management"
-msgstr "Zarządzanie spotkaniami"
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Notes"
 msgstr "Notatki ze spotkania"
@@ -200,11 +162,6 @@ msgstr "Spotkanie odwołane, ale nie udało się zrealizować zwrotu. Wykonaj zw
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled successfully"
 msgstr "Spotkanie zostało odwołane"
-
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
-#, elixir-autogen, elixir-format
-msgid "Meetings"
-msgstr "Spotkania"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
@@ -241,16 +198,6 @@ msgstr "Minione"
 msgid "Processing..."
 msgstr "Przetwarzanie…"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Quick meeting access"
-msgstr "Szybki dostęp do spotkania"
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Real-time updates"
-msgstr "Aktualizacje na żywo"
-
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Refund amount exceeds the remaining refundable balance."
@@ -267,7 +214,6 @@ msgid "Refunds the remaining balance (%{amount})."
 msgstr "Zwraca pozostałą kwotę (%{amount})."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule"
 msgstr "Zmień termin"
@@ -322,12 +268,12 @@ msgstr "Uczestnik wybierze nowy termin spośród twoich wolnych terminów"
 msgid "This action cannot be undone. The attendee will be notified of the cancellation."
 msgstr "Tej operacji nie można cofnąć. Uczestnik otrzyma powiadomienie o odwołaniu."
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting's event was deleted from your external calendar."
 msgstr "Wydarzenie tego spotkania zostało usunięte z zewnętrznego kalendarza."
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting's event was rescheduled in your external calendar."
 msgstr "Wydarzenie tego spotkania zostało przeniesione na inny termin w zewnętrznym kalendarzu."
@@ -342,7 +288,7 @@ msgstr "Zaznacz potwierdzenie, aby odwołać bez zwrotu dla uczestnika."
 msgid "Upcoming"
 msgstr "Nadchodzące"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Video Call"
 msgstr "Spotkanie wideo"
@@ -351,11 +297,6 @@ msgstr "Spotkanie wideo"
 #, elixir-autogen, elixir-format
 msgid "What happens next:"
 msgstr "Co dalej:"
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "With auto notifications"
-msgstr "Z automatycznymi powiadomieniami"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
@@ -531,7 +472,7 @@ msgstr "Dodaj gościa"
 msgid "Already invited"
 msgstr "Już zaproszeni"
 
-#: lib/tymeslot_web/components/dashboard/meetings/add_guests_modal.ex
+#: lib/tymeslot_web/components/dashboard/meetings/guest_status_pill.ex
 #, elixir-autogen, elixir-format
 msgid "Awaiting reply"
 msgstr "Bez odpowiedzi"
@@ -692,3 +633,90 @@ msgstr "Do tego spotkania nie można dodać więcej gości."
 msgctxt "reminder status"
 msgid "Not scheduled"
 msgstr "Niezaplanowane"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Loading meetings"
+msgstr "Ładowanie spotkań"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type"
+msgstr "Typ spotkania"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Show meetings"
+msgstr "Pokaż spotkania"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "%{count}/%{capacity} seats taken"
+msgstr "Zajęte miejsca: %{count}/%{capacity}"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Group booking"
+msgstr "Rezerwacja grupowa"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Participants"
+msgstr "Uczestnicy"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to cancel this group meeting with %{count} participant scheduled for %{when}?"
+msgid_plural "Are you sure you want to cancel this group meeting with %{count} participants scheduled for %{when}?"
+msgstr[0] "Czy na pewno chcesz odwołać to spotkanie grupowe z %{count} uczestnikiem zaplanowane na %{when}?"
+msgstr[1] "Czy na pewno chcesz odwołać to spotkanie grupowe z %{count} uczestnikami zaplanowane na %{when}?"
+msgstr[2] "Czy na pewno chcesz odwołać to spotkanie grupowe z %{count} uczestnikami zaplanowane na %{when}?"
+
+#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Each participant will receive an email explaining you need to reschedule"
+msgstr "Każdy uczestnik otrzyma e-mail z wyjaśnieniem, że musisz zmienić termin"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/reschedule_request.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule request sent to %{count} participant"
+msgid_plural "Reschedule request sent to %{count} participants"
+msgstr[0] "Prośbę o zmianę terminu wysłano do %{count} uczestnika"
+msgstr[1] "Prośbę o zmianę terminu wysłano do %{count} uczestników"
+msgstr[2] "Prośbę o zmianę terminu wysłano do %{count} uczestników"
+
+#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Send a reschedule request to the %{count} participant of this group meeting?"
+msgid_plural "Send a reschedule request to the %{count} participants of this group meeting?"
+msgstr[0] "Wysłać prośbę o zmianę terminu do %{count} uczestnika tego spotkania grupowego?"
+msgstr[1] "Wysłać prośbę o zmianę terminu do %{count} uczestników tego spotkania grupowego?"
+msgstr[2] "Wysłać prośbę o zmianę terminu do %{count} uczestników tego spotkania grupowego?"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This action cannot be undone. Every participant will be notified of the cancellation."
+msgstr "Tej czynności nie można cofnąć. Każdy uczestnik zostanie powiadomiony o odwołaniu."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} person was booked"
+msgid_plural "%{count} people were booked"
+msgstr[0] "%{count} osoba była zapisana"
+msgstr[1] "%{count} osoby były zapisane"
+msgstr[2] "%{count} osób było zapisanych"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Every spot was released"
+msgstr "Wszystkie miejsca zostały zwolnione"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Left this slot"
+msgstr "Opuścił(a) ten termin"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel meeting"
+msgstr "Odwołaj spotkanie"

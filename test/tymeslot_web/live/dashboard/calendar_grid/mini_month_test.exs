@@ -62,7 +62,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.MiniMonthTest do
         |> render_click()
 
       # Grid jumped to that day (day view shows the full date label).
-      assert html =~ Calendar.strftime(target, "%A, %B %-d, %Y")
+      assert html =~ Calendar.strftime(target, "%A, %-d %B %Y")
       # Popover closed.
       refute html =~ ~s(id="mini-month-popover-panel")
     end
@@ -94,7 +94,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.MiniMonthTest do
       # the bare date string, because the mini-month popover also emits today's
       # full date as an `aria-label` on every day cell — and stepping the picker
       # back a month can surface today as a trailing day of that grid.
-      refute html =~ ">#{Calendar.strftime(today, "%A, %B %-d, %Y")}</span>"
+      refute html =~ ">#{Calendar.strftime(today, "%A, %-d %B %Y")}</span>"
 
       # Stepping forward twice lands on next month.
       next_month = Date.shift(Date.new!(today.year, today.month, 1), month: 1)
@@ -121,7 +121,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.MiniMonthTest do
           {"fr", "Janvier 2026"},
           {"uk", "Січень 2026"},
           {"cs", "Leden 2026"},
-          {"pl", "Styczeń 2026"}
+          {"pl", "Styczeń 2026"},
+          {"pt", "Janeiro de 2026"}
         ] do
       test "#{locale}: names the month in the capitalised nominative" do
         Gettext.put_locale(TymeslotWeb.Gettext, unquote(locale))

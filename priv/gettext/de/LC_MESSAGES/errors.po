@@ -372,3 +372,43 @@ msgstr "Dieses Bild ist zu groß (%{size} Megapixel). Bitte laden Sie ein Bild m
 #, elixir-autogen, elixir-format
 msgid "We are busy processing other uploads. Please try again in a moment."
 msgstr "Wir verarbeiten gerade andere Uploads. Bitte versuchen Sie es gleich noch einmal."
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "a group meeting type cannot ask each booker for their phone number"
+msgstr "ein Gruppen-Termintyp kann nicht jede buchende Person nach ihrer Telefonnummer fragen"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "a group meeting type must offer exactly one location"
+msgstr "ein Gruppen-Termintyp muss genau einen Ort anbieten"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "a group meeting type's in-person location must name a venue"
+msgstr "ein Gruppen-Termintyp vor Ort muss einen Veranstaltungsort nennen"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "a group meeting type's in-person location must name exactly one venue"
+msgstr "ein Gruppen-Termintyp vor Ort muss genau einen Veranstaltungsort nennen"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "a group meeting type's video call must use exactly one provider"
+msgstr "der Videoanruf eines Gruppen-Termintyps muss genau einen Anbieter verwenden"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "group bookings cannot require approval"
+msgstr "Gruppenbuchungen können keine Bestätigung erfordern"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "group bookings cannot require payment"
+msgstr "Gruppenbuchungen können keine Zahlung erfordern"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a meeting type with this name"
+msgstr "Sie haben bereits einen Termintyp mit diesem Namen"

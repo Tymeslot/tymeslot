@@ -17,11 +17,27 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
 
   describe "Theme selection" do
     test "renders theme options", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
-      assert html =~ "Choose Your Style"
-      assert html =~ "Quill"
-      assert html =~ "Rhythm"
+      # A card per offered theme, named in its heading, each with its own
+      # customise button.
+      for {name, id} <- [{"Quill", "1"}, {"Rhythm", "2"}] do
+        assert has_element?(view, "h2", name)
+
+        assert has_element?(
+                 view,
+                 "button[phx-click='show_customization'][phx-value-theme='#{id}']"
+               )
+      end
+    end
+
+    test "offers only the real themes, with no coming-soon teaser", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+
+      assert has_element?(view, "h2", "Quill")
+      html = render(view)
+      refute html =~ "More Styles Coming Soon"
+      refute html =~ "Our design team is busy crafting new themes"
     end
 
     test "selects a theme and persists it", %{conn: conn, profile: profile} do
@@ -32,7 +48,23 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       |> render_click()
 
       assert Repo.reload!(profile).booking_theme == "2"
-      assert render(view) =~ "Current Style"
+      assert render(view) =~ "Current style"
+    end
+
+    test "locks Live Preview, focusable and explained, until a calendar is connected", %{
+      conn: conn
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+
+      refute has_element?(view, "a", "Live Preview")
+
+      assert has_element?(
+               view,
+               ~s(button[aria-disabled="true"][title="Connect Calendar to Preview"]),
+               "Live Preview"
+             )
+
+      refute has_element?(view, "button[disabled]", "Live Preview")
     end
   end
 
@@ -98,7 +130,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       |> element("button", "Close")
       |> render_click()
 
-      assert render(view) =~ "Choose Your Style"
+      assert has_element?(view, "button[phx-click='show_customization'][phx-value-theme='1']")
       refute render(view) =~ "Color Palette"
     end
 

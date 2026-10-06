@@ -569,3 +569,34 @@ msgstr "Адресу погодять після бронювання."
 #, elixir-autogen, elixir-format
 msgid "The address will be arranged with you after booking."
 msgstr "Адресу погодять з вами після бронювання."
+
+#: lib/tymeslot/emails/appointment_builder.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} participant"
+msgid_plural "%{count} participants"
+msgstr[0] "%{count} учасник"
+msgstr[1] "%{count} учасники"
+msgstr[2] "%{count} учасників"
+
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
+#, elixir-autogen, elixir-format
+msgid "Attendees (%{count}):"
+msgstr "Учасники (%{count}):"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Open in dashboard:"
+msgstr "Відкрити в панелі керування:"
+
+#: lib/tymeslot/emails/shared/group_session.ex
+#, elixir-autogen, elixir-format
+msgid "Group session: you have one of %{count} spot."
+msgid_plural "Group session: you have one of %{count} spots."
+msgstr[0] "Групова зустріч: у вас одне з %{count} місць."
+msgstr[1] "Групова зустріч: у вас одне з %{count} місць."
+msgstr[2] "Групова зустріч: у вас одне з %{count} місць."
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "ends %{time} on %{date}"
+msgstr "завершення: %{date}, %{time}"

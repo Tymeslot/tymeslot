@@ -25,13 +25,14 @@ defmodule TymeslotWeb.AdminLive.Components.Layout do
       <nav class="brand-nav mb-6 relative">
         <div class="container mx-auto px-4">
           <div class="flex items-center justify-between h-16">
-            <.link
-              patch={~p"/dashboard"}
-              class="inline-flex items-center space-x-2 btn-secondary text-sm px-4 py-2"
+            <.action_link
+              navigate={~p"/dashboard"}
+              variant={:secondary}
+              size={:sm}
+              icon="hero-arrow-left"
             >
-              <.icon name="hero-arrow-left" class="w-4 h-4" />
-              <span>{dgettext("dashboard_admin", "Back to Dashboard")}</span>
-            </.link>
+              {dgettext("dashboard_admin", "Back to Dashboard")}
+            </.action_link>
 
             <div class="relative">
               <.live_component
@@ -48,7 +49,11 @@ defmodule TymeslotWeb.AdminLive.Components.Layout do
       <div class="container mx-auto px-4 py-8">
         <main>
           <div class="max-w-6xl mx-auto">
-            <.section_header icon="hero-cog-6-tooth" title={dgettext("dashboard_admin", "Admin")} />
+            <.section_header
+              level={1}
+              icon="hero-cog-6-tooth"
+              title={dgettext("dashboard_admin", "Admin")}
+            />
             <p class="mb-8 -mt-2 text-base text-tymeslot-600 font-medium">
               {dgettext("dashboard_admin", "Manage this self-hosted Tymeslot install.")}
             </p>

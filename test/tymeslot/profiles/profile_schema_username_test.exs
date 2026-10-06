@@ -85,6 +85,8 @@ defmodule Tymeslot.Profiles.ProfileSchemaUsernameTest do
         "users",
         "www",
         "healthcheck",
+        "guest",
+        "seat",
         "assets",
         "images",
         "css",
