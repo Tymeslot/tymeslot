@@ -225,6 +225,11 @@ defmodule TymeslotWeb.Components.CoreComponentsTabBarTest do
       assert "hidden" in icon_class
       assert "sm:block" in icon_class
 
+      # The tabs sit closer together on a phone too.
+      [strip_class] = attr_of(doc, "#test-tabs", "class")
+      assert "gap-1" in String.split(strip_class)
+      assert "sm:gap-2" in String.split(strip_class)
+
       # The label itself always shows.
       assert Floki.text(Floki.find(doc, "#test-tabs-tab-details span.truncate")) == "Details"
     end

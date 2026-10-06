@@ -63,12 +63,12 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
       things, classes used in place of the default active styling, and a
       background class for a disc shown while the tab is inactive
 
-  Below `sm` a tab shows its label without its icon, and the default size
-  pads it more tightly, as `segmented_control/1` does: on a phone the icons
-  are what push a three-tab strip past the screen's width. Beyond that, the
-  strip stays a single row and scrolls sideways,
-  fading whichever edge has more tabs beyond it, rather than wrapping into a
-  ragged block. A strip whose tabs open a menu (`tab_action`) passes
+  Below `sm` a tab shows its label without its icon, as in
+  `segmented_control/1`, and the tabs sit closer together with tighter
+  padding: on a phone the icons are what push a three-tab strip past the
+  screen's width. Beyond that, the strip stays a single row and scrolls
+  sideways, fading whichever edge has more tabs beyond it, rather than
+  wrapping into a ragged block. A strip whose tabs open a menu (`tab_action`) passes
   `overflow={:wrap}` instead, because a scrolling row clips anything that
   drops out of it.
   """
@@ -147,7 +147,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
         aria-label={@aria_label}
         phx-hook="ScrollStrip"
         class={[
-          "flex gap-2 p-1",
+          "flex gap-1 sm:gap-2 p-1",
           strip_class(@overflow),
           @trailing != [] && "grow min-w-0"
         ]}
