@@ -82,11 +82,15 @@ defmodule Tymeslot.Emails.Shared.Styles.DarkModeTest do
       end
     end
 
-    test "an ink-text button keeps its dark ink on the accent" do
-      deep = Tokens.intent_accent_deep(:alert)
-      assert Styles.button_text_color(deep) == Tokens.ink()
+    test "a button drawn in dark ink keeps its ink on every intent's accent" do
+      # `button_text_color/1` picks dark ink whenever it outreads the light
+      # surface on a `deep`, so each family's surface keeps that ink in dark mode.
+      css = Styles.dark_mode_styles()
 
-      assert Styles.dark_mode_styles() =~ ~s([style*="#{deep}"][style*="color:#{Tokens.ink()}"])
+      for intent <- [:confirmed, :alert, :cancelled] do
+        deep = Tokens.intent_accent_deep(intent)
+        assert css =~ ~s([style*="#{deep}"][style*="color:#{Tokens.ink()}"]), "#{intent}"
+      end
     end
   end
 
