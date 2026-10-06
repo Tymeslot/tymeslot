@@ -83,6 +83,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
       %{integration: insert(:calendar_integration, user: user, calendar_list: [])}
     end
 
+    test "offers the import button at every width, phones included", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+
+      [class] =
+        lv
+        |> element(~s([data-testid="import-ics-button"]))
+        |> render()
+        |> Floki.parse_fragment!()
+        |> Floki.attribute("class")
+
+      # A bare `hidden` with only an `sm:` override is what kept the import out
+      # of reach below 640px; nothing else on a phone opens it.
+      refute "hidden" in String.split(class)
+      assert has_element?(lv, ~s([data-testid="import-ics-button"][aria-label]))
+    end
+
     test "imports every event of the file into the calendar", %{
       conn: conn,
       user: user,

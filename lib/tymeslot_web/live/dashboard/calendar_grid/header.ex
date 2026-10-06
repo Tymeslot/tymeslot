@@ -290,16 +290,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
 
   attr :myself, :any, required: true
 
-  # Opens the `.ics` import modal. Kept off the narrowest screens beside Quick
-  # add, where picking a file to import is rare; the label collapses to the
-  # icon below md, as Refresh does.
+  # Opens the `.ics` import modal. Shown at every width, since nothing else
+  # reaches the import on a phone; the label collapses to the icon below md, as
+  # Refresh does, so the tools row still fits on one line at 390px.
   defp import_button(assigns) do
     ~H"""
     <.action_button
       variant={:secondary}
       size={:sm}
       icon="hero-arrow-up-tray-mini"
-      class="hidden sm:inline-flex"
+      class="shrink-0"
       phx-click="show_ics_import"
       phx-target={@myself}
       data-testid="import-ics-button"
