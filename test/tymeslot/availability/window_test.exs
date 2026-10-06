@@ -105,6 +105,19 @@ defmodule Tymeslot.Availability.WindowTest do
     end
   end
 
+  describe "a next-day window across the Europe/London autumn change" do
+    test "resolves to its true six-hour length while its clock span reads five" do
+      night = window(~T[22:00:00], ~T[03:00:00], true)
+
+      {start_dt, end_dt} = Window.resolve(night, ~D[2026-10-24], "Europe/London")
+
+      assert DateTime.to_iso8601(start_dt) == "2026-10-24T22:00:00+01:00"
+      assert DateTime.to_iso8601(end_dt) == "2026-10-25T03:00:00+00:00"
+      assert DateTime.diff(end_dt, start_dt, :hour) == 6
+      assert Window.span_seconds(night) == 5 * 3600
+    end
+  end
+
   describe "the editor's wire format" do
     test "parse_end/1 reads a plain and a next-day end" do
       assert Window.parse_end("17:00") == {:ok, {~T[17:00:00], false}}

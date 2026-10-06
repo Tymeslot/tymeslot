@@ -72,6 +72,54 @@ defmodule Tymeslot.Availability.SlotGridTest do
     end
   end
 
+  describe "an overnight window across the Europe/London autumn change" do
+    # Sat 2026-10-24 22:00 BST to Sun 2026-10-25 03:00 GMT. The clocks go back
+    # at 02:00 BST, so the window reads as five hours but lasts six, and the
+    # wall-clock hour 01:00 to 02:00 happens twice.
+    setup do
+      %{config: pure_config(days: [night(6, ~T[22:00:00], ~T[03:00:00])])}
+    end
+
+    test "offers the repeated hour once, at its first occurrence", %{config: config} do
+      assert labels(~D[2026-10-24], 60, "Europe/London", "Europe/London", config) ==
+               ["10:00 PM", "11:00 PM"]
+
+      {:ok, starts} =
+        SlotGrid.starts_for_date(~D[2026-10-25], 60, "Europe/London", "Europe/London", config)
+
+      assert Enum.map(starts, &DateTime.to_iso8601/1) == [
+               "2026-10-25T00:00:00+01:00",
+               "2026-10-25T01:00:00+01:00",
+               "2026-10-25T02:00:00+00:00"
+             ]
+    end
+
+    test "never lists a start on the repeated hour's second pass", %{config: config} do
+      {:ok, starts} =
+        SlotGrid.starts_for_date(~D[2026-10-25], 30, "Europe/London", "Europe/London", config)
+
+      assert Enum.map(starts, &DateTime.to_iso8601/1) == [
+               "2026-10-25T00:00:00+01:00",
+               "2026-10-25T00:30:00+01:00",
+               "2026-10-25T01:00:00+01:00",
+               "2026-10-25T01:30:00+01:00",
+               "2026-10-25T02:00:00+00:00",
+               "2026-10-25T02:30:00+00:00"
+             ]
+
+      labels = labels(~D[2026-10-25], 30, "Europe/London", "Europe/London", config)
+      assert labels == Enum.uniq(labels)
+    end
+
+    test "a meeting may span the whole six-hour night, not just its five clock hours",
+         %{config: config} do
+      assert labels(~D[2026-10-24], 360, "Europe/London", "Europe/London", config) ==
+               ["10:00 PM"]
+
+      assert labels(~D[2026-10-24], 361, "Europe/London", "Europe/London", config) == []
+    end
+  end
+
   describe "bookers in another timezone" do
     test "far east: the slot ending at the booker's midnight is offered (today it is dropped)" do
       config = pure_config(days: [day(1, ~T[09:00:00], ~T[17:00:00])])

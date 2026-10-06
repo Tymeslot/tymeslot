@@ -12,6 +12,7 @@ defmodule Tymeslot.Availability.OvernightBookingJourneyTest do
   @moduletag :integration
 
   import Tymeslot.AvailabilityTestHelpers
+  import Tymeslot.Test.ClockHelpers
 
   alias Tymeslot.Bookings.{Create, Reschedule}
   alias Tymeslot.Meetings.MeetingSchema
@@ -120,6 +121,41 @@ defmodule Tymeslot.Availability.OvernightBookingJourneyTest do
            ) == :eq
 
     assert DateTime.diff(moved.end_time, moved.start_time, :minute) == 60
+  end
+
+  test "the hour repeated when London's clocks go back is offered and booked once" do
+    # Sat 2026-10-24 22:00 BST to Sun 03:00 GMT: 01:00 to 02:00 happens twice.
+    freeze_clock(~U[2026-10-14 12:00:00Z])
+    sunday = ~D[2026-10-25]
+
+    host =
+      create_bookable_profile(
+        timezone: "Europe/London",
+        days: [6],
+        hours: %{
+          is_available: true,
+          start_time: ~T[22:00:00],
+          end_time: ~T[03:00:00],
+          ends_next_day: true
+        }
+      )
+
+    assert offered(host.profile, sunday, 60) == ["12:00 AM", "1:00 AM", "2:00 AM"]
+
+    # The label means the first pass, in summer time, and runs a real hour.
+    assert {:ok, meeting} = book(host, sunday, "1:00 AM", 60, "Europe/London")
+    assert meeting.start_time == ~U[2026-10-25 00:00:00Z]
+    assert DateTime.diff(meeting.end_time, meeting.start_time, :minute) == 60
+
+    # The schedule's default 15-minute buffers take 12:00 AM, which ends as
+    # the booking starts. 2:00 AM survives: the repeated hour, 01:00 GMT, sits
+    # between it and the booking, and is not a second chance at the label.
+    assert offered(host.profile, sunday, 60) == ["2:00 AM"]
+    assert {:error, :slot_taken} = book(host, sunday, "1:00 AM", 60, "Europe/London")
+
+    assert {:ok, last} = book(host, sunday, "2:00 AM", 60, "Europe/London")
+    assert last.start_time == ~U[2026-10-25 02:00:00Z]
+    assert last.end_time == ~U[2026-10-25 03:00:00Z]
   end
 
   test "a booker far east of the host can book the slot ending at their midnight" do
