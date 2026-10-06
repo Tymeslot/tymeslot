@@ -73,4 +73,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponentTest do
       refute LazyHTML.text(doc) =~ "No meeting types configured yet"
     end
   end
+
+  describe "add_meeting_type_button/1" do
+    test "is full size, like the other pages' header actions" do
+      [class] =
+        (&MeetingTypesListComponent.add_meeting_type_button/1)
+        |> render_component(%{parent_myself: %Phoenix.LiveComponent.CID{cid: 1}})
+        |> Floki.parse_fragment!()
+        |> Floki.attribute("button", "class")
+
+      assert "action-button" in String.split(class)
+      refute "action-button--sm" in String.split(class)
+    end
+  end
 end

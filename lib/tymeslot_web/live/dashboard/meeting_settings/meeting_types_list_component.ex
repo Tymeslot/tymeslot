@@ -64,13 +64,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
 
   @doc """
   The button that opens the add form. The page header carries it once there
-  are meeting types; with none yet, the empty state does.
+  are meeting types; with none yet, the empty state does. Full size, like
+  the other pages' header actions (Add location, New poll).
   """
   @spec add_meeting_type_button(map()) :: Phoenix.LiveView.Rendered.t()
   def add_meeting_type_button(assigns) do
     ~H"""
     <.action_button
-      size={:sm}
       icon="hero-plus"
       phx-click="toggle_add_form"
       phx-target={@parent_myself}
