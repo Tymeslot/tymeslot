@@ -164,7 +164,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotificationTest do
       tint = Tokens.intent(:confirmed).tint
 
       for label <- ["Field", "Before", "After"] do
-        [_, colour] =
+        [_match, colour] =
           Regex.run(~r/<th style="[^"]*color:\s*(#[0-9a-f]{6});[^"]*">#{label}<\/th>/i, html)
 
         assert Colour.contrast_ratio(colour, tint) >= 4.5,
