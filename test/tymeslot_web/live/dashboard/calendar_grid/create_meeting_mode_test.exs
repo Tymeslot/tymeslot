@@ -45,6 +45,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingModeTest do
       refute html =~ ~s(data-testid="create-mode-meeting")
     end
 
+    test "puts Cancel before Create, as the confirmation dialogs do", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+
+      labels =
+        lv
+        |> open_create_form()
+        |> Floki.parse_document!()
+        |> Floki.find("#create-event-modal .modal-footer button")
+        |> Enum.map(&String.trim(Floki.text(&1)))
+
+      assert labels == ["Cancel", "Create"]
+    end
+
     test "saving without guest details flashes a validation error", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard")
       open_create_form(lv)

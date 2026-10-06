@@ -414,7 +414,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       </div>
 
       <:footer>
-        <div class="flex gap-2">
+        <%!-- Cancel first, then the primary action, as in `confirm_modal/1`. --%>
+        <div class="flex flex-wrap justify-end gap-3">
+          <.action_button
+            variant={:secondary}
+            disabled={@saving}
+            phx-click={JS.push("close_create_form", target: @myself)}
+          >
+            {dgettext("dashboard_calendar_events", "Cancel")}
+          </.action_button>
           <.loading_button
             variant={:primary}
             loading={@saving}
@@ -424,13 +432,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           >
             {dgettext("dashboard_calendar_events", "Create")}
           </.loading_button>
-          <.action_button
-            variant={:secondary}
-            disabled={@saving}
-            phx-click={JS.push("close_create_form", target: @myself)}
-          >
-            {dgettext("dashboard_calendar_events", "Cancel")}
-          </.action_button>
         </div>
       </:footer>
     </.modal>
