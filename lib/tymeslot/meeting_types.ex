@@ -606,6 +606,8 @@ defmodule Tymeslot.MeetingTypes do
   # These templates are bulk-inserted, so they bypass the changeset. Ecto
   # still dumps the embed on the way to the database and refuses anything but
   # the struct, so the struct is what the template carries.
+  # The label is stored as the English default on purpose:
+  # `LocationSelection.options/1` shows it in the reader's language.
   defp default_in_person_location do
     %LocationOption{
       id: UUID.generate(),

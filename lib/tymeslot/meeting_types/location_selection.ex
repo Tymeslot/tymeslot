@@ -63,12 +63,18 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
   Returns `[]` only when there is no meeting type at all (an ad-hoc booking
   against a bare duration), which callers read as "this booking has no
   configured location".
+
+  A label still reading as its kind's English default ("In person") is
+  shown in the current locale: the default meeting types store it that way,
+  so it is the name nobody chose rather than one the host wrote.
   """
   @spec options(map() | nil) :: [LocationOption.t()]
   def options(nil), do: []
 
   def options(%{locations: locations}) when is_list(locations) and locations != [] do
-    Enum.sort_by(locations, &(&1.position || 0))
+    locations
+    |> Enum.sort_by(&(&1.position || 0))
+    |> Enum.map(&localise_default_label/1)
   end
 
   def options(meeting_type), do: derived_options(meeting_type)
@@ -234,7 +240,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
       %LocationOption{
         id: "legacy-video",
         kind: "video",
-        label: dgettext("booking", "Video call"),
+        label: default_label("video"),
         video_integration_ids: [id],
         position: 0
       }
@@ -246,9 +252,29 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
       %LocationOption{
         id: "legacy-in-person",
         kind: "in_person",
-        label: dgettext("booking", "In person"),
+        label: default_label("in_person"),
         position: 0
       }
     ]
   end
+
+  # Each kind's default label in English, as the default meeting types store
+  # it, and in the current locale.
+  @default_labels %{
+    "video" => "Video call",
+    "in_person" => "In person",
+    "phone" => "Phone call",
+    "custom" => "Somewhere else"
+  }
+
+  defp localise_default_label(%LocationOption{kind: kind, label: label} = option) do
+    if Map.get(@default_labels, kind) == label,
+      do: %{option | label: default_label(kind)},
+      else: option
+  end
+
+  defp default_label("video"), do: dgettext("booking", "Video call")
+  defp default_label("in_person"), do: dgettext("booking", "In person")
+  defp default_label("phone"), do: dgettext("booking", "Phone call")
+  defp default_label("custom"), do: dgettext("booking", "Somewhere else")
 end
