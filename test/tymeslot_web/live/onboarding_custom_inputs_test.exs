@@ -483,6 +483,56 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
     end
   end
 
+  describe "Continue with a refused value" do
+    for value <- ["-10", "999"] do
+      test "stays on the buffer step with the error shown for #{value}", %{conn: conn} do
+        {:ok, view, _html, user} = setup_onboarding(conn)
+        navigate_to_scheduling_preferences(view)
+
+        setup_custom_input_and_change_value(view, "buffer_before_minutes", unquote(value))
+        view |> element("button[phx-click='next_step']") |> render_click()
+
+        assert has_element?(view, "#onboarding-buffer-time-form")
+        refute has_element?(view, "#onboarding-booking-window-form")
+
+        assert view
+               |> element("#onboarding-buffer-before")
+               |> render() =~ "Buffer before must be between 0 and 120 minutes."
+
+        assert default_schedule(user).buffer_before_minutes == 20
+      end
+    end
+
+    test "advances once the refused buffer is corrected", %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding(conn)
+      navigate_to_scheduling_preferences(view)
+
+      setup_custom_input_and_change_value(view, "buffer_after_minutes", "999")
+      view |> element("button[phx-click='next_step']") |> render_click()
+      assert has_element?(view, "#onboarding-buffer-time-form")
+
+      view
+      |> element("form[phx-change='update_scheduling_preferences']")
+      |> render_change(%{"buffer_after_minutes" => "45"})
+
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      assert has_element?(view, "#onboarding-booking-window-form")
+      assert default_schedule(user).buffer_after_minutes == 45
+    end
+
+    test "stays on the booking window step with a refused value", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn)
+      navigate_to_booking_window_step(view)
+
+      setup_custom_input_and_change_value(view, "advance_booking_days", "0")
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      assert has_element?(view, "#onboarding-booking-window-form")
+      refute has_element?(view, "#onboarding-min-notice-form")
+    end
+  end
+
   # Helper functions
 
   defp focus_custom_buffer(view, setting) do
