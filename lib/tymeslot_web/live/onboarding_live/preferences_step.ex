@@ -9,8 +9,8 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.CustomInputModeHelper
-  alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   alias TymeslotWeb.OnboardingLive.StepConfig
   alias TymeslotWeb.OnboardingLive.TextHelpers
@@ -22,6 +22,11 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   """
   attr :buffer_before_minutes, :integer, required: true
   attr :buffer_after_minutes, :integer, required: true
+
+  attr :time_format, :string,
+    required: true,
+    doc: "the organiser's resolved clock, \"12h\" or \"24h\", for the example times"
+
   attr :form_errors, :map, required: true
 
   attr :rejected_inputs, :map,
@@ -46,7 +51,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
       class="onboarding-form"
     >
       <p class="onboarding-preference-example">
-        {buffer_example(@buffer_before_minutes, @buffer_after_minutes)}
+        {buffer_example(@buffer_before_minutes, @buffer_after_minutes, @time_format)}
       </p>
 
       <.buffer_row
@@ -308,7 +313,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   @example_meeting_start ~T[13:00:00]
   @example_meeting_end ~T[14:00:00]
 
-  defp buffer_example(0, 0),
+  defp buffer_example(0, 0, _time_format),
     do:
       dgettext(
         "onboarding_wizard",
@@ -317,18 +322,16 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
 
   # A new booking needs its before-buffer clear after an existing meeting ends,
   # and its after-buffer clear before one starts.
-  defp buffer_example(buffer_before, buffer_after) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-
+  defp buffer_example(buffer_before, buffer_after, time_format) do
     dgettext(
       "onboarding_wizard",
       "If you have a meeting from %{start_time} to %{end_time}, a new booking after it can start at %{next_start} at the earliest, and one before it must end by %{latest_end}.",
-      start_time: LocaleFormat.format_time(@example_meeting_start, locale),
-      end_time: LocaleFormat.format_time(@example_meeting_end, locale),
+      start_time: TimeFormat.format(@example_meeting_start, time_format),
+      end_time: TimeFormat.format(@example_meeting_end, time_format),
       next_start:
-        LocaleFormat.format_time(Time.add(@example_meeting_end, buffer_before * 60), locale),
+        TimeFormat.format(Time.add(@example_meeting_end, buffer_before * 60), time_format),
       latest_end:
-        LocaleFormat.format_time(Time.add(@example_meeting_start, -buffer_after * 60), locale)
+        TimeFormat.format(Time.add(@example_meeting_start, -buffer_after * 60), time_format)
     )
   end
 

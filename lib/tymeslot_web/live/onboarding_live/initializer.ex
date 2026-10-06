@@ -15,6 +15,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
   alias Phoenix.Component
   alias Tymeslot.Auth
   alias Tymeslot.Availability.Schedules
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
@@ -48,6 +49,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
     socket
     |> Component.assign(:profile, profile)
     |> Component.assign(:availability_schedule, load_default_schedule(profile))
+    |> Component.assign(:time_format, load_time_format(socket, user))
     |> assign_form_data(profile)
     |> Component.assign(:current_step, :welcome)
     |> Component.assign(:step_data, %{})
@@ -87,6 +89,13 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
 
   defp assign_form_data(socket, _profile) do
     Component.assign(socket, :form_data, BasicSettingsShared.build_form_data(socket))
+  end
+
+  # The clock the organiser reads times in: their stored choice, or the one
+  # their language implies. The static render skips the query.
+  defp load_time_format(socket, user) do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+    CalendarGrid.get_user_time_format(if(connected?(socket), do: user.id), locale)
   end
 
   defp load_profile(socket, user) do

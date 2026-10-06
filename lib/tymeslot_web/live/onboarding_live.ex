@@ -143,6 +143,7 @@ defmodule TymeslotWeb.OnboardingLive do
           <PreferencesStep.buffer_time_step
             buffer_before_minutes={policy_value(@availability_schedule, :buffer_before_minutes)}
             buffer_after_minutes={policy_value(@availability_schedule, :buffer_after_minutes)}
+            time_format={@time_format}
             form_errors={@form_errors}
             rejected_inputs={@rejected_inputs}
             custom_input_mode={@custom_input_mode}
