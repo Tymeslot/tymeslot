@@ -297,5 +297,28 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingModeTest do
       assert html =~ ~s(id="create-event-modal")
       assert html =~ "Attendee email is required"
     end
+
+    test "a time conflict flashes a sentence, not the reason atom", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_create_form(lv)
+
+      send(lv.pid, {:create_ad_hoc_meeting_result, {:error, :time_conflict}})
+      html = render(lv)
+
+      assert html =~ "You already have a meeting at this time."
+      refute html =~ "time_conflict"
+    end
+
+    test "an unrecognised reason flashes a generic sentence, never the raw term",
+         %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_create_form(lv)
+
+      send(lv.pid, {:create_ad_hoc_meeting_result, {:error, :queue_unavailable}})
+      html = render(lv)
+
+      assert html =~ "Failed to create appointment. Please try again."
+      refute html =~ "queue_unavailable"
+    end
   end
 end

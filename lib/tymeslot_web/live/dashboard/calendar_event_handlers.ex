@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.IcsImport
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGridComponent
+  alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
 
   require Logger
 
@@ -436,7 +437,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
 
   @doc "Handles the result of an ad-hoc meeting creation."
   @spec handle_create_ad_hoc_meeting_result(
-          {:ok, any()} | {:error, String.t()},
+          {:ok, any()} | {:error, term()},
           Phoenix.LiveView.Socket.t()
         ) :: {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_create_ad_hoc_meeting_result({:ok, _result}, socket) do
@@ -459,8 +460,21 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
       action: :ad_hoc_meeting_failed
     )
 
-    {:noreply, put_flash(socket, :error, reason)}
+    {:noreply, put_flash(socket, :error, ad_hoc_failed_message(reason))}
   end
+
+  # The reason is a domain term, never copy: an atom such as `:time_conflict`
+  # would otherwise reach the flash verbatim. `CreateAdHoc`'s own refusals are
+  # the binaries `BookingErrorMessage` already translates, and anything it does
+  # not recognise falls back to a generic sentence there.
+  defp ad_hoc_failed_message(:time_conflict) do
+    dgettext(
+      "dashboard_calendar_events",
+      "You already have a meeting at this time. Please choose a different time."
+    )
+  end
+
+  defp ad_hoc_failed_message(reason), do: BookingErrorMessage.message(reason)
 
   @doc """
   Handles the result of changing an event's video room: shows the new link,
