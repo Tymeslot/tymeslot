@@ -49,6 +49,7 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
   attr :class, :string, default: ""
   attr :icon_class, :string, default: ""
   attr :loading, :string, default: "lazy", values: ["lazy", "eager"]
+
   attr :alt, :string,
     default: nil,
     doc: "Defaults to naming the provider; pass \"\" where the name is already written beside it"
