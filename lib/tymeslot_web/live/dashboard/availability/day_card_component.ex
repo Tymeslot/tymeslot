@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Availability.Window
+  alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Components.Shared.TimeOptions
   alias TymeslotWeb.Components.UI.StatusSwitch
@@ -23,6 +24,11 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
   attr :break_duration_presets, :list, required: true
   attr :form_errors, :map, required: true
   attr :hours_errors, :map, default: %{}
+
+  attr :refused_hours, :map,
+    default: %{},
+    doc: "per day, the start and end last picked and refused, shown until the day saves"
+
   attr :show_add_break_form, :any, required: true
   attr :open_menu_day, :any, required: true
   attr :time_format, :string, required: true
@@ -35,6 +41,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
       |> assign(:day, assigns.day_availability.day_of_week)
       |> assign(:breaks, breaks_of(assigns.day_availability))
       |> assign(:hours_errors_for_day, hours_errors_for(assigns))
+      |> assign_hours_inputs()
       |> assign(:break_times, break_times(assigns.day_availability, assigns.time_format))
 
     ~H"""
@@ -79,21 +86,16 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
               type="select"
               name="start"
               options={TimeOptions.time_options(@time_format)}
-              value={BreakHelpers.format_time(@day_availability.start_time)}
+              value={@start_value}
               aria-label={dgettext("dashboard_availability", "Start Time")}
             />
             <span class="text-tymeslot-400">–</span>
             <.input
               type="select"
               name="end"
-              options={
-                TimeOptions.end_options(
-                  @day_availability.start_time,
-                  @time_format,
-                  end_value(@day_availability)
-                )
-              }
-              value={end_value(@day_availability)}
+              options={@end_options}
+              value={@end_value}
+              prompt={is_nil(@end_value) && dgettext("dashboard_availability", "End")}
               aria-label={dgettext("dashboard_availability", "End Time")}
               aria-describedby={hours_describedby(@day, @day_availability, @hours_errors_for_day)}
             />
@@ -297,6 +299,32 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
 
   defp end_value(day_availability),
     do: Window.format_end(day_availability.end_time, day_availability.ends_next_day)
+
+  # The hours selects show the day's saved hours, or the times last picked and
+  # refused. End options always follow the start shown. A refused end that is
+  # not among them (an end before the new start, without its "(+1)") leaves
+  # the end select blank rather than showing a time that no longer fits, so
+  # the error beneath asks for a pick the select can still offer.
+  defp assign_hours_inputs(%{day: day, day_availability: day_availability} = assigns) do
+    refused = Map.get(assigns.refused_hours, day, %{})
+    saved_start = BreakHelpers.format_time(day_availability.start_time)
+    start_value = refused["start"] || saved_start
+
+    start_time =
+      case DateTimeUtils.parse_hhmm(start_value) do
+        {:ok, time} -> time
+        {:error, _reason} -> day_availability.start_time
+      end
+
+    wanted_end = refused["end"] || end_value(day_availability)
+    end_options = TimeOptions.end_options(start_time, assigns.time_format, wanted_end)
+
+    assign(assigns,
+      start_value: start_value,
+      end_options: end_options,
+      end_value: if(Enum.any?(end_options, &(elem(&1, 1) == wanted_end)), do: wanted_end)
+    )
+  end
 
   # Hours ending exactly at midnight already read clearly as "00:00 (+1)" in
   # the end select; the hint is for hours that carry on into the next day.

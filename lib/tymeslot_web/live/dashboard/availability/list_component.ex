@@ -37,7 +37,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
       |> assign(timezone_info)
       |> assign(break_duration_presets: Breaks.get_break_duration_presets())
       |> assign(form_errors: %{})
-      |> assign(hours_errors: %{})
+      |> assign(hours_errors: %{}, refused_hours: %{})
       |> assign_new(:show_add_break_form, fn -> nil end)
       |> assign_new(:open_menu_day, fn -> nil end)
       |> assign_new(:show_delete_break_modal, fn -> false end)
@@ -353,30 +353,46 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
         {:noreply, socket}
 
       {:error, validation_errors} ->
-        {:noreply,
-         assign(socket, :hours_errors, hours_errors_for(socket, params, validation_errors))}
+        {:noreply, assign_refused_hours(socket, params, validation_errors)}
     end
   catch
     :throw, :halt -> {:noreply, socket}
   end
 
   # Day-hours errors belong under that day's hours row, apart from the
-  # add-break form's own `form_errors`.
-  defp hours_errors_for(socket, params, validation_errors) do
+  # add-break form's own `form_errors`. The refused times are kept beside
+  # them, so the row goes on showing the start that was picked, with end
+  # options built from it, rather than snapping back to the saved hours under
+  # an error that no longer describes them.
+  defp assign_refused_hours(socket, params, validation_errors) do
     case BreakHelpers.parse_day(params) do
-      {:ok, day} -> Map.put(socket.assigns.hours_errors, day, validation_errors)
-      {:error, _reason} -> socket.assigns.hours_errors
+      {:ok, day} ->
+        assign(socket,
+          hours_errors: Map.put(socket.assigns.hours_errors, day, validation_errors),
+          refused_hours:
+            Map.put(socket.assigns.refused_hours, day, Map.take(params, ["start", "end"]))
+        )
+
+      {:error, _reason} ->
+        socket
     end
   end
 
+  # A missing or blank time keeps the saved one: a change event may carry only
+  # the start, and the end select is blank while a refused end does not fit
+  # the picked start.
   defp resolve_day_strings(params, day_availability) do
     %{
-      "start" => params["start"] || BreakHelpers.format_time(day_availability.start_time),
+      "start" =>
+        present(params["start"]) || BreakHelpers.format_time(day_availability.start_time),
       "end" =>
-        params["end"] ||
+        present(params["end"]) ||
           Window.format_end(day_availability.end_time, day_availability.ends_next_day)
     }
   end
+
+  defp present(value) when value in [nil, ""], do: nil
+  defp present(value), do: value
 
   defp handle_update_day_hours_result(day, result, socket) do
     case result do
@@ -389,7 +405,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
 
         send(self(), {:reload_schedule})
 
-        {:noreply, assign(socket, form_errors: %{}, hours_errors: %{})}
+        {:noreply, assign(socket, form_errors: %{}, hours_errors: %{}, refused_hours: %{})}
 
       {:error, :invalid_time_format} ->
         Flash.error(dgettext("dashboard_availability", "Invalid time format"))
@@ -475,6 +491,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
             break_duration_presets={@break_duration_presets}
             form_errors={@form_errors}
             hours_errors={@hours_errors}
+            refused_hours={@refused_hours}
             show_add_break_form={@show_add_break_form}
             open_menu_day={@open_menu_day}
             time_format={@time_format}

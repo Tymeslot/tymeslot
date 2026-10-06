@@ -161,6 +161,66 @@ defmodule TymeslotWeb.Dashboard.Availability.OvernightHoursJourneyTest do
     assert {day.start_time, day.end_time, day.ends_next_day} == {~T[22:00:00], ~T[02:00:00], true}
   end
 
+  test "moving the start past the end rebuilds the end select for the new start",
+       %{conn: conn, schedule: schedule} do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+    view
+    |> form("#day-hours-form-1", %{"day" => "1", "start" => "20:00", "end" => "17:00"})
+    |> render_change()
+
+    assert view |> element("#day-hours-errors-1") |> render() =~
+             "End time must be after start time. To run past midnight, pick an end time marked (+1)."
+
+    assert view
+           |> element(~s|#day-hours-form-1 select[name="start"] option[selected]|)
+           |> render() =~ "8:00 PM"
+
+    # Built from 8:00 PM: the end offers 8:15 PM onwards, then the next day,
+    # and shows no end at all rather than the 5:00 PM that no longer fits.
+    assert ["", "20:15" | _rest] = options = select_end_options(view, 1)
+    assert "17:00+1" in options
+    refute "17:00" in options
+    refute has_element?(view, ~s|#day-hours-form-1 select[name="end"] option[selected]|)
+
+    day = WeeklySchedule.get_day_availability(schedule.id, 1)
+
+    assert {day.start_time, day.end_time, day.ends_next_day} ==
+             {~T[09:00:00], ~T[17:00:00], false}
+
+    view
+    |> form("#day-hours-form-1", %{"day" => "1", "start" => "20:00", "end" => "02:00+1"})
+    |> render_change()
+
+    day = WeeklySchedule.get_day_availability(schedule.id, 1)
+    assert {day.start_time, day.end_time, day.ends_next_day} == {~T[20:00:00], ~T[02:00:00], true}
+    refute has_element?(view, "#day-hours-errors-1")
+
+    assert view
+           |> element(~s|#day-hours-form-1 select[name="end"] option[selected]|)
+           |> render() =~ "2:00 AM (+1)"
+  end
+
+  test "moving a refused start back keeps the saved end", %{conn: conn, schedule: schedule} do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+    view
+    |> form("#day-hours-form-1", %{"day" => "1", "start" => "20:00", "end" => "17:00"})
+    |> render_change()
+
+    # The end select is blank now, so the next change submits an empty end.
+    view
+    |> form("#day-hours-form-1", %{"day" => "1", "start" => "10:00", "end" => ""})
+    |> render_change()
+
+    day = WeeklySchedule.get_day_availability(schedule.id, 1)
+
+    assert {day.start_time, day.end_time, day.ends_next_day} ==
+             {~T[10:00:00], ~T[17:00:00], false}
+
+    refute has_element?(view, "#day-hours-errors-1")
+  end
+
   test "hours and a break set in the editor decide the night's slots on both dates",
        %{conn: conn, profile: profile} do
     {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
