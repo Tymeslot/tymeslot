@@ -136,12 +136,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
           </p>
         </div>
 
-        <%!-- Actions --%>
+        <%!-- Actions. Each names its meeting type, as the switch does, so a
+              screen reader's list of buttons tells the cards apart. --%>
         <div class="flex items-center gap-2 shrink-0">
           <Buttons.icon_button
             icon="hero-pencil-square"
             size={:sm}
-            label={dgettext("dashboard_meeting_types", "Edit")}
+            label={dgettext("dashboard_meeting_types", "Edit %{name}", name: @type.name)}
+            tooltip={dgettext("dashboard_meeting_types", "Edit")}
             phx-click="edit_type"
             phx-value-id={@type.id}
             phx-target={@myself}
@@ -151,7 +153,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             icon="hero-trash"
             variant={:danger}
             size={:sm}
-            label={dgettext("dashboard_meeting_types", "Delete")}
+            label={dgettext("dashboard_meeting_types", "Delete %{name}", name: @type.name)}
+            tooltip={dgettext("dashboard_meeting_types", "Delete")}
             phx-click="show_delete_modal"
             phx-value-id={@type.id}
             phx-target={@myself}

@@ -40,6 +40,24 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CardTest do
     )
   end
 
+  describe "action buttons" do
+    test "name the meeting type they act on, as the switch does" do
+      doc =
+        struct(MeetingTypeSchema, build_type(%{}))
+        |> render_card()
+        |> Floki.parse_fragment!()
+
+      assert [_edit] =
+               Floki.find(doc, ~s|button[phx-click="edit_type"][aria-label="Edit Strategy Call"]|)
+
+      assert [_delete] =
+               Floki.find(
+                 doc,
+                 ~s|button[phx-click="show_delete_modal"][aria-label="Delete Strategy Call"]|
+               )
+    end
+  end
+
   describe "group marker" do
     test "names a group type's participant limit" do
       html = render_card(struct(MeetingTypeSchema, build_type(%{max_participants: 3})))
