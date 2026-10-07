@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Themes.Folio.FolioThemeTest do
 
   import Mox
   import Tymeslot.Factory
-  import Tymeslot.ThemeBookingFlowHelpers
+  import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
 
   alias Tymeslot.Profiles
   alias Tymeslot.Repo

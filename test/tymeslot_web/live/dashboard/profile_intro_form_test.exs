@@ -12,7 +12,7 @@ defmodule TymeslotWeb.Dashboard.ProfileIntroFormTest do
 
   import Mox
   import Tymeslot.AuthTestHelpers, only: [log_in_user: 2]
-  import Tymeslot.ThemeBookingFlowHelpers
+  import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
 
   alias Ecto.Changeset
   alias Tymeslot.Repo

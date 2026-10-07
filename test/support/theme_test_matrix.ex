@@ -112,6 +112,7 @@ defmodule TymeslotWeb.ThemeTestMatrix do
       pins_schedule_actions: false,
       schedule_view: :calendar,
       selected_duration_selector: "[data-testid='duration-option'][aria-pressed='true']",
+      journey: :classic,
       fixture: false
     },
     "4" => %{
@@ -124,6 +125,7 @@ defmodule TymeslotWeb.ThemeTestMatrix do
       pins_schedule_actions: false,
       schedule_view: :calendar,
       selected_duration_selector: "[data-testid='duration-option'][aria-pressed='true']",
+      journey: :classic,
       fixture: false
     },
     "97" => %{

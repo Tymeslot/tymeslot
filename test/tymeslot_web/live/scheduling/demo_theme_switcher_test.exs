@@ -13,7 +13,7 @@ defmodule TymeslotWeb.Live.Scheduling.DemoThemeSwitcherTest do
 
   import Mox
   import Phoenix.LiveViewTest
-  import Tymeslot.ThemeBookingFlowHelpers, only: [seed_booking_account: 3]
+  import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
 
   alias TymeslotWeb.Themes.Core.ThemeInfo
   alias TymeslotWeb.Themes.Shared.Components.DemoThemeSwitcher

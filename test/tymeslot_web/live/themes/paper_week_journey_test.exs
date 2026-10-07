@@ -23,7 +23,7 @@ defmodule TymeslotWeb.Live.Themes.PaperWeekJourneyTest do
   import Ecto.Query, only: [from: 2]
   import Mox
   import Tymeslot.Factory
-  import Tymeslot.ThemeBookingFlowHelpers
+  import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
 
   alias Tymeslot.CalendarMock
   alias Tymeslot.Infrastructure.AvailabilityCache

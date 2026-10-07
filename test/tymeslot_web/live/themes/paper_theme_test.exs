@@ -15,7 +15,7 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
 
   import Mox
   import Tymeslot.Factory
-  import Tymeslot.ThemeBookingFlowHelpers
+  import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
 
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.TestMocks
