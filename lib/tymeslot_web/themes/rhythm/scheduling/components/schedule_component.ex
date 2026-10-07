@@ -70,6 +70,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                     class="calendar-nav-button phx-click-loading:animate-pulse"
                     phx-click="prev_week"
                     phx-target={@myself}
+                    data-intent="earlier"
                     phx-disable-with="..."
                     disabled={
                       CalendarNavigation.prev_week_disabled?(@current_week_start, @user_timezone)
@@ -98,6 +99,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                       class="calendar-nav-button phx-click-loading:animate-pulse"
                       phx-click="next_week"
                       phx-target={@myself}
+                      data-intent="later"
                       phx-disable-with="..."
                       disabled={
                         CalendarNavigation.next_week_disabled?(
@@ -122,6 +124,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                       ]}
                       data-testid="calendar-day"
                       data-date={day.date}
+                      data-fact="date"
+                      data-value={day.date}
                       phx-click="select_date"
                       phx-value-date={day.date}
                       phx-target={@myself}
@@ -158,6 +162,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                 phx-click="back_step"
                 phx-target={@myself}
                 data-testid="back-step"
+                data-intent="back"
               >
                 ← {dgettext("booking", "Back")}
               </button>
@@ -168,6 +173,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                 phx-click="next_step"
                 phx-target={@myself}
                 data-testid="next-step"
+                data-intent="continue"
                 disabled={is_nil(@selected_date) or is_nil(@selected_time)}
               >
                 {dgettext("booking", "Next")} →

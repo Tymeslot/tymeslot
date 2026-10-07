@@ -29,6 +29,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Note do
           value="acknowledge"
           selected?={@confirmed?}
           event="answer"
+          question={@definition["id"]}
           myself={@myself}
         >
           {dgettext("booking", "I acknowledge the above")}

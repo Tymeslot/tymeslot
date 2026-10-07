@@ -73,6 +73,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
                 class="prev-button"
                 phx-click="back_step"
                 phx-target={@myself}
+                data-intent="back"
               >
                 <span class="custom-question-cta-nowrap">← {dgettext("booking", "Back")}</span>
               </button>
@@ -82,6 +83,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
                 class="submit-button"
                 phx-click="next_step"
                 phx-target={@myself}
+                data-intent="continue"
               >
                 <span class="custom-question-cta-nowrap">
                   <%= if @last? do %>

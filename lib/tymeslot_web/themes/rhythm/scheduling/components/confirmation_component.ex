@@ -198,6 +198,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                   phx-click="schedule_another"
                   phx-target={@myself}
                   data-testid="schedule-another"
+                  data-intent="restart"
                   class="action-button-primary"
                 >
                   {dgettext("booking", "Schedule Another Meeting")}

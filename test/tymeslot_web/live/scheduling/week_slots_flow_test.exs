@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Live.Scheduling.WeekSlotsFlowTest do
   @moduletag :integration
 
   import Mox
-  import Tymeslot.ThemeBookingFlowHelpers
+  import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
 
   alias Tymeslot.Availability.Offer
   alias Tymeslot.CalendarMock

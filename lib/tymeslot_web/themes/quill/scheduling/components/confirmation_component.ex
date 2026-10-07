@@ -203,6 +203,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                       phx-click="schedule_another"
                       phx-target={@myself}
                       data-testid="schedule-another"
+                      data-intent="restart"
                       class="inline-block"
                     >
                       {dgettext("booking", "Schedule Another Meeting")}

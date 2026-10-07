@@ -17,7 +17,8 @@ defmodule TymeslotWeb.Themes.Shared.Components.BookingForm do
   `contact_class` wrapping the name and email (Quill lays them side by side),
   the message's `message_rows`, and the field `labels` (defaults below). The
   events are the canonical `validate`, `field_blur` and `submit`
-  (`Shared.StepEvents`), sent to `target`, the step component.
+  (`Shared.StepEvents`), sent to `target`, the step component. The `<form>`
+  carries the markup contract's `data-fact="attendee"`.
   """
 
   use Phoenix.Component
@@ -67,6 +68,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.BookingForm do
       phx-submit="submit"
       phx-target={@target}
       data-testid="booking-form"
+      data-fact="attendee"
       class={@class}
       id="booking-form"
       novalidate

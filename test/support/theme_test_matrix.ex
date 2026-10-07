@@ -2,16 +2,21 @@ defmodule TymeslotWeb.ThemeTestMatrix do
   @moduledoc """
   Per-theme test metadata, keyed by theme id.
 
-  The shared flow suites iterate `all/0` instead of listing themes by hand, so
-  a theme added to `Tymeslot.Themes.Catalog` is exercised by every one of them
-  once it has an entry here. `TymeslotWeb.ThemeTestMatrixTest` fails until it
-  does.
+  The shared suites iterate this module instead of listing themes by hand, so
+  a theme added to `Tymeslot.Themes.Catalog` is exercised by them once it has
+  an entry here. `TymeslotWeb.ThemeTestMatrixTest` fails until it does.
 
-  `all/0` and `ids/0` are the shipped themes. `registered/0` and
-  `registered_ids/0` add the test-only fixture themes (registered through
-  `:extra_themes` in `config/test.exs`), which have no booking UI beyond the
-  contract and no stylesheet; the suites that hold a theme to the contract
-  iterate those instead.
+  `registered/0` and `registered_ids/0` are every theme, including the
+  test-only fixture themes (registered through `:extra_themes` in
+  `config/test.exs`). The booking, approval and slot-taken (race) suites, the
+  markup contract test and `TymeslotWeb.BookingDriver`'s tests run those: a
+  fixture renders the approval notice and the confirmation status, and books
+  through the markup contract like any other theme. A fixture has no
+  stylesheet of its own.
+
+  `all/0` and `ids/0` are the shipped themes alone, for the suites tied to
+  their own design (deep links, sort order, cancel pages, accessibility, the
+  e2e embed matrix).
 
   `ids_where/1` narrows `ids/0` to the themes whose customisation spec passes
   a predicate, for a suite that stores one option group's settings (a preset
@@ -35,15 +40,23 @@ defmodule TymeslotWeb.ThemeTestMatrix do
     * `:schedule_view` - what the schedule step picks a time with:
       `:calendar` (a month or week calendar of days, then the chosen day's
       times, as Quill and Rhythm) or `:week_grid` (the shared `WeekGrid`, a
-      week of times with one click per time). The shared flow helpers pick a
-      time from either; the tests of the calendar's own day buttons run for
-      `:calendar` themes only.
+      week of times with one click per time). `TymeslotWeb.BookingDriver`
+      picks a time from either through the markup contract; the tests of the
+      calendar's own day buttons run for `:calendar` themes only.
     * `:selected_duration_selector` - matches the overview's
       `[data-testid='duration-option']` card only while it is selected. Each
       theme marks the selection its own way (on the button, or on a wrapper
       around it), so a shared assertion reads the selector from here.
-    * `:fixture` - a test-only theme: left out of `all/0`, and so of every
-      flow suite and the e2e embed matrix.
+    * `:journey` - `:classic` for a theme on the classic journey (the
+      `steps:` form, one page per step) or `:custom` for one declaring its
+      own `journey:`. The booking, approval and slot-taken suites, the
+      markup contract test and `TymeslotWeb.BookingDriver`'s booking tests
+      run every registered theme; only a suite that asserts one page per
+      step filters on `journey: :classic`.
+    * `:fixture` - a test-only theme: left out of `all/0` (and so of the
+      suites tied to the shipped themes' own design and the e2e embed
+      matrix), but part of `registered/0`, which the booking, approval and
+      race suites, the markup contract test and the driver tests run.
   """
 
   alias Tymeslot.Themes.Catalog
@@ -58,6 +71,7 @@ defmodule TymeslotWeb.ThemeTestMatrix do
           pins_schedule_actions: boolean(),
           schedule_view: :calendar | :week_grid,
           selected_duration_selector: String.t(),
+          journey: :classic | :custom,
           fixture: boolean()
         }
 
@@ -72,6 +86,7 @@ defmodule TymeslotWeb.ThemeTestMatrix do
       pins_schedule_actions: true,
       schedule_view: :calendar,
       selected_duration_selector: "[data-testid='duration-option'].duration-card--selected",
+      journey: :classic,
       fixture: false
     },
     "2" => %{
@@ -84,6 +99,7 @@ defmodule TymeslotWeb.ThemeTestMatrix do
       pins_schedule_actions: false,
       schedule_view: :calendar,
       selected_duration_selector: ".duration-card.selected [data-testid='duration-option']",
+      journey: :classic,
       fixture: false
     },
     "3" => %{
@@ -120,6 +136,7 @@ defmodule TymeslotWeb.ThemeTestMatrix do
       pins_schedule_actions: false,
       schedule_view: :week_grid,
       selected_duration_selector: "[data-testid='duration-option'][aria-pressed='true']",
+      journey: :classic,
       fixture: true
     },
     "99" => %{
@@ -132,11 +149,17 @@ defmodule TymeslotWeb.ThemeTestMatrix do
       pins_schedule_actions: false,
       schedule_view: :week_grid,
       selected_duration_selector: "[data-testid='duration-option'][aria-pressed='true']",
+      journey: :classic,
       fixture: true
     }
   }
 
-  @doc "Every shipped theme's entry, in numeric id order: the themes the flow suites run."
+  @doc """
+  Every shipped theme's entry (no fixtures), in numeric id order: for the
+  suites tied to the shipped themes' own design (deep links, sort order,
+  cancel pages, accessibility). The booking, approval and race suites run
+  `registered/0`.
+  """
   @spec all() :: [entry()]
   def all, do: Enum.reject(registered(), & &1.fixture)
 

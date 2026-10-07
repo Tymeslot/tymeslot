@@ -72,6 +72,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.CustomQuestionsComponen
                       type="button"
                       phx-click="back_step"
                       phx-target={@myself}
+                      data-intent="back"
                       variant={:secondary}
                       class="flex-1"
                     >
@@ -82,6 +83,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.CustomQuestionsComponen
                       type="button"
                       phx-click="next_step"
                       phx-target={@myself}
+                      data-intent="continue"
                       class="flex-1"
                     >
                       <span class="custom-question-cta-nowrap">

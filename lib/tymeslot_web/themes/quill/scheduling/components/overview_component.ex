@@ -40,6 +40,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
       phx-target={@target}
       data-testid="duration-option"
       data-duration={@duration}
+      data-fact="meeting_type"
+      data-value={@duration}
       class={"duration-card w-full rounded-xl cursor-pointer #{if @selected, do: "duration-card--selected", else: "duration-card--unselected"}"}
     >
       <div class="flex items-center justify-between">
@@ -147,6 +149,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                         phx-click="next_step"
                         phx-target={@myself}
                         data-testid="next-step"
+                        data-intent="continue"
                         disabled={!assigns[:selected_duration]}
                         title={
                           unless assigns[:selected_duration],

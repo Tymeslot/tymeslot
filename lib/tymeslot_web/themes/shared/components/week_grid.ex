@@ -37,7 +37,10 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
 
   Tests select times by `data-testid="week-slot"` with `data-date` and
   `data-time`, the controls by `week-grid-prev` and `week-grid-next`, the jump by
-  `week-grid-first-available`.
+  `week-grid-first-available`. Each time also carries the markup contract's
+  `data-fact="slot"` (its day and time in `data-date` and `data-time`) and the
+  week buttons `data-intent="earlier"` and `data-intent="later"`
+  (`THEME_DEVELOPMENT_GUIDE.md`, §"The markup contract").
   """
 
   use Phoenix.Component
@@ -96,6 +99,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
           type="button"
           class="week-grid__nav-button week-grid__nav-button--prev"
           data-testid="week-grid-prev"
+          data-intent="earlier"
           phx-click="prev_week"
           phx-target={@target}
           disabled={CalendarNavigation.prev_week_disabled?(@week_start, @user_timezone)}
@@ -108,6 +112,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
           type="button"
           class="week-grid__nav-button week-grid__nav-button--next"
           data-testid="week-grid-next"
+          data-intent="later"
           phx-click="next_week"
           phx-target={@target}
           disabled={next_disabled?(@week_start, @user_timezone, @booking_window_days)}
@@ -161,6 +166,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
                         "week-grid__slot--selected"
                     ]}
                     data-testid="week-slot"
+                    data-fact="slot"
                     data-date={day.iso}
                     data-time={slot}
                     phx-click="select_slot"

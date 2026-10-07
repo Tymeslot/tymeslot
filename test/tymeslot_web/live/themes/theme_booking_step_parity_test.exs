@@ -16,7 +16,6 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingStepParityTest do
   import Mox
   import Phoenix.LiveViewTest
   import Tymeslot.BookingTestHelpers
-  import Tymeslot.ThemeBookingFlowHelpers
 
   alias Tymeslot.TestMocks
   alias TymeslotWeb.ThemeTestMatrix

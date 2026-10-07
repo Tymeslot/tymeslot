@@ -7,6 +7,9 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.OptionCard do
   fill when selected, glyph indicator on the leading edge. The native
   input element (radio or checkbox) is rendered visually hidden so
   keyboard/screen-reader users get the standard semantics.
+
+  The input carries the markup contract's `data-fact="answer"`, the question
+  id as `data-question` and the value it sends as `data-value`.
   """
   use Phoenix.Component
 
@@ -21,6 +24,10 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.OptionCard do
   attr :selected?, :boolean, required: true
   attr :event, :string, required: true, doc: "Phoenix event name fired on click."
   attr :myself, :any, required: true
+
+  attr :question, :string,
+    required: true,
+    doc: "the question's id, the markup contract's `data-question`"
 
   slot :inner_block, required: true
 
@@ -40,6 +47,9 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.OptionCard do
         phx-click={@event}
         phx-value-value={@value}
         phx-target={@myself}
+        data-fact="answer"
+        data-question={@question}
+        data-value={@value}
       />
       <span
         class={["custom-question-option-indicator", "is-#{@indicator}"]}

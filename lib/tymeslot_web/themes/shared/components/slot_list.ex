@@ -19,6 +19,8 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotList do
   `toggle_hour` with `phx-value-hour`. The `AutoScrollToSlots` hook in
   `assets/js/utility_hooks.js` relies on `#slots-container`,
   `.slot-list__heading` and `[data-slots-loaded]`; change them together.
+  Each time button carries the markup contract's `data-fact="time"`, its
+  `data-value` the value `select_time` sends.
   """
 
   use Phoenix.Component
@@ -190,6 +192,8 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotList do
       class={["slot-list__slot", @selected && "slot-list__slot--selected"]}
       data-testid="time-slot"
       data-time={@slot_value}
+      data-fact="time"
+      data-value={@slot_value}
       phx-click="select_time"
       phx-value-time={@slot_value}
       phx-target={@target}

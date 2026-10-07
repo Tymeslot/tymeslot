@@ -119,6 +119,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 phx-click="back_step"
                 phx-target={@myself}
                 data-testid="back-step"
+                data-intent="back"
                 disabled={@submitting}
               >
                 ← {dgettext("booking", "Back")}
@@ -128,6 +129,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 form="booking-form"
                 class="submit-button"
                 data-testid="submit-booking"
+                data-intent="submit"
                 disabled={@submitting || !OrganizerHelpers.form_valid?(@form)}
               >
                 <%= if @submitting do %>

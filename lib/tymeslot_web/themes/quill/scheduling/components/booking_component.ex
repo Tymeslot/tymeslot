@@ -114,6 +114,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       phx-click="back_step"
                       phx-target={@myself}
                       data-testid="back-step"
+                      data-intent="back"
                       variant={:secondary}
                       disabled={@submitting}
                       class="flex-1"
@@ -129,6 +130,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       loading_text={dgettext("booking", "Verifying...")}
                       disabled={!OrganizerHelpers.form_valid?(@form)}
                       data-testid="submit-booking"
+                      data-intent="submit"
                       class="flex-1"
                       title={get_submit_title(@submitting, @form)}
                     >

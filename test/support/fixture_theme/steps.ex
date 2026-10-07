@@ -5,8 +5,10 @@ defmodule TymeslotWeb.Test.FixtureTheme.Scheduling.OverviewStep do
   """
   use TymeslotWeb, :live_component
 
+  alias Tymeslot.Meetings.Approval
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
+  alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.ProfileIntro
   alias TymeslotWeb.Themes.Shared.StepEvents
 
@@ -36,15 +38,19 @@ defmodule TymeslotWeb.Test.FixtureTheme.Scheduling.OverviewStep do
         phx-value-duration={MeetingTypes.effective_slug(meeting_type)}
         phx-target={@myself}
         data-testid="duration-option"
+        data-fact="meeting_type"
+        data-value={MeetingTypes.effective_slug(meeting_type)}
         aria-pressed={to_string(@selected_duration == MeetingTypes.effective_slug(meeting_type))}
       >
         {meeting_type.name}
+        <ApprovalNotice.pill :if={Approval.required?(meeting_type)} />
       </button>
       <button
         type="button"
         phx-click="next_step"
         phx-target={@myself}
         data-testid="next-step"
+        data-intent="continue"
         disabled={is_nil(@selected_duration)}
       >
         Next
@@ -94,7 +100,13 @@ defmodule TymeslotWeb.Test.FixtureTheme.Scheduling.ScheduleStep do
         landing_week={CalendarHelpers.landing_week(assigns)}
         target={@myself}
       />
-      <button type="button" phx-click="back_step" phx-target={@myself} data-testid="back-step">
+      <button
+        type="button"
+        phx-click="back_step"
+        phx-target={@myself}
+        data-testid="back-step"
+        data-intent="back"
+      >
         Back
       </button>
       <button
@@ -102,6 +114,7 @@ defmodule TymeslotWeb.Test.FixtureTheme.Scheduling.ScheduleStep do
         phx-click="next_step"
         phx-target={@myself}
         data-testid="next-step"
+        data-intent="continue"
         disabled={is_nil(@selected_date) or is_nil(@selected_time)}
       >
         Next
@@ -112,10 +125,15 @@ defmodule TymeslotWeb.Test.FixtureTheme.Scheduling.ScheduleStep do
 end
 
 defmodule TymeslotWeb.Test.FixtureTheme.Scheduling.QuestionsStep do
-  @moduledoc "The fixture theme's custom-questions step: a marker only."
+  @moduledoc """
+  The fixture theme's custom-questions step: the current question through
+  the shared inputs (`CustomQuestions.Inputs.Renderer`), its error, and the
+  ways back and on, unstyled.
+  """
   use TymeslotWeb, :live_component
 
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Events
+  alias TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Renderer, as: InputRenderer
   alias TymeslotWeb.Themes.Shared.StepEvents
 
   @impl Phoenix.LiveComponent
@@ -126,8 +144,20 @@ defmodule TymeslotWeb.Test.FixtureTheme.Scheduling.QuestionsStep do
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
+    assigns = Events.assign_render_state(assigns)
+
     ~H"""
-    <section class="booker-card" data-testid="fixture-questions"></section>
+    <section class="booker-card" data-testid="fixture-questions">
+      <h2>{@definition["label"]}</h2>
+      <InputRenderer.render definition={@definition} value={@value} myself={@myself} />
+      <p :if={@error} data-testid="fixture-question-error">{@error}</p>
+      <button type="button" phx-click="back_step" phx-target={@myself} data-intent="back">
+        Back
+      </button>
+      <button type="button" phx-click="next_step" phx-target={@myself} data-intent="continue">
+        Next
+      </button>
+    </section>
     """
   end
 end
@@ -140,6 +170,10 @@ defmodule TymeslotWeb.Test.FixtureTheme.Scheduling.BookingStep do
   """
   use TymeslotWeb, :live_component
 
+  alias Tymeslot.Meetings.Approval
+  alias Tymeslot.Profiles
+  alias TymeslotWeb.Themes.Shared.BookingLabels
+  alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.BookingForm
   alias TymeslotWeb.Themes.Shared.StepEvents
 
@@ -159,17 +193,37 @@ defmodule TymeslotWeb.Test.FixtureTheme.Scheduling.BookingStep do
         validation_errors={@validation_errors}
         target={@myself}
       />
-      <button type="submit" form="booking-form" data-testid="submit-booking">Book</button>
-      <button type="button" phx-click="back_step" phx-target={@myself}>Back</button>
+      <ApprovalNotice.block
+        :if={Approval.required?(@meeting_type)}
+        organizer_name={Profiles.display_name(@organizer_profile)}
+        payment_required={@meeting_type.payment_required}
+        stage={:before}
+      />
+      <button type="submit" form="booking-form" data-testid="submit-booking" data-intent="submit">
+        {BookingLabels.submit_label(assigns[:is_rescheduling] || false, @meeting_type, "Book")}
+      </button>
+      <button type="button" phx-click="back_step" phx-target={@myself} data-intent="back">
+        Back
+      </button>
     </section>
     """
   end
 end
 
 defmodule TymeslotWeb.Test.FixtureTheme.Scheduling.ConfirmationStep do
-  @moduledoc "The fixture theme's confirmation step: a marker and a fresh start."
+  @moduledoc """
+  The fixture theme's confirmation step: what every theme tells the booker
+  (whether the booking is held for approval or confirmed, the address the
+  details went to, the meeting's length, and the approval notice while it is
+  held), unstyled, and a fresh start.
+  """
   use TymeslotWeb, :live_component
 
+  alias Tymeslot.Availability.Offer
+  alias Tymeslot.Profiles
+  alias TymeslotWeb.Themes.Shared.ApprovalDisplay
+  alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
+  alias TymeslotWeb.Themes.Shared.ConfirmationText
   alias TymeslotWeb.Themes.Shared.StepEvents
 
   @impl Phoenix.LiveComponent
@@ -182,8 +236,31 @@ defmodule TymeslotWeb.Test.FixtureTheme.Scheduling.ConfirmationStep do
   def render(assigns) do
     ~H"""
     <section class="booker-card" data-testid="fixture-confirmation">
-      <button type="button" phx-click="schedule_another" phx-target={@myself}>Again</button>
+      <h1 data-testid="confirmation-heading">{headline(assigns)}</h1>
+      <p data-testid="fixture-confirmation-email">{@email}</p>
+      <p data-testid="fixture-confirmation-length">
+        {Offer.duration_minutes(@meeting_type, @duration)} min
+      </p>
+      <ApprovalNotice.block
+        :if={ApprovalDisplay.awaiting_approval?(assigns)}
+        organizer_name={Profiles.display_name(@organizer_profile)}
+        stage={:after}
+      />
+      <button type="button" phx-click="schedule_another" phx-target={@myself} data-intent="restart">
+        Again
+      </button>
     </section>
     """
+  end
+
+  # Which status applies is decided in `ConfirmationText`, as on every theme
+  # (a held request is never announced as a confirmed meeting); the words are
+  # the fixture's own, the held one as the shipped themes put it.
+  defp headline(assigns) do
+    case ConfirmationText.status(assigns) do
+      :held -> "Request sent!"
+      :rescheduled -> "Rescheduled"
+      :confirmed -> "Confirmed"
+    end
   end
 end

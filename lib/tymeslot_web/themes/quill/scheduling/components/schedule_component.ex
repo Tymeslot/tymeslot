@@ -48,6 +48,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
       ]}
       data-testid="calendar-day"
       data-date={@day[:date] || @day["date"]}
+      data-fact={@current_month && "date"}
+      data-value={@current_month && (@day[:date] || @day["date"])}
       disabled={!@available || !@current_month || @loading}
       aria-label={LocalizationHelpers.format_full_date_label(@day[:date] || @day["date"])}
       aria-current={@day.is_today && "date"}
@@ -227,6 +229,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                             <button
                               phx-click="prev_month"
                               phx-target={@myself}
+                              data-intent="earlier"
                               phx-disable-with="..."
                               disabled={
                                 CalendarNavigation.prev_month_disabled?(
@@ -248,6 +251,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                             <button
                               phx-click="next_month"
                               phx-target={@myself}
+                              data-intent="later"
                               phx-disable-with="..."
                               disabled={
                                 CalendarNavigation.next_month_disabled?(
@@ -340,6 +344,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                       phx-click="back_step"
                       phx-target={@myself}
                       data-testid="back-step"
+                      data-intent="back"
                       variant={:secondary}
                       class="flex-1"
                     >
@@ -350,6 +355,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                       phx-click="next_step"
                       phx-target={@myself}
                       data-testid="next-step"
+                      data-intent="continue"
                       disabled={!(@selected_date && @selected_time)}
                       class="flex-1"
                     >

@@ -4,8 +4,8 @@ defmodule TymeslotWeb.Live.Scheduling.WeekGridJourneyTest do
   page: booking a meeting, and moving one, with the time picked straight from
   the week grid. The fixture theme (`test/support/fixture_theme/`) renders the
   shared `WeekGrid` on its schedule step and a plain booking form on its
-  booking step; the grid's `load_week` binding is sent by hand, since
-  LiveViewTest runs no JS bindings.
+  booking step; the page is walked through `TymeslotWeb.BookingDriver`, which
+  sends the grid's `load_week` binding as a browser would.
 
   The load-bearing assertions are in the database: the meeting booked, or the
   meeting moved, starts at exactly the day and time clicked, and a reschedule
@@ -23,7 +23,7 @@ defmodule TymeslotWeb.Live.Scheduling.WeekGridJourneyTest do
   import Ecto.Query, only: [from: 2]
   import Mox
   import Tymeslot.Factory
-  import Tymeslot.ThemeBookingFlowHelpers
+  import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
 
   alias Tymeslot.CalendarMock
   alias Tymeslot.Infrastructure.AvailabilityCache
@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Live.Scheduling.WeekGridJourneyTest do
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.BookingDriver
 
   @fixture_theme_id "99"
   @timezone "Etc/UTC"
@@ -58,7 +59,7 @@ defmodule TymeslotWeb.Live.Scheduling.WeekGridJourneyTest do
 
     view = open_week(conn, profile, day)
     pick(view, day, "10:00 AM")
-    submit(view, "week-booker@example.com")
+    submit_attendee(view, "week-booker@example.com")
 
     wait_until(fn -> has_element?(view, "[data-testid='fixture-confirmation']") end)
 
@@ -98,7 +99,7 @@ defmodule TymeslotWeb.Live.Scheduling.WeekGridJourneyTest do
 
     view = open_week(conn, profile, day, [{"reschedule_meeting_uid", meeting.uid}])
     pick(view, day, "2:00 PM")
-    submit(view, "attendee@example.com")
+    submit_attendee(view, "attendee@example.com")
 
     wait_until(fn -> Repo.get!(MeetingSchema, meeting.id).start_time != original_start end)
     wait_until(fn -> has_element?(view, "[data-testid='fixture-confirmation']") end)
@@ -121,43 +122,30 @@ defmodule TymeslotWeb.Live.Scheduling.WeekGridJourneyTest do
 
   defp at(date, time), do: DateTime.new!(date, time, @timezone)
 
-  # Overview, schedule step, and the week the linked day is in, loaded as
-  # the grid's phx-mounted binding would load it.
+  # Overview, then the schedule step, on a page linked to `day`.
   defp open_week(conn, profile, day, extra_params \\ []) do
     query =
       URI.encode_query([{"timezone", @timezone}, {"date", Date.to_iso8601(day)} | extra_params])
 
     {:ok, view, _html} = live(conn, "/#{profile.username}?#{query}")
 
-    view |> element("[data-testid='duration-option']") |> render_click()
-    view |> element("[data-testid='next-step']") |> render_click()
-    view |> with_target("[data-testid='fixture-schedule']") |> render_click("load_week", %{})
-    render_async(view)
-
+    BookingDriver.choose_meeting_type(view, "quick-chat")
+    BookingDriver.continue(view)
     view
   end
 
   defp pick(view, day, time) do
-    view
-    |> element(
-      "[data-testid='week-slot'][data-date='#{Date.to_iso8601(day)}'][data-time='#{time}']"
-    )
-    |> render_click()
+    BookingDriver.pick_slot(view, Date.to_iso8601(day), time)
+    BookingDriver.continue(view)
 
-    view |> element("[data-testid='next-step']") |> render_click()
-
-    assert has_element?(view, "form[data-testid='booking-form']")
+    assert has_element?(view, "form[data-fact='attendee']")
   end
 
-  defp submit(view, email) do
-    view
-    |> form("form[data-testid='booking-form']", %{
-      "booking" => %{
-        "name" => "Week Booker",
-        "email" => email,
-        "message" => "Picked from the week grid"
-      }
+  defp submit_attendee(view, email) do
+    BookingDriver.submit(view, %{
+      name: "Week Booker",
+      email: email,
+      message: "Picked from the week grid"
     })
-    |> render_submit()
   end
 end

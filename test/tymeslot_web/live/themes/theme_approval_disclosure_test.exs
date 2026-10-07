@@ -15,7 +15,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
   import Mox
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
-  import Tymeslot.ThemeBookingFlowHelpers
+  import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
 
   @moduletag :themes
   @moduletag :bookings
@@ -27,6 +27,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.BookingDriver
   alias TymeslotWeb.ThemeTestMatrix
 
   setup :verify_on_exit!
@@ -51,7 +52,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
     |> Repo.update!()
   end
 
-  for theme <- ThemeTestMatrix.all() do
+  for theme <- ThemeTestMatrix.registered() do
     describe "#{theme.slug}: a gated meeting type" do
       @tag :capture_log
       test "is marked as needing approval before anything is picked", %{conn: conn} do
@@ -83,7 +84,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
 
         {:ok, view, _html} = live(conn, ~p"/#{profile.username}?timezone=America/New_York")
 
-        advance_to_booking_form(view, unquote(theme.slug))
+        BookingDriver.book(view, until: :attendee)
         html = render(view)
 
         assert html =~ "data-testid=\"approval-notice\""
@@ -111,11 +112,9 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
         email = "held-#{unquote(theme.slug)}@example.com"
 
         html =
-          complete_booking_flow(view, unquote(theme.slug), unquote(theme.id), %{
-            name: "Test Attendee",
-            email: email,
-            message: "Hello!"
-          })
+          BookingDriver.book(view,
+            attendee: %{name: "Test Attendee", email: email, message: "Hello!"}
+          )
 
         assert html =~ "Request sent!"
         assert html =~ "Not confirmed yet"
@@ -199,11 +198,9 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
         email = "plain-#{unquote(theme.slug)}@example.com"
 
         html =
-          complete_booking_flow(view, unquote(theme.slug), unquote(theme.id), %{
-            name: "Test Attendee",
-            email: email,
-            message: "Hello!"
-          })
+          BookingDriver.book(view,
+            attendee: %{name: "Test Attendee", email: email, message: "Hello!"}
+          )
 
         refute html =~ "data-testid=\"approval-notice\""
         refute html =~ "Request sent!"

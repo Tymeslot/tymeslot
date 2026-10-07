@@ -739,7 +739,7 @@ A theme's own booking-page behaviour is an event of its own, not a new canonical
 - **The showcase** (id `"97"`, `test/support/showcase_theme/`): declares all seven [shared option groups](#shared-option-groups) in the canonical order (`palette` over the light tones following the OS, `colour_mode`, `accent`, `font`, `radius`, `density`, `logo`, `cover`, then Quill's `background`), and borrows the fixture's live view (its steps, and its wrapper, which renders the logo and cover media when a spec resolves them) and its `page_shell`. Its dashboard panels, uploads and booking-page tokens and media are proved through the real routes, each group alone and all of them together (`showcase_theme_test.exs`).
 - **`Tymeslot.Test.ThemeCustomizations.GroupsSpec`** (`test/support/theme_customizations/groups_spec.ex`): a spec registered with no theme, declaring the palette over the tones and the five groups that emit variables (`colour_mode`, `accent`, `font`, `radius`, `density`) in the canonical order, for the tests of `Specs` and of the contrast rules that need no page (`groups_spec_test.exs`, `accent_contrast_test.exs`).
 
-The default pages' test ids carry each theme's own key (`showcase-payment-processing`), which is what the payment return suite tells themes apart by. Both themes' `ThemeTestMatrix` entries say `fixture: true`, so the flow suites and the e2e embed matrix (`all/0`) skip them while the contract suites (`registered_ids/0`) and the production checklist (`Catalog.valid_ids/0`) cover them. SaaS's test build inherits the entries and compiles Core's `test/support`, so both exist there too.
+The default pages' test ids carry each theme's own key (`showcase-payment-processing`), which is what the payment return suite tells themes apart by. Both themes' `ThemeTestMatrix` entries say `fixture: true`, so the suites tied to the shipped themes' own design and the e2e embed matrix (`all/0`) skip them, while the booking, approval and race suites, the contract suites (`registered/0`, `registered_ids/0`) and the production checklist (`Catalog.valid_ids/0`) cover them. SaaS's test build inherits the entries and compiles Core's `test/support`, so both exist there too.
 
 ## Meeting Management Integration
 
@@ -1028,11 +1028,39 @@ each of `:overview`, `:schedule`, `:questions`, `:booking` and
 `:confirmation`, and no other key, and a `journey:` must pass
 `Journey.build!/2`; compilation checks both.
 
+### The markup contract
+
+Whatever a theme's markup, the element that sets a fact carries `data-fact`, and the control that moves the visitor on carries `data-intent`. `TymeslotWeb.BookingDriver` (`test/support/booking_driver.ex`, with the page-reading helpers it splits out into `TymeslotWeb.BookingDriver.Page`, `test/support/booking_driver/page.ex`) finds a booking page's controls by these attributes alone (on a page that moves on by itself, `continue/1` also reads the `data-moment` and `data-moment-state` that `BookingDriver.Page.moments/1` collects, to see whether another moment has opened), so the shared flow suites book on a new theme without a driver of its own, and `test/tymeslot_web/themes/markup_contract_test.exs` holds every registered theme to them: each moment, while it is on screen, marks every fact it collects that the booking needs. The shared components render their rows already; a theme renders the rest.
+
+The one decision the driver does not take from the markup is whether a meeting type is already chosen or defaulted: `BookingDriver.choose_meeting_type/2` reads `assigns[:selected_duration]` for that, because the markup does not say. Every other choice reads the attributes below; assigns serve only the driver's waits.
+
+| Attribute | On | Value | Provided by |
+|---|---|---|---|
+| `data-fact="meeting_type"` | each meeting-type choice | `data-value`: what `select_duration` sends, the type's slug (`MeetingTypes.effective_slug/1`) | theme |
+| `data-fact="date"` | each day button of a picker of days | `data-value`: the ISO date | theme |
+| `data-fact="time"` | each time button | `data-value`: what `select_time` sends | shared (`SlotList`) |
+| `data-fact="slot"` | each button that picks a day and a time in one click | `data-date` (ISO) and `data-time` | shared (`WeekGrid`) |
+| `data-fact="answer"` | the `<form>` of a question typed into (text-like questions, a long single select), or each choice of a question answered by a click (option cards, yes/no, the acknowledgement) | `data-question`: the question id; a choice also `data-value`, what it sends | shared (custom-question inputs) |
+| `data-fact="attendee"` | the booking `<form>` | none | shared (`BookingForm`) |
+| `data-intent="continue"`, `data-intent="back"` | the controls that move to the next and to the previous moment (`next_step`, `back_step`) | none | theme |
+| `data-intent="submit"` | the button that submits the booking form | none | theme |
+| `data-intent="restart"` | the outcome's fresh start (`schedule_another`) | none | theme |
+| `data-intent="earlier"`, `data-intent="later"` | the arrows that move a picker of days or slots to the previous and the next period | none | theme; shared on `WeekGrid` |
+
+The rules:
+
+- **One control per value.** A page that renders the same choice twice (Quill's week strip for narrow screens beside its month grid) marks one copy only, with its arrows: the one a desktop visitor sees. A padded day of the neighbouring month belongs to another period and carries no `data-fact`, so the days marked are exactly the period on show; that is how the driver knows whether a date lies earlier or later. `markup_contract_test.exs` fails on two day buttons with one value.
+- **For finding, never for styling.** No stylesheet or script selects these attributes, so adding them changes no pixel; style the classes, as before.
+- **The test ids stay.** The e2e suites and the visual harness still read the `data-testid`s below.
+- **Not every control is a fact.** `TimezonePicker`, `GuestField` and `LocationField` carry none: the timezone is accepted on every moment, and guests and the location belong to the attendee. A by-hour toggle in `SlotList` opens a drawer and sets nothing.
+
+A theme's own picker that loads its data from a `phx-mounted` binding (as `WeekGrid` sends `load_week`) needs nothing more: `BookingDriver.load/1` sends a page's `phx-mounted` pushes as a browser does on mount.
+
 ### Markup the shared tests rely on
 
 The shared test suites, their helpers, the end-to-end suites and the visual harness find elements on a booking page by markup, not by what a theme calls things. A theme that does not render a hook below fails them, usually with "element not found". A theme that builds its steps from the shared components (`SlotList`, `WeekGrid`, `TimezonePicker`, `BookingForm`, `GuestField`, `LocationField`, `ApprovalNotice`, `CustomAnswers`, `ThemeShell`, and `MeetingPageBodies` through `Shared.DefaultPages`) gets most of these for free; the tables mark each hook "shared" (the component renders it, you keep it) or "theme" (you render it).
 
-The readers are: the flow helpers (`test/support/theme_booking_flow_helpers.ex`, `booking_test_helpers.ex`, `week_view_test_helpers.ex`), the suites that loop over `ThemeTestMatrix.all/0` (`theme_booking_flow_test.exs`, `theme_booking_step_parity_test.exs`, `theme_approval_disclosure_test.exs`, `booking_accessibility_test.exs`, `guest_booking_flow_test.exs`, `custom_fields_booking_flow_test.exs`, `reschedule_entry_test.exs`, `linked_date_test.exs`, `visitor_today_test.exs`, `timezone_change_selection_test.exs`, `booker_hook_classes_test.exs`, `ignored_step_event_test.exs`, the meeting and readiness suites), the e2e suite `embed_sizes_matrix_test.exs`, and the visual harness (`SEL` and `MASKS` in `capture.mjs`). Quote a hook exactly: the tests use `data-testid` for what is stable and a class or event name only where it is listed here. A theme also has an entry in `ThemeTestMatrix` (`wrapper_class`, `schedule_view`, `selected_duration_selector`, `video_background`, `pins_schedule_actions`), and the suites read those fields instead of a hard-coded name.
+The readers are: `TymeslotWeb.BookingDriver` (`test/support/booking_driver.ex`, with `TymeslotWeb.BookingDriver.Page`, `test/support/booking_driver/page.ex`; they read only the attributes of §"The markup contract", bar the one `assigns[:selected_duration]` read of `choose_meeting_type/2` and, on a page that moves on by itself, the `data-moment` and `data-moment-state` that `continue/1` reads through `Page.moments/1`) and `booking_test_helpers.ex`, `markup_contract_test.exs`, the suites that loop over `ThemeTestMatrix.registered/0` or `all/0` (`theme_booking_flow_test.exs`, `theme_booking_step_parity_test.exs`, `theme_approval_disclosure_test.exs`, `booking_accessibility_test.exs`, `guest_booking_flow_test.exs`, `custom_fields_booking_flow_test.exs`, `reschedule_entry_test.exs`, `linked_date_test.exs`, `visitor_today_test.exs`, `timezone_change_selection_test.exs`, `booker_hook_classes_test.exs`, `ignored_step_event_test.exs`, the meeting and readiness suites), the e2e suite `embed_sizes_matrix_test.exs`, and the visual harness (`SEL` and `MASKS` in `capture.mjs`). Quote a hook exactly: the tests use `data-testid` for what is stable and a class or event name only where it is listed here. A theme also has an entry in `ThemeTestMatrix` (`wrapper_class`, `schedule_view`, `selected_duration_selector`, `video_background`, `pins_schedule_actions`), and the suites read those fields instead of a hard-coded name.
 
 #### Whole page
 
@@ -1041,7 +1069,7 @@ The readers are: the flow helpers (`test/support/theme_booking_flow_helpers.ex`,
 | The `wrapper_class` of the `ThemeTestMatrix` entry (for example `quill-theme-wrapper`) | the outermost element of every page the theme draws: the booking page, the readiness notice, the cancel and reschedule pages | theme (`class` on `ThemeShell`) | dispatcher, readiness, ignored-event and meeting-management suites |
 | `.booker-page` | the theme grid | shared (`ThemeShell` adds it) | `booker_hook_classes_test.exs`, `shared/embed.css` |
 | `.booker-card` | every card on a step and on the meeting, poll and payment pages | theme | `booker_hook_classes_test.exs` (on the overview), `shared/embed.css` |
-| `[data-phx-component]` | the root of each step: a step is a LiveComponent, and its events are sent to it (`with_target`) | theme (a `steps:` component) | `ignored_step_event_test.exs` (`[data-phx-component]:has([data-testid='duration-option'])`), `week_view_test_helpers.ex` |
+| `[data-phx-component]` | the root of each step: a step is a LiveComponent, and its events are sent to it (`with_target`) | theme (a `steps:` component) | `ignored_step_event_test.exs` (`[data-phx-component]:has([data-testid='duration-option'])`), `BookingDriver.load/1` (the component a `phx-mounted` push targets) |
 | `[data-testid="readiness-notice"]` | the notice shown instead of the flow when the organiser has no calendar | shared (`SchedulingPage`, `ErrorComponent`) | `no_calendar_readiness_test.exs`, `poll_voting_mount_test.exs` |
 | `[data-testid="preview-notice"]` | the owner-preview banner | shared (`ThemeShell`) | `owner_preview_booking_test.exs` |
 | `.lang-switcher button[phx-click="toggle_language_dropdown"]` and `button[phx-click="change_locale"][phx-value-locale]` | the language switcher | shared (`ThemeShell`) | `embed_primary_colour_test.exs` |
@@ -1054,9 +1082,9 @@ The readers are: the flow helpers (`test/support/theme_booking_flow_helpers.ex`,
 
 | Hook | Must be on | Provided by | Read by |
 |---|---|---|---|
-| `[data-testid="duration-option"]` | a `<button>` per meeting type, with `phx-click="select_duration"`, `phx-value-duration` and `data-duration` both the meeting type's slug (`MeetingTypes.effective_slug/1`) and `phx-target={@myself}`; choosing the chosen one again keeps it chosen | theme | flow helpers, `BookingTestHelpers`, parity, reschedule and approval suites, e2e, visual harness (`[data-duration="<slug>"]`) |
+| `[data-testid="duration-option"]` | a `<button>` per meeting type, with `phx-click="select_duration"`, `phx-value-duration` and `data-duration` both the meeting type's slug (`MeetingTypes.effective_slug/1`) and `phx-target={@myself}`; choosing the chosen one again keeps it chosen | theme | parity and reschedule suites, e2e, visual harness (`[data-duration="<slug>"]`); `BookingDriver` reads its `data-fact="meeting_type"` |
 | The `selected_duration_selector` of the `ThemeTestMatrix` entry | matches the card only while it is selected (Quill marks the button with `.duration-card--selected`, Rhythm its wrapper with `.selected`) | theme (you choose the marker and register the selector) | `reschedule_entry_test.exs` |
-| `[data-testid="next-step"]` | a `<button>` with `phx-click="next_step"` and `phx-target={@myself}`, `disabled` until a duration is chosen | theme | flow helpers, parity and reschedule suites, e2e, visual harness |
+| `[data-testid="next-step"]` | a `<button>` with `phx-click="next_step"` and `phx-target={@myself}`, `disabled` until a duration is chosen | theme | parity and reschedule suites, e2e, visual harness; `BookingDriver` reads its `data-intent="continue"` |
 | `[data-testid="approval-pill"]` | inside the duration card of a meeting type that needs approval (`Approval.required?/1`) | shared (`ApprovalNotice.pill/1`), placed by the theme | `theme_approval_disclosure_test.exs` |
 
 #### Schedule step: calendar view
@@ -1065,16 +1093,16 @@ A theme whose `schedule_view` is `:calendar` (days, then the chosen day's times)
 
 | Hook | Must be on | Provided by | Read by |
 |---|---|---|---|
-| `[data-testid="calendar-day"]` | a `<button>` per day with `data-date` (ISO date), `phx-click="select_date"`, `phx-value-date`, `phx-target`; `disabled` while the day has no times, is outside the month on show, or availability is loading; `aria-current="date"` on today in the visitor's timezone; the chosen day carries the class `selected` or `calendar-day--selected` | theme | flow helpers (`:not([disabled])` and `phx-value-date`), `BookingTestHelpers`, `visitor_today_test.exs`, `linked_date_test.exs`, `timezone_change_selection_test.exs`, e2e, visual harness, and `AutoScrollToSlots` (moves focus on from a button matching `[data-testid="calendar-day"]` or `.week-day-cell`) |
+| `[data-testid="calendar-day"]` | a `<button>` per day with `data-date` (ISO date), `phx-click="select_date"`, `phx-value-date`, `phx-target`; `disabled` while the day has no times, is outside the month on show, or availability is loading; `aria-current="date"` on today in the visitor's timezone; the chosen day carries the class `selected` or `calendar-day--selected`; the days of the period on show also carry `data-fact="date"` and `data-value`, one copy per day (§"The markup contract") | theme | `linked_date_test.exs`, `timezone_change_selection_test.exs`, e2e, visual harness, and `AutoScrollToSlots` (moves focus on from a button matching `[data-testid="calendar-day"]` or `.week-day-cell`); `BookingDriver` reads its `data-fact="date"`; `visitor_today_test.exs` does not read the testid but the button itself (`button[phx-click='select_date'][aria-current='date']`) |
 | `.calendar-day--loading` (or `.loading` on a `.week-day-cell`) | a day button while its availability is loading | theme | visual harness waits for it to clear |
 | `.calendar-day--other-month` | a padded day of the neighbouring month, if the grid pads | theme (optional) | visual harness (`SEL.day` ignores it) |
-| `button.calendar-nav-button` | each calendar navigation button, with `phx-click` `prev_month`, `next_month`, `prev_week` or `next_week`, `disabled` at the edge of the booking window | theme | `BookingTestHelpers` (`button[phx-click="next_month"]`, `prev_month`, `next_week`), visual harness (`[phx-click^="next"]`) |
+| `button.calendar-nav-button` | each calendar navigation button, with `phx-click` `prev_month`, `next_month`, `prev_week` or `next_week`, `disabled` at the edge of the booking window | theme | `BookingTestHelpers.show_month/3` (`button[phx-click="next_month"]`, `prev_month`), visual harness (`[phx-click^="next"]`); `BookingDriver` reads the marked arrows' `data-intent="earlier"` and `"later"` |
 | `.calendar-month-label` | on a month-paged calendar (one with a `next_month` button): the month and year, as `LocalizationHelpers.get_month_year_display/2` writes them | theme | `BookingTestHelpers.showing_month?/2` and `show_month/3` |
 | `[data-testid="schedule-actions"]` | the row that holds Back and Next | theme | `embed_sizes_matrix_test.exs` (overlap, reachability and pinning checks) |
-| `[data-testid="next-step"]` | a `<button>` with `phx-click="next_step"`, `disabled` until a date and a time are chosen | theme | flow helpers, e2e, visual harness |
+| `[data-testid="next-step"]` | a `<button>` with `phx-click="next_step"`, `disabled` until a date and a time are chosen | theme | e2e, visual harness; `BookingDriver` reads its `data-intent="continue"` |
 | `[data-testid="back-step"]` | a `<button>` with `phx-click="back_step"`, only when `@entered_via_overview` | theme | e2e, `custom_fields_booking_flow_test.exs`, visual harness |
 | `#slots-container.slot-list` (`phx-hook="AutoScrollToSlots"`), `.slot-list__heading` (`tabindex="-1"`), `[data-slots-loaded]` (the chosen date) | the time list; the hook scrolls to it and focuses the heading once times load | shared (`SlotList`) | `AutoScrollToSlots`, `slot_list_test.exs` |
-| `[data-testid="time-slot"]` | a `<button>` per time with `data-time`, `phx-value-time`, `phx-click="select_time"` | shared (`SlotList`) | flow helpers, `BookingTestHelpers`, timezone, reschedule and e2e suites, visual harness |
+| `[data-testid="time-slot"]` | a `<button>` per time with `data-time`, `phx-value-time`, `phx-click="select_time"` | shared (`SlotList`) | timezone, reschedule and e2e suites, visual harness; `BookingDriver` reads its `data-fact="time"` |
 | `[data-testid="slot-hour"]` | the hour button of a by-hour list (`phx-value-hour`, `aria-expanded`) | shared (`SlotList`) | `SlotPickerTestHelpers.rendered_hours/1`, visual harness |
 | `button.tz-picker__trigger`, `.tz-picker__search` | the timezone trigger (accessible name contains its visible text, announces its dialog) and the search box | shared (`TimezonePicker`) | `booking_accessibility_test.exs` |
 
@@ -1084,11 +1112,11 @@ A theme whose `schedule_view` is `:week_grid` renders the shared `WeekGrid` inst
 
 | Hook | Must be on | Provided by | Read by |
 |---|---|---|---|
-| `[data-testid="week-grid"]` | the grid, inside the schedule step's LiveComponent (`target={@myself}`), so `load_week` reaches it | shared (`WeekGrid`) | `WeekViewTestHelpers.week_view?/1` and `load_week/1`, which choose the picker |
-| `[data-testid="week-slot"]` | a `<button>` per free time with `data-date`, `data-time`, `phx-click="select_slot"`, `disabled` while the week loads | shared (`WeekGrid`) | `WeekViewTestHelpers`, flow helpers, `custom_fields_booking_flow_test.exs` |
-| `[data-testid="week-grid-prev"]`, `[data-testid="week-grid-next"]` | the week buttons (`prev_week`, `next_week`) | shared (`WeekGrid`) | `WeekViewTestHelpers` |
+| `[data-testid="week-grid"]` | the grid, inside the schedule step's LiveComponent (`target={@myself}`), so `load_week` reaches it | shared (`WeekGrid`) | `BookingDriver.load/1`, which sends its `phx-mounted` `load_week` as a browser would |
+| `[data-testid="week-slot"]` | a `<button>` per free time with `data-date`, `data-time`, `phx-click="select_slot"`, `disabled` while the week loads | shared (`WeekGrid`) | `custom_fields_booking_flow_test.exs`; `BookingDriver` reads its `data-fact="slot"` |
+| `[data-testid="week-grid-prev"]`, `[data-testid="week-grid-next"]` | the week buttons (`prev_week`, `next_week`) | shared (`WeekGrid`) | `week_slots_flow_test.exs`; `BookingDriver` reads their `data-intent="earlier"` and `"later"` |
 | `.week-grid__nav` | the navigation row | shared (`WeekGrid`) | `embed_sizes_matrix_test.exs` (overlap check) |
-| `[data-testid="schedule-actions"]`, `[data-testid="next-step"]`, `[data-testid="back-step"]` | as in the calendar view | theme | flow helpers, e2e |
+| `[data-testid="schedule-actions"]`, `[data-testid="next-step"]`, `[data-testid="back-step"]` | as in the calendar view | theme | e2e; `BookingDriver` reads the `data-intent`s |
 | `button.tz-picker__trigger`, `.tz-picker__search` | as in the calendar view | shared (`TimezonePicker`) | `booking_accessibility_test.exs` |
 
 The visual harness has no selector for the grid: a theme that uses it supplies `openSchedule` and `pickSlot` in its harness module.
@@ -1099,7 +1127,7 @@ The step appears only when the meeting type has custom questions. The engine ren
 
 | Hook | Must be on | Provided by | Read by |
 |---|---|---|---|
-| `button[phx-click="next_step"][phx-target]` and `button[phx-click="back_step"][phx-target]` | one of each on screen, so a test's selector is unambiguous | theme | `custom_fields_booking_flow_test.exs`, `long_single_select_flow_test.exs`, visual harness (`next` or `next_step`) |
+| `button[phx-click="next_step"][phx-target]` and `button[phx-click="back_step"][phx-target]` | one of each on screen, so a test's selector is unambiguous | theme | `custom_fields_booking_flow_test.exs`, `long_single_select_flow_test.exs`, visual harness (`next` or `next_step`); `BookingDriver` reads their `data-intent="continue"` and `"back"` |
 | `form[id^="cq-form-"]` (`phx-submit="next_step"`), `input[name="value"]`, `select[name="value"]` | a text-like question and a long single select | shared (custom-questions inputs) | `long_single_select_flow_test.exs`, `custom_fields_booking_flow_test.exs`, visual harness |
 | `label.custom-question-option-card`, `label.custom-question-yes-no-tile` (`.is-yes`, `.is-no`, inside `.custom-question-yes-no`), `input[type="checkbox"][phx-value-value]` | the option, yes/no and acknowledgement inputs | shared (custom-questions inputs) | `custom_fields_booking_flow_test.exs`, `embed_sizes_matrix_test.exs`, visual harness |
 
@@ -1107,10 +1135,10 @@ The step appears only when the meeting type has custom questions. The engine ren
 
 | Hook | Must be on | Provided by | Read by |
 |---|---|---|---|
-| `form[data-testid="booking-form"]` (`id="booking-form"`, `novalidate`, `phx-submit="submit"`) | the booking form | shared (`BookingForm`) | flow helpers, e2e, visual harness, parity and custom-field suites |
-| `[name="booking[name]"]`, `[name="booking[email]"]`, `[name="booking[message]"]` (`input#booking-form_name` and `input#booking-form_email` `required`; a `<span class="text-red-500">` in `label[for="booking-form_name"]` and `label[for="booking-form_email"]`; `.input-error` on an invalid field) | the form's fields | shared (`BookingForm`, the core `input`) | flow helpers, parity suite, visual harness, e2e |
+| `form[data-testid="booking-form"]` (`id="booking-form"`, `novalidate`, `phx-submit="submit"`) | the booking form | shared (`BookingForm`) | e2e, visual harness, parity and custom-field suites; `BookingDriver` reads its `data-fact="attendee"` |
+| `[name="booking[name]"]`, `[name="booking[email]"]`, `[name="booking[message]"]` (`input#booking-form_name` and `input#booking-form_email` `required`; a `<span class="text-red-500">` in `label[for="booking-form_name"]` and `label[for="booking-form_email"]`; `.input-error` on an invalid field) | the form's fields | shared (`BookingForm`, the core `input`) | `BookingDriver.fill_attendee/2` and `submit/2`, parity suite, visual harness, e2e |
 | `booking[website]` (honeypot), `booking[g-recaptcha-response]`, `.recaptcha-notice`, `phx-hook="RecaptchaV3"` on the form when reCAPTCHA is on | the anti-spam fields | shared (`BookingForm`) | `theme_booking_step_parity_test.exs` |
-| `[data-testid="submit-booking"]` | a `<button type="submit" form="booking-form">`, `disabled` until the form is valid and while submitting; its label comes from `BookingLabels.submit_label/3` (it must read "Request meeting", not "Book Meeting", when approval is required) | theme | flow helpers, approval suite, visual harness |
+| `[data-testid="submit-booking"]` | a `<button type="submit" form="booking-form">`, `disabled` until the form is valid and while submitting; its label comes from `BookingLabels.submit_label/3` (it must read "Request meeting", not "Book Meeting", when approval is required) | theme | approval suite, visual harness; it carries `data-intent="submit"` |
 | `[data-testid="back-step"]` | a `<button>` with `phx-click="back_step"` | theme | `custom_fields_booking_flow_test.exs`, e2e, visual harness |
 | `[data-testid="guest-toggle"]`, `guest-input`, `guest-add`, `guest-chip`, `guest-close` (and `form.guest-add` with `novalidate`) | the guest field, inside the form's block | shared (`GuestField`) | `guest_booking_flow_test.exs`, visual harness |
 | `[data-testid="location-field"]`, `location-option`, `location-error`, `video-provider-field`, `video-provider-option` (`data-video-integration-id`) | the location choice, when the meeting type offers one | shared (`LocationField`) | `location_choice_flow_test.exs`, visual harness |
@@ -1120,9 +1148,9 @@ The step appears only when the meeting type has custom questions. The engine ren
 
 | Hook | Must be on | Provided by | Read by |
 |---|---|---|---|
-| `[data-testid="confirmation-heading"]` | the heading shown once the booking is made (and not shown while a preview or a failed booking blocks it) | theme | flow helpers, booking flow and guest suites, visual harness |
+| `[data-testid="confirmation-heading"]` | the heading shown once the booking is made (and not shown while a preview or a failed booking blocks it) | theme | booking flow and guest suites, visual harness |
 | `[data-testid="add-to-calendar"]` | an `<a>` to `PathHandlers.calendar_ics_path/1`, rendered only when a `meeting_uid` is known | theme | `custom_fields_booking_flow_test.exs`, visual harness (`confirmationCta`) |
-| `[data-testid="schedule-another"]` | a `<button>` with `phx-click="schedule_another"` | theme | `reschedule_completion_test.exs`, visual harness (`confirmationCta`) |
+| `[data-testid="schedule-another"]` | a `<button>` with `phx-click="schedule_another"` | theme | `reschedule_completion_test.exs`, visual harness (`confirmationCta`); `BookingDriver.book/2` waits for its `data-intent="restart"` |
 | `.custom-answers`, `.custom-answers__value` | the booker's answers | shared (`CustomAnswers`) | `long_single_select_flow_test.exs` |
 | `[data-testid="approval-notice"]` | when the booking awaits approval (`ApprovalDisplay.awaiting_approval?/1`) | shared (`ApprovalNotice.block/1`), placed by the theme | `theme_approval_disclosure_test.exs` |
 | `[data-testid="awaiting-payment"]` (`#awaiting-payment`, `phx-hook="PaymentRedirectOpenTab"`) | the placeholder for a paid embedded booking | shared (`SchedulingPage`, `AwaitingPayment`) | visual harness |
@@ -1310,7 +1338,7 @@ The checklist automatically verifies:
 - Edge cases work (no meeting types, long names)
 - Basic mobile readiness
 
-The theme's `ThemeTestMatrix` entry adds it to `theme_contract_test.exs`, the shared booking-flow suites (which walk the step transitions) and the e2e `embed_sizes_matrix_test.exs` (embed widths and short heights, run with `mix test.e2e`).
+The theme's `ThemeTestMatrix` entry adds it to `theme_contract_test.exs`, the shared booking-flow suites (which walk a booking through `BookingDriver`) and the e2e `embed_sizes_matrix_test.exs` (embed widths and short heights, run with `mix test.e2e`).
 
 ### Debugging Tips
 
@@ -1367,7 +1395,8 @@ Every place a new theme touches, in the order to add them (`aurora`, id `"3"`, a
 - [ ] **CSS tree** under `assets/css/scheduling/themes/aurora/`: `theme.css` importing `../../shared/entry.css` first, then `./modules/variables.css`, `../../shared/tokens.css`, `./modules/base.css`, `../../shared/embed.css` (the shared embed rules, which `entry.css` does not import), the theme's modules and the `shared/components/*.css` files it uses (every file in `REQUIRED_SHARED_IMPORTS` among them, or `mix css.check_tokens` fails naming it); `modules/variables.css` defining every token `mix css.check_tokens` requires (the scale tokens listed under [Token contract](#token-contract) included) and every colour; `modules/iframe.css` for the theme-specific embed rules; the `booker-card` hook class on each card (`ThemeShell` adds `booker-page` to the page grid and the shared `SlotList` adds `booker-scroll`; a page that bypasses `ThemeShell`, as Quill's payment pages do, adds `booker-page` itself)
 - [ ] **Build config**: nothing to add. `assets/css/scheduling/themes/aurora/theme.css` gives the theme its Tailwind profile (writing `scheduling-theme-aurora.css`), its `tailwind_aurora` dev watcher and its `assets.build`/`assets.minify` entries, all derived by `config/theme_stylesheets.exs`; restart the dev server to pick up a new directory
 - [ ] **Preview image** at `priv/static/images/ui/theme-previews/aurora-theme-preview.webp`, the path `preview_image:` names
-- [ ] **`ThemeTestMatrix` entry** in `test/support/theme_test_matrix.ex`, with `fixture: false` and `schedule_view: :calendar` (a calendar of days, then the chosen day's times) or `:week_grid` (the shared `WeekGrid`, which the shared flow helpers then drive through `Tymeslot.WeekViewTestHelpers`) (`fixture: true` marks a test-only theme registered through `config :tymeslot, :extra_themes` in `config/test.exs`, which the flow suites and the e2e embed matrix skip)
+- [ ] **`ThemeTestMatrix` entry** in `test/support/theme_test_matrix.ex`, with `fixture: false` and `schedule_view: :calendar` (a calendar of days, then the chosen day's times) or `:week_grid` (the shared `WeekGrid`) (`fixture: true` marks a test-only theme registered through `config :tymeslot, :extra_themes` in `config/test.exs`: the booking, approval and race suites and the contract suites run it through `registered/0`, while the suites tied to the shipped themes' own design and the e2e embed matrix (`all/0`) skip it)
+- [ ] **The markup contract** on every moment (§"The markup contract"): `data-fact` on each choice, `data-intent` on each way on, back, to submit and to start again; `markup_contract_test.exs` and `booking_driver_test.exs` then cover the theme once it is registered
 - [ ] Optional: **`onboarding_preview/1`** (see Quill's `onboarding_preview.ex`), so the onboarding wizard shows the theme's shape instead of the generic mock
 - [ ] Optional, with option groups of its own: a panel module for each (one that `use`s `ThemeCustomization.Panel`), named in `option_panels:` on `use TymeslotWeb.Themes.Core.Theme`
 - [ ] Optional, with a video background: a `phx-hook` on the video container, either an existing hook (`QuillVideo` for one looping video) or your own in `assets/js/video_hooks.js`, registered in `assets/js/bundles/public.js`

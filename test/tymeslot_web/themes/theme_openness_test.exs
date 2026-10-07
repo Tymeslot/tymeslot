@@ -16,7 +16,7 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
   import Mox
   import Phoenix.LiveViewTest
   import Tymeslot.DashboardTestHelpers
-  import Tymeslot.ThemeBookingFlowHelpers
+  import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
 
   alias Tymeslot.Onboarding
   alias Tymeslot.Security.RateLimiter

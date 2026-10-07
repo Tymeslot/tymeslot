@@ -12,7 +12,7 @@ defmodule TymeslotWeb.Live.Scheduling.HostCurrencyTest do
 
   import Mox
   import Tymeslot.Factory
-  import Tymeslot.ThemeBookingFlowHelpers
+  import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
 
   alias Tymeslot.TestMocks
 

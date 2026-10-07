@@ -20,12 +20,13 @@ defmodule TymeslotWeb.Themes.Shared.EmbedLocaleSwitchTest do
 
   import Mox
   import Phoenix.LiveViewTest
-  import Tymeslot.ThemeBookingFlowHelpers
+  import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
 
   alias Ecto.Changeset
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.BookingDriver
 
   @parent_origin "https://embedder.test"
   @colour "#e11d48"
@@ -104,11 +105,13 @@ defmodule TymeslotWeb.Themes.Shared.EmbedLocaleSwitchTest do
     attendee_email = "embed-locale@example.com"
 
     confirmation_html =
-      complete_booking_flow(view, "rhythm", "2", %{
-        name: "Embed Locale Attendee",
-        email: attendee_email,
-        message: "Booked inside an embed after switching language"
-      })
+      BookingDriver.book(view,
+        attendee: %{
+          name: "Embed Locale Attendee",
+          email: attendee_email,
+          message: "Booked inside an embed after switching language"
+        }
+      )
 
     assert confirmation_html =~ attendee_email
 

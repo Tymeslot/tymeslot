@@ -61,4 +61,11 @@ defmodule TymeslotWeb.ThemeTestMatrixTest do
              "#{entry.name} has no schedule_view (:calendar or :week_grid)"
     end
   end
+
+  test "says which journey each theme walks" do
+    for entry <- ThemeTestMatrix.registered() do
+      assert Map.get(entry, :journey) in [:classic, :custom],
+             "#{entry.name} has no journey (:classic or :custom)"
+    end
+  end
 end

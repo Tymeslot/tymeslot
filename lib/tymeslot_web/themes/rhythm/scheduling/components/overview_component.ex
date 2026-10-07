@@ -80,6 +80,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                       class="duration-button"
                       data-testid="duration-option"
                       data-duration={slug}
+                      data-fact="meeting_type"
+                      data-value={slug}
                     >
                       <div class="duration-icon shrink-0">
                         {render_icon(meeting_type.icon || get_default_icon(meeting_type))}
@@ -108,6 +110,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                 phx-click="next_step"
                 phx-target={@myself}
                 data-testid="next-step"
+                data-intent="continue"
                 disabled={is_nil(@selected_duration)}
               >
                 {dgettext("booking", "Next")} →

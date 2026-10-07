@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Themes.StepAssignsDocTest do
 
   import Mox
   import Phoenix.LiveViewTest
-  import Tymeslot.ThemeBookingFlowHelpers
+  import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
 
   alias Tymeslot.TestMocks
   alias TymeslotWeb.ThemeTestMatrix
