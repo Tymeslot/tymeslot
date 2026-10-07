@@ -66,6 +66,8 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.OverviewComponent do
                   phx-target={@myself}
                   data-testid="duration-option"
                   data-duration={slug}
+                  data-fact="meeting_type"
+                  data-value={slug}
                   aria-pressed={to_string(@selected_duration == slug)}
                 >
                   <span class="folio-meeting__name">
@@ -91,6 +93,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.OverviewComponent do
             phx-click="next_step"
             phx-target={@myself}
             data-testid="next-step"
+            data-intent="continue"
             disabled={is_nil(@selected_duration)}
           >
             {dgettext("booking", "Next")}

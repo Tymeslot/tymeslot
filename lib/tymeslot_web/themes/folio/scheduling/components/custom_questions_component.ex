@@ -64,6 +64,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.CustomQuestionsComponen
             type="button"
             class="folio-button folio-button--quiet"
             phx-click="back_step"
+            data-intent="back"
             phx-target={@myself}
           >
             <.icon name="hero-arrow-left-mini" class="folio-button__icon" />
@@ -73,6 +74,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.CustomQuestionsComponen
             type="button"
             class="folio-button folio-button--primary"
             phx-click="next_step"
+            data-intent="continue"
             phx-target={@myself}
           >
             {if @last?, do: dgettext("booking", "Continue"), else: dgettext("booking", "Next")}

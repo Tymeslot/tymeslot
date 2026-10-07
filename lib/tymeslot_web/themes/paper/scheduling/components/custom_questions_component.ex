@@ -48,6 +48,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.CustomQuestionsComponen
           type="button"
           class="paper-button paper-button--quiet"
           phx-click="back_step"
+          data-intent="back"
           phx-target={@myself}
         >
           <.icon name="hero-arrow-left-mini" class="paper-button__icon" />
@@ -57,6 +58,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.CustomQuestionsComponen
           type="button"
           class="paper-button paper-button--primary"
           phx-click="next_step"
+          data-intent="continue"
           phx-target={@myself}
         >
           <span class="custom-question-cta-nowrap">

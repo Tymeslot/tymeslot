@@ -90,6 +90,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ScheduleComponent do
               type="button"
               class="folio-calendar__nav calendar-nav-button"
               phx-click="prev_month"
+              data-intent="earlier"
               phx-target={@myself}
               aria-label={@prev_month_label}
               disabled={
@@ -109,6 +110,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ScheduleComponent do
               type="button"
               class="folio-calendar__nav calendar-nav-button"
               phx-click="next_month"
+              data-intent="later"
               phx-target={@myself}
               aria-label={@next_month_label}
               disabled={
@@ -152,6 +154,8 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ScheduleComponent do
                 ]}
                 data-testid="calendar-day"
                 data-date={day[:date]}
+                data-fact={day[:current_month] && "date"}
+                data-value={day[:current_month] && day[:date]}
                 phx-click="select_date"
                 phx-value-date={day[:date]}
                 phx-target={@myself}
@@ -188,6 +192,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ScheduleComponent do
             phx-click="back_step"
             phx-target={@myself}
             data-testid="back-step"
+            data-intent="back"
           >
             <.icon name="hero-arrow-left-mini" class="folio-button__icon" />
             {dgettext("booking", "Back")}
@@ -198,6 +203,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ScheduleComponent do
             phx-click="next_step"
             phx-target={@myself}
             data-testid="next-step"
+            data-intent="continue"
             disabled={is_nil(@selected_date) or is_nil(@selected_time)}
           >
             {dgettext("booking", "Next")}

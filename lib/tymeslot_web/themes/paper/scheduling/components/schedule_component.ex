@@ -158,6 +158,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
           phx-click="back_step"
           phx-target={@myself}
           data-testid="back-step"
+          data-intent="back"
         >
           <.icon name="hero-arrow-left-mini" class="paper-button__icon" />
           {dgettext("booking", "Back")}
@@ -185,6 +186,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
           phx-click="next_step"
           phx-target={@myself}
           data-testid="next-step"
+          data-intent="continue"
           disabled={not @chosen}
         >
           {dgettext("booking", "Next")}
@@ -261,6 +263,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
             type="button"
             class="calendar-nav-button paper-calendar__nav-button"
             phx-click="prev_month"
+            data-intent="earlier"
             phx-target={@target}
             aria-label={CalendarNavigation.month_nav_label(:prev)}
             disabled={CalendarNavigation.prev_month_disabled?(@year, @month, @timezone)}
@@ -274,6 +277,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
             type="button"
             class="calendar-nav-button paper-calendar__nav-button"
             phx-click="next_month"
+            data-intent="later"
             phx-target={@target}
             aria-label={CalendarNavigation.month_nav_label(:next)}
             disabled={
@@ -306,6 +310,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
           ]}
           data-testid="calendar-day"
           data-date={day[:date]}
+          data-fact={day[:current_month] && "date"}
+          data-value={day[:current_month] && day[:date]}
           phx-click="select_date"
           phx-value-date={day[:date]}
           phx-target={@target}

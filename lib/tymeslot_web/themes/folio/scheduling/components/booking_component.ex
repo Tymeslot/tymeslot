@@ -115,6 +115,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.BookingComponent do
             phx-click="back_step"
             phx-target={@myself}
             data-testid="back-step"
+            data-intent="back"
             disabled={@submitting}
           >
             <.icon name="hero-arrow-left-mini" class="folio-button__icon" />
@@ -125,6 +126,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.BookingComponent do
             form="booking-form"
             class="folio-button folio-button--primary"
             data-testid="submit-booking"
+            data-intent="submit"
             disabled={@submitting || !OrganizerHelpers.form_valid?(@form)}
           >
             <%= if @submitting do %>

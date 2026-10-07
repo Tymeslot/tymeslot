@@ -128,6 +128,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
             phx-click="schedule_another"
             phx-target={@myself}
             data-testid="schedule-another"
+            data-intent="restart"
           >
             {dgettext("booking", "Schedule Another Meeting")}
           </button>
