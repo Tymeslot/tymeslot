@@ -345,3 +345,13 @@ msgstr "Тип зустрічі тепер може пропонувати кі�
 #, elixir-autogen, elixir-format
 msgid "Let people choose where you meet"
 msgstr "Дозвольте обирати, де зустрітися"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Host webinars, workshops and classes"
+msgstr "Проводьте вебінари, воркшопи та заняття"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Turn any meeting type into a group session. Set how many people can join and each slot stays open until it's full, so one booking page can run your webinar, workshop, class or office hours. Everyone books themselves in, gets their own confirmation and calendar invite, and can cancel or reschedule without asking you."
+msgstr "Перетворіть будь-який тип зустрічі на групову сесію. Вкажіть, скільки людей може долучитися, і кожен слот залишатиметься відкритим, доки не заповниться, тож одна сторінка бронювання обслужить ваш вебінар, воркшоп, заняття чи консультації. Кожен записується сам, отримує власне підтвердження й запрошення в календар, а скасувати чи перенести бронювання може, не питаючи вас."
