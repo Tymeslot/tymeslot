@@ -599,25 +599,3 @@ SELECT p.id, DATE '2026-12-31', 'custom_hours', TIME '10:00', TIME '14:00', 'Sho
 
 INSERT INTO availability_overrides (profile_id, date, override_type, start_time, end_time, reason, inserted_at, updated_at)
 SELECT p.id, DATE '2027-01-02', 'available', NULL, NULL, NULL, NOW(), NOW() FROM profiles p;
-
--- Hours written as "until the end of the day" before they could end on the
--- next day: 23:59, and 23:59:59 as a self-hosted database might hold it, with
--- a break running to the end. The midnight rewrite has to turn these into
--- "00:00 (+1)" and leave every other window, break and override alone.
-UPDATE weekly_availability SET is_available = true, start_time = TIME '00:00', end_time = TIME '23:59'
-WHERE day_of_week = 6
-  AND profile_id IN (SELECT p.id FROM profiles p JOIN users u ON u.id = p.user_id WHERE u.email = 'seed-user-1@example.com');
-
-UPDATE weekly_availability SET is_available = true, start_time = TIME '18:00', end_time = TIME '23:59:59'
-WHERE day_of_week = 7
-  AND profile_id IN (SELECT p.id FROM profiles p JOIN users u ON u.id = p.user_id WHERE u.email = 'seed-user-1@example.com');
-
-INSERT INTO availability_breaks (weekly_availability_id, start_time, end_time, label, sort_order, inserted_at, updated_at)
-SELECT wa.id, TIME '22:00', TIME '23:59', 'Wind down', 0, NOW(), NOW()
-FROM weekly_availability wa
-JOIN profiles p ON p.id = wa.profile_id
-JOIN users u ON u.id = p.user_id
-WHERE wa.day_of_week = 6 AND u.email = 'seed-user-1@example.com';
-
-INSERT INTO availability_overrides (profile_id, date, override_type, start_time, end_time, reason, inserted_at, updated_at)
-SELECT p.id, DATE '2027-01-05', 'custom_hours', TIME '18:00', TIME '23:59', 'Late night', NOW(), NOW() FROM profiles p;

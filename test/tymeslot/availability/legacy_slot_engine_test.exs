@@ -23,11 +23,9 @@ defmodule Tymeslot.Availability.LegacySlotEngineTest do
   # those labels.
   #
   # Windows ending at 23:59 or 23:59:59 are generated as stored, unflagged:
-  # that is what existing schedules hold until the rewrite migration
-  # (Task 8A), and the new engine must read them exactly as the old one did
-  # (23:59:59 reads as 23:59, which changes no minute-aligned slot). What the
-  # rewrite itself changes is pinned separately, by
-  # `MidnightRewritePropertyTest`.
+  # the editor never offered such an end, but a row written through the
+  # database can hold one, and the new engine must read it exactly as the old
+  # one did (23:59:59 reads as 23:59, which changes no minute-aligned slot).
   #
   # Only runs where the old engine listed something are counted towards the
   # floor below: an empty day on both sides compares nothing.

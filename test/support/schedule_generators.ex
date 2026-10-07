@@ -68,9 +68,10 @@ defmodule Tymeslot.Test.ScheduleGenerators do
   end
 
   @doc """
-  A window as hosts stored them before overnight hours: a same-day quarter-hour
-  window, or one ending at 23:59 or 23:59:59 (how "until the end of the day"
-  had to be written), possibly with a break running to that end.
+  A window as it could be stored before overnight hours: a same-day
+  quarter-hour window, or one ending at 23:59 or 23:59:59 (never offered by the
+  editor, but writable through the database), possibly with a break running to
+  that end.
   """
   @spec legacy_window() :: StreamData.t(map())
   def legacy_window, do: one_of([same_day_window(), until_end_of_day_window()])
