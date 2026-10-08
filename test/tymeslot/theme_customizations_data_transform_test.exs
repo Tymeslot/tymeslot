@@ -17,7 +17,7 @@ defmodule Tymeslot.ThemeCustomizationsDataTransformTest do
           "background_value" => "custom",
           "background_image_path" => "themes/1/1/images/a.jpg"
         },
-        video_processing: "pending"
+        video_processing_status: %{"background_video_path" => "pending"}
       }
 
       assert DataTransform.to_settings(customization) == %{

@@ -43,7 +43,17 @@ defmodule TymeslotWeb.Themes.Core.ThemeTest.Fixture.Theme do
       dgettext_noop(
         "dashboard_appearance",
         "Modern sliding design with video background and a 4-slide booking flow."
-      )
+      ),
+    story: dgettext_noop("dashboard_appearance", "A theme for the macro's own tests."),
+    axes: [
+      surface: :flat_light_card,
+      voice: :neutral,
+      flow: :paged_wizard,
+      entry: :meeting_type_first,
+      spatial: :centred_card,
+      time_view: :month_grid,
+      conversion: :none
+    ]
 end
 
 defmodule TymeslotWeb.Themes.Core.ThemeTest.Overriding.Theme do
@@ -59,7 +69,17 @@ defmodule TymeslotWeb.Themes.Core.ThemeTest.Overriding.Theme do
       dgettext_noop(
         "dashboard_appearance",
         "Modern sliding design with video background and a 4-slide booking flow."
-      )
+      ),
+    story: dgettext_noop("dashboard_appearance", "A theme for the macro's own tests."),
+    axes: [
+      surface: :flat_light_card,
+      voice: :neutral,
+      flow: :paged_wizard,
+      entry: :meeting_type_first,
+      spatial: :centred_card,
+      time_view: :month_grid,
+      conversion: :none
+    ]
 
   @impl TymeslotWeb.Themes.Core.Behaviour
   def render_poll_action(_assigns), do: :overridden
@@ -79,10 +99,35 @@ defmodule TymeslotWeb.Themes.Core.ThemeTest do
   @moduletag :themes
   @moduletag :unit
 
+  alias TymeslotWeb.Test.FixtureTheme.Theme, as: RegisteredFixture
+  alias TymeslotWeb.Test.FixtureTheme.Voice, as: FixtureVoice
   alias TymeslotWeb.Themes.Core.ThemeTest.Fixture.Theme, as: Fixture
   alias TymeslotWeb.Themes.Core.ThemeTest.Overriding.Theme, as: Overriding
 
   @assigns %{marker: :assigns}
+
+  @story_source ~s{story: dgettext_noop("dashboard_appearance", "A theme for the macro's own tests.")}
+
+  @axes_source "axes: [flow: :paged_wizard, entry: :meeting_type_first, " <>
+                 "spatial: :centred_card, time_view: :month_grid, conversion: :none, " <>
+                 "voice: :neutral, surface: :glass]"
+
+  # A theme module's source, named after `name`: the three options every
+  # theme has, then `options` (each a `key: value` source), comma-separated.
+  defp theme_source(name, options) do
+    common = [
+      "live_view: Some.Live",
+      ~s(preview_image: "/images/fixture.webp"),
+      ~s{description: dgettext_noop("dashboard_appearance", "A theme for the macro's own tests.")}
+    ]
+
+    """
+    defmodule TymeslotWeb.Themes.Core.ThemeTest.#{name}.Theme do
+      use TymeslotWeb.Themes.Core.Theme,
+        #{Enum.join(common ++ options, ",\n    ")}
+    end
+    """
+  end
 
   test "declares the theme behaviour" do
     behaviours = Keyword.get_values(Fixture.module_info(:attributes), :behaviour)
@@ -147,6 +192,14 @@ defmodule TymeslotWeb.Themes.Core.ThemeTest do
            }
   end
 
+  test "voice/0 defaults to none" do
+    assert Fixture.voice() == nil
+  end
+
+  test "voice/0 returns the :voice option" do
+    assert RegisteredFixture.voice() == FixtureVoice
+  end
+
   # The macro under test runs inside Code.compile_string/1, where the check
   # cannot see it.
   # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
@@ -160,6 +213,57 @@ defmodule TymeslotWeb.Themes.Core.ThemeTest do
           description: "not translatable"
       end
       """)
+    end
+  end
+
+  test "story/0 returns the :story option" do
+    assert Fixture.story() == "A theme for the macro's own tests."
+  end
+
+  test "axes/0 returns the :axes option in the canonical order" do
+    assert Fixture.axes() == [
+             flow: :paged_wizard,
+             entry: :meeting_type_first,
+             spatial: :centred_card,
+             time_view: :month_grid,
+             conversion: :none,
+             voice: :neutral,
+             surface: :flat_light_card
+           ]
+  end
+
+  # The macro under test runs inside Code.compile_string/1, where the check
+  # cannot see it.
+  # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
+  test "requires a story, as a dgettext_noop/2 call in the description's domain" do
+    assert_raise ArgumentError, ~r/needs :story/, fn ->
+      Code.compile_string(theme_source("NoStory", [@axes_source]))
+    end
+
+    assert_raise ArgumentError, ~r/:story.*dgettext_noop/, fn ->
+      Code.compile_string(theme_source("PlainStory", [~s(story: "mine"), @axes_source]))
+    end
+
+    assert_raise ArgumentError, ~r/same domain/, fn ->
+      Code.compile_string(
+        theme_source("OtherDomain", [
+          ~s{story: dgettext_noop("booking", "A theme for the macro's own tests.")},
+          @axes_source
+        ])
+      )
+    end
+  end
+
+  # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
+  test "requires the seven axes, each with one of its values" do
+    assert_raise ArgumentError, ~r/needs :axes/, fn ->
+      Code.compile_string(theme_source("NoAxes", [@story_source]))
+    end
+
+    assert_raise ArgumentError, ~r/:glassy/, fn ->
+      Code.compile_string(
+        theme_source("BadAxis", [@story_source, String.replace(@axes_source, ":glass", ":glassy")])
+      )
     end
   end
 

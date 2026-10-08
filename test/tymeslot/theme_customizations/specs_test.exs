@@ -551,15 +551,16 @@ defmodule Tymeslot.ThemeCustomizations.SpecsTest do
   end
 
   describe "asset fields and the transcoder" do
-    # `VideoTranscoder` records its status in the row's one `video_processing`
-    # column and is unique per row, so it can follow one video per theme.
-    test "every catalogued spec declares at most one video field" do
-      specs = Enum.map(Catalog.valid_ids(), &Specs.for_theme/1)
-      assert specs != []
+    # Each video's processing state lives under its own field and gets a
+    # transcoding job of its own, so a theme may offer several.
+    test "a catalogued spec may declare several video fields, each an upload of its own" do
+      {:ok, spec} = Catalog.customization_spec("99")
 
-      assert Enum.reject(specs, fn spec ->
-               Enum.count(spec.asset_fields(), &match?({_field, :video}, &1)) <= 1
-             end) == []
+      videos = for {field, :video} <- spec.asset_fields(), do: field
+      assert videos == [:fixture_intro_clip_path, :fixture_outro_clip_path]
+
+      assert Enum.reject(videos, &match?({:ok, _group, :video}, Specs.upload_group(spec, &1))) ==
+               []
     end
   end
 end

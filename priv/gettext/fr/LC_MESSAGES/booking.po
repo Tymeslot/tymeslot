@@ -156,6 +156,7 @@ msgstr "Après-midi"
 msgid "Appointment host"
 msgstr "Organisateur du rendez-vous"
 
+#: lib/tymeslot_web/themes/shared/blocks/next_slots.ex
 #: lib/tymeslot_web/themes/shared/components/slot_list.ex
 #: lib/tymeslot_web/themes/shared/components/week_grid.ex
 #, elixir-autogen, elixir-format
@@ -177,6 +178,8 @@ msgstr "Réservations ouvertes jusqu’à %{advance}"
 #: lib/tymeslot_web/themes/folio/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/blocks/day_chips.ex
+#: lib/tymeslot_web/themes/shared/blocks/month_calendar.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar is loading slowly"
 msgstr "Le calendrier se charge lentement"
@@ -310,6 +313,9 @@ msgid "Let's Connect!"
 msgstr "Prenons rendez-vous !"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/blocks/agenda_index.ex
+#: lib/tymeslot_web/themes/shared/blocks/day_chips.ex
+#: lib/tymeslot_web/themes/shared/blocks/next_slots.ex
 #: lib/tymeslot_web/themes/shared/components/slot_list.ex
 #: lib/tymeslot_web/themes/shared/components/week_grid.ex
 #, elixir-autogen, elixir-format
@@ -323,6 +329,7 @@ msgstr "LUN"
 
 #: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/shared/blocks/summary_bar.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Details"
 msgstr "Détails de la réunion"
@@ -499,6 +506,7 @@ msgid "Search cities, countries, or timezones..."
 msgstr "Rechercher des villes, pays ou fuseaux horaires..."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/blocks/day_chips.ex
 #, elixir-autogen, elixir-format
 msgid "Select a Date"
 msgstr "Sélectionner une date"
@@ -1416,16 +1424,22 @@ msgstr "Réessayer"
 msgid "Your last action could not be completed. Please try again."
 msgstr "Votre dernière action n’a pas pu être effectuée. Veuillez réessayer."
 
+#: lib/tymeslot_web/themes/shared/blocks/agenda_index.ex
+#: lib/tymeslot_web/themes/shared/blocks/next_slots.ex
 #: lib/tymeslot_web/themes/shared/components/week_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Next week"
 msgstr "Semaine suivante"
 
+#: lib/tymeslot_web/themes/shared/blocks/agenda_index.ex
+#: lib/tymeslot_web/themes/shared/blocks/day_chips.ex
+#: lib/tymeslot_web/themes/shared/blocks/next_slots.ex
 #: lib/tymeslot_web/themes/shared/components/week_grid.ex
 #, elixir-autogen, elixir-format
 msgid "No times available"
 msgstr "Aucun horaire disponible"
 
+#: lib/tymeslot_web/themes/shared/blocks/agenda_index.ex
 #: lib/tymeslot_web/themes/shared/components/week_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Previous week"
@@ -1478,3 +1492,23 @@ msgstr "Thèmes de la démo"
 #, elixir-autogen, elixir-format
 msgid "Try another theme"
 msgstr "Essayer un autre thème"
+
+#: lib/tymeslot_web/themes/shared/blocks/day_chips.ex
+#, elixir-autogen, elixir-format
+msgid "%{weekday} %{day}"
+msgstr "%{weekday} %{day}"
+
+#: lib/tymeslot_web/themes/shared/blocks/day_chips.ex
+#, elixir-autogen, elixir-format
+msgid "Today"
+msgstr "Aujourd'hui"
+
+#: lib/tymeslot_web/themes/shared/blocks/day_chips.ex
+#, elixir-autogen, elixir-format
+msgid "Tomorrow"
+msgstr "Demain"
+
+#: lib/tymeslot_web/themes/shared/blocks/next_slots.ex
+#, elixir-autogen, elixir-format
+msgid "More times"
+msgstr "Plus d'horaires"

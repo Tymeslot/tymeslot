@@ -604,19 +604,23 @@ test_colour_literals() {
 }
 
 # The shared component styles (shared/components/) hold rules moved out of
-# the themes, so they follow the same spacing and border-width rules.
+# the themes, and the blocks (shared/blocks/) the markup any theme may render
+# for a fact, so both follow the same spacing and border-width rules.
 test_shared_components() {
-  local components_path="$SCHEDULING_CSS_ROOT/shared/components"
-  [ -d "$components_path" ] || return 0
+  local dir path
+  for dir in components blocks; do
+    path="$SCHEDULING_CSS_ROOT/shared/$dir"
+    [ -d "$path" ] || continue
 
-  echo ""
-  echo "🧩 Testing shared components: $components_path"
-  echo "================================"
+    echo ""
+    echo "🧩 Testing shared $dir: $path"
+    echo "================================"
 
-  FAILED=0
-  test_hardcoded_spacing "$components_path"
-  test_hardcoded_borders "$components_path"
-  [ $FAILED -eq 1 ] && SHARED_FAILED=1
+    FAILED=0
+    test_hardcoded_spacing "$path"
+    test_hardcoded_borders "$path"
+    [ $FAILED -eq 1 ] && SHARED_FAILED=1
+  done
   return 0
 }
 

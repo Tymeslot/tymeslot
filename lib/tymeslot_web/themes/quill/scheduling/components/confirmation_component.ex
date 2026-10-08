@@ -308,18 +308,18 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   defp subtitle(assigns) do
     case ConfirmationText.status(assigns) do
       :held ->
-        ConfirmationText.held_message(assigns[:name], assigns[:organizer_profile])
+        ConfirmationText.held_message(assigns[:name], assigns[:organizer_profile], :quill)
 
       :rescheduled ->
         dgettext("booking", "%{name}, your meeting %{organizer} has been rescheduled.",
           name: assigns[:name],
-          organizer: ConfirmationText.organizer_fragment(assigns[:organizer_profile])
+          organizer: ConfirmationText.organizer_fragment(assigns[:organizer_profile], :quill)
         )
 
       :confirmed ->
         dgettext("booking", "%{name}, your meeting %{organizer} is all set.",
           name: assigns[:name],
-          organizer: ConfirmationText.organizer_fragment(assigns[:organizer_profile])
+          organizer: ConfirmationText.organizer_fragment(assigns[:organizer_profile], :quill)
         )
     end
   end

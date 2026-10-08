@@ -40,11 +40,11 @@ defmodule TymeslotWeb.BookingDriverTest do
   # (Reconciliation 24).
   @stepwise Enum.filter(ThemeTestMatrix.registered(), &(&1.journey == :classic))
 
-  # Pickers that show a bounded run of days with no way to a later one while
-  # it has a free time: Fixture Talk's `DayChips` (JC6, no period arrows) and
-  # Fixture Express's `NextSlots` (JC7, "Next week" only for a week with no
-  # free time). On these the pick tests ask for a day the picker shows.
-  @bounded ["94", "95"]
+  # Pickers that show a bounded run of days with no way to a later one:
+  # Fixture Talk's `DayChips` (JC6, no period arrows). On these the pick
+  # tests ask for a day the picker shows. `NextSlots` always offers the next
+  # week, so Fixture Express is not among them.
+  @bounded ["95"]
 
   setup :verify_on_exit!
 

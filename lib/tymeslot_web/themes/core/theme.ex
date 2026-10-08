@@ -6,7 +6,9 @@ defmodule TymeslotWeb.Themes.Core.Theme do
         use TymeslotWeb.Themes.Core.Theme,
           live_view: TymeslotWeb.Themes.Quill.Scheduling.Live,
           preview_image: "/images/ui/theme-previews/quill-theme-preview.webp",
-          description: dgettext_noop("dashboard_appearance", "…")
+          description: dgettext_noop("dashboard_appearance", "…"),
+          story: dgettext_noop("dashboard_appearance", "…"),
+          axes: [flow: :paged_wizard, entry: :meeting_type_first, ...]
       end
 
   It declares `TymeslotWeb.Themes.Core.Behaviour` and generates:
@@ -15,6 +17,13 @@ defmodule TymeslotWeb.Themes.Core.Theme do
     * `metadata/0`, returning `:preview_image` and `:description` translated
       into the current locale. The description must be a `dgettext_noop/2`
       call, so extraction registers it and the lookup knows its domain;
+    * `story/0`, the `:story` option (required) translated into the current
+      locale: the theme's persona in the organiser's own words, one
+      sentence. Like the description it must be a `dgettext_noop/2` call,
+      in the description's domain;
+    * `axes/0`, the `:axes` option (required): one value on each of the
+      seven design axes, checked against `TymeslotWeb.Themes.Core.Axes`
+      while the theme compiles and returned in the canonical order;
     * the render callbacks, dispatching to the conventional modules under the
       theme's namespace, each with a `render/1`: `Meeting.Reschedule`,
       `Meeting.Cancel`, `Meeting.CancelConfirmed`, `Poll.Voting`,
@@ -27,7 +36,10 @@ defmodule TymeslotWeb.Themes.Core.Theme do
       `TymeslotWeb.OnboardingLive.PreviewParts`;
     * `option_panels/0`, returning `:option_panels` (default `%{}`): the
       dashboard panels for the theme's own option groups,
-      `%{group_module => panel_module}`.
+      `%{group_module => panel_module}`;
+    * `voice/0`, returning `:voice` (default `nil`): the module implementing
+      `TymeslotWeb.Themes.Shared.Voice` that words the shared booking lines
+      for this theme; without one the theme keeps the shared wording.
 
   Every render callback is overridable; an override carries
   `@impl TymeslotWeb.Themes.Core.Behaviour` like any other callback. A
@@ -39,15 +51,20 @@ defmodule TymeslotWeb.Themes.Core.Theme do
   # Aliased here, outside the quote, so the generated default expands to the
   # full module name and nothing is aliased inside the theme module.
   alias TymeslotWeb.OnboardingLive.PreviewParts
+  alias TymeslotWeb.Themes.Core.Axes
   alias TymeslotWeb.Themes.Shared.DefaultPages
 
   @doc false
   defmacro __using__(opts) do
     live_view = Keyword.fetch!(opts, :live_view)
     preview_image = Keyword.fetch!(opts, :preview_image)
-    {description, domain} = translatable!(Keyword.fetch!(opts, :description))
+    {description, domain} = translatable!(Keyword.fetch!(opts, :description), :description)
+    {story, story_domain} = translatable!(required!(opts, :story), :story)
+    same_domain!(story_domain, domain)
+    axes = required!(opts, :axes)
     renders = renders(Keyword.get(opts, :page_shell), __CALLER__.module)
     option_panels = Keyword.get(opts, :option_panels, Macro.escape(%{}))
+    voice = Keyword.get(opts, :voice)
 
     quote do
       @behaviour TymeslotWeb.Themes.Core.Behaviour
@@ -66,6 +83,18 @@ defmodule TymeslotWeb.Themes.Core.Theme do
         }
       end
 
+      @impl TymeslotWeb.Themes.Core.Behaviour
+      def story, do: Gettext.dgettext(TymeslotWeb.Gettext, unquote(domain), unquote(story))
+
+      # Checked in the theme's own body, not by this macro, so the compile-time
+      # dependency on Axes is the theme's: this module keeps none of its own,
+      # and a theme's compile edge to it stays out of the compile-connected
+      # graph.
+      @theme_axes Axes.validate!(unquote(axes))
+
+      @impl TymeslotWeb.Themes.Core.Behaviour
+      def axes, do: @theme_axes
+
       unquote(renders)
 
       @impl TymeslotWeb.Themes.Core.Behaviour
@@ -73,6 +102,9 @@ defmodule TymeslotWeb.Themes.Core.Theme do
 
       @impl TymeslotWeb.Themes.Core.Behaviour
       def option_panels, do: unquote(option_panels)
+
+      @impl TymeslotWeb.Themes.Core.Behaviour
+      def voice, do: unquote(voice)
 
       defoverridable render_meeting_action: 2,
                      render_poll_action: 1,
@@ -140,14 +172,37 @@ defmodule TymeslotWeb.Themes.Core.Theme do
     |> Module.concat()
   end
 
-  defp translatable!({:dgettext_noop, _meta, [domain, msgid]} = ast)
+  defp translatable!({:dgettext_noop, _meta, [domain, msgid]} = ast, _option)
        when is_binary(domain) and is_binary(msgid),
        do: {ast, domain}
 
-  defp translatable!(other) do
+  defp translatable!(other, option) do
     raise ArgumentError,
-          "the :description option of use TymeslotWeb.Themes.Core.Theme must be a " <>
+          "the #{inspect(option)} option of use TymeslotWeb.Themes.Core.Theme must be a " <>
             "dgettext_noop/2 call with a literal domain and msgid, got: " <>
             Macro.to_string(other)
+  end
+
+  # A theme is described by its persona: a story and its seven axes. A theme
+  # that has neither has not been designed yet.
+  defp required!(opts, option) do
+    case Keyword.fetch(opts, option) do
+      {:ok, value} ->
+        value
+
+      :error ->
+        raise ArgumentError,
+              "use TymeslotWeb.Themes.Core.Theme needs #{inspect(option)}: a theme starts " <>
+                "from its persona, a one-sentence story and a value on each design axis " <>
+                "(TymeslotWeb.Themes.Core.Axes)"
+    end
+  end
+
+  defp same_domain!(domain, domain), do: :ok
+
+  defp same_domain!(story_domain, description_domain) do
+    raise ArgumentError,
+          "the :story option of use TymeslotWeb.Themes.Core.Theme must be in the same domain " <>
+            "as the :description (#{inspect(description_domain)}), got: #{inspect(story_domain)}"
   end
 end

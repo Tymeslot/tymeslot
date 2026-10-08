@@ -123,6 +123,27 @@ defmodule TymeslotWeb.Live.Scheduling.WeekSlotsTest do
     end
   end
 
+  describe "free_days/2" do
+    test "lists the days from today on with a free time, in date order" do
+      week = %{
+        "2027-03-12" => ["2:00 PM"],
+        "2027-03-08" => ["9:00 AM"],
+        "2027-03-10" => [%{time: "9:00 AM", available: true}],
+        "2027-03-11" => []
+      }
+
+      assert [
+               %{iso: "2027-03-10", date: ~D[2027-03-10], slots: ["9:00 AM"]},
+               %{iso: "2027-03-12"}
+             ] =
+               WeekSlots.free_days(week, ~D[2027-03-10])
+    end
+
+    test "is empty when no week is loaded" do
+      assert WeekSlots.free_days(nil, ~D[2027-03-10]) == []
+    end
+  end
+
   describe "offered?/3" do
     test "is true for a time the loaded week offers on that day" do
       assert WeekSlots.offered?(%{week_slots: @slots}, "2027-03-08", "9:00 AM")

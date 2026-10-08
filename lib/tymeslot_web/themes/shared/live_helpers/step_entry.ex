@@ -35,6 +35,8 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine, as: QEngine
   alias TymeslotWeb.Themes.Shared.Journey.Facts.Answers
+  alias TymeslotWeb.Themes.Shared.Journey.Progress
+  alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.PathHandlers
   alias TymeslotWeb.Themes.Shared.ReschedulePin
 
@@ -321,15 +323,24 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
 
   # `/:username/:slug/book` can be entered directly (a reschedule deep-link,
   # or a locale switch mid-flow, both of which redirect straight back to this
-  # URL). Neither passes through the `:questions` step, so a meeting type with
-  # required custom fields would otherwise seed the engine with definitions
-  # but no answers and render the booking step, which has no UI for them —
-  # every submit then fails validation with no way to correct it. Route to
-  # `:questions` instead whenever the freshly-resolved engine still needs it;
-  # forward navigation from there already lands back on `:booking`.
+  # URL). Neither passes through the moment collecting the answers (the
+  # classic questions step), so a meeting type with required custom fields
+  # would otherwise seed the engine with definitions but no answers and render
+  # the attendee's moment, which has no UI for them; every submit then fails
+  # validation with no way to correct it. Route to the answers' moment instead
+  # whenever the freshly-resolved engine still needs it; forward navigation
+  # from there already lands back on the attendee's. A moment that collects
+  # the answers itself asks them where it is, so it stays: moving to it would
+  # enter the attendee's moment again, and again. That is read from the
+  # journey, not from `current_state`, which a navigator may update only
+  # after the moment has opened.
   defp maybe_route_to_questions(socket) do
-    if needs_questions_step?(socket.assigns[:engine]) do
-      assign(socket, :current_state, :questions)
+    journey = socket.assigns.journey
+    answers_moment = Progress.moment_for(journey, :answers)
+
+    if needs_questions_step?(socket.assigns[:engine]) and
+         answers_moment != Progress.moment_for(journey, :attendee) do
+      Runtime.transition_to(socket, answers_moment, %{})
     else
       socket
     end

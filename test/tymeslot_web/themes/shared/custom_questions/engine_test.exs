@@ -175,4 +175,30 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.EngineTest do
       assert s.answers == %{}
     end
   end
+
+  describe "confirm/1" do
+    test "answers that validate are not confirmed until the booker confirms them" do
+      d = build_def("short_text")
+      s = [d] |> Engine.init() |> Engine.answer(d["id"], "Acme")
+
+      refute Engine.confirmed?(s)
+      assert Engine.confirmed?(Engine.confirm(s))
+    end
+
+    test "a changed answer needs confirming again; the same answer does not" do
+      d = build_def("short_text")
+      s = [d] |> Engine.init() |> Engine.answer(d["id"], "Acme") |> Engine.confirm()
+
+      assert Engine.confirmed?(Engine.answer(s, d["id"], "Acme"))
+      refute Engine.confirmed?(Engine.answer(s, d["id"], "Initech"))
+    end
+
+    test "leaves the carried answers' review to mark_reviewed/1" do
+      d = build_def("short_text")
+      s = Engine.prefill(Engine.init([d]), %{d["id"] => "Contract renewal"})
+
+      assert Engine.pending_review?(Engine.confirm(s))
+      refute Engine.confirmed?(Engine.mark_reviewed(s))
+    end
+  end
 end

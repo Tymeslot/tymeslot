@@ -240,12 +240,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   defp confirmation_message(assigns) do
     case ConfirmationText.status(assigns) do
       :held ->
-        ConfirmationText.held_message(assigns[:name], assigns[:organizer_profile])
+        ConfirmationText.held_message(assigns[:name], assigns[:organizer_profile], :rhythm)
 
       _confirmed_or_rescheduled ->
         dgettext("booking", "%{name}, your meeting %{organizer} is confirmed",
           name: assigns[:name],
-          organizer: ConfirmationText.organizer_fragment(assigns[:organizer_profile])
+          organizer: ConfirmationText.organizer_fragment(assigns[:organizer_profile], :rhythm)
         )
     end
   end

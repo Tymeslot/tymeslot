@@ -15,6 +15,7 @@ defmodule Tymeslot.ThemeCustomizations.FileLifecycleTest do
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.FileLifecycle
   alias Tymeslot.ThemeCustomizations.Storage
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationQueries
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
 
   setup do
@@ -123,8 +124,7 @@ defmodule Tymeslot.ThemeCustomizations.FileLifecycleTest do
       assert File.exists?(new_abs)
     end
 
-    test "keeps the stored video when an update only records its processing state",
-         %{profile: profile} do
+    test "keeps the stored video when its processing state is recorded", %{profile: profile} do
       rel = "themes/#{profile.id}/1/videos/upload.mp4"
       abs = touch_stored(rel)
 
@@ -136,12 +136,16 @@ defmodule Tymeslot.ThemeCustomizations.FileLifecycleTest do
           "background_video_path" => rel
         })
 
-      assert {:ok, updated} =
-               ThemeCustomizations.update_theme_customization(customization, %{
-                 "video_processing" => "failed"
-               })
+      assert {:ok, _recorded} =
+               ThemeCustomizationQueries.update_video_processing_status(
+                 customization.id,
+                 "background_video_path",
+                 "failed"
+               )
 
-      assert updated.settings["background_video_path"] == rel
+      reloaded = ThemeCustomizations.get_by_profile_and_theme(profile.id, "1")
+      assert reloaded.settings["background_video_path"] == rel
+      assert reloaded.video_processing_status == %{"background_video_path" => "failed"}
       assert File.exists?(abs)
     end
 

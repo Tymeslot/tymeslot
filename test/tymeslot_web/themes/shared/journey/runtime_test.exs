@@ -71,6 +71,40 @@ defmodule TymeslotWeb.Themes.Shared.Journey.RuntimeTest do
       assert_received {:load_slots, "2027-01-05"}
     end
 
+    # The answers beside the details form: submitting the form is the
+    # confirmation, so answers that validate let the form's events through
+    # with no Continue of their own.
+    test "a moment asking the questions beside the details takes the form's events" do
+      journey =
+        Journey.new(
+          navigator: Journey.Navigators.Paged,
+          moments: [
+            {:overview, collects: [:meeting_type], component: OverviewStep},
+            {:schedule, collects: [:slot], component: ScheduleStep},
+            {:booking, collects: [:answers, :attendee], component: BookingStep}
+          ],
+          outcomes: %{confirmation: ConfirmationStep}
+        )
+
+      engine = [question("company")] |> Engine.init() |> Engine.answer("company", "Acme")
+
+      socket =
+        socket(%{
+          journey: journey,
+          current_state: :booking,
+          meeting_type: Map.put(@intro, :custom_fields, [question("company")]),
+          selected_date: "2027-01-05",
+          selected_time: "9:00 AM",
+          engine: engine
+        })
+
+      assert {:noreply, socket} = Runtime.handle_step_event(socket, :booking, :toggle_guests, nil)
+      assert socket.assigns.guests_open
+
+      blank = put_in(socket.assigns.engine, Engine.init([question("company")]))
+      assert Runtime.handle_step_event(blank, :booking, :toggle_guests, nil) == :unhandled
+    end
+
     test "a fact's event waits for the facts it needs" do
       socket = socket(%{current_state: :schedule, meeting_types: [@intro]})
 

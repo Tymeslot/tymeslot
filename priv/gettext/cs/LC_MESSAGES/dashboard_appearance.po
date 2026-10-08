@@ -679,3 +679,18 @@ msgstr "Vyberte den z měsíce, nebo si zobrazte všechny volné časy celého t
 #, elixir-autogen, elixir-format
 msgid "Week"
 msgstr "Týden"
+
+#: lib/tymeslot_web/themes/quill/theme.ex
+#, elixir-autogen, elixir-format
+msgid "My clients should feel they are booking someone established. The page should look as considered as my work."
+msgstr "Moji klienti by měli cítit, že si rezervují někoho zavedeného. Stránka má působit stejně promyšleně jako moje práce."
+
+#: lib/tymeslot_web/themes/rhythm/theme.ex
+#, elixir-autogen, elixir-format
+msgid "When someone books me, I want them to feel the atmosphere first: motion, mood, then a time."
+msgstr "Když si mě někdo rezervuje, chci, aby nejdřív ucítil atmosféru: pohyb, náladu, a teprve pak čas."
+
+#: lib/tymeslot/theme_customizations/assets.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid captions file. Please upload a WebVTT (.vtt) file."
+msgstr "Neplatný soubor titulků. Nahrajte prosím soubor WebVTT (.vtt)."

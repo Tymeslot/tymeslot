@@ -35,6 +35,33 @@ config :tymeslot, :extra_themes, [
     module: TymeslotWeb.Test.ShowcaseTheme.Theme
   },
   %{
+    id: "96",
+    key: :fixture_scroll,
+    name: "Fixture Scroll",
+    heading_style: :generic,
+    customization_spec: Tymeslot.Test.JourneyFixtureSpec,
+    status: :beta,
+    module: TymeslotWeb.Test.JourneyFixtures.Scroll.Theme
+  },
+  %{
+    id: "95",
+    key: :fixture_talk,
+    name: "Fixture Talk",
+    heading_style: :generic,
+    customization_spec: Tymeslot.Test.JourneyFixtureSpec,
+    status: :beta,
+    module: TymeslotWeb.Test.JourneyFixtures.Talk.Theme
+  },
+  %{
+    id: "94",
+    key: :fixture_express,
+    name: "Fixture Express",
+    heading_style: :generic,
+    customization_spec: Tymeslot.Test.JourneyFixtureSpec,
+    status: :beta,
+    module: TymeslotWeb.Test.JourneyFixtures.Express.Theme
+  },
+  %{
     id: "99",
     key: :fixture,
     name: "Fixture",

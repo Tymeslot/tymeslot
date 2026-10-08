@@ -41,6 +41,7 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.BookingDriver
   alias TymeslotWeb.ThemeTestMatrix
 
   # Every theme's booking step carries this testid; its heading wording is the
@@ -372,6 +373,28 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
 
         [meeting] = Repo.all_by(MeetingSchema, attendee_email: "mallory@example.com")
         assert meeting.custom_field_answers["cf-text-001"] == "Acme Corp"
+      end
+
+      # "Schedule another" keeps the meeting type and forgets the rest: the
+      # next booking is someone else's, so the questions start blank.
+      @tag :capture_log
+      test "are asked again, blank, after Schedule another", %{conn: conn, profile: profile} do
+        view = navigate_to_booking_form_with_questions(conn, profile)
+
+        BookingDriver.answer(view, "cf-text-001", "Acme Corp")
+        BookingDriver.continue(view)
+        BookingDriver.submit(view, %{name: "Mallory", email: "mallory@example.com"})
+        assert render(view) =~ "Acme Corp"
+
+        BookingDriver.restart(view)
+        [slug] = BookingDriver.meeting_types(view)
+        BookingDriver.choose_meeting_type(view, slug)
+        BookingDriver.continue(view)
+        BookingDriver.pick_first_slot(view)
+        BookingDriver.continue(view)
+
+        assert has_element?(view, "form[data-fact='answer'][data-question='cf-text-001']")
+        refute render(view) =~ "Acme Corp"
       end
     end
 

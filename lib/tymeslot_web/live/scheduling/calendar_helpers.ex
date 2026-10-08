@@ -104,7 +104,7 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
         meeting_type \\ nil
       ) do
     if organizer_profile do
-      today = user_timezone |> DateTimeUtils.now_in_timezone() |> DateTime.to_date()
+      today = visitor_today(user_timezone)
 
       day_availability =
         day_availability_lookup(
@@ -423,8 +423,18 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
       :out_of_window
   end
 
-  defp today_for(assigns) do
-    (assigns[:user_timezone] || Profiles.get_default_timezone())
+  defp today_for(assigns),
+    do: visitor_today(assigns[:user_timezone] || Profiles.get_default_timezone())
+
+  @doc """
+  The date it is now in the visitor's `timezone`, read through `Tymeslot.Clock`
+  so it stays freezable. Blocks that say "Today" compute it live from this,
+  as the month calendar does, rather than reading the `:calendar_today` the
+  page recorded earlier, which a change of timezone or midnight leaves stale.
+  """
+  @spec visitor_today(String.t()) :: Date.t()
+  def visitor_today(timezone) do
+    timezone
     |> DateTimeUtils.now_in_timezone()
     |> DateTime.to_date()
   end

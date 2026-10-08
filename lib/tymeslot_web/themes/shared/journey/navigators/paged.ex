@@ -90,7 +90,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Navigators.Paged do
     with {number, _rest} <- Integer.parse(step),
          {target, ^number} <- List.keyfind(numbered, number, 1),
          true <- is_integer(current) and number < current,
-         true <- revisitable?(Journey.moment(journey, target), socket.assigns) do
+         true <- Journey.revisitable?(Journey.moment(journey, target), socket.assigns) do
       {:noreply, Runtime.transition_to(socket, target, %{})}
     else
       _no_move -> {:noreply, socket}
@@ -157,15 +157,9 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Navigators.Paged do
       |> Enum.reverse()
       |> Enum.find(&needed?(&1, socket.assigns))
 
-    if previous && revisitable?(previous, socket.assigns),
+    if previous && Journey.revisitable?(previous, socket.assigns),
       do: Runtime.transition_to(socket, previous.key, %{}),
       else: socket
-  end
-
-  defp revisitable?(moment, assigns) do
-    moment
-    |> Journey.required_facts(assigns)
-    |> Enum.all?(& &1.revisitable?(assigns))
   end
 
   defp needed?(moment, assigns), do: Journey.required_facts(moment, assigns) != []

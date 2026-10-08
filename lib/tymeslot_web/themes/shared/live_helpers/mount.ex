@@ -162,6 +162,8 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
     )
     |> StepEntry.maybe_assign_from_params(:selected_date, StepEntry.date_param(params))
     |> StepEntry.maybe_assign_from_params(:selected_time, params["time"])
+    # Checked against the day's times once they arrive (`InfoHandlers`).
+    |> assign(:carried_time, if(is_binary(params["time"]), do: params["time"]))
     |> StepEntry.maybe_assign_from_params(
       :reschedule_meeting_uid,
       params["reschedule_meeting_uid"]

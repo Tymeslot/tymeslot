@@ -6,11 +6,15 @@
    both ways. Never add `height: 100%` chains here: they lock the body to the
    parent-supplied viewport and defeat the resize.
 
-   Themes mark their elements with hook classes:
-     .booker-page    the page grid (content row plus footer row)
-     .booker-card    every card that fills the column layout
-     .booker-scroll  the time-slot scroll region
-   Each theme's modules/iframe.css keeps only what is specific to it.
+   Every page rendered through a theme wrapper carries one outermost element
+   marked [data-booker-root] (ThemeShell renders it), and themes mark their
+   own elements with hook classes:
+     [data-booker-root]  the theme's outermost element, sized to content
+     .booker-card        every card that fills the column layout
+     .booker-scroll      the time-slot scroll region
+   A theme with a page grid of its own (Quill's and Rhythm's .booker-page)
+   sizes it to content in its own modules/iframe.css, which keeps only what
+   is specific to the theme.
 
    Height media queries (height, aspect-ratio, orientation) never apply in an
    embed: there the viewport is the iframe, whose height iframe_embed.js sets
@@ -33,9 +37,10 @@ html.scheduling-app[data-embedded] > body {
   min-height: 0;
 }
 
-html.scheduling-app[data-embedded] .booker-page {
+/* The theme's outermost element is sized by its content in an embed, never
+   by a viewport height it sets for a page opened on its own. */
+html.scheduling-app[data-embedded] [data-booker-root] {
   min-height: auto;
-  grid-template-rows: auto;
 }
 
 html.scheduling-app[data-embedded] .footer-gradient {

@@ -158,7 +158,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
     BookingLabels.submit_label(
       is_rescheduling,
       meeting_type,
-      dgettext("booking", "Book Meeting")
+      dgettext("booking", "Book Meeting"),
+      :quill
     )
   end
 

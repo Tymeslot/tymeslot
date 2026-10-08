@@ -35,8 +35,35 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
   alias TymeslotWeb.Live.Scheduling.NextAvailable
+  alias TymeslotWeb.Themes.Shared.Journey
+  alias TymeslotWeb.Themes.Shared.Journey.Moment
+  alias TymeslotWeb.Themes.Shared.Journey.Navigators.Paged
 
   setup :verify_on_exit!
+
+  # The classic journey's moments, as `Journey.classic/1` lays them out; only
+  # their keys and facts matter here.
+  @classic %Journey{
+    navigator: Paged,
+    outcomes: %{},
+    moments: [
+      %Moment{key: :overview, collects: [:meeting_type], component: nil, defaults: []},
+      %Moment{key: :schedule, collects: [:slot], component: nil, defaults: []},
+      %Moment{key: :questions, collects: [:answers], component: nil, defaults: []},
+      %Moment{key: :booking, collects: [:attendee], component: nil, defaults: []}
+    ]
+  }
+
+  # A journey of a theme's own, whose slot moment is not called :schedule.
+  @own_journey %Journey{
+    navigator: TymeslotWeb.Themes.Shared.Journey.Navigators.Continuous,
+    outcomes: %{},
+    moments: [
+      %Moment{key: :offer, collects: [:meeting_type], component: nil, defaults: []},
+      %Moment{key: :when, collects: [:slot], component: nil, defaults: []},
+      %Moment{key: :you, collects: [:attendee], component: nil, defaults: []}
+    ]
+  }
 
   describe "landing on the first available day" do
     setup tags do
@@ -467,6 +494,24 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
 
       assert {_socket, :done} = NextAvailable.apply(socket)
     end
+
+    test "lands on a journey's own slot moment, whatever it is called" do
+      tomorrow = Date.utc_today() |> Date.add(1) |> Date.to_string()
+      socket = socket_with(%{tomorrow => true}, journey: @own_journey, current_state: :when)
+
+      assert {landed, :done} = NextAvailable.apply(socket)
+      assert landed.assigns.selected_date == tomorrow
+      assert_received {:load_slots, ^tomorrow}
+    end
+
+    test "keeps the landing for later while the moment on screen collects no slot" do
+      tomorrow = Date.utc_today() |> Date.add(1) |> Date.to_string()
+      socket = socket_with(%{tomorrow => true}, journey: @own_journey, current_state: :offer)
+
+      assert {waiting, :done} = NextAvailable.apply(socket)
+      assert waiting.assigns.selected_date == nil
+      assert waiting.assigns.auto_select_settled == false
+    end
   end
 
   describe "spending the landing attempt" do
@@ -562,6 +607,7 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
     assigns =
       %{
         __changed__: %{},
+        journey: Keyword.get(overrides, :journey, @classic),
         current_state: Keyword.get(overrides, :current_state, :schedule),
         auto_select_settled: Keyword.get(overrides, :auto_select_settled, false),
         selected_date: Keyword.get(overrides, :selected_date, nil),

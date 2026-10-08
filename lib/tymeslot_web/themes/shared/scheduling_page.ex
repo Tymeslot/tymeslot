@@ -10,7 +10,9 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingPage do
   component, or the shared awaiting-payment screen when the journey's
   `awaiting_payment` is `:shared`; otherwise each moment the journey's
   navigator makes visible (`Navigator.visible/2`), which for a state the
-  journey does not know is its first moment.
+  journey does not know is its first moment. The visible moments sit in the
+  navigator's frame (`Journey.Components.frame/1`); a paged journey's one
+  moment is rendered bare.
 
   A component gets the id `"<key>-step"` (the ids every theme's hand-written
   render used, which tests and CSS rely on) and the LiveView's assigns minus
@@ -28,15 +30,21 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingPage do
 
   alias TymeslotWeb.Themes.Shared.Components.{AwaitingPayment, DemoThemeSwitcher, ErrorComponent}
   alias TymeslotWeb.Themes.Shared.Journey
+  alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
   alias TymeslotWeb.Themes.Shared.PathHandlers
 
-  @page_keys [:page_wrapper, :page_parts]
+  @page_keys [:page_wrapper, :page_parts, :page_navigator]
 
   @doc "Renders `wrapper` around the outcome or the visible moments of `journey`."
   @spec render(map(), (map() -> Phoenix.LiveView.Rendered.t()), Journey.t()) ::
           Phoenix.LiveView.Rendered.t()
   def render(assigns, wrapper, journey) do
-    assigns = assign(assigns, page_wrapper: wrapper, page_parts: parts(journey, assigns))
+    assigns =
+      assign(assigns,
+        page_wrapper: wrapper,
+        page_parts: parts(journey, assigns),
+        page_navigator: journey.navigator
+      )
 
     ~H"""
     <.wrapper
@@ -45,6 +53,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingPage do
       locale={assigns[:locale]}
       language_dropdown_open={assigns[:language_dropdown_open]}
       current_state={assigns[:current_state]}
+      journey={assigns[:journey]}
       organizer_user_id={@organizer_user_id}
       owner_preview={assigns[:owner_preview]}
       should_show_branding={assigns[:should_show_branding]}
@@ -65,12 +74,14 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingPage do
         <% @page_parts == :awaiting_payment -> %>
           <AwaitingPayment.awaiting_payment checkout_url={@awaiting_payment_checkout_url} />
         <% true -> %>
-          <.live_component
-            :for={{module, id, extra} <- @page_parts}
-            module={module}
-            id={id}
-            {step_assigns(assigns, extra)}
-          />
+          <JourneyComponents.frame navigator={@page_navigator}>
+            <.live_component
+              :for={{module, id, extra} <- @page_parts}
+              module={module}
+              id={id}
+              {step_assigns(assigns, extra)}
+            />
+          </JourneyComponents.frame>
       <% end %>
     </.wrapper>
     """

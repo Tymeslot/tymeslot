@@ -1,11 +1,11 @@
 defmodule Tymeslot.ThemeCustomizations.FileLifecycle do
   @moduledoc """
-  Side-effecting cleanup of theme background assets on the filesystem.
+  Side-effecting cleanup of theme assets on the filesystem.
 
-  Orchestrates `Storage` and `Transcoder` to delete stale background images,
-  videos, and their transcoded variants when a customisation is updated,
-  deleted, or has its background replaced, and removes an upload whose save
-  was refused. Which fields hold stored files, and of which kind, comes from
+  Orchestrates `Storage` and `Transcoder` to delete stale uploaded images,
+  captions, videos, and the videos' transcoded variants when a customisation
+  is updated, deleted, or has its background replaced, and removes an upload
+  whose save was refused. Which fields hold stored files, and of which kind, comes from
   the customisation spec the caller passes (`asset_fields/0`, every option
   group's `asset_fields/1`), so a group's files are cleaned up without this
   module knowing the group. Persistence is handled by the caller; this module
@@ -89,7 +89,8 @@ defmodule Tymeslot.ThemeCustomizations.FileLifecycle do
   defp setting(customization, field),
     do: Map.get(DataTransform.to_settings(customization), Atom.to_string(field))
 
-  defp delete_asset(path, :image, context, label), do: delete_file(path, context, label)
+  defp delete_asset(path, kind, context, label) when kind in [:image, :captions],
+    do: delete_file(path, context, label)
 
   defp delete_asset(path, :video, context, label) do
     delete_file(path, context, label)

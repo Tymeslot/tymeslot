@@ -103,6 +103,11 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Slot do
     end
   end
 
+  # The time goes; the day stays, with its times loaded, so the visitor picks
+  # again from where they were.
+  @impl Fact
+  def clear(socket), do: assign(socket, :selected_time, nil)
+
   defp selection(assigns),
     do:
       Calculate.validate_time_selection(

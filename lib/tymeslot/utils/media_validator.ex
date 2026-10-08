@@ -1,6 +1,7 @@
 defmodule Tymeslot.Utils.MediaValidator do
   @moduledoc """
-  Utility for validating media files (images and videos) using magic bytes.
+  Utility for validating media files (images, videos and WebVTT captions) by
+  their contents: magic bytes, or the signature a captions file starts with.
   """
 
   # Brands of an ISO base media file that name a video file: the ISO base
@@ -91,6 +92,34 @@ defmodule Tymeslot.Utils.MediaValidator do
 
       _no_brands ->
         []
+    end
+  end
+
+  @doc """
+  Whether `binary` starts as a WebVTT file must: the signature `WEBVTT`,
+  after an optional UTF-8 byte order mark, followed by the end of the file,
+  a space, a tab or a line break.
+  """
+  @spec valid_captions?(term()) :: boolean()
+  def valid_captions?(<<0xEF, 0xBB, 0xBF, rest::binary>>), do: webvtt_signature?(rest)
+  def valid_captions?(binary) when is_binary(binary), do: webvtt_signature?(binary)
+  def valid_captions?(_other), do: false
+
+  defp webvtt_signature?("WEBVTT"), do: true
+
+  defp webvtt_signature?(<<"WEBVTT", next, _rest::binary>>) when next in [?\s, ?\t, ?\n, ?\r],
+    do: true
+
+  defp webvtt_signature?(_other), do: false
+
+  @doc """
+  Validates if a file at the given path is a WebVTT captions file.
+  """
+  @spec valid_captions_file?(String.t()) :: boolean()
+  def valid_captions_file?(path) when is_binary(path) do
+    case read_header(path) do
+      {:ok, binary} -> valid_captions?(binary)
+      _other -> false
     end
   end
 

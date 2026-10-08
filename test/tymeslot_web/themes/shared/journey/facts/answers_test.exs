@@ -35,18 +35,30 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.AnswersTest do
   end
 
   describe "known?/1" do
-    test "answers that validate are known" do
+    test "answers that validate are known once the booker confirms them" do
       engine = [question("company")] |> Engine.init() |> Engine.answer("company", "Acme")
 
-      assert Answers.known?(%{engine: engine})
+      refute Answers.known?(%{engine: engine})
+      assert Answers.known?(%{engine: Engine.confirm(engine)})
     end
 
-    test "a required question left blank is not" do
-      refute Answers.known?(%{engine: Engine.init([question("company")])})
+    test "optional questions left blank are not known until confirmed either" do
+      engine = Engine.init([%{question("company") | "required" => false}])
+
+      refute Answers.known?(%{engine: engine})
+      assert Answers.known?(%{engine: Engine.confirm(engine)})
+    end
+
+    test "a required question left blank is not, even confirmed" do
+      refute Answers.known?(%{engine: Engine.confirm(Engine.init([question("company")]))})
     end
 
     test "carried-over answers are not known until the booker has seen them" do
-      engine = [question("company")] |> Engine.init() |> Engine.prefill(%{"company" => "Acme"})
+      engine =
+        [question("company")]
+        |> Engine.init()
+        |> Engine.prefill(%{"company" => "Acme"})
+        |> Engine.confirm()
 
       refute Answers.known?(%{engine: engine})
       assert Answers.known?(%{engine: Engine.mark_reviewed(engine)})
@@ -85,6 +97,17 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.AnswersTest do
 
       assert {:done, socket} = Answers.continue(socket(%{engine: engine}))
       refute Engine.pending_review?(socket.assigns.engine)
+      assert Answers.known?(socket.assigns)
+    end
+
+    test "is not done, nor are the answers known, short of the last question" do
+      engine =
+        [question("company"), %{question("role") | "required" => false}]
+        |> Engine.init()
+        |> Engine.answer("company", "Acme")
+
+      assert {:stay, socket} = Answers.continue(socket(%{engine: engine}))
+      refute Answers.known?(socket.assigns)
     end
 
     test "is done at once when there are no questions" do

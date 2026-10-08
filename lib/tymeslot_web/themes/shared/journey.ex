@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
 
   A moment (`Journey.Moment`) is a LiveComponent the theme writes, collecting
   zero or more facts, and may settle a fact it collects without asking
-  (`defaults:`, checked now and applied once the runtime opens moments).
+  (`defaults:`, applied when the runtime opens the moment).
   Outcomes are where a submit ends, not moments: the
   confirmation, and the wait for an embedded payment, `:shared` meaning
   `Shared.Components.AwaitingPayment`.
@@ -24,6 +24,8 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
   alias TymeslotWeb.Themes.Shared.Journey.Facts.{Answers, Attendee, MeetingType, Slot}
   alias TymeslotWeb.Themes.Shared.Journey.Moment
   alias TymeslotWeb.Themes.Shared.Journey.Navigators.Paged
+
+  require Logger
 
   @enforce_keys [:navigator, :moments, :outcomes]
   defstruct [:navigator, :moments, :outcomes]
@@ -89,6 +91,17 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
   end
 
   @doc """
+  Whether the booker may return to `moment`: every fact it collects that this
+  booking needs may be revisited (`Fact.revisitable?/1`).
+  """
+  @spec revisitable?(Moment.t(), map()) :: boolean()
+  def revisitable?(moment, assigns) do
+    moment
+    |> required_facts(assigns)
+    |> Enum.all?(& &1.revisitable?(assigns))
+  end
+
+  @doc """
   The options of the classic journey for a `steps:` map: `Navigators.Paged`
   over `overview` (the meeting type), `schedule` (the slot), `questions` (the
   answers, shown only when the meeting type has questions) and `booking` (the
@@ -133,7 +146,8 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
   `CompileError` at `caller` naming every problem: an unknown fact; a fact
   collected before one it needs (its `requires/1` given `%{}`, and the answers
   before the attendee when both are collected); a fact collected twice; the
-  meeting type, slot or attendee collected by no moment; a moment or outcome
+  meeting type, slot, answers or attendee collected by no moment (the answers
+  because any meeting type may have questions); a moment or outcome
   component that is not a loaded LiveComponent; a default for a fact the
   moment does not collect, or with a strategy its fact does not take; a
   navigator that is not one; a moment key used twice or named like an
@@ -152,8 +166,8 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
   @doc false
   @spec live_component?(term()) :: boolean()
   def live_component?(module) do
-    is_atom(module) and match?({:module, _}, Code.ensure_compiled(module)) and
-      function_exported?(module, :__live__, 0) and module.__live__()[:kind] == :component
+    available?(module) and function_exported?(module, :__live__, 0) and
+      module.__live__()[:kind] == :component
   end
 
   # Public, as `live_component?/1` is, so it takes any term: the struct's
@@ -161,10 +175,35 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
   @doc false
   @spec navigator?(term()) :: boolean()
   def navigator?(module) do
-    is_atom(module) and match?({:module, _}, Code.ensure_compiled(module)) and
+    available?(module) and
       Enum.all?(@navigator_callbacks, fn {name, arity} ->
         function_exported?(module, name, arity)
       end)
+  end
+
+  # Compiled (waiting for a module still compiling alongside the caller) and
+  # loaded, since `function_exported?/3` never loads.
+  #
+  # The wait is the hard one (`Code.ensure_compiled!/1`). When every file of
+  # a parallel compile is waiting, the compiler gives up the soft waits
+  # (`Code.ensure_compiled/1`) first, and a component no file is defining
+  # yet (one defined second in a file whose first module is still
+  # expanding) then answered `:unavailable` though it compiled moments
+  # later. A hard wait is given up only after the soft waits, which usually
+  # unblocks the compile first; it still fails for a module that never comes
+  # (a typo). It is still given up for a module defined later in a file
+  # whose earlier modules are waiting, so define a journey's moments,
+  # outcomes and navigator one module per file.
+  defp available?(module) do
+    is_atom(module) and
+      try do
+        Code.ensure_compiled!(module)
+        Code.ensure_loaded?(module)
+      rescue
+        error in ArgumentError ->
+          Logger.debug("Journey module unavailable", reason: Exception.message(error))
+          false
+      end
   end
 
   defp new_or_compile_error!(opts, caller) do
@@ -192,6 +231,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
       unknown_fact_problems(collected, facts),
       twice_problems(collected),
       uncollected_problems(collected),
+      answers_problems(collected),
       order_problems(collected, facts),
       component_problems(journey),
       default_problems(journey.moments, facts)
@@ -244,6 +284,15 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
     for key <- @always_collected,
         key not in keys,
         do: "no moment collects #{inspect(key)}, which every booking needs"
+  end
+
+  # Any meeting type may have questions, and only a booking can say whether
+  # this one does, so every journey needs a moment that asks them; a theme
+  # without one could not book such a type at all.
+  defp answers_problems(collected) do
+    if Enum.any?(collected, &(elem(&1, 0) == :answers)),
+      do: [],
+      else: ["no moment collects :answers, which a meeting type with questions needs"]
   end
 
   defp order_problems(collected, facts) do

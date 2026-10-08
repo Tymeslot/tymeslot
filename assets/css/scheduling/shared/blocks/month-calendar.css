@@ -1,0 +1,134 @@
+/* ==========================================================================
+   Month calendar block: the shared structure
+
+   Matches TymeslotWeb.Themes.Shared.Blocks.MonthCalendar. No shipped theme
+   imports it; a theme rendering the block imports it after shared/tokens.css.
+   It reads the contract tokens (shared/tokens.css, REQUIRED_TOKENS) plus two
+   of its own, which a theme may set in its variables.css:
+
+     --month-calendar-gap       the space between days
+                                (default var(--space-3xs))
+     --month-calendar-day-size  the least height of a day
+                                (default calc(var(--space-xl) + var(--space-xs)))
+   ========================================================================== */
+
+.month-calendar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.month-calendar__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.month-calendar__title {
+  flex: 1;
+  margin: 0;
+  color: var(--ink-1);
+  font-size: var(--theme-font-size-md);
+  font-weight: var(--font-weight-semibold);
+  text-align: center;
+}
+
+.month-calendar__nav-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2xs);
+  border: var(--border-width-thin) solid var(--line-1);
+  border-radius: var(--radius-control);
+  background: var(--surface-1);
+  color: var(--ink-1);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.month-calendar__nav-button:hover:not(:disabled) {
+  border-color: var(--theme-primary);
+}
+
+.month-calendar__nav-button:disabled {
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+
+.month-calendar__nav-icon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+.month-calendar__weekdays,
+.month-calendar__days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--month-calendar-gap, var(--space-3xs));
+}
+
+.month-calendar__weekday {
+  color: var(--ink-3);
+  font-size: var(--theme-font-size-xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--letter-spacing-wide);
+  text-align: center;
+}
+
+.month-calendar__day {
+  min-height: var(--month-calendar-day-size, calc(var(--space-xl) + var(--space-xs)));
+  padding: 0;
+  border: var(--border-width-thin) solid transparent;
+  border-radius: var(--radius-control);
+  background: var(--surface-1);
+  color: var(--ink-1);
+  font-size: var(--theme-font-size-sm);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.month-calendar__day:hover:not(:disabled) {
+  border-color: var(--theme-primary);
+}
+
+.month-calendar__day:disabled {
+  background: none;
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+
+.month-calendar__day--other-month {
+  visibility: hidden;
+}
+
+.month-calendar__day--today {
+  border-color: var(--line-1);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Two classes, as the slot list's, so :hover never wins over the selection. */
+.month-calendar__day.month-calendar__day--selected {
+  background: var(--theme-primary-solid);
+  border-color: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+}
+
+.month-calendar__nav-button:focus-visible,
+.month-calendar__day:focus-visible {
+  outline: var(--border-width-thick) solid var(--theme-primary);
+  outline-offset: var(--space-3xs);
+}
+
+.month-calendar--loading .month-calendar__days {
+  opacity: 0.6;
+}
+
+.month-calendar__notice {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-xs);
+  text-align: center;
+}

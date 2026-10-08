@@ -1,7 +1,9 @@
 defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
   @moduledoc """
-  The Rhythm theme's wrapper: its video, gradient, colour or image background
-  and wrapper classes around the shared `ThemeShell`.
+  The Rhythm theme's wrapper: its video, gradient, colour or image
+  background, and its page grid (`.booker-page`, sized to content in an
+  embed by its `iframe.css`) holding the content area and the theme
+  extensions as its footer row, inside the shared `ThemeShell`.
   """
   use Phoenix.Component
 
@@ -36,17 +38,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
     ~H"""
     <ThemeShell.theme_shell
       class="rhythm-theme-wrapper"
-      grid_class="video-background-theme theme-grid"
-      language_class="language-switcher-container"
-      theme_id={@theme_id}
-      theme_tokens={@theme_tokens}
       locale={@locale}
-      language_dropdown_open={@language_dropdown_open}
-      show_language_switcher={@show_language_switcher}
-      owner_preview={@owner_preview}
-      organizer_user_id={@organizer_user_id}
-      should_show_branding={@should_show_branding}
-      {Map.take(assigns, [:demo_mode])}
+      theme_tokens={@theme_tokens}
     >
       <:background>
         <%= cond do %>
@@ -84,7 +77,24 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
             <div class="video-background-container"></div>
         <% end %>
       </:background>
-      {render_slot(@inner_block)}
+      <div class="booker-page video-background-theme theme-grid">
+        <div class="content-area">
+          <ThemeShell.chrome
+            language_class="language-switcher-container"
+            locale={@locale}
+            language_dropdown_open={@language_dropdown_open}
+            show_language_switcher={@show_language_switcher}
+            owner_preview={@owner_preview}
+          />
+          {render_slot(@inner_block)}
+        </div>
+        <ThemeShell.extensions
+          theme_id={@theme_id}
+          organizer_user_id={@organizer_user_id}
+          should_show_branding={@should_show_branding}
+          {Map.take(assigns, [:demo_mode])}
+        />
+      </div>
     </ThemeShell.theme_shell>
     """
   end

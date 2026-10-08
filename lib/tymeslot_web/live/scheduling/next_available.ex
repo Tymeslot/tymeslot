@@ -51,6 +51,7 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailable do
 
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Live.Scheduling.CalendarHelpers
+  alias TymeslotWeb.Themes.Shared.Journey.Progress
 
   require Logger
 
@@ -75,9 +76,10 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailable do
   @spec apply(Phoenix.LiveView.Socket.t()) :: {Phoenix.LiveView.Socket.t(), :done | :refetch}
   def apply(socket) do
     cond do
-      # Availability also loads before the booker reaches the schedule step.
-      # That is not the landing attempt, so it must not spend it.
-      socket.assigns[:current_state] != :schedule -> {socket, :done}
+      # Availability also loads before the booker reaches the moment that
+      # collects the slot (the classic schedule step). That is not the
+      # landing attempt, so it must not spend it.
+      not Progress.collecting_now?(socket.assigns, :slot) -> {socket, :done}
       settled?(socket) -> {socket, :done}
       explicitly_chosen?(socket) -> {settle(socket), :done}
       true -> land(socket)
@@ -108,12 +110,12 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailable do
   behind the booker, and `align_to/2` then drags the visible window back onto
   it: press "next", travel backwards.
 
-  A no-op before the schedule step, so a fetch that fails on the overview
+  A no-op before the moment collecting the slot (the classic schedule step), so a fetch that fails on the overview
   leaves the landing intact for the step that has not been reached yet.
   """
   @spec settle(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def settle(socket) do
-    if socket.assigns[:current_state] == :schedule do
+    if Progress.collecting_now?(socket.assigns, :slot) do
       assign(socket, :auto_select_settled, true)
     else
       socket

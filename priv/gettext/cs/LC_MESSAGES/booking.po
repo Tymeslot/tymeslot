@@ -156,6 +156,7 @@ msgstr "Odpoledne"
 msgid "Appointment host"
 msgstr "Hostitel schůzky"
 
+#: lib/tymeslot_web/themes/shared/blocks/next_slots.ex
 #: lib/tymeslot_web/themes/shared/components/slot_list.ex
 #: lib/tymeslot_web/themes/shared/components/week_grid.ex
 #, elixir-autogen, elixir-format
@@ -177,6 +178,8 @@ msgstr "Rezervace lze vytvořit %{advance}"
 #: lib/tymeslot_web/themes/folio/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/blocks/day_chips.ex
+#: lib/tymeslot_web/themes/shared/blocks/month_calendar.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar is loading slowly"
 msgstr "Kalendář se načítá pomalu"
@@ -310,6 +313,9 @@ msgid "Let's Connect!"
 msgstr "Pojďme se sejít!"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/blocks/agenda_index.ex
+#: lib/tymeslot_web/themes/shared/blocks/day_chips.ex
+#: lib/tymeslot_web/themes/shared/blocks/next_slots.ex
 #: lib/tymeslot_web/themes/shared/components/slot_list.ex
 #: lib/tymeslot_web/themes/shared/components/week_grid.ex
 #, elixir-autogen, elixir-format
@@ -323,6 +329,7 @@ msgstr "PO"
 
 #: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/shared/blocks/summary_bar.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Details"
 msgstr "Podrobnosti schůzky"
@@ -499,6 +506,7 @@ msgid "Search cities, countries, or timezones..."
 msgstr "Hledat města, země nebo časová pásma…"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/blocks/day_chips.ex
 #, elixir-autogen, elixir-format
 msgid "Select a Date"
 msgstr "Vyberte datum"
@@ -1415,16 +1423,22 @@ msgstr "Zkusit znovu"
 msgid "Your last action could not be completed. Please try again."
 msgstr "Vaši poslední akci se nepodařilo dokončit. Zkuste to prosím znovu."
 
+#: lib/tymeslot_web/themes/shared/blocks/agenda_index.ex
+#: lib/tymeslot_web/themes/shared/blocks/next_slots.ex
 #: lib/tymeslot_web/themes/shared/components/week_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Next week"
 msgstr "Následující týden"
 
+#: lib/tymeslot_web/themes/shared/blocks/agenda_index.ex
+#: lib/tymeslot_web/themes/shared/blocks/day_chips.ex
+#: lib/tymeslot_web/themes/shared/blocks/next_slots.ex
 #: lib/tymeslot_web/themes/shared/components/week_grid.ex
 #, elixir-autogen, elixir-format
 msgid "No times available"
 msgstr "Žádné volné termíny"
 
+#: lib/tymeslot_web/themes/shared/blocks/agenda_index.ex
 #: lib/tymeslot_web/themes/shared/components/week_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Previous week"
@@ -1477,3 +1491,23 @@ msgstr "Motivy ukázky"
 #, elixir-autogen, elixir-format
 msgid "Try another theme"
 msgstr "Vyzkoušejte jiný motiv"
+
+#: lib/tymeslot_web/themes/shared/blocks/day_chips.ex
+#, elixir-autogen, elixir-format
+msgid "%{weekday} %{day}"
+msgstr "%{weekday} %{day}."
+
+#: lib/tymeslot_web/themes/shared/blocks/day_chips.ex
+#, elixir-autogen, elixir-format
+msgid "Today"
+msgstr "Dnes"
+
+#: lib/tymeslot_web/themes/shared/blocks/day_chips.ex
+#, elixir-autogen, elixir-format
+msgid "Tomorrow"
+msgstr "Zítra"
+
+#: lib/tymeslot_web/themes/shared/blocks/next_slots.ex
+#, elixir-autogen, elixir-format
+msgid "More times"
+msgstr "Další časy"

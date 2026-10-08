@@ -15,7 +15,8 @@ defmodule TymeslotWeb.BookingDriver do
       `data-value`;
     * `form[data-fact="attendee"]`, the booking form;
     * `data-intent` on the controls that move: `continue`, `back`, `submit`,
-      `restart`, and `earlier` and `later` on a picker's period arrows.
+      `restart`, `earlier` and `later` on a picker's period arrows, and
+      `edit` (an answered moment's Edit, `phx-value-step` the moment's key).
 
   Finding and clicking go through those attributes only. Waiting does not:
   nothing on a page says that the month's availability has arrived or that
@@ -55,6 +56,7 @@ defmodule TymeslotWeb.BookingDriver do
   @attendee "form[data-fact='attendee']"
   @continue "[data-intent='continue']"
   @back "[data-intent='back']"
+  @edit "[data-intent='edit']"
   @restart "[data-intent='restart']"
   @earlier "[data-intent='earlier']"
   @later "[data-intent='later']"
@@ -314,6 +316,15 @@ defmodule TymeslotWeb.BookingDriver do
   @doc "Takes the way back (`data-intent=\"back\"`)."
   @spec back(View.t()) :: :ok
   def back(view), do: click(view, @back)
+
+  @doc """
+  Edits an answered moment: presses its `data-intent="edit"` control, which
+  sends `navigate_to_step` with the moment's key, so the navigator forgets
+  what the moment collected and every fact depending on it
+  (`Navigators.Transcript`).
+  """
+  @spec edit(View.t(), atom() | String.t()) :: :ok
+  def edit(view, moment), do: click(view, "#{@edit}[phx-value-step='#{moment}']")
 
   @doc "Starts a fresh booking from an outcome (`data-intent=\"restart\"`)."
   @spec restart(View.t()) :: :ok

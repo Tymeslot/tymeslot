@@ -182,6 +182,20 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueriesTest do
     end
   end
 
+  describe "update_video_processing_status/3" do
+    test "answers not found for a customisation that no longer exists" do
+      profile = insert(:profile)
+      customization = insert(:theme_customization, profile: profile)
+      Repo.delete!(customization)
+
+      assert ThemeCustomizationQueries.update_video_processing_status(
+               customization.id,
+               "background_video_path",
+               "completed"
+             ) == {:error, :not_found}
+    end
+  end
+
   describe "get_profile_by_user_id/1" do
     test "retrieves profile by user_id" do
       user = insert(:user)

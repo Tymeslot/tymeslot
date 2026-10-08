@@ -7,6 +7,10 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
   own. Each test below drives one of those through the real routes; the last
   one checks that no shared code names it, so none of this works by a
   special case.
+
+  The journey fixtures (`test/support/journey_fixtures/`) compose journeys of
+  their own from the shared navigators and blocks; the same check holds that
+  no shared code names them either.
   """
   use TymeslotWeb.LiveCase, async: false
 
@@ -38,7 +42,7 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
 
   # Everything the test-only themes add that a shared module could name,
   # their ids among them as quoted literals.
-  @fixture_names ~r/FixtureTheme|fixture_emblem|EmblemPanel|:fixture\b|ShowcaseTheme|:showcase\b|#{Regex.escape(~s("99"))}|#{Regex.escape(~s("97"))}/
+  @fixture_names ~r/FixtureTheme|fixture_emblem|EmblemPanel|ClipsPanel|fixture_intro_clip|fixture_outro_clip|fixture_intro_captions|:fixture\b|ShowcaseTheme|:showcase\b|JourneyFixture|:fixture_(scroll|talk|express)\b|#{Regex.escape(~s("99"))}|#{Regex.escape(~s("97"))}|#{Regex.escape(~s("96"))}|#{Regex.escape(~s("95"))}|#{Regex.escape(~s("94"))}/
 
   setup :verify_on_exit!
 
@@ -86,6 +90,23 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
 
       view |> element("[data-testid='back-step']") |> render_click()
       assert has_element?(view, "[data-testid='fixture-overview']")
+    end
+  end
+
+  describe "a theme's voice" do
+    test "words the shared heading on the fixture's own booking page", %{conn: conn} do
+      %{view: view} = booking_page(conn, "fixture-voice")
+
+      assert has_element?(view, "[data-testid='fixture-voice-heading']", "Book a time")
+    end
+
+    test "leaves a theme with no voice, on the same steps, in the shared words",
+         %{conn: conn} do
+      # The showcase theme ("97") renders the fixture's steps and names no voice.
+      %{profile: profile} = seed_booking_account("97", "showcase-voice", "UTC")
+      {:ok, view, _html} = live(conn, ~p"/#{profile.username}")
+
+      assert has_element?(view, "[data-testid='fixture-voice-heading']", "Let's Connect!")
     end
   end
 
@@ -157,6 +178,19 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
       assert has_element?(view, "[data-testid='fixture-emblem-panel']")
       assert html =~ "Colour Palette"
       refute html =~ "Background Design"
+    end
+
+    # A theme's second group of its own gets its panel too, with an upload
+    # declared for each of its videos.
+    test "gets an upload form per clip in the second group's panel", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/#{@theme_id}")
+
+      for field <- ~w(fixture_intro_clip_path fixture_outro_clip_path fixture_intro_captions_path) do
+        assert has_element?(
+                 view,
+                 "[data-testid='fixture-clips-panel'] #fixture-clip-upload-#{field} input[type='file']"
+               )
+      end
     end
 
     test "saves through its panel", %{conn: conn, profile: profile} do
@@ -287,6 +321,36 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
       refute Map.has_key?(saved.settings, "background_type")
     end
 
+    # LiveView accepts only an extension MIME knows, so a `.vtt` upload
+    # reaching the save proves the type is registered.
+    test "uploads captions through the theme's own panel in the dashboard", %{conn: conn} do
+      {:ok, ctx} = setup_dashboard_user_with_theme(%{conn: conn}, @theme_id)
+      %{conn: conn, profile: profile} = Map.new(ctx)
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/#{@theme_id}")
+
+      captions = %{
+        last_modified: System.system_time(:millisecond),
+        name: "intro.vtt",
+        content: "WEBVTT\n\n00:00.000 --> 00:02.000\nHello\n",
+        type: "text/vtt"
+      }
+
+      view
+      |> file_input(
+        "#fixture-clip-upload-fixture_intro_captions_path",
+        :fixture_intro_captions_path,
+        [captions]
+      )
+      |> render_upload("intro.vtt")
+
+      assert_push_event(view, "upload-complete", %{})
+
+      saved = ThemeCustomizations.get_by_profile_and_theme(profile.id, @theme_id)
+
+      assert saved.settings["fixture_intro_captions_path"] =~
+               ~r{^themes/#{profile.id}/99/captions/}
+    end
+
     # `render_upload/2` consumes through the progress callback (above). To reach
     # the panel form's `upload_asset` handler instead, the progress callback's
     # consume is refused by an exhausted rate limit (the entry stays done),
@@ -354,7 +418,7 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
   describe "shared code" do
     # A source check: it reads the shared code rather than calling it.
     # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
-    test "names nothing the fixture theme adds" do
+    test "names nothing the test-only themes add" do
       shared = Path.wildcard("lib/**/*.{ex,exs,heex}")
       configs = Path.wildcard("config/*.exs") -- ["config/test.exs"]
       files = ["mix.exs" | shared ++ configs]

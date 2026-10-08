@@ -82,6 +82,26 @@ defmodule Mix.Tasks.Css.CheckTokensTest do
     assert {_output, 0} = run_script(root)
   end
 
+  test "rejects hardcoded spacing in a shared block", %{root: root} do
+    File.mkdir_p!(Path.join(root, "shared/blocks"))
+    File.write!(Path.join(root, "shared/blocks/chips.css"), ".chips {\n  gap: 12px;\n}\n")
+
+    assert {output, 1} = run_script(root)
+    assert output =~ "shared/blocks/chips.css:2:"
+  end
+
+  test "rejects a hardcoded border width in a shared block", %{root: root} do
+    File.mkdir_p!(Path.join(root, "shared/blocks"))
+
+    File.write!(
+      Path.join(root, "shared/blocks/chips.css"),
+      ".chips {\n  border: 2px solid var(--line-1);\n}\n"
+    )
+
+    assert {output, 1} = run_script(root)
+    assert output =~ "shared/blocks/chips.css:2:"
+  end
+
   test "ignores literals inside comments", %{root: root, modules: modules} do
     File.write!(
       Path.join(modules, "card.css"),

@@ -5,6 +5,8 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
 
   alias TymeslotWeb.Live.Scheduling.PreviewMode
   alias TymeslotWeb.Themes.Core.Context
+  alias TymeslotWeb.Themes.Shared.Journey
+  alias TymeslotWeb.Themes.Shared.Journey.Navigators.{Continuous, Paged, Transcript}
   alias TymeslotWeb.Themes.Shared.PathHandlers
 
   describe "build_path_with_locale/2" do
@@ -154,6 +156,90 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
       assert path == "/johndoe/30-minutes/book?locale=fr"
       refute path =~ "theme="
       refute path =~ "preview"
+    end
+
+    # A paged journey's switcher shows on its first moment only, before any
+    # choice; a choice left behind by going back to it is not carried.
+    test "carries no choice on a paged journey" do
+      for {navigator, live_action} <- [{Paged, :overview}, {Paged, :schedule}] do
+        socket = %Phoenix.LiveView.Socket{
+          assigns: %{
+            username_context: "johndoe",
+            live_action: live_action,
+            journey: %Journey{navigator: navigator, moments: [], outcomes: %{}},
+            duration: "30min",
+            selected_duration: "30min",
+            selected_date: "2027-03-12",
+            selected_time: "9:00 AM",
+            user_timezone: "America/New_York"
+          }
+        }
+
+        assert URI.parse(PathHandlers.build_path_with_locale(socket, "de")).query == "locale=de"
+      end
+    end
+
+    test "carries the choices on a page that opens its moments by itself" do
+      for navigator <- [Continuous, Transcript] do
+        socket = %Phoenix.LiveView.Socket{
+          assigns: %{
+            username_context: "johndoe",
+            live_action: :overview,
+            journey: %Journey{navigator: navigator, moments: [], outcomes: %{}},
+            selected_duration: "30min",
+            selected_date: "2027-03-12",
+            selected_time: "9:00 AM",
+            user_timezone: "America/New_York"
+          }
+        }
+
+        path = PathHandlers.build_path_with_locale(socket, "de")
+
+        assert URI.parse(path).path == "/johndoe"
+
+        assert URI.decode_query(URI.parse(path).query) == %{
+                 "locale" => "de",
+                 "duration" => "30-minutes",
+                 "date" => "2027-03-12",
+                 "time" => "9:00 AM",
+                 "visitor_timezone" => "America/New_York"
+               }
+      end
+    end
+
+    # A switch on the confirmation must not land on the details for the
+    # slot just booked.
+    test "carries no choice from an outcome" do
+      for outcome <- [:confirmation, :awaiting_payment] do
+        socket = %Phoenix.LiveView.Socket{
+          assigns: %{
+            username_context: "johndoe",
+            live_action: :overview,
+            current_state: outcome,
+            journey: %Journey{navigator: Continuous, moments: [], outcomes: %{}},
+            selected_duration: "30min",
+            selected_date: "2027-03-12",
+            selected_time: "9:00 AM",
+            user_timezone: "America/New_York"
+          }
+        }
+
+        assert PathHandlers.build_path_with_locale(socket, "de") == "/johndoe?locale=de"
+      end
+    end
+
+    test "carries no time without its day" do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          username_context: "johndoe",
+          live_action: :schedule,
+          duration: "30min",
+          journey: %Journey{navigator: Continuous, moments: [], outcomes: %{}},
+          selected_time: "9:00 AM"
+        }
+      }
+
+      assert PathHandlers.build_path_with_locale(socket, "de") == "/johndoe/30-minutes?locale=de"
     end
   end
 

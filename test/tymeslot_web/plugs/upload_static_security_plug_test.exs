@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Plugs.UploadStaticSecurityTest do
   alias TymeslotWeb.Plugs.UploadStaticSecurity
 
   describe "call/2 — allowlisted extensions" do
-    for ext <- ~w(.jpg .jpeg .png .gif .webp .mp4 .webm .mov) do
+    for ext <- ~w(.jpg .jpeg .png .gif .webp .mp4 .webm .mov .vtt) do
       test "passes through #{ext} and sets nosniff header", %{conn: conn} do
         path_info = ["uploads", "avatars", "123", "file#{unquote(ext)}"]
 

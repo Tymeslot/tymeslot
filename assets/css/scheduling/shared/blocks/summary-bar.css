@@ -1,0 +1,55 @@
+/* ==========================================================================
+   Summary bar block: the shared structure
+
+   Matches TymeslotWeb.Themes.Shared.Blocks.SummaryBar. No shipped theme
+   imports it; a theme rendering the block imports it after shared/tokens.css.
+   It stays at the top of its scroll container as the page scrolls. It reads
+   the contract tokens plus one of its own, which a theme may set in its
+   variables.css:
+
+     --summary-bar-surface   the bar's ground (default var(--surface-2))
+   ========================================================================== */
+
+.summary-bar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: var(--space-xs) var(--space-sm);
+  border-bottom: var(--border-width-thin) solid var(--line-1);
+  background: var(--summary-bar-surface, var(--surface-2));
+}
+
+.summary-bar__items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs) var(--space-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.summary-bar__link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2xs);
+  color: var(--ink-1);
+  text-decoration: none;
+}
+
+.summary-bar__link:hover .summary-bar__value {
+  text-decoration: underline;
+}
+
+.summary-bar__link:focus-visible {
+  outline: var(--border-width-thick) solid var(--theme-primary);
+  outline-offset: var(--space-3xs);
+}
+
+.summary-bar__value {
+  font-weight: var(--font-weight-semibold);
+}
+
+.summary-bar__label {
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+}

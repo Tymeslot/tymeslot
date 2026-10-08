@@ -179,6 +179,43 @@ defmodule TymeslotWeb.Themes.Shared.BookingTextTest do
     end
   end
 
+  describe "a theme's voice" do
+    # The fixture theme's voice words the heading, greeting and instruction;
+    # the showcase theme has no voice. Both are test-only themes with the
+    # :generic heading style.
+    test "words the default heading of the theme that has it" do
+      assert BookingText.default_heading(:fixture, "Sam") == "Book a time"
+      assert BookingText.default_heading(:showcase, "Sam") == "Let's Connect!"
+    end
+
+    test "reaches the page's heading only while the organiser has no wording of their own" do
+      assert BookingText.heading(build(:profile), :fixture, "Sam") == "Book a time"
+
+      assert BookingText.heading(customized(booking_heading: "Mine"), :fixture, "Sam") ==
+               "Mine"
+    end
+
+    test "words the default greeting and instruction of the theme that has it" do
+      assert BookingText.default_greeting("Sam", :fixture) == "Hello, Sam here."
+      assert BookingText.default_instruction(:fixture) == "Choose a meeting to start."
+      assert BookingText.default_greeting("Sam", :showcase) == "Hi! I'm Sam."
+      assert BookingText.default_instruction(:showcase) == "Pick an option to get started."
+    end
+
+    test "reaches the greeting and instruction only while the organiser has no wording of their own" do
+      assert BookingText.greeting(build(:profile), "Sam", :fixture) == "Hello, Sam here."
+      assert BookingText.instruction(build(:profile), :fixture) == "Choose a meeting to start."
+
+      own = customized(booking_greeting: "Hey", booking_instruction: "Pick one")
+      assert BookingText.greeting(own, "Sam", :fixture) == "Hey"
+      assert BookingText.instruction(own, :fixture) == "Pick one"
+    end
+
+    test "still drops the greeting when there is no name to introduce" do
+      assert BookingText.default_greeting(nil, :fixture) == nil
+    end
+  end
+
   defp customized(attrs) do
     build(:profile, Keyword.put(attrs, :booking_text_enabled, true))
   end

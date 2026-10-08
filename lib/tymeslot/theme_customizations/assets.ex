@@ -9,10 +9,10 @@ defmodule Tymeslot.ThemeCustomizations.Assets do
   `upload_changes/3` is saved, kept to that group's own settings: a
   background upload becomes the custom background and drops the background's
   other upload, whose file the save then deletes, while an upload into
-  another group leaves the background alone. For a video the row is marked
-  `pending` and the transcoding job queued, marking it `failed` if the job
-  cannot be queued (one video field per theme: `VideoTranscoder` tracks one
-  per row). A save that fails deletes the file it stored
+  another group leaves the background alone. For a video, the field's
+  processing state is marked `pending` (`video_processing_status`, one entry
+  per asset field) and the field's transcoding job queued, marking the field
+  `failed` if the job cannot be queued. A save that fails deletes the file it stored
   (`FileLifecycle.discard_upload/2`). Errors come back as translated,
   user-facing messages.
 
@@ -25,6 +25,7 @@ defmodule Tymeslot.ThemeCustomizations.Assets do
   alias Tymeslot.ThemeCustomizations.FileLifecycle
   alias Tymeslot.ThemeCustomizations.Specs
   alias Tymeslot.ThemeCustomizations.Storage
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationQueries
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
   alias Tymeslot.Themes.Catalog
   alias Tymeslot.Workers.VideoTranscoder
@@ -46,8 +47,10 @@ defmodule Tymeslot.ThemeCustomizations.Assets do
     end
   end
 
-  defp attach(:image, profile_id, theme_id, {group, field}, upload) do
-    with {:ok, path} <- store(:image, profile_id, theme_id, upload) do
+  # Images and captions are served as stored; only a video is transcoded.
+  defp attach(kind, profile_id, theme_id, {group, field}, upload)
+       when kind in [:image, :captions] do
+    with {:ok, path} <- store(kind, profile_id, theme_id, upload) do
       save(profile_id, theme_id, path, Specs.upload_changes(group, field, path))
     end
   end
@@ -55,16 +58,10 @@ defmodule Tymeslot.ThemeCustomizations.Assets do
   defp attach(:video, profile_id, theme_id, {group, field}, upload) do
     with :ok <- ensure_transcoder(),
          {:ok, path} <- store(:video, profile_id, theme_id, upload),
-         {:ok, customization} <-
-           save(
-             profile_id,
-             theme_id,
-             path,
-             group
-             |> Specs.upload_changes(field, path)
-             |> Map.put("video_processing", "pending")
-           ) do
-      queue_transcoding(customization, path)
+         {:ok, saved} <-
+           save(profile_id, theme_id, path, Specs.upload_changes(group, field, path)),
+         {:ok, customization} <- mark(saved, field, "pending") do
+      queue_transcoding(customization, field, path)
     end
   end
 
@@ -87,6 +84,13 @@ defmodule Tymeslot.ThemeCustomizations.Assets do
            "Invalid video format. Please upload a valid video file."
          )}
 
+      {:error, :invalid_captions_format} ->
+        {:error,
+         dgettext(
+           "dashboard_appearance",
+           "Invalid captions file. Please upload a WebVTT (.vtt) file."
+         )}
+
       {:error, _reason} ->
         {:error, upload_failed()}
     end
@@ -101,12 +105,7 @@ defmodule Tymeslot.ThemeCustomizations.Assets do
 
       {:error, _changeset} ->
         FileLifecycle.discard_upload(path, %{profile_id: profile_id, theme_id: theme_id})
-
-        {:error,
-         dgettext(
-           "dashboard_appearance",
-           "Could not save your theme customisation. Please try again."
-         )}
+        {:error, save_failed()}
     end
   end
 
@@ -124,20 +123,28 @@ defmodule Tymeslot.ThemeCustomizations.Assets do
     end
   end
 
-  defp queue_transcoding(customization, video_path) do
-    case VideoTranscoder.enqueue(customization.id, video_path) do
+  # Each video's state lives under its own field, so two videos of one theme
+  # are processed and reported apart; the write merges into the stored map.
+  defp mark(customization, field, status) do
+    case ThemeCustomizationQueries.update_video_processing_status(
+           customization.id,
+           Atom.to_string(field),
+           status
+         ) do
+      {:ok, updated} -> {:ok, updated}
+      {:error, :not_found} -> {:error, save_failed()}
+    end
+  end
+
+  defp queue_transcoding(customization, field, video_path) do
+    case VideoTranscoder.enqueue(customization.id, field, video_path) do
       {:ok, _job} ->
         {:ok, customization}
 
       {:error, _reason} ->
-        # Only the status changes: the saved video stays, so the user can see
+        # Only the state changes: the saved video stays, so the user can see
         # what failed and upload again.
-        _marked =
-          ThemeCustomizations.upsert_theme_customization(
-            customization.profile_id,
-            customization.theme_id,
-            %{"video_processing" => "failed"}
-          )
+        _marked = mark(customization, field, "failed")
 
         {:error,
          dgettext(
@@ -148,6 +155,13 @@ defmodule Tymeslot.ThemeCustomizations.Assets do
   end
 
   defp upload_failed, do: dgettext("dashboard_appearance", "Upload failed")
+
+  defp save_failed,
+    do:
+      dgettext(
+        "dashboard_appearance",
+        "Could not save your theme customisation. Please try again."
+      )
 
   defp option_unavailable,
     do: dgettext("dashboard_appearance", "This option is not available for this theme.")

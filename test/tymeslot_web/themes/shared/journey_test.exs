@@ -246,6 +246,20 @@ defmodule TymeslotWeb.Themes.Shared.JourneyTest do
       end
     end
 
+    test "refuses a journey no moment of which collects the answers" do
+      assert_raise CompileError,
+                   ~r/no moment collects :answers, which a meeting type with questions needs/,
+                   fn ->
+                     build!(
+                       journey([
+                         {:offer, collects: [:meeting_type], component: OverviewStep},
+                         {:when, collects: [:slot], component: ScheduleStep},
+                         {:you, collects: [:attendee], component: BookingStep}
+                       ])
+                     )
+                   end
+    end
+
     test "refuses a moment or an outcome that is not a LiveComponent" do
       assert_raise CompileError,
                    ~r/moment :you needs a LiveComponent, got TymeslotWeb.Themes.Shared.Journey,/,

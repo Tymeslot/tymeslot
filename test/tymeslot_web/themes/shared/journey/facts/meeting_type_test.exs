@@ -75,8 +75,8 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.MeetingTypeTest do
   end
 
   describe "default/2" do
-    test "takes the first and the shortest type" do
-      assert MeetingType.default_strategies() == [:first, :shortest]
+    test "takes the first, the shortest and the only type" do
+      assert MeetingType.default_strategies() == [:first, :shortest, :only]
     end
 
     test ":first chooses the organiser's first type" do
@@ -89,6 +89,19 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.MeetingTypeTest do
       socket = MeetingType.default(socket(%{meeting_types: [@intro, @quick]}), :shortest)
 
       assert socket.assigns.selected_duration == "quick-chat"
+    end
+
+    test ":only chooses the type of an organiser who offers one" do
+      socket = MeetingType.default(socket(%{meeting_types: [@intro]}), :only)
+
+      assert socket.assigns.selected_duration == "intro-call"
+    end
+
+    test ":only leaves the choice to the visitor when there are several types" do
+      several = socket(%{meeting_types: [@intro, @quick]})
+
+      assert MeetingType.default(several, :only) == several
+      refute MeetingType.known?(MeetingType.default(several, :only).assigns)
     end
 
     test "leaves a known choice and an empty list alone" do

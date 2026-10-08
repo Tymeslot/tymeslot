@@ -14,6 +14,8 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
   alias TymeslotWeb.Live.Scheduling.NextAvailable
   alias TymeslotWeb.Live.Scheduling.WeekSlots
+  alias TymeslotWeb.Themes.Shared.Journey.Navigators.Reveal
+  alias TymeslotWeb.Themes.Shared.Journey.Progress
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
 
   @doc """
@@ -63,21 +65,22 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
 
   Re-fetches the month availability map and a week view's week, and clears any
   cached slot data so the scheduling page reflects the latest calendar state.
+  The chosen time is dropped only while the visitor has not moved past the
+  moment collecting the slot (`Progress.at_or_before?/2`); once they have,
+  the booking they are completing keeps it.
   """
   @spec handle_calendar_events_updated(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_calendar_events_updated(socket) do
     socket =
-      case socket.assigns[:current_state] do
-        state when state in [:overview, :schedule, nil] ->
-          socket
-          |> assign(:available_slots, nil)
-          |> assign(:selected_time, nil)
-          |> AvailabilityHelpers.fetch_month_availability_async()
-          |> WeekSlots.refetch()
-
-        _committed ->
-          AvailabilityHelpers.fetch_month_availability_async(socket)
+      if Progress.at_or_before?(socket.assigns, :slot) do
+        socket
+        |> assign(:available_slots, nil)
+        |> assign(:selected_time, nil)
+        |> AvailabilityHelpers.fetch_month_availability_async()
+        |> WeekSlots.refetch()
+      else
+        AvailabilityHelpers.fetch_month_availability_async(socket)
       end
 
     {:noreply, socket}
@@ -180,11 +183,40 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
           String.t()
         ) :: {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_fetch_available_slots(socket, date, duration, timezone) do
-    case SlotFetchingHandlerComponent.fetch_available_slots(socket, date, duration, timezone) do
-      {:ok, updated_socket} -> {:noreply, updated_socket}
-      {:error, updated_socket} -> {:noreply, updated_socket}
+    {_result, updated_socket} =
+      SlotFetchingHandlerComponent.fetch_available_slots(socket, date, duration, timezone)
+
+    {:noreply, check_carried_time(updated_socket, date)}
+  end
+
+  # A time the URL carried (a deep link, or a language switch, which
+  # redirects with the day and time chosen) is checked once, against the
+  # first times fetched for its day. On a page that opens its moments by
+  # itself the time alone made the slot known, so the page moved on past
+  # the calendar; a time no longer free, or one whose day's times failed to
+  # load (a failed fetch offers none, so it cannot be confirmed free), is
+  # dropped there, with what was built on it, and the page settles back on
+  # the moment collecting the slot. A paged journey keeps it: its booking
+  # step is already on screen, and the submission refuses a time that was
+  # taken.
+  defp check_carried_time(%{assigns: %{carried_time: time, selected_date: date}} = socket, date)
+       when is_binary(time) do
+    socket = assign(socket, :carried_time, nil)
+
+    if Reveal.journey?(socket.assigns[:journey]) and socket.assigns[:selected_time] == time and
+         time not in (socket.assigns[:available_slots] || []) do
+      before = socket.assigns[:current_state]
+      socket = socket |> Runtime.clear([:slot]) |> Runtime.settle()
+
+      if socket.assigns[:current_state] == before,
+        do: socket,
+        else: assign(socket, :journey_focus, socket.assigns[:current_state])
+    else
+      socket
     end
   end
+
+  defp check_carried_time(socket, _date), do: socket
 
   @doc """
   Handles loading slots for a specific date.
@@ -208,17 +240,21 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   @spec handle_payment_paid(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_payment_paid(socket) do
-    case socket.assigns[:awaiting_payment_meeting] do
-      %{} = meeting ->
+    case socket.assigns do
+      %{current_state: :awaiting_payment, awaiting_payment_meeting: %{} = meeting} ->
         socket =
           socket
           |> assign(:meeting_uid, meeting.uid)
           |> assign(:name, meeting.attendee_name)
           |> assign(:email, meeting.attendee_email)
+          |> Runtime.forget_payment_wait()
 
         {:noreply, Runtime.transition_to(socket, :confirmation, %{})}
 
-      _other ->
+      # Only the wait ends on a payment: a broadcast repeated once the page
+      # has moved on (the confirmation, a booking started again) moves
+      # nothing.
+      _not_waiting ->
         {:noreply, socket}
     end
   end
@@ -227,8 +263,9 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   Handles the `:expired` PubSub broadcast for an embedded paid booking.
 
   When the Stripe Checkout session expires (attendee closed the tab,
-  30 minutes elapsed, etc.) we send the booker back to the booking form
-  with a flash so they can try again.
+  30 minutes elapsed, etc.) we send the booker back to the moment
+  collecting the attendee (the classic booking step) with a flash so they
+  can try again.
   """
   @spec handle_payment_expired(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -243,7 +280,12 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
         dgettext("booking", "Payment was cancelled. Please try booking again.")
       )
 
-    {:noreply, Runtime.transition_to(socket, :booking, %{})}
+    {:noreply,
+     Runtime.transition_to(
+       socket,
+       Progress.moment_for(socket.assigns.journey, :attendee),
+       %{}
+     )}
   end
 
   @doc """

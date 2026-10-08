@@ -12,7 +12,11 @@ defmodule TymeslotWeb.ThemeTestMatrix do
   markup contract test and `TymeslotWeb.BookingDriver`'s tests run those: a
   fixture renders the approval notice and the confirmation status, and books
   through the markup contract like any other theme. A fixture has no
-  stylesheet of its own.
+  stylesheet of its own. Besides the fixture (`"99"`) and the showcase
+  (`"97"`), the test-only themes are the journey fixtures
+  (`test/support/journey_fixtures/`: `"96"` Fixture Scroll, `"95"` Fixture
+  Talk and `"94"` Fixture Express), whose journeys are their own
+  (`journey: :custom`).
 
   `all/0` and `ids/0` are the shipped themes alone, for the suites tied to
   their own design (deep links, sort order, cancel pages, accessibility, the
@@ -127,6 +131,45 @@ defmodule TymeslotWeb.ThemeTestMatrix do
       selected_duration_selector: "[data-testid='duration-option'][aria-pressed='true']",
       journey: :classic,
       fixture: false
+    },
+    "96" => %{
+      id: "96",
+      key: :fixture_scroll,
+      slug: "fixture_scroll",
+      name: "Fixture Scroll",
+      wrapper_class: "journey-fixture-scroll",
+      video_background: false,
+      pins_schedule_actions: false,
+      schedule_view: :calendar,
+      selected_duration_selector: "[data-fact='meeting_type'][aria-pressed='true']",
+      journey: :custom,
+      fixture: true
+    },
+    "94" => %{
+      id: "94",
+      key: :fixture_express,
+      slug: "fixture_express",
+      name: "Fixture Express",
+      wrapper_class: "journey-fixture-express",
+      video_background: false,
+      pins_schedule_actions: false,
+      schedule_view: :week_grid,
+      selected_duration_selector: "[data-fact='meeting_type'][aria-pressed='true']",
+      journey: :custom,
+      fixture: true
+    },
+    "95" => %{
+      id: "95",
+      key: :fixture_talk,
+      slug: "fixture_talk",
+      name: "Fixture Talk",
+      wrapper_class: "journey-fixture-talk",
+      video_background: false,
+      pins_schedule_actions: false,
+      schedule_view: :calendar,
+      selected_duration_selector: "[data-fact='meeting_type'][aria-pressed='true']",
+      journey: :custom,
+      fixture: true
     },
     "97" => %{
       id: "97",

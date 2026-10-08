@@ -31,13 +31,14 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Fact do
     * `revisitable?/1` (optional): whether "back" may return to a moment
       collecting it;
     * `default/2` and `default_strategies/0` (optional): settle the fact
-      without asking, by a named strategy, and the strategies it takes.
+      without asking, by a named strategy, and the strategies it takes;
+    * `clear/1` (optional): forget the fact again.
 
   A fact `use`s this module, which defines every optional callback except
   `default/2` (`enter/2` returns the socket, `continue/1` is
   `{:done, socket}` once `known?/1` and `{:error, :incomplete}` before,
   `back/1` leaves, `revisitable?/1` is true, `default_strategies/0` is
-  empty), each overridable. The engine calls them without checking, so a
+  empty, `clear/1` returns the socket unchanged), each overridable. The engine calls them without checking, so a
   fact that only declares `@behaviour` is incomplete. `default/2` has no
   default: it is only called with a strategy listed in
   `default_strategies/0`, which `Journey.build!/2` checks.
@@ -81,12 +82,21 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Fact do
   @doc "The strategies `default/2` takes."
   @callback default_strategies() :: [atom()]
 
+  @doc """
+  Forgets the fact: puts back the assigns a booking has before it was known,
+  as far as they belong to this fact. `Journey.Runtime.clear/2` calls it for a
+  fact and for every fact depending on it (a transcript's "Edit"). Optional;
+  `use Fact` makes it return the socket unchanged.
+  """
+  @callback clear(Socket.t()) :: Socket.t()
+
   @optional_callbacks enter: 2,
                       continue: 1,
                       back: 1,
                       revisitable?: 1,
                       default: 2,
-                      default_strategies: 0
+                      default_strategies: 0,
+                      clear: 1
 
   @doc false
   defmacro __using__(_opts) do
@@ -110,7 +120,15 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Fact do
       @impl unquote(__MODULE__)
       def default_strategies, do: []
 
-      defoverridable enter: 2, continue: 1, back: 1, revisitable?: 1, default_strategies: 0
+      @impl unquote(__MODULE__)
+      def clear(socket), do: socket
+
+      defoverridable enter: 2,
+                     continue: 1,
+                     back: 1,
+                     revisitable?: 1,
+                     default_strategies: 0,
+                     clear: 1
     end
   end
 end

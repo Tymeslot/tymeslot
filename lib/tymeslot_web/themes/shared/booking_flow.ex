@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
   alias TymeslotWeb.Live.Scheduling.BookingConfig
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   alias TymeslotWeb.Themes.Shared.BookingLocation
+  alias TymeslotWeb.Themes.Shared.Journey.Progress
 
   @type transition_fun :: (Phoenix.LiveView.Socket.t(), atom(), map() ->
                              Phoenix.LiveView.Socket.t())
@@ -28,7 +29,9 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
   render in an iframe), the handler instead instructs the browser to open
   Checkout in a new tab and we transition to the local `:awaiting_payment`
   view; the LiveView subscribes to `meeting_payment:<id>` and flips back
-  to `:confirmation` on `:paid` or `:booking` on `:expired`.
+  to `:confirmation` on `:paid`, or on `:expired` to the moment collecting
+  the attendee (`Progress.moment_for(journey, :attendee)`, the classic
+  booking step).
   """
   @spec submit_booking(Phoenix.LiveView.Socket.t(), map(), transition_fun()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -76,8 +79,9 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
     end
   end
 
-  # Recover from a lost slot race: drop the stale time, return to the schedule
-  # step (which refreshes month availability), and reload that day's slots so
+  # Recover from a lost slot race: drop the stale time, return to the moment
+  # collecting the slot (the classic schedule step), which refreshes month
+  # availability, and reload that day's slots so
   # the just-taken time disappears and the booker can immediately pick another.
   # The error flash was already set by the submission handler.
   defp return_to_schedule_for_new_slot(socket, transition_fun) do
@@ -86,7 +90,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
       |> assign(:submitting, false)
       |> assign(:selected_time, nil)
       |> assign(:available_slots, [])
-      |> transition_fun.(:schedule, %{})
+      |> then(&transition_fun.(&1, Progress.moment_for(&1.assigns.journey, :slot), %{}))
 
     case socket.assigns[:selected_date] do
       nil ->

@@ -16,8 +16,23 @@ defmodule TymeslotWeb.Themes.Shared.Customization.HelpersTest do
   alias Phoenix.LiveView.Socket
   alias Tymeslot.ThemeCustomizations.Tokens
   alias TymeslotWeb.Themes.Shared.Customization.Helpers
+  alias TymeslotWeb.Themes.Shared.Journey
+  alias TymeslotWeb.Themes.Shared.Journey.Moment
+  alias TymeslotWeb.Themes.Shared.Journey.Navigators.{Continuous, Paged, Transcript}
 
   defp socket, do: %Socket{assigns: %{__changed__: %{}}}
+
+  defp journey(navigator, keys) do
+    %Journey{
+      navigator: navigator,
+      outcomes: %{},
+      moments: for(key <- keys, do: %Moment{key: key, collects: [], component: nil, defaults: []})
+    }
+  end
+
+  defp switcher?(assigns),
+    do:
+      Helpers.prepare_wrapper_assigns(Map.put(assigns, :__changed__, %{})).show_language_switcher
 
   describe "assign_theme_customization/3 — no persisted customisation" do
     test "falls back to the theme's defaults" do
@@ -116,6 +131,49 @@ defmodule TymeslotWeb.Themes.Shared.Customization.HelpersTest do
       assert assigns.background == nil
       refute assigns.has_video_background
       assert assigns.show_language_switcher
+    end
+  end
+
+  describe "prepare_wrapper_assigns/1: the language switcher" do
+    test "shows on a paged journey's first moment only, the classic overview included" do
+      classic = journey(Paged, [:overview, :schedule, :questions, :booking])
+      time_first = journey(Paged, [:now, :you])
+
+      assert switcher?(%{journey: classic, current_state: :overview})
+      refute switcher?(%{journey: classic, current_state: :schedule})
+      assert switcher?(%{journey: time_first, current_state: :now})
+      refute switcher?(%{journey: time_first, current_state: :you})
+    end
+
+    test "shows on every moment of a page that opens its moments by itself" do
+      scroll = journey(Continuous, [:intro, :offer, :when, :you])
+      talk = journey(Transcript, [:hello, :ask, :day, :time, :you])
+
+      assert switcher?(%{journey: scroll, current_state: :when})
+      assert switcher?(%{journey: scroll, current_state: :confirmation})
+      assert switcher?(%{journey: talk, current_state: :time})
+    end
+
+    # A locale change remounts the page on its entry route, which would drop
+    # the wait for a payment in progress.
+    test "hides on the payment wait of a page that opens its moments by itself" do
+      for navigator <- [Continuous, Transcript] do
+        reveal = journey(navigator, [:offer, :when, :you])
+
+        refute switcher?(%{journey: reveal, current_state: :awaiting_payment})
+        assert switcher?(%{journey: reveal, current_state: :confirmation})
+      end
+    end
+
+    test "keeps the overview rule on a page without a journey" do
+      assert switcher?(%{current_state: :overview})
+      refute switcher?(%{current_state: :schedule})
+    end
+
+    test "lets a wrapper's own choice win" do
+      scroll = journey(Continuous, [:intro, :offer, :when, :you])
+
+      refute switcher?(%{journey: scroll, current_state: :when, show_language_switcher: false})
     end
   end
 end

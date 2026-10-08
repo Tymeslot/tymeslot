@@ -1,0 +1,122 @@
+/* ==========================================================================
+   Agenda index block: the shared structure
+
+   Matches TymeslotWeb.Themes.Shared.Blocks.AgendaIndex. No shipped theme
+   imports it; a theme rendering the block imports it after shared/tokens.css.
+   It reads the contract tokens plus one of its own, which a theme may set in
+   its variables.css:
+
+     --agenda-index-rule   the line between rows (default var(--line-1))
+
+   A row is the date then its times as text links, wrapping under the date
+   when the row is narrow.
+   ========================================================================== */
+
+.agenda-index {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.agenda-index__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.agenda-index__range {
+  flex: 1;
+  margin: 0;
+  color: var(--ink-1);
+  font-weight: var(--font-weight-semibold);
+  text-align: center;
+}
+
+.agenda-index__nav-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2xs);
+  border: var(--border-width-thin) solid var(--line-1);
+  border-radius: var(--radius-control);
+  background: var(--surface-1);
+  color: var(--ink-1);
+  cursor: pointer;
+}
+
+.agenda-index__nav-button:disabled {
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+
+.agenda-index__nav-icon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+.agenda-index__rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agenda-index__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2xs) var(--space-md);
+  padding: var(--space-xs) 0;
+  border-bottom: var(--border-width-thin) solid var(--agenda-index-rule, var(--line-1));
+}
+
+.agenda-index__date {
+  min-width: calc(var(--space-2xl) * 2);
+  color: var(--ink-1);
+  font-weight: var(--font-weight-semibold);
+}
+
+.agenda-index__times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs) var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agenda-index__time {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--theme-primary);
+  font-variant-numeric: tabular-nums;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.agenda-index__time.agenda-index__time--selected {
+  color: var(--ink-1);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+}
+
+.agenda-index__nav-button:focus-visible,
+.agenda-index__time:focus-visible {
+  outline: var(--border-width-thick) solid var(--theme-primary);
+  outline-offset: var(--space-3xs);
+}
+
+.agenda-index--loading .agenda-index__rows {
+  opacity: 0.6;
+}
+
+.agenda-index__empty,
+.agenda-index__loading,
+.agenda-index__error {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.agenda-index__error {
+  color: var(--theme-danger);
+}

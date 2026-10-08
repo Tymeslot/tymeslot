@@ -14,30 +14,40 @@ defmodule TymeslotWeb.Themes.Shared.BookingLabels do
 
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Profiles
+  alias Tymeslot.Themes.Catalog
+  alias TymeslotWeb.Themes.Shared.Voice
 
   @doc """
-  The submit button's label.
+  The submit button's label, in the voice of the theme with key `theme_key`
+  where it has one.
 
   A gated meeting type submits a request rather than a booking, and says so, so
   that nobody presses a button reading "Book meeting" and receives a held
   request instead. `ungated_label` is the theme's own wording for the ordinary
   case ("Book meeting", "Submit"), passed in already translated so each theme
-  keeps its own literal at its own call site for extraction.
+  keeps its own literal at its own call site for extraction; a voice wording
+  `:submit` replaces it.
   """
-  @spec submit_label(boolean(), term(), String.t()) :: String.t()
-  def submit_label(is_rescheduling, meeting_type, ungated_label) do
+  @spec submit_label(boolean(), term(), String.t(), Catalog.theme_key() | nil) :: String.t()
+  def submit_label(is_rescheduling, meeting_type, ungated_label, theme_key \\ nil) do
+    voice = Voice.of(theme_key)
+
     cond do
       Approval.required?(meeting_type) and is_rescheduling ->
-        dgettext("booking", "Request new time")
+        Voice.line(voice, :submit_request_reschedule, %{}, fn ->
+          dgettext("booking", "Request new time")
+        end)
 
       Approval.required?(meeting_type) ->
-        dgettext("booking", "Request meeting")
+        Voice.line(voice, :submit_request, %{}, fn -> dgettext("booking", "Request meeting") end)
 
       is_rescheduling ->
-        dgettext("booking", "Reschedule Meeting")
+        Voice.line(voice, :submit_reschedule, %{}, fn ->
+          dgettext("booking", "Reschedule Meeting")
+        end)
 
       true ->
-        ungated_label
+        Voice.line(voice, :submit, %{}, fn -> ungated_label end)
     end
   end
 

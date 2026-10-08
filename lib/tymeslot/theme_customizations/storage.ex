@@ -8,11 +8,12 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
   require Logger
   alias Tymeslot.ThemeCustomizations.Spec
   alias Tymeslot.Utils.MediaValidator
+  alias TymeslotWeb.Helpers.UploadConstraints
   alias TymeslotWeb.Helpers.UploadHandler
 
   @type file_upload :: %{required(:path) => Path.t(), required(:filename) => String.t()}
 
-  @kind_directories %{image: "images", video: "videos"}
+  @kind_directories %{image: "images", video: "videos", captions: "captions"}
 
   # A stored name's limit, prefix included; the sanitiser truncates to it.
   @max_name_bytes 255
@@ -36,7 +37,7 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
 
   @doc """
   Returns the directory where theme assets are stored for a profile/theme/type.
-  Type is one of "images" | "videos".
+  Type is one of "images" | "videos" | "captions".
   """
   @spec get_theme_upload_directory(integer(), String.t(), String.t()) :: String.t()
   def get_theme_upload_directory(profile_id, theme_id, type) do
@@ -82,21 +83,27 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
   end
 
   @doc """
-  Stores an uploaded image or video for a profile's theme and returns its path
-  relative to the upload root: `themes/<profile>/<theme>/images/<name>` for an
-  image, `.../videos/<name>` for a video.
+  Stores an uploaded image, video or captions file for a profile's theme and
+  returns its path relative to the upload root:
+  `themes/<profile>/<theme>/images/<name>` for an image, `.../videos/<name>`
+  for a video and `.../captions/<name>` for captions.
 
   The content is checked against `kind` by its bytes, never by the client's
-  content type. Every stored file gets a name of its own, a random prefix
-  before the sanitised client name, so no two uploads share a path: a new
-  upload never overwrites a file a setting still names, and deleting one
-  upload's file never deletes another's.
+  content type. The stored extension, by which `/uploads` types the file,
+  comes from the kind: captions are always `.vtt`, and an image or a video
+  keeps the client's extension, lower-cased, only when its kind takes it
+  (`UploadConstraints.allowed_extensions/1`); any other is refused as a
+  file of the wrong format. Every stored file gets a name of its own, a
+  random prefix before the sanitised client name, so no two uploads share a
+  path: a new upload never overwrites a file a setting still names, and
+  deleting one upload's file never deletes another's.
   """
   @spec store_asset(Spec.asset_kind(), integer(), String.t(), file_upload()) ::
           {:ok, String.t()} | {:error, term()}
   def store_asset(kind, profile_id, theme_id, %{path: temp_path, filename: filename})
-      when kind in [:image, :video] do
-    if valid_content?(kind, temp_path) do
+      when kind in [:image, :video, :captions] do
+    with {:ok, extension} <- stored_extension(kind, filename),
+         :ok <- validate_content(kind, temp_path) do
       directory = Map.fetch!(@kind_directories, kind)
       dest_dir = get_theme_upload_directory(profile_id, theme_id, directory)
 
@@ -105,7 +112,7 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
              UploadHandler.store_file_atomically(
                temp_path,
                dest_dir,
-               unique_name(filename),
+               unique_name(filename, extension),
                %{
                  operation: :store_theme_asset,
                  kind: kind,
@@ -115,39 +122,47 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
              ) do
         {:ok, Path.join(["themes", to_string(profile_id), theme_id, directory, stored_name])}
       end
-    else
-      {:error, invalid_format(kind)}
     end
+  end
+
+  # Captions have one format, so they are stored as it whatever the client
+  # named them; an image or a video comes in several, which the validator
+  # does not tell apart, so the client's extension must be one its kind takes.
+  defp stored_extension(:captions, _filename), do: {:ok, ".vtt"}
+
+  defp stored_extension(kind, filename) do
+    extension = filename |> Path.extname() |> String.downcase()
+
+    if extension in UploadConstraints.allowed_extensions(kind),
+      do: {:ok, extension},
+      else: {:error, invalid_format(kind)}
+  end
+
+  defp validate_content(kind, path) do
+    if valid_content?(kind, path), do: :ok, else: {:error, invalid_format(kind)}
   end
 
   defp valid_content?(:image, path), do: MediaValidator.valid_image_file?(path)
   defp valid_content?(:video, path), do: MediaValidator.valid_video_file?(path)
+  defp valid_content?(:captions, path), do: MediaValidator.valid_captions_file?(path)
 
   defp invalid_format(:image), do: :invalid_image_format
   defp invalid_format(:video), do: :invalid_video_format
+  defp invalid_format(:captions), do: :invalid_captions_format
 
   # The prefix goes in front of the basename: `store_file_atomically/4`
   # sanitises the name with `Path.basename/1`, which would drop a prefix put in
-  # front of a client name carrying a directory. The client name is shortened
-  # first, so that the whole name fits the file-name limit and the sanitiser
-  # never cuts off its extension, by which the file is later served.
-  defp unique_name(filename) do
+  # front of a client name carrying a directory. The client's stem is
+  # shortened first, so that the whole name fits the file-name limit and the
+  # sanitiser never cuts off the stored extension, by which the file is
+  # later served. The cut may split a multi-byte character; harmless, since
+  # the sanitiser replaces every non-ASCII byte with one `_` and so keeps
+  # the length.
+  defp unique_name(filename, extension) do
     prefix = Base.encode16(:crypto.strong_rand_bytes(6), case: :lower) <> "-"
-    prefix <> fit_name(Path.basename(filename), @max_name_bytes - byte_size(prefix))
-  end
+    stem = filename |> Path.basename() |> Path.rootname()
+    budget = @max_name_bytes - byte_size(prefix) - byte_size(extension)
 
-  # Cuts the stem, never the extension, to at most `budget` bytes. The cut may
-  # split a multi-byte character; harmless, since the sanitiser replaces every
-  # non-ASCII byte with one `_` and so keeps the length.
-  defp fit_name(name, budget) when byte_size(name) <= budget, do: name
-
-  defp fit_name(name, budget) do
-    extension = Path.extname(name)
-
-    if byte_size(extension) < budget do
-      binary_part(name, 0, budget - byte_size(extension)) <> extension
-    else
-      binary_part(name, 0, budget)
-    end
+    prefix <> binary_part(stem, 0, min(byte_size(stem), budget)) <> extension
   end
 end

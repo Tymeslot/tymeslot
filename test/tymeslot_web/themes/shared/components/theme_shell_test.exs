@@ -1,8 +1,10 @@
 defmodule TymeslotWeb.Themes.Shared.Components.ThemeShellTest do
   @moduledoc """
-  The page chrome every theme's wrapper renders: the organiser's colours, the
+  What every booking page carries, whatever its layout: the theme's outermost
+  element marked as the booker root, the organiser's colours, the
   owner-preview disclosure, the language switcher and the configured theme
-  extensions, around the theme's own background and step content.
+  extensions. Where the chrome and the extensions sit is the theme's choice;
+  the page below lays them out as Quill and Rhythm do, in a grid of its own.
   """
   # Mutates the node-wide :theme_extensions setting.
   use ExUnit.Case, async: false
@@ -39,7 +41,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.ThemeShellTest do
     ConfigTestHelpers.setup_config(:tymeslot, :theme_extensions, [{ExtensionProbe, :probe}])
   end
 
-  defp render_shell(overrides) do
+  defp render_page(overrides) do
     {demo, overrides} = Keyword.pop(overrides, :demo_mode, :unset)
 
     assigns =
@@ -50,7 +52,6 @@ defmodule TymeslotWeb.Themes.Shared.Components.ThemeShellTest do
           language_dropdown_open: false,
           show_language_switcher: true,
           owner_preview: false,
-          grid_style: nil,
           demo_attrs: if(demo == :unset, do: %{}, else: %{demo_mode: demo})
         },
         Map.new(overrides)
@@ -58,25 +59,28 @@ defmodule TymeslotWeb.Themes.Shared.Components.ThemeShellTest do
 
     fn assigns ->
       ~H"""
-      <ThemeShell.theme_shell
-        class="probe-wrapper"
-        grid_class="probe-grid theme-grid"
-        grid_style={@grid_style}
-        language_class="probe-lang"
-        theme_id="7"
-        theme_tokens={@theme_tokens}
-        locale={@locale}
-        language_dropdown_open={@language_dropdown_open}
-        show_language_switcher={@show_language_switcher}
-        owner_preview={@owner_preview}
-        organizer_user_id={42}
-        should_show_branding={true}
-        {@demo_attrs}
-      >
+      <ThemeShell.theme_shell class="probe-wrapper" locale={@locale} theme_tokens={@theme_tokens}>
         <:background>
           <div id="probe-background"></div>
         </:background>
-        <p id="probe-step">step</p>
+        <div class="probe-grid">
+          <div class="probe-content">
+            <ThemeShell.chrome
+              language_class="probe-lang"
+              locale={@locale}
+              language_dropdown_open={@language_dropdown_open}
+              show_language_switcher={@show_language_switcher}
+              owner_preview={@owner_preview}
+            />
+            <p id="probe-step">step</p>
+          </div>
+          <ThemeShell.extensions
+            theme_id="7"
+            organizer_user_id={42}
+            should_show_branding={true}
+            {@demo_attrs}
+          />
+        </div>
       </ThemeShell.theme_shell>
       """
     end
@@ -84,79 +88,90 @@ defmodule TymeslotWeb.Themes.Shared.Components.ThemeShellTest do
     |> Floki.parse_fragment!()
   end
 
-  test "writes the organiser's customisation onto :root, and nothing without it" do
-    styled = render_shell(theme_tokens: %Tokens{vars: %{"--theme-primary" => "#123456"}})
+  describe "theme_shell/1" do
+    test "marks the theme's outermost element, and only it, as the booker root" do
+      doc = render_page([])
 
-    assert styled |> Floki.find(".probe-wrapper > style") |> Floki.raw_html() =~
-             ~r/:root:root\s*\{\s*--theme-primary: #123456;/
+      assert [{"div", attrs, _children}] = Floki.find(doc, "[data-booker-root]")
+      assert {"class", "probe-wrapper"} in attrs
+      assert {"data-locale", "en"} in attrs
+    end
 
-    assert Floki.find(render_shell(theme_tokens: nil), "style") == []
-    assert Floki.find(render_shell(theme_tokens: %Tokens{}), "style") == []
+    test "writes the organiser's customisation onto :root, and nothing without it" do
+      styled = render_page(theme_tokens: %Tokens{vars: %{"--theme-primary" => "#123456"}})
+
+      assert styled |> Floki.find("[data-booker-root] > style") |> Floki.raw_html() =~
+               ~r/:root:root\s*\{\s*--theme-primary: #123456;/
+
+      assert Floki.find(render_page(theme_tokens: nil), "style") == []
+      assert Floki.find(render_page(theme_tokens: %Tokens{}), "style") == []
+    end
+
+    test "renders the background first, then the theme's own markup, inside the root" do
+      children =
+        []
+        |> render_page()
+        |> Floki.find("[data-booker-root] > *")
+        |> Enum.map(fn {tag, attrs, _children} ->
+          attrs = Map.new(attrs)
+          {tag, attrs["id"] || attrs["class"]}
+        end)
+
+      assert children == [{"div", "probe-background"}, {"div", "probe-grid"}]
+    end
   end
 
-  test "renders the background before the grid, and the step inside the content area" do
-    doc = render_shell([])
+  describe "chrome/1" do
+    test "shows the owner-preview notice only in owner preview, where the theme puts it" do
+      assert Floki.find(
+               render_page(owner_preview: true),
+               ".probe-content > [data-testid=preview-notice]"
+             ) != []
 
-    children =
-      doc
-      |> Floki.find(".probe-wrapper > *")
-      |> Enum.map(fn {tag, attrs, _children} ->
-        attrs = Map.new(attrs)
-        {tag, attrs["id"] || attrs["class"]}
-      end)
+      assert Floki.find(render_page(owner_preview: false), "[data-testid=preview-notice]") == []
+    end
 
-    # The grid also carries the `booker-page` hook the shared embed rules
-    # (shared/embed.css) size to content.
-    assert children == [{"div", "probe-background"}, {"div", "booker-page probe-grid theme-grid"}]
+    test "shows the language switcher only where the page decided to" do
+      assert Floki.find(render_page(show_language_switcher: true), ".probe-lang.visible") != []
+      assert Floki.find(render_page(show_language_switcher: false), ".probe-lang.hidden") != []
 
-    assert Floki.find(doc, ".probe-grid > .content-area #probe-step") != []
+      # A theme hides the container through the semantic class, never by
+      # styling the Tailwind utility name.
+      assert Floki.find(
+               render_page(show_language_switcher: false),
+               ".probe-lang.theme-shell__language--hidden"
+             ) != []
+
+      assert Floki.find(render_page(language_dropdown_open: nil), ".probe-lang") == []
+      assert Floki.find(render_page(locale: nil), ".probe-lang") == []
+    end
   end
 
-  test "puts the theme's grid style on the grid, and no style attribute without one" do
-    doc = render_shell(grid_style: "background: black")
+  describe "extensions/1" do
+    test "hands the branding inputs to the theme extensions, where the theme puts them" do
+      doc = render_page([])
 
-    assert Floki.attribute(doc, ".probe-grid", "style") == ["background: black"]
-    assert Floki.attribute(render_shell(grid_style: nil), ".probe-grid", "style") == []
-    assert Floki.attribute(render_shell(grid_style: ""), ".probe-grid", "style") == [""]
+      assert Floki.attribute(doc, ".probe-grid > #extension-probe", "data-user") == ["42"]
+      assert Floki.attribute(doc, ".probe-grid > #extension-probe", "data-branding") == ["true"]
+    end
+
+    test "hands the theme id to the theme extensions" do
+      assert Floki.attribute(render_page([]), "#extension-probe", "data-theme") == ["7"]
+    end
+
+    test "hands demo mode to the theme extensions only when the page assigned it" do
+      assert Floki.attribute(render_page(demo_mode: true), "#extension-probe", "data-demo") ==
+               ["{:ok, true}"]
+
+      assert Floki.attribute(render_page([]), "#extension-probe", "data-demo") == [":error"]
+    end
   end
 
-  test "shows the owner-preview notice only in owner preview" do
-    assert Floki.find(render_shell(owner_preview: true), "[data-testid=preview-notice]") != []
-    assert Floki.find(render_shell(owner_preview: false), "[data-testid=preview-notice]") == []
-  end
-
-  test "shows the language switcher only where the page decided to" do
-    assert Floki.find(render_shell(show_language_switcher: true), ".probe-lang.visible") != []
-    assert Floki.find(render_shell(show_language_switcher: false), ".probe-lang.hidden") != []
-
-    # A theme hides the container through the semantic class, never by
-    # styling the Tailwind utility name.
-    assert Floki.find(
-             render_shell(show_language_switcher: false),
-             ".probe-lang.theme-shell__language--hidden"
-           ) != []
-
-    assert Floki.find(render_shell(language_dropdown_open: nil), ".probe-lang") == []
-    assert Floki.find(render_shell(locale: nil), ".probe-lang") == []
-  end
-
-  test "hands the branding inputs to the theme extensions, in the grid's footer row" do
-    doc = render_shell([])
-
-    assert Floki.attribute(doc, ".probe-grid > #extension-probe", "data-user") == ["42"]
-    assert Floki.attribute(doc, ".probe-grid > #extension-probe", "data-branding") == ["true"]
-  end
-
-  test "hands the theme id to the theme extensions" do
-    doc = render_shell([])
-
-    assert Floki.attribute(doc, "#extension-probe", "data-theme") == ["7"]
-  end
-
-  test "hands demo mode to the theme extensions only when the page assigned it" do
-    assert Floki.attribute(render_shell(demo_mode: true), "#extension-probe", "data-demo") ==
-             ["{:ok, true}"]
-
-    assert Floki.attribute(render_shell([]), "#extension-probe", "data-demo") == [":error"]
+  describe "style_attrs/1" do
+    test "gives no style attribute without a style, and the style as given otherwise" do
+      assert ThemeShell.style_attrs(nil) == []
+      assert ThemeShell.style_attrs("background: black") == [style: "background: black"]
+      assert ThemeShell.style_attrs("") == [style: ""]
+    end
   end
 end

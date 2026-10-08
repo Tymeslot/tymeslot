@@ -42,4 +42,23 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Navigator do
 
   @doc "A click on the step indicator's `step`."
   @callback go_to(Journey.t(), Socket.t(), step :: String.t()) :: {:noreply, Socket.t()}
+
+  @doc """
+  Reveals what the booking reaches now: for a navigator that shows several
+  moments and moves on by itself, opens each newly reached moment
+  (`Journey.Runtime.open_moment/3`) and sets `:current_state` to the moment
+  still to complete. `Journey.Runtime.settle/1` calls it after a moment is
+  entered and after every fact or ambient event. Optional: a navigator that
+  moves only on Next and Back (`Navigators.Paged`) has none.
+  """
+  @callback settle(Journey.t(), Socket.t()) :: Socket.t()
+
+  @doc """
+  The element the visible moments sit in, as a tag and its attributes
+  (`Journey.Components.frame/1` renders it). Optional: without it the moment
+  is rendered bare, as `Navigators.Paged`'s one moment is.
+  """
+  @callback frame() :: {String.t(), keyword()}
+
+  @optional_callbacks settle: 2, frame: 0
 end

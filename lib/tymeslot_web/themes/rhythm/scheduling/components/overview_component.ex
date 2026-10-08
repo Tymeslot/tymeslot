@@ -51,10 +51,14 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
               </div>
               <div class="organizer-info">
                 <p class="organizer-greeting">
-                  {BookingText.greeting(@organizer_profile, Profiles.display_name(@organizer_profile))}
+                  {BookingText.greeting(
+                    @organizer_profile,
+                    Profiles.display_name(@organizer_profile),
+                    :rhythm
+                  )}
                 </p>
                 <p class="organizer-instruction">
-                  {BookingText.instruction(@organizer_profile)}
+                  {BookingText.instruction(@organizer_profile, :rhythm)}
                 </p>
               </div>
             </div>

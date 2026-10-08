@@ -679,3 +679,18 @@ msgstr "Оберіть день із місяця або перегляньте 
 #, elixir-autogen, elixir-format
 msgid "Week"
 msgstr "Тиждень"
+
+#: lib/tymeslot_web/themes/quill/theme.ex
+#, elixir-autogen, elixir-format
+msgid "My clients should feel they are booking someone established. The page should look as considered as my work."
+msgstr "Мої клієнти мають відчувати, що бронюють когось із міцною репутацією. Сторінка має виглядати так само продумано, як моя робота."
+
+#: lib/tymeslot_web/themes/rhythm/theme.ex
+#, elixir-autogen, elixir-format
+msgid "When someone books me, I want them to feel the atmosphere first: motion, mood, then a time."
+msgstr "Коли хтось мене бронює, я хочу, щоб спершу людина відчула атмосферу: рух, настрій, а потім час."
+
+#: lib/tymeslot/theme_customizations/assets.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid captions file. Please upload a WebVTT (.vtt) file."
+msgstr "Недійсний файл субтитрів. Завантажте файл WebVTT (.vtt)."

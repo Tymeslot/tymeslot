@@ -178,7 +178,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
     BookingLabels.submit_label(
       is_rescheduling,
       meeting_type,
-      dgettext("booking", "Submit")
+      dgettext("booking", "Submit"),
+      :rhythm
     )
   end
 

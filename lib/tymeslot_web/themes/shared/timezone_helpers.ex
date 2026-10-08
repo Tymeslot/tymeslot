@@ -17,8 +17,10 @@ defmodule TymeslotWeb.Themes.Shared.TimezoneHelpers do
   @doc """
   Assigns `:user_timezone`, the timezone every time on the page is shown in.
 
-  The zone the booker's browser reported when the socket connected wins, since
-  it is where the booker actually is; a `timezone` URL parameter covers the
+  A zone a language switch carried (`visitor_timezone`, the one the visitor was
+  seeing times in) wins. Otherwise the zone the booker's browser reported when
+  the socket connected wins, since it is where the booker actually is; a
+  `timezone` URL parameter covers the
   static render, before the browser has reported anything; the default covers
   the rest. The result is always a valid, current IANA id: renamed zones are
   normalised, and an unknown one falls back to the default (or `"UTC"` should
@@ -29,7 +31,7 @@ defmodule TymeslotWeb.Themes.Shared.TimezoneHelpers do
   @spec assign_user_timezone(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def assign_user_timezone(socket, params) do
     requested =
-      get_connect_params(socket)["timezone"] || params["timezone"] ||
+      carried_timezone(params) || get_connect_params(socket)["timezone"] || params["timezone"] ||
         Profiles.get_default_timezone()
 
     normalized = Timezones.normalize(requested)
@@ -38,6 +40,17 @@ defmodule TymeslotWeb.Themes.Shared.TimezoneHelpers do
 
     assign(socket, :user_timezone, timezone)
   end
+
+  # The timezone the visitor was seeing times in before a language switch
+  # (`PathHandlers` carries it with the chosen day and time, which are wall
+  # clock in that zone). It wins over the browser's, as the visitor's own
+  # choice did before the redirect; one that is not a valid zone is ignored.
+  defp carried_timezone(%{"visitor_timezone" => timezone}) when is_binary(timezone) do
+    normalized = Timezones.normalize(timezone)
+    if Timezones.valid?(normalized), do: normalized
+  end
+
+  defp carried_timezone(_params), do: nil
 
   defp fallback_timezone do
     default = Profiles.get_default_timezone()

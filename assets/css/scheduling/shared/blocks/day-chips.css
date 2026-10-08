@@ -1,0 +1,66 @@
+/* ==========================================================================
+   Day chips block: the shared structure
+
+   Matches TymeslotWeb.Themes.Shared.Blocks.DayChips. No shipped theme
+   imports it; a theme rendering the block imports it after shared/tokens.css.
+   It reads the contract tokens plus one of its own, which a theme may set in
+   its variables.css:
+
+     --day-chips-gap   the space between chips (default var(--space-2xs))
+
+   A chip is at least a comfortable touch target tall.
+   ========================================================================== */
+
+.day-chips {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.day-chips__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--day-chips-gap, var(--space-2xs));
+}
+
+.day-chips__chip {
+  min-height: calc(var(--space-xl) + var(--space-xs));
+  padding: var(--space-2xs) var(--space-sm);
+  border: var(--border-width-thin) solid var(--line-1);
+  border-radius: var(--radius-control);
+  background: var(--surface-1);
+  color: var(--ink-1);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.day-chips__chip:hover {
+  border-color: var(--theme-primary);
+}
+
+.day-chips__chip--today {
+  border-color: var(--theme-primary);
+}
+
+.day-chips__chip.day-chips__chip--selected {
+  background: var(--theme-primary-solid);
+  border-color: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+}
+
+.day-chips__chip:focus-visible {
+  outline: var(--border-width-thick) solid var(--theme-primary);
+  outline-offset: var(--space-3xs);
+}
+
+.day-chips__loading,
+.day-chips__error,
+.day-chips__empty {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+}

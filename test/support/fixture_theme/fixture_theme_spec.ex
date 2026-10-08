@@ -5,12 +5,15 @@ defmodule Tymeslot.Test.FixtureThemeSpec do
 
   A light palette with no preset schemes (a custom seed, derived light and
   following the visitor's OS, stored as the seed alone), no background, and
-  one group of its own, `Emblem`. `changeset/2` and `asset_fields/0` are the
-  ones `use Spec` generates, and `tokens/2` starts from the generated
-  default (`Specs.tokens/3`); nothing here restates a shared rule.
+  two groups of its own: `Emblem` (a shape and an image) and `Clips` (two
+  videos, so the theme offers more than one). `changeset/2` and
+  `asset_fields/0` are the ones `use Spec` generates, and `tokens/2` starts
+  from the generated default (`Specs.tokens/3`); nothing here restates a
+  shared rule.
   """
   use Tymeslot.ThemeCustomizations.Spec
 
+  alias Tymeslot.Test.FixtureThemeSpec.Clips
   alias Tymeslot.Test.FixtureThemeSpec.Emblem
   alias Tymeslot.ThemeCustomizations.Options.Palette
   alias Tymeslot.ThemeCustomizations.Spec
@@ -20,7 +23,8 @@ defmodule Tymeslot.Test.FixtureThemeSpec do
   def option_groups,
     do: [
       %{key: :palette, module: Palette, schemes: [], seed_mode: :light, follow_os: true},
-      %{key: :emblem, module: Emblem, choices: ["round", "square"]}
+      %{key: :emblem, module: Emblem, choices: ["round", "square"]},
+      %{key: :clips, module: Clips}
     ]
 
   # A seed-only palette: the group offers no preset schemes, so the stored

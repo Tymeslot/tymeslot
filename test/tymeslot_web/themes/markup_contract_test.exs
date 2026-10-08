@@ -118,7 +118,7 @@ defmodule TymeslotWeb.Themes.MarkupContractTest do
     BookingDriver.choose_meeting_type(view, ctx.booked)
   end
 
-  defp check_and_do(view, :slot, _ctx, _assigns) do
+  defp check_and_do(view, :slot, _ctx, before) do
     BookingDriver.load(view)
     days = attribute(view, "[data-fact='date']", "data-value")
     slots = slot_pairs(view)
@@ -137,16 +137,35 @@ defmodule TymeslotWeb.Themes.MarkupContractTest do
 
     assert times == Enum.uniq(times), "two time buttons share a data-value"
 
-    # A time button belongs to the day picked; a slot button names its own.
-    marked = Enum.map(times, &{day, &1}) ++ slot_pairs(view)
+    # The control clicked said what it sends: the booking holds the day and
+    # the time its attributes named.
+    assigns = live_assigns(view)
 
-    assert {day, time} in marked, "the time picked is marked neither as a time nor as a slot"
+    assert {assigns.selected_date, assigns.selected_time} == {day, time},
+           "the time picked is not the day and time its marked control named"
+
+    # The picker marks the time picked among its choices (a time button
+    # belongs to the day picked; a slot button names its own) while it is on
+    # show, and always while its moment is still the one being answered. A
+    # page that answers the moment in its place once the time is picked (a
+    # transcript, moving on by itself) may show no picker.
+    marked = Enum.map(times, &{day, &1}) ++ slot_pairs(view)
+    must_mark = marked != [] or assigns.current_state == before.current_state
+
+    assert {day, time} in marked == must_mark,
+           "the time picked is marked neither as a time nor as a slot"
   end
 
   defp check_and_do(view, :answers, _ctx, _assigns),
     do: answer_all(view, [], map_size(@answers) + 1)
 
   defp check_and_do(view, :attendee, _ctx, _assigns) do
+    # Answers asked beside the details are confirmed by the way on before
+    # the form shows.
+    if not has_element?(view, "form[data-fact='attendee']") and
+         has_element?(view, "[data-intent='continue']"),
+       do: BookingDriver.continue(view)
+
     forms =
       view |> render() |> Floki.parse_document!() |> Floki.find("form[data-fact='attendee']")
 
@@ -168,7 +187,8 @@ defmodule TymeslotWeb.Themes.MarkupContractTest do
   # is answered (one, on a page that asks one at a time; several, on one that
   # shows them together). Between rounds the walk takes the way on to the next
   # question; after the last answer it stops, leaving the moment to `walk/4`
-  # (a moment that also collects the attendee shows its form by then).
+  # (a moment that also collects the attendee shows its form then, or once
+  # the answers are confirmed with its way on).
   defp answer_all(_view, answered, 0),
     do: flunk("the questions moment kept asking after #{inspect(answered)}")
 

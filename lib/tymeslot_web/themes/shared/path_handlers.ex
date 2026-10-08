@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   use TymeslotWeb, :verified_routes
 
   alias Tymeslot.MeetingTypes
+  alias TymeslotWeb.Themes.Shared.Journey.Navigators.Reveal
 
   @doc """
   Builds a path with locale and theme query parameters.
@@ -94,7 +95,41 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
     |> put_preview_params(socket)
     |> Map.merge(demo_theme_param(socket.assigns))
     |> maybe_put_query_param("reschedule_meeting_uid", socket.assigns[:reschedule_meeting_uid])
+    |> put_choices(socket.assigns)
   end
+
+  # A page that opens its moments by itself shows the switcher on every
+  # moment, so a switch can come after the visitor has chosen. The redirect
+  # carries the choices as the deep-link parameters, and the page that comes
+  # back lands where the visitor was. The route stays the one the visit
+  # started on, which is what `entered_via_overview` is read from: a type
+  # chosen on the overview goes as `duration` on the overview route (a type
+  # the overview does not list is never taken from it), and a meeting
+  # type's own link names its type in the path. A time no longer free is
+  # dropped on arrival, as a deep link's is. The day and time are wall clock
+  # in the visitor's timezone, so that goes too (`visitor_timezone`, which the
+  # mount prefers to the browser's). The answers and the details are not
+  # carried. A paged journey's switcher shows on its first moment only,
+  # before any choice, so it carries nothing; nor does an outcome, whose
+  # choices are a booking already made (a switch on the confirmation would
+  # otherwise land on the details for the slot just booked).
+  defp put_choices(params, assigns) do
+    if Reveal.journey?(assigns[:journey]) and
+         assigns[:current_state] not in [:confirmation, :awaiting_payment] do
+      params
+      |> maybe_put_query_param("duration", overview_choice(assigns))
+      |> maybe_put_query_param("date", assigns[:selected_date])
+      |> maybe_put_query_param("time", assigns[:selected_date] && assigns[:selected_time])
+      |> maybe_put_query_param("visitor_timezone", assigns[:user_timezone])
+    else
+      params
+    end
+  end
+
+  defp overview_choice(%{live_action: :overview} = assigns),
+    do: MeetingTypes.normalize_duration_slug(assigns[:selected_duration])
+
+  defp overview_choice(_assigns), do: nil
 
   # `theme` rides along here and nowhere else, which is the fix for #84. It used
   # to be emitted on every locale switch from `:theme_id`, an assign the

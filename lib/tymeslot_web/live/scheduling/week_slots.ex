@@ -97,6 +97,44 @@ defmodule TymeslotWeb.Live.Scheduling.WeekSlots do
   end
 
   @doc """
+  The loaded week's days from `today` on that have a free time, in date
+  order, as `%{date: Date.t(), iso: String.t(), slots: [String.t()]}`; empty
+  when no week is loaded. The blocks that list times across days
+  (`Blocks.NextSlots`, `Blocks.AgendaIndex`) read the week through it.
+  """
+  @spec free_days(map() | nil, Date.t()) :: [
+          %{date: Date.t(), iso: String.t(), slots: [String.t()]}
+        ]
+  def free_days(nil, _today), do: []
+
+  def free_days(week_slots, today) do
+    week_slots
+    |> Enum.flat_map(fn {iso, slots} ->
+      with {:ok, date} <- Date.from_iso8601(iso),
+           false <- Date.compare(date, today) == :lt,
+           [_first | _rest] = slots <- MeetingUtils.normalize_slot_list(slots) do
+        [%{date: date, iso: iso, slots: slots}]
+      else
+        _not_offered -> []
+      end
+    end)
+    |> Enum.sort_by(& &1.date, Date)
+  end
+
+  @doc """
+  What a block listing the week shows: `:error` when the fetch failed (the
+  error wins), `:loading` when no week has been asked for yet or another
+  week is on its way with its slots emptied, else `:loaded`. A refetch of the
+  week shown keeps it `:loaded`. `Blocks.NextSlots` and `Blocks.AgendaIndex`
+  share it, as `WeekGrid` does.
+  """
+  @spec view_state(map() | nil, boolean(), String.t() | nil) :: :error | :loading | :loaded
+  def view_state(_week_slots, _loading, error) when is_binary(error), do: :error
+  def view_state(nil, _loading, _error), do: :loading
+  def view_state(week_slots, true, _error) when map_size(week_slots) == 0, do: :loading
+  def view_state(_week_slots, _loading, _error), do: :loaded
+
+  @doc """
   A `start_async/3` result. Handles `{:week_slots, week_start}`, and returns
   `:unhandled` for any other name.
   """

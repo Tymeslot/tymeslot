@@ -25,6 +25,23 @@ defmodule TymeslotWeb.Themes.Shared.TimezoneHelpersTest do
       assert socket.assigns.user_timezone == "Asia/Tokyo"
     end
 
+    test "keeps the timezone the visitor chose before a language switch over the browser's" do
+      socket = mounting_socket(%{"timezone" => "Asia/Tokyo"}, true)
+
+      socket =
+        TimezoneHelpers.assign_user_timezone(socket, %{"visitor_timezone" => "America/New_York"})
+
+      assert socket.assigns.user_timezone == "America/New_York"
+    end
+
+    test "ignores a carried timezone that does not exist" do
+      socket = mounting_socket(%{"timezone" => "Asia/Tokyo"}, true)
+
+      socket = TimezoneHelpers.assign_user_timezone(socket, %{"visitor_timezone" => "Mars/Base"})
+
+      assert socket.assigns.user_timezone == "Asia/Tokyo"
+    end
+
     test "uses the URL's timezone on the static render, before the browser has reported one" do
       socket = mounting_socket(%{}, false)
 

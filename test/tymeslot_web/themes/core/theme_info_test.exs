@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Themes.Core.ThemeInfoTest do
   @moduletag :unit
 
   alias Tymeslot.Themes.Catalog
+  alias TymeslotWeb.Test.FixtureTheme.Voice, as: FixtureVoice
   alias TymeslotWeb.Themes.Core.ThemeInfo
   alias TymeslotWeb.Themes.Rhythm.Theme, as: Rhythm
 
@@ -26,6 +27,14 @@ defmodule TymeslotWeb.Themes.Core.ThemeInfoTest do
 
     test "is nil for an unknown id" do
       assert ThemeInfo.get_live_view_module("no-such-theme") == nil
+    end
+  end
+
+  describe "get_voice/1" do
+    test "is the voice the theme names, or nil" do
+      assert ThemeInfo.get_voice("99") == FixtureVoice
+      assert ThemeInfo.get_voice("1") == nil
+      assert ThemeInfo.get_voice("no-such-theme") == nil
     end
   end
 
@@ -83,8 +92,41 @@ defmodule TymeslotWeb.Themes.Core.ThemeInfoTest do
              } = ThemeInfo.get_theme("2")
     end
 
+    test "carries the theme's story and axes" do
+      assert %{
+               story:
+                 "When someone books me, I want them to feel the atmosphere first: motion, mood, then a time.",
+               axes: [
+                 flow: :paged_wizard,
+                 entry: :meeting_type_first,
+                 spatial: :centred_card,
+                 time_view: :week_strip,
+                 conversion: :atmosphere,
+                 voice: :polished,
+                 surface: :glass
+               ]
+             } = ThemeInfo.get_theme("2")
+    end
+
     test "is nil for an unknown id" do
       assert ThemeInfo.get_theme("999") == nil
+    end
+  end
+
+  describe "all_themes/0" do
+    test "carries each theme's story and axes" do
+      assert %{
+               story: "My clients should feel they are booking someone established." <> _rest,
+               axes: [
+                 flow: :paged_wizard,
+                 entry: :meeting_type_first,
+                 spatial: :wide_card,
+                 time_view: :month_grid,
+                 conversion: :atmosphere,
+                 voice: :polished,
+                 surface: :glass
+               ]
+             } = Map.fetch!(ThemeInfo.all_themes(), "1")
     end
   end
 
@@ -100,6 +142,13 @@ defmodule TymeslotWeb.Themes.Core.ThemeInfoTest do
                )
 
       refute Rhythm.metadata().description =~ "Modern sliding design"
+    end
+
+    test "story/0 is translated into the current locale" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+
+      refute Rhythm.story() =~ "When someone books me"
+      assert Rhythm.story() =~ "Atmosphäre"
     end
   end
 end

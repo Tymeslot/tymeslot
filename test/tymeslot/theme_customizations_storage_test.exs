@@ -181,21 +181,62 @@ defmodule Tymeslot.ThemeCustomizationsStorageTest do
       assert File.exists?(Storage.build_theme_file_path(stored_path))
     end
 
-    # The prefix is 13 bytes, so a stem of 242 bytes exactly fills the 255-byte
-    # limit and 243 is the first one cut.
-    for stem_bytes <- [242, 243] do
-      test "store_asset/4 fits a #{stem_bytes}-byte name with no extension into the limit" do
-        filename = String.duplicate("a", unquote(stem_bytes))
+    # The prefix is 13 bytes and the extension 4, so a stem of 238 bytes
+    # exactly fills the 255-byte limit and 239 is the first one cut.
+    for stem_bytes <- [238, 239] do
+      test "store_asset/4 fits a #{stem_bytes}-byte stem into the limit" do
+        filename = String.duplicate("a", unquote(stem_bytes)) <> ".png"
 
         {:ok, stored_path} =
           Storage.store_asset(:image, 1, "1", %{path: gif_file(), filename: filename})
 
         stored_name = Path.basename(stored_path)
 
-        assert stored_name =~ ~r|\A[0-9a-f]{12}-a{242}\z|
+        assert stored_name =~ ~r|\A[0-9a-f]{12}-a{238}\.png\z|
         assert byte_size(stored_name) == 255
         assert File.exists?(Storage.build_theme_file_path(stored_path))
       end
     end
+  end
+
+  # `/uploads` types a file by its extension, and LiveView accepts an upload
+  # on the client's type alone, so the stored extension never rests on the
+  # client's name.
+  describe "the stored extension" do
+    test "is always .vtt for captions, whatever the client named the file" do
+      vtt = temp_file("WEBVTT\n\n00:00.000 --> 00:02.000\nHello\n")
+
+      assert {:ok, stored_path} =
+               Storage.store_asset(:captions, 1, "1", %{path: vtt, filename: "intro.png"})
+
+      assert stored_path =~ ~r|\Athemes/1/1/captions/[0-9a-f]{12}-intro\.vtt\z|
+    end
+
+    test "refuses an image or a video named with an extension its kind does not take" do
+      assert Storage.store_asset(:image, 1, "1", %{path: gif_file(), filename: "bg.vtt"}) ==
+               {:error, :invalid_image_format}
+
+      assert Storage.store_asset(:image, 1, "1", %{path: gif_file(), filename: "bg"}) ==
+               {:error, :invalid_image_format}
+
+      assert Storage.store_asset(:video, 1, "1", %{path: mp4_file(), filename: "clip.png"}) ==
+               {:error, :invalid_video_format}
+
+      assert uploaded_files() == []
+    end
+
+    test "keeps an allowed extension, lower-cased" do
+      assert {:ok, stored_path} =
+               Storage.store_asset(:image, 1, "1", %{path: gif_file(), filename: "BG.PNG"})
+
+      assert stored_path =~ ~r|\Athemes/1/1/images/[0-9a-f]{12}-BG\.png\z|
+    end
+  end
+
+  defp uploaded_files do
+    [Storage.get_upload_base_directory(), "**", "*"]
+    |> Path.join()
+    |> Path.wildcard()
+    |> Enum.filter(&File.regular?/1)
   end
 end

@@ -3,8 +3,8 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Moment do
   One moment of a journey: a LiveComponent the theme writes, collecting zero
   or more facts (`collects:`, keys of `Journey.facts/0`, in the order the
   moment asks them) and settling some of them without asking (`defaults:`,
-  fact key to a `Fact.default/2` strategy; checked now, and applied once
-  the runtime opens moments). A journey writes it as
+  fact key to a `Fact.default/2` strategy, applied by
+  `Journey.Runtime.open_moment/3`). A journey writes it as
   `{key, collects: [...], component: Module, defaults: [...]}`.
   """
 

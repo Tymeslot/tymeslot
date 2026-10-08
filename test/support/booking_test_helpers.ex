@@ -11,6 +11,7 @@ defmodule Tymeslot.BookingTestHelpers do
   import Tymeslot.Factory
 
   alias TymeslotWeb.BookingDriver
+  alias TymeslotWeb.BookingDriver.Page
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   @endpoint TymeslotWeb.Endpoint
@@ -120,7 +121,8 @@ defmodule Tymeslot.BookingTestHelpers do
   the walk that follows has to start from the view already on screen.
 
   `duration_slug` names the meeting type to book, defaulting to whichever the
-  overview lists first. The time is tomorrow's first free one, never today's:
+  overview lists first (or the type the page chose itself, where it renders
+  no choice). The time is tomorrow's first free one, never today's:
   today's times may already be past the cutoff.
   """
   @spec walk_to_booking_form(Phoenix.LiveViewTest.View.t(), String.t(), String.t() | nil) ::
@@ -138,10 +140,13 @@ defmodule Tymeslot.BookingTestHelpers do
     view
   end
 
+  # A page that chose the meeting type itself (an organiser's only type,
+  # defaulted) renders no choice: the type it holds is the one to book.
   defp first_meeting_type(view) do
-    case BookingDriver.meeting_types(view) do
-      [slug | _rest] -> slug
-      [] -> flunk("Expected at least one meeting type card on the overview step")
+    case {BookingDriver.meeting_types(view), Page.assigns(view)[:selected_duration]} do
+      {[slug | _rest], _held} -> slug
+      {[], held} when is_binary(held) -> held
+      {[], nil} -> flunk("Expected at least one meeting type card on the overview step")
     end
   end
 

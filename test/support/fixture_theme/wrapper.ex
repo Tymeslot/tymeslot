@@ -1,8 +1,11 @@
 defmodule TymeslotWeb.Test.FixtureTheme.Scheduling.Wrapper do
   @moduledoc """
-  The fixture theme's wrapper: the shared `ThemeShell`, with no background.
-  It renders the page's logo and cover media when the spec resolves them,
-  which only the showcase theme's does, since it borrows these pages.
+  The fixture theme's wrapper: the shared `ThemeShell` with no background
+  and no page grid of its own. The chrome, the step and the theme
+  extensions sit straight inside the booker root, which proves the shell's
+  obligations need none of Quill's and Rhythm's layout. It renders the
+  page's logo and cover media when the spec resolves them, which only the
+  showcase theme's does, since it borrows these pages.
   """
   use Phoenix.Component
 
@@ -37,21 +40,25 @@ defmodule TymeslotWeb.Test.FixtureTheme.Scheduling.Wrapper do
     ~H"""
     <ThemeShell.theme_shell
       class="fixture-theme-wrapper"
-      grid_class="fixture-theme-grid"
-      language_class="fixture-theme-language"
-      theme_id={@theme_id}
-      theme_tokens={@theme_tokens}
       locale={@locale}
-      language_dropdown_open={@language_dropdown_open}
-      show_language_switcher={@show_language_switcher}
-      owner_preview={@owner_preview}
-      organizer_user_id={@organizer_user_id}
-      should_show_branding={@should_show_branding}
-      {Map.take(assigns, [:demo_mode])}
+      theme_tokens={@theme_tokens}
     >
+      <ThemeShell.chrome
+        language_class="fixture-theme-language"
+        locale={@locale}
+        language_dropdown_open={@language_dropdown_open}
+        show_language_switcher={@show_language_switcher}
+        owner_preview={@owner_preview}
+      />
       <img :if={@cover} src={@cover.src} alt="" data-testid="theme-cover" />
       <img :if={@logo} src={@logo.src} alt="" data-testid="theme-logo" />
       {render_slot(@inner_block)}
+      <ThemeShell.extensions
+        theme_id={@theme_id}
+        organizer_user_id={@organizer_user_id}
+        should_show_branding={@should_show_branding}
+        {Map.take(assigns, [:demo_mode])}
+      />
     </ThemeShell.theme_shell>
     """
   end

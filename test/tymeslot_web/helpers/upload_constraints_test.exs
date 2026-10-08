@@ -20,9 +20,22 @@ defmodule TymeslotWeb.Helpers.UploadConstraintsTest do
       assert ".mp4" in UploadConstraints.allowed_extensions(:video)
     end
 
+    test "captions accept WebVTT only" do
+      assert UploadConstraints.allowed_extensions(:captions) == [".vtt"]
+    end
+
+    # Plug.Static and LiveView's `allow_upload/3` both type a file by MIME;
+    # a <track> plays only a file served as text/vtt.
+    test "WebVTT is known as text/vtt" do
+      assert MIME.from_path("captions.vtt") == "text/vtt"
+    end
+
     test "every extension is lowercase and dot-prefixed" do
       extensions =
-        Enum.flat_map([:avatar, :image, :video], &UploadConstraints.allowed_extensions/1)
+        Enum.flat_map(
+          [:avatar, :image, :video, :captions],
+          &UploadConstraints.allowed_extensions/1
+        )
 
       assert extensions != []
       assert Enum.reject(extensions, &(&1 == String.downcase(&1))) == []
@@ -38,6 +51,16 @@ defmodule TymeslotWeb.Helpers.UploadConstraintsTest do
 
       assert avatar < image
       assert image < video
+    end
+
+    test "allows captions far less than an image, and states them in no megabyte figure" do
+      assert UploadConstraints.max_file_size(:captions) == 200_000
+      assert UploadConstraints.max_file_size(:captions) < UploadConstraints.max_file_size(:image)
+
+      # Through a list, as the type checker already refuses the literal call.
+      for kind <- [:captions] do
+        assert_raise FunctionClauseError, fn -> UploadConstraints.max_file_size_mb(kind) end
+      end
     end
   end
 

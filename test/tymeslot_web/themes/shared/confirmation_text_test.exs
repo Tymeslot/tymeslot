@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Themes.Shared.ConfirmationTextTest do
     end
   end
 
-  describe "held_message/2" do
+  describe "held_message/3" do
     test "names the organiser the request went to" do
       organizer = build(:profile, full_name: "Jane Organizer")
 
@@ -43,6 +43,20 @@ defmodule TymeslotWeb.Themes.Shared.ConfirmationTextTest do
 
     test "leaves the organiser out when there is no name to give" do
       assert ConfirmationText.held_message("Alice", nil) == "Alice, your request has been sent."
+    end
+
+    test "is the theme's own sentence when its voice words it" do
+      assert ConfirmationText.held_message("Alice", nil, :fixture) ==
+               "Alice, your request is in."
+    end
+
+    test "keeps the shared sentence the voice does not word" do
+      organizer = build(:profile, full_name: "Jane Organizer")
+
+      assert ConfirmationText.held_message("Alice", organizer, :fixture) ==
+               "Alice, your request to Jane Organizer has been sent."
+
+      assert ConfirmationText.organizer_fragment(organizer, :fixture) == "with Jane Organizer"
     end
   end
 

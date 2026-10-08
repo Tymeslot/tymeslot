@@ -1,15 +1,24 @@
 /* iframe.css — Quill's own overrides for iframe embeds.
 
-   The shell rules every theme shares (body sizing, the page grid sized to
+   The shell rules every theme shares (body sizing, the booker root sized to
    content, the footer hidden, the slot scroll region released, full width
    in the column layout) live in shared/embed.css, imported just before
-   this file. What follows is specific to Quill.
+   this file. What follows is specific to Quill, starting with its page
+   grid, which is Quill's own markup.
 
    Triggered by the [data-embedded] attribute set by iframe_embed.js. */
 
 /* ---------------------------------------------------------------------------
    1. Layout containers — size to content, not viewport
    --------------------------------------------------------------------------- */
+/* The page grid (.booker-page on the theme grid in Quill's wrapper): sized
+   to content. It must stay the first rule after shared/embed.css, where it
+   used to live, so its place in the cascade does not change. */
+html.scheduling-app[data-embedded] .booker-page {
+  min-height: auto;
+  grid-template-rows: auto;
+}
+
 html.quill-theme[data-embedded] .quill-theme-wrapper > div {
   flex: initial;
 }

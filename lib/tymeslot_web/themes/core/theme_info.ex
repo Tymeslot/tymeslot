@@ -21,7 +21,8 @@ defmodule TymeslotWeb.Themes.Core.ThemeInfo do
 
   @doc """
   Gets a theme's picker data by id: the catalogue facts (`id`, `key`, `name`,
-  `status`) merged with the theme module's `metadata/0`.
+  `status`) merged with the theme module's `metadata/0`, its `story` and its
+  `axes`.
   """
   @spec get_theme(term()) :: map() | nil
   def get_theme(id) do
@@ -100,9 +101,22 @@ defmodule TymeslotWeb.Themes.Core.ThemeInfo do
     end
   end
 
+  @doc """
+  The voice of a theme (its `voice/0`), or `nil` for a theme without one and
+  for an id no theme has.
+  """
+  @spec get_voice(term()) :: module() | nil
+  def get_voice(id) do
+    case get_theme_module(id) do
+      nil -> nil
+      module -> module.voice()
+    end
+  end
+
   defp describe(theme) do
     theme
     |> Map.take([:id, :key, :name, :status])
     |> Map.merge(theme.module.metadata())
+    |> Map.merge(%{story: theme.module.story(), axes: theme.module.axes()})
   end
 end

@@ -45,8 +45,11 @@ defmodule Tymeslot.ThemeCustomizations.Spec do
   @typedoc "Per-page-view overrides, such as an embed's accent colour. Empty when there are none."
   @type overrides :: %{optional(atom()) => term()}
 
-  @typedoc "What an uploaded asset field stores."
-  @type asset_kind :: :image | :video
+  @typedoc """
+  What an uploaded asset field stores: an image, a video (transcoded into
+  variants) or WebVTT captions.
+  """
+  @type asset_kind :: :image | :video | :captions
 
   @typedoc """
   What the onboarding wizard offers for a theme: the option group and field a

@@ -46,7 +46,9 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
   @spec assign_base_state(LiveView.Socket.t()) :: LiveView.Socket.t()
   def assign_base_state(socket) do
     socket
-    |> assign(:current_state, :overview)
+    # The moment the route opens on (`Navigator.entry/3`), so the page names a
+    # moment of its own journey before the connected mount enters it.
+    |> assign(:current_state, opening_moment(socket.assigns))
     # Records how the booker entered: only when they landed on the overview do
     # they get a "back to all appointments" control on the schedule step. A
     # direct link (e.g. a private booking link) enters at :schedule and must not
@@ -91,4 +93,8 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
     |> GuestBooking.assign_defaults()
     |> BookingLocation.assign_defaults()
   end
+
+  # `SchedulingLive` assigns the journey before it mounts the page.
+  defp opening_moment(%{journey: journey} = assigns),
+    do: journey.navigator.entry(journey, assigns[:live_action], assigns)
 end

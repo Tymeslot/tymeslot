@@ -2,8 +2,8 @@ defmodule Tymeslot.Test.FixtureThemeSpecTest do
   @moduledoc """
   The fixture theme's spec (`test/support/fixture_theme/`) works with nothing
   but the shared `Spec` machinery: a palette with no presets, derived light,
-  no background, and a group of its own with a choice, an upload and a media
-  entry. None of the shared modules knows it exists.
+  no background, a group of its own with a choice, an upload and a media
+  entry, and a second with two videos. None of the shared modules knows it exists.
   """
   use ExUnit.Case, async: true
 
@@ -12,6 +12,7 @@ defmodule Tymeslot.Test.FixtureThemeSpecTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Test.FixtureThemeSpec
+  alias Tymeslot.Test.FixtureThemeSpec.Clips
   alias Tymeslot.Test.FixtureThemeSpec.Emblem
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.Options.Palette
@@ -28,8 +29,10 @@ defmodule Tymeslot.Test.FixtureThemeSpecTest do
   end
 
   describe "settings" do
-    test "are the palette's and the emblem's, and nothing of the background's" do
-      assert Specs.setting_types(FixtureThemeSpec) == Map.merge(Palette.types(), Emblem.types())
+    test "are the palette's, the emblem's and the clips', and nothing of the background's" do
+      assert Specs.setting_types(FixtureThemeSpec) ==
+               Palette.types() |> Map.merge(Emblem.types()) |> Map.merge(Clips.types())
+
       refute Map.has_key?(Specs.setting_types(FixtureThemeSpec), :background_type)
     end
 
@@ -44,8 +47,13 @@ defmodule Tymeslot.Test.FixtureThemeSpecTest do
       assert Keyword.has_key?(changeset.errors, :fixture_emblem_shape)
     end
 
-    test "the generated asset fields are the emblem's upload only" do
-      assert FixtureThemeSpec.asset_fields() == [fixture_emblem_path: :image]
+    test "the generated asset fields are the emblem's image, the two clips and the captions" do
+      assert FixtureThemeSpec.asset_fields() == [
+               fixture_emblem_path: :image,
+               fixture_intro_clip_path: :video,
+               fixture_outro_clip_path: :video,
+               fixture_intro_captions_path: :captions
+             ]
     end
 
     test "store a seed-only palette: no scheme name beside the seed" do

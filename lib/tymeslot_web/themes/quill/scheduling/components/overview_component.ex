@@ -111,10 +111,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                          separate thoughts; each starts on its own line, as the
                          Rhythm theme shows them. --%>
                     <p class="overview-description text-glass-primary">
-                      <%= if greeting = BookingText.greeting(@organizer_profile, Profiles.display_name(@organizer_profile)) do %>
+                      <%= if greeting = BookingText.greeting(@organizer_profile, Profiles.display_name(@organizer_profile), :quill) do %>
                         {greeting}<br />
                       <% end %>
-                      {BookingText.instruction(@organizer_profile)}
+                      {BookingText.instruction(@organizer_profile, :quill)}
                     </p>
 
                     <div class="overview-duration-list">

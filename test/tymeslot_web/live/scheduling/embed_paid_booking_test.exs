@@ -38,6 +38,7 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.BookingDriver
 
   setup :verify_on_exit!
 
@@ -190,6 +191,44 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
       rendered = render(view)
       refute rendered =~ "Complete your payment in the new tab"
       assert rendered =~ ~s(data-testid="confirmation-heading")
+    end
+
+    # The webhook can repeat a broadcast; after "Schedule another" the page
+    # is a new booking, and the old meeting's payment must not move it.
+    @tag :capture_log
+    test "Schedule another after a paid booking forgets the old meeting's payment",
+         %{conn: conn, profile: profile, meeting_type: meeting_type} do
+      expect(StripeAdapterMock, :create_checkout_session, fn _params, _opts ->
+        {:ok, %{id: "cs_paid_again", url: "https://checkout.stripe.com/cs_paid_again"}}
+      end)
+
+      view = navigate_to_booking_form_embedded(conn, profile, meeting_type)
+
+      view
+      |> form("form[phx-submit='submit']", %{
+        "booking" => %{"name" => "Pay Pat", "email" => "pat@example.com", "message" => ""}
+      })
+      |> render_submit()
+
+      _drain = :sys.get_state(view.pid)
+      meeting_id = :sys.get_state(view.pid).socket.assigns[:awaiting_payment_meeting].id
+      topic = "meeting_payment:#{meeting_id}"
+
+      Phoenix.PubSub.broadcast(Tymeslot.PubSub, topic, :paid)
+      _drain = :sys.get_state(view.pid)
+      assert has_element?(view, "[data-testid='confirmation-heading']")
+
+      BookingDriver.restart(view)
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+      assert assigns.awaiting_payment_meeting == nil
+      refute view.pid in Enum.map(Registry.lookup(Tymeslot.PubSub, topic), &elem(&1, 0))
+
+      Phoenix.PubSub.broadcast(Tymeslot.PubSub, topic, :paid)
+      _drain = :sys.get_state(view.pid)
+
+      refute :sys.get_state(view.pid).socket.assigns.current_state == :confirmation
+      refute has_element?(view, "[data-testid='confirmation-heading']")
     end
 
     @tag :capture_log

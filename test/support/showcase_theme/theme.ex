@@ -14,5 +14,19 @@ defmodule TymeslotWeb.Test.ShowcaseTheme.Theme do
     live_view: TymeslotWeb.Test.FixtureTheme.Scheduling.Live,
     preview_image: "/images/ui/theme-previews/quill-theme-preview.webp",
     description: dgettext_noop("dashboard_appearance", "Test fixture theme."),
+    story:
+      dgettext_noop(
+        "dashboard_appearance",
+        "Every shared option at once, to prove each one through the real pages."
+      ),
+    axes: [
+      flow: :paged_wizard,
+      entry: :meeting_type_first,
+      spatial: :centred_card,
+      time_view: :week_grid,
+      conversion: :atmosphere,
+      voice: :neutral,
+      surface: :flat_light_card
+    ],
     page_shell: &Pages.page_shell/1
 end

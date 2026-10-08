@@ -100,6 +100,26 @@ defmodule Tymeslot.Utils.MediaValidatorTest do
     end
   end
 
+  describe "valid_captions?/1" do
+    test "accepts the WebVTT signature, alone, after a byte order mark, or with a header" do
+      assert MediaValidator.valid_captions?("WEBVTT")
+      assert MediaValidator.valid_captions?("WEBVTT\n\n00:00.000 --> 00:02.000\nHello\n")
+      assert MediaValidator.valid_captions?("WEBVTT\r\n\r\n00:00.000 --> 00:02.000\nHello\r\n")
+      assert MediaValidator.valid_captions?(<<0xEF, 0xBB, 0xBF>> <> "WEBVTT\n")
+      assert MediaValidator.valid_captions?("WEBVTT - Intro clip\n")
+      assert MediaValidator.valid_captions?("WEBVTT\tIntro clip\n")
+    end
+
+    test "refuses anything else" do
+      refute MediaValidator.valid_captions?("WEBVTTX\n")
+      refute MediaValidator.valid_captions?("webvtt\n")
+      refute MediaValidator.valid_captions?("1\n00:00:01,000 --> 00:00:02,000\nHello\n")
+      refute MediaValidator.valid_captions?(<<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A>>)
+      refute MediaValidator.valid_captions?("")
+      refute MediaValidator.valid_captions?(nil)
+    end
+  end
+
   describe "valid_image_file?/1, valid_video_file?/1, valid_png_file?/1 file handling" do
     test "returns false for a 0-byte file without leaking the file handle" do
       path =

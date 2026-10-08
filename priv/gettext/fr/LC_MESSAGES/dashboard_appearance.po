@@ -679,3 +679,18 @@ msgstr "Choisissez un jour dans un mois, ou voyez d'un coup tous les créneaux l
 #, elixir-autogen, elixir-format
 msgid "Week"
 msgstr "Semaine"
+
+#: lib/tymeslot_web/themes/quill/theme.ex
+#, elixir-autogen, elixir-format
+msgid "My clients should feel they are booking someone established. The page should look as considered as my work."
+msgstr "Mes clients doivent sentir qu’ils réservent quelqu’un d’établi. La page doit paraître aussi soignée que mon travail."
+
+#: lib/tymeslot_web/themes/rhythm/theme.ex
+#, elixir-autogen, elixir-format
+msgid "When someone books me, I want them to feel the atmosphere first: motion, mood, then a time."
+msgstr "Quand quelqu’un me réserve, je veux qu’il ressente d’abord l’atmosphère : le mouvement, l’ambiance, puis un créneau."
+
+#: lib/tymeslot/theme_customizations/assets.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid captions file. Please upload a WebVTT (.vtt) file."
+msgstr "Fichier de sous-titres non valide. Veuillez téléverser un fichier WebVTT (.vtt)."
