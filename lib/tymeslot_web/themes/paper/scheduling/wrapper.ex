@@ -1,8 +1,11 @@
 defmodule TymeslotWeb.Themes.Paper.Scheduling.Wrapper do
   @moduledoc """
   Paper's wrapper: the shared `ThemeShell` on the tone's canvas. Paper has
-  no background option, so nothing is drawn behind the card; the page grid
-  carries `paper-page`, and the language switcher's row `paper-language`.
+  no background option, so nothing is drawn behind the card. Inside the
+  shell, Paper's page grid (`.booker-page paper-page`, sized to content in an
+  embed by its `iframe.css`) holds the content area, which starts with the
+  shell's chrome (the language switcher's row is `paper-language`), and the
+  theme extensions as its footer row.
   """
   use Phoenix.Component
 
@@ -29,19 +32,27 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Wrapper do
     ~H"""
     <ThemeShell.theme_shell
       class="paper-theme-wrapper"
-      grid_class="paper-page"
-      language_class="paper-language"
-      theme_id={@theme_id}
-      theme_tokens={@theme_tokens}
       locale={@locale}
-      language_dropdown_open={@language_dropdown_open}
-      show_language_switcher={@show_language_switcher}
-      owner_preview={@owner_preview}
-      organizer_user_id={@organizer_user_id}
-      should_show_branding={@should_show_branding}
-      {Map.take(assigns, [:demo_mode])}
+      theme_tokens={@theme_tokens}
     >
-      {render_slot(@inner_block)}
+      <div class="booker-page paper-page">
+        <div class="content-area">
+          <ThemeShell.chrome
+            language_class="paper-language"
+            locale={@locale}
+            language_dropdown_open={@language_dropdown_open}
+            show_language_switcher={@show_language_switcher}
+            owner_preview={@owner_preview}
+          />
+          {render_slot(@inner_block)}
+        </div>
+        <ThemeShell.extensions
+          theme_id={@theme_id}
+          organizer_user_id={@organizer_user_id}
+          should_show_branding={@should_show_branding}
+          {Map.take(assigns, [:demo_mode])}
+        />
+      </div>
     </ThemeShell.theme_shell>
     """
   end

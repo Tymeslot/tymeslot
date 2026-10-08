@@ -1,7 +1,10 @@
 defmodule TymeslotWeb.Themes.Folio.Scheduling.Wrapper do
   @moduledoc """
   Folio's wrapper: the shared `ThemeShell` on the scheme's canvas, with no
-  background of its own (the cover belongs to each step's card).
+  background of its own (the cover belongs to each step's card). Inside it,
+  Folio's page grid (`.booker-page folio-page`, sized to content in an embed
+  by its `iframe.css`) holds the content area, which starts with the shell's
+  chrome, and the theme extensions as its footer row.
 
   It marks the page `folio-theme-wrapper--light` or `--dark` (`mode/1`), the
   one thing Folio's CSS cannot derive from the palette's custom properties:
@@ -37,19 +40,27 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Wrapper do
     ~H"""
     <ThemeShell.theme_shell
       class={["folio-theme-wrapper", "folio-theme-wrapper--#{@mode}"]}
-      grid_class="folio-page"
-      language_class="folio-language"
-      theme_id={@theme_id}
-      theme_tokens={@theme_tokens}
       locale={@locale}
-      language_dropdown_open={@language_dropdown_open}
-      show_language_switcher={@show_language_switcher}
-      owner_preview={@owner_preview}
-      organizer_user_id={@organizer_user_id}
-      should_show_branding={@should_show_branding}
-      {Map.take(assigns, [:demo_mode])}
+      theme_tokens={@theme_tokens}
     >
-      {render_slot(@inner_block)}
+      <div class="booker-page folio-page">
+        <div class="content-area">
+          <ThemeShell.chrome
+            language_class="folio-language"
+            locale={@locale}
+            language_dropdown_open={@language_dropdown_open}
+            show_language_switcher={@show_language_switcher}
+            owner_preview={@owner_preview}
+          />
+          {render_slot(@inner_block)}
+        </div>
+        <ThemeShell.extensions
+          theme_id={@theme_id}
+          organizer_user_id={@organizer_user_id}
+          should_show_branding={@should_show_branding}
+          {Map.take(assigns, [:demo_mode])}
+        />
+      </div>
     </ThemeShell.theme_shell>
     """
   end
