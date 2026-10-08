@@ -148,7 +148,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.BookingComponent do
             {BookingLabels.submit_label(
               @is_rescheduling,
               @meeting_type,
-              dgettext("booking", "Book Meeting")
+              dgettext("booking", "Book Meeting"),
+              :paper
             )}
           <% end %>
         </button>

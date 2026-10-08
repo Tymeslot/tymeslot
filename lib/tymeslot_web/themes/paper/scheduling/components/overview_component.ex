@@ -47,8 +47,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
     assigns =
       assign(assigns,
         heading: BookingText.heading(assigns.organizer_profile, :paper, name),
-        greeting: BookingText.greeting(assigns.organizer_profile, name),
-        instruction: BookingText.instruction(assigns.organizer_profile),
+        greeting: BookingText.greeting(assigns.organizer_profile, name, :paper),
+        instruction: BookingText.instruction(assigns.organizer_profile, :paper),
         logo: Components.logo(assigns.theme_tokens)
       )
 

@@ -137,18 +137,18 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
   defp message(assigns) do
     case ConfirmationText.status(assigns) do
       :held ->
-        ConfirmationText.held_message(assigns[:name], assigns[:organizer_profile])
+        ConfirmationText.held_message(assigns[:name], assigns[:organizer_profile], :paper)
 
       :rescheduled ->
         dgettext("booking", "%{name}, your meeting %{organizer} has been rescheduled.",
           name: assigns[:name],
-          organizer: ConfirmationText.organizer_fragment(assigns[:organizer_profile])
+          organizer: ConfirmationText.organizer_fragment(assigns[:organizer_profile], :paper)
         )
 
       :confirmed ->
         dgettext("booking", "%{name}, your meeting %{organizer} is confirmed",
           name: assigns[:name],
-          organizer: ConfirmationText.organizer_fragment(assigns[:organizer_profile])
+          organizer: ConfirmationText.organizer_fragment(assigns[:organizer_profile], :paper)
         )
     end
   end

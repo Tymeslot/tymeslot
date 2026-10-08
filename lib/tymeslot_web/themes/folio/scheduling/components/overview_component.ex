@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.OverviewComponent do
               Profiles.display_name(@organizer_profile)
             )}
           </h2>
-          <p class="folio-muted">{BookingText.instruction(@organizer_profile)}</p>
+          <p class="folio-muted">{BookingText.instruction(@organizer_profile, :folio)}</p>
         </div>
 
         <%= if @meeting_types == [] do %>
