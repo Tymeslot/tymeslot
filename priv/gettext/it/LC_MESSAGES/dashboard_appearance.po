@@ -694,3 +694,13 @@ msgstr "Quando qualcuno mi prenota, voglio che senta prima l’atmosfera: movime
 #, elixir-autogen, elixir-format
 msgid "Invalid captions file. Please upload a WebVTT (.vtt) file."
 msgstr "File di sottotitoli non valido. Carica un file WebVTT (.vtt)."
+
+#: lib/tymeslot_web/themes/paper/theme.ex
+#, elixir-autogen, elixir-format
+msgid "I don't want my booking page to have a personality. I want it clear, fast and in my colour, so people book and get on with their day."
+msgstr "Non voglio che la mia pagina di prenotazione abbia una personalità. La voglio chiara, veloce e del mio colore, così le persone prenotano e tornano alla loro giornata."
+
+#: lib/tymeslot_web/themes/folio/theme.ex
+#, elixir-autogen, elixir-format
+msgid "People book me, not a time slot. Before they pick a date, they should know who I am, what I do, and whether we're a fit."
+msgstr "Le persone prenotano me, non un orario. Prima di scegliere una data, devono sapere chi sono, cosa faccio e se siamo fatti per lavorare insieme."

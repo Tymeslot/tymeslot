@@ -17,6 +17,20 @@ defmodule TymeslotWeb.Themes.Folio.Theme do
         "dashboard_appearance",
         "An editorial page that introduces you, with a cover image, your portrait, headline and bio, and serif headings."
       ),
+    story:
+      dgettext_noop(
+        "dashboard_appearance",
+        "People book me, not a time slot. Before they pick a date, they should know who I am, what I do, and whether we're a fit."
+      ),
+    axes: [
+      flow: :continuous,
+      entry: :person_first,
+      spatial: :full_bleed_editorial,
+      time_view: :month_grid,
+      conversion: :bio_and_cover,
+      voice: :personal,
+      surface: :editorial_print
+    ],
     page_shell: &Pages.page_shell/1
 
   @impl TymeslotWeb.Themes.Core.Behaviour

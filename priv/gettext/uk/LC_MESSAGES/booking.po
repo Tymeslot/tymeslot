@@ -1042,6 +1042,7 @@ msgid "Please select a meeting duration"
 msgstr "Будь ласка, виберіть тривалість зустрічі"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a time"
 msgstr "Будь ласка, виберіть час"

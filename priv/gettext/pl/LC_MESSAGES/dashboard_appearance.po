@@ -690,3 +690,13 @@ msgstr "Kiedy ktoś mnie rezerwuje, chcę, żeby najpierw poczuł atmosferę: ru
 #, elixir-autogen, elixir-format
 msgid "Invalid captions file. Please upload a WebVTT (.vtt) file."
 msgstr "Nieprawidłowy plik napisów. Prześlij plik WebVTT (.vtt)."
+
+#: lib/tymeslot_web/themes/paper/theme.ex
+#, elixir-autogen, elixir-format
+msgid "I don't want my booking page to have a personality. I want it clear, fast and in my colour, so people book and get on with their day."
+msgstr "Nie chcę, żeby moja strona rezerwacji miała osobowość. Ma być przejrzysta, szybka i w moim kolorze, żeby ludzie rezerwowali termin i wracali do swoich spraw."
+
+#: lib/tymeslot_web/themes/folio/theme.ex
+#, elixir-autogen, elixir-format
+msgid "People book me, not a time slot. Before they pick a date, they should know who I am, what I do, and whether we're a fit."
+msgstr "Ludzie rezerwują mnie, a nie termin. Zanim wybiorą datę, powinni wiedzieć, kim jestem, czym się zajmuję i czy do siebie pasujemy."

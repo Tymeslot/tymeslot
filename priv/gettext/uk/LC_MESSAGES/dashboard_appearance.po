@@ -694,3 +694,13 @@ msgstr "Коли хтось мене бронює, я хочу, щоб спер�
 #, elixir-autogen, elixir-format
 msgid "Invalid captions file. Please upload a WebVTT (.vtt) file."
 msgstr "Недійсний файл субтитрів. Завантажте файл WebVTT (.vtt)."
+
+#: lib/tymeslot_web/themes/paper/theme.ex
+#, elixir-autogen, elixir-format
+msgid "I don't want my booking page to have a personality. I want it clear, fast and in my colour, so people book and get on with their day."
+msgstr "Я не хочу, щоб моя сторінка бронювання мала характер. Я хочу, щоб вона була зрозумілою, швидкою і в моєму кольорі, щоб люди бронювали й поверталися до своїх справ."
+
+#: lib/tymeslot_web/themes/folio/theme.ex
+#, elixir-autogen, elixir-format
+msgid "People book me, not a time slot. Before they pick a date, they should know who I am, what I do, and whether we're a fit."
+msgstr "Люди бронюють мене, а не часовий слот. Перш ніж обрати дату, вони мають знати, хто я, чим займаюся і чи підходимо ми одне одному."

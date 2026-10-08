@@ -15,6 +15,20 @@ defmodule TymeslotWeb.Themes.Paper.Theme do
         "dashboard_appearance",
         "A calm, neutral booking page: everything on one screen, light and dark modes and your own accent colour."
       ),
+    story:
+      dgettext_noop(
+        "dashboard_appearance",
+        "I don't want my booking page to have a personality. I want it clear, fast and in my colour, so people book and get on with their day."
+      ),
+    axes: [
+      flow: :two_screen,
+      entry: :meeting_type_first,
+      spatial: :split_card,
+      time_view: :month_grid,
+      conversion: :none,
+      voice: :neutral,
+      surface: :flat_light_card
+    ],
     page_shell: &Pages.page_shell/1
 
   @impl TymeslotWeb.Themes.Core.Behaviour
