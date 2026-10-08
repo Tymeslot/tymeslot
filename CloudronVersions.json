@@ -4069,6 +4069,53 @@
       },
       "publishState": "published",
       "ts": "Fri, 02 Oct 2026 13:19:24 GMT"
+    },
+    "1.23.0": {
+      "creationDate": "Thu, 08 Oct 2026 16:13:32 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "Group bookings arrive, availability can run past midnight, and the app is now available in Brazilian Portuguese. Also .ics import on the dashboard calendar, dark mode in emails, and many smaller fixes across the dashboard on phones. Self-hosters: back up before upgrading, and to undo the upgrade restore that backup rather than going back to the previous image, which cannot read group bookings or overnight hours.\n* Meeting types can take group bookings: several people book the same time, up to a participant limit you set\n* Availability hours can run past midnight (22:00 to 02:00, say), and meeting types can last up to 24 hours\n* Availability schedules have separate buffers before and after each meeting, in place of one buffer for both\n* The dashboard calendar imports events from an .ics file, picked from the toolbar or dropped on the calendar\n* Emails switch to a dark design in mail apps set to dark mode, such as Apple Mail\n* The booking page, dashboard and emails are available in Brazilian Portuguese\n* Booking links can fill in the booker's name and email, by adding #name=…&email=… to the link",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:1.23.0",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!\n\nSet PHX_HOST to your app domain, either on the Environment tab or by editing /app/data/.env, which is pre-filled with every supported variable, commented out (cloudron exec --app <domain> -- vi /app/data/.env). Values set on the Environment tab take precedence over that file. Restart the app after editing it.\n\nThe first user to register becomes the admin.",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "1.23.0",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Thu, 08 Oct 2026 16:13:32 GMT"
     }
   }
 }
