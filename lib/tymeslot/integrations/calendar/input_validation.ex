@@ -214,7 +214,12 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
         url: CredentialFields.sanitize_url_for_logging(sanitized_url)
       })
 
-      {:ok, %{"name" => sanitized_name, "url" => sanitized_url}}
+      {:ok,
+       %{
+         "name" => sanitized_name,
+         "url" => sanitized_url,
+         "all_events_busy" => params["all_events_busy"] in [true, "true", "on"]
+       }}
     else
       {:error, errors} when is_map(errors) ->
         SecurityLogger.log_security_event("calendar_subscription_form_validation_failure", %{

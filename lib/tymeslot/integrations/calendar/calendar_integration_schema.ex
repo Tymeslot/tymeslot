@@ -53,6 +53,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
           default_booking_calendar_id: String.t() | nil,
           verify_ssl: boolean(),
           is_active: boolean(),
+          all_events_busy: boolean(),
           needs_reauth: boolean(),
           reauth_flagged_at: DateTime.t() | nil,
           provider_account_id: String.t() | nil,
@@ -106,6 +107,10 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     # drop the column on the apparent grounds that nothing reads it.
     field(:verify_ssl, :boolean, default: true)
     field(:is_active, :boolean, default: true)
+    # A subscription (`ics_url`) whose events all block availability, even
+    # those its feed marks free: holiday feeds mark every event that way. Read
+    # by `Ics.Provider.list_events/2`; no other provider honours it.
+    field(:all_events_busy, :boolean, default: false)
     field(:needs_reauth, :boolean, default: false)
     # When `needs_reauth` last went from false to true. Deliberately left in
     # place when the flag clears, so a flag raised and resolved within the
@@ -244,6 +249,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
       :default_booking_calendar_id,
       :verify_ssl,
       :is_active,
+      :all_events_busy,
       :provider_account_id,
       :provider_account_email,
       :user_id,

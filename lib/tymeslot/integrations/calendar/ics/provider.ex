@@ -30,6 +30,15 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Provider do
   temporarily unreachable leaves the last known events in place instead of
   emptying the diary.
 
+  ## Events marked free
+
+  An event its feed marks free (`TRANSP:TRANSPARENT`) does not block, like
+  one on any other calendar. Holiday and school-holiday feeds mark every
+  event that way, so a subscription can be told to count all of its events
+  as busy instead (`all_events_busy`). `list_events/2` applies that on the
+  way out of the cache rather than at sync, so turning it on or off takes
+  effect at once, without waiting for the next poll.
+
   ## Discovery
 
   A feed is a single calendar, so `discover_calendars/1` returns one synthetic
@@ -105,7 +114,8 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Provider do
     %{
       feed_url: config |> feed_url() |> normalise(),
       calendar_integration_id: MapKeys.get(config, :calendar_integration_id),
-      calendar_path: @calendar_id
+      calendar_path: @calendar_id,
+      all_events_busy: MapKeys.get(config, :all_events_busy) == true
     }
   end
 
@@ -169,7 +179,8 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Provider do
       %{
         feed_url: subscription_url(integration),
         calendar_integration_id: integration.id,
-        calendar_path: @calendar_id
+        calendar_path: @calendar_id,
+        all_events_busy: Map.get(integration, :all_events_busy, false)
       }
     ]
   end
@@ -194,7 +205,9 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Provider do
 
   Reads the rows `SyncIcsCalendarWorker` last wrote, mapped back to the shape
   the availability path consumes by
-  `ProviderCalendarEventSchema.to_read_path_map/1`.
+  `ProviderCalendarEventSchema.to_read_path_map/1`. A subscription set to count
+  all its events as busy hands every one of them back opaque (see the
+  moduledoc).
   """
   @impl Tymeslot.Integrations.Calendar.Provider
   def list_events(client, opts) do
@@ -210,6 +223,7 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Provider do
           [integration_id]
           |> ProviderCalendarEventQueries.list_for_range(start_time, end_time)
           |> Enum.map(&ProviderCalendarEventSchema.to_read_path_map/1)
+          |> maybe_all_busy(client[:all_events_busy])
 
         {:ok, events}
     end
@@ -227,6 +241,9 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Provider do
   end
 
   # --- Private helpers ---
+
+  defp maybe_all_busy(events, true), do: Enum.map(events, &Map.put(&1, :transparency, "opaque"))
+  defp maybe_all_busy(events, _all_events_busy), do: events
 
   defp synthetic_calendar(feed_url) do
     %CalendarEntry{
