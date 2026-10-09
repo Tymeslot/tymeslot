@@ -350,7 +350,8 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
           required(:schedule_id) => integer() | nil,
           required(:max_advance_booking_days) => pos_integer(),
           required(:min_advance_hours) => non_neg_integer(),
-          required(:buffer_minutes) => non_neg_integer(),
+          required(:buffer_before_minutes) => non_neg_integer(),
+          required(:buffer_after_minutes) => non_neg_integer(),
           required(:slot_interval_minutes) => pos_integer() | nil,
           required(:duration_minutes) => pos_integer(),
           required(:owner_timezone) => String.t()

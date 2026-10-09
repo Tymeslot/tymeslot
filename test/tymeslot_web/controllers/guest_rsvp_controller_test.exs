@@ -2,6 +2,7 @@ defmodule TymeslotWeb.GuestRsvpControllerTest do
   # Uses the global ETS rate limiter; must not run concurrently.
   use TymeslotWeb.ConnCase, async: false
   @moduletag :meetings
+  @moduletag :controllers
 
   alias Tymeslot.Factory
   alias Tymeslot.Meetings.GuestQueries
@@ -138,6 +139,33 @@ defmodule TymeslotWeb.GuestRsvpControllerTest do
 
       assert html_response(conn, 410) =~ "no longer taking responses"
       assert {:ok, %{status: "pending"}} = GuestQueries.get_by_token(guest.rsvp_token)
+    end
+  end
+
+  describe "a guest brought by a group-booking participant" do
+    # A group meeting keeps no attendee timezone, so its guests' pages used to
+    # state the time in UTC. They follow the participant who invited them.
+    setup do
+      meeting = Factory.insert(:group_meeting)
+      participant = Factory.insert(:participant, meeting: meeting, timezone: "Asia/Tokyo")
+
+      {:ok, [guest]} =
+        Guests.create_for_participant(meeting.id, participant.id, ["friend@example.com"])
+
+      %{group_guest: guest}
+    end
+
+    test "the landing page and the success page show times in the participant's timezone",
+         %{conn: conn, group_guest: guest} do
+      landing = conn |> get(~p"/guest/#{guest.rsvp_token}/accept") |> html_response(200)
+
+      success =
+        conn |> recycle() |> post(~p"/guest/#{guest.rsvp_token}/accept") |> html_response(200)
+
+      for html <- [landing, success] do
+        assert html =~ "(Asia/Tokyo)"
+        refute html =~ "(Etc/UTC)"
+      end
     end
   end
 

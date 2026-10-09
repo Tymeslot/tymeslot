@@ -75,13 +75,13 @@ defmodule TymeslotWeb.DashboardRoutesTest do
     @routes [
       {"/dashboard", "calendar-grid"},
       {"/dashboard/overview", "Welcome back"},
-      {"/dashboard/settings", "Profile Settings"},
+      {"/dashboard/settings", "Basic Information"},
       {"/dashboard/availability", "Availability"},
-      {"/dashboard/meeting-settings", "Meeting Settings"},
+      {"/dashboard/meeting-settings", "Meeting Types"},
       {"/dashboard/locations", "Locations"},
       {"/dashboard/calendar", "calendar-grid"},
       {"/dashboard/integrations", "Integrations"},
-      {"/dashboard/theme", "Choose Your Style"},
+      {"/dashboard/theme", "Booking Page Text"},
       {"/dashboard/meetings", "Meetings"},
       {"/dashboard/automation", "Automation"},
       {"/dashboard/polls", "Polls"}
@@ -91,6 +91,37 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       test "renders #{path}", %{conn: conn} do
         {:ok, _view, html} = live(conn, unquote(path))
         assert html =~ unquote(expected_text)
+      end
+    end
+
+    # Every section names itself once, in an h1 that reads exactly like its
+    # entry in the sidebar, so the page outline and the navigation agree.
+    @section_titles [
+      {"/dashboard", "Calendar"},
+      {"/dashboard/overview", "Overview"},
+      {"/dashboard/meetings", "Meetings"},
+      {"/dashboard/analytics", "Analytics"},
+      {"/dashboard/meeting-settings", "Meeting Types"},
+      {"/dashboard/locations", "Locations"},
+      {"/dashboard/availability", "Availability"},
+      {"/dashboard/polls", "Polls"},
+      {"/dashboard/theme", "Theme"},
+      {"/dashboard/theme/customize/1", "Theme"},
+      {"/dashboard/integrations", "Integrations"},
+      {"/dashboard/integrations?tab=video", "Integrations"},
+      {"/dashboard/embed", "Embed & Share"},
+      {"/dashboard/settings", "Profile"},
+      {"/dashboard/automation", "Automation"}
+    ]
+
+    for {path, title} <- @section_titles do
+      test "#{path} has one h1, named like its sidebar entry", %{conn: conn} do
+        {:ok, view, _html} = live(conn, unquote(path))
+        doc = view |> render() |> Floki.parse_document!()
+
+        assert [h1] = Floki.find(doc, "h1")
+        assert squish(h1) == unquote(title)
+        assert active_nav_label(doc) == unquote(title)
       end
     end
 
@@ -148,7 +179,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       |> render_click()
 
       assert render(view) =~ "Add Meeting Type"
-      assert has_element?(view, "form[phx-submit='save_meeting_type']")
+      assert has_element?(view, "form[phx-submit='create_meeting_type']")
     end
 
     test "theme customization can be opened and browsed", %{conn: conn} do
@@ -181,6 +212,48 @@ defmodule TymeslotWeb.DashboardRoutesTest do
     end
   end
 
+  describe "page outline" do
+    # With something on every page, so the cards and list rows render too.
+    setup %{conn: conn} do
+      %{user: user} = context = setup_authenticated_user(conn)
+
+      insert(:meeting_type, user: user)
+      insert(:future_meeting, organizer_user: user, organizer_email: user.email)
+      insert(:video_integration, user: user)
+      insert(:calendar_integration, user: user)
+      insert(:venue, user: user)
+      insert(:webhook, user: user)
+      poll = insert(:poll, user: user)
+      insert(:poll_time_slot, poll: poll)
+
+      {:ok, context}
+    end
+
+    for {path, _title} <- @section_titles do
+      test "#{path} never skips a heading level", %{conn: conn} do
+        {:ok, view, _html} = live(conn, unquote(path))
+
+        levels =
+          view
+          |> render()
+          |> Floki.parse_document!()
+          # A dialog's title belongs to the dialog's own outline.
+          |> Floki.filter_out("[role=dialog]")
+          |> Floki.find("h1, h2, h3, h4, h5, h6")
+          |> Enum.map(fn {"h" <> level, _attrs, _children} -> String.to_integer(level) end)
+
+        assert [1 | _rest] = levels
+
+        skips =
+          levels
+          |> Enum.chunk_every(2, 1, :discard)
+          |> Enum.reject(fn [previous, next] -> next <= previous + 1 end)
+
+        assert skips == []
+      end
+    end
+  end
+
   describe "overview" do
     setup %{conn: conn} do
       {:ok, setup_authenticated_user(conn)}
@@ -195,7 +268,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
     test "shows empty state when no meetings are scheduled", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
 
-      assert html =~ "Nothing on your plate today or tomorrow."
+      assert html =~ "Nothing on your plate today or tomorrow"
     end
 
     test "shows upcoming meeting title and attendee name", %{conn: conn, user: user} do
@@ -222,7 +295,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
 
     test "refreshes meeting list after meeting type is changed", %{conn: conn, user: user} do
       {:ok, view, html} = live(conn, ~p"/dashboard/overview")
-      assert html =~ "Nothing on your plate today or tomorrow."
+      assert html =~ "Nothing on your plate today or tomorrow"
 
       insert(:meeting,
         organizer_email: user.email,
@@ -464,5 +537,17 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       # Should not crash, should still render the dashboard
       assert render(view) =~ "calendar-grid"
     end
+  end
+
+  defp squish(node), do: node |> Floki.text() |> String.split() |> Enum.join(" ")
+
+  # The current section's sidebar link, without the badges it may carry.
+  defp active_nav_label(doc) do
+    assert [link] = Floki.find(doc, "aside nav a[aria-current=page]")
+
+    link
+    |> Floki.filter_out(".dashboard-nav-notification")
+    |> Floki.filter_out("[data-testid$=pro-badge]")
+    |> squish()
   end
 end

@@ -13,6 +13,11 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
   whether they can attend, with the RSVP links from their invitation, and it
   carries none of the booker's links to reschedule or cancel the booking.
 
+  A group participant who moved their own spot gets the attendee variant
+  worded for that (`:seat_move`, set by
+  `Tymeslot.Emails.EmailService.AppointmentEmails.send_seat_reschedule_to_participant/3`):
+  their spot moved, the meeting goes on at the old time for everyone else.
+
   The reschedule context (`:original_start_time` and friends) is supplied by
   `Tymeslot.Notifications.ContentBuilder.build_reschedule_details/2`. Every key
   it adds is read defensively here: a payload without it still renders, minus
@@ -27,6 +32,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
   alias Tymeslot.Emails.Shared.{
     Callouts,
     Formatting,
+    GroupSession,
     MeetingComponents,
     MjmlEmail,
     Sanitise,
@@ -62,15 +68,12 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
         timezone: Map.get(appointment_details, :attendee_timezone)
       }
 
-      intro_copy =
-        dgettext(
-          "emails_booking",
-          "Hi %{name} - our appointment has been moved. Here's the new time, and my calendar is already updated.",
-          name: appointment_details.attendee_name
-        )
+      intro_copy = attendee_intro(appointment_details, locale)
 
       mjml_content = """
       #{Text.centered_text(intro_copy, padding: "8px 0 16px 0")}
+
+      #{if line = GroupSession.line(appointment_details), do: Text.centered_text(line, font_size: "14px", padding: "0 0 16px 0")}
 
       #{previous_time_callout(appointment_details, :attendee, locale)}
 
@@ -95,7 +98,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
         TemplateHelper.build_organizer_details(appointment_details,
           intent: @intent,
           eyebrow: dgettext("emails_booking", "Rescheduled"),
-          stage_title: dgettext("emails_booking", "Your meeting has moved."),
+          stage_title: attendee_stage_title(appointment_details),
           stage_subtitle:
             dgettext("emails_booking", "Meeting with %{name}",
               name: appointment_details.organizer_name
@@ -104,18 +107,9 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
 
       html_body = TemplateHelper.compile_template(mjml_content, organizer_details)
 
-      date_short = Formatting.format_date_short(appointment_details.date, locale)
-
       MjmlEmail.base_email()
       |> to({appointment_details.attendee_name, attendee_email})
-      |> subject(
-        Sanitise.sanitize_for_header(
-          dgettext("emails_booking", "Meeting Rescheduled - %{date} with %{name}",
-            date: date_short,
-            name: appointment_details.organizer_name
-          )
-        )
-      )
+      |> subject(Sanitise.sanitize_for_header(attendee_subject(appointment_details, locale)))
       |> html_body(html_body)
       |> text_body(build_attendee_text_body(appointment_details, locale))
       |> attachment(update_ics_attachment(appointment_details, locale))
@@ -264,6 +258,86 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
     end)
   end
 
+  # A group participant moving their own spot (`:seat_move`) gets the move
+  # told as theirs: the spot moved, the meeting itself did not. Everyone else
+  # on the old time is still meeting there.
+  defp attendee_intro(%{seat_move: true} = appointment_details, locale) do
+    {from, to} = seat_move_times(appointment_details, locale)
+    name = appointment_details.attendee_name
+
+    if from,
+      do:
+        dgettext("emails_booking", "Hi %{name} - your spot has moved from %{from} to %{to}.",
+          name: name,
+          from: from,
+          to: to
+        ),
+      else:
+        dgettext("emails_booking", "Hi %{name} - your spot has moved to %{to}.",
+          name: name,
+          to: to
+        )
+  end
+
+  defp attendee_intro(appointment_details, _locale) do
+    dgettext(
+      "emails_booking",
+      "Hi %{name} - our appointment has been moved. Here's the new time, and my calendar is already updated.",
+      name: appointment_details.attendee_name
+    )
+  end
+
+  defp attendee_text_intro(%{seat_move: true} = appointment_details, locale) do
+    case seat_move_times(appointment_details, locale) do
+      {nil, to} ->
+        dgettext("emails_booking", "Your spot has moved to %{to}.", to: to)
+
+      {from, to} ->
+        dgettext("emails_booking", "Your spot has moved from %{from} to %{to}.",
+          from: from,
+          to: to
+        )
+    end
+  end
+
+  defp attendee_text_intro(_appointment_details, _locale) do
+    dgettext(
+      "emails_booking",
+      "Our appointment has been moved. Here's the new time, and my calendar is already updated."
+    )
+  end
+
+  # The time the spot left is unknown only when its seat row has since gone
+  # (see `Tymeslot.Workers.EmailWorkerHandlers.SeatEmails`).
+  defp seat_move_times(appointment_details, locale) do
+    to = Formatting.format_datetime(appointment_details.start_time_attendee_tz, locale)
+
+    case previous_start_time(appointment_details, :attendee) do
+      %DateTime{} = previous -> {Formatting.format_datetime(previous, locale), to}
+      _unknown -> {nil, to}
+    end
+  end
+
+  defp attendee_stage_title(%{seat_move: true}),
+    do: dgettext("emails_booking", "Your spot has moved.")
+
+  defp attendee_stage_title(_appointment_details),
+    do: dgettext("emails_booking", "Your meeting has moved.")
+
+  defp attendee_subject(%{seat_move: true} = appointment_details, locale) do
+    dgettext("emails_booking", "Spot moved - %{date} with %{name}",
+      date: Formatting.format_date_short(appointment_details.date, locale),
+      name: appointment_details.organizer_name
+    )
+  end
+
+  defp attendee_subject(appointment_details, locale) do
+    dgettext("emails_booking", "Meeting Rescheduled - %{date} with %{name}",
+      date: Formatting.format_date_short(appointment_details.date, locale),
+      name: appointment_details.organizer_name
+    )
+  end
+
   # The slot this booking used to occupy, rendered in the recipient's own
   # timezone. Returns "" when the payload carries no reschedule context, so the
   # template degrades to a plain "new details" email instead of raising.
@@ -332,8 +406,14 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
   # announces (`Bookings.Reschedule`), so the value is sent as it is; the
   # floor of 1 keeps a payload without one past the original invitation.
   # Same METHOD:PUBLISH-not-REQUEST caution as the cancellation ICS.
+  #
+  # A moved spot is the exception: its new seat is a new calendar entry under
+  # a UID of its own, invited at its own revision exactly as a fresh seat's
+  # confirmation is. Floored to 1 it would sit level with the revision the
+  # seat's later cancellation is stamped at, which a calendar client may then
+  # ignore as no newer than the entry it holds.
   defp update_ics_attachment(appointment_details, locale) do
-    sequence = max(Map.get(appointment_details, :ical_sequence) || 0, 1)
+    sequence = ics_sequence(appointment_details)
 
     IcsGenerator.generate_ics_update_attachment(
       appointment_details,
@@ -342,6 +422,12 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
       "appointment-#{appointment_details.uid}.ics"
     )
   end
+
+  defp ics_sequence(%{seat_move: true} = appointment_details),
+    do: Map.get(appointment_details, :ical_sequence) || 0
+
+  defp ics_sequence(appointment_details),
+    do: max(Map.get(appointment_details, :ical_sequence) || 0, 1)
 
   defp build_attendee_text_body(appointment_details, locale) do
     meeting_details = TextBodyHelper.format_meeting_details(appointment_details, locale)
@@ -358,8 +444,9 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
 
     #{dgettext("emails_booking", "Hi %{name},", name: appointment_details.attendee_name)}
 
-    #{dgettext("emails_booking", "Our appointment has been moved. Here's the new time, and my calendar is already updated.")}
-    #{previous_time_line(appointment_details, :attendee, locale)}
+    #{attendee_text_intro(appointment_details, locale)}
+
+    #{GroupSession.text(appointment_details)}#{previous_time_line(appointment_details, :attendee, locale)}
     #{dgettext("emails_booking", "NEW MEETING DETAILS:")}
     #{meeting_details}#{video_section}#{custom_answers}
     #{action_links}

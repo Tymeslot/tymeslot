@@ -9,8 +9,8 @@ defmodule Tymeslot.MeetingTypes.InputValidationPropertyTest do
   alias Tymeslot.MeetingTypes.InputValidation
 
   describe "validate_field(:duration, ...)" do
-    property "valid durations (5..480, divisible by 5) always pass" do
-      check all(n <- integer(1..96)) do
+    property "valid durations (5..1440, divisible by 5) always pass" do
+      check all(n <- integer(1..288)) do
         duration = n * 5
 
         assert {:ok, _sanitized} =
@@ -25,8 +25,8 @@ defmodule Tymeslot.MeetingTypes.InputValidationPropertyTest do
       end
     end
 
-    property "durations above 480 always fail" do
-      check all(n <- integer(481..10_000)) do
+    property "durations above 1440 always fail" do
+      check all(n <- integer(1441..10_000)) do
         assert {:error, %{duration: _msg}} =
                  InputValidation.validate_field(:duration, to_string(n), %{})
       end
@@ -34,7 +34,7 @@ defmodule Tymeslot.MeetingTypes.InputValidationPropertyTest do
 
     property "durations not divisible by 5 always fail" do
       check all(
-              n <- integer(5..480),
+              n <- integer(5..1440),
               rem(n, 5) != 0
             ) do
         assert {:error, %{duration: "Duration must be divisible by 5 minutes"}} =
@@ -43,22 +43,24 @@ defmodule Tymeslot.MeetingTypes.InputValidationPropertyTest do
     end
   end
 
-  describe "validate_buffer_minutes/1" do
-    property "valid buffer values (0..120) always pass" do
-      check all(n <- integer(0..120)) do
-        assert {:ok, ^n} = InputValidation.validate_buffer_minutes(to_string(n))
+  for fun <- [:validate_buffer_before_minutes, :validate_buffer_after_minutes] do
+    describe "#{fun}/2" do
+      property "valid buffer values (0..120) always pass" do
+        check all(n <- integer(0..120)) do
+          assert {:ok, ^n} = InputValidation.unquote(fun)(to_string(n))
+        end
       end
-    end
 
-    property "values above 120 always fail" do
-      check all(n <- integer(121..1000)) do
-        assert {:error, _msg} = InputValidation.validate_buffer_minutes(to_string(n))
+      property "values above 120 always fail" do
+        check all(n <- integer(121..1000)) do
+          assert {:error, _msg} = InputValidation.unquote(fun)(to_string(n))
+        end
       end
-    end
 
-    property "negative values always fail" do
-      check all(n <- integer(-1000..-1)) do
-        assert {:error, _msg} = InputValidation.validate_buffer_minutes(to_string(n))
+      property "negative values always fail" do
+        check all(n <- integer(-1000..-1)) do
+          assert {:error, _msg} = InputValidation.unquote(fun)(to_string(n))
+        end
       end
     end
   end

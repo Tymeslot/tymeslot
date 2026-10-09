@@ -103,11 +103,6 @@ msgstr "Найпростіший"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
-msgid "Embed & Share"
-msgstr "Вбудовування та поширення"
-
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
-#, elixir-autogen, elixir-format
 msgid "Embed Options"
 msgstr "Параметри вбудовування"
 
@@ -440,3 +435,13 @@ msgstr "Лише попередній перегляд: це посилання 
 #, elixir-autogen, elixir-format
 msgid "The preview is disabled because your booking link is currently deactivated."
 msgstr "Попередній перегляд вимкнено, оскільки ваше посилання для бронювання наразі деактивовано."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Embed settings"
+msgstr "Налаштування вбудовування"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
+#, elixir-autogen, elixir-format
+msgid "Remove %{domain}"
+msgstr "Видалити %{domain}"

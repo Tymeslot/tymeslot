@@ -46,11 +46,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.StatusBanners do
               ),
             else: dgettext("dashboard_calendar", "Some calendars have never been synced.")}
         </span>
-        <button
+        <.action_button
+          variant={:secondary}
+          size={:sm}
+          icon="hero-arrow-path"
+          class="ml-auto shrink-0"
           phx-click="refresh"
           phx-target={@myself}
-          class="underline hover:text-amber-900 font-medium"
-        >{dgettext("dashboard_calendar", "Refresh now")}</button>
+        >
+          {dgettext("dashboard_calendar", "Refresh now")}
+        </.action_button>
       </div>
       <div
         :if={@syncing}

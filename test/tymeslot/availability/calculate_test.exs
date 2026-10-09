@@ -585,4 +585,15 @@ defmodule Tymeslot.Availability.CalculateTest do
       :error -> config
     end
   end
+
+  describe "config_buffers/1" do
+    test "reads the before and after buffers from the config" do
+      assert Calculate.config_buffers(%{buffer_before_minutes: 20, buffer_after_minutes: 5}) ==
+               {20, 5}
+    end
+
+    test "falls back to a default schedule's buffers when the config names neither" do
+      assert Calculate.config_buffers(%{}) == {15, 15}
+    end
+  end
 end

@@ -23,7 +23,7 @@ defmodule TymeslotWeb.DashboardPubsubCompositionTest do
   seam:
 
     1. The user mounts the dashboard with a live calendar integration.
-    2. The user opens the Add Meeting Type form and clicks the
+    2. The user opens a meeting type's editor and clicks the
        integration button — this sets `refreshing_calendars: true` in
        the form component and sends `{:refresh_calendar_list, ...}` to
        the parent LiveView, which spawns the async task.
@@ -99,9 +99,7 @@ defmodule TymeslotWeb.DashboardPubsubCompositionTest do
          ]}
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
-
-      view |> element("button", "Add Meeting Type") |> render_click()
+      view = open_editor(conn, user)
 
       view
       |> element(
@@ -130,11 +128,9 @@ defmodule TymeslotWeb.DashboardPubsubCompositionTest do
       integration = insert(:calendar_integration, user: user, provider: "google")
 
       # Mount with the integration present so the calendar picker renders.
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
-
-      # Open the Add Meeting Type form so MeetingTypeForm mounts with
-      # id "meeting-type-form-new".
-      view |> element("button", "Add Meeting Type") |> render_click()
+      # Open a meeting type's editor so MeetingTypeForm mounts and the
+      # calendar picker on its Location tab renders.
+      view = open_editor(conn, user)
 
       # Simulate the race: delete the integration before the user's
       # click is processed. The component's assigns are not reloaded by
@@ -172,5 +168,18 @@ defmodule TymeslotWeb.DashboardPubsubCompositionTest do
         assert render(view) =~ "No calendars found for this account."
       end)
     end
+  end
+
+  # The calendar picker sits on the Location tab, which only exists once a
+  # meeting type does.
+  defp open_editor(conn, user) do
+    meeting_type = insert(:meeting_type, user: user)
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+    view
+    |> element("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
+    |> render_click()
+
+    view
   end
 end

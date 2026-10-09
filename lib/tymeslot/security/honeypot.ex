@@ -6,7 +6,7 @@ defmodule Tymeslot.Security.Honeypot do
   One field name and one rule for every form, so a form cannot end up with a
   field the server never checks, or a check that reads a field the form never
   renders. The field is drawn by
-  `TymeslotWeb.Components.CoreComponents.honeypot_field/1`.
+  `TymeslotWeb.Components.CoreComponents.Forms.honeypot_field/1`.
 
   A tripped honeypot is answered with the same success the form shows a human,
   never with an error: telling the bot the truth would let it learn to skip

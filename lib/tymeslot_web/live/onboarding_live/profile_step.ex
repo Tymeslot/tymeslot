@@ -10,7 +10,7 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.CoreComponents, only: [icon: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [button_classes: 2, icon: 1]
 
   alias Tymeslot.Bookings.Policy
   alias TymeslotWeb.Components.TimezoneDropdown
@@ -63,7 +63,7 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
           </div>
           <label
             for={@uploads.avatar.ref}
-            class="btn-secondary px-4 py-2 inline-flex items-center gap-2 cursor-pointer whitespace-nowrap"
+            class={button_classes(:secondary, :sm)}
           >
             <.icon name="hero-arrow-up-tray-mini" class="w-4 h-4 shrink-0" />
             <span>

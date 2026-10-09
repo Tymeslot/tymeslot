@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.VideoPicker do
         phx-click={@phx_event}
         phx-value-video_integration_id=""
         phx-target={@target}
-        class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-token-xs transition-all #{if is_nil(@selected_id), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
+        class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-token-lg border text-token-xs transition-all #{if is_nil(@selected_id), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
       >
         {dgettext("dashboard_calendar_events", "None")}
       </button>
@@ -38,7 +38,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.VideoPicker do
         phx-click={@phx_event}
         phx-value-video_integration_id={vi.id}
         phx-target={@target}
-        class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-token-xs transition-all #{if to_string(vi.id) == to_string(@selected_id), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
+        class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-token-lg border text-token-xs transition-all #{if to_string(vi.id) == to_string(@selected_id), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
       >
         <ProviderIcon.provider_icon provider={vi.provider} type="video" size="mini" />
         <span class="truncate max-w-[10rem]">{vi.name}</span>

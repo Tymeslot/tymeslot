@@ -4,11 +4,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
 
   Two responsibilities:
 
-    * `build_params/1` mirrors the hidden inputs the form would post, but
-      derives them straight from socket assigns. Auto-save relies on this so
-      it never depends on a DOM round-trip — clicking a control updates an
-      assign synchronously, and the next save reads that assign directly
-      rather than racing the re-rendered hidden input.
+    * `build_params/1` derives the form params straight from socket assigns.
+      Neither creating nor auto-saving depends on a DOM round-trip: clicking
+      a control updates an assign synchronously, and the next save reads
+      that assign directly.
 
     * `persist/4` runs the shared validate → merge → create/update pipeline
       used by both the explicit "Create" submit and edit-mode auto-save, so
@@ -17,19 +16,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
 
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.InputValidation
-  alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Utils.SanitizeMerge
+  alias Tymeslot.Validation.Constraints
   alias Tymeslot.Venues
 
   @doc """
   Builds the `meeting_type` params map from the form's socket assigns.
 
-  The shape matches what the rendered form posts: string keys, string values,
+  The shape is that of a posted form: string keys, string values,
   `reminder_config` as a list of `%{"value", "unit"}` maps, and `custom_fields`
-  and `locations` as lists of maps. Custom fields and payment fields are
-  omitted under exactly the same conditions as the hidden inputs (paywalled
-  questions and hosts who cannot accept charges), so cast leaves those embeds
-  untouched.
+  and `locations` as lists of maps. Custom fields are omitted while questions
+  are paywalled, and payment fields for hosts who cannot accept charges, so
+  cast leaves those embeds untouched.
 
   `allow_video` and `video_integration_id` are absent by design: the schema
   projects them from `locations`, so posting them would give the same two
@@ -67,6 +65,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
     }
     |> maybe_put_custom_fields(assigns)
     |> maybe_put_payment(assigns)
+    |> maybe_put_max_participants(assigns)
   end
 
   @doc """
@@ -120,9 +119,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
   end
 
   # Keeps, in each posted location, only the venue ids still among the
-  # organiser's venues. Locations arrive as a list from `build_params/1` and
-  # as an index-keyed map from the rendered form.
-  defp drop_deleted_venues(%{"locations" => locations} = params, user_id) do
+  # organiser's venues. Locations arrive as the list `build_params/1` makes.
+  defp drop_deleted_venues(%{"locations" => locations} = params, user_id)
+       when is_list(locations) do
     venues = Venues.list_venues(user_id)
 
     keep_known = fn
@@ -133,17 +132,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
         location
     end
 
-    Map.put(params, "locations", map_locations(locations, keep_known))
+    Map.put(params, "locations", Enum.map(locations, keep_known))
   end
 
   defp drop_deleted_venues(params, _user_id), do: params
-
-  defp map_locations(locations, fun) when is_list(locations), do: Enum.map(locations, fun)
-
-  defp map_locations(locations, fun) when is_map(locations),
-    do: Map.new(locations, fn {index, location} -> {index, fun.(location)} end)
-
-  defp map_locations(locations, _fun), do: locations
 
   # Builds the UI-state map the context uses to resolve the icon from the
   # submitted params.
@@ -157,6 +149,68 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
 
   defp to_param(nil), do: ""
   defp to_param(value), do: to_string(value)
+
+  # Toggle off means a solo type — the canonical param is always "1" then,
+  # regardless of what the (hidden) input last held.
+  #
+  # Toggle on posts the pending limit only when it actually satisfies the
+  # *group* range (2..999). The visible input's own validation
+  # (`InputValidation.validate_field(:group_participants, ...)`) already
+  # rejects out-of-range values inline, but a rejected value is left sitting
+  # in the assign so the input still shows what was typed — a later
+  # auto-save triggered by an unrelated field must forward the *last
+  # persisted* limit instead, not the stale invalid one.
+  #
+  # `build_params/1` runs for both auto-save and create. While editing,
+  # `assigns.type` is the stored meeting type, whose limit stands in for the
+  # invalid one. Omitting the key entirely would not help here the way it
+  # does for `custom_fields`/`payment`: unlike those, `FormMapper` always
+  # defaults an absent `max_participants` to 1, so a missing key would
+  # silently downgrade the type exactly like the invalid value would have.
+  # While creating there is no stored limit to keep (and group bookings sit
+  # on a tab that stays disabled until the type exists), so a solo "1" is
+  # the only value to send.
+  defp maybe_put_max_participants(params, %{group_bookings_enabled: true} = assigns) do
+    value =
+      case group_participants_param(assigns.max_participants) do
+        {:ok, value} -> value
+        :error -> stored_max_participants(assigns.type)
+      end
+
+    Map.put(params, "max_participants", value)
+  end
+
+  defp maybe_put_max_participants(params, _assigns), do: Map.put(params, "max_participants", "1")
+
+  defp stored_max_participants(nil), do: "1"
+  defp stored_max_participants(type), do: to_string(type.max_participants)
+
+  @doc """
+  Whether group bookings are on with a participant limit outside the group
+  range still in the input. The inline validator has already said so;
+  auto-save keeps the stored limit and leaves the form marked unsaved until
+  it is fixed, rather than posting a limit the host can see is wrong.
+
+  Derived from the current state rather than from the form's errors, so an
+  error no field handler clears (a `:base` error from a failed save, say)
+  can never leave the form stuck as unsaved.
+  """
+  @spec pending_group_limit_invalid?(boolean(), String.t() | integer() | nil) :: boolean()
+  def pending_group_limit_invalid?(true = _group_bookings_enabled, max_participants),
+    do: group_participants_param(to_string(max_participants)) == :error
+
+  def pending_group_limit_invalid?(_group_bookings_enabled, _max_participants), do: false
+
+  defp group_participants_param(value) when is_binary(value) do
+    range = Constraints.group_participants_range()
+
+    case Integer.parse(value) do
+      {parsed, ""} when parsed >= range.first and parsed <= range.last -> {:ok, to_string(parsed)}
+      _invalid -> :error
+    end
+  end
+
+  defp group_participants_param(_value), do: :error
 
   defp reminder_param(%{value: value, unit: unit}),
     do: %{"value" => to_string(value), "unit" => unit}
@@ -201,18 +255,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
   defp put_optional(map, _key, nil), do: map
   defp put_optional(map, key, value), do: Map.put(map, key, to_string(value))
 
-  @doc """
-  The venue ids an in-person location posts: the ones it lists that are
-  still among the organiser's saved venues, in the location's order.
-
-  Deleting a venue already removes it from every meeting type that offered
-  it, so the two lists normally agree. This is a defence against them
-  disagreeing anyway: the context refuses an id that is not among the
-  organiser's venues, and one such id would make every save of the meeting
-  type fail, so an id missing from `venues` is left out instead of posted.
-  """
-  @spec venue_ids_param(LocationOption.t(), [%{id: integer()}]) :: [String.t()]
-  def venue_ids_param(location, venues) do
+  # The venue ids an in-person location posts: the ones it lists that are
+  # still among the organiser's saved venues, in the location's order.
+  #
+  # Deleting a venue already removes it from every meeting type that offered
+  # it, so the two lists normally agree. This is a defence against them
+  # disagreeing anyway: the context refuses an id that is not among the
+  # organiser's venues, and one such id would make every save of the meeting
+  # type fail, so an id missing from `venues` is left out instead of posted.
+  defp venue_ids_param(location, venues) do
     location.venue_ids |> known_venue_ids(venues) |> Enum.map(&to_string/1)
   end
 

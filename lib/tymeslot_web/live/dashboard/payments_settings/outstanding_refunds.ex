@@ -87,16 +87,16 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefunds do
                   {format_amount(MeetingPayments.refundable_remaining_cents(p), p.currency)}
                 </td>
                 <td class="p-2 text-right">
-                  <button
+                  <.action_button
                     :if={can_refund_here?(p, @account)}
-                    type="button"
-                    class="text-token-sm text-turquoise-700 font-semibold underline"
+                    variant={:secondary}
+                    size={:sm}
                     phx-click="open_refund_modal"
                     phx-value-id={p.id}
                     phx-target={@myself}
                   >
                     {dgettext("dashboard_payments", "Refund")}
-                  </button>
+                  </.action_button>
                   <span
                     :if={not can_refund_here?(p, @account)}
                     class="text-token-xs text-tymeslot-500"
@@ -132,9 +132,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefunds do
   # not arise; it is tolerated rather than raising, because an empty cell beats
   # a 500 on the payments screen.
   defp format_cancelled_at(%{cancelled_at: %DateTime{} = cancelled_at}) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-    month = LocaleFormat.format_month_name(cancelled_at.month, locale, :short)
-    "#{cancelled_at.day} #{month} #{cancelled_at.year}"
+    LocaleFormat.format_short_date_with_year(
+      cancelled_at,
+      Gettext.get_locale(TymeslotWeb.Gettext)
+    )
   end
 
   defp format_cancelled_at(_meeting), do: ""

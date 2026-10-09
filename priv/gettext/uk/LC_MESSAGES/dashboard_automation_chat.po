@@ -31,26 +31,23 @@ msgstr "Назва, що відображається на панелі керу
 msgid "Active"
 msgstr "Активна"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Add Slack via Webhook URL"
 msgstr "Додати Slack через URL-адресу вебхука"
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram_empty_state.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Add Telegram Account"
 msgstr "Додати обліковий запис Telegram"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
 #: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Add to Slack"
 msgstr "Додати до Slack"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
 #: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Add via webhook URL"
@@ -144,7 +141,7 @@ msgstr "Налаштуйте сповіщення для Telegram."
 msgid "Connect"
 msgstr "Підключити"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Connect Slack to receive instant notifications when meetings are booked, cancelled, or rescheduled."
 msgstr "Підключіть Slack, щоб отримувати миттєві сповіщення, коли зустрічі плануються, скасовуються або переносяться."
@@ -154,7 +151,7 @@ msgstr "Підключіть Slack, щоб отримувати миттєві �
 msgid "Connect Telegram"
 msgstr "Підключити Telegram"
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Connect Telegram to receive instant notifications when meetings are booked, cancelled, or rescheduled."
 msgstr "Підключіть Telegram, щоб отримувати миттєві сповіщення, коли зустрічі плануються, скасовуються або переносяться."
@@ -191,8 +188,8 @@ msgid "Delete"
 msgstr "Видалити"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
-#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Disabled"
 msgstr "Вимкнено"
@@ -228,12 +225,6 @@ msgstr "Редагувати інтеграцію зі Slack"
 #, elixir-autogen, elixir-format
 msgid "Edit Telegram Integration"
 msgstr "Редагувати інтеграцію з Telegram"
-
-#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
-#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
-#, elixir-autogen, elixir-format
-msgid "Event Subscriptions"
-msgstr "Підписки на події"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack/crud_handlers.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram/crud_handlers.ex
@@ -390,12 +381,12 @@ msgstr "Журнали"
 msgid "Never triggered"
 msgstr "Жодного разу не спрацьовувало"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex
 #, elixir-autogen, elixir-format
 msgid "No Slack Integrations"
 msgstr "Немає інтеграцій зі Slack"
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_tab.ex
 #, elixir-autogen, elixir-format
 msgid "No Telegram Integrations"
 msgstr "Немає інтеграцій з Telegram"
@@ -841,3 +832,9 @@ msgstr "URL вебхука відкликано у Slack. Створіть но�
 #, elixir-autogen, elixir-format
 msgid "Slack error: %{error}"
 msgstr "Помилка Slack: %{error}"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}"
+msgstr "Видалити %{name}"

@@ -31,11 +31,6 @@ msgstr "Une erreur s’est produite. Veuillez actualiser la page et réessayer."
 msgid "Background Design"
 msgstr "Style d’arrière-plan"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Choose Your Style"
-msgstr "Choisissez votre style"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a visual style that matches your professional identity."
@@ -71,11 +66,6 @@ msgstr "Connectez un calendrier pour prévisualiser"
 #, elixir-autogen, elixir-format
 msgid "Current"
 msgstr "Actuel"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Current Style"
-msgstr "Style actuel"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/color_picker.ex
@@ -136,21 +126,11 @@ msgstr "Aperçu en direct"
 msgid "MP4 or WebM. Max 20MB."
 msgstr "MP4 ou WebM. 20 Mo max."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "More Styles Coming Soon"
-msgstr "Plus de styles à venir"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Or upload your own"
 msgstr "Ou téléversez la vôtre"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Our design team is busy crafting new themes to help you express your unique professional style."
-msgstr "Notre équipe de design travaille à la création de nouveaux thèmes pour vous aider à exprimer votre style professionnel unique."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
 #, elixir-autogen, elixir-format
@@ -192,11 +172,6 @@ msgstr "Choisissez les couleurs principales de l’interface de votre page de r�
 #, elixir-autogen, elixir-format
 msgid "Solid Color"
 msgstr "Couleur unie"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex
-#, elixir-autogen, elixir-format
-msgid "Theme Customization"
-msgstr "Personnalisation du thème"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_preview.ex
@@ -359,3 +334,13 @@ msgstr "Modifications non enregistrées"
 #, elixir-autogen, elixir-format
 msgid "Complete the form to save"
 msgstr "Complétez le formulaire pour enregistrer"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#, elixir-autogen, elixir-format
+msgid "Background type"
+msgstr "Type d’arrière-plan"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Current style"
+msgstr "Style actuel"

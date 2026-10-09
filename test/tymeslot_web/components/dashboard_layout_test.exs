@@ -53,4 +53,18 @@ defmodule TymeslotWeb.Components.DashboardLayoutTest do
 
     assert Floki.find(doc, "button[aria-label='Toggle sidebar']") != []
   end
+
+  test "the mobile sidebar toggle announces what it controls and that it starts closed" do
+    user = build(:user)
+    profile = build(:profile, user: user, username: "testuser", full_name: "Test User")
+
+    doc =
+      (&DashboardLayout.top_navigation/1)
+      |> render_component(%{current_user: user, profile: profile})
+      |> Floki.parse_document!()
+
+    [toggle] = Floki.find(doc, "button#dashboard-sidebar-toggle")
+    assert Floki.attribute(toggle, "aria-controls") == ["dashboard-sidebar"]
+    assert Floki.attribute(toggle, "aria-expanded") == ["false"]
+  end
 end

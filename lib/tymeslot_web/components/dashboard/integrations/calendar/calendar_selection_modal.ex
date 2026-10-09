@@ -38,7 +38,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
 
     ~H"""
     <div id={@id}>
-      <TymeslotWeb.Components.CoreComponents.modal
+      <TymeslotWeb.Components.CoreComponents.Modal.modal
         id={"#{@id}-modal"}
         show={@show}
         on_cancel={@on_cancel}
@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
           >
             <input type="hidden" name="integration_id" value={@integration.id} />
             <div class="flex-1">
-              <label for={"#{@id}-name"} class="label mb-1.5 block">
+              <label for={"#{@id}-name"} class="label">
                 {dgettext("dashboard_calendar_providers", "Name")}
               </label>
               <input
@@ -72,13 +72,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
                 class="input"
               />
             </div>
-            <TymeslotWeb.Components.CoreComponents.action_button type="submit" variant={:secondary}>
+            <.action_button type="submit" variant={:secondary}>
               {dgettext("dashboard_calendar_providers", "Rename")}
-            </TymeslotWeb.Components.CoreComponents.action_button>
+            </.action_button>
           </form>
 
           <div class="mb-6">
-            <p class="label mb-1.5 block">
+            <p class="label">
               {dgettext("dashboard_calendar_providers", "Colour")}
             </p>
             <p class="mb-2 text-token-sm text-tymeslot-500">
@@ -165,15 +165,15 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
 
         <:footer>
           <div class="flex justify-end">
-            <TymeslotWeb.Components.CoreComponents.action_button
+            <.action_button
               variant={:secondary}
               phx-click={@on_cancel}
             >
               {dgettext("dashboard_calendar_providers", "Done")}
-            </TymeslotWeb.Components.CoreComponents.action_button>
+            </.action_button>
           </div>
         </:footer>
-      </TymeslotWeb.Components.CoreComponents.modal>
+      </TymeslotWeb.Components.CoreComponents.Modal.modal>
     </div>
     """
   end

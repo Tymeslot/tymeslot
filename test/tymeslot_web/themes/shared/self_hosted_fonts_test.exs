@@ -15,6 +15,9 @@ defmodule TymeslotWeb.Themes.Shared.SelfHostedFontsTest do
     |> List.flatten()
   end
 
+  # The subject is the theme stylesheets themselves, not an Elixir function:
+  # a theme that drops the import falls back to fonts fetched elsewhere.
+  # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
   test "every theme imports the self-hosted font faces" do
     for theme <- @themes do
       css = File.read!(Path.join(@css_dir, "themes/#{theme}/theme.css"))

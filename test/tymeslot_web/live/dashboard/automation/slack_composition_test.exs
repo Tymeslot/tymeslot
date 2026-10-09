@@ -45,9 +45,8 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCompositionTest do
     test "exposes a Slack tab when slack_notifications_allowed is true",
          %{conn: conn} do
       {:ok, view, _html} = live(conn, "/dashboard/automation")
-      html = render(view)
 
-      assert html =~ ~s(<span>Slack</span>)
+      assert has_element?(view, "#automation-tabs-tab-slack[role='tab']", "Slack")
     end
 
     test "renders the Slack empty state with both CTAs on the Slack tab",
@@ -77,9 +76,12 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCompositionTest do
          %{conn: conn} do
       ConfigTestHelpers.setup_config(:tymeslot, slack_notifications_allowed: false)
 
-      {:ok, _view, html} = live(conn, "/dashboard/automation")
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
 
-      refute html =~ ~s(<span>Slack</span>)
+      # Anchored on the tab strip itself, so the refute below cannot pass
+      # merely because the strip failed to render.
+      assert has_element?(view, "#automation-tabs-tab-webhooks")
+      refute has_element?(view, "#automation-tabs-tab-slack")
     end
   end
 

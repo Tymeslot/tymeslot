@@ -128,7 +128,7 @@ defmodule TymeslotWeb.ThemeMeetingTestCases do
 
     local_time = shift_to_attendee_zone(meeting)
 
-    formatted_date = Calendar.strftime(local_time, "%B %d, %Y")
+    formatted_date = Calendar.strftime(local_time, "%-d %B %Y")
     formatted_time = Calendar.strftime(local_time, "%-I:%M %p")
     raw_utc_time = Calendar.strftime(meeting.start_time, "%-I:%M %p")
 

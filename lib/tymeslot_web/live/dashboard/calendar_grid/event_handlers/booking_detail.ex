@@ -9,7 +9,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.BookingDetail do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_show_booking(%{"meeting-id" => id_str}, socket) when is_binary(id_str) do
     # Meeting ids are UUIDs, so the incoming param is matched as a string
-    # rather than parsed. An unknown id simply selects nothing.
+    # rather than parsed. An unknown id simply selects nothing. The modal
+    # describes the booking as an agenda entry, like the overview's, and
+    # reads a group booking's seats from the booking itself.
     booking =
       Enum.find(
         socket.assigns.events,

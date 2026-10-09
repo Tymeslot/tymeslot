@@ -59,7 +59,8 @@ defmodule Tymeslot.Availability.CalculateBreakTimezoneTest do
       time_off: [],
       min_advance_hours: 0,
       max_advance_booking_days: 3650,
-      buffer_minutes: 0
+      buffer_before_minutes: 0,
+      buffer_after_minutes: 0
     }
   end
 
@@ -136,6 +137,29 @@ defmodule Tymeslot.Availability.CalculateBreakTimezoneTest do
       assert "7:30 PM" in slots
       assert "9:00 PM" in slots
     end
+
+    # A 90-minute meeting starting 11:00 PM Los Angeles on the 7th ends after
+    # the booker's midnight, still inside the owner's Tokyo window (which runs
+    # until 01:00 in Los Angeles). It is listed under the date it begins on.
+    # The old engine clamped each booker day at midnight and dropped it.
+    test "offers the slot that straddles the booker's midnight under the date it begins on" do
+      {:ok, slots} =
+        Calculate.available_slots(
+          ~D[2026-09-07],
+          90,
+          "America/Los_Angeles",
+          "Asia/Tokyo",
+          [],
+          config([])
+        )
+
+      assert "9:30 PM" in slots
+      assert "11:00 PM" in slots
+
+      # The window ends at 01:00 and the grid steps by the duration, so
+      # nothing starts after 11:00 PM.
+      assert List.last(slots) == "11:00 PM"
+    end
   end
 
   describe "the calendar grid's own answer" do
@@ -162,7 +186,8 @@ defmodule Tymeslot.Availability.CalculateBreakTimezoneTest do
         duration_minutes: 30,
         min_advance_hours: 0,
         max_advance_booking_days: 3650,
-        buffer_minutes: 0
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0
       }
     end
 

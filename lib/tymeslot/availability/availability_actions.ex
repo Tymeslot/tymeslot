@@ -6,7 +6,7 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   """
 
   alias Tymeslot.Availability.AvailabilityScheduleQueries
-  alias Tymeslot.Availability.{Breaks, WeeklyAvailabilityQueries, WeeklySchedule}
+  alias Tymeslot.Availability.{Breaks, WeeklyAvailabilityQueries, WeeklySchedule, Window}
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Utils.DateTimeUtils
@@ -46,7 +46,8 @@ defmodule Tymeslot.Availability.AvailabilityActions do
         WeeklySchedule.upsert_day_availability(schedule_id, day, %{
           is_available: true,
           start_time: WeeklyAvailabilityQueries.default_start_time(),
-          end_time: WeeklyAvailabilityQueries.default_end_time()
+          end_time: WeeklyAvailabilityQueries.default_end_time(),
+          ends_next_day: false
         })
       else
         WeeklySchedule.clear_day_settings(schedule_id, day)
@@ -55,18 +56,21 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   end
 
   @doc """
-  Updates the working hours for a specific day.
+  Updates the working hours for a specific day. `end_str` is the editor's
+  value: `"HH:MM"` ends the same day, `"HH:MM+1"` the next
+  (`Tymeslot.Availability.Window.parse_end/1`).
   """
   @spec update_day_hours(integer(), integer(), String.t(), String.t()) ::
           {:ok, term()} | {:error, :invalid_time_format | Ecto.Changeset.t()}
   def update_day_hours(schedule_id, day, start_str, end_str) do
     with_cache_invalidation(schedule_id, fn ->
       with {:ok, start_time} <- DateTimeUtils.parse_hhmm(start_str),
-           {:ok, end_time} <- DateTimeUtils.parse_hhmm(end_str) do
+           {:ok, {end_time, ends_next_day}} <- Window.parse_end(end_str) do
         WeeklySchedule.upsert_day_availability(schedule_id, day, %{
           is_available: true,
           start_time: start_time,
-          end_time: end_time
+          end_time: end_time,
+          ends_next_day: ends_next_day
         })
       else
         _error -> {:error, :invalid_time_format}

@@ -38,16 +38,16 @@ defmodule TymeslotWeb.Dev.EmbedTestHTML do
           .control-group label { font-size: 13px; font-weight: 600; color: #475569; }
           .control-group input, .control-group select { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; }
           .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-          .card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
-          .card-header { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
-          .card-header h2 { font-size: 16px; }
-          .card-header p { font-size: 13px; color: #64748b; margin-top: 4px; }
-          .card-body { padding: 20px; position: relative; }
+          .embed-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+          .embed-card-header { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
+          .embed-card-header h2 { font-size: 16px; }
+          .embed-card-header p { font-size: 13px; color: #64748b; margin-top: 4px; }
+          .embed-card-body { padding: 20px; position: relative; }
           .embed-container { border: 2px dashed #e2e8f0; border-radius: 8px; overflow: hidden; }
           .size-label { position: absolute; top: 28px; right: 28px; background: #1e293b; color: white; font-size: 11px; padding: 2px 8px; border-radius: 4px; z-index: 10; pointer-events: none; }
           #embed-constrained { max-height: 400px; }
           #embed-small { height: 400px; }
-          .card-body--centred { text-align: center; padding: 40px; }
+          .embed-card-body--centred { text-align: center; padding: 40px; }
           .btn { padding: 8px 20px; background: #14b8a6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
           .btn--large { padding: 12px 28px; border-radius: 12px; font-size: 16px; box-shadow: 0 4px 12px rgba(20,184,166,0.3); }
           @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
@@ -98,45 +98,45 @@ defmodule TymeslotWeb.Dev.EmbedTestHTML do
         </div>
 
         <div class="grid">
-          <div class="card">
-            <div class="card-header">
+          <div class="embed-card">
+            <div class="embed-card-header">
               <h2>Unconstrained (default)</h2>
               <p>No height limit, the iframe grows to fit content</p>
             </div>
-            <div class="card-body">
+            <div class="embed-card-body">
               <span class="size-label">auto height</span>
               <div class="embed-container" id="embed-full"></div>
             </div>
           </div>
 
-          <div class="card">
-            <div class="card-header">
+          <div class="embed-card">
+            <div class="embed-card-header">
               <h2>Constrained Height</h2>
               <p>Container has a fixed max-height, should scroll</p>
             </div>
-            <div class="card-body">
+            <div class="embed-card-body">
               <span class="size-label" id="constrained-label">400px max</span>
               <div class="embed-container" id="embed-constrained"></div>
             </div>
           </div>
 
-          <div class="card">
-            <div class="card-header">
+          <div class="embed-card">
+            <div class="embed-card-header">
               <h2>Small (400px)</h2>
               <p>Tight space, content must be scrollable</p>
             </div>
-            <div class="card-body">
+            <div class="embed-card-body">
               <span class="size-label">400px fixed</span>
               <div class="embed-container" id="embed-small"></div>
             </div>
           </div>
 
-          <div class="card">
-            <div class="card-header">
+          <div class="embed-card">
+            <div class="embed-card-header">
               <h2>Popup Mode</h2>
               <p>Click the button to test modal embed</p>
             </div>
-            <div class="card-body card-body--centred">
+            <div class="embed-card-body embed-card-body--centred">
               <button id="popup-btn" class="btn btn--large">
                 Book a Meeting
               </button>

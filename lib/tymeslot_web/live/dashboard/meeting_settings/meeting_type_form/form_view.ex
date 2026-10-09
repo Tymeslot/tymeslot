@@ -8,13 +8,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   unchanged (its `render/1` delegates straight to it), so LiveView change
   tracking is preserved.
 
-  The sections are grouped into five panels. In edit mode a tab bar shows one
-  panel at a time; in create mode the same panels render stacked, so the
-  markup below is the single source of the section grouping and order for
-  both modes. Inactive panels are hidden with CSS rather than conditionally
-  rendered, keeping every input in the DOM (create mode submits the whole
-  form) and preserving the custom-questions component's state across tab
+  The sections are grouped into five panels behind a tab bar, one panel shown
+  at a time. Inactive panels are hidden with CSS rather than conditionally
+  rendered, preserving the custom-questions component's state across tab
   switches.
+
+  A new meeting type uses the same form. Auto-save needs a record to save
+  into, so until it exists only the Details panel renders, the other tabs are
+  shown but disabled, and the footer offers a single "Create meeting type"
+  action in place of the auto-save indicator and "Done".
   """
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
@@ -28,74 +30,93 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     Autosave,
     AvailabilitySection,
     CustomQuestionsSection,
+    GroupBookingsSection,
+    GroupRules,
     GuestsSection,
-    HiddenFields,
     LimitsSection,
     LocationEditorComponent,
     LocationsSection,
     PaymentsSection,
     QuestionEditorComponent,
     ShowAsFreeSection,
+    SlotIntervalField,
     VisibilitySection
   }
 
-  alias TymeslotWeb.CustomInputModeHelper
+  alias TymeslotWeb.Components.CoreComponents.Navigation
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
-  alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   import ApprovalSection, only: [approval_section: 1]
   import AvailabilitySection, only: [availability_section: 1]
+  import GroupBookingsSection, only: [group_bookings_section: 1]
   import GuestsSection, only: [guests_section: 1]
   import LimitsSection, only: [limits_section: 1]
   import ShowAsFreeSection, only: [show_as_free_section: 1]
-  import HiddenFields, only: [hidden_fields: 1]
   import PaymentsSection, only: [payments_section: 1]
   import VisibilitySection, only: [visibility_section: 1]
   import TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents
   import TymeslotWeb.Components.Shared.ReminderPicker, only: [reminder_picker: 1]
-
-  # The dropdown value that opens the custom number input. Not a duration, so
-  # it can never collide with one: every real value parses as an integer.
-  @custom_interval_option "custom"
-
-  # The clock the hint's example times are drawn from. Any hour would do; a
-  # round morning start reads as an illustration rather than as real data.
-  @hint_start_time ~T[09:00:00]
 
   # Which form-error fields surface an indicator on which tab. Errors on
   # fields absent here (e.g. :base) render below the panels and need no dot.
   @tab_error_fields %{
     "details" => [:name, :duration, :slot_interval, :description, :icon],
     "location" => [:locations, :video_integration, :calendar_integration, :target_calendar],
-    "booking" => [:payment_required, :price_cents, :approval_window_hours],
+    "booking" => [:payment_required, :price_cents, :max_participants, :approval_window_hours],
     "reminders" => [:reminder_config]
   }
 
+  @tabs_id "meeting-type-form-tabs"
+
+  @doc """
+  The element id of the tab button for `tab` in the form's tab strip, so a
+  caller can move focus onto it.
+  """
+  @spec tab_element_id(String.t()) :: String.t()
+  def tab_element_id(tab), do: Navigation.tab_id(@tabs_id, tab)
+
   @spec form(map()) :: Phoenix.LiveView.Rendered.t()
   def form(assigns) do
+    assigns =
+      assign(assigns,
+        tabs_id: @tabs_id,
+        create_hint_id: "meeting-type-form-#{assigns.id}-create-hint"
+      )
+
     ~H"""
     <div id={"meeting-type-form-wrapper-#{@id}"}>
       <form
         id={"meeting-type-form-#{@id}"}
-        phx-submit={if @is_edit, do: "flush_autosave", else: "save_meeting_type"}
-        phx-target={if @is_edit, do: @myself, else: @parent_myself}
-        class={if @is_edit, do: "space-y-6", else: "space-y-8"}
+        phx-submit={if @is_edit, do: "flush_autosave", else: "create_meeting_type"}
+        phx-target={@myself}
+        class="space-y-6"
         novalidate
       >
-        <.tab_bar
-          :if={@is_edit}
-          active_tab={@active_tab}
-          target={@myself}
-          tabs={form_tabs(@form_errors)}
-        />
+        <div class="space-y-2">
+          <.tab_bar
+            id={@tabs_id}
+            aria_label={dgettext("dashboard_meeting_form", "Meeting type settings")}
+            active_tab={@active_tab}
+            target={@myself}
+            tabs={form_tabs(@form_errors, @is_edit, @create_hint_id)}
+          />
+          <p
+            :if={!@is_edit}
+            id={@create_hint_id}
+            class="flex items-center gap-1.5 px-2 text-token-sm text-tymeslot-500"
+          >
+            <.icon name="hero-information-circle-mini" class="w-4 h-4 shrink-0 text-tymeslot-400" />
+            {dgettext("dashboard_meeting_form", "Create the meeting type to set up the rest.")}
+          </p>
+        </div>
 
         <%!-- Details --%>
-        <div
-          id="panel-details"
-          role={@is_edit && "tabpanel"}
-          aria-labelledby={@is_edit && "tab-details"}
-          hidden={@is_edit && @active_tab != "details"}
-          class={panel_class(@is_edit, @active_tab, "details")}
+        <.card
+          id={Navigation.panel_id(@tabs_id, "details")}
+          role="tabpanel"
+          aria-labelledby={Navigation.tab_id(@tabs_id, "details")}
+          hidden={@active_tab != "details"}
+          class={panel_class(@active_tab, "details")}
         >
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <.input
@@ -153,16 +174,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
               "slot_interval",
               if(@type, do: @type.slot_interval_minutes, else: "")
             ) %>
-          <% slot_interval_custom? = slot_interval_custom?(assigns, slot_interval_value) %>
+          <% slot_interval_custom? = SlotIntervalField.custom?(assigns, slot_interval_value) %>
           <div>
             <.input
               type="select"
               name="meeting_type[slot_interval]"
               label={dgettext("dashboard_meeting_form", "Booking slot interval")}
               value={
-                if(slot_interval_custom?, do: custom_interval_option(), else: slot_interval_value)
+                if(slot_interval_custom?,
+                  do: SlotIntervalField.custom_interval_option(),
+                  else: slot_interval_value
+                )
               }
-              options={slot_interval_options(slot_interval_value, slot_interval_custom?)}
+              options={SlotIntervalField.options(slot_interval_value, slot_interval_custom?)}
               phx-change="validate_meeting_type"
               phx-target={@myself}
               errors={
@@ -198,7 +222,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
               />
             </div>
             <p class="mt-1 text-token-sm text-tymeslot-600">
-              {slot_interval_hint(slot_interval_value, Map.get(@form_data, "duration"))}
+              {SlotIntervalField.hint(slot_interval_value, Map.get(@form_data, "duration"))}
             </p>
           </div>
 
@@ -223,15 +247,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             form_errors={@form_errors}
             myself={@myself}
           />
-        </div>
+        </.card>
 
         <%!-- Location & Calendar --%>
-        <div
-          id="panel-location"
-          role={@is_edit && "tabpanel"}
-          aria-labelledby={@is_edit && "tab-location"}
-          hidden={@is_edit && @active_tab != "location"}
-          class={panel_class(@is_edit, @active_tab, "location")}
+        <.card
+          :if={@is_edit}
+          id={Navigation.panel_id(@tabs_id, "location")}
+          role="tabpanel"
+          aria-labelledby={Navigation.tab_id(@tabs_id, "location")}
+          hidden={@active_tab != "location"}
+          class={panel_class(@active_tab, "location")}
         >
           <.live_component
             module={LocationsSection}
@@ -240,6 +265,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             video_integrations={@video_integrations}
             venues={@venues}
             form_id={@id}
+            group_bookings_enabled={@group_bookings_enabled}
+            errors={
+              @form_errors
+              |> FormValidationHelpers.field_errors(:locations)
+              |> Enum.map(&Helpers.format_errors/1)
+            }
           />
 
           <.booking_destination_section
@@ -255,23 +286,45 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
           />
 
           <.show_as_free_section show_as_free={@show_as_free} myself={@myself} />
-        </div>
+        </.card>
 
         <%!-- Booking Rules --%>
-        <div
-          id="panel-booking"
-          role={@is_edit && "tabpanel"}
-          aria-labelledby={@is_edit && "tab-booking"}
-          hidden={@is_edit && @active_tab != "booking"}
-          class={panel_class(@is_edit, @active_tab, "booking")}
+        <.card
+          :if={@is_edit}
+          id={Navigation.panel_id(@tabs_id, "booking")}
+          role="tabpanel"
+          aria-labelledby={Navigation.tab_id(@tabs_id, "booking")}
+          hidden={@active_tab != "booking"}
+          class={panel_class(@active_tab, "booking")}
         >
           <.payments_section
             :if={@payments_feature_enabled}
             charges_enabled={@payments_charges_enabled}
+            group_bookings_enabled={@group_bookings_enabled}
             payment_required={@payment_required}
             payment_price={@payment_price}
             currency={@payment_currency}
             currency_minimum_cents={@payment_currency_minimum_cents}
+            form_errors={@form_errors}
+            myself={@myself}
+          />
+
+          <.group_bookings_section
+            group_bookings_enabled={@group_bookings_enabled}
+            max_participants={@max_participants}
+            payment_required={@payment_required}
+            blocker={
+              GroupRules.enable_blocker(%{
+                group_bookings_allowed: @group_bookings_allowed,
+                payment_required: @payment_required,
+                payments_charges_enabled: @payments_charges_enabled,
+                requires_approval: @requires_approval,
+                locations: @locations
+              })
+            }
+            allowed={@group_bookings_allowed}
+            form_id={@id}
+            current_user={@current_user}
             form_errors={@form_errors}
             myself={@myself}
           />
@@ -284,6 +337,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
           <.approval_section
             requires_approval={@requires_approval}
+            group_bookings_enabled={@group_bookings_enabled}
             approval_window_hours={@approval_window_hours}
             errors={
               @form_errors
@@ -302,16 +356,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
           <.limits_section booking_limits={@booking_limits} myself={@myself} />
 
-          <.visibility_section :if={@is_edit && @type} type={@type} parent={@parent_myself} />
-        </div>
+          <.visibility_section type={@type} parent={@parent_myself} />
+        </.card>
 
         <%!-- Questions --%>
-        <div
-          id="panel-questions"
-          role={@is_edit && "tabpanel"}
-          aria-labelledby={@is_edit && "tab-questions"}
-          hidden={@is_edit && @active_tab != "questions"}
-          class={panel_class(@is_edit, @active_tab, "questions")}
+        <.card
+          :if={@is_edit}
+          id={Navigation.panel_id(@tabs_id, "questions")}
+          role="tabpanel"
+          aria-labelledby={Navigation.tab_id(@tabs_id, "questions")}
+          hidden={@active_tab != "questions"}
+          class={panel_class(@active_tab, "questions")}
         >
           <.live_component
             module={CustomQuestionsSection}
@@ -321,15 +376,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             allowed={@custom_questions_allowed}
             current_user={@current_user}
           />
-        </div>
+        </.card>
 
         <%!-- Reminders --%>
-        <div
-          id="panel-reminders"
-          role={@is_edit && "tabpanel"}
-          aria-labelledby={@is_edit && "tab-reminders"}
-          hidden={@is_edit && @active_tab != "reminders"}
-          class={panel_class(@is_edit, @active_tab, "reminders")}
+        <.card
+          :if={@is_edit}
+          id={Navigation.panel_id(@tabs_id, "reminders")}
+          role="tabpanel"
+          aria-labelledby={Navigation.tab_id(@tabs_id, "reminders")}
+          hidden={@active_tab != "reminders"}
+          class={panel_class(@active_tab, "reminders")}
         >
           <.reminder_picker
             reminders={@reminders}
@@ -354,32 +410,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             }
             myself={@myself}
           />
-        </div>
-
-        <%!-- Create-mode form serialisation. Edits auto-save from socket assigns
-           (see Autosave/Submission) and never post the form, so these hidden
-           inputs are only needed when creating. --%>
-        <.hidden_fields
-          :if={!@is_edit}
-          type={@type}
-          selected_icon={@selected_icon}
-          locations={@locations}
-          venues={@venues}
-          selected_calendar_integration_id={@selected_calendar_integration_id}
-          selected_target_calendar_id={@selected_target_calendar_id}
-          selected_availability_schedule_id={@selected_availability_schedule_id}
-          reminders={@reminders}
-          custom_fields={@custom_fields}
-          custom_questions_allowed={@custom_questions_allowed}
-          payments_feature_enabled={@payments_feature_enabled}
-          payments_charges_enabled={@payments_charges_enabled}
-          payment_required={@payment_required}
-          payment_price={@payment_price}
-          allow_guests={@allow_guests}
-          requires_approval={@requires_approval}
-          approval_window_hours={@approval_window_hours}
-          show_as_free={@show_as_free}
-        />
+        </.card>
 
         <%= for error <- FormValidationHelpers.field_errors(@form_errors, :base) do %>
           <p class="form-error">{Helpers.format_errors(error)}</p>
@@ -388,39 +419,31 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
         <div class="flex items-center justify-between gap-4">
           <%= if @is_edit do %>
             <Autosave.indicator status={@save_status} />
-            <button
-              type="button"
-              phx-click="close_edit_overlay"
-              phx-target={@parent_myself}
-              class="btn btn-primary"
-            >
+            <.action_button phx-click="close_edit_overlay" phx-target={@parent_myself}>
               {dgettext("dashboard_meeting_form", "Done")}
-            </button>
+            </.action_button>
           <% else %>
             <span></span>
-            <div class="flex justify-end space-x-3">
-              <button
-                type="button"
+            <div class="flex justify-end gap-3">
+              <.action_button
+                variant={:secondary}
                 phx-click="toggle_add_form"
                 phx-target={@parent_myself}
-                class="btn btn-secondary"
               >
                 {dgettext("dashboard_meeting_form", "Cancel")}
-              </button>
-              <button
-                type="submit"
-                disabled={@saving || @refreshing_calendars}
-                class="btn btn-primary"
-              >
-                <%= if @saving do %>
-                  <span class="flex items-center">
-                    <.spinner class="h-4 w-4 mr-2" />
-                    {dgettext("dashboard_meeting_form", "Saving...")}
-                  </span>
-                <% else %>
-                  {dgettext("dashboard_meeting_form", "Create Meeting Type")}
-                <% end %>
-              </button>
+              </.action_button>
+              <%!-- LiveView marks the form phx-submit-loading and disables
+                    this button for the round trip, which is what swaps the
+                    label for the spinner. --%>
+              <.action_button type="submit" data-testid="create-meeting-type">
+                <span class="hidden items-center gap-2 phx-submit-loading:inline-flex">
+                  <.spinner />
+                  {dgettext("dashboard_meeting_form", "Creating…")}
+                </span>
+                <span class="phx-submit-loading:hidden">
+                  {dgettext("dashboard_meeting_form", "Create meeting type")}
+                </span>
+              </.action_button>
             </div>
           <% end %>
         </div>
@@ -433,6 +456,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
           id={"location-editor-#{@id}"}
           location={@editing_location}
           existing_locations={@locations}
+          group_bookings_enabled={@group_bookings_enabled}
           video_integrations={@video_integrations}
           venues={@venues}
           current_user={@current_user}
@@ -457,109 +481,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     """
   end
 
-  @doc false
-  @spec custom_interval_option() :: String.t()
-  def custom_interval_option, do: @custom_interval_option
-
-  # Whether the custom number input is on screen.
-  #
-  # Two ways in, and both must be honoured. The organiser can pick "Custom" in
-  # the dropdown, which the component records on `:custom_input_mode`. Or the
-  # stored value can simply not be one this dropdown offers — written by a
-  # seed, an import or a support fix — in which case the input opens on its own
-  # so the value stays editable rather than being silently unreachable.
-  defp slot_interval_custom?(assigns, current_value) do
-    chosen? =
-      assigns
-      |> Map.get(:custom_input_mode, %{})
-      |> Map.get(:slot_interval_minutes, false)
-
-    chosen? or off_preset?(parse_interval(current_value))
-  end
-
-  defp off_preset?(nil), do: false
-
-  defp off_preset?(interval),
-    do: not CustomInputModeHelper.preset_value?(:slot_interval_minutes, interval)
-
-  # `current_value` is whatever is currently stored/selected for this meeting
-  # type. It is folded into the option list even when it falls outside the
-  # preset table, so a value written by something other than this form (a seed,
-  # an import, a support fix) still renders as itself instead of silently
-  # falling back to "Same as meeting length" — which the next autosave of any
-  # other field would then persist as the value's erasure.
-  defp slot_interval_options(current_value, custom?) do
-    range = Constraints.slot_interval_minutes_range()
-
-    intervals =
-      :slot_interval_minutes
-      |> CustomInputModeHelper.presets()
-      |> Enum.filter(&(&1 in range))
-      |> add_stored_interval(parse_interval(current_value), custom?)
-      |> Enum.sort()
-      |> Enum.map(
-        &{dgettext("dashboard_meeting_form", "%{minutes} min", minutes: &1), to_string(&1)}
-      )
-
-    [{dgettext("dashboard_meeting_form", "Same as meeting length"), ""}] ++
-      intervals ++
-      [{dgettext("dashboard_meeting_form", "Custom…"), @custom_interval_option}]
-  end
-
-  # While the custom input is open the dropdown reads "Custom…", so folding the
-  # stored value in as well would list a value nothing has selected.
-  defp add_stored_interval(intervals, _interval, true), do: intervals
-  defp add_stored_interval(intervals, nil, _custom?), do: intervals
-  defp add_stored_interval(intervals, interval, _custom?), do: Enum.uniq([interval | intervals])
-
-  # Spells out what the current choice produces. An interval is an abstraction
-  # until it is three clock times, and five minutes is a very different booking
-  # page from sixty; this is where an organiser sees which one they picked.
-  defp slot_interval_hint(interval_value, duration_value) do
-    case {parse_interval(interval_value), parse_interval(duration_value)} do
-      {nil, nil} ->
-        dgettext(
-          "dashboard_meeting_form",
-          "How far apart booking start times are offered. Leave as default to match the meeting length."
-        )
-
-      {nil, duration} ->
-        dgettext(
-          "dashboard_meeting_form",
-          "Matching the meeting length, times will be offered every %{minutes} minutes: %{examples}…",
-          minutes: duration,
-          examples: interval_examples(duration)
-        )
-
-      {interval, _duration} ->
-        dgettext(
-          "dashboard_meeting_form",
-          "Times will be offered every %{minutes} minutes: %{examples}…",
-          minutes: interval,
-          examples: interval_examples(interval)
-        )
-    end
-  end
-
-  defp interval_examples(minutes) do
-    @hint_start_time
-    |> Stream.iterate(&Time.add(&1, minutes, :minute))
-    |> Enum.take(3)
-    |> Enum.map_join(", ", &LocalizationHelpers.format_time_by_locale/1)
-  end
-
-  defp parse_interval(value) when is_integer(value), do: value
-
-  defp parse_interval(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {interval, ""} -> interval
-      _invalid -> nil
-    end
-  end
-
-  defp parse_interval(_value), do: nil
-
-  defp form_tabs(form_errors) do
+  # Until the meeting type exists only Details can be used; the others point
+  # at the hint saying why.
+  defp form_tabs(form_errors, is_edit, create_hint_id) do
     tabs = [
       %{
         id: "details",
@@ -588,7 +512,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
       }
     ]
 
-    Enum.map(tabs, &Map.put(&1, :error, tab_has_errors?(form_errors, &1.id)))
+    Enum.map(tabs, fn tab ->
+      disabled? = not is_edit and tab.id != "details"
+
+      Map.merge(tab, %{
+        error: tab_has_errors?(form_errors, tab.id),
+        disabled: disabled?,
+        describedby: if(disabled?, do: create_hint_id)
+      })
+    end)
   end
 
   defp tab_has_errors?(form_errors, tab_id) do
@@ -597,11 +529,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     |> Enum.any?(&(FormValidationHelpers.field_errors(form_errors, &1) != []))
   end
 
-  # In create mode the panels are invisible groupings in one stacked form;
-  # in edit mode each is a card and only the active one is shown.
-  defp panel_class(false = _is_edit, _active_tab, _panel_id), do: "space-y-4"
-
-  defp panel_class(true = _is_edit, active_tab, panel_id) do
-    ["card-glass space-y-6", active_tab != panel_id && "hidden"]
+  defp panel_class(active_tab, panel_id) do
+    ["space-y-6", active_tab != panel_id && "hidden"]
   end
 end

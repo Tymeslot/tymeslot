@@ -8,6 +8,7 @@ defmodule Tymeslot.Availability.InputValidation do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Availability.Window
   alias Tymeslot.Security.{SecurityLogger, UniversalSanitizer}
   alias Tymeslot.Utils.DateTimeUtils
 
@@ -18,7 +19,8 @@ defmodule Tymeslot.Availability.InputValidation do
   @type validation_errors :: %{atom() => String.t()}
 
   @doc """
-  Validates time range input for day hours (start and end times).
+  Validates time range input for day hours (start and end times). The end may
+  carry a `+1` suffix (`"02:00+1"`) to end on the next day.
 
   ## Parameters
   - `params` - Map containing start and end time strings
@@ -33,6 +35,7 @@ defmodule Tymeslot.Availability.InputValidation do
     metadata = Keyword.get(opts, :metadata, %{})
 
     validate_time_window(
+      :day_hours,
       params,
       metadata,
       "availability_day_hours_validation_success",
@@ -57,6 +60,7 @@ defmodule Tymeslot.Availability.InputValidation do
     metadata = Keyword.get(opts, :metadata, %{})
 
     validate_time_window(
+      :break,
       params,
       metadata,
       "availability_break_validation_success",
@@ -84,7 +88,8 @@ defmodule Tymeslot.Availability.InputValidation do
   def validate_quick_break_input(params, opts \\ []) do
     metadata = Keyword.get(opts, :metadata, %{})
 
-    with {:ok, sanitized_start} <- validate_time_input(params["start"], "start_time", metadata),
+    with {:ok, sanitized_start} <-
+           validate_time_input(params["start"], "start_time", metadata, :clock),
          {:ok, sanitized_duration} <- validate_duration_input(params["duration"], metadata) do
       SecurityLogger.log_security_event("availability_quick_break_validation_success", %{
         ip_address: metadata[:ip],
@@ -154,6 +159,7 @@ defmodule Tymeslot.Availability.InputValidation do
   # Private helper functions
 
   defp validate_time_window(
+         mode,
          params,
          metadata,
          success_event,
@@ -161,9 +167,11 @@ defmodule Tymeslot.Availability.InputValidation do
          post_processor
        )
        when is_function(post_processor, 3) do
-    with {:ok, sanitized_start} <- validate_time_input(params["start"], "start_time", metadata),
-         {:ok, sanitized_end} <- validate_time_input(params["end"], "end_time", metadata),
-         :ok <- validate_time_range(sanitized_start, sanitized_end),
+    with {:ok, sanitized_start} <-
+           validate_time_input(params["start"], "start_time", metadata, :clock),
+         {:ok, sanitized_end} <-
+           validate_time_input(params["end"], "end_time", metadata, end_format(mode)),
+         :ok <- validate_time_range(mode, sanitized_start, sanitized_end),
          {:ok, enriched_result} <-
            post_processor.(
              %{"start" => sanitized_start, "end" => sanitized_end},
@@ -183,6 +191,9 @@ defmodule Tymeslot.Availability.InputValidation do
         {:error, errors}
     end
   end
+
+  defp end_format(:day_hours), do: :window_end
+  defp end_format(:break), do: :clock
 
   defp log_validation_success(event, metadata, extra \\ %{}) do
     SecurityLogger.log_security_event(event, Map.merge(base_metadata(metadata), extra))
@@ -205,13 +216,13 @@ defmodule Tymeslot.Availability.InputValidation do
     }
   end
 
-  defp validate_time_input(time_input, field_name, metadata) do
+  defp validate_time_input(time_input, field_name, metadata, format) do
     case UniversalSanitizer.sanitize_and_validate(time_input,
            allow_html: false,
            metadata: metadata
          ) do
       {:ok, sanitized_time} ->
-        case validate_time_format(sanitized_time) do
+        case validate_time_format(sanitized_time, format) do
           :ok -> {:ok, sanitized_time}
           {:error, error} -> {:error, %{String.to_existing_atom(field_name) => error}}
         end
@@ -221,33 +232,57 @@ defmodule Tymeslot.Availability.InputValidation do
     end
   end
 
-  defp validate_time_format(time_str) when is_binary(time_str) do
+  defp validate_time_format(time_str, :clock) when is_binary(time_str) do
     case DateTimeUtils.parse_hhmm(time_str) do
-      {:ok, _time} ->
-        :ok
-
-      {:error, _reason} ->
-        {:error, dgettext("dashboard_availability", "Time must be in HH:MM format (e.g., 09:30)")}
+      {:ok, _time} -> :ok
+      {:error, _reason} -> {:error, invalid_time_message()}
     end
   end
 
-  defp validate_time_format(_arg),
+  defp validate_time_format(time_str, :window_end) when is_binary(time_str) do
+    case Window.parse_end(time_str) do
+      {:ok, _end} -> :ok
+      {:error, _reason} -> {:error, invalid_time_message()}
+    end
+  end
+
+  defp validate_time_format(_arg, _format),
     do: {:error, dgettext("dashboard_availability", "Time must be a string")}
 
-  defp validate_time_range(start_time, end_time) do
+  defp invalid_time_message,
+    do: dgettext("dashboard_availability", "Time must be in HH:MM format (e.g., 09:30)")
+
+  defp validate_time_range(:day_hours, start_time, end_value) do
     with {:ok, start_parsed} <- DateTimeUtils.parse_hhmm(start_time),
-         {:ok, end_parsed} <- DateTimeUtils.parse_hhmm(end_time) do
-      case Time.compare(start_parsed, end_parsed) do
-        :lt ->
+         {:ok, {end_parsed, ends_next_day}} <- Window.parse_end(end_value) do
+      cond do
+        Window.valid?(start_parsed, end_parsed, ends_next_day) ->
           :ok
 
-        _other ->
-          {:error, dgettext("dashboard_availability", "End time must be after start time")}
+        ends_next_day ->
+          {:error,
+           dgettext(
+             "dashboard_availability",
+             "Hours that end the next day can last at most 24 hours"
+           )}
+
+        true ->
+          {:error,
+           dgettext(
+             "dashboard_availability",
+             "End time must be after start time. To run past midnight, pick an end time marked (+1)."
+           )}
       end
     else
       _other -> {:error, dgettext("dashboard_availability", "Invalid time format")}
     end
   end
+
+  # A break's order depends on its day's hours, which only the domain knows:
+  # 23:30 to 00:30 is valid inside an overnight day. `Breaks` and the break
+  # schema judge it, and the dashboard maps their errors
+  # (`BreakHelpers.display_message/2`).
+  defp validate_time_range(:break, _start_time, _end_time), do: :ok
 
   defp validate_break_label(nil, _metadata), do: {:ok, "Break"}
   defp validate_break_label("", _metadata), do: {:ok, "Break"}

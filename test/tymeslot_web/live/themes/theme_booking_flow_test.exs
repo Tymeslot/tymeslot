@@ -266,7 +266,6 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
     @tag :capture_log
     test "blocks booking on a past date via URL manipulation", %{conn: conn} do
       user = insert(:user)
-      # Quill
       profile = insert(:profile, user: user, booking_theme: "1", username: "past-fuzzer")
       _integration = insert(:calendar_integration, user: user, is_active: true)
 
@@ -274,7 +273,6 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
       # deep link needs one to reach the booking form at all.
       insert(:meeting_type, user: user, name: "30 Minutes", duration_minutes: 30, is_active: true)
 
-      # Date in the past
       past_date = Date.to_string(Date.add(Date.utc_today(), -1))
       time = "10:00 AM"
       timezone = "America/New_York"
@@ -286,7 +284,6 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
           ~p"/#{profile.username}/30-minutes/book?date=#{past_date}&time=#{time}&timezone=#{timezone}"
         )
 
-      # Submit form
       view
       |> form("form[data-testid='booking-form']", %{
         "booking" => %{
@@ -335,7 +332,8 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
           is_default: true,
           advance_booking_days: 400,
           min_advance_hours: 0,
-          buffer_minutes: 0
+          buffer_before_minutes: 0,
+          buffer_after_minutes: 0
         )
 
       _integration = insert(:calendar_integration, user: user, is_active: true)
@@ -366,7 +364,6 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
           ~p"/#{profile.username}/30-minutes?date=#{dst_date_str}&timezone=#{timezone}"
         )
 
-      # Wait for slots to load
       wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
 
       slots_html = render(view)
@@ -406,7 +403,8 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
             is_default: true,
             advance_booking_days: 30,
             min_advance_hours: 0,
-            buffer_minutes: 0
+            buffer_before_minutes: 0,
+            buffer_after_minutes: 0
           )
 
         _meeting_type =
@@ -460,7 +458,8 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
             is_default: true,
             advance_booking_days: 30,
             min_advance_hours: 0,
-            buffer_minutes: 0
+            buffer_before_minutes: 0,
+            buffer_after_minutes: 0
           )
 
         _meeting_type =
@@ -518,7 +517,8 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
             is_default: true,
             advance_booking_days: 30,
             min_advance_hours: 0,
-            buffer_minutes: 0
+            buffer_before_minutes: 0,
+            buffer_after_minutes: 0
           )
 
         _integration = insert(:calendar_integration, user: user, is_active: true)

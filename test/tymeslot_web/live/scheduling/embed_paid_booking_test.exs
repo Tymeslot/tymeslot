@@ -84,7 +84,8 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
         is_default: true,
         advance_booking_days: 30,
         min_advance_hours: 0,
-        buffer_minutes: 0
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0
       )
 
     insert(:connect_account,

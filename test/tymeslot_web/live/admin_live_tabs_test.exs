@@ -40,5 +40,17 @@ defmodule TymeslotWeb.AdminLiveTabsTest do
       # The active pill is the one carrying the selected styling.
       assert html =~ ~r/href="\/admin\/email"[^>]*class="[^"]*bg-turquoise-600/
     end
+
+    test "Back to Dashboard navigates rather than patches, as it leaves this LiveView", %{
+      conn: conn
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/admin/general")
+
+      assert has_element?(
+               lv,
+               ~s(a[href="/dashboard"][data-phx-link="redirect"]),
+               "Back to Dashboard"
+             )
+    end
   end
 end

@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.MeetingTypes.ReminderValidation
@@ -54,13 +54,11 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
 
     ~H"""
     <section class="space-y-2">
-      <div class="flex items-center gap-2">
-        <.icon name="hero-bell" class="w-5 h-5 text-turquoise-500" />
-        <h3 class="text-token-base font-semibold text-tymeslot-800">
-          {dgettext("common", "Reminders")}
-        </h3>
-      </div>
-      <p class="text-token-sm text-tymeslot-600">{@description}</p>
+      <.subsection_header
+        icon="hero-bell"
+        title={dgettext("common", "Reminders")}
+        description={@description}
+      />
 
       <div class="mt-3 flex flex-wrap items-center gap-3">
         <%= if @reminders == [] do %>
@@ -80,7 +78,7 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
                   )
                 }
                 data-testid="reminder-remove"
-                class="inline-flex items-center justify-center rounded-full border border-turquoise-200 bg-white text-turquoise-600 hover:text-turquoise-700 hover:border-turquoise-300"
+                class="inline-flex items-center justify-center rounded-token-full border border-turquoise-200 bg-white text-turquoise-600 hover:text-turquoise-700 hover:border-turquoise-300"
                 aria-label={dgettext("common", "Remove reminder")}
               >
                 <.icon name="hero-x-mark" class="h-4 w-4" />
@@ -163,31 +161,38 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
                 name="reminder[value]"
                 value={@new_reminder_value}
                 placeholder="30"
-                class="input py-1.5! px-3! w-20 text-token-sm"
+                class="input py-1.5 px-3 w-20 text-token-sm"
                 phx-change={@event_prefix <> "update_reminder_input"}
                 phx-target={@myself}
               />
               <select
                 name="reminder[unit]"
-                class="input py-1.5! px-3! w-28 text-token-sm"
-                value={@new_reminder_unit}
+                class="input py-1.5 px-3 w-28 text-token-sm"
                 phx-change={@event_prefix <> "update_reminder_input"}
                 phx-target={@myself}
               >
-                <option value="minutes">{dgettext("common", "Minutes")}</option>
-                <option value="hours">{dgettext("common", "Hours")}</option>
-                <option value="days">{dgettext("common", "Days")}</option>
+                <%!-- A select element ignores a value attribute; the chosen unit has to
+                      be marked on its option, or a re-render snaps it back to
+                      the first one. --%>
+                <option value="minutes" selected={@new_reminder_unit == "minutes"}>
+                  {dgettext("common", "Minutes")}
+                </option>
+                <option value="hours" selected={@new_reminder_unit == "hours"}>
+                  {dgettext("common", "Hours")}
+                </option>
+                <option value="days" selected={@new_reminder_unit == "days"}>
+                  {dgettext("common", "Days")}
+                </option>
               </select>
             </div>
-            <button
-              type="button"
+            <.action_button
+              size={:sm}
               phx-click={@event_prefix <> "add_reminder"}
               phx-target={@myself}
               data-testid="reminder-custom-add"
-              class="btn btn-primary btn-sm rounded-token-lg!"
             >
               {dgettext("common", "Add")}
-            </button>
+            </.action_button>
           </div>
         <% end %>
       </div>

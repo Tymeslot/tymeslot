@@ -74,6 +74,35 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
     dgettext("booking", "This meeting could not be found. Please refresh and try again.")
   end
 
+  def message(:already_booked) do
+    dgettext(
+      "booking",
+      "You already have a spot at this time. Check your email for your booking confirmation."
+    )
+  end
+
+  def message(:already_cancelled) do
+    dgettext("booking", "This booking has already been cancelled or moved.")
+  end
+
+  def message(:group_meeting_not_reschedulable) do
+    dgettext(
+      "booking",
+      "This is a group booking, so each participant moves their own spot from their confirmation email."
+    )
+  end
+
+  def message(:seat_not_movable) do
+    dgettext(
+      "booking",
+      "This spot can no longer be moved. Cancel it and book a new time instead, or contact the host."
+    )
+  end
+
+  def message(:seat_time_unchanged) do
+    dgettext("booking", "This is your current time. Pick a different time to move your spot.")
+  end
+
   # Step-requirement refusals: the booker has not chosen enough yet to move on.
   # `Availability.Calculate` and `MeetingTypes.Duration` used to return this
   # copy themselves, in English, straight into a flash on a public multi-locale

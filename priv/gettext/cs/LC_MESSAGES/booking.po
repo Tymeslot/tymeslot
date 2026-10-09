@@ -51,11 +51,6 @@ msgstr "%{minutes} minut"
 msgid "%{months} months in advance"
 msgstr "s předstihem až %{months} měsíců"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "%{month} %{day}, %{year}"
-msgstr "%{day}. %{month} %{year}"
-
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{name}, your meeting %{organizer} has been rescheduled."
@@ -801,11 +796,6 @@ msgstr "Odebrat hosta %{email}"
 
 #: lib/tymeslot_web/themes/shared/guest_booking.ex
 #, elixir-autogen, elixir-format
-msgid "You can add up to %{count} guests."
-msgstr "Maximální počet hostů je %{count}."
-
-#: lib/tymeslot_web/themes/shared/guest_booking.ex
-#, elixir-autogen, elixir-format
 msgid "You don't need to add your own email as a guest."
 msgstr "Svou vlastní e-mailovou adresu jako hosta přidávat nemusíte."
 
@@ -1378,3 +1368,93 @@ msgstr "Adresu s vámi domluvíme po rezervaci."
 #, elixir-autogen, elixir-format
 msgid "Which location?"
 msgstr "Které místo?"
+
+#: lib/tymeslot_web/themes/shared/components/seat_badge.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} seat left"
+msgid_plural "%{count} seats left"
+msgstr[0] "%{count} volné místo"
+msgstr[1] "%{count} volná místa"
+msgstr[2] "%{count} volných míst"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This booking has already been cancelled or moved."
+msgstr "Tato rezervace už byla zrušena nebo přesunuta."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This is a group booking, so each participant moves their own spot from their confirmation email."
+msgstr "Toto je skupinová rezervace: každý účastník si přesouvá vlastní místo z potvrzovacího e-mailu."
+
+#: lib/tymeslot_web/themes/shared/guest_booking.ex
+#, elixir-autogen, elixir-format
+msgid "This time only has room for %{count} of your guests, so the rest were removed."
+msgid_plural "This time only has room for %{count} of your guests, so the rest were removed."
+msgstr[0] "Na tento čas je místo jen pro %{count} vašeho hosta, ostatní byli odebráni."
+msgstr[1] "Na tento čas je místo jen pro %{count} vaše hosty, ostatní byli odebráni."
+msgstr[2] "Na tento čas je místo jen pro %{count} vašich hostů, ostatní byli odebráni."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a spot at this time. Check your email for your booking confirmation."
+msgstr "V tomto čase už máte místo. Zkontrolujte e-mail s potvrzením rezervace."
+
+#: lib/tymeslot_web/themes/shared/guest_booking.ex
+#, elixir-autogen, elixir-format
+msgid "You can add up to %{count} guest."
+msgid_plural "You can add up to %{count} guests."
+msgstr[0] "Můžete přidat až %{count} hosta."
+msgstr[1] "Můžete přidat až %{count} hosty."
+msgstr[2] "Můžete přidat až %{count} hostů."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This spot can no longer be moved. Cancel it and book a new time instead, or contact the host."
+msgstr "Toto místo už nelze přesunout. Zrušte ho a zarezervujte si nový čas, nebo kontaktujte hostitele."
+
+#: lib/tymeslot_web/themes/shared/components/group_session.ex
+#, elixir-autogen, elixir-format
+msgid "Group session · up to %{count} person"
+msgid_plural "Group session · up to %{count} people"
+msgstr[0] "Skupinové setkání · až %{count} osoba"
+msgstr[1] "Skupinové setkání · až %{count} osoby"
+msgstr[2] "Skupinové setkání · až %{count} osob"
+
+#: lib/tymeslot_web/themes/shared/components/group_session.ex
+#, elixir-autogen, elixir-format
+msgid "Group session: you have one of %{count} spot."
+msgid_plural "Group session: you have one of %{count} spots."
+msgstr[0] "Skupinové setkání: máte jedno z %{count} míst."
+msgstr[1] "Skupinové setkání: máte jedno z %{count} míst."
+msgstr[2] "Skupinové setkání: máte jedno z %{count} míst."
+
+#: lib/tymeslot_web/themes/shared/components/group_session.ex
+#, elixir-autogen, elixir-format
+msgid "Moving your spot on %{datetime}. Pick a new time below."
+msgstr "Přesouváte své místo z termínu %{datetime}. Níže vyberte nový čas."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This is your current time. Pick a different time to move your spot."
+msgstr "Toto je váš současný termín. Pro přesunutí místa vyberte jiný čas."
+
+#: lib/tymeslot_web/themes/shared/seat_move_link.ex
+#, elixir-autogen, elixir-format
+msgid "This link to move your spot has already been used. You can book a new time below."
+msgstr "Tento odkaz na přesunutí místa už byl použit. Níže si můžete rezervovat nový termín."
+
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Ends %{time} on %{weekday} %{day} %{month}"
+msgstr "Konec: %{weekday} %{day}. %{month}, %{time}"
+
+#: lib/tymeslot/meeting_types/location_selection.ex
+#, elixir-autogen, elixir-format
+msgid "Phone call"
+msgstr "Telefonát"
+
+#: lib/tymeslot/meeting_types/location_selection.ex
+#, elixir-autogen, elixir-format
+msgid "Somewhere else"
+msgstr "Jiné místo"

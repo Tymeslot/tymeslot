@@ -9,14 +9,14 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
       datetime = DateTime.from_naive!(~N[2024-11-25 14:30:00], "America/New_York")
       result = Formatting.format_datetime(datetime, "en")
 
-      assert result =~ "November 25, 2024"
+      assert result =~ "25 November 2024"
       assert result =~ " at "
       assert result =~ "02:30 PM"
     end
 
     test "combines date and time formatting" do
       assert Formatting.format_datetime(~U[2024-01-15 09:00:00Z], "en") ==
-               "January 15, 2024 at 09:00 AM UTC"
+               "15 January 2024 at 09:00 AM UTC"
     end
 
     # The payment timestamp on a paid booking confirmation used to render through
@@ -86,10 +86,10 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
   end
 
   describe "format_date_short/2" do
-    test "English locale uses abbreviated month name" do
-      assert Formatting.format_date_short(~D[2024-11-25], "en") == "Nov 25"
-      assert Formatting.format_date_short(~D[2024-01-05], "en") == "Jan 5"
-      assert Formatting.format_date_short(~D[2024-12-31], "en") == "Dec 31"
+    test "English locale puts the day before the abbreviated month" do
+      assert Formatting.format_date_short(~D[2024-11-25], "en") == "25 Nov"
+      assert Formatting.format_date_short(~D[2024-01-05], "en") == "5 Jan"
+      assert Formatting.format_date_short(~D[2024-12-31], "en") == "31 Dec"
     end
 
     test "de/uk locales use dot-separated day.month. format" do
@@ -112,8 +112,13 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
       assert Formatting.format_date_short(~D[2024-01-05], "it") == "5/1"
     end
 
+    test "Portuguese locale uses slash-separated day/month format" do
+      assert Formatting.format_date_short(~D[2024-11-25], "pt") == "25/11"
+      assert Formatting.format_date_short(~D[2024-01-05], "pt") == "5/1"
+    end
+
     test "works with DateTime input" do
-      assert Formatting.format_date_short(~U[2024-11-25 14:30:00Z], "en") == "Nov 25"
+      assert Formatting.format_date_short(~U[2024-11-25 14:30:00Z], "en") == "25 Nov"
       assert Formatting.format_date_short(~U[2024-11-25 14:30:00Z], "de") == "25.11."
     end
 
@@ -224,7 +229,7 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
     end
 
     test "formats Date in English locale" do
-      assert Formatting.format_date(~D[2024-11-25], "en") == "November 25, 2024"
+      assert Formatting.format_date(~D[2024-11-25], "en") == "25 November 2024"
     end
 
     test "formats DateTime in German locale" do
@@ -389,6 +394,27 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
 
     test "-50 cents (partial refund display) formats with leading sign" do
       assert Formatting.format_currency(-50, "eur") == "€-0.50"
+    end
+  end
+
+  describe "format_next_day_end/4" do
+    test "is nil for a meeting ending the same day" do
+      start = DateTime.new!(~D[2027-06-14], ~T[21:00:00], "Europe/London")
+      assert Formatting.format_next_day_end(start, 60, "en", nil) == nil
+    end
+
+    test "names the end and its date when it falls on a later date" do
+      start = DateTime.new!(~D[2027-06-14], ~T[23:00:00], "Europe/London")
+      note = Formatting.format_next_day_end(start, 120, "en", nil)
+
+      assert note == "ends 01:00 AM on Tue 15 Jun"
+    end
+
+    test "is localised to the recipient" do
+      start = DateTime.new!(~D[2027-06-14], ~T[23:00:00], "Europe/Berlin")
+
+      assert Formatting.format_next_day_end(start, 120, "de", nil) ==
+               "endet um 01:00 am Di 15. Jun"
     end
   end
 end

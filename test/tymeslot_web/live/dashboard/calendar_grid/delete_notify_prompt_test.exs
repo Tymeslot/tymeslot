@@ -94,7 +94,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DeleteNotifyPromptTest do
         |> render_hook("confirm_delete_event", %{})
 
       assert html =~ "notify-prompt-modal"
-      assert html =~ "Send cancellation?"
+      assert html =~ "Send cancellation<"
       refute html =~ "confirm-delete-event-modal"
 
       lv
@@ -245,7 +245,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DeleteNotifyPromptTest do
         |> render_hook("confirm_delete_event", %{})
 
       refute html =~ "notify-prompt-modal"
-      refute html =~ "Send cancellation?"
+      refute html =~ "Send cancellation<"
 
       refute_enqueued(
         worker: Worker,

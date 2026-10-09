@@ -1,12 +1,8 @@
 defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
   @moduledoc """
-  Composition tests for `TymeslotWeb.Dashboard.CalendarSettingsComponent` —
+  Composition tests for `TymeslotWeb.Dashboard.CalendarSettingsComponent`,
   the dashboard UI where users refresh, toggle, and delete calendar
-  integrations. Existing tests cover only rate-limit paths; the
-  interactive lifecycle events and their async/DB coupling were untested
-  end-to-end.
-
-  Covered scenarios (plan lines 1826–1833):
+  integrations. Covered scenarios:
 
     * `refresh_all_calendars` with a mixed success/failure result — the
       flash reports accurate counts and `is_refreshing` clears so the
@@ -553,6 +549,26 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
       # profile reads that preload the primary integration would crash.
       {:ok, fresh_profile} = ProfileQueries.get_by_user_id(user.id)
       assert fresh_profile.primary_calendar_integration_id == nil
+    end
+  end
+
+  describe "Delete modal cancel" do
+    test "keeps the integration when the confirmation is cancelled", %{conn: conn, user: user} do
+      attrs = [user: user, provider: "google", name: "Keep Me Google", is_active: true]
+      integration = insert(:calendar_integration, attrs)
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+
+      view
+      |> element("button[phx-value-id='#{integration.id}'][phx-target='#delete-calendar-modal']")
+      |> render_click()
+
+      assert has_element?(view, "#delete-calendar-modal-modal[style*='display: flex']")
+      view |> element("#delete-calendar-modal-modal button", "Cancel") |> render_click()
+
+      refute has_element?(view, "#delete-calendar-modal-modal[style*='display: flex']")
+      assert Repo.get(CalendarIntegrationSchema, integration.id)
+      assert render(view) =~ "Keep Me Google"
+      refute render(view) =~ "Integration deleted successfully"
     end
   end
 

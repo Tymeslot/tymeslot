@@ -8,8 +8,8 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramTab do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.Automation.TelegramCard
-  alias TymeslotWeb.Dashboard.Automation.TelegramEmptyState
 
   attr :integrations, :list, required: true
   attr :time_format, :string, required: true
@@ -21,16 +21,16 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramTab do
     ~H"""
     <%= if @integrations != [] do %>
       <div class="space-y-6">
-        <div class="flex items-center justify-between">
-          <.section_header
-            level={2}
-            title={dgettext("dashboard_automation_chat", "Your Telegram Integrations")}
-            count={length(@integrations)}
-          />
-          <button phx-click="show_telegram_form" phx-target={@myself} class="btn-primary">
-            {dgettext("dashboard_automation_chat", "Add Telegram Account")}
-          </button>
-        </div>
+        <.section_header
+          title={dgettext("dashboard_automation_chat", "Your Telegram Integrations")}
+          count={length(@integrations)}
+        >
+          <:actions>
+            <.action_button phx-click="show_telegram_form" phx-target={@myself}>
+              {dgettext("dashboard_automation_chat", "Add Telegram Account")}
+            </.action_button>
+          </:actions>
+        </.section_header>
 
         <div class="grid grid-cols-1 gap-6">
           <%= for integration <- @integrations do %>
@@ -69,9 +69,25 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramTab do
         </div>
       </div>
     <% else %>
-      <TelegramEmptyState.telegram_empty_state on_create={
-        JS.push("show_telegram_form", target: @myself)
-      } />
+      <.empty_state
+        size={:lg}
+        tone={:brand}
+        heading={:h2}
+        title={dgettext("dashboard_automation_chat", "No Telegram Integrations")}
+        description={
+          dgettext(
+            "dashboard_automation_chat",
+            "Connect Telegram to receive instant notifications when meetings are booked, cancelled, or rescheduled."
+          )
+        }
+      >
+        <:graphic><IconComponents.icon name={:telegram} class="w-10 h-10" /></:graphic>
+        <:action>
+          <.action_button phx-click="show_telegram_form" phx-target={@myself}>
+            {dgettext("dashboard_automation_chat", "Add Telegram Account")}
+          </.action_button>
+        </:action>
+      </.empty_state>
     <% end %>
     """
   end

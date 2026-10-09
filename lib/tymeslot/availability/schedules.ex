@@ -28,7 +28,12 @@ defmodule Tymeslot.Availability.Schedules do
   # legible; it is deliberately low and easy to raise.
   @max_schedules 5
 
-  @policy_fields [:buffer_minutes, :min_advance_hours, :advance_booking_days]
+  @policy_fields [
+    :buffer_before_minutes,
+    :buffer_after_minutes,
+    :min_advance_hours,
+    :advance_booking_days
+  ]
 
   @type schedule :: AvailabilityScheduleSchema.t()
   @type result :: {:ok, schedule()} | {:error, Ecto.Changeset.t() | atom()}
@@ -116,7 +121,7 @@ defmodule Tymeslot.Availability.Schedules do
   end
 
   @doc """
-  Updates the schedule's buffer, minimum notice and advance booking window.
+  Updates the schedule's buffers, minimum notice and advance booking window.
   """
   @spec update_policy(schedule(), map()) :: result()
   def update_policy(%AvailabilityScheduleSchema{} = schedule, attrs) do
@@ -274,7 +279,8 @@ defmodule Tymeslot.Availability.Schedules do
   @typedoc "The scheduling rules every availability and booking config carries."
   @type config :: %{
           required(:schedule_id) => integer() | nil,
-          required(:buffer_minutes) => non_neg_integer(),
+          required(:buffer_before_minutes) => non_neg_integer(),
+          required(:buffer_after_minutes) => non_neg_integer(),
           required(:min_advance_hours) => non_neg_integer(),
           required(:max_advance_booking_days) => pos_integer(),
           required(:slot_interval_minutes) => pos_integer() | nil
@@ -297,7 +303,8 @@ defmodule Tymeslot.Availability.Schedules do
   def config(schedule, meeting_type) do
     %{
       schedule_id: schedule && schedule.id,
-      buffer_minutes: policy(schedule, :buffer_minutes),
+      buffer_before_minutes: policy(schedule, :buffer_before_minutes),
+      buffer_after_minutes: policy(schedule, :buffer_after_minutes),
       min_advance_hours: policy(schedule, :min_advance_hours),
       max_advance_booking_days: policy(schedule, :advance_booking_days),
       slot_interval_minutes: slot_interval_minutes(meeting_type)
@@ -361,7 +368,8 @@ defmodule Tymeslot.Availability.Schedules do
           day_of_week: day.day_of_week,
           is_available: day.is_available,
           start_time: day.start_time,
-          end_time: day.end_time
+          end_time: day.end_time,
+          ends_next_day: day.ends_next_day
         })
 
       copy_breaks(day.breaks, copy.id)

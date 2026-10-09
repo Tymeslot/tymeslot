@@ -8,7 +8,7 @@ defmodule TymeslotWeb.OnboardingCompositionTest do
     * `onboarding_validation_test.exs` — form-level validation,
       duplicate-username rejection, available-username happy path.
     * `onboarding_edge_cases_test.exs` — scheduling boundary rejection
-      (negative and oversized buffer_minutes), preset-spoofing guard.
+      (negative and oversized buffer_before_minutes), preset-spoofing guard.
     * `onboarding_custom_inputs_test.exs` — custom-input mode
       transitions across scheduling preferences.
     * `onboarding_live_test.exs` — mount, step parameterisation,
@@ -43,7 +43,7 @@ defmodule TymeslotWeb.OnboardingCompositionTest do
       shows error") with the `"already taken"` flash assertion.
     * `update_scheduling_preferences` with negative values —
       covered at `onboarding_edge_cases_test.exs:40` ("negative
-      buffer_minutes value is rejected").
+      buffer_before_minutes value is rejected").
     * CalDAV form → `validate_caldav` →
       `discover_caldav_calendars` with network timeout — the CalDAV
       discovery chain is already pinned at the domain level by
@@ -115,7 +115,7 @@ defmodule TymeslotWeb.OnboardingCompositionTest do
       view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
       view |> element("button[phx-click='next_step']") |> render_click()
       render_click(view, "confirm_skip_calendar")
-      assert has_element?(view, "button[phx-value-buffer_minutes]")
+      assert has_element?(view, "button[phx-value-buffer_before_minutes]")
 
       # buffer_time → previous → connect_calendar
       view |> element("button[phx-click='previous_step']") |> render_click()

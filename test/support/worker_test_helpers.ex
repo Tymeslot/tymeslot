@@ -257,6 +257,21 @@ defmodule Tymeslot.WorkerTestHelpers do
 
   @spec expect_mirotalk_success(String.t()) :: :ok
   def expect_mirotalk_success(room_url \\ "https://test.mirotalk.com/join/test-room-123") do
+    # Two join tokens: the organiser's and the attendee's.
+    expect_mirotalk_room(room_url, 2)
+  end
+
+  @doc """
+  `expect_mirotalk_success/1` for a group meeting's room: one join token, the
+  organiser's. The participants' link names nobody, so it is the provider's
+  shared link (`ProviderBehaviour.shared_join_url/2`), which for MiroTalk is
+  the room URL itself and needs no request.
+  """
+  @spec expect_mirotalk_group_success(String.t()) :: :ok
+  def expect_mirotalk_group_success(room_url \\ "https://test.mirotalk.com/join/test-room-123"),
+    do: expect_mirotalk_room(room_url, 1)
+
+  defp expect_mirotalk_room(room_url, join_tokens) do
     # One call: room creation. It used to be two, because validate_config/1 ran
     # a connection test before the create; the provider no longer reaches the
     # network to validate structure.
@@ -271,13 +286,15 @@ defmodule Tymeslot.WorkerTestHelpers do
 
       {:ok, %Req.Response{status: 200, body: body}}
     end)
-    # Next two calls: join token generation for organizer and participant
-    |> expect(:post, 2, fn _url, _body, _headers, _opts ->
+    # Then the join tokens, one per named participant.
+    |> expect(:post, join_tokens, fn _url, _body, _headers, _opts ->
       {:ok,
        %Req.Response{
          status: 200,
          body: Jason.encode!(%{"join" => "#{room_url}?token=abc"})
        }}
     end)
+
+    :ok
   end
 end

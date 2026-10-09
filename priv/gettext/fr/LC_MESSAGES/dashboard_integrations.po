@@ -76,7 +76,6 @@ msgstr "%{name} doit être reconnecté."
 msgid "%{name} stopped syncing."
 msgstr "%{name} a cessé de se synchroniser."
 
-#: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
 #, elixir-autogen, elixir-format
 msgid "Add Integration"
@@ -87,7 +86,6 @@ msgstr "Ajouter une intégration"
 msgid "Add Meeting Type"
 msgstr "Ajouter un type de réunion"
 
-#: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
 #, elixir-autogen, elixir-format
 msgid "Adding..."
@@ -128,8 +126,6 @@ msgstr "Calendrier"
 msgid "Calendars"
 msgstr "Calendriers"
 
-#: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
@@ -154,11 +150,6 @@ msgstr "Le test de connexion a échoué : %{reason}"
 #, elixir-autogen, elixir-format
 msgid "Could not identify your Zoom account. Please try again."
 msgstr "Impossible d’identifier votre compte Zoom. Veuillez réessayer."
-
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Delete %{type} Integration"
-msgstr "Supprimer l’intégration %{type}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format
@@ -205,11 +196,6 @@ msgstr "Intégration supprimée avec succès"
 msgid "Integration not found. It may have already been deleted."
 msgstr "Intégration introuvable. Elle a peut-être déjà été supprimée."
 
-#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
-#, elixir-autogen, elixir-format
-msgid "Integrations"
-msgstr "Intégrations"
-
 #: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid authentication response. Please try again."
@@ -219,11 +205,6 @@ msgstr "Réponse d’authentification invalide. Veuillez réessayer."
 #, elixir-autogen, elixir-format
 msgid "Invalid integration ID"
 msgstr "Identifiant d’intégration invalide"
-
-#: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting Settings"
-msgstr "Paramètres de réunion"
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -254,11 +235,6 @@ msgstr "Aucune intégration sélectionnée pour la suppression"
 #, elixir-autogen, elixir-format
 msgid "Payments"
 msgstr "Paiements"
-
-#: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex
-#, elixir-autogen, elixir-format
-msgid "Provider:"
-msgstr "Fournisseur :"
 
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
 #, elixir-autogen, elixir-format
@@ -316,12 +292,12 @@ msgstr "Échec de la connexion à %{service}. Veuillez réessayer."
 msgid "Save"
 msgstr "Enregistrer"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/tab_nav.ex
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
 #, elixir-autogen, elixir-format
 msgid "Error"
 msgstr "Erreur"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/tab_nav.ex
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
 #, elixir-autogen, elixir-format
 msgid "Warning"
 msgstr "Avertissement"
@@ -338,7 +314,7 @@ msgstr[1] "%{count} connexions nécessitent votre attention - %{message}"
 msgid "%{service} wasn't connected because Calendar permission was not granted. Please try again and tick the box for \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\" - Tymeslot needs this to create meetings and Google Meet links."
 msgstr "%{service} n’a pas été connecté car l’autorisation d’accès au calendrier n’a pas été accordée. Veuillez réessayer et cocher la case « Voir, modifier, partager et supprimer définitivement tous les calendriers auxquels vous pouvez accéder avec Google Agenda » - Tymeslot en a besoin pour créer des réunions et des liens Google Meet."
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/tab_nav.ex
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{status} - needs attention"
 msgstr "%{status} - nécessite votre attention"
@@ -446,3 +422,18 @@ msgstr "Supprimer également ces conversations de votre serveur Nextcloud. Les p
 #, elixir-autogen, elixir-format
 msgid "Enter the address on its own and put the username and password in their own fields."
 msgstr "Saisissez uniquement l'adresse et renseignez le nom d'utilisateur et le mot de passe dans leurs propres champs."
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "Integration categories"
+msgstr "Catégories d'intégrations"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
+#, elixir-autogen, elixir-format
+msgid "Setup guide"
+msgstr "Guide d’installation"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{type} integration"
+msgstr "Supprimer l’intégration %{type}"

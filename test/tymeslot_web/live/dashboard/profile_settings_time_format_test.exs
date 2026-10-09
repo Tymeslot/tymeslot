@@ -52,10 +52,12 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTimeFormatTest do
 
       {:ok, _reloaded, html} = live(conn, ~p"/dashboard/settings")
 
-      # The active option carries the primary button styling; the inactive one
-      # does not. Asserting on the rendered state rather than the stored value
-      # is what proves the form reads back what it wrote.
-      assert html =~ ~r/id="profile-time-format-toggle-24h"[^>]*class="[^"]*btn-primary/s
+      # The active option is pressed; the inactive one is not. Asserting on the
+      # rendered state rather than the stored value is what proves the form
+      # reads back what it wrote.
+      doc = Floki.parse_document!(html)
+      assert Floki.attribute(doc, "#profile-time-format-toggle-24h", "aria-pressed") == ["true"]
+      assert Floki.attribute(doc, "#profile-time-format-toggle-12h", "aria-pressed") == ["false"]
     end
 
     test "writes to the same preference the calendar settings modal uses", %{

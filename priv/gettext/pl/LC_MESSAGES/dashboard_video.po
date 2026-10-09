@@ -132,12 +132,7 @@ msgstr "Bazowy adres URL musi być tekstem"
 msgid "Booked through Tymeslot."
 msgstr "Zarezerwowano przez Tymeslot."
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
-#: lib/tymeslot_web/components/dashboard/integrations/video/jitsi_config.ex
-#: lib/tymeslot_web/components/dashboard/integrations/video/kmeet_config.ex
-#: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex
-#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Anuluj"
@@ -236,11 +231,6 @@ msgstr "Własny link wideo"
 #, elixir-autogen, elixir-format
 msgid "Custom meeting URL is required"
 msgstr "Własny adres URL spotkania jest wymagany"
-
-#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
-#, elixir-autogen, elixir-format
-msgid "Delete integration"
-msgstr "Usuń integrację"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/jitsi_config.ex
 #, elixir-autogen, elixir-format
@@ -839,11 +829,6 @@ msgstr "Przetestuj połączenie"
 msgid "Testing connection…"
 msgstr "Testowanie połączenia…"
 
-#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
-#, elixir-autogen, elixir-format
-msgid "Testing…"
-msgstr "Testowanie…"
-
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "That calendar connection is no longer available."
@@ -1020,11 +1005,6 @@ msgstr "Użyj połączenia kalendarza Nextcloud"
 msgid "Variable name should be: {{meeting_id}}"
 msgstr "Nazwa zmiennej powinna brzmieć: {{meeting_id}}"
 
-#: lib/tymeslot_web/live/dashboard/video_settings/component_view.ex
-#, elixir-autogen, elixir-format
-msgid "Video Integration"
-msgstr "Integracja wideo"
-
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Video integration added successfully"
@@ -1159,3 +1139,13 @@ msgstr "⚠ Nieprawidłowa składnia"
 #, elixir-autogen, elixir-format
 msgid "✓ Valid Template"
 msgstr "✓ Prawidłowy szablon"
+
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Delete"
+msgstr "Usuń"
+
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}"
+msgstr "Usuń %{name}"

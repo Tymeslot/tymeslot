@@ -25,14 +25,23 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.TimezoneHandlerComponent do
   import Phoenix.Component, only: [assign: 3]
   import TymeslotWeb.Live.Shared.LiveHelpers, only: [update_timezone: 2]
 
+  alias Tymeslot.Timezones
+  alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
+
   @doc """
-  Handles timezone changes with automatic slot reloading.
+  Handles timezone changes, recomputing what the page offers in the new zone.
 
   This function:
   1. Updates the user's timezone
   2. Clears the selected time
   3. Closes the timezone dropdown
   4. Reloads available slots if a date is selected
+  5. Refetches the month availability when the zone actually changed, since
+     which days are bookable depends on the zone they are read in
+
+  A rejected timezone leaves the socket untouched. The selected date is kept
+  even when it has no times in the new zone: the slot list then shows its
+  empty state, as it does after a calendar sync empties the day.
 
   ## Examples
 
@@ -44,11 +53,12 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.TimezoneHandlerComponent do
   @spec handle_timezone_change(Phoenix.LiveView.Socket.t(), String.t() | map()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
   def handle_timezone_change(socket, data) do
-    new_timezone = extract_timezone(data)
+    requested = data |> extract_timezone() |> Timezones.normalize()
+    previous = socket.assigns.user_timezone
 
-    socket = update_timezone(socket, new_timezone)
+    socket = update_timezone(socket, requested)
 
-    if socket.assigns.user_timezone != new_timezone do
+    if socket.assigns.user_timezone != requested do
       {:ok, socket}
     else
       socket =
@@ -57,7 +67,8 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.TimezoneHandlerComponent do
         |> assign(:available_slots, [])
         |> assign(:timezone_dropdown_open, false)
         |> assign(:timezone_search, "")
-        |> maybe_trigger_slot_reload(new_timezone)
+        |> maybe_trigger_slot_reload(requested)
+        |> maybe_refetch_month(previous)
 
       {:ok, socket}
     end
@@ -84,4 +95,14 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.TimezoneHandlerComponent do
         end)
     end
   end
+
+  # The month grid's bookable days are computed in the booker's zone, so a
+  # new zone needs a new map. `fetch_month_availability_async/1` cancels the
+  # fetch in flight and replaces its ref, so a result computed for the old
+  # zone that arrives afterwards is discarded rather than painted.
+  defp maybe_refetch_month(%{assigns: %{user_timezone: previous}} = socket, previous),
+    do: socket
+
+  defp maybe_refetch_month(socket, _previous),
+    do: AvailabilityHelpers.fetch_month_availability_async(socket)
 end

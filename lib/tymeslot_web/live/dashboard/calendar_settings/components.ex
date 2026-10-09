@@ -13,18 +13,14 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   alias Tymeslot.Integrations.HealthCheck
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.{
-    AppleConfig,
-    BaikalConfig,
-    CaldavConfig,
+    CaldavFamilyConfig,
     ExchangeConfig,
-    IcsUrlConfig,
-    MailboxOrgConfig,
-    NextcloudConfig,
-    RadicaleConfig,
-    ZimbraConfig
+    IcsUrlConfig
   }
 
-  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionLabels
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard
+  alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Dashboard.CalendarSettings.Helpers
 
   @doc """
@@ -32,7 +28,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   """
   attr :selected_provider, :atom, required: true
   attr :myself, :any, required: true
-  attr :security_metadata, :map, required: true
   attr :form_errors, :map, required: true
   attr :form_values, :map, required: true
   attr :discovered_calendars, :list, required: true
@@ -42,15 +37,20 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
   @spec config_view(map()) :: Phoenix.LiveView.Rendered.t()
   def config_view(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :caldav_family?,
+        assigns.selected_provider in CaldavFamilyConfig.providers()
+      )
+
     ~H"""
     <div id="calendar-config-view" phx-hook="ScrollReset" data-action={@selected_provider}>
-      <%= case @selected_provider do %>
-        <% :nextcloud -> %>
-          <.live_component
-            module={NextcloudConfig}
-            id="nextcloud-config"
+      <%= cond do %>
+        <% @caldav_family? -> %>
+          <CaldavFamilyConfig.caldav_family_config
+            provider={@selected_provider}
             target={@myself}
-            metadata={@security_metadata}
             form_errors={@form_errors}
             form_values={@form_values}
             discovered_calendars={@discovered_calendars}
@@ -58,72 +58,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             discovery_credentials={@discovery_credentials}
             saving={@is_saving}
           />
-        <% :radicale -> %>
-          <.live_component
-            module={RadicaleConfig}
-            id="radicale-config"
-            target={@myself}
-            metadata={@security_metadata}
-            form_errors={@form_errors}
-            form_values={@form_values}
-            discovered_calendars={@discovered_calendars}
-            show_calendar_selection={@show_calendar_selection}
-            discovery_credentials={@discovery_credentials}
-            saving={@is_saving}
-          />
-        <% :baikal -> %>
-          <.live_component
-            module={BaikalConfig}
-            id="baikal-config"
-            target={@myself}
-            metadata={@security_metadata}
-            form_errors={@form_errors}
-            form_values={@form_values}
-            discovered_calendars={@discovered_calendars}
-            show_calendar_selection={@show_calendar_selection}
-            discovery_credentials={@discovery_credentials}
-            saving={@is_saving}
-          />
-        <% :caldav -> %>
-          <.live_component
-            module={CaldavConfig}
-            id="caldav-config"
-            target={@myself}
-            metadata={@security_metadata}
-            form_errors={@form_errors}
-            form_values={@form_values}
-            discovered_calendars={@discovered_calendars}
-            show_calendar_selection={@show_calendar_selection}
-            discovery_credentials={@discovery_credentials}
-            saving={@is_saving}
-          />
-        <% :zimbra -> %>
-          <.live_component
-            module={ZimbraConfig}
-            id="zimbra-config"
-            target={@myself}
-            metadata={@security_metadata}
-            form_errors={@form_errors}
-            form_values={@form_values}
-            discovered_calendars={@discovered_calendars}
-            show_calendar_selection={@show_calendar_selection}
-            discovery_credentials={@discovery_credentials}
-            saving={@is_saving}
-          />
-        <% :mailbox_org -> %>
-          <.live_component
-            module={MailboxOrgConfig}
-            id="mailbox-org-config"
-            target={@myself}
-            metadata={@security_metadata}
-            form_errors={@form_errors}
-            form_values={@form_values}
-            discovered_calendars={@discovered_calendars}
-            show_calendar_selection={@show_calendar_selection}
-            discovery_credentials={@discovery_credentials}
-            saving={@is_saving}
-          />
-        <% :ics_url -> %>
+        <% @selected_provider == :ics_url -> %>
           <.live_component
             module={IcsUrlConfig}
             id="ics-url-config"
@@ -132,7 +67,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             form_values={@form_values}
             saving={@is_saving}
           />
-        <% :exchange -> %>
+        <% @selected_provider == :exchange -> %>
           <.live_component
             module={ExchangeConfig}
             id="exchange-config"
@@ -144,20 +79,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             discovery_credentials={@discovery_credentials}
             saving={@is_saving}
           />
-        <% :apple -> %>
-          <.live_component
-            module={AppleConfig}
-            id="apple-config"
-            target={@myself}
-            metadata={@security_metadata}
-            form_errors={@form_errors}
-            form_values={@form_values}
-            discovered_calendars={@discovered_calendars}
-            show_calendar_selection={@show_calendar_selection}
-            discovery_credentials={@discovery_credentials}
-            saving={@is_saving}
-          />
-        <% _ -> %>
+        <% true -> %>
           <p class="text-tymeslot-500 font-medium">
             {dgettext(
               "dashboard_calendar_settings",
@@ -182,54 +104,42 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   def freebusy_section(assigns) do
     ~H"""
     <section class="space-y-4">
-      <div class="flex items-center gap-2">
-        <.icon name="hero-link" class="w-5 h-5 text-turquoise-500" />
-        <h3 class="text-token-base font-semibold text-tymeslot-800">
-          {dgettext("dashboard_calendar_settings", "Free/busy feed")}
-        </h3>
-      </div>
-
-      <div class="card-glass p-4 space-y-3">
-        <p class="text-token-sm text-tymeslot-500">
-          {dgettext(
+      <.subsection_header
+        size={:lg}
+        level={2}
+        icon="hero-link"
+        title={dgettext("dashboard_calendar_settings", "Free/busy feed")}
+        description={
+          dgettext(
             "dashboard_calendar_settings",
             "Share a read-only link that publishes when you're busy (not the event details) as a standard iCalendar feed, so other calendar systems can overlay your availability."
-          )}
-        </p>
+          )
+        }
+      />
 
+      <.card padding={:sm} class="space-y-3">
         <%= if @enabled do %>
           <code class="block w-full overflow-x-auto rounded-token-md bg-tymeslot-50 px-3 py-2 text-token-sm text-tymeslot-700 select-all">
             {@url}
           </code>
           <div class="flex flex-wrap gap-2">
-            <button
-              type="button"
-              class="btn btn-secondary"
+            <.action_button
+              variant={:secondary}
               phx-click="regenerate_freebusy"
               phx-target={@myself}
             >
               {dgettext("dashboard_calendar_settings", "Regenerate link")}
-            </button>
-            <button
-              type="button"
-              class="btn btn-ghost"
-              phx-click="disable_freebusy"
-              phx-target={@myself}
-            >
+            </.action_button>
+            <.action_button variant={:ghost} phx-click="disable_freebusy" phx-target={@myself}>
               {dgettext("dashboard_calendar_settings", "Disable feed")}
-            </button>
+            </.action_button>
           </div>
         <% else %>
-          <button
-            type="button"
-            class="btn btn-primary"
-            phx-click="enable_freebusy"
-            phx-target={@myself}
-          >
+          <.action_button phx-click="enable_freebusy" phx-target={@myself}>
             {dgettext("dashboard_calendar_settings", "Enable free/busy feed")}
-          </button>
+          </.action_button>
         <% end %>
-      </div>
+      </.card>
     </section>
     """
   end
@@ -258,10 +168,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       <div :if={@active_integrations != []} class="space-y-6">
         <div class="flex items-center justify-between gap-4 flex-col md:flex-row">
           <div>
-            <h3 class="text-xl font-black text-tymeslot-900 tracking-tight flex items-center gap-3">
-              <div class="w-2 h-2 rounded-full bg-turquoise-500 animate-pulse"></div>
+            <h2 class="text-token-lg font-semibold text-tymeslot-900 flex items-center gap-3">
+              <div class="w-2 h-2 rounded-token-full bg-turquoise-500 animate-pulse"></div>
               {dgettext("dashboard_calendar_settings", "Active for Conflict Checking")}
-            </h3>
+            </h2>
             <p class="text-tymeslot-500 font-medium mt-1 ml-5">
               {dgettext(
                 "dashboard_calendar_settings",
@@ -270,35 +180,17 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             </p>
           </div>
 
-          <button
+          <.loading_button
+            variant={:secondary}
+            icon="hero-arrow-path"
+            loading={@is_refreshing}
+            loading_text={dgettext("dashboard_calendar_settings", "Refreshing...")}
+            class="shrink-0"
             phx-click="refresh_all_calendars"
             phx-target={@myself}
-            class={[
-              "flex items-center gap-2 px-5 py-2.5 rounded-token-xl font-bold transition-all border-2 shrink-0 shadow-sm",
-              @is_refreshing &&
-                "bg-tymeslot-50 text-tymeslot-400 border-tymeslot-100 cursor-not-allowed",
-              !@is_refreshing &&
-                "bg-white text-turquoise-600 border-turquoise-50 hover:bg-turquoise-50 hover:border-turquoise-100 hover:shadow-turquoise-500/10"
-            ]}
-            disabled={@is_refreshing}
           >
-            <svg
-              class={["w-5 h-5", @is_refreshing && "animate-spin"]}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2.5"
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-            {if @is_refreshing,
-              do: dgettext("dashboard_calendar_settings", "Refreshing..."),
-              else: dgettext("dashboard_calendar_settings", "Refresh All")}
-          </button>
+            {dgettext("dashboard_calendar_settings", "Refresh All")}
+          </.loading_button>
         </div>
 
         <div class="grid grid-cols-1 gap-4">
@@ -315,10 +207,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       <%!-- Inactive Calendars Section --%>
       <div :if={@inactive_integrations != []} class="space-y-6">
         <div>
-          <h3 class="text-xl font-black text-tymeslot-400 tracking-tight flex items-center gap-3">
-            <div class="w-2 h-2 rounded-full bg-tymeslot-300"></div>
+          <h2 class="text-token-lg font-semibold text-tymeslot-500 flex items-center gap-3">
+            <div class="w-2 h-2 rounded-token-full bg-tymeslot-300"></div>
             {dgettext("dashboard_calendar_settings", "Paused Calendars")}
-          </h3>
+          </h2>
           <p class="text-tymeslot-400 font-medium mt-1 ml-5">
             {dgettext(
               "dashboard_calendar_settings",
@@ -343,8 +235,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
   @doc """
   Renders a single connected calendar integration as a shared
-  `connection_row`: a status-first, flat row with a one-line summary and an
-  always-visible action cluster — Upgrade (Google scope, when needed), Manage
+  `integration_card`: a status-first card with a one-line summary and an
+  always-visible action bar: Upgrade (Google scope, when needed), Manage
   calendars (opens the selection modal), Reconnect (promoted when the
   integration needs re-authentication), and a Delete icon. There is no
   expand/collapse; every action is one click away.
@@ -371,6 +263,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       |> assign(:calendar_list, calendar_list)
       |> assign(:status, integration_status(integration, assigns.health_state))
       |> assign(:summary, calendar_summary(integration))
+      |> assign(:last_synced, last_synced(integration))
       |> assign(:subscription?, subscription?)
       |> assign(:read_only?, read_only?)
       |> assign(
@@ -379,26 +272,33 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       )
 
     ~H"""
-    <ConnectionRow.connection_row
+    <IntegrationCard.integration_card
       id={to_string(@integration.id)}
-      icon={@integration.provider}
-      icon_type={:calendar}
       title={@display_name}
       type_tag={if @read_only?, do: dgettext("dashboard_calendar_settings", "Read-only")}
       summary={@summary}
-      notice={ConnectionRow.reconnect_reason(@integration)}
+      notice={ConnectionLabels.reconnect_reason(@integration)}
       status={@status}
-      active?={@integration.is_active}
+      active={@integration.is_active}
       toggle_event="toggle_integration"
-      myself={@myself}
+      target={@myself}
     >
+      <:icon>
+        <ProviderIcon.provider_icon
+          provider={@integration.provider}
+          type="calendar"
+          size="medium"
+          alt=""
+        />
+      </:icon>
+      <:last_activity :if={@last_synced}>{@last_synced}</:last_activity>
       <:actions>
         <button
           :if={@integration.provider == "google" && Helpers.needs_scope_upgrade?(@integration)}
           phx-click="upgrade_google_scope"
           phx-value-id={@integration.id}
           phx-target={@myself}
-          class="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-token-lg font-bold border-2 border-amber-100 hover:bg-amber-100 transition-all shadow-sm shadow-amber-500/5"
+          class={tile_class(:warning)}
           title={dgettext("dashboard_calendar_settings", "Upgrade Google Calendar permissions")}
         >
           <.icon name="hero-bolt" class="w-4 h-4" /> {dgettext(
@@ -416,7 +316,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
           phx-click="manage_calendars"
           phx-value-id={@integration.id}
           phx-target={@myself}
-          class="flex items-center justify-center gap-1.5 px-3 py-1.5 lg:h-9 lg:w-9 lg:px-0 lg:py-0 bg-tymeslot-50 text-tymeslot-700 rounded-token-lg font-bold border-2 border-tymeslot-100 hover:bg-tymeslot-100 transition-all shadow-sm shadow-tymeslot-500/5"
+          class={tile_class(:neutral)}
           title={
             dgettext(
               "dashboard_calendar_settings",
@@ -425,7 +325,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
           }
           aria-label={dgettext("dashboard_calendar_settings", "Manage calendars")}
         >
-          <.icon name="hero-squares-2x2" class="w-4 h-4" /><span class="lg:hidden">{dgettext(
+          <.icon name="hero-squares-2x2" class="w-4 h-4" /><span>{dgettext(
             "dashboard_calendar_settings",
             "Manage calendars"
           )}</span>
@@ -440,18 +340,19 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
           myself={@myself}
           variant={(@integration.needs_reauth && :attention) || :normal}
         />
-        <button
+      </:actions>
+      <:end_actions>
+        <.icon_button
+          icon="hero-trash"
+          variant={:danger}
+          label={dgettext("dashboard_calendar_settings", "Delete %{name}", name: @display_name)}
+          tooltip={dgettext("dashboard_calendar_settings", "Delete")}
           phx-click="show"
           phx-value-id={@integration.id}
           phx-target="#delete-calendar-modal"
-          class="flex items-center justify-center h-9 w-9 text-tymeslot-500 hover:text-red-500 hover:bg-red-50 rounded-token-lg border-2 border-transparent hover:border-red-100 transition-all"
-          title={dgettext("dashboard_calendar_settings", "Remove connection")}
-          aria-label={dgettext("dashboard_calendar_settings", "Remove connection")}
-        >
-          <.icon name="hero-trash" class="w-5 h-5" />
-        </button>
-      </:actions>
-    </ConnectionRow.connection_row>
+        />
+      </:end_actions>
+    </IntegrationCard.integration_card>
     """
   end
 
@@ -465,7 +366,11 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   attr :variant, :atom, values: [:normal, :attention], required: true
 
   defp reconnect_button(assigns) do
-    assigns = assign(assigns, :class, reconnect_button_class(assigns.variant))
+    assigns =
+      assign(assigns,
+        class: reconnect_button_class(assigns.variant),
+        label_class: reconnect_label_class(assigns.variant)
+      )
 
     ~H"""
     <button
@@ -477,7 +382,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       title={dgettext("dashboard_calendar_settings", "Reconnect integration")}
       aria-label={dgettext("dashboard_calendar_settings", "Reconnect integration")}
     >
-      <.icon name="hero-arrow-path" class="w-4 h-4" /><span class="lg:hidden">{dgettext(
+      <.icon name="hero-arrow-path" class="w-4 h-4" /><span class={@label_class}>{dgettext(
         "dashboard_calendar_settings",
         "Reconnect"
       )}</span>
@@ -491,7 +396,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       title={dgettext("dashboard_calendar_settings", "Reconnect integration")}
       aria-label={dgettext("dashboard_calendar_settings", "Reconnect integration")}
     >
-      <.icon name="hero-arrow-path" class="w-4 h-4" /><span class="lg:hidden">{dgettext(
+      <.icon name="hero-arrow-path" class="w-4 h-4" /><span class={@label_class}>{dgettext(
         "dashboard_calendar_settings",
         "Reconnect"
       )}</span>
@@ -499,23 +404,31 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     """
   end
 
-  # Shared layout: full padded pill on mobile, compact icon-only square on
-  # desktop (the label collapses via `lg:hidden`). Only the colour palette
-  # differs between the promoted (:attention) and subtle (:normal) variants.
-  @reconnect_button_layout "flex items-center justify-center gap-1.5 px-3 py-1.5 lg:h-9 lg:w-9 lg:px-0 lg:py-0 rounded-token-lg font-bold border-2 transition-all shadow-sm"
-
-  defp reconnect_button_class(:attention),
-    do:
-      "#{@reconnect_button_layout} bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100 shadow-amber-500/5"
+  # The promoted (:attention) style is the amber warning tile; the subtle
+  # (:normal) one is the neutral tile.
+  defp reconnect_button_class(:attention), do: tile_class(:warning)
 
   defp reconnect_button_class(:normal),
-    do:
-      "#{@reconnect_button_layout} bg-tymeslot-50 text-tymeslot-700 border-tymeslot-100 hover:bg-tymeslot-100 shadow-tymeslot-500/5"
+    do: [tile_class(:neutral), "max-sm:h-9 max-sm:w-9 max-sm:px-0 max-sm:py-0"]
+
+  # On a phone the routine Reconnect shrinks to its icon so Manage calendars,
+  # Reconnect and Delete share one row; a promoted Reconnect is the action the
+  # owner has to take, so it keeps its label there too.
+  defp reconnect_label_class(:attention), do: nil
+  defp reconnect_label_class(:normal), do: "max-sm:sr-only"
+
+  # Card actions that carry a text label as well as an icon, so they cannot be
+  # `icon_button/1`, take its tile look (the `.icon-button` colour rules set no
+  # size or padding) and the small action button's size, so they sit level
+  # with the icon buttons in the card's footer and keep their label at every
+  # width.
+  defp tile_class(variant),
+    do: ["icon-button", "icon-button--#{variant}", "gap-1.5 px-3 py-1.5 text-token-sm font-bold"]
 
   @doc """
-  Builds a one-line human summary for a calendar integration — account
-  email, conflict-check coverage, booking target, and last-sync — dropping
-  absent segments gracefully.
+  Builds a one-line human summary for a calendar integration: account
+  email, conflict-check coverage and booking target, dropping absent segments
+  gracefully. When it last synced is the card's last-activity line instead.
 
   Only the OAuth providers record an account email, so a CalDAV-family row
   names its server instead; without it the line would identify neither the
@@ -528,10 +441,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
     [
       integration.provider_account_email ||
-        ConnectionRow.server_label(Map.get(integration, :base_url)),
+        ConnectionLabels.server_label(Map.get(integration, :base_url)),
       conflict_segment(integration, calendar_list),
-      booking_segment(integration),
-      sync_segment(integration)
+      booking_segment(integration)
     ]
     |> Enum.reject(&is_nil/1)
     |> Enum.join(" · ")
@@ -539,22 +451,25 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
   # Status-first badge mapping. Precedence lives in the canonical
   # `HealthCheck.attention_status/2` classifier; this just maps the atom to
-  # this row's badge variant/label.
+  # the card's status tone/label.
   defp integration_status(integration, health) do
     case HealthCheck.attention_status(integration, health) do
-      :paused -> {:paused, dgettext("dashboard_calendar_settings", "Paused")}
+      :paused -> {:neutral, dgettext("dashboard_calendar_settings", "Paused")}
       :needs_reauth -> {:warning, dgettext("dashboard_calendar_settings", "Reconnect")}
       :unhealthy -> {:warning, dgettext("dashboard_calendar_settings", "Connection issues")}
-      :ok -> {:ok, dgettext("dashboard_calendar_settings", "Healthy")}
+      :ok -> {:success, dgettext("dashboard_calendar_settings", "Healthy")}
     end
   end
 
   defp conflict_segment(%{is_active: true}, calendar_list) when calendar_list != [] do
     selected = Enum.count(calendar_list, & &1.selected)
 
-    dgettext("dashboard_calendar_settings", "conflict-checks %{selected} of %{total} calendars",
-      selected: selected,
-      total: length(calendar_list)
+    dngettext(
+      "dashboard_calendar_settings",
+      "checks %{selected} of %{count} calendar for conflicts",
+      "checks %{selected} of %{count} calendars for conflicts",
+      length(calendar_list),
+      selected: selected
     )
   end
 
@@ -598,15 +513,14 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   defp feed_segment,
     do: dgettext("dashboard_calendar_settings", "read-only, blocks time but takes no bookings")
 
+  # The card's last-activity line; nothing for a connection never synced.
   # `last_external_sync_at` is what every sync worker stamps and what the
-  # staleness banner reads. This used to read a second, never-written column
-  # instead, which silently dropped the segment for every integration; that
-  # column has since been dropped so the mistake cannot be made again.
-  defp sync_segment(%{last_external_sync_at: %DateTime{} = synced_at}),
+  # staleness banner reads.
+  defp last_synced(%{last_external_sync_at: %DateTime{} = synced_at}),
     do:
-      dgettext("dashboard_calendar_settings", "synced %{time}",
+      dgettext("dashboard_calendar_settings", "Last synced %{time}",
         time: TokenUtils.relative_time(synced_at)
       )
 
-  defp sync_segment(_integration), do: nil
+  defp last_synced(_integration), do: nil
 end

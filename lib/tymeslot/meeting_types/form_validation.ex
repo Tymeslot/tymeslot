@@ -5,8 +5,8 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
   Two different questions, both of which must be answered server-side because
   the form can be forged:
 
-    * **May this host make this change?** Custom questions and paid meeting
-      types sit behind feature flags. Core's default checker allows everything,
+    * **May this host make this change?** Custom questions, group bookings
+      and paid meeting types sit behind feature flags. Core's default checker allows everything,
       so self-hosters are unaffected; the managed overlay narrows them.
 
     * **Do the referenced records exist, still work, and belong to this host?**
@@ -22,10 +22,11 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
       own for the same reason: a foreign one would put someone else's
       address on this host's bookings.
 
-  Both gates deliberately restrict only the *permissive* direction. Turning
-  payment off, or saving no questions, is always allowed, so a host who has
-  downgraded can still edit their way back into compliance rather than being
-  locked out of their own meeting types.
+  The gates deliberately restrict only the *permissive* direction. Turning
+  payment off, saving no questions, or lowering (or keeping) a group type's
+  participant limit is always allowed, so a host who has downgraded can
+  still edit their way back into compliance rather than being locked out of
+  their own meeting types.
   """
 
   alias Tymeslot.Availability.Schedules
@@ -49,14 +50,20 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
           | :target_calendar_invalid
           | :no_writable_calendars
           | :invalid_availability_schedule
+          | :group_bookings_not_allowed
           | atom()
 
   @doc """
   Runs every precondition against the attributes about to be written.
+
+  `current_max_participants` is the participant limit stored before this
+  write: 1 when creating. Only a write raising the limit above both it and 1
+  needs group-bookings access.
   """
-  @spec check(integer(), map()) :: :ok | {:error, error()}
-  def check(user_id, attrs) do
+  @spec check(integer(), map(), pos_integer()) :: :ok | {:error, error()}
+  def check(user_id, attrs, current_max_participants \\ 1) do
     with :ok <- gate_custom_fields(user_id, attrs),
+         :ok <- gate_group_bookings(user_id, attrs, current_max_participants),
          :ok <- gate_payment(user_id, attrs),
          :ok <- validate_availability_schedule(attrs, user_id),
          :ok <- validate_video_integration(attrs, user_id),
@@ -209,6 +216,23 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
       _non_empty -> Features.check_access(user_id, :custom_questions_allowed)
     end
   end
+
+  # Enabling group bookings, or raising a group type's limit, needs access;
+  # keeping or lowering it never does, so a host who lost access can go on
+  # saving an existing group type, or turn it back into a one-to-one type.
+  # A plan refusal is reported as its own reason, so the form can say which
+  # feature it was about; a checker failure keeps its own reason too, since
+  # it means "try again" rather than "upgrade".
+  defp gate_group_bookings(user_id, %{max_participants: max}, current)
+       when is_integer(max) and max > 1 and max > current do
+    case Features.check_access(user_id, :group_bookings_allowed) do
+      :ok -> :ok
+      {:error, :feature_access_checker_failed} = error -> error
+      {:error, _denied} -> {:error, :group_bookings_not_allowed}
+    end
+  end
+
+  defp gate_group_bookings(_user_id, _attrs, _current), do: :ok
 
   # Mirrors `Features.meeting_payments_allowed?/1`'s yes/no decision
   # (`:stripe_required` counts as allowed: the host has the plan but no

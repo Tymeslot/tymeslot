@@ -102,7 +102,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   def create_event(%CalendarIntegrationSchema{} = integration, calendar_id, event_data) do
     body =
       event_data
-      |> EventMapper.format_event_data()
+      |> EventMapper.format_new_event_data()
       |> EventMapper.add_tymeslot_fingerprint()
 
     params = write_params(event_data)

@@ -23,24 +23,30 @@ msgid "Add a meeting type so guests have something to book"
 msgstr "Ajoutez un type de réunion pour que les invités puissent réserver"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
 #, elixir-autogen, elixir-format
 msgid "Analytics"
 msgstr "Statistiques"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Automation"
 msgstr "Automatisation"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Availability"
 msgstr "Disponibilités"
 
 #: lib/tymeslot/integrations/calendar/display_helpers.ex
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr "Calendrier"
@@ -62,6 +68,7 @@ msgstr "Distribution"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Embed & Share"
 msgstr "Intégrer et partager"
@@ -72,23 +79,29 @@ msgid "General"
 msgstr "Général"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
 #, elixir-autogen, elixir-format
 msgid "Integrations"
 msgstr "Intégrations"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Types"
 msgstr "Types de réunion"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
 #, elixir-autogen, elixir-format
 msgid "Meetings"
 msgstr "Réunions"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Overview"
 msgstr "Aperçu"
@@ -99,6 +112,8 @@ msgid "Pro"
 msgstr "Pro"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Profile"
 msgstr "Profil"
@@ -109,11 +124,8 @@ msgid "Scheduling"
 msgstr "Planification"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
-#, elixir-autogen, elixir-format
-msgid "Setup recommended"
-msgstr "Configuration recommandée"
-
-#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Theme"
 msgstr "Thème"
@@ -190,11 +202,6 @@ msgstr "Tableau de bord"
 
 #: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
-msgid "Meeting Settings"
-msgstr "Paramètres de réunion"
-
-#: lib/tymeslot_web/helpers/page_titles.ex
-#, elixir-autogen, elixir-format
 msgid "Payments"
 msgstr "Paiements"
 
@@ -202,16 +209,6 @@ msgstr "Paiements"
 #, elixir-autogen, elixir-format
 msgid "Set a username in Settings to enable this feature"
 msgstr "Définissez un nom d’utilisateur dans les paramètres pour activer cette fonctionnalité"
-
-#: lib/tymeslot_web/helpers/page_titles.ex
-#, elixir-autogen, elixir-format
-msgid "Settings"
-msgstr "Paramètres"
-
-#: lib/tymeslot_web/helpers/page_titles.ex
-#, elixir-autogen, elixir-format
-msgid "Theme Selection"
-msgstr "Sélection du thème"
 
 #: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
@@ -381,7 +378,7 @@ msgid "Meeting type (optional)"
 msgstr "Type de réunion (facultatif)"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
 #, elixir-autogen, elixir-format
 msgid "New poll"
 msgstr "Nouveau sondage"
@@ -432,6 +429,7 @@ msgid "Poll link copied to clipboard!"
 msgstr "Lien du sondage copié dans le presse-papiers !"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "Polls"
@@ -557,11 +555,6 @@ msgstr[1] "%{count} invités ont déjà voté. Leurs réponses seront supprimée
 
 #: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Cancel this poll?"
-msgstr "Annuler ce sondage ?"
-
-#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
-#, elixir-autogen, elixir-format
 msgid "Keep poll"
 msgstr "Conserver le sondage"
 
@@ -629,6 +622,123 @@ msgstr "Ce créneau tombe pendant votre absence. Modifiez ou supprimez l'absence
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
 #, elixir-autogen, elixir-format
 msgid "Locations"
 msgstr "Lieux"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_row.ex
+#, elixir-autogen, elixir-format
+msgid "%{event}, %{time}"
+msgstr "%{event}, %{time}"
+
+#: lib/tymeslot_web/live/dashboard/dashboard_format.ex
+#, elixir-autogen, elixir-format
+msgid "%{hours} hr"
+msgstr "%{hours} h"
+
+#: lib/tymeslot_web/live/dashboard/dashboard_format.ex
+#, elixir-autogen, elixir-format
+msgid "%{hours} hr %{mins} min"
+msgstr "%{hours} h %{mins} min"
+
+#: lib/tymeslot_web/live/dashboard/dashboard_format.ex
+#, elixir-autogen, elixir-format
+msgid "%{minutes} min"
+msgstr "%{minutes} min"
+
+#: lib/tymeslot_web/live/dashboard/dashboard_format.ex
+#, elixir-autogen, elixir-format
+msgid "(No title)"
+msgstr "(Sans titre)"
+
+#: lib/tymeslot_web/live/dashboard/dashboard_format.ex
+#, elixir-autogen, elixir-format
+msgid "All day"
+msgstr "Toute la journée"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
+#, elixir-autogen, elixir-format
+msgid "Booked through your Tymeslot page"
+msgstr "Réservé via votre page Tymeslot"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
+#, elixir-autogen, elixir-format
+msgid "External calendar"
+msgstr "Calendrier externe"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
+#, elixir-autogen, elixir-format
+msgid "In progress"
+msgstr "En cours"
+
+#: lib/tymeslot_web/components/dashboard/appointments/join_link.ex
+#, elixir-autogen, elixir-format
+msgid "Join meeting"
+msgstr "Rejoindre la réunion"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
+#, elixir-autogen, elixir-format
+msgid "Location"
+msgstr "Lieu"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
+#, elixir-autogen, elixir-format
+msgid "Manage booking"
+msgstr "Gérer la réservation"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_row.ex
+#, elixir-autogen, elixir-format
+msgid "Now"
+msgstr "Maintenant"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
+#, elixir-autogen, elixir-format
+msgid "Time"
+msgstr "Heure"
+
+#: lib/tymeslot_web/live/dashboard/dashboard_format.ex
+#, elixir-autogen, elixir-format
+msgid "Today"
+msgstr "Aujourd’hui"
+
+#: lib/tymeslot_web/live/dashboard/dashboard_format.ex
+#, elixir-autogen, elixir-format
+msgid "Tomorrow"
+msgstr "Demain"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
+#, elixir-autogen, elixir-format
+msgid "Video call"
+msgstr "Appel vidéo"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
+#, elixir-autogen, elixir-format
+msgid "Video meeting"
+msgstr "Réunion vidéo"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_row.ex
+#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "View details for %{title}"
+msgstr "Voir les détails de %{title}"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
+#, elixir-autogen, elixir-format
+msgid "When"
+msgstr "Quand"
+
+#: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
+#, elixir-autogen, elixir-format
+msgid "With"
+msgstr "Avec"
+
+#: lib/tymeslot_web/live/dashboard/dashboard_format.ex
+#, elixir-autogen, elixir-format
+msgid "%{date}, %{time}"
+msgstr "%{date}, %{time}"
+
+#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel this poll"
+msgstr "Annuler ce sondage"

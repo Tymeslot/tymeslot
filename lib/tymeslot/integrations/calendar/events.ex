@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   configured behaviour module (defaults to `Calendar.Operations`).
   """
 
+  alias Tymeslot.Availability.Reach
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
@@ -31,7 +32,17 @@ defmodule Tymeslot.Integrations.Calendar.Events do
 
   # Failures a later replay cannot recover: queueing them would only keep a
   # dead row in the offline queue.
-  @non_queueable_errors [:unauthorized, :not_found, :meeting_not_found, :rate_limited]
+  # The organiser has no calendar Tymeslot can write to: none connected, or the
+  # one a meeting names is gone. Nothing changes that but the organiser
+  # connecting one, and a meeting booked before then never had an event.
+  @no_calendar_errors [:no_calendar_client, :no_calendar_integration]
+
+  @non_queueable_errors [:unauthorized, :not_found, :meeting_not_found, :rate_limited] ++
+                          @no_calendar_errors
+
+  # A meeting booked on the last bookable date can run for up to a day past
+  # it, plus its after-buffer, so the fetch reaches that much further.
+  @meeting_reach_days Reach.meeting_days()
 
   @type user_id :: pos_integer()
   @type integration_id :: pos_integer()
@@ -484,6 +495,16 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   def queueable_error?(_reason), do: true
 
   @doc """
+  Whether a failed calendar write failed because the organiser has no calendar
+  to write it to, rather than because a calendar refused it.
+
+  Such a write has nothing to retry: a meeting booked while no calendar was
+  connected simply has no calendar event.
+  """
+  @spec no_calendar_error?(term()) :: boolean()
+  def no_calendar_error?(reason), do: reason in @no_calendar_errors
+
+  @doc """
   Returns the booking calendar integration info for a user, meeting type or meeting (id and path) used for event creation.
   """
   @spec get_booking_integration_info(
@@ -540,11 +561,11 @@ defmodule Tymeslot.Integrations.Calendar.Events do
     case profile_result do
       {:ok, profile} ->
         today = Date.utc_today()
-        {today, Date.add(today, booking_window_days(profile))}
+        {today, Date.add(today, booking_window_days(profile) + @meeting_reach_days)}
 
       {:error, _reason} ->
         today = Date.utc_today()
-        {today, Date.add(today, 30)}
+        {today, Date.add(today, 30 + @meeting_reach_days)}
     end
   end
 

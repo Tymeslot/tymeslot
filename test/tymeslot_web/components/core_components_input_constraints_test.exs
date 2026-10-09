@@ -12,12 +12,12 @@ defmodule TymeslotWeb.Components.CoreComponentsInputConstraintsTest do
 
   import Phoenix.LiveViewTest
 
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Forms
 
   describe "HTML constraint attributes" do
     test "reach the rendered text input" do
       html =
-        render_component(&CoreComponents.input/1,
+        render_component(&Forms.input/1,
           name: "profile[heading]",
           value: "",
           maxlength: 60,
@@ -30,7 +30,7 @@ defmodule TymeslotWeb.Components.CoreComponentsInputConstraintsTest do
 
     test "reach the rendered number input" do
       html =
-        render_component(&CoreComponents.input/1,
+        render_component(&Forms.input/1,
           name: "profile[count]",
           type: "number",
           value: "",
@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Components.CoreComponentsInputConstraintsTest do
     end
 
     test "are absent when the caller does not set them" do
-      html = render_component(&CoreComponents.input/1, name: "profile[heading]", value: "")
+      html = render_component(&Forms.input/1, name: "profile[heading]", value: "")
 
       refute html =~ "maxlength"
       refute html =~ "minlength"
@@ -54,7 +54,7 @@ defmodule TymeslotWeb.Components.CoreComponentsInputConstraintsTest do
 
     test "render disabled, which is not one of Phoenix's globals either" do
       html =
-        render_component(&CoreComponents.input/1,
+        render_component(&Forms.input/1,
           name: "profile[heading]",
           value: "",
           disabled: true
@@ -65,7 +65,7 @@ defmodule TymeslotWeb.Components.CoreComponentsInputConstraintsTest do
 
     test "leave no disabled attribute behind when the field is enabled" do
       html =
-        render_component(&CoreComponents.input/1,
+        render_component(&Forms.input/1,
           name: "profile[heading]",
           value: "",
           disabled: false
@@ -76,7 +76,7 @@ defmodule TymeslotWeb.Components.CoreComponentsInputConstraintsTest do
 
     test "do not displace an aria attribute the component adds for errors" do
       html =
-        render_component(&CoreComponents.input/1,
+        render_component(&Forms.input/1,
           id: "heading",
           name: "profile[heading]",
           value: "",

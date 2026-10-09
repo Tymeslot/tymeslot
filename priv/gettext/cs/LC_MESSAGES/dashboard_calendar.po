@@ -51,7 +51,6 @@ msgid "%{day} at %{time}"
 msgstr "%{day} v %{time}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
 #, elixir-autogen, elixir-format
 msgid "%{event}, %{time}"
 msgstr "%{event}, %{time}"
@@ -71,15 +70,6 @@ msgstr "před %{minutes} min"
 msgid "%{when_text} · %{location}"
 msgstr "%{when_text} · %{location}"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/all_day_row.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/month_view.ex
-#, elixir-autogen, elixir-format
-msgid "(No title)"
-msgstr "(Bez názvu)"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/all_day_row.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/month_view.ex
 #, elixir-autogen, elixir-format
@@ -96,22 +86,10 @@ msgid "3 Days"
 msgstr "3 dny"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
-#, elixir-autogen, elixir-format
-msgid "Add event"
-msgstr "Přidat událost"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Agenda"
 msgstr "Agenda"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header/search_box.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/time_formatting.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
-#, elixir-autogen, elixir-format
-msgid "All day"
-msgstr "Celý den"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/all_day_row.ex
 #, elixir-autogen, elixir-format
@@ -148,11 +126,6 @@ msgstr "Den"
 #, elixir-autogen, elixir-format
 msgid "Keyboard shortcuts"
 msgstr "Klávesové zkratky"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
-#, elixir-autogen, elixir-format
-msgid "Keyboard shortcuts (?)"
-msgstr "Klávesové zkratky (?)"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
@@ -241,7 +214,6 @@ msgstr "Přepnout zobrazení"
 msgid "Syncing calendars%{progress}..."
 msgstr "Synchronizace kalendářů%{progress}…"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Today"
@@ -251,19 +223,6 @@ msgstr "Dnes"
 #, elixir-autogen, elixir-format
 msgid "Toggle calendars"
 msgstr "Zobrazit nebo skrýt kalendáře"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
-#, elixir-autogen, elixir-format
-msgid "Tomorrow"
-msgstr "Zítra"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header/search_box.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/all_day_row.ex
-#, elixir-autogen, elixir-format
-msgid "Untitled event"
-msgstr "Událost bez názvu"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
@@ -346,11 +305,6 @@ msgstr "Výchozí barva"
 msgid "All"
 msgstr "Vše"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Booked through your Tymeslot page"
-msgstr "Zarezervováno přes vaši stránku Tymeslot"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
 #, elixir-autogen, elixir-format
 msgid "Bookings"
@@ -366,16 +320,6 @@ msgstr "Přeneste svůj kalendář do Tymeslotu"
 msgid "Filter agenda"
 msgstr "Filtrovat agendu"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Join meeting"
-msgstr "Připojit se ke schůzce"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Manage in Meetings"
-msgstr "Spravovat v sekci Schůzky"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
 #, elixir-autogen, elixir-format
 msgid "Meetings booked through your Tymeslot page will appear here."
@@ -390,3 +334,28 @@ msgstr "Žádné nadcházející rezervace"
 #, elixir-autogen, elixir-format
 msgid "Your bookings already show here. Connect a calendar to see the rest of your events and prevent double-bookings."
 msgstr "Vaše rezervace se zde již zobrazují. Připojte kalendář, abyste viděli i ostatní události a předešli dvojitým rezervacím."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
+#, elixir-autogen, elixir-format
+msgid "Import"
+msgstr "Importovat"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
+#, elixir-autogen, elixir-format
+msgid "Import events from an .ics file"
+msgstr "Importovat události ze souboru .ics"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "Drop an .ics file to import its events"
+msgstr "Přetáhněte sem soubor .ics a importujte jeho události"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{count}/%{capacity} seats taken"
+msgstr "%{count}/%{capacity} míst obsazeno"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Participants"
+msgstr "Účastníci"

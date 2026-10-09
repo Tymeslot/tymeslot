@@ -12,6 +12,7 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
   alias Ecto.UUID
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.CircuitBreakerSupervisor
+  alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Workers.DeliveryClaims.DeliveryClaimQueries
   alias Tymeslot.Workers.EmailWorker
@@ -136,6 +137,49 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
       end)
 
       assert :ok = EmailWorker.perform(job)
+    end
+
+    # The organiser's copy goes out inline after the per-seat jobs are
+    # dispatched, and the guests are told only after that. An organiser
+    # address the provider refuses outright must not end the job before the
+    # guests hear the meeting is off.
+    test "a group meeting whose organiser address is rejected still tells the guests" do
+      profile = insert(:profile)
+
+      meeting =
+        insert(:group_meeting,
+          capacity: 4,
+          organizer_user_id: profile.user.id,
+          status: "cancelled"
+        )
+
+      participant = insert(:participant, meeting: meeting)
+
+      {:ok, [guest]} =
+        Guests.create_for_participant(meeting.id, participant.id, ["guest@example.com"])
+
+      {:ok, _guest} = GuestQueries.mark_confirmation_sent(guest, DateTime.utc_now(:second))
+
+      expect(Tymeslot.EmailServiceMock, :send_cancellation_email_to_organizer, 1, fn _email,
+                                                                                     _details ->
+        {:error, {:recipient_rejected, "550 no such user"}}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_guest_cancellation, 1, fn "guest@example.com",
+                                                                        _details ->
+        {:ok, :sent}
+      end)
+
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_cancellation_emails",
+                 "meeting_id" => meeting.id
+               })
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{"meeting_id" => meeting.id, "participant_id" => participant.id}
+      )
     end
 
     test "a retry after a total failure sends the cancellation again" do

@@ -51,8 +51,12 @@ defmodule Tymeslot.Utils.DateTimeUtils.Display do
     end)
   end
 
+  @doc """
+  The period of day a slot string falls in: "Early Morning", "Morning",
+  "Afternoon", "Evening" or "Late Night", or "Unknown" when it does not parse.
+  """
   @spec get_time_period(String.t()) :: String.t()
-  defp get_time_period(slot_string) do
+  def get_time_period(slot_string) do
     case DateTimeUtils.parse_time_string(slot_string) do
       {:ok, time} ->
         determine_period_from_hour(time.hour)

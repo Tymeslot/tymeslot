@@ -31,11 +31,6 @@ msgstr "Došlo k chybě. Obnovte prosím stránku a zkuste to znovu."
 msgid "Background Design"
 msgstr "Vzhled pozadí"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Choose Your Style"
-msgstr "Vyberte si styl"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a visual style that matches your professional identity."
@@ -71,11 +66,6 @@ msgstr "Pro náhled připojte kalendář"
 #, elixir-autogen, elixir-format
 msgid "Current"
 msgstr "Aktuální"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Current Style"
-msgstr "Aktuální styl"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/color_picker.ex
@@ -136,21 +126,11 @@ msgstr "Živý náhled"
 msgid "MP4 or WebM. Max 20MB."
 msgstr "MP4 nebo WebM. Max. 20 MB."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "More Styles Coming Soon"
-msgstr "Brzy přibudou další styly"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Or upload your own"
 msgstr "Nebo nahrajte vlastní"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Our design team is busy crafting new themes to help you express your unique professional style."
-msgstr "Náš designový tým pilně připravuje nové motivy, se kterými vyjádříte svůj jedinečný profesní styl."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
 #, elixir-autogen, elixir-format
@@ -192,11 +172,6 @@ msgstr "Vyberte hlavní barvy rozhraní své rezervační stránky."
 #, elixir-autogen, elixir-format
 msgid "Solid Color"
 msgstr "Jednolitá barva"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex
-#, elixir-autogen, elixir-format
-msgid "Theme Customization"
-msgstr "Přizpůsobení motivu"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_preview.ex
@@ -359,3 +334,13 @@ msgstr "Neuložené změny"
 #, elixir-autogen, elixir-format
 msgid "Complete the form to save"
 msgstr "Vyplňte formulář, aby se změny uložily"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#, elixir-autogen, elixir-format
+msgid "Background type"
+msgstr "Typ pozadí"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Current style"
+msgstr "Aktuální styl"

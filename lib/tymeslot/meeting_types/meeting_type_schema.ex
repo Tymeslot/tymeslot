@@ -3,10 +3,12 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   Schema for meeting types that users can configure.
   """
   use Ecto.Schema
+  use Gettext, backend: TymeslotWeb.Gettext
   import Ecto.Changeset
   import Tymeslot.ChangesetValidators.BookingLimits, only: [validate_booking_limits: 2]
 
   alias Tymeslot.CustomFields.FieldDefinition
+  alias Tymeslot.MeetingTypes.GroupLocationRule
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.MeetingTypeAttachment
   alias Tymeslot.MeetingTypes.ReminderValidation
@@ -30,6 +32,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           reminder_config: [map()],
           payment_required: boolean(),
           price_cents: integer() | nil,
+          max_participants: integer(),
           requires_approval: boolean(),
           approval_window_hours: pos_integer() | nil,
           is_archived: boolean(),
@@ -64,6 +67,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     field(:reminder_config, {:array, :map}, default: nil)
     field(:payment_required, :boolean, default: false)
     field(:price_cents, :integer)
+    field(:max_participants, :integer, default: 1)
+
     # Bookings on this meeting type are held until the host approves them,
     # rather than confirmed on submission. `approval_window_hours` nil means
     # "use `Constraints.default_approval_window_hours/0`", the same way a nil
@@ -166,6 +171,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :reminder_config,
       :payment_required,
       :price_cents,
+      :max_participants,
       :requires_approval,
       :approval_window_hours,
       :is_archived,
@@ -184,6 +190,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> validate_number(:duration_minutes, Constraints.duration_minutes_opts())
     |> validate_number(:slot_interval_minutes, Constraints.slot_interval_minutes_opts())
     |> validate_number(:sort_order, greater_than_or_equal_to: 0)
+    |> validate_number(:max_participants, Constraints.max_participants_opts())
     |> validate_number(:approval_window_hours, Constraints.approval_window_hours_opts())
     |> validate_booking_limits(:meeting_types)
     |> validate_inclusion(:icon, @valid_icons, message: "must be one of the available icons")
@@ -193,8 +200,10 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> validate_calendar_destination()
     |> validate_reminder_config()
     |> validate_payment_fields(opts)
+    |> validate_group_rules()
     |> unique_constraint([:user_id, :name],
-      message: "You already have a meeting type with this name"
+      error_key: :name,
+      message: dgettext_noop("errors", "You already have a meeting type with this name")
     )
     |> unique_constraint([:user_id, :slug],
       name: :meeting_types_user_id_slug_index,
@@ -211,7 +220,15 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   for a venue being deleted. The remaining venues keep their order, and
   every other location, and every other field of the rewritten ones, is
   kept exactly as stored. The meeting type's own validation does not run:
-  nothing it checks changes, and a location listing no venue is valid.
+  nothing else it checks changes, and a location listing no venue is valid
+  for a one-to-one type.
+
+  A group type is the exception: its address is fixed in advance
+  (`Tymeslot.MeetingTypes.GroupLocationRule`), so a location whose only
+  venue this is would be left invalid, and the changeset carries an error
+  on `:locations` instead. Only the violation this rewrite would create is
+  checked, so a venue can still be taken off a group type that lists it
+  among several.
   """
   @spec without_venue_changeset(t(), integer()) :: Ecto.Changeset.t()
   def without_venue_changeset(%__MODULE__{locations: locations} = meeting_type, venue_id)
@@ -225,9 +242,23 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           location
       end)
 
-    meeting_type
-    |> change()
-    |> put_embed(:locations, locations)
+    changeset = meeting_type |> change() |> put_embed(:locations, locations)
+
+    if group?(meeting_type) and left_without_venue?(meeting_type, venue_id),
+      do: add_error(changeset, :locations, group_location_message(:address_after_booking)),
+      else: changeset
+  end
+
+  @doc """
+  Whether taking `venue_id` off the meeting type's locations would leave one
+  of them in person with no venue: a location whose only venue it is.
+  """
+  @spec left_without_venue?(t(), integer()) :: boolean()
+  def left_without_venue?(%__MODULE__{locations: locations}, venue_id) do
+    Enum.any?(locations, fn
+      %LocationOption{kind: "in_person", venue_ids: [^venue_id]} -> true
+      _location -> false
+    end)
   end
 
   @doc """
@@ -484,6 +515,96 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   defp format_minimum(cents, currency) do
     "#{String.upcase(currency)} #{:erlang.float_to_binary(cents / 100, decimals: 2)}"
   end
+
+  # What a group type (more than one participant per slot) cannot also be.
+  # Everyone in a group slot shares one meeting row, so nothing about that
+  # row may be decided per booker:
+  #
+  #   * payment: per-seat payment is out of scope;
+  #   * approval: the approval flow answers one booker's request for a whole
+  #     meeting, and a shared slot has no single booker to answer;
+  #   * the location: see `GroupLocationRule`.
+  #
+  # Read with `get_field/2` so a change to either side (the limit, or the
+  # other setting) is caught.
+  #
+  # The messages are msgids of the `errors` domain, registered here with
+  # `dgettext_noop/2` and translated where the form shows them, like Ecto's
+  # own validator messages (`TymeslotWeb.Gettext.EctoErrorMsgids`).
+  defp validate_group_rules(changeset) do
+    if group_limit?(get_field(changeset, :max_participants)) do
+      changeset
+      |> refuse_for_group(
+        :payment_required,
+        dgettext_noop("errors", "group bookings cannot require payment")
+      )
+      |> refuse_for_group(
+        :requires_approval,
+        dgettext_noop("errors", "group bookings cannot require approval")
+      )
+      |> validate_group_location()
+    else
+      changeset
+    end
+  end
+
+  defp group_limit?(max), do: is_integer(max) and max > 1
+
+  defp refuse_for_group(changeset, field, message) do
+    if get_field(changeset, field) == true,
+      do: add_error(changeset, :max_participants, message),
+      else: changeset
+  end
+
+  # The effective options, including the single fallback option a type with
+  # no stored list offers, so a group type cannot slip through on the
+  # "address arranged after booking" fallback.
+  defp validate_group_location(changeset) do
+    offered = %{
+      locations: get_field(changeset, :locations),
+      allow_video: get_field(changeset, :allow_video),
+      video_integration_id: get_field(changeset, :video_integration_id)
+    }
+
+    case GroupLocationRule.check_meeting_type(offered) do
+      :ok -> changeset
+      {:error, reason} -> add_error(changeset, :locations, group_location_message(reason))
+    end
+  end
+
+  defp group_location_message(:not_single_location),
+    do: dgettext_noop("errors", "a group meeting type must offer exactly one location")
+
+  defp group_location_message(:provider_choice),
+    do: dgettext_noop("errors", "a group meeting type's video call must use exactly one provider")
+
+  defp group_location_message(:venue_choice),
+    do:
+      dgettext_noop(
+        "errors",
+        "a group meeting type's in-person location must name exactly one venue"
+      )
+
+  defp group_location_message(:address_after_booking),
+    do: dgettext_noop("errors", "a group meeting type's in-person location must name a venue")
+
+  defp group_location_message(:booker_phone),
+    do:
+      dgettext_noop(
+        "errors",
+        "a group meeting type cannot ask each booker for their phone number"
+      )
+
+  @doc """
+  True when the meeting type accepts more than one participant per slot.
+
+  Anything that is not a stored meeting type (`nil` before one is resolved,
+  or the plain maps a demo organiser's synthesised types are) is not a group
+  type: group bookings need the seat machinery behind a stored type.
+  """
+  @spec group?(t() | map() | nil) :: boolean()
+  def group?(%__MODULE__{max_participants: max}) when is_integer(max) and max > 1, do: true
+  def group?(_not_a_group_type), do: false
 
   @doc """
   Returns the list of valid icons for meeting types.

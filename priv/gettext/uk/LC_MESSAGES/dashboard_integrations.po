@@ -76,7 +76,6 @@ msgstr "%{name} потрібно підключити повторно."
 msgid "%{name} stopped syncing."
 msgstr "Синхронізацію %{name} зупинено."
 
-#: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
 #, elixir-autogen, elixir-format
 msgid "Add Integration"
@@ -87,7 +86,6 @@ msgstr "Додати інтеграцію"
 msgid "Add Meeting Type"
 msgstr "Додати тип зустрічі"
 
-#: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
 #, elixir-autogen, elixir-format
 msgid "Adding..."
@@ -128,8 +126,6 @@ msgstr "Календар"
 msgid "Calendars"
 msgstr "Календарі"
 
-#: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
@@ -154,11 +150,6 @@ msgstr "Помилка перевірки підключення: %{reason}"
 #, elixir-autogen, elixir-format
 msgid "Could not identify your Zoom account. Please try again."
 msgstr "Не вдалося ідентифікувати ваш обліковий запис Zoom. Спробуйте ще раз."
-
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Delete %{type} Integration"
-msgstr "Видалити інтеграцію %{type}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format
@@ -205,11 +196,6 @@ msgstr "Інтеграцію успішно видалено"
 msgid "Integration not found. It may have already been deleted."
 msgstr "Інтеграцію не знайдено. Можливо, її вже видалено."
 
-#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
-#, elixir-autogen, elixir-format
-msgid "Integrations"
-msgstr "Інтеграції"
-
 #: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid authentication response. Please try again."
@@ -219,11 +205,6 @@ msgstr "Некоректна відповідь під час автентифі
 #, elixir-autogen, elixir-format
 msgid "Invalid integration ID"
 msgstr "Некоректний ідентифікатор інтеграції"
-
-#: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting Settings"
-msgstr "Налаштування зустрічей"
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -254,11 +235,6 @@ msgstr "Не вибрано інтеграцію для видалення"
 #, elixir-autogen, elixir-format
 msgid "Payments"
 msgstr "Платежі"
-
-#: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex
-#, elixir-autogen, elixir-format
-msgid "Provider:"
-msgstr "Провайдер:"
 
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
 #, elixir-autogen, elixir-format
@@ -316,12 +292,12 @@ msgstr "Не вдалося підключити %{service}. Будь ласка
 msgid "Save"
 msgstr "Зберегти"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/tab_nav.ex
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
 #, elixir-autogen, elixir-format
 msgid "Error"
 msgstr "Помилка"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/tab_nav.ex
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
 #, elixir-autogen, elixir-format
 msgid "Warning"
 msgstr "Попередження"
@@ -339,7 +315,7 @@ msgstr[2] "%{count} з'єднань потребують уваги - %{message}
 msgid "%{service} wasn't connected because Calendar permission was not granted. Please try again and tick the box for \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\" - Tymeslot needs this to create meetings and Google Meet links."
 msgstr "%{service} не підключено, оскільки не надано дозвіл на доступ до календаря. Будь ласка, спробуйте ще раз і поставте прапорець біля пункту «Переглядати, редагувати, ділитися та остаточно видаляти всі календарі, до яких ви маєте доступ за допомогою Google Calendar» - це потрібно Tymeslot для створення зустрічей і посилань Google Meet."
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/tab_nav.ex
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{status} - needs attention"
 msgstr "%{status} - потребує уваги"
@@ -449,3 +425,18 @@ msgstr "Також видалити ці розмови з вашого серв
 #, elixir-autogen, elixir-format
 msgid "Enter the address on its own and put the username and password in their own fields."
 msgstr "Введіть лише адресу, а ім'я користувача та пароль вкажіть у відповідних полях."
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "Integration categories"
+msgstr "Категорії інтеграцій"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
+#, elixir-autogen, elixir-format
+msgid "Setup guide"
+msgstr "Посібник із налаштування"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{type} integration"
+msgstr "Видалити інтеграцію %{type}"

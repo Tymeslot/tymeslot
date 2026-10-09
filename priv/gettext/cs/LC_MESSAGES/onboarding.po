@@ -311,3 +311,13 @@ msgstr "Typ schůzky teď může nabízet více míst setkání: osobně na adre
 #, elixir-autogen, elixir-format
 msgid "Let people choose where you meet"
 msgstr "Nechte ostatní vybrat, kde se sejdete"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Host webinars, workshops and classes"
+msgstr "Pořádejte webináře, workshopy a kurzy"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Turn any meeting type into a group session. Set how many people can join and each slot stays open until it's full, so one booking page can run your webinar, workshop, class or office hours. Everyone books themselves in, gets their own confirmation and calendar invite, and can cancel or reschedule without asking you."
+msgstr "Změňte libovolný typ schůzky na skupinovou akci. Nastavte, kolik lidí se může připojit, a každý termín zůstane otevřený, dokud se nenaplní, takže jedna rezervační stránka zvládne váš webinář, workshop, kurz nebo konzultační hodiny. Každý se přihlásí sám, dostane vlastní potvrzení i pozvánku do kalendáře a může rezervaci zrušit nebo přesunout, aniž by se musel ptát vás."

@@ -103,11 +103,6 @@ msgstr "Am einfachsten"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
-msgid "Embed & Share"
-msgstr "Einbetten & Teilen"
-
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
-#, elixir-autogen, elixir-format
 msgid "Embed Options"
 msgstr "Einbettungsoptionen"
 
@@ -440,3 +435,13 @@ msgstr "Nur Vorschau: Dieser Link öffnet sich im Testmodus und funktioniert nac
 #, elixir-autogen, elixir-format
 msgid "The preview is disabled because your booking link is currently deactivated."
 msgstr "Die Vorschau ist deaktiviert, weil Ihr Buchungslink derzeit deaktiviert ist."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Embed settings"
+msgstr "Einbettungseinstellungen"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
+#, elixir-autogen, elixir-format
+msgid "Remove %{domain}"
+msgstr "%{domain} entfernen"
