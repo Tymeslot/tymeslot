@@ -85,12 +85,25 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SlotIntervalFiel
   # Spells out what the current choice produces. An interval is an abstraction
   # until it is three clock times, and five minutes is a very different booking
   # page from sixty; this is where an organiser sees which one they picked.
-  @spec hint(term(), term()) :: String.t()
-  def hint(interval_value, duration_value) do
+  #
+  # A type that offers several lengths and leaves the interval on its default
+  # gets a grid whose *step* is whatever length the booker picked, so the same
+  # day offers different start times per length. That is defensible for a
+  # single length and surprising for several, so the host is told once the
+  # second length exists — and only while no fixed interval is set, because
+  # setting one is the fix.
+  @spec hint(term(), term(), list()) :: String.t()
+  def hint(interval_value, duration_value, extra_lengths \\ []) do
     interval = parse_in_range(interval_value, Constraints.slot_interval_minutes_range())
     duration = parse_in_range(duration_value, Constraints.duration_minutes_range())
 
     case {interval, duration} do
+      {nil, _duration} when extra_lengths != [] ->
+        dgettext(
+          "dashboard_meeting_form",
+          "Start times follow whichever length the booker picks, so each length offers a different set of times. Choose a fixed interval to offer the same start times for every length."
+        )
+
       {minutes, _duration} when is_integer(minutes) ->
         dgettext(
           "dashboard_meeting_form",

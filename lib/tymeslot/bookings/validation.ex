@@ -171,9 +171,10 @@ defmodule Tymeslot.Bookings.Validation do
   attendee-supplied URL slug with no binding to what the meeting is (this
   holds even when the meeting type has been deleted and `meeting_type` is
   `nil`). `ScheduleCheck` is stepped by the duration the booking page's grid
-  is drawn with (`Offer.duration_minutes/2`, the meeting type's current
-  one), so a slot the page just offered is not refused after a host edits
-  the type; only the check's step size follows the type.
+  is drawn with (`Offer.duration_minutes/3`: the booked length while the
+  type still offers it, else the type's current one), so a slot the page
+  just offered is not refused after a host edits the type; only the check's
+  step size follows the type.
 
   `meeting_type` and `config` are resolved once by the caller and threaded
   through rather than re-fetched: two reads of the same rows leave a window
@@ -185,7 +186,15 @@ defmodule Tymeslot.Bookings.Validation do
           | {:error, term()}
   def prepare_new_times(params, old_meeting, meeting_type, config) do
     duration_minutes = old_meeting.duration
-    schedule_check_duration_minutes = Offer.duration_minutes(meeting_type, duration_minutes)
+
+    # The grid follows the booked length while the type still offers it, so
+    # it matches the meeting. Once the host has removed that length it falls
+    # back to the type's primary duration: a 45-minute booking on a type that
+    # now offers only 30 is checked against the 30-minute grid and stays 45
+    # minutes long — the same divergence a plain duration change produces,
+    # erring towards letting the guest move an existing booking.
+    schedule_check_duration_minutes =
+      Offer.duration_minutes(meeting_type, duration_minutes, duration_minutes)
 
     with {:ok, {start_datetime, end_datetime}} <-
            parse_meeting_times(

@@ -412,3 +412,8 @@ msgstr "Gruppenbuchungen können keine Zahlung erfordern"
 #, elixir-autogen, elixir-format
 msgid "You already have a meeting type with this name"
 msgstr "Sie haben bereits einen Termintyp mit diesem Namen"
+
+#: lib/tymeslot/meeting_types/lengths.ex
+#, elixir-autogen, elixir-format
+msgid "group bookings cannot offer more than one duration"
+msgstr "Gruppenbuchungen können nur eine Dauer anbieten"

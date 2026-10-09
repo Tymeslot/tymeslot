@@ -33,6 +33,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     GroupBookingsSection,
     GroupRules,
     GuestsSection,
+    LengthsField,
     LimitsSection,
     LocationEditorComponent,
     LocationsSection,
@@ -50,6 +51,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   import AvailabilitySection, only: [availability_section: 1]
   import GroupBookingsSection, only: [group_bookings_section: 1]
   import GuestsSection, only: [guests_section: 1]
+  import LengthsField, only: [lengths_field: 1]
   import LimitsSection, only: [limits_section: 1]
   import ShowAsFreeSection, only: [show_as_free_section: 1]
   import PaymentsSection, only: [payments_section: 1]
@@ -60,7 +62,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   # Which form-error fields surface an indicator on which tab. Errors on
   # fields absent here (e.g. :base) render below the panels and need no dot.
   @tab_error_fields %{
-    "details" => [:name, :duration, :slot_interval, :description, :icon],
+    "details" => [:name, :duration, :extra_lengths, :slot_interval, :description, :icon],
     "location" => [:locations, :video_integration, :calendar_integration, :target_calendar],
     "booking" => [:payment_required, :price_cents, :max_participants, :approval_window_hours],
     "reminders" => [:reminder_config]
@@ -136,38 +138,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
               icon="hero-tag"
             />
 
-            <div>
-              <.input
-                type="number"
-                name="meeting_type[duration]"
-                label={dgettext("dashboard_meeting_form", "Duration (minutes)")}
-                value={
-                  Map.get(@form_data, "duration", if(@type, do: @type.duration_minutes, else: "30"))
-                }
-                min={Constraints.duration_minutes_opts()[:greater_than_or_equal_to]}
-                max={Constraints.duration_minutes_opts()[:less_than_or_equal_to]}
-                required
-                placeholder="30"
-                phx-change="validate_meeting_type"
-                phx-debounce="500"
-                phx-target={@myself}
-                errors={
-                  FormValidationHelpers.field_errors(@form_errors, :duration)
-                  |> Enum.map(&Helpers.format_errors/1)
-                }
-                icon="hero-clock"
-              />
-              <p class="mt-1 text-token-sm text-tymeslot-600">
-                {dgettext(
-                  "dashboard_meeting_form",
-                  "Enter a duration between %{min} and %{max} minutes",
-                  min: Constraints.duration_minutes_opts()[:greater_than_or_equal_to],
-                  max: Constraints.duration_minutes_opts()[:less_than_or_equal_to]
-                )}
-              </p>
-            </div>
+            <.lengths_field
+              form_data={@form_data}
+              form_errors={@form_errors}
+              type={@type}
+              group_bookings_enabled={@group_bookings_enabled}
+              myself={@myself}
+            />
           </div>
 
+          <% extra_lengths = Map.get(@form_data, "extra_lengths", []) %>
           <% slot_interval_value =
             Map.get(
               @form_data,
@@ -222,7 +202,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
               />
             </div>
             <p class="mt-1 text-token-sm text-tymeslot-600">
-              {SlotIntervalField.hint(slot_interval_value, Map.get(@form_data, "duration"))}
+              {SlotIntervalField.hint(
+                slot_interval_value,
+                Map.get(@form_data, "duration"),
+                extra_lengths
+              )}
             </p>
           </div>
 
@@ -319,6 +303,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
                 payment_required: @payment_required,
                 payments_charges_enabled: @payments_charges_enabled,
                 requires_approval: @requires_approval,
+                extra_lengths: Map.get(@form_data, "extra_lengths", []),
                 locations: @locations
               })
             }

@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   import TymeslotWeb.Components.PaymentHelpers, only: [format_amount: 2]
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.Lengths
   alias Tymeslot.MeetingTypes.LocationOption
   alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.CoreComponents.Containers
@@ -81,7 +82,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
           <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-token-xs text-tymeslot-600">
             <span class="flex items-center shrink-0">
               <Icons.icon name="hero-clock" class="w-3.5 h-3.5 mr-1" />
-              {dgettext("dashboard_meeting_types", "%{minutes} min", minutes: @type.duration_minutes)}
+              <%= case Lengths.offered(@type) do %>
+                <% [_single] -> %>
+                  {dgettext("dashboard_meeting_types", "%{minutes} min",
+                    minutes: @type.duration_minutes
+                  )}
+                <% offered -> %>
+                  {dgettext("dashboard_meeting_types", "%{min}–%{max} min",
+                    min: List.first(offered),
+                    max: List.last(offered)
+                  )}
+              <% end %>
             </span>
             <%= if paid?(@type) do %>
               <span class="flex items-center shrink-0 font-medium text-green-600">

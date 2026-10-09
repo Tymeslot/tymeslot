@@ -419,3 +419,8 @@ msgstr "agendamentos em grupo não podem exigir pagamento"
 #, elixir-autogen, elixir-format
 msgid "You already have a meeting type with this name"
 msgstr "Você já tem um tipo de reunião com este nome"
+
+#: lib/tymeslot/meeting_types/lengths.ex
+#, elixir-autogen, elixir-format
+msgid "group bookings cannot offer more than one duration"
+msgstr "agendamentos em grupo só podem oferecer uma duração"

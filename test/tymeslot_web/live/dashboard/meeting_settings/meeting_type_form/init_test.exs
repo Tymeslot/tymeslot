@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.InitTest do
       assert Init.build_form_data(nil) == %{
                "name" => "",
                "duration" => "30",
+               "extra_lengths" => [],
                "slot_interval" => "",
                "description" => "",
                "icon" => "none"
@@ -31,6 +32,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.InitTest do
       assert Init.build_form_data(type) == %{
                "name" => "Standup",
                "duration" => "15",
+               "extra_lengths" => [],
                "slot_interval" => "5",
                "description" => "Daily sync",
                "icon" => "calendar"
@@ -51,6 +53,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.InitTest do
       assert result["duration"] == "30"
       assert result["description"] == ""
       assert result["icon"] == "none"
+    end
+
+    test "lists the further durations a type offers, in the order entered" do
+      type = %{
+        name: "Video call",
+        duration_minutes: 30,
+        extra_lengths_minutes: [60, 15],
+        slot_interval_minutes: nil,
+        description: nil,
+        icon: nil
+      }
+
+      assert Init.build_form_data(type)["extra_lengths"] == ["60", "15"]
     end
 
     test "represents a nil slot_interval_minutes as blank, not the duration" do
