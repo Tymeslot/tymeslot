@@ -316,3 +316,28 @@ msgstr "Видалити"
 #, elixir-autogen, elixir-format
 msgid "Delete %{name}"
 msgstr "Видалити %{name}"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Block the time of every event in this feed, also those it marks as free"
+msgstr "Блокувати час кожної події з цього фіду, навіть позначених як вільні"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Events this calendar marks as free no longer block time"
+msgstr "Події, які цей календар позначає як вільні, більше не блокують час"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Every event busy"
+msgstr "Кожна подія зайнята"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Every event in this calendar now blocks time"
+msgstr "Кожна подія цього календаря тепер блокує час"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "read-only, every event blocks time, also those marked free"
+msgstr "лише для перегляду, кожна подія блокує час, навіть позначені як вільні"

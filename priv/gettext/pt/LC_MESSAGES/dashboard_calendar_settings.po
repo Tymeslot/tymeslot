@@ -314,3 +314,28 @@ msgstr "Excluir"
 #, elixir-autogen, elixir-format
 msgid "Delete %{name}"
 msgstr "Excluir %{name}"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Block the time of every event in this feed, also those it marks as free"
+msgstr "Bloquear o horário de todo evento deste feed, inclusive dos marcados como livres"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Events this calendar marks as free no longer block time"
+msgstr "Eventos que este calendário marca como livres não bloqueiam mais horário"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Every event busy"
+msgstr "Todo evento ocupado"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Every event in this calendar now blocks time"
+msgstr "Todo evento deste calendário agora bloqueia horário"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "read-only, every event blocks time, also those marked free"
+msgstr "somente leitura; todo evento bloqueia horário, inclusive os marcados como livres"

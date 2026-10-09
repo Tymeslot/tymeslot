@@ -330,6 +330,30 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             "Manage calendars"
           )}</span>
         </button>
+        <%!-- A subscription has no settings modal, so its one setting is a
+             toggle here: whether every event in the feed blocks time, also
+             those it marks free (holiday feeds mark all of them free). --%>
+        <button
+          :if={@subscription?}
+          type="button"
+          phx-click="toggle_all_events_busy"
+          phx-value-id={@integration.id}
+          phx-target={@myself}
+          class={tile_class(:neutral)}
+          aria-pressed={to_string(@integration.all_events_busy)}
+          data-testid="all-events-busy-toggle"
+          title={
+            dgettext(
+              "dashboard_calendar_settings",
+              "Block the time of every event in this feed, also those it marks as free"
+            )
+          }
+        >
+          <.icon
+            name={if @integration.all_events_busy, do: "hero-check-circle", else: "hero-no-symbol"}
+            class="w-4 h-4"
+          /><span>{dgettext("dashboard_calendar_settings", "Every event busy")}</span>
+        </button>
         <%!-- Reconnecting a subscription means pasting a new feed URL, not
         re-entering credentials, so the CalDAV reconnect modal does not apply.
         A revoked feed is replaced by removing this row and subscribing again. --%>
@@ -490,7 +514,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
         read_only_target_segment(integration)
 
       :none ->
-        if BookingEligibility.bookable?(integration), do: nil, else: feed_segment()
+        if BookingEligibility.bookable?(integration), do: nil, else: feed_segment(integration)
     end
   end
 
@@ -506,11 +530,18 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     if BookingEligibility.bookable?(integration) do
       dgettext("dashboard_calendar_settings", "booking target can no longer accept bookings")
     else
-      feed_segment()
+      feed_segment(integration)
     end
   end
 
-  defp feed_segment,
+  defp feed_segment(%{all_events_busy: true}),
+    do:
+      dgettext(
+        "dashboard_calendar_settings",
+        "read-only, every event blocks time, also those marked free"
+      )
+
+  defp feed_segment(_integration),
     do: dgettext("dashboard_calendar_settings", "read-only, blocks time but takes no bookings")
 
   # The card's last-activity line; nothing for a connection never synced.

@@ -1286,3 +1286,13 @@ msgstr "Цю зміну внесено до одного повторення р
 #, elixir-autogen, elixir-format
 msgid "The calendar server returned more data than Tymeslot can process at once."
 msgstr "Сервер календаря повернув більше даних, ніж Tymeslot може обробити за один раз."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
+#, elixir-autogen, elixir-format
+msgid "Count every event as busy"
+msgstr "Вважати кожну подію зайнятою"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
+#, elixir-autogen, elixir-format
+msgid "Holiday and school-holiday calendars mark their events as free, so they would block nothing. With this on, every event in the feed blocks the time, however it is marked."
+msgstr "Календарі свят і шкільних канікул позначають свої події як вільні, тож вони нічого не блокували б. Якщо це ввімкнено, кожна подія з фіду блокує час, хоч би як вона була позначена."

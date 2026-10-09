@@ -176,6 +176,11 @@ defmodule Tymeslot.Integrations.Calendar do
     end
   end
 
+  @doc "Sets whether a subscription counts every event as busy; see `CalendarManagement`."
+  @spec set_all_events_busy(integration_id(), user_id(), boolean()) ::
+          {:ok, integration()} | {:error, :not_found | :not_a_subscription | Ecto.Changeset.t()}
+  defdelegate set_all_events_busy(id, user_id, busy?), to: CalendarManagement
+
   # ---------------------------
   # Public API: Discovery/Selection
   # ---------------------------
