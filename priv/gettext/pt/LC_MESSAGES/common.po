@@ -240,6 +240,131 @@ msgstr "Reproduzir vídeo de fundo"
 msgid "Search timezones"
 msgstr "Buscar fusos horários"
 
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} day"
+msgid_plural "%{count} days"
+msgstr[0] "%{count} dia"
+msgstr[1] "%{count} dias"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} hour"
+msgid_plural "%{count} hours"
+msgstr[0] "%{count} hora"
+msgstr[1] "%{count} horas"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} minute"
+msgid_plural "%{count} minutes"
+msgstr[0] "%{count} minuto"
+msgstr[1] "%{count} minutos"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{label} before"
+msgstr "%{label} antes"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "1 hour before"
+msgstr "1 hora antes"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "30 min. before"
+msgstr "30 min. antes"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Add"
+msgstr "Adicionar"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Add Custom"
+msgstr "Lembrete personalizado"
+
+#: lib/tymeslot_web/components/shared/reminder_picker_state.ex
+#, elixir-autogen, elixir-format
+msgid "Added %{label} before"
+msgstr "Lembrete adicionado: %{label} antes"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel Custom"
+msgstr "Cancelar"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Days"
+msgstr "Dias"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Hours"
+msgstr "Horas"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Maximum of %{count} reminder allowed"
+msgid_plural "Maximum of %{count} reminders allowed"
+msgstr[0] "É permitido no máximo %{count} lembrete"
+msgstr[1] "São permitidos no máximo %{count} lembretes"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Minutes"
+msgstr "Minutos"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "No reminders configured."
+msgstr "Nenhum lembrete configurado."
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder value is required"
+msgstr "O valor do lembrete é obrigatório"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder value must be a positive number"
+msgstr "O valor do lembrete precisa ser um número positivo"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders"
+msgstr "Lembretes"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders cannot be set for more than 1 year in advance"
+msgstr "Os lembretes não podem ser definidos com mais de 1 ano de antecedência"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Remove reminder"
+msgstr "Remover lembrete"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Select a valid reminder unit"
+msgstr "Escolha uma unidade de lembrete válida"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "This reminder already exists"
+msgstr "Este lembrete já existe"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "You can configure up to %{count} reminder"
+msgid_plural "You can configure up to %{count} reminders"
+msgstr[0] "Você pode configurar até %{count} lembrete"
+msgstr[1] "Você pode configurar até %{count} lembretes"
+
 #: lib/tymeslot_web/components/core_components/feedback.ex
 #, elixir-autogen, elixir-format
 msgid "Loading"
