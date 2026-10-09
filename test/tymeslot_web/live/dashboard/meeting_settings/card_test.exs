@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CardTest do
   alias Tymeslot.CustomFields.FieldDefinition
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.MeetingTypes.LocationOption
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias TymeslotWeb.Dashboard.MeetingSettings.Card
 
   defp build_type(overrides) do
@@ -37,6 +38,41 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CardTest do
       &Card.meeting_type_card/1,
       Map.merge(%{type: type, myself: %Phoenix.LiveComponent.CID{cid: 1}}, assigns)
     )
+  end
+
+  describe "action buttons" do
+    test "name the meeting type they act on, as the switch does" do
+      doc =
+        struct(MeetingTypeSchema, build_type(%{}))
+        |> render_card()
+        |> Floki.parse_fragment!()
+
+      assert [_edit] =
+               Floki.find(doc, ~s|button[phx-click="edit_type"][aria-label="Edit Strategy Call"]|)
+
+      assert [_delete] =
+               Floki.find(
+                 doc,
+                 ~s|button[phx-click="show_delete_modal"][aria-label="Delete Strategy Call"]|
+               )
+    end
+  end
+
+  describe "group marker" do
+    test "names a group type's participant limit" do
+      html = render_card(struct(MeetingTypeSchema, build_type(%{max_participants: 3})))
+
+      assert [marker] =
+               html |> Floki.parse_fragment!() |> Floki.find("[data-testid=group-type-marker]")
+
+      assert Floki.text(marker) =~ "Group · up to 3"
+    end
+
+    test "is omitted on a one-to-one type" do
+      html = render_card(struct(MeetingTypeSchema, build_type(%{max_participants: 1})))
+
+      refute html =~ "group-type-marker"
+    end
   end
 
   describe "paid token" do

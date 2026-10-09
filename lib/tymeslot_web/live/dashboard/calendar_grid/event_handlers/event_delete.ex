@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
 
       event ->
         with :ok <- EditWorkflow.assert_event_writable(socket, event),
+             :ok <- Shared.check_seat_lock(socket, event),
              {:ok, scopes} <- CalendarGrid.deletion_scopes(event) do
           linked_to_booking =
             CalendarEvents.event_linked_to_booking?(
@@ -40,7 +41,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
              confirm_delete_linked_to_booking: linked_to_booking
            )}
         else
-          {:error, :read_only} = error ->
+          {:error, reason} = error when reason in [:read_only, :group_booking] ->
             Shared.flash_guard_error(socket, error)
 
           {:error, :recurring_event} ->

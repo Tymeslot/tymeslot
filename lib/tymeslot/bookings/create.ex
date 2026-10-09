@@ -13,6 +13,7 @@ defmodule Tymeslot.Bookings.Create do
     BuildParams,
     CalendarCheck,
     CalendarJobs,
+    CreateGroup,
     Errors,
     Policy,
     ScheduleCheck,
@@ -20,9 +21,9 @@ defmodule Tymeslot.Bookings.Create do
   }
 
   alias Tymeslot.Bookings.Create.PaidBooking
+  alias Tymeslot.Bookings.Telemetry
   alias Tymeslot.CustomFields
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Locales
   alias Tymeslot.MeetingPayments
@@ -84,7 +85,7 @@ defmodule Tymeslot.Bookings.Create do
          {:ok, :validated} <- validate_booking(booking_data, opts) do
       create_meeting_and_all_side_effects_atomically(booking_data, opts)
     else
-      {:error, reason} -> {:error, classify_error(reason)}
+      {:error, reason} -> {:error, Errors.classify_error(reason)}
     end
   end
 
@@ -104,21 +105,21 @@ defmodule Tymeslot.Bookings.Create do
       config = scheduling_config(booking_data)
 
       # Try calendar pre-check for better UX
-      case CalendarCheck.probe(booking_data, config) do
+      case CalendarCheck.probe(booking_data, config, calendar_check_opts(booking_data)) do
         :ok ->
           # Calendar shows available, proceed normally
           execute_internal(booking_data, form_data, opts)
 
         {:error, :slot_unavailable} ->
           # Fail fast for better UX
-          {:error, classify_error(:slot_unavailable)}
+          {:error, Errors.classify_error(:slot_unavailable)}
 
         {:error, _reason} ->
           # Calendar check failed, but continue with atomic booking
           execute_internal(booking_data, form_data, opts)
       end
     else
-      {:error, reason} -> {:error, classify_error(reason)}
+      {:error, reason} -> {:error, Errors.classify_error(reason)}
     end
   end
 
@@ -142,6 +143,11 @@ defmodule Tymeslot.Bookings.Create do
     # unresolvable type (ad-hoc booking, or one that fails
     # `validate_meeting_type_active/1` a few steps later) falls back to the
     # client-supplied value, bounded exactly as the booking page bounds it.
+    # Resolving here also stashes the record on `booking_data` for everything
+    # downstream: the group join lookup needs it to know whether this is a
+    # group booking (see `CreateGroup.join_target/1`), and the active/limits validations
+    # and the paid?/guests-allowed? predicates then read it from memory instead
+    # of each issuing the same query again.
     meeting_type = resolve_meeting_type_for_duration(meeting_params)
     duration_minutes = Offer.duration_minutes(meeting_type, meeting_params.duration)
 
@@ -188,7 +194,9 @@ defmodule Tymeslot.Bookings.Create do
         visitor_hash: Map.get(meeting_params, :visitor_hash)
       }
 
-      {:ok, booking_data}
+      # Read once, here, so the booking-limit pre-check and the calendar
+      # check agree on whether this booking joins a live group slot.
+      {:ok, Map.put(booking_data, :join_target, CreateGroup.join_target(booking_data))}
     else
       {:error, :invalid_date_input} -> {:error, "Invalid date format"}
       {:error, :invalid_format} -> {:error, "Invalid date format"}
@@ -239,6 +247,7 @@ defmodule Tymeslot.Bookings.Create do
       user_id ->
         # Meeting type active check
         with :ok <- validate_meeting_type_active(booking_data),
+             :ok <- CreateGroup.ensure_taking_seats(booking_data),
              :ok <- validate_payments_available(booking_data, user_id) do
           config = scheduling_config(booking_data)
 
@@ -316,13 +325,15 @@ defmodule Tymeslot.Bookings.Create do
     end
   end
 
-  # Users named in the link join as guests, so a meeting type without guests
-  # cannot take them. The booking page already refuses such a type; this is
-  # the server-side half of that rule.
+  # Users named in the link join as guests, so a meeting type without guests,
+  # or a group type, cannot take them (`SharedAvailability.meeting_type_allowed?/1`).
+  # The booking page already refuses such a type; this is the server-side half.
   defp validate_shared_availability_guests_allowed(
          %{shared_availability_guests: [_first | _rest]} = data
        ) do
-    if guests_allowed?(data), do: :ok, else: {:error, :unavailable_guests}
+    if SharedAvailability.meeting_type_allowed?(Map.get(data, :meeting_type)),
+      do: :ok,
+      else: {:error, :unavailable_guests}
   end
 
   defp validate_shared_availability_guests_allowed(_booking_data), do: :ok
@@ -373,6 +384,14 @@ defmodule Tymeslot.Bookings.Create do
   # race-safe check runs again inside the booking transaction
   # (Tymeslot.Meetings.Scheduling), because the page can go stale between
   # render and submit.
+  #
+  # A seat on a live group slot adds no meeting row, so it is not counted
+  # against the limits and is exempt here. The exemption cannot be stretched
+  # to a new slot: the seat transaction refuses a slot that filled up in the
+  # meantime as full, and a slot cancelled in the meantime is recreated
+  # through `Scheduling`, whose in-transaction limit check applies.
+  defp validate_booking_limits(%{join_target: %{}}, _user_id), do: :ok
+
   defp validate_booking_limits(booking_data, user_id) do
     Checker.check_booking_allowed(
       user_id,
@@ -387,10 +406,22 @@ defmodule Tymeslot.Bookings.Create do
   # `classify_error/1` collapses either to `:slot_taken`, returning the booker
   # to the schedule step), while a transport failure proceeds.
   defp validate_calendar_availability(booking_data, config) do
-    case CalendarCheck.enforce(booking_data, config) do
+    case CalendarCheck.enforce(booking_data, config, calendar_check_opts(booking_data)) do
       :ok -> {:ok, :validated}
       {:error, reason} -> {:error, reason}
     end
+  end
+
+  # A seat on a live group slot adds no organiser busy time, so the slot's own
+  # meeting event is excluded from the conflict check, exactly as a
+  # reschedule excludes the meeting it moves. Only that one meeting is
+  # excluded, and only when `CreateGroup.join_target/1` finds it joinable for
+  # this booker's seats: a full slot keeps its event blocking and is refused
+  # here, before any side effect, as the seat transaction would refuse it
+  # (`:slot_full` -> `:slot_taken`). Every other event (other meetings,
+  # external calendars) still refuses the booking.
+  defp calendar_check_opts(booking_data) do
+    [exclude: Map.get(booking_data, :join_target)]
   end
 
   defp execute_internal(booking_data, _form_data, opts) do
@@ -399,24 +430,29 @@ defmodule Tymeslot.Bookings.Create do
         create_meeting_and_all_side_effects_atomically(booking_data, opts)
 
       {:error, reason} ->
-        {:error, classify_error(reason)}
+        {:error, Errors.classify_error(reason)}
     end
   end
 
   defp create_meeting_and_all_side_effects_atomically(booking_data, opts) do
     meeting_attrs = Policy.build_meeting_attributes(BuildParams.new(booking_data))
 
-    if paid_meeting_type?(booking_data) do
-      PaidBooking.create(meeting_attrs, booking_data,
-        create_meeting: &create_meeting/1,
-        create_guests: &create_guests/2,
-        classify_error: &classify_creation_error(&1, booking_data),
-        on_created: &emit_booking_created/0
-      )
-    else
-      meeting_attrs
-      |> run_meeting_transaction(booking_data, opts)
-      |> map_transaction_result(booking_data)
+    cond do
+      CreateGroup.applicable?(booking_data) ->
+        CreateGroup.create(meeting_attrs, booking_data, opts)
+
+      paid_meeting_type?(booking_data) ->
+        PaidBooking.create(meeting_attrs, booking_data,
+          create_meeting: &create_meeting/1,
+          create_guests: &create_guests/2,
+          classify_error: &Errors.classify_creation_error(&1, booking_data),
+          on_created: &Telemetry.booking_created/0
+        )
+
+      true ->
+        meeting_attrs
+        |> run_meeting_transaction(booking_data, opts)
+        |> map_transaction_result(booking_data)
     end
   end
 
@@ -472,7 +508,7 @@ defmodule Tymeslot.Bookings.Create do
   # here server-side — the client list is never trusted. Runs inside the
   # booking transaction so a guest failure rolls the whole booking back.
   defp create_guests(meeting, booking_data) do
-    if guests_allowed?(booking_data) do
+    if Policy.guests_allowed?(booking_data) do
       booking_data
       |> Map.get(:shared_availability_guests, [])
       |> SharedAvailability.merge_guest_emails(Map.get(booking_data, :guest_emails, []))
@@ -482,9 +518,6 @@ defmodule Tymeslot.Bookings.Create do
       {:ok, []}
     end
   end
-
-  defp guests_allowed?(%{meeting_type: %{allow_guests: true}}), do: true
-  defp guests_allowed?(_booking_data), do: false
 
   defp create_meeting(meeting_attrs) do
     case Scheduling.create_meeting_with_conflict_check(meeting_attrs) do
@@ -501,91 +534,10 @@ defmodule Tymeslot.Bookings.Create do
 
   defp map_transaction_result({:ok, meeting}, _booking_data) do
     AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
-    emit_booking_created()
+    Telemetry.booking_created()
     {:ok, meeting}
   end
 
   defp map_transaction_result({:error, reason}, booking_data),
-    do: {:error, classify_creation_error(reason, booking_data)}
-
-  # Once validation has passed, the only failures creating the meeting is
-  # expected to meet are the ones the classification names: a lost race, a
-  # limit reached, a changeset refusing the booker's input. Anything that
-  # classifies as nothing better than `:booking_failed` (a guest row the
-  # database refused after sanitising, a calendar job Oban would not insert,
-  # a reason nobody wrote a clause for) is a bug or an outage, and is
-  # recorded. Two reasons that also classify as `:booking_failed` are not:
-  # `:validation_error` is the booker's input refused, and `:database_error`
-  # was recorded, with its exception, by `Meetings.Scheduling` where it was
-  # raised.
-  @not_reported [:validation_error, :database_error]
-
-  defp classify_creation_error(reason, booking_data) do
-    case classify_error(reason) do
-      :booking_failed when reason not in @not_reported ->
-        :ok =
-          ErrorTracking.report_error(reason, nil, %{
-            organizer_user_id: booking_data.organizer_user_id,
-            meeting_type_id: booking_data.meeting_type_id
-          })
-
-        :booking_failed
-
-      classified ->
-        classified
-    end
-  end
-
-  # Classifies every failure reason into a semantic atom rather than a
-  # display string, so callers can dispatch on the error's identity (e.g.
-  # bounce the booker back to the schedule step on `:slot_taken`) without
-  # depending on copy text. The web layer owns rendering these atoms to
-  # user-facing messages. `:time_conflict` and `:slot_unavailable` both
-  # describe the same lost-race outcome and collapse to `:slot_taken`;
-  # `:host_not_found`/`:host_missing` and `:meeting_type_not_found`/
-  # `:meeting_type_missing` are likewise distinct upstream reasons that
-  # share one user-facing meaning, so they collapse to a single atom each.
-  # Reasons that already arrive as arbitrary changeset/validation text pass
-  # through unchanged (`is_binary/1` clause).
-  # A table rather than a clause ladder: every entry is the same behaviour over
-  # varying data, so the mapping is the whole content. `:availability_unverifiable`
-  # collapses to `:slot_taken` because we could not read the organiser's full busy
-  # set and so cannot prove the slot is free — the booker gets the same "pick
-  # another slot" outcome as a genuine clash, and the distinction survives in the
-  # logs rather than the copy. `ScheduleCheck`'s own reasons
-  # (`:slot_not_offered`, `:slot_availability_unverifiable`) are deliberately
-  # absent here: they are classified once, in `Errors.classify_schedule_check_reason/1`,
-  # shared with `Reschedule`, rather than duplicated in this table.
-  @error_classifications %{
-    meeting_type_inactive: :meeting_type_inactive,
-    meeting_type_not_found: :meeting_type_not_found,
-    meeting_type_missing: :meeting_type_not_found,
-    time_conflict: :slot_taken,
-    slot_unavailable: :slot_taken,
-    availability_unverifiable: :slot_taken,
-    booking_limit_reached: :booking_limit_reached,
-    organizer_required: :organizer_required,
-    validation_error: :booking_failed,
-    payments_unavailable: :payments_unavailable,
-    host_not_found: :host_not_found,
-    host_missing: :host_not_found,
-    unavailable_guests: :booking_failed
-  }
-
-  defp classify_error(reason) when is_map_key(@error_classifications, reason),
-    do: Map.fetch!(@error_classifications, reason)
-
-  defp classify_error({:custom_field_errors, _errors}), do: :custom_field_errors
-  defp classify_error({:checkout_failed, _reason}), do: :checkout_failed
-
-  defp classify_error(reason) when is_atom(reason) do
-    Errors.classify_schedule_check_reason(reason) || :booking_failed
-  end
-
-  defp classify_error(reason) when is_binary(reason), do: reason
-  defp classify_error(_other), do: :booking_failed
-
-  defp emit_booking_created do
-    :telemetry.execute([:tymeslot, :booking, :created], %{count: 1}, %{})
-  end
+    do: {:error, Errors.classify_creation_error(reason, booking_data)}
 end

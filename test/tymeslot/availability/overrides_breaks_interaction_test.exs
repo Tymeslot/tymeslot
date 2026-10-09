@@ -128,7 +128,12 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
       profile = insert(:profile, timezone: "Europe/Berlin")
 
       schedule =
-        insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 0)
+        insert(:availability_schedule,
+          profile: profile,
+          is_default: true,
+          buffer_before_minutes: 0,
+          buffer_after_minutes: 0
+        )
 
       weekly =
         insert(:weekly_availability,
@@ -207,8 +212,8 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
     end
 
     test "scenario E: available override with nil times falls through to weekly schedule, unavailable Saturday yields no slots" do
-      # BusinessHours.get_business_hours_in_timezone guards on
-      # `start_time != nil and end_time != nil` before using override times.
+      # BusinessHours.owner_windows/4 only takes an override's hours when both
+      # `start_time` and `end_time` are set.
       # A nil-time `available` override therefore falls through to `_no_override`
       # and consults the weekly schedule. When the weekly row marks the day
       # unavailable, the result must be an empty slot list — pinning the nil-guard
@@ -247,7 +252,12 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
     profile = insert(:profile, timezone: "Europe/Berlin")
 
     schedule =
-      insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 0)
+      insert(:availability_schedule,
+        profile: profile,
+        is_default: true,
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0
+      )
 
     weekly =
       insert(:weekly_availability,
@@ -288,7 +298,12 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
     profile = insert(:profile, timezone: "Europe/Berlin")
 
     schedule =
-      insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 0)
+      insert(:availability_schedule,
+        profile: profile,
+        is_default: true,
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0
+      )
 
     insert(:weekly_availability,
       schedule: schedule,
@@ -300,6 +315,11 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
   end
 
   defp config(schedule) do
-    %{schedule_id: schedule.id, buffer_minutes: 0, min_advance_hours: 0}
+    %{
+      schedule_id: schedule.id,
+      buffer_before_minutes: 0,
+      buffer_after_minutes: 0,
+      min_advance_hours: 0
+    }
   end
 end

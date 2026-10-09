@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.CustomMeetingLinkNoticeTest do
 
     {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
-    assert has_element?(view, "h3", "Per-booking Jitsi")
+    assert has_element?(view, "h2", "Per-booking Jitsi")
     refute has_element?(view, "p.text-amber-700", @notice)
     refute has_element?(view, "span", "Invalid meeting link")
     assert has_element?(view, "span", "Healthy")

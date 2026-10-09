@@ -9,8 +9,8 @@ defmodule Tymeslot.Emails.Shared.Styles.Tokens do
   The palette is **inversion-survivable**: no pure whites, no pure blacks.
   Every base value sits a few steps off the extremes so that a client-forced
   inversion (Thunderbird, iOS Mail, Gmail Android) produces a coherent warm
-  result rather than washed-out neon. There is no separate dark-mode
-  stylesheet — the single palette carries both light and inverted clients.
+  result rather than washed-out neon. Clients that honour
+  `prefers-color-scheme` get the dedicated dark palette (`dark/1`) instead.
   """
 
   alias Tymeslot.Emails.Shared.Styles.BrandPalette
@@ -35,6 +35,22 @@ defmodule Tymeslot.Emails.Shared.Styles.Tokens do
   @ink_muted "#4a5058"
   @ink_whisper "#6d737a"
 
+  # Dark palette, applied under `prefers-color-scheme: dark` by
+  # `Styles.DarkMode`. A warm charcoal rather than pure black, mirroring the
+  # light side's cream. Every ink tier clears WCAG AA against `canvas_soft`
+  # and against each intent's dark tint, the lightest surfaces text sits on.
+  @dark %{
+    canvas: "#131518",
+    canvas_soft: "#24282c",
+    surface: "#1b1e21",
+    hairline: "#3a3f45",
+    hairline_soft: "#2c3035",
+    ink: "#f2eee4",
+    ink_soft: "#d8d4ca",
+    ink_muted: "#aeb2b8",
+    ink_whisper: "#9ca1a8"
+  }
+
   # ============================================================================
   # BRAND ACCENTS — intent families
   # ============================================================================
@@ -56,15 +72,15 @@ defmodule Tymeslot.Emails.Shared.Styles.Tokens do
   # colours only show up when they're genuinely signalling something.
 
   # `deep` backs the stage band and the button surface for each family, so it
-  # carries text and has to clear 4.5:1 against it — the same floor
+  # carries text and has to clear 4.5:1 against it, the same floor
   # `BrandPalette` clamps derived families to. Rose's `deep` was darkened from
   # "#c44d3d" (4.41:1 against band text, a hair under) to reach it.
   #
-  # Amber's `deep` is a known exception: it clears 4.5:1 for a button (dark ink
-  # reads at 5.8:1) but only reaches 2.99:1 against the near-white stage-band
-  # text. Fixing that means changing the alert band's colour, which is a design
-  # decision outside the email-branding change that surfaced it.
-  @amber %{accent: "#f59e0b", deep: "#d97706", ink: "#78350f", tint: "#fef3c7"}
+  # Amber's `deep` was darkened from "#d97706" (2.99:1 against the near-white
+  # band text) to a burnt amber that reads at 4.72:1 under the band text and
+  # 4.51:1 as link text on the amber `tint`. It stays in the amber hue, so the
+  # alert band still reads as "act on this" rather than as rose's alarm.
+  @amber %{accent: "#f59e0b", deep: "#b45309", ink: "#78350f", tint: "#fef3c7"}
   @rose %{accent: "#e26d5c", deep: "#bd493a", ink: "#7a2b22", tint: "#fbeeeb"}
 
   # ============================================================================
@@ -154,6 +170,13 @@ defmodule Tymeslot.Emails.Shared.Styles.Tokens do
   @doc "Whisper ink — the quietest text (legal, tertiary)."
   @spec ink_whisper() :: String.t()
   def ink_whisper, do: @ink_whisper
+
+  @doc """
+  The dark counterpart of a neutral token (`:canvas`, `:surface`, `:ink`, …),
+  used by the dark-mode stylesheet.
+  """
+  @spec dark(atom()) :: String.t()
+  def dark(key), do: Map.fetch!(@dark, key)
 
   @doc "Platform font stack; no web font, so opening an email fetches nothing."
   @spec font_family() :: String.t()

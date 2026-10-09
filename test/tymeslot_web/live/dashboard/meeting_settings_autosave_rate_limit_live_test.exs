@@ -59,4 +59,31 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsAutosaveRateLimitLiveTest do
       assert html =~ "Too many changes - saving shortly…"
     end
   end
+
+  describe "Create rate-limit feedback" do
+    test "says so, creates nothing and stays on the create form when the write bucket is exhausted",
+         %{conn: conn, user: user} do
+      # The create submit shares the manual write bucket: 60 per 30 minutes.
+      for _i <- 1..60 do
+        assert :ok = RateLimiter.check_meeting_type_write_rate_limit(user.id)
+      end
+
+      assert {:error, :rate_limited, message} =
+               RateLimiter.check_meeting_type_write_rate_limit(user.id)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+      view |> element("button", "Add Meeting Type") |> render_click()
+
+      view
+      |> form("form[phx-submit='create_meeting_type']", %{
+        "meeting_type" => %{"name" => "Too Many", "duration" => "30"}
+      })
+      |> render_submit()
+
+      refute Enum.any?(MeetingTypes.get_all_meeting_types(user.id), &(&1.name == "Too Many"))
+      assert has_element?(view, "#app-flash-group", message)
+      assert has_element?(view, "form[phx-submit='create_meeting_type']")
+      assert has_element?(view, "#meeting-type-form-tabs-tab-booking[disabled]")
+    end
+  end
 end

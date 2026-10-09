@@ -9,8 +9,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
   each mutating event; this module owns the rate-limit guard, the
   serialise-and-persist step, and the resulting `:save_status` transitions.
 
-  Creating a new meeting type is a no-op here — there is no record yet, so the
-  explicit "Create Meeting Type" submit still owns persistence.
+  Creating a new meeting type is a no-op here: there is no record yet, so the
+  explicit "Create meeting type" submit (`MeetingTypeForm.Creation`) owns
+  that first save, after which the form is in edit mode.
 
   ## Save-status atoms
 
@@ -19,11 +20,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
   | `:saved`      | "All changes saved"                         | Persist succeeded.                                        |
   | `:unsaved`    | "Unsaved changes"                           | Form is valid but in-flight (e.g. invalid-form pre-save). |
   | `:incomplete` | "Complete the form to save"                 | A required companion field is not yet set (video          |
-  |               |                                             | provider or target calendar absent, or price not yet      |
-  |               |                                             | entered when payment is required). Not a failure — the    |
-  |               |                                             | form is legitimately in progress.                         |
-  | `:throttled`  | "Too many changes — saving shortly…"        | Rate limit hit. A retry is automatically scheduled.       |
-  | `:error`      | "Couldn't save changes"                     | Unexpected persistence failure (changeset or context).    |
+  |               |                                             | provider or target calendar absent, or no price entered   |
+  |               |                                             | yet when payment is required). Not a failure: the form    |
+  |               |                                             | is legitimately in progress.                              |
+  | `:throttled`  | "Too many changes - saving shortly…"        | Rate limit hit. A retry is automatically scheduled.       |
+  | `:error`      | "Couldn't save changes"                     | The save was refused. Either the organiser's own input    |
+  |               |                                             | (an entered price below the currency minimum, shown       |
+  |               |                                             | beside the field and not logged), or an unexpected        |
+  |               |                                             | persistence failure (changeset or context, logged).       |
   """
 
   use TymeslotWeb, :html
@@ -76,18 +80,30 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
   # per-field validators that already drive inline display.
   #
   # Companion-field-not-yet-set errors (:video_integration_required,
-  # :target_calendar_required) and a price_cents-required changeset error when
-  # payment has just been enabled are expected incomplete states — the form is
+  # :target_calendar_required) and a price_cents error while no price has been
+  # entered after enabling payment are expected incomplete states: the form is
   # legitimately in progress and no alarming error indicator should show.
   #
-  # Genuine persistence failures (unexpected changeset errors, unknown context
-  # errors) are logged and shown as :error.
+  # An entered price the changeset refuses is shown as :error with its message
+  # beside the price input, and is not logged: it is the organiser's input,
+  # not a fault. Genuine persistence failures (unexpected changeset errors,
+  # unknown context errors) are logged and shown as :error.
+  #
+  # A participant limit the host is still typing is not part of the save
+  # (`Submission` keeps the stored one), so its error and the "unsaved"
+  # state outlive a save of the other fields.
   defp apply_result({:ok, updated}, socket) do
+    pending_limit? =
+      Submission.pending_group_limit_invalid?(
+        socket.assigns.group_bookings_enabled,
+        socket.assigns.max_participants
+      )
+
     socket
     |> assign(:type, updated)
     |> follow_dropped_venues(updated)
-    |> assign(:form_errors, %{})
-    |> assign(:save_status, :saved)
+    |> assign(:form_errors, pending_limit_errors(socket.assigns.form_errors, pending_limit?))
+    |> assign(:save_status, if(pending_limit?, do: :unsaved, else: :saved))
   end
 
   defp apply_result({:error, {:invalid_form, _errors}}, socket) do
@@ -102,36 +118,40 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
     assign(socket, :save_status, :incomplete)
   end
 
-  # Changeset failure where price_cents is the only missing required field:
-  # payment was just toggled on but the user hasn't entered a price yet.
-  # Treat as :incomplete (guidance) so the "Couldn't save" indicator doesn't
-  # fire before they've had a chance to fill in the price.
+  # Changeset failure where price_cents is the only failing field and no
+  # price has been entered yet: payment was just toggled on. Treat as
+  # :incomplete (guidance) so the "Couldn't save" indicator doesn't fire
+  # before they've had a chance to fill in the price. A price that has been
+  # entered but is refused (below the currency minimum, say) is a real error
+  # and shows beside the price input like any other.
   defp apply_result({:error, %Ecto.Changeset{} = changeset}, socket)
        when socket.assigns.payment_required == true do
-    errors = FormHelpers.format_changeset_errors(changeset)
+    errors = Helpers.changeset_form_errors(changeset)
 
-    if Map.keys(errors) == [:price_cents] do
-      assign(socket, :save_status, :incomplete)
-    else
-      Logger.warning("Autosave changeset failure",
-        user_id: socket.assigns.current_user.id,
-        meeting_type_id: socket.assigns.type.id
-      )
+    cond do
+      Map.keys(errors) != [:price_cents] ->
+        log_changeset_failure(socket)
 
-      socket
-      |> assign(:form_errors, errors)
-      |> assign(:save_status, :error)
+        socket
+        |> assign(:form_errors, errors)
+        |> assign(:save_status, :error)
+
+      price_blank?(socket.assigns.payment_price) ->
+        assign(socket, :save_status, :incomplete)
+
+      # The organiser's own input was refused, not a fault worth logging.
+      true ->
+        socket
+        |> assign(:form_errors, errors)
+        |> assign(:save_status, :error)
     end
   end
 
   defp apply_result({:error, %Ecto.Changeset{} = changeset}, socket) do
-    Logger.warning("Autosave changeset failure",
-      user_id: socket.assigns.current_user.id,
-      meeting_type_id: socket.assigns.type.id
-    )
+    log_changeset_failure(socket)
 
     socket
-    |> assign(:form_errors, FormHelpers.format_changeset_errors(changeset))
+    |> assign(:form_errors, Helpers.changeset_form_errors(changeset))
     |> assign(:save_status, :error)
   end
 
@@ -146,6 +166,21 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
     |> assign(:form_errors, FormHelpers.format_context_error(reason))
     |> assign(:save_status, :error)
   end
+
+  defp log_changeset_failure(socket) do
+    Logger.warning("Autosave changeset failure",
+      user_id: socket.assigns.current_user.id,
+      meeting_type_id: socket.assigns.type.id
+    )
+  end
+
+  defp price_blank?(price) when is_binary(price), do: String.trim(price) == ""
+  defp price_blank?(_price), do: true
+
+  defp pending_limit_errors(form_errors, true = _pending_limit?),
+    do: Map.take(form_errors, [:max_participants])
+
+  defp pending_limit_errors(_form_errors, _pending_limit?), do: %{}
 
   # A save can go through without venues the form still listed, when they
   # were deleted elsewhere meanwhile (see `Submission.persist/4`). The form

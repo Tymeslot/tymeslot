@@ -139,6 +139,58 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
     end
   end
 
+  describe "cancelling a delete" do
+    test "keeps the event when the confirmation is cancelled", %{
+      conn: conn,
+      integration: integration
+    } do
+      event = insert_event(integration)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+      lv |> element("button[phx-click='request_delete_event']") |> render_click()
+
+      assert has_element?(lv, "#confirm-delete-event-modal")
+
+      lv |> element("#confirm-delete-event-modal button", "Cancel") |> render_click()
+
+      refute has_element?(lv, "#confirm-delete-event-modal")
+      assert has_element?(lv, "[id^='event-#{event.id}-']")
+      html = render(lv)
+      assert html =~ "Quarterly Planning"
+      refute html =~ "Event deleted."
+
+      assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
+      assert row.sync_state == "synced"
+    end
+
+    test "keeps a series when the recurring confirmation is cancelled", %{
+      conn: conn,
+      user: user
+    } do
+      google = insert(:calendar_integration, user: user, provider: "google")
+      first = insert_event(google, google_occurrence("series-1", "T100000Z", ~T[10:00:00]))
+      second = insert_event(google, google_occurrence("series-1", "T140000Z", ~T[14:00:00]))
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      lv |> element("[id^='event-#{first.id}-']") |> render_click()
+      lv |> element("button[phx-click='request_delete_event']") |> render_click()
+
+      assert has_element?(lv, ~s(#confirm-delete-event-modal [phx-value-scope="series"]))
+
+      lv |> element("#confirm-delete-event-modal button", "Cancel") |> render_click()
+
+      refute has_element?(lv, "#confirm-delete-event-modal")
+      assert has_element?(lv, "[id^='event-#{first.id}-']")
+      assert has_element?(lv, "[id^='event-#{second.id}-']")
+      refute render(lv) =~ "deleted."
+      assert {:ok, _first_row} = ProviderCalendarEventQueries.get_by_uid(google.id, first.uid)
+      assert {:ok, _second_row} = ProviderCalendarEventQueries.get_by_uid(google.id, second.uid)
+    end
+  end
+
   describe "deleting an occurrence of a Google series" do
     setup %{user: user} do
       google = insert(:calendar_integration, user: user, provider: "google")

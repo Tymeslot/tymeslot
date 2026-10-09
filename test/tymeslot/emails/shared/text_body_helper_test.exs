@@ -44,4 +44,25 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelperTest do
       assert text =~ "Die Adresse wird nach der Buchung mit Ihnen abgestimmt."
     end
   end
+
+  describe "format_meeting_details/2 next-day end" do
+    test "names the end when the meeting runs past midnight" do
+      start = ~U[2026-01-15 23:00:00Z]
+
+      text =
+        TextBodyHelper.format_meeting_details(details(%{start_time: start, duration: 120}), "en")
+
+      assert text =~ "Time: 11:00 PM UTC (2 hours), ends 01:00 AM on Fri 16 Jan"
+    end
+
+    test "says nothing for a meeting ending the same day" do
+      text =
+        TextBodyHelper.format_meeting_details(
+          details(%{start_time: ~U[2026-01-15 23:00:00Z], duration: 30}),
+          "en"
+        )
+
+      refute text =~ "ends"
+    end
+  end
 end

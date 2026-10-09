@@ -17,7 +17,12 @@ defmodule Tymeslot.Scheduling.SharedAvailabilityTest do
 
   # No buffer, no notice, a long window: these tests are about who is free, not
   # about the policy clipping slots.
-  @open_policy %{buffer_minutes: 0, min_advance_hours: 0, max_advance_booking_days: 365}
+  @open_policy %{
+    buffer_before_minutes: 0,
+    buffer_after_minutes: 0,
+    min_advance_hours: 0,
+    max_advance_booking_days: 365
+  }
 
   defp insert_bookable_guest(username, opts \\ []) do
     %{user: user, profile: profile} =
@@ -147,8 +152,20 @@ defmodule Tymeslot.Scheduling.SharedAvailabilityTest do
     end
   end
 
+  describe "meeting_type_allowed?/1" do
+    test "takes a type that allows guests" do
+      assert SharedAvailability.meeting_type_allowed?(%{allow_guests: true, max_participants: 1})
+    end
+
+    test "refuses a type without guests, a group type and no type at all" do
+      refute SharedAvailability.meeting_type_allowed?(%{allow_guests: false, max_participants: 1})
+      refute SharedAvailability.meeting_type_allowed?(%{allow_guests: true, max_participants: 5})
+      refute SharedAvailability.meeting_type_allowed?(nil)
+    end
+  end
+
   describe "strictest_policy/2" do
-    test "takes the largest buffer and notice and the shortest window" do
+    test "takes each largest buffer and notice and the shortest window" do
       host = host()
       %{profile: profile} = insert_bookable_guest("michael")
 
@@ -156,18 +173,34 @@ defmodule Tymeslot.Scheduling.SharedAvailabilityTest do
         from(s in AvailabilityScheduleSchema,
           where: s.profile_id == ^profile.id
         ),
-        set: [buffer_minutes: 30, min_advance_hours: 1, advance_booking_days: 14]
+        set: [
+          buffer_before_minutes: 30,
+          buffer_after_minutes: 5,
+          min_advance_hours: 1,
+          advance_booking_days: 14
+        ]
       )
 
       {:ok, guests} = SharedAvailability.resolve(["michael"], host.id)
-      host_config = %{buffer_minutes: 10, min_advance_hours: 24, max_advance_booking_days: 90}
 
-      assert %{buffer_minutes: 30, min_advance_hours: 24, max_advance_booking_days: 14} =
-               SharedAvailability.strictest_policy(host_config, guests)
+      host_config = %{
+        buffer_before_minutes: 10,
+        buffer_after_minutes: 15,
+        min_advance_hours: 24,
+        max_advance_booking_days: 90
+      }
+
+      # The buffers are compared one by one: the guest's before, the host's after.
+      assert %{
+               buffer_before_minutes: 30,
+               buffer_after_minutes: 15,
+               min_advance_hours: 24,
+               max_advance_booking_days: 14
+             } = SharedAvailability.strictest_policy(host_config, guests)
     end
 
     test "leaves the config untouched without guests" do
-      config = %{buffer_minutes: 10}
+      config = %{buffer_before_minutes: 10}
       assert SharedAvailability.strictest_policy(config, []) == config
     end
   end

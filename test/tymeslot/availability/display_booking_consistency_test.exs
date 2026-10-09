@@ -26,7 +26,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
   import Tymeslot.AvailabilityTestHelpers
 
   alias Ecto.Changeset
-  alias Tymeslot.Availability.{Offer, TimeSlots}
+  alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Bookings.Create
   alias Tymeslot.CalendarMock
   alias Tymeslot.Meetings.MeetingSchema
@@ -397,7 +397,11 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
         create_always_bookable_profile(timezone: timezone, profile: %{max_bookings_per_day: 1})
 
       schedule
-      |> Changeset.change(buffer_minutes: 30, min_advance_hours: 48)
+      |> Changeset.change(
+        buffer_before_minutes: 30,
+        buffer_after_minutes: 30,
+        min_advance_hours: 48
+      )
       |> Repo.update!()
 
       meeting_type =
@@ -574,17 +578,5 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
       |> Stream.iterate(&Date.add(&1, 1))
       |> Enum.find(&(Date.day_of_week(&1) == day_of_week))
     end
-  end
-
-  # The times the booking page offers, through its own pipeline.
-  defp offered(profile, date, duration, opts \\ []) do
-    request = %{
-      profile: profile,
-      user_timezone: Keyword.get(opts, :timezone, profile.timezone),
-      meeting_type: Keyword.get(opts, :meeting_type)
-    }
-
-    {:ok, slots} = Offer.slots_for_date(request, Date.to_iso8601(date), duration)
-    slots
   end
 end

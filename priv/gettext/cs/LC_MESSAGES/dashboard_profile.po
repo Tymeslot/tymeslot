@@ -36,11 +36,6 @@ msgstr "Profilový obrázek byl aktualizován."
 msgid "Basic Information"
 msgstr "Základní informace"
 
-#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Cancel"
-msgstr "Zrušit"
-
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a unique username for your personal booking page."
@@ -116,11 +111,6 @@ msgstr "Zpracování…"
 msgid "Profile Picture"
 msgstr "Profilový obrázek"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Profile Settings"
-msgstr "Nastavení profilu"
-
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
@@ -181,11 +171,6 @@ msgstr "Nahrávání…"
 #, elixir-autogen, elixir-format
 msgid "Username updated! Your booking page: %{url}"
 msgstr "Uživatelské jméno bylo změněno. Vaše rezervační stránka: %{url}"
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
-#, elixir-autogen, elixir-format
-msgid "Your Custom URL"
-msgstr "Vaše vlastní URL"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
@@ -284,3 +269,8 @@ msgstr "Toto uživatelské jméno je již obsazené"
 #, elixir-autogen, elixir-format
 msgid "This username is reserved"
 msgstr "Toto uživatelské jméno je vyhrazené"
+
+#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete avatar"
+msgstr "Smazat profilový obrázek"

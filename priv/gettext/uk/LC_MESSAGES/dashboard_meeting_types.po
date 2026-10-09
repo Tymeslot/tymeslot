@@ -12,8 +12,6 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100 != 11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
 
 #: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
-#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
-#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
 #: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
@@ -106,11 +104,6 @@ msgstr "Редагувати"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex
 #, elixir-autogen, elixir-format
-msgid "Meeting Types"
-msgstr "Типи зустрічей"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex
-#, elixir-autogen, elixir-format
 msgid "No meeting types configured yet"
 msgstr "Ще не налаштовано жодного типу зустрічі"
 
@@ -129,7 +122,6 @@ msgstr "Змінити доступність для %{name}"
 msgid "Are you sure you want to delete the meeting type \"%{name}\"?"
 msgstr "Ви впевнені, що хочете видалити тип зустрічі «%{name}»?"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Booking Limits"
@@ -150,30 +142,10 @@ msgstr "Ліміт бронювань скасовано"
 msgid "Booking limit updated to %{limit} bookings"
 msgstr "Ліміт бронювань оновлено: %{limit}"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Maximum number of bookings you accept across all meeting types. Days at their cap disappear from your booking page. Leave a field empty for no limit."
 msgstr "Максимальна кількість бронювань, які ви приймаєте за всіма типами зустрічей. Дні, що досягли ліміту, зникають з вашої сторінки бронювання. Залиште поле порожнім, щоб не встановлювати ліміт."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "No limit"
-msgstr "Без обмежень"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "Per day"
-msgstr "На день"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "Per month"
-msgstr "На місяць"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "Per week"
-msgstr "На тиждень"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
@@ -261,11 +233,6 @@ msgstr "Місце збережено"
 
 #: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
 #, elixir-autogen, elixir-format
-msgid "Locations"
-msgstr "Місця"
-
-#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
-#, elixir-autogen, elixir-format
 msgid "Locations reordered"
 msgstr "Порядок місць збережено"
 
@@ -331,3 +298,43 @@ msgstr "Цього місця більше не існує"
 #, elixir-autogen, elixir-format
 msgid "A place you meet people, such as an office or a studio. Offer it on any in-person meeting type, and bookers see its name and address when they book."
 msgstr "Місце, де ви зустрічаєтеся з людьми, наприклад офіс чи студія. Пропонуйте його в будь-якому типі особистої зустрічі, і ті, хто бронює, побачать його назву та адресу під час бронювання."
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} is the only location of these group meeting types, whose address must be fixed in advance. Give them another location before deleting it:"
+msgstr "%{name} є єдиним місцем цих типів групових зустрічей, адреса яких має бути визначена заздалегідь. Перш ніж видалити його, призначте їм інше місце:"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "This location is the only one of a group meeting type, so it cannot be deleted"
+msgstr "Це місце є єдиним для типу групової зустрічі, тому його не можна видалити"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Group · up to %{count}"
+msgstr "Група · до %{count}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Group bookings are not included in your current plan, so this meeting type is taking no new bookings. Existing bookings are unaffected. Upgrade, or set the participant limit to 1, to take bookings again."
+msgstr "Групові бронювання не входять до вашого поточного тарифу, тому цей тип зустрічі не приймає нових бронювань. Наявні бронювання залишаються без змін. Оновіть тариф або встановіть ліміт учасників 1, щоб знову приймати бронювання."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Paused"
+msgstr "Призупинено"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}"
+msgstr "Видалити %{name}"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete meeting type"
+msgstr "Видалити тип зустрічі"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Edit %{name}"
+msgstr "Редагувати %{name}"

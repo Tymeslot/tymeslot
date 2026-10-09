@@ -8,6 +8,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
   import Ecto.Query
   import Mox
 
+  alias Ecto.Adapters.SQL.Sandbox
   alias Oban.Job
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
@@ -20,6 +21,23 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
 
   setup :verify_on_exit!
   setup :start_health_check_server
+
+  describe "scheduled sweep failures" do
+    test "a failing sweep is reported and does not stop the process", %{health_check_pid: pid} do
+      # Leaving shared mode means the server holds no sandbox connection, so the
+      # sweep's first query raises an ownership error: a real failure inside
+      # the sweep without altering any production code.
+      Sandbox.mode(Repo, :manual)
+
+      ref = Process.monitor(pid)
+      send(pid, :scheduled_check)
+      state = :sys.get_state(pid)
+
+      assert Process.alive?(pid)
+      refute_received {:DOWN, ^ref, :process, ^pid, _reason}
+      assert state.check_timer
+    end
+  end
 
   describe "integration health monitoring" do
     test "marks integration as unhealthy after repeated failures" do

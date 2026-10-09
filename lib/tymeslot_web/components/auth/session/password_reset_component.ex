@@ -16,7 +16,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
   import TymeslotWeb.Shared.Auth.FormComponents
   import TymeslotWeb.Shared.Auth.ButtonComponents
   import TymeslotWeb.Shared.PasswordToggleButtonComponent
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   @doc """

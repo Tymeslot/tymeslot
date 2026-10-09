@@ -223,7 +223,13 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
     test "respects buffer time between meetings" do
       user = insert(:user)
       profile = insert(:profile, user: user)
-      insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 30)
+
+      insert(:availability_schedule,
+        profile: profile,
+        is_default: true,
+        buffer_before_minutes: 30,
+        buffer_after_minutes: 30
+      )
 
       {start_time1, end_time1} = build_meeting_times(1, 60)
 
@@ -268,100 +274,61 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
       {:ok, meeting3} = Scheduling.create_meeting_with_conflict_check(sufficient_buffer_attrs)
       assert meeting3.uid == "sufficient-buffer"
     end
-  end
 
-  describe "count_bookings/3" do
-    test "counts bookings for the organizer within the window" do
+    test "pads the new meeting by the schedule's before and after buffers separately" do
       user = insert(:user)
-      other_user = insert(:user)
-      now = DateTime.utc_now()
-      from = DateTime.add(now, -3600, :second)
-      to = DateTime.add(now, 3600, :second)
-      base = DateTime.truncate(DateTime.add(now, 1, :day), :second)
+      profile = insert(:profile, user: user)
 
-      insert_meeting_at(user.id, base)
-      insert_meeting_at(user.id, DateTime.add(base, 3600, :second))
-      insert_meeting_at(other_user.id, base)
+      insert(:availability_schedule,
+        profile: profile,
+        is_default: true,
+        buffer_before_minutes: 5,
+        buffer_after_minutes: 20
+      )
 
-      assert MeetingQueries.count_bookings(user.id, from, to) == 2
-      assert MeetingQueries.count_bookings(other_user.id, from, to) == 1
-    end
+      {start_time, end_time} = build_meeting_times(1, 60)
 
-    test "excludes bookings outside the date range" do
-      user = insert(:user)
-      now = DateTime.utc_now()
-      base = DateTime.truncate(DateTime.add(now, 1, :day), :second)
+      attrs = %{
+        uid: "existing",
+        title: "Existing",
+        start_time: start_time,
+        end_time: end_time,
+        organizer_name: "Test Organizer",
+        organizer_email: "organizer@example.com",
+        organizer_user_id: user.id,
+        attendee_name: "Test Attendee",
+        attendee_email: "attendee@example.com",
+        status: "confirmed"
+      }
 
-      insert_meeting_at(user.id, base)
+      {:ok, _existing} = Scheduling.create_meeting_with_conflict_check(attrs)
 
-      past_from = DateTime.add(now, -7200, :second)
-      past_to = DateTime.add(now, -3600, :second)
+      # Starts five minutes after the existing meeting ends: exactly the
+      # before-buffer, so it fits. The existing meeting's own after-buffer
+      # (20) is not re-applied.
+      later_start = DateTime.add(end_time, 5, :minute)
 
-      assert MeetingQueries.count_bookings(user.id, past_from, past_to) == 0
-    end
+      assert {:ok, _later} =
+               Scheduling.create_meeting_with_conflict_check(
+                 Map.merge(attrs, %{
+                   uid: "later",
+                   start_time: later_start,
+                   end_time: DateTime.add(later_start, 30, :minute)
+                 })
+               )
 
-    test "returns 0 when the user has no bookings" do
-      user = insert(:user)
-      now = DateTime.utc_now()
-      from = DateTime.add(now, -3600, :second)
-      to = DateTime.add(now, 3600, :second)
+      # Ends ten minutes before the existing meeting starts: inside the new
+      # meeting's 20-minute after-buffer.
+      earlier_end = DateTime.add(start_time, -10, :minute)
 
-      assert MeetingQueries.count_bookings(user.id, from, to) == 0
-    end
-  end
-
-  describe "count_by_utm_source/3" do
-    test "groups bookings by utm_source for the organizer" do
-      user = insert(:user)
-      now = DateTime.utc_now()
-      from = DateTime.add(now, -3600, :second)
-      to = DateTime.add(now, 3600, :second)
-      base = DateTime.truncate(DateTime.add(now, 1, :day), :second)
-
-      insert_meeting_at(user.id, base, utm_source: "linkedin")
-      insert_meeting_at(user.id, DateTime.add(base, 3600, :second), utm_source: "linkedin")
-      insert_meeting_at(user.id, DateTime.add(base, 7200, :second), utm_source: "twitter")
-
-      result = MeetingQueries.count_by_utm_source(user.id, from, to)
-
-      linkedin = Enum.find(result, &(&1.utm_source == "linkedin"))
-      twitter = Enum.find(result, &(&1.utm_source == "twitter"))
-
-      assert linkedin.bookings == 2
-      assert twitter.bookings == 1
-    end
-
-    test "does not return a row for nil utm_source (direct/unknown)" do
-      user = insert(:user)
-      now = DateTime.utc_now()
-      from = DateTime.add(now, -3600, :second)
-      to = DateTime.add(now, 3600, :second)
-      base = DateTime.truncate(DateTime.add(now, 1, :day), :second)
-
-      insert_meeting_at(user.id, base, utm_source: nil)
-      insert_meeting_at(user.id, DateTime.add(base, 3600, :second), utm_source: "linkedin")
-
-      result = MeetingQueries.count_by_utm_source(user.id, from, to)
-
-      assert length(result) == 1
-      assert hd(result).utm_source == "linkedin"
-    end
-
-    test "returns only rows for the given organizer" do
-      user = insert(:user)
-      other_user = insert(:user)
-      now = DateTime.utc_now()
-      from = DateTime.add(now, -3600, :second)
-      to = DateTime.add(now, 3600, :second)
-      base = DateTime.truncate(DateTime.add(now, 1, :day), :second)
-
-      insert_meeting_at(user.id, base, utm_source: "linkedin")
-      insert_meeting_at(other_user.id, base, utm_source: "twitter")
-
-      result = MeetingQueries.count_by_utm_source(user.id, from, to)
-
-      assert length(result) == 1
-      assert hd(result).utm_source == "linkedin"
+      assert {:error, :time_conflict} =
+               Scheduling.create_meeting_with_conflict_check(
+                 Map.merge(attrs, %{
+                   uid: "earlier",
+                   start_time: DateTime.add(earlier_end, -30, :minute),
+                   end_time: earlier_end
+                 })
+               )
     end
   end
 
@@ -465,7 +432,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
     )
   end
 
-  defp insert_meeting_at(organizer_id, start_time, extra \\ []) do
+  defp insert_meeting_at(organizer_id, start_time, extra) do
     attrs =
       [
         organizer_user_id: organizer_id,

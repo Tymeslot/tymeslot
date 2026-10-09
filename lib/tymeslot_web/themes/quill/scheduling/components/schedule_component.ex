@@ -10,9 +10,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Live.Scheduling.CalendarHelpers
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels
+  alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
@@ -174,13 +175,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                   <%!-- Header: title + compact timezone trigger --%>
                   <div class="schedule-card-header">
                     <div class="flex-1 min-w-0">
-                      <.section_header
-                        level={2}
-                        class="mb-1"
-                        title_class="section-header schedule-title"
-                      >
+                      <h1 class="section-header schedule-title">
                         {dgettext("booking", "Select a Date & Time")}
-                      </.section_header>
+                      </h1>
 
                       <%= if @organizer_profile do %>
                         <p class="schedule-advance-notice text-glass-primary">
@@ -202,6 +199,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                           )}
                         <% end %>
                       </p>
+
+                      <GroupSession.seat_move_notice
+                        from={assigns[:reschedule_seat_from]}
+                        timezone={@user_timezone}
+                        class="mt-2"
+                      />
                     </div>
 
                     <div class="schedule-timezone-area">

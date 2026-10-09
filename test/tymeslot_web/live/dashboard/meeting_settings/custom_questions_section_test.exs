@@ -463,13 +463,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
       |> element("##{list_id}")
       |> render_hook("reorder", %{"ids" => [id2, id1]})
 
-      html = render(view)
-
       # The hidden position inputs reflect the new order: id2 is now at index 0
       # and id1 at index 1, so data-index on the rendered <li> items reflects
       # the new positions. We assert via the data-index attribute on each <li>.
-      assert html =~ ~s(data-id="#{id2}" data-index="0")
-      assert html =~ ~s(data-id="#{id1}" data-index="1")
+      assert has_element?(view, ~s(##{list_id} li[data-id="#{id2}"][data-index="0"]))
+      assert has_element?(view, ~s(##{list_id} li[data-id="#{id1}"][data-index="1"]))
     end
 
     test "tampered reorder ids (duplicate / missing) are ignored", %{conn: conn, user: user} do
@@ -499,8 +497,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
       |> render_hook("reorder", %{"ids" => [id1, id1]})
 
       html = render(view)
-      assert html =~ ~s(data-id="#{id1}" data-index="0")
-      assert html =~ ~s(data-id="#{id2}" data-index="1")
+      assert has_element?(view, ~s(##{list_id} li[data-id="#{id1}"][data-index="0"]))
+      assert has_element?(view, ~s(##{list_id} li[data-id="#{id2}"][data-index="1"]))
       # The first question's list row appears exactly once — the tampered id
       # list did not duplicate it. (Counting the bare label "Alpha" is unsafe:
       # it also occurs in the row's label input value.)

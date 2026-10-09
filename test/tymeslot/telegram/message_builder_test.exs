@@ -82,4 +82,22 @@ defmodule Tymeslot.Telegram.MessageBuilderTest do
       assert msg =~ "Tymeslot"
     end
   end
+
+  describe "build_message/3 end on a later day" do
+    test "a same-day meeting shows one date and both times" do
+      assert MessageBuilder.build_message("meeting.created", @meeting, @timezone) =~
+               "Tue 10 Mar 2026, 14:00–14:30"
+    end
+
+    test "a meeting ending the next day shows the end with its own day" do
+      meeting = %{
+        @meeting
+        | start_time: ~U[2026-03-10 23:30:00Z],
+          end_time: ~U[2026-03-11 00:30:00Z]
+      }
+
+      assert MessageBuilder.build_message("meeting.created", meeting, @timezone) =~
+               "Tue 10 Mar 2026, 23:30 – Wed 11 Mar 00:30"
+    end
+  end
 end

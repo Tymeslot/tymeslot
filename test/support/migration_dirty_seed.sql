@@ -540,6 +540,23 @@ INSERT INTO profiles (user_id, timezone, buffer_minutes, advance_booking_days, m
 SELECT id, 'America/New_York', NULL, NULL, NULL, NOW(), NOW() FROM users WHERE email = 'seed-user-3@example.com';
 
 -- ============================================================================
+-- PROFILE WITH AN OUT-OF-RANGE BUFFER
+-- ============================================================================
+--
+-- profiles.buffer_minutes never had a range constraint, so a self-hosted
+-- database can hold a value no form would accept.
+-- 20260811180804_create_availability_schedules copies it onto the profile's
+-- default schedule unchanged, and split_availability_schedule_buffers has to
+-- clamp it into 0..120 before it adds the range constraints, or that migration
+-- fails on this row. Seeded before the weekly section so the profile also gets
+-- availability rows like every other one.
+INSERT INTO users (email, password_hash, verified_at, inserted_at, updated_at)
+VALUES ('seed-user-4@example.com', '$2b$12$K4fE6xkGz0qYkN2wQpYDOeG0G0G0G0G0G0G0G0G0G0G0G0G0G0', NOW(), NOW(), NOW());
+
+INSERT INTO profiles (user_id, timezone, buffer_minutes, advance_booking_days, min_advance_hours, inserted_at, updated_at)
+SELECT id, 'UTC', 500, 90, 3, NOW(), NOW() FROM users WHERE email = 'seed-user-4@example.com';
+
+-- ============================================================================
 -- WEEKLY AVAILABILITY, BREAKS AND OVERRIDES
 -- ============================================================================
 --

@@ -51,16 +51,16 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.PaymentsTable do
               </td>
               <td class="p-2 text-token-sm">{format_status(p.status)}</td>
               <td class="p-2 text-right">
-                <button
+                <.action_button
                   :if={MeetingPayments.refundable?(p) and not connect_account_deleted?(@account)}
-                  type="button"
-                  class="text-token-sm text-turquoise-700 font-semibold underline"
+                  variant={:secondary}
+                  size={:sm}
                   phx-click="open_refund_modal"
                   phx-value-id={p.id}
                   phx-target={@myself}
                 >
                   {dgettext("dashboard_payments", "Refund")}
-                </button>
+                </.action_button>
               </td>
             </tr>
           </tbody>
@@ -74,9 +74,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.PaymentsTable do
   defp connect_account_deleted?(_account), do: false
 
   defp format_payment_date(inserted_at) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-    month = LocaleFormat.format_month_name(inserted_at.month, locale, :short)
-    "#{inserted_at.day} #{month} #{inserted_at.year}"
+    LocaleFormat.format_short_date_with_year(inserted_at, Gettext.get_locale(TymeslotWeb.Gettext))
   end
 
   defp format_status("paid"), do: dgettext("dashboard_payments", "Paid")

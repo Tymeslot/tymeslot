@@ -26,6 +26,20 @@ defmodule Tymeslot.Security.RateLimiter.Calendar do
 
   def check_event_edit(user_id), do: Helpers.invalid_user_id("calendar event edit", user_id)
 
+  @spec check_ics_import(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_ics_import(user_id) when is_integer(user_id) and user_id > 0 do
+    Helpers.check_with_logging(
+      "calendar_ics_import:#{user_id}",
+      5,
+      3_600_000,
+      "calendar ics import",
+      to_string(user_id)
+    )
+  end
+
+  def check_ics_import(user_id), do: Helpers.invalid_user_id("calendar ics import", user_id)
+
   @spec check_event_move(integer() | any()) ::
           :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
   def check_event_move(user_id) when is_integer(user_id) and user_id > 0 do

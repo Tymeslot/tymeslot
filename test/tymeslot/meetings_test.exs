@@ -309,6 +309,35 @@ defmodule Tymeslot.MeetingsTest do
       assert length(page.items) == 1
     end
 
+    test "lists upcoming meetings soonest first, across pages" do
+      %{user: user} = create_user_with_profile()
+      later = insert_meeting_for_user(user, %{start_offset: 3 * 86_400})
+      soonest = insert_meeting_for_user(user, %{start_offset: 86_400})
+      middle = insert_meeting_for_user(user, %{start_offset: 2 * 86_400})
+
+      assert {:ok, page1} =
+               Meetings.list_user_meetings_by_filter(user.id, "upcoming", per_page: 2)
+
+      assert Enum.map(page1.items, & &1.id) == [soonest.id, middle.id]
+
+      assert {:ok, page2} =
+               Meetings.list_user_meetings_by_filter(user.id, "upcoming",
+                 per_page: 2,
+                 after: page1.next_cursor
+               )
+
+      assert Enum.map(page2.items, & &1.id) == [later.id]
+    end
+
+    test "lists past meetings most recent first" do
+      %{user: user} = create_user_with_profile()
+      older = insert_meeting_for_user(user, %{start_offset: -3 * 86_400})
+      recent = insert_meeting_for_user(user, %{start_offset: -86_400})
+
+      assert {:ok, page} = Meetings.list_user_meetings_by_filter(user.id, "past")
+      assert Enum.map(page.items, & &1.id) == [recent.id, older.id]
+    end
+
     test "returns error for invalid cursor" do
       %{user: user} = create_user_with_profile()
 

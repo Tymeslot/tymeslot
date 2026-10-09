@@ -89,7 +89,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
 
     #{MeetingComponents.custom_answers_section(meeting)}
 
-    #{explanation_section(discrepancy)}
+    #{explanation_section(discrepancy, meeting)}
 
     #{Buttons.action_button(@intent, dgettext("emails_booking", "View Meeting Details"), view_url, full_width: true)}
 
@@ -106,9 +106,19 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
       intent: @intent,
       eyebrow: dgettext("emails_booking", "Action required"),
       stage_title: alert_title,
-      stage_subtitle:
-        dgettext("emails_booking", "Please review and update the booking in Tymeslot.")
+      stage_subtitle: stage_subtitle(meeting)
     )
+  end
+
+  # A group meeting cannot be moved as a whole (`Tymeslot.Bookings.Reschedule`
+  # refuses it), so its copy never asks the organiser to update or reschedule
+  # the booking. What they can do instead: move the event back in their own
+  # calendar, send every participant a reschedule request, or cancel the
+  # meeting from the dashboard.
+  defp stage_subtitle(meeting) do
+    if Meeting.group?(meeting),
+      do: dgettext("emails_booking", "Please review the group meeting in Tymeslot."),
+      else: dgettext("emails_booking", "Please review and update the booking in Tymeslot.")
   end
 
   defp alert_parts(:deleted, meeting) do
@@ -130,16 +140,28 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
 
     {
       :alert,
-      dgettext(
-        "emails_booking",
-        "The meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original booking - please review the details and update or cancel it accordingly.",
-        title: title
-      ),
+      modified_alert_message(meeting, title),
       dgettext("emails_booking", "Meeting Rescheduled in External Calendar")
     }
   end
 
-  defp explanation_section(:deleted) do
+  defp modified_alert_message(meeting, title) do
+    if Meeting.group?(meeting) do
+      dgettext(
+        "emails_booking",
+        "The group meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original time for every participant, and a group meeting cannot be moved for everyone at once.",
+        title: title
+      )
+    else
+      dgettext(
+        "emails_booking",
+        "The meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original booking - please review the details and update or cancel it accordingly.",
+        title: title
+      )
+    end
+  end
+
+  defp explanation_section(:deleted, _meeting) do
     """
     <mj-section padding="12px 0 0 0">
       <mj-column>
@@ -151,16 +173,30 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
     """
   end
 
-  defp explanation_section(:modified) do
+  defp explanation_section(:modified, meeting) do
     """
     <mj-section padding="12px 0 0 0">
       <mj-column>
         <mj-text font-size="15px" color="#{Styles.ink_soft()}" line-height="1.6">
-          #{dgettext("emails_booking", "This meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above. If the new time is final, please update or reschedule the booking in Tymeslot so the attendee receives updated details.")}
+          #{modified_explanation_html(meeting)}
         </mj-text>
       </mj-column>
     </mj-section>
     """
+  end
+
+  defp modified_explanation_html(meeting) do
+    if Meeting.group?(meeting) do
+      dgettext(
+        "emails_booking",
+        "This group meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above, and its participants still expect it. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
+      )
+    else
+      dgettext(
+        "emails_booking",
+        "This meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above. If the new time is final, please update or reschedule the booking in Tymeslot so the attendee receives updated details."
+      )
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -208,13 +244,27 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
     #{dgettext("emails_booking", "Duration:")} #{Formatting.format_duration(meeting.duration, locale)}
     #{dgettext("emails_booking", "Location:")} #{meeting.location || dgettext("emails_booking", "Not specified")}
     #{custom_answers}
-    #{dgettext("emails_booking", "If the new time is final, please update or reschedule the booking in Tymeslot so the attendee receives updated details.")}
+    #{modified_next_steps_text(meeting)}
 
     #{dgettext("emails_booking", "View meeting:")}
     #{view_url}
 
     #{dgettext("emails_booking", "This notification was triggered automatically when a change was detected in your external calendar.")}
     """
+  end
+
+  defp modified_next_steps_text(meeting) do
+    if Meeting.group?(meeting) do
+      dgettext(
+        "emails_booking",
+        "A group meeting cannot be moved for everyone at once. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
+      )
+    else
+      dgettext(
+        "emails_booking",
+        "If the new time is final, please update or reschedule the booking in Tymeslot so the attendee receives updated details."
+      )
+    end
   end
 
   # ---------------------------------------------------------------------------

@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
   alias TymeslotWeb.Themes.Quill.Scheduling.Wrapper
   alias TymeslotWeb.Themes.Shared.PathHandlers
 
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
   import TymeslotWeb.Themes.Shared.Components.MeetingDetails, only: [meeting_detail_rows: 1]
 
   attr :theme_customization, :map, required: true

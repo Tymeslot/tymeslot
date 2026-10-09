@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   import Phoenix.HTML, only: [raw: 1]
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
 
   attr :provider, :string, required: true
   attr :show_calendar_selection, :boolean, required: true
@@ -20,7 +20,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
   attr :form_values, :map, required: true
   attr :saving, :boolean, required: true
   attr :target, :any, required: true
-  attr :myself, :any, required: true
   attr :suggested_name, :string, required: true
   attr :name_placeholder, :string, default: nil
   attr :url_placeholder, :string, default: nil
@@ -68,10 +67,11 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
             <.error_banner error={error} />
           <% end %>
 
-          <div class="flex justify-between items-center pt-4 border-t border-turquoise-200/30">
-            <UIComponents.secondary_button target={@target} />
-            <UIComponents.form_submit_button saving={@saving} />
-          </div>
+          <UIComponents.form_actions
+            target={@target}
+            saving={@saving}
+            class="border-turquoise-200/30"
+          />
         </form>
       <% else %>
         <form
@@ -163,14 +163,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
             <.error_banner error={error} />
           <% end %>
 
-          <div class="flex justify-between items-center pt-4 border-t border-turquoise-200/30">
-            <UIComponents.secondary_button target={@target} />
-            <UIComponents.form_submit_button
-              saving={@saving}
-              text={dgettext("dashboard_calendar_providers", "Discover calendars")}
-              saving_text={dgettext("dashboard_calendar_providers", "Discovering...")}
-            />
-          </div>
+          <UIComponents.form_actions
+            target={@target}
+            saving={@saving}
+            class="border-turquoise-200/30"
+            submit_text={dgettext("dashboard_calendar_providers", "Discover calendars")}
+            saving_text={dgettext("dashboard_calendar_providers", "Discovering...")}
+          />
         </form>
       <% end %>
     </div>
@@ -246,7 +245,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
     ~H"""
     <div class="space-y-3">
       <h4 class="label">{dgettext("dashboard_calendar_providers", "Select calendars to sync:")}</h4>
-      <div class="brand-card p-4">
+      <div class="brand-card">
         <%= if @discovered_calendars == [] do %>
           <p class="text-sm text-tymeslot-500">
             {dgettext(
@@ -257,7 +256,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
         <% else %>
           <%= for calendar <- @discovered_calendars do %>
             <% calendar_path = calendar.path %>
-            <div class="flex items-center space-x-3 p-3 rounded-lg hover:bg-white/20 transition-colors">
+            <div class="flex items-center space-x-3 p-3 rounded-token-lg hover:bg-white/20 transition-colors">
               <.input
                 type="checkbox"
                 name="selected_calendars[]"
@@ -291,21 +290,15 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
     ~H"""
     <div class="form-field-wrapper">
       <div class="flex items-center gap-1.5 mb-2">
-        <span class="label mb-0!">{dgettext("dashboard_calendar_providers", "Server URL")}</span>
+        <span class="label mb-0">{dgettext("dashboard_calendar_providers", "Server URL")}</span>
         <span class="text-tymeslot-400 shrink-0">
-          <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fill-rule="evenodd"
-              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-              clip-rule="evenodd"
-            />
-          </svg>
+          <.icon name="hero-information-circle-mini" class="w-3.5 h-3.5" />
         </span>
       </div>
       <input type="hidden" name={@name} value={@value} />
       <div class="relative" title={@tooltip}>
         <div class="absolute left-4 top-1/2 -translate-y-1/2 text-tymeslot-300 pointer-events-none">
-          <TymeslotWeb.Components.CoreComponents.Icons.icon name="hero-lock-closed" class="w-5 h-5" />
+          <.icon name="hero-lock-closed" class="w-5 h-5" />
         </div>
         <input
           type="text"
@@ -381,13 +374,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
     ~H"""
     <div class="brand-card p-3 bg-red-50/50 border border-red-200/50">
       <p class="text-sm text-red-600 flex items-center">
-        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-          <path
-            fill-rule="evenodd"
-            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-            clip-rule="evenodd"
-          />
-        </svg>
+        <.icon name="hero-exclamation-circle-mini" class="w-4 h-4 mr-2" />
         {@error}
       </p>
     </div>

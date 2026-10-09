@@ -161,6 +161,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
       nil ->
         {:error, "Missing meeting URL in room data"}
 
+      # Nobody to name: the room's own link is the participant's link.
+      base_url when participant_name in [nil, ""] ->
+        {:ok, base_url}
+
       base_url ->
         encoded_name = URI.encode_www_form(participant_name)
 

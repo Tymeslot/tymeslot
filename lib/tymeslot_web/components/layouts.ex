@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Layouts do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Profiles

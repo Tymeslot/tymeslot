@@ -30,6 +30,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
 
   alias Tymeslot.Availability.Offer
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias TymeslotWeb.Components.MeetingUtils
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
 
   @doc """
@@ -82,7 +83,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
       {:ok, slots} ->
         socket =
           socket
-          |> assign(:available_slots, slots)
+          # One seat-aware shape on the socket whatever the domain returned
+          # (plain times for a solo type, seat counts for a group one).
+          |> assign(:available_slots, MeetingUtils.normalize_slot_list(slots))
           |> assign(:slot_interval_minutes, AvailabilityHelpers.slot_interval_minutes(socket))
           |> assign(:duration_minutes, duration_to_fetch)
           |> assign(:loading_slots, false)

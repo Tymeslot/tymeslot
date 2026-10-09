@@ -13,13 +13,14 @@ defmodule Tymeslot.Scheduling.SharedAvailability do
   availability schedule (breaks and date overrides included), the busy times
   of their connected calendars and the bookings they host in Tymeslot
   themselves. The scheduling policy is the strictest of everyone involved:
-  the largest buffer and minimum notice, and the shortest advance booking
-  window.
+  the largest buffers before and after a meeting and minimum notice, and the
+  shortest advance booking window.
 
   Only users with a bookable public page can be named, and only on a meeting
-  type that allows guests: a link then reveals nothing about a user that their
-  own booking page does not already show, and the host decides per meeting
-  type whether guests may join at all.
+  type that allows guests and is not a group type (`meeting_type_allowed?/1`):
+  a link then reveals nothing about a user that their own booking page does
+  not already show, and the host decides per meeting type whether guests may
+  join at all.
 
   Nothing about the link is stored on the booking. When it is rescheduled, the
   users to check are recovered from its guests instead
@@ -122,6 +123,20 @@ defmodule Tymeslot.Scheduling.SharedAvailability do
 
     with {:ok, guests} <- result, do: {:ok, Enum.reverse(guests)}
   end
+
+  @doc """
+  Whether a booking of `meeting_type` can name other users. They join it as
+  guests, so the type has to allow guests. A group type cannot: its slots are
+  shared by every participant, and a seat is booked without the named users'
+  availability being checked.
+  """
+  @spec meeting_type_allowed?(map() | nil) :: boolean()
+  def meeting_type_allowed?(%{allow_guests: true, max_participants: max})
+      when is_integer(max) and max > 1,
+      do: false
+
+  def meeting_type_allowed?(%{allow_guests: true}), do: true
+  def meeting_type_allowed?(_meeting_type), do: false
 
   @doc """
   Recovers the users a booking's availability is checked against from its
@@ -229,31 +244,29 @@ defmodule Tymeslot.Scheduling.SharedAvailability do
 
   @doc """
   Tightens the scheduling policy in `config` to the strictest of the host's
-  and every guest's: the largest buffer and minimum notice, the shortest
-  advance booking window. Returns `config` unchanged without guests.
+  and every guest's: the largest buffer before and after a meeting and minimum
+  notice, the shortest advance booking window. Returns `config` unchanged without guests.
   """
   @spec strictest_policy(map(), [Guest.t()]) :: map()
   def strictest_policy(config, []), do: config
 
   def strictest_policy(config, guests) do
     host = Calculate.config_policy(config)
-    guest_policies = Enum.map(guests, &guest_policy/1)
+    policies = [host | Enum.map(guests, &guest_policy/1)]
+    strictest = fn key, pick -> policies |> Enum.map(&Map.fetch!(&1, key)) |> pick.() end
 
     Map.merge(config, %{
-      buffer_minutes:
-        Enum.max([host.buffer_minutes | Enum.map(guest_policies, & &1.buffer_minutes)]),
-      min_advance_hours:
-        Enum.max([host.min_advance_hours | Enum.map(guest_policies, & &1.min_advance_hours)]),
-      max_advance_booking_days:
-        Enum.min([
-          host.max_advance_booking_days | Enum.map(guest_policies, & &1.max_advance_booking_days)
-        ])
+      buffer_before_minutes: strictest.(:buffer_before_minutes, &Enum.max/1),
+      buffer_after_minutes: strictest.(:buffer_after_minutes, &Enum.max/1),
+      min_advance_hours: strictest.(:min_advance_hours, &Enum.max/1),
+      max_advance_booking_days: strictest.(:max_advance_booking_days, &Enum.min/1)
     })
   end
 
   defp guest_policy(%Guest{schedule: schedule}) do
     %{
-      buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
+      buffer_before_minutes: Schedules.policy(schedule, :buffer_before_minutes),
+      buffer_after_minutes: Schedules.policy(schedule, :buffer_after_minutes),
       min_advance_hours: Schedules.policy(schedule, :min_advance_hours),
       max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days)
     }
@@ -261,7 +274,7 @@ defmodule Tymeslot.Scheduling.SharedAvailability do
 
   @doc """
   Keeps only the slots of `host_slots` (the host's offer for `date`, as slot
-  strings in `user_timezone`) that every guest can attend.
+  labels or as starts, in `user_timezone`) that every guest can attend.
 
   `policy_config` must already carry the strictest policy
   (`strictest_policy/2`). Each guest's own offer is computed by the same engine
@@ -269,14 +282,14 @@ defmodule Tymeslot.Scheduling.SharedAvailability do
   guest's working hours happen to align with the host's slot interval.
   """
   @spec filter_slots(
-          [String.t()],
+          [String.t() | DateTime.t()],
           Date.t(),
           pos_integer(),
           String.t(),
           [Guest.t()],
           map(),
           events_fetcher()
-        ) :: {:ok, [String.t()]} | {:error, term()}
+        ) :: {:ok, [String.t() | DateTime.t()]} | {:error, term()}
   def filter_slots(host_slots, _date, _duration, _user_timezone, guests, _policy_config, _fetcher)
       when host_slots == [] or guests == [],
       do: {:ok, host_slots}
@@ -436,7 +449,8 @@ defmodule Tymeslot.Scheduling.SharedAvailability do
 
     Map.merge(guest.schedule_data, %{
       schedule_id: guest.schedule && guest.schedule.id,
-      buffer_minutes: policy.buffer_minutes,
+      buffer_before_minutes: policy.buffer_before_minutes,
+      buffer_after_minutes: policy.buffer_after_minutes,
       min_advance_hours: policy.min_advance_hours,
       max_advance_booking_days: policy.max_advance_booking_days,
       slot_interval_minutes: 1,
@@ -467,5 +481,12 @@ defmodule Tymeslot.Scheduling.SharedAvailability do
     {DateTime.add(start_of_day, -1, :day), DateTime.add(start_of_day, 2, :day)}
   end
 
-  defp slot_time(slot), do: TimeSlots.parse_time_slot(slot)
+  # A slot as the hour and minute it starts at in the booker's time zone,
+  # whether it arrives as a label or as the start itself.
+  defp slot_time(%DateTime{hour: hour, minute: minute}), do: {hour, minute}
+
+  defp slot_time(label) when is_binary(label) do
+    %Time{hour: hour, minute: minute} = TimeSlots.parse_time_slot(label)
+    {hour, minute}
+  end
 end

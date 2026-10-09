@@ -26,6 +26,13 @@ defmodule TymeslotWeb.Live.Scheduling.SharedAvailabilityGuestsTest do
     insert(:meeting_type, user: host, name: "Team call", allow_guests: true)
     insert(:meeting_type, user: host, name: "Solo call", allow_guests: false)
 
+    insert(:meeting_type,
+      user: host,
+      name: "Group workshop",
+      allow_guests: true,
+      max_participants: 5
+    )
+
     michael = insert(:user, name: "Michael Example")
     insert(:profile, user: michael, username: "michael", full_name: "Michael Example")
     insert(:calendar_integration, user: michael)
@@ -40,6 +47,7 @@ defmodule TymeslotWeb.Live.Scheduling.SharedAvailabilityGuestsTest do
     assert html =~ "Additional participants: Michael Example"
     assert html =~ "Team call"
     refute html =~ "Solo call"
+    refute html =~ "Group workshop"
   end
 
   test "shows an error for a participant who cannot be booked", %{conn: conn} do

@@ -31,7 +31,8 @@ defmodule TymeslotWeb.Live.Scheduling.SharedAvailabilityGuests do
   Resolves the `with` parameter against the organiser on the socket.
 
   Also narrows `:meeting_types` to the types that allow guests, since the
-  users named in the link join the booking as guests.
+  users named in the link join the booking as guests, and that are not group
+  types, whose shared slots the other users' availability does not apply to.
   """
   @spec assign_from_params(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def assign_from_params(socket, params) do
@@ -75,8 +76,8 @@ defmodule TymeslotWeb.Live.Scheduling.SharedAvailabilityGuests do
   end
 
   @doc """
-  Refuses a meeting type that does not allow guests once users are named in
-  the link. A direct link to such a type (`/marco/intro?with=michael`) would
+  Refuses a meeting type that does not allow guests, or a group type, once
+  users are named in the link. A direct link to such a type (`/marco/intro?with=michael`) would
   otherwise offer times the booking could never add the other users to.
   """
   @spec check_meeting_type(Phoenix.LiveView.Socket.t(), map() | nil) ::
@@ -126,8 +127,8 @@ defmodule TymeslotWeb.Live.Scheduling.SharedAvailabilityGuests do
   reschedule uid, and the users the link names, without which the page it
   lands on would offer the host's times alone.
   """
-  @spec path_with_query(String.t(), Phoenix.LiveView.Socket.t() | map(), map()) :: String.t()
-  def path_with_query(path, socket_or_assigns, query \\ %{}) do
+  @spec link_path(String.t(), Phoenix.LiveView.Socket.t() | map(), map()) :: String.t()
+  def link_path(path, socket_or_assigns, query \\ %{}) do
     case put_query_param(query, socket_or_assigns) do
       empty when empty == %{} -> path
       query -> "#{path}?#{URI.encode_query(query)}"
@@ -166,6 +167,5 @@ defmodule TymeslotWeb.Live.Scheduling.SharedAvailabilityGuests do
     )
   end
 
-  defp allows_guests?(%{allow_guests: true}), do: true
-  defp allows_guests?(_meeting_type), do: false
+  defp allows_guests?(meeting_type), do: SharedAvailability.meeting_type_allowed?(meeting_type)
 end

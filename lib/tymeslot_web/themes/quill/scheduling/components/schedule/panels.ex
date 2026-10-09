@@ -9,11 +9,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
   alias Tymeslot.Timezones
   alias TymeslotWeb.Components.MeetingUtils
   alias TymeslotWeb.Live.Scheduling.CalendarHelpers
+  alias TymeslotWeb.Themes.Shared.Components.SeatBadge
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.SlotGrouping
   alias TymeslotWeb.Themes.Shared.TimezoneHelpers
 
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
   import TymeslotWeb.Components.FlagHelpers
 
   # ========== TIMEZONE SELECTOR ==========
@@ -200,13 +201,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
                           {period}
                         </div>
                         <div class="time-slots-grid">
-                          <%= for slot_value <- slots do %>
-                            <.time_slot_button
-                              phx-click="select_time"
-                              phx-target={@target}
-                              phx-value-time={slot_value}
-                              slot={%{start_time: CalendarHelpers.parse_slot_time(slot_value)}}
-                              selected={@selected_time == slot_value}
+                          <%= for slot <- slots do %>
+                            <.slot_button
+                              slot={slot}
+                              selected={@selected_time == slot.time}
+                              target={@target}
+                              loading={@loading_slots}
                             />
                           <% end %>
                         </div>
@@ -262,13 +262,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
                             role="group"
                             aria-label={SlotGrouping.hour_label(hour)}
                           >
-                            <%= for slot_value <- hour_slots do %>
-                              <.time_slot_button
-                                phx-click="select_time"
-                                phx-target={@target}
-                                phx-value-time={slot_value}
-                                slot={%{start_time: CalendarHelpers.parse_slot_time(slot_value)}}
-                                selected={@selected_time == slot_value}
+                            <%= for slot <- hour_slots do %>
+                              <.slot_button
+                                slot={slot}
+                                selected={@selected_time == slot.time}
+                                target={@target}
+                                loading={@loading_slots}
                               />
                             <% end %>
                           </div>
@@ -279,20 +278,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
               </div>
             <% else %>
               <%= if !@calendar_error do %>
-                <.empty_state
-                  message={dgettext("booking", "This date is fully booked")}
-                  secondary_message={dgettext("booking", "Please select another date")}
-                >
-                  <:icon>
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                    >
-                    </path>
-                  </:icon>
-                </.empty_state>
+                <.fully_booked_notice />
               <% end %>
             <% end %>
           <% end %>
@@ -305,6 +291,67 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
         <% end %>
       </div>
     </div>
+    """
+  end
+
+  # Shown when the selected date has no free slots left. Drawn in Quill's own
+  # light-on-glass colours, so it stays local rather than using the dashboard's
+  # empty state.
+  defp fully_booked_notice(assigns) do
+    ~H"""
+    <div class="h-full flex items-center justify-center">
+      <div class="text-center p-4">
+        <svg
+          class="w-12 h-12 mx-auto mb-2 text-tymeslot-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+          >
+          </path>
+        </svg>
+        <p class="text-sm font-medium" style="color: rgba(255,255,255,0.8);">
+          {dgettext("booking", "This date is fully booked")}
+        </p>
+        <p class="text-xs mt-1" style="color: rgba(255,255,255,0.6);">
+          {dgettext("booking", "Please select another date")}
+        </p>
+      </div>
+    </div>
+    """
+  end
+
+  # One booking slot, rendered identically whether it arrived on the flat grid
+  # or nested under an hour. Takes the enriched slot map straight from
+  # `GroupSlots`, so the seat badge cannot be dropped from one of the two
+  # call sites.
+  attr :slot, :map, required: true
+  attr :selected, :boolean, required: true
+  attr :target, :any, required: true
+  attr :loading, :boolean, default: false
+
+  defp slot_button(assigns) do
+    ~H"""
+    <.time_slot_button
+      phx-click="select_time"
+      phx-target={@target}
+      phx-value-time={@slot.time}
+      slot={
+        %{
+          start_time: CalendarHelpers.parse_slot_time(@slot.time),
+          seats_left: @slot[:seats_left],
+          capacity: @slot[:capacity]
+        }
+      }
+      selected={@selected}
+      disabled={@loading}
+    />
     """
   end
 
@@ -334,13 +381,17 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
     <button
       class={[
         "time-slot-button",
+        @slot[:seats_left] && "has-seats",
         @selected && "time-slot-button--selected"
       ]}
       data-testid="time-slot"
       disabled={@disabled}
       {@rest}
     >
-      {LocalizationHelpers.format_time_by_locale(@slot.start_time)}
+      <span>
+        {LocalizationHelpers.format_time_by_locale(@slot.start_time)}
+      </span>
+      <SeatBadge.seat_badge seats_left={@slot[:seats_left]} capacity={@slot[:capacity]} />
     </button>
     """
   end

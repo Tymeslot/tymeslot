@@ -27,11 +27,6 @@ msgstr "Wystąpił błąd. Odśwież stronę i spróbuj ponownie."
 msgid "Background Design"
 msgstr "Wygląd tła"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Choose Your Style"
-msgstr "Wybierz swój styl"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a visual style that matches your professional identity."
@@ -67,11 +62,6 @@ msgstr "Podłącz kalendarz, aby zobaczyć podgląd"
 #, elixir-autogen, elixir-format
 msgid "Current"
 msgstr "Bieżący"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Current Style"
-msgstr "Bieżący styl"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/color_picker.ex
@@ -132,21 +122,11 @@ msgstr "Podgląd na żywo"
 msgid "MP4 or WebM. Max 20MB."
 msgstr "MP4 lub WebM. Maks. 20 MB."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "More Styles Coming Soon"
-msgstr "Wkrótce więcej stylów"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Or upload your own"
 msgstr "Możesz też przesłać własny plik"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Our design team is busy crafting new themes to help you express your unique professional style."
-msgstr "Nasz zespół projektowy pracuje nad nowymi motywami, które pomogą ci wyrazić swój niepowtarzalny styl zawodowy."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
 #, elixir-autogen, elixir-format
@@ -188,11 +168,6 @@ msgstr "Wybierz główne kolory interfejsu swojej strony rezerwacji."
 #, elixir-autogen, elixir-format
 msgid "Solid Color"
 msgstr "Kolor jednolity"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex
-#, elixir-autogen, elixir-format
-msgid "Theme Customization"
-msgstr "Dostosowanie motywu"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_preview.ex
@@ -355,3 +330,13 @@ msgstr "Niezapisane zmiany"
 #, elixir-autogen, elixir-format
 msgid "Complete the form to save"
 msgstr "Uzupełnij formularz, aby zapisać"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#, elixir-autogen, elixir-format
+msgid "Background type"
+msgstr "Rodzaj tła"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Current style"
+msgstr "Bieżący styl"

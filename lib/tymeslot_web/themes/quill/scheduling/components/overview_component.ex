@@ -12,8 +12,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
   alias Tymeslot.Profiles
   alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
+  alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
   import TymeslotWeb.Components.FlagHelpers
 
   @impl Phoenix.LiveComponent
@@ -41,6 +42,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
   attr :icon, :string, required: true
   attr :selected, :boolean, default: false
   attr :requires_approval, :boolean, default: false
+  attr :meeting_type, :any, default: nil
   attr :target, :any, default: nil
 
   defp duration_card(assigns) do
@@ -67,6 +69,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
           <p class="duration-card-description">
             {@description}
           </p>
+          <GroupSession.hint meeting_type={@meeting_type} />
         </div>
         <%= if @icon != "none" do %>
           <%= if String.starts_with?(@icon, "hero-") do %>
@@ -103,7 +106,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                         class="overview-avatar rounded-full object-cover shadow-2xl border-4 border-white/50 transition-all duration-300 hover:scale-105 cursor-pointer"
                       />
                       <div class="overview-success-badge absolute rounded-full flex items-center justify-center shadow-lg">
-                        <span class="overview-success-badge-emoji text-white">✅</span>
+                        <%!-- An inline icon, not an emoji: an emoji paints only where
+                             the visitor's system has a colour emoji font, and as an
+                             empty box everywhere else. --%>
+                        <.icon name="hero-check-mini" class="overview-success-badge-icon" />
                       </div>
                     </div>
                   </div>
@@ -163,6 +169,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                             icon={meeting_type.icon || "hero-clock"}
                             selected={assigns[:selected_duration] == slug}
                             requires_approval={Approval.required?(meeting_type)}
+                            meeting_type={meeting_type}
                             target={@myself}
                           />
                         <% end %>

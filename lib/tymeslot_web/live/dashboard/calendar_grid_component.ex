@@ -18,14 +18,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   - `:profile`      — optional, only its `:timezone` field is read.
 
   Additional assigns forwarded from the parent dashboard LiveView:
-  - `:shared_data`               — map of shared cross-component data, defaults to `%{}`.
-  - `:integration_status`        — current calendar integration status.
-  - `:saving`                    — boolean, whether the parent is persisting something.
-  - `:client_ip`                 — client IP string, used for audit / rate-limit context.
-  - `:user_agent`                — client user-agent string.
-  - `:live_action`               — current route live action atom.
-  - `:params`                    — current URL params map.
-  - `:custom_questions_allowed`  — boolean feature flag.
+  - `:shared_data`: map of shared cross-component data, defaults to `%{}`.
+  - `:integration_status`: current calendar integration status.
+  - `:saving`: boolean, whether the parent is persisting something.
+  - `:client_ip`: client IP string, used for audit / rate-limit context.
+  - `:user_agent`: client user-agent string.
+  - `:live_action`: current route live action atom.
+  - `:params`: current URL params map.
+  - `:custom_questions_allowed`: boolean feature flag.
+  - `:group_bookings_allowed`: boolean feature flag.
 
   Parent-to-component messages travel through `send_update/2` with an `:action` key.
   These bypass attr validation and are dispatched in the `update/2` clauses below:
@@ -34,7 +35,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   `:event_create_failed`, `:event_moved`, `:series_moved`, `:series_move_failed`,
   `:event_deleted`,
   `:event_delete_failed`,
-  `:events_updated`, `:video_link_updated`, `:integration_synced`.
+  `:events_updated`, `:video_link_updated`, `:integration_synced`,
+  `:ics_import_progress`, `:ics_import_finished`.
 
   ## Internal state
 
@@ -51,6 +53,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.BookingDetail
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.DragDrop
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.IcsImport
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEditVideo
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.MiniMonth
@@ -85,6 +88,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     "update_event_recurrence" => :handle_update_event_recurrence
   }
 
+  # The `.ics` import modal's events, each delegated to `IcsImport`.
+  @ics_import_events %{
+    "show_ics_import" => :handle_show,
+    "close_ics_import" => :handle_close,
+    "validate_ics_import" => :handle_validate,
+    "select_ics_import_calendar" => :handle_select_calendar,
+    "start_ics_import" => :handle_start
+  }
+
   attr :current_user, :map, required: true, doc: "Owns calendar preferences and integrations."
 
   attr :profile, :any,
@@ -93,7 +105,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
-    {:ok, assign(socket, InitialState.defaults())}
+    {:ok,
+     socket
+     |> assign(InitialState.defaults())
+     |> allow_upload(IcsImport.upload_name(), IcsImport.upload_options())}
   end
 
   # --- Update action handlers (delegated to UpdateHandlers) ---
@@ -125,6 +140,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   @impl Phoenix.LiveComponent
   def update(%{action: :ad_hoc_meeting_failed} = assigns, socket),
     do: UpdateHandlers.handle_ad_hoc_meeting_failed(assigns, socket)
+
+  @impl Phoenix.LiveComponent
+  def update(%{action: :ics_import_progress} = assigns, socket),
+    do: IcsImport.handle_progress(assigns, socket)
+
+  @impl Phoenix.LiveComponent
+  def update(%{action: :ics_import_finished} = assigns, socket),
+    do: IcsImport.handle_finished(assigns, socket)
 
   @impl Phoenix.LiveComponent
   def update(%{action: :event_created} = assigns, socket),
@@ -168,7 +191,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
 
   @impl Phoenix.LiveComponent
   def update(%{action: :refresh_guest_summaries}, socket),
-    do: {:ok, assign_guest_rsvp_summaries(socket)}
+    do: {:ok, assign_meeting_overlays(socket)}
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
@@ -178,7 +201,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
 
     socket =
       if just_initialized do
-        assign_guest_rsvp_summaries(socket)
+        assign_meeting_overlays(socket)
       else
         socket
       end
@@ -186,9 +209,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     {:ok, socket}
   end
 
-  # Loads the `meeting_uid => RSVP summary` map for the calendar owner so
-  # Tymeslot-created event blocks can show a guest indicator.
-  defp assign_guest_rsvp_summaries(socket) do
+  # Loads the uid-keyed RSVP summaries behind the guest indicator the grid
+  # overlays onto Tymeslot-created event blocks. The group meetings shown
+  # locked are loaded with the events instead (`DataLoading.load_events/1`),
+  # so that set follows the visible range.
+  defp assign_meeting_overlays(socket) do
     case socket.assigns[:current_user] do
       %{id: user_id} ->
         assign(socket, :guest_rsvp_summaries, Meetings.guest_rsvp_summaries_for_user(user_id))
@@ -203,6 +228,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   @impl Phoenix.LiveComponent
   def handle_event(event, params, socket) when is_map_key(@inline_edit_events, event),
     do: apply(InlineEdit, Map.fetch!(@inline_edit_events, event), [params, socket])
+
+  @impl Phoenix.LiveComponent
+  def handle_event(event, params, socket) when is_map_key(@ics_import_events, event),
+    do: apply(IcsImport, Map.fetch!(@ics_import_events, event), [params, socket])
 
   @impl Phoenix.LiveComponent
   def handle_event("update_edit_video", params, socket),
@@ -292,6 +321,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   @impl Phoenix.LiveComponent
   def handle_event("event_dropped", params, socket),
     do: DragDrop.handle_event_dropped(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("locked_event_drag", params, socket),
+    do: DragDrop.handle_locked_event_drag(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("event_resized", params, socket),
@@ -504,6 +537,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   @impl Phoenix.LiveComponent
   def handle_event("cancel_pending_notification", params, socket),
     do: NotificationFlows.handle_cancel_pending_notification(params, socket)
+
+  # --- Async results ---
+
+  @impl Phoenix.LiveComponent
+  def handle_async(:ics_import_plan, result, socket),
+    do: IcsImport.handle_planned(result, socket)
 
   # --- Render ---
 

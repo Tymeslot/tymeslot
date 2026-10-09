@@ -167,6 +167,18 @@
   --time-slot-min-height: 40px;
   --time-slots-max-height: clamp(280px, 50vh, 420px);
 
+  /* Seat availability (group bookings) */
+  --seat-green: var(--theme-accent);
+  --seat-amber: var(--theme-warning);
+  --seat-red: var(--theme-danger);
+  --seat-green-bg: rgba(16, 185, 129, 0.15);
+  --seat-amber-bg: rgba(251, 191, 36, 0.15);
+  --seat-red-bg: rgba(239, 68, 68, 0.15);
+  /* A selected slot is marked by its primary border; the badge becomes a
+     solid primary pill in the palette's own contrast pair to match it. */
+  --seat-selected: var(--theme-on-primary);
+  --seat-selected-bg: var(--theme-primary-solid);
+
   /* Icon sizes */
   --icon-xs: 16px;
   --icon-sm: 20px;

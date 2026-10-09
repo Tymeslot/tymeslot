@@ -24,6 +24,7 @@ defmodule Tymeslot.Bookings.OrchestratorIdorTest do
   import Tymeslot.MeetingTestHelpers
 
   alias Tymeslot.Bookings.Orchestrator
+  alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.TestMocks
 
   setup :verify_on_exit!
@@ -155,6 +156,69 @@ defmodule Tymeslot.Bookings.OrchestratorIdorTest do
 
       assert {:ok, updated} = Orchestrator.submit_booking(params, opts)
       assert updated.id == owner_meeting.id
+    end
+  end
+
+  # A seat reschedule link authorises moving that seat, but the new time is
+  # picked from whichever organiser's page the link was opened on. Opening it
+  # on another organiser's page (a hand-edited URL) must not move the seat.
+  describe "submit_booking/2 with a seat token: organiser of the page" do
+    setup do
+      TestMocks.setup_calendar_mocks()
+      TestMocks.stub_no_calendar_events()
+      %{user: owner, profile: owner_profile} = create_user_with_profile()
+      _schedule = open_schedule_for(owner_profile)
+      meeting_type = insert(:meeting_type, user: owner, max_participants: 2, duration_minutes: 30)
+      start_time = DateTime.new!(Date.add(Date.utc_today(), 2), ~T[10:00:00], "Etc/UTC")
+
+      meeting =
+        insert(:group_meeting,
+          organizer_user_id: owner.id,
+          meeting_type_id: meeting_type.id,
+          start_time: start_time,
+          end_time: DateTime.add(start_time, 30, :minute),
+          duration: 30
+        )
+
+      participant = insert(:participant, meeting: meeting, email: "seat@example.com")
+
+      params = %{
+        form_data: %{"name" => "Seat", "email" => "seat@example.com"},
+        meeting_params: %{
+          date: Date.to_string(Date.add(Date.utc_today(), 3)),
+          time: "10:00",
+          duration: "30min",
+          user_timezone: "Etc/UTC"
+        }
+      }
+
+      %{owner: owner, meeting: meeting, participant: participant, params: params}
+    end
+
+    test "refuses the move from another organiser's page", ctx do
+      attacker = insert(:user)
+      insert(:profile, user: attacker)
+
+      opts = [
+        reschedule_seat_token: ctx.participant.management_token,
+        organizer_user_id: attacker.id
+      ]
+
+      assert {:error, :meeting_not_found} = Orchestrator.submit_booking(ctx.params, opts)
+
+      assert [%{id: id}] = ParticipantQueries.list_live_for_meeting(ctx.meeting.id)
+      assert id == ctx.participant.id
+    end
+
+    test "moves the seat from its own organiser's page", ctx do
+      opts = [
+        reschedule_seat_token: ctx.participant.management_token,
+        organizer_user_id: ctx.owner.id
+      ]
+
+      assert {:ok, new_meeting} = Orchestrator.submit_booking(ctx.params, opts)
+      assert new_meeting.id != ctx.meeting.id
+      assert ParticipantQueries.list_live_for_meeting(ctx.meeting.id) == []
     end
   end
 end

@@ -1,31 +1,15 @@
 defmodule TymeslotWeb.Dashboard.MeetingSettings.Helpers do
   @moduledoc """
-  Helper functions for the ServiceSettingsComponent.
-  Contains business logic, state management, and utility functions.
+  Helper functions shared by the meeting settings components.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Ecto.Changeset
   alias Phoenix.Component
   alias Tymeslot.Profiles
-  alias Tymeslot.Utils.FormHelpers
+  alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
-  alias TymeslotWeb.Live.Shared.Flash
-
-  @doc """
-  Resets the form state to initial values.
-  """
-  @spec reset_form_state(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  def reset_form_state(socket) do
-    socket
-    |> Component.assign(:show_add_form, false)
-    |> Component.assign(:editing_type, nil)
-    |> Component.assign(:show_edit_overlay, false)
-    |> Component.assign(:form_errors, %{})
-    |> Component.assign(:saving, false)
-    |> Component.assign(:selected_icon, "none")
-    |> Component.assign(:form_data, %{})
-  end
 
   @doc """
   Reloads the profile if necessary to ensure fresh data.
@@ -50,97 +34,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Helpers do
   end
 
   @doc """
-  Handles the result of saving a meeting type.
+  The meeting-type form's errors from a refused changeset, keyed by field
+  and translated through the `errors` domain like any other form error
+  (`Forms.translate_error/1`).
   """
-  @spec handle_meeting_type_save_result(
-          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t() | atom() | any()},
-          Phoenix.LiveView.Socket.t()
-        ) :: {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_meeting_type_save_result(result, socket) do
-    case result do
-      {:ok, _type} ->
-        send(self(), {:meeting_type_changed})
-
-        send(
-          self(),
-          {:flash,
-           {:info,
-            if(socket.assigns.editing_type,
-              do: dgettext("dashboard_meeting_form", "Meeting type updated"),
-              else: dgettext("dashboard_meeting_form", "Meeting type created")
-            )}}
-        )
-
-        {:noreply, reset_form_state(socket)}
-
-      {:error, :video_integration_required} ->
-        Flash.error(
-          dgettext("dashboard_meeting_form", "Please select a video provider for video meetings")
-        )
-
-        {:noreply,
-         socket
-         |> Component.assign(
-           :form_errors,
-           FormHelpers.format_context_error(:video_integration_required)
-         )
-         |> Component.assign(:saving, false)}
-
-      {:error, :invalid_duration} ->
-        Flash.error(dgettext("dashboard_meeting_form", "Duration must be a valid number"))
-
-        {:noreply,
-         socket
-         |> Component.assign(:form_errors, FormHelpers.format_context_error(:invalid_duration))
-         |> Component.assign(:saving, false)}
-
-      {:error, :invalid_price} ->
-        Flash.error(
-          dgettext("dashboard_meeting_form", "Enter a valid price for this meeting type")
-        )
-
-        {:noreply,
-         socket
-         |> Component.assign(:form_errors, FormHelpers.format_context_error(:invalid_price))
-         |> Component.assign(:saving, false)}
-
-      {:error, :insufficient_plan} ->
-        Flash.error(
-          dgettext(
-            "dashboard_meeting_form",
-            "Custom booking questions are available on Pro plans."
-          )
-        )
-
-        {:noreply, Component.assign(socket, :saving, false)}
-
-      {:error, :feature_access_checker_failed} ->
-        Flash.error(
-          dgettext(
-            "dashboard_meeting_form",
-            "Unable to verify subscription status. Please try again."
-          )
-        )
-
-        {:noreply, Component.assign(socket, :saving, false)}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        errors = FormHelpers.format_changeset_errors(changeset)
-
-        {:noreply,
-         socket
-         |> Component.assign(:form_errors, errors)
-         |> Component.assign(:saving, false)}
-
-      {:error, error} ->
-        Flash.error(dgettext("dashboard_meeting_form", "Failed to save meeting type"))
-
-        {:noreply,
-         socket
-         |> Component.assign(:form_errors, FormHelpers.format_context_error(error))
-         |> Component.assign(:saving, false)}
-    end
-  end
+  @spec changeset_form_errors(Changeset.t()) :: %{atom() => [String.t()]}
+  def changeset_form_errors(%Changeset{} = changeset),
+    do: Changeset.traverse_errors(changeset, &Forms.translate_error/1)
 
   @doc """
   Formats error messages that can be either strings or lists.

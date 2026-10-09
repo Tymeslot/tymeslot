@@ -8,6 +8,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
   more and the booker chooses, which the section says explicitly so the host
   can see what adding a second option does before they add it.
 
+  A group type offers exactly one location, so while group bookings are on
+  (`group_bookings_enabled`) the section says so and offers no "Add
+  location"; `add_location` refuses a stale or forged event the same way.
+  What that one location may be is checked by the editor
+  (`LocationEditorComponent`).
+
   Mutating actions push assigns directly into the parent `MeetingTypeForm`
   LiveComponent via `send_update/2`, the same single-hop round-trip
   `CustomQuestionsSection` uses so `render_click/1` observes the updated
@@ -20,39 +26,40 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
   alias Phoenix.LiveView
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Venues
-  alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
   alias TymeslotWeb.Helpers.LocationIcons
 
   @impl Phoenix.LiveComponent
-  def update(assigns, socket), do: {:ok, assign(socket, assigns)}
+  def update(assigns, socket) do
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign_new(:group_bookings_enabled, fn -> false end)
+     |> assign_new(:errors, fn -> [] end)}
+  end
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <section class="space-y-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <div class="flex items-center gap-2">
-            <CoreComponents.icon name="hero-map-pin" class="w-5 h-5 text-turquoise-500" />
-            <h3 class="text-token-base font-semibold text-tymeslot-800">
-              {dgettext("dashboard_meeting_form", "Location")}
-            </h3>
-          </div>
-          <p class="text-token-sm text-tymeslot-500 mt-0.5">
-            {location_hint(@locations)}
-          </p>
-        </div>
-        <CoreComponents.action_button
-          type="button"
-          variant={:secondary}
-          phx-click="add_location"
-          phx-target={@myself}
-          data-testid="add-location"
-        >
-          {dgettext("dashboard_meeting_form", "Add location")}
-        </CoreComponents.action_button>
-      </div>
+    <section id={"locations-section-#{@form_id}"} class="space-y-4">
+      <.subsection_header
+        icon="hero-map-pin"
+        title={dgettext("dashboard_meeting_form", "Location")}
+        description={location_hint(@locations, @group_bookings_enabled)}
+      >
+        <:actions>
+          <.action_button
+            :if={can_add?(@locations, @group_bookings_enabled)}
+            type="button"
+            variant={:secondary}
+            phx-click="add_location"
+            phx-target={@myself}
+            data-testid="add-location"
+          >
+            {dgettext("dashboard_meeting_form", "Add location")}
+          </.action_button>
+        </:actions>
+      </.subsection_header>
 
       <%!-- Reuses the questions list's sortable hook: it is generic over
            `[data-id]` children and pushes the same "reorder" event, so a
@@ -66,25 +73,21 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
         class="space-y-2"
       >
         <%= for {location, index} <- Enum.with_index(@locations) do %>
-          <li
-            class="card-glass flex items-center gap-3 px-4 py-3"
+          <.card
+            tag="li"
+            variant={:flat}
+            padding={:xs}
+            class="flex items-center gap-3"
             data-id={location.id}
             data-index={index}
             data-testid="location-row"
             draggable="true"
           >
             <span class="drag-handle cursor-grab active:cursor-grabbing text-tymeslot-400 shrink-0">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M4 8h16M4 16h16"
-                />
-              </svg>
+              <.icon name="hero-bars-2" class="w-4 h-4" />
             </span>
 
-            <CoreComponents.icon
+            <.icon
               name={LocationIcons.icon(location.kind)}
               class="w-5 h-5 text-turquoise-500 shrink-0"
             />
@@ -99,50 +102,54 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
             </div>
 
             <div class="flex items-center gap-1 shrink-0">
-              <CoreComponents.action_button
+              <.action_button
                 type="button"
                 variant={:secondary}
                 phx-click="edit_location"
                 phx-value-id={location.id}
                 phx-target={@myself}
-                class="py-1! px-2! text-token-xs"
+                size={:sm}
               >
                 {dgettext("dashboard_meeting_form", "Edit")}
-              </CoreComponents.action_button>
+              </.action_button>
               <%!-- A meeting type has to be held somewhere, so the last
                     location cannot be deleted; the host edits it instead. --%>
-              <CoreComponents.action_button
+              <.action_button
                 :if={length(@locations) > 1}
                 type="button"
-                variant={:danger}
+                variant={:danger_soft}
                 phx-click="delete_location"
                 phx-value-id={location.id}
                 phx-target={@myself}
-                class="py-1! px-2! text-token-xs"
+                size={:sm}
               >
                 {dgettext("dashboard_meeting_form", "Delete")}
-              </CoreComponents.action_button>
+              </.action_button>
             </div>
-          </li>
+          </.card>
         <% end %>
       </ul>
+
+      <p :for={error <- @errors} class="form-error">{error}</p>
     </section>
     """
   end
 
   @impl Phoenix.LiveComponent
   def handle_event("add_location", _params, socket) do
-    empty = %LocationOption{
-      id: UUID.generate(),
-      kind: "in_person",
-      position: length(socket.assigns.locations)
-    }
+    if can_add?(socket.assigns.locations, socket.assigns.group_bookings_enabled) do
+      empty = %LocationOption{
+        id: UUID.generate(),
+        kind: "in_person",
+        position: length(socket.assigns.locations)
+      }
 
-    LiveView.send_update(MeetingTypeForm,
-      id: socket.assigns.form_id,
-      editing_location: empty,
-      editing_location_mode: :add
-    )
+      LiveView.send_update(MeetingTypeForm,
+        id: socket.assigns.form_id,
+        editing_location: empty,
+        editing_location_mode: :add
+      )
+    end
 
     {:noreply, socket}
   end
@@ -213,6 +220,20 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
     |> Enum.with_index()
     |> Enum.map(fn {location, index} -> %{location | position: index} end)
   end
+
+  # A group type holds exactly one location: no second one, but a first one
+  # if the list is somehow empty.
+  defp can_add?(locations, group_bookings_enabled),
+    do: not group_bookings_enabled or locations == []
+
+  defp location_hint(_locations, true = _group_bookings_enabled) do
+    dgettext(
+      "dashboard_meeting_form",
+      "Where this meeting is held. Group bookings use one location, fixed in advance, so everyone in a slot meets in the same place."
+    )
+  end
+
+  defp location_hint(locations, _group_bookings_enabled), do: location_hint(locations)
 
   defp location_hint([_single]) do
     dgettext(

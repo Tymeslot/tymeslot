@@ -27,30 +27,30 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
 
   @spec sidebar(map()) :: Phoenix.LiveView.Rendered.t()
   def sidebar(assigns) do
-    assigns =
-      assign(assigns, :missing_integrations, missing_integrations(assigns.integration_status))
-
     ~H"""
     <%!-- Mobile Overlay --%>
     <div
       id="dashboard-sidebar-overlay"
       class="lg:hidden fixed inset-0 bg-black/50 z-30 dashboard-sidebar-overlay hidden"
-      phx-click={close_sidebar_js()}
+      phx-click={dismiss_sidebar_js()}
     >
     </div>
 
     <aside
       id="dashboard-sidebar"
       data-tour="sidebar-nav"
-      class="dashboard-sidebar lg:w-64 w-80 h-screen lg:h-full overflow-y-auto lg:shrink-0 lg:relative fixed top-0 left-0 z-40 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out"
+      phx-hook="SidebarEscape"
+      data-dismiss={dismiss_sidebar_js()}
+      class="dashboard-sidebar lg:w-64 w-80 h-screen lg:h-full overflow-y-auto overscroll-contain [scrollbar-width:thin] lg:shrink-0 lg:relative fixed top-0 left-0 z-40 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out"
     >
-      <div class="p-6">
+      <div class="p-6 lg:px-4 lg:pt-4">
         <%!-- Mobile Close Button --%>
         <div class="lg:hidden flex items-center justify-between mb-6">
-          <TymeslotWeb.Components.CoreComponents.logo mode={:full} img_class="h-12" />
+          <TymeslotWeb.Components.CoreComponents.Brand.logo mode={:full} img_class="h-12" />
           <button
-            class="dashboard-sidebar-close p-3 rounded-xl bg-tymeslot-50 border-2 border-tymeslot-100 hover:bg-red-50 hover:border-red-100 transition-all"
-            phx-click={close_sidebar_js()}
+            type="button"
+            class="dashboard-sidebar-close p-3 rounded-token-xl bg-tymeslot-50 border-2 border-tymeslot-100 hover:bg-red-50 hover:border-red-100 transition-all"
+            phx-click={dismiss_sidebar_js()}
             aria-label={dgettext("dashboard_common", "Close sidebar")}
           >
             <.icon name="hero-x-mark" class="w-6 h-6 text-tymeslot-700" />
@@ -58,19 +58,19 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
         </div>
 
         <%!-- Scheduling Link (Mobile and Desktop) --%>
-        <div class="mb-6 flex gap-2">
+        <div class="mb-6 lg:mb-4 flex gap-2">
           <.link
             :if={LinkAccessPolicy.can_link?(@profile, @integration_status)}
             href={LinkAccessPolicy.scheduling_path(@profile)}
             target="_blank"
-            class="dashboard-nav-link flex-1 flex items-center space-x-3 px-4 py-4 text-sm font-black rounded-2xl transition-all duration-300 bg-linear-to-br from-turquoise-600 to-cyan-600 text-white hover:text-white hover:translate-x-0 shadow-lg shadow-turquoise-500/30 hover:shadow-xl hover:shadow-turquoise-500/40 hover:from-turquoise-700 hover:to-cyan-700 group"
+            class="dashboard-nav-link flex-1 bg-linear-to-br from-turquoise-600 to-cyan-600 text-white hover:text-white hover:translate-x-0 shadow-lg shadow-turquoise-500/30 hover:shadow-xl hover:shadow-turquoise-500/40 hover:from-turquoise-700 hover:to-cyan-700 group"
           >
             <.icon name="hero-arrow-top-right-on-square" class="w-5 h-5 shrink-0 text-white" />
             <span class="text-white whitespace-nowrap">{dgettext("dashboard_common", "View Page")}</span>
           </.link>
           <div
             :if={!LinkAccessPolicy.can_link?(@profile, @integration_status)}
-            class="flex-1 flex items-center space-x-3 px-4 py-4 text-sm font-bold rounded-2xl bg-tymeslot-100 text-tymeslot-400 cursor-not-allowed opacity-60 border-2 border-tymeslot-200"
+            class="flex-1 flex items-center space-x-3 px-4 py-4 text-sm font-bold rounded-token-2xl bg-tymeslot-100 text-tymeslot-400 cursor-not-allowed opacity-60 border-2 border-tymeslot-200"
             title={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
           >
             <.icon name="hero-arrow-top-right-on-square" class="w-5 h-5 shrink-0" />
@@ -84,24 +84,30 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             phx-hook="CopyOnClick"
             data-copy-text={"#{TymeslotWeb.Endpoint.url()}#{LinkAccessPolicy.scheduling_path(@profile)}"}
             data-copy-feedback={dgettext("dashboard_common", "Scheduling link copied to clipboard!")}
-            class="dashboard-nav-link px-4 py-4 rounded-2xl transition-all duration-300 bg-white border-2 border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-400 hover:text-turquoise-700 hover:translate-x-0 shadow-sm hover:shadow-md group"
+            class="dashboard-nav-link border-2 border-tymeslot-100 hover:border-turquoise-400 hover:translate-x-0 shadow-sm hover:shadow-md group"
             title={dgettext("dashboard_common", "Copy link to clipboard")}
+            aria-label={dgettext("dashboard_common", "Copy link to clipboard")}
           >
             <.icon name="hero-clipboard" class="w-5 h-5" />
           </button>
+          <%!-- `aria-disabled` rather than `disabled`, so the control stays
+                focusable and its tooltip still explains why the link is
+                unavailable. The accessible name stays the action. --%>
           <button
             :if={!LinkAccessPolicy.can_link?(@profile, @integration_status)}
+            id="copy-scheduling-link-disabled"
             type="button"
-            disabled
-            class="px-3 py-3 rounded-lg bg-tymeslot-200 text-tymeslot-500 cursor-not-allowed opacity-60 relative"
+            aria-disabled="true"
+            class="px-4 py-4 rounded-token-2xl bg-tymeslot-100 text-tymeslot-400 border-2 border-tymeslot-200 cursor-not-allowed opacity-60"
             title={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
+            aria-label={dgettext("dashboard_common", "Copy link to clipboard")}
           >
             <.icon name="hero-clipboard" class="w-5 h-5" />
           </button>
         </div>
 
         <%!-- Navigation Links --%>
-        <nav class="space-y-3 mt-6">
+        <nav class="space-y-3 mt-6 lg:mt-4">
           <div>
             <div class="dashboard-nav-section-title">{dgettext("dashboard_common", "General")}</div>
             <div class="space-y-0">
@@ -143,11 +149,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 patch={~p"/dashboard/meeting-settings"}
                 current={@current_action}
                 action={:meeting_settings}
-                show_notification={not (@integration_status[:has_meeting_types] || false)}
-                notification_type="info"
-                notification_title={
-                  dgettext("dashboard_common", "Add a meeting type so guests have something to book")
-                }
+                setup_reminder={meeting_types_setup_reminder(@integration_status)}
               >
                 <.icon name="hero-squares-2x2" class="w-5 h-5" />
                 <span>{dgettext("dashboard_common", "Meeting Types")}</span>
@@ -198,9 +200,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 patch={~p"/dashboard/integrations"}
                 current={integrations_current(@current_action)}
                 action={:integrations}
-                show_notification={@missing_integrations != []}
-                notification_type="info"
-                notification_title={integration_setup_title(@missing_integrations)}
+                setup_reminder={integrations_setup_reminder(@integration_status)}
               >
                 <.icon name="hero-puzzle-piece" class="w-5 h-5" />
                 <span>{dgettext("dashboard_common", "Integrations")}</span>
@@ -282,10 +282,13 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
   # when either is still unconnected. Which of the two is outstanding has to
   # travel with the marker: once one is connected, a badge that only says
   # "something is missing" reads as if the connection never registered.
-  defp missing_integrations(status) do
-    for {kind, key} <- [calendar: :has_calendar, video: :has_video],
-        not Map.get(status, key, false),
-        do: kind
+  defp integrations_setup_reminder(status) do
+    missing =
+      for {kind, key} <- [calendar: :has_calendar, video: :has_video],
+          not Map.get(status, key, false),
+          do: kind
+
+    integration_setup_title(missing)
   end
 
   defp integration_setup_title([]), do: nil
@@ -299,10 +302,23 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
   defp integration_setup_title([:calendar, :video]),
     do: dgettext("dashboard_common", "Connect a calendar and a video provider to finish setup")
 
+  defp meeting_types_setup_reminder(%{has_meeting_types: true}), do: nil
+
+  defp meeting_types_setup_reminder(_status),
+    do: dgettext("dashboard_common", "Add a meeting type so guests have something to book")
+
   defp close_sidebar_js do
     %JS{}
     |> JS.remove_class("dashboard-sidebar-open", to: "#dashboard-sidebar")
     |> JS.add_class("hidden", to: "#dashboard-sidebar-overlay")
+    |> JS.set_attribute({"aria-expanded", "false"}, to: "#dashboard-sidebar-toggle")
+  end
+
+  # Dismissing the drawer (Escape, the close button, the backdrop) hands focus
+  # back to the menu toggle that opened it. Following a nav link does not: that
+  # navigates, and focus belongs to the new page.
+  defp dismiss_sidebar_js do
+    JS.focus(close_sidebar_js(), to: "#dashboard-sidebar-toggle")
   end
 
   # Private component for navigation links
@@ -310,9 +326,11 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
   attr :navigate, :string, default: nil
   attr :current, :atom, required: true
   attr :action, :atom, required: true
-  attr :show_notification, :boolean, default: false
-  attr :notification_type, :string, default: "critical"
-  attr :notification_title, :string, default: nil
+
+  attr :setup_reminder, :string,
+    default: nil,
+    doc: "Why the row carries a setup dot, or nil for no dot."
+
   attr :locked, :boolean, default: false
   attr :rest, :global
   slot :inner_block, required: true
@@ -324,36 +342,31 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
       patch={@patch}
       navigate={@navigate}
       phx-click={close_sidebar_js()}
+      aria-current={if @current == @action, do: "page"}
+      title={@setup_reminder}
       {@rest}
       class={[
-        "dashboard-nav-link flex items-center space-x-3 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200",
-        if(@current == @action,
-          do: "dashboard-nav-link--active",
-          else: ""
-        ),
-        if(@show_notification and @current != @action,
-          do: "dashboard-nav-link--needs-setup",
-          else: ""
-        ),
+        "dashboard-nav-link",
+        if(@current == @action, do: "dashboard-nav-link--active", else: ""),
         if(@locked, do: "opacity-75", else: "")
       ]}
     >
       {render_slot(@inner_block)}
-      <%!-- Notification Badge --%>
-      <div
-        :if={@show_notification}
-        class={[
-          "dashboard-nav-notification",
-          case @notification_type do
-            "warning" -> "dashboard-nav-notification--warning"
-            "info" -> "dashboard-nav-notification--info"
-            _other -> ""
-          end
-        ]}
-        title={@notification_title || dgettext("dashboard_common", "Setup recommended")}
-      >
-        !
-      </div>
+      <%!-- Setup reminder: a small dot and nothing more, so the row never reads
+            as a second selected item. Only the current section is styled as
+            active. The reason is a tooltip on the link for pointers, and
+            screen-reader-only text after the label, led by a comma so it is
+            read as a pause rather than run into the label. --%>
+      <span :if={@setup_reminder} class="dashboard-nav-notification">
+        <span
+          class={[
+            "block w-2 h-2 rounded-token-full",
+            if(@current == @action, do: "bg-white", else: "bg-turquoise-600")
+          ]}
+          aria-hidden="true"
+        ></span>
+        <span class="sr-only">, {@setup_reminder}</span>
+      </span>
     </.link>
     """
   end
@@ -364,15 +377,9 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
 
   defp pro_badge(assigns) do
     ~H"""
-    <span
-      class={[
-        "ml-auto text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-semibold",
-        @class
-      ]}
-      {@rest}
-    >
+    <.pill tone={:brand} uppercase class={["ml-auto", @class]} {@rest}>
       {dgettext("dashboard_common", "Pro")}
-    </span>
+    </.pill>
     """
   end
 end

@@ -6,6 +6,8 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
   use ExUnit.Case, async: true
   @moduletag :availability
 
+  import Tymeslot.Test.SlotGridHelpers
+
   alias Tymeslot.Availability.TimeSlots
 
   describe "format_datetime_slot/1" do
@@ -139,22 +141,16 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
     end
   end
 
-  describe "generate_slots_for_range_with_breaks/5" do
+  describe "a single window's slots" do
     test "generates slots without breaks" do
-      {start_dt, end_dt, date} = slot_range(~T[09:00:00], ~T[12:00:00])
-
-      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [])
+      slots = day_labels(~T[09:00:00], ~T[12:00:00])
 
       assert length(slots) == 6
     end
 
     test "excludes slots during break period" do
-      {start_dt, end_dt, date} = slot_range(~T[09:00:00], ~T[12:00:00])
-
       # Break from 10:00 to 10:30
-      breaks = utc_breaks([{~T[10:00:00], ~T[10:30:00]}], date)
-
-      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, breaks)
+      slots = day_labels(~T[09:00:00], ~T[12:00:00], breaks: [{~T[10:00:00], ~T[10:30:00]}])
 
       # Should exclude the 10:00 AM slot
       refute "10:00 AM" in slots
@@ -166,12 +162,8 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
     end
 
     test "excludes multiple slots overlapping with break" do
-      {start_dt, end_dt, date} = slot_range(~T[09:00:00], ~T[12:00:00])
-
       # Break from 10:00 to 11:00 (excludes 10:00 and 10:30 for 30-min slots)
-      breaks = utc_breaks([{~T[10:00:00], ~T[11:00:00]}], date)
-
-      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, breaks)
+      slots = day_labels(~T[09:00:00], ~T[12:00:00], breaks: [{~T[10:00:00], ~T[11:00:00]}])
 
       refute "10:00 AM" in slots
       refute "10:30 AM" in slots
@@ -182,19 +174,11 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
     end
 
     test "handles multiple break periods" do
-      {start_dt, end_dt, date} = slot_range(~T[09:00:00], ~T[14:00:00])
-
       # Morning break (10:00-10:30) and lunch break (12:00-13:00)
-      breaks =
-        utc_breaks(
-          [
-            {~T[10:00:00], ~T[10:30:00]},
-            {~T[12:00:00], ~T[13:00:00]}
-          ],
-          date
+      slots =
+        day_labels(~T[09:00:00], ~T[14:00:00],
+          breaks: [{~T[10:00:00], ~T[10:30:00]}, {~T[12:00:00], ~T[13:00:00]}]
         )
-
-      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, breaks)
 
       refute "10:00 AM" in slots
       refute "12:00 PM" in slots
@@ -205,12 +189,8 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
     end
 
     test "handles slot that partially overlaps with break at start" do
-      {start_dt, end_dt, date} = slot_range(~T[09:00:00], ~T[12:00:00])
-
       # Break from 10:15 to 10:45 - the 10:00 slot would end at 10:30, overlapping
-      breaks = utc_breaks([{~T[10:15:00], ~T[10:45:00]}], date)
-
-      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, breaks)
+      slots = day_labels(~T[09:00:00], ~T[12:00:00], breaks: [{~T[10:15:00], ~T[10:45:00]}])
 
       # 10:00 slot runs 10:00-10:30 which overlaps with break starting at 10:15
       refute "10:00 AM" in slots
@@ -219,16 +199,16 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
     end
   end
 
-  describe "generate_slots_for_range_with_breaks/5 across DST transitions" do
+  describe "slots across DST transitions" do
     # Europe/London falls back at 02:00 BST on 2026-10-25, so wall-clock
     # 01:00–01:59 happens twice. A break at 01:30 would crash DateTime.new!/3.
     test "resolves ambiguous break times on fall-back day without raising" do
-      date = ~D[2026-10-25]
-      start_dt = DateTime.new!(date, ~T[09:00:00], "Europe/London")
-      end_dt = DateTime.new!(date, ~T[12:00:00], "Europe/London")
-      breaks = TimeSlots.resolve_breaks([{~T[01:30:00], ~T[01:45:00]}], date, "Europe/London")
-
-      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, breaks)
+      slots =
+        day_labels(~T[09:00:00], ~T[12:00:00],
+          date: ~D[2026-10-25],
+          zone: "Europe/London",
+          breaks: [{~T[01:30:00], ~T[01:45:00]}]
+        )
 
       assert length(slots) == 6
       assert "9:00 AM" in slots
@@ -238,12 +218,12 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
     # Europe/London springs forward at 01:00 GMT on 2026-03-29, so wall-clock
     # 01:00–01:59 never happens. A break at 01:30 would crash DateTime.new!/3.
     test "resolves break times in spring-forward gap without raising" do
-      date = ~D[2026-03-29]
-      start_dt = DateTime.new!(date, ~T[09:00:00], "Europe/London")
-      end_dt = DateTime.new!(date, ~T[12:00:00], "Europe/London")
-      breaks = TimeSlots.resolve_breaks([{~T[01:30:00], ~T[01:45:00]}], date, "Europe/London")
-
-      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, breaks)
+      slots =
+        day_labels(~T[09:00:00], ~T[12:00:00],
+          date: ~D[2026-03-29],
+          zone: "Europe/London",
+          breaks: [{~T[01:30:00], ~T[01:45:00]}]
+        )
 
       assert length(slots) == 6
       assert "9:00 AM" in slots
@@ -251,61 +231,78 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
     end
 
     # America/Santiago springs forward at 24:00 on 2026-09-05, so wall-clock
-    # 00:00–00:59 never happens on 2026-09-06. An owner far enough east (e.g.
-    # Asia/Macau) pushes availability over the attendee's midnight, so the day
-    # boundary is built at 00:00 — which would crash DateTime.new!/3.
-    test "resolves a midnight start boundary that falls in a spring-forward gap" do
-      date = ~D[2026-09-06]
-      start_dt = DateTime.new!(~D[2026-09-05], ~T[21:00:00], "America/Santiago")
-      end_dt = DateTime.new!(date, ~T[05:00:00], "America/Santiago")
+    # 00:00–00:59 never happens on 2026-09-06. The window opens on the 5th and
+    # runs on into the booker's 6th, whose day therefore starts at 01:00.
+    test "a booker's day that opens in a spring-forward gap starts when the gap ends" do
+      slots =
+        day_labels(~T[21:00:00], ~T[05:00:00],
+          window_date: ~D[2026-09-05],
+          date: ~D[2026-09-06],
+          zone: "America/Santiago"
+        )
 
-      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [])
-
-      # The day starts at 01:00, not midnight — the gap is snapped forward.
+      # The day starts at 01:00, not midnight; the gap is snapped forward.
       assert List.first(slots) == "1:00 AM"
       refute "12:00 AM" in slots
       assert length(slots) == 8
     end
 
     # America/Santiago falls back at 24:00 on 2026-04-04, so wall-clock
-    # 23:00–23:59 happens twice and 23:59:59 is ambiguous. DateTime.new!/3
-    # raises on ambiguity just as it does on a gap.
-    test "resolves an end-of-day boundary that is ambiguous on a fall-back day" do
-      date = ~D[2026-04-04]
-      start_dt = DateTime.new!(date, ~T[20:00:00], "America/Santiago")
-      end_dt = DateTime.new!(~D[2026-04-05], ~T[03:00:00], "America/Santiago")
-
-      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [])
+    # 23:00–23:59 happens twice and the end of the booker's day is ambiguous.
+    # Spec rule: the slot that ends where the day ends is offered, so a window
+    # running past midnight now lists 11:30 PM (the clamp used to drop it).
+    test "a window running past midnight on a fall-back day offers the slot that ends at midnight" do
+      slots =
+        day_labels(~T[20:00:00], ~T[03:00:00],
+          window_date: ~D[2026-04-04],
+          zone: "America/Santiago"
+        )
 
       assert List.first(slots) == "8:00 PM"
-      assert List.last(slots) == "11:00 PM"
-      assert length(slots) == 7
+      assert List.last(slots) == "11:30 PM"
+      assert length(slots) == 8
     end
 
-    # Both boundaries are built when availability covers the attendee's whole
-    # day, so a gap at midnight must not take the end boundary down with it.
-    test "resolves both boundaries when a full day spans a spring-forward gap" do
-      date = ~D[2026-09-06]
-      start_dt = DateTime.new!(~D[2026-09-05], ~T[20:00:00], "America/Santiago")
-      end_dt = DateTime.new!(~D[2026-09-07], ~T[03:00:00], "America/Santiago")
+    # A full day of availability over a midnight gap: the 6th starts at 01:00
+    # and, with the window continuing past midnight, ends with the 11:30 PM
+    # slot that the old per-day clamp dropped.
+    test "a full day spanning a spring-forward gap runs from 1:00 AM to the slot ending at midnight" do
+      config =
+        pure_config(
+          days: [
+            %{
+              day_of_week: 6,
+              start_time: ~T[20:00:00],
+              end_time: ~T[00:00:00],
+              ends_next_day: true
+            },
+            %{
+              day_of_week: 7,
+              start_time: ~T[00:00:00],
+              end_time: ~T[00:00:00],
+              ends_next_day: true
+            },
+            %{day_of_week: 1, start_time: ~T[00:00:00], end_time: ~T[03:00:00]}
+          ]
+        )
 
-      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [])
+      slots = labels(~D[2026-09-06], 30, "America/Santiago", "America/Santiago", config)
 
       assert List.first(slots) == "1:00 AM"
-      assert List.last(slots) == "11:00 PM"
-      assert length(slots) == 45
+      assert List.last(slots) == "11:30 PM"
+      assert length(slots) == 46
     end
 
     # Ambiguous breaks are still honoured at the first (earlier UTC) occurrence.
     test "ambiguous break still filters an overlapping slot" do
-      date = ~D[2026-10-25]
-      start_dt = DateTime.new!(date, ~T[09:00:00], "Europe/London")
-      end_dt = DateTime.new!(date, ~T[12:00:00], "Europe/London")
       # A break at wall-clock 10:30–11:00 is unambiguous and must still apply
       # — proves break resolution doesn't silently drop usable breaks.
-      breaks = TimeSlots.resolve_breaks([{~T[10:30:00], ~T[11:00:00]}], date, "Europe/London")
-
-      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, breaks)
+      slots =
+        day_labels(~T[09:00:00], ~T[12:00:00],
+          date: ~D[2026-10-25],
+          zone: "Europe/London",
+          breaks: [{~T[10:30:00], ~T[11:00:00]}]
+        )
 
       refute "10:30 AM" in slots
       assert "10:00 AM" in slots
@@ -315,106 +312,87 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
 
   describe "edge cases" do
     test "handles date mismatch - selected date before range" do
-      start_dt = DateTime.new!(~D[2025-06-16], ~T[09:00:00], "Etc/UTC")
-      end_dt = DateTime.new!(~D[2025-06-16], ~T[12:00:00], "Etc/UTC")
-      date = ~D[2025-06-15]
+      # Window on Monday 16 June; the booker asks about Sunday 15 June.
+      slots =
+        day_labels(~T[09:00:00], ~T[12:00:00], window_date: ~D[2025-06-16], date: ~D[2025-06-15])
 
-      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [])
-
-      # No slots should be generated since selected date is before the range
       assert slots == []
     end
 
     test "handles date mismatch - selected date after range" do
-      start_dt = DateTime.new!(~D[2025-06-14], ~T[09:00:00], "Etc/UTC")
-      end_dt = DateTime.new!(~D[2025-06-14], ~T[12:00:00], "Etc/UTC")
-      date = ~D[2025-06-15]
+      # Window on Saturday 14 June; the booker asks about Sunday 15 June.
+      slots =
+        day_labels(~T[09:00:00], ~T[12:00:00], window_date: ~D[2025-06-14], date: ~D[2025-06-15])
 
-      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [])
-
-      # No slots should be generated since selected date is after the range
       assert slots == []
     end
 
     test "handles range spanning from previous day" do
       # Range from late night June 14 to early morning June 15
-      start_dt = DateTime.new!(~D[2025-06-14], ~T[22:00:00], "Etc/UTC")
-      end_dt = DateTime.new!(~D[2025-06-15], ~T[02:00:00], "Etc/UTC")
-      date = ~D[2025-06-15]
-
-      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [])
+      slots =
+        day_labels(~T[22:00:00], ~T[02:00:00],
+          window_date: ~D[2025-06-14],
+          date: ~D[2025-06-15]
+        )
 
       # Should only include slots from midnight to 2:00 AM on June 15
-      assert "12:00 AM" in slots
-      assert "12:30 AM" in slots
-      assert "1:00 AM" in slots
-      assert "1:30 AM" in slots
+      assert slots == ["12:00 AM", "12:30 AM", "1:00 AM", "1:30 AM"]
       # Should NOT include slots from June 14
       refute "10:00 PM" in slots
     end
 
-    test "handles range spanning to next day" do
-      # Range from June 15 evening into June 16
-      start_dt = DateTime.new!(~D[2025-06-15], ~T[22:00:00], "Etc/UTC")
-      end_dt = DateTime.new!(~D[2025-06-16], ~T[02:00:00], "Etc/UTC")
-      date = ~D[2025-06-15]
+    # Spec rule: a start is listed on the booker's date it falls on, and the
+    # whole meeting only has to fit inside available time. The old clamp to the
+    # booker's day dropped 11:30 PM because it ends at midnight.
+    test "a window running past midnight offers the slot that ends at midnight" do
+      slots = day_labels(~T[22:00:00], ~T[02:00:00])
 
-      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [])
+      assert slots == ["10:00 PM", "10:30 PM", "11:00 PM", "11:30 PM"]
+    end
 
-      # Should include slots from 10 PM until end of day
-      # Note: slots are limited to the selected date (up to 23:59:59)
-      # So only slots that fit within June 15 are included
-      assert "10:00 PM" in slots
-      assert "10:30 PM" in slots
-      assert "11:00 PM" in slots
-      # 11:30 PM is excluded because a 30-min meeting would end at 12:00 AM next day
-      assert length(slots) == 3
+    test "a window running past midnight lists the rest of its slots on the next date" do
+      slots =
+        day_labels(~T[22:00:00], ~T[02:00:00],
+          window_date: ~D[2025-06-15],
+          date: ~D[2025-06-16]
+        )
+
+      assert slots == ["12:00 AM", "12:30 AM", "1:00 AM", "1:30 AM"]
     end
   end
 
-  # Production resolves breaks against the owner's date and zone before they
-  # reach the slot grid (`Calculate` and `Conflicts` both do). Every case in
-  # this module is single-timezone, so the window's own UTC clock *is* the
-  # owner's; the cross-timezone cases live in the module below.
-  defp utc_breaks(breaks, date) do
-    TimeSlots.resolve_breaks(breaks, date, "Etc/UTC")
+  # The slots a schedule with one window offers a booker on the same clock as
+  # the owner. The window opens on `:window_date` and `:date` is the booker's
+  # date the labels are read for (both default to Sunday 15 June 2025, and the
+  # zone to UTC). An end at or before the start runs into the next day.
+  defp day_labels(start_time, end_time, opts \\ []) do
+    window_date = Keyword.get(opts, :window_date, ~D[2025-06-15])
+    date = Keyword.get(opts, :date, window_date)
+    zone = Keyword.get(opts, :zone, "Etc/UTC")
+
+    breaks =
+      for {from, to} <- Keyword.get(opts, :breaks, []), do: %{start_time: from, end_time: to}
+
+    config =
+      pure_config(
+        days: [
+          %{
+            day_of_week: Date.day_of_week(window_date),
+            start_time: start_time,
+            end_time: end_time,
+            ends_next_day: Time.compare(end_time, start_time) != :gt,
+            breaks: breaks
+          }
+        ],
+        interval: Keyword.get(opts, :interval)
+      )
+
+    labels(date, Keyword.get(opts, :duration, 30), zone, zone, config)
   end
 
-  defp slot_range(start_time, end_time, date \\ ~D[2025-06-15]) do
-    start_dt = DateTime.new!(date, start_time, "Etc/UTC")
-    end_dt = DateTime.new!(date, end_time, "Etc/UTC")
-    {start_dt, end_dt, date}
-  end
-
-  # `generate_slots_for_range_with_breaks/7` anchored on the window's own
-  # timezone, which is what every single-timezone case below wants: the owner
-  # and the booker share a clock there, so the anchor cannot be what makes an
-  # assertion pass. The cases where the two clocks differ live in
-  # `Tymeslot.Availability.TimeSlotsOwnerAnchorTest`.
-  defp slots_on_own_clock(start_dt, end_dt, duration_minutes, date, breaks, interval_minutes) do
-    TimeSlots.generate_slots_for_range_with_breaks(
-      start_dt,
-      end_dt,
-      duration_minutes,
-      date,
-      breaks,
-      interval_minutes,
-      start_dt.time_zone
-    )
-  end
-
-  describe "generate_slots_for_range_with_breaks/7 with an explicit interval" do
-    setup do
-      date = ~D[2026-06-15]
-      {:ok, start_dt} = DateTime.new(date, ~T[09:00:00], "Europe/London")
-      {:ok, end_dt} = DateTime.new(date, ~T[10:00:00], "Europe/London")
-
-      %{date: date, start_dt: start_dt, end_dt: end_dt}
-    end
-
-    test "an interval shorter than the duration produces overlapping starts",
-         %{date: date, start_dt: start_dt, end_dt: end_dt} do
-      slots = slots_on_own_clock(start_dt, end_dt, 30, date, [], 5)
+  describe "an explicit interval" do
+    test "an interval shorter than the duration produces overlapping starts" do
+      slots = interval_labels(~T[09:00:00], ~T[10:00:00], 30, 5)
 
       assert List.first(slots) == "9:00 AM"
       assert List.last(slots) == "9:30 AM"
@@ -422,16 +400,12 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       assert "9:05 AM" in slots
     end
 
-    test "an interval longer than the duration produces fewer, rounder starts",
-         %{date: date, start_dt: start_dt, end_dt: end_dt} do
-      slots = slots_on_own_clock(start_dt, end_dt, 20, date, [], 60)
-
-      assert slots == ["9:00 AM"]
+    test "an interval longer than the duration produces fewer, rounder starts" do
+      assert interval_labels(~T[09:00:00], ~T[10:00:00], 20, 60) == ["9:00 AM"]
     end
 
-    test "an interval that does not divide the window is still bounded by it",
-         %{date: date, start_dt: start_dt, end_dt: end_dt} do
-      slots = slots_on_own_clock(start_dt, end_dt, 30, date, [], 7)
+    test "an interval that does not divide the window is still bounded by it" do
+      slots = interval_labels(~T[09:00:00], ~T[10:00:00], 30, 7)
 
       assert List.first(slots) == "9:00 AM"
       assert "9:07 AM" in slots
@@ -439,29 +413,19 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       assert List.last(slots) == "9:28 AM"
     end
 
-    test "a window shorter than the duration offers nothing regardless of interval",
-         %{date: date, start_dt: start_dt} do
-      {:ok, short_end} = DateTime.new(date, ~T[09:10:00], "Europe/London")
-
-      assert slots_on_own_clock(start_dt, short_end, 30, date, [], 5) ==
-               []
+    test "a window shorter than the duration offers nothing regardless of interval" do
+      assert interval_labels(~T[09:00:00], ~T[09:10:00], 30, 5) == []
     end
 
-    test "a nil interval falls back to the duration",
-         %{date: date, start_dt: start_dt, end_dt: end_dt} do
-      with_nil = slots_on_own_clock(start_dt, end_dt, 30, date, [], nil)
+    test "a nil interval falls back to the duration" do
+      with_nil = interval_labels(~T[09:00:00], ~T[10:00:00], 30, nil)
 
-      without = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [])
-
-      assert with_nil == without
+      assert with_nil == ["9:00 AM", "9:30 AM"]
+      assert with_nil == interval_labels(~T[09:00:00], ~T[10:00:00], 30, 30)
     end
 
     test "an off-hour window with an interval that divides the hour aligns forward to the fix's target case" do
-      date = ~D[2026-06-15]
-      start_dt = DateTime.new!(date, ~T[09:15:00], "America/New_York")
-      end_dt = DateTime.new!(date, ~T[17:00:00], "America/New_York")
-
-      slots = slots_on_own_clock(start_dt, end_dt, 60, date, [], 60)
+      slots = interval_labels(~T[09:15:00], ~T[17:00:00], 60, 60, "America/New_York")
 
       assert List.first(slots) == "10:00 AM"
       assert length(slots) == 7
@@ -473,22 +437,14 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
     # this regressed once during development and was caught only by manual
     # measurement.
     test "an interval that does not divide 60 still offers the hour an on-the-hour window opens on" do
-      date = ~D[2026-06-15]
-      start_dt = DateTime.new!(date, ~T[09:00:00], "America/New_York")
-      end_dt = DateTime.new!(date, ~T[17:00:00], "America/New_York")
-
-      slots = slots_on_own_clock(start_dt, end_dt, 60, date, [], 120)
+      slots = interval_labels(~T[09:00:00], ~T[17:00:00], 60, 120, "America/New_York")
 
       assert "9:00 AM" in slots
       assert slots == ["9:00 AM", "11:00 AM", "1:00 PM", "3:00 PM"]
     end
 
     test "alignment never offers a start before the window opens or too late for the duration to fit" do
-      date = ~D[2026-06-15]
-      start_dt = DateTime.new!(date, ~T[09:05:00], "Europe/London")
-      end_dt = DateTime.new!(date, ~T[10:00:00], "Europe/London")
-
-      slots = slots_on_own_clock(start_dt, end_dt, 30, date, [], 15)
+      slots = interval_labels(~T[09:05:00], ~T[10:00:00], 30, 15)
 
       assert slots == ["9:15 AM", "9:30 AM"]
 
@@ -502,12 +458,11 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       end
     end
 
-    test "breaks are filtered by the meeting's length, not by the interval",
-         %{date: date, start_dt: start_dt, end_dt: end_dt} do
-      breaks = TimeSlots.resolve_breaks([{~T[09:20:00], ~T[09:30:00]}], date, "Europe/London")
-
+    test "breaks are filtered by the meeting's length, not by the interval" do
       slots =
-        slots_on_own_clock(start_dt, end_dt, 30, date, breaks, 5)
+        interval_labels(~T[09:00:00], ~T[10:00:00], 30, 5, "Europe/London",
+          breaks: [{~T[09:20:00], ~T[09:30:00]}]
+        )
 
       # A 30-minute meeting starting at 9:00 runs to 9:30 and so overlaps the
       # break; every start before the break ends is excluded.
@@ -515,19 +470,13 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       assert "9:30 AM" in slots
     end
 
-    test "an explicit interval equal to the duration reproduces the default grid exactly",
-         %{date: date} do
-      {:ok, start_dt} = DateTime.new(date, ~T[09:00:00], "Europe/London")
-
+    test "an explicit interval equal to the duration reproduces the default grid exactly" do
       for duration <- [15, 20, 30, 45, 60],
           window_minutes <- [30, 60, 90, 125, 240] do
-        {:ok, end_dt} = DateTime.new(date, ~T[09:00:00], "Europe/London")
-        end_dt = DateTime.add(end_dt, window_minutes, :minute)
+        end_time = Time.add(~T[09:00:00], window_minutes, :minute)
 
-        generalised = slots_on_own_clock(start_dt, end_dt, duration, date, [], duration)
-
-        default =
-          TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, duration, date, [])
+        generalised = interval_labels(~T[09:00:00], end_time, duration, duration)
+        default = interval_labels(~T[09:00:00], end_time, duration, nil)
 
         assert generalised == default,
                "interval == duration must reproduce the default grid " <>
@@ -536,17 +485,14 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
     end
   end
 
-  describe "generate_slots_for_range_with_breaks/7 with an explicit interval, across DST transitions" do
+  describe "an explicit interval, across DST transitions" do
     # Europe/London falls back at 02:00 BST -> 01:00 GMT on 2026-10-25, so
     # wall-clock 01:00-01:59 happens twice. An interval whose grid walks
     # straight through that hour must resolve the repeat the same way plain
     # generation already does: collapse to a single, first-occurrence entry.
     test "resolves a repeated wall-clock hour the same way as generation without an interval" do
-      date = ~D[2026-10-25]
-      start_dt = DateTime.new!(date, ~T[00:45:00], "Europe/London")
-      end_dt = DateTime.new!(date, ~T[03:00:00], "Europe/London")
-
-      slots = slots_on_own_clock(start_dt, end_dt, 30, date, [], 15)
+      slots =
+        interval_labels(~T[00:45:00], ~T[03:00:00], 30, 15, "Europe/London", date: ~D[2026-10-25])
 
       assert slots == [
                "12:45 AM",
@@ -568,14 +514,35 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
     # instant, exactly as the un-intervalled DST tests above already pin for
     # break and boundary resolution.
     test "aligning into a spring-forward gap snaps forward to the first real instant" do
-      date = ~D[2026-03-29]
-      start_dt = DateTime.new!(date, ~T[00:45:00], "Europe/London")
-      end_dt = DateTime.new!(date, ~T[03:00:00], "Europe/London")
-
-      slots = slots_on_own_clock(start_dt, end_dt, 30, date, [], 20)
+      slots =
+        interval_labels(~T[00:45:00], ~T[03:00:00], 30, 20, "Europe/London", date: ~D[2026-03-29])
 
       assert slots == ["2:00 AM", "2:20 AM"]
       refute Enum.any?(slots, &String.starts_with?(&1, "1:"))
     end
+  end
+
+  # `day_labels/3` for the interval cases: the owner and the booker share a
+  # clock, so the anchor cannot be what makes an assertion pass. The cases
+  # where the two clocks differ live in
+  # `Tymeslot.Availability.TimeSlotsOwnerAnchorTest`. Defaults to Monday
+  # 15 June 2026 in Europe/London.
+  defp interval_labels(
+         start_time,
+         end_time,
+         duration,
+         interval,
+         zone \\ "Europe/London",
+         opts \\ []
+       ) do
+    day_labels(
+      start_time,
+      end_time,
+      window_date: Keyword.get(opts, :date, ~D[2026-06-15]),
+      zone: zone,
+      duration: duration,
+      interval: interval,
+      breaks: Keyword.get(opts, :breaks, [])
+    )
   end
 end

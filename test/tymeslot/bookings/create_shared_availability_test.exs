@@ -106,6 +106,23 @@ defmodule Tymeslot.Bookings.CreateSharedAvailabilityTest do
              )
   end
 
+  test "refuses a group type, whose seats are booked without the named users", ctx do
+    group =
+      insert(:meeting_type,
+        user: ctx.host,
+        allow_guests: true,
+        max_participants: 5,
+        duration_minutes: 30
+      )
+
+    assert {:error, :booking_failed} =
+             Create.execute(
+               params(ctx, "14:00", %{meeting_type_id: group.id}),
+               @form,
+               skip_calendar_check: true
+             )
+  end
+
   test "refuses a named user who can no longer be booked", ctx do
     assert {:error, :booking_failed} =
              Create.execute(

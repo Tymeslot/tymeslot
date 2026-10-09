@@ -79,6 +79,22 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
       assert [%{id: ^first}] = LocationSelection.options(type)
     end
 
+    test "shows a stored English default label in the current language, as the fallback does" do
+      stored = %{locations: [option(id: "loc-1", kind: "in_person", label: "In person")]}
+      fallback = %{locations: [], allow_video: false, video_integration_id: nil}
+
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        assert [%{label: "Vor Ort"}] = LocationSelection.options(stored)
+        assert [%{label: "Vor Ort"}] = LocationSelection.options(fallback)
+      end)
+    end
+
+    test "leaves a label the host wrote as they wrote it" do
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        assert [%{label: "The office"}] = LocationSelection.options(%{locations: [office()]})
+      end)
+    end
+
     test "an ad-hoc booking with no meeting type has no locations at all" do
       assert LocationSelection.options(nil) == []
     end

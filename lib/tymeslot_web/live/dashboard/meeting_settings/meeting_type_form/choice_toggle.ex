@@ -16,8 +16,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ChoiceToggle do
   """
   use Phoenix.Component
 
-  alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.CoreComponents.Forms
+  alias TymeslotWeb.Components.CoreComponents.Icons
 
   attr :id, :string, required: true
   attr :name, :string, required: true
@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ChoiceToggle do
             checked={selected?(option.value, @value, @multiple)}
             class="sr-only"
           />
-          <CoreComponents.icon name={option.icon} class="w-4 h-4 shrink-0" />
+          <Icons.icon name={option.icon} class="w-4 h-4 shrink-0" />
           <span>{option.label}</span>
         </label>
       </div>

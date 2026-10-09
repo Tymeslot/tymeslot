@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
   # Import JS helpers for LiveView interactions
   alias Phoenix.LiveView.JS
   alias Tymeslot.Infrastructure.Config
-  import TymeslotWeb.Components.CoreComponents, only: [logo: 1, icon: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [logo: 1, icon: 1]
 
   @doc """
   Main navigation component used across the application.

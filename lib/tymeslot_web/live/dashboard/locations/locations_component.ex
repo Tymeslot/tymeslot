@@ -6,7 +6,8 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
   A card per venue, with how many meeting types offer it; an add and edit
   modal (`VenueFormModal`); and a delete confirmation (`DeleteVenueModal`)
   which, while meeting types offer the venue, first warns which of them it
-  will be taken off and which will be left with no address. Everything goes
+  will be taken off and which will be left with no address, and refuses
+  while it is the only venue of a group type. Everything goes
   through `Tymeslot.Venues`, which scopes every read and write to the
   organiser. Saving and deleting count against the organiser's meeting-type
   write rate limit, as reordering does.
@@ -41,6 +42,7 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
      |> assign_new(:deleting_venue, fn -> nil end)
      |> assign_new(:deleting_in_use, fn -> [] end)
      |> assign_new(:deleting_left_without, fn -> [] end)
+     |> assign_new(:deleting_blocked_by, fn -> [] end)
      |> assign_new(:list_epoch, fn -> 0 end)
      |> load_venues()}
   end
@@ -98,7 +100,8 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
          assign(socket,
            deleting_venue: venue,
            deleting_in_use: Venues.meeting_types_using(venue),
-           deleting_left_without: Venues.meeting_types_left_without(venue)
+           deleting_left_without: Venues.meeting_types_left_without(venue),
+           deleting_blocked_by: Venues.blocking_group_types(venue)
          )}
 
       {:error, :not_found} ->
@@ -116,17 +119,29 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
       case Venues.delete_venue(socket.assigns.deleting_venue) do
         {:ok, _deleted} ->
           Flash.info(dgettext("dashboard_meeting_types", "Location deleted"))
+          {:noreply, socket |> close_delete() |> load_venues()}
 
         # Already gone, most likely from another tab: the reloaded list says so.
         {:error, :not_found} ->
-          :ok
+          {:noreply, socket |> close_delete() |> load_venues()}
+
+        # A meeting type became a group type on this venue since the modal
+        # opened: the modal stays open and now names it.
+        {:error, {:group_meeting_types, group_types}} ->
+          Flash.error(
+            dgettext(
+              "dashboard_meeting_types",
+              "This location is the only one of a group meeting type, so it cannot be deleted"
+            )
+          )
+
+          {:noreply, socket |> assign(:deleting_blocked_by, group_types) |> load_venues()}
 
         {:error, reason} ->
           Logger.error("Failed to delete location", reason: LogFormat.reason(reason))
           Flash.error(dgettext("dashboard_meeting_types", "Could not delete the location"))
+          {:noreply, socket |> close_delete() |> load_venues()}
       end
-
-      {:noreply, socket |> close_delete() |> load_venues()}
     end)
   end
 
@@ -178,90 +193,88 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div class="space-y-6 pb-20" data-testid="locations-page">
-      <.section_header
-        icon="hero-map-pin"
-        title={dgettext("dashboard_meeting_types", "Locations")}
-        class="mb-4"
-      />
-
-      <p class="text-tymeslot-600">
-        {dgettext(
-          "dashboard_meeting_types",
-          "Save the places you meet people once, then offer them on any in-person meeting type."
-        )}
-      </p>
-
-      <%= if @venues == [] do %>
-        <div class="card-glass text-center py-8 px-4 space-y-3" data-testid="locations-empty">
-          <.icon name="hero-map-pin" class="w-12 h-12 mx-auto text-tymeslot-400" />
-          <p class="text-tymeslot-700 font-medium">
-            {dgettext("dashboard_meeting_types", "No saved locations yet")}
-          </p>
-          <p class="text-token-sm text-tymeslot-500">
-            {dgettext(
-              "dashboard_meeting_types",
-              "Add an office, a studio or any other place you meet people. In-person meeting types can then offer it to bookers."
-            )}
-          </p>
-          <div class="flex justify-center pt-2">
-            <.action_button
-              variant={:primary}
-              phx-click="new_venue"
-              phx-target={@myself}
-              data-testid="add-venue"
-            >
-              <.icon name="hero-plus" class="w-4 h-4" />
-              {dgettext("dashboard_meeting_types", "Add location")}
-            </.action_button>
-          </div>
-        </div>
-      <% else %>
-        <div class="flex justify-end">
+    <div data-testid="locations-page">
+      <.dashboard_page icon="hero-map-pin" title={dgettext("dashboard_common", "Locations")}>
+        <%!-- With no venues yet, the empty state carries the add button instead. --%>
+        <:actions :if={@venues != []}>
           <.action_button
             variant={:primary}
             phx-click="new_venue"
             phx-target={@myself}
+            icon="hero-plus"
             data-testid="add-venue"
           >
-            <.icon name="hero-plus" class="w-4 h-4" />
             {dgettext("dashboard_meeting_types", "Add location")}
           </.action_button>
-        </div>
+        </:actions>
+        <p class="text-tymeslot-600">
+          {dgettext(
+            "dashboard_meeting_types",
+            "Save the places you meet people once, then offer them on any in-person meeting type."
+          )}
+        </p>
 
-        <%!-- One column, because the sortable hook places a dragged card by
+        <%= if @venues == [] do %>
+          <.empty_state
+            icon="hero-map-pin"
+            size={:lg}
+            title={dgettext("dashboard_meeting_types", "No saved locations yet")}
+            description={
+              dgettext(
+                "dashboard_meeting_types",
+                "Add an office, a studio or any other place you meet people. In-person meeting types can then offer it to bookers."
+              )
+            }
+            data-testid="locations-empty"
+          >
+            <:action>
+              <.action_button
+                variant={:primary}
+                phx-click="new_venue"
+                phx-target={@myself}
+                icon="hero-plus"
+                data-testid="add-venue"
+              >
+                {dgettext("dashboard_meeting_types", "Add location")}
+              </.action_button>
+            </:action>
+          </.empty_state>
+        <% else %>
+          <%!-- One column, because the sortable hook places a dragged card by
              its vertical position. --%>
-        <div
-          id={"locations-list-#{@list_epoch}"}
-          phx-hook="QuestionsSortable"
-          phx-target={@myself}
-          data-target={@myself}
-          data-testid="locations-list"
-          class="flex flex-col gap-4"
-        >
-          <VenueCard.venue_card
-            :for={venue <- @venues}
-            venue={venue}
-            usage={Map.get(@usage, venue.id, 0)}
-            myself={@myself}
-          />
-        </div>
-      <% end %>
+          <div
+            id={"locations-list-#{@list_epoch}"}
+            phx-hook="QuestionsSortable"
+            phx-target={@myself}
+            data-target={@myself}
+            data-testid="locations-list"
+            class="flex flex-col gap-4"
+          >
+            <VenueCard.venue_card
+              :for={venue <- @venues}
+              venue={venue}
+              usage={Map.get(@usage, venue.id, 0)}
+              myself={@myself}
+            />
+          </div>
+        <% end %>
 
-      <VenueFormModal.venue_form_modal
-        :if={@venue_form}
-        form={@venue_form}
-        mode={if @editing_venue.id, do: :edit, else: :new}
-        myself={@myself}
-      />
+        <VenueFormModal.venue_form_modal
+          :if={@venue_form}
+          form={@venue_form}
+          mode={if @editing_venue.id, do: :edit, else: :new}
+          myself={@myself}
+        />
 
-      <DeleteVenueModal.delete_venue_modal
-        :if={@deleting_venue}
-        venue={@deleting_venue}
-        in_use={@deleting_in_use}
-        left_without={@deleting_left_without}
-        myself={@myself}
-      />
+        <DeleteVenueModal.delete_venue_modal
+          :if={@deleting_venue}
+          venue={@deleting_venue}
+          in_use={@deleting_in_use}
+          left_without={@deleting_left_without}
+          blocked_by={@deleting_blocked_by}
+          myself={@myself}
+        />
+      </.dashboard_page>
     </div>
     """
   end
@@ -300,7 +313,13 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
   defp close_form(socket), do: assign(socket, editing_venue: nil, venue_form: nil)
 
   defp close_delete(socket),
-    do: assign(socket, deleting_venue: nil, deleting_in_use: [], deleting_left_without: [])
+    do:
+      assign(socket,
+        deleting_venue: nil,
+        deleting_in_use: [],
+        deleting_left_without: [],
+        deleting_blocked_by: []
+      )
 
   defp save(%VenueSchema{id: nil}, user_id, params), do: Venues.create_venue(user_id, params)
   defp save(%VenueSchema{} = venue, _user_id, params), do: Venues.update_venue(venue, params)

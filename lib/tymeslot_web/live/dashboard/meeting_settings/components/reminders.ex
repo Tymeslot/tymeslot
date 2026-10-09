@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Utils.ReminderUtils
@@ -30,20 +30,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
 
     ~H"""
     <section class="space-y-2">
-      <div class="flex items-center gap-2">
-        <.icon name="hero-bell" class="w-5 h-5 text-turquoise-500" />
-        <h3 class="text-token-base font-semibold text-tymeslot-800">
-          {dgettext("dashboard_meeting_form", "Reminders")}
-        </h3>
-      </div>
-      <p class="text-token-sm text-tymeslot-600">
-        {dngettext(
-          "dashboard_meeting_form",
-          "Add up to %{count} reminder email for this meeting type. We recommend using only one.",
-          "Add up to %{count} reminder emails for this meeting type. We recommend using only one.",
-          @max_reminders
-        )}
-      </p>
+      <.subsection_header
+        icon="hero-bell"
+        title={dgettext("dashboard_meeting_form", "Reminders")}
+        description={
+          dngettext(
+            "dashboard_meeting_form",
+            "Add up to %{count} reminder email for this meeting type. We recommend using only one.",
+            "Add up to %{count} reminder emails for this meeting type. We recommend using only one.",
+            @max_reminders
+          )
+        }
+      />
 
       <div class="mt-3 flex flex-wrap items-center gap-3">
         <%= if @reminders == [] do %>
@@ -64,7 +62,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
                     target: @myself
                   )
                 }
-                class="inline-flex items-center justify-center rounded-full border border-turquoise-200 bg-white text-turquoise-600 hover:text-turquoise-700 hover:border-turquoise-300"
+                class="inline-flex items-center justify-center rounded-token-full border border-turquoise-200 bg-white text-turquoise-600 hover:text-turquoise-700 hover:border-turquoise-300"
                 aria-label={dgettext("dashboard_meeting_form", "Remove reminder")}
               >
                 <.icon name="hero-x-mark" class="h-4 w-4" />
@@ -138,30 +136,33 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
                 name="reminder[value]"
                 value={@new_reminder_value}
                 placeholder="30"
-                class="input py-1.5! px-3! w-20 text-token-sm"
+                class="input py-1.5 px-3 w-20 text-token-sm"
                 phx-change="update_reminder_input"
                 phx-target={@myself}
               />
               <select
                 name="reminder[unit]"
-                class="input py-1.5! px-3! w-28 text-token-sm"
-                value={@new_reminder_unit}
+                class="input py-1.5 px-3 w-28 text-token-sm"
                 phx-change="update_reminder_input"
                 phx-target={@myself}
               >
-                <option value="minutes">{dgettext("dashboard_meeting_form", "Minutes")}</option>
-                <option value="hours">{dgettext("dashboard_meeting_form", "Hours")}</option>
-                <option value="days">{dgettext("dashboard_meeting_form", "Days")}</option>
+                <%!-- A select element ignores a value attribute; the chosen unit has to
+                      be marked on its option, or a re-render snaps it back to
+                      the first one. --%>
+                <option value="minutes" selected={@new_reminder_unit == "minutes"}>
+                  {dgettext("dashboard_meeting_form", "Minutes")}
+                </option>
+                <option value="hours" selected={@new_reminder_unit == "hours"}>
+                  {dgettext("dashboard_meeting_form", "Hours")}
+                </option>
+                <option value="days" selected={@new_reminder_unit == "days"}>
+                  {dgettext("dashboard_meeting_form", "Days")}
+                </option>
               </select>
             </div>
-            <button
-              type="button"
-              phx-click="add_reminder"
-              phx-target={@myself}
-              class="btn btn-primary btn-sm rounded-token-lg!"
-            >
+            <.action_button size={:sm} phx-click="add_reminder" phx-target={@myself}>
               {dgettext("dashboard_meeting_form", "Add")}
-            </button>
+            </.action_button>
           </div>
         <% end %>
       </div>

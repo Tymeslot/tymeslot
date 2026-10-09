@@ -36,7 +36,7 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       # Still on the buffer_time step.
       assert html =~ "Buffer between meetings"
       # No custom input was revealed (custom_input_mode unchanged).
-      refute html =~ ~s(name="buffer_minutes")
+      refute html =~ ~s(name="buffer_before_minutes")
     end
   end
 
@@ -53,41 +53,45 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
   end
 
   describe "update_scheduling_preferences with boundary values" do
-    test "negative buffer_minutes value is rejected", %{conn: conn} do
+    test "negative buffer_before_minutes value is rejected", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding(conn)
       navigate_to_scheduling_steps(view)
 
       view
-      |> element("button[phx-click='focus_custom_input'][phx-value-setting='buffer_minutes']")
+      |> element(
+        "button[phx-click='focus_custom_input'][phx-value-setting='buffer_before_minutes']"
+      )
       |> render_click()
 
       view
       |> element("form[phx-change='update_scheduling_preferences']")
-      |> render_change(%{"buffer_minutes" => "-10"})
+      |> render_change(%{"buffer_before_minutes" => "-10"})
 
       # Navigate through remaining steps to ready
       navigate_scheduling_steps_to_ready(view)
 
       schedule = default_schedule(user)
-      assert schedule.buffer_minutes >= 0
+      assert schedule.buffer_before_minutes >= 0
     end
 
-    test "exceeding maximum buffer_minutes is rejected", %{conn: conn} do
+    test "exceeding maximum buffer_before_minutes is rejected", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding(conn)
       navigate_to_scheduling_steps(view)
 
       view
-      |> element("button[phx-click='focus_custom_input'][phx-value-setting='buffer_minutes']")
+      |> element(
+        "button[phx-click='focus_custom_input'][phx-value-setting='buffer_before_minutes']"
+      )
       |> render_click()
 
       view
       |> element("form[phx-change='update_scheduling_preferences']")
-      |> render_change(%{"buffer_minutes" => "999"})
+      |> render_change(%{"buffer_before_minutes" => "999"})
 
       navigate_scheduling_steps_to_ready(view)
 
       schedule = default_schedule(user)
-      assert schedule.buffer_minutes <= 120
+      assert schedule.buffer_before_minutes <= 120
     end
   end
 
@@ -97,24 +101,26 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       navigate_to_scheduling_steps(view)
 
       view
-      |> element("button[phx-click='focus_custom_input'][phx-value-setting='buffer_minutes']")
+      |> element(
+        "button[phx-click='focus_custom_input'][phx-value-setting='buffer_before_minutes']"
+      )
       |> render_click()
 
-      assert render(view) =~ ~s(name="buffer_minutes")
+      assert render(view) =~ ~s(name="buffer_before_minutes")
 
       # Try to spoof: non-preset value (20) with _preset marker
       view
       |> element("form[phx-change='update_scheduling_preferences']")
-      |> render_change(%{"buffer_minutes" => "20", "_preset" => "true"})
+      |> render_change(%{"buffer_before_minutes" => "20", "_preset" => "true"})
 
       # Custom mode should remain active (spoofing caught)
       html = render(view)
-      assert html =~ ~s(name="buffer_minutes")
+      assert html =~ ~s(name="buffer_before_minutes")
 
       navigate_scheduling_steps_to_ready(view)
 
       schedule = default_schedule(user)
-      assert schedule.buffer_minutes == 20
+      assert schedule.buffer_before_minutes == 20
     end
 
     test "preset marker is verified for actual preset values", %{conn: conn} do
@@ -122,17 +128,21 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       navigate_to_scheduling_steps(view)
 
       view
-      |> element("button[phx-click='focus_custom_input'][phx-value-setting='buffer_minutes']")
+      |> element(
+        "button[phx-click='focus_custom_input'][phx-value-setting='buffer_before_minutes']"
+      )
       |> render_click()
 
       view
       |> element(
-        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_minutes='15']"
+        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_before_minutes='15']"
       )
       |> render_click()
 
-      html = render(view)
-      assert html =~ "Custom"
+      assert has_element?(
+               view,
+               "#onboarding-buffer-before button[phx-value-setting='buffer_before_minutes']"
+             )
     end
   end
 
@@ -167,19 +177,21 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       navigate_to_scheduling_steps(view)
 
       view
-      |> element("button[phx-click='focus_custom_input'][phx-value-setting='buffer_minutes']")
+      |> element(
+        "button[phx-click='focus_custom_input'][phx-value-setting='buffer_before_minutes']"
+      )
       |> render_click()
 
       view
       |> element("form[phx-change='update_scheduling_preferences']")
-      |> render_change(%{"buffer_minutes" => "25"})
+      |> render_change(%{"buffer_before_minutes" => "25"})
 
       # Navigate forward then back
       view |> element("button[phx-click='next_step']") |> render_click()
       view |> element("button[phx-click='previous_step']") |> render_click()
 
       html = render(view)
-      assert html =~ ~s(name="buffer_minutes")
+      assert html =~ ~s(name="buffer_before_minutes")
       assert html =~ "25"
     end
   end
@@ -283,24 +295,24 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
 
       view
       |> element(
-        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_minutes='15']"
+        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_before_minutes='15']"
       )
       |> render_click()
 
       view
       |> element(
-        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_minutes='30']"
+        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_before_minutes='30']"
       )
       |> render_click()
 
       view
       |> element(
-        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_minutes='45']"
+        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_before_minutes='45']"
       )
       |> render_click()
 
       schedule = default_schedule(user)
-      assert schedule.buffer_minutes == 45
+      assert schedule.buffer_before_minutes == 45
     end
 
     test "switching through preset and back to custom seeds the default custom value", %{
@@ -309,28 +321,32 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       {:ok, view, _html, user} = setup_onboarding(conn)
       navigate_to_scheduling_steps(view)
 
-      # Enter custom mode (seeds buffer_minutes to default_custom = 20).
+      # Enter custom mode (seeds buffer_before_minutes to default_custom = 20).
       view
-      |> element("button[phx-click='focus_custom_input'][phx-value-setting='buffer_minutes']")
+      |> element(
+        "button[phx-click='focus_custom_input'][phx-value-setting='buffer_before_minutes']"
+      )
       |> render_click()
 
       # Click a preset — exits custom mode, persists 30.
       view
       |> element(
-        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_minutes='30']"
+        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_before_minutes='30']"
       )
       |> render_click()
 
       # Re-enter custom mode: current value (30) is a preset, so seeds to default_custom = 20.
       view
-      |> element("button[phx-click='focus_custom_input'][phx-value-setting='buffer_minutes']")
+      |> element(
+        "button[phx-click='focus_custom_input'][phx-value-setting='buffer_before_minutes']"
+      )
       |> render_click()
 
       # Custom input is visible.
-      assert render(view) =~ ~s(name="buffer_minutes")
+      assert render(view) =~ ~s(name="buffer_before_minutes")
       # The re-seeded value (20) was persisted, not the last preset (30).
       schedule = default_schedule(user)
-      assert schedule.buffer_minutes == 20
+      assert schedule.buffer_before_minutes == 20
     end
   end
 
