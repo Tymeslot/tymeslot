@@ -120,21 +120,9 @@ defmodule Tymeslot.Bookings.Reschedule do
              organizer_user_id,
              original_meeting.duration
            ),
-         shared_availability_guests = SharedAvailability.resolve_for_meeting(original_meeting),
-         config =
-           original_meeting.organizer_user_id
-           |> Policy.scheduling_config(meeting_type)
-           |> SharedAvailability.strictest_policy(shared_availability_guests),
+         {named_users, config} = scheduling_config(original_meeting, meeting_type),
          {:ok, new_times} <-
-           Validation.prepare_new_times(new_params, original_meeting, meeting_type, config),
-         :ok <-
-           SharedAvailability.validate_reschedule(
-             shared_availability_guests,
-             original_meeting,
-             {Date.from_iso8601!(new_params.date), new_times.start_time, new_times.end_time,
-              new_params.user_timezone},
-             config
-           ),
+           prepare_new_times(new_params, original_meeting, meeting_type, {named_users, config}),
          :ok <- verify_calendar_free(original_meeting, new_times, config),
          {:ok, updated_meeting} <-
            apply_time_update_and_schedule_job(
@@ -152,6 +140,37 @@ defmodule Tymeslot.Bookings.Reschedule do
   end
 
   # Private functions
+
+  # The users a `?with=` link named, recovered from the booking's guests, and
+  # the strictest scheduling policy of the host and every one of them: the new
+  # time has to suit them as the original one did.
+  defp scheduling_config(meeting, meeting_type) do
+    named_users = SharedAvailability.resolve_for_meeting(meeting)
+
+    config =
+      meeting.organizer_user_id
+      |> Policy.scheduling_config(meeting_type)
+      |> SharedAvailability.strictest_policy(named_users)
+
+    {named_users, config}
+  end
+
+  # The new time as `Validation.prepare_new_times/4` checks it for the host,
+  # then for the named users. `params.date` has been parsed by then.
+  defp prepare_new_times(params, meeting, meeting_type, {named_users, config}) do
+    with {:ok, new_times} <-
+           Validation.prepare_new_times(params, meeting, meeting_type, config),
+         :ok <-
+           SharedAvailability.validate_reschedule(
+             named_users,
+             meeting,
+             {Date.from_iso8601!(params.date), new_times.start_time, new_times.end_time,
+              params.user_timezone},
+             config
+           ) do
+      {:ok, new_times}
+    end
+  end
 
   # Everything a committed reschedule sets off outside the meeting row: fresh
   # availability, the provider side of any room the move left behind or
