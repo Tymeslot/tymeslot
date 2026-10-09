@@ -18,6 +18,7 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Payments.PaymentTransactionSchema
@@ -116,6 +117,36 @@ defmodule Tymeslot.Factory do
   @spec pending_meeting_factory() :: Tymeslot.Meetings.MeetingSchema.t()
   def pending_meeting_factory do
     build(:meeting, status: "pending")
+  end
+
+  @spec group_meeting_factory() :: Tymeslot.Meetings.MeetingSchema.t()
+  # A group meeting's people are its participant rows; its own attendee
+  # columns are always empty.
+  def group_meeting_factory do
+    build(:meeting,
+      capacity: 2,
+      attendee_name: nil,
+      attendee_email: nil,
+      attendee_message: nil,
+      attendee_timezone: nil,
+      attendee_locale: nil
+    )
+  end
+
+  @spec participant_factory(map()) :: Tymeslot.Meetings.ParticipantSchema.t()
+  def participant_factory(attrs) do
+    %ParticipantSchema{
+      meeting: build(:meeting),
+      name: sequence(:participant_name, &"Participant #{&1}"),
+      email: sequence(:participant_email, &"participant#{&1}@test.com"),
+      timezone: "Europe/Zurich",
+      locale: "en",
+      custom_field_answers: %{},
+      management_token: ParticipantSchema.generate_token()
+    }
+    |> merge_attributes(attrs)
+    |> evaluate_lazy_attributes()
+    |> put_token_hash(:management_token, :management_token_hash)
   end
 
   @spec user_factory() :: Tymeslot.Auth.UserSchema.t()
@@ -291,7 +322,8 @@ defmodule Tymeslot.Factory do
     %AvailabilityScheduleSchema{
       name: sequence(:availability_schedule_name, &"Schedule #{&1}"),
       is_default: false,
-      buffer_minutes: 15,
+      buffer_before_minutes: 15,
+      buffer_after_minutes: 15,
       min_advance_hours: 3,
       advance_booking_days: 90,
       profile: build(:profile)

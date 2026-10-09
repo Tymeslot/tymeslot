@@ -9,7 +9,7 @@ defmodule Tymeslot.Availability.Breaks do
   alias Tymeslot.Availability.AvailabilityBreakQueries
   alias Tymeslot.Availability.AvailabilityBreakSchema
   alias Tymeslot.Availability.WeeklyAvailabilityQueries
-  alias Tymeslot.Utils.TimeRange
+  alias Tymeslot.Availability.Window
 
   @doc """
   Adds a new break to a day.
@@ -28,10 +28,12 @@ defmodule Tymeslot.Availability.Breaks do
       sort_order: next_sort_order
     }
 
+    work_hours = AvailabilityBreakQueries.get_work_hours(weekly_availability_id)
+
     %AvailabilityBreakSchema{}
-    |> AvailabilityBreakSchema.changeset(attrs)
-    |> validate_break_within_work_hours(weekly_availability_id)
-    |> validate_no_break_overlap(weekly_availability_id)
+    |> AvailabilityBreakSchema.changeset(attrs, work_hours: work_hours)
+    |> validate_break_within_work_hours(work_hours)
+    |> validate_no_break_overlap(weekly_availability_id, work_hours)
     |> AvailabilityBreakQueries.insert_changeset()
   end
 
@@ -64,13 +66,11 @@ defmodule Tymeslot.Availability.Breaks do
           {:ok, AvailabilityBreakSchema.t()} | {:error, Ecto.Changeset.t() | String.t()}
   def add_quick_break(weekly_availability_id, start_time, duration_minutes, label \\ nil)
       when is_integer(duration_minutes) and duration_minutes > 0 do
+    # Time.add/3 wraps at midnight, which is exactly what a break inside an
+    # overnight window needs; inside a same-day window the wrapped end lands
+    # before the start and the within-hours rule refuses it.
     end_time = Time.add(start_time, duration_minutes * 60, :second)
-
-    if Time.compare(end_time, start_time) != :gt do
-      {:error, "Break duration extends past end of day"}
-    else
-      add_break(weekly_availability_id, start_time, end_time, label)
-    end
+    add_break(weekly_availability_id, start_time, end_time, label)
   rescue
     exception ->
       Logger.warning("Quick break time calculation failed",
@@ -84,42 +84,50 @@ defmodule Tymeslot.Availability.Breaks do
 
   # Private functions
 
-  defp validate_break_within_work_hours(changeset, weekly_availability_id) do
-    with {work_start, work_end} <-
-           AvailabilityBreakQueries.get_work_hours(weekly_availability_id),
+  defp validate_break_within_work_hours(changeset, work_hours) do
+    with %{} = window <- work_hours,
          %Time{} = start_time <- Changeset.get_field(changeset, :start_time),
          %Time{} = end_time <- Changeset.get_field(changeset, :end_time) do
-      cond do
-        Time.compare(start_time, work_start) == :lt ->
-          Changeset.add_error(changeset, :start_time, "cannot be before work hours")
-
-        Time.compare(end_time, work_end) == :gt ->
-          Changeset.add_error(changeset, :end_time, "cannot be after work hours")
-
-        true ->
-          changeset
-      end
+      within_work_hours(changeset, window, start_time, end_time)
     else
-      nil ->
-        Changeset.add_error(changeset, :base, "Work hours not found")
+      nil -> Changeset.add_error(changeset, :base, "Work hours not found")
+      _other -> changeset
+    end
+  end
 
-      _other ->
+  # The same two messages as before. In an overnight window a start outside
+  # the hours reads as a large offset, so it is reported against the end.
+  defp within_work_hours(
+         changeset,
+         %{start_time: %Time{}, end_time: %Time{}} = window,
+         start_time,
+         end_time
+       ) do
+    {from, to} = Window.break_offsets(window, start_time, end_time)
+
+    cond do
+      from < 0 ->
+        Changeset.add_error(changeset, :start_time, "cannot be before work hours")
+
+      to > Window.span_seconds(window) ->
+        Changeset.add_error(changeset, :end_time, "cannot be after work hours")
+
+      true ->
         changeset
     end
   end
 
-  defp validate_no_break_overlap(changeset, weekly_availability_id, exclude_break_id \\ nil) do
+  defp within_work_hours(changeset, _no_hours, _start_time, _end_time), do: changeset
+
+  defp validate_no_break_overlap(changeset, weekly_availability_id, window) do
     start_time = Changeset.get_field(changeset, :start_time)
     end_time = Changeset.get_field(changeset, :end_time)
 
     if start_time && end_time do
       existing_breaks =
-        AvailabilityBreakQueries.get_existing_breaks_for_validation(
-          weekly_availability_id,
-          exclude_break_id
-        )
+        AvailabilityBreakQueries.get_existing_breaks_for_validation(weekly_availability_id)
 
-      if has_overlap?(start_time, end_time, existing_breaks, exclude_break_id) do
+      if has_overlap?(window, {start_time, end_time}, existing_breaks) do
         Changeset.add_error(changeset, :base, "Break times overlap with existing break")
       else
         changeset
@@ -129,15 +137,22 @@ defmodule Tymeslot.Availability.Breaks do
     end
   end
 
-  defp has_overlap?(start_time, end_time, existing_breaks, exclude_break_id) do
-    Enum.any?(existing_breaks, fn
-      {break_id, _break_start, _break_end} when break_id == exclude_break_id ->
-        false
+  defp has_overlap?(window, {start_time, end_time}, existing_breaks) do
+    {from, to} = offsets(window, start_time, end_time)
 
-      {_break_id, break_start, break_end} ->
-        TimeRange.overlaps?(start_time, end_time, break_start, break_end)
+    Enum.any?(existing_breaks, fn {_break_id, break_start, break_end} ->
+      {other_from, other_to} = offsets(window, break_start, break_end)
+      from < other_to and to > other_from
     end)
   end
+
+  # Without hours to measure from, a break is compared on its own clock, as
+  # before.
+  defp offsets(%{start_time: %Time{}, end_time: %Time{}} = window, start_time, end_time),
+    do: Window.break_offsets(window, start_time, end_time)
+
+  defp offsets(_no_hours, start_time, end_time),
+    do: {Time.diff(start_time, ~T[00:00:00]), Time.diff(end_time, ~T[00:00:00])}
 
   @doc """
   Gets common break duration presets.

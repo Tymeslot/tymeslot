@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelect do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
 
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.OptionCard
 

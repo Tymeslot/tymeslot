@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Components.UI.CheckToggle do
   """
   use Phoenix.Component
 
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Icons
 
   attr :id, :string, required: true, doc: "Unique identifier for the control"
   attr :checked, :boolean, required: true, doc: "Whether the item is done"
@@ -35,16 +35,19 @@ defmodule TymeslotWeb.Components.UI.CheckToggle do
       role="checkbox"
       aria-checked={to_string(@checked)}
       aria-label={@label}
-      class={[
-        "shrink-0 flex items-center justify-center rounded-token-md border-2 transition-colors",
-        size_class(@size),
-        state_class(@checked),
-        disabled_class(@disabled),
-        @class
-      ]}
+      class={
+        [
+          # `check-toggle` widens the hit area on touch screens (buttons.css).
+          "check-toggle relative shrink-0 flex items-center justify-center rounded-token-md border-2 transition-colors",
+          size_class(@size),
+          state_class(@checked),
+          disabled_class(@disabled),
+          @class
+        ]
+      }
       id={@id}
     >
-      <CoreComponents.icon name="hero-check" class={icon_size_class(@size)} />
+      <Icons.icon name="hero-check" class={icon_size_class(@size)} />
     </button>
     """
   end
@@ -57,7 +60,7 @@ defmodule TymeslotWeb.Components.UI.CheckToggle do
   defp icon_size_class(:medium), do: "w-4 h-4"
   defp icon_size_class(:large), do: "w-5 h-5"
 
-  defp state_class(true), do: "bg-emerald-500 border-emerald-500 text-white"
+  defp state_class(true), do: "bg-green-500 border-green-500 text-white"
 
   defp state_class(false),
     do: "bg-white border-tymeslot-300 text-transparent hover:border-turquoise-400"

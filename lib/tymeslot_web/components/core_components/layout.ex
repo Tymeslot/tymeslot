@@ -1,9 +1,6 @@
 defmodule TymeslotWeb.Components.CoreComponents.Layout do
   @moduledoc "Layout-related components extracted from CoreComponents."
   use Phoenix.Component
-  use Gettext, backend: TymeslotWeb.Gettext
-
-  import TymeslotWeb.Components.CoreComponents.TranslatedLink, only: [link_html: 2]
 
   # Application modules
   alias TymeslotWeb.StepNavigation
@@ -47,40 +44,6 @@ defmodule TymeslotWeb.Components.CoreComponents.Layout do
       <% end %>
       {render_slot(@inner_block)}
     </div>
-    """
-  end
-
-  @doc """
-  Global footer component.
-  """
-  attr :class, :string, default: nil
-
-  @spec footer(map()) :: Phoenix.LiveView.Rendered.t()
-  def footer(assigns) do
-    ~H"""
-    <footer class="footer-gradient text-center">
-      <p style="color: rgba(255,255,255,0.8);">
-        {Phoenix.HTML.raw(
-          dgettext(
-            "common",
-            "Made with %{heart} by the %{team}",
-            heart: ~s(<span style="color: #ef4444;">❤</span>),
-            team:
-              link_html(dgettext("common", "Tymeslot team"),
-                href: "https://github.com/tymeslot/tymeslot",
-                target: "_blank",
-                rel: "noopener noreferrer",
-                data: [
-                  analytics_event: "github_cta_clicked",
-                  analytics_props: Jason.encode!(%{source_page: "footer_credit"})
-                ],
-                class: "underline hover:text-white transition-colors",
-                style: "color: rgba(255,255,255,0.9);"
-              )
-          )
-        )}
-      </p>
-    </footer>
     """
   end
 end

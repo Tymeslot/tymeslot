@@ -351,3 +351,13 @@ msgstr "Eine Terminart kann jetzt mehrere Treffpunkte anbieten: persönlich an e
 #, elixir-autogen, elixir-format
 msgid "Let people choose where you meet"
 msgstr "Lassen Sie andere wählen, wo Sie sich treffen"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Host webinars, workshops and classes"
+msgstr "Webinare, Workshops und Kurse anbieten"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Turn any meeting type into a group session. Set how many people can join and each slot stays open until it's full, so one booking page can run your webinar, workshop, class or office hours. Everyone books themselves in, gets their own confirmation and calendar invite, and can cancel or reschedule without asking you."
+msgstr "Machen Sie aus jedem Termintyp eine Gruppensitzung. Legen Sie fest, wie viele Personen teilnehmen können, und jedes Zeitfenster bleibt offen, bis es voll ist. So bedient eine einzige Buchungsseite Ihr Webinar, Ihren Workshop, Ihren Kurs oder Ihre Sprechstunde. Alle buchen sich selbst ein, erhalten eine eigene Bestätigung samt Kalendereinladung und können absagen oder verschieben, ohne bei Ihnen nachzufragen."

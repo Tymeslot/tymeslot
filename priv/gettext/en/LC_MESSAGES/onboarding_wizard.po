@@ -63,11 +63,6 @@ msgstr ""
 msgid "%{field} must be between %{min} and %{max}"
 msgstr ""
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
-#, elixir-autogen, elixir-format
-msgid "%{minutes} min buffer between meetings"
-msgstr ""
-
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
 msgid "%{provider} · Connected"
@@ -96,11 +91,6 @@ msgstr ""
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "6 months"
-msgstr ""
-
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
-#, elixir-autogen, elixir-format
-msgid "A breather between meetings (%{minutes} min)"
 msgstr ""
 
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
@@ -171,11 +161,6 @@ msgstr ""
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Booking window"
-msgstr ""
-
-#: lib/tymeslot_web/live/onboarding_live/step_config.ex
-#, elixir-autogen, elixir-format
-msgid "Breathing room between appointments so you never feel rushed."
 msgstr ""
 
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
@@ -382,11 +367,6 @@ msgstr ""
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
 msgid "I'll connect a calendar later"
-msgstr ""
-
-#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
-#, elixir-autogen, elixir-format
-msgid "If someone books a meeting that ends at %{end_time} and your buffer is %{minutes} min, the next available slot starts at %{next_start}."
 msgstr ""
 
 #: lib/tymeslot_web/live/onboarding_live/timezone_handlers.ex
@@ -678,11 +658,6 @@ msgstr ""
 
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
 #, elixir-autogen, elixir-format
-msgid "With no buffer, the next available slot starts as soon as a meeting ends."
-msgstr ""
-
-#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
-#, elixir-autogen, elixir-format
 msgid "With no minimum notice, someone can book a slot that starts any time from now."
 msgstr ""
 
@@ -764,11 +739,6 @@ msgstr ""
 
 #: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex
 #, elixir-autogen, elixir-format
-msgid "Buffer minutes"
-msgstr ""
-
-#: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex
-#, elixir-autogen, elixir-format
 msgid "Minimum advance hours"
 msgstr ""
 
@@ -830,4 +800,86 @@ msgstr ""
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "1 year"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "%{before_minutes} min before, %{after_minutes} min after"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "%{before_minutes} min before, no buffer after"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "A breather around each meeting"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer after"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer after must be between %{min} and %{max} minutes."
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer before"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer before must be between %{min} and %{max} minutes."
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
+#, elixir-autogen, elixir-format
+msgid "Custom buffer after, in minutes"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
+#, elixir-autogen, elixir-format
+msgid "Custom buffer before, in minutes"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
+#, elixir-autogen, elixir-format
+msgid "If you have a meeting from %{start_time} to %{end_time}, a new booking after it can start at %{next_start} at the earliest, and one before it must end by %{latest_end}."
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "No buffer around meetings"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "No buffer before, %{after_minutes} min after"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
+#, elixir-autogen, elixir-format
+msgid "With no buffers, a new booking can sit right next to an existing meeting."
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
+#, elixir-autogen, elixir-format
+msgctxt "buffer"
+msgid "After"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
+#, elixir-autogen, elixir-format
+msgctxt "buffer"
+msgid "Before"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/step_config.ex
+#, elixir-autogen, elixir-format
+msgid "How much free time a new booking needs before and after it."
 msgstr ""

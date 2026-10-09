@@ -24,13 +24,21 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LengthsField do
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   # A new row starts with the next common length the type does not offer yet,
-  # so it is valid straight away and the host only has to adjust it.
-  @suggested_lengths [15, 30, 45, 60, 90, 120, 180, 240, 300, 360, 420, 480]
+  # so it is valid straight away and the host only has to adjust it. Only the
+  # ones the duration range allows are kept, so the list follows its ceiling.
+  @suggested_lengths Enum.filter(
+                       [15, 30, 45, 60, 90, 120, 180, 240, 300, 360, 420, 480, 600, 720, 1440],
+                       &(&1 in Constraints.duration_minutes_range())
+                     )
 
   attr :form_data, :map, required: true
   attr :form_errors, :map, default: %{}
   attr :type, :map, default: nil
   attr :myself, :any, required: true
+
+  attr :group_bookings_enabled, :boolean,
+    default: false,
+    doc: "a group type offers one length, so no further ones can be added"
 
   @doc """
   Renders the length fields for `form_data`.
@@ -88,7 +96,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LengthsField do
             phx-click="remove_length"
             phx-value-index={index}
             phx-target={@myself}
-            class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-tymeslot-200 bg-white text-tymeslot-500 hover:text-red-600 hover:border-red-300"
+            class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-token-full border border-tymeslot-200 bg-white text-tymeslot-500 hover:text-red-600 hover:border-red-300"
             aria-label={dgettext("dashboard_meeting_form", "Remove this duration")}
             title={dgettext("dashboard_meeting_form", "Remove this duration")}
             data-testid="remove-length"
@@ -99,14 +107,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LengthsField do
         <%!-- As tall as an input (h-12), so the button centres on the
               fields beside it rather than on their bottom edge. --%>
         <div
-          :if={length(@extra_lengths) + 1 < Constraints.max_lengths_per_meeting_type()}
+          :if={
+            not @group_bookings_enabled and
+              length(@extra_lengths) + 1 < Constraints.max_lengths_per_meeting_type()
+          }
           class="flex h-12 items-center"
         >
           <button
             type="button"
             phx-click="add_length"
             phx-target={@myself}
-            class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-turquoise-200 bg-white text-turquoise-600 hover:text-turquoise-700 hover:border-turquoise-300"
+            class="inline-flex h-9 w-9 items-center justify-center rounded-token-full border border-turquoise-200 bg-white text-turquoise-600 hover:text-turquoise-700 hover:border-turquoise-300"
             aria-label={dgettext("dashboard_meeting_form", "Offer another duration")}
             title={dgettext("dashboard_meeting_form", "Offer another duration")}
             data-testid="add-length"
@@ -129,6 +140,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LengthsField do
           min: Constraints.duration_minutes_opts()[:greater_than_or_equal_to],
           max: Constraints.duration_minutes_opts()[:less_than_or_equal_to]
         )}
+        <span :if={@group_bookings_enabled}>
+          {dgettext(
+            "dashboard_meeting_form",
+            "A group meeting type offers a single duration."
+          )}
+        </span>
         <span :if={@extra_lengths != []}>
           {dgettext(
             "dashboard_meeting_form",

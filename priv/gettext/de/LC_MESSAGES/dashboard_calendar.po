@@ -48,7 +48,6 @@ msgid "%{day} at %{time}"
 msgstr "%{day} um %{time}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
 #, elixir-autogen, elixir-format
 msgid "%{event}, %{time}"
 msgstr "%{event}, %{time}"
@@ -68,15 +67,6 @@ msgstr "vor %{minutes} Min."
 msgid "%{when_text} · %{location}"
 msgstr "%{when_text} · %{location}"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/all_day_row.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/month_view.ex
-#, elixir-autogen, elixir-format
-msgid "(No title)"
-msgstr "(Kein Titel)"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/all_day_row.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/month_view.ex
 #, elixir-autogen, elixir-format
@@ -92,22 +82,10 @@ msgid "3 Days"
 msgstr "3 Tage"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
-#, elixir-autogen, elixir-format
-msgid "Add event"
-msgstr "Ereignis hinzufügen"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Agenda"
 msgstr "Agenda"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header/search_box.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/time_formatting.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
-#, elixir-autogen, elixir-format
-msgid "All day"
-msgstr "Ganztägig"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/all_day_row.ex
 #, elixir-autogen, elixir-format
@@ -144,11 +122,6 @@ msgstr "Tag"
 #, elixir-autogen, elixir-format
 msgid "Keyboard shortcuts"
 msgstr "Tastenkürzel"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
-#, elixir-autogen, elixir-format
-msgid "Keyboard shortcuts (?)"
-msgstr "Tastenkürzel (?)"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
@@ -237,7 +210,6 @@ msgstr "Ansicht wechseln"
 msgid "Syncing calendars%{progress}..."
 msgstr "Kalender werden synchronisiert%{progress}…"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Today"
@@ -247,19 +219,6 @@ msgstr "Heute"
 #, elixir-autogen, elixir-format
 msgid "Toggle calendars"
 msgstr "Kalender ein-/ausblenden"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
-#, elixir-autogen, elixir-format
-msgid "Tomorrow"
-msgstr "Morgen"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header/search_box.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/all_day_row.ex
-#, elixir-autogen, elixir-format
-msgid "Untitled event"
-msgstr "Ereignis ohne Titel"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
@@ -342,11 +301,6 @@ msgstr "Standardfarbe"
 msgid "All"
 msgstr "Alle"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Booked through your Tymeslot page"
-msgstr "Über Ihre Tymeslot-Seite gebucht"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
 #, elixir-autogen, elixir-format
 msgid "Bookings"
@@ -362,16 +316,6 @@ msgstr "Holen Sie Ihren Kalender in Tymeslot"
 msgid "Filter agenda"
 msgstr "Agenda filtern"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Join meeting"
-msgstr "Meeting beitreten"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Manage in Meetings"
-msgstr "Unter „Termine“ verwalten"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
 #, elixir-autogen, elixir-format
 msgid "Meetings booked through your Tymeslot page will appear here."
@@ -386,3 +330,28 @@ msgstr "Keine anstehenden Buchungen"
 #, elixir-autogen, elixir-format
 msgid "Your bookings already show here. Connect a calendar to see the rest of your events and prevent double-bookings."
 msgstr "Ihre Buchungen werden hier bereits angezeigt. Verbinden Sie einen Kalender, um auch Ihre übrigen Ereignisse zu sehen und Doppelbuchungen zu vermeiden."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
+#, elixir-autogen, elixir-format
+msgid "Import"
+msgstr "Importieren"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
+#, elixir-autogen, elixir-format
+msgid "Import events from an .ics file"
+msgstr "Ereignisse aus einer .ics-Datei importieren"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "Drop an .ics file to import its events"
+msgstr "Legen Sie eine .ics-Datei hier ab, um ihre Ereignisse zu importieren"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{count}/%{capacity} seats taken"
+msgstr "%{count}/%{capacity} Plätze belegt"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Participants"
+msgstr "Teilnehmer"

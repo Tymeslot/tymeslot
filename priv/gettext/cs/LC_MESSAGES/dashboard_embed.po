@@ -103,11 +103,6 @@ msgstr "Nejjednodušší"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
-msgid "Embed & Share"
-msgstr "Vložení a sdílení"
-
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
-#, elixir-autogen, elixir-format
 msgid "Embed Options"
 msgstr "Možnosti vložení"
 
@@ -440,3 +435,13 @@ msgstr "Pouze náhled: tento odkaz se otevře v testovacím režimu a po hodině
 #, elixir-autogen, elixir-format
 msgid "The preview is disabled because your booking link is currently deactivated."
 msgstr "Náhled je vypnutý, protože váš rezervační odkaz je momentálně neaktivní."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Embed settings"
+msgstr "Nastavení vložení"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
+#, elixir-autogen, elixir-format
+msgid "Remove %{domain}"
+msgstr "Odebrat %{domain}"

@@ -35,5 +35,18 @@ defmodule Tymeslot.Emails.Shared.CalloutsTest do
       refute html_without =~ "Heading"
       assert String.length(html_without) < String.length(html_with)
     end
+
+    test "renders :items as a bulleted list under the message" do
+      html = Callouts.alert_box(:alert, "Common causes:", items: ["Network down", "Bad token"])
+
+      assert html =~ "Common causes:<br/>• Network down<br/>• Bad token"
+    end
+
+    test "escapes each item, so an entry cannot inject markup" do
+      html = Callouts.alert_box(:alert, "Causes:", items: ["<script>x</script>"])
+
+      assert html =~ "<br/>• &lt;script&gt;x&lt;/script&gt;"
+      refute html =~ "<script>"
+    end
   end
 end

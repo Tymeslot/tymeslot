@@ -4,6 +4,7 @@ defmodule Tymeslot.Availability.WeeklyAvailabilitySchemaTest do
   @moduletag :database
   @moduletag :schema
 
+  alias Ecto.Changeset
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
 
   describe "changeset/2 - day_of_week validation" do
@@ -248,13 +249,9 @@ defmodule Tymeslot.Availability.WeeklyAvailabilitySchemaTest do
       assert changeset.valid?
     end
 
-    test "rejects time range spanning into next day (e.g., night shift)" do
-      schedule = insert(:availability_schedule)
-
-      # Note: This tests that the validation intentionally rejects overnight shifts
-      # like 22:00-02:00. This structure requires shifts to be within a single day.
+    test "rejects an end before the start unless the hours end the next day" do
       attrs = %{
-        schedule_id: schedule.id,
+        schedule_id: 1,
         day_of_week: 1,
         is_available: true,
         start_time: ~T[22:00:00],
@@ -262,9 +259,79 @@ defmodule Tymeslot.Availability.WeeklyAvailabilitySchemaTest do
       }
 
       changeset = WeeklyAvailabilitySchema.changeset(%WeeklyAvailabilitySchema{}, attrs)
-      # This will fail validation because end_time (02:00) is before start_time (22:00)
       refute changeset.valid?
       assert "must be after start time" in errors_on(changeset).end_time
+
+      assert WeeklyAvailabilitySchema.changeset(
+               %WeeklyAvailabilitySchema{},
+               Map.put(attrs, :ends_next_day, true)
+             ).valid?
+    end
+
+    test "accepts a full 24 hours from midnight to midnight" do
+      attrs = %{
+        schedule_id: 1,
+        day_of_week: 1,
+        is_available: true,
+        start_time: ~T[00:00:00],
+        end_time: ~T[00:00:00],
+        ends_next_day: true
+      }
+
+      assert WeeklyAvailabilitySchema.changeset(%WeeklyAvailabilitySchema{}, attrs).valid?
+    end
+
+    test "refuses hours that end the next day but would last more than 24 hours" do
+      attrs = %{
+        schedule_id: 1,
+        day_of_week: 1,
+        is_available: true,
+        start_time: ~T[09:00:00],
+        end_time: ~T[10:00:00],
+        ends_next_day: true
+      }
+
+      changeset = WeeklyAvailabilitySchema.changeset(%WeeklyAvailabilitySchema{}, attrs)
+
+      assert "must be at or before the start time when the hours end the next day" in errors_on(
+               changeset
+             ).end_time
+    end
+
+    test "an explicit nil flag is stored as a same-day window" do
+      schedule = insert(:availability_schedule)
+
+      attrs = %{
+        schedule_id: schedule.id,
+        day_of_week: 1,
+        is_available: true,
+        start_time: ~T[09:00:00],
+        end_time: ~T[17:00:00],
+        ends_next_day: nil
+      }
+
+      assert {:ok, day} =
+               %WeeklyAvailabilitySchema{}
+               |> WeeklyAvailabilitySchema.changeset(attrs)
+               |> Repo.insert()
+
+      assert day.ends_next_day == false
+    end
+
+    test "a day without hours is never flagged" do
+      attrs = %{
+        schedule_id: 1,
+        day_of_week: 1,
+        is_available: false,
+        start_time: nil,
+        end_time: nil,
+        ends_next_day: true
+      }
+
+      changeset = WeeklyAvailabilitySchema.changeset(%WeeklyAvailabilitySchema{}, attrs)
+
+      assert changeset.valid?
+      assert Changeset.get_field(changeset, :ends_next_day) == false
     end
   end
 

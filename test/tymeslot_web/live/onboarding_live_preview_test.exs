@@ -167,11 +167,25 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
   end
 
   describe "buffer step preview" do
-    test "shows the buffer as a labelled gap, not a slot", %{conn: conn} do
+    test "shows both buffers as a labelled gap, not a slot", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
       view = navigate_to_scheduling_steps(view)
 
-      assert render(view) =~ "buffer between meetings"
+      assert render(view) =~ "15 min before, 15 min after"
+    end
+
+    test "words a zero buffer plainly", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn)
+      view = navigate_to_scheduling_steps(view)
+
+      html =
+        view
+        |> element(
+          "button[phx-click='update_scheduling_preferences'][phx-value-buffer_before_minutes='0']"
+        )
+        |> render_click()
+
+      assert html =~ "No buffer before, 15 min after"
     end
   end
 

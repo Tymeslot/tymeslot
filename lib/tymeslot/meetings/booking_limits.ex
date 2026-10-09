@@ -62,32 +62,52 @@ defmodule Tymeslot.Meetings.BookingLimits do
   end
 
   @doc """
-  The UTC window whose bookings can affect any day/week/month cap that a
-  date in `start_date..end_date` falls under.
+  The host dates the instants of the booker dates `start_date..end_date`
+  fall on, as `{first, last}`.
 
-  Pads the range by one day first (a booker-timezone day can straddle two
-  host-timezone days), then widens to the enclosing Monday-weeks and
-  calendar months. Weekly and monthly caps are judged on the full enclosing
-  period, even the parts outside the displayed or bookable range.
+  A booker's day can begin and end on host dates up to two days away from
+  it: zones sit up to 26 hours apart (UTC-12 to UTC+14), so a booker in
+  Pacific/Kiritimati looking at a Tuesday can be offered a slot on the host's
+  Sunday in Pacific/Pago_Pago.
+  """
+  @spec host_dates(Date.t(), Date.t(), String.t(), String.t()) :: {Date.t(), Date.t()}
+  def host_dates(%Date{} = start_date, %Date{} = end_date, booker_timezone, host_timezone) do
+    first =
+      start_date
+      |> DateTimeUtils.create_datetime_safe(~T[00:00:00], booker_timezone)
+      |> day_key(host_timezone)
+
+    last =
+      end_date
+      |> Date.add(1)
+      |> DateTimeUtils.create_datetime_safe(~T[00:00:00], booker_timezone)
+      |> DateTime.add(-1, :second)
+      |> day_key(host_timezone)
+
+    {first, last}
+  end
+
+  @doc """
+  The UTC window whose bookings can affect any day/week/month cap that a
+  host date in `start_date..end_date` falls under.
+
+  Widens the range to the enclosing Monday-weeks and calendar months: weekly
+  and monthly caps are judged on the full enclosing period, even the parts
+  outside the displayed or bookable range. A caller starting from booker
+  dates converts them with `host_dates/4` first.
   Returns `{from_utc, to_utc}` with `to_utc` exclusive.
   """
   @spec expanded_query_window(Date.t(), Date.t(), String.t()) :: {DateTime.t(), DateTime.t()}
   def expanded_query_window(%Date{} = start_date, %Date{} = end_date, host_timezone) do
-    padded_start = Date.add(start_date, -1)
-    padded_end = Date.add(end_date, 1)
-
     from_date =
       Enum.min(
-        [
-          Date.beginning_of_week(padded_start, @week_start),
-          Date.beginning_of_month(padded_start)
-        ],
+        [Date.beginning_of_week(start_date, @week_start), Date.beginning_of_month(start_date)],
         Date
       )
 
     to_date =
       Enum.max(
-        [Date.end_of_week(padded_end, @week_start), Date.end_of_month(padded_end)],
+        [Date.end_of_week(end_date, @week_start), Date.end_of_month(end_date)],
         Date
       )
 

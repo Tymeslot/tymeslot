@@ -45,6 +45,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
 
       alias TymeslotWeb.Themes.Shared.BookingFlow
       alias TymeslotWeb.Themes.Shared.BookingLocation
+      alias TymeslotWeb.Themes.Shared.BookingTracking
       alias TymeslotWeb.Themes.Shared.GuestBooking
 
       alias TymeslotWeb.Components.MeetingUtils
@@ -81,7 +82,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
             &setup_initial_state/3
           )
 
-        socket = LiveHelpers.assign_tracking(socket, params)
+        socket = BookingTracking.assign_tracking(socket, params)
 
         {:ok, socket}
       end
@@ -138,6 +139,11 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       @impl Phoenix.LiveView
       def handle_info({:load_slots, date}, socket) do
         InfoHandlers.handle_load_slots(socket, date)
+      end
+
+      @impl Phoenix.LiveView
+      def handle_info({:seat_update, meeting_type_id}, socket) do
+        InfoHandlers.handle_seat_update(socket, meeting_type_id, &transition_to/3)
       end
 
       @impl Phoenix.LiveView
@@ -218,12 +224,10 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       end
 
       defp handle_length_events(socket, event, data) do
-        callbacks = %{
+        EventHandlers.handle_length_events(socket, event, data, %{
           validate_state_transition: &validate_state_transition/3,
           transition_to: &transition_to/3
-        }
-
-        EventHandlers.handle_length_events(socket, event, data, callbacks)
+        })
       end
 
       defp handle_schedule_events(socket, event, data) do
@@ -314,9 +318,8 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       defp handle_schedule_navigation_events(socket, event) do
         case event do
           :back_step ->
-            # Enforced server-side (see `StateMachine.schedule_back_target/1`)
-            # so a client cannot bypass the template-level `:if` guard by
-            # pushing the event directly.
+            # Enforced server-side (`StateMachine.schedule_back_target/1`), so
+            # a client pushing the event cannot bypass the template's `:if`.
             case StateMachine.schedule_back_target(socket) do
               nil -> {:noreply, socket}
               target -> handle_state_transition(socket, :schedule, target)
@@ -451,12 +454,18 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
             # The flow restarts here without navigating, so the reschedule
             # context has to be dropped explicitly or the next submit moves the
             # meeting that was just moved. See `ReschedulePin.abandon/1`.
+            #
+            # The booker is on the overview now, with every meeting type in
+            # front of them, so the date step offers the way back to it
+            # whichever page they first entered on.
             socket =
               socket
               |> GuestBooking.assign_defaults()
               |> ReschedulePin.abandon()
+              |> assign(:entered_via_overview, true)
+              |> transition_to(:overview, %{})
 
-            {:noreply, transition_to(socket, :overview, %{})}
+            {:noreply, ReschedulePin.drop_from_url(socket)}
 
           _other ->
             {:noreply, socket}
@@ -481,14 +490,11 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
 
       defp handle_state_entry(socket, :schedule, params) do
         socket = LiveHelpers.handle_schedule_entry(socket, params)
-
-        # A type offering several lengths is only scheduled once one is chosen;
-        # a direct link without `?minutes=` lands on that choice first.
-        if StateMachine.needs_length_choice?(socket) do
-          assign(socket, :current_state, :length)
-        else
-          refresh_stale_slot_snapshot(socket)
-        end
+        # A multi-length type is scheduled once a length is chosen; a direct
+        # link without `?minutes=` lands on that choice first.
+        if StateMachine.needs_length_choice?(socket),
+          do: assign(socket, :current_state, :length),
+          else: refresh_stale_slot_snapshot(socket)
       end
 
       defp handle_state_entry(socket, :questions, _params) do

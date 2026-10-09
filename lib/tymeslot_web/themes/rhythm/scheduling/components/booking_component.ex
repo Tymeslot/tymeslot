@@ -112,6 +112,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
+    assigns = assign(assigns, :next_day_end, LocalizationHelpers.booking_next_day_end(assigns))
+
     ~H"""
     <div class="scheduling-box" data-locale={@locale}>
       <div class="slide-container">
@@ -135,6 +137,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                     <div class="summary-label">
                       {LocalizationHelpers.format_slot_label(@selected_time) ||
                         dgettext("booking", "No time selected")}
+                    </div>
+                    <div :if={@next_day_end} class="summary-label" data-testid="booking-next-day-end">
+                      {@next_day_end}
                     </div>
                   </div>
                 </div>

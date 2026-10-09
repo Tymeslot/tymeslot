@@ -1,5 +1,6 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
   use TymeslotWeb.LiveCase, async: true
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :calendar
   @moduletag :live
@@ -8,6 +9,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
   import Tymeslot.Factory
 
   alias Plug.Test
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Workers.EmailWorker
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
@@ -306,13 +309,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
+      before = lv |> render() |> occurrences("existing@example.com")
+
       html =
         lv
         |> element("#calendar-grid")
         |> render_hook("add_event_attendee", %{"email" => "existing@example.com"})
 
-      # Should not appear as a pending attendee (dashed border = pending tag)
-      refute html =~ "border-dashed"
+      # Listed once still, and not invited a second time.
+      assert occurrences(html, "existing@example.com") == before
+      refute render(lv) =~ "Attendee added and invited."
     end
 
     test "rejects an existing attendee typed in a different case", %{
@@ -432,6 +438,112 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
 
       refute html =~ "discard-me@example.com"
       refute html =~ "New Event"
+    end
+  end
+
+  describe "discard-attendees modal, clicked through" do
+    setup %{user: user} do
+      _integration = insert(:calendar_integration, user: user, is_active: true)
+      :ok
+    end
+
+    defp open_discard_modal(lv) do
+      open_create_form(lv)
+
+      lv
+      |> form("#create-add-attendee-form", %{"email" => "invited@example.com"})
+      |> render_submit()
+
+      lv |> element("#create-event-modal button", "Cancel") |> render_click()
+      assert has_element?(lv, "#confirm-discard-attendees-modal")
+    end
+
+    test "Go back closes the prompt and keeps the form and its attendee", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_discard_modal(lv)
+
+      lv |> element("#confirm-discard-attendees-modal button", "Go back") |> render_click()
+
+      refute has_element?(lv, "#confirm-discard-attendees-modal")
+      assert has_element?(lv, "#create-event-modal")
+      assert render(lv) =~ "invited@example.com"
+    end
+
+    test "Discard closes the prompt and the form and drops the attendee", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_discard_modal(lv)
+
+      lv |> element("#confirm-discard-attendees-modal button", "Discard") |> render_click()
+
+      refute has_element?(lv, "#confirm-discard-attendees-modal")
+      refute has_element?(lv, "#create-event-modal")
+      refute render(lv) =~ "invited@example.com"
+    end
+  end
+
+  describe "remove-attendee modal, clicked through" do
+    setup %{conn: conn, user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      event =
+        insert_event(integration, %{
+          summary: "Team Sync",
+          start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
+          all_day: false,
+          attendees: [%{"email" => "guest@example.com", "name" => "Guest"}]
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      lv
+      |> element(
+        "button[phx-click='request_remove_attendee'][phx-value-email='guest@example.com']"
+      )
+      |> render_click()
+
+      assert has_element?(lv, "#confirm-remove-attendee-modal")
+      {:ok, lv: lv, event: event, integration: integration}
+    end
+
+    test "Cancel closes the prompt and keeps the attendee", %{
+      lv: lv,
+      event: event,
+      integration: integration
+    } do
+      lv |> element("#confirm-remove-attendee-modal button", "Cancel") |> render_click()
+
+      refute has_element?(lv, "#confirm-remove-attendee-modal")
+
+      assert has_element?(
+               lv,
+               "button[phx-click='request_remove_attendee'][phx-value-email='guest@example.com']"
+             )
+
+      refute render(lv) =~ "Attendee removed and notified."
+      refute_enqueued(worker: EmailWorker)
+
+      assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
+      assert [%{"email" => "guest@example.com"}] = row.attendees
+    end
+
+    test "Remove closes the prompt, drops the attendee and notifies them", %{lv: lv} do
+      lv |> element("#confirm-remove-attendee-modal button", "Remove") |> render_click()
+
+      refute has_element?(lv, "#confirm-remove-attendee-modal")
+
+      refute has_element?(
+               lv,
+               "button[phx-click='request_remove_attendee'][phx-value-email='guest@example.com']"
+             )
+
+      assert render(lv) =~ "Attendee removed and notified."
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_calendar_invitation", "attendee_email" => "guest@example.com"}
+      )
     end
   end
 

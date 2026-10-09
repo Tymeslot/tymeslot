@@ -12,6 +12,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Live.Scheduling.CalendarHelpers
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
+  alias TymeslotWeb.Themes.Shared.Components.GroupSession
+  alias TymeslotWeb.Themes.Shared.Components.SeatBadge
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.SlotGrouping
   alias TymeslotWeb.Themes.Shared.StateMachineHelpers
@@ -103,6 +105,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
       <div class="slide-container">
         <div class="slide active">
           <div class="slide-content schedule-slide">
+            <GroupSession.seat_move_notice
+              from={assigns[:reschedule_seat_from]}
+              timezone={@user_timezone}
+            />
             <div class="schedule-header">
               <OrganizerHeader.organizer_header_small
                 organizer_profile={@organizer_profile}
@@ -319,10 +325,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                                   {period}
                                 </h4>
                                 <div class="time-period-slots">
-                                  <%= for slot_value <- slots do %>
+                                  <%= for slot <- slots do %>
                                     <.slot_button
-                                      slot_value={slot_value}
-                                      selected={@selected_time == slot_value}
+                                      slot={slot}
+                                      selected={@selected_time == slot.time}
+                                      loading={@loading_slots}
                                       target={@myself}
                                     />
                                   <% end %>
@@ -380,10 +387,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                                     role="group"
                                     aria-label={SlotGrouping.hour_label(hour)}
                                   >
-                                    <%= for slot_value <- hour_slots do %>
+                                    <%= for slot <- hour_slots do %>
                                       <.slot_button
-                                        slot_value={slot_value}
-                                        selected={@selected_time == slot_value}
+                                        slot={slot}
+                                        selected={@selected_time == slot.time}
+                                        loading={@loading_slots}
                                         target={@myself}
                                       />
                                     <% end %>
@@ -440,8 +448,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
   end
 
   # One definition of the slot button, so the flat grid and the minutes nested
-  # under an expanded hour cannot drift apart in markup.
-  attr :slot_value, :string, required: true
+  # under an expanded hour cannot drift apart in markup — and so the seat
+  # badge cannot be dropped from one of the two.
+  attr :slot, :map, required: true
   attr :selected, :boolean, default: false
   attr :loading, :boolean, default: false
   attr :target, :any, required: true
@@ -451,15 +460,22 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
     ~H"""
     <button
       type="button"
-      class={"time-slot #{if @selected, do: "selected", else: ""}"}
+      class={[
+        "time-slot",
+        @slot[:seats_left] && "has-seats",
+        @selected && "selected"
+      ]}
       data-testid="time-slot"
-      data-time={@slot_value}
+      data-time={@slot.time}
       phx-click="select_time"
-      phx-value-time={@slot_value}
+      phx-value-time={@slot.time}
       phx-target={@target}
       disabled={@loading}
     >
-      {LocalizationHelpers.format_time_by_locale(CalendarHelpers.parse_slot_time(@slot_value))}
+      <span>
+        {LocalizationHelpers.format_time_by_locale(CalendarHelpers.parse_slot_time(@slot.time))}
+      </span>
+      <SeatBadge.seat_badge seats_left={@slot[:seats_left]} capacity={@slot[:capacity]} />
     </button>
     """
   end

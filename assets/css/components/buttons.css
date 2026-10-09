@@ -2,135 +2,240 @@
    BUTTON COMPONENTS
    =================================== */
 
-/* Base Button */
-.btn {
-  @apply inline-flex items-center justify-center font-bold transition-all duration-300 cursor-pointer border-none outline-hidden no-underline whitespace-nowrap select-none touch-manipulation;
-}
+/* Every rule sits in the components layer, below Tailwind's utilities, so a
+   caller's utility class (hidden, w-full, absolute) applies, as it does for
+   layout/utilities.css and design-tokens.css. Hover rules are guarded by
+   (hover: hover) so a tap on a touch screen leaves no stuck hover state, as
+   Tailwind's own hover: variant does. */
+@layer components {
+  /* Legacy button classes, kept only for the surfaces that still render them
+     as raw classes: the auth pages (.btn-primary, .btn-secondary, .btn-link),
+     and the marketing contact page (.btn-primary, .btn-secondary). Their
+     colours are shared with the matching .action-button--* variants below;
+     these rules add only the box (padding, radius, weight) that those callers
+     expect without the .action-button base class. Everything else uses <.action_button>. */
+  .btn-primary,
+  .btn-secondary {
+    @apply font-bold rounded-token-2xl px-6 py-3 transition-glass;
+  }
 
-.btn:focus-visible {
-  @apply ring-2 ring-turquoise-500 ring-offset-2;
-}
+  .btn-link {
+    @apply text-turquoise-600 font-bold hover:text-turquoise-700 transition-colors underline underline-offset-4 decoration-2 decoration-turquoise-200 hover:decoration-turquoise-400;
+  }
 
-/* Button Variants — kept visually in sync with the sanctioned <.action_button>
-   component (.action-button--* below) so both class schemes render the same
-   primary/secondary/danger appearance. Only colour, weight and hover are aligned
-   here; display and width behaviour are deliberately left as-is so existing
-   layouts that use these classes are undisturbed. */
-.btn-primary {
-  @apply bg-linear-to-r from-turquoise-600 to-cyan-600 text-white font-bold shadow-lg shadow-turquoise-500/20 rounded-token-2xl px-6 py-3 transition-glass;
-  @apply hover:from-turquoise-700 hover:to-cyan-700 hover:shadow-turquoise-500/40;
-}
+  /* Without the .action-button base class the legacy classes need their own
+     disabled treatment; the shared hover rules already skip :disabled. */
+  .btn-primary:disabled,
+  .btn-secondary:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
 
-.btn-secondary {
-  @apply bg-white border-2 border-tymeslot-200 text-tymeslot-700 font-bold rounded-token-2xl px-6 py-3 transition-glass shadow-sm;
-  @apply hover:border-turquoise-400 hover:text-turquoise-700 hover:bg-turquoise-50/50;
-}
-
-.btn-danger {
-  @apply bg-linear-to-r from-red-500 to-rose-600 text-white font-bold shadow-lg shadow-red-500/20 rounded-token-2xl px-6 py-3 transition-glass;
-  @apply hover:from-red-400 hover:to-rose-500 hover:shadow-red-500/40;
-}
-
-/* Adding guests is additive rather than destructive, so it reads green beside
-   the red cancel button rather than borrowing the primary gradient, which on a
-   booking card already means "join this meeting". */
-.btn-success {
-  @apply bg-linear-to-r from-green-600 to-emerald-600 text-white font-bold shadow-lg shadow-green-500/20 rounded-token-2xl px-6 py-3 transition-glass;
-  @apply hover:from-green-500 hover:to-emerald-500 hover:shadow-green-500/40;
-}
-
-.btn-ghost {
-  @apply bg-transparent text-tymeslot-600 font-bold rounded-token-2xl px-6 py-3 transition-glass;
-  @apply hover:bg-tymeslot-50 hover:text-turquoise-600;
-}
-
-.btn-link {
-  @apply text-turquoise-600 font-bold hover:text-turquoise-700 transition-colors underline underline-offset-4 decoration-2 decoration-turquoise-200 hover:decoration-turquoise-400;
-}
-
-/* Button Sizes */
-.btn-sm {
-  @apply px-4 py-2 text-token-xs rounded-token-xl;
-}
-
-.btn-lg {
-  @apply px-8 py-4 text-token-base rounded-token-2xl;
-}
-
-.btn-xl {
-  @apply px-10 py-5 text-token-xl rounded-token-2xl;
-}
-
-/* Button States */
-.btn:disabled {
-  @apply opacity-50! cursor-not-allowed! transform-none!;
-}
-
-/* Primary button carries its own hover colour shift without the base .btn
-   class, so it needs an explicit disabled treatment: grey it out and hold the
-   base gradient so it reads as inert. */
-.btn-primary:disabled {
-  @apply opacity-50 cursor-not-allowed;
-}
-
-.btn-primary:disabled:hover {
-  @apply from-turquoise-600 to-cyan-600 shadow-lg;
-}
-
-/* Secondary button carries its own hover affordances (lift, shadow, border
-   colour shift) without the base .btn class, so it needs an explicit disabled
-   treatment: grey it out and strip every hover effect to signal it is inert. */
-.btn-secondary:disabled {
-  @apply opacity-50 cursor-not-allowed;
-}
-
-.btn-secondary:disabled:hover {
-  @apply border-tymeslot-100 bg-white shadow-sm transform-none;
-}
-
-.btn-auth {
-  @apply bg-white border-2 border-tymeslot-100 text-tymeslot-700 font-bold rounded-token-2xl px-4 py-3 transition-glass shadow-sm w-full;
-  @apply hover:border-turquoise-100 hover:bg-tymeslot-50 hover:shadow-md;
-}
-
-/* Action Buttons — the sanctioned <.action_button> component surface (variants
-   :primary / :secondary / :danger / :outline). The legacy .btn-* variants above
-   are kept visually aligned with these. */
-.action-button {
-  @apply px-6 py-3 rounded-token-2xl font-bold transition-glass disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-token-base whitespace-nowrap;
-}
-
-.action-button--primary {
-  @apply bg-linear-to-r from-turquoise-600 to-cyan-600 text-white shadow-lg shadow-turquoise-500/20;
-}
-
-.action-button--primary:hover:not(:disabled) {
-  @apply from-turquoise-700 to-cyan-700 shadow-turquoise-500/40;
-}
-
-.action-button--secondary {
-  @apply bg-white border-2 border-tymeslot-200 text-tymeslot-700 hover:border-turquoise-400 hover:text-turquoise-700 shadow-sm;
-}
-
-.action-button--secondary:hover:not(:disabled) {
-  @apply bg-turquoise-50/50;
-}
-
-.action-button--danger {
-  @apply bg-linear-to-r from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/20;
-}
-
-.action-button--danger:hover:not(:disabled) {
-  @apply from-red-400 to-rose-500 shadow-red-500/40;
-}
-
-.action-button--outline {
-  @apply bg-transparent border-2 border-tymeslot-200 text-tymeslot-600 hover:border-turquoise-400 hover:text-turquoise-700 hover:bg-turquoise-50/50;
-}
-
-/* Small-screen action button sizing */
-@media (max-width: 640px) {
+  /* Action Buttons: the sanctioned <.action_button> / <.action_link> /
+     <.loading_button> surface. The base class carries the :md size; --sm and --lg
+     override it. Size and colour come from the component attributes; a
+     caller's class is for layout (width, margins, position, visibility).
+     Every variant has the same 2px border, transparent where it shows none,
+     so a filled button and an outlined one of the same size stand the same
+     height side by side. */
   .action-button {
-    @apply px-4 py-2 text-token-sm;
+    @apply border-2 border-transparent px-6 py-3 rounded-token-2xl font-bold transition-glass disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 text-token-base whitespace-nowrap no-underline cursor-pointer select-none touch-manipulation;
+  }
+
+  /* A control kept focusable for its tooltip but inert: aria-disabled rather
+     than disabled, which a <label> or <div> styled as a button cannot take. */
+  .action-button[aria-disabled="true"],
+  .icon-button[aria-disabled="true"] {
+    @apply cursor-not-allowed;
+  }
+
+  .action-button:focus-visible {
+    @apply outline-hidden ring-2 ring-turquoise-500 ring-offset-2;
+  }
+
+  .action-button--sm {
+    @apply relative px-3 py-1.5 gap-1.5 text-token-sm rounded-token-xl;
+  }
+
+  .action-button--lg {
+    @apply px-8 py-4 text-token-lg;
+  }
+
+  .action-button--primary,
+  .btn-primary {
+    @apply bg-linear-to-r from-turquoise-600 to-cyan-600 text-white shadow-lg shadow-turquoise-500/20;
+  }
+
+  @media (hover: hover) {
+    .action-button--primary:hover:not(:disabled, [aria-disabled="true"]),
+    .btn-primary:hover:not(:disabled, [aria-disabled="true"]) {
+      @apply from-turquoise-700 to-cyan-700 shadow-turquoise-500/40;
+    }
+  }
+
+  .action-button--secondary,
+  .btn-secondary {
+    @apply bg-white border-2 border-tymeslot-200 text-tymeslot-700 shadow-sm;
+  }
+
+  @media (hover: hover) {
+    .action-button--secondary:hover:not(:disabled, [aria-disabled="true"]),
+    .btn-secondary:hover:not(:disabled, [aria-disabled="true"]) {
+      @apply border-turquoise-400 text-turquoise-700 bg-turquoise-50/50;
+    }
+  }
+
+  .action-button--danger {
+    @apply bg-linear-to-r from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/20;
+  }
+
+  @media (hover: hover) {
+    .action-button--danger:hover:not(:disabled, [aria-disabled="true"]) {
+      @apply from-red-400 to-rose-500 shadow-red-500/40;
+    }
+  }
+
+  /* A destructive action beside a primary one: red text and outline, no fill,
+     so it never outweighs the action the page is for. Solid red stays for the
+     confirm button inside a confirmation modal. */
+  .action-button--danger-soft {
+    @apply bg-white border-2 border-red-200 text-red-600 shadow-sm;
+  }
+
+  @media (hover: hover) {
+    .action-button--danger-soft:hover:not(:disabled, [aria-disabled="true"]) {
+      @apply border-red-400 text-red-700 bg-red-50;
+    }
+  }
+
+  .action-button--danger-soft:focus-visible {
+    @apply ring-red-500;
+  }
+
+  .action-button--outline {
+    @apply bg-transparent border-2 border-tymeslot-200 text-tymeslot-600;
+  }
+
+  @media (hover: hover) {
+    .action-button--outline:hover:not(:disabled, [aria-disabled="true"]) {
+      @apply border-turquoise-400 text-turquoise-700 bg-turquoise-50/50;
+    }
+  }
+
+  .action-button--ghost {
+    @apply bg-transparent text-tymeslot-600;
+  }
+
+  @media (hover: hover) {
+    .action-button--ghost:hover:not(:disabled, [aria-disabled="true"]) {
+      @apply bg-tymeslot-100 text-turquoise-700;
+    }
+  }
+
+  /* Additive rather than destructive (adding guests): green, so it reads apart
+     from both the primary gradient and the red cancel beside it. */
+  .action-button--success {
+    @apply bg-linear-to-r from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/20;
+  }
+
+  @media (hover: hover) {
+    .action-button--success:hover:not(:disabled, [aria-disabled="true"]) {
+      @apply from-green-500 to-emerald-500 shadow-green-500/40;
+    }
+  }
+
+  /* On a dark or brand-gradient surface (the agenda cockpit, the up-next strip),
+     where the primary gradient would vanish into the background. */
+  .action-button--on-dark {
+    @apply bg-white text-turquoise-700 shadow-lg;
+  }
+
+  @media (hover: hover) {
+    .action-button--on-dark:hover:not(:disabled, [aria-disabled="true"]) {
+      @apply bg-turquoise-50;
+    }
+  }
+
+  .action-button--on-dark:focus-visible {
+    @apply ring-white ring-offset-turquoise-700;
+  }
+
+  /* Small-screen sizing for the default :md size only; --sm is already compact
+     and --lg is a deliberate call to action. */
+  @media (max-width: 640px) {
+    .action-button:not(.action-button--sm, .action-button--lg) {
+      @apply px-4 py-2 text-token-sm;
+    }
+  }
+
+  /* Icon Buttons: <.icon_button>, a square icon-only control. */
+  .icon-button {
+    @apply relative inline-flex items-center justify-center shrink-0 rounded-token-lg border-2 transition-all cursor-pointer touch-manipulation disabled:opacity-60 disabled:cursor-not-allowed;
+  }
+
+  .icon-button:focus-visible {
+    @apply outline-hidden ring-2 ring-turquoise-500 ring-offset-2;
+  }
+
+  .icon-button--md {
+    @apply h-9 w-9;
+  }
+
+  .icon-button--sm {
+    @apply h-8 w-8;
+  }
+
+  /* On touch screens, stretch the hit area of the compact controls (icon
+     buttons, small action buttons, the status switch and the check toggle) to
+     at least 44px around the visual tile, without changing its size or the
+     layout around it. Each host is `position: relative`. */
+  @media (pointer: coarse) {
+    .icon-button::before,
+    .action-button--sm::before,
+    .status-toggle::before,
+    .check-toggle::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+      transform: translate(-50%, -50%);
+    }
+  }
+
+  .icon-button--neutral {
+    @apply bg-white text-tymeslot-700 border-tymeslot-100 shadow-sm shadow-tymeslot-500/5;
+  }
+
+  @media (hover: hover) {
+    .icon-button--neutral:hover:not(:disabled, [aria-disabled="true"]) {
+      @apply bg-tymeslot-100;
+    }
+  }
+
+  /* Same box as --neutral, so an edit and a delete control side by side
+     read as a pair; only the hover says which one destroys. */
+  .icon-button--danger {
+    @apply bg-white text-tymeslot-500 border-tymeslot-100 shadow-sm shadow-tymeslot-500/5;
+  }
+
+  @media (hover: hover) {
+    .icon-button--danger:hover:not(:disabled, [aria-disabled="true"]) {
+      @apply text-red-500 bg-red-50 border-red-100;
+    }
+  }
+
+  .icon-button--danger:focus-visible {
+    @apply ring-red-500;
+  }
+
+  .icon-button--warning {
+    @apply bg-amber-50 text-amber-700 border-amber-100 shadow-sm shadow-amber-500/5;
+  }
+
+  @media (hover: hover) {
+    .icon-button--warning:hover:not(:disabled, [aria-disabled="true"]) {
+      @apply bg-amber-100;
+    }
   }
 }

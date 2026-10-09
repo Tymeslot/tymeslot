@@ -82,6 +82,16 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
           links
         end
 
+      links =
+        if appointment_details[:dashboard_url] do
+          [
+            "#{dgettext("emails", "Open in dashboard:")} #{appointment_details.dashboard_url}"
+            | links
+          ]
+        else
+          links
+        end
+
       if Enum.empty?(links) do
         ""
       else
@@ -191,7 +201,17 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
       time_format = Map.get(appointment_details, :time_format)
       time_str = Formatting.format_time(appointment_details[time_key], locale, time_format)
       duration_str = Formatting.format_duration(appointment_details.duration, locale)
-      "#{dgettext("emails", "Time:")} #{time_str} (#{duration_str})"
+      line = "#{dgettext("emails", "Time:")} #{time_str} (#{duration_str})"
+
+      case Formatting.format_next_day_end(
+             appointment_details[time_key],
+             appointment_details.duration,
+             locale,
+             time_format
+           ) do
+        nil -> line
+        note -> "#{line}, #{note}"
+      end
     end
   end
 

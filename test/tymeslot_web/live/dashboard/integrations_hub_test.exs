@@ -36,12 +36,13 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubTest do
       assert html =~ ~s(href="/dashboard/integrations?tab=video")
     end
 
-    test "marks the active tab link with aria-selected=true", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
+    test "marks the active tab link, and only it, as the current page", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
-      # The active (video) tab carries aria-selected="true"; others are false.
-      assert html =~ ~s(aria-selected="true")
-      assert html =~ ~s(aria-selected="false")
+      # The tabs are links to their own URLs, so the active one is the current
+      # page rather than a selected tab.
+      assert has_element?(view, "#integrations-tabs-tab-video[aria-current='page']")
+      refute has_element?(view, "#integrations-tabs-tab-calendars[aria-current]")
     end
 
     test "defaults the active tab to calendars", %{conn: conn} do
@@ -63,6 +64,28 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubTest do
       # The default tab is Calendars; its Connect button opens the picker.
       assert html =~ "Connect a calendar"
       assert html =~ ~s(phx-click="show_picker")
+    end
+
+    test "with nothing connected, offers the connect button once, in the empty state",
+         %{conn: conn} do
+      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+
+      assert buttons_labelled(html, "Connect a calendar") == 1
+
+      assert has_element?(
+               view,
+               "[data-testid='calendars-empty'] button[phx-click='show_picker']",
+               "Connect a calendar"
+             )
+    end
+
+    test "once connected, offers the connect button in the header", %{conn: conn, user: user} do
+      insert(:calendar_integration, user: user, provider: "google", is_active: true)
+
+      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+
+      assert buttons_labelled(html, "Connect a calendar") == 1
+      refute has_element?(view, "[data-testid='calendars-empty']")
     end
   end
 
@@ -134,7 +157,7 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations")
 
       # The count pill inside the Calendars tab link reads "2".
-      assert has_element?(view, "a[role='tab'] span", "2")
+      assert has_element?(view, "#integrations-tabs-tab-calendars span", "2")
     end
   end
 
@@ -215,5 +238,12 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubTest do
                "button[phx-value-id='#{integration.id}'][phx-target='#edit-video-modal']"
              )
     end
+  end
+
+  defp buttons_labelled(html, label) do
+    html
+    |> LazyHTML.from_fragment()
+    |> LazyHTML.query("button")
+    |> Enum.count(&(LazyHTML.text(&1) =~ label))
   end
 end

@@ -6,7 +6,9 @@ defmodule Tymeslot.Bookings.Validation do
   All validation is based on the data passed in as parameters.
   """
 
-  alias Tymeslot.Availability.TimeSlots
+  alias Tymeslot.Availability.{Calculate, Offer, TimeSlots}
+  alias Tymeslot.Bookings.Errors
+  alias Tymeslot.Bookings.ScheduleCheck
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Utils.{DateTimeUtils, TimeRange}
@@ -21,7 +23,8 @@ defmodule Tymeslot.Bookings.Validation do
   @type scheduling_config :: %{
           optional(:min_advance_hours) => non_neg_integer(),
           optional(:max_advance_booking_days) => non_neg_integer(),
-          optional(:buffer_minutes) => non_neg_integer(),
+          optional(:buffer_before_minutes) => non_neg_integer(),
+          optional(:buffer_after_minutes) => non_neg_integer(),
           optional(atom()) => term()
         }
 
@@ -85,14 +88,21 @@ defmodule Tymeslot.Bookings.Validation do
   @doc """
   Checks if a time slot has conflicts with existing events.
 
+  `buffers` is `{before, after}`: the minutes that must stay free before the
+  slot starts and after it ends. They pad the slot, never the events.
+
   Events are first filtered through `CalendarEvent.blocking?/1` so that
   cancelled, declined, and `TRANSP:TRANSPARENT` (free/busy = free) events
-  never block a booking — matching the contract that `Availability.Conflicts`
+  never block a booking, matching the contract that `Availability.Conflicts`
   enforces for the display path.
   """
-  @spec check_slot_availability(DateTime.t(), DateTime.t(), [calendar_event()], non_neg_integer()) ::
-          :ok | {:error, :slot_unavailable}
-  def check_slot_availability(start_datetime, end_datetime, events, buffer_minutes \\ 0) do
+  @spec check_slot_availability(
+          DateTime.t(),
+          DateTime.t(),
+          [calendar_event()],
+          TimeRange.buffers()
+        ) :: :ok | {:error, :slot_unavailable}
+  def check_slot_availability(start_datetime, end_datetime, events, buffers \\ {0, 0}) do
     normalized_events =
       events
       |> Enum.filter(&CalendarEvent.blocking?/1)
@@ -109,7 +119,7 @@ defmodule Tymeslot.Bookings.Validation do
          start_datetime,
          end_datetime,
          normalized_events,
-         buffer_minutes
+         buffers
        ) do
       {:error, :slot_unavailable}
     else
@@ -125,8 +135,12 @@ defmodule Tymeslot.Bookings.Validation do
   @spec validate_no_conflicts(DateTime.t(), DateTime.t(), [calendar_event()], scheduling_config()) ::
           :ok | {:error, :slot_unavailable}
   def validate_no_conflicts(start_datetime, end_datetime, events, config) do
-    buffer_minutes = Map.get(config, :buffer_minutes, 15)
-    check_slot_availability(start_datetime, end_datetime, events, buffer_minutes)
+    check_slot_availability(
+      start_datetime,
+      end_datetime,
+      events,
+      Calculate.config_buffers(config)
+    )
   end
 
   @doc """
@@ -142,6 +156,76 @@ defmodule Tymeslot.Bookings.Validation do
       meeting.status == "cancelled" -> {:error, "Cannot reschedule a cancelled meeting"}
       meeting.status == "completed" -> {:error, "Cannot reschedule a completed meeting"}
       true -> {:ok, meeting}
+    end
+  end
+
+  @doc """
+  Parses and validates the requested new time for a reschedule off
+  `old_meeting`, returning the new slot's times.
+
+  Shared by the whole-meeting reschedule (`Tymeslot.Bookings.Reschedule`)
+  and move-my-seat (`Tymeslot.Bookings.RescheduleSeat`), so both agree on
+  what counts as a valid new slot. The new slot keeps the old meeting's
+  duration, never `params.duration`: a reschedule moves a meeting in time,
+  it does not change its length, and `params.duration` is an
+  attendee-supplied URL slug with no binding to what the meeting is (this
+  holds even when the meeting type has been deleted and `meeting_type` is
+  `nil`). `ScheduleCheck` is stepped by the duration the booking page's grid
+  is drawn with (`Offer.duration_minutes/3`: the booked length while the
+  type still offers it, else the type's current one), so a slot the page
+  just offered is not refused after a host edits the type; only the check's
+  step size follows the type.
+
+  `meeting_type` and `config` are resolved once by the caller and threaded
+  through rather than re-fetched: two reads of the same rows leave a window
+  in which a host edit between them is answered differently by each, and
+  the calendar check that follows needs the same buffer and notice rules.
+  """
+  @spec prepare_new_times(map(), map(), map() | nil, map()) ::
+          {:ok, %{start_time: DateTime.t(), end_time: DateTime.t(), duration_minutes: integer()}}
+          | {:error, term()}
+  def prepare_new_times(params, old_meeting, meeting_type, config) do
+    duration_minutes = old_meeting.duration
+
+    # The grid follows the booked length while the type still offers it, so
+    # it matches the meeting. Once the host has removed that length it falls
+    # back to the type's primary duration: a 45-minute booking on a type that
+    # now offers only 30 is checked against the 30-minute grid and stays 45
+    # minutes long — the same divergence a plain duration change produces,
+    # erring towards letting the guest move an existing booking.
+    schedule_check_duration_minutes =
+      Offer.duration_minutes(meeting_type, duration_minutes, duration_minutes)
+
+    with {:ok, {start_datetime, end_datetime}} <-
+           parse_meeting_times(
+             params.date,
+             params.time,
+             duration_minutes,
+             params.user_timezone
+           ),
+         {:ok, date} <- parse_date(params.date),
+         :ok <- validate_booking_time(start_datetime, params.user_timezone, config),
+         :ok <-
+           ScheduleCheck.validate_slot_on_schedule(
+             date,
+             start_datetime,
+             schedule_check_duration_minutes,
+             params.user_timezone,
+             config,
+             old_meeting.organizer_user_id
+           ) do
+      {:ok,
+       %{
+         start_time: start_datetime,
+         end_time: end_datetime,
+         duration_minutes: duration_minutes
+       }}
+    else
+      {:error, reason} when is_atom(reason) ->
+        {:error, Errors.classify_schedule_check_reason(reason) || reason}
+
+      {:error, _reason} = error ->
+        error
     end
   end
 

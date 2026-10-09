@@ -380,9 +380,9 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
   end
 
   describe "setup_component/0" do
-    test "returns the ZimbraConfig LiveComponent module" do
+    test "returns the CaldavFamilyConfig component module" do
       assert Provider.setup_component() ==
-               TymeslotWeb.Components.Dashboard.Integrations.Calendar.ZimbraConfig
+               TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavFamilyConfig
     end
   end
 end

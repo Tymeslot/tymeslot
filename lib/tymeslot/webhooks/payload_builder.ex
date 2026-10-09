@@ -76,6 +76,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
     }
     |> maybe_add_approval_data(meeting)
     |> maybe_add_cancellation_data(meeting)
+    |> maybe_add_seat_data(meeting)
   end
 
   defp build_organizer_data(meeting) do
@@ -184,6 +185,36 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
   end
 
   defp maybe_add_cancellation_data(data, _meeting), do: data
+
+  # Present on every event about a seat of a group meeting
+  # (`Tymeslot.Meetings.SeatView`), each of which describes that seat's
+  # booking: `attendee` and `guests` are the seat's participant and the
+  # guests they invited. `id` is the seat's own id; a move gives the seat a
+  # new one (and usually a new meeting id), so a `meeting.rescheduled` for a
+  # moved seat names the seat it replaced under `previous`, which is `nil`
+  # on every other event. `seats_taken` counts participants and their guests
+  # when the event fired. A solo booking has no seat, so the key is absent
+  # from its payloads, the same way `approval` is.
+  defp maybe_add_seat_data(data, %MeetingSchema{seat: %{} = seat} = meeting) do
+    Map.put(data, :seat, %{
+      id: seat.participant_id,
+      capacity: meeting.capacity,
+      seats_taken: seat.seats_taken,
+      previous: previous_seat_data(Map.get(seat, :previous))
+    })
+  end
+
+  defp maybe_add_seat_data(data, _meeting), do: data
+
+  defp previous_seat_data(nil), do: nil
+
+  defp previous_seat_data(previous) do
+    %{
+      seat_id: previous.seat_id,
+      meeting_id: previous.meeting_id,
+      start_time: format_datetime(previous.start_time)
+    }
+  end
 
   defp format_datetime(nil), do: nil
 

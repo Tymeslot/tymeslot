@@ -20,7 +20,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.CoreComponents, only: [icon: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
   alias Tymeslot.ThemeCustomizations.Presets
   alias TymeslotWeb.Helpers.LocaleFormat
@@ -41,7 +41,8 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   attr :username, :string, default: ""
   attr :avatar_url, :string, default: nil
   attr :color_scheme, :string, default: @default_scheme
-  attr :buffer_minutes, :integer, default: nil
+  attr :buffer_before_minutes, :integer, default: nil
+  attr :buffer_after_minutes, :integer, default: nil
   attr :advance_booking_days, :integer, default: nil
   attr :min_advance_hours, :integer, default: nil
   attr :calendar_connected, :boolean, default: false
@@ -82,11 +83,12 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
 
           <div class="w-full h-px my-1" style={divider_style(@colors)} />
 
-          <%!-- Buffer callout — a labelled gap between meetings, never a slot --%>
+          <%!-- Buffer callout: a labelled gap around meetings, never a slot --%>
           <.buffer_callout
             :if={@current_step == :buffer_time}
             colors={@colors}
-            minutes={@buffer_minutes || 15}
+            before_minutes={@buffer_before_minutes || 15}
+            after_minutes={@buffer_after_minutes || 15}
           />
 
           <%!-- Theme-specific body --%>
@@ -248,7 +250,8 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   end
 
   attr :colors, :map, required: true
-  attr :minutes, :integer, required: true
+  attr :before_minutes, :integer, required: true
+  attr :after_minutes, :integer, required: true
 
   defp buffer_callout(assigns) do
     ~H"""
@@ -257,10 +260,32 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
       style={buffer_style(@colors)}
     >
       <.icon name="hero-arrows-up-down-mini" class="w-3 h-3" />
-      {dgettext("onboarding_wizard", "%{minutes} min buffer between meetings", minutes: @minutes)}
+      {buffer_callout_text(@before_minutes, @after_minutes)}
     </div>
     """
   end
+
+  defp buffer_callout_text(0, 0),
+    do: dgettext("onboarding_wizard", "No buffer around meetings")
+
+  defp buffer_callout_text(0, after_minutes),
+    do:
+      dgettext("onboarding_wizard", "No buffer before, %{after_minutes} min after",
+        after_minutes: after_minutes
+      )
+
+  defp buffer_callout_text(before_minutes, 0),
+    do:
+      dgettext("onboarding_wizard", "%{before_minutes} min before, no buffer after",
+        before_minutes: before_minutes
+      )
+
+  defp buffer_callout_text(before_minutes, after_minutes),
+    do:
+      dgettext("onboarding_wizard", "%{before_minutes} min before, %{after_minutes} min after",
+        before_minutes: before_minutes,
+        after_minutes: after_minutes
+      )
 
   # -------------------------------------------------------------------
   # Theme + slot resolution
@@ -307,11 +332,8 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   defp caption(%{current_step: :connect_calendar}),
     do: dgettext("onboarding_wizard", "Connect your calendar to fill these slots")
 
-  defp caption(%{current_step: :buffer_time} = assigns) do
-    dgettext("onboarding_wizard", "A breather between meetings (%{minutes} min)",
-      minutes: assigns.buffer_minutes || 15
-    )
-  end
+  defp caption(%{current_step: :buffer_time}),
+    do: dgettext("onboarding_wizard", "A breather around each meeting")
 
   defp caption(%{current_step: :booking_window} = assigns) do
     dgettext("onboarding_wizard", "Bookable up to %{days}",

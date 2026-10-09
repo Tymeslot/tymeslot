@@ -75,7 +75,7 @@ Upcoming meetings, quick actions and your whole setup on a single screen. No hun
 
 ### Availability that mirrors reality
 
-Keep as many named schedules as your week needs — weekday office hours, Tuesday evenings, one weekend a month — each with its own working hours, breaks, date overrides, buffers, booking window and minimum notice. Point each meeting type at the schedule it belongs to, and your booking page offers exactly the hours you meant for it.
+Keep as many named schedules as your week needs — weekday office hours, Tuesday evenings, one weekend a month — each with its own working hours, breaks, date overrides, buffers before and after meetings, booking window and minimum notice. Point each meeting type at the schedule it belongs to, and your booking page offers exactly the hours you meant for it.
 
 ![Availability editor — named schedules as tabs, with per-day hours and breaks](./priv/static/images/screenshots/availability.webp)
 
@@ -100,7 +100,7 @@ Every connected calendar is checked the moment someone books. One conflict anywh
 - **Privacy by design** — credentials encrypted at rest, no third-party trackers or analytics pixels, rate-limited public endpoints, HMAC-signed webhooks, CSRF and signed tokens throughout.
 - **Automate everything** — Slack and Telegram notifications, plus `meeting_created`, `meeting_cancelled` and `meeting_rescheduled` webhooks that plug straight into n8n, Zapier, Make or your own backend.
 - **Make it yours** — two booking-page themes (Quill and Rhythm) with custom colours, backgrounds and white-label options.
-- **Speaks your language** — the whole app in English, German, Ukrainian, French, Italian, Czech and Polish: your dashboard, your booking pages and every email, with dates and times in local convention. Guests get their own language automatically; pick yours in Account settings.
+- **Speaks your language** — the whole app in English, German, Ukrainian, French, Italian, Czech, Polish and Brazilian Portuguese: your dashboard, your booking pages and every email, with dates and times in local convention. Guests get their own language automatically; pick yours in Account settings.
 - **Get paid to meet** — optional paid bookings through [Stripe Connect](#meeting-payments), off by default and fee-free for self-hosters.
 
 ---

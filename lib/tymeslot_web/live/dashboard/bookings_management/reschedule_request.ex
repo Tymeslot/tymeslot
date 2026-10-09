@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RescheduleRequest do
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
+  alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
   alias TymeslotWeb.Hooks.ModalHook
   alias TymeslotWeb.Live.Shared.Flash
 
@@ -36,11 +37,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RescheduleRequest do
       :ok ->
         emit(user_id, meeting.id, result: :ok)
 
-        Flash.info(
-          dgettext("dashboard_bookings", "Reschedule request sent to %{attendee_name}",
-            attendee_name: meeting.attendee_name
-          )
-        )
+        Flash.info(sent_message(meeting))
 
         socket
         |> assign(:sending_reschedule, nil)
@@ -60,6 +57,26 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RescheduleRequest do
         )
 
         assign(socket, :sending_reschedule, nil)
+    end
+  end
+
+  # A group meeting has no attendee to name; the request went to each of its
+  # participants (`meeting` arrives with them loaded, see
+  # `Meetings.with_live_participants/1`).
+  defp sent_message(meeting) do
+    if Helpers.group_meeting?(meeting) do
+      count = length(Helpers.participants(meeting))
+
+      dngettext(
+        "dashboard_bookings",
+        "Reschedule request sent to %{count} participant",
+        "Reschedule request sent to %{count} participants",
+        count
+      )
+    else
+      dgettext("dashboard_bookings", "Reschedule request sent to %{attendee_name}",
+        attendee_name: meeting.attendee_name
+      )
     end
   end
 

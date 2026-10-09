@@ -381,13 +381,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div id="bookings-management" class="space-y-10 pb-20">
-      <div>
-        <.section_header
-          icon="hero-calendar-days"
-          title={dgettext("dashboard_bookings", "Meetings")}
-        />
-
+    <div id="bookings-management">
+      <.dashboard_page icon="hero-clock" title={dgettext("dashboard_common", "Meetings")}>
         <div class="mb-10">
           <MeetingListComponents.filter_tabs
             active={@filter}
@@ -414,11 +409,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
           loading_more={@loading_more}
           target={@myself}
         />
-
-        <div class="mt-16">
-          <MeetingListComponents.info_panel />
-        </div>
-      </div>
+      </.dashboard_page>
 
       <Modals.booking_modals
         cancel_meeting={@cancel_meeting_modal_data}
@@ -577,8 +568,14 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     end
   end
 
+  # A group meeting's modals and flashes speak of its participants, so they
+  # arrive with it.
   defp fetch_meeting_for_user(id, user_email) do
-    Meetings.get_meeting_for_user(id, user_email)
+    with {:ok, meeting} <- Meetings.get_meeting_for_user(id, user_email) do
+      if Meetings.group?(meeting),
+        do: {:ok, Meetings.with_live_participants(meeting)},
+        else: {:ok, meeting}
+    end
   end
 
   @valid_filters ["upcoming", "past", "cancelled", "awaiting_approval"]

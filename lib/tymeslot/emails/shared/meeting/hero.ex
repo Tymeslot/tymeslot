@@ -75,16 +75,28 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
 
       %{start_time: %DateTime{} = start_time, timezone: timezone} when is_binary(timezone) ->
         formatted = Formatting.format_time(start_time, locale, time_format)
-
-        if timezone != "UTC",
-          do: "#{formatted} (#{timezone})",
-          else: formatted
+        base = if timezone != "UTC", do: "#{formatted} (#{timezone})", else: formatted
+        with_next_day_end(base, start_time, details, locale, time_format)
 
       %{start_time: %DateTime{} = start_time} ->
-        Formatting.format_time(start_time, locale, time_format)
+        start_time
+        |> Formatting.format_time(locale, time_format)
+        |> with_next_day_end(start_time, details, locale, time_format)
 
       _other ->
         dgettext("emails", "TBD")
+    end
+  end
+
+  defp with_next_day_end(line, start_time, details, locale, time_format) do
+    case Formatting.format_next_day_end(
+           start_time,
+           Map.get(details, :duration),
+           locale,
+           time_format
+         ) do
+      nil -> line
+      note -> "#{line}, #{note}"
     end
   end
 

@@ -6,6 +6,10 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
   # Phoenix modules
   alias Phoenix.LiveView.JS
 
+  # Application modules
+  alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents.Icons
+
   # ========== MODAL ==========
 
   @doc """
@@ -100,7 +104,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
               # Scrolling and the height cap belong to `.modal-content` in
               # modal.css; an `overflow-hidden` here would win over it and cut a
               # tall dialog off again.
-              "modal-content bg-white rounded-[2.5rem] shadow-2xl border-2 border-tymeslot-50 relative",
+              "modal-content bg-white rounded-token-5xl shadow-2xl border-2 border-tymeslot-50 relative",
               modal_size_class(@size)
             ]
           }
@@ -119,7 +123,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
               <div class="min-w-0">
                 <h3
                   id={"#{@id}-title"}
-                  class="modal-title text-2xl font-black text-tymeslot-900 tracking-tight"
+                  class="modal-title text-token-xl sm:text-token-2xl font-black text-tymeslot-900 tracking-tight break-words"
                 >
                   {render_slot(@header)}
                 </h3>
@@ -133,18 +137,11 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
               </div>
               <button
                 type="button"
-                class="w-10 h-10 rounded-xl bg-tymeslot-50 text-tymeslot-400 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center"
+                class="w-10 h-10 shrink-0 rounded-token-xl bg-tymeslot-50 text-tymeslot-400 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center"
                 aria-label={dgettext("common", "Close modal")}
                 phx-click={@on_cancel}
               >
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2.5"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
+                <Icons.icon name="hero-x-mark" class="w-6 h-6" />
               </button>
             </div>
           <% end %>
@@ -167,6 +164,132 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
     </div>
     """
   end
+
+  @doc """
+  Renders a confirmation dialog on top of `modal/1`: an icon tile and title in
+  the header, the caller's explanation in the body, and a fixed footer of
+  Cancel then Confirm.
+
+  Every "are you sure?" in the dashboard goes through this, so destructive
+  questions look and behave the same everywhere. The owning module keeps its
+  own wording and events; this owns the layout.
+
+  Confirm either pushes `on_confirm` or, with `confirm_form`, submits the form
+  of that id rendered in the body. Attributes not declared here (`phx-value-*`,
+  `phx-disable-with`, `data-testid`) land on the Confirm button; never pass
+  `phx-click` that way, since it would clash with `on_confirm`.
+
+  Where the answer is a choice between several actions, the `:actions` slot
+  replaces the single Confirm button; Cancel always stays first. With
+  `:actions`, the Confirm-only attributes (`on_confirm`, `confirm_form`,
+  `confirm_label`, `confirm_disabled`, `loading_label`) and the extra
+  attributes are ignored, so each action button carries its own.
+
+  While `loading`, both footer buttons are disabled and Escape, a click outside
+  and the close button do nothing, so a request in flight cannot be walked away
+  from half-finished.
+
+  ## Examples
+
+      <.confirm_modal
+        id="delete-thing-modal"
+        show={@show_delete}
+        title={dgettext("dashboard_common", "Delete thing")}
+        confirm_label={dgettext("dashboard_common", "Delete thing")}
+        on_cancel={JS.push("hide_delete", target: @myself)}
+        on_confirm={JS.push("confirm_delete", target: @myself)}
+      >
+        <p>{dgettext("dashboard_common", "Delete %{name}?", name: @thing.name)}</p>
+        <:extra>
+          <.info_box variant={:warning}>...</.info_box>
+        </:extra>
+      </.confirm_modal>
+  """
+  attr :id, :string, required: true
+  attr :show, :boolean, default: false
+  attr :title, :string, required: true
+  attr :on_cancel, JS, default: %JS{}, doc: "pushed by Cancel, Escape and a click outside"
+
+  attr :on_confirm, JS,
+    default: nil,
+    doc: "pushed by Confirm; leave unset when `confirm_form` submits. Ignored with `:actions`"
+
+  attr :confirm_form, :string,
+    default: nil,
+    doc: "id of a form in the body; Confirm becomes its submit button"
+
+  attr :confirm_label, :string, default: nil, doc: "defaults to \"Confirm\""
+  attr :cancel_label, :string, default: nil, doc: "defaults to \"Cancel\""
+  attr :confirm_variant, :atom, default: :danger, values: [:danger, :primary]
+  attr :icon, :string, default: "hero-exclamation-triangle", doc: "a `hero-…` icon name"
+  attr :size, :atom, default: :medium, values: [:small, :medium]
+
+  attr :loading, :boolean,
+    default: false,
+    doc: "shows Confirm's spinner, disables both buttons and blocks dismissal"
+
+  attr :loading_label, :string, default: nil
+  attr :confirm_disabled, :boolean, default: false
+
+  attr :rest, :global,
+    doc: "extra attributes for the Confirm button, never `phx-click`; ignored with `:actions`"
+
+  slot :inner_block, required: true
+  slot :extra, doc: "secondary content under the body, such as an info box or a checkbox"
+  slot :actions, doc: "replaces the Confirm button when the answer is a choice"
+
+  @spec confirm_modal(map()) :: Phoenix.LiveView.Rendered.t()
+  def confirm_modal(assigns) do
+    ~H"""
+    <.modal id={@id} show={@show} on_cancel={if @loading, do: %JS{}, else: @on_cancel} size={@size}>
+      <:header>
+        <span class="flex items-center gap-3">
+          <span class={[
+            "w-10 h-10 shrink-0 rounded-token-xl flex items-center justify-center border",
+            confirm_tile_class(@confirm_variant)
+          ]}>
+            <Icons.icon name={@icon} class="w-6 h-6" />
+          </span>
+          <span class="min-w-0">{@title}</span>
+        </span>
+      </:header>
+
+      <div class="space-y-4 text-tymeslot-600 font-medium leading-relaxed">
+        {render_slot(@inner_block)}
+        <div :if={@extra != []} class="space-y-3">
+          {render_slot(@extra)}
+        </div>
+      </div>
+
+      <:footer>
+        <div class="flex flex-wrap justify-end gap-3">
+          <Buttons.action_button variant={:secondary} disabled={@loading} phx-click={@on_cancel}>
+            {@cancel_label || dgettext("common", "Cancel")}
+          </Buttons.action_button>
+          <%= if @actions != [] do %>
+            {render_slot(@actions)}
+          <% else %>
+            <Buttons.loading_button
+              variant={@confirm_variant}
+              type={if @confirm_form, do: "submit", else: "button"}
+              form={@confirm_form}
+              loading={@loading}
+              loading_text={@loading_label}
+              disabled={@confirm_disabled}
+              phx-click={@on_confirm}
+              {@rest}
+            >
+              {@confirm_label || dgettext("common", "Confirm")}
+            </Buttons.loading_button>
+          <% end %>
+        </div>
+      </:footer>
+    </.modal>
+    """
+  end
+
+  defp confirm_tile_class(:danger), do: "bg-red-50 border-red-100 text-red-500"
+  defp confirm_tile_class(:primary), do: "bg-turquoise-50 border-turquoise-100 text-turquoise-600"
 
   # Prefer aria-labelledby (pointing at the rendered header slot); fall back to
   # the caller-supplied aria-label when there is no header to label the dialog.

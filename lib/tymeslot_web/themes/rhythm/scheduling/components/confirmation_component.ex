@@ -12,7 +12,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
   alias TymeslotWeb.Themes.Shared.BookingLocation
+  alias TymeslotWeb.Themes.Shared.CalendarDownload
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
+  alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.LocationField
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
@@ -31,6 +33,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
+    assigns = assign(assigns, :next_day_end, LocalizationHelpers.booking_next_day_end(assigns))
+
     ~H"""
     <div class="scheduling-box" data-locale={@locale}>
       <div class="slide-container">
@@ -92,6 +96,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                   organizer_name={Profiles.display_name(@organizer_profile)}
                   stage={:after}
                 />
+
+                <GroupSession.confirmation_line meeting_type={@meeting_type} />
               </div>
 
               <div class="meeting-ticket">
@@ -124,6 +130,13 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                         {LocalizationHelpers.format_slot_label(@selected_time)}
                       </span>
                       <span class="ticket-sublabel">{Timezones.format(@user_timezone)}</span>
+                      <span
+                        :if={@next_day_end}
+                        class="ticket-sublabel"
+                        data-testid="booking-next-day-end"
+                      >
+                        {@next_day_end}
+                      </span>
                     </div>
                   </div>
 
@@ -202,8 +215,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
 
               <div class="confirmation-actions-section">
                 <a
-                  :if={@meeting_uid not in [nil, ""] and @username_context not in [nil, ""]}
-                  href={~p"/#{@username_context}/meeting/#{@meeting_uid}/calendar.ics"}
+                  :if={CalendarDownload.href(assigns)}
+                  href={CalendarDownload.href(assigns)}
                   download
                   class="action-button-primary action-button-secondary calendar-download-button"
                   data-testid="add-to-calendar"

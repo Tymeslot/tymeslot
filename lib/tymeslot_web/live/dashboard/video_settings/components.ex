@@ -11,12 +11,14 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.KmeetProvider
   alias Tymeslot.Integrations.Video.RoomCreationError
-  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionLabels
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard
+  alias TymeslotWeb.Components.Icons.ProviderIcon
 
   @doc """
-  Renders a single connected video integration as a shared `connection_row`:
-  a status-first, flat row with a one-line summary and an always-visible action
-  cluster — Test connection (icon), Reconnect (OAuth only, promoted when the
+  Renders a single connected video integration as a shared `integration_card`:
+  a status-first card with a one-line summary and an always-visible action
+  bar: Test connection (icon), Reconnect (OAuth only, promoted when the
   integration needs re-authentication), Edit (icon), and Delete (icon). There is
   no expand/collapse; every action is one click away.
   """
@@ -24,6 +26,10 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   attr :testing_connection, :any, default: nil
   attr :myself, :any, required: true
   attr :health_state, :map, default: nil
+
+  attr :heading_level, :integer,
+    default: 3,
+    doc: "3 under an Active/Inactive group heading, 2 when there is no group heading"
 
   @spec video_connection_row(map()) :: Phoenix.LiveView.Rendered.t()
   def video_connection_row(assigns) do
@@ -42,85 +48,81 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
       )
 
     ~H"""
-    <ConnectionRow.connection_row
+    <IntegrationCard.integration_card
       id={to_string(@integration.id)}
-      icon={@integration.provider}
-      icon_type={:video}
       title={@display_name}
       type_tag={@type_tag}
       summary={@summary}
       notice={notice(@integration)}
       status={@status}
-      active?={@integration.is_active}
+      active={@integration.is_active}
       toggle_event="toggle_integration"
-      myself={@myself}
+      target={@myself}
+      heading_level={@heading_level}
     >
+      <:icon>
+        <ProviderIcon.provider_icon
+          provider={@integration.provider}
+          type="video"
+          size="medium"
+          alt=""
+        />
+      </:icon>
       <:actions>
-        <button
+        <%!-- While the check runs, the icon becomes a spinning arrow. The spin
+             targets the icon span: the tile's own rules set no animation. --%>
+        <.icon_button
           :if={@integration.is_active}
-          phx-click="test_connection"
-          phx-value-id={@integration.id}
-          phx-target={@myself}
-          disabled={@testing_connection == @integration.id}
-          aria-busy={(@testing_connection == @integration.id && "true") || "false"}
-          class="flex items-center justify-center h-9 w-9 bg-tymeslot-50 text-tymeslot-700 rounded-token-lg border-2 border-tymeslot-100 hover:bg-tymeslot-100 transition-all shadow-sm shadow-tymeslot-500/5 disabled:opacity-60"
-          title={
-            (@testing_connection == @integration.id &&
-               dgettext("dashboard_video", "Testing…")) ||
-              dgettext("dashboard_video", "Test connection")
-          }
-          aria-label={
+          icon={(@testing_connection == @integration.id && "hero-arrow-path") || "hero-signal"}
+          label={
             (@testing_connection == @integration.id &&
                dgettext("dashboard_video", "Testing connection…")) ||
               dgettext("dashboard_video", "Test connection")
           }
-        >
-          <.icon
-            name={(@testing_connection == @integration.id && "hero-arrow-path") || "hero-signal"}
-            class={"w-5 h-5 #{(@testing_connection == @integration.id && "animate-spin") || ""}"}
-          />
-        </button>
+          disabled={@testing_connection == @integration.id}
+          class={@testing_connection == @integration.id && "[&>svg]:animate-spin"}
+          aria-busy={(@testing_connection == @integration.id && "true") || "false"}
+          phx-click="test_connection"
+          phx-value-id={@integration.id}
+          phx-target={@myself}
+        />
         <button
           :if={@oauth?}
           phx-click="reconnect_integration"
           phx-value-id={@integration.id}
           phx-target={@myself}
           class={[
-            "flex items-center justify-center gap-1.5 px-3 py-1.5 lg:h-9 lg:w-9 lg:px-0 lg:py-0 rounded-token-lg font-bold border-2 transition-all shadow-sm",
-            (@integration.needs_reauth &&
-               "bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100 shadow-amber-500/5") ||
-              "bg-tymeslot-50 text-tymeslot-700 border-tymeslot-100 hover:bg-tymeslot-100 shadow-tymeslot-500/5"
+            "icon-button gap-1.5 px-3 py-1.5 text-token-sm font-bold",
+            (@integration.needs_reauth && "icon-button--warning") || "icon-button--neutral"
           ]}
           title={dgettext("dashboard_video", "Reconnect integration")}
           aria-label={dgettext("dashboard_video", "Reconnect integration")}
         >
-          <.icon name="hero-arrow-path" class="w-4 h-4" /><span class="lg:hidden">{dgettext(
+          <.icon name="hero-arrow-path" class="w-4 h-4" /><span>{dgettext(
             "dashboard_video",
             "Reconnect"
           )}</span>
         </button>
-        <button
+      </:actions>
+      <:end_actions>
+        <.icon_button
+          icon="hero-pencil-square"
+          label={dgettext("dashboard_video", "Edit integration")}
           phx-click="show"
           phx-value-id={@integration.id}
           phx-target="#edit-video-modal"
-          class="flex items-center justify-center h-9 w-9 bg-tymeslot-50 text-tymeslot-700 rounded-token-lg border-2 border-tymeslot-100 hover:bg-tymeslot-100 transition-all shadow-sm shadow-tymeslot-500/5"
-          title={dgettext("dashboard_video", "Edit integration")}
-          aria-label={dgettext("dashboard_video", "Edit integration")}
-        >
-          <.icon name="hero-pencil-square" class="w-5 h-5" />
-        </button>
-        <button
+        />
+        <.icon_button
+          icon="hero-trash"
+          variant={:danger}
+          label={dgettext("dashboard_video", "Delete %{name}", name: @display_name)}
+          tooltip={dgettext("dashboard_video", "Delete")}
           phx-click="show"
           phx-value-id={@integration.id}
           phx-target="#delete-video-modal"
-          class="flex items-center justify-center h-9 w-9 text-tymeslot-500 hover:text-red-500 hover:bg-red-50 rounded-token-lg border-2 border-transparent hover:border-red-100 transition-all"
-          title={dgettext("dashboard_video", "Delete integration")}
-          aria-label={dgettext("dashboard_video", "Delete integration")}
-        >
-          <.icon name="hero-trash" class="w-5 h-5" />
-        </button>
-      </:actions>
-    </ConnectionRow.connection_row>
+        />
+      </:end_actions>
+    </IntegrationCard.integration_card>
     """
   end
 
@@ -139,7 +141,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   # so the summary carries the server alone: the line is truncated to one row
   # and the server string is the part worth the space.
   defp summary_segments(%{provider: "mirotalk"} = integration) do
-    [ConnectionRow.server_label(integration.base_url)]
+    [ConnectionLabels.server_label(integration.base_url)]
   end
 
   defp summary_segments(%{provider: "custom"} = integration) do
@@ -175,7 +177,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
         dgettext("dashboard_video", "rooms created automatically")
       ]
     else
-      [integration.provider_account_email || ConnectionRow.server_label(integration.base_url)]
+      [integration.provider_account_email || ConnectionLabels.server_label(integration.base_url)]
     end
   end
 
@@ -183,7 +185,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   # is done. Otherwise a provider refusing to create rooms is explained, with
   # its fix: the connection itself is fine, so nothing else would show it.
   defp notice(integration) do
-    ConnectionRow.reconnect_reason(integration) || room_creation_notice(integration) ||
+    ConnectionLabels.reconnect_reason(integration) || room_creation_notice(integration) ||
       meeting_link_notice(integration)
   end
 
@@ -214,7 +216,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   # the provider refuses still needs the owner, so it is not shown as healthy.
   defp video_status(integration, health) do
     case HealthCheck.attention_status(integration, health) do
-      :paused -> {:paused, dgettext("dashboard_video", "Paused")}
+      :paused -> {:neutral, dgettext("dashboard_video", "Paused")}
       :needs_reauth -> {:warning, dgettext("dashboard_video", "Reconnect")}
       :unhealthy -> {:warning, dgettext("dashboard_video", "Connection issues")}
       :ok -> healthy_status(integration)
@@ -225,14 +227,14 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
     if Video.meeting_link_template_invalid?(integration) do
       {:warning, dgettext("dashboard_video", "Invalid meeting link")}
     else
-      {:ok, dgettext("dashboard_video", "Healthy")}
+      {:success, dgettext("dashboard_video", "Healthy")}
     end
   end
 
   defp healthy_status(%{room_creation_error: _code}),
     do: {:warning, dgettext("dashboard_video", "No video links")}
 
-  defp healthy_status(_integration), do: {:ok, dgettext("dashboard_video", "Healthy")}
+  defp healthy_status(_integration), do: {:success, dgettext("dashboard_video", "Healthy")}
 
   defp type_tag("mirotalk"), do: dgettext("dashboard_video", "self-hosted")
   defp type_tag("custom"), do: dgettext("dashboard_video", "custom")

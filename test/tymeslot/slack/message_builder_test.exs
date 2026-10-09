@@ -200,4 +200,16 @@ defmodule Tymeslot.Slack.MessageBuilderTest do
       assert json =~ "configured correctly"
     end
   end
+
+  test "a meeting ending the next day shows the end with its own day" do
+    meeting = %{
+      @meeting
+      | start_time: ~U[2026-03-10 23:30:00Z],
+        end_time: ~U[2026-03-11 00:30:00Z]
+    }
+
+    json = "meeting.created" |> MessageBuilder.build_blocks(meeting, @timezone) |> Jason.encode!()
+
+    assert json =~ "Tue 10 Mar 2026, 23:30 – Wed 11 Mar 00:30"
+  end
 end

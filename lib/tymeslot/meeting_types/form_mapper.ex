@@ -24,6 +24,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   @typedoc "Why form input could not be mapped onto schema attributes."
   @type error ::
           :invalid_duration
+          | :invalid_max_participants
           | :invalid_price
           | :invalid_reminder_config
           | :invalid_approval_window
@@ -40,6 +41,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
     with {:ok, duration_minutes} <- parse_duration(params["duration"]),
          {:ok, reminder_config} <- normalize_reminder_config(params["reminder_config"]),
          {:ok, payment} <- payment_attrs(params),
+         {:ok, max_participants} <- parse_max_participants(params["max_participants"]),
          {:ok, approval_window_hours} <- ApprovalWindow.parse(params["approval_window_hours"]) do
       attrs = %{
         name: params["name"],
@@ -54,7 +56,8 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
         calendar_integration_id: blank_to_nil(params["calendar_integration_id"]),
         availability_schedule_id: blank_to_nil(params["availability_schedule_id"]),
         target_calendar_id: blank_to_nil(params["target_calendar_id"]),
-        reminder_config: reminder_config
+        reminder_config: reminder_config,
+        max_participants: max_participants
       }
 
       attrs =
@@ -64,10 +67,21 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
         |> maybe_put_locations(params)
         |> maybe_put_extra_lengths(params)
         |> Map.merge(payment)
+        |> unpaid_when_group()
 
       {:ok, attrs}
     end
   end
+
+  # Payments and group bookings are mutually exclusive. A host who cannot take
+  # charges posts no payment fields at all (see `payment_attrs/1`), so turning
+  # group bookings on for a paid type has to switch the payment off here or
+  # the save is refused with no control left to fix it. The stored price is
+  # kept, exactly as it is while charges are unavailable.
+  defp unpaid_when_group(%{max_participants: limit} = attrs) when limit > 1,
+    do: Map.put(attrs, :payment_required, false)
+
+  defp unpaid_when_group(attrs), do: attrs
 
   # A form that cannot render the payment controls does not post them, and an
   # absent key is not a request to make the meeting type free. Both
@@ -189,6 +203,23 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   end
 
   defp parse_booking_limit(_value), do: nil
+
+  # Converts the max-participants form param into an integer participant
+  # limit. Absent or blank means a solo type and stores 1 (the column
+  # default). Bad input yields `{:error, :invalid_max_participants}` so the
+  # form surfaces it the same way an invalid price does; the 1..999 range
+  # itself is enforced by the schema changeset.
+  defp parse_max_participants(nil), do: {:ok, 1}
+  defp parse_max_participants(""), do: {:ok, 1}
+
+  defp parse_max_participants(value) when is_binary(value) do
+    case Integer.parse(String.trim(value)) do
+      {limit, ""} -> {:ok, limit}
+      _invalid -> {:error, :invalid_max_participants}
+    end
+  end
+
+  defp parse_max_participants(_value), do: {:error, :invalid_max_participants}
 
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(value), do: value

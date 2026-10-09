@@ -41,44 +41,50 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
         (which forced the view switcher to wrap onto its own detached line and
         looked scrambled), we keep two stable rows:
           Row 1: navigation + period title, with the view switcher pinned right.
-          Row 2: search, quick-add, calendars, refresh and settings.
+          Row 2: search, quick-add, import, calendars, refresh and settings.
         flex-wrap on each row lets it reflow gracefully when space is tight.
       --%>
       <div class="flex flex-col gap-1 md:gap-2 px-3 py-2 md:px-4 md:py-3">
         <%!-- Row 1: navigation (left) + view switcher (right) --%>
-        <div class="flex items-center gap-1 md:gap-2 min-w-0">
-          <button
+        <div class="flex items-center gap-2 min-w-0">
+          <.icon_button
+            icon="hero-chevron-left"
+            label={dgettext("dashboard_calendar", "Previous period")}
             phx-click="prev_period"
             phx-target={@myself}
-            class="min-w-[40px] min-h-[40px] flex items-center justify-center rounded hover:bg-tymeslot-100 text-tymeslot-600 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-            aria-label={dgettext("dashboard_calendar", "Previous period")}
-          >
-            <.icon name="hero-chevron-left" class="w-4 h-4" />
-          </button>
-          <button
+          />
+          <.icon_button
+            icon="hero-chevron-right"
+            label={dgettext("dashboard_calendar", "Next period")}
             phx-click="next_period"
             phx-target={@myself}
-            class="min-w-[40px] min-h-[40px] flex items-center justify-center rounded hover:bg-tymeslot-100 text-tymeslot-600 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-            aria-label={dgettext("dashboard_calendar", "Next period")}
-          >
-            <.icon name="hero-chevron-right" class="w-4 h-4" />
-          </button>
-          <button
+          />
+          <.action_button
+            variant={:secondary}
+            size={:sm}
             phx-click={
               JS.push("today", target: @myself)
               |> JS.dispatch("calendar:scroll-to-current", to: "#calendar-drag-zone")
             }
-            class="px-2.5 py-1.5 md:px-3 text-token-sm border border-tymeslot-200 rounded hover:bg-tymeslot-50 text-tymeslot-600 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-          >{dgettext("dashboard_calendar", "Today")}</button>
-          <MiniMonthPopover.mini_month_popover
-            open={@mini_month_open}
-            view={@view}
-            date={@date}
-            cursor={@mini_month_cursor}
-            preferences={@preferences}
-            user_timezone={@user_timezone}
-            myself={@myself}
-          />
+          >
+            {dgettext("dashboard_calendar", "Today")}
+          </.action_button>
+          <%!--
+            min-w-0 lets the period title shrink and truncate with an ellipsis
+            when the row is tight (a long week range on a phone); the dropdown
+            root cannot take the class itself.
+          --%>
+          <div class="ml-1 md:ml-2 min-w-0">
+            <MiniMonthPopover.mini_month_popover
+              open={@mini_month_open}
+              view={@view}
+              date={@date}
+              cursor={@mini_month_cursor}
+              preferences={@preferences}
+              user_timezone={@user_timezone}
+              myself={@myself}
+            />
+          </div>
           <div class="hidden md:block ml-1 min-w-0">
             <AvailabilityHelpers.timezone_display
               timezone_display={@timezone_display}
@@ -101,10 +107,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
           Row 2: tools. Use flex-wrap (not overflow-x-auto) so the toolbar
           reflows on narrow screens. overflow-x-auto forces overflow-y to compute
           to auto, which clips the dropdown panels (calendars, search) that
-          extend below the row via `top-full`.
+          extend below the row via `top-full`. Below sm the row does not wrap:
+          the timezone label shrinks and truncates instead, so the row stays on
+          one line at 390px whatever the width of the view menu's label
+          ("Agenda" is wider than "Week").
         --%>
-        <div class="flex flex-wrap items-center gap-1 md:gap-2">
-          <div class="md:hidden">
+        <div class="flex flex-nowrap sm:flex-wrap items-center gap-1.5 sm:gap-2">
+          <div class="md:hidden min-w-0">
             <AvailabilityHelpers.timezone_display
               timezone_display={@timezone_display}
               country_code={@timezone_country_code}
@@ -120,6 +129,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
             myself={@myself}
           />
           <.quick_add myself={@myself} />
+          <.import_button myself={@myself} />
           <.view_menu view={@view} show_view_menu={@show_view_menu} myself={@myself} />
           <.calendar_list_dropdown
             :if={@integrations != []}
@@ -132,23 +142,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
             myself={@myself}
           />
           <.refresh_button :if={@integrations != []} syncing={@syncing} myself={@myself} />
-          <button
+          <.icon_button
+            icon="hero-question-mark-circle"
+            label={dgettext("dashboard_calendar", "Keyboard shortcuts")}
+            class="hidden md:inline-flex"
             phx-click="toggle_shortcuts_help"
             phx-target={@myself}
-            class="hidden md:flex min-w-[40px] min-h-[40px] items-center justify-center text-token-sm font-semibold text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-            aria-label={dgettext("dashboard_calendar", "Keyboard shortcuts")}
-            title={dgettext("dashboard_calendar", "Keyboard shortcuts (?)")}
-          >
-            ?
-          </button>
-          <button
+          />
+          <.icon_button
+            icon="hero-cog-6-tooth"
+            label={dgettext("dashboard_calendar", "Calendar settings")}
             phx-click="toggle_settings"
             phx-target={@myself}
-            class="min-w-[40px] min-h-[40px] flex items-center justify-center text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-            aria-label={dgettext("dashboard_calendar", "Calendar settings")}
-          >
-            <.icon name="hero-cog-6-tooth" class="w-4 h-4" />
-          </button>
+          />
         </div>
       </div>
     </div>
@@ -173,8 +179,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
       target={@myself}
       role="dialog"
       panel_label={dgettext("dashboard_calendar", "My Calendars")}
-      trigger_class="min-w-[40px] min-h-[40px] px-2 md:px-3 md:py-1.5 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 flex items-center gap-1.5 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-      class="bg-white border border-tymeslot-200 rounded-xl shadow-lg p-3 w-60"
+      trigger_class={Enum.join(button_classes(:secondary, :sm), " ")}
+      class="bg-white border border-tymeslot-200 rounded-token-xl shadow-lg p-3 w-60"
       aria-label={dgettext("dashboard_calendar", "Toggle calendars")}
     >
       <:trigger>
@@ -210,12 +216,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
         on_toggle="toggle_view_menu"
         on_close="close_view_menu"
         target={@myself}
-        trigger_class="min-w-[40px] min-h-[40px] px-2 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 flex items-center gap-1 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-        class="bg-white border border-tymeslot-200 rounded-xl shadow-lg py-1 w-36"
+        trigger_class={Enum.join(button_classes(:secondary, :sm), " ")}
+        class="bg-white border border-tymeslot-200 rounded-token-xl shadow-lg py-1 w-36"
         aria-label={dgettext("dashboard_calendar", "Switch view")}
       >
         <:trigger>
-          <.icon name="hero-calendar-days" class="w-4 h-4" />
+          <.icon name="hero-calendar-days" class="hidden sm:block w-4 h-4" />
           <span class="text-token-xs font-medium">{Helpers.view_label(@view)}</span>
           <.icon name="hero-chevron-down" class="w-3 h-3" />
         </:trigger>
@@ -240,15 +246,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
   # (hidden on mobile, where the compact `view_menu` takes over).
   defp view_tabs(assigns) do
     ~H"""
-    <div class="hidden md:flex rounded-md border border-tymeslot-200 overflow-hidden text-token-sm">
-      <button
-        :for={{{value, label}, idx} <- view_options() |> Enum.with_index()}
-        phx-click="set_view"
-        phx-value-view={Atom.to_string(value)}
-        phx-target={@myself}
-        class={"px-3 py-1.5 focus:outline-hidden focus:z-10 focus:ring-2 focus:ring-turquoise-400 #{if idx > 0, do: "border-l border-tymeslot-200"} #{if @view == value, do: "bg-turquoise-600 text-white", else: "bg-white text-tymeslot-600 hover:bg-tymeslot-50"}"}
-      >{label}</button>
-    </div>
+    <.segmented_control
+      id="calendar-view"
+      value={@view}
+      on_change="set_view"
+      param="view"
+      target={@myself}
+      aria_label={dgettext("dashboard_calendar", "Switch view")}
+    >
+      <:option :for={{value, label} <- view_options()} value={value} label={label} />
+    </.segmented_control>
     """
   end
 
@@ -268,16 +275,38 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
   # the modal itself, so there is no inline text entry to parse here.
   defp quick_add(assigns) do
     ~H"""
-    <button
-      type="button"
+    <.action_button
+      variant={:secondary}
+      size={:sm}
+      icon="hero-plus-circle-mini"
+      class="hidden sm:inline-flex"
       phx-click="show_create_form"
       phx-target={@myself}
-      class="hidden sm:flex min-w-[40px] min-h-[40px] px-2 md:px-3 md:py-1.5 items-center gap-1.5 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-      aria-label={dgettext("dashboard_calendar", "Add event")}
     >
-      <.icon name="hero-plus-circle-mini" class="w-4 h-4" />
-      <span>{dgettext("dashboard_calendar", "Quick add")}</span>
-    </button>
+      {dgettext("dashboard_calendar", "Quick add")}
+    </.action_button>
+    """
+  end
+
+  attr :myself, :any, required: true
+
+  # Opens the `.ics` import modal. Shown at every width, since nothing else
+  # reaches the import on a phone; the label collapses to the icon below md, as
+  # Refresh does, so the tools row still fits on one line at 390px.
+  defp import_button(assigns) do
+    ~H"""
+    <.action_button
+      variant={:secondary}
+      size={:sm}
+      icon="hero-arrow-up-tray-mini"
+      class="shrink-0"
+      phx-click="show_ics_import"
+      phx-target={@myself}
+      data-testid="import-ics-button"
+      aria-label={dgettext("dashboard_calendar", "Import events from an .ics file")}
+    >
+      <span class="hidden md:inline">{dgettext("dashboard_calendar", "Import")}</span>
+    </.action_button>
     """
   end
 
@@ -286,18 +315,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
 
   defp refresh_button(assigns) do
     ~H"""
-    <button
+    <%!-- The icon is in the slot rather than `icon` so it can spin while syncing. --%>
+    <.action_button
+      variant={:secondary}
+      size={:sm}
+      disabled={@syncing}
       phx-click={
         JS.push("refresh", target: @myself)
         |> JS.dispatch("calendar:scroll-to-current", to: "#calendar-drag-zone")
       }
-      disabled={@syncing}
-      class="min-w-[40px] min-h-[40px] px-2 md:px-3 md:py-1.5 flex items-center justify-center gap-1.5 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
       aria-label={dgettext("dashboard_calendar", "Refresh")}
     >
-      <.icon name="hero-arrow-path" class={if @syncing, do: "w-4 h-4 animate-spin", else: "w-4 h-4"} />
+      <.icon
+        name="hero-arrow-path"
+        class={if @syncing, do: "w-4 h-4 shrink-0 animate-spin", else: "w-4 h-4 shrink-0"}
+      />
       <span class="hidden md:inline">{dgettext("dashboard_calendar", "Refresh")}</span>
-    </button>
+    </.action_button>
     """
   end
 end

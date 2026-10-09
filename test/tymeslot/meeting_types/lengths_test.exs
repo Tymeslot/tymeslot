@@ -25,6 +25,13 @@ defmodule Tymeslot.MeetingTypes.LengthsTest do
     test "never lists a length twice" do
       assert Lengths.offered(type(30, [30, 60])) == [30, 60]
     end
+
+    test "a group type offers its own duration only, whatever it still carries" do
+      group_type = Map.put(type(30, [60, 90]), :max_participants, 5)
+
+      assert Lengths.offered(group_type) == [30]
+      refute Lengths.multiple?(group_type)
+    end
   end
 
   describe "multiple?/1, offers?/2 and resolve/2" do

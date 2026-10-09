@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.SecurityFields
 
-  import TymeslotWeb.Components.CoreComponents, only: [honeypot_field: 1, icon: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [honeypot_field: 1, icon: 1]
 
   @responses [:yes, :if_need_be, :no]
 

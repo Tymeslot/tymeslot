@@ -359,21 +359,24 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       view |> element("button[phx-click='next_step']") |> render_click()
 
       # Verify the schedule defaults were used
-      # Schedule defaults: buffer_minutes: 15, advance_booking_days: 90, min_advance_hours: 3
+      # Schedule defaults: buffers 15/15, advance_booking_days: 90, min_advance_hours: 3
       schedule = default_schedule(user)
-      assert schedule.buffer_minutes == 15
+      assert schedule.buffer_before_minutes == 15
+      assert schedule.buffer_after_minutes == 15
       assert schedule.advance_booking_days == 90
       assert schedule.min_advance_hours == 3
     end
 
-    test "buffer_minutes with valid boundary values (0 and 120) are accepted", %{conn: conn} do
+    test "buffer_before_minutes with valid boundary values (0 and 120) are accepted", %{
+      conn: conn
+    } do
       {:ok, view, _html, user} = setup_onboarding(conn)
       navigate_to_scheduling_steps(view)
 
       # Test minimum value (0) — already on buffer_time step
       view
       |> element(
-        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_minutes='0']"
+        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_before_minutes='0']"
       )
       |> render_click()
 
@@ -384,7 +387,7 @@ defmodule TymeslotWeb.OnboardingValidationTest do
 
       # Verify value was saved
       schedule = default_schedule(user)
-      assert schedule.buffer_minutes == 0
+      assert schedule.buffer_before_minutes == 0
     end
 
     test "advance_booking_days with valid minimum boundary (1) is accepted", %{conn: conn} do

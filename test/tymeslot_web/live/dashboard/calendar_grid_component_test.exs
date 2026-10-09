@@ -71,7 +71,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
       lv |> element("button[phx-value-view='day']", "Day") |> render_click()
       html = lv |> element("button[phx-value-view='week']", "Week") |> render_click()
       # Week view shows short day names, not the full "DayName, Month Day, Year" format
-      refute html =~ Calendar.strftime(Date.utc_today(), "%A, %B %-d, %Y")
+      refute html =~ Calendar.strftime(Date.utc_today(), "%A, %-d %B %Y")
     end
 
     test "switches to 3-day view", %{conn: conn} do
@@ -110,7 +110,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
 
       html = render(lv)
       # Day view's full date format appears
-      assert html =~ Calendar.strftime(Date.utc_today(), "%A, %B %-d, %Y")
+      assert html =~ Calendar.strftime(Date.utc_today(), "%A, %-d %B %Y")
     end
 
     test "mobile viewport demotes three_day to day", %{conn: conn} do
@@ -239,7 +239,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
         |> element("[phx-click='navigate_to_day'][phx-value-date='#{today_iso}']")
         |> render_click()
 
-      assert html =~ Calendar.strftime(Date.utc_today(), "%A, %B")
+      assert html =~ Calendar.strftime(Date.utc_today(), "%A, %-d %B")
     end
   end
 
@@ -416,7 +416,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
       html =
         lv |> element("#calendar-grid") |> render_hook("set_view", %{"view" => "day"})
 
-      assert html =~ Calendar.strftime(Date.utc_today(), "%A, %B %-d, %Y")
+      assert html =~ Calendar.strftime(Date.utc_today(), "%A, %-d %B %Y")
 
       lv |> element("#calendar-grid") |> render_hook("set_view", %{"view" => "month"})
       html = render(lv)
@@ -426,7 +426,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
       html =
         lv |> element("#calendar-grid") |> render_hook("set_view", %{"view" => "week"})
 
-      refute html =~ Calendar.strftime(Date.utc_today(), "%A, %B %-d, %Y")
+      refute html =~ Calendar.strftime(Date.utc_today(), "%A, %-d %B %Y")
     end
   end
 

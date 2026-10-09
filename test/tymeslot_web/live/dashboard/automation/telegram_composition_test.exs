@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCompositionTest do
 
     * `disconnect_telegram` on own-bot integration — no UI surface
       renders the disconnect button for own-bot mode. The template at
-      `telegram_card.ex:193` gates it on
+      `telegram_card.ex` gates it on
       `@integration.bot_mode == "shared" && @integration.chat_id`,
       so the `{:error, :own_bot_mode}` branch at
       `state_handlers.ex:88` is unreachable from a real click.

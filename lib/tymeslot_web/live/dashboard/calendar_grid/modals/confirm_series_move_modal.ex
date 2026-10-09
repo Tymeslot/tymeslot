@@ -22,15 +22,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmSeriesMoveModal do
   @spec confirm_series_move_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def confirm_series_move_modal(assigns) do
     ~H"""
-    <.modal
+    <.confirm_modal
       id="confirm-series-move-modal"
-      show={true}
-      on_cancel={JS.push("cancel_series_move", target: @myself)}
+      show
       size={:small}
+      title={dgettext("dashboard_calendar_events", "Move recurring event")}
+      confirm_label={dgettext("dashboard_calendar_events", "Move series")}
+      confirm_variant={:primary}
+      icon="hero-arrow-path"
+      on_cancel={JS.push("cancel_series_move", target: @myself)}
+      on_confirm={JS.push("confirm_series_move", target: @myself)}
     >
-      <:header>{dgettext("dashboard_calendar_events", "Move recurring event")}</:header>
-
-      <p class="text-token-sm text-tymeslot-500">
+      <p>
         {dgettext(
           "dashboard_calendar_events",
           "Move every event in this series to %{calendar}?",
@@ -41,25 +44,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmSeriesMoveModal do
       <ul
         :if={@prompt.notes != []}
         id="series-move-notes"
-        class="mt-4 space-y-2 list-disc pl-5 text-token-sm text-tymeslot-600"
+        class="space-y-2 list-disc pl-5 text-token-sm"
       >
         <li :for={note <- @prompt.notes}>{SeriesNotes.text(note)}</li>
       </ul>
-
-      <:footer>
-        <div class="flex flex-wrap gap-2">
-          <.action_button phx-click="confirm_series_move" phx-target={@myself}>
-            {dgettext("dashboard_calendar_events", "Move series")}
-          </.action_button>
-          <.action_button
-            variant={:secondary}
-            phx-click={JS.push("cancel_series_move", target: @myself)}
-          >
-            {dgettext("dashboard_calendar_events", "Cancel")}
-          </.action_button>
-        </div>
-      </:footer>
-    </.modal>
+    </.confirm_modal>
     """
   end
 end

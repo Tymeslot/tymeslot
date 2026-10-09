@@ -2,262 +2,161 @@
    CARD COMPONENTS
    =================================== */
 
-/* Base Card - Glass Theme Enhanced */
-.card {
-  background: var(--color-glass-bg-card-enhanced);
-  backdrop-filter: var(--glass-blur-strong);
-  -webkit-backdrop-filter: var(--glass-blur-strong);
-  border: 1px solid var(--color-border-glass-light);
-  border-radius: var(--radius-xl);
-  padding: var(--spacing-6);
-  box-shadow: var(--shadow-glass-card-enhanced);
-  transition: var(--transition-glass-smooth);
-  color: var(--color-text-glass-primary);
-  position: relative;
-  overflow: hidden;
-}
+/* Dashboard card: backs the <.card> component (Containers.card/1), which
+   picks the variant, padding and interactivity; a raw `card-glass` class is
+   for the few places a component cannot go (SaaS panels, mode-dependent
+   wrappers). Every card rule sits in the components layer, below Tailwind's
+   utilities, as the buttons do, so a caller's layout utilities and state
+   cues (a selected ring or border, an error border) apply instead of losing
+   to an unlayered rule. The surface itself (padding, shadow, hover) is the
+   component's to choose.
 
-/* Subtle shine effect */
-.card::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(
-    45deg,
-    transparent 30%,
-    rgba(255, 255, 255, 0.1) 50%,
-    transparent 70%
-  );
-  transform: rotate(45deg);
-  transition: all 0.6s;
-  opacity: 0;
-}
+   The base is the :glass variant at the :md padding. Only an interactive card
+   reacts to hover: a static card that lights up under the pointer reads as
+   clickable. Hover is guarded by (hover: hover) so a tap leaves no stuck
+   state. */
+@layer components {
+  .card-glass {
+    @apply bg-white border-2 border-tymeslot-50 rounded-token-3xl p-6 shadow-2xl transition-all duration-300;
+  }
 
-.card:hover::before {
-  opacity: 1;
-  transform: rotate(45deg) translate(50%, 50%);
-}
+  /* A card inside another card, or a row in a list of settings: the same
+     surface without the lifted shadow, with a border that shows on white. */
+  .card-glass--flat {
+    @apply border-tymeslot-100 rounded-token-2xl shadow-none;
+  }
 
-.card:hover {
-  background: rgba(255, 255, 255, 0.9);
-  border-color: var(--color-primary-300);
-  transform: translateY(-2px);
-  box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.1),
-    0 0 16px var(--color-primary-100);
-}
+  /* A recessed surface: secondary information beside the main card. */
+  .card-glass--muted {
+    @apply bg-tymeslot-50 border-tymeslot-100 rounded-token-2xl shadow-none;
+  }
 
-/* Card Variants */
-.card-compact {
-  padding: var(--spacing-4);
-}
+  .card-glass--interactive {
+    @apply cursor-pointer;
+  }
 
-.card-spacious {
-  padding: var(--spacing-8);
-}
+  /* A flat card (a setting row) only tints its border: lifting it with a
+     shadow inside another card is too loud. */
+  @media (hover: hover) {
+    .card-glass--interactive:hover {
+      @apply border-turquoise-100;
+    }
 
-/* Enhanced Glass Morphism Card - Standardized for 2026 */
-.card-glass {
-  @apply bg-white border-2 border-slate-50 rounded-3xl p-6 shadow-2xl transition-all duration-300;
-}
+    .card-glass--interactive:not(.card-glass--flat):hover {
+      @apply shadow-xl shadow-turquoise-200/20;
+    }
+  }
 
-.card-glass:hover {
-  @apply border-turquoise-100 bg-white/95 shadow-xl shadow-turquoise-200/20;
-}
+  /* Meeting type rows: an active type keeps the card's border visible, an
+     inactive one is greyed out. */
+  .card-glass-available {
+    border-color: var(--color-border-glass-dark);
+  }
 
+  .card-glass-unavailable {
+    background: color-mix(in oklab, var(--color-neutral-500) 25%, transparent);
+    border-color: color-mix(in oklab, var(--color-neutral-400) 50%, transparent);
+    opacity: 0.7;
+    transition: var(--transition-glass);
+    position: relative;
+  }
 
-/* Auth Card - High Contrast */
-.auth-glass-card {
-  @apply bg-white/95 backdrop-blur-md border-2 border-slate-100 rounded-[2.5rem] p-6 sm:p-8 shadow-2xl shadow-slate-900/10 w-full max-w-[480px] mx-auto;
-}
+  .card-glass-unavailable::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg,
+      color-mix(in oklab, var(--color-neutral-500) 10%, transparent) 0%,
+      color-mix(in oklab, var(--color-neutral-600) 5%, transparent) 100%);
+    border-radius: inherit;
+    pointer-events: none;
+  }
 
-/* Flash Message Cards - Modernized */
-.flash-card {
-  @apply rounded-2xl p-4 mb-5 shadow-lg border-2 font-bold flex items-center gap-3;
-}
+  .card-glass-unavailable h3,
+  .card-glass-unavailable span,
+  .card-glass-unavailable label {
+    color: color-mix(in oklab, var(--color-neutral-500) 80%, transparent) !important;
+  }
 
-.flash-card.flash-info {
-  @apply bg-sky-50 border-sky-100 text-sky-800;
-}
+  /* Keep toggle button visible and clickable on unavailable days */
+  .card-glass-unavailable button[role="switch"] {
+    opacity: 1 !important;
+  }
 
-.flash-card.flash-error {
-  @apply bg-red-50 border-red-100 text-red-800;
-}
+  .card-glass-unavailable button[role="switch"] span {
+    /* Deliberate non-palette white alpha: a neutral highlight, not a brand colour. */
+    background: rgba(255, 255, 255, 0.95) !important;
+  }
 
-.flash-card.flash-success {
-  @apply bg-emerald-50 border-emerald-100 text-emerald-800;
-}
+  /* An account card the visitor cannot change (social sign-in). */
+  .card-glass-disabled {
+    background: color-mix(in oklab, var(--color-neutral-400) 10%, transparent);
+    backdrop-filter: var(--glass-blur-strong);
+    -webkit-backdrop-filter: var(--glass-blur-strong);
+    border: 1px solid color-mix(in oklab, var(--color-neutral-400) 30%, transparent);
+    border-radius: var(--radius-2xl);
+    padding: var(--spacing-6);
+    box-shadow: var(--shadow-glass-card);
+    color: var(--color-text-glass-primary);
+    transition: var(--transition-glass);
+  }
 
-/* Selected State Glass Gradient */
-.glass-gradient {
-  background: linear-gradient(
-    135deg,
-    rgba(20, 184, 166, 0.15) 0%,
-    rgba(13, 148, 136, 0.1) 100%
-  ) !important;
-  border-color: var(--color-primary-500) !important;
-  position: relative;
-  /* Ensure box sizing doesn't change */
-  box-sizing: border-box !important;
-}
+  /* Auth Card - High Contrast */
+  .auth-glass-card {
+    @apply bg-white/95 backdrop-blur-md border-2 border-tymeslot-100 rounded-token-5xl p-6 sm:p-8 shadow-2xl shadow-tymeslot-900/10 w-full max-w-[480px] mx-auto;
+  }
 
-/* Ensure icon sizing remains consistent */
-[class*="hero-"] {
-  display: inline-block !important;
-  flex-shrink: 0;
-}
+  /* Selected State Glass Gradient */
+  .glass-gradient {
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--color-primary-500) 15%, transparent) 0%,
+      color-mix(in oklab, var(--color-primary-600) 10%, transparent) 100%
+    ) !important;
+    border-color: var(--color-primary-500) !important;
+    position: relative;
+    /* Ensure box sizing doesn't change */
+    box-sizing: border-box !important;
+  }
 
-.glass-gradient::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(20, 184, 166, 0.1) 0%,
-    transparent 50%,
-    rgba(13, 148, 136, 0.05) 100%
-  );
-  border-radius: inherit;
-  pointer-events: none;
-}
+  .glass-gradient::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--color-primary-500) 10%, transparent) 0%,
+      transparent 50%,
+      color-mix(in oklab, var(--color-primary-600) 5%, transparent) 100%
+    );
+    border-radius: inherit;
+    pointer-events: none;
+  }
 
-/* Availability Day Cards */
-.card-glass-available {
-  /* Ensure border is visible for available cards */
-  border-color: var(--color-border-glass-dark);
-}
+  /* Brand Card */
+  .brand-card {
+    @apply bg-white border-2 border-tymeslot-100 rounded-token-3xl p-6 shadow-xl shadow-tymeslot-200/50 transition-glass;
+  }
 
+  .brand-card:hover {
+    @apply border-turquoise-100 shadow-xl shadow-turquoise-500/10;
+  }
 
-.card-glass-unavailable {
-  background: rgba(107, 114, 128, 0.25);
-  border-color: rgba(156, 163, 175, 0.5);
-  opacity: 0.7;
-  transition: var(--transition-glass);
-  position: relative;
-}
+  /* Glass Morphism Card — backs the <.glass_morphism_card> component */
+  .glass-morphism-card {
+    @apply bg-white/80 backdrop-blur-xl rounded-token-3xl border border-white/40 shadow-2xl;
+    /* Deliberate non-palette black alpha: a neutral shadow, not a brand colour. */
+    box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.1);
+  }
 
-.card-glass-unavailable::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, 
-    rgba(107, 114, 128, 0.1) 0%, 
-    rgba(75, 85, 99, 0.05) 100%);
-  border-radius: inherit;
-  pointer-events: none;
-}
-
-.card-glass-primary {
-  /* Primary calendar with enhanced turquoise styling */
-  border-color: var(--color-turquoise-400);
-  background: linear-gradient(135deg, 
-    rgba(var(--color-turquoise-50-rgb), 0.15), 
-    rgba(var(--color-turquoise-100-rgb), 0.10));
-  box-shadow: 0 0 20px rgba(var(--color-turquoise-500-rgb), 0.25), 
-              var(--shadow-glass-md);
-}
-
-
-.card-glass-calendar-secondary {
-  /* More visible borders for secondary calendars */
-  border-color: rgb(226, 232, 240); /* slate-200 - more visible */
-  border-width: 2px; /* Ensure consistent width */
-  background: linear-gradient(135deg,
-    rgba(148, 163, 184, 0.03),  /* slate-400 tint */
-    rgba(203, 213, 225, 0.02)); /* slate-300 tint */
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-}
-
-
-
-.card-glass-unavailable h3,
-.card-glass-unavailable span,
-.card-glass-unavailable label {
-  color: rgba(107, 114, 128, 0.8) !important;
-}
-
-/* Keep toggle button visible and clickable on unavailable days */
-.card-glass-unavailable button[role="switch"] {
-  opacity: 1 !important;
-}
-
-.card-glass-unavailable button[role="switch"] span {
-  background: rgba(255, 255, 255, 0.95) !important;
-}
-
-/* Make unavailable text turquoise */
-.card-glass-unavailable .availability-status {
-  color: var(--color-primary-600) !important;
-  font-weight: 600 !important;
-}
-
-/* Password Requirements Card */
-.password-requirements-card {
-  background: var(--color-glass-bg-overlay);
-  backdrop-filter: var(--glass-blur-light);
-  border: 2px solid var(--color-border-glass-dark);
-  border-radius: 8px;
-  padding: 16px;
-  margin-top: 12px;
-}
-
-.password-requirements-card p {
-  color: var(--color-text-glass-primary);
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-
-.password-requirements-card ul li {
-  color: var(--color-text-glass-primary);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-  font-weight: 600;
-}
-
-.password-requirements-card ul li svg {
-  color: var(--color-text-glass-primary);
-}
-
-/* Disabled Glass Card for Social Login */
-.card-glass-disabled {
-  background: rgba(156, 163, 175, 0.1);
-  backdrop-filter: var(--glass-blur-strong);
-  -webkit-backdrop-filter: var(--glass-blur-strong);
-  border: 1px solid rgba(156, 163, 175, 0.3);
-  border-radius: 16px;
-  padding: var(--spacing-6);
-  box-shadow: var(--shadow-glass-card);
-  color: var(--color-text-glass-primary);
-  transition: var(--transition-glass);
-}
-
-/* Brand Card */
-.brand-card {
-  @apply bg-white border-2 border-tymeslot-100 rounded-token-3xl p-6 shadow-xl shadow-tymeslot-200/50 transition-glass;
-}
-
-.brand-card:hover {
-  @apply border-turquoise-100 shadow-xl shadow-turquoise-500/10;
-}
-
-/* Glass Morphism Card — backs the <.glass_morphism_card> component */
-.glass-morphism-card {
-  @apply bg-white/80 backdrop-blur-xl rounded-token-3xl border border-white/40 shadow-2xl;
-  box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.1);
-}
-
-/* Meeting Details Card */
-.meeting-details-card {
-  @apply bg-linear-to-br from-turquoise-50 to-cyan-50 border border-turquoise-100 rounded-token-2xl p-6 shadow-sm;
-}
-
-@media (min-width: 640px) {
+  /* Meeting Details Card */
   .meeting-details-card {
-    padding: 1rem;
+    @apply bg-linear-to-br from-turquoise-50 to-cyan-50 border border-turquoise-100 rounded-token-2xl p-6 shadow-sm;
+  }
+
+  @media (min-width: 640px) {
+    .meeting-details-card {
+      padding: 1rem;
+    }
   }
 }

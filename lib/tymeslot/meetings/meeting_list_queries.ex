@@ -11,8 +11,10 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
 
   import Ecto.Query, warn: false
 
+  alias Tymeslot.Meetings.GuestSchema
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Repo
 
   # Query building helpers
@@ -41,10 +43,12 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   defp apply_time_filter(query, :upcoming, now), do: upcoming(query, now)
   defp apply_time_filter(query, :past, now), do: past(query, now)
 
-  defp cursor_after(query, nil, _after_id), do: query
-  defp cursor_after(query, _after_start, nil), do: query
+  # The keyset cursor walks in the same direction as the ordering, so a page
+  # always continues from the last row of the previous one.
+  defp cursor_after(query, nil, _after_id, _order), do: query
+  defp cursor_after(query, _after_start, nil, _order), do: query
 
-  defp cursor_after(query, after_start, after_id) do
+  defp cursor_after(query, after_start, after_id, :desc) do
     from(m in query,
       where:
         m.start_time < ^after_start or
@@ -52,8 +56,44 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     )
   end
 
-  defp order_by_start_desc_id_desc(query),
+  defp cursor_after(query, after_start, after_id, :asc) do
+    from(m in query,
+      where:
+        m.start_time > ^after_start or
+          (m.start_time == ^after_start and m.id > ^after_id)
+    )
+  end
+
+  defp order_by_start_and_id(query, :desc),
     do: from(m in query, order_by: [desc: m.start_time, desc: m.id])
+
+  defp order_by_start_and_id(query, :asc),
+    do: from(m in query, order_by: [asc: m.start_time, asc: m.id])
+
+  # Live (non-cancelled) participants only, oldest booking first — mirrors
+  # the guests preload_order and keeps the dashboard from ever rendering a
+  # cancelled participant.
+  defp live_participants_preload do
+    from(p in ParticipantSchema,
+      where: is_nil(p.cancelled_at),
+      order_by: [asc: p.inserted_at]
+    )
+  end
+
+  # Guests whose booker is still on the meeting. A participant who cancels
+  # their seat leaves their guest rows behind — deliberately, since the rows
+  # record who was invited — but those guests no longer hold seats and their
+  # RSVP links are inert, so showing them on the organiser's card would count
+  # people who are not coming. Guests of a solo booking carry no participant
+  # and are always live.
+  defp live_guests_preload do
+    from(g in GuestSchema,
+      left_join: p in ParticipantSchema,
+      on: p.id == g.participant_id,
+      where: is_nil(g.participant_id) or is_nil(p.cancelled_at),
+      order_by: [asc: g.inserted_at]
+    )
+  end
 
   @doc """
   Returns upcoming meetings that should have a video room link but do not.
@@ -232,8 +272,20 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> for_user_email(user_email)
     |> order_by_start_asc()
     |> apply_limit(limit)
+    |> preload(participants: ^live_participants_preload())
     |> Repo.all()
   end
+
+  @doc """
+  Loads the live participants of `meeting`, or of each of a list of
+  meetings, into `:participants`, oldest booking first, the same set the
+  dashboard lists show. A list is loaded in one query.
+  """
+  @spec preload_live_participants(Meeting.t()) :: Meeting.t()
+  @spec preload_live_participants([Meeting.t()]) :: [Meeting.t()]
+  def preload_live_participants(meeting_or_meetings),
+    do:
+      Repo.preload(meeting_or_meetings, [participants: live_participants_preload()], force: true)
 
   @doc """
   Returns the organiser's live bookings overlapping the `[from_utc, to_utc)`
@@ -271,7 +323,8 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
 
   @doc """
   Cursor-based pagination for a user's meetings using keyset on start_time and id.
-  Accepts opts: :after_start (DateTime), :after_id (binary_id), :per_page, :status, :time_filter (:upcoming | :past).
+  Accepts opts: :after_start (DateTime), :after_id (binary_id), :per_page, :status, :time_filter (:upcoming | :past),
+  :order (:desc, the default, newest first; or :asc, soonest first).
   Returns a list limited to per_page.
   """
   @spec list_meetings_for_user_paginated_cursor(String.t(), Keyword.t()) :: [Meeting.t()]
@@ -284,6 +337,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     status = Keyword.get(opts, :status)
     exclude_status = Keyword.get(opts, :exclude_status)
     time_filter = Keyword.get(opts, :time_filter)
+    order = Keyword.get(opts, :order, :desc)
 
     now = DateTime.utc_now()
 
@@ -292,10 +346,27 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> with_status(status)
     |> without_status(exclude_status)
     |> apply_time_filter(time_filter, now)
-    |> order_by_start_desc_id_desc()
-    |> cursor_after(after_start, after_id)
+    |> order_by_start_and_id(order)
+    |> cursor_after(after_start, after_id, order)
     |> apply_limit(limit)
-    |> preload(:guests)
+    |> preload(
+      guests: ^live_guests_preload(),
+      participants: ^card_participants_preload()
+    )
     |> Repo.all()
+  end
+
+  # The participants a dashboard card lists: the live ones, and on a
+  # cancelled meeting every one, since a cancelled card records who had
+  # booked it. Whoever released their spot before the meeting was cancelled
+  # carries their own `cancelled_at`; those still booked when it was called
+  # off do not (cancelling a meeting leaves its participant rows alone).
+  defp card_participants_preload do
+    from(p in ParticipantSchema,
+      join: m in Meeting,
+      on: m.id == p.meeting_id,
+      where: is_nil(p.cancelled_at) or m.status == "cancelled",
+      order_by: [asc: p.inserted_at]
+    )
   end
 end

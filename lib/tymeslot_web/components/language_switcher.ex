@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Components.LanguageSwitcher do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
   import TymeslotWeb.Components.FlagHelpers
 
   attr :locale, :string, required: true

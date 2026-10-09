@@ -51,6 +51,7 @@ defmodule Tymeslot.Emails.Shared.Frame do
         <mj-raw>
           <meta name="color-scheme" content="light dark" />
           <meta name="supported-color-schemes" content="light dark" />
+          #{Styles.dark_mode_styles()}
         </mj-raw>
         #{Styles.mjml_base_attributes()}
         <mj-breakpoint width="480px" />

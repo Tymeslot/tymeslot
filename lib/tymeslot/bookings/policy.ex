@@ -30,7 +30,7 @@ defmodule Tymeslot.Bookings.Policy do
   require Logger
 
   @doc """
-  Scheduling policy for a booking: buffer, minimum notice, advance window and
+  Scheduling policy for a booking: buffers, minimum notice, advance window and
   the organiser's timezone.
 
   The policy comes from the schedule the meeting type is booked against, so
@@ -39,7 +39,8 @@ defmodule Tymeslot.Bookings.Policy do
   """
   @spec scheduling_config(integer() | nil, map() | nil) :: %{
           required(:schedule_id) => integer() | nil,
-          required(:buffer_minutes) => integer(),
+          required(:buffer_before_minutes) => integer(),
+          required(:buffer_after_minutes) => integer(),
           required(:min_advance_hours) => integer(),
           required(:max_advance_booking_days) => integer(),
           required(:owner_timezone) => String.t(),
@@ -373,6 +374,17 @@ defmodule Tymeslot.Bookings.Policy do
       meeting_url: nil
     }
   end
+
+  @doc """
+  True when the booking's meeting type allows the booker to add guests.
+
+  Shared by the solo/paid booking transaction and the group seat-booking
+  pipeline so both re-apply the same rule to the (never-trusted) client-
+  submitted guest list.
+  """
+  @spec guests_allowed?(map()) :: boolean()
+  def guests_allowed?(%{meeting_type: %{allow_guests: true}}), do: true
+  def guests_allowed?(_booking_data), do: false
 
   @doc """
   Gets the organizer name from configuration.

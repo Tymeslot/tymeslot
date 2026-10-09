@@ -83,7 +83,7 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequiredTest do
     test "asks the owner to remove the subscription and subscribe again, since its row has no Reconnect button" do
       html = IntegrationReauthRequired.render(@user, ics_integration(), :calendar)
 
-      assert html =~ "Select <strong>Remove connection</strong> on the Calendar subscription row"
+      assert html =~ "Select <strong>Delete</strong> on the Calendar subscription row"
 
       assert html =~ "paste the current feed link and select Subscribe"
 

@@ -5,25 +5,38 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   """
   use Gettext, backend: TymeslotWeb.Gettext
   alias Calendar
+  alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.MeetingTypes.Lengths
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.DateTimeUtils.Display
   alias TymeslotWeb.Helpers.LocaleFormat
 
   @doc """
-  Groups time slots by period of day with translated period names.
+  Groups normalised slot maps (`TymeslotWeb.Components.MeetingUtils.slot/0`)
+  by period of day with translated period names.
   """
-  @spec group_slots_by_period([String.t()]) :: [{String.t(), [String.t()]}]
+  @spec group_slots_by_period([map()]) :: [{String.t(), [map()]}]
   def group_slots_by_period(slots) do
-    grouped = Display.group_slots_by_period(slots)
+    grouped = Enum.group_by(slots, &Display.get_time_period(&1.time))
 
     [
-      {dgettext("booking", "Early Morning"), Map.get(grouped, "Early Morning", [])},
-      {dgettext("booking", "Morning"), Map.get(grouped, "Morning", [])},
-      {dgettext("booking", "Afternoon"), Map.get(grouped, "Afternoon", [])},
-      {dgettext("booking", "Evening"), Map.get(grouped, "Evening", [])},
-      {dgettext("booking", "Late Night"), Map.get(grouped, "Late Night", [])}
+      {dgettext("booking", "Early Morning"), sorted_period(grouped, "Early Morning")},
+      {dgettext("booking", "Morning"), sorted_period(grouped, "Morning")},
+      {dgettext("booking", "Afternoon"), sorted_period(grouped, "Afternoon")},
+      {dgettext("booking", "Evening"), sorted_period(grouped, "Evening")},
+      {dgettext("booking", "Late Night"), sorted_period(grouped, "Late Night")}
     ]
+  end
+
+  defp sorted_period(grouped, period) do
+    grouped
+    |> Map.get(period, [])
+    |> Enum.sort_by(fn slot ->
+      case DateTimeUtils.parse_time_string(slot.time) do
+        {:ok, time} -> {time.hour, time.minute, time.second}
+        {:error, _reason} -> {99, 99, 99}
+      end
+    end)
   end
 
   @doc """
@@ -56,6 +69,60 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
   def format_booking_datetime(_date, _time, _timezone),
     do: dgettext("booking", "Invalid date/time")
+
+  @doc """
+  When a meeting starting at `time` on `date` (the booker's clock) ends on a
+  later date, a short line saying when; nil when it ends the day it starts or
+  the inputs cannot be read. `duration` is minutes or a slug such as "60min".
+  """
+  @spec format_next_day_end(
+          String.t() | nil,
+          String.t() | nil,
+          integer() | String.t() | nil,
+          String.t() | nil
+        ) :: String.t() | nil
+  def format_next_day_end(_date, _time, nil, _timezone), do: nil
+
+  def format_next_day_end(date, time, duration, timezone)
+      when is_binary(date) and is_binary(time) and is_binary(timezone) do
+    with {:ok, start_date} <- parse_date(date),
+         {:ok, start_time} <- DateTimeUtils.parse_time_string(time),
+         {:ok, start} <- DateTimeUtils.resolve_local(start_date, start_time, timezone),
+         finish = DateTime.add(start, TimeSlots.parse_duration(duration), :minute),
+         :gt <- Date.compare(DateTime.to_date(finish), start_date) do
+      dgettext("booking", "Ends %{time} on %{weekday} %{day} %{month}",
+        time: format_time_by_locale(finish),
+        weekday: mid_sentence_weekday(Date.day_of_week(DateTime.to_date(finish))),
+        day: finish.day,
+        month: month_in_date(finish.month)
+      )
+    else
+      _same_day_or_unreadable -> nil
+    end
+  end
+
+  def format_next_day_end(_date, _time, _duration, _timezone), do: nil
+
+  @doc """
+  `format_next_day_end/4` for a booking or confirmation step's assigns: the
+  chosen date and time, the meeting type's duration (or the bare `duration`)
+  and the booker's timezone.
+  """
+  @spec booking_next_day_end(map()) :: String.t() | nil
+  def booking_next_day_end(assigns) do
+    duration =
+      case assigns[:meeting_type] do
+        %{duration_minutes: minutes} -> minutes
+        _no_meeting_type -> assigns[:duration]
+      end
+
+    format_next_day_end(
+      assigns[:selected_date],
+      assigns[:selected_time],
+      duration,
+      assigns[:user_timezone]
+    )
+  end
 
   @doc """
   Formats a meeting start time for the payment return pages — localized and
@@ -133,7 +200,8 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   def to_attendee_datetime(_other, _timezone), do: :error
 
   @doc """
-  Formats date string or struct for display.
+  Formats a date string or struct for display in the current locale's word
+  order, via `LocaleFormat.format_date/2`: "15 July 2026", "15. Juli 2026".
   """
   @spec format_date(String.t() | Date.t() | DateTime.t() | nil) :: String.t()
   def format_date(nil), do: ""
@@ -147,8 +215,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
   @spec format_date(Date.t()) :: String.t()
   def format_date(%Date{} = date) do
-    month = month_in_date(date.month)
-    dgettext("booking", "%{month} %{day}, %{year}", month: month, day: date.day, year: date.year)
+    LocaleFormat.format_date(date, current_locale())
   end
 
   @spec format_date(DateTime.t()) :: String.t()
@@ -158,7 +225,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
   @doc """
   Builds a full, screen-reader-friendly date label — the localized weekday
-  followed by the localized date, e.g. "Monday, July 15, 2026". Accepts an ISO
+  followed by the localized date, e.g. "Monday, 15 July 2026". Accepts an ISO
   date string (as carried in the calendar day maps) or a `Date`, and falls back
   to the raw input on a parse failure so a day button is never left unlabelled.
   """
@@ -240,6 +307,13 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   end
 
   defp current_locale, do: Gettext.get_locale(TymeslotWeb.Gettext)
+
+  # German nouns and English weekdays keep their capital inside a sentence; the
+  # other catalogues capitalise them only for use as a heading.
+  defp mid_sentence_weekday(day) do
+    name = get_weekday_name(day)
+    if current_locale() in ["en", "de"], do: name, else: String.downcase(name)
+  end
 
   @spec get_weekday_name(integer()) :: String.t()
   defp get_weekday_name(day) do

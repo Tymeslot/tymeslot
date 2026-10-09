@@ -11,55 +11,42 @@ msgstr ""
 "Language: cs\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "%{going} of %{total} going"
 msgstr "%{going} z %{total} se zúčastní"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Custom answers"
 msgstr "Vlastní odpovědi"
 
-#: lib/tymeslot_web/components/dashboard/meetings/add_guests_modal.ex
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/guest_status_pill.ex
 #, elixir-autogen, elixir-format
 msgid "Declined"
 msgstr "Odmítnuto"
 
-#: lib/tymeslot_web/components/dashboard/meetings/add_guests_modal.ex
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/guest_status_pill.ex
 #, elixir-autogen, elixir-format
 msgid "Going"
 msgstr "Přijato"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Guests"
 msgstr "Hosté"
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Pending"
-msgstr "Čeká"
 
 #: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
 #, elixir-autogen, elixir-format
 msgid "%{attendee_name} will receive an email explaining you need to reschedule"
 msgstr "%{attendee_name} obdrží e-mail s vysvětlením, že potřebujete schůzku přesunout"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee Email"
 msgstr "E-mail účastníka"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Auto-notifications"
-msgstr "Automatická upozornění"
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Zrušit"
@@ -85,11 +72,6 @@ msgstr "Zrušeno"
 msgid "Cancelling..."
 msgstr "Rušení…"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Change meeting times"
-msgstr "Změnit čas schůzky"
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_status_badge.ex
 #, elixir-autogen, elixir-format
 msgid "Completed"
@@ -105,12 +87,12 @@ msgstr "Potvrdit zrušení"
 msgid "Current Meeting"
 msgstr "Stávající schůzka"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Date & Time"
 msgstr "Datum a čas"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Dismiss"
 msgstr "Skrýt"
@@ -150,16 +132,6 @@ msgstr "Plné vrácení platby."
 msgid "I understand the attendee will not receive a refund."
 msgstr "Beru na vědomí, že účastníkovi nebude vrácena platba."
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Join Meeting"
-msgstr "Připojit se ke schůzce"
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Join Video"
-msgstr "Připojit se k videohovoru"
-
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Keep Meeting"
@@ -175,17 +147,7 @@ msgstr "Načíst další schůzky"
 msgid "Loading..."
 msgstr "Načítání…"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Manage all your scheduled meetings in one place. Filter by status and take quick actions on your appointments."
-msgstr "Spravujte všechny naplánované schůzky na jednom místě. Filtrujte podle stavu a rychle s nimi provádějte potřebné akce."
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting Management"
-msgstr "Správa schůzek"
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Notes"
 msgstr "Poznámky ke schůzce"
@@ -204,11 +166,6 @@ msgstr "Schůzka byla zrušena, ale platbu se nepodařilo vrátit. Vraťte ji pr
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled successfully"
 msgstr "Schůzka byla zrušena."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
-#, elixir-autogen, elixir-format
-msgid "Meetings"
-msgstr "Schůzky"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
@@ -245,16 +202,6 @@ msgstr "Minulé"
 msgid "Processing..."
 msgstr "Zpracování…"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Quick meeting access"
-msgstr "Rychlý přístup ke schůzce"
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Real-time updates"
-msgstr "Aktualizace v reálném čase"
-
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Refund amount exceeds the remaining refundable balance."
@@ -271,7 +218,6 @@ msgid "Refunds the remaining balance (%{amount})."
 msgstr "Vrátí zbývající částku (%{amount})."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule"
 msgstr "Přesunout"
@@ -326,12 +272,12 @@ msgstr "Nový termín si vybere z vaší dostupnosti"
 msgid "This action cannot be undone. The attendee will be notified of the cancellation."
 msgstr "Tuto akci nelze vrátit zpět. Účastník obdrží oznámení o zrušení."
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting's event was deleted from your external calendar."
 msgstr "Událost této schůzky byla smazána z vašeho externího kalendáře."
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting's event was rescheduled in your external calendar."
 msgstr "Událost této schůzky byla přesunuta ve vašem externím kalendáři."
@@ -346,7 +292,7 @@ msgstr "Chcete-li zrušit schůzku bez vrácení platby účastníkovi, zaškrtn
 msgid "Upcoming"
 msgstr "Nadcházející"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Video Call"
 msgstr "Videohovor"
@@ -355,11 +301,6 @@ msgstr "Videohovor"
 #, elixir-autogen, elixir-format
 msgid "What happens next:"
 msgstr "Co bude následovat:"
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "With auto notifications"
-msgstr "S automatickými upozorněními"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
@@ -535,7 +476,7 @@ msgstr "Přidat hosta"
 msgid "Already invited"
 msgstr "Již pozvaní"
 
-#: lib/tymeslot_web/components/dashboard/meetings/add_guests_modal.ex
+#: lib/tymeslot_web/components/dashboard/meetings/guest_status_pill.ex
 #, elixir-autogen, elixir-format
 msgid "Awaiting reply"
 msgstr "Čeká na odpověď"
@@ -696,3 +637,90 @@ msgstr "Na tuto schůzku už nelze přidat další hosty."
 msgctxt "reminder status"
 msgid "Not scheduled"
 msgstr "Nenaplánováno"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Loading meetings"
+msgstr "Načítání schůzek"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type"
+msgstr "Typ schůzky"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Show meetings"
+msgstr "Zobrazit schůzky"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "%{count}/%{capacity} seats taken"
+msgstr "%{count}/%{capacity} míst obsazeno"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Group booking"
+msgstr "Skupinová rezervace"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Participants"
+msgstr "Účastníci"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to cancel this group meeting with %{count} participant scheduled for %{when}?"
+msgid_plural "Are you sure you want to cancel this group meeting with %{count} participants scheduled for %{when}?"
+msgstr[0] "Opravdu chcete zrušit tuto skupinovou schůzku s %{count} účastníkem naplánovanou na %{when}?"
+msgstr[1] "Opravdu chcete zrušit tuto skupinovou schůzku s %{count} účastníky naplánovanou na %{when}?"
+msgstr[2] "Opravdu chcete zrušit tuto skupinovou schůzku s %{count} účastníky naplánovanou na %{when}?"
+
+#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Each participant will receive an email explaining you need to reschedule"
+msgstr "Každý účastník dostane e-mail s vysvětlením, že je potřeba schůzku přeložit"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/reschedule_request.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule request sent to %{count} participant"
+msgid_plural "Reschedule request sent to %{count} participants"
+msgstr[0] "Žádost o přeložení odeslána %{count} účastníkovi"
+msgstr[1] "Žádost o přeložení odeslána %{count} účastníkům"
+msgstr[2] "Žádost o přeložení odeslána %{count} účastníkům"
+
+#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Send a reschedule request to the %{count} participant of this group meeting?"
+msgid_plural "Send a reschedule request to the %{count} participants of this group meeting?"
+msgstr[0] "Odeslat žádost o přeložení %{count} účastníkovi této skupinové schůzky?"
+msgstr[1] "Odeslat žádost o přeložení %{count} účastníkům této skupinové schůzky?"
+msgstr[2] "Odeslat žádost o přeložení %{count} účastníkům této skupinové schůzky?"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This action cannot be undone. Every participant will be notified of the cancellation."
+msgstr "Tuto akci nelze vrátit zpět. Všichni účastníci budou o zrušení informováni."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} person was booked"
+msgid_plural "%{count} people were booked"
+msgstr[0] "%{count} osoba byla rezervována"
+msgstr[1] "%{count} osoby byly rezervovány"
+msgstr[2] "%{count} osob bylo rezervováno"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Every spot was released"
+msgstr "Všechna místa byla uvolněna"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Left this slot"
+msgstr "Opustil(a) tento termín"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel meeting"
+msgstr "Zrušit schůzku"

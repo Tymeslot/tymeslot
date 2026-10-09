@@ -6,6 +6,7 @@ defmodule Tymeslot.MeetingTypes.ExtraLengthsValidationTest do
   alias Tymeslot.MeetingTypes.FormMapper
   alias Tymeslot.MeetingTypes.InputValidation
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.Validation.Constraints
 
   defp changeset(attrs) do
     user = insert(:user)
@@ -22,8 +23,18 @@ defmodule Tymeslot.MeetingTypes.ExtraLengthsValidationTest do
     end
 
     test "refuses a length outside the allowed range" do
-      refute changeset(%{extra_lengths_minutes: [600]}).valid?
+      too_long = Constraints.duration_minutes_range().last + 5
+      refute changeset(%{extra_lengths_minutes: [too_long]}).valid?
       refute changeset(%{extra_lengths_minutes: [0]}).valid?
+    end
+
+    test "refuses further lengths on a group type" do
+      changeset = changeset(%{max_participants: 5, extra_lengths_minutes: [60]})
+
+      refute changeset.valid?
+
+      assert {"group bookings cannot offer more than one duration", _opts} =
+               changeset.errors[:max_participants]
     end
 
     test "refuses a length offered twice, including the primary one" do

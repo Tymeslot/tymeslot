@@ -4,23 +4,40 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.BookingDetailModal do
 
   Bookings are managed through the booking flows (cancel with refund handling,
   reschedule requests) rather than edited like provider events, so this modal
-  presents the booking and links to the Meetings page for those actions.
+  presents the booking and links to the Meetings page for those actions. Its
+  body and actions are `AppointmentDetails`, shared with the overview's agenda
+  modal; the booking is described as an `Agenda.Entry`.
+
+  A group booking also lists its live participants, shows how many of its
+  seats are taken and, beside the actions, why it cannot be moved or deleted
+  from the calendar: the same wording the grid's lock badge and its refusals
+  use.
   """
 
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
-  alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
-  alias TymeslotWeb.Helpers.LocaleFormat
+  alias Tymeslot.Agenda
+  alias Tymeslot.CalendarGrid.BookingEvent
+  alias TymeslotWeb.Components.Dashboard.Appointments.AppointmentDetails
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
+  alias TymeslotWeb.Dashboard.DashboardFormat
 
-  attr :booking, :map, required: true
+  attr :booking, BookingEvent, required: true
   attr :user_timezone, :string, required: true
-  attr :time_format, :any, default: nil
+  attr :time_format, :string, required: true
+  attr :now, DateTime, required: true, doc: "The grid's clock, anchoring the countdown"
   attr :myself, :any, required: true
 
   @spec booking_detail_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def booking_detail_modal(assigns) do
+    assigns =
+      assign(assigns,
+        entry: Agenda.entry_for_grid_event(assigns.booking, assigns.user_timezone),
+        group?: group?(assigns.booking)
+      )
+
     ~H"""
     <.modal
       id="booking-detail-modal"
@@ -29,78 +46,66 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.BookingDetailModal do
       size={:medium}
     >
       <:header>
-        <div class="flex items-center gap-2 min-w-0">
-          <img src="/images/brand/logo.svg" alt="" class="w-5 h-5 shrink-0" />
-          <span class="truncate">{@booking.summary}</span>
+        <%!-- A long booking title wraps rather than truncating, so it stays readable. --%>
+        <div class="flex items-start gap-2 min-w-0">
+          <img src="/images/brand/logo.svg" alt="" class="w-5 h-5 mt-1 sm:mt-1.5 shrink-0" />
+          <span class="min-w-0 break-words">{DashboardFormat.title(@entry.title)}</span>
         </div>
       </:header>
 
       <div class="space-y-4" data-testid="booking-detail">
-        <div class="flex items-start gap-3">
-          <.icon name="hero-clock" class="w-5 h-5 text-tymeslot-400 shrink-0 mt-0.5" />
-          <div>
-            <div class="text-token-sm font-medium text-tymeslot-800">
-              {booking_date_label(@booking, @user_timezone)}
-            </div>
-            <div class="text-token-sm text-tymeslot-500">
-              {Helpers.format_display_time_range(@booking, @time_format, @user_timezone)}
-            </div>
-          </div>
-        </div>
+        <AppointmentDetails.appointment_details
+          entry={@entry}
+          timezone={@user_timezone}
+          time_format={@time_format}
+          now={@now}
+        />
 
-        <div :if={@booking.attendee_name || @booking.attendee_email} class="flex items-start gap-3">
-          <.icon name="hero-user" class="w-5 h-5 text-tymeslot-400 shrink-0 mt-0.5" />
-          <div class="min-w-0">
-            <div :if={@booking.attendee_name} class="text-token-sm font-medium text-tymeslot-800">
-              {@booking.attendee_name}
-            </div>
-            <div :if={@booking.attendee_email} class="text-token-sm text-tymeslot-500 truncate">
-              {@booking.attendee_email}
-            </div>
-          </div>
-        </div>
-
-        <div :if={@booking.location} class="flex items-start gap-3">
-          <.icon name="hero-map-pin" class="w-5 h-5 text-tymeslot-400 shrink-0 mt-0.5" />
-          <div class="text-token-sm text-tymeslot-700 break-words min-w-0">
-            {@booking.location}
-          </div>
-        </div>
-
-        <div class="flex items-center gap-2 text-token-xs text-tymeslot-500">
-          <.icon name="hero-check-badge" class="w-4 h-4 text-turquoise-500" />
-          {dgettext("dashboard_calendar", "Booked through your Tymeslot page")}
-        </div>
+        <.detail_line
+          :if={@booking.participants != []}
+          icon="hero-user-group"
+          label={dgettext("dashboard_calendar", "Participants")}
+          data-testid="booking-participants"
+        >
+          <.pill :if={@group?} tone={:brand} class="mb-2" data-testid="booking-seats">
+            {dgettext("dashboard_calendar", "%{count}/%{capacity} seats taken",
+              count: @booking.seats_taken,
+              capacity: @booking.capacity
+            )}
+          </.pill>
+          <ul class="min-w-0 space-y-2">
+            <li :for={participant <- @booking.participants} class="min-w-0">
+              <span :if={participant.name} class="block">{participant.name}</span>
+              <a
+                href={"mailto:#{participant.email}"}
+                class="block text-token-sm font-semibold text-tymeslot-500 hover:text-turquoise-600 truncate"
+              >
+                {participant.email}
+              </a>
+            </li>
+          </ul>
+        </.detail_line>
       </div>
 
       <:footer>
-        <div class="flex flex-wrap gap-2">
-          <a
-            :if={@booking.join_url}
-            href={@booking.join_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="inline-flex items-center gap-2 px-4 py-2 bg-turquoise-600 hover:bg-turquoise-700 text-white text-token-sm font-semibold rounded-token-lg transition-colors"
+        <div class="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+          <p
+            :if={@group?}
+            class="flex items-start gap-1.5 text-token-xs text-tymeslot-500 min-w-0 flex-1 basis-56"
+            data-testid="booking-lock-note"
           >
-            <.icon name="hero-video-camera" class="w-4 h-4" />
-            {dgettext("dashboard_calendar", "Join meeting")}
-          </a>
-          <.link
-            patch={~p"/dashboard/meetings"}
-            class="inline-flex items-center gap-2 px-4 py-2 bg-tymeslot-50 hover:bg-tymeslot-100 text-tymeslot-700 text-token-sm font-semibold rounded-token-lg transition-colors"
-          >
-            <.icon name="hero-arrow-top-right-on-square" class="w-4 h-4" />
-            {dgettext("dashboard_calendar", "Manage in Meetings")}
-          </.link>
+            <.icon name="hero-lock-closed-micro" class="w-3.5 h-3.5 shrink-0 mt-px" />
+            <span>{Shared.seat_lock_message()}</span>
+          </p>
+          <AppointmentDetails.appointment_actions entry={@entry} />
         </div>
       </:footer>
     </.modal>
     """
   end
 
-  defp booking_date_label(booking, timezone) do
-    booking
-    |> Helpers.event_display_date(timezone)
-    |> LocaleFormat.format_weekday_date(Gettext.get_locale(TymeslotWeb.Gettext))
-  end
+  defp group?(%{participants: [_first | _rest], capacity: capacity}) when capacity > 1,
+    do: true
+
+  defp group?(_booking), do: false
 end

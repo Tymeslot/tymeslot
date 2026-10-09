@@ -99,11 +99,6 @@ msgstr "Najprostsze"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
-msgid "Embed & Share"
-msgstr "Osadzanie i udostępnianie"
-
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
-#, elixir-autogen, elixir-format
 msgid "Embed Options"
 msgstr "Opcje osadzania"
 
@@ -436,3 +431,13 @@ msgstr "Tylko podgląd: ten link otwiera się w trybie testowym i przestaje dzia
 #, elixir-autogen, elixir-format
 msgid "The preview is disabled because your booking link is currently deactivated."
 msgstr "Podgląd jest wyłączony, bo link do rezerwacji jest obecnie nieaktywny."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Embed settings"
+msgstr "Ustawienia osadzania"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
+#, elixir-autogen, elixir-format
+msgid "Remove %{domain}"
+msgstr "Usuń %{domain}"

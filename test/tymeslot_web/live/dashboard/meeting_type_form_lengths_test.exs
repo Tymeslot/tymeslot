@@ -97,15 +97,11 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormLengthsTest do
 
     view |> element("button", "Add Meeting Type") |> render_click()
 
-    # The default reminder's hidden inputs cannot be re-encoded by
-    # Phoenix.LiveViewTest on submit; removing it first is what the other
-    # create-path tests do.
-    view |> element("button[aria-label='Remove reminder']") |> render_click()
-
+    # A new type is created from its Details tab, where the lengths are.
     view |> element("[data-testid='add-length']") |> render_click()
 
     view
-    |> form("form[phx-submit='save_meeting_type']", %{
+    |> form("form[phx-submit='create_meeting_type']", %{
       "meeting_type" => %{
         "name" => "Consultation",
         "duration" => "30",

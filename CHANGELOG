@@ -1,4 +1,67 @@
 
+[1.23.0]
+* dashboard: Tighten the gap between tabs on a phone
+* meeting-types: Match Add Meeting Type to the other page header buttons
+* meeting-types: Name the meeting type in its card's Edit and Delete buttons
+* meeting-types: Translate default location names everywhere they show
+* calendar: Put Cancel before Create in the quick-add dialog
+* dashboard: Write confirmation dialog titles in sentence case
+* dashboard: Fit short tab strips on a phone without cutting labels off
+* calendar: Show the .ics import button on phones
+* emails: Draw the banner eyebrow and subtitle at full contrast
+* availability: Rebuild the end time options when a day's start moves past its end
+* calendar: Stop retrying calendar writes when no calendar is connected
+* emails: Make the event update change table labels readable
+* emails: Show calendar sync error causes as a list, not raw markup
+* onboarding: Show buffer example times on the organiser's clock
+* emails: Make text on the amber alert banner readable
+* calendar: Explain a quick-add failure instead of showing its error code
+* onboarding: Stop Continue past a refused scheduling preference
+* meeting-types: Mark next-day times in the slot interval preview
+* profile: Make the username field's browser check work in Chromium
+* booking: Keep a literal + in a prefilled booking link email
+* i18n: Format dates on meeting slots and payment tables per language
+* booking: Update the calendar's bookable days when the timezone changes
+* dashboard: Keep the Join meeting button inside its column in longer languages
+* calendar: Keep the spaces in long imported event titles and descriptions
+* profiles: Stop guest and seat being taken as usernames
+* bookings: Join from the meetings list with the host's own video link
+* meeting-types: Say when a meeting type's name is already taken
+* Write English dates in British order, day before month
+* dashboard: Stop the Integrations sidebar item looking selected
+* meeting-types: Show the minimum price error while editing a paid meeting type
+* dashboard: Show a disabled field's value darker than its placeholder
+* embed: Name each allowed domain's remove button for screen readers
+* dashboard: Make muted availability controls and disabled field text readable
+* dashboard: Keep sidebar icons white when the current page's link is hovered
+* dashboard: Draw each switch size at its own size with a keyboard focus ring
+* profile: Name each profile field once
+* dashboard: Show one add button on empty pages, inside the empty state
+* dashboard: Make empty states readable and let Time Off add from one
+* dashboard: Stop the sidebar covering the page at exactly 1024px
+* analytics: Say when there is no traffic instead of drawing an empty chart
+* dashboard: Show poll and analytics times on the organiser's clock
+* dashboard: Give every dashboard section its own page title
+* calendar: Reword the calendar summary's conflict-check count
+* availability: Colour the minimum notice chips like the others
+* dashboard: Keep switches and the reminder unit showing their real state
+* embed: Scroll embed snippets instead of breaking lines mid-word
+* calendar: Stop the calendar grid running to the screen edge on phones
+* dashboard: Keep the closed mobile sidebar out of keyboard focus
+* bookings: Keep booking actions and filters on screen on phones
+* bookings: List upcoming meetings soonest first
+* calendar: Keep the app running when a calendar's credentials cannot be decrypted
+* dashboard: Keep profile saves from crashing after a slow profile load
+* availability: Offer slots that cross midnight
+* meeting-types: Add meeting types with the same tabbed form as editing
+* meeting-types: Allow meeting types up to 24 hours long
+* availability: Set separate buffers before and after meetings
+* booking: Prefill the booking form from a link's #name and #email
+* calendar: Import events from an .ics file
+* emails: Add dark mode to every email
+* Support group bookings with per-slot participant limits
+
+
 [1.22.0]
 * security: Accept bookings and sign-ups when Google cannot be reached
 * uploads: Say when an image is refused for its size

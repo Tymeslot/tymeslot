@@ -12,7 +12,9 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponentTest do
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Venues
 
@@ -36,6 +38,39 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponentTest do
       view |> element("[data-testid='add-venue']") |> render_click()
 
       assert has_element?(view, "#venue-form")
+    end
+
+    test "the empty state carries the only Add location button", %{conn: conn} do
+      doc = conn |> open() |> render() |> LazyHTML.from_document()
+
+      assert doc |> LazyHTML.query("button[phx-click='new_venue']") |> Enum.count() == 1
+
+      assert doc
+             |> LazyHTML.query("[data-testid='locations-empty'] button[phx-click='new_venue']")
+             |> Enum.count() == 1
+    end
+  end
+
+  describe "with saved locations" do
+    test "offers Add location once, beside the page title", %{conn: conn, user: user} do
+      insert(:venue, user: user, name: "Studio")
+
+      doc = conn |> open() |> render() |> LazyHTML.from_document()
+
+      assert doc |> LazyHTML.query("button[phx-click='new_venue']") |> Enum.count() == 1
+
+      assert doc
+             |> LazyHTML.query("div:has(> div > h1) button[phx-click='new_venue']")
+             |> Enum.count() == 1
+    end
+
+    test "edits and deletes from labelled icon buttons on each card", %{conn: conn, user: user} do
+      venue = insert(:venue, user: user, name: "Studio")
+      view = open(conn)
+
+      card = "[data-testid='venue-card'][data-venue-id='#{venue.id}']"
+      assert has_element?(view, "#{card} button[phx-click='edit_venue'][aria-label='Edit']")
+      assert has_element?(view, "#{card} button[phx-click='delete_venue'][aria-label='Delete']")
     end
   end
 
@@ -123,6 +158,78 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponentTest do
                Venues.get_venue(user.id, venue.id)
 
       assert has_element?(view, "[data-testid='venue-card']", "The studio")
+    end
+
+    test "refuses to delete the only location of a group meeting type, naming it",
+         %{conn: conn, user: user} do
+      venue = insert(:venue, user: user, name: "Studio")
+
+      workshop =
+        insert(:meeting_type,
+          user: user,
+          name: "Group workshop",
+          max_participants: 6,
+          locations: [in_person_location([venue])]
+        )
+
+      locations_before = workshop.locations
+      view = open(conn)
+
+      view |> element("[phx-click='delete_venue'][phx-value-id='#{venue.id}']") |> render_click()
+
+      assert has_element?(view, "[data-testid='venue-blocked-by']", "Group workshop")
+
+      assert has_element?(
+               view,
+               "#delete-venue-modal",
+               "Studio is the only location of these group meeting types"
+             )
+
+      refute has_element?(view, "[data-testid='confirm-delete-venue']")
+
+      # A confirmation that arrives anyway, say from a page opened before the
+      # type became a group type, is refused by the context and says so.
+      view
+      |> with_target("[data-testid='locations-page']")
+      |> render_click("confirm_delete_venue", %{})
+
+      drain(view)
+
+      assert render(view) =~
+               "This location is the only one of a group meeting type, so it cannot be deleted"
+
+      assert has_element?(view, "[data-testid='venue-blocked-by']", "Group workshop")
+      assert {:ok, _still_there} = Venues.get_venue(user.id, venue.id)
+      assert MeetingTypes.get_meeting_type(workshop.id, user.id).locations == locations_before
+    end
+
+    test "a stale confirmation for a type that became a group type is refused with the modal kept open",
+         %{conn: conn, user: user} do
+      venue = insert(:venue, user: user, name: "Studio")
+
+      consultation =
+        insert(:meeting_type,
+          user: user,
+          name: "Consultation",
+          locations: [in_person_location([venue])]
+        )
+
+      view = open(conn)
+      view |> element("[phx-click='delete_venue'][phx-value-id='#{venue.id}']") |> render_click()
+      assert has_element?(view, "[data-testid='confirm-delete-venue']")
+
+      # Turned into a group type from another tab while the modal was open.
+      consultation |> Changeset.change(max_participants: 4) |> Repo.update!()
+
+      view |> element("[data-testid='confirm-delete-venue']") |> render_click()
+      drain(view)
+
+      assert render(view) =~
+               "This location is the only one of a group meeting type, so it cannot be deleted"
+
+      assert has_element?(view, "[data-testid='venue-blocked-by']", "Consultation")
+      refute has_element?(view, "[data-testid='confirm-delete-venue']")
+      assert {:ok, _still_there} = Venues.get_venue(user.id, venue.id)
     end
 
     test "does not open for a location that is not the organiser's", %{conn: conn} do
@@ -252,7 +359,7 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponentTest do
       view = open(conn)
 
       view |> element("[phx-click='delete_venue'][phx-value-id='#{venue.id}']") |> render_click()
-      view |> element("#delete-venue-modal [phx-click='close_delete_venue']") |> render_click()
+      view |> element("#delete-venue-modal .modal-footer button", "Cancel") |> render_click()
 
       refute has_element?(view, "#delete-venue-modal")
       assert {:ok, _still_there} = Venues.get_venue(user.id, venue.id)

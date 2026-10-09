@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.LengthComponent do
 
   alias Tymeslot.MeetingTypes.Lengths
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do

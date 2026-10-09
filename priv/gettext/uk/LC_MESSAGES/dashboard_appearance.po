@@ -31,11 +31,6 @@ msgstr "Сталася помилка. Оновіть сторінку та сп
 msgid "Background Design"
 msgstr "Дизайн фону"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Choose Your Style"
-msgstr "Оберіть свій стиль"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a visual style that matches your professional identity."
@@ -71,11 +66,6 @@ msgstr "Підключіть календар для попереднього п
 #, elixir-autogen, elixir-format
 msgid "Current"
 msgstr "Поточний"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Current Style"
-msgstr "Поточний стиль"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/color_picker.ex
@@ -136,21 +126,11 @@ msgstr "Перегляд наживо"
 msgid "MP4 or WebM. Max 20MB."
 msgstr "MP4 або WebM. Макс. 20 МБ."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "More Styles Coming Soon"
-msgstr "Нові стилі вже скоро"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Or upload your own"
 msgstr "Або завантажте свій файл"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Our design team is busy crafting new themes to help you express your unique professional style."
-msgstr "Наша команда дизайнерів активно працює над новими темами, щоб допомогти вам виразити свій унікальний професійний стиль."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
 #, elixir-autogen, elixir-format
@@ -192,11 +172,6 @@ msgstr "Виберіть основні кольори для інтерфейс
 #, elixir-autogen, elixir-format
 msgid "Solid Color"
 msgstr "Суцільний колір"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex
-#, elixir-autogen, elixir-format
-msgid "Theme Customization"
-msgstr "Налаштування теми"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_preview.ex
@@ -359,3 +334,13 @@ msgstr "Незбережені зміни"
 #, elixir-autogen, elixir-format
 msgid "Complete the form to save"
 msgstr "Заповніть форму, щоб зберегти"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#, elixir-autogen, elixir-format
+msgid "Background type"
+msgstr "Тип фону"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Current style"
+msgstr "Поточний стиль"

@@ -49,49 +49,59 @@ defmodule TymeslotWeb.Themes.Shared.SlotGroupingTest do
 
   describe "group/3" do
     test "returns the flat period grouping when not two-tier" do
-      assert {:flat, periods} = SlotGrouping.group(["9:00 AM", "9:30 AM"], nil, 30)
+      assert {:flat, periods} = SlotGrouping.group(slots(["9:00 AM", "9:30 AM"]), nil, 30)
 
-      assert {"Morning", ["9:00 AM", "9:30 AM"]} in periods
+      assert {"Morning", slots(["9:00 AM", "9:30 AM"])} in periods
     end
 
     test "nests hours inside periods when two-tier" do
-      slots = ["9:00 AM", "9:05 AM", "10:00 AM"]
+      slots = slots(["9:00 AM", "9:05 AM", "10:00 AM"])
 
       assert {:hours, periods} = SlotGrouping.group(slots, 5, 30)
 
       morning = Enum.find_value(periods, fn {label, hours} -> label == "Morning" && hours end)
 
-      assert morning == [{9, ["9:00 AM", "9:05 AM"]}, {10, ["10:00 AM"]}]
+      assert morning == [{9, slots(["9:00 AM", "9:05 AM"])}, {10, slots(["10:00 AM"])}]
     end
 
     test "groups an interval that does not divide the hour into uneven hours" do
       # 7 divides neither the hour nor itself into it, so the hours hold
       # differing counts and the boundary falls mid-step.
-      slots = ["9:49 AM", "9:56 AM", "10:03 AM"]
+      slots = slots(["9:49 AM", "9:56 AM", "10:03 AM"])
 
       assert {:hours, periods} = SlotGrouping.group(slots, 7, 30)
 
       morning = Enum.find_value(periods, fn {label, hours} -> label == "Morning" && hours end)
 
-      assert morning == [{9, ["9:49 AM", "9:56 AM"]}, {10, ["10:03 AM"]}]
+      assert morning == [{9, slots(["9:49 AM", "9:56 AM"])}, {10, slots(["10:03 AM"])}]
+    end
+
+    test "carries a slot's seat count through the hour nesting" do
+      slot = %{time: "9:05 AM", seats_left: 3, capacity: 10}
+
+      assert {:hours, periods} = SlotGrouping.group([slot], 5, 30)
+
+      morning = Enum.find_value(periods, fn {label, hours} -> label == "Morning" && hours end)
+
+      assert morning == [{9, [slot]}]
     end
   end
 
   describe "effective_expanded_hour/2" do
     test "expands the earliest hour holding slots when nothing is chosen" do
-      grouping = SlotGrouping.group(["2:00 PM", "9:05 AM"], 5, 30)
+      grouping = SlotGrouping.group(slots(["2:00 PM", "9:05 AM"]), 5, 30)
 
       assert SlotGrouping.effective_expanded_hour(nil, grouping) == 9
     end
 
     test "expands nothing when the booker has collapsed the open hour" do
-      grouping = SlotGrouping.group(["9:05 AM"], 5, 30)
+      grouping = SlotGrouping.group(slots(["9:05 AM"]), 5, 30)
 
       assert SlotGrouping.effective_expanded_hour(:none, grouping) == nil
     end
 
     test "expands the chosen hour" do
-      grouping = SlotGrouping.group(["9:05 AM", "2:00 PM"], 5, 30)
+      grouping = SlotGrouping.group(slots(["9:05 AM", "2:00 PM"]), 5, 30)
 
       assert SlotGrouping.effective_expanded_hour(14, grouping) == 14
     end
@@ -105,15 +115,19 @@ defmodule TymeslotWeb.Themes.Shared.SlotGroupingTest do
     test "falls back to the earliest hour when the stored hour holds no slots in this grouping" do
       # A refetch that keeps the same date (timezone change, retry) can leave
       # a previously stored hour (11) with nothing in the new grouping.
-      grouping = SlotGrouping.group(["9:05 AM", "2:00 PM"], 5, 30)
+      grouping = SlotGrouping.group(slots(["9:05 AM", "2:00 PM"]), 5, 30)
 
       assert SlotGrouping.effective_expanded_hour(11, grouping) == 9
     end
 
     test "falls back to the earliest hour for an out-of-range visitor-supplied hour" do
-      grouping = SlotGrouping.group(["9:05 AM", "2:00 PM"], 5, 30)
+      grouping = SlotGrouping.group(slots(["9:05 AM", "2:00 PM"]), 5, 30)
 
       assert SlotGrouping.effective_expanded_hour(47, grouping) == 9
     end
   end
+
+  # Slots as the themes hand them over (`MeetingUtils.slot/0`): a solo meeting
+  # type carries no seat counts.
+  defp slots(times), do: Enum.map(times, &%{time: &1, seats_left: nil, capacity: nil})
 end

@@ -106,10 +106,10 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
 
       # 7. Delete webhook
       view
-      |> element("button[title='Delete Webhook']")
+      |> element("button[title='Delete'][aria-label='Delete #{webhook.name}']")
       |> render_click()
 
-      assert render(view) =~ "Delete Webhook?"
+      assert render(view) =~ "Delete webhook"
 
       view
       |> element("#delete-webhook-modal button", "Delete Webhook")
@@ -146,6 +146,58 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
     end
   end
 
+  describe "Cancelling a delete" do
+    test "keeps the webhook when the delete confirmation is cancelled", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, webhook} =
+        Webhooks.create_webhook(user.id, %{
+          name: "Keep Me Webhook",
+          url: "https://example.com/keep",
+          events: ["meeting.created"]
+        })
+
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+
+      view
+      |> element("button[title='Delete'][aria-label='Delete #{webhook.name}']")
+      |> render_click()
+
+      assert has_element?(view, "#delete-webhook-modal[style*='display: flex']")
+
+      view |> element("#delete-webhook-modal button", "Cancel") |> render_click()
+
+      refute has_element?(view, "#delete-webhook-modal[style*='display: flex']")
+      assert [%{id: id}] = Webhooks.list_webhooks(user.id)
+      assert id == webhook.id
+      assert render(view) =~ "Keep Me Webhook"
+      refute render(view) =~ "Webhook deleted successfully"
+    end
+  end
+
+  describe "Webhook form close button" do
+    test "the labelled close icon closes the form without creating a webhook",
+         %{conn: conn, user: user} do
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+
+      view
+      |> element("button", "Create Your First Webhook")
+      |> render_click()
+
+      assert has_element?(view, "#webhook-form")
+
+      close = ~s(button[aria-label="Close"][title="Close"][phx-click="close_webhook_form"])
+      assert has_element?(view, close)
+
+      view |> element(close) |> render_click()
+
+      refute has_element?(view, "#webhook-form")
+      assert render(view) =~ "No Webhooks Yet"
+      assert Webhooks.list_webhooks(user.id) == []
+    end
+  end
+
   describe "Token regeneration flow" do
     setup %{user: user} do
       {:ok, webhook} =
@@ -179,7 +231,7 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
       |> element("button[phx-click='show_regenerate_token_modal']")
       |> render_click()
 
-      assert render(view) =~ "Regenerate Token?"
+      assert render(view) =~ "Regenerate token"
 
       # Confirm the regeneration via the danger button in the modal
       view
@@ -192,6 +244,37 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
       [updated_webhook] = Webhooks.list_webhooks(user.id)
       assert updated_webhook.webhook_token != original_token
       assert String.starts_with?(updated_webhook.webhook_token, "ts_")
+    end
+  end
+
+  describe "Cancelling token regeneration" do
+    test "keeps the existing token when the confirmation is cancelled", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, webhook} =
+        Webhooks.create_webhook(user.id, %{
+          name: "Test Webhook",
+          url: "https://example.com/webhook",
+          events: ["meeting.created"]
+        })
+
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+
+      view |> element("button[title='Edit Webhook']") |> render_click()
+
+      view
+      |> element("button[phx-click='show_regenerate_token_modal']")
+      |> render_click()
+
+      assert has_element?(view, "#regenerate-token-modal[style*='display: flex']")
+
+      view |> element("#regenerate-token-modal button", "Cancel") |> render_click()
+
+      refute has_element?(view, "#regenerate-token-modal[style*='display: flex']")
+      assert [%{webhook_token: token}] = Webhooks.list_webhooks(user.id)
+      assert token == webhook.webhook_token
+      refute render(view) =~ "Security token regenerated"
     end
   end
 

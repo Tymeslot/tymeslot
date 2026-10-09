@@ -15,8 +15,9 @@ defmodule TymeslotWeb.Dashboard.Locations.VenueCard do
   @spec venue_card(map()) :: Phoenix.LiveView.Rendered.t()
   def venue_card(assigns) do
     ~H"""
-    <div
-      class="card-glass p-4 flex items-start gap-3"
+    <.card
+      padding={:sm}
+      class="flex items-start gap-3"
       data-testid="venue-card"
       data-venue-id={@venue.id}
       data-id={@venue.id}
@@ -27,7 +28,7 @@ defmodule TymeslotWeb.Dashboard.Locations.VenueCard do
       </span>
       <.icon name="hero-map-pin" class="w-5 h-5 text-turquoise-500 shrink-0 mt-0.5" />
       <div class="flex-1 min-w-0">
-        <h3 class="text-token-base font-semibold text-tymeslot-800 truncate">{@venue.name}</h3>
+        <h2 class="text-token-lg font-semibold text-tymeslot-900 truncate">{@venue.name}</h2>
         <%!-- Kept on one line: under whitespace-pre-line, any line break
              around the text would render as an empty line. --%>
         <p
@@ -40,27 +41,26 @@ defmodule TymeslotWeb.Dashboard.Locations.VenueCard do
         </p>
       </div>
 
-      <div class="flex shrink-0 gap-2">
-        <.action_button
-          variant={:secondary}
+      <div class="flex shrink-0 items-center gap-2">
+        <.icon_button
+          icon="hero-pencil-square"
+          size={:sm}
+          label={dgettext("dashboard_meeting_types", "Edit")}
           phx-click="edit_venue"
           phx-value-id={@venue.id}
           phx-target={@myself}
-          class="py-1! px-2! text-token-xs"
-        >
-          {dgettext("dashboard_meeting_types", "Edit")}
-        </.action_button>
-        <.action_button
+        />
+        <.icon_button
+          icon="hero-trash"
           variant={:danger}
+          size={:sm}
+          label={dgettext("dashboard_meeting_types", "Delete")}
           phx-click="delete_venue"
           phx-value-id={@venue.id}
           phx-target={@myself}
-          class="py-1! px-2! text-token-xs"
-        >
-          {dgettext("dashboard_meeting_types", "Delete")}
-        </.action_button>
+        />
       </div>
-    </div>
+    </.card>
     """
   end
 

@@ -11,16 +11,6 @@ msgstr ""
 "Language: uk\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100 != 11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "%{hours} hr"
-msgstr "%{hours} год"
-
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "%{hours} hr %{mins} min"
-msgstr "%{hours} год %{mins} хв"
-
 #: lib/tymeslot_web/live/dashboard/agenda_timeline.ex
 #, elixir-autogen, elixir-format
 msgid "%{hours}h %{mins}m free"
@@ -30,11 +20,6 @@ msgstr "%{hours} год %{mins} хв вільно"
 #, elixir-autogen, elixir-format
 msgid "%{hours}h free"
 msgstr "%{hours} год вільно"
-
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "%{minutes} min"
-msgstr "%{minutes} хв"
 
 #: lib/tymeslot_web/live/dashboard/agenda_timeline.ex
 #, elixir-autogen, elixir-format
@@ -49,21 +34,12 @@ msgstr[0] "ще %{count}"
 msgstr[1] "ще %{count}"
 msgstr[2] "ще %{count}"
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
-#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_formatters.ex
-#, elixir-autogen, elixir-format
-msgid "All day"
-msgstr "Увесь день"
-
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
-#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
+#: lib/tymeslot_web/live/dashboard/dashboard_overview/source_pill.ex
 #, elixir-autogen, elixir-format
 msgid "Booking"
 msgstr "Бронювання"
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
-#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
+#: lib/tymeslot_web/live/dashboard/dashboard_overview/source_pill.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr "Календар"
@@ -88,42 +64,15 @@ msgstr "Не вдалося зберегти цей колір. Спробуйт
 msgid "Default"
 msgstr "Стандартний"
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "External calendar"
-msgstr "Зовнішній календар"
-
 #: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Here's an overview of your scheduling setup and recent activity."
 msgstr "Ось огляд ваших налаштувань розкладу та останніх дій."
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "In progress"
-msgstr "Триває"
-
 #: lib/tymeslot_web/live/dashboard_live.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid redirect URL"
 msgstr "Некоректна URL-адреса переспрямування"
-
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_up_next_strip.ex
-#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
-#, elixir-autogen, elixir-format
-msgid "Join"
-msgstr "Приєднатися"
-
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Location"
-msgstr "Місце"
-
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Manage booking"
-msgstr "Керувати бронюванням"
 
 #: lib/tymeslot_web/live/dashboard_live.ex
 #, elixir-autogen, elixir-format
@@ -132,32 +81,15 @@ msgstr "Для прийому платежів за зустрічі потрі�
 
 #: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format
-msgid "Nothing on your plate today or tomorrow."
-msgstr "На сьогодні та завтра у вас немає запланованих справ."
-
-#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
-#, elixir-autogen, elixir-format
 msgid "Now"
 msgstr "Зараз"
 
 #: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format
-msgid "Overview"
-msgstr "Огляд"
-
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Time"
-msgstr "Час"
-
-#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_formatters.ex
-#, elixir-autogen, elixir-format
 msgid "Today"
 msgstr "Сьогодні"
 
 #: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Tomorrow"
 msgstr "Завтра"
@@ -168,25 +100,10 @@ msgstr "Завтра"
 msgid "Up next"
 msgstr "Далі"
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Video call"
-msgstr "Відеодзвінок"
-
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Video meeting"
-msgstr "Відеозустріч"
-
 #: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "View calendar"
 msgstr "Переглянути календар"
-
-#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
-#, elixir-autogen, elixir-format
-msgid "View details for %{title}"
-msgstr "Переглянути деталі %{title}"
 
 #: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format
@@ -197,16 +114,6 @@ msgstr "Вітаємо"
 #, elixir-autogen, elixir-format
 msgid "Welcome back"
 msgstr "З поверненням"
-
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "When"
-msgstr "Коли"
-
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "With"
-msgstr "З ким"
 
 #: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format
@@ -242,3 +149,16 @@ msgstr "потім"
 #, elixir-autogen, elixir-format
 msgid "today"
 msgstr "сьогодні"
+
+#: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing on your plate today or tomorrow"
+msgstr "На сьогодні та завтра у вас немає запланованих справ"
+
+#: lib/tymeslot/agenda.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} participant"
+msgid_plural "%{count} participants"
+msgstr[0] "%{count} учасник"
+msgstr[1] "%{count} учасники"
+msgstr[2] "%{count} учасників"

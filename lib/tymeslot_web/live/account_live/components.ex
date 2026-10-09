@@ -7,6 +7,7 @@ defmodule TymeslotWeb.AccountLive.Components do
   use Gettext, backend: TymeslotWeb.Gettext
 
   import TymeslotWeb.AccountLive.Forms
+  import TymeslotWeb.Components.CoreComponents.Buttons
   import TymeslotWeb.Components.CoreComponents.Icons
   import TymeslotWeb.Components.FlagHelpers
   alias TymeslotWeb.AccountLive.Helpers
@@ -225,7 +226,7 @@ defmodule TymeslotWeb.AccountLive.Components do
           <p class="text-sm text-tymeslot-500 mt-2">{@description}</p>
         <% end %>
       </div>
-      <.action_button
+      <.card_toggle_button
         is_social={@is_social}
         provider={@provider}
         toggle_event={@toggle_event}
@@ -243,13 +244,13 @@ defmodule TymeslotWeb.AccountLive.Components do
   attr :is_social, :boolean, required: true
   attr :provider, :string, default: nil
 
-  @spec action_button(map) :: Phoenix.LiveView.Rendered.t()
-  def action_button(assigns) do
+  @spec card_toggle_button(map) :: Phoenix.LiveView.Rendered.t()
+  def card_toggle_button(assigns) do
     ~H"""
     <div class="relative group">
-      <button phx-click={@toggle_event} class={button_classes(@is_social)} disabled={@is_social}>
+      <.action_button phx-click={@toggle_event} size={:sm} disabled={@is_social}>
         {@button_text}
-      </button>
+      </.action_button>
       <%= if @is_social do %>
         <.social_tooltip provider={@provider} />
       <% end %>
@@ -349,16 +350,6 @@ defmodule TymeslotWeb.AccountLive.Components do
       "card-glass card-glass-disabled"
     else
       "card-glass"
-    end
-  end
-
-  defp button_classes(is_social) do
-    base = ["btn", "btn-sm"]
-
-    if is_social do
-      base ++ ["btn-disabled", "opacity-50", "cursor-not-allowed"]
-    else
-      base ++ ["btn-primary"]
     end
   end
 end

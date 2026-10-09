@@ -36,6 +36,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
   alias Tymeslot.Integrations.HealthCheck.ErrorAnalysis
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.SeatView
   alias Tymeslot.Webhooks
   alias Tymeslot.Workers.DeliveryClaims
 
@@ -73,12 +74,31 @@ defmodule Tymeslot.Workers.WebhookWorker do
   Called by the trigger site at the moment the event fires, so a retried
   delivery can replay what that event asserted rather than whatever the
   meeting looks like by the time the retry runs.
+
+  A group meeting's seat (`Tymeslot.Meetings.SeatView`) also pins the seats
+  taken on the slot when the event fired, under `"seats_taken"`, and the
+  seat a move replaced, under `"previous_seat"`.
   """
   @spec snapshot(MeetingSchema.t()) :: map()
   def snapshot(%MeetingSchema{} = meeting) do
     meeting
     |> Map.take(@snapshot_fields)
     |> Map.new(fn {field, value} -> {Atom.to_string(field), encode_snapshot_field(value)} end)
+    |> maybe_put_seats_taken(SeatView.seats_taken(meeting))
+    |> maybe_put_previous_seat(SeatView.previous_seat(meeting))
+  end
+
+  defp maybe_put_seats_taken(snapshot, nil), do: snapshot
+  defp maybe_put_seats_taken(snapshot, seats), do: Map.put(snapshot, "seats_taken", seats)
+
+  defp maybe_put_previous_seat(snapshot, nil), do: snapshot
+
+  defp maybe_put_previous_seat(snapshot, previous) do
+    Map.put(snapshot, "previous_seat", %{
+      "seat_id" => previous.seat_id,
+      "meeting_id" => previous.meeting_id,
+      "start_time" => DateTime.to_iso8601(previous.start_time)
+    })
   end
 
   defp encode_snapshot_field(%DateTime{} = dt), do: DateTime.to_iso8601(dt)
@@ -131,7 +151,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
     with {:ok, webhook} <- WebhookQueries.get_webhook(webhook_id),
          :ok = ErrorTracking.put_context(user_id: webhook.user_id),
          :ok <- check_feature_access(webhook.user_id, webhook_id, event_type, feature),
-         {:ok, meeting} <- fetch_meeting(meeting_id, args["snapshot"]),
+         {:ok, meeting} <- fetch_meeting(meeting_id, args["participant_id"], args["snapshot"]),
          :ok <- deliver_once(webhook, event_type, meeting, job) do
       :ok
     else
@@ -259,9 +279,21 @@ defmodule Tymeslot.Workers.WebhookWorker do
   `snapshot`, from `snapshot/1`, is what a retried delivery replays instead of
   re-deriving the meeting's current state; omit it (or pass `nil`) only where
   the event has no status-dependent payload section to protect.
+
+  `participant_id` names the seat of a group meeting the event is about (see
+  `Tymeslot.Meetings.SeatView`); the delivery then describes that seat's
+  booking. Each seat is its own delivery, so it is part of the uniqueness
+  key; a solo meeting passes `nil` and keeps the key it always had.
   """
-  @spec schedule_delivery(integer(), String.t(), binary(), map() | nil) :: :ok | {:error, term()}
-  def schedule_delivery(webhook_id, event_type, meeting_id, snapshot \\ nil) do
+  @spec schedule_delivery(integer(), String.t(), binary(), map() | nil, binary() | nil) ::
+          :ok | {:error, term()}
+  def schedule_delivery(
+        webhook_id,
+        event_type,
+        meeting_id,
+        snapshot \\ nil,
+        participant_id \\ nil
+      ) do
     result =
       %{
         "webhook_id" => webhook_id,
@@ -269,6 +301,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
         "meeting_id" => meeting_id
       }
       |> maybe_put_snapshot(snapshot)
+      |> maybe_put_participant(participant_id)
       |> new(
         queue: :webhooks,
         priority: 2,
@@ -276,7 +309,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
           # 5 minute uniqueness window
           period: 300,
           fields: [:args],
-          keys: [:webhook_id, :event_type, :meeting_id]
+          keys: unique_keys(participant_id)
         ]
       )
       |> Oban.insert()
@@ -317,6 +350,14 @@ defmodule Tymeslot.Workers.WebhookWorker do
 
   # Private functions
 
+  defp unique_keys(nil), do: [:webhook_id, :event_type, :meeting_id]
+  defp unique_keys(_participant_id), do: [:webhook_id, :event_type, :meeting_id, :participant_id]
+
+  defp maybe_put_participant(args, nil), do: args
+
+  defp maybe_put_participant(args, participant_id),
+    do: Map.put(args, "participant_id", participant_id)
+
   defp maybe_put_snapshot(args, nil), do: args
 
   defp maybe_put_snapshot(args, snapshot) when is_map(snapshot),
@@ -328,11 +369,49 @@ defmodule Tymeslot.Workers.WebhookWorker do
   # delivered on every attempt. `snapshot` is `nil` for jobs enqueued before
   # this was threaded through — those keep re-deriving from the live meeting,
   # same as before.
-  defp fetch_meeting(meeting_id, snapshot) do
-    with {:ok, meeting} <- MeetingQueries.get_meeting_with_guests(meeting_id) do
+  #
+  # A seat's delivery (`participant_id` set) describes that seat's booking:
+  # the participant as the attendee, their guests only, and the seat count
+  # the event fired with. The snapshot is replayed over the seat view, so a
+  # seat given up reads as cancelled with the time it was given up.
+  defp fetch_meeting(meeting_id, participant_id, snapshot) do
+    with {:ok, meeting} <- MeetingQueries.get_meeting_with_guests(meeting_id),
+         {:ok, meeting} <- maybe_seat_view(meeting, participant_id, snapshot) do
       {:ok, apply_snapshot(meeting, snapshot)}
     end
   end
+
+  defp maybe_seat_view(meeting, nil, _snapshot), do: {:ok, meeting}
+
+  defp maybe_seat_view(meeting, participant_id, snapshot) do
+    SeatView.load(
+      meeting,
+      participant_id,
+      snapshot_seats_taken(snapshot),
+      snapshot_previous_seat(snapshot)
+    )
+  end
+
+  defp snapshot_seats_taken(%{"seats_taken" => seats}) when is_integer(seats), do: seats
+  defp snapshot_seats_taken(_snapshot), do: nil
+
+  defp snapshot_previous_seat(%{
+         "previous_seat" => %{
+           "seat_id" => seat_id,
+           "meeting_id" => meeting_id,
+           "start_time" => start_time
+         }
+       }) do
+    case DateTime.from_iso8601(start_time) do
+      {:ok, start_time, _offset} ->
+        %{seat_id: seat_id, meeting_id: meeting_id, start_time: start_time}
+
+      {:error, _reason} ->
+        nil
+    end
+  end
+
+  defp snapshot_previous_seat(_snapshot), do: nil
 
   defp apply_snapshot(meeting, nil), do: meeting
 

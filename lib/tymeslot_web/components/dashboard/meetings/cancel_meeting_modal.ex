@@ -13,7 +13,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.MeetingPayments
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Forms
+  alias TymeslotWeb.Components.CoreComponents.Modal
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
 
   import TymeslotWeb.Components.PaymentHelpers, only: [format_amount: 2]
@@ -50,21 +51,21 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
     assigns = assign(assigns, :paid?, MeetingPayments.refundable?(assigns[:booking_payment]))
 
     ~H"""
-    <CoreComponents.modal id={@id} show={@show} on_cancel={@on_cancel} size={:medium}>
-      <:header>
-        <div class="flex items-center gap-2">
-          <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-            />
-          </svg>
-          {dgettext("dashboard_bookings", "Cancel Meeting")}
-        </div>
-      </:header>
-
+    <Modal.confirm_modal
+      id={@id}
+      show={@show}
+      title={dgettext("dashboard_bookings", "Cancel meeting")}
+      confirm_label={
+        if @paid?,
+          do: dgettext("dashboard_bookings", "Confirm cancellation"),
+          else: dgettext("dashboard_bookings", "Cancel Meeting")
+      }
+      cancel_label={dgettext("dashboard_bookings", "Keep Meeting")}
+      confirm_form="cancel-meeting-form"
+      loading={@cancelling}
+      loading_label={dgettext("dashboard_bookings", "Cancelling...")}
+      on_cancel={@on_cancel}
+    >
       <form
         :if={@meeting}
         id="cancel-meeting-form"
@@ -72,45 +73,53 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
         phx-target={@target}
         class="space-y-4"
       >
-        <p class="text-tymeslot-600 font-medium text-lg leading-relaxed">
-          {dgettext(
-            "dashboard_bookings",
-            "Are you sure you want to cancel the meeting with %{name} scheduled for %{when}?",
-            name: @meeting.attendee_name,
-            when:
-              "#{Helpers.format_meeting_date(@meeting, @timezone)} • #{Helpers.format_meeting_time(@meeting, @timezone, @time_format)}"
-          )}
+        <p>
+          {confirm_question(@meeting, @timezone, @time_format)}
         </p>
 
         <.paid_options :if={@paid?} booking_payment={@booking_payment} />
-        <p :if={not @paid?} class="text-tymeslot-500 font-medium">
-          {dgettext(
-            "dashboard_bookings",
-            "This action cannot be undone. The attendee will be notified of the cancellation."
-          )}
+        <p :if={not @paid?} class="text-tymeslot-500">
+          {if Helpers.group_meeting?(@meeting),
+            do:
+              dgettext(
+                "dashboard_bookings",
+                "This action cannot be undone. Every participant will be notified of the cancellation."
+              ),
+            else:
+              dgettext(
+                "dashboard_bookings",
+                "This action cannot be undone. The attendee will be notified of the cancellation."
+              )}
         </p>
       </form>
-
-      <:footer>
-        <div class="flex justify-end gap-3">
-          <CoreComponents.action_button variant={:secondary} phx-click={@on_cancel}>
-            {dgettext("dashboard_bookings", "Keep Meeting")}
-          </CoreComponents.action_button>
-          <CoreComponents.loading_button
-            type="submit"
-            form="cancel-meeting-form"
-            variant={:danger}
-            loading={@cancelling}
-            loading_text={dgettext("dashboard_bookings", "Cancelling...")}
-          >
-            {if @paid?,
-              do: dgettext("dashboard_bookings", "Confirm cancellation"),
-              else: dgettext("dashboard_bookings", "Cancel Meeting")}
-          </CoreComponents.loading_button>
-        </div>
-      </:footer>
-    </CoreComponents.modal>
+    </Modal.confirm_modal>
     """
+  end
+
+  # A group meeting has no single attendee to name: it is with however many
+  # people currently hold a seat on it.
+  defp confirm_question(meeting, timezone, time_format) do
+    scheduled_for =
+      "#{Helpers.format_meeting_date(meeting, timezone)} • #{Helpers.format_meeting_time(meeting, timezone, time_format)}"
+
+    if Helpers.group_meeting?(meeting) do
+      count = length(Helpers.participants(meeting))
+
+      dngettext(
+        "dashboard_bookings",
+        "Are you sure you want to cancel this group meeting with %{count} participant scheduled for %{when}?",
+        "Are you sure you want to cancel this group meeting with %{count} participants scheduled for %{when}?",
+        count,
+        when: scheduled_for
+      )
+    else
+      dgettext(
+        "dashboard_bookings",
+        "Are you sure you want to cancel the meeting with %{name} scheduled for %{when}?",
+        name: meeting.attendee_name,
+        when: scheduled_for
+      )
+    end
   end
 
   defp paid_options(assigns) do
@@ -154,7 +163,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
         </label>
 
         <div class="ml-6">
-          <CoreComponents.input
+          <Forms.input
             type="number"
             name="cancel_refund_amount"
             label={dgettext("dashboard_bookings", "Partial amount")}

@@ -50,6 +50,42 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
       assert html =~ "No polls yet"
     end
 
+    test "with no polls, the empty state carries the only New poll button", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+
+      assert has_element?(view, "[data-testid='polls-empty'] button", "New poll")
+
+      assert view
+             |> render()
+             |> LazyHTML.from_fragment()
+             |> LazyHTML.query("button[phx-click='new_poll']")
+             |> Enum.count() == 1
+
+      view |> element("[data-testid='polls-empty'] button", "New poll") |> render_click()
+
+      assert has_element?(view, "form[phx-submit='create_poll']")
+      refute has_element?(view, "[data-testid='polls-empty']")
+    end
+
+    test "with polls listed, New poll sits once beside the page title", %{
+      conn: conn,
+      user: user
+    } do
+      insert(:poll, user: user, title: "Team sync", status: :open)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+
+      refute has_element?(view, "[data-testid='polls-empty']")
+      assert has_element?(view, "[data-testid='new-poll']", "New poll")
+
+      doc = view |> render() |> LazyHTML.from_document()
+      assert doc |> LazyHTML.query("button[phx-click='new_poll']") |> Enum.count() == 1
+
+      assert doc
+             |> LazyHTML.query("div:has(> div > h1) [data-testid='new-poll']")
+             |> Enum.count() == 1
+    end
+
     test "does not list polls belonging to other users", %{conn: conn} do
       other = insert(:user)
       insert(:poll, user: other, title: "Someone else's poll")
@@ -173,10 +209,19 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
       insert(:profile, user: user, username: "hostwithout")
       insert(:poll, user: user, title: "Needs a calendar")
 
-      {:ok, _view, html} = live(log_in(conn, user), ~p"/dashboard/polls")
+      {:ok, view, html} = live(log_in(conn, user), ~p"/dashboard/polls")
 
-      assert html =~ "Connect a calendar in Calendar settings to enable this feature"
       refute html =~ ~s(phx-hook="CopyOnClick")
+
+      # Inert but focusable: the accessible name stays the action and the
+      # tooltip carries the reason.
+      assert has_element?(
+               view,
+               ~s(button[aria-disabled="true"][aria-label="Copy poll link to clipboard"]) <>
+                 ~s([title="Connect a calendar in Calendar settings to enable this feature"])
+             )
+
+      refute has_element?(view, ~s(button[aria-label="Copy poll link to clipboard"][disabled]))
     end
 
     test "is enabled when the host has an active calendar integration", %{conn: conn} do

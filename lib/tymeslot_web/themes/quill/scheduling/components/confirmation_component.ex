@@ -12,11 +12,13 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
   alias TymeslotWeb.Themes.Shared.BookingLocation
+  alias TymeslotWeb.Themes.Shared.CalendarDownload
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
+  alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.LocationField
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
@@ -94,12 +96,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                       </div>
                     </div>
                     <div class="flex-1 min-w-0" data-testid="confirmation-heading">
-                      <.section_header
-                        class="mb-1"
-                        title_class="section-header confirmation-title"
-                      >
+                      <h1 class="section-header confirmation-title">
                         {headline(assigns)}
-                      </.section_header>
+                      </h1>
                       <p class="confirmation-subtitle text-quill-primary">
                         {subtitle(assigns)}
                       </p>
@@ -112,6 +111,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                     stage={:after}
                     class="mt-4"
                   />
+
+                  <GroupSession.confirmation_line meeting_type={@meeting_type} class="mt-4" />
 
                   <.meeting_details_card title="">
                     <.booking_details
@@ -211,8 +212,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
 
                   <div class="confirmation-actions">
                     <a
-                      :if={@meeting_uid not in [nil, ""] and @username_context not in [nil, ""]}
-                      href={~p"/#{@username_context}/meeting/#{@meeting_uid}/calendar.ics"}
+                      :if={CalendarDownload.href(assigns)}
+                      href={CalendarDownload.href(assigns)}
                       download
                       class="action-button action-button--secondary calendar-download-button"
                       data-testid="add-to-calendar"
@@ -292,6 +293,14 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
       |> assign_new(:formatted_duration, fn ->
         LocalizationHelpers.format_duration(assigns.duration)
       end)
+      |> assign_new(:next_day_end, fn ->
+        LocalizationHelpers.format_next_day_end(
+          assigns.date,
+          assigns.time,
+          assigns.duration,
+          assigns.timezone
+        )
+      end)
       |> assign_new(:formatted_timezone, fn -> Timezones.format(assigns.timezone) end)
 
     ~H"""
@@ -303,6 +312,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
       <div>
         <p class="booking-detail-label">{@time_label}</p>
         <p class="booking-detail-value">{@formatted_time}</p>
+        <p :if={@next_day_end} class="booking-detail-value" data-testid="booking-next-day-end">
+          {@next_day_end}
+        </p>
       </div>
       <div>
         <p class="booking-detail-label">{@duration_label}</p>

@@ -1,0 +1,3 @@
+# Commits git-cliff leaves out of the changelog, one full SHA per line.
+# Reverted before release: hours ending at 23:59 rewritten to midnight.
+308c3b7951b4c994678879b7ade934cd8842c2a0

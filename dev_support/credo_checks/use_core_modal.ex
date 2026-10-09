@@ -1,9 +1,9 @@
 defmodule CredoChecks.UseCoreModal do
   @moduledoc """
-  Ensures that `CoreComponents.modal` is used instead of hand-rolled modal overlay HTML.
+  Ensures that `<.modal>` (`CoreComponents.Modal.modal/1`) is used instead of hand-rolled modal overlay HTML.
 
   A `<div>` with `class="... fixed inset-0 ... justify-center ..."` is the canonical pattern
-  for a custom modal backdrop. It should be replaced with `<CoreComponents.modal>` (or the
+  for a custom modal backdrop. It should be replaced with `<.modal>` (or the
   `<.modal>` shorthand when imported), which provides consistent styling, keyboard handling,
   and accessibility across the application.
 
@@ -28,16 +28,16 @@ defmodule CredoChecks.UseCoreModal do
     exit_status: 0,
     explanations: [
       check: """
-      Avoid hand-rolling modal overlay HTML. Use `TymeslotWeb.Components.CoreComponents.modal/1`
+      Avoid hand-rolling modal overlay HTML. Use `TymeslotWeb.Components.CoreComponents.Modal.modal/1`
       instead.
 
       A div with `fixed inset-0` combined with `justify-center` is the telltale pattern for a
       custom modal backdrop. Replace it with:
 
-          <CoreComponents.modal id="my-modal" show={@show} on_cancel={...}>
+          <.modal id="my-modal" show={@show} on_cancel={...}>
             <:header>Title</:header>
             Content here.
-          </CoreComponents.modal>
+          </.modal>
       """,
       params: []
     ]
@@ -76,7 +76,7 @@ defmodule CredoChecks.UseCoreModal do
   defp issue_for(issue_meta, line_no) do
     format_issue(issue_meta,
       message:
-        "Avoid hand-rolled modal backdrops. Use `TymeslotWeb.Components.CoreComponents.modal/1` instead.",
+        "Avoid hand-rolled modal backdrops. Use `TymeslotWeb.Components.CoreComponents.Modal.modal/1` instead.",
       line_no: line_no,
       trigger: "fixed inset-0"
     )

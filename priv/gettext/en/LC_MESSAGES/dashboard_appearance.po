@@ -31,11 +31,6 @@ msgstr ""
 msgid "Background Design"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Choose Your Style"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a visual style that matches your professional identity."
@@ -70,11 +65,6 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/current_indicator.ex
 #, elixir-autogen, elixir-format
 msgid "Current"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Current Style"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
@@ -136,20 +126,10 @@ msgstr ""
 msgid "MP4 or WebM. Max 20MB."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "More Styles Coming Soon"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Or upload your own"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Our design team is busy crafting new themes to help you express your unique professional style."
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
@@ -191,11 +171,6 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/color_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Solid Color"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex
-#, elixir-autogen, elixir-format
-msgid "Theme Customization"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
@@ -358,4 +333,14 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
 msgid "Complete the form to save"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#, elixir-autogen, elixir-format
+msgid "Background type"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Current style"
 msgstr ""

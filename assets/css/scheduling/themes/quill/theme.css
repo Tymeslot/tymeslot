@@ -97,6 +97,7 @@
 @import "./modules/custom-questions.css";
 @import "./modules/overview.css";
 @import "./modules/approval-notice.css";
+@import "./modules/group-session.css";
 @import "./modules/preview-notice.css";
 @import "./modules/confirmation.css";
 @import "./modules/polls.css";

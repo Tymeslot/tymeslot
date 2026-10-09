@@ -10,6 +10,7 @@ defmodule Tymeslot.Security.CredentialReencryptionTest do
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.GuestSchema
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Polls
   alias Tymeslot.Polls.PollParticipantSchema
   alias Tymeslot.Polls.PollSchema
@@ -37,6 +38,7 @@ defmodule Tymeslot.Security.CredentialReencryptionTest do
     {Telegram, "telegram_integrations"},
     {Webhooks, "webhooks"},
     {Meetings, "meeting_guests"},
+    {Meetings, "meeting_participants"},
     {Polls, "polls"},
     {Polls, "poll_participants"},
     {Profiles, "profiles"}
@@ -54,7 +56,13 @@ defmodule Tymeslot.Security.CredentialReencryptionTest do
 
   # Every schema of a swept table, whichever way it maps its encrypted columns.
   @swept_schemas @encrypted_credential_schemas ++
-                   [GuestSchema, PollSchema, PollParticipantSchema, ProfileSchema]
+                   [
+                     GuestSchema,
+                     ParticipantSchema,
+                     PollSchema,
+                     PollParticipantSchema,
+                     ProfileSchema
+                   ]
 
   defp reload_token(schema, id) do
     Repo.get!(schema, id).bot_token_encrypted

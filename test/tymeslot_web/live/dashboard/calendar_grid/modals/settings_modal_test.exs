@@ -83,13 +83,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModalTest do
     assert active_option(html, "default-view-toggle") == "week"
   end
 
-  # The active toggle option is the button carrying `btn-primary`; its id is
-  # "<toggle-id>-<value>".
+  # The active option is the button pressed in the segmented control; its id
+  # is "<toggle-id>-<value>".
   defp active_option(html, toggle_id) do
     active =
       html
       |> Floki.parse_fragment!()
-      |> Floki.find("button[id^='#{toggle_id}-'].btn-primary")
+      |> Floki.find("button[id^='#{toggle_id}-'][aria-pressed='true']")
       |> Enum.map(fn button ->
         button
         |> Floki.attribute("id")

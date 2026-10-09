@@ -179,9 +179,9 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
 
         change_section(dgettext("emails_booking", "What changed"), """
         <tr>
-          <th style="padding: 6px 12px 6px 0; font-size: 10px; font-weight: 700; color: #{Styles.ink_whisper()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails_booking", "Field")}</th>
-          <th style="padding: 6px 12px; font-size: 10px; font-weight: 700; color: #{Styles.ink_whisper()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails_booking", "Before")}</th>
-          <th style="padding: 6px 12px 6px 0; font-size: 10px; font-weight: 700; color: #{Styles.ink_whisper()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails_booking", "After")}</th>
+          <th style="padding: 6px 12px 6px 0; font-size: 10px; font-weight: 700; color: #{Styles.ink_muted()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails_booking", "Field")}</th>
+          <th style="padding: 6px 12px; font-size: 10px; font-weight: 700; color: #{Styles.ink_muted()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails_booking", "Before")}</th>
+          <th style="padding: 6px 12px 6px 0; font-size: 10px; font-weight: 700; color: #{Styles.ink_muted()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails_booking", "After")}</th>
         </tr>
         #{body_rows}
         """)

@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
   @moduledoc """
-  Function components for rendering the Meeting Types section header, add button, empty state,
-  and the grid of meeting type cards, emitting events to the parent via parent_myself.
+  Function components for rendering the Meeting Types add button, empty state,
+  and the list of meeting type cards, emitting events to the parent via parent_myself.
   """
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
@@ -13,60 +13,29 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
   attr :editing_type, :any, default: nil
   attr :currency, :string, default: "eur"
   attr :venues, :list, default: []
+  attr :group_bookings_allowed, :boolean, default: true
   attr :parent_myself, :any, required: true
 
   @spec meeting_types_section(map()) :: Phoenix.LiveView.Rendered.t()
   def meeting_types_section(assigns) do
     ~H"""
     <div>
-      <div class="flex items-center justify-between mb-6">
-        <h2 class="text-token-xl font-semibold text-tymeslot-800">
-          {dgettext("dashboard_meeting_types", "Meeting Types")}
-        </h2>
-        <%= unless @show_add_form || @editing_type do %>
-          <button
-            phx-click="toggle_add_form"
-            phx-target={@parent_myself}
-            class="btn btn-primary btn-sm"
-          >
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            {dgettext("dashboard_meeting_types", "Add Meeting Type")}
-          </button>
-        <% end %>
-      </div>
-
       <%= if @meeting_types == [] && !@show_add_form do %>
-        <div class="card-glass text-center py-8">
-          <svg
-            class="w-12 h-12 mx-auto text-tymeslot-400 mb-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <p class="text-tymeslot-600">
-            {dgettext("dashboard_meeting_types", "No meeting types configured yet")}
-          </p>
-          <p class="text-token-sm text-tymeslot-500 mt-1">
-            {dgettext(
+        <.empty_state
+          icon="hero-clock"
+          size={:lg}
+          title={dgettext("dashboard_meeting_types", "No meeting types configured yet")}
+          description={
+            dgettext(
               "dashboard_meeting_types",
               "Create meeting types to offer different appointment options"
-            )}
-          </p>
-        </div>
+            )
+          }
+        >
+          <:action :if={!@editing_type}>
+            <.add_meeting_type_button parent_myself={@parent_myself} />
+          </:action>
+        </.empty_state>
       <% else %>
         <div
           id="meeting-types-sortable-list"
@@ -80,6 +49,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
                 type={type}
                 currency={@currency}
                 venues={@venues}
+                group_bookings_allowed={@group_bookings_allowed}
                 myself={@parent_myself}
               />
             </div>
@@ -87,6 +57,26 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
         </div>
       <% end %>
     </div>
+    """
+  end
+
+  attr :parent_myself, :any, required: true
+
+  @doc """
+  The button that opens the add form. The page header carries it once there
+  are meeting types; with none yet, the empty state does. Full size, like
+  the other pages' header actions (Add location, New poll).
+  """
+  @spec add_meeting_type_button(map()) :: Phoenix.LiveView.Rendered.t()
+  def add_meeting_type_button(assigns) do
+    ~H"""
+    <.action_button
+      icon="hero-plus"
+      phx-click="toggle_add_form"
+      phx-target={@parent_myself}
+    >
+      {dgettext("dashboard_meeting_types", "Add Meeting Type")}
+    </.action_button>
     """
   end
 end

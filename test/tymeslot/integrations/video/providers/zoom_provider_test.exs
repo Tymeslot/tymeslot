@@ -123,6 +123,13 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderTest do
       refute String.contains?(url, "&pwd=1234")
       assert String.contains?(url, "uname=x%26pwd%3D1234")
     end
+
+    test "hands back the room URL unchanged when there is nobody to name" do
+      room_data = %{meeting_url: "https://zoom.us/j/123456789"}
+
+      assert {:ok, "https://zoom.us/j/123456789"} =
+               ZoomProvider.create_join_url(room_data, nil, nil, "participant", nil)
+    end
   end
 
   describe "extract_room_id/1" do

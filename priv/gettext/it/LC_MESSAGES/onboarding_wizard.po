@@ -63,11 +63,6 @@ msgstr "%{field} deve essere un numero valido"
 msgid "%{field} must be between %{min} and %{max}"
 msgstr "%{field} deve essere compreso tra %{min} e %{max}"
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
-#, elixir-autogen, elixir-format
-msgid "%{minutes} min buffer between meetings"
-msgstr "%{minutes} min di margine tra le riunioni"
-
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
 msgid "%{provider} · Connected"
@@ -97,11 +92,6 @@ msgstr "3 mesi"
 #, elixir-autogen, elixir-format
 msgid "6 months"
 msgstr "6 mesi"
-
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
-#, elixir-autogen, elixir-format
-msgid "A breather between meetings (%{minutes} min)"
-msgstr "Una pausa tra le riunioni (%{minutes} min)"
 
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
 #, elixir-autogen, elixir-format
@@ -172,11 +162,6 @@ msgstr "Anteprima della pagina di prenotazione"
 #, elixir-autogen, elixir-format
 msgid "Booking window"
 msgstr "Finestra di prenotazione"
-
-#: lib/tymeslot_web/live/onboarding_live/step_config.ex
-#, elixir-autogen, elixir-format
-msgid "Breathing room between appointments so you never feel rushed."
-msgstr "Un po' di respiro tra un appuntamento e l'altro, così non ti senti mai sotto pressione."
 
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
@@ -383,11 +368,6 @@ msgstr "Con quanto anticipo i clienti possono fissare un appuntamento con te."
 #, elixir-autogen, elixir-format
 msgid "I'll connect a calendar later"
 msgstr "Collegherò un calendario più tardi"
-
-#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
-#, elixir-autogen, elixir-format
-msgid "If someone books a meeting that ends at %{end_time} and your buffer is %{minutes} min, the next available slot starts at %{next_start}."
-msgstr "Se qualcuno prenota una riunione che termina alle %{end_time} e il tuo margine è di %{minutes} min, la fascia oraria successiva disponibile inizia alle %{next_start}."
 
 #: lib/tymeslot_web/live/onboarding_live/timezone_handlers.ex
 #, elixir-autogen, elixir-format
@@ -678,11 +658,6 @@ msgstr "Con %{notice} di preavviso, nessuno può prenotare una fascia oraria che
 
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
 #, elixir-autogen, elixir-format
-msgid "With no buffer, the next available slot starts as soon as a meeting ends."
-msgstr "Senza margine, la fascia oraria successiva disponibile inizia non appena una riunione termina."
-
-#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
-#, elixir-autogen, elixir-format
 msgid "With no minimum notice, someone can book a slot that starts any time from now."
 msgstr "Senza preavviso minimo, qualcuno può prenotare una fascia oraria che inizia in qualsiasi momento a partire da adesso."
 
@@ -764,11 +739,6 @@ msgstr "Giorni di prenotazione anticipata"
 
 #: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex
 #, elixir-autogen, elixir-format
-msgid "Buffer minutes"
-msgstr "Minuti di margine"
-
-#: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex
-#, elixir-autogen, elixir-format
 msgid "Minimum advance hours"
 msgstr "Ore di anticipo minimo"
 
@@ -831,3 +801,85 @@ msgstr "2 mesi"
 #, elixir-autogen, elixir-format
 msgid "1 year"
 msgstr "1 anno"
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "%{before_minutes} min before, %{after_minutes} min after"
+msgstr "%{before_minutes} min prima, %{after_minutes} min dopo"
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "%{before_minutes} min before, no buffer after"
+msgstr "%{before_minutes} min prima, nessun margine dopo"
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "A breather around each meeting"
+msgstr "Una pausa attorno a ogni riunione"
+
+#: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer after"
+msgstr "Margine dopo"
+
+#: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer after must be between %{min} and %{max} minutes."
+msgstr "Il margine dopo deve essere compreso tra %{min} e %{max} minuti."
+
+#: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer before"
+msgstr "Margine prima"
+
+#: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer before must be between %{min} and %{max} minutes."
+msgstr "Il margine prima deve essere compreso tra %{min} e %{max} minuti."
+
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
+#, elixir-autogen, elixir-format
+msgid "Custom buffer after, in minutes"
+msgstr "Margine dopo personalizzato, in minuti"
+
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
+#, elixir-autogen, elixir-format
+msgid "Custom buffer before, in minutes"
+msgstr "Margine prima personalizzato, in minuti"
+
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
+#, elixir-autogen, elixir-format
+msgid "If you have a meeting from %{start_time} to %{end_time}, a new booking after it can start at %{next_start} at the earliest, and one before it must end by %{latest_end}."
+msgstr "Se hai una riunione dalle %{start_time} alle %{end_time}, una nuova prenotazione dopo di essa può iniziare al più presto alle %{next_start}, e una prima di essa deve terminare entro le %{latest_end}."
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "No buffer around meetings"
+msgstr "Nessun margine attorno alle riunioni"
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "No buffer before, %{after_minutes} min after"
+msgstr "Nessun margine prima, %{after_minutes} min dopo"
+
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
+#, elixir-autogen, elixir-format
+msgid "With no buffers, a new booking can sit right next to an existing meeting."
+msgstr "Senza margini, una nuova prenotazione può stare subito accanto a una riunione esistente."
+
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
+#, elixir-autogen, elixir-format
+msgctxt "buffer"
+msgid "After"
+msgstr "Dopo"
+
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
+#, elixir-autogen, elixir-format
+msgctxt "buffer"
+msgid "Before"
+msgstr "Prima"
+
+#: lib/tymeslot_web/live/onboarding_live/step_config.ex
+#, elixir-autogen, elixir-format
+msgid "How much free time a new booking needs before and after it."
+msgstr "Quanto tempo libero serve prima e dopo una nuova prenotazione."

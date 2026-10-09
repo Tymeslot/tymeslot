@@ -16,11 +16,18 @@ defmodule TymeslotWeb.Themes.Shared.SlotGrouping do
   alias Tymeslot.Availability.TimeSlots
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
+  @typedoc """
+  An enriched slot as the themes render it: the start time plus, on a group
+  meeting type, the seats left on it. Grouping only ever reads `:time`, but it
+  carries the whole map through so the seat badge survives the nesting.
+  """
+  @type slot :: %{required(:time) => String.t(), optional(atom()) => term()}
+
   @typedoc "Slots grouped by part of the day, as the themes have always rendered them."
-  @type flat :: {:flat, [{String.t(), [String.t()]}]}
+  @type flat :: {:flat, [{String.t(), [slot()]}]}
 
   @typedoc "Slots grouped by part of the day, then by the hour they start in."
-  @type hours :: {:hours, [{String.t(), [{0..23, [String.t()]}]}]}
+  @type hours :: {:hours, [{String.t(), [{0..23, [slot()]}]}]}
 
   @type grouping :: flat() | hours()
 
@@ -74,7 +81,7 @@ defmodule TymeslotWeb.Themes.Shared.SlotGrouping do
   @doc """
   Groups `slots` for display.
   """
-  @spec group([String.t()], pos_integer() | nil, pos_integer() | nil) :: grouping()
+  @spec group([slot()], pos_integer() | nil, pos_integer() | nil) :: grouping()
   def group(slots, interval_minutes, duration_minutes) do
     periods = LocalizationHelpers.group_slots_by_period(slots)
 
@@ -132,7 +139,9 @@ defmodule TymeslotWeb.Themes.Shared.SlotGrouping do
 
   def selected_hour({:hours, periods}, selected_time) do
     Enum.find_value(periods, fn {_period, hours} ->
-      Enum.find_value(hours, fn {hour, slots} -> selected_time in slots && hour end)
+      Enum.find_value(hours, fn {hour, slots} ->
+        Enum.any?(slots, &(&1.time == selected_time)) && hour
+      end)
     end)
   end
 
@@ -154,5 +163,5 @@ defmodule TymeslotWeb.Themes.Shared.SlotGrouping do
     |> Enum.sort_by(fn {hour, _slots} -> hour end)
   end
 
-  defp hour_of(slot), do: TimeSlots.parse_time_slot(slot).hour
+  defp hour_of(slot), do: TimeSlots.parse_time_slot(slot.time).hour
 end

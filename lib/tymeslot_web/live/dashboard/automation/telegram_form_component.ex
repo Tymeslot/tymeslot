@@ -9,8 +9,8 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
   alias Phoenix.LiveView.JS
   alias Tymeslot.Telegram
   alias Tymeslot.Validation.Constraints
-  alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.Icons.IconComponents
+  alias TymeslotWeb.Dashboard.Automation.EventSubscriptions
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -64,31 +64,23 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
     assigns = assign(assigns, :can_submit, can_submit?(assigns))
 
     ~H"""
-    <div class="space-y-8 pb-20">
+    <div class="space-y-8">
       <%!-- Toolbar --%>
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
-        <.section_header
-          icon="hero-bolt"
-          title={form_title(@mode, @shared_bot_mode, @wizard_step)}
-          class="mb-0"
-        />
-
-        <button
-          phx-click="close_telegram_form"
-          phx-target={@parent_component}
-          class="flex items-center gap-2 px-5 py-2.5 rounded-token-xl bg-tymeslot-50 text-tymeslot-600 font-bold hover:bg-tymeslot-100 transition-all border-2 border-transparent hover:border-tymeslot-200"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2.5"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-          {dgettext("dashboard_automation_chat", "Close")}
-        </button>
-      </div>
+      <.section_header
+        icon="hero-bolt"
+        title={form_title(@mode, @shared_bot_mode, @wizard_step)}
+        class="mb-10"
+      >
+        <:actions>
+          <.icon_button
+            icon="hero-x-mark"
+            variant={:neutral}
+            label={dgettext("dashboard_automation_chat", "Close")}
+            phx-click="close_telegram_form"
+            phx-target={@parent_component}
+          />
+        </:actions>
+      </.section_header>
 
       <%= if @shared_bot_mode && @mode == :create && @wizard_step == 1 do %>
         <%!-- Shared Bot: Step 1 — Deep Link --%>
@@ -113,19 +105,15 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
           novalidate
         >
           <%!-- Name & Details --%>
-          <div class="card-glass">
-            <div class="mb-6">
-              <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
-                {dgettext("dashboard_automation_chat", "Integration Details")}
-              </h3>
-              <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
-                {dgettext(
-                  "dashboard_automation_chat",
-                  "Configure your Telegram notification settings."
-                )}
-              </p>
-            </div>
-
+          <.card
+            title={dgettext("dashboard_automation_chat", "Integration Details")}
+            description={
+              dgettext(
+                "dashboard_automation_chat",
+                "Configure your Telegram notification settings."
+              )
+            }
+          >
             <div class="space-y-6">
               <.input
                 name="telegram[name]"
@@ -183,19 +171,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
                 <div class="p-4 rounded-token-xl bg-turquoise-50/50 border-2 border-turquoise-100">
                   <div class="flex gap-3">
                     <div class="mt-0.5">
-                      <svg
-                        class="w-5 h-5 text-turquoise-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2.5"
-                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
+                      <.icon name="hero-information-circle" class="w-5 h-5 text-turquoise-600" />
                     </div>
                     <div>
                       <p class="text-token-sm font-black text-turquoise-900">
@@ -222,59 +198,34 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
                 </div>
               <% end %>
             </div>
-          </div>
+          </.card>
 
           <%!-- Events Selection --%>
-          <div class="card-glass">
-            <div class="mb-6">
-              <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
-                {dgettext("dashboard_automation_chat", "Event Subscriptions")}
-              </h3>
-              <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
-                {dgettext(
-                  "dashboard_automation_chat",
-                  "Select which events should trigger Telegram notifications."
-                )}
-              </p>
-            </div>
-
-            <div class="space-y-3">
-              <%= for event <- @available_events do %>
-                <label class="flex items-start gap-3 p-4 rounded-token-xl border-2 border-tymeslot-100 hover:border-turquoise-200 cursor-pointer transition-colors">
-                  <.input
-                    type="checkbox"
-                    name="telegram[events][]"
-                    value={event.value}
-                    checked={event.value in Map.get(@form_values, "events", [])}
-                    phx-click={
-                      JS.push("toggle_telegram_event",
-                        value: %{"event" => event.value},
-                        target: @parent_component
-                      )
-                    }
-                  />
-                  <div class="flex-1">
-                    <div class="font-black text-tymeslot-900">{event.label}</div>
-                    <div class="text-token-sm text-tymeslot-600 font-medium">{event.description}</div>
-                  </div>
-                </label>
-              <% end %>
-            </div>
-            <%= for error <- FormValidationHelpers.field_errors(@form_errors, :events) do %>
-              <p class="text-token-sm text-red-600 font-medium mt-3">{error}</p>
-            <% end %>
-          </div>
+          <EventSubscriptions.event_subscriptions
+            name="telegram[events][]"
+            events={@available_events}
+            selected={Map.get(@form_values, "events", [])}
+            toggle_event="toggle_telegram_event"
+            target={@parent_component}
+            errors={FormValidationHelpers.field_errors(@form_errors, :events)}
+            description={
+              dgettext(
+                "dashboard_automation_chat",
+                "Select which events should trigger Telegram notifications."
+              )
+            }
+          />
 
           <%!-- Form Actions --%>
           <div class="flex justify-end gap-3 pt-4">
-            <CoreComponents.action_button
+            <.action_button
               variant={:secondary}
               phx-click="close_telegram_form"
               phx-target={@parent_component}
             >
               {dgettext("dashboard_automation_chat", "Cancel")}
-            </CoreComponents.action_button>
-            <CoreComponents.loading_button
+            </.action_button>
+            <.loading_button
               type="submit"
               variant={:primary}
               loading={@saving}
@@ -285,7 +236,6 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
                 )
               }
               disabled={!@can_submit}
-              class={if !@can_submit, do: "opacity-50 cursor-not-allowed grayscale", else: ""}
             >
               <%= cond do %>
                 <% !@shared_bot_mode && @mode == :create -> %>
@@ -295,7 +245,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
                 <% true -> %>
                   {dgettext("dashboard_automation_chat", "Update")}
               <% end %>
-            </CoreComponents.loading_button>
+            </.loading_button>
           </div>
         </form>
       <% end %>
@@ -303,96 +253,87 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
     """
   end
 
+  defp shared_bot_step1(%{link_expired: true} = assigns) do
+    ~H"""
+    <.empty_state
+      size={:lg}
+      tone={:warning}
+      heading={:h3}
+      title={dgettext("dashboard_automation_chat", "Link Expired")}
+      description={
+        dgettext(
+          "dashboard_automation_chat",
+          "The link has expired. Click below to generate a new one."
+        )
+      }
+    >
+      <:graphic><IconComponents.icon name={:telegram} class="w-10 h-10" /></:graphic>
+      <:action>
+        <.action_button phx-click="refresh_telegram_link" phx-target={@parent_component}>
+          {dgettext("dashboard_automation_chat", "Generate New Link")}
+        </.action_button>
+      </:action>
+    </.empty_state>
+    """
+  end
+
   defp shared_bot_step1(assigns) do
     ~H"""
-    <div class="card-glass text-center py-12">
-      <div class="w-20 h-20 bg-turquoise-50 rounded-token-3xl mx-auto mb-6 flex items-center justify-center border-2 border-turquoise-100">
-        <IconComponents.icon name={:telegram} class="w-10 h-10 text-turquoise-600" />
-      </div>
+    <.empty_state
+      size={:lg}
+      tone={:brand}
+      heading={:h3}
+      title={dgettext("dashboard_automation_chat", "Connect Telegram")}
+      description={
+        dgettext(
+          "dashboard_automation_chat",
+          "Click the button below to open Telegram and link your account. Once connected, you'll configure notification preferences."
+        )
+      }
+    >
+      <:graphic><IconComponents.icon name={:telegram} class="w-10 h-10" /></:graphic>
+      <:action :if={@deep_link}>
+        <.action_link href={@deep_link} target="_blank" rel="noopener noreferrer">
+          <IconComponents.icon name={:telegram} class="w-5 h-5" />
+          {dgettext("dashboard_automation_chat", "Open in Telegram")}
+        </.action_link>
+      </:action>
 
-      <%= if @link_expired do %>
-        <h3 class="text-token-2xl font-black text-amber-700 mb-3">
-          {dgettext("dashboard_automation_chat", "Link Expired")}
-        </h3>
-        <p class="text-tymeslot-600 font-medium mb-8 max-w-md mx-auto">
-          {dgettext(
+      <%= if @deep_link do %>
+        <div class="flex items-center justify-center gap-2 text-token-sm text-tymeslot-500">
+          <.icon
+            name="hero-clock"
+            class="w-4 h-4 animate-pulse text-turquoise-500"
+          />
+          <span>{dgettext(
             "dashboard_automation_chat",
-            "The link has expired. Click below to generate a new one."
-          )}
-        </p>
-        <button
-          phx-click="refresh_telegram_link"
-          phx-target={@parent_component}
-          class="btn-primary"
-        >
-          {dgettext("dashboard_automation_chat", "Generate New Link")}
-        </button>
-      <% else %>
-        <h3 class="text-token-2xl font-black text-tymeslot-900 mb-3">
-          {dgettext("dashboard_automation_chat", "Connect Telegram")}
-        </h3>
-        <p class="text-tymeslot-600 font-medium mb-8 max-w-md mx-auto">
-          {dgettext(
-            "dashboard_automation_chat",
-            "Click the button below to open Telegram and link your account. Once connected, you'll configure notification preferences."
-          )}
-        </p>
+            "Waiting for Telegram connection... (link expires in 10 minutes)"
+          )}</span>
+        </div>
 
-        <%= if @deep_link do %>
-          <a
-            href={@deep_link}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="btn-primary inline-flex items-center gap-2"
-          >
-            <IconComponents.icon name={:telegram} class="w-5 h-5" />
-            {dgettext("dashboard_automation_chat", "Open in Telegram")}
-          </a>
-
-          <div class="mt-6 flex items-center justify-center gap-2 text-token-sm text-tymeslot-500">
-            <svg
-              class="w-4 h-4 animate-pulse text-turquoise-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span>{dgettext(
+        <div class="mt-6 p-4 rounded-token-xl bg-tymeslot-50 border border-tymeslot-100 text-left max-w-md mx-auto">
+          <p class="text-token-xs font-black text-tymeslot-700 mb-2 uppercase tracking-wide">
+            {dgettext(
               "dashboard_automation_chat",
-              "Waiting for Telegram connection... (link expires in 10 minutes)"
-            )}</span>
-          </div>
-
-          <div class="mt-6 p-4 rounded-token-xl bg-tymeslot-50 border border-tymeslot-100 text-left max-w-md mx-auto">
-            <p class="text-token-xs font-black text-tymeslot-700 mb-2 uppercase tracking-wide">
-              {dgettext(
-                "dashboard_automation_chat",
-                "Button didn't work? Already started the bot before?"
-              )}
-            </p>
-            <p class="text-token-xs text-tymeslot-600 mb-3">
-              {dgettext(
-                "dashboard_automation_chat",
-                "Send this command directly in the Telegram bot chat:"
-              )}
-            </p>
-            <code class="block text-token-xs font-mono bg-white border border-tymeslot-200 rounded-lg px-3 py-2 break-all select-all text-tymeslot-800">
-              /start {String.split(@deep_link, "start=") |> List.last() |> String.trim_trailing("#")}
-            </code>
-          </div>
-        <% else %>
-          <div class="text-tymeslot-500 font-medium">
-            {dgettext("dashboard_automation_chat", "Setting up connection...")}
-          </div>
-        <% end %>
+              "Button didn't work? Already started the bot before?"
+            )}
+          </p>
+          <p class="text-token-xs text-tymeslot-600 mb-3">
+            {dgettext(
+              "dashboard_automation_chat",
+              "Send this command directly in the Telegram bot chat:"
+            )}
+          </p>
+          <code class="block text-token-xs font-mono bg-white border border-tymeslot-200 rounded-token-lg px-3 py-2 break-all select-all text-tymeslot-800">
+            /start {String.split(@deep_link, "start=") |> List.last() |> String.trim_trailing("#")}
+          </code>
+        </div>
+      <% else %>
+        <div class="text-tymeslot-500 font-medium">
+          {dgettext("dashboard_automation_chat", "Setting up connection...")}
+        </div>
       <% end %>
-    </div>
+    </.empty_state>
     """
   end
 

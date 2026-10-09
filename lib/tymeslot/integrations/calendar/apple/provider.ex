@@ -40,9 +40,10 @@ defmodule Tymeslot.Integrations.Calendar.Apple.Provider do
   @impl Tymeslot.Integrations.Calendar.Provider
   def connection_test_bucket, do: :caldav
 
-  @doc "Returns the LiveComponent module for provider configuration UI"
+  @doc "Returns the component module that renders the CalDAV-family configuration form"
   @spec setup_component() :: module()
-  def setup_component, do: TymeslotWeb.Components.Dashboard.Integrations.Calendar.AppleConfig
+  def setup_component,
+    do: TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavFamilyConfig
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def config_schema do

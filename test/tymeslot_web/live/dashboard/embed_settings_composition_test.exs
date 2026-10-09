@@ -68,9 +68,9 @@ defmodule TymeslotWeb.Dashboard.EmbedSettingsCompositionTest do
 
       # Fresh mount — the view re-reads the profile, so a regression
       # in how the theme page derives "selected" from the DB would
-      # surface as a missing "Current Style" badge on the fresh mount.
+      # surface as a missing "Current style" badge on the fresh mount.
       {:ok, fresh_view, html} = live(conn, ~p"/dashboard/theme")
-      assert html =~ "Current Style"
+      assert html =~ "Current style"
       assert has_element?(fresh_view, "[phx-value-theme='2']")
     end
 
@@ -78,7 +78,7 @@ defmodule TymeslotWeb.Dashboard.EmbedSettingsCompositionTest do
     test "adding an embed domain survives navigating away and back",
          %{conn: conn, profile: profile} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/embed")
-      view |> element("button#tab-security") |> render_click()
+      view |> element("button#embed-settings-tabs-tab-security") |> render_click()
 
       view
       |> form("form[phx-submit='save_embed_domains']", %{
@@ -96,7 +96,7 @@ defmodule TymeslotWeb.Dashboard.EmbedSettingsCompositionTest do
       {:ok, _other_view, _html} = live(conn, ~p"/dashboard")
       {:ok, reopened, _html} = live(conn, ~p"/dashboard/embed")
 
-      reopened |> element("button#tab-security") |> render_click()
+      reopened |> element("button#embed-settings-tabs-tab-security") |> render_click()
       assert render(reopened) =~ "example.com"
     end
   end

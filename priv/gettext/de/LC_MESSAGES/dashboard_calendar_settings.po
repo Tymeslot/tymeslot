@@ -48,11 +48,6 @@ msgstr "Alle Kalender erfolgreich aktualisiert"
 msgid "CalDAV servers"
 msgstr "CalDAV-Server"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/component_view.ex
-#, elixir-autogen, elixir-format
-msgid "Calendar Settings"
-msgstr "Kalendereinstellungen"
-
 #: lib/tymeslot_web/live/dashboard/calendar_settings/config_view_component.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar integration added successfully"
@@ -190,11 +185,6 @@ msgstr "Link neu generieren"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
-msgid "Remove connection"
-msgstr "Verbindung entfernen"
-
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
-#, elixir-autogen, elixir-format
 msgid "Share a read-only link that publishes when you're busy (not the event details) as a standard iCalendar feed, so other calendar systems can overlay your availability."
 msgstr "Teilen Sie einen schreibgeschützten Link, der als standardisierter iCalendar-Feed veröffentlicht, wann Sie beschäftigt sind (nicht die Ereignisdetails), sodass andere Kalendersysteme Ihre Verfügbarkeit einblenden können."
 
@@ -237,16 +227,6 @@ msgstr "Wir prüfen diese Kalender, um Doppelbuchungen automatisch zu vermeiden.
 #, elixir-autogen, elixir-format
 msgid "books into %{calendar}"
 msgstr "bucht in %{calendar}"
-
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
-#, elixir-autogen, elixir-format
-msgid "conflict-checks %{selected} of %{total} calendars"
-msgstr "prüft %{selected} von %{total} Kalendern auf Konflikte"
-
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
-#, elixir-autogen, elixir-format
-msgid "synced %{time}"
-msgstr "synchronisiert %{time}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -312,3 +292,25 @@ msgstr "Exchange-Server"
 #, elixir-autogen, elixir-format
 msgid "read-only, blocks time but takes no bookings"
 msgstr "schreibgeschützt, blockiert Zeiten, nimmt aber keine Buchungen an"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "checks %{selected} of %{count} calendar for conflicts"
+msgid_plural "checks %{selected} of %{count} calendars for conflicts"
+msgstr[0] "prüft %{selected} von %{count} Kalender auf Konflikte"
+msgstr[1] "prüft %{selected} von %{count} Kalendern auf Konflikte"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Last synced %{time}"
+msgstr "Zuletzt synchronisiert %{time}"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Delete"
+msgstr "Löschen"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}"
+msgstr "%{name} löschen"
