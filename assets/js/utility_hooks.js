@@ -4,10 +4,17 @@
 // Flash message hook for auto-dismiss functionality
 export const Flash = {
   mounted() {
-    // Auto-dismiss after 6 seconds
+    // Auto-dismiss after 6 seconds by running the flash's own dismiss command
+    // (its `phx-click`), not by clicking it. A synthetic click bubbles to the
+    // window like a real one, so every open dialog's `phx-click-away` reads it
+    // as a click outside and closes — the dashboard's announcement modal among
+    // them, which then marks its whole stack seen. A flash rendered without a
+    // close command has no `phx-click` and stays.
     this.timer = setTimeout(() => {
-      if (this.el.dataset.close !== "false") {
-        this.el.click();
+      const dismiss = this.el.getAttribute("phx-click");
+
+      if (this.el.dataset.close !== "false" && dismiss) {
+        this.liveSocket.execJS(this.el, dismiss);
       }
     }, 6000);
     
