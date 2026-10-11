@@ -176,6 +176,16 @@ defmodule TymeslotWeb.Themes.Core.Context do
 
   defp load_customizations(theme_id, nil), do: ThemeCustomizations.get_defaults(theme_id)
 
+  defp load_customizations(theme_id, %{booking_page: %{id: _page_id}} = profile) do
+    case ThemeCustomizations.get_by_profile_and_theme(
+           ThemeCustomizations.scope_for(profile),
+           theme_id
+         ) do
+      nil -> ThemeCustomizations.get_defaults(theme_id)
+      customization -> ThemeCustomizations.to_map(customization)
+    end
+  end
+
   defp load_customizations(theme_id, profile) do
     case ThemeCustomizations.get_for_user(profile.user_id, theme_id) do
       nil -> ThemeCustomizations.get_defaults(theme_id)

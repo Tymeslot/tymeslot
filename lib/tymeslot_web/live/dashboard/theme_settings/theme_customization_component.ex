@@ -5,7 +5,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
 
   Assigns contract
   - Required (passed in):
-    - profile: Tymeslot.Profiles.ProfileSchema.t()
+    - profile: Tymeslot.Profiles.ProfileSchema.t() – may be the owner's profile as one of its booking pages presents it; colours are then read and written for that page (ThemeCustomizations.scope_for/1)
     - theme_id: String.t()
   - Provided/managed by this component (do not pass these in):
     - customization: map with current customization state (see customization_t())
@@ -102,7 +102,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
       customization: customization,
       original: _original_state,
       presets: presets
-    } = ThemeCustomizations.initialize_customization(assigns.profile.id, theme_id)
+    } =
+      ThemeCustomizations.initialize_customization(
+        ThemeCustomizations.scope_for(assigns.profile),
+        theme_id
+      )
 
     # Narrow assigns surface: expose a small, consistent contract
     {:ok,
@@ -154,7 +158,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
   def handle_event("theme:select_color_scheme", %{"scheme" => scheme_id}, socket) do
     with_rate_limit(socket, "color_scheme", fn ->
       case ThemeCustomizations.apply_color_scheme_change(
-             socket.assigns.profile.id,
+             ThemeCustomizations.scope_for(socket.assigns.profile),
              socket.assigns.theme_id,
              socket.assigns.customization,
              scheme_id
@@ -178,7 +182,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
     if is_nil(socket.assigns.customization.custom_palette_seed) do
       with_rate_limit(socket, "color_scheme", fn ->
         case ThemeCustomizations.apply_color_scheme_change(
-               socket.assigns.profile.id,
+               ThemeCustomizations.scope_for(socket.assigns.profile),
                socket.assigns.theme_id,
                socket.assigns.customization,
                "custom"
@@ -222,7 +226,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
   def handle_event("theme:set_palette_seed", %{"value" => hex}, socket) do
     with_rate_limit(socket, "palette_seed", fn ->
       case ThemeCustomizations.apply_custom_palette_change(
-             socket.assigns.profile.id,
+             ThemeCustomizations.scope_for(socket.assigns.profile),
              socket.assigns.theme_id,
              socket.assigns.customization,
              hex
@@ -241,7 +245,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
   def handle_event("theme:set_custom_background", %{"value" => hex}, socket) do
     with_rate_limit(socket, "background", fn ->
       case ThemeCustomizations.apply_background_change(
-             socket.assigns.profile.id,
+             ThemeCustomizations.scope_for(socket.assigns.profile),
              socket.assigns.theme_id,
              socket.assigns.customization,
              "color",
@@ -268,7 +272,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
 
     with_rate_limit(socket, "background", fn ->
       case ThemeCustomizations.apply_background_change(
-             socket.assigns.profile.id,
+             ThemeCustomizations.scope_for(socket.assigns.profile),
              socket.assigns.theme_id,
              socket.assigns.customization,
              type,

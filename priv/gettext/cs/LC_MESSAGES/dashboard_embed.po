@@ -445,3 +445,8 @@ msgstr "Nastavení vložení"
 #, elixir-autogen, elixir-format
 msgid "Remove %{domain}"
 msgstr "Odebrat %{domain}"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page"
+msgstr "Rezervační stránka"

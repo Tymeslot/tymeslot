@@ -412,3 +412,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "You already have a meeting type with this name"
 msgstr ""
+
+#: lib/tymeslot/booking_pages/booking_page_schema.ex
+#, elixir-autogen, elixir-format
+msgid "Use 3 to 30 lowercase letters, numbers, hyphens or underscores, starting with a letter or number"
+msgstr ""

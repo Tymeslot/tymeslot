@@ -16,6 +16,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   require Logger
 
   alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.BookingPages
   alias Tymeslot.Features
 
   alias Tymeslot.MeetingPayments.{
@@ -67,7 +68,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
          :ok <- check_payments_access(host.id),
          {:ok, account} <- fetch_connect_account(host.id),
          {:ok, meeting_type} <- fetch_meeting_type(meeting.meeting_type_id) do
-      theme_id = resolve_theme_id(host.id)
+      theme_id = resolve_theme_id(host.id, meeting)
       bp_config = Application.get_env(:tymeslot, :payment_application_fee_bp, 0)
       fee_cents = ApplicationFee.calculate(meeting_type.price_cents || 0, bp_config)
 
@@ -163,8 +164,9 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
       {:error, :meeting_type_not_found}
   end
 
-  defp resolve_theme_id(user_id) do
-    case Profiles.get_profile(user_id) do
+  # A booking made through a booking page pays and returns in that page's look.
+  defp resolve_theme_id(user_id, meeting) do
+    case user_id |> Profiles.get_profile() |> BookingPages.for_meeting(meeting) do
       %{booking_theme: theme_id} when is_binary(theme_id) -> theme_id
       _missing_or_default -> ThemeCatalog.default_id()
     end

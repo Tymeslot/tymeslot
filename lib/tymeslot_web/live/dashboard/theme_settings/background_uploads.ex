@@ -138,7 +138,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BackgroundUploads do
     # Re-read the customisation so the new asset path is reflected immediately.
     %{customization: customization} =
       ThemeCustomizations.initialize_customization(
-        socket.assigns.profile.id,
+        ThemeCustomizations.scope_for(socket.assigns.profile),
         socket.assigns.theme_id
       )
 

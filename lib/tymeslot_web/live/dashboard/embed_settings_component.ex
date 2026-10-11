@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Ecto.Changeset
+  alias Tymeslot.BookingPages
   alias Tymeslot.Locales
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.LinkAccessPolicy
@@ -31,8 +32,6 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     profile = assigns.profile
     integration_status = assigns[:integration_status] || %{}
     base_url = Endpoint.url()
-    username = profile.username
-    theme_id = profile.booking_theme || "1"
 
     # Check if user is ready for scheduling using cached integration status when available
     is_ready = Map.get(integration_status, :has_calendar, false)
@@ -58,9 +57,6 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
       |> assign(:profile, profile)
       |> assign(:current_user, assigns.current_user)
       |> assign(:base_url, base_url)
-      |> assign(:username, username)
-      |> assign(:theme_id, theme_id)
-      |> assign(:booking_url, UrlBuilder.booking_url(username))
       |> assign(:is_ready, is_ready)
       |> assign(:error_reason, error_reason)
       |> assign(:allowed_domains, allowed_domains)
@@ -77,6 +73,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
       # outliving the component is the failure we want — an hour-old preview
       # says so plainly rather than silently booking for real.
       |> assign_new(:preview_token, fn -> PreviewToken.sign(assigns.current_user.id) end)
+      |> assign(:pages, BookingPages.list(profile.id))
+      |> assign_new(:selected_page_id, fn -> nil end)
+      |> assign_page_target()
 
     {:ok, socket}
   end
@@ -94,6 +93,22 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
         </p>
 
         <div class="space-y-6">
+          <.form
+            :if={@pages != []}
+            for={to_form(%{}, as: :embed_page)}
+            id="embed-page-picker"
+            phx-change="select_page"
+            phx-target={@myself}
+          >
+            <.input
+              type="select"
+              name="page"
+              label={dgettext("dashboard_embed", "Booking page")}
+              value={if(@selected_page_id, do: to_string(@selected_page_id), else: "profile")}
+              options={page_options(@profile, @pages)}
+            />
+          </.form>
+
           <.tab_bar
             id="embed-settings-tabs"
             active_tab={@active_tab}
@@ -294,6 +309,45 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
       ["none"],
       dgettext("dashboard_embed", "Embedding is now disabled")
     )
+  end
+
+  def handle_event("select_page", %{"page" => "profile"}, socket),
+    do: {:noreply, socket |> assign(:selected_page_id, nil) |> assign_page_target()}
+
+  def handle_event("select_page", %{"page" => id}, socket) when is_binary(id) do
+    case Enum.find_value(socket.assigns.pages, &(to_string(&1.id) == id && &1.id)) do
+      nil -> reject_invalid_event("select_page", socket)
+      page_id -> {:noreply, socket |> assign(:selected_page_id, page_id) |> assign_page_target()}
+    end
+  end
+
+  def handle_event("select_page", _params, socket),
+    do: reject_invalid_event("select_page", socket)
+
+  # The snippet, link and preview follow the chosen page: its address in place
+  # of the username, and its theme. Allowed embed domains stay the profile's.
+  defp assign_page_target(socket) do
+    %{profile: profile, pages: pages, selected_page_id: page_id} = socket.assigns
+
+    shown =
+      case Enum.find(pages, &(&1.id == page_id)) do
+        nil -> profile
+        page -> BookingPages.apply_to_profile(profile, page)
+      end
+
+    address = BookingPages.public_address(shown)
+
+    socket
+    |> assign(:username, address)
+    |> assign(:theme_id, shown.booking_theme || "1")
+    |> assign(:booking_url, UrlBuilder.booking_url(address))
+  end
+
+  defp page_options(profile, pages) do
+    [
+      {"/" <> (profile.username || ""), "profile"}
+      | Enum.map(pages, &{BookingPages.name_and_address(&1), to_string(&1.id)})
+    ]
   end
 
   defp reject_invalid_event(event_name, socket) do

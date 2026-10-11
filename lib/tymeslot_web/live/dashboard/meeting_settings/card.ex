@@ -28,6 +28,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
     default: true,
     doc: "whether the host may take group bookings; a group type without it is paused"
 
+  attr :unlisted, :boolean,
+    default: nil,
+    doc: "on no page at all; nil falls back to the type's own `is_private`"
+
+  attr :page_addresses, :list, default: [], doc: "the addresses the type is listed on"
+
   @spec meeting_type_card(map()) :: Phoenix.LiveView.Rendered.t()
   def meeting_type_card(assigns) do
     ~H"""
@@ -52,12 +58,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               {@type.name}
             </h2>
             <Feedback.pill
-              :if={@type.is_private}
+              :if={if(is_nil(@unlisted), do: @type.is_private, else: @unlisted)}
               icon="hero-eye-slash-mini"
               title={
                 dgettext(
                   "dashboard_meeting_types",
-                  "Hidden from your public booking page; reachable only by its direct link"
+                  "On no booking page; reachable only by its direct link"
                 )
               }
             >
@@ -70,6 +76,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               data-testid="group-type-paused"
             >
               {dgettext("dashboard_meeting_types", "Paused")}
+            </Feedback.pill>
+            <Feedback.pill :for={address <- @page_addresses} size={:sm} icon="hero-globe-alt-mini">
+              {"/" <> address}
             </Feedback.pill>
           </div>
           <p

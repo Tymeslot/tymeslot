@@ -128,7 +128,8 @@ defmodule Tymeslot.Bookings.Policy do
           required(:utm_term) => String.t() | nil,
           required(:referrer_host) => String.t() | nil,
           required(:tracking_params) => map(),
-          required(:visitor_hash) => String.t() | nil
+          required(:visitor_hash) => String.t() | nil,
+          required(:booking_page_id) => integer() | nil
         }
 
   @typedoc "A meeting record with the fields required by the policy checks."
@@ -281,8 +282,9 @@ defmodule Tymeslot.Bookings.Policy do
 
   # Where the booking came from: the UTM parameters and referrer captured on
   # the booking page, plus the cookieless key joining this meeting to that
-  # page view in analytics. Grouped so the attributes map states the booking
-  # itself rather than burying it under eight tracking keys.
+  # page view in analytics, and the booking page it came through. Grouped so
+  # the attributes map states the booking itself rather than burying it under
+  # nine tracking keys.
   defp source_attribution(%BuildParams{} = params) do
     %{
       utm_source: params.utm_source,
@@ -292,7 +294,8 @@ defmodule Tymeslot.Bookings.Policy do
       utm_term: params.utm_term,
       referrer_host: params.referrer_host,
       tracking_params: params.tracking_params,
-      visitor_hash: params.visitor_hash
+      visitor_hash: params.visitor_hash,
+      booking_page_id: params.booking_page_id
     }
   end
 

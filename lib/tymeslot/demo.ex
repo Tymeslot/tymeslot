@@ -30,9 +30,9 @@ defmodule Tymeslot.Demo do
   @spec resolve_organizer_context(String.t()) :: {:ok, map()} | {:error, :profile_not_found}
   def resolve_organizer_context(username), do: provider().resolve_organizer_context(username)
 
-  @spec get_theme_customization(integer(), String.t()) :: any()
-  def get_theme_customization(profile_id, theme_id),
-    do: provider().get_theme_customization(profile_id, theme_id)
+  @spec get_theme_customization(integer() | {integer(), integer()}, String.t()) :: any()
+  def get_theme_customization(scope, theme_id),
+    do: provider().get_theme_customization(scope, theme_id)
 
   @spec booking_window_days(map()) :: non_neg_integer()
   def booking_window_days(profile), do: provider().booking_window_days(profile)

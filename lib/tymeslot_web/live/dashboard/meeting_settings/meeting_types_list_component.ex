@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Dashboard.MeetingSettings.Card
+  alias TymeslotWeb.Dashboard.MeetingSettings.PageVisibility
 
   attr :meeting_types, :list, required: true
   attr :show_add_form, :boolean, default: false
@@ -14,6 +15,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
   attr :currency, :string, default: "eur"
   attr :venues, :list, default: []
   attr :group_bookings_allowed, :boolean, default: true
+  attr :username, :string, default: nil
+  attr :booking_pages, :list, default: []
+  attr :page_memberships, :map, default: %{}
   attr :parent_myself, :any, required: true
 
   @spec meeting_types_section(map()) :: Phoenix.LiveView.Rendered.t()
@@ -50,6 +54,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
                 currency={@currency}
                 venues={@venues}
                 group_bookings_allowed={@group_bookings_allowed}
+                unlisted={PageVisibility.unlisted?(@page_memberships, type)}
+                page_addresses={
+                  PageVisibility.addresses(@username, @booking_pages, @page_memberships, type)
+                }
                 myself={@parent_myself}
               />
             </div>

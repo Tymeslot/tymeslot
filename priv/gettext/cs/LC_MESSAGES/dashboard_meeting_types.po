@@ -27,11 +27,6 @@ msgstr "Změnit rezervační odkaz"
 msgid "Changing this link will stop any links you have already shared for this meeting type from working."
 msgstr "Po změně tohoto odkazu přestanou fungovat všechny odkazy, které jste pro tento typ schůzky již sdíleli."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
-#, elixir-autogen, elixir-format
-msgid "Hidden from your public booking page; reachable only by its direct link"
-msgstr "Skryté na veřejné rezervační stránce; dostupné jen přes přímý odkaz"
-
 #: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Link address"
@@ -338,3 +333,8 @@ msgstr "Smazat typ schůzky"
 #, elixir-autogen, elixir-format
 msgid "Edit %{name}"
 msgstr "Upravit %{name}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "On no booking page; reachable only by its direct link"
+msgstr "Na žádné rezervační stránce; přístup jen přes přímý odkaz"

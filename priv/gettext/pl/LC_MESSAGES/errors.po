@@ -433,3 +433,8 @@ msgstr "rezerwacje grupowe nie mogą wymagać płatności"
 #, elixir-autogen, elixir-format
 msgid "You already have a meeting type with this name"
 msgstr "Masz już typ spotkania o tej nazwie"
+
+#: lib/tymeslot/booking_pages/booking_page_schema.ex
+#, elixir-autogen, elixir-format
+msgid "Use 3 to 30 lowercase letters, numbers, hyphens or underscores, starting with a letter or number"
+msgstr "Użyj od 3 do 30 małych liter, cyfr, łączników lub podkreśleń, zaczynając od litery lub cyfry"

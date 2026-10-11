@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   Shared path building logic for theme scheduling LiveViews.
   """
 
+  alias Tymeslot.BookingPages
   alias Tymeslot.MeetingTypes
 
   @doc """
@@ -148,7 +149,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
 
   @doc """
   Returns the organizer's scheduling page path for restarting a booking,
-  e.g. "/username".
+  e.g. "/username", or the booking page's address for an organiser resolved through one.
 
   Invoked from the reschedule flow's "Choose New Time" CTA. When a
   `:meeting_uid` is present in the assigns it is carried forward as the
@@ -161,9 +162,9 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   """
   @spec organizer_scheduling_path(map()) :: String.t()
   def organizer_scheduling_path(assigns) do
-    case assigns[:organizer_profile] do
-      %{username: username} when is_binary(username) and username != "" ->
-        maybe_append_reschedule_uid("/#{username}", assigns[:meeting_uid])
+    case BookingPages.public_address(assigns[:organizer_profile]) do
+      address when is_binary(address) and address != "" ->
+        maybe_append_reschedule_uid("/#{address}", assigns[:meeting_uid])
 
       _other ->
         "/"

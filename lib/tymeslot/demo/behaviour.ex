@@ -64,7 +64,10 @@ defmodule Tymeslot.Demo.Behaviour do
   @doc """
   Gets theme customization for a profile and theme.
   """
-  @callback get_theme_customization(profile_id :: integer(), theme_id :: String.t()) :: any()
+  @callback get_theme_customization(
+              scope :: integer() | {integer(), integer()},
+              theme_id :: String.t()
+            ) :: any()
 
   @doc """
   Lists active meeting types for a user.

@@ -5,6 +5,7 @@ defmodule Tymeslot.Bookings.Create do
   """
 
   alias Tymeslot.Availability.Offer
+  alias Tymeslot.BookingPages
 
   alias Tymeslot.Bookings.{
     Activation,
@@ -185,7 +186,8 @@ defmodule Tymeslot.Bookings.Create do
         utm_term: Map.get(meeting_params, :utm_term),
         referrer_host: Map.get(meeting_params, :referrer_host),
         tracking_params: Map.get(meeting_params, :tracking_params, %{}),
-        visitor_hash: Map.get(meeting_params, :visitor_hash)
+        visitor_hash: Map.get(meeting_params, :visitor_hash),
+        booking_page_id: BookingPages.existing_id(Map.get(meeting_params, :booking_page_id))
       }
 
       # Read once, here, so the booking-limit pre-check and the calendar

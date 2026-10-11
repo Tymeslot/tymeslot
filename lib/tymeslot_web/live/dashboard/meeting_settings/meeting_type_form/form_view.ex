@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
+  alias TymeslotWeb.Dashboard.MeetingSettings.PageVisibility
 
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{
     ApprovalSection,
@@ -356,7 +357,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
           <.limits_section booking_limits={@booking_limits} myself={@myself} />
 
-          <.visibility_section type={@type} parent={@parent_myself} />
+          <.visibility_section
+            type={@type}
+            parent={@parent_myself}
+            pages={PageVisibility.rows(@username, @booking_pages, @page_memberships, @type)}
+          />
         </.card>
 
         <%!-- Questions --%>

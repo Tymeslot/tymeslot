@@ -10,8 +10,9 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   Returns `{:ok, %{meeting:, payment:, profile:}}` only when:
 
     * the meeting exists,
-    * the host's profile booking_theme matches the URL slug (host can't
-      be tricked into sending attendees down the wrong theme),
+    * the host's profile booking_theme (the booking page's, for a meeting
+      booked through one) matches the URL slug (host can't be tricked into
+      sending attendees down the wrong theme),
     * a `booking_payment` row for the meeting exists,
     * the `session_id` query param matches the stored
       `stripe_checkout_session_id` (prevents cross-meeting probing).
@@ -22,6 +23,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Phoenix.PubSub
+  alias Tymeslot.BookingPages
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -73,9 +75,11 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
 
   defp rebook_path(%{username: username}, meeting)
        when is_binary(username) and username != "" do
+    address = BookingPages.address_for_meeting(meeting, username)
+
     case meeting_type_slug(meeting) do
-      nil -> "/" <> username
-      slug -> "/" <> username <> "/" <> slug
+      nil -> "/" <> address
+      slug -> "/" <> address <> "/" <> slug
     end
   end
 
@@ -219,7 +223,8 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   defp get_profile(meeting) do
     case Profiles.get_profile(meeting.organizer_user_id) do
       nil -> {:error, :profile_not_found}
-      profile -> {:ok, profile}
+      # A booking made through a booking page returns in that page's theme.
+      profile -> {:ok, BookingPages.for_meeting(profile, meeting)}
     end
   end
 

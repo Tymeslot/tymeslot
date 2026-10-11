@@ -4,6 +4,7 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   """
 
   import Ecto.Query
+  alias Tymeslot.BookingPages.BookingPageQueries
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.Token
@@ -145,6 +146,9 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   the insert to discover, one round trip after the live check could have said
   so. Only rows written outside the changeset can be non-lowercase, which is
   exactly the case the functional index exists to catch.
+
+  Booking page addresses share the namespace (`Tymeslot.BookingPages`), so an
+  address any page holds is not available either.
   """
   @spec username_available?(String.t()) :: boolean()
   def username_available?(username) when is_binary(username) do
@@ -152,7 +156,7 @@ defmodule Tymeslot.Profiles.ProfileQueries do
 
     not Repo.exists?(
       from(p in ProfileSchema, where: fragment("lower(?)", p.username) == ^normalised)
-    )
+    ) and not BookingPageQueries.slug_taken?(normalised)
   end
 
   @doc """
