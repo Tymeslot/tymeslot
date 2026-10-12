@@ -1,0 +1,117 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/group_event_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Add a saved location or connect a video service to hold an event."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
+#, elixir-autogen, elixir-format
+msgid "Allow between %{min} and %{max} participants."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
+#, elixir-autogen, elixir-format
+msgid "An event lasts at least 5 minutes and at most 24 hours."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/group_event_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a location"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
+#, elixir-autogen, elixir-format
+msgid "Choose where the event takes place."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/group_event_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Creates a one-off event with its own booking link. People sign up until registration closes, and it is on your calendar at once."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/group_event_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Description (optional)"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
+#, elixir-autogen, elixir-format
+msgid "Event created. Its booking link: %{link}"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
+#, elixir-autogen, elixir-format
+msgid "Give the event a title."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Group event"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
+#, elixir-autogen, elixir-format
+msgid "Group events are not included in your plan."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/group_event_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Location"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "New Group Event"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/group_event_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Participant limit"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/group_event_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closes (optional, %{timezone})"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
+#, elixir-autogen, elixir-format
+msgid "Registration has to close in the future, and no later than the event starts."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/group_event_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Saved locations"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
+#, elixir-autogen, elixir-format
+msgid "The event could not be created. Please try again."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
+#, elixir-autogen, elixir-format
+msgid "The event has to start in the future."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/group_event_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Video call"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a booking at that time."
+msgstr ""

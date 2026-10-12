@@ -386,6 +386,7 @@ msgid "Input too long"
 msgstr "Le champ est trop long"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid calendar selected"
@@ -1301,6 +1302,7 @@ msgid "No more guests can be added to this meeting."
 msgstr "Vous ne pouvez plus ajouter d’invités à cette réunion."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
 #, elixir-autogen, elixir-format
 msgid "Too many new meetings. Please wait a moment."
 msgstr "Trop de nouvelles réunions. Veuillez patienter un instant."

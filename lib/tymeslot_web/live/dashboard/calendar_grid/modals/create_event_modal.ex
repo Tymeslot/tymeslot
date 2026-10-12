@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.GroupEventFields
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.VideoPicker
@@ -26,12 +27,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   attr :user_timezone, :string, required: true
   attr :myself, :any, required: true
   attr :video_integrations, :list, default: []
+  attr :venues, :list, default: []
+  attr :group_allowed, :boolean, default: false
 
   @spec create_event_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def create_event_modal(assigns) do
     assigns =
       assigns
       |> assign(:meeting_mode, assigns.creating_event[:mode] == :meeting)
+      |> assign(:group_mode, assigns.creating_event[:mode] == :group_event)
+      |> assign(:event_mode, assigns.creating_event[:mode] in [nil, :event])
       # A subscribed calendar is no more a target than no calendar at all, so
       # the mode toggle and the picker follow what can be written to, not what
       # is connected.
@@ -45,28 +50,43 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       size={:medium}
     >
       <:header>
-        {if @meeting_mode,
-          do: dgettext("dashboard_calendar_events", "New Meeting"),
-          else: dgettext("dashboard_calendar_events", "New Event")}
+        <%= cond do %>
+          <% @meeting_mode -> %>
+            {dgettext("dashboard_calendar_events", "New Meeting")}
+          <% @group_mode -> %>
+            {dgettext("dashboard_group_events", "New Group Event")}
+          <% true -> %>
+            {dgettext("dashboard_calendar_events", "New Event")}
+        <% end %>
       </:header>
 
       <%!-- Mode toggle: a bare provider event vs an ad-hoc Tymeslot meeting.
             Hidden when no calendar is connected — the form is then fixed to
             meeting mode, the only kind that can exist without one. --%>
-      <div :if={@targets != []} class="mb-4">
+      <div :if={@targets != [] or @group_allowed} class="mb-4">
         <.segmented_control
           id="create-mode"
-          value={if @meeting_mode, do: "meeting", else: "event"}
+          value={Atom.to_string(@creating_event[:mode] || :event)}
           on_change="set_create_mode"
           param="mode"
           target={@myself}
           aria_label={dgettext("dashboard_calendar_events", "What to create")}
         >
-          <:option value="event" label={dgettext("dashboard_calendar_events", "Event")} />
+          <:option
+            :if={@targets != []}
+            value="event"
+            label={dgettext("dashboard_calendar_events", "Event")}
+          />
           <:option
             value="meeting"
             label={dgettext("dashboard_calendar_events", "Meeting with a guest")}
             testid="create-mode-meeting"
+          />
+          <:option
+            :if={@group_allowed}
+            value="group_event"
+            label={dgettext("dashboard_group_events", "Group event")}
+            testid="create-mode-group-event"
           />
         </.segmented_control>
         <p :if={@meeting_mode} class="mt-1.5 text-token-xs text-tymeslot-400">
@@ -250,7 +270,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
         </div>
       </div>
 
-      <div :if={!@meeting_mode} class="mb-3 flex items-center justify-between">
+      <div :if={@event_mode} class="mb-3 flex items-center justify-between">
         <p class="text-token-sm font-medium text-tymeslot-700">
           {dgettext("dashboard_calendar_events", "All day")}
         </p>
@@ -312,6 +332,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
         </form>
       </div>
 
+      <GroupEventFields.group_event_fields
+        :if={@group_mode}
+        values={@creating_event[:group_event] || %{}}
+        venues={@venues}
+        video_integrations={@video_integrations}
+        user_timezone={@user_timezone}
+        myself={@myself}
+      />
+
       <CalendarPicker.calendar_picker
         :if={@targets != []}
         integrations={@integrations}
@@ -325,7 +354,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       <%!-- Video: which provider backs the event's join link. Offered for a
       plain event as much as a meeting, and before attendees are added, so an
       event can be created with a room in one step. --%>
-      <div :if={@video_integrations != []} class="border-t border-tymeslot-200 pt-3 mt-3">
+      <div
+        :if={@video_integrations != [] and not @group_mode}
+        class="border-t border-tymeslot-200 pt-3 mt-3"
+      >
         <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">
           {dgettext("dashboard_calendar_events", "Video")}
         </p>
@@ -338,7 +370,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       </div>
 
       <%!-- Repeat --%>
-      <div :if={!@meeting_mode} class="border-t border-tymeslot-200 pt-3 mt-3">
+      <div :if={@event_mode} class="border-t border-tymeslot-200 pt-3 mt-3">
         <RecurrenceEditor.recurrence_editor
           recurrence_rule={@creating_event[:recurrence_rule]}
           timezone={@user_timezone}
@@ -348,7 +380,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       </div>
 
       <%!-- Reminders --%>
-      <div :if={!@meeting_mode} class="border-t border-tymeslot-200 pt-3 mt-3">
+      <div :if={@event_mode} class="border-t border-tymeslot-200 pt-3 mt-3">
         <RemindersEditor.reminders_editor
           reminders={@creating_event[:reminders] || []}
           myself={@myself}
@@ -358,7 +390,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       </div>
 
       <%!-- Attendee section --%>
-      <div :if={!@meeting_mode} class="space-y-3 border-t border-tymeslot-200 pt-3 mt-3">
+      <div :if={@event_mode} class="space-y-3 border-t border-tymeslot-200 pt-3 mt-3">
         <p class="text-token-xs font-medium text-tymeslot-400">
           {dgettext("dashboard_calendar_events", "Invite attendees (optional)")}
         </p>

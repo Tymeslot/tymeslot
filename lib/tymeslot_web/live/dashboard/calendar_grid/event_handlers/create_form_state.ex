@@ -126,7 +126,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
       attendee_input: "",
       reminders: [],
       recurrence_rule: nil,
-      video_integration_id: nil
+      video_integration_id: nil,
+      # A one-off group event's own fields, as its form posts them.
+      group_event: %{"max_participants" => "10", "location" => "", "closes_at" => ""}
     }
 
     Map.merge(defaults, overrides)
@@ -138,11 +140,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
     creating = socket.assigns.creating_event
 
     cond do
-      is_nil(creating) or mode not in ~w(event meeting) ->
+      is_nil(creating) or mode not in ~w(event meeting group_event) ->
         {:noreply, socket}
 
       # Event mode needs a calendar that can be written to.
       mode == "event" and not writable?(socket) ->
+        {:noreply, socket}
+
+      # A group event is a group meeting type, which may sit behind a plan.
+      mode == "group_event" and not Map.get(socket.assigns, :group_bookings_allowed, false) ->
         {:noreply, socket}
 
       true ->
@@ -151,6 +157,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
             # Meetings are always timed; clear a stray all-day toggle so the
             # time inputs reappear.
             "meeting" -> creating |> Map.put(:mode, :meeting) |> Map.put(:all_day, false)
+            "group_event" -> creating |> Map.put(:mode, :group_event) |> Map.put(:all_day, false)
             "event" -> Map.put(creating, :mode, :event)
           end
 
@@ -307,6 +314,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
         :ok
     end
   end
+
+  @doc """
+  Records the group-event fields as their form posts them. They are parsed
+  and checked on save (`CreateExecution`), where the event is created.
+  """
+  @spec handle_update_create_group_event(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_update_create_group_event(%{"group_event" => params}, socket) when is_map(params) do
+    case socket.assigns.creating_event do
+      %{group_event: current} ->
+        fields = Map.take(params, ~w(max_participants location closes_at description))
+        put_field(socket, :group_event, Map.merge(current, fields))
+
+      _not_creating ->
+        {:noreply, socket}
+    end
+  end
+
+  def handle_update_create_group_event(_params, socket), do: {:noreply, socket}
 
   defp put_field(socket, key, value) do
     case socket.assigns.creating_event do

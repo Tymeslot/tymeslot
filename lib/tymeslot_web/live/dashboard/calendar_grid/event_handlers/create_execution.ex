@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.GroupEventCreation
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGridComponent
 
@@ -25,6 +26,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
       handle_save_event_with(creating, socket)
     end
   end
+
+  # Group-event mode creates a one-off event people sign up for; see
+  # `GroupEventCreation`.
+  defp handle_save_event_with(%{mode: :group_event} = creating, socket),
+    do: GroupEventCreation.save(creating, socket)
 
   # Meeting mode books an ad-hoc Tymeslot meeting instead of writing a bare
   # provider event. A calendar integration is optional here: the booking is

@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Security.RateLimiter
+  alias TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.ServiceSettings.ComponentView
   require Logger
@@ -19,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     {:ok,
      socket
      |> assign(:meeting_types, [])
+     |> assign(:events, [])
      |> assign(:show_add_form, false)
      |> assign(:editing_type, nil)
      |> assign(:show_edit_overlay, false)
@@ -65,6 +67,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     socket =
       socket
       |> assign(:meeting_types, data.meeting_types)
+      |> assign(:events, EventsListComponent.rows(data.meeting_types))
       |> refresh_editing_type(data.meeting_types)
       |> assign(:video_integrations, data.video_integrations)
       |> assign(:venues, data.venues)

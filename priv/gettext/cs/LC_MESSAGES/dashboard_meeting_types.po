@@ -87,6 +87,7 @@ msgstr "Vytvořte typy schůzek a nabídněte různé varianty setkání"
 
 #: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr "Smazat"
@@ -98,6 +99,7 @@ msgstr "Smazat typ schůzky"
 
 #: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Edit"
 msgstr "Upravit"
@@ -325,6 +327,7 @@ msgid "Paused"
 msgstr "Pozastaveno"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Delete %{name}"
 msgstr "Smazat %{name}"
@@ -335,6 +338,52 @@ msgid "Delete meeting type"
 msgstr "Smazat typ schůzky"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Edit %{name}"
 msgstr "Upravit %{name}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking link copied!"
+msgstr "Rezervační odkaz byl zkopírován."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled"
+msgstr "Zrušeno"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Copy link"
+msgstr "Kopírovat odkaz"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Events"
+msgstr "Akce"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "One-off events created from Quick Add. Each has its own booking link and ends on its own once it is over."
+msgstr "Jednorázové akce vytvořené přes rychlé přidání. Každá má vlastní rezervační odkaz a sama skončí, jakmile proběhne."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Over"
+msgstr "Proběhlo"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed"
+msgstr "Registrace uzavřena"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Registration open"
+msgstr "Registrace otevřena"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{count}/%{capacity} seats taken"
+msgstr "%{count}/%{capacity} míst obsazeno"

@@ -86,6 +86,7 @@ msgstr "Créez des types de réunion pour proposer différentes options de rende
 
 #: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr "Supprimer"
@@ -97,6 +98,7 @@ msgstr "Supprimer le type de réunion"
 
 #: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Edit"
 msgstr "Modifier"
@@ -322,6 +324,7 @@ msgid "Paused"
 msgstr "En pause"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Delete %{name}"
 msgstr "Supprimer %{name}"
@@ -332,6 +335,52 @@ msgid "Delete meeting type"
 msgstr "Supprimer le type de réunion"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Edit %{name}"
 msgstr "Modifier %{name}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking link copied!"
+msgstr "Lien de réservation copié !"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled"
+msgstr "Annulé"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Copy link"
+msgstr "Copier le lien"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Events"
+msgstr "Événements"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "One-off events created from Quick Add. Each has its own booking link and ends on its own once it is over."
+msgstr "Événements ponctuels créés depuis l'ajout rapide. Chacun a son propre lien de réservation et se termine de lui-même une fois passé."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Over"
+msgstr "Terminé"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed"
+msgstr "Inscriptions closes"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Registration open"
+msgstr "Inscriptions ouvertes"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{count}/%{capacity} seats taken"
+msgstr "%{count}/%{capacity} places prises"

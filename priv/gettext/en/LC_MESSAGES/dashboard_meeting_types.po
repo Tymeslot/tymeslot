@@ -86,6 +86,7 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr ""
@@ -97,6 +98,7 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Edit"
 msgstr ""
@@ -322,6 +324,7 @@ msgid "Paused"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Delete %{name}"
 msgstr ""
@@ -332,6 +335,52 @@ msgid "Delete meeting type"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Edit %{name}"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking link copied!"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Copy link"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Events"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "One-off events created from Quick Add. Each has its own booking link and ends on its own once it is over."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Over"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Registration open"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{count}/%{capacity} seats taken"
 msgstr ""
