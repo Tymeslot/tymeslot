@@ -8,6 +8,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   import Tymeslot.ChangesetValidators.BookingLimits, only: [validate_booking_limits: 2]
 
   alias Tymeslot.CustomFields.FieldDefinition
+  alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.GroupLocationRule
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.MeetingTypeAttachment
@@ -33,6 +34,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           payment_required: boolean(),
           price_cents: integer() | nil,
           max_participants: integer(),
+          fixed_dates: boolean(),
           requires_approval: boolean(),
           approval_window_hours: pos_integer() | nil,
           is_archived: boolean(),
@@ -68,6 +70,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     field(:payment_required, :boolean, default: false)
     field(:price_cents, :integer)
     field(:max_participants, :integer, default: 1)
+    # See `Tymeslot.MeetingTypes.FixedDates`.
+    field(:fixed_dates, :boolean, default: false)
 
     # Bookings on this meeting type are held until the host approves them,
     # rather than confirmed on submission. `approval_window_hours` nil means
@@ -172,6 +176,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :payment_required,
       :price_cents,
       :max_participants,
+      :fixed_dates,
       :requires_approval,
       :approval_window_hours,
       :is_archived,
@@ -201,6 +206,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> validate_reminder_config()
     |> validate_payment_fields(opts)
     |> validate_group_rules()
+    |> FixedDates.validate_changeset()
     |> unique_constraint([:user_id, :name],
       error_key: :name,
       message: dgettext_noop("errors", "You already have a meeting type with this name")

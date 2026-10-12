@@ -66,7 +66,9 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Notifications.Events
   alias UUID
@@ -94,10 +96,9 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
       guest_emails = guest_emails(participant)
 
       with :ok <- ensure_group_type(meeting_type),
-           {:ok, new_times} <-
-             Validation.prepare_new_times(new_params, old_meeting, meeting_type, config),
+           {:ok, new_times} <- new_times(new_params, old_meeting, meeting_type, config),
            :ok <- ensure_time_changes(old_meeting, new_times),
-           :ok <- verify_calendar_free(old_meeting, participant, new_times, config, guest_emails) do
+           :ok <- check_target(old_meeting, participant, new_times, meeting_type, config) do
         move_seat(old_meeting, participant, new_times, meeting_type, guest_emails)
       end
     else
@@ -213,6 +214,50 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     end
   end
 
+  # A fixed-date type's seat moves only onto another of its planned sessions
+  # (`Tymeslot.Meetings.PlannedSessions`), so the new time is not checked
+  # against the schedule: it is only parsed here, keeping the seat's length,
+  # and `check_target/5` decides whether a session is there to take it.
+  defp new_times(params, old_meeting, meeting_type, config) do
+    if FixedDates.enabled?(meeting_type) do
+      with {:ok, {start_time, end_time}} <-
+             Validation.parse_meeting_times(
+               params.date,
+               params.time,
+               old_meeting.duration,
+               params.user_timezone
+             ) do
+        {:ok,
+         %{start_time: start_time, end_time: end_time, duration_minutes: old_meeting.duration}}
+      end
+    else
+      Validation.prepare_new_times(params, old_meeting, meeting_type, config)
+    end
+  end
+
+  # The target of a fixed-date move is one of the type's planned sessions,
+  # open for registration with room for the seat and its guests. The host's
+  # calendar plays no part: the session is already the host's own.
+  defp check_target(old_meeting, participant, new_times, meeting_type, config) do
+    guest_emails = guest_emails(participant)
+
+    if FixedDates.enabled?(meeting_type) do
+      case GroupScheduling.join_target(
+             old_meeting.meeting_type_id,
+             new_times.start_time,
+             1 + length(guest_emails)
+           ) do
+        %{planned: true} = session ->
+          if PlannedSessions.open?(session), do: :ok, else: {:error, :slot_taken}
+
+        _no_open_session ->
+          {:error, :slot_taken}
+      end
+    else
+      verify_calendar_free(old_meeting, participant, new_times, config, guest_emails)
+    end
+  end
+
   # The live target meeting's own snapshotted capacity governs when the move
   # joins an existing slot (`GroupScheduling.join_meeting/3` reads it
   # directly); the type's `max_participants` only seeds the capacity of a
@@ -228,7 +273,8 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
       exclude_from_conflicts: fn ->
         if last_live_seat?(old_meeting, participant), do: old_meeting.uid
       end,
-      on_booked: fn _booking -> vacate_old_seat(old_meeting, participant) end
+      on_booked: fn _booking -> vacate_old_seat(old_meeting, participant) end,
+      join_only: FixedDates.enabled?(meeting_type)
     )
     |> handle_move(old_meeting, participant)
   end
@@ -238,6 +284,10 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   # the old meeting's row lock (`:also_lock`), where nobody can join or leave
   # the old meeting before the move commits, so the old meeting is left out
   # of the conflict check only when `vacate_old_seat/2` does cancel it.
+  # A planned session is never vacated: it stays when its last participant
+  # moves away (`SeatRelease.cancel_if_emptied/1`).
+  defp last_live_seat?(%{planned: true}, _participant), do: false
+
   defp last_live_seat?(old_meeting, participant) do
     ParticipantQueries.count_live_for_meeting(old_meeting.id) == 1 and
       match?({:ok, %{cancelled_at: nil}}, ParticipantQueries.get(participant.id))

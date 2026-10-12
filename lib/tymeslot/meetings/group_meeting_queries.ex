@@ -87,6 +87,21 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   end
 
   @doc """
+  The live sessions a host planned on a fixed-date meeting type
+  (`Tymeslot.Meetings.PlannedSessions`), in start order. With `from`, only
+  those starting at or after it.
+  """
+  @spec list_planned_for_type(integer(), DateTime.t() | nil) :: [Meeting.t()]
+  def list_planned_for_type(meeting_type_id, from \\ nil) when is_integer(meeting_type_id) do
+    Meeting
+    |> MeetingState.where_slot_live()
+    |> where([m], m.planned and m.meeting_type_id == ^meeting_type_id)
+    |> then(fn query -> if from, do: where(query, [m], m.start_time >= ^from), else: query end)
+    |> order_by([m], asc: m.start_time)
+    |> Repo.all()
+  end
+
+  @doc """
   Sets `capacity` on a meeting type's future, live group meetings
   (`capacity > 1`, start time after `now`), returning how many were updated.
 
