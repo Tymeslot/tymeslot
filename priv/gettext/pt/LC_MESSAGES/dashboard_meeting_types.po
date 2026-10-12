@@ -373,7 +373,7 @@ msgstr "Terminado"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Registration closed"
-msgstr "Inscrições fechadas"
+msgstr "Inscrições encerradas"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format

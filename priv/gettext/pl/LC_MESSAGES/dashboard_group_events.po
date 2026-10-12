@@ -39,7 +39,7 @@ msgstr "Wybierz, gdzie odbędzie się wydarzenie."
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/group_event_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Creates a one-off event with its own booking link. People sign up until registration closes, and it is on your calendar at once."
-msgstr "Tworzy jednorazowe wydarzenie z własnym linkiem do rezerwacji. Można się zapisywać do zamknięcia rejestracji, a wydarzenie od razu trafia do kalendarza."
+msgstr "Tworzy jednorazowe wydarzenie z własnym linkiem do rezerwacji. Można się zapisywać do końca zapisów, a wydarzenie od razu trafia do kalendarza."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/group_event_fields.ex
 #, elixir-autogen, elixir-format
@@ -84,12 +84,12 @@ msgstr "Limit uczestników"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/group_event_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Registration closes (optional, %{timezone})"
-msgstr "Zamknięcie rejestracji (opcjonalnie, %{timezone})"
+msgstr "Koniec zapisów (opcjonalnie, %{timezone})"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
 #, elixir-autogen, elixir-format
 msgid "Registration has to close in the future, and no later than the event starts."
-msgstr "Rejestracja musi zamknąć się w przyszłości, najpóźniej w chwili rozpoczęcia wydarzenia."
+msgstr "Koniec zapisów musi przypadać w przyszłości i nie później niż początek wydarzenia."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/group_event_fields.ex
 #, elixir-autogen, elixir-format

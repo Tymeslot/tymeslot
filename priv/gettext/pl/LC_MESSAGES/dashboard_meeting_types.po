@@ -372,12 +372,12 @@ msgstr "Zakończone"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Registration closed"
-msgstr "Rejestracja zamknięta"
+msgstr "Zapisy zamknięte"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Registration open"
-msgstr "Rejestracja otwarta"
+msgstr "Zapisy otwarte"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
