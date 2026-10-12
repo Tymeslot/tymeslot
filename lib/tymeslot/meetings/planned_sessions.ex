@@ -108,6 +108,40 @@ defmodule Tymeslot.Meetings.PlannedSessions do
   end
 
   @doc """
+  Moves when registration for `session` closes: to `closes_at`, or to its
+  start when `nil`.
+
+  Any time up to the start will do, so the host can extend registration,
+  reopen it, or close it at once with a time already past. A session that
+  has started keeps its close. The booking page follows at once.
+  """
+  @spec set_registration_close(Meeting.t(), DateTime.t() | nil, DateTime.t()) ::
+          {:ok, Meeting.t()}
+          | {:error, :session_started | :invalid_registration_close | Ecto.Changeset.t()}
+  def set_registration_close(%Meeting{planned: true} = session, closes_at, now \\ Clock.utc_now()) do
+    closes_at = closes_at && DateTime.truncate(closes_at, :second)
+
+    cond do
+      DateTime.compare(session.start_time, now) != :gt ->
+        {:error, :session_started}
+
+      closes_at && DateTime.compare(closes_at, session.start_time) == :gt ->
+        {:error, :invalid_registration_close}
+
+      true ->
+        with {:ok, updated} <- GroupMeetingQueries.set_registration_closes_at(session, closes_at) do
+          SeatEffects.broadcast_and_invalidate(updated)
+          {:ok, updated}
+        end
+    end
+  end
+
+  @doc "The type's next session people can still sign up for, or `nil`."
+  @spec next_open(map(), DateTime.t()) :: Meeting.t() | nil
+  def next_open(meeting_type, now \\ Clock.utc_now()),
+    do: meeting_type |> upcoming(now) |> Enum.find(&open?(&1, now))
+
+  @doc """
   Cancels a planned session the host owns, through the host's own cancel
   path, which tells everyone booked on it.
   """

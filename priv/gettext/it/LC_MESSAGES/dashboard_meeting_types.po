@@ -335,3 +335,18 @@ msgstr "Elimina tipo di riunione"
 #, elixir-autogen, elixir-format
 msgid "Edit %{name}"
 msgstr "Modifica %{name}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Next date: %{date}"
+msgstr "Prossima data: %{date}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "No open dates"
+msgstr "Nessuna data aperta"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Not on your booking page until one of its dates is open for registration. Plan a date, or move a registration close."
+msgstr "Non compare sulla tua pagina di prenotazione finché nessuna delle sue date è aperta alle iscrizioni. Pianifica una data o sposta una chiusura delle iscrizioni."

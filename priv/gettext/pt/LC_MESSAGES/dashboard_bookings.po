@@ -714,3 +714,8 @@ msgstr "Saiu deste horário"
 #, elixir-autogen, elixir-format
 msgid "Cancel meeting"
 msgstr "Cancelar reunião"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed"
+msgstr "Inscrições encerradas"

@@ -714,3 +714,8 @@ msgstr "A quitté ce créneau"
 #, elixir-autogen, elixir-format
 msgid "Cancel meeting"
 msgstr "Annuler la réunion"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed"
+msgstr "Inscriptions closes"

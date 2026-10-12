@@ -720,3 +720,8 @@ msgstr "Opuścił(a) ten termin"
 #, elixir-autogen, elixir-format
 msgid "Cancel meeting"
 msgstr "Odwołaj spotkanie"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed"
+msgstr "Zapisy zamknięte"

@@ -11,9 +11,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
 
   Below it the planned dates, each with its seats and when registration
   closes, and a row to plan another: a date, a time and an optional close
-  of registration, all in the host's own time zone. Cancelling a date with
-  people booked on it asks first, and tells them through the same cancel
-  path a group meeting always uses. Dates can only be planned on a saved
+  of registration, all in the host's own time zone. The close of an
+  upcoming date can be moved in place at any time, up to its start.
+  Cancelling a date with people booked on it asks first, and tells them
+  through the same cancel path a group meeting always uses. Dates can only be planned on a saved
   type, since each one is a meeting of it.
 
   Events go to the parent `MeetingTypeForm` (`@myself`), which hands them to
@@ -32,6 +33,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
   attr :new_session, :map, default: %{}
   attr :session_error, :string, default: nil
   attr :confirming_session_id, :string, default: nil
+
+  attr :editing_close, :map,
+    default: nil,
+    doc: "the registration close being edited: `%{id, value, error}`"
+
   attr :form_id, :string, required: true
   attr :myself, :any, required: true
 
@@ -101,7 +107,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
                 capacity: session.capacity
               )}
             </span>
-            <span :if={session.registration_closes_at} class="text-tymeslot-600">
+            <span
+              :if={session.registration_closes_at && session.open?}
+              class="text-tymeslot-600"
+            >
               {dgettext("dashboard_meeting_form", "registration until %{datetime}",
                 datetime:
                   LocalizationHelpers.format_meeting_datetime(
@@ -110,9 +119,54 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
                   )
               )}
             </span>
+            <span
+              :if={not session.past? and not session.open?}
+              class="font-medium text-amber-700"
+              data-testid="session-registration-closed"
+            >
+              {dgettext("dashboard_meeting_form", "registration closed")}
+            </span>
 
             <%= cond do %>
               <% session.past? -> %>
+              <% @editing_close && @editing_close.id == session.id -> %>
+                <div class="flex w-full flex-wrap items-end gap-2" data-testid="edit-session-close">
+                  <.input
+                    type="datetime-local"
+                    id={"session-close-#{session.id}"}
+                    name="session_close[closes_at]"
+                    label={dgettext("dashboard_meeting_form", "Registration closes")}
+                    value={@editing_close.value}
+                    max={local_input(session.start_time, @timezone)}
+                    phx-change="update_session_close"
+                    phx-target={@myself}
+                  />
+                  <.action_button
+                    size={:sm}
+                    phx-click="save_session_close"
+                    phx-target={@myself}
+                    data-testid="save-session-close"
+                  >
+                    {dgettext("dashboard_meeting_form", "Save")}
+                  </.action_button>
+                  <.action_button
+                    size={:sm}
+                    variant={:ghost}
+                    phx-click="discard_session_close"
+                    phx-target={@myself}
+                  >
+                    {dgettext("dashboard_meeting_form", "Cancel")}
+                  </.action_button>
+                  <p class="w-full text-token-xs text-tymeslot-500">
+                    {dgettext(
+                      "dashboard_meeting_form",
+                      "Leave it empty to take sign-ups until the start. A time already past closes registration now."
+                    )}
+                  </p>
+                  <p :if={@editing_close.error} class="form-error w-full" role="alert">
+                    {@editing_close.error}
+                  </p>
+                </div>
               <% @confirming_session_id == session.id -> %>
                 <span class="w-full text-token-sm text-red-700" role="alert">
                   {dngettext(
@@ -144,7 +198,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
               <% true -> %>
                 <button
                   type="button"
-                  class="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-token-full border border-tymeslot-200 bg-white text-tymeslot-500 hover:text-red-600 hover:border-red-300"
+                  class="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-token-full border border-tymeslot-200 bg-white text-tymeslot-500 hover:text-turquoise-700 hover:border-turquoise-300"
+                  phx-click="edit_session_close"
+                  phx-value-id={session.id}
+                  phx-target={@myself}
+                  aria-label={dgettext("dashboard_meeting_form", "Change when registration closes")}
+                  title={dgettext("dashboard_meeting_form", "Change when registration closes")}
+                  data-testid="edit-session-close-button"
+                >
+                  <.icon name="hero-pencil-square" class="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-token-full border border-tymeslot-200 bg-white text-tymeslot-500 hover:text-red-600 hover:border-red-300"
                   phx-click="remove_session"
                   phx-value-id={session.id}
                   phx-target={@myself}
@@ -202,4 +268,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
     </section>
     """
   end
+
+  # A `datetime-local` value in the host's time zone.
+  defp local_input(datetime, timezone),
+    do: datetime |> DateTime.shift_zone!(timezone) |> Calendar.strftime("%Y-%m-%dT%H:%M")
 end

@@ -340,6 +340,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             new_session={@new_session}
             session_error={@session_error}
             confirming_session_id={@confirming_session_id}
+            editing_close={@editing_close}
             form_id={@id}
             myself={@myself}
           />
