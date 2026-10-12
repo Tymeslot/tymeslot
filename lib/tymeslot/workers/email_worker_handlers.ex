@@ -11,6 +11,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   alias Tymeslot.Workers.EmailWorkerHandlers.GuestEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails
+  alias Tymeslot.Workers.EmailWorkerHandlers.PlannedSessionEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.PollEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.SeatEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.SeatJobs
@@ -54,6 +55,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
       {BookingApprovalEmails, :handle_reschedule_request_expired},
     "send_poll_deadline_reminders" => {PollEmails, :handle_deadline_reminders, :with_job_id},
     "send_poll_host_nudge" => {PollEmails, :handle_host_nudge, :with_job_id},
+    "send_registration_closed" =>
+      {PlannedSessionEmails, :handle_registration_closed, :with_job_id},
     "send_email_change_confirmations" => {AuthEmails, :handle_email_change_confirmations},
     "send_email_verification" => {AuthEmails, :handle_email_verification},
     "send_password_reset" => {AuthEmails, :handle_password_reset},
@@ -84,6 +87,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     GuestEmails,
     IntegrationEmails,
     MeetingEmails,
+    PlannedSessionEmails,
     PollEmails,
     SeatJobs
   ]

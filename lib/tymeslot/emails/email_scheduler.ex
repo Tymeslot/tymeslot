@@ -134,6 +134,7 @@ defmodule Tymeslot.Emails.EmailScheduler do
     "send_signup_attempt_notice" => ["user_id"],
     "send_social_signup_confirmation" => ["email", "provider", "confirm_url_encrypted"],
     "send_poll_deadline_reminders" => ["poll_id"],
+    "send_registration_closed" => ["meeting_id"],
     "send_poll_host_nudge" => ["poll_id", "variant"],
     "send_email_change_verification" => [
       "user_id",

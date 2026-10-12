@@ -431,6 +431,7 @@ msgstr "Těším se na setkání s vámi."
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #: lib/tymeslot/emails/templates/event_update_notification.ex
 #: lib/tymeslot/emails/templates/external_booking_change.ex
+#: lib/tymeslot/emails/templates/registration_closed.ex
 #: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "MEETING DETAILS:"
@@ -1116,6 +1117,7 @@ msgstr "%{name} zrušil(a) své místo. Schůzka pro ostatní proběhne podle pl
 msgid "%{name} moved their spot from %{from} to %{to}."
 msgstr "%{name} přesunul(a) své místo z %{from} na %{to}."
 
+#: lib/tymeslot/emails/templates/registration_closed.ex
 #: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "%{taken} of %{count} spot taken"
@@ -1140,6 +1142,7 @@ msgid "A spot was booked"
 msgstr "Bylo rezervováno místo"
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/registration_closed.ex
 #: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "Open in dashboard"
@@ -1274,3 +1277,81 @@ msgstr "Skupinová schůzka „%{title}“ byla přesunuta ve vašem externím k
 #, elixir-autogen, elixir-format
 msgid "This group meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above, and its participants still expect it. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
 msgstr "Tato skupinová schůzka byla <strong>přesunuta ve vašem externím kalendáři</strong>. Služba Tymeslot výše stále zobrazuje původní čas a účastníci s ním stále počítají. Chcete-li zachovat původní čas, vraťte událost ve svém kalendáři zpět. Chcete-li ho změnit, pošlete účastníkům z nástěnky žádost o přesunutí, nebo tam schůzku zrušte, aby byl každý účastník informován."
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} person signed up for %{event}. Here is who is coming."
+msgid_plural "%{count} people signed up for %{event}. Here is who is coming."
+msgstr[0] "Na %{event} je přihlášena %{count} osoba. Tady je, kdo přijde."
+msgstr[1] "Na %{event} jsou přihlášeny %{count} osoby. Tady je, kdo přijde."
+msgstr[2] "Na %{event} je přihlášeno %{count} osob. Tady je, kdo přijde."
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Company"
+msgstr "Společnost"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Email"
+msgstr "E-mail"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Guests"
+msgstr "Hosté"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Guests: %{guests}"
+msgstr "Hosté: %{guests}"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Message"
+msgstr "Zpráva"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Message: %{message}"
+msgstr "Zpráva: %{message}"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr "Jméno"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Nobody signed up for %{event}. If it is not going ahead, you can cancel it in your dashboard."
+msgstr "Na %{event} se nikdo nepřihlásil. Pokud se akce nekoná, můžete ji zrušit v přehledu."
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Participants"
+msgstr "Účastníci"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Phone"
+msgstr "Telefon"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed"
+msgstr "Registrace uzavřena"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed: %{event} - %{date}"
+msgstr "Registrace uzavřena: %{event} - %{date}"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Registration has closed"
+msgstr "Registrace je uzavřena"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "The list is also attached as a CSV file for a spreadsheet."
+msgstr "Seznam je přiložen také jako soubor CSV pro tabulkový procesor."

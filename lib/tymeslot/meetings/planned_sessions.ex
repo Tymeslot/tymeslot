@@ -19,7 +19,9 @@ defmodule Tymeslot.Meetings.PlannedSessions do
       (`Tymeslot.Bookings.SeatRelease`);
     * it is offered until registration closes, at `registration_closes_at`
       or, without one, at its start (`open?/2`), rather than by the type's
-      availability schedule.
+      availability schedule;
+    * when registration closes, the host is emailed who signed up
+      (`Tymeslot.Workers.EmailWorkerHandlers.PlannedSessionEmails`).
   """
 
   require Logger
@@ -27,6 +29,7 @@ defmodule Tymeslot.Meetings.PlannedSessions do
   alias Ecto.UUID
   alias Tymeslot.Bookings.{BuildParams, CalendarJobs, Policy, SeatEffects}
   alias Tymeslot.Clock
+  alias Tymeslot.Emails.EmailScheduler.SessionScheduler
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.Cancellation
   alias Tymeslot.Meetings.GroupMeetingQueries
@@ -159,7 +162,11 @@ defmodule Tymeslot.Meetings.PlannedSessions do
     })
   end
 
+  # The calendar event, the slot's own jobs (reminders, video room) and the
+  # organiser's participant list for when registration closes.
   defp schedule_session_effects(session) do
+    :ok = SessionScheduler.schedule_registration_closed(session)
+
     with {:ok, _job} <- CalendarJobs.schedule_job(session, "create"),
          {:ok, _defer?} <- SeatEffects.schedule_new_slot_effects(session) do
       :ok
