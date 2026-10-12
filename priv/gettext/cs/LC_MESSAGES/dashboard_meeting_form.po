@@ -1250,7 +1250,7 @@ msgstr[2] "%{time} (+%{count} dní)"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format
 msgid "%{taken} of %{capacity} seats taken"
-msgstr "Obsazeno %{taken} z %{capacity} míst"
+msgstr "Obsazeno %{taken} z %{capacity} míst"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format
@@ -1276,9 +1276,9 @@ msgstr "Zrušit tento termín"
 #, elixir-autogen, elixir-format
 msgid "Cancel this date? %{count} person is booked and will be told."
 msgid_plural "Cancel this date? %{count} people are booked and will be told."
-msgstr[0] "Zrušit tento termín? Je přihlášena %{count} osoba a dostane zprávu."
-msgstr[1] "Zrušit tento termín? Jsou přihlášeny %{count} osoby a dostanou zprávu."
-msgstr[2] "Zrušit tento termín? Je přihlášeno %{count} osob a dostanou zprávu."
+msgstr[0] "Zrušit tento termín? Je přihlášena %{count} osoba a dostane zprávu."
+msgstr[1] "Zrušit tento termín? Jsou přihlášeny %{count} osoby a dostanou zprávu."
+msgstr[2] "Zrušit tento termín? Je přihlášeno %{count} osob a dostanou zprávu."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format
@@ -1288,12 +1288,12 @@ msgstr "Vytvořte typ schůzky, abyste mohli naplánovat jeho termíny."
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Enter the date and time of the session."
-msgstr "Zadejte datum a čas setkání."
+msgstr "Zadejte datum a čas setkání."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format
 msgid "Instead of times from the availability schedule, bookers choose from the dates you plan. Each date is on your calendar at once."
-msgstr "Místo časů z plánu dostupnosti si rezervující vybírají z termínů, které naplánujete. Každý termín je hned ve vašem kalendáři."
+msgstr "Místo časů z plánu dostupnosti si rezervující vybírají z termínů, které naplánujete. Každý termín je hned ve vašem kalendáři."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format
@@ -1318,32 +1318,32 @@ msgstr "Konec registrace (volitelné)"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Registration has to close in the future, and no later than the session starts."
-msgstr "Konec registrace musí být v budoucnosti a nejpozději v čase začátku setkání."
+msgstr "Konec registrace musí být v budoucnosti a nejpozději v čase začátku setkání."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "The date could not be planned. Please try again."
-msgstr "Termín se nepodařilo naplánovat. Zkuste to prosím znovu."
+msgstr "Termín se nepodařilo naplánovat. Zkuste to prosím znovu."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "The date has to lie in the future."
-msgstr "Termín musí být v budoucnosti."
+msgstr "Termín musí být v budoucnosti."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format
 msgid "Times are in your time zone, %{timezone}."
-msgstr "Časy jsou ve vašem časovém pásmu, %{timezone}."
+msgstr "Časy jsou ve vašem časovém pásmu, %{timezone}."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Turn on fixed dates and group bookings first."
-msgstr "Nejdřív zapněte pevné termíny a skupinové rezervace."
+msgstr "Nejdřív zapněte pevné termíny a skupinové rezervace."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "You already have a booking at that time."
-msgstr "V tu dobu už máte rezervaci."
+msgstr "V tu dobu už máte rezervaci."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format

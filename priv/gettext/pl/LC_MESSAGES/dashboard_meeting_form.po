@@ -1289,7 +1289,7 @@ msgstr "Podaj datę i godzinę sesji."
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format
 msgid "Instead of times from the availability schedule, bookers choose from the dates you plan. Each date is on your calendar at once."
-msgstr "Zamiast godzin z harmonogramu rezerwujący wybierają spośród terminów, które zaplanujesz. Każdy termin od razu trafia do twojego kalendarza."
+msgstr "Zamiast godzin z harmonogramu rezerwujący wybierają spośród terminów, które zaplanujesz. Każdy termin od razu trafia do kalendarza."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format
@@ -1329,7 +1329,7 @@ msgstr "Termin musi przypadać w przyszłości."
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format
 msgid "Times are in your time zone, %{timezone}."
-msgstr "Godziny w twojej strefie czasowej: %{timezone}."
+msgstr "Godziny w strefie czasowej: %{timezone}."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
 #, elixir-autogen, elixir-format
