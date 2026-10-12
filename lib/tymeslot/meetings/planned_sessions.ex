@@ -24,11 +24,14 @@ defmodule Tymeslot.Meetings.PlannedSessions do
 
   require Logger
 
+  alias Ecto.UUID
   alias Tymeslot.Bookings.{BuildParams, CalendarJobs, Policy, SeatEffects}
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.Cancellation
   alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.MeetingTypes.FixedDates
 
@@ -41,13 +44,17 @@ defmodule Tymeslot.Meetings.PlannedSessions do
           | term()
 
   @doc "The type's live planned sessions, in start order, past ones included."
-  @spec list(%{id: integer()}) :: [Meeting.t()]
+  @spec list(map()) :: [Meeting.t()]
   def list(%{id: meeting_type_id}), do: GroupMeetingQueries.list_planned_for_type(meeting_type_id)
 
   @doc "The type's live planned sessions that have not started yet, in start order."
-  @spec upcoming(%{id: integer()}, DateTime.t()) :: [Meeting.t()]
-  def upcoming(%{id: meeting_type_id}, now \\ DateTime.utc_now()),
+  @spec upcoming(map(), DateTime.t()) :: [Meeting.t()]
+  def upcoming(%{id: meeting_type_id}, now \\ Clock.utc_now()),
     do: GroupMeetingQueries.list_planned_for_type(meeting_type_id, now)
+
+  @doc "How many people are booked on `session`: its live participants, not their guests."
+  @spec participant_count(Meeting.t()) :: non_neg_integer()
+  def participant_count(%Meeting{id: id}), do: ParticipantQueries.count_live_for_meeting(id)
 
   @doc """
   When registration for `session` closes: its `registration_closes_at`, or
@@ -61,7 +68,7 @@ defmodule Tymeslot.Meetings.PlannedSessions do
 
   @doc "Whether people can still sign up for `session` at `now`."
   @spec open?(Meeting.t(), DateTime.t()) :: boolean()
-  def open?(%Meeting{planned: true} = session, now \\ DateTime.utc_now()) do
+  def open?(%Meeting{planned: true} = session, now \\ Clock.utc_now()) do
     DateTime.compare(now, registration_closes_at(session)) == :lt
   end
 
@@ -79,9 +86,14 @@ defmodule Tymeslot.Meetings.PlannedSessions do
   """
   @spec add(map(), DateTime.t(), keyword()) :: {:ok, Meeting.t()} | {:error, add_error()}
   def add(meeting_type, %DateTime{} = starts_at, opts \\ []) do
-    now = Keyword.get(opts, :now, DateTime.utc_now())
+    now = Keyword.get(opts, :now, Clock.utc_now())
     starts_at = DateTime.truncate(starts_at, :second)
-    closes_at = truncate(Keyword.get(opts, :registration_closes_at))
+
+    closes_at =
+      case Keyword.get(opts, :registration_closes_at) do
+        %DateTime{} = closes_at -> DateTime.truncate(closes_at, :second)
+        nil -> nil
+      end
 
     with :ok <- check_fixed_dates(meeting_type),
          :ok <- check_start(starts_at, now),
@@ -129,7 +141,7 @@ defmodule Tymeslot.Meetings.PlannedSessions do
     duration = meeting_type.duration_minutes
 
     %{
-      meeting_uid: Ecto.UUID.generate(),
+      meeting_uid: UUID.generate(),
       form_data: %{},
       start_datetime: starts_at,
       end_datetime: DateTime.add(starts_at, duration, :minute),
@@ -161,7 +173,4 @@ defmodule Tymeslot.Meetings.PlannedSessions do
 
     SeatEffects.broadcast_and_invalidate(session)
   end
-
-  defp truncate(nil), do: nil
-  defp truncate(%DateTime{} = datetime), do: DateTime.truncate(datetime, :second)
 end

@@ -64,12 +64,20 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
         |> Map.merge(booking_limits(params))
         |> maybe_put_custom_fields(params)
         |> maybe_put_locations(params)
+        |> maybe_put_fixed_dates(params)
         |> Map.merge(payment)
         |> unpaid_when_group()
 
       {:ok, attrs}
     end
   end
+
+  # Only a form that renders the fixed-dates toggle posts it, so an absent key
+  # leaves the stored setting alone rather than turning it off.
+  defp maybe_put_fixed_dates(attrs, %{"fixed_dates" => value}),
+    do: Map.put(attrs, :fixed_dates, value == "true")
+
+  defp maybe_put_fixed_dates(attrs, _params), do: attrs
 
   # Payments and group bookings are mutually exclusive. A host who cannot take
   # charges posts no payment fields at all (see `payment_attrs/1`), so turning

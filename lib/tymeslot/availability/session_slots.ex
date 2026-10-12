@@ -13,12 +13,13 @@ defmodule Tymeslot.Availability.SessionSlots do
   """
 
   alias Tymeslot.Availability.TimeSlots
+  alias Tymeslot.Clock
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.Meetings.Seats
 
   @doc "The open sessions starting on `date` in `user_timezone`."
   @spec day_slots(map(), Date.t(), String.t(), DateTime.t()) :: [map()]
-  def day_slots(meeting_type, %Date{} = date, user_timezone, now \\ DateTime.utc_now()) do
+  def day_slots(meeting_type, %Date{} = date, user_timezone, now \\ Clock.utc_now()) do
     meeting_type
     |> open_sessions(user_timezone, now)
     |> Enum.filter(fn {local_start, _session, _seats_left} ->
@@ -38,19 +39,21 @@ defmodule Tymeslot.Availability.SessionSlots do
   ISO 8601 dates to booleans the booking calendar reads.
   """
   @spec days(map(), Date.t(), Date.t(), String.t(), DateTime.t()) :: %{String.t() => boolean()}
-  def days(meeting_type, start_date, end_date, user_timezone, now \\ DateTime.utc_now()) do
+  def days(meeting_type, start_date, end_date, user_timezone, now \\ Clock.utc_now()) do
     open_days =
       meeting_type
       |> open_sessions(user_timezone, now)
       |> MapSet.new(fn {local_start, _session, _seats_left} -> DateTime.to_date(local_start) end)
 
-    Date.range(start_date, end_date)
-    |> Map.new(&{Date.to_iso8601(&1), MapSet.member?(open_days, &1)})
+    Map.new(
+      Date.range(start_date, end_date),
+      &{Date.to_iso8601(&1), MapSet.member?(open_days, &1)}
+    )
   end
 
   @doc "Whether `meeting_type` has a session anyone can still sign up for."
   @spec any_open?(map(), DateTime.t()) :: boolean()
-  def any_open?(meeting_type, now \\ DateTime.utc_now()),
+  def any_open?(meeting_type, now \\ Clock.utc_now()),
     do: open_sessions(meeting_type, "Etc/UTC", now) != []
 
   defp open_sessions(meeting_type, user_timezone, now) do

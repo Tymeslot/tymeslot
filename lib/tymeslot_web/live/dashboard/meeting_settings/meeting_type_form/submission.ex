@@ -66,6 +66,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
     |> maybe_put_custom_fields(assigns)
     |> maybe_put_payment(assigns)
     |> maybe_put_max_participants(assigns)
+    |> Map.put(
+      "fixed_dates",
+      to_string(
+        Map.get(assigns, :group_bookings_enabled) == true and
+          Map.get(assigns, :fixed_dates) == true
+      )
+    )
   end
 
   @doc """

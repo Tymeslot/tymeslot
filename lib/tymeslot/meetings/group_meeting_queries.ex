@@ -160,7 +160,9 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   A group meeting has live seats while its slot is live
   (`MeetingState.where_slot_live/1`) and at least one participant has not
   cancelled. Its time then belongs to the bookers, so the organiser's
-  provider event must not be moved, deleted or re-attended from the grid.
+  provider event must not be moved, deleted or re-attended from the grid. A
+  session the host planned (`Tymeslot.Meetings.PlannedSessions`) counts from
+  the start, before anyone has booked it: people are being offered its time.
 
   Keyed by `calendar_uid` rather than id because the consumer is the
   calendar grid, which knows provider events, and a Tymeslot booking's
@@ -204,12 +206,13 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
     |> where([meeting: m], m.organizer_user_id == ^user_id and m.capacity > 1)
     |> where(
       [meeting: m],
-      exists(
-        from(p in Participant,
-          where: p.meeting_id == parent_as(:meeting).id and is_nil(p.cancelled_at),
-          select: 1
+      m.planned or
+        exists(
+          from(p in Participant,
+            where: p.meeting_id == parent_as(:meeting).id and is_nil(p.cancelled_at),
+            select: 1
+          )
         )
-      )
     )
   end
 

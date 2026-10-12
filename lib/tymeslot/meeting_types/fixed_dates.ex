@@ -16,12 +16,25 @@ defmodule Tymeslot.MeetingTypes.FixedDates do
   use Gettext, backend: TymeslotWeb.Gettext
   import Ecto.Changeset
 
+  alias Tymeslot.Availability.SessionSlots
+
   @doc "Whether `meeting_type` offers planned sessions instead of its schedule's slots."
   @spec enabled?(map() | nil) :: boolean()
   def enabled?(%{fixed_dates: true, max_participants: max}) when is_integer(max) and max > 1,
     do: true
 
   def enabled?(_meeting_type), do: false
+
+  @doc """
+  `meeting_types` without the fixed-date ones nobody can sign up for any
+  more: their sessions have all passed, closed registration or filled up.
+  Such a type is left off the public booking page, as an inactive one is;
+  its direct link still says why it cannot be booked.
+  """
+  @spec reject_unbookable([map()]) :: [map()]
+  def reject_unbookable(meeting_types) do
+    Enum.reject(meeting_types, &(enabled?(&1) and not SessionSlots.any_open?(&1)))
+  end
 
   @doc """
   Refuses fixed dates on a type that is not a group type. The message is a

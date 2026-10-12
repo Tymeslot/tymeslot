@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
+  alias TymeslotWeb.Themes.Shared.Components.SessionList
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   use TymeslotWeb.Components.CoreComponents
@@ -218,7 +219,17 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                     </div>
                   </div>
 
-                  <div class="calendar-slots-container">
+                  <SessionList.session_list
+                    sessions={assigns[:planned_sessions]}
+                    selected_date={@selected_date}
+                    timezone={@user_timezone}
+                    target={@myself}
+                  />
+
+                  <div
+                    :if={SessionList.show_calendar?(assigns[:planned_sessions])}
+                    class="calendar-slots-container"
+                  >
                     <div class="flex-1 calendar-section">
                       <%!-- Weekly view: shown on small screens --%>
                       <div class="calendar-weekly">
