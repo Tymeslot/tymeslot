@@ -23,7 +23,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   # passes to `Tymeslot.Workers.DeliveryClaims` so that a rescued job does not
   # repeat a send it already made.
   #
-  # The six seat-action keys come from `MeetingScheduler.seat_action/1`
+  # The seven seat-action keys come from `MeetingScheduler.seat_action/1`
   # rather than retyped literals, so this table and the scheduling call sites
   # that produce those same action strings can't drift apart on a typo — see
   # that function's doc for why `:seat_cancellation` and
@@ -47,6 +47,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     "send_reminder_emails" => {MeetingEmails, :handle_reminder_emails},
     MeetingScheduler.seat_action(:seat_reminder) =>
       {GroupMeetingEmails, :handle_seat_reminder_emails},
+    MeetingScheduler.seat_action(:seat_session_moved) =>
+      {GroupMeetingEmails, :handle_seat_session_moved, :with_job_id},
     "send_reschedule_request" => {MeetingEmails, :handle_reschedule_request},
     "send_booking_request_emails" => {BookingApprovalEmails, :handle_booking_request_emails},
     "send_booking_approval_nudge" => {BookingApprovalEmails, :handle_booking_approval_nudge},

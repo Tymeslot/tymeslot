@@ -6,6 +6,11 @@ defmodule Tymeslot.Emails.EmailScheduler.SessionScheduler do
   `Tymeslot.Workers.EmailWorkerHandlers.PlannedSessionEmails`, which
   re-checks the session when it runs, so cancelling a session needs no job
   deleted here.
+
+  There is one pending list per session. Scheduling it again, when the
+  session or its registration close has moved, moves the pending job to the
+  new time; once a list has gone out, a registration that reopens and
+  closes again sends a new one.
   """
 
   alias Ecto.Changeset
@@ -16,7 +21,7 @@ defmodule Tymeslot.Emails.EmailScheduler.SessionScheduler do
   require Logger
 
   @action "send_registration_closed"
-  # 10 years in seconds — one list per session, however far ahead it is planned.
+  # 10 years in seconds — one pending list per session, however far ahead it is planned.
   @unique_period 315_360_000
 
   @doc "The worker action this module schedules."
@@ -24,9 +29,9 @@ defmodule Tymeslot.Emails.EmailScheduler.SessionScheduler do
   def action, do: @action
 
   @doc """
-  Schedules the participant list for `session`, once per session. A
-  scheduling failure is logged and not raised: the session is planned
-  either way.
+  Schedules the participant list for `session` at its registration close,
+  or moves the pending one there. A scheduling failure is logged and not
+  raised: the session stands either way.
   """
   @spec schedule_registration_closed(map()) :: :ok
   def schedule_registration_closed(session) do
@@ -37,7 +42,13 @@ defmodule Tymeslot.Emails.EmailScheduler.SessionScheduler do
         queue: :emails,
         priority: 2,
         scheduled_at: PlannedSessions.registration_closes_at(session),
-        unique: [period: @unique_period, fields: [:args, :queue], keys: [:action, :meeting_id]]
+        unique: [
+          period: @unique_period,
+          fields: [:args, :queue],
+          keys: [:action, :meeting_id],
+          states: :incomplete
+        ],
+        replace: [scheduled: [:scheduled_at], available: [:scheduled_at]]
       )
 
     case Oban.insert(job) do

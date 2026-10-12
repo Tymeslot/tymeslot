@@ -20,6 +20,8 @@ defmodule Tymeslot.Meetings.PlannedSessions do
     * it is offered until registration closes, at `registration_closes_at`
       or, without one, at its start (`open?/2`), rather than by the type's
       availability schedule;
+    * the host moves it from the meeting type, with everyone on it
+      (`move/3`), rather than asking each participant to book again;
     * when registration closes, the host is emailed who signed up
       (`Tymeslot.Workers.EmailWorkerHandlers.PlannedSessionEmails`).
   """
@@ -36,6 +38,7 @@ defmodule Tymeslot.Meetings.PlannedSessions do
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.Scheduling
+  alias Tymeslot.Meetings.SessionMove
   alias Tymeslot.MeetingTypes.FixedDates
 
   @type add_error ::
@@ -109,6 +112,50 @@ defmodule Tymeslot.Meetings.PlannedSessions do
       {:ok, session}
     end
   end
+
+  @doc """
+  Moves when registration for `session` closes: to `closes_at`, or to its
+  start when `nil`.
+
+  Any time up to the start will do, so the host can extend registration,
+  reopen it, or close it at once with a time already past. A session that
+  has started keeps its close. The booking page follows at once.
+  """
+  @spec set_registration_close(Meeting.t(), DateTime.t() | nil, DateTime.t()) ::
+          {:ok, Meeting.t()}
+          | {:error, :session_started | :invalid_registration_close | Ecto.Changeset.t()}
+  def set_registration_close(%Meeting{planned: true} = session, closes_at, now \\ Clock.utc_now()) do
+    closes_at = closes_at && DateTime.truncate(closes_at, :second)
+
+    cond do
+      DateTime.compare(session.start_time, now) != :gt ->
+        {:error, :session_started}
+
+      closes_at && DateTime.compare(closes_at, session.start_time) == :gt ->
+        {:error, :invalid_registration_close}
+
+      true ->
+        with {:ok, updated} <- GroupMeetingQueries.set_registration_closes_at(session, closes_at) do
+          SeatEffects.broadcast_and_invalidate(updated)
+          :ok = SessionScheduler.schedule_registration_closed(updated)
+          {:ok, updated}
+        end
+    end
+  end
+
+  @doc """
+  Moves `session` to `starts_at` with everyone booked on it, registration
+  closing at `closes_at` (`nil`: at the new start). See
+  `Tymeslot.Meetings.SessionMove`.
+  """
+  @spec move(Meeting.t(), DateTime.t(), DateTime.t() | nil) ::
+          {:ok, Meeting.t()} | {:error, SessionMove.error()}
+  defdelegate move(session, starts_at, closes_at), to: SessionMove
+
+  @doc "The type's next session people can still sign up for, or `nil`."
+  @spec next_open(map(), DateTime.t()) :: Meeting.t() | nil
+  def next_open(meeting_type, now \\ Clock.utc_now()),
+    do: meeting_type |> upcoming(now) |> Enum.find(&open?(&1, now))
 
   @doc """
   Cancels a planned session the host owns, through the host's own cancel

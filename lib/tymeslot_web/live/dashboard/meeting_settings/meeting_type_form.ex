@@ -33,6 +33,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
+  # The fixed dates' events, all handled by `SessionHandlers`.
+  @session_events SessionHandlers.events()
+
   # Public assigns passed from parent
   # - type: existing meeting type or nil
   # - is_edit: whether the meeting type exists yet (set here too, on creation)
@@ -399,23 +402,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   end
 
   @impl Phoenix.LiveComponent
-  def handle_event("toggle_fixed_dates", _params, socket),
-    do: {:noreply, SessionHandlers.toggle_fixed_dates(socket)}
-
-  def handle_event("update_session_input", params, socket),
-    do: {:noreply, SessionHandlers.update_input(params, socket)}
-
-  def handle_event("add_session", _params, socket),
-    do: {:noreply, SessionHandlers.add(socket)}
-
-  def handle_event("remove_session", %{"id" => id}, socket),
-    do: {:noreply, SessionHandlers.ask_to_cancel(id, socket)}
-
-  def handle_event("cancel_session", %{"id" => id}, socket),
-    do: {:noreply, SessionHandlers.cancel(id, socket)}
-
-  def handle_event("keep_session", _params, socket),
-    do: {:noreply, SessionHandlers.keep(socket)}
+  def handle_event(event, params, socket) when event in @session_events,
+    do: {:noreply, SessionHandlers.handle_event(event, params, socket)}
 
   @impl Phoenix.LiveComponent
   def handle_event(

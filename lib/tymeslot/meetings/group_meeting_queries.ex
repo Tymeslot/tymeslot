@@ -102,6 +102,19 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   end
 
   @doc """
+  Sets when registration for a planned session closes (`nil`: at its
+  start). A plain change rather than `MeetingSchema.changeset/2`, which
+  asks for the attendee fields a group meeting does not carry.
+  """
+  @spec set_registration_closes_at(Meeting.t(), DateTime.t() | nil) ::
+          {:ok, Meeting.t()} | {:error, Changeset.t()}
+  def set_registration_closes_at(%Meeting{planned: true} = session, closes_at) do
+    session
+    |> Changeset.change(registration_closes_at: closes_at)
+    |> Repo.update()
+  end
+
+  @doc """
   Sets `capacity` on a meeting type's future, live group meetings
   (`capacity > 1`, start time after `now`), returning how many were updated.
 

@@ -78,6 +78,13 @@ defmodule Tymeslot.Workers.RegistrationClosedEmailTest do
     fun.()
   end
 
+  defp list_jobs(session),
+    do:
+      all_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_registration_closed", "meeting_id" => session.id}
+      )
+
   # The layout embeds the logo as an inline attachment of every email.
   defp csv_attachments(email),
     do: Enum.filter(email.attachments, &(&1.content_type == "text/csv"))
@@ -104,6 +111,22 @@ defmodule Tymeslot.Workers.RegistrationClosedEmailTest do
                )
 
       assert DateTime.compare(job.scheduled_at, starts_at) == :eq
+    end
+
+    test "moving the registration close moves the pending list with it", ctx do
+      new_close = DateTime.add(ctx.closes_at, 1, :day)
+      {:ok, _session} = PlannedSessions.set_registration_close(ctx.session, new_close)
+
+      assert [job] = list_jobs(ctx.session)
+      assert DateTime.compare(job.scheduled_at, new_close) == :eq
+    end
+
+    test "moving the session moves the pending list to its new close", ctx do
+      new_start = DateTime.add(ctx.starts_at, 3, :day)
+      {:ok, _moved} = PlannedSessions.move(ctx.session, new_start, nil)
+
+      assert [job] = list_jobs(ctx.session)
+      assert DateTime.compare(job.scheduled_at, new_start) == :eq
     end
   end
 

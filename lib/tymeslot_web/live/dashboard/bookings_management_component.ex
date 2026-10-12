@@ -175,7 +175,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   end
 
   def handle_event("show_reschedule_modal", %{"id" => _id} = params, socket) do
-    case fetch_meeting_for_modal(socket, params, policy_fun: &Policy.can_reschedule_meeting?/1) do
+    case fetch_meeting_for_modal(socket, params, policy_fun: &Policy.can_request_reschedule?/1) do
       {:ok, meeting} ->
         :telemetry.execute(
           [:tymeslot, :dashboard, :meetings, :reschedule, :open],

@@ -714,3 +714,13 @@ msgstr "Hat diesen Termin verlassen"
 #, elixir-autogen, elixir-format
 msgid "Cancel meeting"
 msgstr "Termin absagen"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed"
+msgstr "Anmeldung geschlossen"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Move a fixed date from its meeting type."
+msgstr "Feste Termine verlegen Sie im Termintyp."

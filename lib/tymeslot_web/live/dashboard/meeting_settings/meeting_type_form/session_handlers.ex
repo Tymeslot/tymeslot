@@ -1,8 +1,9 @@
 defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers do
   @moduledoc """
   Event handling for the meeting-type form's fixed dates
-  (`MeetingTypeForm.FixedDatesSection`): the toggle, planning a date and
-  cancelling one.
+  (`MeetingTypeForm.FixedDatesSection`): the toggle, planning a date,
+  editing one (moving it, or when its registration closes), and cancelling
+  one.
 
   The dates are the type's planned sessions (`Tymeslot.Meetings.PlannedSessions`),
   read fresh after every change rather than kept in the form's own state:
@@ -35,7 +36,42 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
     |> Component.assign_new(:new_session, fn -> %{} end)
     |> Component.assign_new(:session_error, fn -> nil end)
     |> Component.assign_new(:confirming_session_id, fn -> nil end)
+    |> Component.assign_new(:editing_session, fn -> nil end)
   end
+
+  @doc """
+  The form's events for the fixed dates, by name; `MeetingTypeForm` hands
+  each of them here.
+  """
+  @spec events() :: [String.t()]
+  def events,
+    do: ~w(toggle_fixed_dates update_session_input add_session remove_session cancel_session
+           keep_session edit_session update_session_edit save_session_edit
+           discard_session_edit)
+
+  @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
+          Phoenix.LiveView.Socket.t()
+  def handle_event("toggle_fixed_dates", _params, socket), do: toggle_fixed_dates(socket)
+  def handle_event("update_session_input", params, socket), do: update_input(params, socket)
+  def handle_event("add_session", _params, socket), do: add(socket)
+  def handle_event("remove_session", %{"id" => id}, socket), do: ask_to_cancel(id, socket)
+  def handle_event("cancel_session", %{"id" => id}, socket), do: cancel(id, socket)
+  def handle_event("keep_session", _params, socket), do: keep(socket)
+  def handle_event("edit_session", %{"id" => id}, socket), do: edit(id, socket)
+
+  def handle_event("update_session_edit", %{"session_edit" => params}, socket)
+      when is_map(params) and is_map(socket.assigns.editing_session) do
+    editing = socket.assigns.editing_session
+    input = Map.merge(editing.input, Map.take(params, ~w(date time closes_at)))
+    Component.assign(socket, :editing_session, %{editing | input: input, error: nil})
+  end
+
+  def handle_event("save_session_edit", _params, socket), do: save_edit(socket)
+
+  def handle_event("discard_session_edit", _params, socket),
+    do: Component.assign(socket, :editing_session, nil)
+
+  def handle_event(_event, _params, socket), do: socket
 
   @doc "The rows the section lists for `type`: every live planned date, past ones included."
   @spec rows(map() | nil) :: [map()]
@@ -52,7 +88,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
         capacity: session.capacity,
         seats_taken: Seats.seats_taken(session.id),
         participants: PlannedSessions.participant_count(session),
-        past?: DateTime.compare(session.start_time, now) != :gt
+        past?: DateTime.compare(session.start_time, now) != :gt,
+        open?: PlannedSessions.open?(session, now)
       }
     end)
   end
@@ -136,6 +173,56 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
     |> assign_sessions()
   end
 
+  # Opens a row for editing, prefilled with its date, time and registration
+  # close in the host's time zone (an empty close: at the start).
+  defp edit(id, socket) do
+    timezone = socket.assigns.host_timezone
+
+    case Enum.find(socket.assigns[:session_rows] || [], &(&1.id == id and not &1.past?)) do
+      %{start_time: start_time, registration_closes_at: closes_at} ->
+        [date, time] = start_time |> local_input(timezone) |> String.split("T")
+        closes = if closes_at, do: local_input(closes_at, timezone), else: ""
+        input = %{"date" => date, "time" => time, "closes_at" => closes}
+        Component.assign(socket, :editing_session, %{id: id, input: input, error: nil})
+
+      nil ->
+        socket
+    end
+  end
+
+  # A new date or time moves the session, with everyone on it; otherwise
+  # only its registration close changes.
+  defp save_edit(%{assigns: %{editing_session: %{id: id, input: input} = editing}} = socket) do
+    %{current_user: %{id: user_id}, type: type, host_timezone: timezone} = socket.assigns
+
+    with {:ok, starts_at} <- parse_start(input, timezone),
+         {:ok, closes_at} <- parse_close(input["closes_at"], timezone),
+         %{} = type <- type && MeetingTypes.get_meeting_type(type.id, user_id),
+         %{} = session <- Enum.find(PlannedSessions.list(type), &(&1.id == id)),
+         {:ok, _session} <- apply_edit(session, starts_at, closes_at) do
+      socket
+      |> Component.assign(:editing_session, nil)
+      |> assign_sessions()
+    else
+      {:error, reason} ->
+        Component.assign(socket, :editing_session, %{editing | error: error_message(reason)})
+
+      _gone ->
+        socket |> Component.assign(:editing_session, nil) |> assign_sessions()
+    end
+  end
+
+  defp save_edit(socket), do: socket
+
+  defp apply_edit(session, starts_at, closes_at) do
+    if DateTime.compare(starts_at, session.start_time) == :eq,
+      do: PlannedSessions.set_registration_close(session, closes_at),
+      else: PlannedSessions.move(session, starts_at, closes_at)
+  end
+
+  defp local_input(datetime, timezone),
+    do: datetime |> DateTime.shift_zone!(timezone) |> Calendar.strftime("%Y-%m-%dT%H:%M")
+
   defp parse_start(%{"date" => date, "time" => time}, timezone)
        when is_binary(date) and is_binary(time) do
     with {:ok, date} <- Date.from_iso8601(date),
@@ -180,6 +267,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
         "dashboard_meeting_form",
         "Registration has to close in the future, and no later than the session starts."
       )
+
+  defp error_message(:session_started),
+    do: dgettext("dashboard_meeting_form", "This date has already started.")
 
   defp error_message(:time_conflict),
     do: dgettext("dashboard_meeting_form", "You already have a booking at that time.")
