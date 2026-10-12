@@ -387,3 +387,18 @@ msgstr "Registrace otevřena"
 #, elixir-autogen, elixir-format
 msgid "%{count}/%{capacity} seats taken"
 msgstr "%{count}/%{capacity} míst obsazeno"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Next date: %{date}"
+msgstr "Další termín: %{date}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "No open dates"
+msgstr "Žádné otevřené termíny"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Not on your booking page until one of its dates is open for registration. Plan a date, or move a registration close."
+msgstr "Na rezervační stránce se neobjeví, dokud nebude některý z termínů otevřen k registraci. Naplánujte termín nebo posuňte uzávěrku registrace."

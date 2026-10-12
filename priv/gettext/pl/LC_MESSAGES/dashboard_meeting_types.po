@@ -383,3 +383,18 @@ msgstr "Zapisy otwarte"
 #, elixir-autogen, elixir-format
 msgid "%{count}/%{capacity} seats taken"
 msgstr "Zajęte miejsca: %{count}/%{capacity}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Next date: %{date}"
+msgstr "Następny termin: %{date}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "No open dates"
+msgstr "Brak otwartych terminów"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Not on your booking page until one of its dates is open for registration. Plan a date, or move a registration close."
+msgstr "Nie pojawi się na stronie rezerwacji, dopóki żaden z terminów nie będzie otwarty na zapisy. Zaplanuj termin albo przesuń koniec zapisów."

@@ -276,6 +276,43 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
     end
   end
 
+  describe "moving when registration closes" do
+    test "extends, reopens and closes registration, up to the start", ctx do
+      starts_at = at(10, ~T[18:00:00])
+      session = plan!(ctx.meeting_type, starts_at, registration_closes_at: at(2, ~T[12:00:00]))
+
+      assert {:ok, extended} =
+               PlannedSessions.set_registration_close(session, at(9, ~T[12:00:00]))
+
+      assert extended.registration_closes_at == at(9, ~T[12:00:00])
+      assert PlannedSessions.open?(extended)
+
+      assert {:ok, closed} =
+               PlannedSessions.set_registration_close(extended, at(-1, ~T[12:00:00]))
+
+      refute PlannedSessions.open?(closed)
+      assert PlannedSessions.next_open(ctx.meeting_type) == nil
+      assert offered(ctx, starts_at) == []
+
+      assert {:ok, until_start} = PlannedSessions.set_registration_close(closed, nil)
+      assert until_start.registration_closes_at == nil
+      assert PlannedSessions.next_open(ctx.meeting_type).id == session.id
+    end
+
+    test "refuses a close after the start, and a session that has started", ctx do
+      starts_at = at(10, ~T[18:00:00])
+      session = plan!(ctx.meeting_type, starts_at)
+
+      assert {:error, :invalid_registration_close} =
+               PlannedSessions.set_registration_close(session, at(11, ~T[12:00:00]))
+
+      assert {:error, :session_started} =
+               PlannedSessions.set_registration_close(session, nil, at(10, ~T[18:30:00]))
+
+      assert Repo.get!(MeetingSchema, session.id).registration_closes_at == nil
+    end
+  end
+
   describe "the meeting type" do
     test "refuses fixed dates on a type that is not a group type", ctx do
       changeset =
