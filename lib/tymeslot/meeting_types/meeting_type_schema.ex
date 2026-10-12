@@ -35,6 +35,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           price_cents: integer() | nil,
           max_participants: integer(),
           fixed_dates: boolean(),
+          one_off: boolean(),
           requires_approval: boolean(),
           approval_window_hours: pos_integer() | nil,
           is_archived: boolean(),
@@ -70,8 +71,9 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     field(:payment_required, :boolean, default: false)
     field(:price_cents, :integer)
     field(:max_participants, :integer, default: 1)
-    # See `Tymeslot.MeetingTypes.FixedDates`.
+    # See `Tymeslot.MeetingTypes.FixedDates` and `Tymeslot.MeetingTypes.OneOffEvents`.
     field(:fixed_dates, :boolean, default: false)
+    field(:one_off, :boolean, default: false)
 
     # Bookings on this meeting type are held until the host approves them,
     # rather than confirmed on submission. `approval_window_hours` nil means
@@ -177,6 +179,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :price_cents,
       :max_participants,
       :fixed_dates,
+      :one_off,
       :requires_approval,
       :approval_window_hours,
       :is_archived,
