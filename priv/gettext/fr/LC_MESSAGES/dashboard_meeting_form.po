@@ -1344,16 +1344,6 @@ msgstr "inscriptions jusqu’au %{datetime}"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format
-msgid "Change when registration closes"
-msgstr "Modifier la clôture des inscriptions"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
-#, elixir-autogen, elixir-format
-msgid "Leave it empty to take sign-ups until the start. A time already past closes registration now."
-msgstr "Laissez vide pour accepter les inscriptions jusqu’au début. Une heure déjà passée clôt les inscriptions immédiatement."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
-#, elixir-autogen, elixir-format
 msgid "Registration closes"
 msgstr "Clôture des inscriptions"
 
@@ -1371,3 +1361,20 @@ msgstr "Cette date a déjà commencé."
 #, elixir-autogen, elixir-format
 msgid "registration closed"
 msgstr "inscriptions closes"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Edit this date"
+msgstr "Modifier cette date"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Leave the registration close empty to take sign-ups until the start. A time already past closes registration now."
+msgstr "Laissez la clôture des inscriptions vide pour accepter les inscriptions jusqu’au début. Une heure déjà passée clôt les inscriptions immédiatement."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Moving the date emails the %{count} person booked on it the new time."
+msgid_plural "Moving the date emails the %{count} people booked on it the new time."
+msgstr[0] "Déplacer la date envoie la nouvelle heure par e-mail à la %{count} personne inscrite."
+msgstr[1] "Déplacer la date envoie la nouvelle heure par e-mail aux %{count} personnes inscrites."

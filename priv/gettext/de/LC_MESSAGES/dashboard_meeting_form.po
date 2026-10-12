@@ -1344,16 +1344,6 @@ msgstr "Anmeldung bis %{datetime}"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format
-msgid "Change when registration closes"
-msgstr "Anmeldeschluss ändern"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
-#, elixir-autogen, elixir-format
-msgid "Leave it empty to take sign-ups until the start. A time already past closes registration now."
-msgstr "Leer lassen, um Anmeldungen bis zum Beginn anzunehmen. Ein bereits vergangener Zeitpunkt schließt die Anmeldung sofort."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
-#, elixir-autogen, elixir-format
 msgid "Registration closes"
 msgstr "Anmeldeschluss"
 
@@ -1371,3 +1361,20 @@ msgstr "Dieser Termin hat bereits begonnen."
 #, elixir-autogen, elixir-format
 msgid "registration closed"
 msgstr "Anmeldung geschlossen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Edit this date"
+msgstr "Diesen Termin bearbeiten"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Leave the registration close empty to take sign-ups until the start. A time already past closes registration now."
+msgstr "Lassen Sie den Anmeldeschluss leer, um Anmeldungen bis zum Beginn anzunehmen. Ein bereits vergangener Zeitpunkt schließt die Anmeldung sofort."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Moving the date emails the %{count} person booked on it the new time."
+msgid_plural "Moving the date emails the %{count} people booked on it the new time."
+msgstr[0] "Beim Verlegen erhält die %{count} angemeldete Person die neue Zeit per E-Mail."
+msgstr[1] "Beim Verlegen erhalten die %{count} angemeldeten Personen die neue Zeit per E-Mail."

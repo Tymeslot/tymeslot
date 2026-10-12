@@ -719,3 +719,8 @@ msgstr "Cancelar reunião"
 #, elixir-autogen, elixir-format
 msgid "Registration closed"
 msgstr "Inscrições encerradas"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Move a fixed date from its meeting type."
+msgstr "Mude uma data fixa pelo tipo de reunião dela."

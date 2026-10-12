@@ -1344,16 +1344,6 @@ msgstr "inscrições até %{datetime}"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format
-msgid "Change when registration closes"
-msgstr "Alterar o fim das inscrições"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
-#, elixir-autogen, elixir-format
-msgid "Leave it empty to take sign-ups until the start. A time already past closes registration now."
-msgstr "Deixe vazio para aceitar inscrições até o início. Um horário que já passou encerra as inscrições na hora."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
-#, elixir-autogen, elixir-format
 msgid "Registration closes"
 msgstr "Fim das inscrições"
 
@@ -1371,3 +1361,20 @@ msgstr "Esta data já começou."
 #, elixir-autogen, elixir-format
 msgid "registration closed"
 msgstr "inscrições encerradas"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Edit this date"
+msgstr "Editar esta data"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Leave the registration close empty to take sign-ups until the start. A time already past closes registration now."
+msgstr "Deixe o fim das inscrições vazio para aceitar inscrições até o início. Um horário que já passou encerra as inscrições na hora."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Moving the date emails the %{count} person booked on it the new time."
+msgid_plural "Moving the date emails the %{count} people booked on it the new time."
+msgstr[0] "Ao mudar a data, a %{count} pessoa inscrita recebe o novo horário por e-mail."
+msgstr[1] "Ao mudar a data, as %{count} pessoas inscritas recebem o novo horário por e-mail."

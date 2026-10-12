@@ -224,7 +224,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
     end
   end
 
-  # Canonical seat-email action names, declared once so the same six strings
+  # Canonical seat-email action names, declared once so the same strings
   # aren't retyped at each call site here, in `EmailWorkerHandlers`'s
   # dispatch table, and in `Tymeslot.Emails.EmailScheduler`'s arg-validation
   # table. `:seat_cancellation` (a seat's own cancellation) and
@@ -239,6 +239,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   def seat_action(:seat_reschedule), do: "send_seat_reschedule_emails"
   def seat_action(:seat_reschedule_request), do: "send_seat_reschedule_request"
   def seat_action(:seat_reminder), do: "send_seat_reminder"
+  def seat_action(:seat_session_moved), do: "send_seat_session_moved"
 
   @doc """
   Schedules a single-seat email job.
@@ -396,6 +397,23 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
       participant_id,
       %{"reminder_value" => reminder_value, "reminder_unit" => reminder_unit},
       [:reminder_value, :reminder_unit]
+    )
+  end
+
+  @doc """
+  Schedules one live participant's notice that the host moved their planned
+  session (`Tymeslot.Meetings.SessionMove`). `from` (the previous start, as
+  ISO 8601) names the move, so a second move of the same session is a new
+  email.
+  """
+  @spec schedule_seat_session_moved(term(), term(), String.t()) :: :ok | {:error, String.t()}
+  def schedule_seat_session_moved(meeting_id, participant_id, from) do
+    schedule_seat_email(
+      seat_action(:seat_session_moved),
+      meeting_id,
+      participant_id,
+      %{"from" => from},
+      [:from]
     )
   end
 

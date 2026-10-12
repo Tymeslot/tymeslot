@@ -19,7 +19,9 @@ defmodule Tymeslot.Meetings.PlannedSessions do
       (`Tymeslot.Bookings.SeatRelease`);
     * it is offered until registration closes, at `registration_closes_at`
       or, without one, at its start (`open?/2`), rather than by the type's
-      availability schedule.
+      availability schedule;
+    * the host moves it from the meeting type, with everyone on it
+      (`move/3`), rather than asking each participant to book again.
   """
 
   require Logger
@@ -33,6 +35,7 @@ defmodule Tymeslot.Meetings.PlannedSessions do
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.Scheduling
+  alias Tymeslot.Meetings.SessionMove
   alias Tymeslot.MeetingTypes.FixedDates
 
   @type add_error ::
@@ -135,6 +138,15 @@ defmodule Tymeslot.Meetings.PlannedSessions do
         end
     end
   end
+
+  @doc """
+  Moves `session` to `starts_at` with everyone booked on it, registration
+  closing at `closes_at` (`nil`: at the new start). See
+  `Tymeslot.Meetings.SessionMove`.
+  """
+  @spec move(Meeting.t(), DateTime.t(), DateTime.t() | nil) ::
+          {:ok, Meeting.t()} | {:error, SessionMove.error()}
+  defdelegate move(session, starts_at, closes_at), to: SessionMove
 
   @doc "The type's next session people can still sign up for, or `nil`."
   @spec next_open(map(), DateTime.t()) :: Meeting.t() | nil

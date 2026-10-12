@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.FixedDatesRegistrationCloseTest do
   """
 
   use TymeslotWeb.LiveCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :meeting_types
   @moduletag :live
@@ -56,15 +57,21 @@ defmodule TymeslotWeb.Dashboard.FixedDatesRegistrationCloseTest do
     view
   end
 
-  defp move_close(view, value) do
-    view |> element("[data-testid='edit-session-close-button']") |> render_click()
-
+  defp edit_date(view, session, fields) do
     view
-    |> element("input[name='session_close[closes_at]']")
-    |> render_change(%{"session_close" => %{"closes_at" => value}})
+    |> element("[data-testid='edit-session-button'][phx-value-id='#{session.id}']")
+    |> render_click()
 
-    view |> element("[data-testid='save-session-close']") |> render_click()
+    for {field, value} <- fields do
+      view
+      |> element("input[name='session_edit[#{field}]']")
+      |> render_change(%{"session_edit" => %{field => value}})
+    end
+
+    view |> element("[data-testid='save-session-edit']") |> render_click()
   end
+
+  defp move_close(view, session, value), do: edit_date(view, session, %{"closes_at" => value})
 
   describe "the meeting-type form" do
     test "moves a date's registration close, and closes it at once", ctx do
@@ -75,13 +82,13 @@ defmodule TymeslotWeb.Dashboard.FixedDatesRegistrationCloseTest do
 
       view = edit(ctx.conn, ctx.meeting_type)
 
-      move_close(view, local(at(9, ~T[20:00:00])))
+      move_close(view, session, local(at(9, ~T[20:00:00])))
 
       assert Repo.reload!(session).registration_closes_at == at(9, ~T[20:00:00])
-      refute has_element?(view, "[data-testid='edit-session-close']")
+      refute has_element?(view, "[data-testid='edit-session']")
       assert has_element?(view, "[data-testid='planned-session']", "registration until")
 
-      move_close(view, local(at(-1, ~T[12:00:00])))
+      move_close(view, session, local(at(-1, ~T[12:00:00])))
 
       refute PlannedSessions.open?(Repo.reload!(session))
       assert has_element?(view, "[data-testid='session-registration-closed']")
@@ -91,10 +98,51 @@ defmodule TymeslotWeb.Dashboard.FixedDatesRegistrationCloseTest do
       {:ok, session} = PlannedSessions.add(ctx.meeting_type, at(10, ~T[18:00:00]))
       view = edit(ctx.conn, ctx.meeting_type)
 
-      move_close(view, local(at(11, ~T[12:00:00])))
+      move_close(view, session, local(at(11, ~T[12:00:00])))
 
-      assert has_element?(view, "[data-testid='edit-session-close']", "no later than")
+      assert has_element?(view, "[data-testid='edit-session']", "no later than")
       assert Repo.reload!(session).registration_closes_at == nil
+    end
+  end
+
+  describe "moving a date" do
+    test "moves it with everyone booked on it, who are told", ctx do
+      {:ok, session} = PlannedSessions.add(ctx.meeting_type, at(10, ~T[18:00:00]))
+      participant = insert(:participant, meeting: session, name: "Ada Lovelace")
+      view = edit(ctx.conn, ctx.meeting_type)
+
+      edit_date(view, session, %{
+        "date" => Date.to_iso8601(Date.add(Date.utc_today(), 12)),
+        "time" => "09:30"
+      })
+
+      moved = Repo.reload!(session)
+      assert moved.start_time == at(12, ~T[09:30:00])
+      assert moved.end_time == at(12, ~T[11:00:00])
+      refute has_element?(view, "[data-testid='edit-session']")
+
+      assert_enqueued(
+        worker: Tymeslot.Workers.EmailWorker,
+        args: %{
+          "action" => "send_seat_session_moved",
+          "meeting_id" => session.id,
+          "participant_id" => participant.id
+        }
+      )
+    end
+
+    test "says when the host has another booking at the new time", ctx do
+      {:ok, session} = PlannedSessions.add(ctx.meeting_type, at(10, ~T[18:00:00]))
+      {:ok, _other} = PlannedSessions.add(ctx.meeting_type, at(12, ~T[09:00:00]))
+      view = edit(ctx.conn, ctx.meeting_type)
+
+      edit_date(view, session, %{
+        "date" => Date.to_iso8601(Date.add(Date.utc_today(), 12)),
+        "time" => "09:30"
+      })
+
+      assert has_element?(view, "[data-testid='edit-session']", "already have a booking")
+      assert Repo.reload!(session).start_time == at(10, ~T[18:00:00])
     end
   end
 
@@ -120,6 +168,15 @@ defmodule TymeslotWeb.Dashboard.FixedDatesRegistrationCloseTest do
   end
 
   describe "the meetings list" do
+    test "offers no reschedule request for a session, which moves from its type", ctx do
+      {:ok, session} = PlannedSessions.add(ctx.meeting_type, at(10, ~T[18:00:00]))
+      insert(:participant, meeting: session, name: "Ada Lovelace")
+
+      {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/meetings")
+
+      assert has_element?(view, "button[phx-click='show_reschedule_modal'][disabled]")
+    end
+
     test "marks an upcoming session whose registration has closed", ctx do
       {:ok, session} = PlannedSessions.add(ctx.meeting_type, at(10, ~T[18:00:00]))
       insert(:participant, meeting: session, name: "Ada Lovelace")

@@ -1353,16 +1353,6 @@ msgstr "registrace do %{datetime}"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format
-msgid "Change when registration closes"
-msgstr "Změnit uzávěrku registrace"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
-#, elixir-autogen, elixir-format
-msgid "Leave it empty to take sign-ups until the start. A time already past closes registration now."
-msgstr "Ponechte prázdné, chcete-li přijímat přihlášky až do začátku. Čas, který už uplynul, registraci hned uzavře."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
-#, elixir-autogen, elixir-format
 msgid "Registration closes"
 msgstr "Uzávěrka registrace"
 
@@ -1380,3 +1370,21 @@ msgstr "Tento termín už začal."
 #, elixir-autogen, elixir-format
 msgid "registration closed"
 msgstr "registrace uzavřena"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Edit this date"
+msgstr "Upravit tento termín"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Leave the registration close empty to take sign-ups until the start. A time already past closes registration now."
+msgstr "Ponechte uzávěrku registrace prázdnou, chcete-li přijímat přihlášky až do začátku. Čas, který už uplynul, registraci hned uzavře."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Moving the date emails the %{count} person booked on it the new time."
+msgid_plural "Moving the date emails the %{count} people booked on it the new time."
+msgstr[0] "Po přesunu termínu dostane %{count} přihlášená osoba nový čas e-mailem."
+msgstr[1] "Po přesunu termínu dostanou %{count} přihlášené osoby nový čas e-mailem."
+msgstr[2] "Po přesunu termínu dostane %{count} přihlášených osob nový čas e-mailem."
