@@ -204,6 +204,9 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     )
   end
 
+  defp update_failed_message(:day_missing_in_some_months),
+    do: EditWorkflow.month_end_refused_message()
+
   defp update_failed_message(:not_organiser), do: EditWorkflow.not_organiser_message()
 
   defp update_failed_message(reason)

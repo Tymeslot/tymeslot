@@ -58,6 +58,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
       "requires_approval" => to_string(Map.get(assigns, :requires_approval, false)),
       "approval_window_hours" => to_param(Map.get(assigns, :approval_window_hours)),
       "show_as_free" => to_string(Map.get(assigns, :show_as_free, false)),
+      "show_seat_availability" => to_string(Map.get(assigns, :show_seat_availability, true)),
+      "last_spots_threshold" => to_param(Map.get(assigns, :last_spots_threshold)),
       "max_bookings_per_day" => to_param(booking_limits["max_bookings_per_day"]),
       "max_bookings_per_week" => to_param(booking_limits["max_bookings_per_week"]),
       "max_bookings_per_month" => to_param(booking_limits["max_bookings_per_month"]),

@@ -112,6 +112,7 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
     context = %RefundContext{
       attendee_email: payment.attendee_email,
       attendee_name: payment.attendee_name,
+      host_email: payment.host_email,
       host_name: payment.host_name,
       meeting_title: meeting_title(meeting, payment),
       amount_cents: payment.amount_cents,

@@ -84,7 +84,7 @@
 }
 
 /* ===== Seat availability (group bookings) ===== */
-/* Group slots stack the time above a seats-left badge; solo slots (no
+/* Group slots stack the time above a spots badge; solo slots (no
    .has-seats) keep the single-line layout untouched. */
 .time-slot.has-seats {
   flex-direction: column;
@@ -97,11 +97,15 @@
   display: inline-flex;
   align-items: center;
   padding: 0 var(--space-2xs);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   font-size: var(--theme-font-size-3xs);
   font-weight: var(--font-weight-semibold);
   line-height: 1.6;
-  white-space: nowrap;
+  /* Labels are translated, and some outgrow a narrow slot button: they wrap
+     inside it rather than spill past its edge. */
+  max-width: 100%;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .seat-badge.seat-green {
@@ -117,6 +121,11 @@
 .seat-badge.seat-red {
   background: var(--seat-red-bg);
   color: var(--seat-red);
+}
+
+.seat-badge.seat-neutral {
+  background: var(--seat-neutral-bg);
+  color: var(--seat-neutral);
 }
 
 /* The selected slot's surface differs from the unselected one, and a faint

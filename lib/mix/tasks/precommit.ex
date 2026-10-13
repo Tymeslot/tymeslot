@@ -119,6 +119,9 @@ defmodule Mix.Tasks.Precommit do
     # once missed. Lower it again if either goes away.
     {"xref", ~w[xref graph --label compile-connected --fail-above 27], :dev},
     {"test", ~w[test], :test},
+    # Vitest, over the hooks under assets/js. `mix test` never reaches it, so
+    # without this step a JavaScript change could pass the whole gate unrun.
+    {"js", ~w[test.js], :dev},
     {"dialyzer", ~w[dialyzer.incremental --list-unused-filters], :dev}
   ]
 

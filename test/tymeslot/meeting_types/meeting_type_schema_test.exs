@@ -153,6 +153,34 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
     end
   end
 
+  describe "last_spots_threshold" do
+    test "rejects zero and negative thresholds" do
+      for threshold <- [0, -1] do
+        changeset = threshold_changeset(threshold)
+
+        assert errors_on(changeset).last_spots_threshold == [
+                 "must be greater than or equal to 1"
+               ],
+               "expected #{threshold} to be rejected"
+      end
+    end
+
+    test "rejects a threshold above the participant maximum of 999" do
+      assert errors_on(threshold_changeset(1000)).last_spots_threshold == [
+               "must be less than or equal to 999"
+             ]
+    end
+
+    test "accepts 1, the participant maximum, and nil" do
+      for threshold <- [1, 999, nil] do
+        changeset = threshold_changeset(threshold)
+
+        assert changeset.valid?, "expected #{inspect(threshold)} to be accepted"
+        assert Changeset.get_field(changeset, :last_spots_threshold) == threshold
+      end
+    end
+  end
+
   describe "business rules" do
     test "prevents meetings longer than 24 hours" do
       user = insert(:user)
@@ -505,6 +533,17 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
                "the picker offers #{icon} but no such heroicon is vendored"
       end
     end
+  end
+
+  defp threshold_changeset(threshold) do
+    MeetingTypeSchema.changeset(%MeetingTypeSchema{}, %{
+      name: "Workshop",
+      duration_minutes: 60,
+      user_id: 1,
+      max_participants: 10,
+      locations: [%{kind: "custom", label: "Main hall"}],
+      last_spots_threshold: threshold
+    })
   end
 
   defp valid_attrs do

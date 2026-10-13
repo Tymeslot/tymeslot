@@ -20,9 +20,12 @@ defmodule Tymeslot.Integrations.Calendar.Ics.AvailabilityIntegrationTest do
   @moduletag :integrations
   @moduletag :calendar
 
+  alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.Ics.Provider, as: IcsProvider
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
   alias Tymeslot.Integrations.Calendar.Runtime.EventFetcher
+  alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
 
   @feed_url "https://feeds.example.com/secret-address/team.ics"
@@ -89,5 +92,81 @@ defmodule Tymeslot.Integrations.Calendar.Ics.AvailabilityIntegrationTest do
 
       refute Enum.any?(events, &(&1.uid == "blocked-slot@example.com"))
     end
+  end
+
+  describe "an event the feed marks free" do
+    setup %{integration: integration} do
+      # How holiday feeds publish every entry: free, so it does not show as
+      # busy in the calendars it is subscribed in.
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        provider: "ics_url",
+        provider_calendar_id: "subscription",
+        uid: "public-holiday@example.com",
+        summary: "Public holiday",
+        start_at: ~U[2026-08-11 00:00:00.000000Z],
+        end_at: ~U[2026-08-12 00:00:00.000000Z],
+        all_day: true,
+        start_date: ~D[2026-08-11],
+        end_date: ~D[2026-08-12],
+        transparency: "transparent"
+      )
+
+      :ok
+    end
+
+    test "blocks nothing by default", %{user: user} do
+      assert holiday(user).transparency == "transparent"
+      refute CalendarEvent.blocking?(holiday(user))
+    end
+
+    test "blocks once the subscription counts every event as busy, without a new sync", %{
+      user: user,
+      integration: integration
+    } do
+      assert {:ok, %{all_events_busy: true}} =
+               CalendarManagement.set_all_events_busy(integration.id, user.id, true)
+
+      assert holiday(user).transparency == "opaque"
+      assert CalendarEvent.blocking?(holiday(user))
+
+      # The feed's own busy event is untouched by the flag either way.
+      assert busy_block(user).transparency == "opaque"
+
+      assert {:ok, %{all_events_busy: false}} =
+               CalendarManagement.set_all_events_busy(integration.id, user.id, false)
+
+      refute CalendarEvent.blocking?(holiday(user))
+    end
+  end
+
+  describe "CalendarManagement.set_all_events_busy/3" do
+    test "refuses a connection that is not a subscription", %{user: user} do
+      caldav = insert(:calendar_integration, user: user, provider: "caldav")
+
+      assert {:error, :not_a_subscription} =
+               CalendarManagement.set_all_events_busy(caldav.id, user.id, true)
+
+      refute Repo.reload!(caldav).all_events_busy
+    end
+
+    test "refuses another user's subscription", %{integration: integration} do
+      other = insert(:user)
+
+      assert {:error, :not_found} =
+               CalendarManagement.set_all_events_busy(integration.id, other.id, true)
+
+      refute Repo.reload!(integration).all_events_busy
+    end
+  end
+
+  defp holiday(user), do: event(user, "public-holiday@example.com")
+  defp busy_block(user), do: event(user, "blocked-slot@example.com")
+
+  defp event(user, uid) do
+    {:ok, events} =
+      EventFetcher.get_events_for_range_fresh(user.id, ~D[2026-08-01], ~D[2026-08-20])
+
+    Enum.find(events, &(&1.uid == uid))
   end
 end

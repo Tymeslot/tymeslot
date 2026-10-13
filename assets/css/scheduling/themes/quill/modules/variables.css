@@ -229,6 +229,10 @@
   --seat-green-bg: rgba(16, 185, 129, 0.18);
   --seat-amber-bg: rgba(251, 191, 36, 0.18);
   --seat-red-bg: rgba(239, 68, 68, 0.18);
+  /* The exact count without the traffic light: a fact, not a warning, so it
+     takes the slot's own text colour on a faint wash of it. */
+  --seat-neutral: currentColor;
+  --seat-neutral-bg: color-mix(in srgb, currentColor 12%, transparent);
   /* A selected slot sits on the primary gradient, whose text colour is
      --theme-on-primary: the badge takes that colour on a faint wash of it,
      so a custom palette's contrast pair carries over to the badge. */

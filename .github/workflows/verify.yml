@@ -30,6 +30,11 @@ jobs:
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: assets/package-lock.json
       # priv/plts is where mix.exs points plt_core_path/plt_local_path; without
       # it cached, every run rebuilds the Dialyzer PLT from scratch. The
       # Elixir/OTP versions are part of the key because both _build and the PLT
@@ -78,6 +83,10 @@ jobs:
           sudo tar -xzf /tmp/git-cliff.tar.gz -C /usr/local/bin --strip-components=1 "git-cliff-${CLIFF_VERSION}/git-cliff"
           git-cliff --version
       - run: mix test
+      # The Vitest suite over assets/js, which `mix test` never reaches. Without
+      # it a pull request that only changes a hook is verified by nothing.
+      - run: npm ci --prefix assets
+      - run: mix test.js
       # Catalogue references drift whenever a translatable string is added,
       # removed, or moved between files, and nothing else in this workflow
       # notices. Run it locally the same way, from the repository root:

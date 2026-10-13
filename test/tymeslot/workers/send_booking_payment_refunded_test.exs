@@ -95,6 +95,20 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefundedTest do
       end)
     end
 
+    test "lets the booker reply to the host" do
+      payment = insert_payment(%{host_email: "bob@example.com"})
+
+      assert :ok =
+               perform_job(SendBookingPaymentRefunded, %{
+                 "booking_payment_id" => payment.id
+               })
+
+      assert_email_sent(fn email ->
+        assert email.to == [{"Alice", "alice@example.com"}]
+        assert email.reply_to == {"Bob Host", "bob@example.com"}
+      end)
+    end
+
     test "discards when booking_payment is missing" do
       assert {:discard, "booking_payment not found"} =
                perform_job(SendBookingPaymentRefunded, %{

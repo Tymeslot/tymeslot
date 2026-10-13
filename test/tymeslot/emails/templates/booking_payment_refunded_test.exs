@@ -109,4 +109,20 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefundedTest do
       assert String.length(email.html_body) > 100
     end
   end
+
+  describe "render/1 Reply-To" do
+    test "replies to the host, from the instance's address" do
+      email = BookingPaymentRefunded.render(build_context(%{host_email: "bob@example.com"}))
+
+      assert email.reply_to == {"Bob Host", "bob@example.com"}
+      assert {_name, address} = email.from
+      assert address == Application.get_env(:tymeslot, :email)[:from_email]
+    end
+
+    test "carries no Reply-To when the host's address is unknown" do
+      email = BookingPaymentRefunded.render(build_context(%{host_email: nil}))
+
+      assert email.reply_to == nil
+    end
+  end
 end

@@ -433,6 +433,26 @@ defmodule Tymeslot.CalendarGrid.IcsImportTest do
 
       assert %{exclusions_dropped: 1} = IcsImport.run(outlook_target, plan)
     end
+
+    test "counts refused month-end series as failed without stopping the import", ctx do
+      series =
+        for n <- 1..6 do
+          timed("m#{n}@x", "Close #{n}", "20260131T090000Z", "20260131T100000Z", [
+            "RRULE:FREQ=MONTHLY"
+          ])
+        end
+
+      plan =
+        plan!(ics(series ++ [timed("last@x", "Last", "20261105T090000Z", "20261105T100000Z")]))
+
+      stub(Tymeslot.CalendarMock, :create_event, fn
+        %{recurrence_rule: "FREQ=MONTHLY"}, _context -> {:error, :day_missing_in_some_months}
+        data, _context -> {:ok, CreatedEvent.new(data.uid)}
+      end)
+
+      assert %{created: 1, failed: 6, month_end_refused: 6, halted: nil} =
+               IcsImport.run(ctx.target, plan)
+    end
   end
 
   describe "CalendarGrid.import_ics/5" do

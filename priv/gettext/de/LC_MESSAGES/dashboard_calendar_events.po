@@ -1484,3 +1484,15 @@ msgstr "Absage senden"
 #, elixir-autogen, elixir-format
 msgid "You already have a meeting at this time. Please choose a different time."
 msgstr "Zu dieser Zeit haben Sie bereits einen Termin. Bitte wählen Sie eine andere Uhrzeit."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
+#, elixir-autogen, elixir-format
+msgid "1 of them repeats on a day some months don't have, which Outlook would move to the month's last day."
+msgid_plural "%{count} of them repeat on a day some months don't have, which Outlook would move to the month's last day."
+msgstr[0] "1 davon wiederholt sich an einem Tag, den manche Monate nicht haben; Outlook würde es auf den letzten Tag des Monats verschieben."
+msgstr[1] "%{count} davon wiederholen sich an einem Tag, den manche Monate nicht haben; Outlook würde sie auf den letzten Tag des Monats verschieben."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "Outlook can't skip the months that don't have this series' day, and would move those events to the month's last day. Please start the series on the 28th or earlier, or save it to another calendar."
+msgstr "Outlook kann Monate, die den Tag dieser Serie nicht haben, nicht überspringen und würde diese Ereignisse auf den letzten Tag des Monats verschieben. Bitte beginnen Sie die Serie am 28. oder früher oder speichern Sie sie in einem anderen Kalender."

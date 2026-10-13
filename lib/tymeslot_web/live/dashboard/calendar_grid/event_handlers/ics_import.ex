@@ -434,7 +434,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.IcsImport do
         count
       )
 
-  defp failed_message(%{failed: failed, failed_titles: titles}) do
+  defp failed_message(%{failed: failed, failed_titles: titles} = summary) do
     titles = titles |> Enum.reject(&(&1 == "")) |> Enum.join(", ")
 
     message =
@@ -445,8 +445,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.IcsImport do
         failed
       )
 
-    if titles == "", do: message, else: "#{message} (#{titles})"
+    message = if titles == "", do: message, else: "#{message} (#{titles})"
+
+    case summary.month_end_refused do
+      0 -> message
+      refused -> message <> " " <> month_end_refused_message(refused)
+    end
   end
+
+  defp month_end_refused_message(count),
+    do:
+      dngettext(
+        "dashboard_calendar_events",
+        "1 of them repeats on a day some months don't have, which Outlook would move to the month's last day.",
+        "%{count} of them repeat on a day some months don't have, which Outlook would move to the month's last day.",
+        count
+      )
 
   defp halted_message(:unauthorized),
     do:

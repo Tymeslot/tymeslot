@@ -243,6 +243,37 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
       assert subjects["attendee@example.com"] =~ "Appointment Confirmed"
     end
 
+    # Both copies are sent from the instance's own, often no-reply, address,
+    # so a reply only reaches a person through Reply-To.
+    test "lets each party reply to the other, not to the instance's address", %{
+      meeting_params: meeting_params,
+      form_data: form_data
+    } do
+      assert {:ok, meeting} = Create.execute(meeting_params, form_data)
+
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_confirmation_emails",
+                 "meeting_id" => meeting.id
+               })
+
+      assert_received {:email, one}
+      assert_received {:email, other}
+
+      by_recipient = Map.new([one, other], &{&1.to |> hd() |> elem(1), &1})
+      instance_address = Application.get_env(:tymeslot, :email)[:from_email]
+
+      attendee_copy = Map.fetch!(by_recipient, "attendee@example.com")
+      organiser_copy = Map.fetch!(by_recipient, "organizer@example.com")
+
+      assert attendee_copy.reply_to == {meeting.organizer_name, "organizer@example.com"}
+      assert organiser_copy.reply_to == {"Test Attendee", "attendee@example.com"}
+
+      for email <- [attendee_copy, organiser_copy] do
+        assert {_name, ^instance_address} = email.from
+      end
+    end
+
     # The stored title becomes the host's calendar event, so it is in the
     # host's language. The booker's calendar file is tagged with the booker's
     # language, so the title in it has to be in that language too, through

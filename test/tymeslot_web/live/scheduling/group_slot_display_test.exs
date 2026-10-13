@@ -1,7 +1,8 @@
 defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
   @moduledoc """
-  Traffic-light seat display on the public booking schedule step, per theme.
-  Solo meeting types must render exactly as before (no badge markup).
+  The spots display on the public booking schedule step, per theme, under
+  each of the organiser's display settings. Solo meeting types must render
+  exactly as before (no badge markup).
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -148,7 +149,8 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
       html = render(view)
       assert html =~ ~s(data-testid="seat-badge")
       assert html =~ "seat-green"
-      assert html =~ "10 seats left"
+      assert html =~ "Plenty left"
+      refute html =~ "spots left"
       assert html =~ "has-seats"
     end
 
@@ -163,7 +165,7 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
 
       html = render(view)
       refute html =~ "seat-badge"
-      refute html =~ "seats left"
+      refute html =~ "spots left"
       refute html =~ "has-seats"
     end
 
@@ -224,7 +226,7 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
       html = render(view)
       assert html =~ ~s(data-testid="seat-badge")
       assert html =~ "seat-green"
-      assert html =~ "10 seats left"
+      assert html =~ "Plenty left"
     end
 
     @tag :capture_log
@@ -238,7 +240,60 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
 
       html = render(view)
       refute html =~ "seat-badge"
-      refute html =~ "seats left"
+      refute html =~ "spots left"
     end
+  end
+
+  # Capacity 10 and nobody booked yet: every slot has 10 spots left, so a
+  # threshold of 10 shows the count and one of 9 does not.
+  for {theme, theme_name} <- [{"1", "Quill"}, {"2", "Rhythm"}] do
+    describe "#{theme_name} spots display settings" do
+      @theme theme
+
+      @tag :capture_log
+      test "with colours off and no count, slots carry no badge but the step still says group session",
+           %{user: user} do
+        view = group_schedule(user, @theme, show_seat_availability: false)
+
+        refute has_element?(view, ~s([data-testid="seat-badge"]))
+        refute has_element?(view, ~s([data-testid="time-slot"].has-seats))
+        assert has_element?(view, ~s([data-testid="group-session-hint"]), "up to 10 people")
+      end
+
+      @tag :capture_log
+      test "with colours off, the count shows neutrally once within the threshold", %{user: user} do
+        view =
+          group_schedule(user, @theme, show_seat_availability: false, last_spots_threshold: 10)
+
+        assert has_element?(view, ~s([data-testid="seat-badge"].seat-neutral), "10 spots left")
+        refute render(view) =~ "seat-green"
+      end
+
+      @tag :capture_log
+      test "with colours on, the count replaces the level label within the threshold",
+           %{user: user} do
+        view = group_schedule(user, @theme, last_spots_threshold: 10)
+
+        assert has_element?(view, ~s([data-testid="seat-badge"].seat-green), "10 spots left")
+        refute render(view) =~ "Plenty left"
+      end
+
+      @tag :capture_log
+      test "the count stays hidden above the threshold", %{user: user} do
+        view = group_schedule(user, @theme, last_spots_threshold: 9)
+
+        assert has_element?(view, ~s([data-testid="seat-badge"].seat-green), "Plenty left")
+        refute render(view) =~ "spots left"
+      end
+    end
+  end
+
+  defp group_schedule(user, theme, display_attrs) do
+    {profile, _meeting_type} =
+      setup_booking_page(user, theme, "Group Display", [max_participants: 10] ++ display_attrs)
+
+    {view, _date} = open_schedule_and_pick_tomorrow(profile, "group-display")
+    wait_until(fn -> has_element?(view, ~s([data-testid="time-slot"])) end)
+    view
   end
 end

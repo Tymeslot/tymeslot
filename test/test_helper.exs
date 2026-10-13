@@ -48,7 +48,11 @@ Tymeslot.Test.SuiteConfig.setup_log_capture()
 
 ExUnit.start()
 
-base_config = [capture_log: true, exclude: Tymeslot.Test.SuiteConfig.default_exclude_tags()]
+base_config = [
+  capture_log: true,
+  exclude: Tymeslot.Test.SuiteConfig.default_exclude_tags(),
+  formatters: Tymeslot.Test.SuiteConfig.formatters()
+]
 
 exunit_config =
   case Tymeslot.Test.SuiteConfig.max_cases() do

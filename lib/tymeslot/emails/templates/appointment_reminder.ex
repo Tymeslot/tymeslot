@@ -78,6 +78,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
 
       MjmlEmail.base_email()
       |> to({appointment_details.attendee_name, attendee_email})
+      |> MjmlEmail.put_reply_to(
+        appointment_details.organizer_name,
+        appointment_details.organizer_email
+      )
       |> subject(
         Sanitise.sanitize_for_header(
           dgettext("emails_booking", "Reminder: Our meeting is in %{time_until}",
@@ -157,6 +161,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
 
       MjmlEmail.base_email()
       |> to({guest_name, guest_email})
+      |> MjmlEmail.put_reply_to(
+        appointment_details.organizer_name,
+        appointment_details.organizer_email
+      )
       |> subject(
         Sanitise.sanitize_for_header(
           dgettext("emails_booking", "Reminder: the meeting with %{name} is in %{time_until}",
@@ -212,6 +220,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
 
       MjmlEmail.base_email()
       |> to({appointment_details.organizer_name, organizer_email})
+      |> MjmlEmail.put_reply_to(
+        appointment_details.attendee_name,
+        appointment_details.attendee_email
+      )
       |> subject(
         Sanitise.sanitize_for_header(
           dgettext("emails_booking", "⏰ Meeting with %{name} in %{time_until}",

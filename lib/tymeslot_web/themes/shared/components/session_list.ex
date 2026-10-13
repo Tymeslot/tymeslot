@@ -34,6 +34,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.SessionList do
           closes_at: DateTime.t() | nil,
           seats_left: non_neg_integer(),
           capacity: pos_integer(),
+          seats: Seats.display(),
           open?: boolean()
         }
 
@@ -50,13 +51,15 @@ defmodule TymeslotWeb.Themes.Shared.Components.SessionList do
       entries =
         meeting_type
         |> PlannedSessions.upcoming(now)
-        |> Enum.map(&entry(&1, timezone, now))
+        |> Enum.map(&entry(&1, meeting_type, timezone, now))
 
       %{entries: entries, ended?: entries == [] and PlannedSessions.list(meeting_type) != []}
     end
   end
 
-  defp entry(session, timezone, now) do
+  # `seats` is what the type's spots display shows for the session, as for
+  # any group slot (`SeatBadge.display/2`).
+  defp entry(session, meeting_type, timezone, now) do
     local = DateTime.shift_zone!(session.start_time, timezone)
     seats_left = Seats.seats_left(session, session.capacity)
 
@@ -67,6 +70,8 @@ defmodule TymeslotWeb.Themes.Shared.Components.SessionList do
       closes_at: session.registration_closes_at,
       seats_left: seats_left,
       capacity: session.capacity,
+      seats:
+        SeatBadge.display(%{seats_left: seats_left, capacity: session.capacity}, meeting_type),
       open?: seats_left > 0 and PlannedSessions.open?(session, now)
     }
   end
@@ -128,11 +133,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.SessionList do
             <span class="session-list-when">
               {LocalizationHelpers.format_meeting_datetime_compact(entry.starts_at, @timezone)}
             </span>
-            <SeatBadge.seat_badge
-              :if={entry.open?}
-              seats_left={entry.seats_left}
-              capacity={entry.capacity}
-            />
+            <SeatBadge.seat_badge :if={entry.open?} display={entry.seats} />
             <span class="session-list-status">{status(entry, @timezone)}</span>
           </button>
         </li>

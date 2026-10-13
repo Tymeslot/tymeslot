@@ -600,3 +600,8 @@ msgstr[2] "Skupinové setkání: máte jedno z %{count} míst."
 #, elixir-autogen, elixir-format
 msgid "ends %{time} on %{date}"
 msgstr "konec: %{date}, %{time}"
+
+#: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
+#, elixir-autogen, elixir-format
+msgid "Scheduled with %{brand}: %{url}"
+msgstr "Naplánováno přes %{brand}: %{url}"
