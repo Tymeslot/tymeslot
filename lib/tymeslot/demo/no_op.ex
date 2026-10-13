@@ -59,9 +59,9 @@ defmodule Tymeslot.Demo.NoOp do
   end
 
   @impl Tymeslot.Demo.Behaviour
-  def get_theme_customization(profile_id, theme_id)
-      when is_integer(profile_id) and is_binary(theme_id) do
-    ThemeCustomizations.get_by_profile_and_theme(profile_id, theme_id)
+  def get_theme_customization(scope, theme_id)
+      when (is_integer(scope) or is_tuple(scope)) and is_binary(theme_id) do
+    ThemeCustomizations.get_by_profile_and_theme(scope, theme_id)
   end
 
   @impl Tymeslot.Demo.Behaviour

@@ -5,12 +5,14 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationSchema do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Tymeslot.BookingPages.BookingPageSchema
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Themes.Catalog
 
   @type t :: %__MODULE__{
           id: integer() | nil,
           profile_id: integer() | nil,
+          booking_page_id: integer() | nil,
           theme_id: String.t() | nil,
           color_scheme: String.t(),
           custom_palette_seed: String.t() | nil,
@@ -40,6 +42,8 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationSchema do
     field(:video_processing, :string)
 
     belongs_to(:profile, ProfileSchema, foreign_key: :profile_id)
+    # Set for a booking page's own colours; NULL for the profile's own page.
+    belongs_to(:booking_page, BookingPageSchema)
 
     timestamps(type: :utc_datetime)
   end
@@ -51,6 +55,7 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationSchema do
     |> cast(attrs, [
       :profile_id,
       :theme_id,
+      :booking_page_id,
       :color_scheme,
       :custom_palette_seed,
       :background_type,
@@ -67,7 +72,9 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationSchema do
     |> validate_background_value()
     |> validate_custom_palette_seed()
     |> foreign_key_constraint(:profile_id)
+    |> foreign_key_constraint(:booking_page_id)
     |> unique_constraint([:profile_id, :theme_id])
+    |> unique_constraint([:booking_page_id, :theme_id])
   end
 
   @doc """

@@ -430,3 +430,8 @@ msgstr "групові бронювання не можуть вимагати �
 #, elixir-autogen, elixir-format
 msgid "You already have a meeting type with this name"
 msgstr "У вас уже є тип зустрічі з такою назвою"
+
+#: lib/tymeslot/booking_pages/booking_page_schema.ex
+#, elixir-autogen, elixir-format
+msgid "Use 3 to 30 lowercase letters, numbers, hyphens or underscores, starting with a letter or number"
+msgstr "Використовуйте від 3 до 30 малих літер, цифр, дефісів або підкреслень, починаючи з літери чи цифри"

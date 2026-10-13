@@ -13,6 +13,7 @@ defmodule Tymeslot.Profiles do
 
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.BookingPage.Publication
+  alias Tymeslot.BookingPages
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Profiles.Avatars
   alias Tymeslot.Profiles.EmbedDomains
@@ -119,13 +120,16 @@ defmodule Tymeslot.Profiles do
   end
 
   @doc """
-  Gets a profile by username.
+  Resolves a public address to a profile: a username, or failing that one of
+  its booking pages' addresses, which answers with the owner's profile as that
+  page presents it (`Tymeslot.BookingPages.apply_to_profile/2`). A username
+  always wins, so a page can never take over another host's start page.
   """
   @spec get_profile_by_username(username) :: profile | nil
   def get_profile_by_username(username) do
     case ProfileQueries.get_by_username(username) do
       {:ok, profile} -> profile
-      {:error, :not_found} -> nil
+      {:error, :not_found} -> BookingPages.profile_for_address(username)
     end
   end
 

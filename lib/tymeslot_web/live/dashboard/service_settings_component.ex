@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.BookingPages
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
@@ -70,6 +71,8 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
       |> assign(:venues, data.venues)
       |> assign(:calendar_integrations, data.calendar_integrations)
       |> assign(:payment_currency, host_currency(data.meeting_types, user_id))
+      |> assign(:booking_pages, BookingPages.list(socket.assigns.profile.id))
+      |> assign(:page_memberships, BookingPages.memberships(socket.assigns.profile.id))
 
     {:ok, socket}
   end
@@ -162,6 +165,14 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
 
     with_rate_limit(RateLimiter.check_meeting_type_write_rate_limit(user_id), socket, fn ->
       do_toggle_private(socket, type_id, user_id)
+    end)
+  end
+
+  def handle_event("toggle_page_membership", %{"id" => id, "page" => page_id}, socket) do
+    user_id = socket.assigns.current_user.id
+
+    with_rate_limit(RateLimiter.check_meeting_type_write_rate_limit(user_id), socket, fn ->
+      do_toggle_page_membership(socket, String.to_integer(id), page_id, user_id)
     end)
   end
 
@@ -318,6 +329,26 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
             Flash.error(dgettext("dashboard_integrations", "Failed to update visibility"))
             {:noreply, socket}
         end
+    end
+  end
+
+  # A booking page's listing. A type or page deleted meanwhile (in another
+  # tab) fails like a refused write: an error flash, nothing changed.
+  defp do_toggle_page_membership(socket, type_id, page_id, user_id) do
+    profile_id = socket.assigns.profile.id
+
+    with %{} = type <- MeetingTypes.get_meeting_type(type_id, user_id),
+         {:ok, page} <- BookingPages.fetch(profile_id, page_id),
+         listed_on = Map.get(socket.assigns.page_memberships, type.id, MapSet.new()),
+         :ok <-
+           BookingPages.set_meeting_type(page, type.id, not MapSet.member?(listed_on, page.id)) do
+      send(self(), {:meeting_type_changed})
+      Flash.info(dgettext("dashboard_integrations", "Visibility updated"))
+      {:noreply, assign(socket, :page_memberships, BookingPages.memberships(profile_id))}
+    else
+      _not_found_or_failed ->
+        Flash.error(dgettext("dashboard_integrations", "Failed to update visibility"))
+        {:noreply, socket}
     end
   end
 

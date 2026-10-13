@@ -437,3 +437,8 @@ msgstr "skupinové rezervace nemohou vyžadovat platbu"
 #, elixir-autogen, elixir-format
 msgid "You already have a meeting type with this name"
 msgstr "Typ schůzky s tímto názvem už máte"
+
+#: lib/tymeslot/booking_pages/booking_page_schema.ex
+#, elixir-autogen, elixir-format
+msgid "Use 3 to 30 lowercase letters, numbers, hyphens or underscores, starting with a letter or number"
+msgstr "Použijte 3 až 30 malých písmen, číslic, pomlček nebo podtržítek; na začátku písmeno nebo číslice"

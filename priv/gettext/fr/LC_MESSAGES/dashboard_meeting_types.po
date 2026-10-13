@@ -27,11 +27,6 @@ msgstr "Modifier le lien de réservation"
 msgid "Changing this link will stop any links you have already shared for this meeting type from working."
 msgstr "Modifier ce lien désactivera tous les liens que vous avez déjà partagés pour ce type de réunion."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
-#, elixir-autogen, elixir-format
-msgid "Hidden from your public booking page; reachable only by its direct link"
-msgstr "Masqué de votre page de réservation publique ; accessible uniquement via son lien direct"
-
 #: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Link address"
@@ -335,3 +330,8 @@ msgstr "Supprimer le type de réunion"
 #, elixir-autogen, elixir-format
 msgid "Edit %{name}"
 msgstr "Modifier %{name}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "On no booking page; reachable only by its direct link"
+msgstr "Sur aucune page de réservation ; accessible uniquement via son lien direct"

@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Helpers.ThemeUploadHelper do
   @spec process_background_image_upload(Phoenix.LiveView.Socket.t(), map()) ::
           {:ok, String.t()} | {:error, String.t()}
   def process_background_image_upload(socket, profile) do
+    scope = ThemeCustomizations.scope_for(profile)
     theme_id = get_theme_id(socket)
 
     uploaded_files =
@@ -21,7 +22,7 @@ defmodule TymeslotWeb.Helpers.ThemeUploadHelper do
         # We must copy the file INSIDE this callback, before it gets deleted
         file_info = %{path: temp_path, filename: entry.client_name}
 
-        case ThemeCustomizations.store_background_image(profile.id, theme_id, file_info) do
+        case ThemeCustomizations.store_background_image(scope, theme_id, file_info) do
           {:ok, stored_path} ->
             {:ok, stored_path}
 
@@ -41,7 +42,7 @@ defmodule TymeslotWeb.Helpers.ThemeUploadHelper do
           "background_image_path" => stored_path
         }
 
-        case ThemeCustomizations.upsert_theme_customization(profile.id, theme_id, attrs) do
+        case ThemeCustomizations.upsert_theme_customization(scope, theme_id, attrs) do
           {:ok, _customization} ->
             {:ok, "Background image uploaded successfully"}
 
@@ -80,6 +81,7 @@ defmodule TymeslotWeb.Helpers.ThemeUploadHelper do
   end
 
   defp do_process_background_video_upload(socket, profile) do
+    scope = ThemeCustomizations.scope_for(profile)
     theme_id = get_theme_id(socket)
 
     uploaded_files =
@@ -87,7 +89,7 @@ defmodule TymeslotWeb.Helpers.ThemeUploadHelper do
         # We must copy the file INSIDE this callback, before it gets deleted
         file_info = %{path: temp_path, filename: entry.client_name}
 
-        case ThemeCustomizations.store_background_video(profile.id, theme_id, file_info) do
+        case ThemeCustomizations.store_background_video(scope, theme_id, file_info) do
           {:ok, stored_path} ->
             {:ok, stored_path}
 
@@ -108,14 +110,14 @@ defmodule TymeslotWeb.Helpers.ThemeUploadHelper do
           "video_processing" => "pending"
         }
 
-        case ThemeCustomizations.upsert_theme_customization(profile.id, theme_id, attrs) do
+        case ThemeCustomizations.upsert_theme_customization(scope, theme_id, attrs) do
           {:ok, customization} ->
             case VideoTranscoder.enqueue(customization.id, stored_path) do
               {:ok, _job} ->
                 :ok
 
               {:error, _reason} ->
-                ThemeCustomizations.upsert_theme_customization(profile.id, theme_id, %{
+                ThemeCustomizations.upsert_theme_customization(scope, theme_id, %{
                   "video_processing" => "failed"
                 })
             end

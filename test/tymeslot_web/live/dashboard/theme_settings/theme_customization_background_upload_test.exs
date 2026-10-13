@@ -2,12 +2,15 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationBackgroundUpload
   @moduledoc """
   Verifies a successful background image upload in the theme customizer
   pushes "upload-complete" so the `AutoUpload` hook clears the file picker,
-  mirroring the avatar upload fixes (dashboard and onboarding), and that what
-  is published carries none of the uploaded file's metadata.
+  mirroring the avatar upload fixes (dashboard and onboarding), that what
+  is published carries none of the uploaded file's metadata, and that an
+  upload on a booking page's tab is stored as the page's.
   """
 
   use TymeslotWeb.LiveCase, async: false
 
+  alias Ecto.Changeset
+  alias Tymeslot.Repo
   alias Tymeslot.Test.MediaFixtures
   alias Tymeslot.ThemeCustomizations
 
@@ -15,6 +18,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationBackgroundUpload
   @moduletag :live
 
   import Tymeslot.DashboardTestHelpers
+  import Tymeslot.Factory
 
   # Complete and decodable: a stored image is re-encoded, so magic bytes
   # alone are refused.
@@ -103,6 +107,38 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationBackgroundUpload
                %{background_image_path: path} when is_binary(path),
                ThemeCustomizations.get_by_profile_and_theme(profile.id, "1")
              )
+    end
+
+    test "a background uploaded on a booking page's tab is the page's", %{
+      conn: conn,
+      profile: profile
+    } do
+      profile = profile |> Changeset.change(username: "joern") |> Repo.update!()
+      page = insert(:booking_page, profile: profile, slug: "einfachiso", booking_theme: "1")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1?#{[page: page.id]}")
+
+      view
+      |> element("button[phx-click='theme:set_browsing_type'][phx-value-type='image']")
+      |> render_click()
+
+      image = %{
+        last_modified: System.system_time(:millisecond),
+        name: "background.png",
+        content: @valid_png,
+        type: "image/png"
+      }
+
+      view
+      |> file_input("#theme-background-image-form", :background_image, [image])
+      |> render_upload("background.png")
+
+      assert_push_event(view, "upload-complete", %{})
+
+      assert %{background_image_path: path} =
+               ThemeCustomizations.get_by_profile_and_theme({profile.id, page.id}, "1")
+
+      assert path =~ "page-#{page.id}-"
+      assert ThemeCustomizations.get_by_profile_and_theme(profile.id, "1") == nil
     end
   end
 

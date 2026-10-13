@@ -12,6 +12,8 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Availability.AvailabilityScheduleSchema
   alias Tymeslot.Availability.TimeOffPeriodSchema
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
+  alias Tymeslot.BookingPages.BookingPageMeetingTypeSchema
+  alias Tymeslot.BookingPages.BookingPageSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
@@ -382,6 +384,25 @@ defmodule Tymeslot.Factory do
       background_type: "gradient",
       background_value: "gradient_1",
       profile: build(:profile)
+    }
+  end
+
+  @spec booking_page_factory() :: Tymeslot.BookingPages.BookingPageSchema.t()
+  def booking_page_factory do
+    %BookingPageSchema{
+      name: sequence(:booking_page_name, &"Page #{&1}"),
+      slug: sequence(:booking_page_slug, &"page-#{&1}"),
+      booking_theme: "1",
+      profile: build(:profile)
+    }
+  end
+
+  @spec booking_page_meeting_type_factory() ::
+          Tymeslot.BookingPages.BookingPageMeetingTypeSchema.t()
+  def booking_page_meeting_type_factory do
+    %BookingPageMeetingTypeSchema{
+      booking_page: build(:booking_page),
+      meeting_type: build(:meeting_type)
     }
   end
 

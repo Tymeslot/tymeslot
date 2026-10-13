@@ -172,11 +172,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
     } do
       view |> element("#meeting-type-form-tabs-tab-booking") |> render_click()
 
+      # The switch reads "Show on /<username>": on while the type is listed.
       # A switch must state "false" when off: a boolean false drops the
       # attribute, leaving screen readers with no state at all.
       assert has_element?(
                view,
-               "#meeting-type-form-tabs-panel-booking [phx-click='toggle_private'][aria-checked='false']"
+               "#meeting-type-form-tabs-panel-booking [phx-click='toggle_private'][aria-checked='true']"
              )
 
       view
@@ -187,7 +188,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
 
       assert has_element?(
                view,
-               "#meeting-type-form-tabs-panel-booking [phx-click='toggle_private'][aria-checked='true']"
+               "#meeting-type-form-tabs-panel-booking [phx-click='toggle_private'][aria-checked='false']"
              )
     end
   end

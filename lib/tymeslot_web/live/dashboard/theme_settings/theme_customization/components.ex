@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.BookingPages
   alias Tymeslot.ThemeCustomizations
   alias TymeslotWeb.Live.Scheduling.PreviewMode
 
@@ -38,7 +39,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
       <div class="flex items-center justify-between gap-3 md:justify-start">
         <%= if @profile && @profile.username do %>
           <.action_link
-            href={PreviewMode.owner_path(@profile.username, @profile.user_id, theme: @theme_id)}
+            href={
+              PreviewMode.owner_path(BookingPages.public_address(@profile), @profile.user_id,
+                theme: @theme_id
+              )
+            }
             target="_blank"
             rel="noopener noreferrer"
             variant={:secondary}

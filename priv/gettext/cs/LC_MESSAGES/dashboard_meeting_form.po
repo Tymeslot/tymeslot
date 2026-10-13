@@ -682,11 +682,6 @@ msgstr "Pravidla rezervace"
 msgid "Details"
 msgstr "Podrobnosti"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
-#, elixir-autogen, elixir-format
-msgid "Hide from public booking page"
-msgstr "Skrýt z veřejné rezervační stránky"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "Location"
@@ -706,11 +701,6 @@ msgstr "Otázky"
 #, elixir-autogen, elixir-format
 msgid "Visibility"
 msgstr "Viditelnost"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
-#, elixir-autogen, elixir-format
-msgid "When on, this meeting type is reachable only through its direct link."
-msgstr "Když je zapnuto, je tento typ schůzky dostupný jen přes svůj přímý odkaz."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
 #, elixir-autogen, elixir-format
@@ -1244,3 +1234,13 @@ msgid_plural "%{time} (+%{count} days)"
 msgstr[0] "%{time} (+%{count} den)"
 msgstr[1] "%{time} (+%{count} dny)"
 msgstr[2] "%{time} (+%{count} dní)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "On no booking page: bookable only through its direct link."
+msgstr "Na žádné rezervační stránce: lze rezervovat jen přes přímý odkaz."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Show on %{address}"
+msgstr "Zobrazit na stránce %{address}"

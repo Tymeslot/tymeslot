@@ -33,6 +33,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
           booking_page_published_at: DateTime.t() | nil,
           booking_text_enabled: boolean(),
           booking_heading: String.t() | nil,
+          booking_page: map() | nil,
           booking_greeting: String.t() | nil,
           booking_instruction: String.t() | nil,
           freebusy_token: String.t() | nil,
@@ -82,6 +83,10 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     )
 
     field(:meeting_types, {:array, :map}, virtual: true)
+    # Set when this profile was resolved through one of its booking pages:
+    # the page whose theme and texts `Tymeslot.BookingPages.apply_to_profile/2`
+    # laid over these fields. Never persisted.
+    field(:booking_page, :map, virtual: true)
     belongs_to(:user, Tymeslot.Auth.UserSchema)
 
     belongs_to(
@@ -153,7 +158,9 @@ defmodule Tymeslot.Profiles.ProfileSchema do
   absent, which would silently drop the change when an organiser clears a field,
   leaving the old wording on the page.
   """
-  @spec booking_text_changeset(t(), map()) :: Ecto.Changeset.t()
+  # Also applied to `Tymeslot.BookingPages.BookingPageSchema`, which carries
+  # the same three fields and switch, so a page's texts follow the same rules.
+  @spec booking_text_changeset(t() | struct(), map()) :: Ecto.Changeset.t()
   def booking_text_changeset(profile, attrs) do
     profile
     |> cast(attrs, [:booking_text_enabled | @booking_text_fields], empty_values: [])

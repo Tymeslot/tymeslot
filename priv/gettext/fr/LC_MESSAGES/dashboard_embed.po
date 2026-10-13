@@ -445,3 +445,8 @@ msgstr "Paramètres d'intégration"
 #, elixir-autogen, elixir-format
 msgid "Remove %{domain}"
 msgstr "Supprimer %{domain}"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page"
+msgstr "Page de réservation"

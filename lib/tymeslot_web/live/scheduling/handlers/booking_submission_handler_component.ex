@@ -33,6 +33,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
 
   alias Phoenix.Component
   alias Phoenix.LiveView
+  alias Tymeslot.BookingPages
   alias Tymeslot.Bookings.DemoOrchestrator
   alias Tymeslot.CustomFields
   alias Tymeslot.Demo
@@ -379,6 +380,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       user_timezone: socket.assigns.user_timezone,
       organizer_user_id: socket.assigns.organizer_user_id,
       meeting_type_id: get_meeting_type_id(socket),
+      booking_page_id: BookingPages.page_id(socket.assigns[:organizer_profile]),
       requires_approval: Approval.required?(socket.assigns[:meeting_type]),
       attendee_locale:
         socket.assigns[:locale] || Application.get_env(:tymeslot, :locales)[:default] || "en",

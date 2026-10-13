@@ -27,11 +27,6 @@ msgstr "Змінити посилання для бронювання"
 msgid "Changing this link will stop any links you have already shared for this meeting type from working."
 msgstr "Якщо ви зміните це посилання, усі раніше надіслані посилання для цього типу зустрічі перестануть працювати."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
-#, elixir-autogen, elixir-format
-msgid "Hidden from your public booking page; reachable only by its direct link"
-msgstr "Приховано з вашої публічної сторінки бронювання; доступно лише за прямим посиланням"
-
 #: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Link address"
@@ -338,3 +333,8 @@ msgstr "Видалити тип зустрічі"
 #, elixir-autogen, elixir-format
 msgid "Edit %{name}"
 msgstr "Редагувати %{name}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "On no booking page; reachable only by its direct link"
+msgstr "На жодній сторінці бронювання; доступно лише за прямим посиланням"
