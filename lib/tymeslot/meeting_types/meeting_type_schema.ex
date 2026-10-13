@@ -12,7 +12,6 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.MeetingTypeAttachment
   alias Tymeslot.MeetingTypes.ReminderValidation
-  alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Validation.Constraints
 
   @type t :: %__MODULE__{
@@ -205,7 +204,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> validate_slug()
     |> validate_video_integration()
     |> validate_calendar_destination()
-    |> validate_reminder_config()
+    |> ReminderValidation.validate_changeset()
     |> validate_payment_fields(opts)
     |> validate_group_rules()
     |> unique_constraint([:user_id, :name],
@@ -426,61 +425,6 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
         changeset
     end
   end
-
-  defp validate_reminder_config(changeset) do
-    case get_change(changeset, :reminder_config) do
-      nil ->
-        changeset
-
-      reminders when is_list(reminders) ->
-        validate_reminder_list(changeset, reminders)
-
-      _other ->
-        add_error(changeset, :reminder_config, "must be a list of reminder settings")
-    end
-  end
-
-  # The count is checked before the entries, so an oversized list reports that
-  # rather than whichever of its entries happens to be malformed.
-  defp validate_reminder_list(changeset, reminders) do
-    normalized = Enum.map(reminders, &ReminderUtils.normalize_reminder/1)
-
-    result =
-      cond do
-        length(reminders) > ReminderValidation.max_reminders() ->
-          {:error, :too_many}
-
-        Enum.any?(normalized, &match?({:error, _reason}, &1)) ->
-          {:error, :invalid}
-
-        true ->
-          normalized
-          |> Enum.map(fn {:ok, reminder} -> reminder end)
-          |> ReminderValidation.check_policy(
-            ReminderUtils.normalize_reminders(changeset.data.reminder_config)
-          )
-      end
-
-    case result do
-      :ok -> changeset
-      {:error, reason} -> add_reminder_error(changeset, reason)
-    end
-  end
-
-  defp add_reminder_error(changeset, :too_many),
-    do:
-      add_error(changeset, :reminder_config, "cannot have more than %{count} reminders",
-        count: ReminderValidation.max_reminders()
-      )
-
-  defp add_reminder_error(changeset, :invalid),
-    do: add_error(changeset, :reminder_config, "contains invalid reminder settings")
-
-  defp add_reminder_error(changeset, :duplicate),
-    do: add_error(changeset, :reminder_config, "contains duplicate reminders")
-
-  defp add_reminder_error(changeset, :exceeds_max),
-    do: add_error(changeset, :reminder_config, "cannot be set for more than 1 year in advance")
 
   defp validate_payment_fields(changeset, opts) do
     if get_field(changeset, :payment_required) do
