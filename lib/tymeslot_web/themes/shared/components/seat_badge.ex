@@ -1,13 +1,18 @@
 defmodule TymeslotWeb.Themes.Shared.Components.SeatBadge do
   @moduledoc """
-  Shared seats-left badge for group-booking time slots.
+  Shared spots badge for group-booking time slots.
 
-  Renders nothing for solo meeting types (`seats_left` is nil), so solo slot
-  buttons keep their existing markup untouched. The traffic-light class
-  (`seat-green`/`seat-amber`/`seat-red`) comes from
-  `Tymeslot.Meetings.Seats.seat_level/2`. The markup is theme-agnostic and
-  ships no styling of its own — each theme styles the `seat-badge`/`seat-*`
-  classes in its own time-slots.css, following the `guest-*` convention.
+  What a slot says about its spots is the organiser's choice, decided by
+  `Tymeslot.Meetings.Seats.display/3`: a traffic-light level, the exact
+  count once the slot is down to its last few spots, both, or nothing.
+  `display/2` resolves that for a slot; `seat_badge/1` renders the result.
+  Solo slots and slots with nothing to show render nothing, so their
+  buttons keep the single-line markup.
+
+  The level is always named in words ("Filling up"), never by colour alone.
+  The markup is theme-agnostic and ships no styling of its own: each theme
+  styles the `seat-badge`/`seat-*` classes in its own time-slots.css,
+  following the `guest-*` convention.
   """
 
   use Phoenix.Component
@@ -15,23 +20,42 @@ defmodule TymeslotWeb.Themes.Shared.Components.SeatBadge do
 
   alias Tymeslot.Meetings.Seats
 
-  attr :seats_left, :integer, default: nil
-  attr :capacity, :integer, default: nil
+  @doc """
+  What `slot` shows under `meeting_type`'s display settings, or `nil`.
+
+  SaaS demo organisers supply meeting types as plain maps, so a missing
+  setting reads as its schema default.
+  """
+  @spec display(map(), map() | nil) :: Seats.display()
+  def display(%{seats_left: seats_left, capacity: capacity}, meeting_type)
+      when is_integer(seats_left) and seats_left > 0 and is_integer(capacity) do
+    Seats.display(seats_left, capacity, meeting_type || %{})
+  end
+
+  def display(_slot, _meeting_type), do: nil
+
+  attr :display, :map, default: nil
 
   @spec seat_badge(map()) :: Phoenix.LiveView.Rendered.t()
-  def seat_badge(%{seats_left: nil} = assigns) do
+  def seat_badge(%{display: nil} = assigns) do
     ~H""
   end
 
   def seat_badge(assigns) do
-    assigns = assign(assigns, :level, Seats.seat_level(assigns.seats_left, assigns.capacity))
-
     ~H"""
-    <span class={["seat-badge", "seat-#{@level}"]} data-testid="seat-badge">
-      {dngettext("booking", "%{count} seat left", "%{count} seats left", @seats_left,
-        count: @seats_left
-      )}
+    <span
+      class={["seat-badge", "seat-#{@display.level || :neutral}"]}
+      data-testid="seat-badge"
+    >
+      {label(@display)}
     </span>
     """
   end
+
+  defp label(%{spots_left: count}) when is_integer(count),
+    do: dngettext("booking", "%{count} spot left", "%{count} spots left", count, count: count)
+
+  defp label(%{level: :green}), do: dgettext("booking", "Plenty left")
+  defp label(%{level: :amber}), do: dgettext("booking", "Filling up")
+  defp label(%{level: :red}), do: dgettext("booking", "Almost full")
 end

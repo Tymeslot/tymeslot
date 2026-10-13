@@ -136,6 +136,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
 
       assert {:ok, %{id: "new_primary_id"}} = CalendarAPI.create_event(integration, event_data)
     end
+
+    # No expectation is set, so any request to Graph fails the test.
+    test "refuses a monthly series from the 31st without sending anything" do
+      integration = insert_month_end_integration()
+
+      assert CalendarAPI.create_event(integration, month_end_series()) ==
+               {:error, :day_missing_in_some_months}
+    end
   end
 
   describe "create_event/3" do
@@ -603,5 +611,32 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
 
       assert {:error, :rate_limited, "retry_after:120"} = CalendarAPI.list_calendars(integration)
     end
+  end
+
+  describe "update_event/4 with a monthly series from the 31st" do
+    test "refuses it without sending anything" do
+      integration = insert_month_end_integration()
+
+      assert CalendarAPI.update_event(integration, "cal1", "event1", month_end_series()) ==
+               {:error, :day_missing_in_some_months}
+    end
+  end
+
+  defp insert_month_end_integration do
+    insert(:calendar_integration,
+      user: insert(:user),
+      provider: "outlook",
+      access_token_encrypted: Encryption.encrypt("valid_token"),
+      token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
+    )
+  end
+
+  defp month_end_series do
+    %{
+      summary: "Month end review",
+      start_time: ~U[2026-01-31 10:00:00Z],
+      end_time: ~U[2026-01-31 11:00:00Z],
+      recurrence_rule: "FREQ=MONTHLY"
+    }
   end
 end

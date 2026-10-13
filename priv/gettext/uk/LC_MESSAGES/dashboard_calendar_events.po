@@ -1504,3 +1504,16 @@ msgstr "Надіслати скасування"
 #, elixir-autogen, elixir-format
 msgid "You already have a meeting at this time. Please choose a different time."
 msgstr "На цей час у вас уже є зустріч. Виберіть, будь ласка, інший час."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
+#, elixir-autogen, elixir-format
+msgid "1 of them repeats on a day some months don't have, which Outlook would move to the month's last day."
+msgid_plural "%{count} of them repeat on a day some months don't have, which Outlook would move to the month's last day."
+msgstr[0] "%{count} із них повторюється в день, якого немає в деяких місяцях, тож Outlook перемістив би її на останній день місяця."
+msgstr[1] "%{count} із них повторюються в день, якого немає в деяких місяцях, тож Outlook перемістив би їх на останній день місяця."
+msgstr[2] "%{count} із них повторюються в день, якого немає в деяких місяцях, тож Outlook перемістив би їх на останній день місяця."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "Outlook can't skip the months that don't have this series' day, and would move those events to the month's last day. Please start the series on the 28th or earlier, or save it to another calendar."
+msgstr "Outlook не може пропускати місяці, у яких немає дня цієї серії, і перемістив би ці події на останній день місяця. Почніть серію не пізніше 28-го числа або збережіть її в іншому календарі."

@@ -444,4 +444,45 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
       assert %{attendee_email: nil, attendee_name: nil} = Repo.reload(live)
     end
   end
+
+  describe "perform/1 - invitee data" do
+    test "anonymises meetings that ended more than two years ago by default" do
+      old_end = DateTime.utc_now() |> DateTime.add(-731, :day) |> DateTime.truncate(:second)
+      recent_end = DateTime.add(old_end, 2, :day)
+
+      old =
+        insert(:meeting,
+          start_time: DateTime.add(old_end, -1, :hour),
+          end_time: old_end,
+          status: "completed"
+        )
+
+      recent =
+        insert(:meeting,
+          start_time: DateTime.add(recent_end, -1, :hour),
+          end_time: recent_end,
+          status: "completed"
+        )
+
+      assert :ok = perform_job(DataRetentionWorker, %{})
+
+      assert %{attendee_email: nil, invitee_data_erased_at: %DateTime{}} = Repo.reload(old)
+      assert %{attendee_email: email, invitee_data_erased_at: nil} = Repo.reload(recent)
+      assert email == recent.attendee_email
+    end
+
+    test "respects the invitee_data_retention_days argument" do
+      ended = DateTime.utc_now() |> DateTime.add(-40, :day) |> DateTime.truncate(:second)
+
+      meeting =
+        insert(:meeting,
+          start_time: DateTime.add(ended, -1, :hour),
+          end_time: ended,
+          status: "completed"
+        )
+
+      assert :ok = perform_job(DataRetentionWorker, %{"invitee_data_retention_days" => 30})
+      assert %{attendee_email: nil} = Repo.reload(meeting)
+    end
+  end
 end

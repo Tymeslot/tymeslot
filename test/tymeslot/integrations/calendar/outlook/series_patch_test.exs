@@ -253,4 +253,43 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatchTest do
              }
     end
   end
+
+  # Graph would move a series on the 31st onto the last day of the shorter
+  # months, so it is refused rather than written with dates nobody chose.
+  describe "a series that would land on a day some months lack" do
+    # A monthly series on the 30th from 30 July, at 09:00 in Berlin.
+    @monthly_master %{
+      @master
+      | "start" => %{"dateTime" => "2026-07-30T07:00:00.0000000", "timeZone" => "UTC"},
+        "end" => %{"dateTime" => "2026-07-30T08:00:00.0000000", "timeZone" => "UTC"},
+        "recurrence" => %{
+          "pattern" => %{"type" => "absoluteMonthly", "interval" => 1, "dayOfMonth" => 30},
+          "range" => %{@range | "startDate" => "2026-07-30"}
+        }
+    }
+
+    test "a new monthly rule on a series that starts on the 30th is refused" do
+      edit = %{
+        scope: :all,
+        master_id: "master-1",
+        start: ~U[2026-09-30 07:00:00Z],
+        end: ~U[2026-09-30 08:00:00Z],
+        changes: %{recurrence_rule: "FREQ=MONTHLY"}
+      }
+
+      assert SeriesPatch.build(@monthly_master, edit) == {:error, :day_missing_in_some_months}
+    end
+
+    test "a move from the 30th to the 31st is refused" do
+      edit = %{
+        scope: :all,
+        master_id: "master-1",
+        start: ~U[2026-09-30 07:00:00Z],
+        end: ~U[2026-09-30 08:00:00Z],
+        changes: %{start_time: ~U[2026-10-01 07:00:00Z], end_time: ~U[2026-10-01 08:00:00Z]}
+      }
+
+      assert SeriesPatch.build(@monthly_master, edit) == {:error, :day_missing_in_some_months}
+    end
+  end
 end

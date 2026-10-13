@@ -151,6 +151,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
   attr :slot_interval_minutes, :integer, default: nil
   attr :duration_minutes, :integer, default: nil
   attr :expanded_hour, :any, default: nil
+  attr :meeting_type, :any, default: nil
 
   @spec time_slots_panel(map()) :: Phoenix.LiveView.Rendered.t()
   def time_slots_panel(assigns) do
@@ -207,6 +208,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
                               selected={@selected_time == slot.time}
                               target={@target}
                               loading={@loading_slots}
+                              meeting_type={@meeting_type}
                             />
                           <% end %>
                         </div>
@@ -268,6 +270,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
                                 selected={@selected_time == slot.time}
                                 target={@target}
                                 loading={@loading_slots}
+                                meeting_type={@meeting_type}
                               />
                             <% end %>
                           </div>
@@ -335,6 +338,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
   attr :selected, :boolean, required: true
   attr :target, :any, required: true
   attr :loading, :boolean, default: false
+  attr :meeting_type, :any, default: nil
 
   defp slot_button(assigns) do
     ~H"""
@@ -345,8 +349,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
       slot={
         %{
           start_time: CalendarHelpers.parse_slot_time(@slot.time),
-          seats_left: @slot[:seats_left],
-          capacity: @slot[:capacity]
+          seat_display: SeatBadge.display(@slot, @meeting_type)
         }
       }
       selected={@selected}
@@ -381,7 +384,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
     <button
       class={[
         "time-slot-button",
-        @slot[:seats_left] && "has-seats",
+        @slot[:seat_display] && "has-seats",
         @selected && "time-slot-button--selected"
       ]}
       data-testid="time-slot"
@@ -391,7 +394,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
       <span>
         {LocalizationHelpers.format_time_by_locale(@slot.start_time)}
       </span>
-      <SeatBadge.seat_badge seats_left={@slot[:seats_left]} capacity={@slot[:capacity]} />
+      <SeatBadge.seat_badge display={@slot[:seat_display]} />
     </button>
     """
   end

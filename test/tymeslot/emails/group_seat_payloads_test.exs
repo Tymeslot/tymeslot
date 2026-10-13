@@ -14,6 +14,8 @@ defmodule Tymeslot.Emails.GroupSeatPayloadsTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Emails.AppointmentBuilder
+  alias Tymeslot.Emails.Templates.AppointmentCancellation
+  alias Tymeslot.Emails.Templates.AppointmentReminder
   alias Tymeslot.Emails.Templates.SeatUpdateForOrganizer
   alias Tymeslot.Meetings.Recipient
   alias Tymeslot.Notifications.ContentBuilder
@@ -171,6 +173,35 @@ defmodule Tymeslot.Emails.GroupSeatPayloadsTest do
       email = SeatUpdateForOrganizer.render(:booked, "host@example.com", details)
 
       assert email.subject =~ "Місце заброньовано: Ada"
+    end
+
+    test "replies to the participant, from the instance's address", %{details: details} do
+      email = render_in_english(:booked, details)
+
+      assert email.reply_to == {"Ada", "ada@example.com"}
+      assert {_name, address} = email.from
+      assert address == Application.get_env(:tymeslot, :email)[:from_email]
+    end
+  end
+
+  describe "the organiser's email about the whole slot" do
+    # The group copy is addressed about every participant at once, so there
+    # is no one person a reply could go to.
+    test "a cancellation carries no Reply-To", %{meeting: meeting} do
+      details = AppointmentBuilder.for_organizer_of_group(meeting, 2)
+
+      email = AppointmentCancellation.render(:organizer, "host@example.com", details)
+
+      assert details.attendee_email == nil
+      assert email.reply_to == nil
+    end
+
+    test "a reminder carries no Reply-To", %{meeting: meeting} do
+      details = AppointmentBuilder.for_organizer_of_group(meeting, 2, %{value: 1, unit: "hours"})
+
+      email = AppointmentReminder.render(:organizer, "host@example.com", details)
+
+      assert email.reply_to == nil
     end
   end
 
