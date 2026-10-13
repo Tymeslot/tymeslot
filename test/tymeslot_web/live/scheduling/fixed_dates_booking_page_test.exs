@@ -95,7 +95,9 @@ defmodule TymeslotWeb.Live.Scheduling.FixedDatesBookingPageTest do
 
         html = render(view)
         assert html =~ "Dates"
-        assert html =~ "20 seats left"
+        # The type's spots display, here its default traffic light.
+        assert html =~ ~s(data-testid="seat-badge")
+        assert html =~ "Plenty left"
         assert html =~ "Registration until"
 
         view |> element("[data-testid='session-entry']") |> render_click()
