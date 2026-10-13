@@ -176,6 +176,55 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
     end
   end
 
+  describe "Spots display on the booking page" do
+    test "an existing group type shows colours by default and no count",
+         %{conn: conn, user: user} do
+      view = edit(conn, insert_type(user, max_participants: 8))
+
+      assert has_element?(view, "input[phx-click='toggle_seat_availability'][checked]")
+      refute has_element?(view, "input[phx-click='toggle_last_spots'][checked]")
+      refute has_element?(view, "input[phx-change='change_last_spots_threshold']")
+    end
+
+    test "switching colours off persists", %{conn: conn, user: user} do
+      meeting_type = insert_type(user, max_participants: 8)
+      view = edit(conn, meeting_type)
+
+      view |> element("input[phx-click='toggle_seat_availability']") |> render_click()
+
+      refute reload_type(user, meeting_type.id).show_seat_availability
+    end
+
+    test "the last-spots count starts at 3, takes a new value, and clears when switched off",
+         %{conn: conn, user: user} do
+      meeting_type = insert_type(user, max_participants: 8)
+      view = edit(conn, meeting_type)
+
+      view |> element("input[phx-click='toggle_last_spots']") |> render_click()
+      assert reload_type(user, meeting_type.id).last_spots_threshold == 3
+
+      view
+      |> element("input[phx-change='change_last_spots_threshold']")
+      |> render_change(%{"meeting_type" => %{"last_spots_threshold_input" => "5"}})
+
+      assert reload_type(user, meeting_type.id).last_spots_threshold == 5
+
+      view |> element("input[phx-click='toggle_last_spots']") |> render_click()
+      assert reload_type(user, meeting_type.id).last_spots_threshold == nil
+    end
+
+    test "a threshold below 1 is clamped to 1", %{conn: conn, user: user} do
+      meeting_type = insert_type(user, max_participants: 8, last_spots_threshold: 3)
+      view = edit(conn, meeting_type)
+
+      view
+      |> element("input[phx-change='change_last_spots_threshold']")
+      |> render_change(%{"meeting_type" => %{"last_spots_threshold_input" => "0"}})
+
+      assert reload_type(user, meeting_type.id).last_spots_threshold == 1
+    end
+  end
+
   describe "Creating" do
     test "a new type offers group bookings once it is created and its location is fixed",
          %{conn: conn, user: user} do

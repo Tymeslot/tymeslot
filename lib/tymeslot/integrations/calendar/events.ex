@@ -37,8 +37,15 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   # connecting one, and a meeting booked before then never had an event.
   @no_calendar_errors [:no_calendar_client, :no_calendar_integration]
 
-  @non_queueable_errors [:unauthorized, :not_found, :meeting_not_found, :rate_limited] ++
-                          @no_calendar_errors
+  # A repeat rule the provider cannot hold is refused before anything is sent,
+  # and a replay would be refused alike.
+  @non_queueable_errors [
+                          :unauthorized,
+                          :not_found,
+                          :meeting_not_found,
+                          :rate_limited,
+                          :day_missing_in_some_months
+                        ] ++ @no_calendar_errors
 
   # A meeting booked on the last bookable date can run for up to a day past
   # it, plus its after-buffer, so the fetch reaches that much further.

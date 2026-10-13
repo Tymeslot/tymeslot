@@ -1236,3 +1236,35 @@ msgid "%{time} (+%{count} day)"
 msgid_plural "%{time} (+%{count} days)"
 msgstr[0] "%{time} (+%{count} dia)"
 msgstr[1] "%{time} (+%{count} dias)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "A time shows how many spots are left, such as \"3 spots left\", only once it is down to its last few."
+msgstr "Um horário só mostra quantas vagas restam, como “Restam 3 vagas”, quando chega às últimas."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Last spots"
+msgstr "Últimas vagas"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Show how full each time is"
+msgstr "Mostrar a ocupação de cada horário"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Show the count for the last spots"
+msgstr "Mostrar o número das últimas vagas"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "The count appears once %{count} spot or fewer is left."
+msgid_plural "The count appears once %{count} spots or fewer are left."
+msgstr[0] "O número aparece quando resta %{count} vaga ou menos."
+msgstr[1] "O número aparece quando restam %{count} vagas ou menos."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Times are marked green, amber or red, labelled \"Plenty left\", \"Filling up\" or \"Almost full\"."
+msgstr "Os horários aparecem em verde, amarelo ou vermelho, com os rótulos “Muitas vagas”, “Enchendo” ou “Quase cheio”."

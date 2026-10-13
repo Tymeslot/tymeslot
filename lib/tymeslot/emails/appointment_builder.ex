@@ -196,6 +196,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     %{
       uid: meeting.calendar_uid,
       title: title,
+      organizer_user_id: Map.get(meeting, :organizer_user_id),
       summary: if(meeting.summary in [nil, meeting.title], do: title, else: meeting.summary),
       description: meeting.description || "",
       start_time: meeting.start_time,

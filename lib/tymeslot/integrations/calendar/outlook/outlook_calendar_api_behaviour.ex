@@ -10,6 +10,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPIBehaviour do
            :unauthorized | :not_found | :rate_limited | :network_error | :authentication_error,
            String.t()}
 
+  # A repeat rule Graph cannot hold with the organiser's dates, refused before
+  # anything is sent (see `Outlook.RecurrenceConverter`).
+  @type write_refusal :: {:error, :day_missing_in_some_months}
+
   @callback list_calendars(CalendarIntegrationSchema.t()) ::
               {:ok, [map()]} | api_error()
   @callback list_events(CalendarIntegrationSchema.t(), String.t(), DateTime.t(), DateTime.t()) ::
@@ -17,13 +21,13 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPIBehaviour do
   @callback list_primary_events(CalendarIntegrationSchema.t(), DateTime.t(), DateTime.t()) ::
               {:ok, [map()]} | api_error()
   @callback create_event(CalendarIntegrationSchema.t(), map()) ::
-              {:ok, map()} | api_error()
+              {:ok, map()} | api_error() | write_refusal()
   @callback create_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
-              {:ok, map()} | api_error()
+              {:ok, map()} | api_error() | write_refusal()
   @callback update_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
-              {:ok, map()} | api_error()
+              {:ok, map()} | api_error() | write_refusal()
   @callback update_event(CalendarIntegrationSchema.t(), String.t(), String.t(), map()) ::
-              {:ok, map()} | api_error()
+              {:ok, map()} | api_error() | write_refusal()
   @callback get_event(CalendarIntegrationSchema.t(), String.t()) :: {:ok, map()} | api_error()
   @callback get_event(CalendarIntegrationSchema.t(), String.t(), keyword()) ::
               {:ok, map()} | api_error()

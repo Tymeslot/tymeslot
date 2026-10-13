@@ -12,8 +12,12 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
 
   @doc """
   Converts Tymeslot event data into the Microsoft Graph event format.
+
+  Refuses a repeat rule Graph would write with other dates
+  (`{:error, :day_missing_in_some_months}`, see
+  `Outlook.RecurrenceConverter`), rather than writing the event without it.
   """
-  @spec format_event_data(map()) :: map()
+  @spec format_event_data(map()) :: {:ok, map()} | {:error, :day_missing_in_some_months}
   def format_event_data(event_data) do
     base = %{
       "subject" => extract_field(event_data, :summary, "summary"),
@@ -31,11 +35,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
         do: Map.put(base, "isAllDay", true),
         else: base
 
-    base
-    |> add_reminder(event_data)
-    |> add_recurrence(event_data)
-    |> Enum.reject(fn {_k, v} -> is_nil(v) or v == "" end)
-    |> Map.new()
+    with {:ok, body} <- base |> add_reminder(event_data) |> add_recurrence(event_data) do
+      {:ok, body |> Enum.reject(fn {_k, v} -> is_nil(v) or v == "" end) |> Map.new()}
+    end
   end
 
   @doc """
@@ -191,9 +193,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
          %Date{} = start_date <- recurrence_start_date(event_data),
          recurrence when is_map(recurrence) <-
            RecurrenceConverter.rrule_to_outlook(rrule, start_date, timezone) do
-      Map.put(base, "recurrence", recurrence)
+      {:ok, Map.put(base, "recurrence", recurrence)}
     else
-      _none -> base
+      {:error, _reason} = refused -> refused
+      _none -> {:ok, base}
     end
   end
 

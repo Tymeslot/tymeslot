@@ -83,19 +83,27 @@ defmodule Tymeslot.FreeBusy do
   @spec busy_intervals(ProfileSchema.t(), DateTime.t(), DateTime.t()) ::
           [FreebusyGenerator.interval()]
   def busy_intervals(%ProfileSchema{} = profile, window_start, window_end) do
-    integration_ids =
-      profile.user_id
-      |> CalendarIntegrationQueries.list_active_for_user()
-      |> Enum.map(& &1.id)
+    integrations = CalendarIntegrationQueries.list_active_for_user(profile.user_id)
+    all_busy_ids = MapSet.new(for %{all_events_busy: true, id: id} <- integrations, do: id)
 
     event_intervals =
-      integration_ids
+      integrations
+      |> Enum.map(& &1.id)
       |> CalendarEventQueries.in_range({window_start, window_end})
+      |> Enum.map(&apply_all_events_busy(&1, all_busy_ids))
       |> Enum.filter(&CalendarEvent.blocking?/1)
       |> Enum.flat_map(&event_interval/1)
 
     event_intervals ++
       TimeOff.busy_intervals(profile.id, profile.timezone, window_start, window_end)
+  end
+
+  # This reads the event cache directly rather than through
+  # `Ics.Provider.list_events/2`, so it applies a subscription's
+  # `all_events_busy` itself, or a holiday that blocks bookings would be
+  # published as free.
+  defp apply_all_events_busy(%CalendarEvent{calendar_integration_id: id} = event, all_busy_ids) do
+    if MapSet.member?(all_busy_ids, id), do: CalendarEvent.as_busy(event), else: event
   end
 
   # Timed events map directly; all-day events span midnight-to-midnight UTC.

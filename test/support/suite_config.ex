@@ -10,6 +10,7 @@ defmodule Tymeslot.Test.SuiteConfig do
 
   alias Oban.Job
   alias Tymeslot.Repo
+  alias Tymeslot.Test.HtmlFailureFormatter
   alias Tymeslot.Test.LogCapture
 
   # Slow/external suites are opt-in — run them explicitly with `--include`
@@ -51,6 +52,19 @@ defmodule Tymeslot.Test.SuiteConfig do
     case System.find_executable("git-cliff") do
       nil -> Keyword.put(@default_exclude_tags, :git_cliff, true)
       _found -> @default_exclude_tags
+    end
+  end
+
+  @doc """
+  The configured ExUnit formatters with `ExUnit.CLIFormatter` swapped for
+  `Tymeslot.Test.HtmlFailureFormatter`, so a failed `html =~` prints an excerpt
+  rather than the whole page. Any `--formatter` given on the command line is
+  kept.
+  """
+  @spec formatters() :: [module()]
+  def formatters do
+    for formatter <- ExUnit.configuration()[:formatters] do
+      if formatter == ExUnit.CLIFormatter, do: HtmlFailureFormatter, else: formatter
     end
   end
 

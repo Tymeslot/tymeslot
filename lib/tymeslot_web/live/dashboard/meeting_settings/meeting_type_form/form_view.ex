@@ -62,7 +62,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   @tab_error_fields %{
     "details" => [:name, :duration, :slot_interval, :description, :icon],
     "location" => [:locations, :video_integration, :calendar_integration, :target_calendar],
-    "booking" => [:payment_required, :price_cents, :max_participants, :approval_window_hours],
+    "booking" => [
+      :payment_required,
+      :price_cents,
+      :max_participants,
+      :last_spots_threshold,
+      :approval_window_hours
+    ],
     "reminders" => [:reminder_config]
   }
 
@@ -312,6 +318,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
           <.group_bookings_section
             group_bookings_enabled={@group_bookings_enabled}
             max_participants={@max_participants}
+            show_seat_availability={@show_seat_availability}
+            last_spots_threshold={@last_spots_threshold}
             payment_required={@payment_required}
             blocker={
               GroupRules.enable_blocker(%{

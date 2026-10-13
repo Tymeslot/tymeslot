@@ -99,6 +99,32 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
     |> attach_logo()
   end
 
+  @doc """
+  Sets `Reply-To` to the other party of a booking, so that a reply reaches
+  that person instead of the instance's sending mailbox, which is often a
+  no-reply address. `From` stays the instance address, keeping SPF, DKIM
+  and DMARC aligned with the sending domain.
+
+  Leaves the email untouched when there is no address (a group meeting's
+  organiser copy has no single attendee), or when the address is the
+  instance's own sender, where the header would add nothing.
+  """
+  @spec put_reply_to(Swoosh.Email.t(), String.t() | nil, String.t() | nil) :: Swoosh.Email.t()
+  def put_reply_to(email, name, address) when is_binary(address) do
+    address = String.trim(address)
+
+    cond do
+      address == "" -> email
+      same_address?(address, fetch_from_email()) -> email
+      true -> reply_to(email, {Sanitise.sanitize_for_header(name), address})
+    end
+  end
+
+  def put_reply_to(email, _name, _address), do: email
+
+  defp same_address?(address, from),
+    do: String.downcase(address) == String.downcase(String.trim(from))
+
   # Content-ID must match the attachment filename exactly: Swoosh's SendGrid
   # adapter derives the content_id from the filename (ignoring `cid:`), and
   # Mailgun drops `cid:` entirely and keys inline images by filename.

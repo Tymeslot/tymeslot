@@ -62,6 +62,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
       attrs =
         attrs
         |> Map.merge(booking_limits(params))
+        |> Map.merge(seat_display(params))
         |> maybe_put_custom_fields(params)
         |> maybe_put_locations(params)
         |> Map.merge(payment)
@@ -70,6 +71,31 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
       {:ok, attrs}
     end
   end
+
+  # The booking page's spots display. Only keys the form posted are set, so a
+  # caller that does not render these controls cannot reset them by omission.
+  # The threshold is posted blank when the option is off; the changeset
+  # validates its range.
+  defp seat_display(params) do
+    params
+    |> Map.take(["show_seat_availability", "last_spots_threshold"])
+    |> Map.new(&seat_display_attr/1)
+  end
+
+  defp seat_display_attr({"show_seat_availability", value}),
+    do: {:show_seat_availability, value != "false"}
+
+  defp seat_display_attr({"last_spots_threshold", value}),
+    do: {:last_spots_threshold, parse_threshold(value)}
+
+  defp parse_threshold(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {count, ""} -> count
+      _blank_or_invalid -> nil
+    end
+  end
+
+  defp parse_threshold(_value), do: nil
 
   # Payments and group bookings are mutually exclusive. A host who cannot take
   # charges posts no payment fields at all (see `payment_attrs/1`), so turning

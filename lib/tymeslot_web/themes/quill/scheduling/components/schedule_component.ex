@@ -200,6 +200,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                         <% end %>
                       </p>
 
+                      <GroupSession.hint meeting_type={@meeting_type} class="mt-2" />
+
                       <GroupSession.seat_move_notice
                         from={assigns[:reschedule_seat_from]}
                         timezone={@user_timezone}
@@ -392,6 +394,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                       slot_interval_minutes={@slot_interval_minutes}
                       duration_minutes={@duration_minutes}
                       expanded_hour={@expanded_hour}
+                      meeting_type={@meeting_type}
                       target={@myself}
                     />
                   </div>

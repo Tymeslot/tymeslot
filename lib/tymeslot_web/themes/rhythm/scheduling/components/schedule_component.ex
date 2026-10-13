@@ -328,6 +328,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                                       selected={@selected_time == slot.time}
                                       loading={@loading_slots}
                                       target={@myself}
+                                      meeting_type={@meeting_type}
                                     />
                                   <% end %>
                                 </div>
@@ -390,6 +391,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                                         selected={@selected_time == slot.time}
                                         loading={@loading_slots}
                                         target={@myself}
+                                        meeting_type={@meeting_type}
                                       />
                                     <% end %>
                                   </div>
@@ -451,15 +453,19 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
   attr :selected, :boolean, default: false
   attr :loading, :boolean, default: false
   attr :target, :any, required: true
+  attr :meeting_type, :any, default: nil
 
   @spec slot_button(map()) :: Phoenix.LiveView.Rendered.t()
   defp slot_button(assigns) do
+    assigns =
+      assign(assigns, :seat_display, SeatBadge.display(assigns.slot, assigns.meeting_type))
+
     ~H"""
     <button
       type="button"
       class={[
         "time-slot",
-        @slot[:seats_left] && "has-seats",
+        @seat_display && "has-seats",
         @selected && "selected"
       ]}
       data-testid="time-slot"
@@ -472,7 +478,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
       <span>
         {LocalizationHelpers.format_time_by_locale(CalendarHelpers.parse_slot_time(@slot.time))}
       </span>
-      <SeatBadge.seat_badge seats_left={@slot[:seats_left]} capacity={@slot[:capacity]} />
+      <SeatBadge.seat_badge display={@seat_display} />
     </button>
     """
   end

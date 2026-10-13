@@ -1,12 +1,14 @@
 defmodule TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader do
   @moduledoc """
   Shared organizer profile header component for the Rhythm theme.
-  Displays organizer avatar, name, and meeting duration.
+  Displays organizer avatar, name, and meeting duration, and marks a group
+  type as a group session on every step it heads.
   """
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.{Demo, Profiles}
+  alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   @doc """
@@ -42,6 +44,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader do
             {LocalizationHelpers.format_duration(@selected_duration)}
           <% end %>
         </div>
+        <GroupSession.hint :if={@meeting_type} meeting_type={@meeting_type} />
       </div>
     </div>
     """

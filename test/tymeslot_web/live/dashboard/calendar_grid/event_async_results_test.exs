@@ -40,6 +40,30 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
       assert html =~ "Failed to update event"
       assert html =~ "Failing Event"
     end
+
+    test "says why Outlook refused a month-end series", %{conn: conn, user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      event =
+        insert_event(integration, %{
+          summary: "Month-end close",
+          start_at: DateTime.new!(Date.utc_today(), ~T[09:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
+          all_day: false
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      send(
+        lv.pid,
+        {:event_update_result,
+         {:error, original_event: event, reason: :day_missing_in_some_months}}
+      )
+
+      html = render(lv)
+      assert html =~ "Please start the series on the 28th or earlier"
+      refute html =~ "Failed to update event"
+    end
   end
 
   describe "async event create result" do
@@ -407,6 +431,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
       html = render(lv)
       assert html =~ "Failed to create event"
       refute html =~ "queued to retry"
+    end
+
+    test "a month-end series Outlook refused says why", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      send(
+        lv.pid,
+        {:create_event_result,
+         {:error, %{reason: :day_missing_in_some_months, retry: :not_queued}}}
+      )
+
+      html = render(lv)
+      assert html =~ "Please start the series on the 28th or earlier"
+      refute html =~ "Failed to create event"
     end
   end
 

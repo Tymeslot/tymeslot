@@ -1236,3 +1236,35 @@ msgid "%{time} (+%{count} day)"
 msgid_plural "%{time} (+%{count} days)"
 msgstr[0] "%{time} (+%{count} jour)"
 msgstr[1] "%{time} (+%{count} jours)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "A time shows how many spots are left, such as \"3 spots left\", only once it is down to its last few."
+msgstr "Un créneau n’indique le nombre de places restantes (par exemple « 3 places restantes ») qu’une fois arrivé à ses dernières places."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Last spots"
+msgstr "Dernières places"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Show how full each time is"
+msgstr "Afficher le remplissage de chaque créneau"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Show the count for the last spots"
+msgstr "Afficher le nombre des dernières places"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "The count appears once %{count} spot or fewer is left."
+msgid_plural "The count appears once %{count} spots or fewer are left."
+msgstr[0] "Le nombre s’affiche dès qu’il reste %{count} place ou moins."
+msgstr[1] "Le nombre s’affiche dès qu’il reste %{count} places ou moins."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Times are marked green, amber or red, labelled \"Plenty left\", \"Filling up\" or \"Almost full\"."
+msgstr "Les créneaux sont signalés en vert, orange ou rouge, avec les libellés « Disponible », « Se remplit » ou « Quasi plein »."
