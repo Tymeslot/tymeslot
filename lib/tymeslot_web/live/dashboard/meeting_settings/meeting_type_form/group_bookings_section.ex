@@ -4,7 +4,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
   section.
 
   Renders the "Group bookings" toggle and, when enabled, the
-  participant-limit number input (2 up to the `Constraints` maximum).
+  participant-limit number input (2 up to the `Constraints` maximum) and
+  what the booking page says about each time's spots: the traffic-light
+  level (`toggle_seat_availability`) and the exact count once a time is down
+  to its last few spots (`toggle_last_spots`, with the threshold posted as
+  `last_spots_threshold_input` to `change_last_spots_threshold`). The rule
+  they feed is `Tymeslot.Meetings.Seats.display/3`.
 
   A group type cannot require payment or approval, and its location has to be
   fixed in advance (`Tymeslot.MeetingTypes.GroupLocationRule`). While any of
@@ -41,6 +46,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
 
   attr :group_bookings_enabled, :boolean, required: true
   attr :max_participants, :string, required: true
+  attr :show_seat_availability, :boolean, default: true
+  attr :last_spots_threshold, :integer, default: nil
   attr :payment_required, :boolean, required: true
   attr :blocker, :any, default: nil, doc: "`GroupRules.enable_blocker/1`'s answer"
   attr :allowed, :boolean, default: true
@@ -130,6 +137,70 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
             max: Constraints.group_participants_range().last
           )}
         </p>
+      </div>
+
+      <div
+        :if={@group_bookings_enabled and not @payment_required}
+        class="space-y-4"
+        data-testid="seat-display-settings"
+      >
+        <.setting_row
+          id={"seat-availability-toggle-#{@form_id}"}
+          label={dgettext("dashboard_meeting_form", "Show how full each time is")}
+          description={
+            dgettext(
+              "dashboard_meeting_form",
+              "Times are marked green, amber or red, labelled \"Plenty left\", \"Filling up\" or \"Almost full\"."
+            )
+          }
+          checked={@show_seat_availability}
+          on_change="toggle_seat_availability"
+          target={@myself}
+        />
+
+        <.setting_row
+          id={"last-spots-toggle-#{@form_id}"}
+          label={dgettext("dashboard_meeting_form", "Show the count for the last spots")}
+          description={
+            dgettext(
+              "dashboard_meeting_form",
+              "A time shows how many spots are left, such as \"3 spots left\", only once it is down to its last few."
+            )
+          }
+          checked={@last_spots_threshold != nil}
+          on_change="toggle_last_spots"
+          target={@myself}
+        />
+
+        <div :if={@last_spots_threshold}>
+          <div class="max-w-xs">
+            <.input
+              type="number"
+              name="meeting_type[last_spots_threshold_input]"
+              label={dgettext("dashboard_meeting_form", "Last spots")}
+              value={@last_spots_threshold}
+              min={Constraints.last_spots_threshold_range().first}
+              max={Constraints.last_spots_threshold_range().last}
+              step="1"
+              phx-change="change_last_spots_threshold"
+              phx-debounce="500"
+              phx-target={@myself}
+              errors={
+                FormValidationHelpers.field_errors(@form_errors, :last_spots_threshold)
+                |> Enum.map(&Helpers.format_errors/1)
+              }
+            />
+          </div>
+          <p class="mt-1 text-token-sm text-tymeslot-600">
+            {dngettext(
+              "dashboard_meeting_form",
+              "The count appears once %{count} spot or fewer is left.",
+              "The count appears once %{count} spots or fewer are left.",
+              @last_spots_threshold,
+              count: @last_spots_threshold
+            )}
+          </p>
+        </div>
       </div>
 
       <%!-- The number input above only renders while the toggle is on and

@@ -1277,5 +1277,38 @@ msgstr "Skupinový typ schůzky nabízí jen jednu délku."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
 #, elixir-autogen, elixir-format
+msgid "A time shows how many spots are left, such as \"3 spots left\", only once it is down to its last few."
+msgstr "Termín ukáže, kolik míst zbývá (třeba „3 volná místa“), až když zbývá jen posledních několik."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
 msgid "Remove the additional durations to enable group bookings."
 msgstr "Odeberte další délky, chcete-li zapnout skupinové rezervace."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen
+msgid "Last spots"
+msgstr "Poslední místa"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Show how full each time is"
+msgstr "Zobrazit obsazenost každého termínu"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Show the count for the last spots"
+msgstr "Zobrazit počet posledních volných míst"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "The count appears once %{count} spot or fewer is left."
+msgid_plural "The count appears once %{count} spots or fewer are left."
+msgstr[0] "Počet se zobrazí, jakmile zbývá %{count} místo nebo méně."
+msgstr[1] "Počet se zobrazí, jakmile zbývají %{count} místa nebo méně."
+msgstr[2] "Počet se zobrazí, jakmile zbývá %{count} míst nebo méně."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Times are marked green, amber or red, labelled \"Plenty left\", \"Filling up\" or \"Almost full\"."
+msgstr "Termíny se označují zeleně, oranžově nebo červeně a popiskem „Hodně míst“, „Plní se“ nebo „Téměř plno“."

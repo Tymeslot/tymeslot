@@ -90,6 +90,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
       MjmlEmail.base_email()
       |> to({meeting.attendee_name, meeting.attendee_email})
       |> from({meeting.organizer_name, MjmlEmail.fetch_from_email()})
+      |> MjmlEmail.put_reply_to(meeting.organizer_name, meeting.organizer_email)
       |> subject(
         Sanitise.sanitize_for_header(
           dgettext("emails_booking_requests", "Reschedule Request: %{title} - %{date}",

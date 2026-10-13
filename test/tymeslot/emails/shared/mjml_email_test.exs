@@ -95,6 +95,72 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
     end
   end
 
+  describe "put_reply_to/3" do
+    test "sets Reply-To to the named address" do
+      email = MjmlEmail.put_reply_to(MjmlEmail.base_email(), "Jane Host", "jane@example.com")
+
+      assert email.reply_to == {"Jane Host", "jane@example.com"}
+    end
+
+    test "trims surrounding whitespace from the address" do
+      email = MjmlEmail.put_reply_to(MjmlEmail.base_email(), "Jane", "  jane@example.com \n")
+
+      assert email.reply_to == {"Jane", "jane@example.com"}
+    end
+
+    test "leaves From as the instance sender" do
+      email = MjmlEmail.put_reply_to(MjmlEmail.base_email(), "Jane Host", "jane@example.com")
+
+      assert email.from == {configured(:from_name), configured(:from_email)}
+    end
+
+    test "leaves Reply-To unset when the address is nil" do
+      email = MjmlEmail.put_reply_to(MjmlEmail.base_email(), "Jane Host", nil)
+
+      assert email.reply_to == nil
+    end
+
+    test "leaves Reply-To unset when the address is blank" do
+      email = MjmlEmail.put_reply_to(MjmlEmail.base_email(), "Jane Host", "   ")
+
+      assert email.reply_to == nil
+    end
+
+    test "leaves Reply-To unset when the address is the instance sender, in any case" do
+      sender = configured(:from_email)
+
+      email =
+        MjmlEmail.put_reply_to(MjmlEmail.base_email(), "Instance", " #{String.upcase(sender)} ")
+
+      assert email.reply_to == nil
+    end
+
+    # Swoosh stores a bare address as `{"", address}`, which adapters send
+    # without a display name.
+    test "uses the bare address when the name is nil" do
+      email = MjmlEmail.put_reply_to(MjmlEmail.base_email(), nil, "jane@example.com")
+
+      assert email.reply_to == {"", "jane@example.com"}
+    end
+
+    test "uses the bare address when the name is blank" do
+      email = MjmlEmail.put_reply_to(MjmlEmail.base_email(), "  ", "jane@example.com")
+
+      assert email.reply_to == {"", "jane@example.com"}
+    end
+
+    test "strips CR and LF from the name, so it cannot inject a header" do
+      email =
+        MjmlEmail.put_reply_to(
+          MjmlEmail.base_email(),
+          "Jane\r\nBcc: evil@example.com",
+          "jane@example.com"
+        )
+
+      assert email.reply_to == {"Jane Bcc: evil@example.com", "jane@example.com"}
+    end
+  end
+
   describe "fetch_from_name/0" do
     test "returns a non-empty string" do
       name = MjmlEmail.fetch_from_name()

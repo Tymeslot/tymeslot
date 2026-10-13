@@ -101,6 +101,13 @@ defmodule Tymeslot.Validation.Constraints do
   @spec group_participants_range() :: Range.t()
   def group_participants_range, do: 2..max_participants_range().last
 
+  @doc """
+  The "last N spots" threshold of a group meeting type. A value at or above
+  the type's capacity is allowed: the count then simply always shows.
+  """
+  @spec last_spots_threshold_range() :: Range.t()
+  def last_spots_threshold_range, do: 1..max_participants_range().last
+
   @spec booking_limit_range() :: Range.t()
   def booking_limit_range, do: 1..500
 
@@ -203,6 +210,12 @@ defmodule Tymeslot.Validation.Constraints do
   @spec max_participants_opts() :: keyword()
   def max_participants_opts do
     range = max_participants_range()
+    [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
+  end
+
+  @spec last_spots_threshold_opts() :: keyword()
+  def last_spots_threshold_opts do
+    range = last_spots_threshold_range()
     [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
   end
 

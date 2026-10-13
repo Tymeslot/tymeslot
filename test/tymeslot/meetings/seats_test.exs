@@ -8,6 +8,34 @@ defmodule Tymeslot.Meetings.SeatsTest do
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.Seats
 
+  describe "display/3" do
+    @shown %{show_seat_availability: true, last_spots_threshold: nil}
+
+    test "shows the level alone by default" do
+      assert Seats.display(6, 10, @shown) == %{level: :green, spots_left: nil}
+    end
+
+    test "adds the count at the threshold, not one above it" do
+      assert Seats.display(3, 10, %{@shown | last_spots_threshold: 3}) ==
+               %{level: :amber, spots_left: 3}
+
+      assert Seats.display(4, 10, %{@shown | last_spots_threshold: 3}) ==
+               %{level: :amber, spots_left: nil}
+    end
+
+    test "with availability hidden, shows only the count within the threshold" do
+      hidden = %{show_seat_availability: false, last_spots_threshold: 3}
+
+      assert Seats.display(2, 10, hidden) == %{level: nil, spots_left: 2}
+      assert Seats.display(4, 10, hidden) == nil
+    end
+
+    test "shows nothing with both settings off" do
+      assert Seats.display(1, 10, %{show_seat_availability: false, last_spots_threshold: nil}) ==
+               nil
+    end
+  end
+
   describe "seat_level/2" do
     test "green when more than half the seats are free" do
       assert Seats.seat_level(6, 10) == :green

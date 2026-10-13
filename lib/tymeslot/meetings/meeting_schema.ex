@@ -99,6 +99,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           referrer_host: String.t() | nil,
           tracking_params: map(),
           visitor_hash: String.t() | nil,
+          invitee_data_erased_at: DateTime.t() | nil,
           organizer_user: any() | Ecto.Association.NotLoaded.t() | nil,
           calendar_integration: any() | Ecto.Association.NotLoaded.t() | nil,
           video_integration: any() | Ecto.Association.NotLoaded.t() | nil,
@@ -312,6 +313,11 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # Cookieless join key to the booking-page view in analytics_events.
     field(:visitor_hash, :string)
     field(:tracking_params, :map, default: %{})
+
+    # Stamped once the retention purge has removed everything the invitees
+    # gave, so the purge passes over the meeting from then on. See
+    # `Tymeslot.InviteeData`.
+    field(:invitee_data_erased_at, :utc_datetime)
 
     timestamps(type: :utc_datetime)
   end

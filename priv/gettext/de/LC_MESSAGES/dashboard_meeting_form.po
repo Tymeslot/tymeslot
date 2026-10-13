@@ -1269,5 +1269,37 @@ msgstr "Ein Gruppen-Termintyp bietet nur eine Dauer an."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
 #, elixir-autogen, elixir-format
+msgid "A time shows how many spots are left, such as \"3 spots left\", only once it is down to its last few."
+msgstr "Ein Zeitfenster zeigt erst dann an, wie viele Plätze noch frei sind (etwa „3 Plätze frei“), wenn nur noch wenige übrig sind."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
 msgid "Remove the additional durations to enable group bookings."
 msgstr "Entfernen Sie die weiteren Dauern, um Gruppenbuchungen zu aktivieren."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen
+msgid "Last spots"
+msgstr "Letzte Plätze"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Show how full each time is"
+msgstr "Auslastung jedes Zeitfensters anzeigen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Show the count for the last spots"
+msgstr "Anzahl der letzten freien Plätze anzeigen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "The count appears once %{count} spot or fewer is left."
+msgid_plural "The count appears once %{count} spots or fewer are left."
+msgstr[0] "Die Anzahl erscheint, sobald nur noch %{count} Platz oder weniger frei ist."
+msgstr[1] "Die Anzahl erscheint, sobald nur noch %{count} Plätze oder weniger frei sind."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Times are marked green, amber or red, labelled \"Plenty left\", \"Filling up\" or \"Almost full\"."
+msgstr "Zeitfenster werden grün, gelb oder rot markiert und mit „Viele frei“, „Füllt sich“ oder „Fast voll“ beschriftet."
