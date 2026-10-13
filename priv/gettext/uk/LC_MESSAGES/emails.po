@@ -600,3 +600,8 @@ msgstr[2] "Групова зустріч: у вас одне з %{count} міс�
 #, elixir-autogen, elixir-format
 msgid "ends %{time} on %{date}"
 msgstr "завершення: %{date}, %{time}"
+
+#: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
+#, elixir-autogen, elixir-format
+msgid "Scheduled with %{brand}: %{url}"
+msgstr "Заплановано через %{brand}: %{url}"

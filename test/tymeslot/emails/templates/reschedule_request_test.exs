@@ -249,4 +249,15 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
       assert email.text_body =~ "Location: In person\n"
     end
   end
+
+  describe "Reply-To" do
+    test "replies to the organiser, from the instance's address" do
+      meeting = insert(:meeting, organizer_name: "Sam Host", organizer_email: "sam@example.com")
+
+      email = RescheduleRequest.render(meeting)
+
+      assert email.reply_to == {"Sam Host", "sam@example.com"}
+      assert email.from == {"Sam Host", Application.get_env(:tymeslot, :email)[:from_email]}
+    end
+  end
 end

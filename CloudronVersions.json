@@ -4116,6 +4116,53 @@
       },
       "publishState": "published",
       "ts": "Thu, 08 Oct 2026 16:13:32 GMT"
+    },
+    "1.24.0": {
+      "creationDate": "Tue, 13 Oct 2026 12:20:03 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "More control over how group booking pages and subscribed calendars behave, replies to booking emails that reach the right person, and invitee details anonymised two years after a meeting. Existing group meeting types stop showing the exact number of spots left on every time; turn on \"Show the count for the last spots\" in the meeting type's settings to bring it back when few remain.\n* Group meeting types can hide how full each time is on the booking page, or show the exact count only for the last few spots\n* A subscribed calendar, such as a holiday feed, can count every event as busy, blocking those times on the booking page and in your free/busy feed\n* Replying to a booking email now reaches the organiser (or, for the organiser's copy, the attendee) instead of the address it was sent from\n* Invitee names, emails and messages are anonymised two years after their meeting ends; the meetings themselves stay in your statistics\n* Repeating Outlook events that start on the 29th, 30th or 31st are refused with an explanation, instead of landing on a different day in shorter months\n* A notification that disappears on its own no longer closes the dialog you have open",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:1.24.0",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!\n\nSet PHX_HOST to your app domain, either on the Environment tab or by editing /app/data/.env, which is pre-filled with every supported variable, commented out (cloudron exec --app <domain> -- vi /app/data/.env). Values set on the Environment tab take precedence over that file. Restart the app after editing it.\n\nThe first user to register becomes the admin.",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "1.24.0",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Tue, 13 Oct 2026 12:20:03 GMT"
     }
   }
 }

@@ -194,7 +194,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
     :sha256 |> :crypto.hash(url) |> Base.encode16(case: :lower)
   end
 
-  defp subscription_attrs(user_id, %{"name" => name, "url" => url}) do
+  defp subscription_attrs(user_id, %{"name" => name, "url" => url} = sanitized) do
     %{
       user_id: user_id,
       name: name,
@@ -206,7 +206,8 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
       provider_account_id: subscription_account_id(url),
       calendar_paths: [],
       calendar_list: [subscription_calendar()],
-      is_active: true
+      is_active: true,
+      all_events_busy: Map.get(sanitized, "all_events_busy", false)
     }
   end
 

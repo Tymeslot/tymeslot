@@ -13,7 +13,6 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.MeetingTypeAttachment
   alias Tymeslot.MeetingTypes.ReminderValidation
-  alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Validation.Constraints
 
   @type t :: %__MODULE__{
@@ -36,6 +35,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           max_participants: integer(),
           fixed_dates: boolean(),
           one_off: boolean(),
+          show_seat_availability: boolean(),
+          last_spots_threshold: pos_integer() | nil,
           requires_approval: boolean(),
           approval_window_hours: pos_integer() | nil,
           is_archived: boolean(),
@@ -74,6 +75,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     # See `Tymeslot.MeetingTypes.FixedDates` and `Tymeslot.MeetingTypes.OneOffEvents`.
     field(:fixed_dates, :boolean, default: false)
     field(:one_off, :boolean, default: false)
+    field(:show_seat_availability, :boolean, default: true)
+    field(:last_spots_threshold, :integer)
 
     # Bookings on this meeting type are held until the host approves them,
     # rather than confirmed on submission. `approval_window_hours` nil means
@@ -180,6 +183,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :max_participants,
       :fixed_dates,
       :one_off,
+      :show_seat_availability,
+      :last_spots_threshold,
       :requires_approval,
       :approval_window_hours,
       :is_archived,
@@ -199,6 +204,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> validate_number(:slot_interval_minutes, Constraints.slot_interval_minutes_opts())
     |> validate_number(:sort_order, greater_than_or_equal_to: 0)
     |> validate_number(:max_participants, Constraints.max_participants_opts())
+    |> validate_number(:last_spots_threshold, Constraints.last_spots_threshold_opts())
     |> validate_number(:approval_window_hours, Constraints.approval_window_hours_opts())
     |> validate_booking_limits(:meeting_types)
     |> validate_inclusion(:icon, @valid_icons, message: "must be one of the available icons")
@@ -206,7 +212,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> validate_slug()
     |> validate_video_integration()
     |> validate_calendar_destination()
-    |> validate_reminder_config()
+    |> ReminderValidation.validate_changeset()
     |> validate_payment_fields(opts)
     |> validate_group_rules()
     |> FixedDates.validate_changeset()
@@ -428,61 +434,6 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
         changeset
     end
   end
-
-  defp validate_reminder_config(changeset) do
-    case get_change(changeset, :reminder_config) do
-      nil ->
-        changeset
-
-      reminders when is_list(reminders) ->
-        validate_reminder_list(changeset, reminders)
-
-      _other ->
-        add_error(changeset, :reminder_config, "must be a list of reminder settings")
-    end
-  end
-
-  # The count is checked before the entries, so an oversized list reports that
-  # rather than whichever of its entries happens to be malformed.
-  defp validate_reminder_list(changeset, reminders) do
-    normalized = Enum.map(reminders, &ReminderUtils.normalize_reminder/1)
-
-    result =
-      cond do
-        length(reminders) > ReminderValidation.max_reminders() ->
-          {:error, :too_many}
-
-        Enum.any?(normalized, &match?({:error, _reason}, &1)) ->
-          {:error, :invalid}
-
-        true ->
-          normalized
-          |> Enum.map(fn {:ok, reminder} -> reminder end)
-          |> ReminderValidation.check_policy(
-            ReminderUtils.normalize_reminders(changeset.data.reminder_config)
-          )
-      end
-
-    case result do
-      :ok -> changeset
-      {:error, reason} -> add_reminder_error(changeset, reason)
-    end
-  end
-
-  defp add_reminder_error(changeset, :too_many),
-    do:
-      add_error(changeset, :reminder_config, "cannot have more than %{count} reminders",
-        count: ReminderValidation.max_reminders()
-      )
-
-  defp add_reminder_error(changeset, :invalid),
-    do: add_error(changeset, :reminder_config, "contains invalid reminder settings")
-
-  defp add_reminder_error(changeset, :duplicate),
-    do: add_error(changeset, :reminder_config, "contains duplicate reminders")
-
-  defp add_reminder_error(changeset, :exceeds_max),
-    do: add_error(changeset, :reminder_config, "cannot be set for more than 1 year in advance")
 
   defp validate_payment_fields(changeset, opts) do
     if get_field(changeset, :payment_required) do

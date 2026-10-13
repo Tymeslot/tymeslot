@@ -82,6 +82,12 @@ defmodule Tymeslot.Emails.GroupParticipantEmailsTest do
       refute email.html_body =~ "Group session"
       refute email.text_body =~ "Group session"
     end
+
+    test "replies to the organiser", %{details: details} do
+      email = AppointmentConfirmation.render(:attendee, "erin@example.com", details)
+
+      assert email.reply_to == {"Host", "host@example.com"}
+    end
   end
 
   describe "the participant's own cancellation" do
