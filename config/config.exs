@@ -84,6 +84,10 @@ config :tymeslot,
   # This should remain false in the standalone open-source version.
   show_branding: false,
 
+  # Link appended to the description of every .ics Tymeslot sends while
+  # branding is shown for the organiser. nil leaves the footer off.
+  ics_branding_url: nil,
+
   # Demo provider - no-op by default (can be provided by external layers)
   demo_provider: Tymeslot.Demo.NoOp,
 
@@ -519,6 +523,10 @@ config :tymeslot, :payments,
     stripe_event_days: 90,
     analytics_event_days: 90,
     payload_days: 30,
+    # How long what invitees gave (names, emails, messages, answers) is kept
+    # after their meeting or poll ends, before it is anonymised. The meeting
+    # rows themselves stay for statistics. See Tymeslot.InviteeData.
+    invitee_data_days: 730,
     # Statutory retention for financial records (booking payments, payment
     # transactions, subscription invoices), in years counted from the end of
     # the financial year a record belongs to. Ten is the longest period common

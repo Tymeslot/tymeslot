@@ -94,21 +94,18 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   """
   @impl CalendarAPIBehaviour
   @spec create_event(CalendarIntegrationSchema.t(), map()) ::
-          {:ok, calendar_event()} | api_error()
+          {:ok, calendar_event()} | api_error() | CalendarAPIBehaviour.write_refusal()
   def create_event(%CalendarIntegrationSchema{} = integration, event_data) do
-    body =
-      event_data
-      |> EventMapper.format_event_data()
-      |> EventMapper.add_tymeslot_fingerprint()
-
-    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      with {:ok, response} <-
-             make_request_with_body(:post, "/me/events", token, body,
-               headers: @silent_event_headers
-             ) do
-        {:ok, List.first(convert_to_common_format([response]))}
-      end
-    end)
+    with {:ok, body} <- event_body(event_data) do
+      AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+        with {:ok, response} <-
+               make_request_with_body(:post, "/me/events", token, body,
+                 headers: @silent_event_headers
+               ) do
+          {:ok, List.first(convert_to_common_format([response]))}
+        end
+      end)
+    end
   end
 
   @doc """
@@ -116,21 +113,18 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   """
   @impl CalendarAPIBehaviour
   @spec create_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
-          {:ok, calendar_event()} | api_error()
+          {:ok, calendar_event()} | api_error() | CalendarAPIBehaviour.write_refusal()
   def create_event(%CalendarIntegrationSchema{} = integration, calendar_id, event_data) do
-    body =
-      event_data
-      |> EventMapper.format_event_data()
-      |> EventMapper.add_tymeslot_fingerprint()
-
-    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      with {:ok, response} <-
-             make_request_with_body(:post, "/me/calendars/#{calendar_id}/events", token, body,
-               headers: @silent_event_headers
-             ) do
-        {:ok, List.first(convert_to_common_format([response]))}
-      end
-    end)
+    with {:ok, body} <- event_body(event_data) do
+      AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+        with {:ok, response} <-
+               make_request_with_body(:post, "/me/calendars/#{calendar_id}/events", token, body,
+                 headers: @silent_event_headers
+               ) do
+          {:ok, List.first(convert_to_common_format([response]))}
+        end
+      end)
+    end
   end
 
   @doc """
@@ -138,21 +132,18 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   """
   @impl CalendarAPIBehaviour
   @spec update_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
-          {:ok, calendar_event()} | api_error()
+          {:ok, calendar_event()} | api_error() | CalendarAPIBehaviour.write_refusal()
   def update_event(%CalendarIntegrationSchema{} = integration, event_id, event_data) do
-    body =
-      event_data
-      |> EventMapper.format_event_data()
-      |> EventMapper.add_tymeslot_fingerprint()
-
-    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      with {:ok, response} <-
-             make_request_with_body(:patch, "/me/events/#{event_id}", token, body,
-               headers: @silent_event_headers
-             ) do
-        {:ok, List.first(convert_to_common_format([response]))}
-      end
-    end)
+    with {:ok, body} <- event_body(event_data) do
+      AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+        with {:ok, response} <-
+               make_request_with_body(:patch, "/me/events/#{event_id}", token, body,
+                 headers: @silent_event_headers
+               ) do
+          {:ok, List.first(convert_to_common_format([response]))}
+        end
+      end)
+    end
   end
 
   @doc """
@@ -160,25 +151,22 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   """
   @impl CalendarAPIBehaviour
   @spec update_event(CalendarIntegrationSchema.t(), String.t(), String.t(), map()) ::
-          {:ok, calendar_event()} | api_error()
+          {:ok, calendar_event()} | api_error() | CalendarAPIBehaviour.write_refusal()
   def update_event(%CalendarIntegrationSchema{} = integration, calendar_id, event_id, event_data) do
-    body =
-      event_data
-      |> EventMapper.format_event_data()
-      |> EventMapper.add_tymeslot_fingerprint()
-
-    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      with {:ok, response} <-
-             make_request_with_body(
-               :patch,
-               "/me/calendars/#{calendar_id}/events/#{event_id}",
-               token,
-               body,
-               headers: @silent_event_headers
-             ) do
-        {:ok, List.first(convert_to_common_format([response]))}
-      end
-    end)
+    with {:ok, body} <- event_body(event_data) do
+      AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+        with {:ok, response} <-
+               make_request_with_body(
+                 :patch,
+                 "/me/calendars/#{calendar_id}/events/#{event_id}",
+                 token,
+                 body,
+                 headers: @silent_event_headers
+               ) do
+          {:ok, List.first(convert_to_common_format([response]))}
+        end
+      end)
+    end
   end
 
   @doc """
@@ -522,6 +510,12 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
       body,
       Keyword.merge([response_handler: &handle_response(&1, path)], opts)
     )
+  end
+
+  # The refusal comes before a token is fetched: nothing is sent to Graph.
+  defp event_body(event_data) do
+    with {:ok, body} <- EventMapper.format_event_data(event_data),
+         do: {:ok, EventMapper.add_tymeslot_fingerprint(body)}
   end
 
   defp read_preference(:text), do: ~s(outlook.timezone="UTC", outlook.body-content-type="text")

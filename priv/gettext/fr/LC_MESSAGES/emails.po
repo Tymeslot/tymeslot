@@ -591,3 +591,8 @@ msgstr[1] "Session de groupe : vous avez l'une des %{count} places."
 #, elixir-autogen, elixir-format
 msgid "ends %{time} on %{date}"
 msgstr "se termine à %{time} le %{date}"
+
+#: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
+#, elixir-autogen, elixir-format
+msgid "Scheduled with %{brand}: %{url}"
+msgstr "Planifié avec %{brand} : %{url}"

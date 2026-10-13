@@ -76,6 +76,29 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.IcsUrlConfig do
           />
         </div>
 
+        <label
+          for="subscription_all_events_busy"
+          class="flex items-start gap-3 p-4 rounded-token-xl border-2 border-tymeslot-100 hover:border-turquoise-200 cursor-pointer transition-colors"
+        >
+          <.input
+            type="checkbox"
+            id="subscription_all_events_busy"
+            name="integration[all_events_busy]"
+            value={Map.get(@form_values, "all_events_busy", "false")}
+          />
+          <div class="flex-1">
+            <div class="font-bold text-tymeslot-900">
+              {dgettext("dashboard_calendar_providers", "Count every event as busy")}
+            </div>
+            <div class="text-token-sm text-tymeslot-600 font-medium">
+              {dgettext(
+                "dashboard_calendar_providers",
+                "Holiday and school-holiday calendars mark their events as free, so they would block nothing. With this on, every event in the feed blocks the time, however it is marked."
+              )}
+            </div>
+          </div>
+        </label>
+
         <.info_box variant={:info}>
           {dgettext(
             "dashboard_calendar_providers",

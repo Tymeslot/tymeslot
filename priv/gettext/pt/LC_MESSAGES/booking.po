@@ -1368,13 +1368,6 @@ msgstr "O endereço vai ser combinado com você depois do agendamento."
 msgid "Which location?"
 msgstr "Qual local?"
 
-#: lib/tymeslot_web/themes/shared/components/seat_badge.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} seat left"
-msgid_plural "%{count} seats left"
-msgstr[0] "Resta %{count} vaga"
-msgstr[1] "Restam %{count} vagas"
-
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "This booking has already been cancelled or moved."
@@ -1452,3 +1445,25 @@ msgstr "Ligação telefônica"
 #, elixir-autogen, elixir-format
 msgid "Somewhere else"
 msgstr "Outro local"
+
+#: lib/tymeslot_web/themes/shared/components/seat_badge.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} spot left"
+msgid_plural "%{count} spots left"
+msgstr[0] "Resta %{count} vaga"
+msgstr[1] "Restam %{count} vagas"
+
+#: lib/tymeslot_web/themes/shared/components/seat_badge.ex
+#, elixir-autogen, elixir-format
+msgid "Almost full"
+msgstr "Quase cheio"
+
+#: lib/tymeslot_web/themes/shared/components/seat_badge.ex
+#, elixir-autogen, elixir-format
+msgid "Filling up"
+msgstr "Enchendo"
+
+#: lib/tymeslot_web/themes/shared/components/seat_badge.ex
+#, elixir-autogen, elixir-format
+msgid "Plenty left"
+msgstr "Muitas vagas"

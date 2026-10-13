@@ -493,4 +493,32 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalEmailsTest do
       refute BookingRequestReceived.render(at_venue).text_body =~ @note
     end
   end
+
+  describe "Reply-To" do
+    # Sent from the instance's own address, so a reply would otherwise land
+    # in a mailbox nobody reads.
+    test "the invitee's request receipt replies to the host" do
+      email = BookingRequestReceived.render(meeting())
+
+      assert email.reply_to == {"Sam Host", "sam@example.com"}
+      assert {"Sam Host", instance_address()} == email.from
+    end
+
+    test "the invitee's outcome notice replies to the host" do
+      email = BookingRequestOutcome.render(:declined, meeting())
+
+      assert email.reply_to == {"Sam Host", "sam@example.com"}
+      assert {"Sam Host", instance_address()} == email.from
+    end
+
+    test "the host's approval request replies to the invitee" do
+      email = BookingApprovalRequest.render(:request, meeting(), @urls, "en")
+
+      assert email.reply_to == {"Alex Guest", "alex@example.com"}
+      assert {_name, address} = email.from
+      assert address == instance_address()
+    end
+
+    defp instance_address, do: Application.get_env(:tymeslot, :email)[:from_email]
+  end
 end

@@ -4,7 +4,7 @@ defmodule Tymeslot.MixProject do
   def project do
     [
       app: :tymeslot,
-      version: "1.23.0",
+      version: "1.24.0",
       elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -217,6 +217,9 @@ defmodule Tymeslot.MixProject do
         "ecto.migrate --quiet",
         "test --color --preload-modules --only e2e"
       ],
+      # The Vitest suite under assets/, which `mix test` does not reach. A
+      # `mix precommit` step and a CI step of its own.
+      "test.js": [&run_js_tests/1],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": [
         "tailwind tymeslot",
@@ -250,4 +253,24 @@ defmodule Tymeslot.MixProject do
   # `test_helper.exs` reads this to decide whether to start the HTTP endpoint and
   # Wallaby, which the browser needs to connect to.
   defp set_e2e_env(_args), do: System.put_env("E2E", "true")
+
+  # `mix setup` builds the assets with the esbuild and Tailwind binaries and
+  # never runs npm, so a fresh clone has no node_modules until this installs
+  # them from the lockfile.
+  defp run_js_tests(_args) do
+    assets = Path.expand("assets", __DIR__)
+
+    unless File.dir?(Path.join(assets, "node_modules")) do
+      npm!(["ci"], assets)
+    end
+
+    npm!(["test"], assets)
+  end
+
+  defp npm!(args, dir) do
+    case System.cmd("npm", args, cd: dir, env: [{"CI", "true"}], into: IO.stream()) do
+      {_output, 0} -> :ok
+      {_output, status} -> Mix.raise("npm #{Enum.join(args, " ")} failed (exit #{status})")
+    end
+  end
 end

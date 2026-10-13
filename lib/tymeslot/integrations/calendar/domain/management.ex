@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   """
 
   alias Tymeslot.Emails.EmailScheduler.IntegrationScheduler
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.BookingEligibility
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
@@ -15,6 +16,7 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   alias Tymeslot.Integrations.Calendar.Defaults
   alias Tymeslot.Integrations.Calendar.Discovery
   alias Tymeslot.Integrations.Calendar.PrimarySelection
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Shared.ReauthHandling
@@ -189,6 +191,30 @@ defmodule Tymeslot.Integrations.CalendarManagement do
       HealthCheck.mark_user_recovered(:calendar, updated.id)
       ok
     end
+  end
+
+  @doc """
+  Sets whether a subscription counts every event in its feed as busy, even
+  those the feed marks free (`all_events_busy`; see `Ics.Provider`). Only a
+  subscription honours the flag, so any other connection is refused. The
+  user's cached availability is dropped, so the next booking page load
+  already reflects the change.
+  """
+  @spec set_all_events_busy(integer(), integer(), boolean()) ::
+          {:ok, CalendarIntegrationSchema.t()}
+          | {:error, :not_found | :not_a_subscription | Ecto.Changeset.t()}
+  def set_all_events_busy(integration_id, user_id, busy?) when is_boolean(busy?) do
+    with {:ok, integration} <- get_calendar_integration(integration_id, user_id),
+         :ok <- subscription_only(integration),
+         {:ok, updated} <-
+           CalendarIntegrationQueries.update(integration, %{all_events_busy: busy?}) do
+      AvailabilityCache.invalidate_for_user(user_id)
+      {:ok, updated}
+    end
+  end
+
+  defp subscription_only(%{provider: provider}) do
+    if ProviderConfig.subscription?(provider), do: :ok, else: {:error, :not_a_subscription}
   end
 
   @doc """

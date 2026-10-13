@@ -1368,13 +1368,6 @@ msgstr ""
 msgid "Which location?"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/components/seat_badge.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} seat left"
-msgid_plural "%{count} seats left"
-msgstr[0] ""
-msgstr[1] ""
-
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "This booking has already been cancelled or moved."
@@ -1451,4 +1444,26 @@ msgstr ""
 #: lib/tymeslot/meeting_types/location_selection.ex
 #, elixir-autogen, elixir-format
 msgid "Somewhere else"
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/components/seat_badge.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} spot left"
+msgid_plural "%{count} spots left"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/themes/shared/components/seat_badge.ex
+#, elixir-autogen, elixir-format
+msgid "Almost full"
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/components/seat_badge.ex
+#, elixir-autogen, elixir-format
+msgid "Filling up"
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/components/seat_badge.ex
+#, elixir-autogen, elixir-format
+msgid "Plenty left"
 msgstr ""

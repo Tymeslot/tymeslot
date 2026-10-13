@@ -591,3 +591,8 @@ msgstr[1] ""
 #, elixir-autogen, elixir-format
 msgid "ends %{time} on %{date}"
 msgstr ""
+
+#: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
+#, elixir-autogen, elixir-format
+msgid "Scheduled with %{brand}: %{url}"
+msgstr ""
