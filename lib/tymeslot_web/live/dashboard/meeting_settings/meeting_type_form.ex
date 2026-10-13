@@ -217,19 +217,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   end
 
   @impl Phoenix.LiveComponent
-  def handle_event("toggle_meeting_mode", %{"mode" => mode}, socket) do
-    socket =
-      socket
-      |> assign(:meeting_mode, mode)
-      |> assign(
-        :form_errors,
-        FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :video_integration)
-      )
-
-    {:noreply, Autosave.maybe_run(socket)}
-  end
-
-  @impl Phoenix.LiveComponent
   def handle_event("select_icon", %{"icon" => icon}, socket) do
     {:noreply, socket |> assign(:selected_icon, icon) |> Autosave.maybe_run()}
   end
