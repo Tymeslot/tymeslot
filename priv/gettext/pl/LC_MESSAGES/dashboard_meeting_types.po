@@ -54,6 +54,7 @@ msgid "Use lowercase letters, numbers and hyphens. Randomise creates an unguessa
 msgstr "Używaj małych liter, cyfr i myślników. Losowanie tworzy link nie do odgadnięcia."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{minutes} min"
 msgstr "%{minutes} min"
