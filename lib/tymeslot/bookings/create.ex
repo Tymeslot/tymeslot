@@ -289,9 +289,10 @@ defmodule Tymeslot.Bookings.Create do
   # without it the meeting was created in `awaiting_payment`, `CheckoutSessions`
   # then refused for want of a charges-enabled account, and the booker was left
   # with the same message on top of a half-made booking that had to expire.
+  # The same holds when the host's plan no longer grants payments.
   defp validate_payments_available(booking_data, user_id) do
     if paid_meeting_type?(booking_data) and
-         not MeetingPayments.charges_enabled_for_user?(user_id) do
+         not MeetingPayments.accepting_payments?(user_id) do
       {:error, :payments_unavailable}
     else
       :ok
