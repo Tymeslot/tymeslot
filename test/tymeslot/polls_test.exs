@@ -5,7 +5,8 @@ defmodule Tymeslot.PollsTest do
   @moduletag :polls
 
   alias Tymeslot.Polls
-  alias Tymeslot.Polls.PollSchema
+  alias Tymeslot.Polls.{PollParticipantSchema, PollSchema}
+  alias Tymeslot.Repo
 
   import Tymeslot.Factory
 
@@ -298,6 +299,41 @@ defmodule Tymeslot.PollsTest do
       assert tallies[slot1.id] == %{yes: 2, if_need_be: 0, no: 0}
       assert tallies[slot2.id] == %{yes: 0, if_need_be: 1, no: 1}
       assert tallies[slot3.id] == %{yes: 0, if_need_be: 0, no: 0}
+    end
+  end
+
+  describe "unconfirmed participants" do
+    setup do
+      poll = insert(:poll)
+      now = DateTime.utc_now(:second)
+
+      confirmed = insert(:poll_participant, poll: poll)
+      fresh = insert(:poll_participant, poll: poll, confirmed_at: nil, link_sent_at: now)
+
+      expired =
+        insert(:poll_participant,
+          poll: poll,
+          confirmed_at: nil,
+          link_sent_at: DateTime.add(now, -49, :hour)
+        )
+
+      %{poll: poll, confirmed: confirmed, fresh: fresh, expired: expired}
+    end
+
+    test "count_unconfirmed/1 counts only those whose link is still live", %{poll: poll} do
+      assert Polls.count_unconfirmed(poll) == 1
+    end
+
+    test "prune_unconfirmed_participants/0 deletes only the expired ones", ctx do
+      assert {1, nil} = Polls.prune_unconfirmed_participants()
+
+      remaining =
+        PollParticipantSchema
+        |> Repo.all()
+        |> Enum.map(& &1.id)
+        |> MapSet.new()
+
+      assert MapSet.equal?(remaining, MapSet.new([ctx.confirmed.id, ctx.fresh.id]))
     end
   end
 

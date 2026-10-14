@@ -14,10 +14,8 @@ defmodule Tymeslot.Emails.Templates.PollHostNudge do
   import Swoosh.Email
 
   alias Tymeslot.Emails.RecipientLocale
-  alias Tymeslot.Emails.Shared.{Buttons, MjmlEmail, Sanitise, TemplateHelper, Text}
+  alias Tymeslot.Emails.Shared.{Buttons, MjmlEmail, PollHost, Sanitise, TemplateHelper, Text}
   alias Tymeslot.Polls.PollSchema
-  alias Tymeslot.Profiles
-  alias Tymeslot.Profiles.ProfileSchema
 
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -27,7 +25,7 @@ defmodule Tymeslot.Emails.Templates.PollHostNudge do
   def render(%PollSchema{} = poll, variant, results_url)
       when variant in [:all_voted, :deadline_passed] and is_binary(results_url) do
     locale = host_locale(poll)
-    host_name = host_display_name(poll)
+    host_name = PollHost.display_name(poll)
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       copy = copy(variant, poll.title)
@@ -105,15 +103,6 @@ defmodule Tymeslot.Emails.Templates.PollHostNudge do
         )
     }
   end
-
-  defp host_display_name(%PollSchema{user: %{profile: %ProfileSchema{} = profile}}) do
-    Profiles.display_name(profile) || MjmlEmail.fetch_from_name()
-  end
-
-  defp host_display_name(%PollSchema{user: %{name: name}}) when is_binary(name) and name != "",
-    do: name
-
-  defp host_display_name(_poll), do: MjmlEmail.fetch_from_name()
 
   defp host_locale(%PollSchema{user: %{locale: _locale} = user}),
     do: RecipientLocale.locale_for(user)

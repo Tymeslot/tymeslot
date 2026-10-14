@@ -742,3 +742,10 @@ msgstr "%{date}, %{time}"
 #, elixir-autogen, elixir-format
 msgid "Cancel this poll"
 msgstr "Cancelar esta enquete"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} more person asked for a voting link but hasn't voted with it yet."
+msgid_plural "%{count} more people asked for a voting link but haven't voted with it yet."
+msgstr[0] "Mais %{count} pessoa pediu um link de votação, mas ainda não votou com ele."
+msgstr[1] "Mais %{count} pessoas pediram um link de votação, mas ainda não votaram com ele."

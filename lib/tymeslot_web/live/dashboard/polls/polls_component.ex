@@ -67,6 +67,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
      |> assign_new(:show_form, fn -> false end)
      |> assign_new(:selected_poll_id, fn -> nil end)
      |> assign_new(:selected_poll, fn -> nil end)
+     |> assign_new(:unconfirmed_count, fn -> 0 end)
      |> assign_new(:tallies, fn -> %{} end)
      |> assign_new(:slot_health, fn -> %{} end)
      |> assign_new(:slot_health_loading, fn -> false end)
@@ -111,6 +112,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
           <PollResults.results_panel
             :if={@selected_poll}
             poll={@selected_poll}
+            unconfirmed_count={@unconfirmed_count}
             tallies={@tallies}
             slot_health={@slot_health}
             slot_health_loading={@slot_health_loading}
@@ -329,6 +331,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
       {:ok, poll} ->
         socket
         |> assign(:selected_poll, poll)
+        |> assign(:unconfirmed_count, Polls.count_unconfirmed(poll))
         |> assign(:tallies, Polls.tallies(poll))
         |> assign_winning_slot(poll)
         |> sync_slot_health(poll, opts)

@@ -748,3 +748,11 @@ msgstr "%{date}, %{time}"
 #, elixir-autogen, elixir-format
 msgid "Cancel this poll"
 msgstr "Скасувати це опитування"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} more person asked for a voting link but hasn't voted with it yet."
+msgid_plural "%{count} more people asked for a voting link but haven't voted with it yet."
+msgstr[0] "Ще %{count} особа запросила посилання для голосування, але ще не проголосувала ним."
+msgstr[1] "Ще %{count} особи запросили посилання для голосування, але ще не проголосували ним."
+msgstr[2] "Ще %{count} осіб запросили посилання для голосування, але ще не проголосували ним."

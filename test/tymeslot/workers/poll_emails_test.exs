@@ -15,8 +15,10 @@ defmodule Tymeslot.Workers.PollEmailsTest do
   import Tymeslot.Factory
   import Tymeslot.WorkerTestHelpers
 
+  alias Ecto.UUID
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
+  alias Tymeslot.Polls.PollParticipantQueries
   alias Tymeslot.Polls.Voting
   alias Tymeslot.Workers.EmailWorker
 
@@ -124,8 +126,8 @@ defmodule Tymeslot.Workers.PollEmailsTest do
 
       {:ok, poll} = Polls.get_poll_for_voting(poll.token)
 
-      {:ok, alice} = Voting.register_participant(poll, %{name: "Alice", email: "a@example.com"})
-      {:ok, bob} = Voting.register_participant(poll, %{name: "Bob", email: "b@example.com"})
+      alice = request(poll, %{name: "Alice", email: "a@example.com"})
+      bob = request(poll, %{name: "Bob", email: "b@example.com"})
 
       {:ok, _alice_vote} = Voting.cast_votes(poll, alice.token, %{slot_one.id => :yes})
 
@@ -147,6 +149,24 @@ defmodule Tymeslot.Workers.PollEmailsTest do
 
       assert enqueued_all_voted_count(poll.id) == 1
     end
+
+    test "a link request that expired unconfirmed does not hold the nudge back" do
+      user = insert(:user)
+      poll = insert(:poll, status: :open, user: user)
+      slot = insert(:poll_time_slot, poll: poll, start_time: in_hours(48))
+      {:ok, poll} = Polls.get_poll_for_voting(poll.token)
+
+      insert(:poll_participant,
+        poll: poll,
+        confirmed_at: nil,
+        link_sent_at: DateTime.add(DateTime.utc_now(:second), -3, :day)
+      )
+
+      alice = request(poll, %{name: "Alice", email: "a@example.com"})
+      {:ok, _alice_vote} = Voting.cast_votes(poll, alice.token, %{slot.id => :yes})
+
+      assert enqueued_all_voted_count(poll.id) == 1
+    end
   end
 
   # --- Handler: deadline reminders ---
@@ -157,13 +177,22 @@ defmodule Tymeslot.Workers.PollEmailsTest do
       _profile = insert(:profile, user: user, username: "hostname")
       poll = insert(:poll, status: :open, user: user, deadline_at: in_hours(48))
 
-      insert(:poll_participant, poll: poll, name: "Unvoted", email: "unvoted@example.com")
+      unvoted =
+        insert(:poll_participant, poll: poll, name: "Unvoted", email: "unvoted@example.com")
 
       insert(:poll_participant,
         poll: poll,
         name: "Voted",
         email: "voted@example.com",
         voted_at: DateTime.utc_now(:second)
+      )
+
+      # Asked for a link but never confirmed it: not a participant yet.
+      insert(:poll_participant,
+        poll: poll,
+        email: "unconfirmed@example.com",
+        confirmed_at: nil,
+        link_sent_at: DateTime.utc_now(:second)
       )
 
       assert :ok =
@@ -174,6 +203,8 @@ defmodule Tymeslot.Workers.PollEmailsTest do
 
       assert_receive {:email, email}, 1000
       assert "unvoted@example.com" in recipients(email)
+      # Their own link: voting is only possible through it.
+      assert email.text_body =~ "/hostname/poll/#{poll.token}?p=#{unvoted.token}"
       refute_receive {:email, _other}, 200
     end
 
@@ -227,6 +258,116 @@ defmodule Tymeslot.Workers.PollEmailsTest do
                })
 
       refute_receive {:email, _any}, 200
+    end
+  end
+
+  # --- Handler: participant link ---
+
+  describe "send_poll_participant_link" do
+    test "emails the participant their personal link, addressed to no one but them" do
+      user = insert(:user)
+      _profile = insert(:profile, user: user, username: "hostname")
+      poll = insert(:poll, status: :open, user: user, title: "Team sync")
+
+      participant =
+        insert(:poll_participant,
+          poll: poll,
+          name: "Typed By Anyone",
+          email: "ada@example.com",
+          confirmed_at: nil,
+          link_sent_at: DateTime.utc_now(:second)
+        )
+
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_poll_participant_link",
+                 "participant_id" => participant.id
+               })
+
+      assert_receive {:email, email}, 1000
+      assert email.to == [{"", "ada@example.com"}]
+      assert email.subject =~ "Team sync"
+      assert email.text_body =~ "/hostname/poll/#{poll.token}?p=#{participant.token}"
+      refute email.text_body =~ "Typed By Anyone"
+      refute email.html_body =~ "Typed By Anyone"
+    end
+
+    test "discards once the participant is gone" do
+      assert {:discard, "poll participant not found"} =
+               perform_job(EmailWorker, %{
+                 "action" => "send_poll_participant_link",
+                 "participant_id" => UUID.generate()
+               })
+
+      refute_receive {:email, _any}, 200
+    end
+
+    test "discards when the poll is no longer open" do
+      user = insert(:user)
+      _profile = insert(:profile, user: user)
+      poll = insert(:poll, status: :cancelled, user: user)
+      participant = insert(:poll_participant, poll: poll)
+
+      assert {:discard, "poll not open"} =
+               perform_job(EmailWorker, %{
+                 "action" => "send_poll_participant_link",
+                 "participant_id" => participant.id
+               })
+
+      refute_receive {:email, _any}, 200
+    end
+
+    test "discards without delivering when the host has no username" do
+      poll = insert(:poll, status: :open, user: insert(:user))
+      participant = insert(:poll_participant, poll: poll)
+
+      assert {:discard, "host has no username"} =
+               perform_job(EmailWorker, %{
+                 "action" => "send_poll_participant_link",
+                 "participant_id" => participant.id
+               })
+
+      refute_receive {:email, _any}, 200
+    end
+  end
+
+  # --- Handler: vote receipt ---
+
+  describe "send_poll_vote_receipt" do
+    test "lists the participant's responses and carries their link" do
+      user = insert(:user)
+      _profile = insert(:profile, user: user, username: "hostname")
+      poll = insert(:poll, status: :open, user: user, timezone: "Etc/UTC")
+      start_time = ~U[2030-03-04 10:00:00Z]
+
+      slot_yes =
+        insert(:poll_time_slot,
+          poll: poll,
+          start_time: start_time,
+          end_time: DateTime.add(start_time, 1, :hour)
+        )
+
+      _slot_unanswered =
+        insert(:poll_time_slot,
+          poll: poll,
+          start_time: DateTime.add(start_time, 1, :day),
+          end_time: DateTime.add(start_time, 25, :hour)
+        )
+
+      participant = insert(:poll_participant, poll: poll, name: "Ada", email: "ada@example.com")
+      insert(:poll_vote, participant: participant, time_slot: slot_yes, response: :yes)
+
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_poll_vote_receipt",
+                 "participant_id" => participant.id
+               })
+
+      assert_receive {:email, email}, 1000
+      assert "ada@example.com" in recipients(email)
+      assert email.text_body =~ "/hostname/poll/#{poll.token}?p=#{participant.token}"
+      assert email.text_body =~ ": Yes"
+      assert email.text_body =~ ": No answer"
     end
   end
 
@@ -324,4 +465,9 @@ defmodule Tymeslot.Workers.PollEmailsTest do
   end
 
   defp recipients(email), do: Enum.map(email.to, fn {_name, address} -> address end)
+
+  defp request(poll, attrs) do
+    :ok = Voting.request_link(poll, attrs)
+    PollParticipantQueries.get_by_poll_and_email(poll.id, attrs.email)
+  end
 end

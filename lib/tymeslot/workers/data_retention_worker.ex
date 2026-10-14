@@ -19,6 +19,8 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
       `Tymeslot.MeetingPayments.DataRetention`)
   11. What invitees gave on meetings and polls that ended two years ago,
       anonymised rather than deleted (see `Tymeslot.InviteeData`)
+  12. Requests for a poll voting link never confirmed within the link's
+      lifetime (48 hours, not a day count), with the name and email they hold
 
   Ensures the database doesn't grow indefinitely by removing
   old records based on configured retention periods.
@@ -37,6 +39,7 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
   alias Tymeslot.Integrations.HealthCheck.AvailabilityRefusalQueries
   alias Tymeslot.InviteeData
   alias Tymeslot.MeetingPayments.DataRetention
+  alias Tymeslot.Polls
   alias Tymeslot.Slack
   alias Tymeslot.Telegram
   alias Tymeslot.Webhooks.WebhookQueries
@@ -115,6 +118,8 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
 
     prune_orphaned_telegram_stubs()
 
+    prune_unconfirmed_poll_participants()
+
     prune_expired_analytics_salts()
 
     purge_expired_financial_records()
@@ -171,6 +176,13 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
       {0, _rows} ->
         Logger.debug("No abandoned Telegram setup stubs to prune")
     end
+  end
+
+  # Not a `@retention_jobs` entry: an unconfirmed participant's lifetime is
+  # their link's, counted in hours from when it was last sent.
+  defp prune_unconfirmed_poll_participants do
+    {count, _rows} = Polls.prune_unconfirmed_participants()
+    Logger.info("Pruned unconfirmed poll participants", deleted_count: count)
   end
 
   # Deliberately not a `@retention_jobs` entry either: a salt's lifetime is its

@@ -109,60 +109,67 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
       %{view: view, poll: poll, slot: slot, profile: profile}
     end
 
-    test "registering creates a participant and patches the URL with ?p=", %{
+    test "asking for a link creates an unconfirmed participant and never shows the link", %{
       view: view,
-      poll: poll,
-      profile: profile
+      poll: poll
     } do
-      view
-      |> form("form[data-testid='poll-register-form']", %{
-        "name" => "Ada Lovelace",
-        "email" => "ada@example.com"
-      })
-      |> render_submit()
+      html =
+        view
+        |> form("form[data-testid='poll-register-form']", %{
+          "name" => "Ada Lovelace",
+          "email" => "ada@example.com"
+        })
+        |> render_submit()
 
       participant = Repo.get_by!(PollParticipantSchema, poll_id: poll.id)
       assert participant.email == "ada@example.com"
+      assert participant.confirmed_at == nil
 
-      assert_patched(view, poll_path(profile.username, poll.token) <> "?p=#{participant.token}")
-      assert has_element?(view, "[data-testid='poll-participant-name']", "Ada Lovelace")
+      refute html =~ participant.token
+      assert has_element?(view, "[data-testid='poll-link-sent']", "ada@example.com")
+      refute has_element?(view, "form[data-testid='poll-vote-form']")
     end
 
-    test "the patched ?p= URL is a live route that resumes the participant", %{
-      conn: conn,
+    test "an address already on the poll gets the same answer and nobody's link", %{
       view: view,
-      poll: poll,
-      profile: profile
+      poll: poll
     } do
-      view
-      |> form("form[data-testid='poll-register-form']", %{
-        "name" => "Ada Lovelace",
-        "email" => "ada@example.com"
-      })
-      |> render_submit()
+      ada = insert(:poll_participant, poll: poll, name: "Ada Lovelace", email: "ada@example.com")
 
-      participant = Repo.get_by!(PollParticipantSchema, poll_id: poll.id)
-      resume_url = poll_path(profile.username, poll.token) <> "?p=#{participant.token}"
+      html =
+        view
+        |> form("form[data-testid='poll-register-form']", %{
+          "name" => "Mallory",
+          "email" => "ada@example.com"
+        })
+        |> render_submit()
 
-      # The page patches to a path it builds itself. Only `/:username/poll/:token`
-      # reaches this LiveView: a username-less `/poll/<token>` lands on a
-      # different live_session, which `push_patch/2` refuses and crashes on, so
-      # this asserts the built path both patches and mounts.
-      {:ok, resumed, _html} = live(conn, resume_url)
-      assert has_element?(resumed, "[data-testid='poll-participant-name']", "Ada Lovelace")
+      refute html =~ ada.token
+      refute html =~ "Ada Lovelace"
+      assert has_element?(view, "[data-testid='poll-link-sent']", "ada@example.com")
+      refute has_element?(view, "form[data-testid='poll-vote-form']")
     end
 
-    test "casting votes persists responses and re-renders the tallies", %{
-      view: view,
-      poll: poll,
-      slot: slot
-    } do
-      view
-      |> form("form[data-testid='poll-register-form']", %{
-        "name" => "Grace",
-        "email" => "grace@example.com"
-      })
-      |> render_submit()
+    test "the emailed link opens the vote form, and saving through it confirms the participant",
+         %{
+           conn: conn,
+           poll: poll,
+           slot: slot,
+           profile: profile
+         } do
+      pending =
+        insert(:poll_participant,
+          poll: poll,
+          name: "Grace",
+          confirmed_at: nil,
+          link_sent_at: DateTime.utc_now(:second)
+        )
+
+      {:ok, view, _html} =
+        live(conn, poll_path(profile.username, poll.token) <> "?p=#{pending.token}")
+
+      assert has_element?(view, "[data-testid='poll-participant-name']", "Grace")
+      assert has_element?(view, "[data-testid='poll-link-notice']", "confirm your email address")
 
       html =
         view
@@ -171,8 +178,30 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
 
       {:ok, reloaded} = Polls.get_poll_for_voting(poll.token)
       assert Polls.tallies(reloaded)[slot.id].yes == 1
+      assert %DateTime{} = Repo.get!(PollParticipantSchema, pending.id).confirmed_at
 
       assert html =~ "poll-tally--yes"
+      assert html =~ "your responses count now"
+      assert has_element?(view, "[data-testid='poll-link-notice']", "your personal link")
+    end
+
+    test "an unconfirmed link past its lifetime opens the request form instead", %{
+      conn: conn,
+      poll: poll,
+      profile: profile
+    } do
+      expired =
+        insert(:poll_participant,
+          poll: poll,
+          confirmed_at: nil,
+          link_sent_at: DateTime.add(DateTime.utc_now(), -3, :day)
+        )
+
+      {:ok, view, _html} =
+        live(conn, poll_path(profile.username, poll.token) <> "?p=#{expired.token}")
+
+      assert has_element?(view, "form[data-testid='poll-register-form']")
+      refute has_element?(view, "form[data-testid='poll-vote-form']")
     end
 
     test "a bot filling the honeypot is silently rejected", %{view: view, poll: poll} do

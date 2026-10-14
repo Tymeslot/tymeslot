@@ -2,7 +2,14 @@ defmodule Tymeslot.Emails.PollTemplatesTest do
   use Tymeslot.DataCase, async: true
   @moduletag :emails
 
-  alias Tymeslot.Emails.Templates.{PollDeadlineReminder, PollHostNudge}
+  alias Tymeslot.Emails.Templates.{
+    PollDeadlineReminder,
+    PollHostNudge,
+    PollParticipantLink,
+    PollVoteReceipt
+  }
+
+  alias Tymeslot.Repo
 
   import Tymeslot.Factory
 
@@ -166,6 +173,96 @@ defmodule Tymeslot.Emails.PollTemplatesTest do
       email = PollHostNudge.render(poll, :all_voted, url)
 
       assert email.to == [{poll.user.name, poll.user.email}]
+    end
+  end
+
+  describe "PollParticipantLink.render/3" do
+    setup do
+      poll =
+        insert(:poll,
+          title: "Sprint Planning",
+          deadline_at: DateTime.utc_now() |> DateTime.add(2, :day) |> DateTime.truncate(:second),
+          timezone: "Europe/Berlin"
+        )
+
+      participant =
+        insert(:poll_participant,
+          poll: poll,
+          name: "<b>Whatever Someone Typed</b>",
+          email: "dana@example.com",
+          locale: "en",
+          confirmed_at: nil
+        )
+
+      %{poll: poll, participant: participant, url: "https://tymeslot.app/h/poll/t?p=personal-123"}
+    end
+
+    test "carries the link and the poll title in both bodies", %{
+      poll: poll,
+      participant: participant,
+      url: url
+    } do
+      email = PollParticipantLink.render(poll, participant, url)
+
+      assert email.subject =~ poll.title
+      assert email.html_body =~ poll.title
+      assert email.html_body =~ url
+      assert email.text_body =~ poll.title
+      assert email.text_body =~ url
+      assert email.text_body =~ "Voting closes"
+    end
+
+    test "names nobody but the host, so a stranger's typing never reaches the inbox", %{
+      poll: poll,
+      participant: participant,
+      url: url
+    } do
+      email = PollParticipantLink.render(poll, participant, url)
+
+      assert email.to == [{"", "dana@example.com"}]
+      refute email.html_body =~ "Whatever Someone Typed"
+      refute email.text_body =~ "Whatever Someone Typed"
+      assert email.text_body =~ "ignore this email"
+    end
+  end
+
+  describe "PollVoteReceipt.render/3" do
+    test "lists each time with the participant's answer and carries the link" do
+      poll = insert(:poll, title: "Sprint Planning", timezone: "Etc/UTC")
+      start_time = ~U[2030-03-04 10:00:00Z]
+
+      slot_a =
+        insert(:poll_time_slot,
+          poll: poll,
+          start_time: start_time,
+          end_time: DateTime.add(start_time, 1, :hour),
+          position: 0
+        )
+
+      slot_b =
+        insert(:poll_time_slot,
+          poll: poll,
+          start_time: DateTime.add(start_time, 1, :day),
+          end_time: DateTime.add(start_time, 25, :hour),
+          position: 1
+        )
+
+      participant = insert(:poll_participant, poll: poll, name: "Dana", email: "dana@example.com")
+      insert(:poll_vote, participant: participant, time_slot: slot_a, response: :if_need_be)
+      insert(:poll_vote, participant: participant, time_slot: slot_b, response: :no)
+
+      poll = Repo.preload(poll, [:time_slots, user: :profile])
+      participant = Repo.preload(participant, :votes)
+      url = "https://tymeslot.app/h/poll/t?p=personal-123"
+
+      email = PollVoteReceipt.render(poll, participant, url)
+
+      assert email.to == [{"Dana", "dana@example.com"}]
+      assert email.subject =~ poll.title
+      assert email.text_body =~ url
+      assert email.html_body =~ url
+      assert email.text_body =~ ": If need be"
+      assert email.text_body =~ ": No"
     end
   end
 end

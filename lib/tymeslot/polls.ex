@@ -11,6 +11,7 @@ defmodule Tymeslot.Polls do
   alias Tymeslot.MeetingTypes
 
   alias Tymeslot.Polls.{
+    PollParticipantQueries,
     PollParticipantSchema,
     PollQueries,
     PollSchema,
@@ -147,6 +148,23 @@ defmodule Tymeslot.Polls do
         }
   def tallies(%{time_slots: time_slots, participants: participants}) do
     Map.new(time_slots, fn slot -> {slot.id, tally_slot(participants, slot.id)} end)
+  end
+
+  @doc """
+  Counts the people on a poll who asked for a voting link and have not yet
+  confirmed it by saving responses. They are not among `poll.participants`.
+  """
+  @spec count_unconfirmed(PollSchema.t()) :: non_neg_integer()
+  def count_unconfirmed(%PollSchema{id: poll_id}),
+    do: PollParticipantQueries.count_unconfirmed(poll_id)
+
+  @doc """
+  Deletes the participants who never confirmed their voting link within its
+  lifetime. Run daily by `Tymeslot.Workers.DataRetentionWorker`.
+  """
+  @spec prune_unconfirmed_participants() :: {non_neg_integer(), nil}
+  def prune_unconfirmed_participants do
+    PollParticipantQueries.delete_expired_unconfirmed(PollParticipantQueries.expiry_cutoff())
   end
 
   @doc "Whether voting is currently open: open status and no deadline, or a deadline still in the future."

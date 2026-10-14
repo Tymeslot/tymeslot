@@ -1,11 +1,16 @@
 defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
   @moduledoc """
-  Schedules poll deadline reminders and host nudges via Oban.
+  Schedules poll emails via Oban: participants' voting links and receipts,
+  deadline reminders and host nudges.
 
   Two jobs bracket a poll with a deadline: a reminder to unvoted participants 24
   hours before it closes, and a nudge to the host once it has passed. A separate
   immediate nudge fires the moment every participant has voted. Cancelling or
   confirming a poll deletes any of these that are still pending.
+
+  A participant's link and receipt jobs carry only the participant's id: the
+  link holds their token, which job args must not keep in the clear, so the
+  handler reads it from the participant when it sends.
   """
 
   alias Ecto.Changeset
@@ -47,6 +52,32 @@ defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
     insert_job(
       %{"action" => "send_poll_host_nudge", "poll_id" => poll.id, "variant" => "all_voted"},
       unique: unique_opts([:action, :poll_id, :variant])
+    )
+  end
+
+  @doc """
+  Sends a participant their personal voting link now.
+
+  Not deduplicated here: `Tymeslot.Polls.Voting` already allows one send per
+  address in its resend window.
+  """
+  @spec schedule_participant_link(map()) :: :ok
+  def schedule_participant_link(participant) do
+    insert_job(
+      %{"action" => "send_poll_participant_link", "participant_id" => participant.id},
+      []
+    )
+  end
+
+  @doc """
+  Sends a participant the receipt for their first saved responses now. Keyed
+  so it goes out once per participant.
+  """
+  @spec schedule_vote_receipt(map()) :: :ok
+  def schedule_vote_receipt(participant) do
+    insert_job(
+      %{"action" => "send_poll_vote_receipt", "participant_id" => participant.id},
+      unique: unique_opts([:action, :participant_id])
     )
   end
 
@@ -102,6 +133,7 @@ defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
         Logger.error("Failed to schedule poll email job",
           action: args["action"],
           poll_id: args["poll_id"],
+          participant_id: args["participant_id"],
           error: Helpers.format_insert_error(reason)
         )
 

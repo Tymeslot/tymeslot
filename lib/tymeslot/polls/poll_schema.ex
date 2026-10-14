@@ -16,6 +16,11 @@ defmodule Tymeslot.Polls.PollSchema do
 
   @max_slots 40
   @max_participants 40
+  # Requests for a voting link not yet confirmed, counted apart from the cap
+  # above so that requests nobody confirms cannot fill a poll. Bounded too,
+  # since each one stores an address and sends an email; they expire after
+  # `PollParticipantSchema.unconfirmed_ttl_seconds/0`.
+  @max_unconfirmed_participants 100
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -52,8 +57,13 @@ defmodule Tymeslot.Polls.PollSchema do
     # poll link land in the same second often enough that the arbitrary winner
     # reached `Confirm.pick_primary/2`, which promotes the first available
     # voter to primary attendee.
+    #
+    # Only confirmed participants: someone who asked for a link but never
+    # saved responses through it has proved nothing about their address, so
+    # they stay out of the tallies, the results and the confirmed meeting.
     has_many(:participants, PollParticipantSchema,
       foreign_key: :poll_id,
+      where: [confirmed_at: {:not, nil}],
       preload_order: [asc: :inserted_at, asc: :email]
     )
 
@@ -65,6 +75,9 @@ defmodule Tymeslot.Polls.PollSchema do
 
   @spec max_participants() :: pos_integer()
   def max_participants, do: @max_participants
+
+  @spec max_unconfirmed_participants() :: pos_integer()
+  def max_unconfirmed_participants, do: @max_unconfirmed_participants
 
   @spec creation_changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
   def creation_changeset(poll, attrs) do

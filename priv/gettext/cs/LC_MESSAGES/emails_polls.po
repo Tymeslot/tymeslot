@@ -97,11 +97,13 @@ msgid "Voting closed"
 msgstr "Hlasování bylo ukončeno"
 
 #: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
 #, elixir-autogen, elixir-format
 msgid "Voting closes"
 msgstr "Hlasování končí"
 
 #: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
 #, elixir-autogen, elixir-format
 msgid "Voting closes:"
 msgstr "Hlasování končí:"
@@ -120,3 +122,120 @@ msgstr "Hlasování v anketě %{title} bylo ukončeno"
 #, elixir-autogen, elixir-format
 msgid "Your vote is needed"
 msgstr "Potřebujeme váš hlas"
+
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} is looking for a time for %{title}."
+msgstr "%{host} hledá termín pro %{title}."
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "Change My Responses"
+msgstr "Změnit odpovědi"
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "Change your responses:"
+msgstr "Změnit odpovědi:"
+
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#, elixir-autogen, elixir-format
+msgid "Didn't ask for this? Then you can ignore this email. Nothing is recorded unless the link is used."
+msgstr "Tento e-mail nečekáte? Pak ho můžete ignorovat. Dokud nebude odkaz použit, nic se neuloží."
+
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#, elixir-autogen, elixir-format
+msgid "Here is your link to vote on %{title} for %{host}. Your responses count once you save them through it."
+msgstr "Zde je váš odkaz k hlasování v anketě %{title} od %{host}. Vaše odpovědi se započítají, jakmile je přes něj uložíte."
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "If need be"
+msgstr "V nouzi"
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "No"
+msgstr "Ne"
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "No answer"
+msgstr "Bez odpovědi"
+
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "Poll"
+msgstr "Anketa"
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "Thanks for voting"
+msgstr "Děkujeme za hlas"
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "This link is yours alone: anyone who has it can change your responses, so please don't share it."
+msgstr "Tento odkaz patří jen vám: kdokoli, kdo ho má, může změnit vaše odpovědi, proto ho nesdílejte."
+
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#, elixir-autogen, elixir-format
+msgid "This link is yours alone: anyone who has it can change your responses, so please don't share it. Keep this email to come back later."
+msgstr "Tento odkaz patří jen vám: kdokoli, kdo ho má, může změnit vaše odpovědi, proto ho nesdílejte. Tento e-mail si uschovejte, abyste se mohli později vrátit."
+
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#, elixir-autogen, elixir-format
+msgid "Vote Now"
+msgstr "Hlasovat"
+
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#, elixir-autogen, elixir-format
+msgid "Vote here:"
+msgstr "Hlasujte zde:"
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "Yes"
+msgstr "Ano"
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "Your email address is confirmed and your responses to %{title} count now. You can change them with the link below until voting closes."
+msgstr "Vaše e-mailová adresa je potvrzena a vaše odpovědi v anketě %{title} se nyní počítají. Do konce hlasování je můžete změnit pomocí odkazu níže."
+
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#, elixir-autogen, elixir-format
+msgid "Your link to vote on \"%{title}\""
+msgstr "Váš odkaz k hlasování v anketě „%{title}“"
+
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#, elixir-autogen, elixir-format
+msgid "Your link to vote on %{title}"
+msgstr "Váš odkaz k hlasování v anketě %{title}"
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "Your responses"
+msgstr "Vaše odpovědi"
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "Your responses to \"%{title}\""
+msgstr "Vaše odpovědi v anketě „%{title}“"
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "Your responses to %{title}"
+msgstr "Vaše odpovědi v anketě %{title}"
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "Your responses to %{title} count now."
+msgstr "Vaše odpovědi v anketě %{title} se nyní počítají."
+
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#, elixir-autogen, elixir-format
+msgid "Your voting link"
+msgstr "Váš odkaz k hlasování"

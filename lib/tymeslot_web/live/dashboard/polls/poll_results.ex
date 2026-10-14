@@ -40,6 +40,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   Renders the results panel for a single selected poll.
   """
   attr :poll, :map, required: true
+  attr :unconfirmed_count, :integer, default: 0
   attr :tallies, :map, required: true
   attr :slot_health, :map, required: true
   attr :slot_health_loading, :boolean, default: false
@@ -148,6 +149,23 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
           "%{count} guest has voted so far.",
           "%{count} guests have voted so far.",
           @participant_count
+        )}
+      </p>
+
+      <%!-- People who asked for a voting link but have not saved responses
+            through it yet. They prove nothing until they do, so they are not
+            in the counts above; this tells the host why someone who says they
+            voted is not listed. --%>
+      <p
+        :if={@open? && @unconfirmed_count > 0}
+        class="text-token-xs text-tymeslot-500"
+        data-testid="poll-unconfirmed-count"
+      >
+        {dngettext(
+          "dashboard_common",
+          "%{count} more person asked for a voting link but hasn't voted with it yet.",
+          "%{count} more people asked for a voting link but haven't voted with it yet.",
+          @unconfirmed_count
         )}
       </p>
 
