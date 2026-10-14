@@ -43,7 +43,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
         :reminder_picker,
         assigns.creating_event[:meeting_reminders] || ReminderPickerState.new()
       )
-      |> assign(:targets, Calendar.writable_integrations(assigns.integrations))
 
     ~H"""
     <.modal
