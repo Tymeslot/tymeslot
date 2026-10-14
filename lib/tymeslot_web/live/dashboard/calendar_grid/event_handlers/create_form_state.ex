@@ -320,25 +320,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
     end
   end
 
-  @doc """
-  Records the group-event fields as their form posts them. They are parsed
-  and checked on save (`CreateExecution`), where the event is created.
-  """
-  @spec handle_update_create_group_event(map(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_update_create_group_event(%{"group_event" => params}, socket) when is_map(params) do
-    case socket.assigns.creating_event do
-      %{group_event: current} ->
-        fields = Map.take(params, ~w(max_participants location closes_at description))
-        put_field(socket, :group_event, Map.merge(current, fields))
-
-      _not_creating ->
-        {:noreply, socket}
-    end
-  end
-
-  def handle_update_create_group_event(_params, socket), do: {:noreply, socket}
-
   defp put_field(socket, key, value) do
     case socket.assigns.creating_event do
       nil -> {:noreply, socket}

@@ -21,6 +21,30 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.GroupEventCreation do
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading
 
+  @doc """
+  Records the group-event fields as their form posts them. They are parsed
+  and checked on save (`save/2`), where the event is created.
+  """
+  @spec update_fields(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def update_fields(%{"group_event" => params}, socket) when is_map(params) do
+    case socket.assigns.creating_event do
+      %{group_event: current} = creating ->
+        fields =
+          Map.merge(
+            current,
+            Map.take(params, ~w(max_participants location closes_at description))
+          )
+
+        {:noreply, assign(socket, :creating_event, %{creating | group_event: fields})}
+
+      _not_creating ->
+        {:noreply, socket}
+    end
+  end
+
+  def update_fields(_params, socket), do: {:noreply, socket}
+
   @spec save(map(), Phoenix.LiveView.Socket.t()) :: {:noreply, Phoenix.LiveView.Socket.t()}
   def save(creating, socket) do
     case build_params(creating, socket) do

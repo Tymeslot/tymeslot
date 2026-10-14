@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventRecurrence
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.GroupEventCreation
 
   defdelegate handle_show_create_form(params, socket), to: CreateFormState
   defdelegate handle_set_create_mode(params, socket), to: CreateFormState
@@ -17,7 +18,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
   defdelegate handle_remove_create_guest(params, socket), to: CreateFormState
   defdelegate handle_update_create_guest_input(params, socket), to: CreateFormState
   defdelegate handle_update_create_locale(params, socket), to: CreateFormState
-  defdelegate handle_update_create_group_event(params, socket), to: CreateFormState
+
+  defdelegate handle_update_create_group_event(params, socket),
+    to: GroupEventCreation,
+    as: :update_fields
+
   defdelegate handle_close_create_form(params, socket), to: CreateFormState
   defdelegate handle_update_create_title(params, socket), to: CreateFormState
   defdelegate handle_update_create_time(params, socket), to: CreateFormState
