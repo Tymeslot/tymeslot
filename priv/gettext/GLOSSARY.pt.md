@@ -1,10 +1,10 @@
-# Tymeslot — Brazilian Portuguese (`pt`) Translation Style Guide & Termbase
+# Tymeslot: Brazilian Portuguese (`pt`) Translation Style Guide & Termbase
 
 Authoritative. Written **before** the catalogues, not mined from them, so that every one
 of the 3,438 msgstrs could be translated against a fixed termbase instead of drifting
 across 28 domains. Where this guide and a msgstr disagree, **this guide wins**.
 
-Brazilian Portuguese only. See §8 for why the directory is `pt` even so — the
+Brazilian Portuguese only. See §8 for why the directory is `pt` even so: the
 reason is in `LocalePlug`, not in the language.
 
 ---
@@ -16,17 +16,17 @@ No exceptions.
 
 Portuguese has three ways to address a reader and only one of them fits a product:
 
-- **"você"** — the Brazilian default. Neither familiar nor distant. This is what every
+- **"você"**: the Brazilian default. Neither familiar nor distant. This is what every
   Brazilian software product uses, and it is what we use.
-- **"tu"** — regional (South, parts of the North) and almost always conjugated
+- **"tu"**: regional (South, parts of the North) and almost always conjugated
   informally. Wrong register and wrong reach. Never.
-- **"o senhor" / "a senhora"** — genuinely deferential, and it *genders the reader*.
+- **"o senhor" / "a senhora"**: genuinely deferential, and it *genders the reader*.
   A booking page cannot know. Never.
 
 Unlike German, pt-BR needs no Sie/du decision: "você" carries no coldness, so the warmth
 of the English comes through without softening anything.
 
-### Grammatical gender — the rule that matters most here
+### Grammatical gender: the rule that matters most here
 
 Portuguese inflects adjectives and participles for gender, and **Tymeslot never knows
 the reader's**. Three rules, in order of preference:
@@ -35,7 +35,7 @@ the reader's**. Three rules, in order of preference:
    - `"You're invited"` → **"Você foi convidado"** ❌ → **"Convite para você"** ✓
    - `"Welcome!"` → **"Bem-vindo!"** ❌ → **"Boas-vindas!"** ✓ (gender-free, and now
      standard in Brazilian products)
-   - `"Are you sure?"` → **"Tem certeza?"** ✓ (already gender-free — prefer these)
+   - `"Are you sure?"` → **"Tem certeza?"** ✓ (already gender-free; prefer these)
 2. **Prefer gender-free nouns** when naming a person. `participante`, `cliente`,
    `pessoa`, `responsável` inflect only in the article, which can often be dropped.
 3. **Only where 1 and 2 fail**, use the masculine as the grammatical default
@@ -65,7 +65,7 @@ flow and in the dashboard.
 | **event** (entry in an external calendar) | **evento** | Google Calendar's own pt-BR word. |
 | **event** (webhook / subscription sense) | **evento** | Same word, different domain; no collision in practice. |
 | **host** | **anfitrião** | §1 rule 3 applies. |
-| **attendee** | **participante** | Gender-free in both forms — prefer it wherever the English allows. |
+| **attendee** | **participante** | Gender-free in both forms; prefer it wherever the English allows. |
 | **guest** | **convidado** | |
 | **invitee** | **convidado** | Same word as *guest*. English distinguishes them in 2 strings out of 3,438; Portuguese gains nothing by inventing a second term. |
 | **slot** / **time slot** | **horário** | "the slot is released" → "o horário é liberado". Never "espaço" or "vaga". |
@@ -76,9 +76,11 @@ flow and in the dashboard.
 | **saved location** | **local salvo** | |
 | **availability** | **disponibilidade** | |
 | **available times** | **horários disponíveis** | |
-| **reschedule** | **remarcar** | Not "reagendar" — both exist, "remarcar" is the one Brazilians say. |
+| **reschedule** | **remarcar** | Not "reagendar". Both exist; "remarcar" is the one Brazilians say. |
 | **cancel** | **cancelar** | |
 | **decline** (a request) | **recusar** | |
+| **minimum notice** | **antecedência mínima** | **[DECIDED]** Always with *mínima*. Bare *antecedência* is fine on its own in prose (*"pede mais antecedência"*), but wherever the booking horizon appears in the same sentence, spell out both: *"antecedência mínima e limite de antecedência"*. |
+| **booking horizon** · how far ahead (Bookable ahead, Advance Booking Window) | **limite de antecedência** | **[DECIDED]** Masculine: *um limite de antecedência de seis semanas*, *antecedência mínima e limite de antecedência são definidos*. Never *janela de agendamento* (a *janela* on the website is the pop-up embed), *prazo máximo (de agendamento)* or *antecedência máxima*. The dashboard's availability catalogue still says *janela de antecedência*; align it when that domain is next revised. |
 
 ### Extended termbase
 
@@ -124,7 +126,7 @@ flow and in the dashboard.
 | overview | visão geral |
 | analytics | análises |
 | plan (Pro, Free) | plano |
-| time off (days away, v1.22) | ausência — never *folga*, which is the buffer |
+| time off (days away, v1.22) | ausência, never *folga*, which is the buffer |
 | location / venue (where a meeting happens) | local · plural **locais** |
 | in person | presencial |
 | phone call | ligação telefônica |
@@ -169,7 +171,7 @@ with whatever `%{name}` turns out to be.
 `meeting_form`, which collides with the calendar's **Agenda** view. Leave both as they
 are until the two are decided together.
 
-### Third-party UI labels — never guess
+### Third-party UI labels: never guess
 
 When a setup instruction tells the reader to click something inside another company's
 product, the label must be what that product actually shows **to a Brazilian user**.
@@ -179,14 +181,14 @@ Invent one and they hunt for a menu that does not exist.
 |---|---|---|---|
 | Apple, **web** (`account.apple.com`) | Sign-In and Security | **Início de sessão e segurança** | `support.apple.com/pt-br/102654` |
 | Apple, menu label | App-Specific Passwords | **Senhas específicas de apps** | *ibid.* |
-| Apple, running prose | app-specific password | **senha específica do app** | *ibid.* — note the singular shifts to `do app` |
+| Apple, running prose | app-specific password | **senha específica do app** | *ibid.*; note the singular shifts to `do app` |
 | Apple | *Generate* a password | **gerar** | Apple's own verb; not "criar" |
 | mailbox.org | Settings → Security | **keep English: `Settings → Security`** | see below |
 | Nextcloud | Personal settings → Security | **Configurações pessoais → Segurança** | Nextcloud ships a pt-BR interface; re-check against a pt-BR install |
 
 **mailbox.org stays in English, and that is the careful answer, not the lazy one.**
 mailbox.org's interface is offered in German, English, Spanish, French, Italian and
-Dutch — **not Portuguese**. A Brazilian user is looking at an English (or German) menu.
+Dutch, **not Portuguese**. A Brazilian user is looking at an English (or German) menu.
 Translating the label to "Configurações → Segurança" would send them looking for words
 that are not on their screen. Write the surrounding sentence in Portuguese and leave the
 label alone: *"…gere uma senha específica de aplicativo em Settings → Security…"*
@@ -231,7 +233,9 @@ The SaaS dashboard, its emails and the marketing site.
 | Resources (nav) · changelog (nav) · Legal (footer) | Conteúdos · Novidades · Jurídico |
 | FAQ | Perguntas frequentes |
 | open source | código aberto (keep *open source* only inside a product or licence name) |
-| managed cloud | nuvem gerenciada |
+| managed service · managed cloud | **serviço gerenciado** is the settled default for the managed offering; *nuvem gerenciada* only where the English contrasts *cloud* with *self-hosted* in the same breath |
+| advertising trackers · ad pixels | **rastreadores de publicidade** (never *rastreadores de anúncio(s)*) · pixels de anúncio |
+| first-class CalDAV (support) | **CalDAV de primeira linha** · *trata o CalDAV como provedor de primeira linha* |
 | per-seat | por usuário |
 | white-label | marca própria (no Tymeslot logo) |
 | deposit (payment) | sinal |
@@ -270,6 +274,12 @@ A FAQ question may ask about LGPD; its answer must not say yes.
 
 **GDPR** stays *GDPR* where it refers to the EU law.
 
+**LGPD next to GDPR** (health, legal and the /for FAQs) is a statement about the law,
+never a compliance claim. A question may read *"O Tymeslot atende à LGPD e ao GDPR em
+consultórios odontológicos?"*; the answer describes what the product does (data
+location, no advertising trackers, the DPA on Enterprise, self-hosting) and leaves the
+legal judgement to the reader. It never opens with *Sim*.
+
 ### The /for profession pages
 
 | English | pt-BR |
@@ -295,6 +305,12 @@ A FAQ question may ask about LGPD; its answer must not say yes.
 | informal payment request (*"PayPal link"*) | Pix |
 | DST | horário de verão |
 
+- **`profession_in_text`** is the bare lowercase plural, with no article, so it drops
+  into *"Tudo de que %{profession_in_text} precisam."* (followed by *"Nada além disso."*),
+  *"Situações que %{profession_in_text} enfrentam toda semana…"*, *"Uma configuração
+  inicial para %{profession_in_text}"* and *"Privacidade e conformidade para
+  %{profession_in_text}"*. Acronyms keep their capitals (*consultores de TI*); *pilates*
+  and *yoga* stay lowercase, as in the rest of the copy and the keywords.
 - **Appointment or service type** in profession prose is *tipo de consulta*, *de
   atendimento* or *de sessão*, as the profession calls it; the product setting is
   always **tipo de reunião**.
@@ -304,13 +320,13 @@ A FAQ question may ask about LGPD; its answer must not say yes.
 
 ---
 
-## 3. DO NOT TRANSLATE — keep verbatim
+## 3. DO NOT TRANSLATE: keep verbatim
 
-**Tymeslot** (no hyphenated compounds — Portuguese uses "conta do Tymeslot", "painel do
+**Tymeslot** (no hyphenated compounds; Portuguese uses "conta do Tymeslot", "painel do
 Tymeslot"), Stripe, Stripe Checkout, Stripe Connect, reCAPTCHA, Google, Google Calendar,
 Google Meet, GitHub, Outlook, Microsoft Teams, Zoom, CalDAV, Nextcloud, iCloud, Fastmail,
 Zimbra, Radicale, mailbox.org, MiroTalk, Keycloak, Authentik, Lemonldap, JavaScript,
-OAuth, OIDC, SSO, Oban, UTM, Cloudron — and, since v1.22, Jitsi, Jitsi Meet, kMeet,
+OAuth, OIDC, SSO, Oban, UTM, Cloudron, and, since v1.22, Jitsi, Jitsi Meet, kMeet,
 Infomaniak and Nextcloud Talk (*o Talk*). Jitsi's token fields **App ID** and
 **App secret** stay verbatim: they are the names the server's own configuration uses.
 
@@ -326,12 +342,12 @@ Loanwords kept as-is: **link**, **webhook**, **slug**, **e-mail**, **upgrade**, 
 
 Google's own Brazilian branding for the product is **Google Agenda**, not Google
 Calendar. That puts two rules of this guide against each other: the do-not-translate
-list above says keep it verbatim, and §2's *"Third-party UI labels — never guess"*
+list above says keep it verbatim, and §2's *"Third-party UI labels: never guess"*
 says match what the product shows the reader.
 
 Everywhere it is a bare product reference, this translation **keeps "Google
 Calendar"**, following the explicit list. But one string quotes Google's consent
-screen back to the reader, and there the argument is the other way — the reader is
+screen back to the reader, and there the argument is the other way: the reader is
 being told to find a checkbox, and the checkbox is in Portuguese:
 
     dashboard_integrations:
@@ -347,7 +363,7 @@ Calendar**.
 
 ## 4. PLACEHOLDERS, MARKUP, TYPOGRAPHY
 
-**Placeholders `%{name}` — the hard rule:**
+**Placeholders `%{name}` (the hard rule):**
 - Reproduce **byte-for-byte**. Never translate, rename, add, or drop one.
 - If the msgid has three placeholders, the msgstr has exactly those three.
 - You **may and should reorder** them to fit Portuguese syntax:
@@ -369,7 +385,7 @@ duration is `"de reunião"`; `"%{hour_text} %{minute_text}"` is
 `dashboard_integrations` has twenty strings that teach the reader to type a URL
 template. Those braces are literal text the reader must copy exactly, not a gettext
 binding, so the `%{…}` gate does not see them. Reproduce every `{{meeting_id}}`
-byte-for-byte — including the deliberately wrong forms (`{{MEETING_ID}}`,
+byte-for-byte, including the deliberately wrong forms (`{{MEETING_ID}}`,
 `{{meeting-id}}`, `((meeting_id))`) that the error messages quote in order to
 correct them. Translating or "fixing" one of those turns the message into nonsense.
 
@@ -378,12 +394,12 @@ correct them. Translating or "fixing" one of those turns the message into nonsen
   `"<strong>removido do seu calendário externo</strong>"`
 - `&` stays literal (not `&amp;`). Bullets `•`, checkmarks `✓`, emoji preserved.
 
-**Typography — use these characters:**
-- Ellipsis **`…`** (U+2026), never `...`, and **no space before it** — `Carregando…`,
+**Typography (use these characters):**
+- Ellipsis **`…`** (U+2026), never `...`, and **no space before it**: `Carregando…`,
   `Selecionar…`. Project convention across every domain.
 - En dash **`–`** for ranges (`14h–15h`).
 - **No em dash `—`.** The English source has almost none, and an introduced one reads
-  as machine-made. Write commas, a colon, parentheses or a full stop instead. Where the
+  as machine-made. Use commas, colons, parentheses or full stops instead. Where the
   msgid itself has a dash, keep the msgid's character in the same position: the
   subject-line separator `"Booking request: %{name} - %{date}"` is
   `"Pedido de agendamento: %{name} - %{date}"`. The one exception is a greeting run into
@@ -395,19 +411,20 @@ correct them. Translating or "fixing" one of those turns the message into nonsen
   guillemets `«…»`, which are European Portuguese and would mark the translation as
   foreign on sight.
 - **Decimal comma**: `"0.0 and 1.0"` → `"0,0 e 1,0"`. Thousands separator is `.`
-  (`1.500`), and currency is `R$ 1.234,56` — with a space after `R$`.
+  (`1.500`), and currency is `R$ 1.234,56`, with a space after the sign: `R$ 1.500`,
+  `US$ 10`, `€ 12,95`. Percentages take no space: `0,5%`.
 - `ex.:` for "e.g."; `p. ex.` is European. `etc.` keeps its period.
 - **24-hour clock.** Brazil does not use AM/PM. `"3:00 PM"` → `"15:00"`, and in running
   prose `15h`.
 - Dates are **day-first**: `15/09/2026`, and in prose `15 de setembro de 2026`.
-  Month names are **lowercase** in Portuguese — `setembro`, never `Setembro`.
+  Month names are **lowercase** in Portuguese: `setembro`, never `Setembro`.
 - Weekday names are lowercase too: `segunda-feira`, `terça-feira`, `sábado`, `domingo`.
 
 ---
 
 ## 5. PLURALS
 
-`pt` is `nplurals=2; plural=(n != 1);` — the same split as German and French.
+`pt` is `nplurals=2; plural=(n != 1);`, the same split as German and French.
 
 ```
 msgstr[0]  →  n == 1 only
@@ -434,15 +451,15 @@ Both forms must be filled. Placeholders present in a form must appear in that fo
 
 ## 6. TONE BY REGISTER
 
-- **Marketing** — warm, direct, confident. Brazilian marketing Portuguese is *less*
+- **Marketing**: warm, direct, confident. Brazilian marketing Portuguese is *less*
   formal than the English, not more; resist the pull toward bureaucratic Portuguese
-  ("realizar", "efetuar", "possuir" — say "fazer", "ter"). Rephrase idioms instead of
+  ("realizar", "efetuar", "possuir"; say "fazer", "ter"). Rephrase idioms instead of
   calquing: `"stop the back-and-forth and start booking"` → **"Chega de e-mail vai,
   e-mail vem. Agende de uma vez."** Headlines must land as headlines.
-- **Dashboard / admin UI** — terse, functional. Buttons are imperative verbs (Salvar,
+- **Dashboard / admin UI**: terse, functional. Buttons are imperative verbs (Salvar,
   Excluir, Remarcar) or bare nouns. Toggle states are adjectives (Ativado/Desativado).
   System feedback is clean declarative: **"Não foi possível atualizar a configuração."**
-  — this impersonal construction is the Brazilian product idiom for failure and avoids
+  This impersonal construction is the Brazilian product idiom for failure and avoids
   both blame and gender. No filler, no exclamation marks except genuine success.
   For a refusal, *"Cannot cancel…"* is **"Não é possível cancelar…"**, never the
   colloquial *"Não dá para…"*. *"Too many X attempts"* is **"Muitas tentativas de X."**,
@@ -454,12 +471,12 @@ Both forms must be filled. Placeholders present in a form must appear in that fo
   *"Pronto para entrar?"*.
 - **Amounts take singular agreement**: *"%{amount} devolvido"*, *"%{amount} do seu
   pagamento foi reembolsado"*, as with *"%{amount} pago"*.
-- **Transactional email** — polite, clear, human. Greeting **"Olá %{name},"**.
-  **Unlike German, Portuguese capitalises the sentence after the comma** — `"Olá Ana,"`
+- **Transactional email**: polite, clear, human. Greeting **"Olá %{name},"**.
+  **Unlike German, Portuguese capitalises the sentence after the comma**: `"Olá Ana,"`
   then `"Sua reunião foi confirmada."` Keep the capital; the msgid's capital is right.
   Sign-off `"Best,"` → **"Abraço,"** for warm mail, **"Atenciosamente,"** where the
   English is neutral-formal. Apologies plain: **"Desculpe pelo transtorno."**
-- **Booking flow (public)** — friendly and guiding; this reader has never heard of
+- **Booking flow (public)**: friendly and guiding; this reader has never heard of
   Tymeslot. `"Please pick a date to see available times"` → **"Escolha uma data para
   ver os horários disponíveis"**. Success is upbeat: **"Reunião confirmada!"**
 
@@ -475,12 +492,12 @@ markers a Brazilian reader notices in the first three seconds.
 | utilizador | **usuário** |
 | ficheiro | **arquivo** |
 | guardar (a file) | **salvar** |
-| apagar (as a UI **button label** on a record) | **Excluir** — in running prose, *apagar este e-mail* is fine Brazilian |
+| apagar (as a UI **button label** on a record) | **Excluir**; in running prose, *apagar este e-mail* is fine Brazilian |
 | palavra-passe | **senha** |
 | ecrã | **tela** |
 | equipa | **equipe** |
 | telemóvel | **celular** |
-| caducar (a request lapses) | **expirar** — *caducar* is legal register, and European in an interface |
+| caducar (a request lapses) | **expirar** (*caducar* is legal register, and European in an interface) |
 | peço desculpa | **peço desculpas** |
 | correio eletrónico | **e-mail** |
 | hiperligação | **link** |
@@ -506,14 +523,14 @@ Brazilian reader say *"isto é português de Portugal"*. These do:
 | **A sua** reunião foi cancelada. | **Sua** reunião foi cancelada. |
 
 Brazilian formal grammar allows both, which is exactly why a catalogue drifts into
-mixing them — and the mix is what reads as foreign. So the rule is absolute: **drop
+mixing them, and the mix is what reads as foreign. So the rule is absolute: **drop
 the bare article.** Three places it stays, because Brazilian keeps it too:
 
-- **contracted with a preposition** — *na sua página*, *do seu calendário*,
+- **contracted with a preposition**: *na sua página*, *do seu calendário*,
   *pela sua conta*. These are Brazilian.
-- **after a quantifier** — *todos **os** seus eventos*, *todas **as** suas
+- **after a quantifier**: *todos **os** seus eventos*, *todas **as** suas
   integrações*. Dropping it here is colloquial, not correct.
-- when the possessive is **pronominal**, standing alone — *a sua* in *"a minha e a
+- when the possessive is **pronominal**, standing alone: *a sua* in *"a minha e a
   sua"*. Rare in UI.
 
 **Gerund, never *estar a*.** *Está carregando*, never *está a carregar*. The single
@@ -522,11 +539,11 @@ strongest European marker. (This catalogue has none.)
 **Você, never *tu*.** Already §1; listed here because it is the second-strongest.
 
 A first draft of this catalogue had **279** article-plus-possessive constructions
-against 455 without — a 38% mix, inside one product. That is the defect, and it is
+against 455 without: a 38% mix, inside one product. That is the defect, and it is
 the kind a generic machine translation produces: grammatical, and wrong for the
 reader. All 279 were removed before submission.
 
-Spelling: post-1990 orthographic agreement, Brazilian variant — `ação`, `direção`,
+Spelling: post-1990 orthographic agreement, Brazilian variant: `ação`, `direção`,
 `econômico` (circumflex, not `económico`), `fato` (not `facto`), `registro` (not
 `registo`).
 
@@ -538,8 +555,8 @@ The vocabulary in §7 is Brazilian and the guide makes no apology for it. So the
 obvious directory name is `pt_BR`. It is not, and the reason is in the code rather
 than in the language.
 
-**`LocalePlug` cannot reach a region tag.** Every locale source — the `?locale=`
-param, the session, and the `Accept-Language` header — funnels through
+**`LocalePlug` cannot reach a region tag.** Every locale source (the `?locale=`
+param, the session, and the `Accept-Language` header) funnels through
 `normalize_locale/1`, which ends with:
 
 ```elixir
@@ -550,7 +567,7 @@ param, the session, and the `Accept-Language` header — funnels through
 
 So a Brazilian visitor whose browser asks for `pt-BR` is matched against `"pt"`, and
 `?locale=pt_BR` is mangled to `"ptbr"`. Registering the locale as `pt_BR` would put
-Portuguese in the language switcher and then **never apply it** — the exact failure
+Portuguese in the language switcher and then **never apply it**: the exact failure
 `TRANSLATING.md` calls out: *"the alternative is shipping a language switcher that
 quietly serves English."*
 
@@ -563,7 +580,7 @@ Two consequences, both deliberate:
   `config :tymeslot, :locales` carries `%{code: "pt", name: "Português (Brasil)"}`,
   so a European Portuguese reader sees what they are getting before they pick it.
 - The plural rule is `n != 1` rather than `n > 1` (§5). For Brazilian Portuguese this
-  is the better of the two anyway — zero belongs in the plural.
+  is the better of the two anyway: zero belongs in the plural.
 
 **If you would rather have proper region tags**, the change is in `normalize_locale/1`,
 not here: keep the full tag when it is supported and fall back to the language subtag
