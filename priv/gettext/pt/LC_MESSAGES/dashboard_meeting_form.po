@@ -1147,3 +1147,23 @@ msgstr[1] "O número aparece quando restam %{count} vagas ou menos."
 #, elixir-autogen, elixir-format
 msgid "Times are marked green, amber or red, labelled \"Plenty left\", \"Filling up\" or \"Almost full\"."
 msgstr "Os horários aparecem em verde, amarelo ou vermelho, com os rótulos “Muitas vagas”, “Enchendo” ou “Quase cheio”."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Guests per booking"
+msgstr "Convidados por reserva"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Limit the guests per booking"
+msgstr "Limitar os convidados por reserva"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Without a limit, each booking may bring up to %{count} guests."
+msgstr "Sem limite, cada reserva pode trazer até %{count} convidados."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Each guest takes one of the time's seats, as the booker does."
+msgstr "Cada convidado ocupa uma das vagas do horário, assim como quem agenda."

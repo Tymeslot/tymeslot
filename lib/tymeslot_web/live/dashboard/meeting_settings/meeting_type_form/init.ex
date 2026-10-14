@@ -37,6 +37,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> Component.assign(:reminders, get_reminders(type))
     |> Component.assign(:custom_fields, get_custom_fields(type))
     |> Component.assign(:allow_guests, get_allow_guests(type))
+    |> Component.assign(:guest_limit, Map.get(type || %{}, :max_guests_per_booking))
     |> Component.assign(:requires_approval, get_requires_approval(type))
     |> Component.assign(:approval_window_hours, get_approval_window_hours(type))
     |> Component.assign(:show_as_free, get_show_as_free(type))

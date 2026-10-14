@@ -42,14 +42,27 @@ defmodule Tymeslot.Meetings.Guests do
   def max_guests, do: @max_guests
 
   @doc """
+  How many guests one booking of `meeting_type` may bring: the host's own
+  limit for the type (`max_guests_per_booking`), or `max_guests/0` without
+  one. A group booking is further bounded by the seats left on its time.
+  """
+  @spec limit_for(map() | nil) :: pos_integer()
+  def limit_for(%{max_guests_per_booking: limit}) when is_integer(limit) and limit > 0,
+    do: min(limit, @max_guests)
+
+  def limit_for(_meeting_type), do: @max_guests
+
+  @doc """
   Sanitises a raw list of guest emails submitted with a booking.
 
   Trims and downcases each entry, drops blanks and anything that fails email
   validation, removes the primary attendee's own address, de-duplicates, and
   caps the result at `max_guests/0`. Always returns a list — never raises.
   """
-  @spec sanitize_emails([String.t()] | nil, String.t() | nil) :: [String.t()]
-  def sanitize_emails(emails, primary_email) when is_list(emails) do
+  @spec sanitize_emails([String.t()] | nil, String.t() | nil, pos_integer()) :: [String.t()]
+  def sanitize_emails(emails, primary_email, limit \\ @max_guests)
+
+  def sanitize_emails(emails, primary_email, limit) when is_list(emails) do
     primary = normalize(primary_email)
 
     emails
@@ -57,10 +70,10 @@ defmodule Tymeslot.Meetings.Guests do
     |> Enum.reject(&(&1 == "" or &1 == primary))
     |> Enum.filter(&valid_email?/1)
     |> Enum.uniq()
-    |> Enum.take(@max_guests)
+    |> Enum.take(limit)
   end
 
-  def sanitize_emails(_emails, _primary_email), do: []
+  def sanitize_emails(_emails, _primary_email, _limit), do: []
 
   @doc """
   Whether `email` is an address a guest can be invited at: the same rule

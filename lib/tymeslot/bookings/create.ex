@@ -422,7 +422,10 @@ defmodule Tymeslot.Bookings.Create do
     if Policy.guests_allowed?(booking_data) do
       booking_data
       |> Map.get(:guest_emails, [])
-      |> Guests.sanitize_emails(meeting.attendee_email)
+      |> Guests.sanitize_emails(
+        meeting.attendee_email,
+        Guests.limit_for(Map.get(booking_data, :meeting_type))
+      )
       |> then(&Guests.create_for_meeting(meeting.id, &1, :booker))
     else
       {:ok, []}

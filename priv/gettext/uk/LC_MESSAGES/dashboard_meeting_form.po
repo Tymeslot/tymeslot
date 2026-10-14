@@ -1151,3 +1151,23 @@ msgstr[2] "Кількість з'являється, коли залишаєть
 #, elixir-autogen, elixir-format
 msgid "Times are marked green, amber or red, labelled \"Plenty left\", \"Filling up\" or \"Almost full\"."
 msgstr "Слоти позначаються зеленим, жовтим або червоним кольором із підписами «Багато місць», «Заповнюється» або «Майже повно»."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Guests per booking"
+msgstr "Гостей на бронювання"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Limit the guests per booking"
+msgstr "Обмежити кількість гостей на бронювання"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Without a limit, each booking may bring up to %{count} guests."
+msgstr "Без обмеження кожне бронювання може привести до %{count} гостей."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Each guest takes one of the time's seats, as the booker does."
+msgstr "Кожен гість займає одне з місць цього часу, як і той, хто бронює."
