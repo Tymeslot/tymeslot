@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent do
   alias Tymeslot.MeetingTypes.OneOffEvents
   alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Dashboard.DashboardFormat
+  alias TymeslotWeb.Dashboard.MeetingSettings.Card
 
   @type row :: %{
           type: map(),
@@ -80,6 +81,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent do
   attr :booking_base_url, :string, default: nil
   attr :timezone, :string, required: true
   attr :time_format, :string, required: true
+  attr :venues, :list, default: [], doc: "the host's saved venues, to name an event's location"
   attr :parent_myself, :any, required: true
 
   @spec events_section(map()) :: Phoenix.LiveView.Rendered.t()
@@ -99,36 +101,65 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent do
         }
       />
 
-      <.card :for={event <- @events} variant={:flat} data-testid="event-row">
-        <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <div class="min-w-0 flex-1 space-y-1">
-            <div class="flex flex-wrap items-center gap-2">
-              <h3 class="font-semibold text-tymeslot-900">{event.type.name}</h3>
-              <.pill tone={tone(event.status)} size={:xs}>{label(event.status)}</.pill>
+      <.card
+        :for={event <- @events}
+        padding={:xs}
+        class={
+          if(event.status in [:open, :closed],
+            do: "card-glass-available",
+            else: "card-glass-unavailable"
+          )
+        }
+        data-testid="event-row"
+      >
+        <div class="flex items-center gap-3">
+          <.icon
+            name={event_icon(event.type)}
+            class="w-5 h-5 text-tymeslot-600 shrink-0"
+          />
+
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 min-w-0">
+              <h2 class="text-token-lg font-semibold text-tymeslot-900 truncate">
+                {event.type.name}
+              </h2>
+              <.pill tone={tone(event.status)}>{label(event.status)}</.pill>
             </div>
-            <p class="text-token-sm text-tymeslot-600">
-              <span :if={event.starts_at}>
-                {when_label(event.starts_at, @timezone, @time_format)} ·
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-token-xs text-tymeslot-600">
+              <span :if={event.starts_at} class="flex items-center shrink-0">
+                <.icon name="hero-calendar-days-mini" class="w-3.5 h-3.5 mr-1 text-tymeslot-500" />
+                {when_label(event.starts_at, @timezone, @time_format)}
               </span>
-              {dgettext("dashboard_meeting_types", "%{count}/%{capacity} seats taken",
-                count: event.seats_taken,
-                capacity: event.capacity
-              )}
-            </p>
+              <span class="flex items-center shrink-0">
+                <.icon name="hero-clock" class="w-3.5 h-3.5 mr-1" />
+                {dgettext("dashboard_meeting_types", "%{minutes} min",
+                  minutes: event.type.duration_minutes
+                )}
+              </span>
+              <span class="flex items-center shrink-0">
+                <.icon name="hero-users-mini" class="w-3.5 h-3.5 mr-1 text-tymeslot-500" />
+                {dgettext("dashboard_meeting_types", "%{count}/%{capacity} seats taken",
+                  count: event.seats_taken,
+                  capacity: event.capacity
+                )}
+              </span>
+              <Card.location_summary type={event.type} icon_size="mini" venues={@venues} />
+            </div>
           </div>
 
+          <%!-- Actions, named after the event as on a meeting type card. --%>
           <div class="flex items-center gap-2 shrink-0">
-            <.action_button
+            <Buttons.icon_button
               :if={@booking_base_url && event.status in [:open, :closed]}
+              icon="hero-link"
               size={:sm}
-              variant={:secondary}
               id={"copy-event-link-#{event.type.id}"}
+              label={dgettext("dashboard_meeting_types", "Copy link")}
+              tooltip={dgettext("dashboard_meeting_types", "Copy link")}
               phx-hook="CopyOnClick"
               data-copy-text={"#{@booking_base_url}/#{MeetingTypes.effective_slug(event.type)}"}
               data-copy-feedback={dgettext("dashboard_meeting_types", "Booking link copied!")}
-            >
-              {dgettext("dashboard_meeting_types", "Copy link")}
-            </.action_button>
+            />
             <Buttons.icon_button
               icon="hero-pencil-square"
               size={:sm}
@@ -159,6 +190,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent do
     date = starts_at |> DashboardFormat.local_date(timezone) |> DashboardFormat.long_date()
     "#{date}, #{DashboardFormat.clock(starts_at, timezone, time_format)}"
   end
+
+  # An event shows the icon its type was given, as a meeting type card does,
+  # or the events section's own when it has none.
+  defp event_icon(%{icon: icon}) when is_binary(icon) and icon != "none", do: icon
+  defp event_icon(_type), do: "hero-ticket"
 
   defp tone(:open), do: :success
   defp tone(:closed), do: :warning

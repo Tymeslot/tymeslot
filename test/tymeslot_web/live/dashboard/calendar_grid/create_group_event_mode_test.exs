@@ -190,7 +190,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateGroupEventModeTest do
       [row] =
         html |> Floki.parse_document!() |> Floki.find(~s{[data-testid="event-row"]})
 
-      assert Floki.text(row) =~ "Introduction to X"
+      # Laid out as a meeting type card: the name as the card's title.
+      assert [title] = Floki.find(row, "h2")
+      assert Floki.text(title) =~ "Introduction to X"
       assert Floki.text(row) =~ "Registration open"
       assert Floki.text(row) =~ "0/12 seats taken"
 

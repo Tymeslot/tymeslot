@@ -13,6 +13,7 @@ defmodule Tymeslot.MeetingTypes.OneOffEventsTest do
 
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.PlannedSessions
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.MeetingTypes.OneOffEvents
   alias Tymeslot.Repo
@@ -93,5 +94,23 @@ defmodule Tymeslot.MeetingTypes.OneOffEventsTest do
              OneOffEvents.create(params(ctx, %{location: {:venue, other_venue.id}}))
 
     assert Repo.all(MeetingTypeSchema) == []
+  end
+
+  test "the booking page lists the regular types first, then the events by date", ctx do
+    regular = insert(:meeting_type, user: ctx.user, name: "Strategy Session", sort_order: 5)
+
+    {:ok, %{meeting_type: later}} =
+      OneOffEvents.create(
+        params(ctx, %{name: "Later event", starts_at: starts_at(30), registration_closes_at: nil})
+      )
+
+    {:ok, %{meeting_type: sooner}} =
+      OneOffEvents.create(
+        params(ctx, %{name: "Sooner event", starts_at: starts_at(5), registration_closes_at: nil})
+      )
+
+    listed = ctx.user.id |> MeetingTypes.get_public_meeting_types() |> Enum.map(& &1.id)
+
+    assert Enum.take(listed, -3) == [regular.id, sooner.id, later.id]
   end
 end

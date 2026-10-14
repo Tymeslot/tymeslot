@@ -150,6 +150,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
               booking_base_url={booking_base_url(@profile)}
               timezone={(@profile && @profile.timezone) || "Etc/UTC"}
               time_format={@time_format}
+              venues={@venues}
               parent_myself={@myself}
             />
 

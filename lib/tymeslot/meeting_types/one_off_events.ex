@@ -66,6 +66,30 @@ defmodule Tymeslot.MeetingTypes.OneOffEvents do
     end
   end
 
+  @doc """
+  `meeting_types` as the booking page lists them: the host's regular types
+  first, in their own order, then the one-off events by the date they take
+  place, soonest first. An event has no place in the order the host drags
+  the regular types into, so it would otherwise land wherever its default
+  position falls.
+  """
+  @spec order_for_listing([map()]) :: [map()]
+  def order_for_listing(meeting_types) do
+    {events, regular} = Enum.split_with(meeting_types, &one_off?/1)
+    regular ++ Enum.sort_by(events, &first_start/1, &sooner?/2)
+  end
+
+  defp first_start(meeting_type) do
+    case PlannedSessions.upcoming(meeting_type) do
+      [session | _later] -> session.start_time
+      [] -> nil
+    end
+  end
+
+  defp sooner?(nil, _other), do: false
+  defp sooner?(_start, nil), do: true
+  defp sooner?(left, right), do: DateTime.compare(left, right) != :gt
+
   @doc "Whether `meeting_type` was created as a one-off event."
   @spec one_off?(map() | nil) :: boolean()
   def one_off?(%{one_off: true}), do: true
