@@ -10,11 +10,18 @@ defmodule Tymeslot.Polls.SlotHealth do
 
   Because it is advisory, it degrades gracefully: any failure fetching the
   host's calendar events returns every slot as `:ok` and never blocks anything.
+
+  The events are compared as the booking path compares them
+  (`Tymeslot.Availability.Events.convert_events_to_timezone/3`): an all-day
+  event, which the calendar cache hands back with `Date` bounds, blocks its
+  days from midnight to midnight in the host's time zone.
   """
 
+  alias Tymeslot.Availability.Events
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
+  alias Tymeslot.Profiles
   alias Tymeslot.Utils.TimeRange
 
   require Logger
@@ -35,7 +42,14 @@ defmodule Tymeslot.Polls.SlotHealth do
 
     case fetch_events(poll.user_id, range_start, range_end) do
       {:ok, events} ->
-        blocking_events = Enum.filter(events, &CalendarEvent.blocking?/1)
+        blocking_events =
+          events
+          |> Enum.filter(&CalendarEvent.blocking?/1)
+          |> Events.convert_events_to_timezone(
+            Profiles.get_user_timezone(poll.user_id),
+            "Etc/UTC"
+          )
+
         Map.new(slots, &{&1.id, slot_status(&1, blocking_events)})
 
       {:error, reason} ->
