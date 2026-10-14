@@ -1,4 +1,9 @@
 
+[1.25.0]
+* payments: Refuse paid bookings when the host's plan lacks payments
+* calendar: Let quick add set the meeting's reminders (#146)
+
+
 [1.24.0]
 * calendar: Refuse Outlook series on days that some months lack
 * ui: Stop a flash's auto-dismiss closing the dialog that is open
