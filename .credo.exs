@@ -190,6 +190,14 @@
           {Jump.CredoChecks.ConditionalAssertion, [priority: :low, exit_status: 0]},
           {Jump.CredoChecks.AssertElementSelectorCanNeverFail, [priority: :low, exit_status: 0]},
 
+          # A field set on the struct before change/cast is not a change: it
+          # skips validation and an update silently drops it. Gating, since
+          # lib/ was clean when it was enabled. Tests are excluded because
+          # building an unsaved struct variant to feed a changeset is a
+          # legitimate fixture there, and nothing in a test is persisted
+          # through that path.
+          {Jump.CredoChecks.AvoidModifyingStructBeforeChangeset, [files: %{excluded: ["test/"]}]},
+
           #
           ## Additional Maintainability Checks (low priority, only visible with --strict)
           #
