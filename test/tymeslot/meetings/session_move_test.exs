@@ -19,6 +19,7 @@ defmodule Tymeslot.Meetings.SessionMoveTest do
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Emails.Templates.AppointmentRescheduled
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.PlannedSessions
@@ -86,6 +87,24 @@ defmodule Tymeslot.Meetings.SessionMoveTest do
     )
 
     assert_enqueued(worker: EmailWorker, args: seat_job_args(ctx.session, ada))
+  end
+
+  test "asks the guests to answer for the new time, but a decline stands", ctx do
+    ada = insert(:participant, meeting: ctx.session, name: "Ada Lovelace")
+
+    {:ok, [coming, not_coming]} =
+      Guests.create_for_participant(ctx.session.id, ada.id, [
+        "coming@example.com",
+        "not.coming@example.com"
+      ])
+
+    {:ok, _accepted} = Guests.record_rsvp(coming.rsvp_token, "accepted")
+    {:ok, _declined} = Guests.record_rsvp(not_coming.rsvp_token, "declined")
+
+    {:ok, _moved} = PlannedSessions.move(ctx.session, at(12, ~T[09:30:00]), nil)
+
+    assert {:ok, %{status: "pending"}} = GuestQueries.get_by_token(coming.rsvp_token)
+    assert {:ok, %{status: "declined"}} = GuestQueries.get_by_token(not_coming.rsvp_token)
   end
 
   test "refuses a start in the past, a close after the new start and a cancelled session",

@@ -143,6 +143,30 @@ defmodule Tymeslot.Meetings.GuestQueries do
     count
   end
 
+  @doc """
+  `reset_for_new_time/1` for a planned session its host moved
+  (`Tymeslot.Meetings.SessionMove`): the guests answer for the new time,
+  except that a guest who declined keeps their answer. They are told the
+  new time like everyone else and can still say yes, which then has to
+  find a free seat; reset to pending, they would take one unasked.
+  """
+  @spec reset_for_moved_session(binary()) :: non_neg_integer()
+  def reset_for_moved_session(meeting_id) do
+    {count, _rows} =
+      Guest
+      |> where([g], g.meeting_id == ^meeting_id and g.status != "declined")
+      |> Repo.update_all(
+        set: [
+          status: "pending",
+          responded_at: nil,
+          reminders_sent: nil,
+          updated_at: DateTime.utc_now(:second)
+        ]
+      )
+
+    count
+  end
+
   @doc "Stamps `confirmation_sent_at` on the given guest."
   @spec mark_confirmation_sent(Guest.t(), DateTime.t()) ::
           {:ok, Guest.t()} | {:error, Changeset.t()}

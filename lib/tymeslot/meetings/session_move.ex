@@ -19,7 +19,8 @@ defmodule Tymeslot.Meetings.SessionMove do
   revision, and every participant (and their guests) is emailed the new
   time with an updated calendar entry, one job per seat
   (`Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails`). Guests'
-  answers applied to the old time and are reset.
+  answers applied to the old time and are reset, except a decline, which
+  stands until the guest answers again.
   """
 
   require Logger
@@ -101,7 +102,7 @@ defmodule Tymeslot.Meetings.SessionMove do
                enforce_booking_limits: false
              ),
            _seats = ParticipantQueries.bump_ical_sequence_for_meeting(moved.id),
-           _guests = GuestQueries.reset_for_new_time(moved.id),
+           _guests = GuestQueries.reset_for_moved_session(moved.id),
            {:ok, _job} <- CalendarJobs.schedule_job(moved, "update") do
         moved
       else
