@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     GroupRules,
     Init,
     LengthsField,
+    LengthsHandlers,
     SlotIntervalField,
     Validation
   }
@@ -41,6 +42,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   # - venues: the organiser's saved venues, for in-person locations
   # - parent_myself: phx-target for parent events (cancel, done, visibility)
   # - current_user: used for security metadata in validation
+
+  # The further lengths' events, all handled by `LengthsHandlers`.
+  @lengths_events LengthsHandlers.events()
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -189,32 +193,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   end
 
   @impl Phoenix.LiveComponent
-  def handle_event("add_length", _params, socket) do
-    form_data = socket.assigns.form_data || %{}
-    extras = Map.get(form_data, "extra_lengths", [])
-
-    # A group type offers one length; the button is hidden, this stops a
-    # stale or forged event.
-    if not socket.assigns.group_bookings_enabled and
-         length(extras) + 1 < Constraints.max_lengths_per_meeting_type() do
-      update_extra_lengths(socket, extras ++ [LengthsField.suggest(form_data)])
-    else
-      {:noreply, socket}
-    end
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("remove_length", %{"index" => index}, socket) do
-    extras = Map.get(socket.assigns.form_data || %{}, "extra_lengths", [])
-
-    case Integer.parse(to_string(index)) do
-      {position, ""} when position >= 0 and position < length(extras) ->
-        update_extra_lengths(socket, List.delete_at(extras, position))
-
-      _other ->
-        {:noreply, socket}
-    end
-  end
+  def handle_event(event, params, socket) when event in @lengths_events,
+    do: {:noreply, LengthsHandlers.handle_event(event, params, socket)}
 
   @impl Phoenix.LiveComponent
   def handle_event("select_icon", %{"icon" => icon}, socket) do
@@ -624,20 +604,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   end
 
   defp off_preset_interval?(_value), do: false
-
-  defp update_extra_lengths(socket, extras) do
-    {data, errors} =
-      Validation.revalidate_extra_lengths(
-        Map.put(socket.assigns.form_data || %{}, "extra_lengths", extras),
-        socket.assigns.form_errors || %{},
-        Helpers.get_security_metadata(socket)
-      )
-
-    {:noreply,
-     socket
-     |> assign(form_data: data, form_errors: errors)
-     |> Autosave.maybe_run()}
-  end
 
   # The reminder picker's own state, as the shared module keeps it. This form
   # holds each field as an assign of its own, so it is lifted out for the

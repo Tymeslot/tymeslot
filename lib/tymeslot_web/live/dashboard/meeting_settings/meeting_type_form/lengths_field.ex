@@ -11,9 +11,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LengthsField do
   one up.
 
   The events the buttons send (`add_length`, `remove_length`) are handled by
-  `TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm`, which owns the
-  form's assigns and its autosave; this module contributes the markup and the
-  two pure functions that belong to it.
+  `MeetingTypeForm.LengthsHandlers`; this module contributes the markup and
+  the two pure functions that belong to it.
   """
 
   use TymeslotWeb, :html
