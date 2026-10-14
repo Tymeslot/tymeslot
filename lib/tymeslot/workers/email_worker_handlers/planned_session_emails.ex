@@ -91,7 +91,13 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.PlannedSessionEmails do
       phone: participant.phone,
       company: participant.company,
       message: participant.message,
-      guests: Enum.map(participant.guests, &%{name: &1.name, email: &1.email}),
+      # A guest who declined is not coming, so the list leaves them out.
+      guests:
+        for(
+          guest <- participant.guests,
+          guest.status != "declined",
+          do: %{name: guest.name, email: guest.email}
+        ),
       answers:
         questions
         |> Enum.map(&{&1["label"] || "", AnswerRenderer.render(&1, answers[&1["id"]])})

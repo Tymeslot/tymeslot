@@ -131,7 +131,7 @@ defmodule Tymeslot.Workers.RegistrationClosedEmailTest do
   end
 
   describe "sending" do
-    test "lists everyone who signed up, with their guests and answers", ctx do
+    test "lists everyone who signed up, with the guests coming and their answers", ctx do
       snapshot = [%{"id" => "diet", "label" => "Dietary needs", "type" => "text"}]
 
       ctx.session
@@ -152,6 +152,15 @@ defmodule Tymeslot.Workers.RegistrationClosedEmailTest do
         participant_id: ada.id,
         name: "Charles Babbage",
         email: "charles@example.com",
+        invited_by: :booker
+      })
+
+      Repo.insert!(%GuestSchema{
+        meeting_id: ctx.session.id,
+        participant_id: ada.id,
+        name: "Not Coming",
+        email: "declined@example.com",
+        status: "declined",
         invited_by: :booker
       })
 
@@ -177,6 +186,7 @@ defmodule Tymeslot.Workers.RegistrationClosedEmailTest do
         assert email.text_body =~ "Dietary needs: Vegetarian"
         assert email.text_body =~ "Grace Hopper"
         refute email.text_body =~ "Gone Again"
+        refute email.text_body =~ "Not Coming"
         assert email.html_body =~ "Ada Lovelace"
 
         assert [%Attachment{data: csv}] = csv_attachments(email)

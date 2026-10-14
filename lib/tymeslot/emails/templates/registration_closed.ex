@@ -7,7 +7,8 @@ defmodule Tymeslot.Emails.Templates.RegistrationClosed do
 
   The payload is `Tymeslot.Emails.AppointmentBuilder.for_organizer_of_group/3`
   for the session, and the roster, one entry per live participant in
-  sign-up order: their details, the guests they brought and their answers
+  sign-up order: their details, the guests they brought (leaving out any who
+  declined) and their answers
   to the type's questions. With people signed up, the roster is also
   attached as a CSV file, one row per participant, for a spreadsheet or a
   printout. When nobody signed up, the email says so, since the host may
