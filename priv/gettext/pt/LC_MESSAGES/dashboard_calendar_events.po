@@ -1304,6 +1304,13 @@ msgstr "Não é possível adicionar mais convidados a esta reunião."
 msgid "Too many new meetings. Please wait a moment."
 msgstr "Muitas reuniões novas. Aguarde um momento."
 
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Add up to %{count} reminder email for this meeting. The guest and anyone else invited receive it."
+msgid_plural "Add up to %{count} reminder emails for this meeting. The guest and anyone else invited receive it."
+msgstr[0] "Adicione até %{count} e-mail de lembrete para esta reunião. Ele é enviado ao convidado e a todas as outras pessoas convidadas."
+msgstr[1] "Adicione até %{count} e-mails de lembrete para esta reunião. Eles são enviados ao convidado e a todas as outras pessoas convidadas."
+
 #: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #, elixir-autogen, elixir-format
 msgid "Someone else organises this meeting, so Tymeslot can't move or split a series you were only invited to."
