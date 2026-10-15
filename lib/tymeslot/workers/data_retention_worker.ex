@@ -19,6 +19,8 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
       `Tymeslot.MeetingPayments.DataRetention`)
   11. What invitees gave on meetings and polls that ended two years ago,
       anonymised rather than deleted (see `Tymeslot.InviteeData`)
+  12. Extra available times on dates that have passed (see
+      `Tymeslot.Availability.ExtraAvailability`)
 
   Ensures the database doesn't grow indefinitely by removing
   old records based on configured retention periods.
@@ -33,6 +35,8 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
 
   alias Tymeslot.Analytics
   alias Tymeslot.Auth
+  alias Tymeslot.Availability.ExtraAvailability
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.HealthCheck.AvailabilityRefusalQueries
   alias Tymeslot.InviteeData
@@ -115,6 +119,8 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
 
     prune_orphaned_telegram_stubs()
 
+    prune_past_extra_availability()
+
     prune_expired_analytics_salts()
 
     purge_expired_financial_records()
@@ -171,6 +177,14 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
       {0, _rows} ->
         Logger.debug("No abandoned Telegram setup stubs to prune")
     end
+  end
+
+  # Not a `@retention_jobs` entry: an extra available time lasts until its
+  # date has passed everywhere, so yesterday's UTC date is the cutoff and a
+  # time still today in some timezone is never removed.
+  defp prune_past_extra_availability do
+    {count, _rows} = ExtraAvailability.prune_past(Date.add(Clock.utc_today(), -1))
+    Logger.info("Pruned past extra available times", deleted_count: count)
   end
 
   # Deliberately not a `@retention_jobs` entry either: a salt's lifetime is its
