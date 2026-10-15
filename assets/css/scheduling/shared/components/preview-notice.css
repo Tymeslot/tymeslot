@@ -21,7 +21,6 @@
    ========================================================================== */
 
 .preview-notice {
-  --preview-notice-ground: rgb(15 23 42 / 0.85);
   display: flex;
   align-items: center;
   justify-content: center;

@@ -115,6 +115,9 @@
   --line-2: var(--border-medium);
   --surface-1: var(--surface-subtle);
   --notice-warning: var(--theme-warning);
+  /* The preview notice's scrim: it sits on the page background, whatever
+     the organiser chose there (shared/components/preview-notice.css). */
+  --preview-notice-ground: rgb(15 23 42 / 0.85);
 
   --theme-primary-solid: var(--theme-primary);
   --theme-primary-solid-hover: var(--theme-primary-hover);
