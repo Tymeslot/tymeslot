@@ -131,7 +131,10 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ScheduleComponent do
           </p>
 
           <div class="folio-calendar__weekdays" aria-hidden="true">
-            <span :for={day <- LocalizationHelpers.weekday_headings(@week_start)} class="folio-calendar__weekday">
+            <span
+              :for={day <- LocalizationHelpers.weekday_headings(@week_start)}
+              class="folio-calendar__weekday"
+            >
               {day}
             </span>
           </div>

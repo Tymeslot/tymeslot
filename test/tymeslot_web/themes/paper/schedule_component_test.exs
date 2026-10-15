@@ -42,6 +42,7 @@ defmodule TymeslotWeb.Themes.Paper.ScheduleComponentTest do
           current_year: 2030,
           current_month: 3,
           current_week_start: @monday,
+          week_start: :monday,
           calendar_today: @monday,
           booking_window_days: 90,
           month_availability_map: %{},
@@ -153,7 +154,7 @@ defmodule TymeslotWeb.Themes.Paper.ScheduleComponentTest do
         )
 
       assert text(doc, "[data-testid='paper-selection'] .paper-selection__date") ==
-               "Wednesday, March 6, 2030"
+               "Wednesday, 6 March 2030"
 
       assert text(doc, "[data-testid='paper-selection'] .paper-selection__time") == "02:00 PM"
       assert Floki.attribute(doc, "button[data-testid='next-step']", "disabled") == []

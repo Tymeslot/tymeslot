@@ -249,7 +249,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   attr :days, :list, required: true
   attr :year, :integer, required: true
   attr :month, :integer, required: true
-  attr :week_start, :atom, required: true, doc: "the day the weeks start on, the flow's `:week_start`"
+  attr :week_start, :atom, required: true, doc: "the flow's `:week_start`"
   attr :timezone, :string, required: true
   attr :booking_window_days, :integer, required: true
   attr :availability_status, :any, default: nil
