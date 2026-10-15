@@ -77,9 +77,9 @@ defmodule TymeslotWeb.Themes.Shared.Journey.RuntimeTest do
       assert_received {:load_slots, "2027-01-05"}
     end
 
-    # The answers beside the details form: submitting the form is the
-    # confirmation, so answers that validate let the form's events through
-    # with no Continue of their own.
+    # The answers beside the details form: submitting the form sends the
+    # answers with it, so the form's events go through whatever the answers
+    # hold, and the submission validates them.
     test "a moment asking the questions beside the details takes the form's events" do
       journey =
         Journey.new(
@@ -107,8 +107,11 @@ defmodule TymeslotWeb.Themes.Shared.Journey.RuntimeTest do
       assert {:noreply, socket} = Runtime.handle_step_event(socket, :booking, :toggle_guests, nil)
       assert socket.assigns.guests_open
 
+      # Blank answers beside the form no longer hold its events back: the
+      # submit sends them, and the submission refuses them.
       blank = put_in(socket.assigns.engine, Engine.init([question("company")]))
-      assert Runtime.handle_step_event(blank, :booking, :toggle_guests, nil) == :unhandled
+      assert {:noreply, blank} = Runtime.handle_step_event(blank, :booking, :toggle_guests, nil)
+      assert blank.assigns.guests_open
     end
 
     test "a fact's event waits for the facts it needs" do

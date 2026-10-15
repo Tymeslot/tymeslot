@@ -15,8 +15,8 @@ defmodule TymeslotWeb.ThemeTestMatrix do
   stylesheet of its own. Besides the fixture (`"99"`) and the showcase
   (`"97"`), the test-only themes are the journey fixtures
   (`test/support/journey_fixtures/`: `"96"` Fixture Scroll, `"95"` Fixture
-  Talk and `"94"` Fixture Express), whose journeys are their own
-  (`journey: :custom`).
+  Talk, `"94"` Fixture Express and `"93"` Fixture Two), whose journeys are
+  their own (`journey: :custom`).
 
   `all/0` and `ids/0` are the shipped themes alone, for the suites tied to
   their own design (deep links, sort order, cancel pages, accessibility, the
@@ -128,6 +128,19 @@ defmodule TymeslotWeb.ThemeTestMatrix do
       video_background: false,
       pins_schedule_actions: false,
       schedule_view: :week_grid,
+      selected_duration_selector: "[data-fact='meeting_type'][aria-pressed='true']",
+      journey: :custom,
+      fixture: true
+    },
+    "93" => %{
+      id: "93",
+      key: :fixture_two,
+      slug: "fixture_two",
+      name: "Fixture Two",
+      wrapper_class: "journey-fixture-two",
+      video_background: false,
+      pins_schedule_actions: false,
+      schedule_view: :calendar,
       selected_duration_selector: "[data-fact='meeting_type'][aria-pressed='true']",
       journey: :custom,
       fixture: true

@@ -2,7 +2,8 @@ defmodule TymeslotWeb.Test.JourneyFixtures.Moments.Offer do
   @moduledoc """
   The journey fixtures' meeting-type moment: a button per meeting type for the
   meeting type fact, with the approval pill on a type the organiser must
-  accept. Once answered, a transcript shows the answer and, where it may be
+  accept. On a paged journey (Fixture Two) a Continue moves on once a type is
+  chosen. Once answered, a transcript shows the answer and, where it may be
   changed, an Edit control instead. A meeting type a direct or private link
   chose may not be changed (`Markup.revisitable?/1`): the moment then names
   the chosen type alone, never the organiser's public list beside it. The
@@ -86,6 +87,16 @@ defmodule TymeslotWeb.Test.JourneyFixtures.Moments.Offer do
         >
           {meeting_type.name}
           <ApprovalNotice.pill :if={Approval.required?(meeting_type)} />
+        </button>
+        <button
+          :if={Markup.paged?(assigns)}
+          type="button"
+          phx-click="next_step"
+          phx-target={@myself}
+          data-intent="continue"
+          disabled={is_nil(@selected_duration)}
+        >
+          Continue
         </button>
     <% end %>
     """

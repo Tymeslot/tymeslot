@@ -37,6 +37,10 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   new current moment becomes `:journey_focus`. `clear/2` forgets facts and
   those depending on them. `navigate_to_step/2` is the step indicator's
   click, handed to the navigator's `go_to/3`.
+
+  A fact whose prerequisite its own moment collects is entered once that
+  prerequisite is known (`enter_ready/1`, after every step event), so one
+  paged moment can pick the time and then open the details.
   """
 
   import Phoenix.Component, only: [assign: 2, assign: 3]
@@ -60,19 +64,22 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   """
   @spec handle_step_event(Socket.t(), atom(), atom(), term()) :: reply() | :unhandled
   def handle_step_event(%Socket{assigns: %{journey: journey}} = socket, moment_key, event, data) do
-    cond do
-      navigation?(journey, socket.assigns, moment_key, event) ->
-        navigate(journey, socket, event)
+    reply =
+      cond do
+        navigation?(journey, socket.assigns, moment_key, event) ->
+          navigate(journey, socket, event)
 
-      restart?(socket.assigns, moment_key, event) ->
-        {:noreply, restart(socket)}
+        restart?(socket.assigns, moment_key, event) ->
+          {:noreply, restart(socket)}
 
-      event in Ambient.events() ->
-        ambient_event(journey, socket, moment_key, event, data)
+        event in Ambient.events() ->
+          ambient_event(journey, socket, moment_key, event, data)
 
-      true ->
-        fact_event(journey, socket, moment_key, event, data)
-    end
+        true ->
+          fact_event(journey, socket, moment_key, event, data)
+      end
+
+    enter_ready_after(reply)
   end
 
   def handle_step_event(_socket, _moment_key, _event, _data), do: :unhandled
@@ -97,6 +104,10 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   that the booking requires, with `params` (the URL parameters on arrival,
   `%{}` inside the page), and records the moment in `:journey_opened`, so a
   navigator showing several moments enters each once while it stays shown.
+  A fact waiting on a prerequisite that the same moment collects and that
+  is not yet known (the attendee beside the slot on one screen) is not
+  entered here but put off, with `params`, until `enter_ready/1` finds its
+  prerequisites known.
   """
   @spec open_moment(Socket.t(), Moment.t(), map()) :: Socket.t()
   def open_moment(socket, %Moment{} = moment, params) do
@@ -104,9 +115,42 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
 
     socket
     |> apply_defaults(moment, facts)
+    |> forget_deferred(moment.key)
     |> enter_facts(moment, params, facts)
     |> then(&assign(&1, :journey_opened, MapSet.put(opened(&1), moment.key)))
   end
+
+  @doc """
+  Enters each fact a visible moment put off (`open_moment/3`) whose
+  prerequisites are now all known, with the parameters its moment opened
+  with. Runs after every step event, so a time picked on a screen that also
+  asks for the details opens the details' form and token.
+  """
+  @spec enter_ready(Socket.t()) :: Socket.t()
+  def enter_ready(%Socket{assigns: %{journey: %Journey{navigator: navigator} = journey}} = socket) do
+    visible =
+      MapSet.new(navigator.visible(journey, socket.assigns), fn {moment, _state} ->
+        moment.key
+      end)
+
+    socket
+    |> deferred()
+    |> Enum.filter(fn {{moment_key, fact_key}, _params} ->
+      MapSet.member?(visible, moment_key) and ready?(Journey.fact!(fact_key), socket.assigns)
+    end)
+    |> Enum.reduce(socket, fn {{_moment_key, fact_key} = entry, params}, acc ->
+      fact = Journey.fact!(fact_key)
+
+      acc
+      |> assign(:journey_deferred, Map.delete(deferred(acc), entry))
+      |> fact.enter(params)
+    end)
+  end
+
+  def enter_ready(socket), do: socket
+
+  defp ready?(fact, assigns),
+    do: Enum.all?(fact.requires(assigns), &Journey.fact!(&1).known?(assigns))
 
   @doc """
   Forgets `keys` and every fact depending on them for this booking
@@ -304,12 +348,46 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
     end)
   end
 
-  defp enter_facts(socket, %Moment{collects: collects}, params, facts) do
+  defp enter_facts(socket, %Moment{key: moment_key, collects: collects}, params, facts) do
     Enum.reduce(collects, socket, fn key, acc ->
       fact = Map.fetch!(facts, key)
-      if fact.required?(acc.assigns), do: fact.enter(acc, params), else: acc
+
+      cond do
+        not fact.required?(acc.assigns) -> acc
+        waits_in_moment?(fact, collects, acc.assigns) -> defer(acc, moment_key, key, params)
+        true -> fact.enter(acc, params)
+      end
     end)
   end
+
+  # A prerequisite the same moment still has to collect puts the fact off: the
+  # attendee beside the slot on one screen is entered once the time is picked.
+  # A prerequisite another moment collects does not: that entry runs as it
+  # always did, redirect included (a `/book` link with no day and time).
+  defp waits_in_moment?(fact, collects, assigns) do
+    Enum.any?(fact.requires(assigns), fn required ->
+      required in collects and not Journey.fact!(required).known?(assigns)
+    end)
+  end
+
+  defp defer(socket, moment_key, fact_key, params),
+    do:
+      assign(
+        socket,
+        :journey_deferred,
+        Map.put(deferred(socket), {moment_key, fact_key}, params)
+      )
+
+  # A moment opening again decides afresh what it puts off.
+  defp forget_deferred(socket, moment_key) do
+    kept = Map.reject(deferred(socket), fn {{key, _fact}, _params} -> key == moment_key end)
+    assign(socket, :journey_deferred, kept)
+  end
+
+  defp deferred(socket), do: socket.assigns[:journey_deferred] || %{}
+
+  defp enter_ready_after({:noreply, socket}), do: {:noreply, enter_ready(socket)}
+  defp enter_ready_after(other), do: other
 
   defp opened(socket), do: socket.assigns[:journey_opened] || MapSet.new()
 

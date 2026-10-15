@@ -7,6 +7,10 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Events do
   so the bubbling semantics and derived render assigns stay identical
   across themes.
 
+  `answer` and `multi_toggle` answer the question the event names
+  (`question`, which every shared input sends), else the one on show;
+  `all_questions/1` serves a screen that asks every question at once.
+
   The events are `answer`, `multi_toggle`, `next_step` and `back_step` (the
   canonical navigation names every step uses, `Shared.StepEvents`), plus a
   theme's own `theme:<name>` events, relayed untouched; anything else is
@@ -16,6 +20,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Events do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.CustomFields
   alias TymeslotWeb.Themes.Shared.CustomQuestions.AnswerNormaliser
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine
   alias TymeslotWeb.Themes.Shared.StepEvents
@@ -23,8 +28,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Events do
   @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event("answer", params, socket) do
-    %Engine{} = engine = socket.assigns.engine
-    definition = Engine.current_definition(engine)
+    definition = asked(socket.assigns.engine, params)
     id = definition["id"]
     raw = Map.get(params, "value", params)
     value = AnswerNormaliser.normalise(raw, definition["type"])
@@ -32,9 +36,9 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Events do
     {:noreply, socket}
   end
 
-  def handle_event("multi_toggle", %{"value" => key}, socket) do
+  def handle_event("multi_toggle", %{"value" => key} = params, socket) do
     %Engine{} = engine = socket.assigns.engine
-    id = Engine.current_definition(engine)["id"]
+    id = asked(engine, params)["id"]
     current = Map.get(engine.answers, id) || []
     next = if key in current, do: List.delete(current, key), else: [key | current]
     send(self(), {:step_event, moment(socket), :answer, {id, next}})
@@ -71,6 +75,15 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Events do
     StepEvents.moment(socket.assigns) || :questions
   end
 
+  # The question an answer is for: the one the event names (every input
+  # sends its question's id as `question`, so a screen showing every
+  # question at once answers the right one), when the engine has it; else
+  # the one on show.
+  defp asked(%Engine{definitions: definitions} = engine, params) do
+    Enum.find(definitions, &(&1["id"] == params["question"])) ||
+      Engine.current_definition(engine)
+  end
+
   @spec assign_render_state(Phoenix.LiveView.Socket.assigns()) ::
           Phoenix.LiveView.Socket.assigns()
   def assign_render_state(assigns) do
@@ -86,4 +99,37 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Events do
     |> assign(:total, total)
     |> assign(:last?, engine.current_index == total - 1)
   end
+
+  @doc """
+  Every question at once, for a screen that shows them all above the
+  details form and sends them with it (Fixture Two's second screen): each
+  definition with its answer and the error to show under it. The error
+  shows for a question the submit refused (`:refused_questions`, set by
+  `BookingSubmissionHandlerComponent` on every submit, kept apart from
+  `:validation_errors`, which the form's own validation replaces on each
+  keystroke) or one the booker has answered
+  (`Engine`'s `touched`), for as long as its answer still fails; it is the
+  answer's own message, so it clears as the answer is put right. A screen
+  with no questions, or no engine, gets an empty list.
+  """
+  @spec all_questions(map()) :: [%{definition: map(), value: any(), error: String.t() | nil}]
+  def all_questions(%{engine: %Engine{} = engine} = assigns) do
+    refused = assigns[:refused_questions] || MapSet.new()
+
+    Enum.map(engine.definitions, fn definition ->
+      id = definition["id"]
+      value = Map.get(engine.answers, id)
+      shown? = MapSet.member?(engine.touched, id) or MapSet.member?(refused, id)
+
+      error =
+        case CustomFields.validate_answer(value, definition) do
+          {:error, message} when shown? -> message
+          _valid_or_unseen -> nil
+        end
+
+      %{definition: definition, value: value, error: error}
+    end)
+  end
+
+  def all_questions(_assigns), do: []
 end
