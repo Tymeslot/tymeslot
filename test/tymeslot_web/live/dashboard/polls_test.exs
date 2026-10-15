@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Polls
+  alias Tymeslot.TestMocks
 
   # A host with a profile but no calendar integration and no username: the
   # baseline for list/create/validation tests.
@@ -194,6 +195,61 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
 
       assert html =~ "Add at least one candidate time"
       assert Polls.list_polls(user.id) == []
+    end
+  end
+
+  # ===========================================================================
+  # Updates on new votes
+  # ===========================================================================
+
+  describe "Updates on new votes" do
+    setup :setup_host
+
+    test "are on for a new poll unless the host unticks them", %{conn: conn, user: user} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+      date = Date.utc_today() |> Date.add(7) |> Date.to_iso8601()
+
+      for {title, notify} <- [{"With updates", nil}, {"Quiet", "false"}] do
+        view |> element("button", "New poll") |> render_click()
+        view |> element("button", "Add time") |> render_click()
+
+        params =
+          %{
+            "title" => title,
+            "duration" => "30",
+            "timezone" => "Europe/Tallinn",
+            "slots" => %{"0" => "#{date}T09:00"}
+          }
+
+        params = if notify, do: Map.put(params, "notify_on_vote", notify), else: params
+
+        view |> form("form[phx-submit='create_poll']", %{"poll" => params}) |> render_submit()
+      end
+
+      polls = Map.new(Polls.list_polls(user.id), &{&1.title, &1.notify_on_vote})
+      assert polls == %{"With updates" => true, "Quiet" => false}
+    end
+
+    test "can be turned off while editing an open poll", %{conn: conn, user: user} do
+      TestMocks.setup_calendar_mocks(events: [])
+      poll = insert(:poll, user: user, status: :open, notify_on_vote: true, meeting_type_id: nil)
+      insert(:poll_time_slot, poll: poll)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+
+      view
+      |> element("button[phx-click='select_poll'][phx-value-id='#{poll.id}']")
+      |> render_click()
+
+      view |> element("[data-testid='poll-edit-details']") |> render_click()
+
+      view
+      |> form("[data-testid='poll-details-form']",
+        poll: %{title: poll.title, notify_on_vote: "false"}
+      )
+      |> render_submit()
+
+      assert {:ok, %{notify_on_vote: false}} = Polls.get_poll_for_host(poll.id, user.id)
     end
   end
 

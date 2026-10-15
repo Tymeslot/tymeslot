@@ -749,3 +749,14 @@ msgid "%{count} more person asked for a voting link but hasn't voted with it yet
 msgid_plural "%{count} more people asked for a voting link but haven't voted with it yet."
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#, elixir-autogen, elixir-format
+msgid "At most one email every 15 minutes, naming who voted, with the current standings."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "Email me about new votes"
+msgstr ""

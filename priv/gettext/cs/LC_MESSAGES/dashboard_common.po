@@ -756,3 +756,14 @@ msgid_plural "%{count} more people asked for a voting link but haven't voted wit
 msgstr[0] "%{count} další osoba požádala o odkaz k hlasování, ale zatím s ním nehlasovala."
 msgstr[1] "%{count} další osoby požádaly o odkaz k hlasování, ale zatím s ním nehlasovaly."
 msgstr[2] "%{count} dalších osob požádalo o odkaz k hlasování, ale zatím s ním nehlasovalo."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#, elixir-autogen, elixir-format
+msgid "At most one email every 15 minutes, naming who voted, with the current standings."
+msgstr "Nejvýše jeden e-mail za 15 minut, se jmény hlasujících a aktuálním stavem."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "Email me about new votes"
+msgstr "Upozorňovat e-mailem na nové hlasy"

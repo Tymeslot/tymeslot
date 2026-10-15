@@ -38,6 +38,11 @@ defmodule Tymeslot.Polls.PollSchema do
     field(:token, EncryptedString, source: :token_encrypted, redact: true)
     field(:token_hash, :string)
     field(:status, Ecto.Enum, values: [:open, :confirmed, :cancelled], default: :open)
+    # Whether the host is emailed about new votes, bundled per quarter hour
+    # (`Tymeslot.Emails.EmailScheduler.PollScheduler.schedule_vote_digest/1`),
+    # and when they last were, so the next update names only who voted since.
+    field(:notify_on_vote, :boolean, default: false)
+    field(:vote_digest_sent_at, :utc_datetime)
     field(:deadline_at, :utc_datetime)
     field(:timezone, :string)
     field(:confirmed_at, :utc_datetime)
@@ -89,7 +94,8 @@ defmodule Tymeslot.Polls.PollSchema do
       :description,
       :duration_minutes,
       :deadline_at,
-      :timezone
+      :timezone,
+      :notify_on_vote
     ])
     |> validate_required([:user_id, :title, :duration_minutes, :timezone])
     |> validate_number(:duration_minutes, Constraints.poll_duration_minutes_opts())
@@ -105,15 +111,15 @@ defmodule Tymeslot.Polls.PollSchema do
   @doc """
   Changeset for a host editing a poll's wording after it exists.
 
-  Deliberately narrow: only the title and description, never the candidate
-  times, duration, timezone, or deadline. Guests vote against the slots they
-  were shown, so changing those under an in-flight poll would silently
-  invalidate votes already cast.
+  Deliberately narrow: only the title, the description and whether the host
+  is told about new votes, never the candidate times, duration, timezone, or
+  deadline. Guests vote against the slots they were shown, so changing those
+  under an in-flight poll would silently invalidate votes already cast.
   """
   @spec details_changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
   def details_changeset(poll, attrs) do
     poll
-    |> cast(attrs, [:title, :description])
+    |> cast(attrs, [:title, :description, :notify_on_vote])
     # `cast/3` already nils a whitespace-only string, so these have to tolerate
     # nil as well as trim: a title of "   " arrives here as a nil *change*, and
     # `validate_required/2` is what turns it into an error.
@@ -135,6 +141,11 @@ defmodule Tymeslot.Polls.PollSchema do
     |> cast(attrs, [:status, :confirmed_meeting_id, :confirmed_at])
     |> validate_required([:status, :confirmed_meeting_id, :confirmed_at])
   end
+
+  @doc "Marks the host as told about every vote cast up to `sent_at`."
+  @spec vote_digest_sent_changeset(%__MODULE__{}, DateTime.t()) :: Ecto.Changeset.t()
+  def vote_digest_sent_changeset(poll, sent_at),
+    do: change(poll, vote_digest_sent_at: DateTime.truncate(sent_at, :second))
 
   @spec cancel_changeset(%__MODULE__{}) :: Ecto.Changeset.t()
   def cancel_changeset(poll), do: change(poll, status: :cancelled)

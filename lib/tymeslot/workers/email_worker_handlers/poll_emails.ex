@@ -1,8 +1,8 @@
 defmodule Tymeslot.Workers.EmailWorkerHandlers.PollEmails do
   @moduledoc """
   Handles poll-related email actions: participants' voting links and receipts,
-  deadline reminders to unvoted participants and pick-a-time nudges to the
-  host.
+  deadline reminders to unvoted participants, and for the host pick-a-time
+  nudges and updates on new votes.
 
   Every email to a participant carries their personal `?p=` link, read from
   the participant here rather than from the job args.
@@ -14,9 +14,11 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.PollEmails do
   alias Tymeslot.Emails.Templates.PollDeadlineReminder
   alias Tymeslot.Emails.Templates.PollHostNudge
   alias Tymeslot.Emails.Templates.PollParticipantLink
+  alias Tymeslot.Emails.Templates.PollVoteDigest
   alias Tymeslot.Emails.Templates.PollVoteReceipt
   alias Tymeslot.Polls.PollParticipantQueries
   alias Tymeslot.Polls.PollQueries
+  alias Tymeslot.Polls.PollSchema
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Utils.UrlBuilder
   alias Tymeslot.Workers.DeliveryClaims
@@ -146,8 +148,64 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.PollEmails do
         |> Delivery.deliver()
       end)
 
-      :ok
+      # The nudge carries the standings, so it counts as the host's update on
+      # new votes: a pending one then has nothing new to tell.
+      mark_host_updated(poll, DateTime.utc_now())
     end)
+  end
+
+  @doc """
+  Emails the host an update naming who voted or changed their responses since
+  their last one, with the standings. Sends nothing when the host has turned
+  updates off since the job was scheduled, or when nothing is new, e.g.
+  because a nudge carried the same standings in the meantime.
+  """
+  @spec handle_vote_digest(%{String.t() => term()}, DeliveryClaims.job_id()) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_vote_digest(%{"poll_id" => poll_id}, job_id) do
+    with_open_poll(poll_id, "poll vote digest", fn poll ->
+      cutoff = DateTime.utc_now()
+
+      case {poll.notify_on_vote, voted_since_update(poll, cutoff)} do
+        {false, _voters} ->
+          :ok
+
+        {true, []} ->
+          :ok
+
+        {true, voters} ->
+          delivered =
+            DeliveryClaims.once(job_id, "host", fn ->
+              poll
+              |> PollVoteDigest.render(voters, results_url())
+              |> Delivery.deliver()
+              |> delivery_outcome()
+            end)
+
+          with :ok <- delivered, do: mark_host_updated(poll, cutoff)
+      end
+    end)
+  end
+
+  # Who voted after the host's last update and up to `cutoff`, in the order
+  # they voted. Votes after `cutoff` scheduled the next update.
+  defp voted_since_update(poll, cutoff) do
+    since = poll.vote_digest_sent_at
+
+    poll.participants
+    |> Enum.filter(fn participant ->
+      participant.voted_at != nil and
+        (since == nil or DateTime.compare(participant.voted_at, since) == :gt) and
+        DateTime.compare(participant.voted_at, cutoff) != :gt
+    end)
+    |> Enum.sort_by(& &1.voted_at, DateTime)
+  end
+
+  defp mark_host_updated(poll, at) do
+    case PollQueries.update(PollSchema.vote_digest_sent_changeset(poll, at)) do
+      {:ok, _poll} -> :ok
+      {:error, changeset} -> {:error, changeset}
+    end
   end
 
   # Fetches the poll with its host preloaded and runs `fun` only while the poll is

@@ -24,6 +24,9 @@ defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
   @unique_period 315_360_000
   # Reminders go out 24 hours before the deadline.
   @reminder_lead_seconds 86_400
+  # A host who wants to hear about new votes gets at most one update per
+  # quarter hour, covering every vote cast in it.
+  @vote_digest_delay_seconds 15 * 60
 
   @doc """
   Schedules the deadline reminder and the deadline-passed host nudge for a poll.
@@ -78,6 +81,25 @@ defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
     insert_job(
       %{"action" => "send_poll_vote_receipt", "participant_id" => participant.id},
       unique: unique_opts([:action, :participant_id])
+    )
+  end
+
+  @doc """
+  Schedules the host's update on new votes for a quarter of an hour from now,
+  unless one is already waiting: every vote cast until it runs joins that
+  update. A vote cast while it is sending schedules the next one.
+  """
+  @spec schedule_vote_digest(map()) :: :ok
+  def schedule_vote_digest(poll) do
+    insert_job(
+      %{"action" => "send_poll_vote_digest", "poll_id" => poll.id},
+      scheduled_at: DateTime.add(DateTime.utc_now(), @vote_digest_delay_seconds, :second),
+      unique: [
+        period: :infinity,
+        fields: [:args, :queue],
+        keys: [:action, :poll_id],
+        states: [:available, :scheduled, :retryable]
+      ]
     )
   end
 

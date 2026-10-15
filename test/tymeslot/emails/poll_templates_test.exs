@@ -6,6 +6,7 @@ defmodule Tymeslot.Emails.PollTemplatesTest do
     PollDeadlineReminder,
     PollHostNudge,
     PollParticipantLink,
+    PollVoteDigest,
     PollVoteReceipt
   }
 
@@ -119,13 +120,13 @@ defmodule Tymeslot.Emails.PollTemplatesTest do
 
   describe "PollHostNudge.render/3" do
     setup do
-      poll = insert(:poll, title: "Quarterly Review")
+      poll = :poll |> insert(title: "Quarterly Review") |> for_host_email()
       %{poll: poll, results_url: "https://tymeslot.app/dashboard/polls/#{poll.id}"}
     end
 
     test "is written in the host's own language" do
       host = insert(:user, locale: "de")
-      poll = insert(:poll, title: "Quarterly Review", user: host)
+      poll = :poll |> insert(title: "Quarterly Review", user: host) |> for_host_email()
 
       email = PollHostNudge.render(poll, :all_voted, "https://tymeslot.app/dashboard/polls/1")
 
@@ -173,6 +174,42 @@ defmodule Tymeslot.Emails.PollTemplatesTest do
       email = PollHostNudge.render(poll, :all_voted, url)
 
       assert email.to == [{poll.user.name, poll.user.email}]
+    end
+
+    test "carries the standings, marking the time with the most votes", %{results_url: url} do
+      poll = insert(:poll, title: "Quarterly Review", timezone: "Etc/UTC")
+      start_time = ~U[2030-03-04 10:00:00Z]
+
+      leading =
+        insert(:poll_time_slot,
+          poll: poll,
+          start_time: start_time,
+          end_time: DateTime.add(start_time, 1, :hour),
+          position: 0
+        )
+
+      other =
+        insert(:poll_time_slot,
+          poll: poll,
+          start_time: DateTime.add(start_time, 1, :day),
+          end_time: DateTime.add(start_time, 25, :hour),
+          position: 1
+        )
+
+      for response <- [:yes, :yes] do
+        voter = insert(:poll_participant, poll: poll, voted_at: DateTime.utc_now(:second))
+        insert(:poll_vote, participant: voter, time_slot: leading, response: response)
+        insert(:poll_vote, participant: voter, time_slot: other, response: :if_need_be)
+      end
+
+      email = PollHostNudge.render(for_host_email(poll), :deadline_passed, url)
+
+      assert email.text_body =~ "Current standings"
+      assert email.text_body =~ ~r/★ .*: 2 yes, 0 if need be, 0 no \(most votes\)/
+      assert email.text_body =~ ": 0 yes, 2 if need be, 0 no"
+      refute email.text_body =~ ~r/★ .*: 0 yes/
+      assert email.text_body =~ "2 people have voted so far."
+      assert email.html_body =~ "most votes"
     end
   end
 
@@ -265,4 +302,47 @@ defmodule Tymeslot.Emails.PollTemplatesTest do
       assert email.text_body =~ ": No"
     end
   end
+
+  describe "PollVoteDigest.render/3" do
+    test "names who voted, with the standings and a way to turn updates off" do
+      host = insert(:user, locale: "en")
+      poll = insert(:poll, title: "Quarterly Review", user: host, timezone: "Etc/UTC")
+      start_time = ~U[2030-03-04 10:00:00Z]
+
+      slot =
+        insert(:poll_time_slot,
+          poll: poll,
+          start_time: start_time,
+          end_time: DateTime.add(start_time, 1, :hour)
+        )
+
+      voters =
+        for name <- ["Ada", "Grace"] do
+          voter =
+            insert(:poll_participant, poll: poll, name: name, voted_at: DateTime.utc_now(:second))
+
+          insert(:poll_vote, participant: voter, time_slot: slot, response: :yes)
+          voter
+        end
+
+      email =
+        PollVoteDigest.render(
+          for_host_email(poll),
+          voters,
+          "https://tymeslot.app/dashboard/polls"
+        )
+
+      assert email.to == [{host.name, host.email}]
+      assert email.subject =~ "New responses on"
+      assert email.subject =~ "Quarterly Review"
+      assert email.text_body =~ "2 new responses on Quarterly Review"
+      assert email.text_body =~ "Responses from: Ada, Grace"
+      assert email.text_body =~ ": 2 yes, 0 if need be, 0 no"
+      assert email.text_body =~ "turn them off"
+      assert email.html_body =~ "https://tymeslot.app/dashboard/polls"
+    end
+  end
+
+  defp for_host_email(poll),
+    do: Repo.preload(poll, [:time_slots, user: :profile, participants: :votes])
 end

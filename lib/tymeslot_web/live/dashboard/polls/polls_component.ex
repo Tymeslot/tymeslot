@@ -236,7 +236,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   def handle_event("save_poll_details", %{"poll" => params}, socket) do
     poll_id = socket.assigns.selected_poll_id
     user_id = socket.assigns.current_user.id
-    attrs = Map.take(params, ["title", "description"])
+    attrs = Map.take(params, ["title", "description", "notify_on_vote"])
 
     case Polls.update_details(poll_id, user_id, attrs) do
       {:ok, _poll} ->

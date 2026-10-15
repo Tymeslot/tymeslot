@@ -273,6 +273,7 @@ defmodule Tymeslot.Polls.Voting do
       {:ok, stamped} ->
         Polls.broadcast_update(poll.id)
         maybe_send_receipt(participant, stamped)
+        maybe_update_host(poll)
         maybe_notify_all_voted(poll)
         {:ok, stamped}
 
@@ -305,6 +306,13 @@ defmodule Tymeslot.Polls.Voting do
     |> PollParticipantSchema.voted_changeset(DateTime.utc_now())
     |> PollParticipantQueries.update()
   end
+
+  # A host who asked to hear about new votes gets them bundled: this joins the
+  # update already waiting, or schedules one.
+  defp maybe_update_host(%PollSchema{notify_on_vote: true} = poll),
+    do: PollScheduler.schedule_vote_digest(poll)
+
+  defp maybe_update_host(_poll), do: :ok
 
   # Once everyone who asked for a link has voted, nudge the host to pick a time.
   # The count is re-checked against the database rather than the (now stale)

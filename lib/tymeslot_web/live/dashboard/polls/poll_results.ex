@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Polls
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Components.CoreComponents.Buttons
@@ -62,7 +63,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
       |> assign(:votes, vote_index(assigns.poll.participants))
       |> assign(:open?, assigns.poll.status == :open)
       |> assign(:participant_count, length(assigns.poll.participants))
-      |> assign(:leaders, leader_ids(assigns.poll.time_slots, assigns.tallies))
+      |> assign(:leaders, Polls.leading_slot_ids(assigns.poll.time_slots, assigns.tallies))
 
     ~H"""
     <Containers.card id={"poll-results-#{@poll.id}"} class="space-y-6">
@@ -237,6 +238,14 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
         value={@poll.description}
         placeholder={dgettext("dashboard_common", "Add any context for your guests")}
         errors={error_list(@errors, :description)}
+      />
+
+      <Forms.input
+        type="checkbox"
+        id={"poll-notify-on-vote-#{@poll.id}"}
+        name="poll[notify_on_vote]"
+        value={@poll.notify_on_vote}
+        label={dgettext("dashboard_common", "Email me about new votes")}
       />
 
       <div class="flex justify-end gap-2">
@@ -532,30 +541,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   defp percent(count, total), do: count / total * 100
 
   defp empty_counts, do: %{yes: 0, if_need_be: 0, no: 0}
-
-  # The slots tied on the most yes votes, breaking ties on "if need be" so a
-  # slot half the group can only just make does not outrank one they can.
-  #
-  # A badge only means something if it distinguishes. An unanswered poll has no
-  # leader, and neither does one where every slot scores the same — a poll where
-  # the group is equally free throughout is a real outcome, and marking all six
-  # slots "most votes" tells the host nothing they can act on.
-  @spec leader_ids([map()], map()) :: [binary()]
-  defp leader_ids(time_slots, tallies) do
-    scores =
-      Map.new(time_slots, fn slot ->
-        counts = Map.get(tallies, slot.id, empty_counts())
-        {slot.id, {Map.get(counts, :yes, 0), Map.get(counts, :if_need_be, 0)}}
-      end)
-
-    leaders =
-      case scores |> Map.values() |> Enum.max(fn -> {0, 0} end) do
-        {0, 0} -> []
-        best -> for {id, score} <- scores, score == best, do: id
-      end
-
-    if length(leaders) == map_size(scores), do: [], else: leaders
-  end
 
   # The weekday and month follow the organiser's language and the clock their
   # own 12/24-hour preference, as everywhere else on the dashboard.

@@ -337,6 +337,29 @@ defmodule Tymeslot.PollsTest do
     end
   end
 
+  describe "leading_slot_ids/2" do
+    test "leads on yes votes, ties broken on if need be" do
+      slots = [%{id: "a"}, %{id: "b"}, %{id: "c"}]
+
+      tallies = %{
+        "a" => %{yes: 2, if_need_be: 0, no: 0},
+        "b" => %{yes: 2, if_need_be: 1, no: 0},
+        "c" => %{yes: 0, if_need_be: 0, no: 2}
+      }
+
+      assert Polls.leading_slot_ids(slots, tallies) == ["b"]
+    end
+
+    test "no time leads when nobody is available or every time scores the same" do
+      slots = [%{id: "a"}, %{id: "b"}]
+
+      assert Polls.leading_slot_ids(slots, %{}) == []
+
+      even = %{"a" => %{yes: 1, if_need_be: 0}, "b" => %{yes: 1, if_need_be: 0}}
+      assert Polls.leading_slot_ids(slots, even) == []
+    end
+  end
+
   describe "voting_open?/1" do
     test "true for an open poll with no deadline" do
       assert Polls.voting_open?(build(:poll, status: :open, deadline_at: nil))

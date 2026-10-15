@@ -103,9 +103,10 @@ defmodule Tymeslot.Polls do
   def count_open_polls(user_id), do: PollQueries.count_open_for_user(user_id)
 
   @doc """
-  Updates an open poll's title and description, and notifies subscribers.
+  Updates an open poll's title and description, and whether the host is
+  emailed about new votes (`notify_on_vote`), and notifies subscribers.
 
-  Only these two fields, and only while the poll is open. The candidate times,
+  Only these fields, and only while the poll is open. The candidate times,
   duration, timezone, and deadline are the terms guests voted against, so they
   are not editable; a confirmed poll has already minted a meeting that carries
   its own title, and a cancelled one is history.
@@ -165,6 +166,31 @@ defmodule Tymeslot.Polls do
   @spec prune_unconfirmed_participants() :: {non_neg_integer(), nil}
   def prune_unconfirmed_participants do
     PollParticipantQueries.delete_expired_unconfirmed(PollParticipantQueries.expiry_cutoff())
+  end
+
+  @doc """
+  The slots leading on the votes in `tallies` (from `tallies/1`): those tied
+  on the most yes votes, ties broken on "if need be", so a time half the group
+  can only just make does not outrank one they can.
+
+  Empty when nobody has said yes or if need be anywhere, and when every slot
+  scores the same, since then no time leads.
+  """
+  @spec leading_slot_ids([map()], map()) :: [Ecto.UUID.t()]
+  def leading_slot_ids(time_slots, tallies) do
+    scores =
+      Map.new(time_slots, fn slot ->
+        counts = Map.get(tallies, slot.id, %{})
+        {slot.id, {Map.get(counts, :yes, 0), Map.get(counts, :if_need_be, 0)}}
+      end)
+
+    leaders =
+      case scores |> Map.values() |> Enum.max(fn -> {0, 0} end) do
+        {0, 0} -> []
+        best -> for {id, score} <- scores, score == best, do: id
+      end
+
+    if length(leaders) == map_size(scores), do: [], else: leaders
   end
 
   @doc "Whether voting is currently open: open status and no deadline, or a deadline still in the future."
