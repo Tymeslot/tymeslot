@@ -18,6 +18,12 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   (`week.css`), and the actions bar names the chosen day and time between
   Back and Next (`data-testid="paper-selection"`, announced politely).
 
+  For a group type the details say how many people it takes
+  (`GroupSession.hint`), and a seat move names the spot it is moving above
+  both views (`GroupSession.seat_move_notice`). The month's times show each
+  time's free seats (`SlotList` with the meeting type); the shared
+  `WeekGrid` shows none yet.
+
   The calendar's buttons carry the class names and test ids the shared
   suites and the visual harness drive: `calendar-day` with `data-date`,
   `calendar-day--selected`, `calendar-day--other-month`, `calendar-day--today`
@@ -36,6 +42,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Themes.Paper.Components
   alias TymeslotWeb.Themes.Shared.BookingText
+  alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.SlotList
   alias TymeslotWeb.Themes.Shared.Components.TimezonePicker
   alias TymeslotWeb.Themes.Shared.Components.WeekGrid
@@ -74,6 +81,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
       data-testid="paper-schedule"
     >
       <Components.brand theme_tokens={@theme_tokens} />
+
+      <GroupSession.seat_move_notice from={assigns[:reschedule_seat_from]} timezone={@user_timezone} />
 
       <div class={["paper-schedule", @view == "week" && "paper-schedule--week"]}>
         <.details
@@ -133,6 +142,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
               slot_interval_minutes={@slot_interval_minutes}
               duration_minutes={@duration_minutes}
               expanded_hour={@expanded_hour}
+              meeting_type={@meeting_type}
               target={@myself}
               heading_tag="h2"
               period_tag="h3"
@@ -241,6 +251,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
         </Components.fact>
         <Components.fact :if={@price} icon="hero-banknotes">{@price}</Components.fact>
       </ul>
+      <GroupSession.hint meeting_type={@meeting_type} />
       <p :if={@description} class="paper-details__description">{@description}</p>
     </aside>
     """

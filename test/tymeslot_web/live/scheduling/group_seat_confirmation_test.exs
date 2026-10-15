@@ -1,8 +1,10 @@
 defmodule TymeslotWeb.Live.Scheduling.GroupSeatConfirmationTest do
   @moduledoc """
-  A group booker's confirmation step, end to end: booking a seat through the
-  public booking page offers "Add to calendar" for the booker's own seat (the
-  file their emails invite them to), never the shared slot, whose uid would
+  A group booker's confirmation step, end to end and on every shipped theme
+  (`ThemeTestMatrix.all/0`): booking a seat through the public booking page
+  says the booking is one spot of a group session, and offers "Add to
+  calendar" for the booker's own seat (the file their emails invite them
+  to), never the shared slot, whose uid would
   open the slot's public cancel and reschedule pages. Those pages, opened
   with a group meeting's uid anyway, send the visitor to the host's booking
   page with a message they can act on.
@@ -24,6 +26,7 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSeatConfirmationTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.ThemeTestMatrix
 
   setup :verify_on_exit!
 
@@ -40,7 +43,7 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSeatConfirmationTest do
     :ok
   end
 
-  for {theme_id, theme} <- [{"1", "Quill"}, {"2", "Rhythm"}] do
+  for %{id: theme_id, name: theme} <- ThemeTestMatrix.all() do
     @tag :capture_log
     test "#{theme}: Add to calendar downloads the booker's own seat, not the shared slot",
          %{conn: conn} do
@@ -64,6 +67,13 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSeatConfirmationTest do
       |> render_submit()
 
       assert has_element?(view, "[data-testid='add-to-calendar']")
+
+      # The thank-you screen says the booking is one spot of the session.
+      assert has_element?(
+               view,
+               "[data-testid='group-session-line']",
+               "Group session: you have one of 3 spots."
+             )
 
       slot = Repo.one!(MeetingSchema)
       assert [seat] = ParticipantQueries.list_live_for_meeting(slot.id)

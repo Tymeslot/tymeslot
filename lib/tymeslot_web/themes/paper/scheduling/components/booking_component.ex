@@ -1,7 +1,9 @@
 defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.BookingComponent do
   @moduledoc """
-  Paper's booking step: the chosen meeting, day, time, length, timezone
-  and price in a quiet box at the top of the card, then where to meet, the
+  Paper's booking step: the chosen meeting, day, time (with the day it ends
+  on, when that is the next), length, timezone and price in a quiet box at
+  the top of the card, then where to meet (a choice of option, video
+  service or venue, or the one place already settled), the
   shared booking form (name and email side by side once the card is wide
   enough) with the guest field, the approval notice for a gated type, and
   Back and the submit button.
@@ -47,7 +49,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.BookingComponent do
             duration: assigns.duration
           }),
         price:
-          BookingText.price_label(assigns.meeting_type, assigns.host_currency, assigns.locale)
+          BookingText.price_label(assigns.meeting_type, assigns.host_currency, assigns.locale),
+        next_day_end: LocalizationHelpers.booking_next_day_end(assigns)
       )
 
     ~H"""
@@ -58,6 +61,13 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.BookingComponent do
         <p :if={@meeting_type} class="paper-summary__title">{@meeting_type.name}</p>
         <ul class="paper-facts" role="list">
           <Components.fact icon="hero-calendar">{@when_text}</Components.fact>
+          <Components.fact
+            :if={@next_day_end}
+            icon="hero-moon"
+            data-testid="booking-next-day-end"
+          >
+            {@next_day_end}
+          </Components.fact>
           <Components.fact icon="hero-clock">{@duration_text}</Components.fact>
           <Components.fact icon="hero-globe-alt">{Timezones.format(@user_timezone)}</Components.fact>
           <Components.fact :if={@price} icon="hero-banknotes">{@price}</Components.fact>
@@ -72,10 +82,19 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.BookingComponent do
         selected_location_id={@selected_location_id}
         video_choices={BookingLocation.video_choices(assigns)}
         selected_video_id={@selected_video_id}
+        venue_choices={BookingLocation.venue_choices(assigns)}
+        selected_venue_id={@selected_venue_id}
+        kept_location={BookingLocation.kept_location(assigns)}
         location_phone={@location_phone}
         location_error={@location_error}
         phone_required={BookingLocation.phone_required?(assigns)}
         target={@myself}
+      />
+
+      <LocationField.stated_location
+        :if={BookingLocation.stated_location?(assigns)}
+        option={BookingLocation.selected(assigns)}
+        venue_choices={BookingLocation.venue_choices(assigns)}
       />
 
       <BookingForm.booking_form

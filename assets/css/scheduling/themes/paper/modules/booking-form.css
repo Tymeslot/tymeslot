@@ -188,6 +188,88 @@
   color: var(--ink-2);
 }
 
+/* The venues an in-person option offers: one row each in the same flat box
+   as the options, so a venue's address sits under its name. The radio
+   inside reuses `.location-option__radio`. An address may run over several
+   lines, which `pre-line` keeps. */
+.paper-theme-wrapper .location-venues {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  padding: var(--space-3xs);
+  border: var(--border-width-thin) solid var(--paper-control-line);
+  border-radius: min(var(--radius-control), var(--paper-radius-box));
+  background: var(--theme-surface);
+}
+
+.paper-theme-wrapper .location-venue {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  padding: var(--space-2xs) var(--space-sm);
+  border-radius: max(0rem, calc(min(var(--radius-control), var(--paper-radius-box)) - var(--space-3xs)));
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.paper-theme-wrapper .location-venue:hover {
+  background: var(--surface-subtle);
+  color: var(--ink-1);
+}
+
+.paper-theme-wrapper .location-venue:has(.location-option__radio:focus-visible) {
+  outline: var(--paper-focus-outline);
+  outline-offset: var(--border-width-medium);
+}
+
+.paper-theme-wrapper .location-venue--selected,
+.paper-theme-wrapper .location-venue--selected:hover {
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+}
+
+.paper-theme-wrapper .location-venue__name,
+.paper-theme-wrapper .location-field__venue-name {
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.paper-theme-wrapper .location-field__venue-name {
+  color: var(--ink-1);
+}
+
+.paper-theme-wrapper .location-venue__description,
+.paper-theme-wrapper .location-field__venue-description {
+  font-size: var(--theme-font-size-xs);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.paper-theme-wrapper .location-field__venue {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+}
+
+.paper-theme-wrapper .location-field__note {
+  margin: var(--space-2xs) 0 0;
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+}
+
+/* The one place a type with nothing to choose is held at: its icon and
+   name as a fact line, then its venue or the arranged-later note. */
+.paper-theme-wrapper .location-stated__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin: 0;
+  color: var(--ink-1);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
 .paper-theme-wrapper .location-phone__label {
   color: var(--ink-1);
 }

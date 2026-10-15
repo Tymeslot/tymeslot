@@ -3,6 +3,8 @@ defmodule TymeslotWeb.Live.Scheduling.SeatRescheduleJourneyTest do
   Journey coverage for a group-booking participant moving their own seat:
   from the reschedule link in their email, through the public booking page,
   to the moved seat, and on to a fresh booking from the confirmation screen.
+  That walk runs on every shipped theme (`ThemeTestMatrix.all/0`, through
+  the `:theme` tag `RescheduleTestSetup` reads); the rest on Quill.
 
   The seat move travels as `reschedule_seat_token` rather than a meeting uid,
   so it has its own half of the reschedule context: `ReschedulePin` pins the
@@ -31,6 +33,7 @@ defmodule TymeslotWeb.Live.Scheduling.SeatRescheduleJourneyTest do
   alias Tymeslot.RescheduleTestSetup
   alias Tymeslot.Workers.EmailWorker
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
+  alias TymeslotWeb.ThemeTestMatrix
 
   setup tags do
     context = RescheduleTestSetup.reschedule_journey(tags)
@@ -103,80 +106,83 @@ defmodule TymeslotWeb.Live.Scheduling.SeatRescheduleJourneyTest do
       assert AvailabilityHelpers.request(socket).reschedule_seat_token == token
     end
 
-    @tag :capture_log
-    test "moves the seat, and \"Schedule another meeting\" then books afresh", %{
-      conn: conn,
-      profile: profile,
-      seat: seat
-    } do
-      token = seat.management_token
+    for theme <- ThemeTestMatrix.all() do
+      @tag theme: theme.id
+      @tag :capture_log
+      test "#{theme.name}: moves the seat, and \"Schedule another meeting\" then books afresh", %{
+        conn: conn,
+        profile: profile,
+        seat: seat
+      } do
+        token = seat.management_token
 
-      target = conn |> get(~p"/seat/#{token}/reschedule") |> redirected_to()
-      assert target == "/#{profile.username}/group-session?reschedule_seat_token=#{token}"
+        target = conn |> get(~p"/seat/#{token}/reschedule") |> redirected_to()
+        assert target == "/#{profile.username}/group-session?reschedule_seat_token=#{token}"
 
-      {:ok, view, _html} = live(conn, target <> "&timezone=UTC")
+        {:ok, view, _html} = live(conn, target <> "&timezone=UTC")
 
-      # The date step says which spot is moving.
-      assert has_element?(view, "[data-testid='seat-move-notice']", "Moving your spot on")
+        # The date step says which spot is moving.
+        assert has_element?(view, "[data-testid='seat-move-notice']", "Moving your spot on")
 
-      view = walk_from_schedule_to_booking_form(view, "UTC")
+        view = walk_from_schedule_to_booking_form(view, "UTC")
 
-      # The details step states where the spot is, as a new booking's does.
-      assert render(view) =~ "Main Hall"
+        # The details step states where the spot is, as a new booking's does.
+        assert render(view) =~ "Main Hall"
 
-      submit_booking(view, "Moving Participant", "mover@example.com")
+        submit_booking(view, "Moving Participant", "mover@example.com")
 
-      # So does the "rescheduled" screen, which also says the booking is one
-      # spot of a group session.
-      wait_until(fn -> has_element?(view, "[data-testid='confirmation-location']") end)
-      html = render(view)
-      assert html =~ "Main Hall"
-      assert html =~ "Group session: you have one of 3 spots."
+        # So does the "rescheduled" screen, which also says the booking is one
+        # spot of a group session.
+        wait_until(fn -> has_element?(view, "[data-testid='confirmation-location']") end)
+        html = render(view)
+        assert html =~ "Main Hall"
+        assert html =~ "Group session: you have one of 3 spots."
 
-      wait_until(fn ->
-        match?({:ok, %{cancelled_at: %DateTime{}}}, ParticipantQueries.get(seat.id))
-      end)
+        wait_until(fn ->
+          match?({:ok, %{cancelled_at: %DateTime{}}}, ParticipantQueries.get(seat.id))
+        end)
 
-      assert [moved] = live_participants("mover@example.com")
-      assert moved.id != seat.id
-      assert moved.meeting_id != seat.meeting_id
-      assert moved.management_token != token
+        assert [moved] = live_participants("mover@example.com")
+        assert moved.id != seat.id
+        assert moved.meeting_id != seat.meeting_id
+        assert moved.management_token != token
 
-      # "Add to calendar" downloads the moved seat's own entry.
-      assert html =~ ~s(/seat/#{moved.management_token}/calendar.ics")
+        # "Add to calendar" downloads the moved seat's own entry.
+        assert html =~ ~s(/seat/#{moved.management_token}/calendar.ics")
 
-      assert_enqueued(
-        worker: EmailWorker,
-        args: %{
-          "action" => "send_seat_reschedule_emails",
-          "participant_id" => moved.id,
-          "old_participant_id" => seat.id
-        }
-      )
+        assert_enqueued(
+          worker: EmailWorker,
+          args: %{
+            "action" => "send_seat_reschedule_emails",
+            "participant_id" => moved.id,
+            "old_participant_id" => seat.id
+          }
+        )
 
-      # The confirmation screen's way back to a fresh booking. Left on the
-      # socket, the spent token routed this booking through the seat move,
-      # which refused it as "already cancelled or moved".
-      view |> element("[data-testid='schedule-another']") |> render_click()
+        # The confirmation screen's way back to a fresh booking. Left on the
+        # socket, the spent token routed this booking through the seat move,
+        # which refused it as "already cancelled or moved".
+        view |> element("[data-testid='schedule-another']") |> render_click()
 
-      # The spent token leaves the address bar with the reschedule, so a
-      # reload or a shared link is a fresh booking too. The link named the
-      # meeting type, so the fresh booking starts on that type's own
-      # schedule step rather than the overview.
-      assert_patch(view, "/#{profile.username}/group-session?timezone=UTC")
-      refute has_element?(view, "[data-testid='seat-move-notice']")
+        # The spent token leaves the address bar with the reschedule, so a
+        # reload or a shared link is a fresh booking too. The link named the
+        # meeting type, so the fresh booking starts on that type's own
+        # schedule step rather than the overview.
+        assert_patch(view, "/#{profile.username}/group-session?timezone=UTC")
+        refute has_element?(view, "[data-testid='seat-move-notice']")
 
-      view = walk_from_schedule_to_booking_form(view, "UTC")
+        view = walk_from_schedule_to_booking_form(view, "UTC")
 
-      html = submit_booking(view, "Second Booker", "second@example.com")
-      refute html =~ "already been cancelled or moved"
+        html = submit_booking(view, "Second Booker", "second@example.com")
+        refute html =~ "already been cancelled or moved"
 
-      wait_until(fn -> live_participants("second@example.com") != [] end)
+        wait_until(fn -> live_participants("second@example.com") != [] end)
 
-      assert [_new_booking] = live_participants("second@example.com")
+        assert [_new_booking] = live_participants("second@example.com")
 
-      assert [%{id: still_moved_id}] = live_participants("mover@example.com")
-      assert still_moved_id == moved.id
+        assert [%{id: still_moved_id}] = live_participants("mover@example.com")
+        assert still_moved_id == moved.id
+      end
     end
   end
 

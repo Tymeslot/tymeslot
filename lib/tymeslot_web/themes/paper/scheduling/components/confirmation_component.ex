@@ -2,7 +2,10 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
   @moduledoc """
   Paper's confirmation: a check in a success-tinted circle (a clock on the
   warning tint for a request the organiser still has to accept), the
-  headline and message, the meeting's details in a quiet box, where the
+  headline and message, for a group type the line saying the booking is one
+  of its spots, the meeting's details in a quiet box (with the day it ends
+  on, when that is the next, and a note when the address is still to be
+  arranged), where the
   confirmation went, the guest's answers, and the calendar file and a new
   booking. Which status applies is `ConfirmationText`'s; only the wording
   of the headline is Paper's.
@@ -18,6 +21,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
   alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.CustomAnswers
+  alias TymeslotWeb.Themes.Shared.Components.GroupSession
+  alias TymeslotWeb.Themes.Shared.Components.LocationField
   alias TymeslotWeb.Themes.Shared.ConfirmationText
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.PathHandlers
@@ -36,7 +41,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
         held: ApprovalDisplay.awaiting_approval?(assigns),
         location: BookingLocation.chosen_display(assigns),
         calendar_path: PathHandlers.calendar_ics_path(assigns),
-        minutes: Offer.duration_minutes(assigns.meeting_type, assigns.duration)
+        minutes: Offer.duration_minutes(assigns.meeting_type, assigns.duration),
+        next_day_end: LocalizationHelpers.booking_next_day_end(assigns)
       )
 
     ~H"""
@@ -58,6 +64,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
         stage={:after}
       />
 
+      <GroupSession.confirmation_line meeting_type={@meeting_type} />
+
       <div class="paper-confirmation__details">
         <p class="paper-confirmation__meeting">
           <span :if={@meeting_type} class="paper-confirmation__meeting-name">{@meeting_type.name}</span>
@@ -70,6 +78,13 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
           <Components.fact icon="hero-clock">
             {LocalizationHelpers.format_slot_label(@selected_time)}, {Timezones.format(@user_timezone)}
           </Components.fact>
+          <Components.fact
+            :if={@next_day_end}
+            icon="hero-moon"
+            data-testid="booking-next-day-end"
+          >
+            {@next_day_end}
+          </Components.fact>
           <Components.fact :if={@organizer_profile} icon="hero-user">
             {dgettext("booking", "with %{name}", name: Profiles.display_name(@organizer_profile))}
           </Components.fact>
@@ -80,6 +95,10 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
             {Enum.join(@guest_emails, ", ")}
           </Components.fact>
         </ul>
+        <LocationField.arranged_note
+          :if={@location && BookingLocation.arranged_after_booking?(assigns)}
+          class="paper-confirmation__note"
+        />
       </div>
 
       <p class="paper-confirmation__sent">

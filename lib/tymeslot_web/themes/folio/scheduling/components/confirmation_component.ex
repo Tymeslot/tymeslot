@@ -2,8 +2,10 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
   @moduledoc """
   Folio's confirmation step: the slim masthead, the outcome (confirmed,
   rescheduled, or a request awaiting the organiser's approval) with its
-  badge, the meeting's details, the booker's answers, and the calendar file
-  and a fresh start.
+  badge, for a group type the line saying the booking is one of its spots,
+  the meeting's details (with the day it ends on, when that is the next, and
+  a note when the address is still to be arranged), the booker's answers,
+  and the calendar file and a fresh start.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -16,6 +18,8 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
   alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.CustomAnswers
+  alias TymeslotWeb.Themes.Shared.Components.GroupSession
+  alias TymeslotWeb.Themes.Shared.Components.LocationField
   alias TymeslotWeb.Themes.Shared.ConfirmationText
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.PathHandlers
@@ -29,7 +33,11 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
-    assigns = assign(assigns, :pending, ApprovalDisplay.awaiting_approval?(assigns))
+    assigns =
+      assign(assigns,
+        pending: ApprovalDisplay.awaiting_approval?(assigns),
+        next_day_end: LocalizationHelpers.booking_next_day_end(assigns)
+      )
 
     ~H"""
     <section class="folio-card folio-card--confirmation booker-card" data-locale={@locale}>
@@ -57,6 +65,8 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
           stage={:after}
         />
 
+        <GroupSession.confirmation_line meeting_type={@meeting_type} />
+
         <section class="folio-details" aria-labelledby="folio-details-heading">
           <h2 id="folio-details-heading" class="folio-eyebrow">
             {dgettext("booking", "Meeting Details")}
@@ -68,7 +78,16 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
             </div>
             <div class="folio-details__row">
               <dt>{dgettext("booking", "Time")}</dt>
-              <dd>{LocalizationHelpers.format_slot_label(@selected_time)}</dd>
+              <dd>
+                {LocalizationHelpers.format_slot_label(@selected_time)}
+                <span
+                  :if={@next_day_end}
+                  class="folio-details__note"
+                  data-testid="booking-next-day-end"
+                >
+                  {@next_day_end}
+                </span>
+              </dd>
             </div>
             <div class="folio-details__row">
               <dt>{dgettext("booking", "Timezone")}</dt>
@@ -92,7 +111,13 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
               data-testid="confirmation-location"
             >
               <dt>{dgettext("booking", "Location")}</dt>
-              <dd>{BookingLocation.chosen_display(assigns)}</dd>
+              <dd>
+                {BookingLocation.chosen_display(assigns)}
+                <LocationField.arranged_note
+                  :if={BookingLocation.arranged_after_booking?(assigns)}
+                  class="folio-details__note"
+                />
+              </dd>
             </div>
             <div :if={@guest_emails not in [nil, []]} class="folio-details__row">
               <dt>{dgettext("booking", "Guests")}</dt>

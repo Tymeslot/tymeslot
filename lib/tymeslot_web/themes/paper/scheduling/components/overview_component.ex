@@ -9,7 +9,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
   meeting types as one bordered list, each row with its name, approval
   pill and description, then its facts with their icons: length, each
   location (`MeetingTypes.location_options/1`, drawn with
-  `LocationIcons.icon/1`) and, for a paid type, its price. Under the list
+  `LocationIcons.icon/1`) and, for a paid type, its price, then, for a
+  group type, how many people it takes (`GroupSession.hint`). Under the list
   the actions bar with Next; with no meeting types the right pane says so.
 
   The card lays the panes out by its own width (`overview.css`, the frame
@@ -31,6 +32,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
   alias TymeslotWeb.Themes.Paper.Components
   alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
+  alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
 
@@ -157,6 +159,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
             <span class="paper-type__price">{@price}</span>
           </Components.fact>
         </span>
+        <GroupSession.hint meeting_type={@meeting_type} />
       </span>
       <.icon name="hero-chevron-right-mini" class="paper-type__chevron" />
     </button>

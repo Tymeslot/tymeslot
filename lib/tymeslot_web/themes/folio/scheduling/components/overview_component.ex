@@ -1,7 +1,8 @@
 defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.OverviewComponent do
   @moduledoc """
   Folio's overview: the full masthead (cover, portrait, name, headline and
-  bio), then the meeting types as cards with their descriptions in full.
+  bio), then the meeting types as cards with their descriptions in full and,
+  for a group type, how many people it takes (`GroupSession.hint`).
 
   The page's heading and instruction (the organiser's own wording, or the
   defaults) introduce the meeting types; the greeting line is not shown,
@@ -16,6 +17,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.OverviewComponent do
   alias TymeslotWeb.Themes.Folio.Components.Masthead
   alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
+  alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
 
@@ -80,6 +82,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.OverviewComponent do
                   <span :if={present?(meeting_type.description)} class="folio-meeting__description">
                     {meeting_type.description}
                   </span>
+                  <GroupSession.hint meeting_type={meeting_type} class="folio-meeting__group" />
                 </button>
               </li>
             <% end %>

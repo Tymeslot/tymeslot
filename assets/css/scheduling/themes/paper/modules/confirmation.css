@@ -170,3 +170,10 @@
     gap: var(--space-3xs);
   }
 }
+
+/* Under the details: the address is still to be arranged. */
+.paper-confirmation__details .paper-confirmation__note {
+  margin: var(--space-xs) 0 0;
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+}

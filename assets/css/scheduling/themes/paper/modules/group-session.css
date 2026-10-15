@@ -1,0 +1,38 @@
+/* Paper's group-session marks (after the shared group-session.css): flat
+   neutral boxes on the card, cornered like Paper's other quiet boxes, in
+   the card's inks rather than a tint of their own.
+
+     .group-session-hint  - a meeting type's row and the schedule's details
+     .group-session-line  - the confirmation, above the meeting's details
+     .group-session-move  - the schedule step of a seat move, above both views */
+
+.paper-theme-wrapper .group-session-hint {
+  align-self: flex-start;
+  margin-top: var(--space-2xs);
+  border-color: var(--line-1);
+  background: var(--surface-subtle);
+}
+
+/* On a chosen meeting type the hint takes the row's selected ink. */
+.paper-type[aria-pressed="true"] .group-session-hint {
+  color: var(--paper-ink-selected);
+}
+
+/* The week's compact details row: the hint takes a line of its own. */
+.paper-card--week .paper-details .group-session-hint {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.paper-theme-wrapper .group-session-line,
+.paper-theme-wrapper .group-session-move {
+  margin: 0 0 var(--space-lg);
+  border-color: var(--line-1);
+  border-radius: min(var(--radius-control), var(--paper-radius-box));
+  background: var(--surface-subtle);
+  color: var(--ink-1);
+}
+
+.paper-theme-wrapper .group-session-line-icon {
+  color: var(--ink-2);
+}

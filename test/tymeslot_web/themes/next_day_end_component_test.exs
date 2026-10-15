@@ -1,9 +1,11 @@
-defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.NextDayEndComponentTest do
+defmodule TymeslotWeb.Themes.NextDayEndComponentTest do
   use TymeslotWeb.ConnCase, async: true
 
   @moduledoc """
-  The booking and confirmation steps name the end of a meeting that runs past
-  midnight, rendered straight from the step's assigns so no schedule is needed.
+  The booking and confirmation steps of every shipped theme
+  (`ThemeTestMatrix.all/0`) name the end of a meeting that runs past
+  midnight, rendered straight from the step's assigns so no schedule is
+  needed.
   """
   @moduletag :themes
   @moduletag :bookings
@@ -12,8 +14,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.NextDayEndComponentTes
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
 
-  alias TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent
-  alias TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent
+  alias TymeslotWeb.ThemeTestMatrix
 
   @note "[data-testid='booking-next-day-end']"
 
@@ -49,21 +50,39 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.NextDayEndComponentTes
       validation_errors: %{},
       seat_calendar_url: nil,
       custom_field_answers: %{},
-      custom_fields_snapshot: []
+      custom_fields_snapshot: [],
+      theme_tokens: nil,
+      host_currency: nil
     }
   end
 
-  for {name, component} <- [booking: BookingComponent, confirmation: ConfirmationComponent] do
-    describe "the #{name} step" do
+  # A shipped theme's step component follows from its key, as its theme
+  # module does (`Themes.Core.Registry`).
+  defp step(slug, name),
+    do:
+      Module.safe_concat([
+        "TymeslotWeb.Themes",
+        Macro.camelize(slug),
+        "Scheduling.Components",
+        name
+      ])
+
+  for theme <- ThemeTestMatrix.all(),
+      {stage, component} <- [booking: "BookingComponent", confirmation: "ConfirmationComponent"] do
+    describe "#{theme.name}'s #{stage} step" do
+      @component {theme.slug, component}
+
       test "names the end when the meeting runs past midnight" do
-        html = render_component(unquote(component), assigns("11:00 PM", 120))
+        {slug, name} = @component
+        html = render_component(step(slug, name), assigns("11:00 PM", 120))
 
         assert [note] = html |> Floki.parse_document!() |> Floki.find(@note)
         assert Floki.text(note) =~ "Ends 01:00 AM on Tuesday 15 June"
       end
 
       test "says nothing for a meeting ending the day it starts" do
-        html = render_component(unquote(component), assigns("10:00 PM", 60))
+        {slug, name} = @component
+        html = render_component(step(slug, name), assigns("10:00 PM", 60))
 
         assert html |> Floki.parse_document!() |> Floki.find(@note) == []
       end

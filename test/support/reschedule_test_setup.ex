@@ -19,7 +19,8 @@ defmodule Tymeslot.RescheduleTestSetup do
 
   Takes the test's tags so that Mox runs in global mode: the booking flow does
   its calendar work in processes the test does not own, and a private-mode
-  expectation is invisible to them.
+  expectation is invisible to them. A `:theme` tag (a theme id) picks the
+  organiser's booking theme; without one it is Quill (`"1"`).
   """
   @spec reschedule_journey(map()) :: keyword()
   def reschedule_journey(tags) do
@@ -34,7 +35,7 @@ defmodule Tymeslot.RescheduleTestSetup do
       insert(:profile,
         user: user,
         username: "reschedule-host",
-        booking_theme: "1",
+        booking_theme: Map.get(tags, :theme, "1"),
         timezone: timezone
       )
 

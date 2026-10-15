@@ -1,7 +1,9 @@
 defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.BookingComponent do
   @moduledoc """
-  Folio's booking step: the slim masthead, a summary of the chosen time,
-  the location choice, the shared booking form (with the guest field) and
+  Folio's booking step: the slim masthead, a summary of the chosen time
+  (with the day it ends on, when that is the next), the location choice (an
+  option, video service or venue, or the one place already settled), the
+  shared booking form (with the guest field) and
   the approval notice, then the way back and the submit button.
   """
   use TymeslotWeb, :live_component
@@ -30,6 +32,8 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.BookingComponent do
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
+    assigns = assign(assigns, :next_day_end, LocalizationHelpers.booking_next_day_end(assigns))
+
     ~H"""
     <section class="folio-card folio-card--booking booker-card" data-locale={@locale}>
       <Masthead.masthead
@@ -56,6 +60,9 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.BookingComponent do
               {LocalizationHelpers.format_slot_label(@selected_time) ||
                 dgettext("booking", "No time selected")}
             </dd>
+            <dd :if={@next_day_end} class="folio-summary__note" data-testid="booking-next-day-end">
+              {@next_day_end}
+            </dd>
           </div>
           <div class="folio-summary__item">
             <dt class="folio-eyebrow">{dgettext("booking", "Timezone")}</dt>
@@ -73,10 +80,19 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.BookingComponent do
           selected_location_id={@selected_location_id}
           video_choices={BookingLocation.video_choices(assigns)}
           selected_video_id={@selected_video_id}
+          venue_choices={BookingLocation.venue_choices(assigns)}
+          selected_venue_id={@selected_venue_id}
+          kept_location={BookingLocation.kept_location(assigns)}
           location_phone={@location_phone}
           location_error={@location_error}
           phone_required={BookingLocation.phone_required?(assigns)}
           target={@myself}
+        />
+
+        <LocationField.stated_location
+          :if={BookingLocation.stated_location?(assigns)}
+          option={BookingLocation.selected(assigns)}
+          venue_choices={BookingLocation.venue_choices(assigns)}
         />
 
         <div class="folio-booking">

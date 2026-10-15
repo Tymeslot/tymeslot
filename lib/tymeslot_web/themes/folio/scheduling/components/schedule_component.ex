@@ -1,8 +1,10 @@
 defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ScheduleComponent do
   @moduledoc """
   Folio's schedule step: the slim masthead, then one column: the step's
-  title and the meeting's length, the timezone picker, a month calendar and
-  the chosen day's times (the shared `SlotList`), and the way on and back.
+  title, the meeting's length and, for a group type, how many people it
+  takes (`GroupSession.hint`), the spot a seat move is moving, the timezone
+  picker, a month calendar and the chosen day's times (the shared
+  `SlotList`, with a group type's seats), and the way on and back.
 
   The month buttons are labelled with the month they open, so they need no
   string of their own; they also carry `calendar-nav-button`, the class the
@@ -16,6 +18,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Themes.Folio.Components.Masthead
   alias TymeslotWeb.Themes.Shared.BookingText
+  alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.SlotList
   alias TymeslotWeb.Themes.Shared.Components.TimezonePicker
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -60,7 +63,13 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ScheduleComponent do
               advance: LocalizationHelpers.format_advance_booking_days(@booking_window_days)
             )}
           </p>
+          <GroupSession.hint meeting_type={@meeting_type} />
         </header>
+
+        <GroupSession.seat_move_notice
+          from={assigns[:reschedule_seat_from]}
+          timezone={@user_timezone}
+        />
 
         <div class="folio-timezone">
           <%!-- Visual label only: the trigger carries its own accessible name. --%>
@@ -182,6 +191,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ScheduleComponent do
           slot_interval_minutes={@slot_interval_minutes}
           duration_minutes={@duration_minutes}
           expanded_hour={@expanded_hour}
+          meeting_type={@meeting_type}
           target={@myself}
           heading_tag="h2"
           period_tag="h3"
