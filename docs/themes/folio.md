@@ -10,7 +10,7 @@ Coaches, therapists, consultants, writers and freelancers whose booking page is 
 
 ## Journey
 
-`Paged`, the classic journey (`steps:`), with no step indicator: the overview (the full masthead, with the cover, the organiser's portrait, name, headline and bio, then the meeting types as cards with their descriptions in full), the schedule (a slim masthead, then one column with the meeting's length, the timezone, a month calendar and the chosen day's times), the questions one per page when the meeting type has any, the booking form under a summary of the chosen time, then the confirmation with the meeting's details and the visitor's answers. Nothing is defaulted. The spec takes Folio next to one continuous page that reads like a personal site, each section unlocking below the last with a sticky summary bar, and no card at all.
+`Paged`, the classic journey (`steps:`), with no step indicator: the overview (the full masthead, with the cover, the organiser's portrait, name, headline and bio, then the meeting types as cards with their descriptions in full), the schedule (a slim masthead, then one column with the meeting's length, the timezone, a month calendar and the chosen day's times), the questions one per page when the meeting type has any, the booking form under a summary of the chosen time, then the confirmation with the meeting's details and the visitor's answers. Nothing is defaulted. Folio's next step is one continuous page that reads like a personal site, each section unlocking below the last with a sticky summary bar, and no card at all.
 
 ## Look
 
@@ -29,6 +29,8 @@ Today Folio shares the booking copy every theme shares, its heading naming the o
 - **Lines:** section "Ways to work with me"; time prompt "When suits you?"; details "A little about you"; empty "I'm fully booked this month. Try the next one."; button "Request this time" (approval) or "Book our session"; confirmation "See you on Thursday, Mia"; slot taken "Someone took that time a moment ago. Here are the nearest ones."
 
 ## Axes
+
+The axes are where Folio is going, not only today's page: `flow`, `spatial` and `voice` are the continuous page, the full-bleed layout without a card and the personal voice still to land, not today's paged journey, card and shared copy.
 
 <!-- axes:start -->
 | Axis | Value |

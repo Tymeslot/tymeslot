@@ -20,19 +20,12 @@ defmodule TymeslotWeb.Themes.PersonaSheetsTest do
   @guide "docs/THEME_DEVELOPMENT_GUIDE.md"
   @axes [:flow, :entry, :spatial, :time_view, :conversion, :voice, :surface]
 
-  # `axes_table/1` reads the tables' words with `String.to_existing_atom/1`,
-  # and an axis value is an existing atom only once `Axes` is loaded, which a
-  # test that reads its table first would not have done yet.
-  setup_all do
-    Code.ensure_loaded!(Axes)
-    :ok
-  end
-
   # The rows between the first `<!-- axes:start -->` and the next
   # `<!-- axes:end -->` in `path`, as `{axis, values}`: the backticked words
-  # of each row, the first naming the axis. The guide's sheet template
-  # repeats the markers further down, inside a code block; only the first
-  # pair is read.
+  # of each row, the first naming the axis. They stay strings, so a misspelt
+  # value shows in the assertion's diff. The guide's sheet template repeats
+  # the markers further down, inside a code block; only the first pair is
+  # read.
   defp axes_table(path) do
     [_before, rest] = path |> File.read!() |> String.split("<!-- axes:start -->", parts: 2)
     [table, _after] = String.split(rest, "<!-- axes:end -->", parts: 2)
@@ -43,7 +36,7 @@ defmodule TymeslotWeb.Themes.PersonaSheetsTest do
         |> Regex.scan(line, capture: :all_but_first)
         |> List.flatten()
 
-      {String.to_existing_atom(axis), Enum.map(values, &String.to_existing_atom/1)}
+      {axis, values}
     end
   end
 
@@ -56,7 +49,11 @@ defmodule TymeslotWeb.Themes.PersonaSheetsTest do
   end
 
   test "the guide lists every axis once, in order, with exactly the values Axes accepts" do
-    assert axes_table(@guide) == Enum.map(@axes, &{&1, Axes.values(&1)})
+    assert axes_table(@guide) ==
+             for(
+               axis <- @axes,
+               do: {Atom.to_string(axis), Enum.map(Axes.values(axis), &Atom.to_string/1)}
+             )
   end
 
   test "there are shipped themes to hold to their sheets" do
@@ -68,9 +65,13 @@ defmodule TymeslotWeb.Themes.PersonaSheetsTest do
       table = axes_table(sheet(unquote(theme.slug)))
       module = ThemeInfo.get_theme_module(unquote(theme.id))
 
-      assert Enum.map(table, &elem(&1, 0)) == @axes
+      assert Enum.map(table, &elem(&1, 0)) == Enum.map(@axes, &Atom.to_string/1)
       assert Enum.reject(table, &match?({_axis, [_value]}, &1)) == []
-      assert Map.new(table, fn {axis, [value]} -> {axis, value} end) == Map.new(module.axes())
+
+      assert Map.new(table, fn {axis, [value]} -> {axis, value} end) ==
+               Map.new(module.axes(), fn {axis, value} ->
+                 {Atom.to_string(axis), Atom.to_string(value)}
+               end)
     end
 
     test "#{theme.name}: its persona sheet tells the story its theme declares, word for word" do

@@ -50,6 +50,6 @@ Quill is the closest shipped theme: the two differ on spatial and time view, two
 
 Small, each its own commit with a reviewed visual pass, never a redesign:
 
-- Rhythm's own voice (the brief above): copy only, through its voice module. This is the one the spec commits to.
+- Rhythm's own voice (the brief above): copy only, through its voice module. This is the one planned next.
 - A mood line: an optional tagline the organiser writes, set large over the video on the first slide before the card appears, so the atmosphere comes first, as the story says.
 - Slides that follow the video: slide transitions take their timing from the background's motion preset instead of one fixed duration.

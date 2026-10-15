@@ -10,11 +10,11 @@ Someone who used Calendly or cal.com, a team that white-labels its page, an orga
 
 ## Journey
 
-`Paged`, the classic journey (`steps:`) on one card, with no step indicator: the overview (the organiser's introduction beside the meeting types as one bordered list, each with its length, locations and price), the schedule (a month calendar with the chosen day's times, or a week of free times where one click picks the day and the time together), the questions one at a time when the meeting type has any, the booking form under a quiet summary of the chosen meeting and time, then the confirmation with the details and where they were sent. Nothing is defaulted; the visitor chooses every fact. The spec takes Paper next to two working screens: choose, then schedule, questions and details together on one screen.
+`Paged`, the classic journey (`steps:`) on one card, with no step indicator: the overview (the organiser's introduction beside the meeting types as one bordered list, each with its length, locations and price), the schedule (a month calendar with the chosen day's times, or a week of free times where one click picks the day and the time together), the questions one at a time when the meeting type has any, the booking form under a quiet summary of the chosen meeting and time, then the confirmation with the details and where they were sent. Nothing is defaulted; the visitor chooses every fact. Paper's next step is two working screens: choose, then schedule, questions and details together on one screen.
 
 ## Look
 
-One flat card on the tone's canvas (neutral, cool or warm), light, dark or following the visitor's system, with one accent colour. The card widens for the overview and the week (from 40rem to 64rem) and lays its panes out by its own width. System font, Inter or IBM Plex Sans; tabular numerals for times. The organiser's logo, when uploaded, sits top-left of every card. It never has a background behind the card: no gradient, image, video or glass.
+One flat card on the tone's canvas (neutral, cool or warm), light, dark or following the visitor's system, with one accent colour. The card is 40rem, widening to 64rem for the overview and the month schedule and to 72rem for the week, and lays its panes out by its own width. System font, Inter or IBM Plex Sans; tabular numerals for times. The organiser's logo, when uploaded, sits top-left of every card. It never has a background behind the card: no gradient, image, video or glass.
 
 ## Options
 
@@ -30,7 +30,7 @@ Today Paper shares the booking copy every theme shares, its heading naming the o
 
 ## Axes
 
-The time view is the default calendar view; an organiser can switch Paper to a week of free times.
+The axes are where Paper is going, not only today's page: `flow` and `voice` are the two working screens and the neutral voice still to land, not today's paged journey and shared copy. The time view is the default calendar view; an organiser can switch Paper to a week of free times.
 
 <!-- axes:start -->
 | Axis | Value |

@@ -26,7 +26,7 @@ Every theme takes one value on each axis. Two themes that share most values tell
 
 ### The rubric
 
-Two shipped themes must differ on at least three axes. It is a test, not a review habit: `test/tymeslot_web/themes/theme_rubric_test.exs` compares the axes of every pair of shipped themes (`ThemeTestMatrix.all/0`) and fails under three, so a theme that drifts towards another fails the build. One pair is exempted by name, with its reason in the test: Quill and Rhythm differ on two axes (spatial and time view) until Rhythm's own voice lands, which makes three.
+Two shipped themes must differ on at least three axes. It is a test, not a review habit: `test/tymeslot_web/themes/theme_rubric_test.exs` compares the axes of every pair of shipped themes (`ThemeTestMatrix.ids/0`) and fails under three, so a theme that drifts towards another fails the build. One pair is exempted by name, with its reason in the test: Quill and Rhythm differ on two axes (spatial and time view) until Rhythm's own voice lands, which makes three.
 
 Check a new sheet before writing code: count the axes on which it differs from every shipped theme's sheet. Under three, change the journey, the look or the voice the story asks for until it passes, never only the colours: a theme that differs from another by its palette alone tells the same story.
 
@@ -348,6 +348,8 @@ defmodule TymeslotWeb.Themes.Aurora.Theme do
     ]
 end
 ```
+
+The example shows the classic journey (`flow: :paged_wizard`, a `steps:` theme) for brevity. A new theme takes its journey from its persona sheet: see [Journeys: facts, moments and navigators](#2-journeys-facts-moments-and-navigators), and the journey fixtures (`test/support/journey_fixtures/`) for worked examples of a continuous, a transcript and a time-first journey.
 
 `use TymeslotWeb.Themes.Core.Theme` declares `TymeslotWeb.Themes.Core.Behaviour` and generates every callback. The render callbacks dispatch by convention to `render/1` in modules under your theme's namespace: `Meeting.Reschedule`, `Meeting.Cancel`, `Meeting.CancelConfirmed`, `Poll.Voting`, `Payment.Processing` and `Payment.Cancelled`. A missing one is a compile warning, which the build treats as an error. Or name a shell: `use TymeslotWeb.Themes.Core.Theme, ..., page_shell: &MyTheme.Pages.page_shell/1` gives the theme all six pages from `Shared.DefaultPages`, each shared body inside that function component, which receives `page`, `theme_tokens`, `locale` and `language_dropdown_open` (the last three `nil` on the payment pages) and draws the theme's wrapper and a `booker-card` card. Import `shared/components/manage-pages.css` and set the tokens its header lists. Folio's `pages.ex` is the shipped example, the fixture theme's the smallest. Override a callback (with `@impl TymeslotWeb.Themes.Core.Behaviour`) only if your theme needs a different mapping. An override replaces every clause of that callback, so one that handles only some pages or actions must call `super/2` for the rest. The description must be a `dgettext_noop/2` call; `metadata/0` translates it at call time.
 

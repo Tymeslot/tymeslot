@@ -25,8 +25,8 @@ A colour palette (a preset scheme or a custom seed colour) and a background of a
 Polished and friendly. The shared booking copy is Quill's voice.
 
 - **Tone:** confident, warm and businesslike; it welcomes rather than instructs.
-- **Rules:** short, plain labels; one exclamation mark at most, in the welcome; the organiser introduced by name when there is one.
-- **Lines:** heading "Let's Connect!"; greeting "Hi! I'm Sarah Rodriguez."; instruction "Pick an option below."; button "Next".
+- **Rules:** short, plain labels; exclamation marks in the welcome and the confirmation headline; the organiser introduced by name when there is one.
+- **Lines:** heading "Let's Connect!", with the greeting "Hi! I'm Sarah Rodriguez."; meeting-type prompt "Pick an option to get started."; time prompt "Select a Date & Time"; details prompt "Enter Your Details"; button "Book Meeting"; confirmation "Meeting Confirmed!"; slot taken "This time slot is no longer available. Please select a different time."
 
 ## Axes
 
