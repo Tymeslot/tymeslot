@@ -4,8 +4,8 @@ defmodule TymeslotWeb.Test.FixtureTheme.Voice do
   words (the generic heading, the greeting, the instruction, the
   held-request sentence without an organiser name, the submit button and the
   notice for a time taken meanwhile), every other line left to the shared
-  wording. It proves a theme's voice
-  reaches `BookingText`, `ConfirmationText` and `BookingLabels`, and that a
+  wording. It proves a theme's voice reaches `BookingText`,
+  `ConfirmationText`, `BookingLabels` and `BookingErrorMessage`, and that a
   line it leaves alone (the request labels, the sentences naming the
   organiser) keeps the shared wording. Its strings live in the test build
   only, which extraction never compiles; a shipped theme's voice is

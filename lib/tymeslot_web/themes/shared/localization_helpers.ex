@@ -295,8 +295,9 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
   @doc """
   `weekday_name/1` as it reads inside a sentence: German nouns and English
-  weekdays keep their capital; the other catalogues capitalise a weekday
-  only for use as a heading, so here it is lower-cased ("jeudi", "giovedì").
+  weekdays keep their capital; in the other catalogues (French, Italian,
+  Czech, Ukrainian, Polish, Portuguese) a weekday is capitalised only as a
+  heading, so here it is lower-cased ("jeudi", "giovedì").
   """
   @spec mid_sentence_weekday(1..7) :: String.t()
   def mid_sentence_weekday(day) do

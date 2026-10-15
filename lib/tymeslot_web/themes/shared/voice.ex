@@ -2,12 +2,12 @@ defmodule TymeslotWeb.Themes.Shared.Voice do
   @moduledoc """
   A theme's own wording of the booking lines every theme shares.
 
-  `BookingText`, `ConfirmationText`, `BookingLabels` and `BookingErrorMessage`
-  decide which line a
-  page shows; a theme's voice only words it. Each of those modules asks the
-  rendering theme's voice first (`line/4`) and keeps the shared wording when
-  the theme has no voice or the voice leaves the line alone. A theme names
-  its voice with `use TymeslotWeb.Themes.Core.Theme, voice: MyTheme.Voice`.
+  `BookingText`, `ConfirmationText`, `BookingLabels` and
+  `BookingErrorMessage` decide which line a page shows; a theme's voice only
+  words it. Each of those modules asks the rendering theme's voice first
+  (`line/4`) and keeps the shared wording when the theme has no voice or the
+  voice leaves the line alone. A theme names its voice with
+  `use TymeslotWeb.Themes.Core.Theme, voice: MyTheme.Voice`.
 
   A voice implements `c:text/2`: given a key and its bindings, the line in
   the theme's words, or `nil` to keep the shared one. Each line is a literal
