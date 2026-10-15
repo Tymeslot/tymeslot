@@ -688,6 +688,7 @@ msgstr ""
 #: lib/tymeslot_web/themes/folio/theme.ex
 #, elixir-autogen, elixir-format
 msgid "People book me, not a time slot. Before they pick a date, they should know who I am, what I do, and whether we're a fit."
+msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format

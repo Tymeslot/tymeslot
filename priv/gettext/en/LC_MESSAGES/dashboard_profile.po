@@ -307,6 +307,7 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Shown on your booking page by themes that introduce you, such as Folio. Leave an empty line between paragraphs."
+msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
 #, elixir-autogen, elixir-format
