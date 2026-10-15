@@ -200,8 +200,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   end
 
   defp send_solo_cancellation_emails(meeting, appointment_details) do
-    {organizer_result, attendee_result} =
-      Config.email_service_module().send_cancellation_emails(appointment_details)
+    {organizer_result, attendee_result} = send_cancellations(meeting, appointment_details)
 
     DeliveryOutcome.from_dual_send(
       "cancellation",
@@ -209,6 +208,25 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
       organizer_result,
       attendee_result
     )
+  end
+
+  # A meeting the host manages (confirmed from a poll) has no booker: the
+  # person in its attendee fields is a guest, invited, reminded and told of
+  # changes with the other guests, so the booking emails with their
+  # reschedule and cancel links are never sent to them.
+  defp booker?(meeting), do: not MeetingSchema.managed_by_host?(meeting)
+
+  defp send_cancellations(meeting, appointment_details) do
+    email_service = Config.email_service_module()
+
+    if booker?(meeting) do
+      email_service.send_cancellation_emails(appointment_details)
+    else
+      {email_service.send_cancellation_email_to_organizer(
+         appointment_details.organizer_email,
+         appointment_details
+       ), {:ok, :skipped}}
+    end
   end
 
   defp send_confirmation_emails(meeting) do
@@ -231,7 +249,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
       appointment_details = AppointmentBuilder.from_meeting(meeting)
 
       need_organizer? = !meeting.organizer_email_sent
-      need_attendee? = !meeting.attendee_email_sent
+      need_attendee? = !meeting.attendee_email_sent and booker?(meeting)
 
       # The join link itself is a credential for link-based providers, so only
       # whether there is one is logged; `has_meeting_url` is what the branch
@@ -363,7 +381,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   defp send_solo_reminder_emails(meeting, reminder_value, reminder_unit) do
     status = reminder_sent_status(meeting, reminder_value, reminder_unit)
     need_organizer? = !status.organizer
-    need_attendee? = !status.attendee
+    need_attendee? = !status.attendee and booker?(meeting)
 
     appointment_details =
       AppointmentBuilder.from_meeting(meeting, %{value: reminder_value, unit: reminder_unit})

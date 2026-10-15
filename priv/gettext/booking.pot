@@ -1467,3 +1467,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Plenty left"
 msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting was arranged by a poll, so only its host can move it. If the new time doesn't suit you, reply to your invitation."
+msgstr ""

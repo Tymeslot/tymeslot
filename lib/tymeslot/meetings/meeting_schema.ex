@@ -287,6 +287,12 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     field(:custom_fields_snapshot, {:array, :map}, default: [])
     field(:custom_field_answers, :map, default: %{})
 
+    # A meeting confirmed from a poll: it has no booker. Everyone who answered
+    # the poll is a guest, the person in the attendee fields included (they
+    # are there because a calendar entry needs one), and only the host moves
+    # or cancels it. See `managed_by_host?/1`.
+    field(:managed_by_host, :boolean, default: false)
+
     # Snapshot of the meeting type's show_as_free setting at booking time —
     # drives TRANSP/transparency on the calendar event written to the host.
     field(:show_as_free, :boolean, default: false)
@@ -403,7 +409,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :utm_term,
     :referrer_host,
     :tracking_params,
-    :visitor_hash
+    :visitor_hash,
+    :managed_by_host
   ]
 
   @group_required_fields [
@@ -572,6 +579,16 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   """
   @spec group?(t()) :: boolean
   def group?(%__MODULE__{capacity: capacity}), do: capacity > 1
+
+  @doc """
+  Whether only the host manages the meeting: one confirmed from a poll. Its
+  attendee is a guest like everyone else, so they are sent no booking emails
+  and the public cancel and reschedule pages refuse it; the host moves it
+  from the dashboard instead (`Tymeslot.Bookings.Reschedule.move_by_host/3`).
+  """
+  @spec managed_by_host?(map()) :: boolean()
+  def managed_by_host?(%{managed_by_host: true}), do: true
+  def managed_by_host?(_meeting), do: false
 
   @doc """
   The link the organiser joins the video call with: their own (host) room link

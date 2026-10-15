@@ -576,3 +576,8 @@ msgstr "Не вдалося скасувати зустріч. Спробуйт�
 #, elixir-autogen, elixir-format
 msgid "This is a group session, so it cannot be changed from this link. To cancel or move your spot, use the links in your confirmation email."
 msgstr "Це групова зустріч, тому її не можна змінити за цим посиланням. Щоб скасувати або перенести своє місце, скористайтеся посиланнями з листа-підтвердження."
+
+#: lib/tymeslot_web/themes/core/meeting_management.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting was arranged by a poll, so only its host can move or cancel it. If you can't make it, use \"Can't make it\" in your invitation, or reply to it."
+msgstr "Цю зустріч призначено за опитуванням, тому лише організатор може перенести або скасувати її. Якщо ви не можете прийти, скористайтеся «Не зможу прийти» у запрошенні або дайте відповідь на нього."

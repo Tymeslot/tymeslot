@@ -576,3 +576,8 @@ msgstr "La réunion n'a pas pu être annulée. Veuillez réessayer."
 #, elixir-autogen, elixir-format
 msgid "This is a group session, so it cannot be changed from this link. To cancel or move your spot, use the links in your confirmation email."
 msgstr "Il s'agit d'une session de groupe : elle ne peut donc pas être modifiée depuis ce lien. Pour annuler ou déplacer votre place, utilisez les liens de votre e-mail de confirmation."
+
+#: lib/tymeslot_web/themes/core/meeting_management.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting was arranged by a poll, so only its host can move or cancel it. If you can't make it, use \"Can't make it\" in your invitation, or reply to it."
+msgstr "Cette réunion a été fixée par un sondage : seul son organisateur peut la déplacer ou l'annuler. Si vous ne pouvez pas venir, utilisez « Je ne pourrai pas venir » dans votre invitation, ou répondez-y."
