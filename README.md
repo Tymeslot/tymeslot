@@ -29,11 +29,31 @@ Built on Elixir/OTP, so it keeps running while you sleep.
 
 <br />
 
-<img src="./priv/static/images/demo/quill.gif" alt="Booking a meeting on a Tymeslot page — pick a duration, choose a time, confirm" width="900" />
+<img src="./priv/static/images/demo/quill.gif" alt="Booking a meeting on a Tymeslot page in the Quill theme" width="900" />
 
-<sub>A real booking, start to finish: pick a duration, choose a time, done. &nbsp;·&nbsp; <a href="./priv/static/images/demo/quill.mp4">Watch in HD →</a></sub>
+<sub>A real booking on Quill, start to finish. Each theme tells its own booking story: <a href="#booking-themes">meet them</a>. &nbsp;·&nbsp; <a href="./priv/static/images/demo/quill.mp4">Watch in HD →</a></sub>
 
 </div>
+
+<br />
+
+## Booking themes
+
+Every booking theme starts from a person and the way they like to be booked, and follows their story: its journey, its look and its voice. Each has a persona sheet saying who it is for and why it looks and behaves as it does.
+
+<p align="center">
+<a href="./docs/themes/quill.md"><img src="./priv/static/images/ui/theme-previews/quill-theme-preview.webp" alt="The Quill booking page" width="200" /></a>
+<a href="./docs/themes/rhythm.md"><img src="./priv/static/images/ui/theme-previews/rhythm-theme-preview.webp" alt="The Rhythm booking page" width="200" /></a>
+<a href="./docs/themes/paper.md"><img src="./priv/static/images/ui/theme-previews/paper-theme-preview.webp" alt="The Paper booking page" width="200" /></a>
+<a href="./docs/themes/folio.md"><img src="./priv/static/images/ui/theme-previews/folio-theme-preview.webp" alt="The Folio booking page" width="200" /></a>
+</p>
+
+- **[Quill](docs/themes/quill.md)**: for consultants and professional services whose clients should feel they are booking someone established.
+- **[Rhythm](docs/themes/rhythm.md)**: for creatives whose visitors should feel the atmosphere first: motion, mood, then a time.
+- **[Paper](docs/themes/paper.md)**: for organisers who want no personality on the page, just clear, fast and in their colour, so people book and get on with their day.
+- **[Folio](docs/themes/folio.md)**: for coaches, therapists and freelancers whose visitors should know who they are, what they do and whether they're a fit before they pick a date.
+
+A new theme starts the same way, from its persona sheet: see [Start from a story](docs/THEME_DEVELOPMENT_GUIDE.md#start-from-a-story).
 
 <br />
 

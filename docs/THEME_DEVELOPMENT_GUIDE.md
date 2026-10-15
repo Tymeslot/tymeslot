@@ -2,6 +2,86 @@
 
 This guide explains how to create new themes for Tymeslot.
 
+## Start from a story
+
+A booking theme is a persona's story, and the story may change the journey itself, not only its look. Before any file, write the theme's **persona sheet**: who the organiser is, the sentence they would say about how they want to be booked, and the journey, look, options and voice that follow from it. Design follows the persona. A new theme does not reach for the classic five moments (`steps:`) by default: choose the flow, the entry point and the time view the story asks for, and use the classic journey only when the story is the classic one.
+
+One sheet per theme lives at `docs/themes/<key>.md`; the shipped ones are the examples: [Quill](themes/quill.md), [Rhythm](themes/rhythm.md), [Paper](themes/paper.md) and [Folio](themes/folio.md). The theme's `story:` and `axes:` (on `use TymeslotWeb.Themes.Core.Theme`) are the sheet's, word for word: `persona_sheets_test.exs` fails for a shipped theme without a sheet, for a sheet whose story or axes differ from its theme module's, and for a sheet this guide does not link. The same sentence is the theme's story in onboarding ("Which of these sounds like you?") and on the marketing site.
+
+### The seven axes
+
+Every theme takes one value on each axis. Two themes that share most values tell the same story, whatever their colours. The values are the ones `TymeslotWeb.Themes.Core.Axes.values/1` accepts, and `use TymeslotWeb.Themes.Core.Theme` refuses any other at compile time. A persona that needs a value no axis has adds it to `Axes` and to this table in the same commit; `persona_sheets_test.exs` holds the table to `Axes`.
+
+<!-- axes:start -->
+| Axis | Values | What it decides |
+|---|---|---|
+| `flow` | `paged_wizard`, `two_screen`, `continuous`, `conversation`, `time_first` | How the moments meet the screen: one per screen, two working screens, one scrolling page, a conversation, or the free times first |
+| `entry` | `meeting_type_first`, `time_first`, `person_first`, `questions_first` | What a visitor meets first |
+| `spatial` | `centred_card`, `wide_card`, `split_card`, `split_screen`, `full_bleed_editorial`, `mobile_first_stack`, `chat_column`, `typographic_grid` | How the page is laid out |
+| `time_view` | `month_grid`, `week_strip`, `week_grid`, `next_slots`, `agenda_index`, `day_chips` | How free times are shown |
+| `conversion` | `none`, `atmosphere`, `bio_and_cover`, `host_video`, `work_samples` | What persuades a visitor to book |
+| `voice` | `neutral`, `polished`, `evocative`, `personal`, `direct`, `brisk`, `terse`, `warm` | How the page speaks |
+| `surface` | `glass`, `flat_light_card`, `flat_bold`, `editorial_print`, `utilitarian`, `brutalist`, `soft_bubbles` | What the page is made of |
+<!-- axes:end -->
+
+### The rubric
+
+Two shipped themes must differ on at least three axes. It is a test, not a review habit: `test/tymeslot_web/themes/theme_rubric_test.exs` compares the axes of every pair of shipped themes (`ThemeTestMatrix.all/0`) and fails under three, so a theme that drifts towards another fails the build. One pair is exempted by name, with its reason in the test: Quill and Rhythm differ on two axes (spatial and time view) until Rhythm's own voice lands, which makes three.
+
+Check a new sheet before writing code: count the axes on which it differs from every shipped theme's sheet. Under three, change the journey, the look or the voice the story asks for until it passes, never only the colours: a theme that differs from another by its palette alone tells the same story.
+
+### The persona sheet
+
+Copy this into `docs/themes/<key>.md`, link it from the list above, and fill every section. The Story line is the theme's `story:` msgid exactly, after `> `; the Axes table gives one value per axis, in this order.
+
+```markdown
+# <Name>: <the persona in a few words>
+
+## Persona
+
+Who the organiser is, in one paragraph: their work, where their visitors come from and in what frame of mind, and what they find wrong with the shipped themes.
+
+## Story
+
+> The sentence the organiser would say about being booked, first person, in their own words.
+
+## Journey
+
+The navigator, the moments in order and the facts each collects, any fact a moment defaults instead of asking, and what the confirmation shows.
+
+## Look
+
+The spatial model, the surface, type, colour and motion. What it never does (another theme's surface, say).
+
+## Options
+
+The option groups the organiser gets, with their defaults.
+
+## Voice
+
+- **Tone:** how it sounds.
+- **Rules:** what it always and never does.
+- **Lines:** the heading, the meeting-type prompt, the time prompt, the details prompt, the button, the confirmation, the slot-taken message.
+
+## Axes
+
+<!-- axes:start -->
+| Axis | Value |
+|---|---|
+| `flow` | `<value>` |
+| `entry` | `<value>` |
+| `spatial` | `<value>` |
+| `time_view` | `<value>` |
+| `conversion` | `<value>` |
+| `voice` | `<value>` |
+| `surface` | `<value>` |
+<!-- axes:end -->
+
+## Rubric
+
+The closest shipped themes, each with the axes this one differs from it on (three at least).
+```
+
 ## Architecture Overview
 
 The theme system uses a centralized registry pattern that eliminates magic strings and provides type-safe theme access.
@@ -190,7 +270,7 @@ assets/css/scheduling/themes/aurora/
 └── theme.css
 ```
 
-**Tip**: Copy an existing theme as a starting point and modify it: Quill or Rhythm for a theme with a background and pages of its own, Folio for one built on the shared option groups and a `page_shell:`.
+**Tip**: Start from the persona sheet ([Start from a story](#start-from-a-story)); once its axes pass the rubric, copy the shipped theme closest to the journey it chose and modify it.
 
 ### 2. Register Your Theme
 
@@ -1400,7 +1480,7 @@ LocalizationHelpers.format_date(@selected_date)
 
 ### Step-by-Step Implementation
 
-Copy an existing theme (Quill, Rhythm or Folio), rename its files and modules to your theme's name, then work through the [Summary Checklist](#summary-checklist) in order: it lists every file and line a new theme touches.
+Write the theme's persona sheet first ([Start from a story](#start-from-a-story)) and check its axes against the rubric. Then copy the shipped theme closest to the journey the sheet chose, rename its files and modules to your theme's name, and work through the [Summary Checklist](#summary-checklist) in order: it lists every file and line a new theme touches.
 
 ### What to Copy vs. What to Customize
 
@@ -1468,7 +1548,7 @@ Logger.debug("Socket assigns: #{inspect(socket.assigns)}")
 ✅ **Keep LiveView thin** - `live.ex` holds the `use SchedulingLive` line and, at most, your own event hooks; the page lives in the wrapper and step components
 ✅ **Use LocalizationHelpers** - For all date/time formatting
 ✅ **Test with production checklist** - Automated validation catches issues early
-✅ **Copy existing themes** - Rhythm and Quill are proven implementations
+✅ **Start from a persona sheet** - its axes pass the rubric before any code is written; then copy the shipped theme closest to its journey
 
 ### Don'ts
 
@@ -1483,6 +1563,7 @@ Logger.debug("Socket assigns: #{inspect(socket.assigns)}")
 
 Every place a new theme touches, in the order to add them (`aurora`, id `"3"`, as the example):
 
+- [ ] **Persona sheet** at `docs/themes/aurora.md`, from the template in [Start from a story](#start-from-a-story) and linked from its list, its axes differing from every shipped theme's on at least three; `story:` and `axes:` in `theme.ex` are the sheet's, word for word (`persona_sheets_test.exs`)
 - [ ] **Catalog facts** in `lib/tymeslot/themes/catalog.ex`: `id`, `key`, `name`, `heading_style`, `status` (start at `:beta`) and `customization_spec:`
 - [ ] **Registry binding**: nothing to edit; the module must be `TymeslotWeb.Themes.Aurora.Theme` in `lib/tymeslot_web/themes/aurora/theme.ex` (`registry_test.exs` fails, naming the key, otherwise)
 - [ ] **`theme.ex`**: one `use TymeslotWeb.Themes.Core.Theme, live_view:, preview_image:, description:, story:, axes:` (the description and the story `dgettext_noop/2` calls in one domain, the axes passing `theme_rubric_test.exs`), plus `voice:` if the theme words the shared booking lines its own way
