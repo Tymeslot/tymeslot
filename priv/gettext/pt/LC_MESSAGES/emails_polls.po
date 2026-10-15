@@ -340,11 +340,6 @@ msgstr "%{host} adicionou horários à enquete. Suas respostas anteriores contin
 
 #: lib/tymeslot/emails/templates/poll_cancelled.ex
 #, elixir-autogen, elixir-format
-msgid "%{host} has cancelled the poll %{title}, so no meeting will be scheduled from it. Thank you for your responses. If you have questions, reply to this email."
-msgstr "%{host} cancelou a enquete %{title}, então nenhuma reunião será marcada a partir dela. Agradecemos suas respostas. Em caso de dúvida, é só responder a este e-mail."
-
-#: lib/tymeslot/emails/templates/poll_cancelled.ex
-#, elixir-autogen, elixir-format
 msgid "%{title} has been cancelled"
 msgstr "%{title} foi cancelada"
 
@@ -382,3 +377,13 @@ msgstr "Enquete cancelada"
 #, elixir-autogen, elixir-format
 msgid "Poll cancelled: \"%{title}\""
 msgstr "Enquete cancelada: “%{title}”"
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} has cancelled the poll %{title}, so no meeting will be scheduled from it. Thank you for your responses."
+msgstr "%{host} cancelou a enquete %{title}, então nenhuma reunião será marcada a partir dela. Agradecemos suas respostas."
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "If you have questions, just reply to this email; your reply goes straight to %{host}."
+msgstr "Em caso de dúvida, é só responder a este e-mail: a resposta vai direto para %{host}."

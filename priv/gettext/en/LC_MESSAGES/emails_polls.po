@@ -340,11 +340,6 @@ msgstr ""
 
 #: lib/tymeslot/emails/templates/poll_cancelled.ex
 #, elixir-autogen, elixir-format
-msgid "%{host} has cancelled the poll %{title}, so no meeting will be scheduled from it. Thank you for your responses. If you have questions, reply to this email."
-msgstr ""
-
-#: lib/tymeslot/emails/templates/poll_cancelled.ex
-#, elixir-autogen, elixir-format
 msgid "%{title} has been cancelled"
 msgstr ""
 
@@ -381,4 +376,14 @@ msgstr ""
 #: lib/tymeslot/emails/templates/poll_cancelled.ex
 #, elixir-autogen, elixir-format
 msgid "Poll cancelled: \"%{title}\""
+msgstr ""
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} has cancelled the poll %{title}, so no meeting will be scheduled from it. Thank you for your responses."
+msgstr ""
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "If you have questions, just reply to this email; your reply goes straight to %{host}."
 msgstr ""

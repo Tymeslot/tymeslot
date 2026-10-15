@@ -342,11 +342,6 @@ msgstr "%{host} додає нові варіанти часу до опитув�
 
 #: lib/tymeslot/emails/templates/poll_cancelled.ex
 #, elixir-autogen, elixir-format
-msgid "%{host} has cancelled the poll %{title}, so no meeting will be scheduled from it. Thank you for your responses. If you have questions, reply to this email."
-msgstr "%{host} скасовує опитування %{title}, тож зустріч за ним не буде призначено. Дякуємо за ваші відповіді. Якщо маєте запитання, просто дайте відповідь на цей лист."
-
-#: lib/tymeslot/emails/templates/poll_cancelled.ex
-#, elixir-autogen, elixir-format
 msgid "%{title} has been cancelled"
 msgstr "Опитування %{title} скасовано"
 
@@ -384,3 +379,13 @@ msgstr "Опитування скасовано"
 #, elixir-autogen, elixir-format
 msgid "Poll cancelled: \"%{title}\""
 msgstr "Опитування скасовано: «%{title}»"
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} has cancelled the poll %{title}, so no meeting will be scheduled from it. Thank you for your responses."
+msgstr "%{host} скасовує опитування %{title}, тож зустріч за ним не буде призначено. Дякуємо за ваші відповіді."
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "If you have questions, just reply to this email; your reply goes straight to %{host}."
+msgstr "Якщо маєте запитання, просто дайте відповідь на цей лист – вона надійде безпосередньо до %{host}."

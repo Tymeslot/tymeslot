@@ -15,6 +15,7 @@ defmodule Tymeslot.Workers.PollManagementEmailsTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Emails.EmailScheduler.PollScheduler
+  alias Tymeslot.Emails.Shared.MjmlEmail
   alias Tymeslot.Polls
   alias Tymeslot.Repo
   alias Tymeslot.Workers.EmailWorker
@@ -116,6 +117,39 @@ defmodule Tymeslot.Workers.PollManagementEmailsTest do
 
       assert Enum.sort(Enum.flat_map([first, second], &Enum.map(&1.to, fn {_n, a} -> a end))) ==
                ["ada@example.com", "grace@example.com"]
+    end
+
+    test "invites a reply only when the reply reaches the host", ctx do
+      insert(:poll_participant, poll: ctx.poll, email: "ada@example.com")
+      assert {:ok, _cancelled} = Polls.cancel_poll(ctx.poll.id, ctx.user.id)
+
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_poll_cancelled",
+                 "poll_id" => ctx.poll.id
+               })
+
+      assert_receive {:email, email}, 1000
+      assert {_name, host_email} = email.reply_to
+      assert host_email == ctx.user.email
+      assert email.text_body =~ "your reply goes straight to"
+
+      # A host whose address is the instance's own sender gets no Reply-To, so
+      # a reply would never reach them and the email does not ask for one.
+      Repo.update!(Changeset.change(ctx.user, email: MjmlEmail.fetch_from_email()))
+      other = insert(:poll, user: ctx.user, status: :open, title: "Second")
+      insert(:poll_participant, poll: other, email: "grace@example.com")
+      assert {:ok, _cancelled} = Polls.cancel_poll(other.id, ctx.user.id)
+
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_poll_cancelled",
+                 "poll_id" => other.id
+               })
+
+      assert_receive {:email, quiet}, 1000
+      assert quiet.reply_to == nil
+      refute quiet.text_body =~ "reply"
     end
 
     test "is dropped for a poll deleted before it ran", ctx do

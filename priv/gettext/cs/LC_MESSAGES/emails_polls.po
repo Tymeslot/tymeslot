@@ -342,11 +342,6 @@ msgstr "%{host} přidává do ankety další termíny. Vaše dosavadní odpověd
 
 #: lib/tymeslot/emails/templates/poll_cancelled.ex
 #, elixir-autogen, elixir-format
-msgid "%{host} has cancelled the poll %{title}, so no meeting will be scheduled from it. Thank you for your responses. If you have questions, reply to this email."
-msgstr "%{host} ruší anketu %{title}, takže z ní nebude naplánována žádná schůzka. Děkujeme za vaše odpovědi. S dotazy stačí odpovědět na tento e-mail."
-
-#: lib/tymeslot/emails/templates/poll_cancelled.ex
-#, elixir-autogen, elixir-format
 msgid "%{title} has been cancelled"
 msgstr "Anketa %{title} byla zrušena"
 
@@ -384,3 +379,13 @@ msgstr "Anketa zrušena"
 #, elixir-autogen, elixir-format
 msgid "Poll cancelled: \"%{title}\""
 msgstr "Anketa zrušena: „%{title}“"
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} has cancelled the poll %{title}, so no meeting will be scheduled from it. Thank you for your responses."
+msgstr "%{host} ruší anketu %{title}, takže z ní nebude naplánována žádná schůzka. Děkujeme za vaše odpovědi."
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "If you have questions, just reply to this email; your reply goes straight to %{host}."
+msgstr "S dotazy stačí odpovědět na tento e-mail – odpověď dostane přímo %{host}."
