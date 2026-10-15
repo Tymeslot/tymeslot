@@ -10,6 +10,7 @@
   align-self: flex-start;
   margin-top: var(--space-2xs);
   border-color: var(--line-1);
+  border-radius: min(var(--radius-control), var(--paper-radius-box));
   background: var(--surface-subtle);
 }
 
