@@ -13,7 +13,7 @@ defmodule TymeslotWeb.Themes.Paper.Components do
   """
   use Phoenix.Component
 
-  import TymeslotWeb.Components.CoreComponents, only: [icon: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
   alias Tymeslot.Demo
   alias Tymeslot.ThemeCustomizations.Tokens

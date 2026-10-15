@@ -131,7 +131,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ScheduleComponent do
           </p>
 
           <div class="folio-calendar__weekdays" aria-hidden="true">
-            <span :for={day <- LocalizationHelpers.weekday_headers()} class="folio-calendar__weekday">
+            <span :for={day <- LocalizationHelpers.weekday_headings(@week_start)} class="folio-calendar__weekday">
               {day}
             </span>
           </div>
@@ -140,7 +140,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ScheduleComponent do
             "folio-calendar__grid",
             @availability_status == :loading && "folio-calendar__grid--loading"
           ]}>
-            <%= for day <- CalendarHelpers.get_calendar_days(@user_timezone, @current_year, @current_month, @organizer_profile, @month_availability_map, @meeting_type) do %>
+            <%= for day <- CalendarHelpers.get_calendar_days(@user_timezone, @current_year, @current_month, @week_start, @organizer_profile, @month_availability_map, @meeting_type) do %>
               <% bookable = day[:available] && !day[:past] && day[:current_month] %>
               <button
                 type="button"

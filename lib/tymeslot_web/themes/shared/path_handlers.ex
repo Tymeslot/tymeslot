@@ -244,7 +244,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   end
 
   defp restart_base(:schedule, username, socket),
-    do: do_get_base_path(:schedule, username, socket)
+    do: base_path(:schedule, username, socket.assigns)
 
   defp restart_base(_overview, username, _socket), do: "/#{username}"
 

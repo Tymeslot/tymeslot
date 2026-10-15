@@ -115,6 +115,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
             days={@days}
             year={@current_year}
             month={@current_month}
+            week_start={@week_start}
             timezone={@user_timezone}
             booking_window_days={@booking_window_days}
             availability_status={@availability_status}
@@ -209,6 +210,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
       assigns.user_timezone,
       assigns.current_year,
       assigns.current_month,
+      assigns.week_start,
       assigns.organizer_profile,
       assigns.month_availability_map,
       assigns.meeting_type
@@ -247,6 +249,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   attr :days, :list, required: true
   attr :year, :integer, required: true
   attr :month, :integer, required: true
+  attr :week_start, :atom, required: true, doc: "the day the weeks start on, the flow's `:week_start`"
   attr :timezone, :string, required: true
   attr :booking_window_days, :integer, required: true
   attr :availability_status, :any, default: nil
@@ -294,7 +297,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
       </p>
 
       <div class="paper-calendar__weekdays" aria-hidden="true">
-        <span :for={weekday <- LocalizationHelpers.weekday_headers()}>{weekday}</span>
+        <span :for={weekday <- LocalizationHelpers.weekday_headings(@week_start)}>{weekday}</span>
       </div>
 
       <div class="paper-calendar__grid">
