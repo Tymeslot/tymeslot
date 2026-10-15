@@ -630,11 +630,6 @@ msgstr "Виберіть основні кольори для інтерфейс
 msgid "Solid Colour"
 msgstr "Суцільний колір"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex
-#, elixir-autogen, elixir-format
-msgid "Theme Customisation"
-msgstr "Налаштування теми"
-
 #: lib/tymeslot_web/themes/paper/theme.ex
 #, elixir-autogen, elixir-format
 msgid "A calm, neutral booking page: everything on one screen, light and dark modes and your own accent colour."

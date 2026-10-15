@@ -630,11 +630,6 @@ msgstr "Seleziona i colori primari per l'interfaccia della tua pagina di prenota
 msgid "Solid Colour"
 msgstr "Tinta unita"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex
-#, elixir-autogen, elixir-format
-msgid "Theme Customisation"
-msgstr "Personalizzazione del tema"
-
 #: lib/tymeslot_web/themes/paper/theme.ex
 #, elixir-autogen, elixir-format
 msgid "A calm, neutral booking page: everything on one screen, light and dark modes and your own accent colour."

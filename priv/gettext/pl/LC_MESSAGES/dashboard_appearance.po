@@ -626,11 +626,6 @@ msgstr "Wybierz główne kolory interfejsu swojej strony rezerwacji."
 msgid "Solid Colour"
 msgstr "Kolor jednolity"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex
-#, elixir-autogen, elixir-format
-msgid "Theme Customisation"
-msgstr "Dostosowanie motywu"
-
 #: lib/tymeslot_web/themes/paper/theme.ex
 #, elixir-autogen, elixir-format
 msgid "A calm, neutral booking page: everything on one screen, light and dark modes and your own accent colour."
