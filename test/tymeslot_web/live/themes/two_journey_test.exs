@@ -14,7 +14,9 @@ defmodule TymeslotWeb.Live.Themes.TwoJourneyTest do
   @moduletag :themes
   @moduletag :integration
 
+  import Ecto.Query, only: [where: 2]
   import Mox
+  import Tymeslot.Factory
   import Tymeslot.JourneyFixtureHelpers
 
   alias Tymeslot.CalendarMock
@@ -273,6 +275,93 @@ defmodule TymeslotWeb.Live.Themes.TwoJourneyTest do
       BookingDriver.fill_attendee(view, %{name: "Ana Silva", email: "ana-both@example.com"})
 
       assert has_element?(view, "[data-testid='journey-fixture-question-error']")
+    end
+
+    @tag :capture_log
+    test "Schedule another returns to the meeting types, and the second screen waits for a time again",
+         %{conn: conn} do
+      %{user: user, profile: profile} = seed_organiser(@theme_id, "two-again")
+      view = open_second_screen(conn, profile)
+
+      BookingDriver.pick_first_slot(view, on: ahead())
+      first_token = live_assigns(view).submission_token
+      BookingDriver.submit(view, %{name: "Ana Silva", email: "ana-first@example.com"})
+      await(view, "[data-testid='confirmation-heading']")
+
+      BookingDriver.restart(view)
+
+      assert has_element?(view, "#offer-step [data-fact='meeting_type']")
+
+      BookingDriver.choose_meeting_type(view, "quick-chat")
+      BookingDriver.continue(view)
+
+      refute form?(view)
+
+      BookingDriver.pick_first_slot(view, on: ahead())
+
+      assert form?(view)
+      token = live_assigns(view).submission_token
+      assert byte_size(token) > 0
+      refute token == first_token
+
+      BookingDriver.submit(view, %{name: "Ben Silva", email: "ben-second@example.com"})
+      await(view, "[data-testid='confirmation-heading']")
+
+      assert Repo.get_by(MeetingSchema,
+               organizer_user_id: user.id,
+               attendee_email: "ben-second@example.com"
+             )
+    end
+
+    @tag :capture_log
+    test "a reschedule waits for the new time, then moves the meeting", %{conn: conn} do
+      %{user: user, profile: profile, meeting_types: [meeting_type]} =
+        seed_organiser(@theme_id, "two-move")
+
+      original_start =
+        DateTime.utc_now() |> DateTime.add(7, :day) |> DateTime.truncate(:second)
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          organizer_name: user.name,
+          meeting_type_id: meeting_type.id,
+          attendee_name: "Ana Silva",
+          attendee_email: "ana-move@example.com",
+          attendee_timezone: "Etc/UTC",
+          start_time: original_start,
+          end_time: DateTime.add(original_start, 30, :minute),
+          duration: 30,
+          status: "confirmed"
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          "/#{profile.username}?reschedule_meeting_uid=#{meeting.uid}&timezone=Etc/UTC"
+        )
+
+      unless has_element?(view, "#pick-step") do
+        BookingDriver.choose_meeting_type(view, "quick-chat")
+        BookingDriver.continue(view)
+      end
+
+      # The details, prefilled from the meeting, wait for the new time.
+      refute form?(view)
+      assert live_assigns(view).submission_token == nil
+
+      {day, time} = BookingDriver.pick_first_slot(view, on: ahead())
+
+      assert form?(view)
+
+      BookingDriver.submit(view)
+      await(view, "[data-testid='confirmation-heading']")
+
+      moved = Repo.get!(MeetingSchema, meeting.id)
+      {:ok, clock} = DateTimeUtils.parse_time_string(time)
+      assert Date.to_iso8601(DateTime.to_date(moved.start_time)) == day
+      assert Time.compare(DateTime.to_time(moved.start_time), clock) == :eq
+      assert Repo.aggregate(where(MeetingSchema, organizer_user_id: ^user.id), :count) == 1
     end
 
     test "a link to the booking with a day and a time opens with the details",

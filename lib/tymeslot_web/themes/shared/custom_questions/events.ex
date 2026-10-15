@@ -8,7 +8,8 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Events do
   across themes.
 
   `answer` and `multi_toggle` answer the question the event names
-  (`question`, which every shared input sends), else the one on show;
+  (`question`, which every shared input sends; an id the engine does not
+  have answers nothing), else the one on show;
   `all_questions/1` serves a screen that asks every question at once.
 
   The events are `answer`, `multi_toggle`, `next_step` and `back_step` (the
@@ -28,21 +29,31 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Events do
   @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event("answer", params, socket) do
-    definition = asked(socket.assigns.engine, params)
-    id = definition["id"]
-    raw = Map.get(params, "value", params)
-    value = AnswerNormaliser.normalise(raw, definition["type"])
-    send(self(), {:step_event, moment(socket), :answer, {id, value}})
-    {:noreply, socket}
+    case asked(socket.assigns.engine, params) do
+      nil ->
+        {:noreply, socket}
+
+      definition ->
+        raw = Map.get(params, "value", params)
+        value = AnswerNormaliser.normalise(raw, definition["type"])
+        send(self(), {:step_event, moment(socket), :answer, {definition["id"], value}})
+        {:noreply, socket}
+    end
   end
 
   def handle_event("multi_toggle", %{"value" => key} = params, socket) do
     %Engine{} = engine = socket.assigns.engine
-    id = asked(engine, params)["id"]
-    current = Map.get(engine.answers, id) || []
-    next = if key in current, do: List.delete(current, key), else: [key | current]
-    send(self(), {:step_event, moment(socket), :answer, {id, next}})
-    {:noreply, socket}
+
+    case asked(engine, params) do
+      nil ->
+        {:noreply, socket}
+
+      %{"id" => id} ->
+        current = Map.get(engine.answers, id) || []
+        next = if key in current, do: List.delete(current, key), else: [key | current]
+        send(self(), {:step_event, moment(socket), :answer, {id, next}})
+        {:noreply, socket}
+    end
   end
 
   def handle_event("next_step", _params, socket) do
@@ -77,12 +88,13 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Events do
 
   # The question an answer is for: the one the event names (every input
   # sends its question's id as `question`, so a screen showing every
-  # question at once answers the right one), when the engine has it; else
-  # the one on show.
-  defp asked(%Engine{definitions: definitions} = engine, params) do
-    Enum.find(definitions, &(&1["id"] == params["question"])) ||
-      Engine.current_definition(engine)
-  end
+  # question at once answers the right one), or none when the engine has
+  # no such question, so a crafted id answers nothing; the one on show for
+  # an event that names none.
+  defp asked(%Engine{definitions: definitions}, %{"question" => id}),
+    do: Enum.find(definitions, &(&1["id"] == id))
+
+  defp asked(%Engine{} = engine, _params), do: Engine.current_definition(engine)
 
   @spec assign_render_state(Phoenix.LiveView.Socket.assigns()) ::
           Phoenix.LiveView.Socket.assigns()
