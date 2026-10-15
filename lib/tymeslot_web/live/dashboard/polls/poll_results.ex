@@ -55,6 +55,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   attr :profile, :any, required: true
   attr :integration_status, :map, required: true
   attr :editing_details?, :boolean, default: false
+  attr :meeting_types, :list, default: []
   attr :user_id, :integer, required: true
   attr :parent_id, :string, required: true
   attr :meetings_path, :string, required: true
@@ -78,6 +79,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
         module={PollEditor}
         id={"poll-editor-#{@poll.id}"}
         poll={@poll}
+        meeting_types={@meeting_types}
         user_id={@user_id}
         parent_id={@parent_id}
         parent_myself={@myself}

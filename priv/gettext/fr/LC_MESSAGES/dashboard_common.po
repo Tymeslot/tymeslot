@@ -374,6 +374,7 @@ msgstr "Si nécessaire"
 msgid "Meeting confirmed. Your guests have been notified."
 msgstr "Réunion confirmée. Vos invités ont été prévenus."
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting type (optional)"
@@ -395,6 +396,7 @@ msgstr "Non"
 msgid "No answer"
 msgstr "Sans réponse"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "No meeting type"
@@ -410,6 +412,7 @@ msgstr "Aucun sondage pour l'instant"
 msgid "Open"
 msgstr "Ouvert"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Paid meeting types can't be used for polls"
@@ -443,6 +446,7 @@ msgstr "Sondages"
 msgid "Remove time"
 msgstr "Supprimer le créneau"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "That meeting type is unavailable"
@@ -929,3 +933,8 @@ msgstr "a voté"
 #, elixir-autogen, elixir-format
 msgid "“%{title}” will be removed with its times and everyone's responses. This cannot be undone."
 msgstr "« %{title} » sera supprimé avec ses horaires et toutes les réponses. Cette action est irréversible."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Its calendar and video provider are used for the meeting when you confirm a time. The poll's times and title stay as they are."
+msgstr "Son calendrier et son service vidéo sont utilisés pour la réunion lorsque vous confirmez un horaire. Les horaires et le titre du sondage restent inchangés."

@@ -142,6 +142,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
             winning_slot_id={@winning_slot_id}
             expanded_slots={@expanded_slots}
             editing_details?={@editing_details?}
+            meeting_types={@meeting_types}
             user_id={@current_user.id}
             parent_id={@id}
             profile={@profile}
@@ -181,12 +182,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
 
   @impl Phoenix.LiveComponent
   def handle_event("new_poll", _params, socket) do
-    meeting_types =
-      socket.assigns.current_user.id
-      |> MeetingTypes.get_active_meeting_types()
-      |> Enum.reject(& &1.payment_required)
-
-    {:noreply, assign(socket, show_form: true, meeting_types: meeting_types)}
+    {:noreply, assign(socket, show_form: true, meeting_types: poll_meeting_types(socket))}
   end
 
   @impl Phoenix.LiveComponent
@@ -253,7 +249,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
 
   @impl Phoenix.LiveComponent
   def handle_event("edit_poll_details", _params, socket) do
-    {:noreply, assign(socket, editing_details?: true)}
+    {:noreply, assign(socket, editing_details?: true, meeting_types: poll_meeting_types(socket))}
   end
 
   @impl Phoenix.LiveComponent
@@ -372,6 +368,13 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
     |> assign(:selected_poll_id, poll_id)
     |> assign(slot_errors: %{}, invite_value: "", invite_error: nil)
     |> reload_selected(refresh_health: true)
+  end
+
+  # A paid meeting type cannot carry a poll: confirming one mints no payment.
+  defp poll_meeting_types(socket) do
+    socket.assigns.current_user.id
+    |> MeetingTypes.get_active_meeting_types()
+    |> Enum.reject(& &1.payment_required)
   end
 
   defp parse_invitees(text) do

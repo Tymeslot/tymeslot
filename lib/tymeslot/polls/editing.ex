@@ -15,17 +15,26 @@ defmodule Tymeslot.Polls.Editing do
       sees them when they open their link.
 
   Existing times are never changed or removed here: they are what guests
-  voted against.
+  voted against. A meeting type set here only chooses the calendar and video
+  provider the confirmed meeting uses; the poll keeps its own title and
+  times, and the type's schedule plays no part in confirming one of them.
   """
 
   alias Ecto.Changeset
   alias Tymeslot.Emails.EmailScheduler.PollScheduler
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Polls
   alias Tymeslot.Polls.{PollQueries, PollSchema, PollTimeSlotQueries, PollTimeSlotSchema}
   alias Tymeslot.Repo
 
   @type reason ::
-          :not_found | :not_open | :too_many_slots | :slot_in_past | Changeset.t()
+          :not_found
+          | :not_open
+          | :too_many_slots
+          | :slot_in_past
+          | :meeting_type_not_found
+          | :payment_required_type
+          | Changeset.t()
 
   @doc """
   Applies `attrs` (see `PollSchema.details_changeset/2`) to the user's open
@@ -47,6 +56,7 @@ defmodule Tymeslot.Polls.Editing do
 
   defp write(id, user_id, attrs, new_starts) do
     with {:ok, poll} <- lock(id, user_id),
+         :ok <- check_meeting_type(attrs, user_id),
          changeset = PollSchema.details_changeset(poll, attrs),
          {:ok, updated} <- PollQueries.update(changeset),
          {:ok, added} <- add_slots(updated, new_starts) do
@@ -61,6 +71,22 @@ defmodule Tymeslot.Polls.Editing do
       nil -> {:error, :not_found}
       %PollSchema{status: :open} = poll -> {:ok, poll}
       _closed -> {:error, :not_open}
+    end
+  end
+
+  # The same rule creating a poll applies: the host's own type, and not a
+  # paid one, since confirming a poll takes no payment.
+  defp check_meeting_type(attrs, user_id) do
+    case Map.get(attrs, "meeting_type_id", Map.get(attrs, :meeting_type_id)) do
+      nil ->
+        :ok
+
+      id ->
+        case MeetingTypes.get_meeting_type(id, user_id) do
+          nil -> {:error, :meeting_type_not_found}
+          %{payment_required: true} -> {:error, :payment_required_type}
+          _meeting_type -> :ok
+        end
     end
   end
 

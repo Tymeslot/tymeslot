@@ -378,6 +378,7 @@ msgstr "V nouzi"
 msgid "Meeting confirmed. Your guests have been notified."
 msgstr "Schůzka byla potvrzena. Hosté byli informováni."
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting type (optional)"
@@ -399,6 +400,7 @@ msgstr "Ne"
 msgid "No answer"
 msgstr "Bez odpovědi"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "No meeting type"
@@ -414,6 +416,7 @@ msgstr "Zatím žádné ankety"
 msgid "Open"
 msgstr "Otevřeno"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Paid meeting types can't be used for polls"
@@ -447,6 +450,7 @@ msgstr "Ankety"
 msgid "Remove time"
 msgstr "Odebrat termín"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "That meeting type is unavailable"
@@ -938,3 +942,8 @@ msgstr "hlas odevzdán"
 #, elixir-autogen, elixir-format
 msgid "“%{title}” will be removed with its times and everyone's responses. This cannot be undone."
 msgstr "Anketa „%{title}“ bude odstraněna i s termíny a všemi odpověďmi. Tuto akci nelze vrátit."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Its calendar and video provider are used for the meeting when you confirm a time. The poll's times and title stay as they are."
+msgstr "Jeho kalendář a videoslužba se použijí pro schůzku, když potvrdíte termín. Termíny a název ankety zůstávají beze změny."

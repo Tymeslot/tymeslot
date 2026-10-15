@@ -374,6 +374,7 @@ msgstr "W razie potrzeby"
 msgid "Meeting confirmed. Your guests have been notified."
 msgstr "Spotkanie potwierdzone. Goście zostali powiadomieni."
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting type (optional)"
@@ -395,6 +396,7 @@ msgstr "Nie"
 msgid "No answer"
 msgstr "Brak odpowiedzi"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "No meeting type"
@@ -410,6 +412,7 @@ msgstr "Brak ankiet"
 msgid "Open"
 msgstr "Otwarta"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Paid meeting types can't be used for polls"
@@ -443,6 +446,7 @@ msgstr "Ankiety"
 msgid "Remove time"
 msgstr "Usuń termin"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "That meeting type is unavailable"
@@ -934,3 +938,8 @@ msgstr "głos oddany"
 #, elixir-autogen, elixir-format
 msgid "“%{title}” will be removed with its times and everyone's responses. This cannot be undone."
 msgstr "Ankieta „%{title}” zostanie usunięta wraz z terminami i wszystkimi odpowiedziami. Tej operacji nie można cofnąć."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Its calendar and video provider are used for the meeting when you confirm a time. The poll's times and title stay as they are."
+msgstr "Jego kalendarz i usługa wideo zostaną użyte dla spotkania po zatwierdzeniu terminu. Terminy i tytuł ankiety pozostają bez zmian."

@@ -185,6 +185,40 @@ defmodule Tymeslot.Polls.EditingTest do
     end
   end
 
+  describe "update_details/4 with a meeting type" do
+    test "sets the host's own type and clears it again, leaving title and times", ctx do
+      meeting_type =
+        insert(:meeting_type, user: ctx.user, name: "Office hours", duration_minutes: 90)
+
+      assert {:ok, updated} =
+               Polls.update_details(ctx.poll.id, ctx.user.id, %{
+                 "meeting_type_id" => meeting_type.id
+               })
+
+      assert updated.meeting_type_id == meeting_type.id
+      assert updated.title == ctx.poll.title
+      assert updated.duration_minutes == ctx.poll.duration_minutes
+
+      assert {:ok, cleared} =
+               Polls.update_details(ctx.poll.id, ctx.user.id, %{"meeting_type_id" => nil})
+
+      assert cleared.meeting_type_id == nil
+    end
+
+    test "refuses another host's type and a paid one", ctx do
+      foreign = insert(:meeting_type, user: insert(:user))
+      paid = insert(:meeting_type, user: ctx.user, payment_required: true)
+
+      assert {:error, :meeting_type_not_found} =
+               Polls.update_details(ctx.poll.id, ctx.user.id, %{"meeting_type_id" => foreign.id})
+
+      assert {:error, :payment_required_type} =
+               Polls.update_details(ctx.poll.id, ctx.user.id, %{"meeting_type_id" => paid.id})
+
+      assert Repo.get!(PollSchema, ctx.poll.id).meeting_type_id == nil
+    end
+  end
+
   describe "remove_participant/3" do
     test "removes them with their responses", ctx do
       participant = insert(:poll_participant, poll: ctx.poll)

@@ -110,6 +110,30 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       refute has_element?(view, "[data-testid='poll-details-form']")
     end
 
+    test "sets a meeting type the host made after sending the poll", %{
+      conn: conn,
+      user: user,
+      poll: poll
+    } do
+      meeting_type = insert(:meeting_type, user: user, name: "Office hours", is_active: true)
+
+      # With a meeting type set, the reloaded panel's conflict check reads that
+      # type's calendar fresh.
+      Mox.stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _id, _from, _to ->
+        {:ok, []}
+      end)
+
+      view = open_editor(conn, poll)
+
+      view
+      |> form("[data-testid='poll-details-form']", %{
+        "poll" => %{"title" => "Offsite", "meeting_type_id" => to_string(meeting_type.id)}
+      })
+      |> render_submit()
+
+      assert Repo.get!(PollSchema, poll.id).meeting_type_id == meeting_type.id
+    end
+
     test "keeps the editor open and explains a deadline in the past", %{conn: conn, poll: poll} do
       view = open_editor(conn, poll)
 

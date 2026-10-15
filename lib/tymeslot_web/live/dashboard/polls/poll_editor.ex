@@ -42,6 +42,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
       description: poll.description || "",
       deadline: LocalTime.to_input(poll.deadline_at, poll.timezone),
       notify_on_vote: poll.notify_on_vote,
+      meeting_type_id: poll.meeting_type_id,
       new_times: [],
       time_counter: 0,
       reminder_picker: PollReminders.new(PollSchema.reminders(poll)),
@@ -93,6 +94,23 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
               "dashboard_common",
               "Move it, clear it, or set it again after it has passed to reopen voting. Times in %{timezone}.",
               timezone: @poll.timezone
+            )}
+          </:description>
+        </.input>
+
+        <.input
+          type="select"
+          name="poll[meeting_type_id]"
+          label={dgettext("dashboard_common", "Meeting type (optional)")}
+          value={@meeting_type_id}
+          prompt={dgettext("dashboard_common", "No meeting type")}
+          options={Enum.map(@meeting_types, &{&1.name, &1.id})}
+          errors={error_list(@errors, :meeting_type_id)}
+        >
+          <:description>
+            {dgettext(
+              "dashboard_common",
+              "Its calendar and video provider are used for the meeting when you confirm a time. The poll's times and title stay as they are."
             )}
           </:description>
         </.input>
@@ -237,6 +255,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
        description: Map.get(params, "description", socket.assigns.description),
        deadline: Map.get(params, "deadline", socket.assigns.deadline),
        notify_on_vote: Map.get(params, "notify_on_vote", "false") == "true",
+       meeting_type_id: parse_id(Map.get(params, "meeting_type_id")),
        new_times: merge_times(socket.assigns.new_times, Map.get(params, "new_times", %{}))
      )}
   end
@@ -281,6 +300,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
       "description" => Map.get(params, "description"),
       "notify_on_vote" => Map.get(params, "notify_on_vote", "false"),
       "deadline_at" => LocalTime.to_utc(Map.get(params, "deadline"), poll.timezone),
+      "meeting_type_id" => parse_id(Map.get(params, "meeting_type_id")),
       "reminder_config" => PollReminders.to_config(socket.assigns.reminder_picker)
     }
 
@@ -307,6 +327,17 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
     end
   end
 
+  defp parse_id(value) when value in [nil, ""], do: nil
+
+  defp parse_id(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {id, ""} -> id
+      _invalid -> nil
+    end
+  end
+
+  defp parse_id(value), do: value
+
   defp merge_times(times, values) do
     Enum.map(times, fn %{key: key} = time ->
       %{time | value: Map.get(values, Integer.to_string(key), time.value)}
@@ -321,6 +352,16 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
     do: %{
       new_times: [
         dgettext("dashboard_common", "Up to %{max} times", max: PollSchema.max_slots())
+      ]
+    }
+
+  defp errors_for(:meeting_type_not_found),
+    do: %{meeting_type_id: [dgettext("dashboard_common", "That meeting type is unavailable")]}
+
+  defp errors_for(:payment_required_type),
+    do: %{
+      meeting_type_id: [
+        dgettext("dashboard_common", "Paid meeting types can't be used for polls")
       ]
     }
 

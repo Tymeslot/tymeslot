@@ -120,7 +120,9 @@ defmodule Tymeslot.Polls.PollSchema do
   Changeset for a host editing an open poll.
 
   Covers the title, the description, whether the host is told about new votes,
-  the voting deadline and the reminders before it. A deadline may be moved,
+  the voting deadline, the reminders before it, and the meeting type whose
+  calendar and video the confirmed meeting uses (checked by
+  `Tymeslot.Polls.Editing`, which knows the host). A deadline may be moved,
   removed, or set again after it passed, which reopens voting, but never into
   the past. The candidate times, duration and timezone stay as they are:
   guests voted against the slots they were shown, so changing those under an
@@ -130,7 +132,14 @@ defmodule Tymeslot.Polls.PollSchema do
   @spec details_changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
   def details_changeset(poll, attrs) do
     poll
-    |> cast(attrs, [:title, :description, :notify_on_vote, :deadline_at, :reminder_config])
+    |> cast(attrs, [
+      :title,
+      :description,
+      :notify_on_vote,
+      :deadline_at,
+      :reminder_config,
+      :meeting_type_id
+    ])
     # `cast/3` already nils a whitespace-only string, so these have to tolerate
     # nil as well as trim: a title of "   " arrives here as a nil *change*, and
     # `validate_required/2` is what turns it into an error.
@@ -141,6 +150,7 @@ defmodule Tymeslot.Polls.PollSchema do
     |> validate_description_length()
     |> validate_future_deadline()
     |> validate_reminder_config()
+    |> foreign_key_constraint(:meeting_type_id)
   end
 
   @doc """

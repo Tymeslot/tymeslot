@@ -374,6 +374,7 @@ msgstr "Zur Not"
 msgid "Meeting confirmed. Your guests have been notified."
 msgstr "Termin bestätigt. Ihre Gäste wurden benachrichtigt."
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting type (optional)"
@@ -395,6 +396,7 @@ msgstr "Nein"
 msgid "No answer"
 msgstr "Keine Antwort"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "No meeting type"
@@ -410,6 +412,7 @@ msgstr "Noch keine Umfragen"
 msgid "Open"
 msgstr "Offen"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Paid meeting types can't be used for polls"
@@ -443,6 +446,7 @@ msgstr "Umfragen"
 msgid "Remove time"
 msgstr "Zeit entfernen"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "That meeting type is unavailable"
@@ -929,3 +933,8 @@ msgstr "abgestimmt"
 #, elixir-autogen, elixir-format
 msgid "“%{title}” will be removed with its times and everyone's responses. This cannot be undone."
 msgstr "„%{title}“ wird mit allen Zeiten und Antworten entfernt. Das kann nicht rückgängig gemacht werden."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Its calendar and video provider are used for the meeting when you confirm a time. The poll's times and title stay as they are."
+msgstr "Sein Kalender und sein Video-Anbieter werden für den Termin verwendet, wenn Sie eine Zeit bestätigen. Zeiten und Titel der Umfrage bleiben unverändert."
