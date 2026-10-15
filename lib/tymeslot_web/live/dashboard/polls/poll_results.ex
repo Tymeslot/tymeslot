@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Polls
+  alias Tymeslot.Polls.PollParticipantSchema
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Components.CoreComponents.Buttons
@@ -31,6 +32,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.CoreComponents.Icons
+  alias TymeslotWeb.Dashboard.Polls.PollInvite
   alias TymeslotWeb.Dashboard.Polls.PollShareLink
   alias TymeslotWeb.Helpers.LocaleFormat
 
@@ -42,6 +44,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   """
   attr :poll, :map, required: true
   attr :unconfirmed_count, :integer, default: 0
+  attr :invite_value, :string, default: ""
+  attr :invite_error, :string, default: nil
   attr :tallies, :map, required: true
   attr :slot_health, :map, required: true
   attr :slot_health_loading, :boolean, default: false
@@ -63,6 +67,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
       |> assign(:votes, vote_index(assigns.poll.participants))
       |> assign(:open?, assigns.poll.status == :open)
       |> assign(:participant_count, length(assigns.poll.participants))
+      |> assign(:voted_count, Enum.count(assigns.poll.participants, & &1.voted_at))
       |> assign(:leaders, Polls.leading_slot_ids(assigns.poll.time_slots, assigns.tallies))
 
     ~H"""
@@ -149,9 +154,11 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
           "dashboard_common",
           "%{count} guest has voted so far.",
           "%{count} guests have voted so far.",
-          @participant_count
+          @voted_count
         )}
       </p>
+
+      <PollInvite.waiting_for :if={@open?} participants={@poll.participants} />
 
       <%!-- People who asked for a voting link but have not saved responses
             through it yet. They prove nothing until they do, so they are not
@@ -189,6 +196,14 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
           myself={@myself}
         />
       </div>
+
+      <PollInvite.invite_form
+        :if={@open?}
+        poll={@poll}
+        value={@invite_value}
+        error={@invite_error}
+        myself={@myself}
+      />
 
       <div :if={@open?} class="flex justify-end pt-2 border-t border-tymeslot-100">
         <Buttons.action_button
@@ -526,7 +541,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   defp voter_names(participants, votes, slot_id, response) do
     participants
     |> Enum.filter(&(vote_for(votes, &1.id, slot_id) == response))
-    |> Enum.map(& &1.name)
+    |> Enum.map(&PollParticipantSchema.display_name/1)
   end
 
   # `:none` is not stored as a vote — it is everyone the tallies did not

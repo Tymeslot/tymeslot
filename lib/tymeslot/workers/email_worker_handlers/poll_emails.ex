@@ -1,8 +1,8 @@
 defmodule Tymeslot.Workers.EmailWorkerHandlers.PollEmails do
   @moduledoc """
-  Handles poll-related email actions: participants' voting links and receipts,
-  deadline reminders to unvoted participants, and for the host pick-a-time
-  nudges and updates on new votes.
+  Handles poll-related email actions: invitations, participants' voting links
+  and receipts, deadline reminders to unvoted participants, and for the host
+  pick-a-time nudges and updates on new votes.
 
   Every email to a participant carries their personal `?p=` link, read from
   the participant here rather than from the job args.
@@ -13,6 +13,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.PollEmails do
   alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.Templates.PollDeadlineReminder
   alias Tymeslot.Emails.Templates.PollHostNudge
+  alias Tymeslot.Emails.Templates.PollInvitation
   alias Tymeslot.Emails.Templates.PollParticipantLink
   alias Tymeslot.Emails.Templates.PollVoteDigest
   alias Tymeslot.Emails.Templates.PollVoteReceipt
@@ -44,6 +45,13 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.PollEmails do
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_participant_link(%{"participant_id" => participant_id}) do
     with_participant(participant_id, "poll participant link", &PollParticipantLink.render/3)
+  end
+
+  @doc "Emails an invitee their invitation with their personal voting link."
+  @spec handle_invitation(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_invitation(%{"participant_id" => participant_id}) do
+    with_participant(participant_id, "poll invitation", &PollInvitation.render/3)
   end
 
   @doc "Emails a newly confirmed participant the receipt for their responses."

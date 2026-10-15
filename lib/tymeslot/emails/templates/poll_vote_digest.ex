@@ -37,7 +37,7 @@ defmodule Tymeslot.Emails.Templates.PollVoteDigest do
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       headline = headline(poll, voters)
-      names = Enum.map_join(voters, ", ", & &1.name)
+      names = Enum.map_join(voters, ", ", &PollParticipantSchema.display_name/1)
 
       html_body =
         TemplateHelper.compile_system_template(

@@ -7,6 +7,10 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
   unconfirmed: they do not count anywhere (`PollSchema`'s `:participants` leaves
   them out), and once their link is older than `unconfirmed_ttl_seconds/0`
   it stops working and the row is pruned.
+
+  A participant the host invited by address is confirmed from the start: the
+  host vouches for the address, and the invitation carries the link. They may
+  have no name until they first vote.
   """
 
   use Ecto.Schema
@@ -49,6 +53,9 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
     # When their link was last emailed: throttles repeat requests and starts
     # the clock on an unconfirmed participant's link.
     field(:link_sent_at, :utc_datetime)
+    # When the host invited them by address; nil for someone who asked for a
+    # link on the voting page.
+    field(:invited_at, :utc_datetime)
 
     belongs_to(:poll, PollSchema)
     has_many(:votes, PollVoteSchema, foreign_key: :poll_participant_id)
@@ -70,9 +77,31 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
   def creation_changeset(participant, attrs) do
     participant
     |> cast(attrs, [:poll_id, :name, :email, :timezone, :locale])
+    |> validate_required([:name])
+    |> common_creation()
+  end
+
+  @doc """
+  Builds a participant the host invited by address, with the name they gave
+  if any. Confirmed at once, since the host vouches for the address; the
+  caller stamps `link_sent_at` as the invitation goes out.
+  """
+  @spec invitation_changeset(%__MODULE__{}, map(), DateTime.t()) :: Ecto.Changeset.t()
+  def invitation_changeset(participant, attrs, now) do
+    now = DateTime.truncate(now, :second)
+
+    participant
+    |> cast(attrs, [:poll_id, :name, :email, :timezone, :locale])
+    |> put_change(:confirmed_at, now)
+    |> put_change(:invited_at, now)
+    |> common_creation()
+  end
+
+  defp common_creation(changeset) do
+    changeset
     |> update_change(:email, &(&1 |> String.trim() |> String.downcase()))
     |> update_change(:name, &String.trim/1)
-    |> validate_required([:poll_id, :name, :email])
+    |> validate_required([:poll_id, :email])
     |> EmailChangeset.validate_email(:email)
     |> validate_length(:email, max: 255)
     |> validate_name()
@@ -84,6 +113,31 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
     |> unique_constraint([:poll_id, :email], name: :poll_participants_poll_id_email_index)
     |> foreign_key_constraint(:poll_id)
   end
+
+  @doc """
+  Sets the name of a participant invited without one, as they give it the
+  first time they vote.
+  """
+  @spec name_changeset(%__MODULE__{}, String.t() | nil) :: Ecto.Changeset.t()
+  def name_changeset(participant, name) do
+    participant
+    |> cast(%{name: name}, [:name])
+    |> update_change(:name, &String.trim/1)
+    |> validate_required([:name])
+    |> validate_name()
+  end
+
+  @doc "The participant as an email recipient: with their name once they have one."
+  @spec email_recipient(%__MODULE__{}) :: {String.t(), String.t()} | String.t()
+  def email_recipient(%__MODULE__{name: name, email: email}) when is_binary(name) and name != "",
+    do: {name, email}
+
+  def email_recipient(%__MODULE__{email: email}), do: email
+
+  @doc "The participant's name, or their address while they have none."
+  @spec display_name(%__MODULE__{}) :: String.t()
+  def display_name(%__MODULE__{name: name}) when is_binary(name) and name != "", do: name
+  def display_name(%__MODULE__{email: email}), do: email
 
   @doc "How long an unconfirmed participant's link stays valid after it was last sent."
   @spec unconfirmed_ttl_seconds() :: pos_integer()
@@ -104,6 +158,13 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
 
   defp put_confirmed_at(changeset, nil, at), do: put_change(changeset, :confirmed_at, at)
   defp put_confirmed_at(changeset, _confirmed_at, _at), do: changeset
+
+  @doc "Confirms and marks invited a participant who asked for a link before the host invited them."
+  @spec invited_changeset(%__MODULE__{}, DateTime.t()) :: Ecto.Changeset.t()
+  def invited_changeset(participant, now) do
+    now = DateTime.truncate(now, :second)
+    change(participant, confirmed_at: now, invited_at: now)
+  end
 
   @doc "Stamps `link_sent_at` on a participant or on a changeset building one."
   @spec link_sent_changeset(%__MODULE__{} | Ecto.Changeset.t(), DateTime.t()) ::

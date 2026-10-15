@@ -91,9 +91,10 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
     end
   end
 
-  def handle_poll_event("cast_votes", %{"votes" => votes_map}, socket) when is_map(votes_map) do
+  def handle_poll_event("cast_votes", %{"votes" => votes_map} = params, socket)
+      when is_map(votes_map) do
     with_rate_limit(socket, "poll_vote:", @vote_limit, fn socket ->
-      cast_votes_for(socket, votes_map)
+      cast_votes_for(socket, votes_map, params["name"])
     end)
   end
 
@@ -187,7 +188,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
 
   # --- Vote casting ---
 
-  defp cast_votes_for(%{assigns: %{participant: nil}} = socket, _votes_map) do
+  defp cast_votes_for(%{assigns: %{participant: nil}} = socket, _votes_map, _name) do
     {:noreply,
      put_flash(
        socket,
@@ -196,10 +197,10 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
      )}
   end
 
-  defp cast_votes_for(socket, votes_map) do
+  defp cast_votes_for(socket, votes_map, name) do
     %{poll: poll, participant: participant} = socket.assigns
 
-    case Voting.cast_votes(poll, participant.token, votes_map) do
+    case Voting.cast_votes(poll, participant.token, votes_map, name: name) do
       {:ok, _participant} ->
         {:noreply,
          socket
@@ -211,7 +212,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
     end
   end
 
-  defp saved_message(%{confirmed_at: nil}),
+  defp saved_message(%{voted_at: nil}),
     do:
       dgettext(
         "booking_polls",
@@ -261,6 +262,9 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
 
   defp cast_error_message(:voting_closed),
     do: dgettext("booking_polls", "Voting has closed for this poll.")
+
+  defp cast_error_message(%Ecto.Changeset{}),
+    do: dgettext("booking_polls", "Please enter your name, then save your responses again.")
 
   defp cast_error_message(:poll_full),
     do: dgettext("booking_polls", "This poll has reached its participant limit.")

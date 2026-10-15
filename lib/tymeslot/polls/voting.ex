@@ -67,25 +67,35 @@ defmodule Tymeslot.Polls.Voting do
   `voted_at`, the participant has not yet expressed anything.
 
   The first responses an unconfirmed participant saves confirm them, provided
-  the poll still has room (`{:error, :poll_full}` otherwise), and send them a
-  receipt carrying their link.
+  the poll still has room (`{:error, :poll_full}` otherwise). Anyone's first
+  saved responses send them a receipt carrying their link.
+
+  A participant the host invited without a name gives it with their first
+  responses, as the `:name` option; without a valid one nothing is saved and
+  the name changeset is returned.
 
   Returns `{:error, :voting_closed}`, `{:error, :unknown_participant}`,
-  `{:error, :invalid_slot}`, `{:error, :invalid_response}` or
-  `{:error, :poll_full}` on the respective failure.
+  `{:error, :invalid_slot}`, `{:error, :invalid_response}`,
+  `{:error, :poll_full}` or `{:error, changeset}` on the respective failure.
   """
-  @spec cast_votes(PollSchema.t(), String.t(), %{optional(Ecto.UUID.t()) => String.t() | atom()}) ::
+  @spec cast_votes(
+          PollSchema.t(),
+          String.t(),
+          %{optional(Ecto.UUID.t()) => String.t() | atom()},
+          keyword()
+        ) ::
           {:ok, PollParticipantSchema.t()}
           | {:error,
              :voting_closed
              | :unknown_participant
              | :invalid_slot
              | :invalid_response
-             | :poll_full}
-  def cast_votes(poll, participant_token, votes_map) do
+             | :poll_full
+             | Ecto.Changeset.t()}
+  def cast_votes(poll, participant_token, votes_map, opts \\ []) do
     with :ok <- ensure_open(poll),
          {:ok, participant} <- resolve_participant(poll, participant_token) do
-      cast_for_participant(poll, participant, votes_map)
+      cast_for_participant(poll, participant, votes_map, Keyword.get(opts, :name))
     end
   end
 
@@ -204,14 +214,14 @@ defmodule Tymeslot.Polls.Voting do
     end
   end
 
-  defp cast_for_participant(_poll, participant, votes_map) when map_size(votes_map) == 0 do
+  defp cast_for_participant(_poll, participant, votes_map, _name) when map_size(votes_map) == 0 do
     {:ok, participant}
   end
 
-  defp cast_for_participant(poll, participant, votes_map) do
+  defp cast_for_participant(poll, participant, votes_map, name) do
     with :ok <- validate_slots(poll, votes_map),
          {:ok, vote_maps} <- build_vote_maps(participant, votes_map) do
-      persist(poll, participant, vote_maps)
+      persist(poll, participant, vote_maps, name)
     end
   end
 
@@ -255,17 +265,16 @@ defmodule Tymeslot.Polls.Voting do
   # Upsert and voted_at stamp must land together: Task 11's all-voted
   # notification keys off voted_at, so a vote persisted without the stamp would
   # be invisible to it. Broadcast only after the transaction commits.
-  defp persist(poll, participant, vote_maps) do
+  defp persist(poll, participant, vote_maps, name) do
     transaction =
       Repo.transaction(fn ->
-        case ensure_room(poll, participant) do
-          :ok ->
-            PollVoteQueries.upsert_votes(vote_maps)
-            {:ok, stamped} = stamp_voted(participant)
-            stamped
-
-          {:error, reason} ->
-            Repo.rollback(reason)
+        with :ok <- ensure_room(poll, participant),
+             {:ok, named} <- ensure_named(participant, name) do
+          PollVoteQueries.upsert_votes(vote_maps)
+          {:ok, stamped} = stamp_voted(named)
+          stamped
+        else
+          {:error, reason} -> Repo.rollback(reason)
         end
       end)
 
@@ -294,9 +303,19 @@ defmodule Tymeslot.Polls.Voting do
     end
   end
 
-  # One receipt, when the participant is confirmed. Later changes are saved
+  # Only a participant invited without a name lacks one, and they give it with
+  # their first responses. Anyone else's name stays as it is.
+  defp ensure_named(%PollParticipantSchema{name: nil} = participant, name) do
+    participant
+    |> PollParticipantSchema.name_changeset(name)
+    |> PollParticipantQueries.update()
+  end
+
+  defp ensure_named(participant, _name), do: {:ok, participant}
+
+  # One receipt, for the first responses saved. Later changes are saved
   # silently: the receipt already holds the link to come back with.
-  defp maybe_send_receipt(%PollParticipantSchema{confirmed_at: nil}, stamped),
+  defp maybe_send_receipt(%PollParticipantSchema{voted_at: nil}, stamped),
     do: PollScheduler.schedule_vote_receipt(stamped)
 
   defp maybe_send_receipt(_participant, _stamped), do: :ok
@@ -314,10 +333,12 @@ defmodule Tymeslot.Polls.Voting do
 
   defp maybe_update_host(_poll), do: :ok
 
-  # Once everyone who asked for a link has voted, nudge the host to pick a time.
-  # The count is re-checked against the database rather than the (now stale)
-  # in-memory poll, since the just-cast vote stamped voted_at inside the
-  # transaction above.
+  # Once everyone has voted, nudge the host to pick a time. Only a poll the
+  # host invited people to knows who everyone is: on a poll shared only by
+  # link, "everyone" would be whoever happened to ask for a link so far, often
+  # just the first voter. The check runs against the database rather than the
+  # (now stale) in-memory poll, since the just-cast vote stamped voted_at
+  # inside the transaction above.
   defp maybe_notify_all_voted(poll) do
     if all_participants_voted?(poll) do
       PollScheduler.schedule_all_voted_nudge(poll)
@@ -327,7 +348,7 @@ defmodule Tymeslot.Polls.Voting do
   end
 
   defp all_participants_voted?(poll) do
-    PollParticipantQueries.count_confirmed(poll.id) > 0 and
+    PollParticipantQueries.any_invited?(poll.id) and
       not PollParticipantQueries.awaiting_votes?(poll.id)
   end
 end

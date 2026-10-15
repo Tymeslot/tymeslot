@@ -134,6 +134,15 @@ defmodule Tymeslot.Polls.ConfirmTest do
       assert meeting.attendee_timezone == poll.timezone
     end
 
+    test "names the primary by address when they were invited without a name and never voted",
+         %{user: user, poll: poll, slot: slot} do
+      insert(:poll_participant, poll: poll, name: nil, email: "ada@example.com")
+
+      assert {:ok, meeting} = Confirm.confirm(poll.id, slot.id, user.id)
+      assert meeting.attendee_name == "ada@example.com"
+      assert meeting.attendee_email == "ada@example.com"
+    end
+
     test "carries the poll's description onto the meeting as the organiser's note",
          %{user: user, poll: poll, slot: slot} do
       poll = poll |> Changeset.change(description: "Bring the Q3 numbers.") |> Repo.update!()

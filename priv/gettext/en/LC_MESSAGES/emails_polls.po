@@ -97,12 +97,14 @@ msgid "Voting closed"
 msgstr ""
 
 #: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
+#: lib/tymeslot/emails/templates/poll_invitation.ex
 #: lib/tymeslot/emails/templates/poll_participant_link.ex
 #, elixir-autogen, elixir-format
 msgid "Voting closes"
 msgstr ""
 
 #: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
+#: lib/tymeslot/emails/templates/poll_invitation.ex
 #: lib/tymeslot/emails/templates/poll_participant_link.ex
 #, elixir-autogen, elixir-format
 msgid "Voting closes:"
@@ -123,6 +125,7 @@ msgstr ""
 msgid "Your vote is needed"
 msgstr ""
 
+#: lib/tymeslot/emails/templates/poll_invitation.ex
 #: lib/tymeslot/emails/templates/poll_participant_link.ex
 #: lib/tymeslot/emails/templates/poll_vote_receipt.ex
 #, elixir-autogen, elixir-format
@@ -164,6 +167,7 @@ msgstr ""
 msgid "No answer"
 msgstr ""
 
+#: lib/tymeslot/emails/templates/poll_invitation.ex
 #: lib/tymeslot/emails/templates/poll_participant_link.ex
 #: lib/tymeslot/emails/templates/poll_vote_receipt.ex
 #, elixir-autogen, elixir-format
@@ -180,16 +184,19 @@ msgstr ""
 msgid "This link is yours alone: anyone who has it can change your responses, so please don't share it."
 msgstr ""
 
+#: lib/tymeslot/emails/templates/poll_invitation.ex
 #: lib/tymeslot/emails/templates/poll_participant_link.ex
 #, elixir-autogen, elixir-format
 msgid "This link is yours alone: anyone who has it can change your responses, so please don't share it. Keep this email to come back later."
 msgstr ""
 
+#: lib/tymeslot/emails/templates/poll_invitation.ex
 #: lib/tymeslot/emails/templates/poll_participant_link.ex
 #, elixir-autogen, elixir-format
 msgid "Vote Now"
 msgstr ""
 
+#: lib/tymeslot/emails/templates/poll_invitation.ex
 #: lib/tymeslot/emails/templates/poll_participant_link.ex
 #, elixir-autogen, elixir-format
 msgid "Vote here:"
@@ -297,4 +304,29 @@ msgstr ""
 #: lib/tymeslot/emails/shared/poll_standings.ex
 #, elixir-autogen, elixir-format
 msgid "most votes"
+msgstr ""
+
+#: lib/tymeslot/emails/templates/poll_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} invites you to vote on \"%{title}\""
+msgstr ""
+
+#: lib/tymeslot/emails/templates/poll_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} would like to know which of these times suit you. Open your personal link, mark each time, and save."
+msgstr ""
+
+#: lib/tymeslot/emails/templates/poll_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Help pick a time"
+msgstr ""
+
+#: lib/tymeslot/emails/templates/poll_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Note from the host"
+msgstr ""
+
+#: lib/tymeslot/emails/templates/poll_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Proposed times"
 msgstr ""

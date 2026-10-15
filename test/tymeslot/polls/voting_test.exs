@@ -124,7 +124,7 @@ defmodule Tymeslot.Polls.VotingTest do
 
     test "returns {:error, :poll_full} for a new address once the confirmed cap is reached" do
       poll = insert(:poll)
-      insert_list(40, :poll_participant, poll: poll)
+      insert_list(PollSchema.max_participants(), :poll_participant, poll: poll)
 
       assert {:error, :poll_full} =
                Voting.request_link(poll, %{name: "Late", email: "late@example.com"})
@@ -132,7 +132,7 @@ defmodule Tymeslot.Polls.VotingTest do
 
     test "unconfirmed requests do not fill the poll" do
       poll = insert(:poll)
-      insert_list(39, :poll_participant, poll: poll)
+      insert_list(PollSchema.max_participants() - 1, :poll_participant, poll: poll)
       insert_list(5, :poll_participant, poll: poll, confirmed_at: nil, link_sent_at: now())
 
       assert :ok = Voting.request_link(poll, %{name: "Real", email: "real@example.com"})
@@ -367,13 +367,46 @@ defmodule Tymeslot.Polls.VotingTest do
       assert id == pending.id
     end
 
-    test "an already confirmed participant gets no receipt", ctx do
+    test "a participant's first responses send a receipt, later changes do not", ctx do
       %{poll: poll, slot_a: slot_a, participant: participant} = ctx
 
-      assert {:ok, _participant} =
-               Voting.cast_votes(poll, participant.token, %{slot_a.id => "yes"})
+      assert {:ok, _first} = Voting.cast_votes(poll, participant.token, %{slot_a.id => "yes"})
+      assert [_receipt] = receipt_jobs()
 
-      assert receipt_jobs() == []
+      returning =
+        insert(:poll_participant, poll: poll, voted_at: DateTime.utc_now(:second))
+
+      assert {:ok, _again} = Voting.cast_votes(poll, returning.token, %{slot_a.id => "no"})
+      assert [_still_one] = receipt_jobs()
+    end
+
+    test "someone invited without a name gives it with their first responses", ctx do
+      %{poll: poll, slot_a: slot_a} = ctx
+      invitee = insert(:poll_participant, poll: poll, name: nil, email: "ada@example.com")
+
+      assert {:error, %Ecto.Changeset{}} =
+               Voting.cast_votes(poll, invitee.token, %{slot_a.id => "yes"})
+
+      assert {:error, %Ecto.Changeset{}} =
+               Voting.cast_votes(poll, invitee.token, %{slot_a.id => "yes"}, name: "  ")
+
+      unsaved = PollParticipantQueries.get_by_poll_and_token(poll.id, invitee.token)
+      assert unsaved.votes == [] and unsaved.voted_at == nil and unsaved.name == nil
+
+      assert {:ok, voted} =
+               Voting.cast_votes(poll, invitee.token, %{slot_a.id => "yes"}, name: " Ada ")
+
+      assert voted.name == "Ada"
+      assert %DateTime{} = voted.voted_at
+    end
+
+    test "a name sent with the responses leaves an existing name alone", ctx do
+      %{poll: poll, slot_a: slot_a, participant: participant} = ctx
+
+      assert {:ok, voted} =
+               Voting.cast_votes(poll, participant.token, %{slot_a.id => "yes"}, name: "Mallory")
+
+      assert voted.name == participant.name
     end
 
     test "an unconfirmed participant whose link expired cannot vote", ctx do
@@ -392,7 +425,7 @@ defmodule Tymeslot.Polls.VotingTest do
 
     test "confirming is refused once the poll is full, and nothing is written", ctx do
       %{poll: poll, slot_a: slot_a} = ctx
-      insert_list(39, :poll_participant, poll: poll)
+      insert_list(PollSchema.max_participants() - 1, :poll_participant, poll: poll)
       pending = insert(:poll_participant, poll: poll, confirmed_at: nil, link_sent_at: now())
 
       assert {:error, :poll_full} = Voting.cast_votes(poll, pending.token, %{slot_a.id => "yes"})

@@ -32,6 +32,14 @@ defmodule Tymeslot.Polls.PollParticipantQueries do
     |> Repo.one()
   end
 
+  @doc "The participants on `poll_id` under any of `emails`, confirmed or not."
+  @spec list_by_poll_and_emails(Ecto.UUID.t(), [String.t()]) :: [PollParticipantSchema.t()]
+  def list_by_poll_and_emails(poll_id, emails) do
+    PollParticipantSchema
+    |> where([p], p.poll_id == ^poll_id and p.email in ^emails)
+    |> Repo.all()
+  end
+
   @doc """
   The participant on `poll_id` holding `token`, unless they are unconfirmed and
   their link has expired.
@@ -107,6 +115,14 @@ defmodule Tymeslot.Polls.PollParticipantQueries do
       |> Repo.update_all(set: [link_sent_at: DateTime.truncate(now, :second)])
 
     count == 1
+  end
+
+  @doc "Whether the host has invited anyone to `poll_id` by address."
+  @spec any_invited?(Ecto.UUID.t()) :: boolean()
+  def any_invited?(poll_id) do
+    PollParticipantSchema
+    |> where([p], p.poll_id == ^poll_id and not is_nil(p.invited_at))
+    |> Repo.exists?()
   end
 
   @doc "Deletes unconfirmed participants whose link was last sent before `cutoff`."
