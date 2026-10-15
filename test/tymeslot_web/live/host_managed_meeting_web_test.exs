@@ -35,6 +35,8 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
       insert(:meeting,
         organizer_user: user,
         organizer_email: user.email,
+        title: "Team offsite",
+        meeting_type: "Team offsite",
         attendee_name: "Ada",
         attendee_email: "ada@example.com",
         status: "confirmed",
@@ -61,6 +63,18 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
       assert to == "/#{ctx.profile.username}"
       assert flash["error"] =~ "only its host can move or cancel it"
     end
+  end
+
+  test "the dashboard card names the poll, not a booker, and lists everyone as a guest", ctx do
+    conn = build_conn() |> init_test_session(%{}) |> fetch_session() |> log_in_user(ctx.user)
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+    assert has_element?(view, "h2", "Team offsite")
+    refute has_element?(view, "h2", "Ada")
+    assert has_element?(view, "[data-testid='poll-meeting-badge']")
+    refute has_element?(view, "[data-testid='meeting-type']")
+    refute render(view) =~ "Attendee Email"
+    assert render(view) =~ "bob@example.com"
   end
 
   test "the host moves it from the dashboard and everyone is told", ctx do

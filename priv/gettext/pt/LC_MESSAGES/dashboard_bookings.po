@@ -764,3 +764,8 @@ msgstr "O novo horário precisa estar no futuro."
 #, elixir-autogen, elixir-format
 msgid "You already have a meeting at that time."
 msgstr "Você já tem uma reunião nesse horário."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Poll"
+msgstr "Enquete"

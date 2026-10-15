@@ -774,3 +774,8 @@ msgstr "Nový čas musí být v budoucnosti."
 #, elixir-autogen, elixir-format
 msgid "You already have a meeting at that time."
 msgstr "V tuto dobu už máte schůzku."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Poll"
+msgstr "Anketa"

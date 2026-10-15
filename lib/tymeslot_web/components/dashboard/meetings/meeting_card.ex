@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
 
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.Seats
   alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.CoreComponents.Containers
@@ -39,6 +40,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
         timezone: timezone,
         guests: guest_list(assigns.meeting),
         group?: Helpers.group_meeting?(assigns.meeting),
+        managed?: MeetingSchema.managed_by_host?(assigns.meeting),
         participants: Helpers.participants(assigns.meeting),
         answered_fields: answered_fields(assigns.meeting)
       )
@@ -66,6 +68,15 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
               {@meeting.attendee_company}
             </span>
             <MeetingStatusBadge.status_badges meeting={@meeting} />
+            <Feedback.pill
+              :if={@managed?}
+              tone={:brand}
+              size={:sm}
+              icon="hero-hand-raised"
+              data-testid="poll-meeting-badge"
+            >
+              {dgettext("dashboard_bookings", "Poll")}
+            </Feedback.pill>
             <Feedback.pill
               :if={@group?}
               tone={:brand}
@@ -97,8 +108,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
                 {Helpers.format_meeting_time(@meeting, @timezone, @time_format)}
               </span>
             </Containers.detail_line>
+            <%!-- A meeting from a poll carries the poll's title as its type,
+                 which already heads the card. --%>
             <Containers.detail_line
-              :if={@meeting.meeting_type}
+              :if={@meeting.meeting_type && !@managed?}
               variant={:tile}
               icon="hero-squares-2x2"
               label={dgettext("dashboard_bookings", "Meeting type")}
@@ -107,9 +120,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
               {@meeting.meeting_type}
             </Containers.detail_line>
             <%!-- A group slot has no single attendee: every booker is listed
-                 in the participants panel below. --%>
+                 in the participants panel below. Nor has a meeting from a
+                 poll: everyone on it is a guest, listed below, the person in
+                 its attendee fields included. --%>
             <Containers.detail_line
-              :if={not @group? and @meeting.attendee_email}
+              :if={!@group? && !@managed? && @meeting.attendee_email}
               variant={:tile}
               tone={:info}
               icon="hero-envelope"
@@ -336,11 +351,12 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   end
 
   # A solo card is titled after its attendee. A group card has no single
-  # attendee, so it is named after what was booked: `title` is a required
-  # field on every meeting, snapshotted at creation, so it survives the
-  # meeting type being edited or deleted.
+  # attendee, and a meeting from a poll none that matters, so they are named
+  # after what was booked: `title` is a required field on every meeting,
+  # snapshotted at creation, so it survives the meeting type being edited or
+  # deleted.
   defp meeting_title(meeting) do
-    if Helpers.group_meeting?(meeting),
+    if Helpers.group_meeting?(meeting) or MeetingSchema.managed_by_host?(meeting),
       do: group_title(meeting),
       else: solo_title(meeting)
   end
