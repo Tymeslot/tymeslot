@@ -8,6 +8,15 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   alias Tymeslot.MeetingTypes
   alias TymeslotWeb.Themes.Shared.Journey.Navigators.Reveal
 
+  # The route's own segments, which arrive in `params` beside the query.
+  @path_params ["username", "slug"]
+
+  # What makes a page a reschedule rather than a booking.
+  @reschedule_params ["reschedule_meeting_uid", "reschedule_seat_token"]
+
+  # What the path or the booking's facts now say, never carried in the query.
+  @fact_params ~w(date time duration)
+
   @doc """
   Builds a path with locale and theme query parameters.
   """
@@ -19,13 +28,57 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
     if query_string == "", do: base_path, else: "#{base_path}?#{query_string}"
   end
 
+  @doc """
+  The address a booking's known facts give, for a journey whose address
+  follows them (`url: :facts`): `/:username` before a meeting type is known,
+  `/:username/:slug` with one, `/:username/:slug/book` once the day and the
+  time are, and `/:username/thank-you` on the confirmation. `nil` without an
+  organiser.
+  """
+  @spec facts_path(map()) :: String.t() | nil
+  def facts_path(%{username_context: username} = assigns) when is_binary(username) do
+    slug = MeetingTypes.normalize_duration_slug(assigns[:duration] || assigns[:selected_duration])
+
+    cond do
+      assigns[:current_state] == :confirmation -> "/#{username}/thank-you"
+      is_nil(slug) -> "/#{username}"
+      slot_known?(assigns) -> "/#{username}/#{slug}/book"
+      true -> "/#{username}/#{slug}"
+    end
+  end
+
+  def facts_path(_assigns), do: nil
+
+  defp slot_known?(assigns),
+    do: is_binary(assigns[:selected_date]) and is_binary(assigns[:selected_time])
+
+  @doc """
+  The query string a journey whose address follows its facts keeps: the
+  page's own parameters (`:page_query_params`) less the day, the time and
+  the duration, which the facts now say, and less the reschedule once it is
+  abandoned (no `reschedule_meeting_uid` and no `reschedule_seat_token`
+  left on the page). `nil` when nothing is left.
+  """
+  @spec facts_query(map()) :: String.t() | nil
+  def facts_query(assigns) do
+    dropped =
+      if is_nil(assigns[:reschedule_meeting_uid]) and is_nil(assigns[:reschedule_seat_token]),
+        do: @fact_params ++ @reschedule_params,
+        else: @fact_params
+
+    case Map.drop(assigns[:page_query_params] || %{}, dropped) do
+      empty when map_size(empty) == 0 -> nil
+      query -> URI.encode_query(query)
+    end
+  end
+
   defp get_base_path(socket) do
     username = socket.assigns[:username_context]
 
     if is_nil(username) do
       "/"
     else
-      do_get_base_path(socket.assigns[:live_action], username, socket)
+      do_get_base_path(route(socket.assigns), username, socket)
     end
   end
 
@@ -100,10 +153,21 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
     end
   end
 
-  defp overview_choice(%{live_action: :overview} = assigns),
-    do: MeetingTypes.normalize_duration_slug(assigns[:selected_duration])
+  defp overview_choice(assigns) do
+    if route(assigns) == :overview,
+      do: MeetingTypes.normalize_duration_slug(assigns[:selected_duration])
+  end
 
-  defp overview_choice(_assigns), do: nil
+  # The route the switch rebuilds: on a journey whose address follows its
+  # facts, the one the visit started on (the address has moved since, and
+  # the choices travel as parameters, `put_choices/2`); otherwise the
+  # current one. The journey is matched as a map, so this module takes no
+  # compile-time dependency on it.
+  defp route(%{journey: %{url: :facts}, entry_action: action})
+       when is_atom(action) and action != nil,
+       do: action
+
+  defp route(assigns), do: assigns[:live_action]
 
   # `theme` rides along here and nowhere else, which is the fix for #84. It used
   # to be emitted on every locale switch from `:theme_id`, an assign the
@@ -173,12 +237,6 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
 
   defp maybe_put_query_param(params, _param_key, value) when value in [nil, ""], do: params
   defp maybe_put_query_param(params, key, value), do: Map.put(params, key, value)
-
-  # The route's own segments, which arrive in `params` beside the query.
-  @path_params ["username", "slug"]
-
-  # What makes a page a reschedule rather than a booking.
-  @reschedule_params ["reschedule_meeting_uid", "reschedule_seat_token"]
 
   @doc """
   The query string parameters of a booking page's `params`: everything but

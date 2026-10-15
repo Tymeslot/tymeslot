@@ -122,11 +122,11 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       # Assigned again: the dispatcher may hand the page to another theme on
       # a patch (`?theme=`), and the journey is the rendering theme's.
       @impl Phoenix.LiveView
-      def handle_params(params, _url, socket),
+      def handle_params(params, url, socket),
         do:
           socket
           |> assign(:journey, __journey__())
-          |> TymeslotWeb.Themes.Shared.LiveHelpers.Mount.handle_scheduling_params(params)
+          |> TymeslotWeb.Themes.Shared.LiveHelpers.Mount.handle_scheduling_params(params, url)
 
       # A theme's own event (`theme:<name>`, relayed untouched by the step
       # relays) goes to the theme's hook without its prefix, from any step;

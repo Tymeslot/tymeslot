@@ -40,10 +40,12 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
 
   A fact whose prerequisite its own moment collects is entered once that
   prerequisite is known (`enter_ready/1`, after every step event), so one
-  paged moment can pick the time and then open the details.
+  paged moment can pick the time and then open the details. On a declared
+  journey the address then follows the facts (`follow_url/1`).
   """
 
   import Phoenix.Component, only: [assign: 2, assign: 3]
+  import Phoenix.LiveView, only: [connected?: 1, push_patch: 2]
 
   alias Phoenix.LiveView.Socket
   alias TymeslotWeb.Themes.Shared.GuestBooking
@@ -51,6 +53,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   alias TymeslotWeb.Themes.Shared.Journey.Ambient
   alias TymeslotWeb.Themes.Shared.Journey.Moment
   alias TymeslotWeb.Themes.Shared.Journey.Progress
+  alias TymeslotWeb.Themes.Shared.PathHandlers
   alias TymeslotWeb.Themes.Shared.PaymentReturn
   alias TymeslotWeb.Themes.Shared.ReschedulePin
 
@@ -148,6 +151,42 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   end
 
   def enter_ready(socket), do: socket
+
+  @doc """
+  On a journey whose address follows its facts (`url: :facts`), moves the
+  address to the path the booking's facts give (`PathHandlers.facts_path/1`)
+  with the page's own query (`PathHandlers.facts_query/1`), replacing the
+  history entry, so the browser's Back leaves the page. Records it in
+  `:journey_url`, by which the patch's `handle_params` knows it for the
+  page's own. Any other journey, and a page not yet connected, keeps its
+  address.
+  """
+  @spec follow_url(Socket.t()) :: Socket.t()
+  # A socket already redirecting or patching (a restart that patched a
+  # reschedule out of the address, a fact that redirected) is left alone: a
+  # second push_patch would raise, and that move's own handle_params records
+  # the address it lands on.
+  def follow_url(%Socket{redirected: redirected} = socket) when redirected != nil,
+    do: socket
+
+  def follow_url(%Socket{assigns: %{journey: %Journey{url: :facts}}} = socket) do
+    case PathHandlers.facts_path(socket.assigns) do
+      nil ->
+        socket
+
+      path ->
+        address = with_query(path, PathHandlers.facts_query(socket.assigns))
+
+        if connected?(socket) and address != socket.assigns[:journey_url],
+          do: socket |> assign(:journey_url, address) |> push_patch(to: address, replace: true),
+          else: socket
+    end
+  end
+
+  def follow_url(socket), do: socket
+
+  defp with_query(path, nil), do: path
+  defp with_query(path, query), do: "#{path}?#{query}"
 
   defp ready?(fact, assigns),
     do: Enum.all?(fact.requires(assigns), &Journey.fact!(&1).known?(assigns))
@@ -386,7 +425,9 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
 
   defp deferred(socket), do: socket.assigns[:journey_deferred] || %{}
 
-  defp enter_ready_after({:noreply, socket}), do: {:noreply, enter_ready(socket)}
+  defp enter_ready_after({:noreply, socket}),
+    do: {:noreply, socket |> enter_ready() |> follow_url()}
+
   defp enter_ready_after(other), do: other
 
   defp opened(socket), do: socket.assigns[:journey_opened] || MapSet.new()

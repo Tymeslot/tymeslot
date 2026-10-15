@@ -42,6 +42,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
     socket =
       socket
       |> SchedulingInit.assign_theme_state()
+      |> assign(:entry_action, socket.assigns[:live_action])
       |> TimezoneHelpers.assign_user_timezone(params)
       |> ThemeUtils.assign_attendee_prefill()
       |> ThemeUtils.assign_theme_with_preview(params)
@@ -101,6 +102,26 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
       AvailabilityHelpers.fetch_month_availability_async(socket)
     else
       socket
+    end
+  end
+
+  @doc """
+  `handle_scheduling_params/2`, given the request's `url`: a patch the page
+  made itself, moving its address to its facts (`Runtime.follow_url/1`), is
+  not a new arrival and changes nothing; any other request records the
+  address and is handled as an arrival.
+  """
+  @spec handle_scheduling_params(Phoenix.LiveView.Socket.t(), map(), String.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_scheduling_params(socket, params, url) do
+    address = address(url)
+
+    if follows_facts?(socket) and address == socket.assigns[:journey_url] do
+      {:noreply, socket}
+    else
+      socket
+      |> remember_address(address)
+      |> handle_scheduling_params(params)
     end
   end
 
@@ -243,6 +264,19 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
   defp entry(socket) do
     journey = socket.assigns.journey
     journey.navigator.entry(journey, socket.assigns[:live_action], socket.assigns)
+  end
+
+  defp follows_facts?(socket), do: match?(%{url: :facts}, socket.assigns[:journey])
+
+  # Only a journey whose address follows its facts keeps its address, so the
+  # classic journey's assigns are what they were.
+  defp remember_address(socket, address) do
+    if follows_facts?(socket), do: assign(socket, :journey_url, address), else: socket
+  end
+
+  defp address(url) do
+    %URI{path: path, query: query} = URI.parse(url)
+    if query in [nil, ""], do: path, else: "#{path}?#{query}"
   end
 
   defp maybe_subscribe_to_calendar_events(socket) do

@@ -137,13 +137,14 @@ defmodule TymeslotWeb.Themes.Shared.JourneyTest do
                  {:questions, collects: [:answers], component: QuestionsStep},
                  {:booking, collects: [:attendee], component: BookingStep}
                ],
-               outcomes: %{confirmation: ConfirmationStep, awaiting_payment: :shared}
+               outcomes: %{confirmation: ConfirmationStep, awaiting_payment: :shared},
+               url: :route
              ]
     end
   end
 
   describe "new/1 and moment/2" do
-    test "turns each moment entry into a Moment, and the payment wait defaults to the shared one" do
+    test "turns each moment entry into a Moment; the payment wait defaults to the shared one, the address to the facts" do
       journey = Journey.new(questions_first())
 
       assert [%Moment{key: :offer, collects: [:meeting_type], defaults: []} | _rest] =
@@ -152,6 +153,8 @@ defmodule TymeslotWeb.Themes.Shared.JourneyTest do
       assert journey.outcomes == %{confirmation: ConfirmationStep, awaiting_payment: :shared}
       assert %Moment{component: ScheduleStep} = Journey.moment(journey, :when)
       assert Journey.moment(journey, :confirmation) == nil
+      assert journey.url == :facts
+      assert Journey.new(Journey.classic(@steps)).url == :route
     end
 
     test "required_facts/2 leaves out what this booking does not need" do
