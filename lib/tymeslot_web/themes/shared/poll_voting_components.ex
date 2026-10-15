@@ -295,6 +295,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
             tally={Map.get(@tallies, slot.id, %{})}
             editable={true}
             current={Map.get(@current_votes, slot.id)}
+            new?={new_to?(@participant, @current_votes, slot)}
           />
         </div>
         <button type="submit" class="poll-submit-button" data-testid="poll-save-votes">
@@ -357,6 +358,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   attr :tally, :map, required: true
   attr :editable, :boolean, required: true
   attr :current, :atom, default: nil
+  attr :new?, :boolean, default: false
 
   defp slot_row(assigns) do
     ~H"""
@@ -369,7 +371,12 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
           Time, tallies and controls now share one line and wrap only when the
           card is too narrow to hold them. --%>
     <div class="poll-slot-row" data-testid="poll-slot">
-      <span class="poll-slot-time">{format_slot_time(@slot.start_time, @tz)}</span>
+      <span class="poll-slot-time">
+        {format_slot_time(@slot.start_time, @tz)}
+        <span :if={@new?} class="poll-slot-new" data-testid="poll-slot-new">
+          {dgettext("booking_polls", "New")}
+        </span>
+      </span>
 
       <div class="poll-slot-tallies">
         <span :for={response <- responses()} class={"poll-tally poll-tally--#{response}"}>
@@ -413,6 +420,13 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   defp voting_view(_assigns), do: :vote
 
   # --- Data helpers ---
+
+  # A time is new to someone who has voted but not on it: the host added it
+  # after they last answered.
+  defp new_to?(%{voted_at: %DateTime{}}, current_votes, slot),
+    do: not Map.has_key?(current_votes, slot.id)
+
+  defp new_to?(_participant, _current_votes, _slot), do: false
 
   defp responses, do: @responses
 

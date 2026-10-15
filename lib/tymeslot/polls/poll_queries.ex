@@ -94,4 +94,8 @@ defmodule Tymeslot.Polls.PollQueries do
 
   @spec update(Ecto.Changeset.t()) :: {:ok, PollSchema.t()} | {:error, Ecto.Changeset.t()}
   def update(changeset), do: Repo.update(changeset)
+
+  @doc "Deletes a poll; its slots, participants and votes go with it."
+  @spec delete(PollSchema.t()) :: {:ok, PollSchema.t()} | {:error, Ecto.Changeset.t()}
+  def delete(poll), do: Repo.delete(poll)
 end

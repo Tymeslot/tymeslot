@@ -1,0 +1,358 @@
+defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
+  @moduledoc """
+  LiveComponent for editing an open poll from its results panel.
+
+  Covers what can change while people vote (see `Tymeslot.Polls.Editing`):
+  the title and description, whether the host is emailed about new votes, the
+  voting deadline (moved, removed, or set again to reopen voting), the
+  reminders before it, and new candidate times. Everything is saved at once.
+  The participant list beside it removes someone straight away.
+
+  The editor keeps its own state across re-renders: a vote arriving while the
+  host edits refreshes the poll it is given, not what the host has typed.
+  On a save it tells the owning `PollsComponent` (`poll_edited: true`), which
+  closes the editor and reloads the poll.
+  """
+  use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
+
+  alias Ecto.Changeset
+  alias Tymeslot.Polls
+  alias Tymeslot.Polls.{PollParticipantSchema, PollSchema}
+  alias TymeslotWeb.Dashboard.Polls.{LocalTime, PollReminders, PollsComponent}
+  alias TymeslotWeb.Live.Shared.Flash
+
+  @reminder_events PollReminders.events()
+
+  @impl Phoenix.LiveComponent
+  def update(assigns, socket) do
+    socket = assign(socket, assigns)
+
+    if socket.assigns[:initialized?] do
+      {:ok, socket}
+    else
+      {:ok, init(socket, assigns.poll)}
+    end
+  end
+
+  defp init(socket, poll) do
+    assign(socket,
+      initialized?: true,
+      title: poll.title,
+      description: poll.description || "",
+      deadline: LocalTime.to_input(poll.deadline_at, poll.timezone),
+      notify_on_vote: poll.notify_on_vote,
+      new_times: [],
+      time_counter: 0,
+      reminder_picker: PollReminders.new(PollSchema.reminders(poll)),
+      errors: %{}
+    )
+  end
+
+  @impl Phoenix.LiveComponent
+  def render(assigns) do
+    ~H"""
+    <div class="space-y-4" data-testid="poll-editor">
+      <form
+        id={"poll-details-form-#{@poll.id}"}
+        phx-submit="save"
+        phx-change="change"
+        phx-target={@myself}
+        class="space-y-4"
+        data-testid="poll-details-form"
+        novalidate
+      >
+        <.input
+          type="text"
+          name="poll[title]"
+          label={dgettext("dashboard_common", "Title")}
+          value={@title}
+          required
+          errors={error_list(@errors, :title)}
+          icon="hero-hand-raised"
+        />
+
+        <.input
+          type="textarea"
+          name="poll[description]"
+          label={dgettext("dashboard_common", "Description (optional)")}
+          value={@description}
+          placeholder={dgettext("dashboard_common", "Add any context for your guests")}
+          errors={error_list(@errors, :description)}
+        />
+
+        <.input
+          type="datetime-local"
+          name="poll[deadline]"
+          label={dgettext("dashboard_common", "Voting deadline (optional)")}
+          value={@deadline}
+          errors={error_list(@errors, :deadline_at)}
+        >
+          <:description>
+            {dgettext(
+              "dashboard_common",
+              "Move it, clear it, or set it again after it has passed to reopen voting. Times in %{timezone}.",
+              timezone: @poll.timezone
+            )}
+          </:description>
+        </.input>
+
+        <div class="space-y-2" data-testid="poll-new-times">
+          <p class="text-token-sm font-medium text-tymeslot-700">
+            {dgettext("dashboard_common", "Add times")}
+          </p>
+          <p class="text-token-xs text-tymeslot-500">
+            {dgettext(
+              "dashboard_common",
+              "Existing times stay as they are. Everyone who has voted is emailed about the new ones."
+            )}
+          </p>
+          <div :for={time <- @new_times} class="flex items-center gap-2">
+            <input
+              type="datetime-local"
+              name={"poll[new_times][#{time.key}]"}
+              value={time.value}
+              class="input py-1.5 px-3 text-token-sm"
+              aria-label={dgettext("dashboard_common", "New time")}
+            />
+            <.icon_button
+              icon="hero-x-mark"
+              label={dgettext("dashboard_common", "Remove time")}
+              phx-click="remove_time"
+              phx-value-key={time.key}
+              phx-target={@myself}
+            />
+          </div>
+          <.action_button
+            variant={:secondary}
+            size={:sm}
+            icon="hero-plus"
+            phx-click="add_time"
+            phx-target={@myself}
+          >
+            {dgettext("dashboard_common", "Add time")}
+          </.action_button>
+          <p :for={error <- error_list(@errors, :new_times)} class="form-error">{error}</p>
+        </div>
+
+        <.input
+          type="checkbox"
+          id={"poll-notify-on-vote-#{@poll.id}"}
+          name="poll[notify_on_vote]"
+          value={@notify_on_vote}
+          label={dgettext("dashboard_common", "Email me about new votes")}
+        />
+      </form>
+
+      <PollReminders.reminders_form
+        id={"poll-edit-reminders-#{@poll.id}"}
+        state={@reminder_picker}
+        myself={@myself}
+      />
+      <p :for={error <- error_list(@errors, :reminder_config)} class="form-error">{error}</p>
+
+      <.participants poll={@poll} myself={@myself} />
+
+      <div class="flex justify-end gap-2">
+        <.action_button
+          variant={:secondary}
+          size={:sm}
+          phx-click="cancel_edit_poll_details"
+          phx-target={@parent_myself}
+        >
+          {dgettext("dashboard_common", "Cancel")}
+        </.action_button>
+        <.action_button type="submit" size={:sm} form={"poll-details-form-#{@poll.id}"}>
+          {dgettext("dashboard_common", "Save changes")}
+        </.action_button>
+      </div>
+    </div>
+    """
+  end
+
+  attr :poll, :map, required: true
+  attr :myself, :any, required: true
+
+  # Everyone counted on the poll, with a way to take someone off it.
+  defp participants(assigns) do
+    ~H"""
+    <details :if={@poll.participants != []} class="text-token-sm" data-testid="poll-participants">
+      <summary class="cursor-pointer font-medium text-tymeslot-700">
+        {dngettext(
+          "dashboard_common",
+          "%{count} participant",
+          "%{count} participants",
+          length(@poll.participants)
+        )}
+      </summary>
+      <ul class="mt-2 divide-y divide-tymeslot-100">
+        <li
+          :for={participant <- @poll.participants}
+          class="flex items-center justify-between gap-3 py-2"
+          data-testid="poll-participant"
+        >
+          <div class="min-w-0">
+            <p class="truncate text-tymeslot-800">
+              {PollParticipantSchema.display_name(participant)}
+            </p>
+            <p class="truncate text-token-xs text-tymeslot-500">
+              {participant.email} · {status_label(participant)}
+            </p>
+          </div>
+          <.icon_button
+            icon="hero-user-minus"
+            label={dgettext("dashboard_common", "Remove from the poll")}
+            phx-click="remove_participant"
+            phx-value-id={participant.id}
+            phx-target={@myself}
+            data-confirm={
+              dgettext(
+                "dashboard_common",
+                "Remove %{name} and their responses from this poll? They are not told.",
+                name: PollParticipantSchema.display_name(participant)
+              )
+            }
+            data-testid="poll-remove-participant"
+          />
+        </li>
+      </ul>
+    </details>
+    """
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event(event, params, socket) when event in @reminder_events do
+    {:noreply,
+     assign(
+       socket,
+       :reminder_picker,
+       PollReminders.apply_event(event, socket.assigns.reminder_picker, params)
+     )}
+  end
+
+  def handle_event("change", %{"poll" => params}, socket) do
+    {:noreply,
+     assign(socket,
+       title: Map.get(params, "title", socket.assigns.title),
+       description: Map.get(params, "description", socket.assigns.description),
+       deadline: Map.get(params, "deadline", socket.assigns.deadline),
+       notify_on_vote: Map.get(params, "notify_on_vote", "false") == "true",
+       new_times: merge_times(socket.assigns.new_times, Map.get(params, "new_times", %{}))
+     )}
+  end
+
+  def handle_event("add_time", _params, socket) do
+    key = socket.assigns.time_counter
+
+    {:noreply,
+     assign(socket,
+       new_times: socket.assigns.new_times ++ [%{key: key, value: ""}],
+       time_counter: key + 1
+     )}
+  end
+
+  def handle_event("remove_time", %{"key" => key}, socket) do
+    key = String.to_integer(key)
+
+    {:noreply,
+     assign(socket, :new_times, Enum.reject(socket.assigns.new_times, &(&1.key == key)))}
+  end
+
+  def handle_event("remove_participant", %{"id" => participant_id}, socket) do
+    %{poll: poll, user_id: user_id} = socket.assigns
+
+    case Polls.remove_participant(poll.id, user_id, participant_id) do
+      :ok ->
+        Flash.info(dgettext("dashboard_common", "Removed from the poll"))
+
+      {:error, _reason} ->
+        Flash.error(dgettext("dashboard_common", "This poll is no longer open."))
+    end
+
+    send_update(PollsComponent, id: socket.assigns.parent_id, poll_updated: poll.id)
+    {:noreply, socket}
+  end
+
+  def handle_event("save", %{"poll" => params}, socket) do
+    %{poll: poll, user_id: user_id} = socket.assigns
+
+    attrs = %{
+      "title" => Map.get(params, "title"),
+      "description" => Map.get(params, "description"),
+      "notify_on_vote" => Map.get(params, "notify_on_vote", "false"),
+      "deadline_at" => LocalTime.to_utc(Map.get(params, "deadline"), poll.timezone),
+      "reminder_config" => PollReminders.to_config(socket.assigns.reminder_picker)
+    }
+
+    new_starts =
+      params
+      |> Map.get("new_times", %{})
+      |> Map.values()
+      |> Enum.map(&LocalTime.to_utc(&1, poll.timezone))
+      |> Enum.reject(&is_nil/1)
+
+    case Polls.update_details(poll.id, user_id, attrs, new_starts) do
+      {:ok, _poll} ->
+        Flash.info(dgettext("dashboard_common", "Poll updated"))
+        send_update(PollsComponent, id: socket.assigns.parent_id, poll_edited: true)
+        {:noreply, socket}
+
+      {:error, :not_open} ->
+        Flash.warning(dgettext("dashboard_common", "This poll is no longer open."))
+        send_update(PollsComponent, id: socket.assigns.parent_id, poll_edited: true)
+        {:noreply, socket}
+
+      {:error, reason} ->
+        {:noreply, assign(socket, :errors, errors_for(reason))}
+    end
+  end
+
+  defp merge_times(times, values) do
+    Enum.map(times, fn %{key: key} = time ->
+      %{time | value: Map.get(values, Integer.to_string(key), time.value)}
+    end)
+  end
+
+  defp status_label(%{voted_at: %DateTime{}}), do: dgettext("dashboard_common", "voted")
+  defp status_label(%{invited_at: %DateTime{}}), do: dgettext("dashboard_common", "invited")
+  defp status_label(_participant), do: dgettext("dashboard_common", "not voted yet")
+
+  defp errors_for(:too_many_slots),
+    do: %{
+      new_times: [
+        dgettext("dashboard_common", "Up to %{max} times", max: PollSchema.max_slots())
+      ]
+    }
+
+  defp errors_for(:slot_in_past),
+    do: %{new_times: [dgettext("dashboard_common", "Times must be in the future")]}
+
+  defp errors_for(%Changeset{data: %PollSchema{}} = changeset) do
+    errors = changeset_errors(changeset)
+
+    if Map.has_key?(errors, :deadline_at),
+      do:
+        Map.put(errors, :deadline_at, [
+          dgettext("dashboard_common", "The deadline must be in the future")
+        ]),
+      else: errors
+  end
+
+  # A time clashing with one the poll already has fails on the slot's unique
+  # index.
+  defp errors_for(%Changeset{}),
+    do: %{new_times: [dgettext("dashboard_common", "The poll already has this time")]}
+
+  defp errors_for(_reason),
+    do: %{base: [dgettext("dashboard_common", "Couldn't save this poll. Please try again.")]}
+
+  defp changeset_errors(changeset) do
+    Changeset.traverse_errors(changeset, fn {message, opts} ->
+      Regex.replace(~r"%{(\w+)}", message, fn _whole, key ->
+        opts |> Keyword.get(String.to_existing_atom(key), "") |> to_string()
+      end)
+    end)
+  end
+
+  defp error_list(errors, field), do: Map.get(errors, field, [])
+end

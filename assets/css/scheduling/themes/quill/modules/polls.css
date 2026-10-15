@@ -91,6 +91,19 @@ html.quill-theme .poll-identity-form {
 }
 
 /* Shown in place of the form once a voting link was requested */
+/* Marks a time added after the participant last answered */
+html.quill-theme .poll-slot-new {
+  display: inline-block;
+  margin-left: var(--space-xs);
+  padding: 0 var(--space-xs);
+  border-radius: var(--radius-full);
+  background: var(--theme-accent);
+  color: var(--theme-background, #fff);
+  font-size: var(--theme-font-size-xs, 0.75rem);
+  font-weight: 600;
+  vertical-align: middle;
+}
+
 html.quill-theme .poll-link-sent {
   display: flex;
   flex-direction: column;

@@ -4,8 +4,9 @@ defmodule TymeslotWeb.Dashboard.Polls.CancelPollModal do
 
   Stateless function component rendered by `PollsComponent`. Cancelling a poll
   is irreversible (`Polls.cancel_poll/2` only accepts open polls and nothing
-  reopens one) and it closes the public voting page on every guest who already
-  holds the link, so the destructive action is never one click away.
+  reopens one), it closes the public voting page on every guest who already
+  holds the link and emails every participant, so the destructive action is
+  never one click away.
 
   The Keep/Cancel actions dispatch `close_cancel_poll_modal` and
   `cancel_poll` back to the parent component (`@myself`), which owns the
@@ -41,6 +42,12 @@ defmodule TymeslotWeb.Dashboard.Polls.CancelPollModal do
           "dashboard_common",
           "“%{title}” will stop accepting responses and everyone holding the voting link will see it as cancelled. This cannot be undone.",
           title: @poll.title
+        )}
+      </p>
+      <p class="mt-2">
+        {dgettext(
+          "dashboard_common",
+          "Everyone on the poll is told by email that it will not go ahead."
         )}
       </p>
 

@@ -168,6 +168,7 @@ msgid "No answer"
 msgstr "Keine Antwort"
 
 #: lib/tymeslot/emails/templates/poll_invitation.ex
+#: lib/tymeslot/emails/templates/poll_new_times.ex
 #: lib/tymeslot/emails/templates/poll_participant_link.ex
 #: lib/tymeslot/emails/templates/poll_vote_receipt.ex
 #, elixir-autogen, elixir-format
@@ -197,6 +198,7 @@ msgid "Vote Now"
 msgstr "Jetzt abstimmen"
 
 #: lib/tymeslot/emails/templates/poll_invitation.ex
+#: lib/tymeslot/emails/templates/poll_new_times.ex
 #: lib/tymeslot/emails/templates/poll_participant_link.ex
 #, elixir-autogen, elixir-format
 msgid "Vote here:"
@@ -330,3 +332,53 @@ msgstr "Nachricht des Gastgebers"
 #, elixir-autogen, elixir-format
 msgid "Proposed times"
 msgstr "Vorgeschlagene Zeiten"
+
+#: lib/tymeslot/emails/templates/poll_new_times.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} added times to the poll. Your earlier responses are kept; please answer the new times too."
+msgstr "%{host} hat der Umfrage weitere Zeiten hinzugefügt. Ihre bisherigen Antworten bleiben erhalten; bitte beantworten Sie auch die neuen Zeiten."
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} has cancelled the poll %{title}, so no meeting will be scheduled from it. Thank you for your responses. If you have questions, reply to this email."
+msgstr "%{host} hat die Umfrage %{title} abgesagt, es wird also kein Termin daraus festgelegt. Vielen Dank für Ihre Antworten. Bei Fragen antworten Sie einfach auf diese E-Mail."
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "%{title} has been cancelled"
+msgstr "%{title} wurde abgesagt"
+
+#: lib/tymeslot/emails/templates/poll_new_times.ex
+#, elixir-autogen, elixir-format
+msgid "Answer the New Times"
+msgstr "Neue Zeiten beantworten"
+
+#: lib/tymeslot/emails/templates/poll_new_times.ex
+#, elixir-autogen, elixir-format
+msgid "New times"
+msgstr "Neue Zeiten"
+
+#: lib/tymeslot/emails/templates/poll_new_times.ex
+#, elixir-autogen, elixir-format
+msgid "New times for %{title}"
+msgstr "Neue Zeiten für %{title}"
+
+#: lib/tymeslot/emails/templates/poll_new_times.ex
+#, elixir-autogen, elixir-format
+msgid "New times to vote on in \"%{title}\""
+msgstr "Neue Zeiten zur Abstimmung in „%{title}“"
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "No time will be picked."
+msgstr "Es wird keine Zeit festgelegt."
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "Poll cancelled"
+msgstr "Umfrage abgesagt"
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "Poll cancelled: \"%{title}\""
+msgstr "Umfrage abgesagt: „%{title}“"

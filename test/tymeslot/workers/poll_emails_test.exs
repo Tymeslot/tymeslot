@@ -87,7 +87,7 @@ defmodule Tymeslot.Workers.PollEmailsTest do
   # --- Cancellation of scheduled jobs ---
 
   describe "cancelling scheduled poll jobs" do
-    test "Polls.cancel_poll/2 deletes the pending deadline jobs" do
+    test "Polls.cancel_poll/2 deletes the pending deadline jobs and tells the participants" do
       user = insert(:user)
       poll = create_poll(user, in_hours(48))
 
@@ -95,7 +95,8 @@ defmodule Tymeslot.Workers.PollEmailsTest do
 
       assert {:ok, _cancelled} = Polls.cancel_poll(poll.id, user.id)
 
-      assert all_enqueued(worker: EmailWorker, args: %{"poll_id" => poll.id}) == []
+      assert [%{args: %{"action" => "send_poll_cancelled"}}] =
+               all_enqueued(worker: EmailWorker, args: %{"poll_id" => poll.id})
     end
 
     test "Confirm.confirm/3 deletes the pending deadline jobs" do

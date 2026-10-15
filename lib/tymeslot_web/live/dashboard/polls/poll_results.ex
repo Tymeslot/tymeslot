@@ -30,8 +30,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.CoreComponents.Containers
   alias TymeslotWeb.Components.CoreComponents.Feedback
-  alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.CoreComponents.Icons
+  alias TymeslotWeb.Dashboard.Polls.PollEditor
   alias TymeslotWeb.Dashboard.Polls.PollInvite
   alias TymeslotWeb.Dashboard.Polls.PollShareLink
   alias TymeslotWeb.Helpers.LocaleFormat
@@ -55,7 +55,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   attr :profile, :any, required: true
   attr :integration_status, :map, required: true
   attr :editing_details?, :boolean, default: false
-  attr :detail_errors, :map, default: %{}
+  attr :user_id, :integer, required: true
+  attr :parent_id, :string, required: true
   attr :meetings_path, :string, required: true
   attr :time_format, :string, default: nil
   attr :myself, :any, required: true
@@ -72,11 +73,14 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
 
     ~H"""
     <Containers.card id={"poll-results-#{@poll.id}"} class="space-y-6">
-      <.details_form
+      <.live_component
         :if={@editing_details?}
+        module={PollEditor}
+        id={"poll-editor-#{@poll.id}"}
         poll={@poll}
-        errors={@detail_errors}
-        myself={@myself}
+        user_id={@user_id}
+        parent_id={@parent_id}
+        parent_myself={@myself}
       />
 
       <div :if={!@editing_details?} class="flex items-start justify-between gap-3">
@@ -120,12 +124,12 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
             profile={@profile}
             integration_status={@integration_status}
           />
-          <%!-- Wording only, and only while the poll is open: see
-                `Polls.update_details/3` for why the times are not editable. --%>
+          <%!-- Only while the poll is open: see `Polls.Editing` for what
+                can change while people vote. --%>
           <Buttons.icon_button
             :if={@open?}
             icon="hero-pencil-square"
-            label={dgettext("dashboard_common", "Edit title and description")}
+            label={dgettext("dashboard_common", "Edit poll")}
             phx-click="edit_poll_details"
             phx-target={@myself}
             data-testid="poll-edit-details"
@@ -205,6 +209,21 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
         myself={@myself}
       />
 
+      <%!-- A poll that is over can be deleted to tidy the list; an open one is
+            cancelled first, so nothing people still vote on disappears. --%>
+      <div :if={!@open?} class="flex justify-end pt-2 border-t border-tymeslot-100">
+        <Buttons.action_button
+          variant={:danger_soft}
+          size={:sm}
+          icon="hero-trash"
+          phx-click="request_delete_poll"
+          phx-target={@myself}
+          data-testid="poll-delete"
+        >
+          {dgettext("dashboard_common", "Delete poll")}
+        </Buttons.action_button>
+      </div>
+
       <div :if={@open?} class="flex justify-end pt-2 border-t border-tymeslot-100">
         <Buttons.action_button
           variant={:danger_soft}
@@ -219,68 +238,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
     </Containers.card>
     """
   end
-
-  # --- Details form ---
-
-  attr :poll, :map, required: true
-  attr :errors, :map, required: true
-  attr :myself, :any, required: true
-
-  defp details_form(assigns) do
-    ~H"""
-    <form
-      id={"poll-details-form-#{@poll.id}"}
-      phx-submit="save_poll_details"
-      phx-target={@myself}
-      class="space-y-4"
-      data-testid="poll-details-form"
-      novalidate
-    >
-      <Forms.input
-        type="text"
-        name="poll[title]"
-        label={dgettext("dashboard_common", "Title")}
-        value={@poll.title}
-        required
-        errors={error_list(@errors, :title)}
-        icon="hero-hand-raised"
-      />
-
-      <Forms.input
-        type="textarea"
-        name="poll[description]"
-        label={dgettext("dashboard_common", "Description (optional)")}
-        value={@poll.description}
-        placeholder={dgettext("dashboard_common", "Add any context for your guests")}
-        errors={error_list(@errors, :description)}
-      />
-
-      <Forms.input
-        type="checkbox"
-        id={"poll-notify-on-vote-#{@poll.id}"}
-        name="poll[notify_on_vote]"
-        value={@poll.notify_on_vote}
-        label={dgettext("dashboard_common", "Email me about new votes")}
-      />
-
-      <div class="flex justify-end gap-2">
-        <Buttons.action_button
-          variant={:secondary}
-          size={:sm}
-          phx-click="cancel_edit_poll_details"
-          phx-target={@myself}
-        >
-          {dgettext("dashboard_common", "Cancel")}
-        </Buttons.action_button>
-        <Buttons.action_button type="submit" size={:sm}>
-          {dgettext("dashboard_common", "Save changes")}
-        </Buttons.action_button>
-      </div>
-    </form>
-    """
-  end
-
-  defp error_list(errors, field), do: Map.get(errors, field, [])
 
   # --- Lifecycle banner ---
 

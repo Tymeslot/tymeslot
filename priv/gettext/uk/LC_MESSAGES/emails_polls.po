@@ -168,6 +168,7 @@ msgid "No answer"
 msgstr "Немає відповіді"
 
 #: lib/tymeslot/emails/templates/poll_invitation.ex
+#: lib/tymeslot/emails/templates/poll_new_times.ex
 #: lib/tymeslot/emails/templates/poll_participant_link.ex
 #: lib/tymeslot/emails/templates/poll_vote_receipt.ex
 #, elixir-autogen, elixir-format
@@ -197,6 +198,7 @@ msgid "Vote Now"
 msgstr "Проголосувати"
 
 #: lib/tymeslot/emails/templates/poll_invitation.ex
+#: lib/tymeslot/emails/templates/poll_new_times.ex
 #: lib/tymeslot/emails/templates/poll_participant_link.ex
 #, elixir-autogen, elixir-format
 msgid "Vote here:"
@@ -332,3 +334,53 @@ msgstr "Повідомлення від організатора"
 #, elixir-autogen, elixir-format
 msgid "Proposed times"
 msgstr "Запропонований час"
+
+#: lib/tymeslot/emails/templates/poll_new_times.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} added times to the poll. Your earlier responses are kept; please answer the new times too."
+msgstr "%{host} додає нові варіанти часу до опитування. Ваші попередні відповіді збережено; будь ласка, дайте відповідь і щодо нових варіантів."
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} has cancelled the poll %{title}, so no meeting will be scheduled from it. Thank you for your responses. If you have questions, reply to this email."
+msgstr "%{host} скасовує опитування %{title}, тож зустріч за ним не буде призначено. Дякуємо за ваші відповіді. Якщо маєте запитання, просто дайте відповідь на цей лист."
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "%{title} has been cancelled"
+msgstr "Опитування %{title} скасовано"
+
+#: lib/tymeslot/emails/templates/poll_new_times.ex
+#, elixir-autogen, elixir-format
+msgid "Answer the New Times"
+msgstr "Відповісти щодо нових варіантів"
+
+#: lib/tymeslot/emails/templates/poll_new_times.ex
+#, elixir-autogen, elixir-format
+msgid "New times"
+msgstr "Нові варіанти часу"
+
+#: lib/tymeslot/emails/templates/poll_new_times.ex
+#, elixir-autogen, elixir-format
+msgid "New times for %{title}"
+msgstr "Нові варіанти часу для %{title}"
+
+#: lib/tymeslot/emails/templates/poll_new_times.ex
+#, elixir-autogen, elixir-format
+msgid "New times to vote on in \"%{title}\""
+msgstr "Нові варіанти часу для голосування в опитуванні «%{title}»"
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "No time will be picked."
+msgstr "Час не буде обрано."
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "Poll cancelled"
+msgstr "Опитування скасовано"
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "Poll cancelled: \"%{title}\""
+msgstr "Опитування скасовано: «%{title}»"

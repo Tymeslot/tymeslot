@@ -11,6 +11,7 @@ defmodule Tymeslot.Polls do
   alias Tymeslot.MeetingTypes
 
   alias Tymeslot.Polls.{
+    Editing,
     Invitations,
     PollParticipantQueries,
     PollParticipantSchema,
@@ -107,23 +108,60 @@ defmodule Tymeslot.Polls do
   def count_open_polls(user_id), do: PollQueries.count_open_for_user(user_id)
 
   @doc """
-  Updates an open poll's title and description, and whether the host is
-  emailed about new votes (`notify_on_vote`), and notifies subscribers.
+  Updates the user's open poll: its title and description, whether the host
+  is emailed about new votes, the voting deadline and the reminders before it,
+  and adds a candidate time at each of `new_starts`. Existing times are never
+  changed. See `Tymeslot.Polls.Editing`.
 
-  Only these fields, and only while the poll is open. The candidate times,
-  duration, timezone, and deadline are the terms guests voted against, so they
-  are not editable; a confirmed poll has already minted a meeting that carries
-  its own title, and a cancelled one is history.
-
-  Subscribers are notified because the title and description are both on the
-  public voting page, so an open voting tab shows the correction immediately.
+  Subscribers are notified, since the title, description, deadline and times
+  are all on the public voting page.
   """
-  @spec update_details(Ecto.UUID.t(), integer(), map()) ::
-          {:ok, PollSchema.t()} | {:error, :not_found | :not_open | Ecto.Changeset.t()}
-  def update_details(id, user_id, attrs) do
+  @spec update_details(Ecto.UUID.t(), integer(), map(), [DateTime.t()]) ::
+          {:ok, PollSchema.t()} | {:error, Editing.reason()}
+  def update_details(id, user_id, attrs, new_starts \\ []),
+    do: Editing.update(id, user_id, attrs, new_starts)
+
+  @doc """
+  Removes a participant from the user's open poll, with their responses, for
+  someone the host does not want counted: a joke entry, or someone who has
+  dropped out. Nobody is emailed.
+  """
+  @spec remove_participant(Ecto.UUID.t(), integer(), Ecto.UUID.t()) ::
+          :ok | {:error, :not_found | :not_open}
+  def remove_participant(id, user_id, participant_id) do
     with_poll(id, user_id, fn
-      %{status: :open} = poll -> do_update_details(poll, attrs)
-      _poll -> {:error, :not_open}
+      %{status: :open} = poll ->
+        case PollParticipantQueries.delete_from_poll(poll.id, participant_id) do
+          {1, _rows} ->
+            broadcast_update(poll.id)
+            :ok
+
+          {0, _rows} ->
+            {:error, :not_found}
+        end
+
+      _closed ->
+        {:error, :not_open}
+    end)
+  end
+
+  @doc """
+  Deletes the user's poll once it is over, confirmed or cancelled, with its
+  times, participants and votes, to tidy the list. The meeting a confirmed
+  poll minted stays. An open poll has to be cancelled first, so nothing
+  people are still voting on disappears.
+  """
+  @spec delete_poll(Ecto.UUID.t(), integer()) :: :ok | {:error, :not_found | :still_open}
+  def delete_poll(id, user_id) do
+    with_poll(id, user_id, fn
+      %{status: :open} ->
+        {:error, :still_open}
+
+      poll ->
+        :ok = PollScheduler.cancel_deadline_jobs(poll.id)
+        {:ok, _deleted} = PollQueries.delete(poll)
+        broadcast_update(poll.id)
+        :ok
     end)
   end
 
@@ -148,7 +186,10 @@ defmodule Tymeslot.Polls do
     end)
   end
 
-  @doc "Cancels an open poll and notifies subscribers. Only open polls may be cancelled."
+  @doc """
+  Cancels an open poll, notifies subscribers and emails every participant
+  that it will not go ahead. Only open polls may be cancelled.
+  """
   @spec cancel_poll(Ecto.UUID.t(), integer()) ::
           {:ok, PollSchema.t()} | {:error, :not_found | :not_open | Ecto.Changeset.t()}
   def cancel_poll(id, user_id) do
@@ -356,19 +397,9 @@ defmodule Tymeslot.Polls do
     case PollQueries.update(PollSchema.cancel_changeset(poll)) do
       {:ok, cancelled} ->
         :ok = PollScheduler.cancel_deadline_jobs(cancelled.id)
+        :ok = PollScheduler.schedule_cancellation(cancelled)
         broadcast_update(cancelled.id)
         {:ok, cancelled}
-
-      {:error, changeset} ->
-        {:error, changeset}
-    end
-  end
-
-  defp do_update_details(poll, attrs) do
-    case PollQueries.update(PollSchema.details_changeset(poll, attrs)) do
-      {:ok, updated} ->
-        broadcast_update(updated.id)
-        {:ok, updated}
 
       {:error, changeset} ->
         {:error, changeset}

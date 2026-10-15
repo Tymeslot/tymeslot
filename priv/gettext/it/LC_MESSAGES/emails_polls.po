@@ -168,6 +168,7 @@ msgid "No answer"
 msgstr "Nessuna risposta"
 
 #: lib/tymeslot/emails/templates/poll_invitation.ex
+#: lib/tymeslot/emails/templates/poll_new_times.ex
 #: lib/tymeslot/emails/templates/poll_participant_link.ex
 #: lib/tymeslot/emails/templates/poll_vote_receipt.ex
 #, elixir-autogen, elixir-format
@@ -197,6 +198,7 @@ msgid "Vote Now"
 msgstr "Vota ora"
 
 #: lib/tymeslot/emails/templates/poll_invitation.ex
+#: lib/tymeslot/emails/templates/poll_new_times.ex
 #: lib/tymeslot/emails/templates/poll_participant_link.ex
 #, elixir-autogen, elixir-format
 msgid "Vote here:"
@@ -330,3 +332,53 @@ msgstr "Messaggio dell'organizzatore"
 #, elixir-autogen, elixir-format
 msgid "Proposed times"
 msgstr "Orari proposti"
+
+#: lib/tymeslot/emails/templates/poll_new_times.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} added times to the poll. Your earlier responses are kept; please answer the new times too."
+msgstr "%{host} ha aggiunto degli orari al sondaggio. Le tue risposte precedenti restano valide; rispondi anche ai nuovi orari."
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} has cancelled the poll %{title}, so no meeting will be scheduled from it. Thank you for your responses. If you have questions, reply to this email."
+msgstr "%{host} ha annullato il sondaggio %{title}, quindi non verrà fissato alcun incontro. Grazie per le tue risposte. Per qualsiasi domanda, rispondi a questa email."
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "%{title} has been cancelled"
+msgstr "%{title} è stato annullato"
+
+#: lib/tymeslot/emails/templates/poll_new_times.ex
+#, elixir-autogen, elixir-format
+msgid "Answer the New Times"
+msgstr "Rispondi ai nuovi orari"
+
+#: lib/tymeslot/emails/templates/poll_new_times.ex
+#, elixir-autogen, elixir-format
+msgid "New times"
+msgstr "Nuovi orari"
+
+#: lib/tymeslot/emails/templates/poll_new_times.ex
+#, elixir-autogen, elixir-format
+msgid "New times for %{title}"
+msgstr "Nuovi orari per %{title}"
+
+#: lib/tymeslot/emails/templates/poll_new_times.ex
+#, elixir-autogen, elixir-format
+msgid "New times to vote on in \"%{title}\""
+msgstr "Nuovi orari da votare in \"%{title}\""
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "No time will be picked."
+msgstr "Non verrà scelto alcun orario."
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "Poll cancelled"
+msgstr "Sondaggio annullato"
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "Poll cancelled: \"%{title}\""
+msgstr "Sondaggio annullato: \"%{title}\""

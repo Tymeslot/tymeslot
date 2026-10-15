@@ -234,6 +234,15 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
     delete_pending_jobs(worker_module, args_match, queue: "emails")
   end
 
+  @doc """
+  Like `delete_poll_jobs/2`, but only the jobs whose args also contain
+  `args_match`, e.g. one action's.
+  """
+  @spec delete_poll_jobs_matching(term(), module(), map()) :: {non_neg_integer(), nil}
+  def delete_poll_jobs_matching(poll_id, worker_module, args_match) do
+    delete_pending_jobs(worker_module, Map.put(args_match, "poll_id", poll_id), queue: "emails")
+  end
+
   defp delete_pending_jobs(worker_module, args_match, opts \\ []) do
     worker_name = normalize_worker_name(worker_module)
     queue = Keyword.get(opts, :queue)

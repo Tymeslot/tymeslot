@@ -175,3 +175,8 @@ msgstr "Ми надіслали особисте посилання для го�
 #, elixir-autogen, elixir-format
 msgid "Please enter your name, then save your responses again."
 msgstr "Введіть своє ім'я, а потім збережіть відповіді ще раз."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "New"
+msgstr "Нове"

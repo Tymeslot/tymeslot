@@ -228,18 +228,19 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
       view |> element("[data-testid='poll-edit-details']") |> render_click()
       assert has_element?(view, "[data-testid='poll-details-form']")
 
-      html =
-        view
-        |> form("[data-testid='poll-details-form']",
-          poll: %{title: "Team offsite (moved)", description: "Now ninety minutes."}
-        )
-        |> render_submit()
+      view
+      |> form("[data-testid='poll-details-form']",
+        poll: %{title: "Team offsite (moved)", description: "Now ninety minutes."}
+      )
+      |> render_submit()
 
       # Persisted, and the panel is back to its reading state showing the change.
       {:ok, reloaded} = Polls.get_poll_for_host(poll.id, user.id)
       assert reloaded.title == "Team offsite (moved)"
       assert reloaded.description == "Now ninety minutes."
 
+      # The editor tells the panel it saved; the panel redraws on the next render.
+      html = render(view)
       refute has_element?(view, "[data-testid='poll-details-form']")
       assert html =~ "Team offsite (moved)"
       assert html =~ "Now ninety minutes."

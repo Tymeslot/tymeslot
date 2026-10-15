@@ -175,3 +175,8 @@ msgstr "Enviamos um link pessoal de votação para %{email}. Abra-o para votar; 
 #, elixir-autogen, elixir-format
 msgid "Please enter your name, then save your responses again."
 msgstr "Informe seu nome e salve suas respostas novamente."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "New"
+msgstr "Novo"

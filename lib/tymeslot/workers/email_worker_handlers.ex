@@ -55,6 +55,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     "send_poll_deadline_reminders" => {PollEmails, :handle_deadline_reminders, :with_job_id},
     "send_poll_host_nudge" => {PollEmails, :handle_host_nudge, :with_job_id},
     "send_poll_vote_digest" => {PollEmails, :handle_vote_digest, :with_job_id},
+    "send_poll_new_times" => {PollEmails, :handle_new_times, :with_job_id},
+    "send_poll_cancelled" => {PollEmails, :handle_cancelled, :with_job_id},
     "send_poll_participant_link" => {PollEmails, :handle_participant_link},
     "send_poll_invitation" => {PollEmails, :handle_invitation},
     "send_poll_vote_receipt" => {PollEmails, :handle_vote_receipt},

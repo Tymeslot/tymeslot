@@ -175,3 +175,8 @@ msgstr "Na adresu %{email} jsme poslali osobní odkaz k hlasování. Otevřete 
 #, elixir-autogen, elixir-format
 msgid "Please enter your name, then save your responses again."
 msgstr "Zadejte své jméno a pak odpovědi uložte znovu."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "New"
+msgstr "Nové"
