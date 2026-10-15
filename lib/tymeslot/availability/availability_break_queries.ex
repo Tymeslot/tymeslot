@@ -52,12 +52,18 @@ defmodule Tymeslot.Availability.AvailabilityBreakQueries do
   @doc """
   Gets work hours for a weekly availability.
   """
-  @spec get_work_hours(integer()) :: {Time.t() | nil, Time.t() | nil} | nil
+  @spec get_work_hours(integer()) ::
+          %{start_time: Time.t() | nil, end_time: Time.t() | nil, ends_next_day: boolean()}
+          | nil
   def get_work_hours(weekly_availability_id) do
     query =
       from(wa in "weekly_availability",
         where: wa.id == ^weekly_availability_id,
-        select: {wa.start_time, wa.end_time}
+        select: %{
+          start_time: wa.start_time,
+          end_time: wa.end_time,
+          ends_next_day: wa.ends_next_day
+        }
       )
 
     Repo.one(query)

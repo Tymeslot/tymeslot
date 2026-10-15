@@ -129,6 +129,25 @@ defmodule Tymeslot.Security.SecurityLoggerTest do
       assert meta.ip_address == nil
       assert meta.user_agent == nil
     end
+
+    # Through the installed redactor, as production writes it: the line keeps
+    # the visitor's network for telling traffic apart, never the address.
+    test "never writes a full client address, IPv4 or IPv6" do
+      LogCapture.with_capture([logger_level: :info], fn ->
+        for ip <- ["203.0.113.77", "2001:db8:85a3:8d3:1319:8a2e:370:7348"] do
+          SecurityLogger.log_authentication_attempt("alice@example.com", false, "bad_password", %{
+            ip_address: ip
+          })
+        end
+      end)
+
+      logged =
+        LogCapture.drain()
+        |> Enum.filter(&(&1.meta[:event_type] == "authentication_failure"))
+        |> Enum.map(& &1.meta.ip_address)
+
+      assert logged == ["203.0.113.0/24", "2001:db8:85a3::/48"]
+    end
   end
 
   describe "log_security_event/2" do

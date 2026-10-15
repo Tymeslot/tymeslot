@@ -95,6 +95,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
     |> put_preview_params(socket)
     |> Map.merge(demo_theme_param(socket.assigns))
     |> maybe_put_query_param("reschedule_meeting_uid", socket.assigns[:reschedule_meeting_uid])
+    |> maybe_put_query_param("reschedule_seat_token", socket.assigns[:reschedule_seat_token])
     |> put_choices(socket.assigns)
   end
 
@@ -202,6 +203,57 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   defp maybe_put_query_param(params, _param_key, value) when value in [nil, ""], do: params
   defp maybe_put_query_param(params, key, value), do: Map.put(params, key, value)
 
+  # The route's own segments, which arrive in `params` beside the query.
+  @path_params ["username", "slug"]
+
+  # What makes a page a reschedule rather than a booking.
+  @reschedule_params ["reschedule_meeting_uid", "reschedule_seat_token"]
+
+  @doc """
+  The query string parameters of a booking page's `params`: everything but
+  the route's own segments, and only the string-valued ones a URL can carry
+  back.
+  """
+  @spec query_params(map()) :: %{String.t() => String.t()}
+  def query_params(params) do
+    for {key, value} <- Map.drop(params, @path_params), is_binary(value), into: %{} do
+      {key, value}
+    end
+  end
+
+  @doc """
+  The host's booking page from the start, as a fresh booking: the page's
+  own query (an embed's parameters, a preview, the timezone) is kept, and
+  only the reschedule it was for is dropped.
+
+  `route` is where the booking starts again: `:overview`, the host's page
+  with every meeting type, or `:schedule`, the chosen meeting type's own
+  link, so a booker who came by a direct or private link is not shown the
+  host's other types.
+  """
+  @spec restart_path(Phoenix.LiveView.Socket.t(), :overview | :schedule) :: String.t()
+  def restart_path(socket, route \\ :overview) do
+    base =
+      case socket.assigns[:username_context] do
+        username when is_binary(username) -> restart_base(route, username, socket)
+        _none -> "/"
+      end
+
+    query = Map.drop(socket.assigns[:page_query_params] || %{}, @reschedule_params)
+    if query == %{}, do: base, else: "#{base}?#{URI.encode_query(query)}"
+  end
+
+  defp restart_base(:schedule, username, socket),
+    do: do_get_base_path(:schedule, username, socket)
+
+  defp restart_base(_overview, username, _socket), do: "/#{username}"
+
+  @doc "Whether the page's URL carries a reschedule."
+  @spec reschedule_in_url?(Phoenix.LiveView.Socket.t()) :: boolean()
+  def reschedule_in_url?(socket) do
+    Enum.any?(@reschedule_params, &Map.has_key?(socket.assigns[:page_query_params] || %{}, &1))
+  end
+
   @doc """
   Returns the organizer's scheduling page path for restarting a booking,
   e.g. "/username".
@@ -236,10 +288,17 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   The confirmation step's "Add to calendar" link: the booked meeting as a
   downloadable `.ics` file, served by `MeetingCalendarController`.
 
+  A seat on a group meeting downloads the seat's own file under its
+  management token instead (`:seat_calendar_url`, set when the seat was
+  booked): the meeting uid of a group meeting names the shared slot, which is
+  never the booker's to hold, export or manage.
+
   `nil` until the meeting has a uid and the page knows its organiser, which
   is how the templates decide whether to show the link at all.
   """
   @spec calendar_ics_path(map()) :: String.t() | nil
+  def calendar_ics_path(%{seat_calendar_url: url}) when is_binary(url) and url != "", do: url
+
   def calendar_ics_path(%{username_context: username, meeting_uid: uid})
       when is_binary(username) and username != "" and is_binary(uid) and uid != "",
       do: ~p"/#{username}/meeting/#{uid}/calendar.ics"

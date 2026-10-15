@@ -19,7 +19,7 @@ defmodule Tymeslot.Profiles.ProfileQueriesTest do
       assert is_nil(profile.timezone)
 
       assert {:ok, schedule} = Schedules.create_default(profile.id)
-      assert schedule.buffer_minutes == 15
+      assert {schedule.buffer_before_minutes, schedule.buffer_after_minutes} == {15, 15}
       assert schedule.advance_booking_days == 90
       assert schedule.min_advance_hours == 3
     end
@@ -40,9 +40,11 @@ defmodule Tymeslot.Profiles.ProfileQueriesTest do
       profile = insert(:profile)
       schedule = insert(:availability_schedule, profile: profile, is_default: true)
 
-      assert {:error, changeset} = Schedules.update_policy(schedule, %{buffer_minutes: -10})
+      assert {:error, changeset} =
+               Schedules.update_policy(schedule, %{buffer_before_minutes: -10})
+
       refute changeset.valid?
-      assert "must be greater than or equal to 0" in errors_on(changeset).buffer_minutes
+      assert "must be greater than or equal to 0" in errors_on(changeset).buffer_before_minutes
     end
   end
 

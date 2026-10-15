@@ -21,33 +21,24 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ShowAsFreeSectio
   def show_as_free_section(assigns) do
     ~H"""
     <section class="space-y-4">
-      <div class="flex items-center gap-2">
-        <.icon name="hero-calendar-days" class="w-5 h-5 text-turquoise-500" />
-        <h3 class="text-token-base font-semibold text-tymeslot-800">
-          {dgettext("dashboard_meeting_form", "Calendar availability")}
-        </h3>
-      </div>
+      <.subsection_header
+        icon="hero-calendar-days"
+        title={dgettext("dashboard_meeting_form", "Calendar availability")}
+      />
 
-      <label class="card-glass flex items-start gap-3 p-4 cursor-pointer">
-        <input
-          type="checkbox"
-          class="checkbox mt-0.5"
-          checked={@show_as_free}
-          phx-click="toggle_show_as_free"
-          phx-target={@myself}
-        />
-        <div class="space-y-1">
-          <p class="text-token-sm font-medium text-tymeslot-700">
-            {dgettext("dashboard_meeting_form", "Show these bookings as free on my calendar")}
-          </p>
-          <p class="text-token-sm text-tymeslot-500">
-            {dgettext(
-              "dashboard_meeting_form",
-              "The event is still created, but marked as free time so it doesn't block other bookings or appear busy to people who can see your availability."
-            )}
-          </p>
-        </div>
-      </label>
+      <.setting_row
+        id="show-as-free-toggle"
+        label={dgettext("dashboard_meeting_form", "Show these bookings as free on my calendar")}
+        description={
+          dgettext(
+            "dashboard_meeting_form",
+            "The event is still created, but marked as free time so it doesn't block other bookings or appear busy to people who can see your availability."
+          )
+        }
+        checked={@show_as_free}
+        on_change="toggle_show_as_free"
+        target={@myself}
+      />
     </section>
     """
   end

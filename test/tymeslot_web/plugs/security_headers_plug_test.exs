@@ -53,7 +53,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
                "form-action 'self' https://billing.stripe.com https://checkout.stripe.com https://connect.stripe.com"
     end
 
-    test "loads stylesheets and fonts from the instance only", %{conn: conn} do
+    test "fonts and stylesheets load only from this instance", %{conn: conn} do
       conn = SecurityHeadersPlug.call(conn, [])
       [csp] = get_resp_header(conn, "content-security-policy")
 
@@ -442,8 +442,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
 
       nonce = conn.assigns.csp_nonce
 
-      assert script_src_directive ==
-               "script-src 'self' 'nonce-#{nonce}' https://www.google.com https://www.gstatic.com https://js.stripe.com"
+      assert script_src_directive == "script-src 'self' 'nonce-#{nonce}'"
     end
 
     test "does not allow 'unsafe-eval' or 'unsafe-inline' in script-src", %{conn: conn} do

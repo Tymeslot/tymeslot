@@ -11,7 +11,7 @@ defmodule Tymeslot.Emails.BrandingTest do
   alias Tymeslot.Emails.Branding
   alias Tymeslot.Emails.Shared.Layouts
   alias Tymeslot.Emails.Shared.MjmlEmail
-  alias Tymeslot.Emails.Shared.Styles.BrandPalette
+  alias Tymeslot.Emails.Shared.Styles.{BrandPalette, CSS, Tokens}
   alias Tymeslot.Emails.Shared.TemplateHelper
   alias Tymeslot.Utils.Colour
 
@@ -192,6 +192,32 @@ defmodule Tymeslot.Emails.BrandingTest do
       File.rm!(Path.join(upload_dir(), relative))
 
       assert Branding.custom_logo_path() == nil
+    end
+  end
+
+  describe "dark-mode logo plate" do
+    test "a custom logo sits on a light plate behind the logo wrapper in dark mode" do
+      {:ok, _relative} = Branding.store_logo(png_path())
+
+      css = CSS.dark_mode_styles()
+      [_light, dark] = String.split(css, "@media (prefers-color-scheme: dark) {", parts: 2)
+
+      assert dark =~ ".#{CSS.logo_plate_class()} img {"
+      assert dark =~ "background: #{Tokens.surface()} !important;"
+      assert MjmlEmail.logo_header() =~ ~s(css-class="#{CSS.logo_plate_class()}")
+    end
+
+    test "the stock logo gets no plate" do
+      refute CSS.dark_mode_styles() =~ CSS.logo_plate_class()
+    end
+
+    test "the plate rule stays inside the dark media query, so light mode is unchanged" do
+      {:ok, _relative} = Branding.store_logo(png_path())
+
+      [light, _dark] =
+        String.split(CSS.dark_mode_styles(), "@media (prefers-color-scheme: dark) {", parts: 2)
+
+      refute light =~ CSS.logo_plate_class()
     end
   end
 

@@ -1,6 +1,11 @@
 defmodule TymeslotWeb.StepNavigation do
   @moduledoc """
   Component for rendering step navigation indicators in the booking flow.
+
+  A step is offered as a button only when it is behind the current one and
+  in `navigable_steps`, the steps a click would actually move to
+  (`Journey.Runtime.navigable_steps/1`); every other step is plain,
+  non-interactive markup.
   """
 
   use Phoenix.Component
@@ -11,6 +16,10 @@ defmodule TymeslotWeb.StepNavigation do
   attr :slug, :string, default: nil
   attr :username_context, :string, default: nil
 
+  attr :navigable_steps, :list,
+    default: [],
+    doc: "the step numbers a click would move to; no other step is clickable"
+
   @spec step_indicator(map()) :: Phoenix.LiveView.Rendered.t()
   def step_indicator(assigns) do
     ~H"""
@@ -19,7 +28,7 @@ defmodule TymeslotWeb.StepNavigation do
         step={1}
         current_step={@current_step}
         label={dgettext("onboarding", "Duration")}
-        clickable={@current_step > 1}
+        clickable={@current_step > 1 and 1 in @navigable_steps}
       />
 
       <div class={"step-connector " <> connector_class(1, @current_step)}></div>
@@ -28,7 +37,7 @@ defmodule TymeslotWeb.StepNavigation do
         step={2}
         current_step={@current_step}
         label={dgettext("onboarding", "Date & Time")}
-        clickable={@current_step > 2 && @slug != nil}
+        clickable={(@current_step > 2 && @slug != nil) and 2 in @navigable_steps}
       />
 
       <div class={"step-connector " <> connector_class(2, @current_step)}></div>
@@ -37,7 +46,7 @@ defmodule TymeslotWeb.StepNavigation do
         step={3}
         current_step={@current_step}
         label={dgettext("onboarding", "Details")}
-        clickable={@current_step > 3 && @slug != nil}
+        clickable={(@current_step > 3 && @slug != nil) and 3 in @navigable_steps}
       />
 
       <div class={"step-connector " <> connector_class(3, @current_step)}></div>
@@ -60,9 +69,13 @@ defmodule TymeslotWeb.StepNavigation do
   @spec step_item(map()) :: Phoenix.LiveView.Rendered.t()
   defp step_item(assigns) do
     ~H"""
-    <div class="step-item-wrapper flex flex-col items-center">
+    <div
+      class="step-item-wrapper flex flex-col items-center"
+      aria-current={@step == @current_step && "step"}
+    >
       <%= if @clickable do %>
         <button
+          type="button"
           phx-click="navigate_to_step"
           phx-value-step={@step}
           class="flex flex-col items-center group"

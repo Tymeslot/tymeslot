@@ -31,11 +31,6 @@ msgstr "Ein Fehler ist aufgetreten. Bitte laden Sie die Seite neu und versuchen 
 msgid "Background Design"
 msgstr "Hintergrund-Design"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Choose Your Style"
-msgstr "Wählen Sie Ihren Stil"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/background_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a visual style that matches your professional identity."
@@ -62,11 +57,6 @@ msgstr "Für die Vorschau Kalender verbinden"
 #, elixir-autogen, elixir-format
 msgid "Current"
 msgstr "Aktuell"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Current Style"
-msgstr "Aktueller Stil"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/accent_panel.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/palette_panel.ex
@@ -112,22 +102,12 @@ msgstr "Ungültige Design-Auswahl"
 msgid "Live Preview"
 msgstr "Live-Vorschau"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "More Styles Coming Soon"
-msgstr "Weitere Stile folgen bald"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/cover_panel.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Or upload your own"
 msgstr "Oder eigenes hochladen"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Our design team is busy crafting new themes to help you express your unique professional style."
-msgstr "Unser Design-Team arbeitet bereits an neuen Designs, damit Sie Ihren einzigartigen professionellen Stil ausdrücken können."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_upload.ex
 #, elixir-autogen, elixir-format
@@ -294,6 +274,16 @@ msgstr "Nicht gespeicherte Änderungen"
 #, elixir-autogen, elixir-format
 msgid "Complete the form to save"
 msgstr "Formular ausfüllen, um zu speichern"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/background_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Background type"
+msgstr "Hintergrundtyp"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Current style"
+msgstr "Aktueller Stil"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/asset_uploads.ex
 #, elixir-autogen, elixir-format
@@ -577,11 +567,6 @@ msgstr "Abstände"
 msgid "JPG, PNG or WebP. Max %{size} MB."
 msgstr "JPG, PNG oder WebP. Max. %{size} MB."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
-#, elixir-autogen, elixir-format
-msgid "MP4, WebM or MOV. Max %{size} MB."
-msgstr "MP4, WebM oder MOV. Max. %{size} MB."
-
 #: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
 #, elixir-autogen, elixir-format
 msgid "Blush"
@@ -683,12 +668,12 @@ msgstr "Woche"
 #: lib/tymeslot_web/themes/quill/theme.ex
 #, elixir-autogen, elixir-format
 msgid "My clients should feel they are booking someone established. The page should look as considered as my work."
-msgstr "Meine Kunden sollen spüren, dass sie jemand Etabliertes buchen. Die Seite soll so durchdacht aussehen wie meine Arbeit."
+msgstr "Meine Kunden sollen spüren, dass sie bei jemandem buchen, der etabliert ist. Die Seite soll so durchdacht aussehen wie meine Arbeit."
 
 #: lib/tymeslot_web/themes/rhythm/theme.ex
 #, elixir-autogen, elixir-format
 msgid "When someone books me, I want them to feel the atmosphere first: motion, mood, then a time."
-msgstr "Wenn mich jemand bucht, soll er zuerst die Atmosphäre spüren: Bewegung, Stimmung, dann einen Termin."
+msgstr "Wer bei mir bucht, soll zuerst die Atmosphäre spüren: Bewegung, Stimmung, dann einen Termin."
 
 #: lib/tymeslot/theme_customizations/assets.ex
 #, elixir-autogen, elixir-format
@@ -704,3 +689,8 @@ msgstr "Meine Buchungsseite soll keine Persönlichkeit haben. Sie soll klar, sch
 #, elixir-autogen, elixir-format
 msgid "People book me, not a time slot. Before they pick a date, they should know who I am, what I do, and whether we're a fit."
 msgstr "Man bucht mich, nicht einen Termin. Bevor jemand ein Datum wählt, soll er wissen, wer ich bin, was ich mache und ob wir zusammenpassen."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "MP4 or WebM. Max %{size} MB."
+msgstr "MP4 oder WebM. Max. %{size} MB."

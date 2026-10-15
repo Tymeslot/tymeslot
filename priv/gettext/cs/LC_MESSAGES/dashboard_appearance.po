@@ -31,11 +31,6 @@ msgstr "Došlo k chybě. Obnovte prosím stránku a zkuste to znovu."
 msgid "Background Design"
 msgstr "Vzhled pozadí"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Choose Your Style"
-msgstr "Vyberte si styl"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/background_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a visual style that matches your professional identity."
@@ -62,11 +57,6 @@ msgstr "Pro náhled připojte kalendář"
 #, elixir-autogen, elixir-format
 msgid "Current"
 msgstr "Aktuální"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Current Style"
-msgstr "Aktuální styl"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/accent_panel.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/palette_panel.ex
@@ -112,22 +102,12 @@ msgstr "Neplatný výběr motivu"
 msgid "Live Preview"
 msgstr "Živý náhled"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "More Styles Coming Soon"
-msgstr "Brzy přibudou další styly"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/cover_panel.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Or upload your own"
 msgstr "Nebo nahrajte vlastní"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Our design team is busy crafting new themes to help you express your unique professional style."
-msgstr "Náš designový tým pilně připravuje nové motivy, se kterými vyjádříte svůj jedinečný profesní styl."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_upload.ex
 #, elixir-autogen, elixir-format
@@ -294,6 +274,16 @@ msgstr "Neuložené změny"
 #, elixir-autogen, elixir-format
 msgid "Complete the form to save"
 msgstr "Vyplňte formulář, aby se změny uložily"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/background_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Background type"
+msgstr "Typ pozadí"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Current style"
+msgstr "Aktuální styl"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/asset_uploads.ex
 #, elixir-autogen, elixir-format
@@ -577,11 +567,6 @@ msgstr "Rozestupy"
 msgid "JPG, PNG or WebP. Max %{size} MB."
 msgstr "JPG, PNG nebo WebP. Max. %{size} MB."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
-#, elixir-autogen, elixir-format
-msgid "MP4, WebM or MOV. Max %{size} MB."
-msgstr "MP4, WebM nebo MOV. Max. %{size} MB."
-
 #: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
 #, elixir-autogen, elixir-format
 msgid "Blush"
@@ -683,12 +668,12 @@ msgstr "Týden"
 #: lib/tymeslot_web/themes/quill/theme.ex
 #, elixir-autogen, elixir-format
 msgid "My clients should feel they are booking someone established. The page should look as considered as my work."
-msgstr "Moji klienti by měli cítit, že si rezervují někoho zavedeného. Stránka má působit stejně promyšleně jako moje práce."
+msgstr "Moji klienti mají mít pocit, že si rezervují někoho zavedeného. Stránka má působit stejně promyšleně jako moje práce."
 
 #: lib/tymeslot_web/themes/rhythm/theme.ex
 #, elixir-autogen, elixir-format
 msgid "When someone books me, I want them to feel the atmosphere first: motion, mood, then a time."
-msgstr "Když si mě někdo rezervuje, chci, aby nejdřív ucítil atmosféru: pohyb, náladu, a teprve pak čas."
+msgstr "Když si mě někdo rezervuje, chci, aby nejdřív ucítil atmosféru: pohyb, náladu, pak teprve termín."
 
 #: lib/tymeslot/theme_customizations/assets.ex
 #, elixir-autogen, elixir-format
@@ -704,3 +689,8 @@ msgstr "Nechci, aby moje rezervační stránka měla osobnost. Chci, aby byla p�
 #, elixir-autogen, elixir-format
 msgid "People book me, not a time slot. Before they pick a date, they should know who I am, what I do, and whether we're a fit."
 msgstr "Lidé si rezervují mě, ne časový úsek. Než si vyberou datum, měli by vědět, kdo jsem, co dělám a jestli si sedneme."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "MP4 or WebM. Max %{size} MB."
+msgstr "MP4 nebo WebM. Max. %{size} MB."

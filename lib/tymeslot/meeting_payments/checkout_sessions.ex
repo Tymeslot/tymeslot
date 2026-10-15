@@ -273,5 +273,8 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   def stripe_locale("it"), do: "it"
   def stripe_locale("cs"), do: "cs"
   def stripe_locale("pl"), do: "pl"
+  # The catalogue is registered as "pt" but written in Brazilian Portuguese
+  # (see priv/gettext/GLOSSARY.pt.md §8), so the checkout follows the text.
+  def stripe_locale("pt"), do: "pt-BR"
   def stripe_locale(_other), do: "auto"
 end

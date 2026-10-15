@@ -4,10 +4,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploadsTest do
   @moduletag :themes
 
   alias Phoenix.LiveView.Socket
+  alias Tymeslot.Media.UploadConstraints
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.ThemeSettings.AssetUploads
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent
-  alias TymeslotWeb.Helpers.UploadConstraints
 
   @user_id 4_242
   @bucket "theme_upload:#{@user_id}"

@@ -17,19 +17,16 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.ColourModePanel
       assign(assigns, :mode, ColourMode.mode(assigns.customization.settings, assigns.group))
 
     ~H"""
-    <div class="card-glass" data-testid="colour-mode-panel">
-      <div class="mb-8">
-        <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
-          {dgettext("dashboard_appearance", "Colour Mode")}
-        </h3>
-        <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
-          {dgettext(
-            "dashboard_appearance",
-            "Show your booking page light or dark, or let it follow each visitor's device."
-          )}
-        </p>
-      </div>
-
+    <.card
+      title={dgettext("dashboard_appearance", "Colour Mode")}
+      description={
+        dgettext(
+          "dashboard_appearance",
+          "Show your booking page light or dark, or let it follow each visitor's device."
+        )
+      }
+      data-testid="colour-mode-panel"
+    >
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <button
           :for={mode <- ColourMode.modes()}
@@ -60,7 +57,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.ColourModePanel
           </span>
         </button>
       </div>
-    </div>
+    </.card>
     """
   end
 

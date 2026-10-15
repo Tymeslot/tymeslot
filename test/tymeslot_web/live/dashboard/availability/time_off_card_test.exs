@@ -36,6 +36,32 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCardTest do
       refute html =~ ~s(data-testid="time-off-current")
     end
 
+    test "the empty state carries the only Add time off button, which opens the form",
+         %{conn: conn} do
+      {:ok, view, html} = live(conn, ~p"/dashboard/availability")
+
+      assert html
+             |> LazyHTML.from_fragment()
+             |> LazyHTML.query("[data-testid='add-time-off']")
+             |> Enum.count() == 1
+
+      assert has_element?(view, "[data-testid='time-off-empty'] [data-testid='add-time-off']")
+
+      view |> element("[data-testid='add-time-off']") |> render_click()
+
+      assert has_element?(view, "#time-off-form-modal-form")
+    end
+
+    test "once time off is listed, Add time off moves to the card header",
+         %{conn: conn, profile: profile} do
+      insert(:time_off_period, profile: profile, label: "Portugal")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      refute has_element?(view, "[data-testid='time-off-empty']")
+      assert has_element?(view, "[data-testid='add-time-off']", "Add time off")
+    end
+
     test "lists a whole-day period by its dates alone", %{conn: conn, profile: profile} do
       insert(:time_off_period,
         profile: profile,
@@ -48,8 +74,8 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCardTest do
       html = render(view)
 
       assert html =~ "Portugal"
-      assert html =~ "July 5, 2027"
-      assert html =~ "July 12, 2027"
+      assert html =~ "5 July 2027"
+      assert html =~ "12 July 2027"
       # A whole-day period must not be dressed up with the times it does not have.
       refute html =~ "from 00:00"
       refute html =~ "until 23:59"
@@ -574,6 +600,28 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCardTest do
 
       assert TimeOff.list(profile.id) == []
       assert render(view) =~ "No time off booked"
+    end
+  end
+
+  describe "cancelling a removal" do
+    test "keeps the period when the confirmation is cancelled", %{conn: conn, profile: profile} do
+      period = insert(:time_off_period, profile: profile, label: "Portugal")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      view
+      |> element("#time-off-#{period.id} button[aria-label='Remove time off']")
+      |> render_click()
+
+      assert has_element?(view, "#delete-time-off-modal[style*='display: flex']")
+
+      view |> element("#delete-time-off-modal button", "Cancel") |> render_click()
+
+      refute has_element?(view, "#delete-time-off-modal[style*='display: flex']")
+      assert [%{id: id}] = TimeOff.list(profile.id)
+      assert id == period.id
+      assert has_element?(view, "#time-off-#{period.id}")
+      refute render(view) =~ "No time off booked"
     end
   end
 

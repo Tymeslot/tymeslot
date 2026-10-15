@@ -22,6 +22,9 @@ defmodule Tymeslot.Security.CredentialReencryption do
 
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Meetings
+  alias Tymeslot.Polls
+  alias Tymeslot.Profiles
   alias Tymeslot.Security.CredentialReencryptionQueries, as: Queries
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Slack
@@ -41,7 +44,10 @@ defmodule Tymeslot.Security.CredentialReencryption do
     Video,
     Slack,
     Telegram,
-    Webhooks
+    Webhooks,
+    Meetings,
+    Polls,
+    Profiles
   ]
 
   @type stats :: %{
@@ -95,11 +101,13 @@ defmodule Tymeslot.Security.CredentialReencryption do
   @doc "The tables and encrypted columns the sweep covers."
   @spec covered_tables() :: [{String.t(), [atom()]}]
   def covered_tables do
-    Enum.map(@contexts, & &1.encrypted_storage())
+    Enum.flat_map(@contexts, &List.wrap(&1.encrypted_storage()))
   end
 
+  # The first page starts from no id rather than 0, since some of the tables
+  # are keyed by UUID.
   defp sweep_table(table, columns, batch_size) do
-    sweep_batches(table, columns, batch_size, 0, empty_stats())
+    sweep_batches(table, columns, batch_size, nil, empty_stats())
   end
 
   defp sweep_batches(table, columns, batch_size, after_id, stats) do

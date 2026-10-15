@@ -62,7 +62,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.BookingFormTest do
     assert [_input] =
              Floki.find(
                doc,
-               "form#booking-form .honeypot-field[aria-hidden] input[name='booking[website]'][tabindex='-1']"
+               "form#booking-form .sr-only[aria-hidden] input[name='booking[website]'][tabindex='-1'][autocomplete='off']"
              )
   end
 

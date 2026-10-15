@@ -13,12 +13,15 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.CustomAnswers
+  alias TymeslotWeb.Themes.Shared.Components.GroupSession
+  alias TymeslotWeb.Themes.Shared.Components.LocationField
   alias TymeslotWeb.Themes.Shared.ConfirmationText
+  alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.PathHandlers
   alias TymeslotWeb.Themes.Shared.StepEvents
 
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
 
   @impl Phoenix.LiveComponent
   defdelegate update(assigns, socket), to: StepEvents
@@ -28,10 +31,13 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
+    assigns = assign(assigns, :navigable_steps, Runtime.navigable_steps(assigns))
+
     ~H"""
     <div class="container quill-container flex-1" data-locale={@locale}>
       <.page_layout
         show_steps={true}
+        navigable_steps={@navigable_steps}
         current_step={4}
         slug={@duration}
         username_context={@username_context}
@@ -89,12 +95,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                       </div>
                     </div>
                     <div class="flex-1 min-w-0" data-testid="confirmation-heading">
-                      <.section_header
-                        class="mb-1"
-                        title_class="section-header confirmation-title"
-                      >
+                      <h1 class="section-header confirmation-title">
                         {headline(assigns)}
-                      </.section_header>
+                      </h1>
                       <p class="confirmation-subtitle text-quill-primary">
                         {subtitle(assigns)}
                       </p>
@@ -108,12 +111,15 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                     class="mt-4"
                   />
 
+                  <GroupSession.confirmation_line meeting_type={@meeting_type} class="mt-4" />
+
                   <.meeting_details_card title="">
                     <.booking_details
                       date={@selected_date}
                       time={@selected_time}
                       duration={BookingText.duration_label(assigns)}
                       timezone={@user_timezone}
+                      next_day_end={LocalizationHelpers.booking_next_day_end(assigns)}
                       variant={:compact}
                     />
 
@@ -132,6 +138,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                           </span>
                         </p>
                       </div>
+                      <LocationField.arranged_note :if={
+                        BookingLocation.arranged_after_booking?(assigns)
+                      } />
                     </div>
 
                     <div class="confirmation-border-top mt-3 pt-3 border-t">
@@ -249,6 +258,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   attr :time, :string, required: true
   attr :duration, :string, required: true, doc: "the formatted duration"
   attr :timezone, :string, required: true
+  attr :next_day_end, :string, default: nil, doc: "when the meeting ends on a later day"
   attr :variant, :atom, default: :compact, values: [:compact, :expanded]
 
   defp booking_details(assigns) do
@@ -278,6 +288,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
       <div>
         <p class="booking-detail-label">{@time_label}</p>
         <p class="booking-detail-value">{@formatted_time}</p>
+        <p :if={@next_day_end} class="booking-detail-value" data-testid="booking-next-day-end">
+          {@next_day_end}
+        </p>
       </div>
       <div>
         <p class="booking-detail-label">{@duration_label}</p>

@@ -23,6 +23,14 @@ defmodule Tymeslot.Migrations.MoveThemeCustomizationOptionsToSettingsTest do
   alias Tymeslot.Test.MigrationRunner
 
   @version 20_260_929_081_519
+  # The later sync migration's trigger writes `settings`, which `down/0`
+  # here removes, so it comes off first, as it does in a real rollback.
+  @sync_version 20_261_014_084_423
+
+  defp roll_back! do
+    MigrationRunner.down!(@sync_version)
+    MigrationRunner.down!(@version)
+  end
 
   defp insert_legacy_row(profile_id, theme_id, columns) do
     {names, values} = Enum.unzip(columns)
@@ -79,7 +87,7 @@ defmodule Tymeslot.Migrations.MoveThemeCustomizationOptionsToSettingsTest do
 
   test "every option column is copied into settings, leaving out the null ones" do
     profile = insert(:profile)
-    MigrationRunner.down!(@version)
+    roll_back!()
 
     insert_legacy_row(profile.id, "1",
       color_scheme: "sunset",
@@ -130,7 +138,7 @@ defmodule Tymeslot.Migrations.MoveThemeCustomizationOptionsToSettingsTest do
         background_video_path: "1/2/backgrounds/clip.mp4"
       )
 
-    MigrationRunner.down!(@version)
+    roll_back!()
 
     assert columns(customization.profile_id, "2") == %{
              "color_scheme" => "ocean",
@@ -170,7 +178,7 @@ defmodule Tymeslot.Migrations.MoveThemeCustomizationOptionsToSettingsTest do
       DROP COLUMN background_video_path
     """)
 
-    MigrationRunner.down!(@version)
+    roll_back!()
 
     assert %{"color_scheme" => "forest", "background_value" => "gradient_2"} =
              columns(customization.profile_id, "1")

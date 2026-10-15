@@ -45,15 +45,13 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModalTest do
   test "renders the time range on a 12-hour clock when that is the choice" do
     html = render_component(&AgendaDetailModal.agenda_detail_modal/1, assigns("12h"))
 
-    assert html =~ "2:30 PM"
-    assert html =~ "3:00 PM"
+    assert html =~ "2:30\u00A0PM\u00A0– 3:00\u00A0PM"
   end
 
   test "renders the time range on a 24-hour clock when that is the choice" do
     html = render_component(&AgendaDetailModal.agenda_detail_modal/1, assigns("24h"))
 
-    assert html =~ "14:30"
-    assert html =~ "15:00"
+    assert html =~ "14:30\u00A0– 15:00"
     refute html =~ "PM"
   end
 
@@ -61,7 +59,7 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModalTest do
     Gettext.put_locale(TymeslotWeb.Gettext, "de")
     html = render_component(&AgendaDetailModal.agenda_detail_modal/1, assigns("12h"))
 
-    assert html =~ "2:30 PM"
+    assert html =~ "2:30\u00A0PM"
     # The date beside it still follows German word order: only the clock is
     # governed by the preference.
     assert html =~ "Januar"

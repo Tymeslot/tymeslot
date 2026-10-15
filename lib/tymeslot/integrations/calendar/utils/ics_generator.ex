@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
 
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Locales
+  alias Tymeslot.Payments.Subscriptions
 
   @doc """
   Generates an ICS file content for a meeting/appointment.
@@ -194,7 +195,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
 
   # RFC 5545 §3.2.10 — `LANGUAGE` carries the BCP-47 language tag of the
   # property's human-readable text. The configured locale codes ("en", "de",
-  # "fr", "it", "uk", "cs", "pl") are already valid BCP-47 primary subtags. We read the
+  # "fr", "it", "uk", "cs", "pl", "pt") are already valid BCP-47 primary subtags. We read the
   # locale active for this render (set by `generate_ics_with/4`) so it cannot
   # drift from the surrounding email translation.
   defp language_param do
@@ -316,7 +317,8 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
       build_organizer_note_section(meeting_details),
       build_attendee_message_section(meeting_details),
       build_video_url_section(meeting_details),
-      build_custom_answers_section(meeting_details)
+      build_custom_answers_section(meeting_details),
+      build_branding_section(meeting_details)
     ]
 
     parts
@@ -355,6 +357,19 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
 
       _other ->
         nil
+    end
+  end
+
+  # The free-tier footer: the description is the one field every calendar
+  # client shows, so it is where the event says how it was scheduled. Read the
+  # URL first so an instance without one never consults the subscription
+  # manager.
+  defp build_branding_section(meeting_details) do
+    with url when is_binary(url) <- Application.get_env(:tymeslot, :ics_branding_url),
+         true <- Subscriptions.show_branding?(Map.get(meeting_details, :organizer_user_id)) do
+      dgettext("emails", "Scheduled with %{brand}: %{url}", brand: "Tymeslot", url: url)
+    else
+      _no_branding -> nil
     end
   end
 

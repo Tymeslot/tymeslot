@@ -154,18 +154,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
   describe "period_label/1" do
     test "three_day same month formats as start – end_day, year" do
       assigns = %{view: :three_day, date: ~D[2026-04-10]}
-      assert PreferenceHelpers.period_label(assigns) == "April 10 – 12, 2026"
+      assert PreferenceHelpers.period_label(assigns) == "10–12 April 2026"
     end
 
     test "three_day crossing a month boundary includes both month names" do
       assigns = %{view: :three_day, date: ~D[2026-04-30]}
-      assert PreferenceHelpers.period_label(assigns) == "April 30 – May 2, 2026"
+      assert PreferenceHelpers.period_label(assigns) == "30 April – 2 May 2026"
     end
 
     test "week crossing a month boundary includes both month names" do
       # 2026-01-30 is a Friday; Monday start → week_start = 2026-01-26, week_end = 2026-02-01
       assigns = %{view: :week, date: ~D[2026-01-30], preferences: %{week_start_day: "monday"}}
-      assert PreferenceHelpers.period_label(assigns) == "January 26 – February 1, 2026"
+      assert PreferenceHelpers.period_label(assigns) == "26 January – 1 February 2026"
     end
 
     test "day view reads in the locale's own date order" do
@@ -176,7 +176,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
       assert PreferenceHelpers.period_label(assigns) == "Donnerstag, 5. Februar 2026"
 
       Gettext.put_locale(TymeslotWeb.Gettext, "en")
-      assert PreferenceHelpers.period_label(assigns) == "Thursday, February 5, 2026"
+      assert PreferenceHelpers.period_label(assigns) == "Thursday, 5 February 2026"
     end
 
     test "month view heads with the capitalised standalone month" do
@@ -190,7 +190,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
         {"it", "Gennaio 2026"},
         {"uk", "Січень 2026"},
         {"cs", "Leden 2026"},
-        {"pl", "Styczeń 2026"}
+        {"pl", "Styczeń 2026"},
+        {"pt", "Janeiro de 2026"}
       ]
 
       for {locale, label} <- expected do

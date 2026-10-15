@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
   alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.EventTimeFormatter
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.Properties
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias Tymeslot.Integrations.Calendar.Reminder
   alias Tymeslot.Utils.UrlBuilder
@@ -38,6 +39,27 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
     |> maybe_add_recurrence(event_data)
     |> maybe_add_colour(event_data)
     |> remove_nil_values()
+  end
+
+  @doc """
+  Formats the body of a new event: `format_event_data/1`, with a series'
+  excluded occurrences (`:recurrence_exceptions`) written as an `EXDATE` line
+  after its rule, which Google takes in the same `recurrence` list.
+
+  Only a new event carries them. An existing series keeps its exclusions as
+  cancelled instances of its own, which an edit's body must not restate.
+  """
+  @spec format_new_event_data(map()) :: map()
+  def format_new_event_data(event_data) do
+    body = format_event_data(event_data)
+
+    case {body["recurrence"], Properties.build_exdate(event_data)} do
+      {[_rule | _rest] = recurrence, exdate} when is_binary(exdate) ->
+        Map.put(body, "recurrence", recurrence ++ [exdate])
+
+      _no_exclusions ->
+        body
+    end
   end
 
   @doc """

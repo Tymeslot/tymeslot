@@ -36,6 +36,7 @@ defmodule TymeslotWeb.Test.JourneyFixtures.Moments.When do
         current_year={@current_year}
         current_month={@current_month}
         user_timezone={@user_timezone}
+        first_day={@week_start}
         selected_date={@selected_date}
         availability_status={@availability_status}
         booking_window_days={assigns[:booking_window_days]}

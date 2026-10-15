@@ -29,6 +29,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
+    assigns = assign(assigns, :next_day_end, LocalizationHelpers.booking_next_day_end(assigns))
+
     ~H"""
     <div class="scheduling-box booker-card" data-locale={@locale}>
       <div class="slide-container">
@@ -51,6 +53,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                     <div class="summary-label">
                       {LocalizationHelpers.format_slot_label(@selected_time) ||
                         dgettext("booking", "No time selected")}
+                    </div>
+                    <div :if={@next_day_end} class="summary-label" data-testid="booking-next-day-end">
+                      {@next_day_end}
                     </div>
                   </div>
                 </div>
@@ -80,10 +85,19 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
               selected_location_id={@selected_location_id}
               video_choices={BookingLocation.video_choices(assigns)}
               selected_video_id={@selected_video_id}
+              venue_choices={BookingLocation.venue_choices(assigns)}
+              selected_venue_id={@selected_venue_id}
+              kept_location={BookingLocation.kept_location(assigns)}
               location_phone={@location_phone}
               location_error={@location_error}
               phone_required={BookingLocation.phone_required?(assigns)}
               target={@myself}
+            />
+
+            <LocationField.stated_location
+              :if={BookingLocation.stated_location?(assigns)}
+              option={BookingLocation.selected(assigns)}
+              venue_choices={BookingLocation.venue_choices(assigns)}
             />
 
             <BookingForm.booking_form

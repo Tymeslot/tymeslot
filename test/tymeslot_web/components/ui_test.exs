@@ -7,15 +7,6 @@ defmodule TymeslotWeb.Components.UITest do
   import Phoenix.Component
   alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.UI.StatusSwitch
-  alias TymeslotWeb.Components.UI.Toggle
-
-  # The class attribute of the single element matching `selector`. Raises when
-  # the selector matches none, so a renamed element fails loudly rather than
-  # quietly asserting against an empty string.
-  defp class_of(doc, selector) do
-    [class] = Floki.attribute(doc, selector, "class")
-    class
-  end
 
   describe "StatusSwitch" do
     test "renders in checked state" do
@@ -24,7 +15,8 @@ defmodule TymeslotWeb.Components.UITest do
 
       assert html =~ ~s(aria-checked="true")
       assert html =~ "status-toggle--active"
-      assert html =~ "status-toggle-slider--active"
+      # The slider has travelled to the "on" end of the medium track.
+      assert "translate-x-5" in slider_classes(html)
       # Active icon (checkmark) should be visible
       assert html =~ "status-toggle-icon--visible"
     end
@@ -39,7 +31,8 @@ defmodule TymeslotWeb.Components.UITest do
       # with no state at all.
       assert html =~ ~s(aria-checked="false")
       assert html =~ "status-toggle--inactive"
-      refute html =~ "status-toggle-slider--active"
+      # The slider rests at the "off" end: no travel at all.
+      refute Enum.any?(slider_classes(html), &String.starts_with?(&1, "translate-x-"))
     end
 
     test "renders an explicit button type so it can sit inside a form" do
@@ -82,63 +75,33 @@ defmodule TymeslotWeb.Components.UITest do
         end
       end
     end
-  end
 
-  describe "Toggle" do
-    setup do
-      options = [
-        %{value: :list, label: "List View", icon: "list"},
-        %{value: :grid, label: "Grid View", icon: "grid"}
-      ]
+    # The slider's travel is the track's inner width less the slider: the small
+    # track has 1px borders, the others 2px, so a single shared travel would run
+    # the small slider past its track.
+    test "each size moves the slider exactly across its own track" do
+      travels = %{small: "translate-x-4.5", medium: "translate-x-5", large: "translate-x-5"}
 
-      {:ok, options: options}
-    end
+      for {size, travel} <- travels do
+        on =
+          render_component(&StatusSwitch.status_switch/1, %{
+            id: "on",
+            checked: true,
+            on_change: "toggle",
+            size: size
+          })
 
-    test "renders all options", %{options: options} do
-      assigns = %{id: "toggle-1", active_option: :list, options: options, phx_click: "switch"}
-      html = render_component(&Toggle.toggle/1, assigns)
+        off =
+          render_component(&StatusSwitch.status_switch/1, %{
+            id: "off",
+            checked: false,
+            on_change: "toggle",
+            size: size
+          })
 
-      assert html =~ "List View"
-      assert html =~ "Grid View"
-      assert html =~ "toggle-1-list"
-      assert html =~ "toggle-1-grid"
-    end
-
-    test "highlights the active option and only that one", %{options: options} do
-      assigns = %{id: "toggle-1", active_option: :grid, options: options, phx_click: "switch"}
-      html = render_component(&Toggle.toggle/1, assigns)
-      doc = Floki.parse_fragment!(html)
-
-      # "btn-primary is somewhere in the markup" is satisfied by highlighting
-      # the wrong button, so pin the highlight to the option it belongs to.
-      assert class_of(doc, "#toggle-1-grid") =~ "btn-primary"
-      refute class_of(doc, "#toggle-1-list") =~ "btn-primary"
-      assert class_of(doc, "#toggle-1-list") =~ "btn-ghost"
-    end
-
-    test "renders icons based on option", %{options: options} do
-      assigns = %{id: "toggle-1", active_option: :list, options: options, phx_click: "switch"}
-      html = render_component(&Toggle.toggle/1, assigns)
-
-      # Should contain SVG paths for list and grid
-      # list icon
-      assert html =~ "M4 6h16M4 10h16M4 14h16M4 18h16"
-      # grid icon
-      assert html =~ "M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"
-    end
-
-    test "renders with label", %{options: options} do
-      assigns = %{
-        id: "toggle-1",
-        active_option: :list,
-        options: options,
-        phx_click: "switch",
-        label: "View Mode"
-      }
-
-      html = render_component(&Toggle.toggle/1, assigns)
-
-      assert html =~ "View Mode"
+        assert travel in slider_classes(on)
+        refute off =~ "translate-x-"
+      end
     end
   end
 
@@ -178,5 +141,10 @@ defmodule TymeslotWeb.Components.UITest do
       assert html =~ "Sending..."
       refute html =~ "Submit"
     end
+  end
+
+  defp slider_classes(html) do
+    [class] = html |> Floki.parse_fragment!() |> Floki.attribute(".status-toggle-slider", "class")
+    String.split(class)
   end
 end

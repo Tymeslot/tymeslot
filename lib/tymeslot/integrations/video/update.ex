@@ -131,9 +131,9 @@ defmodule Tymeslot.Integrations.Video.Update do
 
       field ->
         attrs = Map.delete(attrs, :provider_account_id)
-        new_key = attrs |> Map.get(field) |> AccountKey.from_url()
+        new_key = AccountKey.key_for(provider, Map.get(attrs, field))
 
-        if is_nil(new_key) or new_key == AccountKey.from_url(Map.get(integration, field)),
+        if is_nil(new_key) or new_key == AccountKey.key_for(provider, Map.get(integration, field)),
           do: attrs,
           else: Map.put(attrs, :provider_account_id, new_key)
     end

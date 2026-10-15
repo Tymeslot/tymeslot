@@ -7,21 +7,38 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
   import Tymeslot.DashboardTestHelpers
 
   alias Ecto.Changeset
+  alias Tymeslot.Media.UploadConstraints
   alias Tymeslot.Repo
+  alias Tymeslot.Test.MediaFixtures
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
-  alias TymeslotWeb.Helpers.UploadConstraints
   alias TymeslotWeb.Live.Scheduling.PreviewToken
 
   setup :setup_dashboard_user_with_theme
 
   describe "Theme selection" do
     test "renders theme options", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
-      assert html =~ "Choose Your Style"
-      assert html =~ "Quill"
-      assert html =~ "Rhythm"
+      # A card per offered theme, named in its heading, each with its own
+      # customise button.
+      for {name, id} <- [{"Quill", "1"}, {"Rhythm", "2"}] do
+        assert has_element?(view, "h2", name)
+
+        assert has_element?(
+                 view,
+                 "button[phx-click='show_customization'][phx-value-theme='#{id}']"
+               )
+      end
+    end
+
+    test "offers only the real themes, with no coming-soon teaser", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+
+      assert has_element?(view, "h2", "Quill")
+      html = render(view)
+      refute html =~ "More Styles Coming Soon"
+      refute html =~ "Our design team is busy crafting new themes"
     end
 
     test "selects a theme and persists it", %{conn: conn, profile: profile} do
@@ -32,7 +49,23 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       |> render_click()
 
       assert Repo.reload!(profile).booking_theme == "2"
-      assert render(view) =~ "Current Style"
+      assert render(view) =~ "Current style"
+    end
+
+    test "locks Live Preview, focusable and explained, until a calendar is connected", %{
+      conn: conn
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+
+      refute has_element?(view, "a", "Live Preview")
+
+      assert has_element?(
+               view,
+               ~s(button[aria-disabled="true"][title="Connect Calendar to Preview"]),
+               "Live Preview"
+             )
+
+      refute has_element?(view, "button[disabled]", "Live Preview")
     end
   end
 
@@ -98,7 +131,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       |> element("button", "Close")
       |> render_click()
 
-      assert render(view) =~ "Choose Your Style"
+      assert has_element?(view, "button[phx-click='show_customization'][phx-value-theme='1']")
       refute render(view) =~ "Colour Palette"
     end
 
@@ -211,38 +244,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       image = %{
         last_modified: System.system_time(:millisecond),
         name: "bg.png",
-        content: <<
-          0x89,
-          0x50,
-          0x4E,
-          0x47,
-          0x0D,
-          0x0A,
-          0x1A,
-          0x0A,
-          0x00,
-          0x00,
-          0x00,
-          0x0D,
-          "IHDR",
-          0x00,
-          0x00,
-          0x00,
-          0x01,
-          0x00,
-          0x00,
-          0x00,
-          0x01,
-          0x08,
-          0x02,
-          0x00,
-          0x00,
-          0x00,
-          0x90,
-          0x77,
-          0x53,
-          0xDE
-        >>,
+        content: MediaFixtures.png(),
         type: "image/png"
       }
 
@@ -283,10 +285,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       image = %{
         last_modified: System.system_time(:millisecond),
         name: "bg.png",
-        content:
-          <<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, "IHDR", 0x00,
-            0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77,
-            0x53, 0xDE>>,
+        content: MediaFixtures.png(),
         type: "image/png"
       }
 
@@ -339,7 +338,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
 
       # The hints state the limits the uploads enforce.
       image_hint = "JPG, PNG or WebP. Max #{UploadConstraints.max_file_size_mb(:image)} MB."
-      video_hint = "MP4, WebM or MOV. Max #{UploadConstraints.max_file_size_mb(:video)} MB."
+      video_hint = "MP4 or WebM. Max #{UploadConstraints.max_file_size_mb(:video)} MB."
 
       refute html_gradient =~ "Select a solid colour"
       refute html_gradient =~ image_hint

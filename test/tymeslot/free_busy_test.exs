@@ -119,6 +119,44 @@ defmodule Tymeslot.FreeBusyTest do
                )
     end
 
+    test "publishes free events as busy from a subscription that counts every event as busy",
+         %{profile: profile} do
+      subscription =
+        insert(:calendar_integration,
+          user: profile.user,
+          provider: "ics_url",
+          all_events_busy: true
+        )
+
+      insert(:provider_calendar_event,
+        calendar_integration: subscription,
+        provider: "ics_url",
+        start_at: ~U[2030-06-01 09:00:00Z],
+        end_at: ~U[2030-06-01 10:00:00Z],
+        transparency: "transparent",
+        status: "confirmed"
+      )
+
+      insert(:provider_calendar_event,
+        calendar_integration: subscription,
+        provider: "ics_url",
+        start_at: ~U[2030-06-02 09:00:00Z],
+        end_at: ~U[2030-06-02 10:00:00Z],
+        transparency: "transparent",
+        status: "cancelled"
+      )
+
+      assert [{s, e}] =
+               FreeBusy.busy_intervals(
+                 profile,
+                 ~U[2030-05-01 00:00:00Z],
+                 ~U[2030-07-01 00:00:00Z]
+               )
+
+      assert DateTime.truncate(s, :second) == ~U[2030-06-01 09:00:00Z]
+      assert DateTime.truncate(e, :second) == ~U[2030-06-01 10:00:00Z]
+    end
+
     test "maps all-day events to midnight-to-midnight UTC intervals", %{
       profile: profile,
       integration: integration

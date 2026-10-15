@@ -188,6 +188,7 @@ msgid "Cancel Appointment"
 msgstr "Zrušit schůzku"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "Cancelled"
 msgstr "Zrušeno"
@@ -430,6 +431,7 @@ msgstr "Těším se na setkání s vámi."
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #: lib/tymeslot/emails/templates/event_update_notification.ex
 #: lib/tymeslot/emails/templates/external_booking_change.ex
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "MEETING DETAILS:"
 msgstr "ÚDAJE O SCHŮZCE:"
@@ -508,6 +510,7 @@ msgstr "Potřebujete změnit plány?"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "Need to make changes?"
 msgstr "Potřebujete něco změnit?"
@@ -523,6 +526,7 @@ msgid "New Appointment: %{name} - %{date}"
 msgstr "Nová schůzka: %{name} – %{date}"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "New booking"
 msgstr "Nová rezervace"
@@ -706,6 +710,7 @@ msgid "Reschedule"
 msgstr "Přesunout schůzku"
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "Rescheduled"
 msgstr "Přesunuto"
@@ -1095,3 +1100,177 @@ msgstr "Schůzka, na kterou vás zve %{organizer}, byla zrušena."
 #, elixir-autogen, elixir-format
 msgid "The meeting %{organizer} invited you to has been moved to a new time."
 msgstr "Schůzka, na kterou vás zve %{organizer}, byla přesunuta na nový čas."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} booked a spot in your group meeting."
+msgstr "%{name} si rezervoval(a) místo ve vaší skupinové schůzce."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} cancelled their spot. The meeting goes ahead for everyone else."
+msgstr "%{name} zrušil(a) své místo. Schůzka pro ostatní proběhne podle plánu."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} moved their spot from %{from} to %{to}."
+msgstr "%{name} přesunul(a) své místo z %{from} na %{to}."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{taken} of %{count} spot taken"
+msgid_plural "%{taken} of %{count} spots taken"
+msgstr[0] "Obsazeno %{taken} z %{count} místa"
+msgstr[1] "Obsazeno %{taken} ze %{count} míst"
+msgstr[2] "Obsazeno %{taken} z %{count} míst"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "A participant cancelled their spot"
+msgstr "Účastník zrušil své místo"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "A participant moved their spot"
+msgstr "Účastník přesunul své místo"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "A spot was booked"
+msgstr "Bylo rezervováno místo"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Open in dashboard"
+msgstr "Otevřít v přehledu"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Spot booked: %{name} - %{date}"
+msgstr "Místo rezervováno: %{name} - %{date}"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Spot cancelled: %{name} - %{date}"
+msgstr "Místo zrušeno: %{name} - %{date}"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Spot moved: %{name} - %{date}"
+msgstr "Místo přesunuto: %{name} - %{date}"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} moved their spot to %{to}."
+msgstr "%{name} přesunul(a) své místo na %{to}."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} cancelled their spot. Nobody is left on this slot, so the meeting has been cancelled and the time is free again."
+msgstr "%{name} zrušil(a) své místo. V tomto termínu už nikdo nezůstal, takže schůzka byla zrušena a čas je opět volný."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Nobody is left at the earlier time, so that meeting has been cancelled and the time is free again."
+msgstr "V původním termínu už nikdo nezůstal, takže tamní schůzka byla zrušena a čas je opět volný."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Slot freed: %{name} cancelled - %{date}"
+msgstr "Termín uvolněn: %{name} zrušil(a) - %{date}"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "The last participant cancelled their spot"
+msgstr "Poslední účastník zrušil své místo"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Book Another Time"
+msgstr "Rezervovat jiný termín"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "CANCELLED SPOT:"
+msgstr "ZRUŠENÉ MÍSTO:"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name} - you've given up your spot in %{meeting} on %{date}."
+msgstr "Dobrý den, %{name}, vzdali jste se svého místa na %{meeting} dne %{date}."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name} - your spot has moved from %{from} to %{to}."
+msgstr "Dobrý den, %{name}, vaše místo bylo přesunuto z %{from} na %{to}."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name} - your spot has moved to %{to}."
+msgstr "Dobrý den, %{name}, vaše místo bylo přesunuto na %{to}."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "If you added the meeting to your calendar, the attached file removes it there."
+msgstr "Pokud jste si schůzku přidali do kalendáře, přiložený soubor ji z něj odstraní."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Spot cancelled"
+msgstr "Místo zrušeno"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Spot cancelled - %{date} with %{name}"
+msgstr "Místo zrušeno - %{date} s %{name}"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Spot moved - %{date} with %{name}"
+msgstr "Místo přesunuto - %{date} s %{name}"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting goes ahead for the others."
+msgstr "Pro ostatní schůzka proběhne podle plánu."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Would you like to book another time?"
+msgstr "Chcete si rezervovat jiný termín?"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Your spot has moved from %{from} to %{to}."
+msgstr "Vaše místo bylo přesunuto z %{from} na %{to}."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Your spot has moved to %{to}."
+msgstr "Vaše místo bylo přesunuto na %{to}."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Your spot has moved."
+msgstr "Vaše místo bylo přesunuto."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "A group meeting cannot be moved for everyone at once. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
+msgstr "Skupinovou schůzku nelze přesunout pro všechny najednou. Chcete-li zachovat původní čas, vraťte událost ve svém kalendáři zpět. Chcete-li ho změnit, pošlete účastníkům z nástěnky žádost o přesunutí, nebo tam schůzku zrušte, aby byl každý účastník informován."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "Please review the group meeting in Tymeslot."
+msgstr "Zkontrolujte prosím skupinovou schůzku ve službě Tymeslot."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "The group meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original time for every participant, and a group meeting cannot be moved for everyone at once."
+msgstr "Skupinová schůzka „%{title}“ byla přesunuta ve vašem externím kalendáři. Služba Tymeslot stále eviduje původní čas pro všechny účastníky a skupinovou schůzku nelze přesunout pro všechny najednou."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "This group meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above, and its participants still expect it. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
+msgstr "Tato skupinová schůzka byla <strong>přesunuta ve vašem externím kalendáři</strong>. Služba Tymeslot výše stále zobrazuje původní čas a účastníci s ním stále počítají. Chcete-li zachovat původní čas, vraťte událost ve svém kalendáři zpět. Chcete-li ho změnit, pošlete účastníkům z nástěnky žádost o přesunutí, nebo tam schůzku zrušte, aby byl každý účastník informován."

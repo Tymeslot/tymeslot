@@ -1,8 +1,39 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.EventBadges do
-  @moduledoc "Guest RSVP badge/indicator helpers shared by the calendar grid views."
+  @moduledoc "Guest RSVP and seat-lock badge helpers shared by the calendar grid views."
 
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
+
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
+
+  # ---------- Seat lock indicator ----------
+
+  @doc """
+  Whether a live seat is held on the meeting behind this event.
+
+  Such an event belongs to the booking, not to the calendar: dragging or
+  deleting the provider event would leave every participant booked on a
+  slot the calendar no longer shows. The grid marks these locked and
+  refuses the change server-side (`Shared.check_seat_lock/2`).
+  """
+  @spec seat_locked?(MapSet.t() | nil, map()) :: boolean()
+  def seat_locked?(nil, _event), do: false
+  def seat_locked?(uids, event), do: MapSet.member?(uids, Map.get(event, :uid))
+
+  attr :locked, :boolean, default: false
+
+  @spec seat_lock_badge(map()) :: Phoenix.LiveView.Rendered.t()
+  def seat_lock_badge(assigns) do
+    ~H"""
+    <span
+      :if={@locked}
+      class="absolute bottom-0.5 right-0.5 inline-flex items-center rounded-full bg-black/25 p-px"
+      title={Shared.seat_lock_message()}
+    >
+      <.icon name="hero-lock-closed-micro" class="w-2.5 h-2.5" />
+    </span>
+    """
+  end
 
   # ---------- Guest RSVP indicator ----------
 
@@ -15,7 +46,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.EventBadges do
     <span
       :if={@summary}
       class={[
-        "absolute bottom-0.5 left-0.5 inline-flex items-center gap-0.5 rounded-full px-1 py-px text-token-2xs font-bold leading-none",
+        "absolute bottom-0.5 left-0.5 inline-flex items-center gap-0.5 rounded-token-full px-1 py-px text-token-2xs font-bold leading-none",
         guest_badge_tone(@summary)
       ]}
       title={guest_badge_title(@summary)}

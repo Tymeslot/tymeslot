@@ -55,19 +55,145 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
     end
   end
 
+  describe "group bookings" do
+    test "max_participants defaults to 1" do
+      user = insert(:user)
+
+      changeset =
+        MeetingTypeSchema.changeset(%MeetingTypeSchema{}, %{
+          name: "Solo Call",
+          duration_minutes: 30,
+          user_id: user.id
+        })
+
+      assert Changeset.get_field(changeset, :max_participants) == 1
+    end
+
+    test "accepts limits within 1..999" do
+      user = insert(:user)
+
+      changeset =
+        MeetingTypeSchema.changeset(%MeetingTypeSchema{}, %{
+          name: "Workshop",
+          duration_minutes: 60,
+          user_id: user.id,
+          max_participants: 999,
+          locations: [%{kind: "custom", label: "Main hall"}]
+        })
+
+      assert changeset.valid?
+    end
+
+    test "rejects limits outside 1..999" do
+      user = insert(:user)
+
+      too_low =
+        MeetingTypeSchema.changeset(%MeetingTypeSchema{}, %{
+          name: "Workshop",
+          duration_minutes: 60,
+          user_id: user.id,
+          max_participants: 0
+        })
+
+      too_high =
+        MeetingTypeSchema.changeset(%MeetingTypeSchema{}, %{
+          name: "Workshop",
+          duration_minutes: 60,
+          user_id: user.id,
+          max_participants: 1000
+        })
+
+      assert "must be greater than or equal to 1" in errors_on(too_low).max_participants
+      assert "must be less than or equal to 999" in errors_on(too_high).max_participants
+    end
+
+    test "group bookings cannot require payment" do
+      user = insert(:user)
+
+      changeset =
+        MeetingTypeSchema.changeset(
+          %MeetingTypeSchema{},
+          %{
+            name: "Paid Workshop",
+            duration_minutes: 60,
+            user_id: user.id,
+            max_participants: 10,
+            payment_required: true,
+            price_cents: 5000
+          },
+          host_charges_enabled: true
+        )
+
+      assert "group bookings cannot require payment" in errors_on(changeset).max_participants
+    end
+
+    test "a solo type may still require payment" do
+      user = insert(:user)
+
+      changeset =
+        MeetingTypeSchema.changeset(
+          %MeetingTypeSchema{},
+          %{
+            name: "Paid Consultation",
+            duration_minutes: 60,
+            user_id: user.id,
+            max_participants: 1,
+            payment_required: true,
+            price_cents: 5000
+          },
+          host_charges_enabled: true
+        )
+
+      assert changeset.valid?
+    end
+
+    test "group?/1 dispatches on the participant limit" do
+      assert MeetingTypeSchema.group?(%MeetingTypeSchema{max_participants: 2})
+      refute MeetingTypeSchema.group?(%MeetingTypeSchema{max_participants: 1})
+    end
+  end
+
+  describe "last_spots_threshold" do
+    test "rejects zero and negative thresholds" do
+      for threshold <- [0, -1] do
+        changeset = threshold_changeset(threshold)
+
+        assert errors_on(changeset).last_spots_threshold == [
+                 "must be greater than or equal to 1"
+               ],
+               "expected #{threshold} to be rejected"
+      end
+    end
+
+    test "rejects a threshold above the participant maximum of 999" do
+      assert errors_on(threshold_changeset(1000)).last_spots_threshold == [
+               "must be less than or equal to 999"
+             ]
+    end
+
+    test "accepts 1, the participant maximum, and nil" do
+      for threshold <- [1, 999, nil] do
+        changeset = threshold_changeset(threshold)
+
+        assert changeset.valid?, "expected #{inspect(threshold)} to be accepted"
+        assert Changeset.get_field(changeset, :last_spots_threshold) == threshold
+      end
+    end
+  end
+
   describe "business rules" do
-    test "prevents meetings longer than 8 hours" do
+    test "prevents meetings longer than 24 hours" do
       user = insert(:user)
 
       attrs = %{
         name: "All Day Meeting",
-        duration_minutes: 481,
+        duration_minutes: 1441,
         user_id: user.id
       }
 
       changeset = MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs)
       refute changeset.valid?
-      assert "must be less than or equal to 480" in errors_on(changeset).duration_minutes
+      assert "must be less than or equal to 1440" in errors_on(changeset).duration_minutes
     end
 
     test "prevents a meeting shorter than the grid can offer" do
@@ -109,7 +235,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
         })
         |> Repo.insert()
 
-      assert "You already have a meeting type with this name" in errors_on(changeset).user_id
+      assert "You already have a meeting type with this name" in errors_on(changeset).name
     end
 
     test "schema allows non-divisible-by-5 durations (form layer enforces this)" do
@@ -407,6 +533,17 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
                "the picker offers #{icon} but no such heroicon is vendored"
       end
     end
+  end
+
+  defp threshold_changeset(threshold) do
+    MeetingTypeSchema.changeset(%MeetingTypeSchema{}, %{
+      name: "Workshop",
+      duration_minutes: 60,
+      user_id: 1,
+      max_participants: 10,
+      locations: [%{kind: "custom", label: "Main hall"}],
+      last_spots_threshold: threshold
+    })
   end
 
   defp valid_attrs do

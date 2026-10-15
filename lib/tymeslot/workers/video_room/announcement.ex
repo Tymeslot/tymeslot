@@ -7,9 +7,13 @@ defmodule Tymeslot.Workers.VideoRoom.Announcement do
   whole announcement to `Tymeslot.Workers.VideoRoomWorker` instead of sending
   it before the room is there. Two announcements can be owed that way:
 
-    * `:created`, a new booking. `Events.meeting_created/1` claims the event
-      once per meeting, so a late room after the fallback announcement, or a
-      second job for the same meeting, can never announce it twice.
+    * `:created`, a new booking. For a solo meeting `Events.meeting_created/1`
+      claims the event once per meeting, so a late room after the fallback
+      announcement, or a second job for the same meeting, can never announce
+      it twice. A group meeting instead releases each live seat's own
+      confirmation email, whose jobs are uniqued per seat, so re-releasing
+      them is likewise a no-op in the common case (see
+      `Events.announce_video_room_outcome/1`).
 
     * `{:rescheduled, previous, rescheduled_to}`, a reschedule that moved the
       meeting onto a video location it has no room for yet. Nothing on the
@@ -101,8 +105,7 @@ defmodule Tymeslot.Workers.VideoRoom.Announcement do
 
   def deliver(:created, meeting, _already_announced?) do
     Logger.info("Announcing the meeting now its room exists", meeting_id: meeting.id)
-    Events.meeting_created(meeting)
-    :ok
+    Events.announce_video_room_outcome(meeting)
   end
 
   def deliver({:rescheduled, _previous, _rescheduled_to}, meeting, true) do

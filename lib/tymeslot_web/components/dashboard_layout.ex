@@ -99,33 +99,25 @@ defmodule TymeslotWeb.Components.DashboardLayout do
               <%= if @show_sidebar_toggle do %>
                 <%!-- Mobile Menu Button --%>
                 <button
-                  class="lg:hidden dashboard-mobile-menu-toggle flex items-center justify-center w-12 h-12 rounded-xl bg-tymeslot-50 border-2 border-tymeslot-100 hover:bg-turquoise-50 hover:border-turquoise-100 transition-all shrink-0"
+                  id="dashboard-sidebar-toggle"
+                  type="button"
+                  class="lg:hidden dashboard-mobile-menu-toggle flex items-center justify-center w-12 h-12 rounded-token-xl bg-tymeslot-50 border-2 border-tymeslot-100 hover:bg-turquoise-50 hover:border-turquoise-100 transition-all shrink-0"
                   phx-click={
                     JS.toggle_class("dashboard-sidebar-open", to: "#dashboard-sidebar")
                     |> JS.toggle_class("hidden", to: "#dashboard-sidebar-overlay")
+                    |> JS.toggle_attribute({"aria-expanded", "true", "false"})
                   }
                   aria-label={dgettext("dashboard_common", "Toggle sidebar")}
+                  aria-controls="dashboard-sidebar"
+                  aria-expanded="false"
                 >
-                  <svg
-                    class="w-6 h-6 text-tymeslot-700"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2.5"
-                      d="M4 6h16M4 12h16M4 18h16"
-                    >
-                    </path>
-                  </svg>
+                  <.icon name="hero-bars-3" class="w-6 h-6 text-tymeslot-700" />
                 </button>
               <% end %>
 
               <%!-- Logo with Icon and Text --%>
               <div class="flex items-center space-x-3 min-w-0">
-                <TymeslotWeb.Components.CoreComponents.logo
+                <TymeslotWeb.Components.CoreComponents.Brand.logo
                   mode={:full}
                   img_class="h-10 sm:h-16 shrink min-w-0"
                 />

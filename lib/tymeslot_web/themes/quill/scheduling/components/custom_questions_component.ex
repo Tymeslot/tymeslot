@@ -10,10 +10,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.CustomQuestionsComponen
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
 
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Events
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Renderer, as: InputRenderer
+  alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.StepEvents
 
   @impl Phoenix.LiveComponent
@@ -24,12 +25,14 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.CustomQuestionsComponen
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
+    assigns = assign(assigns, :navigable_steps, Runtime.navigable_steps(assigns))
     assigns = Events.assign_render_state(assigns)
 
     ~H"""
     <div class="container quill-container flex-1" data-locale={@locale}>
       <.page_layout
         show_steps={true}
+        navigable_steps={@navigable_steps}
         current_step={3}
         slug={@duration}
         username_context={@username_context}
@@ -45,13 +48,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.CustomQuestionsComponen
                     </p>
                   <% end %>
 
-                  <.section_header
-                    level={2}
-                    class="booking-heading-wrapper"
-                    title_class="section-header booking-heading"
-                  >
+                  <h1 class="section-header booking-heading booking-heading-wrapper">
                     {@definition["label"]}
-                  </.section_header>
+                  </h1>
 
                   <%= if @definition["help_text"] do %>
                     <p class="text-quill-secondary mb-2">{@definition["help_text"]}</p>

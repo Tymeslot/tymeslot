@@ -154,6 +154,34 @@ defmodule Tymeslot.Bookings.OrchestratorPaidBookingTest do
       assert Repo.aggregate(MeetingSchema, :count) == 0
     end
 
+    # Stripe still reports charges_enabled after the host's plan stops granting
+    # payments, so the pre-check must ask for the plan grant too; checkout
+    # refusing later would leave a half-made booking behind.
+    test "refuses a paid booking outright when the host's plan no longer grants payments, creating no meeting",
+         %{user: user, meeting_type: meeting_type} do
+      setup_config(:tymeslot, meeting_payments_enabled: false)
+
+      params = %{
+        form_data: %{
+          "name" => "Attendee",
+          "email" => "attendee@example.com",
+          "message" => ""
+        },
+        meeting_params: %{
+          date: Date.add(Date.utc_today(), 1),
+          time: "11:00",
+          duration: "30min",
+          user_timezone: "Europe/Berlin",
+          organizer_user_id: user.id,
+          meeting_type_id: meeting_type.id
+        }
+      }
+
+      assert {:error, :payments_unavailable} = Orchestrator.submit_booking(params)
+
+      assert Repo.aggregate(MeetingSchema, :count) == 0
+    end
+
     test "expires the meeting, frees the slot, and returns a payment-oriented message when Stripe checkout creation fails",
          %{user: user, meeting_type: meeting_type} do
       # The Stripe call now runs outside the booking DB transaction, so the

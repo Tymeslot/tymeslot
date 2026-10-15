@@ -24,6 +24,41 @@ defmodule TymeslotWeb.FreebusyControllerTest do
       assert body =~ "BEGIN:VFREEBUSY"
     end
 
+    test "publishes a holiday as busy when its subscription counts every event as busy", %{
+      conn: conn
+    } do
+      {:ok, profile} = FreeBusy.enable_feed(insert(:profile))
+
+      subscription =
+        insert(:calendar_integration,
+          user: profile.user,
+          provider: "ics_url",
+          all_events_busy: true
+        )
+
+      day = Date.add(Date.utc_today(), 3)
+
+      # Holiday feeds mark every entry free.
+      insert(:provider_calendar_event,
+        calendar_integration: subscription,
+        provider: "ics_url",
+        uid: "public-holiday@example.com",
+        all_day: true,
+        start_date: day,
+        end_date: Date.add(day, 1),
+        start_at: DateTime.new!(day, ~T[00:00:00], "Etc/UTC"),
+        end_at: DateTime.new!(Date.add(day, 1), ~T[00:00:00], "Etc/UTC"),
+        transparency: "transparent",
+        status: "confirmed"
+      )
+
+      body = conn |> get(~p"/free-busy/#{profile.freebusy_token}") |> response(200)
+
+      day_str = Calendar.strftime(day, "%Y%m%d")
+      next_str = day |> Date.add(1) |> Calendar.strftime("%Y%m%d")
+      assert body =~ "FREEBUSY;FBTYPE=BUSY:#{day_str}T000000Z/#{next_str}T000000Z"
+    end
+
     test "returns 404 for an unknown token", %{conn: conn} do
       conn = get(conn, ~p"/free-busy/does-not-exist")
 

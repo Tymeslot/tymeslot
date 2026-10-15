@@ -28,6 +28,9 @@ end
 # admin bootstrap's lock (see Tymeslot.Test.AdminBootstrapHelpers).
 Tymeslot.Test.AdminBootstrapHelpers.close!()
 
+# Clear out jobs a migration committed (see Tymeslot.Test.SuiteConfig).
+Tymeslot.Test.SuiteConfig.discard_committed_jobs!()
+
 Ecto.Adapters.SQL.Sandbox.mode(Tymeslot.Repo, :manual)
 
 # Mox mocks are defined once, at compile time, in
@@ -45,7 +48,11 @@ Tymeslot.Test.SuiteConfig.setup_log_capture()
 
 ExUnit.start()
 
-base_config = [capture_log: true, exclude: Tymeslot.Test.SuiteConfig.default_exclude_tags()]
+base_config = [
+  capture_log: true,
+  exclude: Tymeslot.Test.SuiteConfig.default_exclude_tags(),
+  formatters: Tymeslot.Test.SuiteConfig.formatters()
+]
 
 exunit_config =
   case Tymeslot.Test.SuiteConfig.max_cases() do

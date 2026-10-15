@@ -96,7 +96,7 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
         )
 
       MjmlEmail.base_email()
-      |> to({meeting.organizer_name, meeting.organizer_email})
+      |> addressed_to_host(meeting)
       |> subject(
         Sanitise.sanitize_for_header(
           subject_line(variant, kind, meeting, Formatting.format_date_short(host_time, locale))
@@ -113,6 +113,13 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
         )
       )
     end)
+  end
+
+  # To the host, with replies going to the person asking for the slot.
+  defp addressed_to_host(email, meeting) do
+    email
+    |> to({meeting.organizer_name, meeting.organizer_email})
+    |> MjmlEmail.put_reply_to(meeting.attendee_name, meeting.attendee_email)
   end
 
   defp eyebrow(:request), do: dgettext("emails_booking_requests", "Needs your answer")
@@ -242,7 +249,8 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
       location: meeting.location,
       location_type: BookingRequestLocation.type(meeting),
       meeting_type: meeting.meeting_type || dgettext("emails_booking_requests", "Meeting"),
-      timezone: host_tz
+      timezone: host_tz,
+      audience: :host
     }
   end
 
@@ -298,7 +306,7 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
     #{dgettext("emails_booking_requests", "Date:")} #{Formatting.format_date_short(details.date, locale)}
     #{dgettext("emails_booking_requests", "Time:")} #{Formatting.format_time(details.start_time, locale)}
     #{dgettext("emails_booking_requests", "Duration:")} #{Formatting.format_duration(details.duration, locale)}
-    #{dgettext("emails_booking_requests", "Location:")} #{Formatting.format_location(details)}
+    #{dgettext("emails_booking_requests", "Location:")} #{Formatting.format_location(details)}#{TextBodyHelper.location_note_line(details)}
     #{dgettext("emails_booking_requests", "Timezone:")} #{details.timezone}
     #{previous || ""}
 

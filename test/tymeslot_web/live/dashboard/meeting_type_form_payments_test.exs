@@ -45,21 +45,19 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormPaymentsTest do
   end
 
   describe "Payments section gating" do
-    test "is hidden when the meeting payments feature is disabled", %{conn: conn} do
+    test "is hidden when the meeting payments feature is disabled", %{conn: conn, user: user} do
       Application.put_env(:tymeslot, :meeting_payments_enabled, false)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
-      view |> element("button", "Add Meeting Type") |> render_click()
+      view = open_editor(conn, insert(:meeting_type, user: user))
 
       refute render(view) =~ "Require payment for this meeting type"
     end
 
     test "shows a disabled toggle with a connect link when Stripe is not connected",
-         %{conn: conn} do
+         %{conn: conn, user: user} do
       Application.put_env(:tymeslot, :meeting_payments_enabled, true)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
-      view |> element("button", "Add Meeting Type") |> render_click()
+      view = open_editor(conn, insert(:meeting_type, user: user))
 
       html = render(view)
       assert html =~ "Require payment for this meeting type"
@@ -76,57 +74,34 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormPaymentsTest do
       :ok
     end
 
-    test "submitting a price persists payment_required and price_cents",
+    test "entering a price persists payment_required and price_cents",
          %{conn: conn, user: user} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
-      view |> element("button", "Add Meeting Type") |> render_click()
+      meeting_type = insert(:meeting_type, user: user, name: "Paid Strategy Call")
+      view = open_editor(conn, meeting_type)
 
-      # Remove the default reminder so the hidden reminder inputs do not
-      # break Plug.Conn.Query re-encoding on submit (same workaround the
-      # happy-path create test uses).
-      view |> element("button[aria-label='Remove reminder']") |> render_click()
-
-      # Enable payments — the toggle flips socket state so the price input
-      # renders and the hidden payment fields post on submit.
+      # Enable payments: the toggle flips socket state so the price input
+      # renders.
       view
       |> element("input[phx-click='toggle_payment_required']")
       |> render_click()
 
-      html = render(view)
-      assert html =~ "Price (USD)"
+      assert render(view) =~ "Price (USD)"
 
-      # Enter the price through the visible input's phx-change so the socket
-      # (and the mirrored hidden `meeting_type[price]` input) carry the value.
+      # Entering the price through the visible input auto-saves the type.
       view
       |> element("input[phx-change='change_payment_price']")
       |> render_change(%{"meeting_type" => %{"price_input" => "25.00"}})
 
-      view
-      |> form("form[phx-submit='save_meeting_type']", %{
-        "meeting_type" => %{
-          "name" => "Paid Strategy Call",
-          "duration" => "30"
-        }
-      })
-      |> render_submit()
+      saved = MeetingTypes.get_meeting_type(meeting_type.id, user.id)
 
-      assert render(view) =~ "Meeting type created"
-
-      created =
-        Enum.find(
-          MeetingTypes.get_all_meeting_types(user.id),
-          &(&1.name == "Paid Strategy Call")
-        )
-
-      assert created.payment_required == true
-      assert created.price_cents == 2500
+      assert saved.payment_required == true
+      assert saved.price_cents == 2500
     end
 
-    test "a below-minimum price surfaces a changeset error and does not persist",
+    test "a below-minimum price surfaces an error beside the price and does not persist",
          %{conn: conn, user: user} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
-      view |> element("button", "Add Meeting Type") |> render_click()
-      view |> element("button[aria-label='Remove reminder']") |> render_click()
+      meeting_type = insert(:meeting_type, user: user, name: "Too Cheap")
+      view = open_editor(conn, meeting_type)
 
       view
       |> element("input[phx-click='toggle_payment_required']")
@@ -136,23 +111,39 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormPaymentsTest do
       |> element("input[phx-change='change_payment_price']")
       |> render_change(%{"meeting_type" => %{"price_input" => "0.10"}})
 
-      view
-      |> form("form[phx-submit='save_meeting_type']", %{
-        "meeting_type" => %{
-          "name" => "Too Cheap",
-          "duration" => "30"
-        }
-      })
-      |> render_submit()
+      saved = MeetingTypes.get_meeting_type(meeting_type.id, user.id)
 
-      html = render(view)
-      refute html =~ "Meeting type created"
-      assert html =~ "must be at least USD 0.50"
+      refute saved.payment_required
+      assert is_nil(saved.price_cents)
 
-      refute Enum.any?(
-               MeetingTypes.get_all_meeting_types(user.id),
-               &(&1.name == "Too Cheap")
+      assert has_element?(
+               view,
+               "#meeting-type-form-tabs-panel-booking",
+               "must be at least USD 0.50"
              )
+
+      assert has_element?(view, "[aria-live='polite']", "Couldn't save changes")
+    end
+  end
+
+  describe "Turning payment on before entering a price" do
+    setup %{user: user} do
+      Application.put_env(:tymeslot, :meeting_payments_enabled, true)
+      insert(:connect_account, user: user, charges_enabled: true, default_currency: "usd")
+      :ok
+    end
+
+    test "asks for the price without reporting an error", %{conn: conn, user: user} do
+      meeting_type = insert(:meeting_type, user: user, name: "Not priced yet")
+      view = open_editor(conn, meeting_type)
+
+      view
+      |> element("input[phx-click='toggle_payment_required']")
+      |> render_click()
+
+      refute MeetingTypes.get_meeting_type(meeting_type.id, user.id).payment_required
+      assert has_element?(view, "[aria-live='polite']", "Complete the form to save")
+      refute render(view) =~ "must be at least"
     end
   end
 
@@ -183,6 +174,18 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormPaymentsTest do
       # 4200 cents pre-fills as a 42.00 major-unit value.
       assert html =~ "42.00"
     end
+  end
+
+  # Payments sit on the Booking Rules tab, which only exists once the meeting
+  # type does.
+  defp open_editor(conn, meeting_type) do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+    view
+    |> element("button[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
+    |> render_click()
+
+    view
   end
 
   defp restore_env(key, nil), do: Application.delete_env(:tymeslot, key)

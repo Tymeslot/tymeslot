@@ -40,10 +40,12 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.MeetingTypes.GroupLocationRule
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.Themes.Shared.BookingLocation
 
   setup :verify_on_exit!
 
@@ -74,7 +76,8 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
         is_default: true,
         advance_booking_days: 30,
         min_advance_hours: 0,
-        buffer_minutes: 0
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0
       )
 
     Enum.each(1..7, fn day_of_week ->
@@ -97,7 +100,6 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
       id: "loc-office",
       kind: "in_person",
       label: "Our office",
-      details: "12 High Street",
       position: 0
     }
   end
@@ -146,7 +148,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
       assert has_element?(view, "[data-location-id='loc-office']")
       assert has_element?(view, "[data-location-id='loc-call']")
 
-      assert render(view) =~ "12 High Street"
+      assert has_element?(view, "[data-testid='location-arranged-note']")
       assert :sys.get_state(view.pid).socket.assigns.selected_location_id == "loc-office"
     end
 
@@ -165,14 +167,14 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
     test "shows the detail of the chosen option only", %{conn: conn, profile: profile} do
       view = navigate_to_booking_form(conn, profile, nil)
 
-      assert view |> element("[data-testid='location-detail']") |> render() =~ "12 High Street"
+      assert has_element?(view, "[data-testid='location-arranged-note']")
 
       send(view.pid, {:step_event, :booking, :select_location, "loc-call"})
       _drain = :sys.get_state(view.pid)
 
       detail = view |> element("[data-testid='location-detail']") |> render()
       assert detail =~ "We&#39;ll call you"
-      refute detail =~ "12 High Street"
+      refute has_element?(view, "[data-testid='location-arranged-note']")
     end
 
     @tag :capture_log
@@ -231,7 +233,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
       assert submit(view, "default@example.com") =~ "Meeting Confirmed"
 
       assert [meeting] = Repo.all_by(MeetingSchema, attendee_email: "default@example.com")
-      assert meeting.location == "Our office (12 High Street)"
+      assert meeting.location == "Our office"
       assert meeting.location_option_id == "loc-office"
     end
   end
@@ -354,8 +356,41 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
       assert submit(view, "single@example.com") =~ "Meeting Confirmed"
 
       assert [meeting] = Repo.all_by(MeetingSchema, attendee_email: "single@example.com")
-      assert meeting.location == "Our office (12 High Street)"
+      assert meeting.location == "Our office"
       assert meeting.location_kind == "in_person"
+    end
+  end
+
+  # A group type's location is fixed in advance (`GroupLocationRule`), so
+  # however the page is reached there is never a picker: every seat in a
+  # slot is held at the one place the slot is.
+  describe "a group meeting type" do
+    setup %{user: user} do
+      venue = insert(:venue, user: user, name: "Main Hall", description: "1 Market Square")
+
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          duration_minutes: 30,
+          name: "Workshop",
+          is_active: true,
+          max_participants: 4,
+          locations: [in_person_location([venue])]
+        )
+
+      %{meeting_type: meeting_type}
+    end
+
+    test "shows no picker, and states the one location every seat is held at",
+         %{conn: conn, profile: profile, meeting_type: meeting_type} do
+      assert GroupLocationRule.check_meeting_type(meeting_type) == :ok
+
+      view = navigate_to_booking_form(conn, profile, nil)
+
+      refute has_element?(view, "[data-testid='location-field']")
+      refute has_element?(view, "[data-testid='venue-field']")
+      refute has_element?(view, "[data-testid='video-provider-field']")
+      assert view |> element("[data-testid='location-stated']") |> render() =~ "Main Hall"
     end
   end
 
@@ -440,7 +475,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
 
       moved = submit_reschedule(view, meeting, original_start)
 
-      assert moved.location == "Our office (12 High Street)"
+      assert moved.location == "Our office"
       assert moved.location_option_id == "loc-office"
       assert moved.location_kind == "in_person"
       assert moved.attendee_phone == nil
@@ -468,6 +503,101 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
 
       assert moved.location == "The old office"
       assert moved.location_option_id == "loc-old-office"
+    end
+  end
+
+  describe "rescheduling a meeting at a saved venue" do
+    setup %{user: user} do
+      start = DateTime.utc_now() |> DateTime.add(7, :day) |> DateTime.truncate(:second)
+
+      berlin =
+        insert(:venue, user: user, name: "Berlin office", description: "Friedrichstrasse 1")
+
+      munich = insert(:venue, user: user, name: "Munich office", description: "Marienplatz 2")
+      # Dropped from the location since the meeting was booked there.
+      hamburg = insert(:venue, user: user, name: "Hamburg office", description: "Jungfernstieg 3")
+
+      option = in_person_location([berlin, munich], id: "loc-offices", label: "Our offices")
+
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          duration_minutes: 30,
+          name: "Consultation",
+          is_active: true,
+          locations: [option]
+        )
+
+      book = fn venue ->
+        insert(:meeting,
+          organizer_user_id: user.id,
+          meeting_type_id: meeting_type.id,
+          attendee_name: "Booker",
+          attendee_email: "rebook@example.com",
+          attendee_timezone: "America/New_York",
+          start_time: start,
+          end_time: DateTime.add(start, 30, :minute),
+          duration: 30,
+          status: "confirmed",
+          location: "#{venue.name} (#{venue.description})",
+          location_kind: "in_person",
+          location_option_id: "loc-offices",
+          venue_id: venue.id
+        )
+      end
+
+      %{book: book, original_start: start, berlin: berlin, munich: munich, hamburg: hamburg}
+    end
+
+    @tag :capture_log
+    test "the picker opens on the meeting's venue, and a time-only move keeps it",
+         %{conn: conn, profile: profile, book: book, munich: munich, original_start: start} do
+      meeting = book.(munich)
+
+      view = navigate_to_booking_form(conn, profile, nil, reschedule_meeting_uid: meeting.uid)
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+
+      assert assigns.selected_venue_id == munich.id
+      assert BookingLocation.submitted_venue_id(assigns) == munich.id
+
+      moved = submit_reschedule(view, meeting, start)
+
+      assert moved.venue_id == munich.id
+      assert moved.location == "Munich office (Marienplatz 2)"
+    end
+
+    @tag :capture_log
+    test "a venue no longer offered stays put when the booker only changes the time",
+         %{conn: conn, profile: profile, book: book, hamburg: hamburg} = ctx do
+      meeting = book.(hamburg)
+
+      view = navigate_to_booking_form(conn, profile, nil, reschedule_meeting_uid: meeting.uid)
+
+      # The picker opens with no venue chosen: the location's first venue
+      # was never the booker's choice, so it must not move the meeting there.
+      assert :sys.get_state(view.pid).socket.assigns.selected_venue_id == nil
+
+      moved = submit_reschedule(view, meeting, ctx.original_start)
+
+      assert moved.venue_id == hamburg.id
+      assert moved.location == "Hamburg office (Jungfernstieg 3)"
+    end
+
+    @tag :capture_log
+    test "a venue the booker picks moves the meeting there",
+         %{conn: conn, profile: profile, book: book, berlin: berlin, hamburg: hamburg} = ctx do
+      meeting = book.(hamburg)
+
+      view = navigate_to_booking_form(conn, profile, nil, reschedule_meeting_uid: meeting.uid)
+
+      send(view.pid, {:step_event, :booking, :select_venue, to_string(berlin.id)})
+      _drain = :sys.get_state(view.pid)
+
+      moved = submit_reschedule(view, meeting, ctx.original_start)
+
+      assert moved.venue_id == berlin.id
+      assert moved.location == "Berlin office (Friedrichstrasse 1)"
     end
   end
 end

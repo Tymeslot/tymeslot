@@ -47,11 +47,11 @@ defmodule Tymeslot.Emails.Shared.Frame do
     <mjml>
       <mj-head>
         <mj-title>#{title}</mj-title>
-        <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
         <mj-preview>#{preview}</mj-preview>
         <mj-raw>
           <meta name="color-scheme" content="light dark" />
           <meta name="supported-color-schemes" content="light dark" />
+          #{Styles.dark_mode_styles()}
         </mj-raw>
         #{Styles.mjml_base_attributes()}
         <mj-breakpoint width="480px" />

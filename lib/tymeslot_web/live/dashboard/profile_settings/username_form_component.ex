@@ -206,7 +206,11 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
 
     ~H"""
     <div id="username-form-container">
-      <.section_header level={3} title={dgettext("dashboard_profile", "Custom URL")} class="mb-4" />
+      <.subsection_header
+        id="custom-url-heading"
+        title={dgettext("dashboard_profile", "Custom URL")}
+        class="mb-4"
+      />
       <form
         id="username-form"
         phx-submit="update_username"
@@ -221,7 +225,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
               <% input_padding = "--leading-icon-width: #{prefix_length}ch;" %>
               <.input
                 name="username"
-                label={dgettext("dashboard_profile", "Your Custom URL")}
+                aria-labelledby="custom-url-heading"
                 value={if @profile, do: @profile.username || "", else: ""}
                 placeholder={dgettext("dashboard_profile", "yourname")}
                 pattern={UsernameValidator.html_pattern()}
@@ -239,43 +243,17 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
                   <div class="absolute right-3 top-1/2 -translate-y-1/2 shrink-0">
                     <%= case @username_available do %>
                       <% true -> %>
-                        <div class="inline-flex items-center px-2 py-0.5 rounded-token-lg bg-emerald-50 text-emerald-700 text-token-2xs font-black uppercase tracking-wider border border-emerald-100">
-                          <svg
-                            class="w-3 h-3 mr-1"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="3"
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
+                        <.pill tone={:success} icon="hero-check-mini" uppercase>
                           {dgettext("dashboard_profile", "Available")}
-                        </div>
+                        </.pill>
                       <% false -> %>
-                        <div class="inline-flex items-center px-2 py-0.5 rounded-token-lg bg-red-50 text-red-700 text-token-2xs font-black uppercase tracking-wider border border-red-100">
-                          <svg
-                            class="w-3 h-3 mr-1"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="3"
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
+                        <.pill tone={:danger} icon="hero-x-mark-mini" uppercase>
                           {dgettext("dashboard_profile", "Taken")}
-                        </div>
+                        </.pill>
                       <% {:error, _message} -> %>
-                        <div class="inline-flex items-center px-2 py-0.5 rounded-token-lg bg-amber-50 text-amber-700 text-token-2xs font-black uppercase tracking-wider border border-amber-100">
+                        <.pill tone={:warning} icon="hero-exclamation-triangle-mini" uppercase>
                           {dgettext("dashboard_profile", "Invalid")}
-                        </div>
+                        </.pill>
                       <% _ -> %>
                     <% end %>
                   </div>
@@ -283,32 +261,22 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
               </.input>
             </div>
             <div class="flex items-end">
-              <button
+              <%!-- The fixed height matches the input beside it; the component sets
+                    padding, not height, so this is layout only. --%>
+              <.action_button
                 type="submit"
-                class="btn-primary px-8 whitespace-nowrap h-[52px]"
+                class="h-[52px]"
                 phx-disable-with={dgettext("dashboard_profile", "Saving...")}
               >
                 {dgettext("dashboard_profile", "Update URL")}
-              </button>
+              </.action_button>
             </div>
           </div>
 
           <div class="mt-4">
             <%= if @profile && @profile.username do %>
               <div class="flex items-center gap-2 text-token-sm font-bold text-tymeslot-500">
-                <svg
-                  class="w-4 h-4 text-emerald-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2.5"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
+                <.icon name="hero-check" class="w-4 h-4 text-green-500" />
                 {dgettext("dashboard_profile", "Live at:")}
                 <a
                   href={"#{Policy.app_url()}/#{@profile.username}"}

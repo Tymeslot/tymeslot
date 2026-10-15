@@ -307,4 +307,31 @@ defmodule TymeslotWeb.Live.Themes.ScrollJourneyTest do
       refute has_element?(view, "#offer-heading-done[phx-mounted*='focus']")
     end
   end
+
+  describe "the month calendar's week start" do
+    test "starts the weeks on the visitor's first day, Sunday or Monday", %{conn: conn} do
+      %{profile: profile} = seed_organiser(@theme_id, "scroll-week-start")
+
+      for {accept_language, first_heading, first_weekday} <- [
+            {"en-US,en;q=0.9", "Sun", 7},
+            {"en-GB,en;q=0.9", "Mon", 1}
+          ] do
+        {:ok, view, _html} =
+          conn
+          |> put_req_header("accept-language", accept_language)
+          |> live(~p"/#{profile.username}")
+
+        BookingDriver.choose_meeting_type(view, "quick-chat")
+        doc = view |> render() |> Floki.parse_document!()
+
+        assert [^first_heading | _rest] =
+                 doc
+                 |> Floki.find(".month-calendar__weekday")
+                 |> Enum.map(&String.trim(Floki.text(&1)))
+
+        [first_day | _rest] = Floki.attribute(doc, ".month-calendar__day", "phx-value-date")
+        assert Date.day_of_week(Date.from_iso8601!(first_day)) == first_weekday
+      end
+    end
+  end
 end

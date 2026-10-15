@@ -11,13 +11,13 @@ defmodule Tymeslot.Availability.TimeOff do
   lunchtime, back Monday morning" needs, and the shape a whole-day holiday
   degenerates to when both times are null.
 
-  `blocked_window/2` is the single reading of that model: everything else in
-  the availability calculation asks this module what a date looks like rather
-  than comparing dates and times itself.
+  `intervals/2` is the single reading of that model: the availability
+  calculation asks this module for each period as an interval of instants
+  rather than comparing dates and times itself.
 
   Periods are profile-wide by construction, so they outrank the per-schedule
-  date overrides: a day covered in full by time off offers nothing, even where
-  an override marked that same date `available`. "I am away" is a statement
+  date overrides: time covered by a period offers nothing, even where an
+  override marked that same date `available`. "I am away" is a statement
   about the person and cannot be contradicted by one schedule's exception.
   """
 
@@ -32,20 +32,8 @@ defmodule Tymeslot.Availability.TimeOff do
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.TimeRange
 
-  @typedoc """
-  What a period does to one date: nothing, blocks the whole of it, or blocks
-  the single `{start_time, end_time}` window it trims out of it.
-  """
-  @type blocked_window :: :none | :all_day | {Time.t(), Time.t()}
-
   @type period :: TimeOffPeriodSchema.t()
   @type result :: {:ok, period()} | {:error, Ecto.Changeset.t()}
-
-  # The last instant a wall-clock day can name. Slot generation already treats
-  # 23:59:59 as the end of a day (see `TimeSlots.determine_slot_range/5`), so
-  # an open-ended period ends where the longest possible business-hours window
-  # does and cannot leave a sliver of bookable evening behind.
-  @end_of_day ~T[23:59:59]
 
   # A profile with more periods than this is not describing holidays any more,
   # and the availability read path holds every overlapping period in memory.
@@ -263,68 +251,6 @@ defmodule Tymeslot.Availability.TimeOff do
   end
 
   @doc """
-  What `period` does to `date`.
-
-  Returns `:none` when the date falls outside the period, `:all_day` when the
-  period covers the whole of it, and `{start_time, end_time}` for the window
-  it trims off an otherwise ordinary day.
-  """
-  @spec blocked_window(period() | map(), Date.t()) :: blocked_window()
-  def blocked_window(%{starts_on: nil}, _date), do: :none
-  def blocked_window(%{ends_on: nil}, _date), do: :none
-
-  def blocked_window(%{starts_on: starts_on, ends_on: ends_on} = period, date) do
-    if Date.compare(date, starts_on) == :lt or Date.compare(date, ends_on) == :gt do
-      :none
-    else
-      window_within_period(period, date, starts_on, ends_on)
-    end
-  end
-
-  def blocked_window(_period, _date), do: :none
-
-  defp window_within_period(period, date, starts_on, ends_on) do
-    from = if date == starts_on, do: period.start_time || ~T[00:00:00], else: ~T[00:00:00]
-    to = if date == ends_on, do: period.end_time || @end_of_day, else: @end_of_day
-
-    cond do
-      # A first day whose start time is at or past the last day's end time
-      # leaves nothing: a single-day period is guarded by the changeset, but a
-      # multi-day one is free to end earlier in the clock than it began.
-      Time.compare(from, to) != :lt -> :none
-      from == ~T[00:00:00] and to == @end_of_day -> :all_day
-      true -> {from, to}
-    end
-  end
-
-  @doc """
-  Whether `periods` block the whole of `date`.
-  """
-  @spec all_day?([period()], Date.t()) :: boolean()
-  def all_day?(periods, date) when is_list(periods) do
-    Enum.any?(periods, &(blocked_window(&1, date) == :all_day))
-  end
-
-  @doc """
-  The part-day windows `periods` block on `date`, as the
-  `{start_time, end_time}` tuples the slot generator already excludes breaks
-  with.
-
-  Days blocked in full contribute nothing here: `all_day?/2` answers those,
-  and a whole day is refused before slot generation rather than by removing
-  every slot it produced.
-  """
-  @spec windows_for_day([period()], Date.t()) :: [{Time.t(), Time.t()}]
-  def windows_for_day(periods, date) when is_list(periods) do
-    Enum.flat_map(periods, fn period ->
-      case blocked_window(period, date) do
-        {_from, _to} = window -> [window]
-        _all_day_or_none -> []
-      end
-    end)
-  end
-
-  @doc """
   The stretches `profile_id`'s periods block between `window_start` and
   `window_end`, as UTC `{start, end}` pairs, reading the periods in the owner's
   `timezone`.
@@ -389,6 +315,19 @@ defmodule Tymeslot.Availability.TimeOff do
     end)
   end
 
+  @doc """
+  Each period as one `{from, to}` interval of UTC instants, read on the
+  owner's clock in `timezone`: from `starts_on` at its start time (or
+  midnight) to `ends_on` at its end time, or to the midnight after `ends_on`
+  when it has none. The slot engine subtracts these from available time, so a
+  period blocks clock time whichever day's hours run into it.
+  """
+  @spec intervals([period() | map()], String.t()) :: [{DateTime.t(), DateTime.t()}]
+  def intervals(periods, timezone) when is_list(periods) and is_binary(timezone) do
+    for %{starts_on: %Date{}, ends_on: %Date{}} = period <- periods,
+        do: interval(period, timezone)
+  end
+
   defp interval(period, timezone) do
     to =
       case period.end_time do
@@ -399,8 +338,9 @@ defmodule Tymeslot.Availability.TimeOff do
     {utc_wall_clock(period.starts_on, period.start_time || ~T[00:00:00], timezone), to}
   end
 
-  # Mirrors `TimeSlots.resolve_breaks/3`: the first occurrence of a repeated
-  # time, the first valid instant after a skipped one. An unknown timezone
+  # Resolves as `DateTimeUtils.resolve_local/3` does for windows and breaks:
+  # the first occurrence of a repeated time, the first valid instant after a
+  # skipped one. An unknown timezone
   # falls back to UTC, as `today/1` does.
   defp utc_wall_clock(date, time, timezone) do
     local =

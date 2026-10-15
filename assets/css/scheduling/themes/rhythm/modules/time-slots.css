@@ -86,6 +86,15 @@
     inset 0 1px 0 var(--border-subtle);
 }
 
+/* ===== Seat availability (group bookings) ===== */
+/* The shared slot-list.css stacks a group time above its spots badge;
+   Rhythm sets it tighter, on a little more padding. */
+.slot-list__slot--seats {
+  gap: var(--space-hairline);
+  padding-top: var(--space-2xs);
+  padding-bottom: var(--space-2xs);
+}
+
 /* ============================================================================
    CONTAINER QUERY OVERRIDES
    Replaces width-based @media queries from responsive.css.

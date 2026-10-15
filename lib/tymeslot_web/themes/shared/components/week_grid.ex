@@ -46,11 +46,10 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.CoreComponents, only: [icon: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
   alias Phoenix.LiveView.JS
-  alias TymeslotWeb.Components.MeetingUtils
-  alias TymeslotWeb.Live.Scheduling.{CalendarHelpers, CalendarNavigation}
+  alias TymeslotWeb.Live.Scheduling.{CalendarHelpers, CalendarNavigation, WeekSlots}
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   attr :week_start, Date, required: true, doc: "the Monday of the week shown"
@@ -199,7 +198,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
         date: date,
         iso: iso,
         today: date == today,
-        slots: MeetingUtils.normalize_slot_list(Map.get(week_slots || %{}, iso, []))
+        slots: WeekSlots.times(Map.get(week_slots || %{}, iso, []))
       }
     end
   end

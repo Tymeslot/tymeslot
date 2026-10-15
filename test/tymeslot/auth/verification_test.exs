@@ -36,6 +36,28 @@ defmodule Tymeslot.Auth.VerificationTest do
       assert verified.verified_at
     end
 
+    # The sign-up IP exists only for the comparison above. Clearing it in the
+    # verifying update must not reach the comparison, or every verification
+    # would fall back to a manual login.
+    test "clears the signup IP once verified, after the same-device check has used it" do
+      {user, token} = user_with_token("203.0.113.9")
+
+      assert {:ok, verified, :auto_login} =
+               Verification.verify_email_and_maybe_login(token, ip: "203.0.113.9")
+
+      assert verified.signup_ip == nil
+      assert Repo.reload!(user).signup_ip == nil
+    end
+
+    test "clears the signup IP when verified from another device too" do
+      {user, token} = user_with_token("203.0.113.9")
+
+      assert {:ok, _verified, :manual} =
+               Verification.verify_email_and_maybe_login(token, ip: "198.51.100.1")
+
+      assert Repo.reload!(user).signup_ip == nil
+    end
+
     test "treats the localhost spellings as one address" do
       {_user, token} = user_with_token("127.0.0.1")
 

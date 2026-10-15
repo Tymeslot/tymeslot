@@ -54,7 +54,7 @@ defmodule Tymeslot.Emails.Shared.Stage do
             align="left"
             css-class="mobile-text"
           >
-            <span style="opacity: 0.92;">#{safe_subtitle}</span>
+            #{safe_subtitle}
           </mj-text>
           """
       end
@@ -78,7 +78,7 @@ defmodule Tymeslot.Emails.Shared.Stage do
           text-transform="uppercase"
           css-class="stage-band-eyebrow mobile-eyebrow"
         >
-          <span style="opacity: 0.78;">#{dot()} #{safe_eyebrow}</span>
+          #{dot()} #{safe_eyebrow}
         </mj-text>
         <mj-text
           padding="0"

@@ -1,8 +1,12 @@
 /* Modal System - Modern Branding */
 
 /* Modal Overlay & Container */
+/* `margin: 0` because the overlay is often a child of a `space-y-*` stack,
+   whose margin would otherwise shorten the fixed box and leave the page
+   uncovered along the bottom of the viewport. */
 .modal-overlay {
   @apply fixed inset-0 z-[9999] overflow-hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-xs transition-all duration-300;
+  margin: 0;
 }
 
 .modal-container {
@@ -38,8 +42,11 @@
   @apply flex items-center justify-between px-10 py-8 border-b-2 border-slate-50;
 }
 
+/* Size, weight and colour come from the markup's utilities (smaller on a
+   phone, so a long title wraps to fewer lines beside the close button); an
+   unlayered font size here would override them. */
 .modal-title {
-  @apply text-3xl font-black text-slate-900 tracking-tight;
+  overflow-wrap: break-word;
 }
 
 /* Modal Body */

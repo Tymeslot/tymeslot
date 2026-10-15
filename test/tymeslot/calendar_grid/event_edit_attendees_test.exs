@@ -91,7 +91,7 @@ defmodule Tymeslot.CalendarGrid.EventEditAttendeesTest do
 
       assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
 
-      body = OutlookMapper.format_event_data(captured_payload())
+      {:ok, body} = OutlookMapper.format_event_data(captured_payload())
       assert body["subject"] == "Renamed"
       refute Map.has_key?(body, "attendees")
     end
@@ -102,7 +102,7 @@ defmodule Tymeslot.CalendarGrid.EventEditAttendeesTest do
 
       assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{attendees: []})
 
-      assert OutlookMapper.format_event_data(captured_payload())["attendees"] == []
+      assert {:ok, %{"attendees" => []}} = OutlookMapper.format_event_data(captured_payload())
     end
   end
 

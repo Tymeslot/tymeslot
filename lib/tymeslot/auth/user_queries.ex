@@ -171,6 +171,23 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
+  Lists up to `limit` accounts that are still unverified and were signed up
+  before `cutoff`, oldest first.
+
+  An account sent a verification link since `cutoff` is left out, so a link
+  its owner asked for recently still works when it is followed.
+  """
+  @spec list_stale_unverified_users(DateTime.t(), pos_integer()) :: [UserSchema.t()]
+  def list_stale_unverified_users(%DateTime{} = cutoff, limit) do
+    UserSchema
+    |> where([u], is_nil(u.verified_at) and u.inserted_at < ^cutoff)
+    |> where([u], is_nil(u.verification_sent_at) or u.verification_sent_at < ^cutoff)
+    |> order_by([u], asc: u.inserted_at, asc: u.id)
+    |> limit(^limit)
+    |> Repo.all()
+  end
+
+  @doc """
   Updates a user's password with confirmation. Like every password change, it
   revokes any outstanding reset or email change token.
   """

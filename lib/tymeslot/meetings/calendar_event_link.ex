@@ -90,16 +90,20 @@ defmodule Tymeslot.Meetings.CalendarEventLink do
   it already occupies.
 
   `nil` means "nothing to exclude", so the ordinary booking paths can call this
-  unconditionally.
+  unconditionally. A list excludes every meeting in it (`nil` entries
+  ignored): a seat move off a meeting it vacates, onto a slot it joins, has
+  two meetings whose events are not conflicts with the move.
   """
-  @spec reject_mirrors(Enumerable.t(), map() | nil) :: list()
+  @spec reject_mirrors(Enumerable.t(), map() | [map() | nil] | nil) :: list()
   def reject_mirrors(records, nil), do: Enum.to_list(records)
 
-  def reject_mirrors(records, meeting) do
-    identifiers = identifier_set([meeting])
+  def reject_mirrors(records, meetings) when is_list(meetings) do
+    identifiers = meetings |> Enum.reject(&is_nil/1) |> identifier_set()
 
     Enum.reject(records, &linked?(&1, identifiers))
   end
+
+  def reject_mirrors(records, meeting), do: reject_mirrors(records, [meeting])
 
   @doc """
   Whether `value` is unusable as an identifier: absent, or blank once trimmed.

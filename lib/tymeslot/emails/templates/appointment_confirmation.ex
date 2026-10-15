@@ -17,6 +17,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
   alias Tymeslot.Emails.Shared.{
     Callouts,
     Formatting,
+    GroupSession,
     MeetingComponents,
     MjmlEmail,
     Sanitise,
@@ -62,6 +63,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
       mjml_content = """
       #{Text.centered_text(intro_copy, padding: "8px 0 16px 0")}
 
+      #{if line = GroupSession.line(appointment_details), do: Text.centered_text(line, font_size: "14px", padding: "0 0 16px 0")}
+
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 
       #{MeetingComponents.organizer_note_box(@intent, appointment_details[:organizer_note])}
@@ -106,6 +109,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
       MjmlEmail.base_email()
       |> to({appointment_details.attendee_name, attendee_email})
+      |> MjmlEmail.put_reply_to(
+        appointment_details.organizer_name,
+        appointment_details.organizer_email
+      )
       |> subject(
         Sanitise.sanitize_for_header(
           dgettext("emails_booking", "Appointment Confirmed - %{date} with %{name}",
@@ -127,6 +134,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
   end
 
   def render(:guest, guest_email, appointment_details) do
+    appointment_details = TemplateHelper.as_guest_view(appointment_details)
+
     # Guests have no per-guest locale field; they intentionally inherit the
     # booker's locale (`:attendee_locale`) set when the booking was created.
     locale = Map.get(appointment_details, :attendee_locale, "en")
@@ -141,7 +150,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
         duration: appointment_details.duration,
         location: appointment_details.location,
         location_type: Map.get(appointment_details, :location_type),
-        meeting_type: appointment_details.meeting_type
+        meeting_type: appointment_details.meeting_type,
+        audience: :guest
       }
 
       intro_copy = guest_intro(appointment_details, guest_name)
@@ -182,6 +192,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
       MjmlEmail.base_email()
       |> to({guest_name, guest_email})
+      |> MjmlEmail.put_reply_to(
+        appointment_details.organizer_name,
+        appointment_details.organizer_email
+      )
       |> subject(
         Sanitise.sanitize_for_header(
           dgettext("emails_booking", "You're invited - %{date} with %{name}",
@@ -253,6 +267,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
       # producing a duplicate event and re-sending invites to the attendee.
       MjmlEmail.base_email()
       |> to({appointment_details.organizer_name, organizer_email})
+      |> MjmlEmail.put_reply_to(
+        appointment_details.attendee_name,
+        appointment_details.attendee_email
+      )
       |> subject(
         Sanitise.sanitize_for_header(
           dgettext("emails_booking", "New Appointment: %{name} - %{date}",
@@ -292,7 +310,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
     #{dgettext("emails_booking", "I'm looking forward to our meeting. I've blocked the time on my calendar and will be ready for you.")}
 
-    #{dgettext("emails_booking", "MEETING DETAILS:")}
+    #{GroupSession.text(appointment_details)}#{dgettext("emails_booking", "MEETING DETAILS:")}
     #{meeting_details}#{TextBodyHelper.format_organizer_note(appointment_details, locale)}#{video_section}#{custom_answers}
     #{action_links}#{payment_section}
     #{if appointment_details.organizer_contact_info, do: "\n#{dgettext("emails_booking", "QUESTIONS?")}\n#{appointment_details.organizer_contact_info}\n"}

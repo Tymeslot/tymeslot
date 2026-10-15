@@ -25,6 +25,7 @@ defmodule Tymeslot.Integrations.Video do
   alias Tymeslot.Integrations.Video.Urls
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
+  alias Tymeslot.Security.EncryptedString
 
   @behaviour Tymeslot.Security.EncryptedStorage
 
@@ -44,7 +45,8 @@ defmodule Tymeslot.Integrations.Video do
   def encrypted_storage,
     do:
       {VideoIntegrationSchema.__schema__(:source),
-       VideoIntegrationSchema.encrypted_credential_fields()}
+       VideoIntegrationSchema.encrypted_credential_fields() ++
+         EncryptedString.columns(VideoIntegrationSchema)}
 
   # ---------------
   # Read
@@ -195,7 +197,7 @@ defmodule Tymeslot.Integrations.Video do
   # clauses run, so the attrs are read one way here.
   defp do_create_integration(:mirotalk, attrs) do
     base_url = attrs[:base_url]
-    attrs = Map.put(attrs, :provider_account_id, AccountKey.from_url(base_url))
+    attrs = Map.put(attrs, :provider_account_id, AccountKey.key_for(:mirotalk, base_url))
 
     # Pre-test the connection prior to creation for better UX
     config = %{
@@ -218,7 +220,12 @@ defmodule Tymeslot.Integrations.Video do
   end
 
   defp do_create_integration(:custom, attrs) do
-    attrs = Map.put(attrs, :provider_account_id, AccountKey.from_url(attrs[:custom_meeting_url]))
+    attrs =
+      Map.put(
+        attrs,
+        :provider_account_id,
+        AccountKey.key_for(:custom, attrs[:custom_meeting_url])
+      )
 
     with :ok <- check_no_duplicate(attrs) do
       VideoIntegrationQueries.create(attrs)
@@ -249,7 +256,7 @@ defmodule Tymeslot.Integrations.Video do
   # anything is saved: a half-filled credential pair or a short secret would
   # otherwise only surface when a later booking fails to get its video link.
   defp do_create_integration(:jitsi, attrs) do
-    attrs = Map.put(attrs, :provider_account_id, AccountKey.from_url(attrs[:base_url]))
+    attrs = Map.put(attrs, :provider_account_id, AccountKey.key_for(:jitsi, attrs[:base_url]))
 
     with :ok <- JitsiProvider.validate_config(attrs),
          :ok <- check_no_duplicate(attrs) do

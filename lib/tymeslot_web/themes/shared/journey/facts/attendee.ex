@@ -30,6 +30,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Attendee do
     :field_blur,
     :select_location,
     :select_video_provider,
+    :select_venue,
     :location_phone,
     :toggle_guests,
     :close_guests,
@@ -49,8 +50,11 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Attendee do
   @impl Fact
   def required?(_assigns), do: true
 
+  # A booking was made: its meeting's uid, or, for a seat on a group
+  # meeting, whose uid names the shared slot and is never the booker's, the
+  # seat's own calendar link (`BookingSubmissionHandlerComponent`).
   @impl Fact
-  def known?(assigns), do: is_binary(assigns[:meeting_uid]) and assigns[:meeting_uid] != ""
+  def known?(assigns), do: booked?(assigns[:meeting_uid]) or booked?(assigns[:seat_calendar_url])
 
   @impl Fact
   def events, do: @events
@@ -62,7 +66,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Attendee do
     do: {:noreply, OrganizerHelpers.mark_field_touched(socket, field)}
 
   def handle(socket, event, data)
-      when event in [:select_location, :select_video_provider, :location_phone],
+      when event in [:select_location, :select_video_provider, :select_venue, :location_phone],
       do: {:noreply, BookingLocation.apply_event(socket, event, data)}
 
   def handle(socket, :toggle_guests, _data), do: {:noreply, GuestBooking.open(socket)}
@@ -82,8 +86,17 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Attendee do
   def continue(socket), do: {:stay, socket}
 
   # The attendee moment makes a fresh token each time it opens again, and
-  # forgetting the attendee forgets the booking made (`meeting_uid`).
+  # forgetting the attendee forgets the booking made (`meeting_uid`, or a
+  # seat's `seat_calendar_url`).
   @impl Fact
   def clear(socket),
-    do: assign(socket, submission_token: nil, submission_processed: false, meeting_uid: nil)
+    do:
+      assign(socket,
+        submission_token: nil,
+        submission_processed: false,
+        meeting_uid: nil,
+        seat_calendar_url: nil
+      )
+
+  defp booked?(value), do: is_binary(value) and value != ""
 end

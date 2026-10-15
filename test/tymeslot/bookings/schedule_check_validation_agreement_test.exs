@@ -6,7 +6,7 @@ defmodule Tymeslot.Bookings.ScheduleCheckValidationAgreementTest do
   candidate slot too soon or too far out.
 
   `Validation` reads "now" through `Tymeslot.Clock`. `ScheduleCheck` (via
-  `Calculate.offers_slot/6` -> `Conflicts.filter_available_slots/6`) used to
+  `Calculate.offers_slot/6` -> `Conflicts.filter_available_starts/5`) used to
   re-derive "now" from `Tymeslot.Utils.DateTimeUtils.now_in_timezone/1`
   reading the raw wall clock, so a frozen clock made the two checks disagree:
   `Validation` would allow a slot relative to the frozen instant while

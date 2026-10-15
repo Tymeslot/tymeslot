@@ -6,9 +6,11 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
   """
 
   require Logger
+  alias Tymeslot.Media.ImageMetadata
+  alias Tymeslot.Media.UploadConstraints
+  alias Tymeslot.Media.VideoMetadata
   alias Tymeslot.ThemeCustomizations.Spec
   alias Tymeslot.Utils.MediaValidator
-  alias TymeslotWeb.Helpers.UploadConstraints
   alias TymeslotWeb.Helpers.UploadHandler
 
   @type file_upload :: %{required(:path) => Path.t(), required(:filename) => String.t()}
@@ -97,6 +99,13 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
   random prefix before the sanitised client name, so no two uploads share a
   path: a new upload never overwrites a file a setting still names, and
   deleting one upload's file never deletes another's.
+
+  Before it is moved into the upload directory, the file the caller hands
+  over at `temp_path` is cleaned in place: an image is re-encoded without its
+  metadata (see `Tymeslot.Media.ImageMetadata`), and a video has its metadata
+  removed (see `Tymeslot.Media.VideoMetadata`). A video that is not an MP4 or
+  WebM the stripper can read to the end is refused as `:invalid_video_format`.
+  Captions are plain text and carry no metadata.
   """
   @spec store_asset(Spec.asset_kind(), integer(), String.t(), file_upload()) ::
           {:ok, String.t()} | {:error, term()}
@@ -107,7 +116,8 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
       directory = Map.fetch!(@kind_directories, kind)
       dest_dir = get_theme_upload_directory(profile_id, theme_id, directory)
 
-      with :ok <- ensure_directory_exists(dest_dir),
+      with :ok <- strip_metadata(kind, temp_path, extension),
+           :ok <- ensure_directory_exists(dest_dir),
            {:ok, stored_name} <-
              UploadHandler.store_file_atomically(
                temp_path,
@@ -155,14 +165,44 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
   # front of a client name carrying a directory. The client's stem is
   # shortened first, so that the whole name fits the file-name limit and the
   # sanitiser never cuts off the stored extension, by which the file is
-  # later served. The cut may split a multi-byte character; harmless, since
-  # the sanitiser replaces every non-ASCII byte with one `_` and so keeps
-  # the length.
+  # later served.
+  #
+  # Every byte of the stem outside `[a-zA-Z0-9_-]` becomes one `_`: the
+  # media URL is built through `Validation.sanitize_path/1`, which drops
+  # anything else and every `..`, so a stored `photo (1).jpg` or `a..b.png`
+  # would be served under a name no file has. Dots go too, so the only dot
+  # left is the extension's. The replacement is byte for byte, which keeps
+  # the length budget exact.
   defp unique_name(filename, extension) do
     prefix = Base.encode16(:crypto.strong_rand_bytes(6), case: :lower) <> "-"
-    stem = filename |> Path.basename() |> Path.rootname()
+
+    stem =
+      filename
+      |> Path.basename()
+      |> Path.rootname()
+      |> String.replace(~r/[^a-zA-Z0-9_-]/, "_")
+
     budget = @max_name_bytes - byte_size(prefix) - byte_size(extension)
 
     prefix <> binary_part(stem, 0, min(byte_size(stem), budget)) <> extension
   end
+
+  # The metadata a phone writes into a photo or a recording (location,
+  # capture time, device serial) would otherwise be served publicly with it.
+  defp strip_metadata(:image, path, extension), do: ImageMetadata.strip(path, path, extension)
+
+  defp strip_metadata(:video, path, _extension) do
+    case VideoMetadata.strip(path) do
+      {:ok, _stripped_or_unchanged} ->
+        :ok
+
+      {:error, reason} when reason in [:unsupported_container, :malformed] ->
+        {:error, :invalid_video_format}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp strip_metadata(:captions, _path, _extension), do: :ok
 end

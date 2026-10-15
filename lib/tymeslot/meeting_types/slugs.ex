@@ -8,6 +8,7 @@ defmodule Tymeslot.MeetingTypes.Slugs do
   that reaches a single meeting type without exposing the rest of a public page.
   """
 
+  alias Tymeslot.MeetingTypes.GroupAccess
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
 
   @doc """
@@ -16,11 +17,15 @@ defmodule Tymeslot.MeetingTypes.Slugs do
   Resolves against active types only — including private ones, which carry no
   public listing but are still bookable through their direct link. An inactive
   type is therefore unreachable, which is what pauses a shared link when the
-  organiser turns the type off.
+  organiser turns the type off. A paused group type
+  (`Tymeslot.MeetingTypes.GroupAccess`) is unreachable for the same reason.
   """
   @spec find_by_slug(integer(), String.t()) :: Ecto.Schema.t() | nil
   def find_by_slug(user_id, slug) do
-    active = MeetingTypeQueries.list_active_meeting_types(user_id)
+    active =
+      user_id
+      |> MeetingTypeQueries.list_active_meeting_types()
+      |> GroupAccess.reject_paused()
 
     # Prefer a type whose custom `slug` field is an exact match over one that
     # only matches via its name-derived slug. This prevents a public type from

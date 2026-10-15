@@ -20,7 +20,8 @@ defmodule Tymeslot.Availability.AvailabilityScheduleSchemaTest do
       defaults = Constraints.scheduling_policy_defaults()
       schedule = %AvailabilityScheduleSchema{}
 
-      assert schedule.buffer_minutes == defaults.buffer_minutes
+      assert schedule.buffer_before_minutes == defaults.buffer_before_minutes
+      assert schedule.buffer_after_minutes == defaults.buffer_after_minutes
       assert schedule.min_advance_hours == defaults.min_advance_hours
       assert schedule.advance_booking_days == defaults.advance_booking_days
     end
@@ -63,15 +64,45 @@ defmodule Tymeslot.Availability.AvailabilityScheduleSchemaTest do
         AvailabilityScheduleSchema.changeset(%AvailabilityScheduleSchema{}, %{
           profile_id: 1,
           name: "Evenings",
-          buffer_minutes: 999,
+          buffer_before_minutes: 121,
+          buffer_after_minutes: -1,
           min_advance_hours: -1,
           advance_booking_days: 0
         })
 
       errors = errors_on(changeset)
-      assert Map.has_key?(errors, :buffer_minutes)
+      assert Map.has_key?(errors, :buffer_before_minutes)
+      assert Map.has_key?(errors, :buffer_after_minutes)
       assert Map.has_key?(errors, :min_advance_hours)
       assert Map.has_key?(errors, :advance_booking_days)
+    end
+
+    test "accepts each buffer at both ends of 0..120" do
+      for {buffer_before, buffer_after} <- [{0, 120}, {120, 0}] do
+        changeset =
+          AvailabilityScheduleSchema.changeset(%AvailabilityScheduleSchema{}, %{
+            profile_id: 1,
+            name: "Edges",
+            buffer_before_minutes: buffer_before,
+            buffer_after_minutes: buffer_after
+          })
+
+        assert changeset.valid?, "expected #{buffer_before}/#{buffer_after} to be valid"
+      end
+    end
+
+    for field <- [:buffer_before_minutes, :buffer_after_minutes] do
+      test "maps a database range violation on #{field} onto the field rather than raising" do
+        profile = insert(:profile)
+
+        assert {:error, changeset} =
+                 %AvailabilityScheduleSchema{}
+                 |> AvailabilityScheduleSchema.changeset(%{profile_id: profile.id, name: "Raw"})
+                 |> Changeset.force_change(unquote(field), 500)
+                 |> Repo.insert()
+
+        assert Map.has_key?(errors_on(changeset), unquote(field))
+      end
     end
 
     test "accepts a valid schedule and trims the name" do
@@ -94,11 +125,13 @@ defmodule Tymeslot.Availability.AvailabilityScheduleSchemaTest do
         AvailabilityScheduleSchema.policy_changeset(schedule, %{
           name: "Renamed",
           is_default: false,
-          buffer_minutes: 30
+          buffer_before_minutes: 30,
+          buffer_after_minutes: 5
         })
 
       assert changeset.valid?
-      assert Changeset.get_change(changeset, :buffer_minutes) == 30
+      assert Changeset.get_change(changeset, :buffer_before_minutes) == 30
+      assert Changeset.get_change(changeset, :buffer_after_minutes) == 5
       assert Changeset.get_change(changeset, :name) == nil
       assert Changeset.get_change(changeset, :is_default) == nil
     end

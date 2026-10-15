@@ -12,7 +12,9 @@ defmodule TymeslotWeb.OnboardingLive.SkipCalendarModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents.Icons
+  alias TymeslotWeb.Components.CoreComponents.Modal
 
   @doc """
   Renders the "continue without a calendar?" confirmation modal.
@@ -22,7 +24,7 @@ defmodule TymeslotWeb.OnboardingLive.SkipCalendarModal do
   @spec skip_calendar_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def skip_calendar_modal(assigns) do
     ~H"""
-    <CoreComponents.modal
+    <Modal.modal
       id="skip-calendar-modal"
       show={@show}
       on_cancel={JS.push("hide_skip_calendar_modal")}
@@ -31,7 +33,7 @@ defmodule TymeslotWeb.OnboardingLive.SkipCalendarModal do
       <:header>
         <div class="flex items-center gap-4">
           <div class="w-12 h-12 bg-turquoise-50 rounded-2xl flex items-center justify-center border border-turquoise-100">
-            <CoreComponents.icon name="hero-calendar-days" class="w-6 h-6 text-turquoise-600" />
+            <Icons.icon name="hero-calendar-days" class="w-6 h-6 text-turquoise-600" />
           </div>
           {dgettext("onboarding_wizard", "Continue without a calendar?")}
         </div>
@@ -52,23 +54,23 @@ defmodule TymeslotWeb.OnboardingLive.SkipCalendarModal do
 
       <:footer>
         <div class="flex flex-row gap-3">
-          <CoreComponents.action_button
+          <Buttons.action_button
             variant={:outline}
             phx-click="confirm_skip_calendar"
-            class="flex-1 py-3"
+            class="flex-1"
           >
             {dgettext("onboarding_wizard", "Continue without one")}
-          </CoreComponents.action_button>
-          <CoreComponents.action_button
+          </Buttons.action_button>
+          <Buttons.action_button
             variant={:primary}
             phx-click="hide_skip_calendar_modal"
-            class="flex-1 py-3"
+            class="flex-1"
           >
             {dgettext("onboarding_wizard", "Connect a calendar")}
-          </CoreComponents.action_button>
+          </Buttons.action_button>
         </div>
       </:footer>
-    </CoreComponents.modal>
+    </Modal.modal>
     """
   end
 end

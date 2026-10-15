@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Features
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.LocationOption
@@ -40,7 +41,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> Component.assign(:requires_approval, get_requires_approval(type))
     |> Component.assign(:approval_window_hours, get_approval_window_hours(type))
     |> Component.assign(:show_as_free, get_show_as_free(type))
+    |> assign_group_bookings_state(type)
     |> Component.assign(:booking_limits, get_booking_limits(type))
+    |> Component.assign(
+      :week_start,
+      assigns |> Map.get(:current_user) |> user_id() |> CalendarManagement.get_week_start()
+    )
     |> Component.assign(
       :selected_availability_schedule_id,
       get_availability_schedule_id(type)
@@ -144,6 +150,51 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   end
 
   defp get_payment_price(_type), do: ""
+
+  # Pre-filled participant limit when the toggle is first switched on.
+  @default_group_limit 10
+
+  @doc "Default participant limit pre-filled when group bookings is first enabled."
+  @spec default_group_limit() :: pos_integer()
+  def default_group_limit, do: @default_group_limit
+
+  # Pre-filled "last spots" threshold when that option is first switched on.
+  @default_last_spots 3
+
+  @doc "Default last-spots threshold pre-filled when the option is first enabled."
+  @spec default_last_spots() :: pos_integer()
+  def default_last_spots, do: @default_last_spots
+
+  @doc """
+  Assigns the group-bookings toggle state, participant-limit form value and
+  the booking page's spots display settings.
+
+  A stored limit above 1 marks the type as a group type and pre-fills the
+  input with it. Solo types keep the toggle off and pre-fill the input with
+  the default so enabling the toggle starts from a sensible value.
+  """
+  @spec assign_group_bookings_state(Phoenix.LiveView.Socket.t(), Ecto.Schema.t() | nil) ::
+          Phoenix.LiveView.Socket.t()
+  def assign_group_bookings_state(socket, type) do
+    limit = get_max_participants(type)
+
+    socket
+    |> Component.assign(:group_bookings_enabled, limit > 1)
+    |> Component.assign(
+      :max_participants,
+      to_string(if limit > 1, do: limit, else: @default_group_limit)
+    )
+    |> Component.assign(
+      :show_seat_availability,
+      Map.get(type || %{}, :show_seat_availability, true)
+    )
+    |> Component.assign(:last_spots_threshold, Map.get(type || %{}, :last_spots_threshold))
+  end
+
+  @doc "Returns the stored participant limit for an existing meeting type, defaulting to 1."
+  @spec get_max_participants(Ecto.Schema.t() | nil) :: pos_integer()
+  def get_max_participants(%{max_participants: limit}) when is_integer(limit), do: limit
+  def get_max_participants(_type), do: 1
 
   @doc "Builds the initial form data map from an existing meeting type or nil."
   @spec build_form_data(Ecto.Schema.t() | nil) :: map()

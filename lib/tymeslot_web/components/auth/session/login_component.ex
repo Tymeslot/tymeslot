@@ -13,7 +13,7 @@ defmodule TymeslotWeb.Session.LoginComponent do
   import TymeslotWeb.Shared.Auth.LayoutComponents
   import TymeslotWeb.Shared.Auth.FormComponents
   import TymeslotWeb.Shared.Auth.ButtonComponents
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
   alias Tymeslot.Infrastructure.Config
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 

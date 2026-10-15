@@ -6,10 +6,15 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   meeting type creation/editing and scheduling settings configuration.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.Security.{SecurityLogger, UniversalSanitizer}
   alias Tymeslot.Validation.Constraints
+
+  @min_duration Constraints.duration_minutes_range().first
+  @max_duration Constraints.duration_minutes_range().last
 
   @doc """
   Validates meeting type form input (name, duration, description, icon).
@@ -25,16 +30,17 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   def validate_meeting_type_form(params, opts \\ []) do
     metadata = Keyword.get(opts, :metadata, %{})
 
-    validations = [
-      {:name, params["name"]},
-      {:duration, params["duration"]},
-      {:slot_interval, params["slot_interval"]},
-      {:description, params["description"]},
-      {:icon, params["icon"]},
-      {:calendar_integration_id, params["calendar_integration_id"]},
-      {:target_calendar_id, params["target_calendar_id"]},
-      {:reminder_config, params["reminder_config"]}
-    ]
+    validations =
+      [
+        {:name, params["name"]},
+        {:duration, params["duration"]},
+        {:slot_interval, params["slot_interval"]},
+        {:description, params["description"]},
+        {:icon, params["icon"]},
+        {:calendar_integration_id, params["calendar_integration_id"]},
+        {:target_calendar_id, params["target_calendar_id"]},
+        {:reminder_config, params["reminder_config"]}
+      ] ++ max_participants_validation(params)
 
     case run_validations(validations, metadata) do
       {:ok, sanitized_params} ->
@@ -83,22 +89,49 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   def validate_field(:reminder_config, value, metadata),
     do: ReminderValidation.validate_reminder_config(value, metadata)
 
+  # The canonical param, which the form serialises as "1" for a solo type.
+  def validate_field(:max_participants, value, metadata),
+    do: validate_max_participants(value, metadata, Constraints.max_participants_range())
+
+  # The visible participant-limit input, which only exists while group
+  # bookings are switched on. Its floor is 2: a limit of 1 is the toggle
+  # being off, and accepting it here would store a solo type behind an
+  # enabled toggle, stranding any bookings already taken on the slot.
+  def validate_field(:group_participants, value, metadata),
+    do: validate_max_participants(value, metadata, Constraints.group_participants_range())
+
   def validate_field(_other_field, _value, _metadata),
     do: {:error, %{base: "Invalid field"}}
 
   @doc """
-  Validates buffer minutes setting input.
+  Validates the buffer kept free before each booking.
 
   ## Parameters
-  - `buffer_str` - String containing buffer minutes value
+  - `value_str` - String containing the buffer in minutes
   - `opts` - Options including metadata for logging
 
   ## Returns
   - `{:ok, validated_integer}` | `{:error, validation_error}`
   """
-  @spec validate_buffer_minutes(String.t(), keyword()) :: {:ok, integer()} | {:error, String.t()}
-  def validate_buffer_minutes(buffer_str, opts \\ []) do
-    validate_numeric_setting(buffer_str, 0, 120, "Buffer minutes", "buffer_minutes", opts)
+  @spec validate_buffer_before_minutes(String.t(), keyword()) ::
+          {:ok, integer()} | {:error, String.t()}
+  def validate_buffer_before_minutes(value_str, opts \\ []),
+    do: validate_buffer(value_str, "Buffer before", "buffer_before_minutes", opts)
+
+  @doc """
+  Validates the buffer kept free after each booking. Same rule and return
+  shape as `validate_buffer_before_minutes/2`.
+  """
+  @spec validate_buffer_after_minutes(String.t(), keyword()) ::
+          {:ok, integer()} | {:error, String.t()}
+  def validate_buffer_after_minutes(value_str, opts \\ []),
+    do: validate_buffer(value_str, "Buffer after", "buffer_after_minutes", opts)
+
+  # Both buffers share one range, read from `Constraints` so this check and
+  # the schema's cannot disagree.
+  defp validate_buffer(value_str, label, event_name, opts) do
+    range = Constraints.buffer_minutes_range()
+    validate_numeric_setting(value_str, range.first, range.last, label, event_name, opts)
   end
 
   @doc """
@@ -280,12 +313,12 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
     end
   end
 
-  defp validate_duration_constraints(duration) when duration < 5 do
-    {:error, %{duration: "Duration must be at least 5 minutes"}}
+  defp validate_duration_constraints(duration) when duration < @min_duration do
+    {:error, %{duration: "Duration must be at least #{@min_duration} minutes"}}
   end
 
-  defp validate_duration_constraints(duration) when duration > 480 do
-    {:error, %{duration: "Duration cannot exceed 8 hours (480 minutes)"}}
+  defp validate_duration_constraints(duration) when duration > @max_duration do
+    {:error, %{duration: "Duration cannot exceed 24 hours (#{@max_duration} minutes)"}}
   end
 
   defp validate_duration_constraints(duration) when rem(duration, 5) != 0 do
@@ -422,6 +455,56 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
 
   defp validate_target_calendar_id(_invalid, _metadata) do
     {:error, %{target_calendar: "Invalid target calendar format"}}
+  end
+
+  # Only validated when the form actually posts the key — an absent key means
+  # the sanitised params omit it too, so Ecto's cast leaves the stored value
+  # untouched (same convention as custom_fields and the payment fields).
+  defp max_participants_validation(%{"max_participants" => value}),
+    do: [{:max_participants, value}]
+
+  defp max_participants_validation(_params), do: []
+
+  defp validate_max_participants(value, metadata, range) when is_binary(value) do
+    case validate_numeric_setting(
+           value,
+           range.first,
+           range.last,
+           "Participant limit",
+           "max_participants",
+           metadata: metadata
+         ) do
+      {:ok, validated} -> {:ok, to_string(validated)}
+      {:error, _message} -> {:error, %{max_participants: participant_limit_message(value, range)}}
+    end
+  end
+
+  defp validate_max_participants(_invalid, _metadata, _range),
+    do:
+      {:error,
+       %{
+         max_participants:
+           dgettext("dashboard_meeting_form", "Participant limit must be a valid number")
+       }}
+
+  # Re-derives which bound was violated so the user-facing message is
+  # translated, without changing `validate_numeric_setting/6`'s plain-English
+  # message (shared with schedule-settings validators outside this form).
+  defp participant_limit_message(value, range) do
+    case Integer.parse(value) do
+      {parsed, ""} when parsed < range.first ->
+        dgettext("dashboard_meeting_form", "Participant limit must be at least %{min}",
+          min: range.first
+        )
+
+      {parsed, ""} when parsed > range.last ->
+        dgettext("dashboard_meeting_form", "Participant limit cannot exceed %{max}",
+          max: range.last
+        )
+
+      _invalid ->
+        dgettext("dashboard_meeting_form", "Participant limit must be a valid number")
+    end
   end
 
   defp validate_numeric_range(value_str, min, max, field_name) do

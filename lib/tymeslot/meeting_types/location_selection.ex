@@ -10,7 +10,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
       the host's editor renders, so the two can never disagree about what
       this meeting type offers.
 
-    * `resolve/3` — turns the option id the booker submitted into the
+    * `resolve/4` — turns the option id the booker submitted into the
       meeting fields that follow from it: the location string the calendar
       event and confirmation emails show, the kind, and the video
       integration the room will be created on.
@@ -26,6 +26,12 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
   option: it is honoured only when the option lists it, and otherwise the
   option's first provider is used.
 
+  A venue within an in-person option is honoured the same way, by
+  `place_at_venue/3` once the option is resolved: the booker's pick if the
+  option still offers it, otherwise the option's first venue. An in-person
+  option offering no venue resolves to its label alone, which is the
+  "address arranged after booking" location.
+
   ## Meeting types with no stored list
 
   `locations` was added after meeting types existed, and rows can still
@@ -38,6 +44,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.MeetingTypes.LocationOption
+  alias Tymeslot.Venues
 
   @typedoc "The meeting fields that follow from the booker's chosen location."
   @type resolution :: %{
@@ -45,6 +52,8 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
           location_kind: String.t() | nil,
           location_option_id: String.t() | nil,
           video_integration_id: integer() | nil,
+          venue_id: integer() | nil,
+          address_to_arrange: boolean(),
           attendee_phone: String.t() | nil
         }
 
@@ -54,21 +63,39 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
   Returns `[]` only when there is no meeting type at all (an ad-hoc booking
   against a bare duration), which callers read as "this booking has no
   configured location".
+
+  A label still reading as its kind's English default ("In person") is
+  shown in the current locale: the default meeting types store it that way,
+  so it is the name nobody chose rather than one the host wrote.
   """
   @spec options(map() | nil) :: [LocationOption.t()]
   def options(nil), do: []
 
   def options(%{locations: locations}) when is_list(locations) and locations != [] do
-    Enum.sort_by(locations, &(&1.position || 0))
+    locations
+    |> Enum.sort_by(&(&1.position || 0))
+    |> Enum.map(&localise_default_label/1)
   end
 
   def options(meeting_type), do: derived_options(meeting_type)
 
   @doc """
-  Whether the booking page has to ask. One location is stated, not chosen.
+  Whether the booker has anything to choose: between locations, between the
+  providers of a video location, or between the venues of an in-person one.
+
+  `video_choices` and `venue_choices` map an option id to what that option
+  offers (`Tymeslot.MeetingTypes.location_video_choices/1` and
+  `location_venue_choices/1` on the booking page, which leave out providers
+  and venues that no longer exist). The booking page renders its location
+  picker exactly when this is true, and `Tymeslot.MeetingTypes.GroupLocationRule`
+  admits only locations for which it can never be.
   """
-  @spec choice_required?(map() | nil) :: boolean()
-  def choice_required?(meeting_type), do: length(options(meeting_type)) > 1
+  @spec choice_required?([LocationOption.t()], map() | nil, map() | nil) :: boolean()
+  def choice_required?(options, video_choices, venue_choices) do
+    length(options) > 1 or several?(video_choices) or several?(venue_choices)
+  end
+
+  defp several?(choices), do: Enum.any?(Map.values(choices || %{}), &(length(&1) > 1))
 
   @doc "The option with `id`, or the first one when `id` matches nothing."
   @spec fetch(map() | nil, String.t() | nil) :: LocationOption.t() | nil
@@ -122,10 +149,39 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
   defp to_integer(_id), do: nil
 
   @doc """
+  Places a resolved in-person booking at one of the venues its option
+  offers.
+
+  `venues` are the option's venues that still exist, in the host's order
+  (`Tymeslot.MeetingTypes.location_venue_choices/1`). The first id in
+  `preferred` that they include wins: the booker's pick, then, on a
+  reschedule, the meeting's current venue. Otherwise the option's first
+  venue. With no venues the resolution is returned unchanged: the option's
+  label, no venue, and the address to be arranged.
+  """
+  @spec place_at_venue(resolution(), [Venues.choice()], [integer() | String.t() | nil]) ::
+          resolution()
+  def place_at_venue(resolution, [], _preferred), do: resolution
+
+  def place_at_venue(resolution, [first | _rest] = venues, preferred) do
+    venue =
+      Enum.find_value(preferred, fn id ->
+        chosen = to_integer(id)
+        Enum.find(venues, &(&1.id == chosen))
+      end) || first
+
+    %{resolution | venue_id: venue.id, location: Venues.display(venue), address_to_arrange: false}
+  end
+
+  @doc """
   The location string for an option, with the booker's own number folded in
   when the option asked for one.
   """
   @spec display(LocationOption.t(), String.t() | nil) :: String.t()
+  # An in-person option's address lives in its venues (see
+  # `place_at_venue/3`), never in the option, so the option alone is its label.
+  def display(%LocationOption{kind: "in_person", label: label}, _guest_phone), do: label
+
   def display(%LocationOption{collect_from_guest: true, label: label} = option, guest_phone) do
     case normalize_phone(guest_phone) do
       nil -> LocationOption.display(%{option | details: nil})
@@ -141,6 +197,10 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
       location_kind: option.kind,
       location_option_id: option.id,
       video_integration_id: video_integration_for(option, video_integration_id),
+      venue_id: nil,
+      # Until `place_at_venue/3` places it, an in-person booking has no
+      # address yet.
+      address_to_arrange: option.kind == "in_person",
       attendee_phone: collected_phone(option, guest_phone)
     }
   end
@@ -151,6 +211,8 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
       location_kind: nil,
       location_option_id: nil,
       video_integration_id: nil,
+      venue_id: nil,
+      address_to_arrange: false,
       attendee_phone: nil
     }
   end
@@ -178,7 +240,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
       %LocationOption{
         id: "legacy-video",
         kind: "video",
-        label: dgettext("booking", "Video call"),
+        label: default_label("video"),
         video_integration_ids: [id],
         position: 0
       }
@@ -190,9 +252,29 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
       %LocationOption{
         id: "legacy-in-person",
         kind: "in_person",
-        label: dgettext("booking", "In person"),
+        label: default_label("in_person"),
         position: 0
       }
     ]
   end
+
+  # Each kind's default label in English, as the default meeting types store
+  # it, and in the current locale.
+  @default_labels %{
+    "video" => "Video call",
+    "in_person" => "In person",
+    "phone" => "Phone call",
+    "custom" => "Somewhere else"
+  }
+
+  defp localise_default_label(%LocationOption{kind: kind, label: label} = option) do
+    if Map.get(@default_labels, kind) == label,
+      do: %{option | label: default_label(kind)},
+      else: option
+  end
+
+  defp default_label("video"), do: dgettext("booking", "Video call")
+  defp default_label("in_person"), do: dgettext("booking", "In person")
+  defp default_label("phone"), do: dgettext("booking", "Phone call")
+  defp default_label("custom"), do: dgettext("booking", "Somewhere else")
 end

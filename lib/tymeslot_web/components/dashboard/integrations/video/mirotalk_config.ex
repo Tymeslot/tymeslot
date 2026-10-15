@@ -5,10 +5,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
+
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponents,
     as: SharedForm
-
-  alias TymeslotWeb.Components.Icons.ProviderIcon
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -33,15 +33,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig do
   def render(assigns) do
     ~H"""
     <div id="mirotalk-config-modal" class="space-y-6">
-      <div class="flex items-center gap-4 mb-2">
-        <ProviderIcon.provider_icon provider="mirotalk" type="video" size="large" />
-        <div>
-          <h3 class="text-xl font-black text-tymeslot-900 tracking-tight">MiroTalk P2P</h3>
-          <p class="text-sm text-tymeslot-500 font-medium">
-            {dgettext("dashboard_video", "Self-hosted video conferencing")}
-          </p>
-        </div>
-      </div>
+      <UIComponents.provider_config_header
+        provider="mirotalk"
+        type="video"
+        title="MiroTalk P2P"
+        tagline={dgettext("dashboard_video", "Self-hosted video conferencing")}
+      />
 
       <form
         id="mirotalk-integration-form"
@@ -98,19 +95,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig do
           <SharedForm.error_banner error={error} />
         <% end %>
 
-        <div class="flex justify-between items-center pt-4 border-t border-tymeslot-100">
-          <button
-            type="button"
-            phx-click="back_to_providers"
-            phx-target={@target}
-            class="btn-secondary"
-          >
-            {dgettext("dashboard_video", "Cancel")}
-          </button>
-          <TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents.form_submit_button saving={
-            @saving
-          } />
-        </div>
+        <UIComponents.form_actions
+          target={@target}
+          saving={@saving}
+        />
       </form>
     </div>
     """

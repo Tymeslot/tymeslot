@@ -57,7 +57,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.NotifyPromptTest do
         |> render_hook("update_event_title", %{"value" => "New Title"})
 
       assert html =~ "notify-prompt-modal"
-      assert html =~ "Notify attendees?"
+      assert html =~ "Notify attendees<"
       refute_enqueued(worker: Worker)
     end
 

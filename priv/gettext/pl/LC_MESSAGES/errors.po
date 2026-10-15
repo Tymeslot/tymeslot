@@ -379,6 +379,56 @@ msgstr[0] "minuty"
 msgstr[1] "%{count} minut"
 msgstr[2] "%{count} minut"
 
+#: lib/tymeslot_web/helpers/image_upload_errors.ex
+#, elixir-autogen, elixir-format
+msgid "This image is too large (%{size} megapixels). Please upload an image of at most %{limit} megapixels."
+msgstr "Ten obraz jest za duży (%{size} megapikseli). Prześlij obraz o rozdzielczości najwyżej %{limit} megapikseli."
+
+#: lib/tymeslot_web/helpers/image_upload_errors.ex
+#, elixir-autogen, elixir-format
+msgid "We are busy processing other uploads. Please try again in a moment."
+msgstr "Trwa przetwarzanie innych przesłanych plików. Spróbuj ponownie za chwilę."
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "a group meeting type cannot ask each booker for their phone number"
+msgstr "grupowy typ spotkania nie może prosić każdej rezerwującej osoby o numer telefonu"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "a group meeting type must offer exactly one location"
+msgstr "grupowy typ spotkania musi oferować dokładnie jedną lokalizację"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "a group meeting type's in-person location must name a venue"
+msgstr "stacjonarna lokalizacja grupowego typu spotkania musi wskazywać miejsce spotkania"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "a group meeting type's in-person location must name exactly one venue"
+msgstr "stacjonarna lokalizacja grupowego typu spotkania musi wskazywać dokładnie jedno miejsce spotkania"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "a group meeting type's video call must use exactly one provider"
+msgstr "rozmowa wideo grupowego typu spotkania musi korzystać z dokładnie jednego dostawcy"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "group bookings cannot require approval"
+msgstr "rezerwacje grupowe nie mogą wymagać zatwierdzenia"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "group bookings cannot require payment"
+msgstr "rezerwacje grupowe nie mogą wymagać płatności"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a meeting type with this name"
+msgstr "Masz już typ spotkania o tej nazwie"
+
 #: lib/tymeslot_web/themes/shared/components/error_component.ex
 #, elixir-autogen, elixir-format
 msgid "If you are the organiser, please connect a calendar in your dashboard."

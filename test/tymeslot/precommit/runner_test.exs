@@ -129,6 +129,15 @@ defmodule Tymeslot.Precommit.RunnerTest do
     end
   end
 
+  describe "suite?/1" do
+    test "is keyed off the command, so either repository's suite command counts" do
+      assert Runner.suite?({"test", ["test"], :test})
+      assert Runner.suite?({"test", ["test.elixir", "test/a_test.exs"], :test})
+      refute Runner.suite?({"js", ["test.js"], :dev})
+      refute Runner.suite?({"test", ["credo", "--strict"], :dev})
+    end
+  end
+
   describe "run/3 with the suite in the background" do
     test "the suite runs while the static checks do" do
       test_pid = self()

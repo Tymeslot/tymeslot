@@ -81,6 +81,7 @@
   background: var(--theme-primary-solid);
   border-color: var(--theme-primary-solid);
   color: var(--theme-on-primary);
+  box-shadow: var(--selected-ring);
 }
 
 .calendar-day--unavailable {
@@ -192,6 +193,7 @@
   background: var(--theme-primary-solid);
   border-color: var(--theme-primary-solid);
   color: var(--theme-on-primary);
+  box-shadow: var(--selected-ring);
 }
 
 .week-day-cell:disabled {

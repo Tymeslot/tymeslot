@@ -91,6 +91,17 @@ defmodule TymeslotWeb.Components.Icons.ProviderIconTest do
       assert html =~ ~s(height="32")
     end
 
+    test "uses the alt text a caller gives instead of the generated one" do
+      html =
+        render_component(&ProviderIcon.provider_icon/1,
+          provider: "google_calendar",
+          alt: "Google Calendar"
+        )
+
+      assert html =~ ~s(alt="Google Calendar")
+      refute html =~ "google_calendar icon"
+    end
+
     test "callers rendering above the fold can opt out of lazy loading" do
       html =
         render_component(&ProviderIcon.provider_icon/1,

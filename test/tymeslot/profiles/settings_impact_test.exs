@@ -9,10 +9,11 @@ defmodule Tymeslot.Profiles.SettingsImpactTest do
       drifts to a naive type, every persisted booking would suddenly
       render an hour off — this test pins the UTC storage.
     * **Buffer change flows through to conflict detection** — the booking
-      availability calculation reads `buffer_minutes` from the passed
-      config (sourced from the profile's default availability schedule). A
-      slot that sits just after a calendar event must flip from available →
-      blocked when the buffer widens, otherwise the setting is decorative.
+      availability calculation reads `buffer_before_minutes` and
+      `buffer_after_minutes` from the passed config (sourced from the
+      profile's default availability schedule). A slot that sits just after
+      a calendar event must flip from available → blocked when the buffer
+      widens, otherwise the setting is decorative.
   """
 
   use Tymeslot.DataCase, async: true
@@ -55,7 +56,7 @@ defmodule Tymeslot.Profiles.SettingsImpactTest do
     end
   end
 
-  describe "buffer_minutes change flips conflict detection" do
+  describe "a buffer change flips conflict detection" do
     test "a slot adjacent to a calendar event becomes blocked when buffer widens" do
       # Use a weekday Tuesday at least a day in the future so the
       # `min_advance_hours` check inside Conflicts can never cull slots
@@ -68,7 +69,8 @@ defmodule Tymeslot.Profiles.SettingsImpactTest do
         insert(:availability_schedule,
           profile: profile,
           is_default: true,
-          buffer_minutes: 0,
+          buffer_before_minutes: 0,
+          buffer_after_minutes: 0,
           min_advance_hours: 0
         )
 
@@ -107,16 +109,25 @@ defmodule Tymeslot.Profiles.SettingsImpactTest do
                  "Europe/Berlin",
                  "Europe/Berlin",
                  [event],
-                 %{schedule_id: schedule.id, buffer_minutes: 0, min_advance_hours: 0}
+                 %{
+                   schedule_id: schedule.id,
+                   buffer_before_minutes: 0,
+                   buffer_after_minutes: 0,
+                   min_advance_hours: 0
+                 }
                )
 
       assert "11:00 AM" in slots_no_buffer
 
       # Widen the buffer. The setting write is the user-facing action;
       # conflict detection must observe the change on the next query.
-      assert {:ok, updated} = Schedules.update_policy(schedule, %{buffer_minutes: 60})
+      assert {:ok, updated} =
+               Schedules.update_policy(schedule, %{
+                 buffer_before_minutes: 60,
+                 buffer_after_minutes: 60
+               })
 
-      assert updated.buffer_minutes == 60
+      assert {updated.buffer_before_minutes, updated.buffer_after_minutes} == {60, 60}
 
       assert {:ok, slots_with_buffer} =
                Calculate.available_slots(
@@ -127,7 +138,8 @@ defmodule Tymeslot.Profiles.SettingsImpactTest do
                  [event],
                  %{
                    schedule_id: updated.id,
-                   buffer_minutes: updated.buffer_minutes,
+                   buffer_before_minutes: updated.buffer_before_minutes,
+                   buffer_after_minutes: updated.buffer_after_minutes,
                    min_advance_hours: 0
                  }
                )

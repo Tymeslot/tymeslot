@@ -18,6 +18,7 @@ defmodule Tymeslot.Integrations.Video.UrlKeyedIntegrationsTest do
 
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Integrations.Video.AccountKey
 
   setup :verify_on_exit!
 
@@ -45,7 +46,9 @@ defmodule Tymeslot.Integrations.Video.UrlKeyedIntegrationsTest do
         {:ok, integration} = connect(ctx, unquote(old_url))
 
         assert {:ok, edited} = edit(ctx, integration, unquote(new_url))
-        assert edited.provider_account_id == unquote(new_url)
+
+        assert edited.provider_account_id ==
+                 AccountKey.key_for(unquote(provider), unquote(new_url))
 
         assert {:ok, _again} = connect(ctx, unquote(old_url))
         assert {:error, :duplicate_integration} = connect(ctx, unquote(new_url))
@@ -56,7 +59,9 @@ defmodule Tymeslot.Integrations.Video.UrlKeyedIntegrationsTest do
            ctx do
         {:ok, integration} = connect(ctx, unquote(new_url_variant))
 
-        assert integration.provider_account_id == unquote(new_url)
+        assert integration.provider_account_id ==
+                 AccountKey.key_for(unquote(provider), unquote(new_url))
+
         assert {:error, :duplicate_integration} = connect(ctx, unquote(new_url))
       end
 
@@ -70,7 +75,9 @@ defmodule Tymeslot.Integrations.Video.UrlKeyedIntegrationsTest do
 
         assert {:ok, stored} = Video.get_integration(user.id, integration.id)
         assert Map.fetch!(stored, unquote(field)) == unquote(old_url)
-        assert stored.provider_account_id == unquote(old_url)
+
+        assert stored.provider_account_id ==
+                 AccountKey.key_for(unquote(provider), unquote(old_url))
       end
 
       test "an edit onto an inactive integration's address is refused too", %{user: user} = ctx do
@@ -85,17 +92,24 @@ defmodule Tymeslot.Integrations.Video.UrlKeyedIntegrationsTest do
         {:ok, integration} = connect(ctx, unquote(new_url))
 
         assert {:ok, edited} = edit(ctx, integration, unquote(new_url_variant))
-        assert edited.provider_account_id == unquote(new_url)
+
+        assert edited.provider_account_id ==
+                 AccountKey.key_for(unquote(provider), unquote(new_url))
       end
 
-      test "a key saved as typed before keys were normalised still counts", %{user: user} = ctx do
-        insert(:video_integration,
-          user: user,
-          provider: to_string(unquote(provider)),
-          provider_account_id: unquote(new_url_variant)
-        )
+      # A custom link's key was rewritten to a hash after keys were
+      # normalised, so it holds no key as typed.
+      if provider != :custom do
+        test "a key saved as typed before keys were normalised still counts",
+             %{user: user} = ctx do
+          insert(:video_integration,
+            user: user,
+            provider: to_string(unquote(provider)),
+            provider_account_id: unquote(new_url_variant)
+          )
 
-        assert {:error, :duplicate_integration} = connect(ctx, unquote(new_url))
+          assert {:error, :duplicate_integration} = connect(ctx, unquote(new_url))
+        end
       end
 
       test "a submitted key is ignored", %{user: user} = ctx do
@@ -107,7 +121,8 @@ defmodule Tymeslot.Integrations.Video.UrlKeyedIntegrationsTest do
                    provider_account_id: "https://elsewhere.example.com"
                  })
 
-        assert edited.provider_account_id == unquote(old_url)
+        assert edited.provider_account_id ==
+                 AccountKey.key_for(unquote(provider), unquote(old_url))
       end
     end
   end
@@ -118,11 +133,20 @@ defmodule Tymeslot.Integrations.Video.UrlKeyedIntegrationsTest do
     test "personal meeting links differing only in their password are different links",
          ctx do
       assert {:ok, first} = connect(ctx, "https://zoom.us/j/123?pwd=one")
-      assert first.provider_account_id == "https://zoom.us/j/123?pwd=one"
+
+      assert first.provider_account_id ==
+               AccountKey.key_for(:custom, "https://zoom.us/j/123?pwd=one")
 
       assert {:ok, _second} = connect(ctx, "https://zoom.us/j/123?pwd=two")
 
       assert {:error, :duplicate_integration} = connect(ctx, "https://Zoom.us/j/123/?pwd=one")
+    end
+
+    test "the key holds no part of the link", ctx do
+      assert {:ok, integration} = connect(ctx, "https://zoom.us/j/123?pwd=secret")
+
+      refute integration.provider_account_id =~ "zoom"
+      refute integration.provider_account_id =~ "secret"
     end
 
     test "the password keeps its case", ctx do

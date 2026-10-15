@@ -22,19 +22,16 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.FontPanel do
       )
 
     ~H"""
-    <div class="card-glass" data-testid="font-panel">
-      <div class="mb-8">
-        <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
-          {dgettext("dashboard_appearance", "Font")}
-        </h3>
-        <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
-          {dgettext(
-            "dashboard_appearance",
-            "The typeface of the text and headings on your booking page."
-          )}
-        </p>
-      </div>
-
+    <.card
+      title={dgettext("dashboard_appearance", "Font")}
+      description={
+        dgettext(
+          "dashboard_appearance",
+          "The typeface of the text and headings on your booking page."
+        )
+      }
+      data-testid="font-panel"
+    >
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <button
           :for={{id, font} <- @fonts}
@@ -64,7 +61,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.FontPanel do
           </span>
         </button>
       </div>
-    </div>
+    </.card>
     """
   end
 

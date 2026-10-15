@@ -57,6 +57,54 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverterTest do
     end
   end
 
+  describe "rrule_to_outlook/2 — a day some months lack" do
+    # Graph would move these onto 28 February, 30 April and so on, where
+    # RFC 5545 skips the month.
+    for {rrule, start_date} <- [
+          {"FREQ=MONTHLY", ~D[2026-01-29]},
+          {"FREQ=MONTHLY", ~D[2026-01-30]},
+          {"FREQ=MONTHLY", ~D[2026-01-31]},
+          {"FREQ=MONTHLY;INTERVAL=2", ~D[2026-03-31]},
+          {"FREQ=YEARLY", ~D[2028-02-29]},
+          {"FREQ=YEARLY;INTERVAL=4", ~D[2028-02-29]}
+        ] do
+      test "refuses #{rrule} from #{start_date}" do
+        assert RecurrenceConverter.rrule_to_outlook(
+                 unquote(rrule),
+                 unquote(Macro.escape(start_date))
+               ) ==
+                 {:error, :day_missing_in_some_months}
+      end
+    end
+
+    # Each ends, or steps, before a period without the day.
+    for {rrule, start_date} <- [
+          {"FREQ=MONTHLY", ~D[2026-01-28]},
+          {"FREQ=MONTHLY;COUNT=1", ~D[2026-01-31]},
+          {"FREQ=MONTHLY;COUNT=2", ~D[2026-07-31]},
+          {"FREQ=MONTHLY;UNTIL=20260829", ~D[2026-07-31]},
+          {"FREQ=MONTHLY;INTERVAL=6", ~D[2026-01-31]},
+          {"FREQ=MONTHLY;INTERVAL=12", ~D[2026-03-31]},
+          {"FREQ=YEARLY", ~D[2026-01-31]},
+          {"FREQ=YEARLY;COUNT=1", ~D[2028-02-29]}
+        ] do
+      test "writes #{rrule} from #{start_date} on its own day" do
+        assert %{"pattern" => %{"dayOfMonth" => day}} =
+                 RecurrenceConverter.rrule_to_outlook(
+                   unquote(rrule),
+                   unquote(Macro.escape(start_date))
+                 )
+
+        assert day == unquote(start_date.day)
+      end
+    end
+
+    test "refuses a series whose UNTIL reaches the last day of a short month" do
+      assert RecurrenceConverter.rrule_to_outlook("FREQ=MONTHLY;UNTIL=20260930", ~D[2026-08-31]) ==
+               {:error, :day_missing_in_some_months}
+    end
+  end
+
   describe "rrule_to_outlook/2 — range" do
     test "noEnd range when neither COUNT nor UNTIL present" do
       %{"range" => range} = RecurrenceConverter.rrule_to_outlook("FREQ=DAILY", @start_date)

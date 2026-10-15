@@ -15,7 +15,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
   alias Ecto.UUID
   alias Phoenix.LiveView
   alias Tymeslot.CustomFields.FieldDefinition
-  alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
 
   @impl Phoenix.LiveComponent
@@ -33,13 +32,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
     # SaaS hasn't registered a placeholder component — render a minimal lock
     # notice rather than nothing, so the operator notices the misconfiguration.
     ~H"""
-    <section class="card-glass py-6 text-center">
-      <p class="text-token-sm text-tymeslot-500">
-        {dgettext(
-          "dashboard_meeting_form",
-          "Custom booking questions are not available on your current plan."
-        )}
-      </p>
+    <section>
+      <.card class="text-center">
+        <p class="text-token-sm text-tymeslot-500">
+          {dgettext(
+            "dashboard_meeting_form",
+            "Custom booking questions are not available on your current plan."
+          )}
+        </p>
+      </.card>
     </section>
     """
   end
@@ -60,44 +61,40 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
   def render(assigns) do
     ~H"""
     <section class="space-y-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <h3 class="text-token-base font-semibold text-tymeslot-800">
-            {dgettext("dashboard_meeting_form", "Custom questions")}
-          </h3>
-          <p class="text-token-sm text-tymeslot-500 mt-0.5">
-            {dgettext(
-              "dashboard_meeting_form",
-              "Ask bookers extra questions during the booking flow."
-            )}
-          </p>
-        </div>
-        <CoreComponents.action_button
-          type="button"
-          variant={:secondary}
-          phx-click="add_question"
-          phx-target={@myself}
-        >
-          {dgettext("dashboard_meeting_form", "Add question")}
-        </CoreComponents.action_button>
-      </div>
+      <.subsection_header
+        icon="hero-question-mark-circle"
+        title={dgettext("dashboard_meeting_form", "Custom questions")}
+        description={
+          dgettext(
+            "dashboard_meeting_form",
+            "Ask bookers extra questions during the booking flow."
+          )
+        }
+      >
+        <:actions>
+          <.action_button
+            type="button"
+            variant={:secondary}
+            phx-click="add_question"
+            phx-target={@myself}
+          >
+            {dgettext("dashboard_meeting_form", "Add question")}
+          </.action_button>
+        </:actions>
+      </.subsection_header>
 
       <%= if @custom_fields == [] do %>
-        <div class="card-glass py-6 text-center">
-          <CoreComponents.icon
-            name="hero-question-mark-circle"
-            class="w-8 h-8 mx-auto mb-2 text-tymeslot-400"
-          />
-          <p class="text-token-sm font-medium text-tymeslot-700">
-            {dgettext("dashboard_meeting_form", "No custom questions yet")}
-          </p>
-          <p class="text-token-xs text-tymeslot-500 mt-1">
-            {dgettext(
+        <.empty_state
+          icon="hero-question-mark-circle"
+          size={:sm}
+          title={dgettext("dashboard_meeting_form", "No custom questions yet")}
+          description={
+            dgettext(
               "dashboard_meeting_form",
               "Add a question and bookers will be asked it when they book this meeting type."
-            )}
-          </p>
-        </div>
+            )
+          }
+        />
       <% else %>
         <ul
           id={"custom-questions-list-#{@form_id}"}
@@ -107,22 +104,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
           class="space-y-2"
         >
           <%= for {q, i} <- Enum.with_index(@custom_fields) do %>
-            <li
-              class="card-glass flex items-center gap-3 px-4 py-3"
+            <.card
+              tag="li"
+              variant={:flat}
+              padding={:xs}
+              class="flex items-center gap-3"
               data-id={q.id}
               data-index={i}
               draggable="true"
             >
               <%!-- Drag handle --%>
               <span class="drag-handle cursor-grab active:cursor-grabbing text-tymeslot-400 shrink-0">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M4 8h16M4 16h16"
-                  />
-                </svg>
+                <.icon name="hero-bars-2" class="w-4 h-4" />
               </span>
 
               <%!-- Question info --%>
@@ -142,28 +135,28 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
 
               <%!-- Actions --%>
               <div class="flex items-center gap-1 shrink-0">
-                <CoreComponents.action_button
+                <.action_button
                   type="button"
                   variant={:secondary}
                   phx-click="edit_question"
                   phx-value-id={q.id}
                   phx-target={@myself}
-                  class="py-1! px-2! text-token-xs"
+                  size={:sm}
                 >
                   {dgettext("dashboard_meeting_form", "Edit")}
-                </CoreComponents.action_button>
-                <CoreComponents.action_button
+                </.action_button>
+                <.action_button
                   type="button"
-                  variant={:danger}
+                  variant={:danger_soft}
                   phx-click="delete_question"
                   phx-value-id={q.id}
                   phx-target={@myself}
-                  class="py-1! px-2! text-token-xs"
+                  size={:sm}
                 >
                   {dgettext("dashboard_meeting_form", "Delete")}
-                </CoreComponents.action_button>
+                </.action_button>
               </div>
-            </li>
+            </.card>
           <% end %>
         </ul>
       <% end %>

@@ -6,7 +6,8 @@ defmodule TymeslotWeb.Themes.Shared.Components.BookingForm do
 
     * the reCAPTCHA hook attributes on the `<form>`
       (`SecurityFields.recaptcha_form_attrs/2`);
-    * the honeypot field, first inside the form;
+    * the honeypot field (`CoreComponents.Forms.honeypot_field/1`, shared
+      with every public form), first inside the form;
     * the hidden reCAPTCHA token input, last inside the form;
     * after the form, the inner block (a theme renders the guest field
       there), then the reCAPTCHA privacy notice.
@@ -24,7 +25,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.BookingForm do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.CoreComponents, only: [input: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [honeypot_field: 1, input: 1]
 
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   alias TymeslotWeb.Themes.Shared.SecurityFields
@@ -74,7 +75,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.BookingForm do
       novalidate
       {SecurityFields.recaptcha_form_attrs("booking_form", "booking")}
     >
-      <SecurityFields.honeypot_field id_prefix="booking" param_root="booking" />
+      <.honeypot_field id="booking-website" param_root="booking" />
 
       <div :if={@contact_class} class={@contact_class}>
         <.contact_fields

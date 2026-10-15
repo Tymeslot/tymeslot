@@ -231,7 +231,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
   # that adds its calendar's owner to any event not already listing them.
   #
   # Either way the attendee identity is also folded into the event DESCRIPTION
-  # (see `CalendarEventBuilder.build_event_description/1`), which is what
+  # (see `CalendarEventBuilder.build_event_description/2`), which is what
   # Google and Outlook events carry too, and the only form that renders in a
   # client showing neither property.
   @spec build_attendee_lines(map(), Scheduling.mode()) :: String.t() | nil

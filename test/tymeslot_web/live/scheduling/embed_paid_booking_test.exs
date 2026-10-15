@@ -86,7 +86,8 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
         is_default: true,
         advance_booking_days: 30,
         min_advance_hours: 0,
-        buffer_minutes: 0
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0
       )
 
     insert(:connect_account,
@@ -254,13 +255,54 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
 
       meeting_id = :sys.get_state(view.pid).socket.assigns[:awaiting_payment_meeting].id
 
-      Phoenix.PubSub.broadcast(Tymeslot.PubSub, "meeting_payment:#{meeting_id}", :expired)
+      topic = "meeting_payment:#{meeting_id}"
+      Phoenix.PubSub.broadcast(Tymeslot.PubSub, topic, :expired)
       _drain = :sys.get_state(view.pid)
 
       rendered = render(view)
       assert rendered =~ "Payment was cancelled"
       refute rendered =~ "Complete your payment in the new tab"
       refute rendered =~ ~s(data-testid="confirmation-heading")
+      assert has_element?(view, "form[phx-submit='submit']")
+
+      # The wait is over: the meeting is forgotten and its topic no longer
+      # reaches the page.
+      assert :sys.get_state(view.pid).socket.assigns.awaiting_payment_meeting == nil
+      refute view.pid in Enum.map(Registry.lookup(Tymeslot.PubSub, topic), &elem(&1, 0))
+    end
+
+    # The webhook can repeat an `:expired` broadcast. Once the page has moved
+    # on, here to the confirmation of a paid booking, it must move nothing.
+    @tag :capture_log
+    test "an :expired broadcast after the payment wait has ended changes nothing",
+         %{conn: conn, profile: profile, meeting_type: meeting_type} do
+      expect(StripeAdapterMock, :create_checkout_session, fn _params, _opts ->
+        {:ok, %{id: "cs_late_expiry", url: "https://checkout.stripe.com/cs_late_expiry"}}
+      end)
+
+      view = navigate_to_booking_form_embedded(conn, profile, meeting_type)
+
+      view
+      |> form("form[phx-submit='submit']", %{
+        "booking" => %{"name" => "Late Lou", "email" => "lou@example.com", "message" => ""}
+      })
+      |> render_submit()
+
+      _drain = :sys.get_state(view.pid)
+      meeting_id = :sys.get_state(view.pid).socket.assigns[:awaiting_payment_meeting].id
+
+      Phoenix.PubSub.broadcast(Tymeslot.PubSub, "meeting_payment:#{meeting_id}", :paid)
+      _drain = :sys.get_state(view.pid)
+      assert has_element?(view, "[data-testid='confirmation-heading']")
+
+      # Delivered straight to the process: the guard must hold even for a
+      # message that reaches the page by some other subscription.
+      send(view.pid, :expired)
+      _drain = :sys.get_state(view.pid)
+
+      assert :sys.get_state(view.pid).socket.assigns.current_state == :confirmation
+      assert has_element?(view, "[data-testid='confirmation-heading']")
+      refute render(view) =~ "Payment was cancelled"
     end
 
     # While the checkout is open only the webhook moves the booker on: the
@@ -287,6 +329,9 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
 
       _drain = :sys.get_state(view.pid)
       assert has_element?(view, "[data-testid='awaiting-payment']")
+
+      # Nor does the page offer a step a click would not take.
+      refute has_element?(view, "[phx-click='navigate_to_step']")
 
       for step <- ["3", "2", "1"] do
         render_hook(view, "navigate_to_step", %{"step" => step})

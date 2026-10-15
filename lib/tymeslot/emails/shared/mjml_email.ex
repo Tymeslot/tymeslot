@@ -23,7 +23,7 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   alias Swoosh.Attachment
   alias Tymeslot.Emails.Branding
   alias Tymeslot.Emails.Shared.{AvatarHelper, Frame, Sanitise, Stage, Styles, Urls}
-  alias Tymeslot.Emails.Shared.Styles.Tokens
+  alias Tymeslot.Emails.Shared.Styles.{CSS, Tokens}
   alias Tymeslot.Mailer
   alias Tymeslot.Mailer.Providers
 
@@ -43,25 +43,28 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   @doc "Compiles MJML to HTML, raising on error."
   @spec compile_mjml(String.t()) :: String.t()
   def compile_mjml(mjml_content) do
-    case Mjml.to_html(mjml_content) do
+    # With no font map, MJML links Google Fonts for any of its default web
+    # fonts (Roboto among them) the font stack names, so every open would
+    # reach Google. An empty map links none, whatever the stack says.
+    case Mjml.to_html(mjml_content, fonts: %{}) do
       {:ok, html} -> html
       {:error, errors} -> raise "MJML compilation failed: #{inspect(errors)}"
     end
   end
 
   @typedoc """
-  Tracking category. Controls open-tracking and link-rewriting, and on
-  Postmark the message stream the email is routed through.
+  Tracking category. Controls open tracking, and on Postmark the message
+  stream the email is routed through. Links are never rewritten for click
+  tracking, whatever the category.
 
     * `:transactional` — confirmations, security alerts, receipts. No opens,
-      no link rewriting, sent on the default `outbound` (transactional) stream.
-      Safer for spam filters and respects user privacy.
+      sent on the default `outbound` (transactional) stream. Safer for spam
+      filters and respects user privacy.
     * `:lifecycle` — onboarding / billing nudges where engagement metrics are
-      genuinely useful (welcome, trial ending, dunning). Opens on, links left
-      untouched, still on `outbound`.
-    * `:marketing` — bulk newsletters and announcements. Opens on, links
-      rewritten in HTML and text, sent on the `broadcast` stream so reputation
-      is isolated from transactional mail.
+      genuinely useful (welcome, trial ending, dunning). Opens on, still on
+      `outbound`.
+    * `:marketing` — bulk newsletters and announcements. Opens on, sent on the
+      `broadcast` stream so reputation is isolated from transactional mail.
 
   The category itself is stashed on the email via `Tymeslot.Mailer.put_tracking/2`
   rather than resolved here: `Tymeslot.Mailer.deliver/2` reads it back at the
@@ -95,6 +98,32 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
     |> Mailer.put_tracking(tracking)
     |> attach_logo()
   end
+
+  @doc """
+  Sets `Reply-To` to the other party of a booking, so that a reply reaches
+  that person instead of the instance's sending mailbox, which is often a
+  no-reply address. `From` stays the instance address, keeping SPF, DKIM
+  and DMARC aligned with the sending domain.
+
+  Leaves the email untouched when there is no address (a group meeting's
+  organiser copy has no single attendee), or when the address is the
+  instance's own sender, where the header would add nothing.
+  """
+  @spec put_reply_to(Swoosh.Email.t(), String.t() | nil, String.t() | nil) :: Swoosh.Email.t()
+  def put_reply_to(email, name, address) when is_binary(address) do
+    address = String.trim(address)
+
+    cond do
+      address == "" -> email
+      same_address?(address, fetch_from_email()) -> email
+      true -> reply_to(email, {Sanitise.sanitize_for_header(name), address})
+    end
+  end
+
+  def put_reply_to(email, _name, _address), do: email
+
+  defp same_address?(address, from),
+    do: String.downcase(address) == String.downcase(String.trim(from))
 
   # Content-ID must match the attachment filename exactly: Swoosh's SendGrid
   # adapter derives the content_id from the filename (ignoring `cid:`), and
@@ -218,6 +247,7 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
           align="center"
           padding="0"
           border="0"
+          css-class="#{CSS.logo_plate_class()}"
         />
       </mj-column>
     </mj-section>

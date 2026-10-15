@@ -10,6 +10,8 @@ defmodule Tymeslot.ThemeCustomizations do
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.ThemeCustomizations.OptionGroup
   alias Tymeslot.ThemeCustomizations.Options.Background
+  alias Tymeslot.ThemeCustomizations.Options.ColourMode
+  alias Tymeslot.ThemeCustomizations.Options.Cover
   alias Tymeslot.ThemeCustomizations.Options.Palette
   alias Tymeslot.ThemeCustomizations.Spec
   alias Tymeslot.ThemeCustomizations.Specs
@@ -95,12 +97,31 @@ defmodule Tymeslot.ThemeCustomizations do
     end
   end
 
+  # What a customisation spec offers, asked of the spec itself rather than a
+  # theme id, so a caller holding a catalogue entry's spec can describe it.
+  @option_modules %{palette: Palette, colour_mode: ColourMode, cover: Cover}
+
+  @typedoc "An option a spec may offer: an option group, or one kind of background."
+  @type offered_option ::
+          :palette | :colour_mode | :cover | {:background, Spec.background_kind()}
+
+  @doc """
+  Whether the customisation `spec` (a theme's `customization_spec`) offers
+  `option`: a palette, a colour mode, a cover, or `{:background, kind}` for
+  one kind of background.
+  """
+  @spec spec_offers?(module(), offered_option()) :: boolean()
+  def spec_offers?(spec, {:background, kind}), do: Specs.supports_background?(spec, kind)
+
+  def spec_offers?(spec, option) when is_map_key(@option_modules, option),
+    do: Specs.group(spec, Map.fetch!(@option_modules, option)) != nil
+
   @doc """
   Stores an uploaded file for one of the theme's asset fields and saves it on
   the profile's customisation. See `Tymeslot.ThemeCustomizations.Assets`.
   """
   @spec attach_asset(profile_id(), theme_id(), atom(), upload_attrs()) ::
-          {:ok, ThemeCustomizationSchema.t()} | {:error, String.t()}
+          Assets.result()
   defdelegate attach_asset(profile_id, theme_id, field, upload), to: Assets
 
   @doc """

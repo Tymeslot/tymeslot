@@ -6,9 +6,11 @@ defmodule Tymeslot.Bookings.Orchestrator do
   delegating business logic to appropriate domain modules.
   """
 
-  alias Tymeslot.Bookings.{Create, Errors, Validation}
+  alias Tymeslot.Bookings.{Create, Errors, RescheduleSeat, Validation}
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.SeatView
 
   @typedoc "Parameters for `submit_booking/2`."
   @type booking_submission_params :: %{
@@ -23,7 +25,9 @@ defmodule Tymeslot.Bookings.Orchestrator do
   - Meeting creation or rescheduling
 
   Returns:
-    * `{:ok, meeting}` for free bookings (confirmed)
+    * `{:ok, meeting}` for free bookings (confirmed); for a seat on a group
+      meeting, booked or moved, the meeting as that seat
+      (`Tymeslot.Meetings.SeatView`)
     * `{:ok, :payment_required, %{meeting: meeting, checkout_url: url}}` when
       the meeting type requires payment — caller should redirect the
       attendee to the Stripe Checkout URL
@@ -46,10 +50,12 @@ defmodule Tymeslot.Bookings.Orchestrator do
       meeting_params: meeting_params,
       is_rescheduling: is_rescheduling,
       reschedule_uid: reschedule_uid,
+      reschedule_seat_token: reschedule_seat_token,
       organizer_user_id: organizer_user_id
     } = normalize_params(params, opts)
 
-    case create_or_reschedule_meeting(
+    case submit_action(
+           reschedule_seat_token,
            is_rescheduling,
            reschedule_uid,
            meeting_params,
@@ -98,8 +104,28 @@ defmodule Tymeslot.Bookings.Orchestrator do
       meeting_params: Map.get(params, :meeting_params, %{}),
       is_rescheduling: Keyword.get(opts, :is_rescheduling, false),
       reschedule_uid: Keyword.get(opts, :reschedule_uid),
+      reschedule_seat_token: Keyword.get(opts, :reschedule_seat_token),
       organizer_user_id: Keyword.get(opts, :organizer_user_id)
     }
+  end
+
+  # A seat token takes precedence: the visitor followed a participant
+  # reschedule link, so the submission moves their seat instead of creating
+  # a booking. The token authorises the move; the page's organiser must
+  # still be the seat's, since the new time was picked from their schedule.
+  defp submit_action(seat_token, _rescheduling?, _uid, meeting_params, _form_data, org_id)
+       when is_binary(seat_token) do
+    case RescheduleSeat.execute(seat_token, meeting_params, org_id) do
+      {:ok, %{meeting: meeting, participant: participant}} ->
+        {:ok, SeatView.at_event(meeting, participant)}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp submit_action(_seat_token, rescheduling?, uid, meeting_params, form_data, org_id) do
+    create_or_reschedule_meeting(rescheduling?, uid, meeting_params, form_data, org_id)
   end
 
   defp create_or_reschedule_meeting(
@@ -126,12 +152,27 @@ defmodule Tymeslot.Bookings.Orchestrator do
 
   defp create_meeting(meeting_params, sanitized_data) do
     # Use the appropriate creation method based on context
-    if meeting_params[:with_video_room] do
-      Create.execute_with_video_room(meeting_params, sanitized_data)
-    else
-      Create.execute(meeting_params, sanitized_data)
-    end
+    result =
+      if meeting_params[:with_video_room] do
+        Create.execute_with_video_room(meeting_params, sanitized_data)
+      else
+        Create.execute(meeting_params, sanitized_data)
+      end
+
+    as_booked_seat(result, sanitized_data)
   end
+
+  # A booking on a group meeting type returns the shared slot; the booker's
+  # booking is their seat on it, so that is what the booking page is handed.
+  # A seat already gone again by now leaves the slot, which the page then
+  # offers nothing from (`Meetings.booker_calendar/1`).
+  defp as_booked_seat({:ok, %MeetingSchema{} = meeting} = result, form_data) do
+    if Meetings.group?(meeting),
+      do: {:ok, SeatView.for_booker(meeting, form_data["email"]) || meeting},
+      else: result
+  end
+
+  defp as_booked_seat(result, _form_data), do: result
 
   defp reschedule_meeting(_meeting_uid, _meeting_params, _sanitized_data, nil),
     do: {:error, :meeting_not_found}

@@ -19,6 +19,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
           optional(:last_date) => Date.t() | nil,
           optional(:location) => String.t() | nil,
           optional(:location_type) => atom() | nil,
+          optional(:audience) => :host | :guest,
           optional(:meeting_type) => String.t() | nil,
           optional(:timezone) => String.t() | nil,
           optional(:time_format) => String.t() | nil,
@@ -40,6 +41,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
       time_line = format_meeting_time(details, locale)
       duration = format_meeting_duration(details, locale)
       location = Formatting.format_location(details)
+      location_note = Formatting.location_note(details)
       meeting_type = Map.get(details, :meeting_type)
 
       Stack.spaced("""
@@ -54,7 +56,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
           #{hero_date(date_line)}
           #{hero_time(time_line)}
           #{hero_divider()}
-          #{hero_meta_grid(meeting_type, duration, location)}
+          #{hero_meta_grid(meeting_type, duration, location, location_note)}
         </mj-column>
       </mj-section>
       """)
@@ -73,16 +75,28 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
 
       %{start_time: %DateTime{} = start_time, timezone: timezone} when is_binary(timezone) ->
         formatted = Formatting.format_time(start_time, locale, time_format)
-
-        if timezone != "UTC",
-          do: "#{formatted} (#{timezone})",
-          else: formatted
+        base = if timezone != "UTC", do: "#{formatted} (#{timezone})", else: formatted
+        with_next_day_end(base, start_time, details, locale, time_format)
 
       %{start_time: %DateTime{} = start_time} ->
-        Formatting.format_time(start_time, locale, time_format)
+        start_time
+        |> Formatting.format_time(locale, time_format)
+        |> with_next_day_end(start_time, details, locale, time_format)
 
       _other ->
         dgettext("emails", "TBD")
+    end
+  end
+
+  defp with_next_day_end(line, start_time, details, locale, time_format) do
+    case Formatting.format_next_day_end(
+           start_time,
+           Map.get(details, :duration),
+           locale,
+           time_format
+         ) do
+      nil -> line
+      note -> "#{line}, #{note}"
     end
   end
 
@@ -160,7 +174,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
     """
   end
 
-  defp hero_meta_grid(meeting_type, duration, location) do
+  defp hero_meta_grid(meeting_type, duration, location, location_note) do
     type_row =
       case meeting_type do
         nil -> ""
@@ -178,10 +192,19 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
         <td style="vertical-align: top; padding: 12px 0 0 12px; width: 50%;">
           #{hero_meta_label(dgettext("emails", "Location"))}
           #{hero_meta_value(location)}
+          #{hero_meta_note(location_note)}
         </td>
       </tr>
     </mj-table>
     """
+  end
+
+  defp hero_meta_note(nil), do: ""
+
+  defp hero_meta_note(note) do
+    safe = Sanitise.sanitize_for_email(note)
+
+    ~s(<div class="email-ink-muted" style="font-size: 13px; color: #{Styles.ink_muted()}; line-height: 1.4; padding-top: 4px;">#{safe}</div>)
   end
 
   defp hero_meta_row(label, value, opts) do

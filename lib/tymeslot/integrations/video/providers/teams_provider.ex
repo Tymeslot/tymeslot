@@ -209,6 +209,10 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
         HTTPClient.request_budget_ms(:delete, @create_request_options)
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def create_join_url(%{meeting_url: base_url}, participant_name, _email, _role, _meeting_time)
+      when is_binary(base_url) and participant_name in [nil, ""],
+      do: {:ok, base_url}
+
   def create_join_url(room_data, participant_name, _participant_email, _role, _meeting_time) do
     base_url = room_data.meeting_url
 

@@ -60,7 +60,8 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
           ) do
       config = %{
         duration_minutes: duration,
-        buffer_minutes: 0,
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0,
         min_advance_hours: 0,
         schedule_id: schedule.id
       }
@@ -94,7 +95,8 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
   test "range_availability spans an attendee midnight that DST skips", %{schedule: schedule} do
     config = %{
       duration_minutes: 30,
-      buffer_minutes: 0,
+      buffer_before_minutes: 0,
+      buffer_after_minutes: 0,
       min_advance_hours: 0,
       schedule_id: schedule.id
     }
@@ -128,7 +130,8 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
           ) do
       config = %{
         duration_minutes: duration,
-        buffer_minutes: 0,
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0,
         min_advance_hours: 0,
         schedule_id: schedule.id
       }
@@ -155,7 +158,8 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
   test "available_slots handles DST spring forward correctly", %{schedule: schedule} do
     config = %{
       duration_minutes: 30,
-      buffer_minutes: 0,
+      buffer_before_minutes: 0,
+      buffer_after_minutes: 0,
       min_advance_hours: 0,
       schedule_id: schedule.id
     }

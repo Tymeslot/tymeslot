@@ -47,6 +47,14 @@ defmodule Tymeslot.Utils.FormHelpers do
     }
   end
 
+  def format_context_error(:invalid_venue) do
+    %{
+      base: [
+        dgettext("dashboard_meeting_form", "A selected location is not one of yours")
+      ]
+    }
+  end
+
   def format_context_error(:invalid_duration) do
     %{duration: [dgettext("dashboard_meeting_form", "Duration must be a valid number")]}
   end
@@ -94,6 +102,10 @@ defmodule Tymeslot.Utils.FormHelpers do
     %{price_cents: [dgettext("dashboard_meeting_form", "Enter a valid price")]}
   end
 
+  def format_context_error(:group_bookings_not_allowed) do
+    %{max_participants: [group_bookings_not_allowed_message()]}
+  end
+
   def format_context_error(:invalid_approval_window) do
     %{
       approval_window_hours: [
@@ -111,6 +123,14 @@ defmodule Tymeslot.Utils.FormHelpers do
 
   def format_context_error(error) do
     %{base: [to_string(error)]}
+  end
+
+  @doc """
+  Why a host may not enable group bookings, or raise a group type's limit.
+  """
+  @spec group_bookings_not_allowed_message() :: String.t()
+  def group_bookings_not_allowed_message do
+    dgettext("dashboard_meeting_form", "Group bookings are not included in your current plan.")
   end
 
   defp format_generic_error(error) when is_atom(error) do

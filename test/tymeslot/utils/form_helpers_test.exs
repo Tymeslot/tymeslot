@@ -90,4 +90,11 @@ defmodule Tymeslot.Utils.FormHelpersTest do
                %{base: ["string error"]}
     end
   end
+
+  describe "format_context_error/1 for a venue that is not the host's" do
+    test "explains it in words rather than as a humanised atom" do
+      assert %{base: ["A selected location is not one of yours"]} =
+               FormHelpers.format_context_error(:invalid_venue)
+    end
+  end
 end

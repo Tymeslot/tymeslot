@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.ComponentDispatch do
   alias TymeslotWeb.Dashboard.CalendarSettingsComponent
   alias TymeslotWeb.Dashboard.DashboardOverviewComponent
   alias TymeslotWeb.Dashboard.IntegrationsHubComponent
+  alias TymeslotWeb.Dashboard.Locations.LocationsComponent
   alias TymeslotWeb.Dashboard.PaymentsSettingsComponent
   alias TymeslotWeb.Dashboard.Polls.PollsComponent
   alias TymeslotWeb.Dashboard.ProfileSettingsComponent
@@ -46,6 +47,7 @@ defmodule TymeslotWeb.Dashboard.ComponentDispatch do
   def component_for_action(:settings, _components), do: ProfileSettingsComponent
   def component_for_action(:availability, _components), do: ScheduleSettingsComponent
   def component_for_action(:meeting_settings, _components), do: ServiceSettingsComponent
+  def component_for_action(:locations, _components), do: LocationsComponent
   def component_for_action(:calendar, _components), do: CalendarGridComponent
   def component_for_action(:calendar_integration, _components), do: CalendarSettingsComponent
   def component_for_action(:video_integration, _components), do: VideoSettingsComponent

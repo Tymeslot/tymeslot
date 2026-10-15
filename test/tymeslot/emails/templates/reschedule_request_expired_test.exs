@@ -61,4 +61,26 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestExpiredTest do
              end
            )
   end
+
+  test "notes an in-person address still to be arranged, worded for the host" do
+    note = "The address is to be arranged with the booker."
+
+    email =
+      meeting()
+      |> struct!(location_kind: "in_person", address_to_arrange: true, location: "In person")
+      |> RescheduleRequestExpired.render("en")
+
+    assert email.html_body =~ note
+    assert email.text_body =~ "Location: In person\n#{note}"
+    refute email.html_body =~ "arranged with you"
+    refute email.text_body =~ "arranged with you"
+  end
+
+  test "replies to the invitee, from the instance's address" do
+    email = RescheduleRequestExpired.render(meeting(), "en")
+
+    assert email.reply_to == {"Alex Guest", "alex@example.com"}
+    assert {_name, address} = email.from
+    assert address == Application.get_env(:tymeslot, :email)[:from_email]
+  end
 end

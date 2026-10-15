@@ -107,9 +107,12 @@ defmodule Tymeslot.Telegram.MessageBuilder do
 
     date = Calendar.strftime(start_time, "%a %d %b %Y")
     start_str = Calendar.strftime(start_time, "%H:%M")
-    end_str = Calendar.strftime(end_time, "%H:%M")
 
-    "#{date}, #{start_str}\u2013#{end_str} (#{esc(timezone)})"
+    if DateTime.to_date(end_time) == DateTime.to_date(start_time) do
+      "#{date}, #{start_str}\u2013#{Calendar.strftime(end_time, "%H:%M")} (#{esc(timezone)})"
+    else
+      "#{date}, #{start_str} \u2013 #{Calendar.strftime(end_time, "%a %d %b %H:%M")} (#{esc(timezone)})"
+    end
   end
 
   defp video_line(meeting) do

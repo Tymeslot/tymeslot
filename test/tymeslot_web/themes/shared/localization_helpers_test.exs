@@ -139,12 +139,12 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
     test "builds a weekday + date label from an ISO date string" do
       # 2026-06-15 is a Monday.
       assert LocalizationHelpers.format_full_date_label("2026-06-15") ==
-               "Monday, June 15, 2026"
+               "Monday, 15 June 2026"
     end
 
     test "accepts a Date struct" do
       assert LocalizationHelpers.format_full_date_label(~D[2026-06-15]) ==
-               "Monday, June 15, 2026"
+               "Monday, 15 June 2026"
     end
 
     test "returns an empty string for nil" do
@@ -153,6 +153,59 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
 
     test "falls back to the raw input when the string is not a valid date" do
       assert LocalizationHelpers.format_full_date_label("not-a-date") == "not-a-date"
+    end
+
+    test "follows the German and Czech word order and punctuation" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+      assert LocalizationHelpers.format_full_date_label(~D[2026-06-15]) == "Montag, 15. Juni 2026"
+
+      Gettext.put_locale(TymeslotWeb.Gettext, "cs")
+      assert LocalizationHelpers.format_full_date_label(~D[2026-06-15]) =~ "15. června 2026"
+    end
+  end
+
+  describe "format_date/1" do
+    test "writes English dates day before month" do
+      assert LocalizationHelpers.format_date(~D[2026-10-06]) == "6 October 2026"
+      assert LocalizationHelpers.format_date("2026-10-06") == "6 October 2026"
+      assert LocalizationHelpers.format_date(~U[2026-10-06 09:00:00Z]) == "6 October 2026"
+    end
+
+    test "puts a period after the day in German and Czech" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+      assert LocalizationHelpers.format_date(~D[2026-10-06]) == "6. Oktober 2026"
+
+      Gettext.put_locale(TymeslotWeb.Gettext, "cs")
+      assert LocalizationHelpers.format_date(~D[2026-10-06]) == "6. října 2026"
+    end
+
+    test "returns an unparseable string unchanged and nil as empty" do
+      assert LocalizationHelpers.format_date("not-a-date") == "not-a-date"
+      assert LocalizationHelpers.format_date(nil) == ""
+    end
+  end
+
+  describe "group_slots_by_period/1 (slot maps)" do
+    test "groups seat-aware slot maps by period and keeps seat data" do
+      slots = [
+        %{time: "14:00", seats_left: 2, capacity: 10},
+        %{time: "09:00", seats_left: nil, capacity: nil}
+      ]
+
+      grouped = LocalizationHelpers.group_slots_by_period(slots)
+
+      assert {_morning, [%{time: "09:00", seats_left: nil}]} = Enum.at(grouped, 1)
+      assert {_afternoon, [%{time: "14:00", seats_left: 2, capacity: 10}]} = Enum.at(grouped, 2)
+    end
+
+    test "sorts slots chronologically inside a period" do
+      slots = [
+        %{time: "11:30", seats_left: nil, capacity: nil},
+        %{time: "07:15", seats_left: nil, capacity: nil}
+      ]
+
+      {_period, morning} = Enum.at(LocalizationHelpers.group_slots_by_period(slots), 1)
+      assert Enum.map(morning, & &1.time) == ["07:15", "11:30"]
     end
   end
 
@@ -201,9 +254,10 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
     end
   end
 
-  describe "weekday_headers/0" do
-    test "starts on Sunday, the day the month grid starts on" do
-      assert LocalizationHelpers.weekday_headers() == ~w(Sun Mon Tue Wed Thu Fri Sat)
+  describe "weekday_headings/1" do
+    test "starts on the week start it is given" do
+      assert LocalizationHelpers.weekday_headings(:monday) == ~w(Mon Tue Wed Thu Fri Sat Sun)
+      assert LocalizationHelpers.weekday_headings(:sunday) == ~w(Sun Mon Tue Wed Thu Fri Sat)
     end
 
     test "cuts a longer translation to three characters so it cannot widen a column" do
@@ -211,7 +265,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
       # more than the grid's header cell is sized for.
       Gettext.put_locale(TymeslotWeb.Gettext, "fr")
 
-      assert LocalizationHelpers.weekday_headers() == ~w(Dim Lun Mar Mer Jeu Ven Sam)
+      assert LocalizationHelpers.weekday_headings(:sunday) == ~w(Dim Lun Mar Mer Jeu Ven Sam)
     end
   end
 
@@ -251,7 +305,9 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
           {"it", "Settembre 2026", "Settembre – ottobre 2026", "Dicembre 2025 – gennaio 2026"},
           {"uk", "Вересень 2026", "Вересень – жовтень 2026", "Грудень 2025 – січень 2026"},
           {"cs", "Září 2026", "Září – říjen 2026", "Prosinec 2025 – leden 2026"},
-          {"pl", "Wrzesień 2026", "Wrzesień – październik 2026", "Grudzień 2025 – styczeń 2026"}
+          {"pl", "Wrzesień 2026", "Wrzesień – październik 2026", "Grudzień 2025 – styczeń 2026"},
+          {"pt", "Setembro de 2026", "Setembro – outubro de 2026",
+           "Dezembro de 2025 – janeiro de 2026"}
         ] do
       test "#{locale}: capitalises only the start of the heading, in the nominative" do
         Gettext.put_locale(TymeslotWeb.Gettext, unquote(locale))
@@ -274,6 +330,86 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
       Gettext.put_locale(TymeslotWeb.Gettext, "fr")
 
       assert LocalizationHelpers.get_month_year_display(2026, 9) == "Septembre 2026"
+    end
+  end
+
+  describe "format_next_day_end/4" do
+    test "is nil when the meeting ends on the day it starts" do
+      assert LocalizationHelpers.format_next_day_end(
+               "2027-06-14",
+               "10:00 PM",
+               60,
+               "Europe/London"
+             ) ==
+               nil
+    end
+
+    test "names the end when it falls on a later date" do
+      note =
+        LocalizationHelpers.format_next_day_end("2027-06-14", "11:00 PM", 120, "Europe/London")
+
+      assert note == "Ends 01:00 AM on Tuesday 15 June"
+    end
+
+    test "a 24-hour meeting from midnight ends at midnight the next day" do
+      assert LocalizationHelpers.format_next_day_end(
+               "2027-06-14",
+               "12:00 AM",
+               "1440min",
+               "Europe/Berlin"
+             ) =~ "Tuesday"
+    end
+
+    test "is nil without a duration or with an unreadable time" do
+      assert LocalizationHelpers.format_next_day_end(
+               "2027-06-14",
+               "11:00 PM",
+               nil,
+               "Europe/London"
+             ) ==
+               nil
+
+      assert LocalizationHelpers.format_next_day_end(
+               "2027-06-14",
+               "not a time",
+               60,
+               "Europe/London"
+             ) == nil
+    end
+  end
+
+  describe "format_next_day_end/4 across locales and DST" do
+    test "reads naturally in French, with the weekday in lower case" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "fr")
+
+      assert LocalizationHelpers.format_next_day_end(
+               "2027-06-14",
+               "11:00 PM",
+               120,
+               "Europe/Paris"
+             ) ==
+               "Fin : mardi 15 juin, 01:00"
+    end
+
+    test "keeps the capital German nouns take" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+
+      assert LocalizationHelpers.format_next_day_end(
+               "2027-06-14",
+               "11:00 PM",
+               120,
+               "Europe/Berlin"
+             ) ==
+               "Endet um 01:00 am Dienstag, 15. Juni"
+    end
+
+    test "a 24-hour meeting from midnight on the 23-hour night ends at 01:00 on Monday" do
+      assert LocalizationHelpers.format_next_day_end(
+               "2027-03-28",
+               "12:00 AM",
+               "1440min",
+               "Europe/Berlin"
+             ) == "Ends 01:00 AM on Monday 29 March"
     end
   end
 end

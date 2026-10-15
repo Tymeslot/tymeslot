@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.TextInput do
   """
   use Phoenix.Component
 
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
 
   attr :input_type, :string, required: true
   attr :definition, :map, required: true

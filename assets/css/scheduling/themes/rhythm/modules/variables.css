@@ -150,6 +150,22 @@
   /* Time slots specific */
   --time-slots-max-height: clamp(280px, 50vh, 420px);
 
+  /* Seat availability (group bookings) */
+  --seat-green: var(--theme-accent);
+  --seat-amber: var(--theme-warning);
+  --seat-red: var(--theme-danger);
+  --seat-green-bg: rgba(16, 185, 129, 0.15);
+  --seat-amber-bg: rgba(251, 191, 36, 0.15);
+  --seat-red-bg: rgba(239, 68, 68, 0.15);
+  /* The exact count without the traffic light: a fact, not a warning, so it
+     takes the slot's own text colour on a faint wash of it. */
+  --seat-neutral: currentColor;
+  --seat-neutral-bg: color-mix(in srgb, currentColor 12%, transparent);
+  /* A selected slot is marked by its primary border; the badge becomes a
+     solid primary pill in the palette's own contrast pair to match it. */
+  --seat-selected: var(--theme-on-primary);
+  --seat-selected-bg: var(--theme-primary-solid);
+
   /* Icon sizes */
   --icon-xs: 16px;
   --icon-sm: 20px;
@@ -219,7 +235,10 @@
   --poll-option-line: rgba(255, 255, 255, 0.22);
   --poll-option-selected-surface: var(--theme-primary-tint);
 
-  /* Payment return pages (shared/components/payment-pages.css) */
+  /* Payment return pages (shared/components/payment-pages.css). They have
+     no video background container, so the page itself carries the
+     background the container shows behind its media. */
+  --payment-page-background: var(--theme-background);
   --payment-page-max-width: 36rem;
   --payment-card-surface: rgba(0, 0, 0, var(--box-opacity));
   --payment-card-line: var(--border-subtle);

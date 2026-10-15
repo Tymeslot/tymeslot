@@ -10,34 +10,53 @@ defmodule TymeslotWeb.OnboardingPreferencesExampleTest do
   @moduletag :onboarding
 
   import Phoenix.LiveViewTest
+  import Tymeslot.AuthTestHelpers
+  import Tymeslot.Factory
   import TymeslotWeb.OnboardingTestHelpers
+
+  alias Tymeslot.CalendarGrid
 
   setup tags do
     {:ok, conn: setup_onboarding_session(tags.conn)}
   end
 
   describe "buffer time example" do
-    test "reflects the chosen buffer and the computed next start time", %{conn: conn} do
+    test "reflects both buffers around a 1:00 PM to 2:00 PM meeting", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
       view = navigate_to_scheduling_steps(view)
 
-      html = view |> element("button[phx-value-buffer_minutes='60']") |> render_click()
-      assert html =~ "ends at 02:00 PM"
-      assert html =~ "your buffer is 60 min"
-      assert html =~ "starts at 03:00 PM"
+      html = view |> element("button[phx-value-buffer_before_minutes='30']") |> render_click()
+      assert html =~ "from 1:00 PM to 2:00 PM"
+      assert html =~ "start at 2:30 PM at the earliest"
+      # The after-buffer is still the default 15.
+      assert html =~ "must end by 12:45 PM"
 
-      html = view |> element("button[phx-value-buffer_minutes='30']") |> render_click()
-      assert html =~ "your buffer is 30 min"
-      assert html =~ "starts at 02:30 PM"
+      html = view |> element("button[phx-value-buffer_after_minutes='60']") |> render_click()
+      assert html =~ "start at 2:30 PM at the earliest"
+      assert html =~ "must end by 12:00 PM"
     end
 
-    test "uses a no-buffer phrasing for zero", %{conn: conn} do
+    test "follows the organiser's chosen 24-hour clock", %{conn: conn} do
+      user = insert(:user, onboarding_completed_at: nil)
+      {:ok, _prefs} = CalendarGrid.save_preferences(user.id, %{time_format: "24h"})
+      {:ok, view, _html} = conn |> log_in_user(user) |> live("/onboarding")
+      view = navigate_to_scheduling_steps(view)
+
+      html = view |> element("button[phx-value-buffer_before_minutes='30']") |> render_click()
+      assert html =~ "from 13:00 to 14:00"
+      assert html =~ "start at 14:30 at the earliest"
+      refute html =~ "PM"
+    end
+
+    test "uses a no-buffer phrasing when both are zero", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
       view = navigate_to_scheduling_steps(view)
 
-      html = view |> element("button[phx-value-buffer_minutes='0']") |> render_click()
-      assert html =~ "as soon as a meeting ends"
-      refute html =~ "your buffer is 0 min"
+      view |> element("button[phx-value-buffer_before_minutes='0']") |> render_click()
+      html = view |> element("button[phx-value-buffer_after_minutes='0']") |> render_click()
+
+      assert html =~ "right next to an existing meeting"
+      refute html =~ "at the earliest"
     end
   end
 

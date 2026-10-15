@@ -87,7 +87,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatch do
 
   defp fields(changes) do
     changed = Map.take(changes, Map.keys(@field_keys))
-    formatted = EventMapper.format_event_data(changed)
+    # No repeat rule is among the fields, so nothing here can be refused.
+    {:ok, formatted} = EventMapper.format_event_data(changed)
 
     changed
     |> Enum.flat_map(fn {field, _value} -> Map.fetch!(@field_keys, field) end)
@@ -210,6 +211,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatch do
     case RecurrenceConverter.rrule_to_outlook(rule, start_date, zone) do
       nil ->
         {:error, :unsupported_rule}
+
+      {:error, _reason} = refused ->
+        refused
 
       built ->
         with {:ok, range} <- range(built, recurrence, rule, {start_date, days}, zone),

@@ -1,4 +1,4 @@
-# Tymeslot — Italian (it) Translation Style Guide & Termbase
+# Tymeslot: Italian (it) Translation Style Guide & Termbase
 
 Authoritative. Mined from the ~3,800 already-translated Italian msgstrs and settled during the terminology unification sweep. Follow this exactly. Where this guide contradicts an existing msgstr in the repo, **this guide wins**: the existing string is drift and is being corrected.
 
@@ -42,8 +42,8 @@ Three English concepts, three Italian words. They are not interchangeable.
 | to book | **prenotare** |
 | **slot / time slot** | **fascia oraria** (never `slot`, never `slot orario`, never `spazio in agenda`) |
 | **organiser / organizer** | **organizzatore** |
-| **host** (the person) | **organizzatore** — Italian collapses the two English roles into one; never leave `host` in the msgstr |
-| host page (the page an iframe is embedded in) | **pagina host** — technical, unrelated to the role above |
+| **host** (the person) | **organizzatore**: Italian collapses the two English roles into one; never leave `host` in the msgstr |
+| host page (the page an iframe is embedded in) | **pagina host**: technical, unrelated to the role above |
 | attendee | **partecipante** |
 | guest | **ospite** / **ospiti** |
 | invitee | **invitato** |
@@ -63,13 +63,13 @@ Three English concepts, three Italian words. They are not interchangeable.
 | recurring | **ricorrente** |
 | theme (Quill/Rhythm booking theme) | **tema** (Quill/Rhythm stay verbatim) |
 | event (a calendar event) | **evento** |
-| **booking page / scheduling page** | **pagina di prenotazione** — one term for both English phrasings; never `pagina di pianificazione` |
+| **booking page / scheduling page** | **pagina di prenotazione**: one term for both English phrasings; never `pagina di pianificazione` |
 | **dashboard** | **Dashboard** (loanword; lowercase `dashboard` mid-sentence, matching the English msgid's case). Never `pannello di controllo` |
 | settings | **impostazioni** |
 | profile | **profilo** |
 | account | **account** |
-| log in / sign in (verb) | **accedere** — `Accedi` |
-| sign up (verb) | **registrarsi** — `Registrati` |
+| log in / sign in (verb) | **accedere**: `Accedi` |
+| sign up (verb) | **registrarsi**: `Registrati` |
 | password | **password** |
 | user | **utente** / **utenti** |
 | admin / administrator | **amministratore**; `Amministrazione` for the section |
@@ -77,7 +77,7 @@ Three English concepts, three Italian words. They are not interchangeable.
 | automation | **automazione** |
 | integration | **integrazione** / **integrazioni** |
 | webhook | **webhook** (loanword) |
-| **Enabled / Disabled** | **Attivato / Disattivato** — verbs `attivare` / `disattivare`. Never `abilitare` / `disabilitare`, not even for `JavaScript disattivato` |
+| **Enabled / Disabled** | **Attivato / Disattivato**: verbs `attivare` / `disattivare`. Never `abilitare` / `disabilitare`, not even for `JavaScript disattivato` |
 | subscription | **abbonamento** |
 | plan (pricing tier) | **piano** |
 | billing | **fatturazione** |
@@ -96,12 +96,12 @@ One verb stem across calendars, video providers, chat integrations and Stripe. T
 
 | English | Italian |
 |---|---|
-| **connect** (verb) | **collegare** — `Collega`, `Collegane uno` |
-| **reconnect** | **ricollegare** — `Ricollega` |
-| **disconnect** | **scollegare** — `Scollega` |
+| **connect** (verb) | **collegare**: `Collega`, `Collegane uno` |
+| **reconnect** | **ricollegare**: `Ricollega` |
+| **disconnect** | **scollegare**: `Scollega` |
 | **connected** (adj) | **collegato** |
 | **disconnected** (adj) | **scollegato** |
-| connection (the noun: state, test, count) | **connessione** — `Problemi di connessione`, `Prova la connessione`, `1 connessione calendario` |
+| connection (the noun: state, test, count) | **connessione**: `Problemi di connessione`, `Prova la connessione`, `1 connessione calendario` |
 
 Never `Connetti` / `Riconnetti` / `Disconnetti` / `connesso`. (`Disconnessione` remains correct for **logging out**, a different concept.)
 
@@ -113,9 +113,9 @@ One term, in Core and in marketing alike. Do not fall back on the English loanwo
 |---|---|
 | to embed | **incorporare** |
 | embedded | **incorporato** |
-| **embed / embedding / embeds** (noun) | **incorporamento** / **incorporamenti** — never bare `embed` |
+| **embed / embedding / embeds** (noun) | **incorporamento** / **incorporamenti**: never bare `embed` |
 | **Embed & Share** | **Incorpora e condividi** (all four call sites) |
-| **Floating Button** | **Pulsante fluttuante** — `flottante` is a Gallicism and is wrong |
+| **Floating Button** | **Pulsante fluttuante**: `flottante` is a Gallicism and is wrong |
 | Inline Embed | **Incorporamento inline** |
 | Website Embed | **Incorporamento nel sito web** |
 | popup modal | **modale popup** |
@@ -128,7 +128,7 @@ Settled while translating; reuse rather than re-coining.
 
 | English | Italian |
 |---|---|
-| **Tymeslot Core** / *Tymeslot's core* / *the core* (the product) | **Core** — a product name. `Il Core di Tymeslot`, `il Core è open source`. **Never `il nucleo`.** |
+| **Tymeslot Core** / *Tymeslot's core* / *the core* (the product) | **Core**: a product name. `Il Core di Tymeslot`, `il Core è open source`. **Never `il nucleo`.** |
 | self-hosting / to self-host / self-hosted | **self-hosting** / **ospitare in autonomia** / **self-hosted** |
 | open source | **open source** |
 | closed SaaS | **SaaS chiuso** |
@@ -145,13 +145,28 @@ Settled while translating; reuse rather than re-coining.
 | lock-in | **lock-in** |
 | **Easiest** (badge) | **Il più semplice** |
 | **Live Preview** | **Anteprima in tempo reale** (never `Anteprima dal vivo`) |
-| **Wk** (calendar column header) | **Sett** — no full stop |
+| **schedule** (an availability schedule: hours, buffer, notice, booking window) | **pianificazione**, matching the dashboard. Feminine: `una pianificazione propria`, `nella tua pianificazione`, `pianificazioni separate`. Never `programma di disponibilità`. The dashboard label `Weekly Schedule` (the weekly hours grid) stays `Programma settimanale` |
+| **custom booking questions / intake questions** (the Pro feature) | **domande di raccolta dati**; `Custom booking questions` → `Domande di raccolta dati personalizzate`. When naming the feature, never `domande di prenotazione`, `domande di accoglienza`, `domande iniziali` or bare `domande personalizzate`. Plain wording is fine where the sentence is not naming the feature (an FAQ question, a competitor's own feature) |
+| managed service (Tymeslot Cloud) | **servizio gestito** |
+| payout (money reaching the organiser) | `l'incasso arriva sul tuo account Stripe` |
+| platform fee | **commissione della piattaforma** |
+| deposit | **acconto** |
+| payments at booking | **pagamenti alla prenotazione** |
+| group bookings | **prenotazioni di gruppo** |
+| discovery call | **chiamata conoscitiva** |
+| time off | **periodi di assenza** |
+| daily / weekly limits | **limiti giornalieri** / **limiti settimanali** |
+| slot interval ("15-minute intervals") | phrase it as start times: `fasce orarie ogni 15 minuti` |
+| approval request expires (left unanswered) | **decadere**: `le richieste senza risposta decadono` |
+| approval email buttons (Approve / Decline) | **Conferma** / **Rifiuta** |
+| **Wk** (calendar column header) | **Sett**: no full stop |
 | gradient / preset | **gradiente** / **preset** |
 | booking link | **link di prenotazione** |
-| advance booking window | **finestra di prenotazione** |
-| analytics | **statistiche** |
+| **booking horizon / advance booking window** | **finestra di prenotazione**: the dashboard term, used on every marketing and profession page too |
+| **analytics** (our booking analytics feature) | **statistiche** (`statistiche sulle prenotazioni`); never `analytics` for our own feature |
+| third-party analytics / tracking | **strumenti di analisi di terze parti** (product names such as Google Analytics stay verbatim) |
 | conversion / visits / unique visitors | **conversione** / **visite** / **visitatori unici** |
-| **therapists** | **terapeuti** — never `terapisti`. (`fisioterapisti`, `massaggiatori` are the correct specific roles and stay.) |
+| **therapists** | **terapeuti**: never `terapisti`. (`fisioterapisti`, `massaggiatori` are the correct specific roles and stay.) |
 | in-person (location) | **di persona** |
 | unlisted | **Non elencato** |
 | Pending / Declined / Cancelled | **In attesa** / **Rifiutato** / **Annullato** |
@@ -167,7 +182,7 @@ Settled while translating; reuse rather than re-coining.
 
 ---
 
-## 3. DO NOT TRANSLATE — keep verbatim
+## 3. DO NOT TRANSLATE: keep verbatim
 
 **Tymeslot** and **Tymeslot Core** (and the bare product name **Core**), Stripe, Stripe Checkout, Stripe Connect, reCAPTCHA, Google, Google Calendar, Google Meet, GitHub, Outlook, Microsoft Teams, Zoom, CalDAV, Nextcloud, iCloud, Fastmail, Zimbra, Radicale, mailbox.org, MiroTalk, Keycloak, Authentik, Lemonldap, JavaScript, OAuth, OIDC, SSO, Oban, UTM, Cloudron. Plan names (Cloud Free, Cloud Pro, Self-Hosted) and theme names (Quill, Rhythm) likewise.
 
@@ -179,22 +194,24 @@ Loanwords kept as-is: Dashboard, password, account, webhook, workflow, slug, pre
 
 ## 4. PLACEHOLDERS, MARKUP, TYPOGRAPHY
 
-**Placeholders `%{name}` — the hard rule:**
+**Placeholders `%{name}` (the hard rule):**
 
 - Reproduce **byte-for-byte**. Never translate, rename, add, or drop one.
 - If the msgid has three placeholders, the msgstr must have exactly those three.
 - You **may and should reorder** them to fit Italian syntax.
 - Watch what the placeholder *interpolates*. `%{organizer}` already expands to `con Mario Rossi`, so the msgstr must not add a second `con`. `%{advance}` already expands to `90 giorni di anticipo`, so the msgstr must not prefix it with `con`.
 - A build gate checks this. A dropped or invented placeholder is a runtime crash.
+- **`%{profession_in_text}`** (profession pages) expands to a lowercase plural with no article: `dentisti`, `consulenti IT`, `istruttori di Pilates`, `coach`. Build the sentence so a bare plural works, typically after `per`: `Tutto il necessario per %{profession_in_text}.`, `Privacy e conformità per %{profession_in_text}`. Avoid structures that need an article or an articulated preposition (`ai`, `agli`, `alle`), and do not fall back on `%{profession}: …` colon headings. `%{profession}` is the capitalised form for titles and labels.
+- A link label interpolated mid-sentence (`%{docker_guide}`, `%{embed_guide}`) is lowercase, because it is translated as its own msgid: `la %{docker_guide}` → `la guida alla configurazione Docker`.
 
 **Markup / entities:** keep verbatim inside the msgstr. `<strong>removed from your external calendar</strong>` → `<strong>rimossa dal tuo calendario esterno</strong>`. `&` stays literal (not `&amp;`). Bullets `•`, checkmarks `✓` and emoji are preserved.
 
-**Typography — use these characters:**
+**Typography (use these characters):**
 
 - Italian quotes **`«…»`** (caporali), no inner spaces: `La riunione «%{title}» è stata eliminata`.
-- Em dash **`—`** for parenthetical asides, mirroring the English em dash.
+- **No em dashes.** Where the English has an em dash, use a comma, a colon, parentheses or a full stop instead, whichever reads most naturally in Italian.
 - Ellipsis: **mirror the source**. If the msgid ends in `...`, the msgstr ends in `...`; if it ends in `…`, use `…`.
-- Decimal comma: `0.0 and 1.0` → `0,0 e 1,0`. Currency sign follows the number with a space: `0 €`.
+- Decimal comma: `0.0 and 1.0` → `0,0 e 1,0`. Currency sign follows the number with a space: `0 €`, and dollar prices the same way: `16 $`, `16 $/mese`. Percentages take the decimal comma and no space: `0,5%`.
 - **Elision before a vowel**: `un'email`, `un'ora`, `l'organizzatore`, `dell'account`, `l'incorporamento`. Note `un'altra riunione` (feminine, elided) but `un altro tipo` (masculine, no apostrophe).
 - **`lo` before s + consonant, z, gn, ps**: `lo share-alike`, `lo strumento`, `lo snippet`. Never `il share-alike`.
 - **Euphonic `ed`** before a word starting with `e`: `ed elimina`, `ed è`.
@@ -223,13 +240,13 @@ Do not silently change number: if the English says "the attendee is notified", t
 
 ## 6. TONE BY REGISTER
 
-- **Marketing** — warm, direct, confident. Rephrase idioms rather than calquing them: a "noisy neighbour" in a cloud-tenancy sentence is `il carico di un altro cliente`, not `un vicino rumoroso`. Headlines should land as headlines. Keep the `tu`, and let the sentences breathe.
-- **Dashboard / admin UI** — terse and functional. Buttons are imperatives (`Salva`, `Promuovi`) or nouns. Toggle states are adjectives (`Attivato` / `Disattivato`). System feedback is clean declarative: `Impossibile aggiornare l'impostazione.` No filler, no exclamation marks except on genuine success.
-- **Transactional email** — polite, clear, human. Greeting `Ciao %{name},`. Warm first-person prose from the host is where `incontro` lives. Apologies are courteous: `Mi scuso per l'eventuale disagio.`
-- **Booking flow (public)** — friendly and encouraging. Prompts guide the invitee: `Scegli una data per vedere gli orari disponibili`. Success is upbeat: `Riunione confermata!`
+- **Marketing**: warm, direct, confident. Rephrase idioms rather than calquing them: a "noisy neighbour" in a cloud-tenancy sentence is `il carico di un altro cliente`, not `un vicino rumoroso`. Headlines should land as headlines. Keep the `tu`, and let the sentences breathe.
+- **Dashboard / admin UI**: terse and functional. Buttons are imperatives (`Salva`, `Promuovi`) or nouns. Toggle states are adjectives (`Attivato` / `Disattivato`). System feedback is clean declarative: `Impossibile aggiornare l'impostazione.` No filler, no exclamation marks except on genuine success.
+- **Transactional email**: polite, clear, human. Greeting `Ciao %{name},`. Warm first-person prose from the host is where `incontro` lives. Apologies are courteous: `Mi scuso per l'eventuale disagio.`
+- **Booking flow (public)**: friendly and encouraging. Prompts guide the invitee: `Scegli una data per vedere gli orari disponibili`. Success is upbeat: `Riunione confermata!`
 
 ---
 
 ## 7. ONE-LINE SUMMARY
 
-Informal **tu** + imperative. **riunione** (the meeting) · **incontro** (only "our meeting" in warm prose) · **appuntamento** (only English *appointment*) · **tipo di riunione** vs **tipo di evento** · **fascia oraria** · **organizzatore** · **partecipante** · **ospite** · **collegare/ricollegare/scollegare** · **incorporamento** · **margine** · **pagina di prenotazione** · **Informativa sulla privacy** · **Attivato/Disattivato** · **email** (no hyphen). Keep **Tymeslot / Core / brand names / env vars / `%{…}`** verbatim. Use `«…»`, `—`, decimal comma, `example.com`. Never drop or invent a placeholder.
+Informal **tu** + imperative. **riunione** (the meeting) · **incontro** (only "our meeting" in warm prose) · **appuntamento** (only English *appointment*) · **tipo di riunione** vs **tipo di evento** · **fascia oraria** · **organizzatore** · **partecipante** · **ospite** · **collegare/ricollegare/scollegare** · **incorporamento** · **margine** · **pagina di prenotazione** · **Informativa sulla privacy** · **Attivato/Disattivato** · **email** (no hyphen). Keep **Tymeslot / Core / brand names / env vars / `%{…}`** verbatim. Use `«…»`, decimal comma, `16 $`, `example.com`, and no em dashes. Never drop or invent a placeholder.

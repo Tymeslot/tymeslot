@@ -36,11 +36,6 @@ msgstr "Аватар успішно оновлено"
 msgid "Basic Information"
 msgstr "Основна інформація"
 
-#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Cancel"
-msgstr "Скасувати"
-
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a unique username for your personal booking page."
@@ -116,11 +111,6 @@ msgstr "Обробка..."
 msgid "Profile Picture"
 msgstr "Фото профілю"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Profile Settings"
-msgstr "Налаштування профілю"
-
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
@@ -181,11 +171,6 @@ msgstr "Завантаження..."
 #, elixir-autogen, elixir-format
 msgid "Username updated! Your booking page: %{url}"
 msgstr "Ім'я користувача оновлено! Ваша сторінка бронювання: %{url}"
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
-#, elixir-autogen, elixir-format
-msgid "Your Custom URL"
-msgstr "Ваша власна URL-адреса"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
@@ -324,3 +309,8 @@ msgstr "Заголовок і біографію збережено"
 #, elixir-autogen, elixir-format
 msgid "Shown on your booking page by themes that introduce you, such as Folio. Leave an empty line between paragraphs."
 msgstr "Показується на вашій сторінці бронювання в темах, які представляють вас, як-от Folio. Залишайте порожній рядок між абзацами."
+
+#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete avatar"
+msgstr "Видалити аватар"

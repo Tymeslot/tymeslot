@@ -21,9 +21,14 @@ Termbase for the Polish catalogues. Settle a term here before using a new one.
   odwołane"), use the impersonal "-no/-to" form ("Podłączono Zoom", "Zapisano zmiany"), use the
   present tense ("%{name} zaprasza cię"), or a noun phrase. The bracketed "zaprosił(a)" is a
   last resort, never in a subject line or heading.
-- Polish typography: „cudzysłów drukarski” where the source uses quotes; a spaced półpauza " – "
-  as the dash, never an em dash; the single ellipsis character "…", never "..."; a space between
-  a number and its unit ("5 MB", "1000 px"); no space before `:` `,` `.` `?` `!`.
+- Polish typography: „cudzysłów drukarski” where the source uses quotes; no em dashes, and no
+  dash as sentence punctuation: use a comma, a colon, parentheses or a full stop instead. A spaced
+  półpauza " – " stays only as a separator in titles and subject lines and in ranges
+  ("Kwiecień – maj 2026"). The single ellipsis character "…", never "..."; a space between a number
+  and its unit ("5 MB", "1000 px"); no space before `:` `,` `.` `?` `!`.
+- **Gender-neutral address in marketing copy too.** Never a masculine past form or adjective
+  aimed at the reader ("zarezerwowałeś", "które sam dodasz", "jesteś gotowy"): use the present
+  or future ("które dodasz"), "samodzielnie", or a noun phrase.
 - **Vocative comma**: "Cześć, %{name}!" / "Cześć, %{name},". No comma after a closing
   "Pozdrawiamy".
 - Do not translate brand names: Tymeslot, Google, Google Calendar, Google Meet, Outlook,
@@ -44,7 +49,8 @@ where Polish needs another case, which rules out a preposition directly before i
 "do %{name}", "od %{name}", "dla %{name}", "w %{calendar}") and any verb that governs the
 genitive, dative or instrumental of it. Restructure instead:
 
-- a colon, dash or parentheses: "Spotkanie potwierdzone – %{date}, %{name}",
+- a colon or parentheses (a spaced półpauza only in a title or subject line):
+  "Spotkanie potwierdzone – %{date}, %{name}",
   "Prośba wysłana (odbiorca: %{name})", "Wiadomość od uczestnika: %{name}";
 - a declined head noun in front of the placeholder: "w kalendarzu %{calendar}",
   "ustawienia dnia: %{day}";
@@ -195,10 +201,21 @@ fragment: read how the code uses it.
 | deposit / prepayment | zaliczka / przedpłata |
 | discovery call / scoping call | rozmowa wstępna |
 | intake form | formularz wstępny |
-| self-hosting / self-host | na własnym serwerze / hostuj na własnym serwerze |
+| self-hosting / self-host | na własnym serwerze / hostuj (hostujesz, hostować) Tymeslot na własnym serwerze; never "self-hosting", "samodzielny hosting" or "hostuj samodzielnie" |
 | managed cloud | zarządzana chmura |
+| managed service (profession pages) | usługa zarządzana |
+| platform fee | prowizja platformy ("0,5% prowizji platformy"), never "opłata platformy"; Stripe's own charges stay "opłaty Stripe" |
+| booking analytics (Pro feature) | statystyki rezerwacji (short: "statystyki"); "wbudowane statystyki" |
+| third-party / site analytics (Umami, Fathom, Google) | analityka ("bez zewnętrznej analityki", "nasza własna analityka bez ciasteczek") |
+| custom questions | własne pytania (w formularzu rezerwacji); in running text also "pytania przy rezerwacji" |
+| group bookings | rezerwacje grupowe (a studio's group classes stay "zajęcia grupowe") |
+| booker | osoba rezerwująca (plural "osoby rezerwujące"); never the bare noun "rezerwujący". An adjectival "klient rezerwujący trening" is fine |
+| embed modes: inline / popup / floating button | w treści (kalendarz w treści) / okienko pop-up / pływający przycisk |
+| profession guides (/for) | poradniki |
+| advertising pixels / ad trackers | piksele reklamowe / trackery reklamowe (the English keeps the two apart; so do we) |
+| Google Calendar | Google Calendar, verbatim; never „Kalendarz Google” as the product name. A provider list with a head noun, "kalendarz Google, Outlook lub CalDAV", is fine |
 | white-label branding | własny branding bez logo Tymeslot |
-| per seat | za użytkownika |
+| per seat / per user | za użytkownika ("10 USD za użytkownika/mies.") |
 | free plan / no card | darmowy plan / bez karty |
 | Pro price | Pro (%{pro_monthly}/mies.); "/year" is "/rok" |
 | trial | okres próbny |
@@ -209,6 +226,15 @@ fragment: read how the code uses it.
 | single sign-on / identity provider | logowanie jednokrotne (SSO) / dostawca tożsamości |
 | widget | widżet |
 
-The /for profession pages price in złoty at Polish market rates, and the savings calculator's
-`hourly_rate` for `pl` is a złoty figure. Tymeslot's own plan prices stay as the placeholders
-give them.
+Prices are written with the ISO currency code after the number, Polish decimal comma and a
+space: "10 USD", "0 EUR", "12,95 EUR", "300 PLN", "od ok. 15 000 USD/rok"; never "$10", "€0" or
+"300 zł". Percentages take no space: "0,5%", "1,29%".
+
+The /for profession pages price in złoty at Polish market rates (written "300 PLN"), and the
+savings calculator's `hourly_rate` for `pl` is a złoty figure. Tymeslot's own plan prices stay as
+the placeholders give them.
+
+`profession_in_text` in `priv/professions/pl/*.exs` is the lowercase nominative plural
+("fizjoterapeuci", "konsultanci IT", "instruktorzy pilatesu"). Polish cannot put it after "dla",
+so the /for msgstrs that use it make the profession the subject: "Wszystko, czego potrzebują
+%{profession_in_text}.", "Konfiguracja, od której mogą zacząć %{profession_in_text}".

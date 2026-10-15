@@ -40,7 +40,7 @@ defmodule Tymeslot.Demo.NoOpTest do
     end
 
     test "get_calendar_days/4 always returns []" do
-      assert [] == NoOp.get_calendar_days("UTC", 2025, 1, %{})
+      assert [] == NoOp.get_calendar_days("UTC", 2025, 1, :sunday, %{})
     end
   end
 end

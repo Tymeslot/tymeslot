@@ -20,6 +20,7 @@ defmodule Tymeslot.Auth.SignupSecurity do
 
   alias Tymeslot.Auth.RateLimit
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
+  alias Tymeslot.Security.Honeypot
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Security.SecurityLogger
 
@@ -53,7 +54,7 @@ defmodule Tymeslot.Auth.SignupSecurity do
     metadata = opts |> Keyword.take([:ip, :user_agent]) |> Map.new()
     bot_checks? = Keyword.get(opts, :bot_checks, true)
 
-    if bot_checks? and honeypot_tripped?(user_params) do
+    if bot_checks? and Honeypot.tripped?(user_params) do
       log_honeypot_signup(metadata)
       :honeypot
     else
@@ -73,13 +74,6 @@ defmodule Tymeslot.Auth.SignupSecurity do
       ip_address: metadata[:ip],
       user_agent: metadata[:user_agent]
     })
-  end
-
-  defp honeypot_tripped?(params) do
-    case Map.get(params, "website") do
-      value when is_binary(value) -> value != ""
-      _other -> false
-    end
   end
 
   defp log_honeypot_signup(metadata) do

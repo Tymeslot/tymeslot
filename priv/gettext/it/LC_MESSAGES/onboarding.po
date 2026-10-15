@@ -350,3 +350,13 @@ msgstr "Un tipo di riunione ora può offrire più luoghi d'incontro: di persona 
 #, elixir-autogen, elixir-format
 msgid "Let people choose where you meet"
 msgstr "Lascia scegliere dove incontrarvi"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Host webinars, workshops and classes"
+msgstr "Organizza webinar, workshop e corsi"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Turn any meeting type into a group session. Set how many people can join and each slot stays open until it's full, so one booking page can run your webinar, workshop, class or office hours. Everyone books themselves in, gets their own confirmation and calendar invite, and can cancel or reschedule without asking you."
+msgstr "Trasforma qualsiasi tipo di riunione in una sessione di gruppo. Imposta quante persone possono partecipare e ogni orario resta aperto finché non è pieno, così una sola pagina di prenotazione gestisce il tuo webinar, workshop, corso o ricevimento. Ognuno si prenota da sé, riceve la propria conferma e l'invito nel calendario, e può annullare o spostare senza chiedere a te."

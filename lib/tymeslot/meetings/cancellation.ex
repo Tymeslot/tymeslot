@@ -107,7 +107,7 @@ defmodule Tymeslot.Meetings.Cancellation do
           | {:error, :not_found}
           | {:error, {:refund_failed, term()}}
           | {:error, term()}
-  def cancel(meeting, _acting_user_id, :none), do: Cancel.execute(meeting)
+  def cancel(meeting, _acting_user_id, :none), do: Cancel.execute(meeting, caller: :organizer)
 
   def cancel(%{id: meeting_id} = meeting, acting_user_id, {:refund, amount_cents}) do
     case MeetingPayments.payment_for_meeting(meeting_id, acting_user_id) do
@@ -116,11 +116,19 @@ defmodule Tymeslot.Meetings.Cancellation do
     end
   end
 
+  # `caller: :organizer` is what lets this cancel a group meeting outright.
+  # The public, participant-facing cancel link resolves through
+  # `Meetings.cancel_meeting/1` instead, which passes no `:caller` and is
+  # therefore refused for a group slot: one booker must not be able to cancel
+  # everyone else's seats. This module is only ever reached from the
+  # authenticated dashboard, where cancelling the whole meeting is the host's
+  # own decision.
+  #
   # The announcement waits for the refund, whichever way it went: the host's
   # cancellation email reports what they still hold for the booking, read from
   # the payment when the email is built.
   defp cancel_and_refund(meeting, payment, host_user_id, amount_cents) do
-    with {:ok, cancelled} <- Cancel.execute(meeting, announce: false) do
+    with {:ok, cancelled} <- Cancel.execute(meeting, caller: :organizer, announce: false) do
       try do
         case MeetingPayments.refund_payment_for_host(payment.id, host_user_id, amount_cents) do
           {:ok, _payment} -> {:ok, cancelled}

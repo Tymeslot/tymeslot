@@ -126,8 +126,16 @@ defmodule TymeslotWeb.DashboardLive do
     action = socket.assigns.live_action
 
     # Leaving the calendar unmounts the grid while this process lives on,
-    # so the writes it still has queued are handed to their guardian.
-    if action != :calendar, do: WriteGuardian.detach()
+    # so the writes it still has queued are handed to their guardian. The
+    # count tells a grid LiveView revives, rather than mounts afresh, to
+    # take them back (see `EventWrites.adopt/1`).
+    socket =
+      if action == :calendar do
+        assign_new(socket, :calendar_left, fn -> 0 end)
+      else
+        WriteGuardian.detach()
+        assign(socket, :calendar_left, Map.get(socket.assigns, :calendar_left, 0) + 1)
+      end
 
     socket =
       if connected?(socket) && action == :calendar &&
@@ -251,8 +259,10 @@ defmodule TymeslotWeb.DashboardLive do
               client_ip={@client_ip}
               user_agent={@user_agent}
               live_action={@live_action}
+              calendar_left={@calendar_left}
               params={@params}
               custom_questions_allowed={@custom_questions_allowed}
+              group_bookings_allowed={@group_bookings_allowed}
               payments_allowed={@payments_allowed}
             />
           <% else %>
@@ -449,6 +459,9 @@ defmodule TymeslotWeb.DashboardLive do
   def handle_info({:event_video_result, result}, socket),
     do: CalendarEventHandlers.handle_event_video_result(result, socket)
 
+  def handle_info({:event_writes_released, release}, socket),
+    do: CalendarEventHandlers.handle_event_writes_released(release, socket)
+
   def handle_info({:execute_create_event, payload}, socket),
     do: CalendarEventHandlers.handle_execute_create_event(payload, socket)
 
@@ -463,6 +476,15 @@ defmodule TymeslotWeb.DashboardLive do
       result
       |> CalendarEventHandlers.handle_create_ad_hoc_meeting_result(socket)
       |> rebuild_agenda()
+
+  def handle_info({:execute_ics_import, payload}, socket),
+    do: CalendarEventHandlers.handle_execute_ics_import(payload, socket)
+
+  def handle_info({:ics_import_progress, done}, socket),
+    do: CalendarEventHandlers.handle_ics_import_progress(done, socket)
+
+  def handle_info({:ics_import_result, result}, socket),
+    do: CalendarEventHandlers.handle_ics_import_result(result, socket)
 
   def handle_info({:execute_delete_event, payload}, socket),
     do: CalendarEventHandlers.handle_execute_delete_event(payload, socket)

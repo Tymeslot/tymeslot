@@ -101,6 +101,18 @@ REQUIRED_TOKENS=(
   "--status-ink"
   "--status-ink-soft"
   "--status-ink-hint"
+  # The seat badge's traffic light (shared/components/slot-list.css): each
+  # theme picks its own colours for it.
+  "--seat-green"
+  "--seat-green-bg"
+  "--seat-amber"
+  "--seat-amber-bg"
+  "--seat-red"
+  "--seat-red-bg"
+  "--seat-neutral"
+  "--seat-neutral-bg"
+  "--seat-selected"
+  "--seat-selected-bg"
   # Tokens the shared component styles (shared/components/*.css) read.
   "--approval-icon-surface"
   "--approval-notice-font-size"

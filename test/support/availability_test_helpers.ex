@@ -7,6 +7,7 @@ defmodule Tymeslot.AvailabilityTestHelpers do
 
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Availability.AvailabilityScheduleSchema
+  alias Tymeslot.Availability.Offer
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
   alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.MeetingTestHelpers
@@ -19,7 +20,9 @@ defmodule Tymeslot.AvailabilityTestHelpers do
   }
 
   # Narrower window (11:00–17:00) used by the display/booking consistency tests;
-  # deliberately away from the day boundary so timezone conversions never clip.
+  # deliberately away from the day boundary so a booker's midnight never cuts
+  # the window, which keeps the existing property about rules rather than day
+  # boundaries; `OvernightDisplayBookingPropertyTest` covers those.
   @bookable_day_attrs %{
     is_available: true,
     start_time: ~T[11:00:00],
@@ -166,5 +169,20 @@ defmodule Tymeslot.AvailabilityTestHelpers do
       7 -> Date.add(date, 1)
       _weekday -> date
     end
+  end
+
+  @doc """
+  The times the booking page offers, through its own pipeline.
+  """
+  @spec offered(ProfileSchema.t(), Date.t(), String.t() | integer(), keyword()) :: [map()]
+  def offered(profile, date, duration, opts \\ []) do
+    request = %{
+      profile: profile,
+      user_timezone: Keyword.get(opts, :timezone, profile.timezone),
+      meeting_type: Keyword.get(opts, :meeting_type)
+    }
+
+    {:ok, slots} = Offer.slots_for_date(request, Date.to_iso8601(date), duration)
+    slots
   end
 end

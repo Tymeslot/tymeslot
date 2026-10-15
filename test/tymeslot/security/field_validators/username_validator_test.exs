@@ -108,6 +108,30 @@ defmodule Tymeslot.Security.FieldValidators.UsernameValidatorTest do
       assert browser_accepts?("user_7_a1b2")
     end
 
+    test "is valid under the v flag browsers compile pattern with" do
+      # Chromium and Firefox compile `pattern` as `new RegExp(p, "v")`. In that
+      # mode a hyphen inside a class must be escaped unless it forms a range;
+      # an invalid pattern is logged and the browser silently skips the check.
+      assert UsernameValidator.html_pattern() == "[a-z0-9][a-z0-9_\\-]*"
+
+      class_bodies =
+        ~r/\[((?:\\.|[^\]\\])*)\]/
+        |> Regex.scan(UsernameValidator.html_pattern(), capture: :all_but_first)
+        |> List.flatten()
+
+      assert length(class_bodies) == 2
+
+      bare_hyphens =
+        Enum.filter(class_bodies, fn body ->
+          body
+          |> String.replace(~r/\\./, "")
+          |> String.replace(~r/[a-z0-9]-[a-z0-9]/i, "")
+          |> String.contains?("-")
+        end)
+
+      assert bare_hyphens == []
+    end
+
     defp browser_accepts?(username) do
       # `pattern` is implicitly anchored at both ends by the HTML spec.
       Regex.match?(~r/^(?:#{UsernameValidator.html_pattern()})$/, username)

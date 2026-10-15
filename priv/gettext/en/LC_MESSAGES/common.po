@@ -31,7 +31,7 @@ msgstr ""
 msgid "Browser Not Supported"
 msgstr ""
 
-#: lib/tymeslot_web/components/confirmation_modal.ex
+#: lib/tymeslot_web/components/core_components/modal.ex
 #: lib/tymeslot_web/components/dashboard/meetings/add_guests_modal.ex
 #: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
@@ -54,7 +54,7 @@ msgstr ""
 msgid "Close modal"
 msgstr ""
 
-#: lib/tymeslot_web/components/confirmation_modal.ex
+#: lib/tymeslot_web/components/core_components/modal.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm"
 msgstr ""
@@ -94,7 +94,6 @@ msgstr ""
 msgid "Password must contain:"
 msgstr ""
 
-#: lib/tymeslot_web/components/confirmation_modal.ex
 #: lib/tymeslot_web/components/core_components/buttons.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
@@ -121,11 +120,6 @@ msgstr ""
 msgid "Select timezone"
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/navigation.ex
-#, elixir-autogen, elixir-format
-msgid "Tabs"
-msgstr ""
-
 #: lib/tymeslot_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "This %{context} requires a modern browser with ES module support. Please upgrade to the latest version of Chrome, Firefox, Safari, or Edge."
@@ -146,11 +140,6 @@ msgstr ""
 msgid "Tymeslot logo"
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/layout.ex
-#, elixir-autogen, elixir-format
-msgid "Tymeslot team"
-msgstr ""
-
 #: lib/tymeslot_web/components/timezone_dropdown.ex
 #, elixir-autogen, elixir-format
 msgid "Your Timezone"
@@ -169,11 +158,6 @@ msgstr ""
 #: lib/tymeslot_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "scheduling page"
-msgstr ""
-
-#: lib/tymeslot_web/components/core_components/layout.ex
-#, elixir-autogen, elixir-format
-msgid "Made with %{heart} by the %{team}"
 msgstr ""
 
 #: lib/tymeslot_web/components/site_components.ex
@@ -249,6 +233,136 @@ msgstr ""
 #: lib/tymeslot_web/components/timezone_dropdown.ex
 #, elixir-autogen, elixir-format
 msgid "Search timezones"
+msgstr ""
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} day"
+msgid_plural "%{count} days"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} hour"
+msgid_plural "%{count} hours"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} minute"
+msgid_plural "%{count} minutes"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{label} before"
+msgstr ""
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "1 hour before"
+msgstr ""
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "30 min. before"
+msgstr ""
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Add"
+msgstr ""
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Add Custom"
+msgstr ""
+
+#: lib/tymeslot_web/components/shared/reminder_picker_state.ex
+#, elixir-autogen, elixir-format
+msgid "Added %{label} before"
+msgstr ""
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel Custom"
+msgstr ""
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Days"
+msgstr ""
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Hours"
+msgstr ""
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Maximum of %{count} reminder allowed"
+msgid_plural "Maximum of %{count} reminders allowed"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Minutes"
+msgstr ""
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "No reminders configured."
+msgstr ""
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder value is required"
+msgstr ""
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder value must be a positive number"
+msgstr ""
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders"
+msgstr ""
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders cannot be set for more than 1 year in advance"
+msgstr ""
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Remove reminder"
+msgstr ""
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Select a valid reminder unit"
+msgstr ""
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "This reminder already exists"
+msgstr ""
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "You can configure up to %{count} reminder"
+msgid_plural "You can configure up to %{count} reminders"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/components/core_components/feedback.ex
+#, elixir-autogen, elixir-format
+msgid "Loading"
 msgstr ""
 
 #: lib/tymeslot/custom_fields/answer_renderer.ex

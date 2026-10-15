@@ -13,7 +13,7 @@ defmodule TymeslotWeb.Themes.Quill.Poll.Voting do
   alias TymeslotWeb.Themes.Quill.Scheduling.Wrapper
   alias TymeslotWeb.Themes.Shared.PollVotingComponents
 
-  import TymeslotWeb.Components.CoreComponents, only: [glass_morphism_card: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [glass_morphism_card: 1]
 
   attr :theme_tokens, :any, required: true
   attr :locale, :string, required: true

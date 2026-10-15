@@ -35,6 +35,25 @@ defmodule Tymeslot.Utils.TimeRangePropertyTest do
     end
   end
 
+  # A bookable-looking slot: 15 minutes to two hours long.
+  defp slot_gen do
+    gen all(start_dt <- datetime_gen(), length <- integer(15..120)) do
+      {start_dt, DateTime.add(start_dt, length, :minute)}
+    end
+  end
+
+  # Busy events within six hours either side of `anchor`, so a good share of
+  # them land inside or next to a slot's buffers rather than months away.
+  defp nearby_events_gen(anchor) do
+    event =
+      gen all(offset <- integer(-360..360), length <- integer(1..180)) do
+        start_time = DateTime.add(anchor, offset, :minute)
+        %{start_time: start_time, end_time: DateTime.add(start_time, length, :minute)}
+      end
+
+    list_of(event, max_length: 4)
+  end
+
   # -- Properties --
 
   describe "overlaps?/4" do
@@ -83,34 +102,123 @@ defmodule Tymeslot.Utils.TimeRangePropertyTest do
     end
   end
 
-  describe "add_buffer/3" do
-    property "expands the range (start moves earlier, end moves later)" do
+  describe "add_buffer/4" do
+    property "moves the start earlier by the first amount and the end later by the second" do
       check all(
               {start_dt, end_dt} <- ordered_datetime_pair_gen(),
+              buffer_before <- integer(0..120),
+              buffer_after <- integer(0..120)
+            ) do
+        {padded_start, padded_end} =
+          TimeRange.add_buffer(start_dt, end_dt, buffer_before, buffer_after)
+
+        assert DateTime.diff(start_dt, padded_start, :second) == buffer_before * 60
+        assert DateTime.diff(padded_end, end_dt, :second) == buffer_after * 60
+      end
+    end
+
+    property "zero buffers return the original range" do
+      check all({start_dt, end_dt} <- ordered_datetime_pair_gen()) do
+        assert TimeRange.add_buffer(start_dt, end_dt, 0, 0) == {start_dt, end_dt}
+      end
+    end
+  end
+
+  describe "has_conflict_with_events?/4" do
+    # The oracles below never pad the candidate. Padding the candidate by
+    # `before` and `after` is the same, per event, as padding the event by
+    # `after` in front and `before` behind, so they check the rule from the
+    # other side instead of restating the implementation.
+
+    property "a slot conflicts iff [start - before, end + after] overlaps an event" do
+      check all(
+              {slot_start, slot_end} <- slot_gen(),
+              events <- nearby_events_gen(slot_start),
+              buffer_before <- integer(0..120),
+              buffer_after <- integer(0..120)
+            ) do
+        expected =
+          Enum.any?(events, fn event ->
+            TimeRange.overlaps?(
+              slot_start,
+              slot_end,
+              DateTime.add(event.start_time, -buffer_after, :minute),
+              DateTime.add(event.end_time, buffer_before, :minute)
+            )
+          end)
+
+        assert TimeRange.has_conflict_with_events?(
+                 slot_start,
+                 slot_end,
+                 events,
+                 {buffer_before, buffer_after}
+               ) == expected
+      end
+    end
+
+    property "an event after the slot blocks it only through the after-buffer" do
+      check all(
+              {slot_start, slot_end} <- slot_gen(),
+              gap <- integer(0..180),
+              buffer_before <- integer(0..120),
+              buffer_after <- integer(0..120)
+            ) do
+        event_start = DateTime.add(slot_end, gap, :minute)
+        event = %{start_time: event_start, end_time: DateTime.add(event_start, 30, :minute)}
+
+        assert TimeRange.has_conflict_with_events?(
+                 slot_start,
+                 slot_end,
+                 [event],
+                 {buffer_before, buffer_after}
+               ) == gap < buffer_after
+      end
+    end
+
+    property "an event before the slot blocks it only through the before-buffer" do
+      check all(
+              {slot_start, slot_end} <- slot_gen(),
+              gap <- integer(0..180),
+              buffer_before <- integer(0..120),
+              buffer_after <- integer(0..120)
+            ) do
+        event_end = DateTime.add(slot_start, -gap, :minute)
+        event = %{start_time: DateTime.add(event_end, -30, :minute), end_time: event_end}
+
+        assert TimeRange.has_conflict_with_events?(
+                 slot_start,
+                 slot_end,
+                 [event],
+                 {buffer_before, buffer_after}
+               ) == gap < buffer_before
+      end
+    end
+
+    # The migration copies each schedule's old buffer into both new ones and
+    # promises that no offered slot changes. That holds only if an equal pair
+    # blocks exactly what padding every event by that amount used to.
+    property "equal buffers block exactly what the old symmetric rule blocked" do
+      check all(
+              {slot_start, slot_end} <- slot_gen(),
+              events <- nearby_events_gen(slot_start),
               buffer <- integer(0..120)
             ) do
-        {buffered_start, buffered_end} = TimeRange.add_buffer(start_dt, end_dt, buffer)
+        old_rule =
+          Enum.any?(events, fn event ->
+            TimeRange.overlaps?(
+              slot_start,
+              slot_end,
+              DateTime.add(event.start_time, -buffer, :minute),
+              DateTime.add(event.end_time, buffer, :minute)
+            )
+          end)
 
-        assert DateTime.compare(buffered_start, start_dt) != :gt
-        assert DateTime.compare(buffered_end, end_dt) != :lt
-      end
-    end
-
-    property "zero buffer returns the original range" do
-      check all({start_dt, end_dt} <- ordered_datetime_pair_gen()) do
-        assert TimeRange.add_buffer(start_dt, end_dt, 0) == {start_dt, end_dt}
-      end
-    end
-
-    property "buffer expansion is exact" do
-      check all(
-              {start_dt, end_dt} <- ordered_datetime_pair_gen(),
-              buffer <- integer(1..120)
-            ) do
-        {buffered_start, buffered_end} = TimeRange.add_buffer(start_dt, end_dt, buffer)
-
-        assert DateTime.diff(start_dt, buffered_start, :second) == buffer * 60
-        assert DateTime.diff(buffered_end, end_dt, :second) == buffer * 60
+        assert TimeRange.has_conflict_with_events?(
+                 slot_start,
+                 slot_end,
+                 events,
+                 {buffer, buffer}
+               ) == old_rule
       end
     end
   end

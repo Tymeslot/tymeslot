@@ -2,7 +2,9 @@ defmodule Tymeslot.ThemeCustomizationsStorageTest do
   use Tymeslot.DataCase, async: false
   @moduletag :utils
 
+  alias Tymeslot.Test.MediaFixtures
   alias Tymeslot.ThemeCustomizations.Storage
+  alias Tymeslot.ThemeCustomizations.Validation
 
   setup do
     upload_root =
@@ -20,7 +22,13 @@ defmodule Tymeslot.ThemeCustomizationsStorageTest do
     %{upload_root: upload_root}
   end
 
-  # GIF magic bytes, which MediaValidator accepts as an image.
+  # A real image and a real video, which the metadata strippers can read to
+  # the end; a stored file has been through them.
+  defp image_file, do: MediaFixtures.temp_copy!("gps.png")
+  defp video_file, do: MediaFixtures.temp_copy!("gps.mp4")
+
+  # GIF magic bytes, which MediaValidator accepts as an image, over content
+  # no decoder can read.
   defp gif_file, do: temp_file("GIF89a" <> "fake image data")
 
   # PNG magic bytes: 89 50 4E 47 0D 0A 1A 0A
@@ -99,11 +107,11 @@ defmodule Tymeslot.ThemeCustomizationsStorageTest do
       original_dir = Application.get_env(:tymeslot, :upload_directory)
       Application.put_env(:tymeslot, :upload_directory, readonly)
 
-      temp_file = gif_file()
+      temp_file = MediaFixtures.temp_copy!("gps.webp")
 
       try do
         assert {:error, :eacces} =
-                 Storage.store_asset(:image, 1, "1", %{path: temp_file, filename: "bg.jpg"})
+                 Storage.store_asset(:image, 1, "1", %{path: temp_file, filename: "bg.webp"})
       after
         Application.put_env(:tymeslot, :upload_directory, original_dir)
         File.chmod!(readonly, 0o755)
@@ -133,15 +141,15 @@ defmodule Tymeslot.ThemeCustomizationsStorageTest do
 
     test "store_asset/4 stores an image under the theme's images directory" do
       assert {:ok, stored_path} =
-               Storage.store_asset(:image, 1, "1", %{path: gif_file(), filename: "test.jpg"})
+               Storage.store_asset(:image, 1, "1", %{path: image_file(), filename: "test.png"})
 
-      assert stored_path =~ ~r|\Athemes/1/1/images/[0-9a-f]{12}-test\.jpg\z|
+      assert stored_path =~ ~r|\Athemes/1/1/images/[0-9a-f]{12}-test\.png\z|
       assert File.exists?(Storage.build_theme_file_path(stored_path))
     end
 
     test "store_asset/4 stores a video under the theme's videos directory" do
       assert {:ok, stored_path} =
-               Storage.store_asset(:video, 1, "2", %{path: mp4_file(), filename: "test.mp4"})
+               Storage.store_asset(:video, 1, "2", %{path: video_file(), filename: "test.mp4"})
 
       assert stored_path =~ ~r|\Athemes/1/2/videos/[0-9a-f]{12}-test\.mp4\z|
       assert File.exists?(Storage.build_theme_file_path(stored_path))
@@ -150,8 +158,9 @@ defmodule Tymeslot.ThemeCustomizationsStorageTest do
     test "store_asset/4 gives two uploads of the same name paths of their own" do
       # Otherwise the second upload overwrites a file a setting still names,
       # and deleting either path would delete both.
-      {:ok, first} = Storage.store_asset(:image, 1, "1", %{path: gif_file(), filename: "bg.png"})
-      {:ok, second} = Storage.store_asset(:image, 1, "1", %{path: gif_file(), filename: "bg.png"})
+      upload = fn -> %{path: image_file(), filename: "bg.png"} end
+      {:ok, first} = Storage.store_asset(:image, 1, "1", upload.())
+      {:ok, second} = Storage.store_asset(:image, 1, "1", upload.())
 
       assert first != second
       assert File.exists?(Storage.build_theme_file_path(first))
@@ -160,10 +169,32 @@ defmodule Tymeslot.ThemeCustomizationsStorageTest do
 
     test "store_asset/4 keeps the prefix when the client name carries a directory" do
       {:ok, stored_path} =
-        Storage.store_asset(:image, 1, "1", %{path: gif_file(), filename: "../photos/bg.png"})
+        Storage.store_asset(:image, 1, "1", %{path: image_file(), filename: "../photos/bg.png"})
 
       assert Path.basename(stored_path) =~ ~r|\A[0-9a-f]{12}-bg\.png\z|
       assert Path.dirname(stored_path) == "themes/1/1/images"
+    end
+
+    # The media URL is built through `Validation.sanitize_path/1`; a stored
+    # name it would rewrite is served under a name no file has, and 404s.
+    for {filename, stem} <- [
+          {"photo (1).jpg", "photo__1_"},
+          {"a..b.png", "a__b"},
+          {"café.png", "caf__"}
+        ] do
+      test "store_asset/4 stores #{inspect(filename)} under a name its URL keeps" do
+        {:ok, stored_path} =
+          Storage.store_asset(:image, 1, "1", %{path: image_file(), filename: unquote(filename)})
+
+        extension = Path.extname(unquote(filename))
+
+        assert Path.basename(stored_path) =~
+                 ~r/\A[0-9a-f]{12}-#{unquote(stem)}#{Regex.escape(extension)}\z/
+
+        assert Validation.sanitize_path(stored_path) == stored_path
+
+        assert File.exists?(Storage.build_theme_file_path(Validation.sanitize_path(stored_path)))
+      end
     end
 
     test "store_asset/4 shortens a long client name to fit, keeping its extension" do
@@ -172,7 +203,7 @@ defmodule Tymeslot.ThemeCustomizationsStorageTest do
       filename = String.duplicate("a", 246) <> ".png"
 
       {:ok, stored_path} =
-        Storage.store_asset(:image, 1, "1", %{path: gif_file(), filename: filename})
+        Storage.store_asset(:image, 1, "1", %{path: image_file(), filename: filename})
 
       stored_name = Path.basename(stored_path)
 
@@ -188,7 +219,7 @@ defmodule Tymeslot.ThemeCustomizationsStorageTest do
         filename = String.duplicate("a", unquote(stem_bytes)) <> ".png"
 
         {:ok, stored_path} =
-          Storage.store_asset(:image, 1, "1", %{path: gif_file(), filename: filename})
+          Storage.store_asset(:image, 1, "1", %{path: image_file(), filename: filename})
 
         stored_name = Path.basename(stored_path)
 
@@ -196,6 +227,48 @@ defmodule Tymeslot.ThemeCustomizationsStorageTest do
         assert byte_size(stored_name) == 255
         assert File.exists?(Storage.build_theme_file_path(stored_path))
       end
+    end
+
+    test "store_asset/4 stores an image without its EXIF location" do
+      assert {:ok, stored_path} =
+               Storage.store_asset(:image, 1, "1", %{
+                 path: MediaFixtures.temp_copy!("gps.webp"),
+                 filename: "bg.webp"
+               })
+
+      contents = stored_path |> Storage.build_theme_file_path() |> File.read!()
+      assert MediaFixtures.image_metadata_fields(contents) == []
+      refute contents =~ "Model-X"
+    end
+
+    test "store_asset/4 refuses a file that only has image magic bytes" do
+      assert Storage.store_asset(:image, 1, "1", %{path: gif_file(), filename: "bg.png"}) ==
+               {:error, :invalid_image_format}
+
+      assert uploaded_files() == []
+    end
+
+    test "store_asset/4 stores a video without its location" do
+      assert {:ok, stored_path} =
+               Storage.store_asset(:video, 1, "1", %{
+                 path: MediaFixtures.temp_copy!("gps.mp4"),
+                 filename: "test.mp4"
+               })
+
+      stored = stored_path |> Storage.build_theme_file_path() |> File.read!()
+      assert byte_size(stored) == byte_size(MediaFixtures.read!("gps.mp4"))
+      refute stored =~ <<0xA9, "xyz">>
+      refute stored =~ "location.ISO6709"
+    end
+
+    test "store_asset/4 refuses a video container whose metadata cannot be stripped" do
+      # AVI passes the magic-byte check but is neither MP4 nor WebM.
+      avi = temp_file("RIFF" <> <<100::little-32>> <> "AVI LIST")
+
+      assert Storage.store_asset(:video, 1, "1", %{path: avi, filename: "clip.mp4"}) ==
+               {:error, :invalid_video_format}
+
+      assert uploaded_files() == []
     end
   end
 
@@ -227,7 +300,7 @@ defmodule Tymeslot.ThemeCustomizationsStorageTest do
 
     test "keeps an allowed extension, lower-cased" do
       assert {:ok, stored_path} =
-               Storage.store_asset(:image, 1, "1", %{path: gif_file(), filename: "BG.PNG"})
+               Storage.store_asset(:image, 1, "1", %{path: image_file(), filename: "BG.PNG"})
 
       assert stored_path =~ ~r|\Athemes/1/1/images/[0-9a-f]{12}-BG\.png\z|
     end

@@ -46,6 +46,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.AmbientTest do
     socket =
       socket(%{
         user_timezone: "Europe/Tallinn",
+        week_start: :monday,
         calendar_today: ~D[2027-01-31],
         current_year: 2027,
         current_month: 1,

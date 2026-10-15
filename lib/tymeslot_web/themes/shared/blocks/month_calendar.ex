@@ -1,9 +1,10 @@
 defmodule TymeslotWeb.Themes.Shared.Blocks.MonthCalendar do
   @moduledoc """
   A month of days to pick the slot's date from: the month's name between
-  previous and next month controls, the weekday headers (Sunday first, as the
-  availability window is laid out) and one button per day of the window
-  (`CalendarHelpers.get_calendar_days/6`, trailing weeks wholly in the next
+  previous and next month controls, the weekday headers (starting on
+  `first_day`, the flow's `:week_start`, as the availability window is laid
+  out) and one button per day of the window
+  (`CalendarHelpers.get_calendar_days/7`, trailing weeks wholly in the next
   month trimmed).
 
   It is the behaviour of Quill's month grid without its look. A day is a
@@ -31,7 +32,7 @@ defmodule TymeslotWeb.Themes.Shared.Blocks.MonthCalendar do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.CoreComponents, only: [icon: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
   alias TymeslotWeb.Live.Scheduling.{CalendarHelpers, CalendarNavigation}
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -39,6 +40,12 @@ defmodule TymeslotWeb.Themes.Shared.Blocks.MonthCalendar do
   attr :current_year, :integer, required: true
   attr :current_month, :integer, required: true
   attr :user_timezone, :string, required: true
+
+  attr :first_day, :atom,
+    required: true,
+    values: [:monday, :sunday],
+    doc: "the day the weeks start on, the flow's `:week_start`"
+
   attr :selected_date, :string, default: nil
   attr :availability_status, :atom, default: :not_loaded
   attr :booking_window_days, :integer, default: nil
@@ -96,7 +103,10 @@ defmodule TymeslotWeb.Themes.Shared.Blocks.MonthCalendar do
         </button>
       </div>
       <div class="month-calendar__weekdays" aria-hidden="true">
-        <span :for={weekday <- LocalizationHelpers.weekday_headers()} class="month-calendar__weekday">
+        <span
+          :for={weekday <- LocalizationHelpers.weekday_headings(@first_day)}
+          class="month-calendar__weekday"
+        >
           {weekday}
         </span>
       </div>
@@ -132,13 +142,14 @@ defmodule TymeslotWeb.Themes.Shared.Blocks.MonthCalendar do
     """
   end
 
-  @doc "The flow's days for the month shown, as `CalendarHelpers.get_calendar_days/6` builds them."
+  @doc "The flow's days for the month shown, as `CalendarHelpers.get_calendar_days/7` builds them."
   @spec days(map()) :: [map()]
   def days(assigns) do
     CalendarHelpers.get_calendar_days(
       assigns.user_timezone,
       assigns.current_year,
       assigns.current_month,
+      assigns.first_day,
       assigns.organizer_profile,
       assigns.month_availability_map,
       assigns.meeting_type

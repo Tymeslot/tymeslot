@@ -29,9 +29,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploads do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [allow_upload: 3, consume_uploaded_entries: 3, send_update: 3]
 
+  alias Tymeslot.Media.UploadConstraints
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.ThemeCustomizations
-  alias TymeslotWeb.Helpers.UploadConstraints
+  alias TymeslotWeb.Helpers.ImageUploadErrors
   alias TymeslotWeb.Live.Shared.Flash
 
   # Five uploads per ten minutes, shared across every field: video encoding is
@@ -147,8 +148,15 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploads do
         Flash.info(success_message(field))
         assign(socket, :customization, customization)
 
-      [{:error, message}] ->
+      [{:error, message}] when is_binary(message) ->
         Flash.error(message)
+        socket
+
+      [{:error, reason}] ->
+        Flash.error(
+          ImageUploadErrors.message(reason) || dgettext("dashboard_appearance", "Upload failed")
+        )
+
         socket
 
       [] ->

@@ -26,6 +26,7 @@ defmodule Tymeslot.Meetings.Guests do
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Repo
   alias Tymeslot.Security.FieldValidators.EmailValidator
 
@@ -88,20 +89,24 @@ defmodule Tymeslot.Meetings.Guests do
 
   def create_for_meeting(meeting_id, emails, invited_by)
       when is_binary(meeting_id) and is_list(emails) and invited_by in [:booker, :organizer] do
-    result =
-      Enum.reduce_while(emails, {:ok, []}, fn email, {:ok, acc} ->
-        attrs = %{meeting_id: meeting_id, email: email, invited_by: invited_by}
+    insert_guests(%{meeting_id: meeting_id, invited_by: invited_by}, emails)
+  end
 
-        case GuestQueries.insert_guest(attrs) do
-          {:ok, guest} -> {:cont, {:ok, [guest | acc]}}
-          {:error, changeset} -> {:halt, {:error, changeset}}
-        end
-      end)
+  @doc """
+  Inserts sanitised guest emails for a group-booking participant.
 
-    case result do
-      {:ok, guests} -> {:ok, Enum.reverse(guests)}
-      error -> error
-    end
+  Guests belong to the participant who added them and count towards the
+  meeting's seats. Intended to run inside the seat-booking transaction so a
+  failure rolls the whole seat back.
+  """
+  @spec create_for_participant(binary(), binary(), [String.t()]) ::
+          {:ok, [GuestSchema.t()]} | {:error, Ecto.Changeset.t()}
+  def create_for_participant(_meeting_id, _participant_id, []), do: {:ok, []}
+
+  def create_for_participant(meeting_id, participant_id, emails)
+      when is_binary(meeting_id) and is_binary(participant_id) and is_list(emails) do
+    attrs = %{meeting_id: meeting_id, participant_id: participant_id, invited_by: :booker}
+    insert_guests(attrs, emails)
   end
 
   @doc """
@@ -109,7 +114,10 @@ defmodule Tymeslot.Meetings.Guests do
 
   Scoped to the organiser: a meeting `organizer_user_id` does not own is
   `{:error, :not_found}`, exactly as one that does not exist. The meeting must
-  still be open to guests (`invitations_open?/1`), or `{:error, :closed}`.
+  still be open to guests (`invitations_open?/1`), or `{:error, :closed}`. A
+  group meeting is always `{:error, :closed}` here: its guests belong to the
+  participant who brought them and each takes one of the slot's seats, so a
+  guest the host adds with no participant would bypass the seat count.
 
   This is the host's own path. The meeting type's `allow_guests` decides what
   the *booker* may do on the public form, and says nothing about whom the host
@@ -157,8 +165,17 @@ defmodule Tymeslot.Meetings.Guests do
       DateTime.after?(meeting.start_time, Clock.utc_now())
   end
 
+  @doc """
+  Whether the host may add guests to this meeting (`invite_for_organizer/3`):
+  it is open to guests and is not a group meeting, whose guests are brought by
+  its participants and counted against its seats.
+  """
+  @spec host_can_invite?(MeetingSchema.t()) :: boolean()
+  def host_can_invite?(meeting),
+    do: not MeetingSchema.group?(meeting) and invitations_open?(meeting)
+
   defp ensure_open(meeting) do
-    if invitations_open?(meeting), do: :ok, else: {:error, :closed}
+    if host_can_invite?(meeting), do: :ok, else: {:error, :closed}
   end
 
   defp add_to_meeting(meeting, emails) do
@@ -186,15 +203,18 @@ defmodule Tymeslot.Meetings.Guests do
   @doc """
   Looks up the open invitation behind an RSVP token without mutating anything.
 
-  Returns the guest with its `:meeting` preloaded. Returns
-  `{:error, :not_found}` for an unknown token and `{:error, :meeting_closed}`
+  Returns the guest with its `:meeting` and `:participant` (the group-booking
+  participant who invited them, or `nil`) preloaded. Returns
+  `{:error, :not_found}` for an unknown token, or for a guest whose group
+  booking participant has cancelled their seat, and `{:error, :meeting_closed}`
   when the meeting no longer takes responses (see the module doc).
   """
   @spec get_open_invitation(String.t()) ::
           {:ok, GuestSchema.t()} | {:error, :not_found | :meeting_closed}
   def get_open_invitation(token) do
-    with {:ok, guest} <- GuestQueries.get_by_token(token) do
-      guest = Repo.preload(guest, :meeting)
+    with {:ok, guest} <- GuestQueries.get_by_token(token),
+         :ok <- ensure_participant_open(guest) do
+      guest = Repo.preload(guest, [:meeting, :participant])
 
       if invitations_open?(guest.meeting), do: {:ok, guest}, else: {:error, :meeting_closed}
     end
@@ -224,6 +244,20 @@ defmodule Tymeslot.Meetings.Guests do
 
   def record_rsvp(_token, _response), do: {:error, :invalid_response}
 
+  # A guest brought by a group-booking participant loses their invitation when
+  # that participant cancels their seat, even though the meeting carries on.
+  # The voided link answers :not_found, so the public page shows the same
+  # invalid-link screen as a bad token.
+  defp ensure_participant_open(%{participant_id: nil}), do: :ok
+
+  defp ensure_participant_open(%{participant_id: participant_id}) do
+    case ParticipantQueries.get(participant_id) do
+      {:ok, %{cancelled_at: nil}} -> :ok
+      {:ok, _cancelled} -> {:error, :not_found}
+      {:error, :not_found} -> {:error, :not_found}
+    end
+  end
+
   @doc """
   Subscribes the calling process to RSVP updates on the meetings organised by
   `user_id`. Subscribers receive `{:guest_rsvp_updated, meeting_id}`.
@@ -245,6 +279,21 @@ defmodule Tymeslot.Meetings.Guests do
       |> Map.update!(:total, &(&1 + 1))
       |> Map.update!(GuestSchema.status_key(status), &(&1 + 1))
     end)
+  end
+
+  defp insert_guests(base_attrs, emails) do
+    result =
+      Enum.reduce_while(emails, {:ok, []}, fn email, {:ok, acc} ->
+        case GuestQueries.insert_guest(Map.put(base_attrs, :email, email)) do
+          {:ok, guest} -> {:cont, {:ok, [guest | acc]}}
+          {:error, changeset} -> {:halt, {:error, changeset}}
+        end
+      end)
+
+    case result do
+      {:ok, guests} -> {:ok, Enum.reverse(guests)}
+      error -> error
+    end
   end
 
   defp broadcast_rsvp_update(%{organizer_user_id: user_id, id: meeting_id})

@@ -70,7 +70,7 @@ defmodule Tymeslot.CustomFields.AnswerRendererTest do
 
     test "a date answer is written out in English" do
       Gettext.with_locale(TymeslotWeb.Gettext, "en", fn ->
-        assert "January 19, 2027" = AnswerRenderer.render(%{"type" => "date"}, "2027-01-19")
+        assert "19 January 2027" = AnswerRenderer.render(%{"type" => "date"}, "2027-01-19")
       end)
     end
 

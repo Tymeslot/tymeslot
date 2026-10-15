@@ -155,6 +155,7 @@ defmodule Tymeslot.Demo.Behaviour do
               user_timezone :: String.t(),
               year :: integer(),
               month :: integer(),
+              week_start :: :monday | :sunday,
               organizer_profile :: map(),
               availability_map :: map() | atom() | nil
             ) :: [map()]

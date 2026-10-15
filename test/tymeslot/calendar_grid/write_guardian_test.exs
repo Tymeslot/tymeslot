@@ -60,6 +60,112 @@ defmodule Tymeslot.CalendarGrid.WriteGuardianTest do
              ProviderCalendarEventQueries.get_by_uid(google.id, event.uid)
   end
 
+  describe "a guardian lending events to a grid mounted in another LiveView" do
+    setup %{user: user} do
+      google = insert(:calendar_integration, user: user, provider: "google")
+      event = cached_event(google, "google")
+
+      {queue, [{:start, _running, _event}]} =
+        WriteQueue.update(WriteQueue.new(), event, %{summary: "Renamed"}, [])
+
+      owner = other_live_view(user, queue)
+      lender = WriteGuardian.whereis(owner)
+      key = {event.calendar_integration_id, event.uid}
+
+      # The test process is the grid mounted in a new LiveView.
+      assert WriteQueue.pending_keys(WriteGuardian.adopt(WriteQueue.new(), user.id)) == [key]
+
+      {:ok, owner: owner, lender: lender, key: key}
+    end
+
+    test "killed outright, it still releases the event it lends", %{lender: lender, key: key} do
+      Process.exit(lender, :kill)
+
+      assert_receive {:event_writes_released, {^lender, ^key, :unknown}}, 1_000
+    end
+
+    test "killed after releasing the event, nothing more is released", %{
+      user: user,
+      owner: owner,
+      lender: lender,
+      key: key
+    } do
+      # Its LiveView's write answered: the queue is empty, and the event released.
+      run_in(owner, fn -> WriteGuardian.mirror(WriteQueue.new(), user.id) end)
+
+      assert_receive {:event_writes_released, {^lender, ^key, {:ok, %{summary: "Standup"}}}},
+                     1_000
+
+      ref = Process.monitor(lender)
+      Process.exit(lender, :kill)
+      assert_receive {:DOWN, ^ref, :process, ^lender, :killed}, 1_000
+
+      refute_receive {:event_writes_released, _release}, 200
+    end
+  end
+
+  describe "a grid mounting while another guardian is held up" do
+    # A guardian held up (stopping, saving what it can) must not hold up the
+    # grid mounting for each such guardian in turn; the grid still waits
+    # for the events every guardian that answers lends it.
+    test "waits for the others together, and still borrows from those that answer", %{
+      user: user
+    } do
+      google = insert(:calendar_integration, user: user, provider: "google")
+      event = cached_event(google, "google")
+
+      {queue, [{:start, _running, _event}]} =
+        WriteQueue.update(WriteQueue.new(), event, %{summary: "Renamed"}, [])
+
+      _answering = other_live_view(user, queue)
+      held_up = for _n <- 1..2, do: WriteGuardian.whereis(other_live_view(user, queue))
+      Enum.each(held_up, &:sys.suspend/1)
+      on_exit(fn -> Enum.each(held_up, &:sys.resume/1) end)
+
+      started = System.monotonic_time(:millisecond)
+      adopted = WriteGuardian.adopt(WriteQueue.new(), user.id)
+      waited = System.monotonic_time(:millisecond) - started
+
+      assert WriteQueue.pending_keys(adopted) == [{google.id, event.uid}]
+      # Two seconds for all of them, not for each in turn.
+      assert waited < 3_500
+
+      assert %{level: :warning} =
+               LogCapture.await_log("did not say what it lends in time")
+    end
+  end
+
+  # A LiveView of the same organiser, still alive, whose guardian mirrors
+  # `queue`.
+  defp other_live_view(user, queue) do
+    test = self()
+
+    owner =
+      spawn_link(fn ->
+        :ok = WriteGuardian.mirror(queue, user.id)
+        send(test, :mirrored)
+        serve()
+      end)
+
+    assert_receive :mirrored, 1_000
+    # The mirror is a cast; a call behind it makes sure it has landed.
+    _state = :sys.get_state(WriteGuardian.whereis(owner))
+    owner
+  end
+
+  defp serve do
+    receive do
+      {:run, fun, from} ->
+        send(from, {:ran, fun.()})
+        serve()
+    end
+  end
+
+  defp run_in(owner, fun) do
+    send(owner, {:run, fun, self()})
+    assert_receive {:ran, _result}, 1_000
+  end
+
   defp cached_event(integration, provider) do
     insert(:provider_calendar_event,
       calendar_integration: integration,

@@ -2,233 +2,201 @@
    FORM COMPONENTS
    =================================== */
 
-/* Input Fields - Modern Branding */
-.input {
-  @apply block w-full text-sm font-medium text-slate-900 bg-slate-50/50 border-2 border-slate-100 rounded-2xl transition-all duration-300;
-  @apply focus:outline-hidden focus:border-turquoise-400 focus:bg-white focus:shadow-xl focus:shadow-turquoise-500/10;
-  @apply hover:border-slate-200 hover:bg-slate-50;
-  padding: 0.75rem 1rem;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-}
+/* Every form rule sits in the components layer, below Tailwind's utilities,
+   as the buttons and cards do, so a caller's utilities (a narrower width, a
+   read-only tint, tighter padding) apply instead of losing to an unlayered
+   rule. Scoped overrides elsewhere, such as the weekday rows' compact selects
+   in dashboard.css, stay unlayered and still win. */
+@layer components {
+  /* Input Fields - Modern Branding */
+  .input {
+    @apply block w-full text-sm font-medium text-tymeslot-900 bg-tymeslot-50/50 border-2 border-tymeslot-100 rounded-token-2xl transition-all duration-300;
+    @apply focus:outline-hidden focus:border-turquoise-400 focus:bg-white focus:shadow-xl focus:shadow-turquoise-500/10;
+    @apply hover:border-tymeslot-200 hover:bg-tymeslot-50;
+    padding: 0.75rem 1rem;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+  }
 
-/* Input with leading icon - accounts for icon space */
-.input.input-with-icon {
-  padding-left: 3.5rem; /* 1rem (icon left offset) + 1.25rem (icon width) + 1.25rem (gap) = 3.5rem */
-}
+  /* Input with leading icon - accounts for icon space */
+  .input.input-with-icon {
+    padding-left: 3.5rem; /* 1rem (icon left offset) + 1.25rem (icon width) + 1.25rem (gap) = 3.5rem */
+  }
 
-/* Override for custom text prefixes (like username URL prefix) */
-.input.input-with-icon[style*="--leading-icon-width"] {
-  padding-left: calc(1rem + var(--leading-icon-width) + 1.25rem);
-}
+  /* Override for custom text prefixes (like username URL prefix) */
+  .input.input-with-icon[style*="--leading-icon-width"] {
+    padding-left: calc(1rem + var(--leading-icon-width) + 1.25rem);
+  }
 
-.input-with-trailing-icon {
-  @apply pr-14;
-}
+  .input-with-trailing-icon {
+    @apply pr-14;
+  }
 
-.input::placeholder {
-  @apply text-slate-400 font-medium;
-}
+  .input::placeholder {
+    @apply text-tymeslot-400 font-medium;
+  }
 
-/* Disabled: visible but inert. The hover and focus rules above match at the
-   same specificity, so these have to come after them to win, and the explicit
-   :disabled:hover keeps a greyed-out field from lighting up under the pointer. */
-.input:disabled {
-  @apply text-slate-400 bg-slate-100/60 border-slate-100 shadow-none cursor-not-allowed;
-}
+  /* Disabled: visible but inert. The hover and focus rules above match at the
+     same specificity, so these have to come after them to win, and the explicit
+     :disabled:hover keeps a greyed-out field from lighting up under the pointer. */
+  .input:disabled {
+    @apply text-tymeslot-600 bg-tymeslot-100/60 border-tymeslot-100 shadow-none cursor-not-allowed;
+  }
 
-.input:disabled:hover {
-  @apply border-slate-100 bg-slate-100/60;
-}
+  .input:disabled:hover {
+    @apply border-tymeslot-100 bg-tymeslot-100/60;
+  }
 
-.input:disabled::placeholder {
-  @apply text-slate-300;
-}
+  /* A disabled field's placeholder often shows the value that applies instead
+     (a default wording), so it stays readable: tymeslot-500 clears 4.5:1 on the
+     disabled fill. */
+  .input:disabled::placeholder {
+    @apply text-tymeslot-500;
+  }
 
-/* Input Variants */
-.input-error {
-  @apply border-red-200 bg-red-50 text-red-900;
-  @apply focus:border-red-400 focus:bg-white focus:shadow-red-500/10;
-}
+  /* Input Variants */
+  .input-error {
+    @apply border-red-200 bg-red-50 text-red-900;
+    @apply focus:border-red-400 focus:bg-white focus:shadow-red-500/10;
+  }
 
-.input-valid {
-  @apply border-emerald-200 bg-emerald-50 text-emerald-900;
-}
+  /* Label - Modern Typography */
+  .label {
+    @apply block text-sm font-black text-tymeslot-800 uppercase tracking-wider mb-2;
+  }
 
-/* Label - Modern Typography */
-.label {
-  @apply block text-sm font-black text-slate-800 uppercase tracking-wider mb-2;
-}
+  .form-error {
+    @apply mt-2 text-sm font-semibold text-red-600;
+  }
 
-.form-error {
-  @apply mt-2 text-sm font-semibold text-red-600;
-}
+  /* Checkbox Styling */
+  .checkbox {
+    @apply rounded border-2 border-tymeslot-200 text-turquoise-600 focus:ring-turquoise-500 transition-all;
+  }
 
-/* Form Group */
-.form-group {
-  @apply mb-8;
-}
+  /* Textarea */
+  .textarea {
+    @apply block w-full px-4 py-3 text-sm font-medium text-tymeslot-900 bg-tymeslot-50/50 border-2 border-tymeslot-100 rounded-token-2xl transition-all duration-300 min-h-[120px] resize-y;
+    @apply focus:outline-hidden focus:border-turquoise-400 focus:bg-white focus:shadow-xl focus:shadow-turquoise-500/10;
+  }
 
-/* Checkbox Styling */
-.checkbox {
-  @apply rounded border-2 border-slate-200 text-turquoise-600 focus:ring-turquoise-500 transition-all;
-}
+  /* Select Dropdowns */
+  select.input {
+    @apply cursor-pointer pr-10 bg-no-repeat transition-all;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2371717a' stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 1rem center;
+    background-size: 1.25rem;
+  }
 
-/* Textarea */
-.textarea {
-  @apply block w-full px-4 py-3 text-sm font-medium text-slate-900 bg-slate-50/50 border-2 border-slate-100 rounded-2xl transition-all duration-300 min-h-[120px] resize-y;
-  @apply focus:outline-hidden focus:border-turquoise-400 focus:bg-white focus:shadow-xl focus:shadow-turquoise-500/10;
-}
+  /* Range slider — dark background variant (used on marketing calculator) */
+  .slider-dark {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    border-radius: 9999px;
+    cursor: pointer;
+    outline: none;
+    /* Initial background set by SliderInputHook; this is the fallback */
+    background: var(--color-neutral-700);
+  }
 
-/* Select Dropdowns */
-select.glass-input,
-select.input {
-  @apply cursor-pointer pr-10 bg-no-repeat transition-all;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-  background-position: right 1rem center;
-  background-size: 1.25rem;
-}
+  .slider-dark::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--color-primary-500);
+    cursor: pointer;
+    box-shadow: 0 0 10px color-mix(in oklab, var(--color-primary-500) 45%, transparent);
+    transition: background 0.15s, transform 0.1s;
+  }
 
-/* Glass Dropdown */
-.glass-dropdown {
-  @apply block w-full px-4 py-3 text-sm font-bold text-slate-900 bg-white border-2 border-slate-100 rounded-2xl transition-all duration-300 shadow-sm cursor-pointer;
-  @apply hover:border-turquoise-100 hover:bg-slate-50;
-  @apply focus:outline-hidden focus:border-turquoise-400 focus:shadow-lg focus:shadow-turquoise-500/10;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2314b8a6' stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-  background-position: right 1rem center;
-  background-size: 1.25rem;
-}
+  .slider-dark::-webkit-slider-thumb:hover {
+    background: var(--color-primary-400);
+    transform: scale(1.15);
+  }
 
+  .slider-dark::-moz-range-track {
+    height: 6px;
+    border-radius: 9999px;
+    background: var(--color-neutral-700);
+  }
 
-/* Range slider — dark background variant (used on marketing calculator) */
-.slider-dark {
-  -webkit-appearance: none;
-  appearance: none;
-  height: 6px;
-  border-radius: 9999px;
-  cursor: pointer;
-  outline: none;
-  /* Initial background set by SliderInputHook; this is the fallback */
-  background: var(--color-neutral-700);
-}
+  .slider-dark::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border: none;
+    border-radius: 50%;
+    background: var(--color-primary-500);
+    cursor: pointer;
+    box-shadow: 0 0 10px color-mix(in oklab, var(--color-primary-500) 45%, transparent);
+    transition: background 0.15s, transform 0.1s;
+  }
 
-.slider-dark::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--color-primary-500);
-  cursor: pointer;
-  box-shadow: 0 0 10px rgba(20, 184, 166, 0.45);
-  transition: background 0.15s, transform 0.1s;
-}
+  .slider-dark::-moz-range-thumb:hover {
+    background: var(--color-primary-400);
+    transform: scale(1.15);
+  }
 
-.slider-dark::-webkit-slider-thumb:hover {
-  background: var(--color-primary-400);
-  transform: scale(1.15);
-}
+  /* Inline field-level validation message (legacy twin of .form-error above) */
+  .field-error {
+    @apply text-red-600 text-token-sm mt-1;
+  }
 
-.slider-dark::-moz-range-track {
-  height: 6px;
-  border-radius: 9999px;
-  background: var(--color-neutral-700);
-}
+  /* ===================================
+     DROPDOWN PANEL
+     =================================== */
 
-.slider-dark::-moz-range-thumb {
-  width: 20px;
-  height: 20px;
-  border: none;
-  border-radius: 50%;
-  background: var(--color-primary-500);
-  cursor: pointer;
-  box-shadow: 0 0 10px rgba(20, 184, 166, 0.45);
-  transition: background 0.15s, transform 0.1s;
-}
+  /* Standard clickable row inside a dropdown panel */
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+    width: 100%;
+    text-align: left;
+    padding: var(--dropdown-item-py) var(--dropdown-item-px);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    border-radius: var(--dropdown-item-radius);
+    transition: background-color 0.15s ease, color 0.15s ease;
+    color: var(--color-text-secondary);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+  }
 
-.slider-dark::-moz-range-thumb:hover {
-  background: var(--color-primary-400);
-  transform: scale(1.15);
-}
+  .dropdown-item:hover {
+    background-color: var(--dropdown-item-hover-bg);
+    color: var(--dropdown-item-hover-text);
+  }
 
-/* Inline field-level validation message (legacy twin of .form-error above) */
-.field-error {
-  @apply text-red-600 text-token-sm mt-1;
-}
+  .dropdown-item--danger {
+    color: var(--dropdown-item-danger-text);
+  }
 
-/* Form Field — labelled input group with branded label + input */
-.form-field {
-  @apply mb-5;
-}
+  .dropdown-item--danger:hover {
+    background-color: var(--dropdown-item-danger-hover-bg);
+    color: var(--dropdown-item-danger-text);
+  }
 
-.form-field__label {
-  @apply block text-token-sm font-black mb-2 text-tymeslot-800 uppercase tracking-wider;
-}
+  /* Icon inside a dropdown item */
+  .dropdown-item__icon {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    color: var(--color-text-tertiary);
+  }
 
-.form-field__input {
-  @apply w-full px-4 py-3 rounded-token-2xl border-2 border-tymeslot-100 bg-tymeslot-50/50 transition-glass font-medium;
-  @apply focus:outline-hidden focus:border-turquoise-400 focus:bg-white focus:shadow-lg focus:shadow-turquoise-500/10;
-}
+  .dropdown-item--danger .dropdown-item__icon {
+    color: var(--dropdown-item-danger-text);
+    opacity: 0.7;
+  }
 
-.form-field__input--error {
-  @apply border-red-200 bg-red-50 text-red-900 focus:border-red-400 focus:shadow-red-500/10;
-}
-
-/* ===================================
-   DROPDOWN PANEL
-   =================================== */
-
-/* Standard clickable row inside a dropdown panel */
-.dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-3);
-  width: 100%;
-  text-align: left;
-  padding: var(--dropdown-item-py) var(--dropdown-item-px);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  border-radius: var(--dropdown-item-radius);
-  transition: background-color 0.15s ease, color 0.15s ease;
-  color: var(--color-text-secondary);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-}
-
-.dropdown-item:hover {
-  background-color: var(--dropdown-item-hover-bg);
-  color: var(--dropdown-item-hover-text);
-}
-
-.dropdown-item--danger {
-  color: var(--dropdown-item-danger-text);
-}
-
-.dropdown-item--danger:hover {
-  background-color: var(--dropdown-item-danger-hover-bg);
-  color: var(--dropdown-item-danger-text);
-}
-
-/* Icon inside a dropdown item */
-.dropdown-item__icon {
-  width: 1rem;
-  height: 1rem;
-  flex-shrink: 0;
-  color: var(--color-text-tertiary);
-}
-
-.dropdown-item--danger .dropdown-item__icon {
-  color: var(--dropdown-item-danger-text);
-  opacity: 0.7;
-}
-
-/* Thin horizontal separator inside a dropdown panel */
-.dropdown-divider {
-  border: none;
-  border-top: 1px solid var(--dropdown-divider);
-  margin: var(--spacing-1) 0;
+  /* Thin horizontal separator inside a dropdown panel */
+  .dropdown-divider {
+    border: none;
+    border-top: 1px solid var(--dropdown-divider);
+    margin: var(--spacing-1) 0;
+  }
 }

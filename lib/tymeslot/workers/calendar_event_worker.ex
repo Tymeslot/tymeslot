@@ -30,6 +30,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Jobs.ObanJobQueries
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.CalendarEventSync
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Workers.RetryHelpers
@@ -68,10 +69,13 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   # refusing authentication is recorded.
   @meeting_gone "Meeting not found"
   @queued_for_replay "Conflicting server-side change; queued for offline replay"
+  @no_calendar "No calendar to write the event to"
 
   @impl ExpectedJobOutcome
   def expected_outcome?(reason),
-    do: reason in [@meeting_gone, @queued_for_replay] or reason == ReauthHandling.discard_reason()
+    do:
+      reason in [@meeting_gone, @queued_for_replay, @no_calendar] or
+        reason == ReauthHandling.discard_reason()
 
   @impl Oban.Worker
   def perform(
@@ -219,8 +223,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
         :ok
 
       {:error, error_type} ->
-        tag_for_offline_queue(job, error_type)
-        handle_error_result(error_type, job)
+        handle_failure(error_type, job)
 
       {:error, error_type, message} when is_binary(message) ->
         tag_for_offline_queue(job, error_type)
@@ -231,6 +234,23 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
 
       _unexpected ->
         handle_unexpected_result(result)
+    end
+  end
+
+  # The organiser has no calendar Tymeslot can write to (none connected, or the
+  # one the meeting named is gone). Retrying cannot change that, so the job ends
+  # here rather than failing through every attempt.
+  defp handle_failure(error_type, job) do
+    if CalendarEvents.no_calendar_error?(error_type) do
+      Logger.info("No calendar to write to, skipping calendar event job",
+        action: job.args["action"],
+        meeting_id: job.args["meeting_id"]
+      )
+
+      {:discard, @no_calendar}
+    else
+      tag_for_offline_queue(job, error_type)
+      handle_error_result(error_type, job)
     end
   end
 
@@ -247,7 +267,11 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     with true <- CalendarEvents.queueable_error?(error_type),
          {:ok, meeting} <- MeetingQueries.get_meeting(meeting_id),
          action_atom when action_atom in [:create, :update, :delete] <- action_to_atom(action) do
-      event_data = CalendarEventBuilder.build_event_data(meeting)
+      event_data =
+        CalendarEventBuilder.build_event_data(meeting,
+          attendees: Meetings.attendees_for_calendar(meeting)
+        )
+
       QueueWiring.tag(meeting, action_atom, event_data)
     else
       _other -> :ok

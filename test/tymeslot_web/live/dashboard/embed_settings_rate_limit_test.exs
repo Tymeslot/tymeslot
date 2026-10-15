@@ -22,7 +22,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsRateLimitTest do
 
   test "shows rate limit error after too many domain updates", %{conn: conn, user: user} do
     {:ok, view, _html} = live(conn, "/dashboard/embed")
-    view |> element("button#tab-security") |> render_click()
+    view |> element("button#embed-settings-tabs-tab-security") |> render_click()
 
     # Exhaust the per-user rate limit (10 updates per hour)
     for _i <- 1..10 do

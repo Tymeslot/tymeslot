@@ -336,6 +336,43 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     )
   end
 
+  @doc """
+  Deletes the booking payments of deleted hosts whose statutory retention
+  period has ended: every row anonymised by `anonymise_for_host/2` and dated
+  before `cutoff`. A row is dated by when it was paid, or by when it was
+  created if it never was.
+  """
+  @spec delete_retained_before(DateTime.t()) :: {non_neg_integer(), nil}
+  def delete_retained_before(%DateTime{} = cutoff) do
+    BookingPaymentSchema
+    |> where([b], not is_nil(b.host_deleted_at))
+    |> dated_before(cutoff)
+    |> Repo.delete_all()
+  end
+
+  @doc """
+  Scrubs the attendee's name and email from the booking payments of hosts who
+  still exist, once the row's statutory retention period has ended (dated
+  before `cutoff`, as for `delete_retained_before/1`). The row stays, so the
+  host's own payment history keeps its amounts and dates.
+  """
+  @spec scrub_attendees_before(DateTime.t(), DateTime.t()) :: {non_neg_integer(), nil}
+  def scrub_attendees_before(%DateTime{} = cutoff, now) do
+    BookingPaymentSchema
+    |> where([b], is_nil(b.host_deleted_at))
+    |> where([b], not is_nil(b.attendee_email) or not is_nil(b.attendee_name))
+    |> dated_before(cutoff)
+    |> Repo.update_all(set: [attendee_email: nil, attendee_name: nil, updated_at: now])
+  end
+
+  defp dated_before(query, cutoff) do
+    where(
+      query,
+      [b],
+      coalesce(b.paid_at, b.inserted_at) < type(^cutoff, :utc_datetime)
+    )
+  end
+
   defp cast_id(id) do
     case UUID.cast(id) do
       {:ok, uuid} -> {:ok, uuid}

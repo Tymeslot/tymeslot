@@ -19,7 +19,9 @@ defmodule Tymeslot.Webhooks do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.SeatView
   alias Tymeslot.Notifications.EventTypes
+  alias Tymeslot.Security.EncryptedString
 
   alias Tymeslot.Webhooks.{
     HttpDelivery,
@@ -34,7 +36,9 @@ defmodule Tymeslot.Webhooks do
 
   @impl Tymeslot.Security.EncryptedStorage
   def encrypted_storage,
-    do: {WebhookSchema.__schema__(:source), WebhookSchema.encrypted_credential_fields()}
+    do:
+      {WebhookSchema.__schema__(:source),
+       WebhookSchema.encrypted_credential_fields() ++ EncryptedString.columns(WebhookSchema)}
 
   # ============================================================================
   # CRUD Operations
@@ -290,7 +294,8 @@ defmodule Tymeslot.Webhooks do
         webhook.id,
         event_type,
         meeting.id,
-        WebhookWorker.snapshot(meeting)
+        WebhookWorker.snapshot(meeting),
+        SeatView.participant_id(meeting)
       )
     else
       {:error, :webhook_not_active}

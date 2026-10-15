@@ -540,6 +540,23 @@ INSERT INTO profiles (user_id, timezone, buffer_minutes, advance_booking_days, m
 SELECT id, 'America/New_York', NULL, NULL, NULL, NOW(), NOW() FROM users WHERE email = 'seed-user-3@example.com';
 
 -- ============================================================================
+-- PROFILE WITH AN OUT-OF-RANGE BUFFER
+-- ============================================================================
+--
+-- profiles.buffer_minutes never had a range constraint, so a self-hosted
+-- database can hold a value no form would accept.
+-- 20260811180804_create_availability_schedules copies it onto the profile's
+-- default schedule unchanged, and split_availability_schedule_buffers has to
+-- clamp it into 0..120 before it adds the range constraints, or that migration
+-- fails on this row. Seeded before the weekly section so the profile also gets
+-- availability rows like every other one.
+INSERT INTO users (email, password_hash, verified_at, inserted_at, updated_at)
+VALUES ('seed-user-4@example.com', '$2b$12$K4fE6xkGz0qYkN2wQpYDOeG0G0G0G0G0G0G0G0G0G0G0G0G0G0', NOW(), NOW(), NOW());
+
+INSERT INTO profiles (user_id, timezone, buffer_minutes, advance_booking_days, min_advance_hours, inserted_at, updated_at)
+SELECT id, 'UTC', 500, 90, 3, NOW(), NOW() FROM users WHERE email = 'seed-user-4@example.com';
+
+-- ============================================================================
 -- WEEKLY AVAILABILITY, BREAKS AND OVERRIDES
 -- ============================================================================
 --
@@ -582,3 +599,35 @@ SELECT p.id, DATE '2026-12-31', 'custom_hours', TIME '10:00', TIME '14:00', 'Sho
 
 INSERT INTO availability_overrides (profile_id, date, override_type, start_time, end_time, reason, inserted_at, updated_at)
 SELECT p.id, DATE '2027-01-02', 'available', NULL, NULL, NULL, NOW(), NOW() FROM profiles p;
+
+-- ============================================================================
+-- THEME CUSTOMISATIONS
+-- ============================================================================
+--
+-- 20260929081519_move_theme_customization_options_to_settings copies each
+-- row's option columns into `settings`, and 20261008094224 moves
+-- video_processing into video_processing_status. On an empty table both
+-- UPDATEs match nothing and prove only that the SQL parses, so every legacy
+-- shape the previous release could store is seeded: a custom seed in
+-- uppercase, an uploaded video with its processing state, a preset image, a
+-- row holding nothing but the column defaults, an empty seed string and an
+-- image background naming neither an upload nor a preset.
+INSERT INTO theme_customizations (profile_id, theme_id, color_scheme, custom_palette_seed, background_type, background_value, background_image_path, background_video_path, video_processing, inserted_at, updated_at)
+SELECT p.id, '1', 'custom', '#AB34CD', 'gradient', 'gradient_2', NULL, NULL, NULL, NOW(), NOW()
+FROM profiles p JOIN users u ON u.id = p.user_id WHERE u.email = 'seed-user-1@example.com';
+
+INSERT INTO theme_customizations (profile_id, theme_id, color_scheme, custom_palette_seed, background_type, background_value, background_image_path, background_video_path, video_processing, inserted_at, updated_at)
+SELECT p.id, '2', 'monochrome', NULL, 'video', 'custom', NULL, p.id || '/2/backgrounds/clip.mp4', 'completed', NOW(), NOW()
+FROM profiles p JOIN users u ON u.id = p.user_id WHERE u.email = 'seed-user-1@example.com';
+
+INSERT INTO theme_customizations (profile_id, theme_id, color_scheme, custom_palette_seed, background_type, background_value, background_image_path, background_video_path, video_processing, inserted_at, updated_at)
+SELECT p.id, '1', 'forest', NULL, 'image', 'preset:ocean-sunset', NULL, NULL, NULL, NOW(), NOW()
+FROM profiles p JOIN users u ON u.id = p.user_id WHERE u.email = 'seed-user-2@example.com';
+
+INSERT INTO theme_customizations (profile_id, theme_id, inserted_at, updated_at)
+SELECT p.id, '2', NOW(), NOW()
+FROM profiles p JOIN users u ON u.id = p.user_id WHERE u.email = 'seed-user-2@example.com';
+
+INSERT INTO theme_customizations (profile_id, theme_id, color_scheme, custom_palette_seed, background_type, background_value, background_image_path, background_video_path, video_processing, inserted_at, updated_at)
+SELECT p.id, '1', 'ocean', '', 'image', NULL, NULL, NULL, NULL, NOW(), NOW()
+FROM profiles p JOIN users u ON u.id = p.user_id WHERE u.email = 'seed-user-3@example.com';

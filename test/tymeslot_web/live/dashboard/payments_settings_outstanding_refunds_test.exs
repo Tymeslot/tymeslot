@@ -209,7 +209,11 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
       assert has_element?(view, refund_button(payment))
 
       view |> element("button[phx-click='open_disconnect_modal']") |> render_click()
-      html = view |> element("#disconnect-modal button[phx-click='disconnect']") |> render_click()
+
+      html =
+        view
+        |> element("#disconnect-modal [data-testid='confirm-disconnect-stripe']")
+        |> render_click()
 
       # The Connect call-to-action is back, and the debt is still above it.
       assert html =~ "Refunds outstanding"

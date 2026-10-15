@@ -46,6 +46,9 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
       assign(assigns,
         series: full_series,
         max: max_visits(full_series),
+        # The series always spans the whole window, so "no data" means every
+        # day is zero rather than an empty list.
+        empty?: Enum.all?(full_series, &(&1.visits == 0)),
         width: @width,
         height: @height,
         padding: @padding,
@@ -55,13 +58,13 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
       )
 
     ~H"""
-    <div class="card-glass">
+    <.card>
       <div class="flex items-center justify-between gap-2">
         <div class="text-token-xs font-black uppercase tracking-widest text-tymeslot-400">
           {dgettext("dashboard_analytics", "Visits over time")}
         </div>
         <div class="flex items-center gap-1.5 text-token-xs text-tymeslot-500">
-          <span class="inline-block h-2.5 w-2.5 rounded-sm bg-turquoise-500" aria-hidden="true"></span>
+          <span class="inline-block h-2.5 w-2.5 rounded-token-sm bg-turquoise-500" aria-hidden="true"></span>
           {dgettext("dashboard_analytics", "Daily visits")}
         </div>
       </div>
@@ -73,14 +76,16 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
       >
       </div>
 
-      <div
-        :if={!@loading? and @series == []}
-        class="mt-4 py-8 text-center text-token-sm text-tymeslot-400"
-      >
-        {dgettext("dashboard_analytics", "No traffic in this period yet.")}
-      </div>
+      <.empty_state
+        :if={!@loading? and @empty?}
+        icon="hero-chart-bar"
+        size={:sm}
+        variant={:plain}
+        title={dgettext("dashboard_analytics", "No traffic in this period yet")}
+        data-testid="visits-chart-empty"
+      />
 
-      <div :if={!@loading? and @series != []} class="mt-3 flex gap-2">
+      <div :if={!@loading? and not @empty?} class="mt-3 flex gap-2">
         <%!-- y-axis: visits range from 0 at the baseline up to the busiest day --%>
         <div
           class="flex h-48 flex-col justify-between py-px text-right text-token-xs tabular-nums text-tymeslot-400"
@@ -137,7 +142,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
           </div>
         </div>
       </div>
-    </div>
+    </.card>
     """
   end
 
@@ -168,9 +173,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
   defp axis_label(nil), do: nil
 
   defp axis_label(%{day: day}) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-    day_num = String.pad_leading(to_string(day.day), 2, "0")
-    "#{day_num} #{LocaleFormat.format_month_name(day.month, locale, :short)}"
+    LocaleFormat.format_short_date(day, Gettext.get_locale(TymeslotWeb.Gettext))
   end
 
   defp max_visits([]), do: 1

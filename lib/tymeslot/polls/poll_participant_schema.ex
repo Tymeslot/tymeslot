@@ -8,7 +8,9 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
   alias Tymeslot.ChangesetValidators.Email, as: EmailChangeset
   alias Tymeslot.Locales
   alias Tymeslot.Polls.{PollSchema, PollVoteSchema}
+  alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.FieldValidators.NameValidator
+  alias Tymeslot.Security.Token
   alias Tymeslot.Timezones
   alias Tymeslot.Utils.UnguessableToken
 
@@ -20,7 +22,12 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
   schema "poll_participants" do
     field(:name, :string)
     field(:email, :string)
-    field(:token, :string)
+    # The per-person `?p=` token. Registering again with the same address
+    # resumes the participant and hands their link back, so the token is
+    # encrypted rather than only hashed; it is looked up by `token_hash`. The
+    # plain `token` column predates this and is no longer read or written.
+    field(:token, EncryptedString, source: :token_encrypted, redact: true)
+    field(:token_hash, :string)
     field(:timezone, :string)
     field(:locale, :string, default: "en")
     field(:voted_at, :utc_datetime)
@@ -54,7 +61,8 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
     |> validate_timezone()
     |> validate_locale()
     |> put_new_token()
-    |> unique_constraint(:token)
+    |> Token.put_hash(:token, :token_hash)
+    |> unique_constraint(:token_hash)
     |> unique_constraint([:poll_id, :email], name: :poll_participants_poll_id_email_index)
     |> foreign_key_constraint(:poll_id)
   end

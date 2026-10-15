@@ -21,6 +21,11 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotList do
   `.slot-list__heading` and `[data-slots-loaded]`; change them together.
   Each time button carries the markup contract's `data-fact="time"`, its
   `data-value` the value `select_time` sends.
+
+  On a group meeting type (`meeting_type`) a time also shows its spots
+  (`SeatBadge`, as the organiser chose to show them): the button then gains
+  `slot-list__slot--seats`, which stacks the time above the badge. A solo
+  time keeps its single-line markup.
   """
 
   use Phoenix.Component
@@ -28,6 +33,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotList do
 
   alias TymeslotWeb.Components.MeetingUtils
   alias TymeslotWeb.Live.Scheduling.CalendarHelpers
+  alias TymeslotWeb.Themes.Shared.Components.SeatBadge
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.SlotGrouping
 
@@ -38,6 +44,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotList do
   attr :calendar_error, :string, default: nil
   attr :slot_interval_minutes, :integer, default: nil
   attr :duration_minutes, :integer, default: nil
+  attr :meeting_type, :any, default: nil, doc: "the meeting type, whose spots a group time shows"
 
   attr :expanded_hour, :any,
     default: nil,
@@ -114,9 +121,10 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotList do
                       </.dynamic_tag>
                       <div class="slot-list__grid">
                         <.slot_button
-                          :for={slot_value <- period_slots}
-                          slot_value={slot_value}
-                          selected={@selected_time == slot_value}
+                          :for={slot <- period_slots}
+                          slot={slot}
+                          selected={@selected_time == slot.time}
+                          meeting_type={@meeting_type}
                           target={@target}
                         />
                       </div>
@@ -162,9 +170,10 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotList do
                           aria-label={SlotGrouping.hour_label(hour)}
                         >
                           <.slot_button
-                            :for={slot_value <- hour_slots}
-                            slot_value={slot_value}
-                            selected={@selected_time == slot_value}
+                            :for={slot <- hour_slots}
+                            slot={slot}
+                            selected={@selected_time == slot.time}
+                            meeting_type={@meeting_type}
                             target={@target}
                           />
                         </div>
@@ -180,25 +189,38 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotList do
   end
 
   # One definition of the slot button, so the flat grid and the minutes nested
-  # under an expanded hour cannot drift apart in markup.
-  attr :slot_value, :string, required: true
+  # under an expanded hour cannot drift apart in markup, nor either of them
+  # drop the seat badge. Takes the normalised slot map
+  # (`MeetingUtils.normalize_slot_list/1`), seats and all.
+  attr :slot, :map, required: true
   attr :selected, :boolean, default: false
+  attr :meeting_type, :any, default: nil
   attr :target, :any, required: true
 
   defp slot_button(assigns) do
+    assigns =
+      assign(assigns, :seat_display, SeatBadge.display(assigns.slot, assigns.meeting_type))
+
     ~H"""
     <button
       type="button"
-      class={["slot-list__slot", @selected && "slot-list__slot--selected"]}
+      class={[
+        "slot-list__slot",
+        @seat_display && "slot-list__slot--seats",
+        @selected && "slot-list__slot--selected"
+      ]}
       data-testid="time-slot"
-      data-time={@slot_value}
+      data-time={@slot.time}
       data-fact="time"
-      data-value={@slot_value}
+      data-value={@slot.time}
       phx-click="select_time"
-      phx-value-time={@slot_value}
+      phx-value-time={@slot.time}
       phx-target={@target}
     >
-      {LocalizationHelpers.format_time_by_locale(CalendarHelpers.parse_slot_time(@slot_value))}
+      <span class="slot-list__time">
+        {LocalizationHelpers.format_time_by_locale(CalendarHelpers.parse_slot_time(@slot.time))}
+      </span>
+      <SeatBadge.seat_badge display={@seat_display} />
     </button>
     """
   end

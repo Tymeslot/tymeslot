@@ -104,7 +104,7 @@ defmodule Tymeslot.Availability.AvailabilityBreakQueriesTest do
 
       result = AvailabilityBreakQueries.get_work_hours(weekly_availability.id)
 
-      assert result == {~T[09:00:00], ~T[17:00:00]}
+      assert result == %{start_time: ~T[09:00:00], end_time: ~T[17:00:00], ends_next_day: false}
     end
 
     test "returns nil when weekly availability does not exist" do

@@ -10,6 +10,10 @@ defmodule Tymeslot.Agenda.Entry do
   entries carry the local-timezone midnight boundaries of their date, which keeps
   them sorting ahead of that day's timed entries. `day` is the entry's local
   (user-timezone) date, precomputed so grouping never has to reconvert.
+
+  `title` is `nil` when the booking or event has none; the presentation layer
+  labels it. `who` names the other party (a booking's attendee, an event's organiser);
+  `who_email` is the attendee's address, known for bookings only.
   """
 
   alias Tymeslot.Utils.DateTimeUtils
@@ -26,6 +30,7 @@ defmodule Tymeslot.Agenda.Entry do
     :location,
     :join_url,
     :who,
+    :who_email,
     :calendar,
     :colour,
     :target
@@ -42,7 +47,7 @@ defmodule Tymeslot.Agenda.Entry do
   @type t :: %__MODULE__{
           id: String.t(),
           source: source(),
-          title: String.t(),
+          title: String.t() | nil,
           day: Date.t(),
           start_at: DateTime.t(),
           end_at: DateTime.t(),
@@ -50,6 +55,7 @@ defmodule Tymeslot.Agenda.Entry do
           location: String.t() | nil,
           join_url: String.t() | nil,
           who: String.t() | nil,
+          who_email: String.t() | nil,
           calendar: String.t() | nil,
           colour: String.t() | nil,
           target: target() | nil

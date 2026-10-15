@@ -19,7 +19,46 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 10:30:00Z],
                  ~U[2026-04-07 11:30:00Z],
                  events,
-                 0
+                 {0, 0}
+               )
+    end
+
+    test "applies the before-buffer ahead of the slot and the after-buffer behind it" do
+      events = [%{start_time: ~U[2026-04-07 10:00:00Z], end_time: ~U[2026-04-07 11:00:00Z]}]
+
+      # Starts ten minutes after the event ends: inside a 15-minute
+      # before-buffer, clear of a 5-minute one.
+      assert {:error, :slot_unavailable} =
+               Validation.check_slot_availability(
+                 ~U[2026-04-07 11:10:00Z],
+                 ~U[2026-04-07 11:40:00Z],
+                 events,
+                 {15, 5}
+               )
+
+      assert :ok =
+               Validation.check_slot_availability(
+                 ~U[2026-04-07 11:10:00Z],
+                 ~U[2026-04-07 11:40:00Z],
+                 events,
+                 {5, 15}
+               )
+
+      # Ends ten minutes before the event starts: the mirror image.
+      assert {:error, :slot_unavailable} =
+               Validation.check_slot_availability(
+                 ~U[2026-04-07 09:20:00Z],
+                 ~U[2026-04-07 09:50:00Z],
+                 events,
+                 {5, 15}
+               )
+
+      assert :ok =
+               Validation.check_slot_availability(
+                 ~U[2026-04-07 09:20:00Z],
+                 ~U[2026-04-07 09:50:00Z],
+                 events,
+                 {15, 5}
                )
     end
 
@@ -33,7 +72,7 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 12:00:00Z],
                  ~U[2026-04-07 13:00:00Z],
                  events,
-                 0
+                 {0, 0}
                )
     end
 
@@ -48,7 +87,7 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 10:00:00Z],
                  ~U[2026-04-07 11:00:00Z],
                  events,
-                 0
+                 {0, 0}
                )
     end
 
@@ -63,7 +102,7 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 00:15:00Z],
                  ~U[2026-04-07 00:45:00Z],
                  events,
-                 0
+                 {0, 0}
                )
     end
 
@@ -77,7 +116,7 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-08 10:00:00Z],
                  ~U[2026-04-08 11:00:00Z],
                  events,
-                 0
+                 {0, 0}
                )
     end
 
@@ -93,7 +132,7 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 14:30:00Z],
                  ~U[2026-04-07 15:30:00Z],
                  events,
-                 0
+                 {0, 0}
                )
     end
 
@@ -109,7 +148,7 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-06 23:50:00Z],
                  ~U[2026-04-07 00:20:00Z],
                  events,
-                 15
+                 {15, 15}
                )
     end
 
@@ -128,7 +167,7 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 10:30:00Z],
                  ~U[2026-04-07 11:30:00Z],
                  events,
-                 0
+                 {0, 0}
                )
     end
 
@@ -147,7 +186,7 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 10:30:00Z],
                  ~U[2026-04-07 11:30:00Z],
                  events,
-                 0
+                 {0, 0}
                )
     end
 
@@ -166,7 +205,7 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 10:30:00Z],
                  ~U[2026-04-07 11:30:00Z],
                  events,
-                 0
+                 {0, 0}
                )
     end
 
@@ -188,7 +227,7 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-29 14:00:00Z],
                  ~U[2026-04-29 15:00:00Z],
                  events,
-                 15
+                 {15, 15}
                )
     end
 
@@ -207,7 +246,7 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-29 14:00:00Z],
                  ~U[2026-04-29 15:00:00Z],
                  events,
-                 0
+                 {0, 0}
                )
     end
 
@@ -233,7 +272,7 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 10:30:00Z],
                  ~U[2026-04-07 11:00:00Z],
                  events,
-                 0
+                 {0, 0}
                )
 
       # 14:30 slot overlaps the opaque event — still blocked
@@ -242,7 +281,7 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 14:30:00Z],
                  ~U[2026-04-07 15:30:00Z],
                  events,
-                 0
+                 {0, 0}
                )
     end
 
@@ -271,7 +310,7 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 10:30:00Z],
                  ~U[2026-04-07 11:30:00Z],
                  [transparent_event],
-                 0
+                 {0, 0}
                )
     end
   end

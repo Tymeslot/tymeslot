@@ -184,7 +184,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
 
       tz = Profiles.get_user_timezone(user.id)
       start_local = DateTime.shift_zone!(start_utc, tz)
-      expected_time = Calendar.strftime(start_local, "%-I:%M %p")
+      # Dashboard times keep each clock reading on one line with a
+      # non-breaking space before the meridiem.
+      expected_time = Calendar.strftime(start_local, "%-I:%M\u00A0%p")
 
       assert html =~ "Clickable Event"
       assert html =~ expected_time

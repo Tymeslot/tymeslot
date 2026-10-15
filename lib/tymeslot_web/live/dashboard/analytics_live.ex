@@ -14,19 +14,23 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
 
   alias Tymeslot.Analytics
   alias Tymeslot.Analytics.MetricsCache
+  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Components.DashboardLayout
   alias TymeslotWeb.Dashboard.AnalyticsLive.DeviceBreakdown
   alias TymeslotWeb.Dashboard.AnalyticsLive.SourcesTable
   alias TymeslotWeb.Dashboard.AnalyticsLive.SummaryCards
   alias TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart
   alias TymeslotWeb.Dashboard.ComponentDispatch
-  alias TymeslotWeb.Helpers.LocaleFormat
+  alias TymeslotWeb.Dashboard.DashboardFormat
+  alias TymeslotWeb.Helpers.PageTitles
 
   @ranges %{"7d" => 7, "30d" => 30, "90d" => 90}
   @default_range "30d"
 
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
+    socket = assign(socket, :page_title, PageTitles.dashboard_title(:analytics))
+
     cond do
       not Analytics.enabled?() ->
         {:ok,
@@ -124,68 +128,51 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
         feature_placeholder_components={@feature_placeholder_components}
       />
 
-      <div :if={@analytics_allowed} class="space-y-6">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <h1 class="text-2xl font-black tracking-tight text-tymeslot-900">
-            {dgettext("dashboard_analytics", "Analytics")}
-          </h1>
-          <div class="flex items-center gap-2">
-            <div
-              class="flex gap-2"
-              role="group"
-              aria-label={dgettext("dashboard_analytics", "Date range")}
-            >
-              <.range_button
-                label={dgettext("dashboard_analytics", "7 days")}
-                value="7d"
-                current={@range}
-              />
-              <.range_button
-                label={dgettext("dashboard_analytics", "30 days")}
-                value="30d"
-                current={@range}
-              />
-              <.range_button
-                label={dgettext("dashboard_analytics", "90 days")}
-                value="90d"
-                current={@range}
-              />
-            </div>
-            <button
-              type="button"
-              phx-click="refresh"
-              title={dgettext("dashboard_analytics", "Refresh")}
-              aria-label={dgettext("dashboard_analytics", "Refresh analytics")}
-              class="rounded-md bg-tymeslot-50 p-2 text-tymeslot-700 transition-colors hover:bg-tymeslot-100"
-            >
-              <.icon name="hero-arrow-path" class={"h-4 w-4 #{if @refreshing?, do: "animate-spin"}"} />
-            </button>
-          </div>
-        </div>
+      <.dashboard_page
+        :if={@analytics_allowed}
+        icon="hero-chart-bar"
+        title={dgettext("dashboard_common", "Analytics")}
+      >
+        <:actions>
+          <.segmented_control
+            id="analytics-range"
+            value={@range}
+            on_change="set_range"
+            param="range"
+            aria_label={dgettext("dashboard_analytics", "Date range")}
+          >
+            <:option value="7d" label={dgettext("dashboard_analytics", "7 days")} />
+            <:option value="30d" label={dgettext("dashboard_analytics", "30 days")} />
+            <:option value="90d" label={dgettext("dashboard_analytics", "90 days")} />
+          </.segmented_control>
+          <%!-- The arbitrary variant spins the component's icon while a
+                  refresh is in flight; the button itself stays still. --%>
+          <.icon_button
+            icon="hero-arrow-path"
+            label={dgettext("dashboard_analytics", "Refresh analytics")}
+            size={:sm}
+            class={@refreshing? && "[&>svg]:animate-spin"}
+            phx-click="refresh"
+          />
+        </:actions>
 
         <p
           :if={@loaded? and @refreshed_at}
-          class="text-token-xs tabular-nums text-tymeslot-400"
+          class="text-token-xs tabular-nums text-tymeslot-500"
           aria-live="polite"
         >
           {dgettext("dashboard_analytics", "Updated %{time}",
-            time: format_refreshed_at(@refreshed_at, @time_zone)
+            time: format_refreshed_at(@refreshed_at, @time_zone, @time_format)
           )}
         </p>
 
-        <div
-          :if={@partial_window?}
-          class="flex items-start gap-2 rounded-token-lg bg-turquoise-50 px-4 py-3 text-token-sm text-tymeslot-700"
-        >
-          <.icon name="hero-information-circle" class="mt-0.5 h-5 w-5 shrink-0 text-turquoise-500" />
-          <span>
-            {dgettext(
-              "dashboard_analytics",
-              "Booking analytics started collecting on %{date}. Dates before then show no data, so longer ranges will look sparse until more history builds up.",
-              date: format_launch_date(@launch_date)
-            )}
-          </span>
-        </div>
+        <.info_box :if={@partial_window?} variant={:info}>
+          {dgettext(
+            "dashboard_analytics",
+            "Booking analytics started collecting on %{date}. Dates before then show no data, so longer ranges will look sparse until more history builds up.",
+            date: format_launch_date(@launch_date)
+          )}
+        </.info_box>
 
         <SummaryCards.cards
           visits={@visits}
@@ -195,7 +182,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
           loading?={!@loaded?}
         />
 
-        <p class="text-token-xs leading-relaxed text-tymeslot-400">
+        <p class="text-token-xs leading-relaxed text-tymeslot-500">
           <%!--
             Be honest about the cookieless model: the daily-rotated fingerprint
             means a visitor is counted once per UTC day, so multi-day "unique
@@ -220,32 +207,8 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
         <DeviceBreakdown.breakdown devices={@devices} loading?={!@loaded?} />
 
         <SourcesTable.table sources={@sources} loading?={!@loaded?} />
-      </div>
+      </.dashboard_page>
     </DashboardLayout.dashboard_layout>
-    """
-  end
-
-  attr :label, :string, required: true
-  attr :value, :string, required: true
-  attr :current, :string, required: true
-
-  defp range_button(assigns) do
-    ~H"""
-    <button
-      type="button"
-      phx-click="set_range"
-      phx-value-range={@value}
-      aria-pressed={@current == @value}
-      class={[
-        "rounded-md px-3 py-1.5 text-token-sm font-semibold transition-colors",
-        if(@current == @value,
-          do: "bg-turquoise-500 text-white shadow-sm",
-          else: "bg-tymeslot-50 text-tymeslot-700 hover:bg-tymeslot-100"
-        )
-      ]}
-    >
-      {@label}
-    </button>
     """
   end
 
@@ -294,12 +257,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
     assign(socket, launch_date: launch_date, partial_window?: partial_window?)
   end
 
-  defp format_launch_date(%Date{} = date) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-    day = String.pad_leading(to_string(date.day), 2, "0")
-    "#{day} #{LocaleFormat.format_month_name(date.month, locale, :short)} #{date.year}"
-  end
-
+  defp format_launch_date(%Date{} = date), do: DashboardFormat.long_date(date)
   defp format_launch_date(_other), do: ""
 
   defp organizer_time_zone(socket) do
@@ -335,12 +293,19 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
     |> assign(:refreshed_at, DateTime.utc_now())
   end
 
-  defp format_refreshed_at(%DateTime{} = dt, time_zone) do
-    case DateTime.shift_zone(dt, time_zone || "Etc/UTC") do
-      {:ok, local} -> Calendar.strftime(local, "%H:%M:%S")
-      {:error, _reason} -> Calendar.strftime(dt, "%H:%M:%S")
-    end
+  # The organiser's own clock, 12- or 24-hour, as on every other dashboard page.
+  defp format_refreshed_at(%DateTime{} = dt, time_zone, time_format) do
+    local =
+      case DateTime.shift_zone(dt, time_zone || "Etc/UTC") do
+        {:ok, local} -> local
+        {:error, _reason} -> dt
+      end
+
+    TimeFormat.format(
+      local,
+      TimeFormat.resolve(time_format, Gettext.get_locale(TymeslotWeb.Gettext))
+    )
   end
 
-  defp format_refreshed_at(_other, _time_zone), do: ""
+  defp format_refreshed_at(_other, _time_zone, _time_format), do: ""
 end

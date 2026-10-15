@@ -97,6 +97,21 @@ defmodule Tymeslot.Precommit.Runner do
           ([String.t()], atom(), [{String.t(), String.t()}] -> {String.t(), non_neg_integer()})
   @type suite_plan_fun :: (-> Tymeslot.Precommit.CpuBudget.plan() | nil)
 
+  # `test.elixir` is the suite in the repository that consumes Core as a path
+  # dependency, whose `test` alias also runs the JavaScript suites; its gate
+  # runs those as a step of their own.
+  @suite_commands ~w[test test.elixir]
+
+  @doc """
+  Whether `step` runs the Elixir suite.
+
+  Keyed off the command rather than the step's display name, matching
+  `step_env/1`: the name is a label and can be reworded, the command is the
+  contract.
+  """
+  @spec suite?(step()) :: boolean()
+  def suite?({_name, [command | _rest], _env}), do: command in @suite_commands
+
   @spec run([step()], boolean(), keyword()) :: :ok
   def run(steps, fail_fast?, opts \\ []) do
     cmd_fun = Keyword.get(opts, :cmd, &cmd/2)
@@ -289,11 +304,7 @@ defmodule Tymeslot.Precommit.Runner do
     end
   end
 
-  # Keyed off the command rather than the step's display name, matching
-  # `step_env/1`: the name is a label and can be reworded, the command is the
-  # contract.
-  defp background?({_name, ["test" | _rest], _env}), do: true
-  defp background?(_step), do: false
+  defp background?(step), do: suite?(step)
 
   # Steps that can rewrite `_build/dev` and so must not overlap the steps that
   # read it. Keyed off the command for the same reason as `background?/1`.

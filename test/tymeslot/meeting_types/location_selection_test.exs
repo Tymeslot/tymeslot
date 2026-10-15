@@ -79,26 +79,24 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
       assert [%{id: ^first}] = LocationSelection.options(type)
     end
 
+    test "shows a stored English default label in the current language, as the fallback does" do
+      stored = %{locations: [option(id: "loc-1", kind: "in_person", label: "In person")]}
+      fallback = %{locations: [], allow_video: false, video_integration_id: nil}
+
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        assert [%{label: "Vor Ort"}] = LocationSelection.options(stored)
+        assert [%{label: "Vor Ort"}] = LocationSelection.options(fallback)
+      end)
+    end
+
+    test "leaves a label the host wrote as they wrote it" do
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        assert [%{label: "The office"}] = LocationSelection.options(%{locations: [office()]})
+      end)
+    end
+
     test "an ad-hoc booking with no meeting type has no locations at all" do
       assert LocationSelection.options(nil) == []
-    end
-  end
-
-  describe "choice_required?/1" do
-    test "is false for a single location, which is stated rather than chosen" do
-      refute LocationSelection.choice_required?(%{locations: [office()]})
-    end
-
-    test "is true once there is more than one" do
-      assert LocationSelection.choice_required?(%{locations: [office(), zoom()]})
-    end
-
-    test "is false for a meeting type falling back to its derived single location" do
-      refute LocationSelection.choice_required?(%{
-               locations: [],
-               allow_video: true,
-               video_integration_id: 42
-             })
     end
   end
 
@@ -111,6 +109,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
                location_kind: "in_person",
                location_option_id: "loc-office",
                video_integration_id: nil,
+               address_to_arrange: true,
                attendee_phone: nil
              } = LocationSelection.resolve(type, "loc-office")
     end
@@ -155,7 +154,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
     test "ignores a number submitted against a location that never asked for one" do
       type = %{locations: [office(), zoom()]}
 
-      assert %{location: "Zoom", attendee_phone: nil} =
+      assert %{location: "Zoom", attendee_phone: nil, address_to_arrange: false} =
                LocationSelection.resolve(type, "loc-zoom", "+44 7700 900123")
     end
 
@@ -190,8 +189,62 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
                location_kind: nil,
                location_option_id: nil,
                video_integration_id: nil,
+               address_to_arrange: false,
                attendee_phone: nil
              } = LocationSelection.resolve(nil, nil)
+    end
+  end
+
+  describe "in-person locations" do
+    test "resolve to their label alone, whatever details an old row carries" do
+      office =
+        option(
+          id: "loc-office",
+          kind: "in_person",
+          label: "Our office",
+          details: "12 High Street",
+          position: 0
+        )
+
+      assert %{location: "Our office", venue_id: nil} =
+               LocationSelection.resolve(%{locations: [office]}, "loc-office")
+    end
+  end
+
+  describe "place_at_venue/3" do
+    defp venue(id, name, description \\ nil), do: %{id: id, name: name, description: description}
+
+    defp at_the_office, do: LocationSelection.resolve(%{locations: [office()]}, "loc-office")
+
+    defp two_offices,
+      do: [venue(1, "Berlin office"), venue(2, "Munich office", "Marienplatz 8")]
+
+    test "places the booking at the venue the booker picked" do
+      assert %{
+               venue_id: 2,
+               location: "Munich office (Marienplatz 8)",
+               address_to_arrange: false
+             } = LocationSelection.place_at_venue(at_the_office(), two_offices(), [2])
+    end
+
+    test "accepts the pick as the string the form posts" do
+      assert %{venue_id: 2} =
+               LocationSelection.place_at_venue(at_the_office(), two_offices(), ["2"])
+    end
+
+    test "falls back to the first venue for an id the location does not offer" do
+      assert %{venue_id: 1, location: "Berlin office"} =
+               LocationSelection.place_at_venue(at_the_office(), two_offices(), [99])
+    end
+
+    test "takes the next preference when the first is not offered" do
+      assert %{venue_id: 2} =
+               LocationSelection.place_at_venue(at_the_office(), two_offices(), [99, 2])
+    end
+
+    test "leaves a location with no venues as its label, with no venue" do
+      assert %{venue_id: nil, location: "The office", address_to_arrange: true} =
+               LocationSelection.place_at_venue(at_the_office(), [], [1])
     end
   end
 end

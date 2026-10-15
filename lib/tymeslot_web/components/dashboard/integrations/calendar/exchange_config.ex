@@ -2,7 +2,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ExchangeConfig 
   @moduledoc """
   Configuration form for connecting a Microsoft Exchange mailbox over EWS.
 
-  Deliberately not built on `ConfigBase` or the shared CalDAV `config_form/1`.
+  Deliberately not built on `CaldavFamilyConfig` or the shared CalDAV
+  `config_form/1`.
   Exchange is not a CalDAV server, and three differences make the shared form
   the wrong shape rather than merely a loose fit:
 
@@ -36,7 +37,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ExchangeConfig 
     as: SharedForm
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
-  alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   @impl Phoenix.LiveComponent
@@ -48,20 +48,17 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ExchangeConfig 
   def render(assigns) do
     ~H"""
     <div id={"exchange-config-#{@id}"} class="space-y-6">
-      <div class="flex items-center gap-4">
-        <ProviderIcon.provider_icon provider="exchange" type="calendar" size="large" />
-        <div>
-          <h3 class="text-xl font-black text-tymeslot-900 tracking-tight">
-            {dgettext("dashboard_calendar_providers", "Microsoft Exchange")}
-          </h3>
-          <p class="text-sm text-tymeslot-500 font-medium">
-            {dgettext(
-              "dashboard_calendar_providers",
-              "Sync busy time and bookings with an on-premises Exchange Server"
-            )}
-          </p>
-        </div>
-      </div>
+      <UIComponents.provider_config_header
+        provider="exchange"
+        type="calendar"
+        title={dgettext("dashboard_calendar_providers", "Microsoft Exchange")}
+        tagline={
+          dgettext(
+            "dashboard_calendar_providers",
+            "Sync busy time and bookings with an on-premises Exchange Server"
+          )
+        }
+      />
 
       <%= if @show_calendar_selection do %>
         <.selection_step
@@ -215,14 +212,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ExchangeConfig 
         error={error}
       />
 
-      <div class="flex justify-between items-center pt-4 border-t border-turquoise-200/30">
-        <UIComponents.secondary_button target={@target} />
-        <UIComponents.form_submit_button
-          saving={@saving}
-          text={dgettext("dashboard_calendar_providers", "Discover calendars")}
-          saving_text={dgettext("dashboard_calendar_providers", "Discovering...")}
-        />
-      </div>
+      <UIComponents.form_actions
+        target={@target}
+        saving={@saving}
+        class="border-turquoise-200/30"
+        submit_text={dgettext("dashboard_calendar_providers", "Discover calendars")}
+        saving_text={dgettext("dashboard_calendar_providers", "Discovering...")}
+      />
     </form>
     """
   end
@@ -269,7 +265,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ExchangeConfig 
           {dgettext("dashboard_calendar_providers", "Select calendars to show on your dashboard:")}
         </h4>
 
-        <div class="brand-card p-4">
+        <div class="brand-card">
           <%= if @discovered_calendars == [] do %>
             <p class="text-sm text-tymeslot-500">
               {dgettext(
@@ -280,7 +276,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ExchangeConfig 
           <% else %>
             <div
               :for={calendar <- @discovered_calendars}
-              class="flex items-center space-x-3 p-3 rounded-lg hover:bg-white/20 transition-colors"
+              class="flex items-center space-x-3 p-3 rounded-token-lg hover:bg-white/20 transition-colors"
             >
               <.input
                 type="checkbox"
@@ -316,10 +312,11 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ExchangeConfig 
         error={error}
       />
 
-      <div class="flex justify-between items-center pt-4 border-t border-turquoise-200/30">
-        <UIComponents.secondary_button target={@target} />
-        <UIComponents.form_submit_button saving={@saving} />
-      </div>
+      <UIComponents.form_actions
+        target={@target}
+        saving={@saving}
+        class="border-turquoise-200/30"
+      />
     </form>
     """
   end

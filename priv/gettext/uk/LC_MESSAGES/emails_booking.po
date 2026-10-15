@@ -188,6 +188,7 @@ msgid "Cancel Appointment"
 msgstr "Скасувати зустріч"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "Cancelled"
 msgstr "Скасовано"
@@ -430,6 +431,7 @@ msgstr "З нетерпінням чекаю на зустріч!"
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #: lib/tymeslot/emails/templates/event_update_notification.ex
 #: lib/tymeslot/emails/templates/external_booking_change.ex
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "MEETING DETAILS:"
 msgstr "ДЕТАЛІ ЗУСТРІЧІ:"
@@ -508,6 +510,7 @@ msgstr "Змінилися плани?"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "Need to make changes?"
 msgstr "Потрібно внести зміни?"
@@ -523,6 +526,7 @@ msgid "New Appointment: %{name} - %{date}"
 msgstr "Нова зустріч: %{name} - %{date}"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "New booking"
 msgstr "Нове бронювання"
@@ -706,6 +710,7 @@ msgid "Reschedule"
 msgstr "Перенести"
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "Rescheduled"
 msgstr "Перенесено"
@@ -1095,3 +1100,177 @@ msgstr "Зустріч, на яку вас запросив(ла) %{organizer}, 
 #, elixir-autogen, elixir-format
 msgid "The meeting %{organizer} invited you to has been moved to a new time."
 msgstr "Зустріч, на яку вас запросив(ла) %{organizer}, перенесено на новий час."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} booked a spot in your group meeting."
+msgstr "%{name} забронював(-ла) місце на вашій груповій зустрічі."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} cancelled their spot. The meeting goes ahead for everyone else."
+msgstr "%{name} скасував(-ла) своє місце. Для всіх інших зустріч відбудеться за планом."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} moved their spot from %{from} to %{to}."
+msgstr "%{name} переніс(-ла) своє місце з %{from} на %{to}."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{taken} of %{count} spot taken"
+msgid_plural "%{taken} of %{count} spots taken"
+msgstr[0] "Зайнято %{taken} з %{count} місця"
+msgstr[1] "Зайнято %{taken} з %{count} місць"
+msgstr[2] "Зайнято %{taken} з %{count} місць"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "A participant cancelled their spot"
+msgstr "Учасник скасував своє місце"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "A participant moved their spot"
+msgstr "Учасник переніс своє місце"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "A spot was booked"
+msgstr "Місце заброньовано"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Open in dashboard"
+msgstr "Відкрити в панелі керування"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Spot booked: %{name} - %{date}"
+msgstr "Місце заброньовано: %{name} - %{date}"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Spot cancelled: %{name} - %{date}"
+msgstr "Місце скасовано: %{name} - %{date}"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Spot moved: %{name} - %{date}"
+msgstr "Місце перенесено: %{name} - %{date}"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} moved their spot to %{to}."
+msgstr "%{name} переніс(-ла) своє місце на %{to}."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} cancelled their spot. Nobody is left on this slot, so the meeting has been cancelled and the time is free again."
+msgstr "%{name} скасував(-ла) своє місце. У цьому слоті більше нікого не лишилося, тому зустріч скасовано, а час знову вільний."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Nobody is left at the earlier time, so that meeting has been cancelled and the time is free again."
+msgstr "На попередній час більше нікого не лишилося, тому ту зустріч скасовано, а час знову вільний."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Slot freed: %{name} cancelled - %{date}"
+msgstr "Слот звільнено: %{name} скасував(-ла) - %{date}"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "The last participant cancelled their spot"
+msgstr "Останній учасник скасував своє місце"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Book Another Time"
+msgstr "Забронювати інший час"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "CANCELLED SPOT:"
+msgstr "СКАСОВАНЕ МІСЦЕ:"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name} - you've given up your spot in %{meeting} on %{date}."
+msgstr "Вітаємо, %{name}! Ви відмовилися від свого місця на %{meeting} %{date}."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name} - your spot has moved from %{from} to %{to}."
+msgstr "Вітаємо, %{name}! Ваше місце перенесено з %{from} на %{to}."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name} - your spot has moved to %{to}."
+msgstr "Вітаємо, %{name}! Ваше місце перенесено на %{to}."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "If you added the meeting to your calendar, the attached file removes it there."
+msgstr "Якщо ви додали зустріч до свого календаря, вкладений файл видалить її звідти."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Spot cancelled"
+msgstr "Місце скасовано"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Spot cancelled - %{date} with %{name}"
+msgstr "Місце скасовано - %{date} з %{name}"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Spot moved - %{date} with %{name}"
+msgstr "Місце перенесено - %{date} з %{name}"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting goes ahead for the others."
+msgstr "Для інших зустріч відбудеться за планом."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Would you like to book another time?"
+msgstr "Бажаєте забронювати інший час?"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Your spot has moved from %{from} to %{to}."
+msgstr "Ваше місце перенесено з %{from} на %{to}."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Your spot has moved to %{to}."
+msgstr "Ваше місце перенесено на %{to}."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Your spot has moved."
+msgstr "Ваше місце перенесено."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "A group meeting cannot be moved for everyone at once. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
+msgstr "Групову зустріч не можна перенести для всіх одночасно. Щоб зберегти початковий час, поверніть подію на місце у своєму календарі. Щоб змінити його, надішліть учасникам запит на перенесення з панелі керування або скасуйте там зустріч, щоб кожен учасник отримав сповіщення."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "Please review the group meeting in Tymeslot."
+msgstr "Будь ласка, перегляньте групову зустріч у Tymeslot."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "The group meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original time for every participant, and a group meeting cannot be moved for everyone at once."
+msgstr "Групову зустріч «%{title}» перенесено у вашому зовнішньому календарі. У Tymeslot для кожного учасника досі збережено початковий час, а групову зустріч не можна перенести для всіх одночасно."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "This group meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above, and its participants still expect it. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
+msgstr "Цю групову зустріч <strong>перенесено у вашому зовнішньому календарі</strong>. У Tymeslot вище досі показано початковий час, і учасники досі на нього розраховують. Щоб зберегти початковий час, поверніть подію на місце у своєму календарі. Щоб змінити його, надішліть учасникам запит на перенесення з панелі керування або скасуйте там зустріч, щоб кожен учасник отримав сповіщення."

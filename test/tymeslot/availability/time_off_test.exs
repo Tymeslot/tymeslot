@@ -1,11 +1,11 @@
 defmodule Tymeslot.Availability.TimeOffTest do
   @moduledoc """
   Covers `Tymeslot.Availability.TimeOff`: the reading of a stored period as
-  the window it blocks on a given date, and the create/update/delete API the
+  the interval of instants it blocks, and the create/update/delete API the
   dashboard drives.
 
-  `blocked_window/2` is where the whole feature's semantics live — a period is
-  one continuous interval, so its times trim only the first and last day —
+  `intervals/2` is where the whole feature's semantics live: a period is
+  one continuous interval, so its times trim only the first and last day,
   and every other module asks this one rather than comparing dates itself.
   """
 
@@ -19,8 +19,10 @@ defmodule Tymeslot.Availability.TimeOffTest do
   alias Tymeslot.Availability.TimeOff
   alias Tymeslot.Availability.TimeOffPeriodQueries
 
-  describe "blocked_window/2" do
-    test "a whole-day period blocks every date it covers, and nothing outside it" do
+  describe "intervals/2" do
+    defp span({from, to}), do: {DateTime.to_iso8601(from), DateTime.to_iso8601(to)}
+
+    test "an open-ended period ends at the midnight after ends_on" do
       period = %{
         starts_on: ~D[2026-09-10],
         ends_on: ~D[2026-09-12],
@@ -28,17 +30,13 @@ defmodule Tymeslot.Availability.TimeOffTest do
         end_time: nil
       }
 
-      assert TimeOff.blocked_window(period, ~D[2026-09-09]) == :none
-      assert TimeOff.blocked_window(period, ~D[2026-09-10]) == :all_day
-      assert TimeOff.blocked_window(period, ~D[2026-09-11]) == :all_day
-      assert TimeOff.blocked_window(period, ~D[2026-09-12]) == :all_day
-      assert TimeOff.blocked_window(period, ~D[2026-09-13]) == :none
+      assert [interval] = TimeOff.intervals([period], "Etc/UTC")
+      assert span(interval) == {"2026-09-10T00:00:00Z", "2026-09-13T00:00:00Z"}
     end
 
-    test "times trim only the first and last day; the days between stay blocked in full" do
-      # "Leaving Friday lunchtime, back Monday morning": the point of the
-      # continuous-interval reading. Saturday and Sunday must not inherit the
-      # 14:00 start, which is what a per-day reading of the same row would do.
+    test "a part-day first day starts at its time; the days between stay blocked in full" do
+      # "Leaving Friday lunchtime, back Monday morning": one continuous
+      # interval, so Saturday and Sunday do not inherit the 14:00 start.
       period = %{
         starts_on: ~D[2026-09-11],
         ends_on: ~D[2026-09-14],
@@ -46,13 +44,11 @@ defmodule Tymeslot.Availability.TimeOffTest do
         end_time: ~T[09:00:00]
       }
 
-      assert TimeOff.blocked_window(period, ~D[2026-09-11]) == {~T[14:00:00], ~T[23:59:59]}
-      assert TimeOff.blocked_window(period, ~D[2026-09-12]) == :all_day
-      assert TimeOff.blocked_window(period, ~D[2026-09-13]) == :all_day
-      assert TimeOff.blocked_window(period, ~D[2026-09-14]) == {~T[00:00:00], ~T[09:00:00]}
+      assert [interval] = TimeOff.intervals([period], "Etc/UTC")
+      assert span(interval) == {"2026-09-11T14:00:00Z", "2026-09-14T09:00:00Z"}
     end
 
-    test "a single day with both times blocks only that window" do
+    test "a period with both times on one day is that span" do
       period = %{
         starts_on: ~D[2026-09-10],
         ends_on: ~D[2026-09-10],
@@ -60,10 +56,11 @@ defmodule Tymeslot.Availability.TimeOffTest do
         end_time: ~T[17:00:00]
       }
 
-      assert TimeOff.blocked_window(period, ~D[2026-09-10]) == {~T[13:00:00], ~T[17:00:00]}
+      assert [interval] = TimeOff.intervals([period], "Etc/UTC")
+      assert span(interval) == {"2026-09-10T13:00:00Z", "2026-09-10T17:00:00Z"}
     end
 
-    test "a single open-ended day blocks from its time to the end of the day" do
+    test "a single open-ended day runs from its time to the midnight after" do
       period = %{
         starts_on: ~D[2026-09-10],
         ends_on: ~D[2026-09-10],
@@ -71,72 +68,36 @@ defmodule Tymeslot.Availability.TimeOffTest do
         end_time: nil
       }
 
-      assert TimeOff.blocked_window(period, ~D[2026-09-10]) == {~T[13:00:00], ~T[23:59:59]}
+      assert [interval] = TimeOff.intervals([period], "Etc/UTC")
+      assert span(interval) == {"2026-09-10T13:00:00Z", "2026-09-11T00:00:00Z"}
     end
 
-    test "a day covered from midnight to end of day reads as all-day, not as a window" do
-      # Explicit midnight-to-midnight times must collapse to :all_day, or the
-      # day would be handed to the slot filter as a break and the business-hours
-      # refusal that keeps the date off the calendar grid would never fire.
+    test "a single day with no start time runs from midnight to its end time" do
       period = %{
         starts_on: ~D[2026-09-10],
         ends_on: ~D[2026-09-10],
-        start_time: ~T[00:00:00],
-        end_time: ~T[23:59:59]
-      }
-
-      assert TimeOff.blocked_window(period, ~D[2026-09-10]) == :all_day
-    end
-
-    test "a multi-day period whose end time precedes its start time blocks neither edge day fully" do
-      # Friday 16:00 to Monday 09:00 leaves Friday morning and Monday afternoon
-      # bookable; neither edge may be promoted to :all_day by the clock
-      # comparison alone.
-      period = %{
-        starts_on: ~D[2026-09-11],
-        ends_on: ~D[2026-09-14],
-        start_time: ~T[16:00:00],
+        start_time: nil,
         end_time: ~T[09:00:00]
       }
 
-      refute TimeOff.blocked_window(period, ~D[2026-09-11]) == :all_day
-      refute TimeOff.blocked_window(period, ~D[2026-09-14]) == :all_day
+      assert [interval] = TimeOff.intervals([period], "Etc/UTC")
+      assert span(interval) == {"2026-09-10T00:00:00Z", "2026-09-10T09:00:00Z"}
     end
 
-    test "a period with no dates blocks nothing" do
-      assert TimeOff.blocked_window(%{starts_on: nil, ends_on: nil}, ~D[2026-09-10]) == :none
-    end
-  end
-
-  describe "all_day? / windows_for_day" do
-    test "separates whole days from the part-day windows the slot filter excludes" do
-      whole_day = %{
+    test "times are read on the owner's clock and returned as UTC instants" do
+      period = %{
         starts_on: ~D[2026-09-10],
         ends_on: ~D[2026-09-10],
         start_time: nil,
         end_time: nil
       }
 
-      afternoon = %{
-        starts_on: ~D[2026-09-11],
-        ends_on: ~D[2026-09-11],
-        start_time: ~T[13:00:00],
-        end_time: ~T[17:00:00]
-      }
-
-      periods = [whole_day, afternoon]
-
-      assert TimeOff.all_day?(periods, ~D[2026-09-10])
-      refute TimeOff.all_day?(periods, ~D[2026-09-11])
-
-      # A whole day contributes no window: it is refused before slot generation
-      # rather than by removing every slot it produced.
-      assert TimeOff.windows_for_day(periods, ~D[2026-09-10]) == []
-      assert TimeOff.windows_for_day(periods, ~D[2026-09-11]) == [{~T[13:00:00], ~T[17:00:00]}]
-      assert TimeOff.windows_for_day(periods, ~D[2026-09-12]) == []
+      # Berlin is UTC+2 in September: local midnight is 22:00 UTC the day before.
+      assert [interval] = TimeOff.intervals([period], "Europe/Berlin")
+      assert span(interval) == {"2026-09-09T22:00:00Z", "2026-09-10T22:00:00Z"}
     end
 
-    test "overlapping part-day periods each contribute their own window" do
+    test "each period is its own interval, overlapping ones included" do
       periods = [
         %{
           starts_on: ~D[2026-09-11],
@@ -152,10 +113,14 @@ defmodule Tymeslot.Availability.TimeOffTest do
         }
       ]
 
-      assert TimeOff.windows_for_day(periods, ~D[2026-09-11]) == [
-               {~T[09:00:00], ~T[11:00:00]},
-               {~T[10:00:00], ~T[13:00:00]}
+      assert periods |> TimeOff.intervals("Etc/UTC") |> Enum.map(&span/1) == [
+               {"2026-09-11T09:00:00Z", "2026-09-11T11:00:00Z"},
+               {"2026-09-11T10:00:00Z", "2026-09-11T13:00:00Z"}
              ]
+    end
+
+    test "a period with no dates contributes nothing" do
+      assert TimeOff.intervals([%{starts_on: nil, ends_on: nil}], "Etc/UTC") == []
     end
   end
 
@@ -271,7 +236,9 @@ defmodule Tymeslot.Availability.TimeOffTest do
                  end_time: ~T[09:00:00]
                })
 
-      assert TimeOff.blocked_window(period, ~D[2026-09-10]) == {~T[00:00:00], ~T[09:00:00]}
+      assert [{from, to}] = TimeOff.intervals([period], "Etc/UTC")
+      assert DateTime.compare(from, ~U[2026-09-10 00:00:00Z]) == :eq
+      assert DateTime.compare(to, ~U[2026-09-10 09:00:00Z]) == :eq
     end
 
     test "strips null bytes from the note instead of failing the insert" do
@@ -502,7 +469,9 @@ defmodule Tymeslot.Availability.TimeOffTest do
       assert updated.start_time == nil
       assert updated.end_time == nil
       assert updated.label == nil
-      assert TimeOff.blocked_window(updated, ~D[2026-09-10]) == :all_day
+      assert [{from, to}] = TimeOff.intervals([updated], "Etc/UTC")
+      assert DateTime.compare(from, ~U[2026-09-10 00:00:00Z]) == :eq
+      assert DateTime.compare(to, ~U[2026-09-11 00:00:00Z]) == :eq
     end
 
     test "a whitespace-only note is stored as no note at all" do

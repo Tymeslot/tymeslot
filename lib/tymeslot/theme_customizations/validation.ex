@@ -7,7 +7,7 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
   require Logger
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias TymeslotWeb.Helpers.UploadConstraints
+  alias Tymeslot.Media.UploadConstraints
 
   # Tokens that, if present in generated theme CSS, indicate a `</style>` break-out
   # or loader-based injection. Match case-insensitively: attackers try `</STYLE>`,

@@ -59,6 +59,9 @@ defmodule Tymeslot.Announcements.Catalog do
   @meeting_locations_published_at ~U[2026-09-23 00:00:00Z]
   @meeting_locations_expires_at ~U[2026-10-23 00:00:00Z]
 
+  @group_bookings_published_at ~U[2026-10-07 00:00:00Z]
+  @group_bookings_expires_at ~U[2026-11-06 00:00:00Z]
+
   @spec list() :: [Announcement.t()]
   def list do
     # One builder per announcement keeps this ordered list trivial and each
@@ -66,6 +69,7 @@ defmodule Tymeslot.Announcements.Catalog do
     # last — add smaller improvements to its bullets rather than spawning new
     # entries.
     [
+      group_bookings(),
       meeting_locations(),
       video_providers(),
       time_off(),
@@ -83,6 +87,24 @@ defmodule Tymeslot.Announcements.Catalog do
       zoom_integration(),
       more_features()
     ]
+  end
+
+  defp group_bookings do
+    %Announcement{
+      key: "group_bookings",
+      title: dgettext("onboarding", "Host webinars, workshops and classes"),
+      body:
+        dgettext(
+          "onboarding",
+          "Turn any meeting type into a group session. Set how many people can join and " <>
+            "each slot stays open until it's full, so one booking page can run your webinar, " <>
+            "workshop, class or office hours. Everyone books themselves in, gets their own " <>
+            "confirmation and calendar invite, and can cancel or reschedule without asking you."
+        ),
+      image_path: "/images/announcements/group-bookings.svg",
+      published_at: @group_bookings_published_at,
+      expires_at: @group_bookings_expires_at
+    }
   end
 
   defp meeting_locations do

@@ -5,11 +5,11 @@ defmodule Tymeslot.Availability.OfferRangeTest do
 
   The property is the whole contract: each day of the range is exactly what
   `Offer.slots_for_date/3` offers for that day, across the host's rules
-  (buffer, notice, slot interval, a daily booking cap with bookings counting
-  against it, an unavailable-day override, a stretch of time off), the
-  booker's timezone, the host's calendar and a reschedule. The range reads the
-  host's calendar once where the per-day path reads it once a day, so the
-  examples below pin that and the refusals.
+  (the buffers before and after, notice, slot interval, a daily booking cap
+  with bookings counting against it, an unavailable-day override, a stretch of
+  time off), the booker's timezone, the host's calendar and a reschedule. The
+  range reads the host's calendar once where the per-day path reads it once a
+  day, so the examples below pin that and the refusals.
 
   The clock is frozen for every test: today is in every range, and a slot
   starting between the two computations would otherwise pass its notice
@@ -322,7 +322,8 @@ defmodule Tymeslot.Availability.OfferRangeTest do
 
     schedule
     |> Changeset.change(
-      buffer_minutes: rules.buffer_minutes,
+      buffer_before_minutes: rules.buffer_before_minutes,
+      buffer_after_minutes: rules.buffer_after_minutes,
       min_advance_hours: rules.min_advance_hours
     )
     |> Repo.update!()
@@ -392,7 +393,8 @@ defmodule Tymeslot.Availability.OfferRangeTest do
 
   defp rules_generator do
     gen all(
-          buffer_minutes <- member_of([0, 15, 30]),
+          buffer_before_minutes <- member_of([0, 15, 30]),
+          buffer_after_minutes <- member_of([0, 15, 30]),
           min_advance_hours <- member_of([0, 5, 30, 480]),
           slot_interval_minutes <- member_of([:no_meeting_type, nil, 15, 30]),
           {max_bookings_per_day, existing_bookings} <- booking_limit(),
@@ -401,7 +403,8 @@ defmodule Tymeslot.Availability.OfferRangeTest do
           reschedule? <- boolean()
         ) do
       %{
-        buffer_minutes: buffer_minutes,
+        buffer_before_minutes: buffer_before_minutes,
+        buffer_after_minutes: buffer_after_minutes,
         min_advance_hours: min_advance_hours,
         slot_interval_minutes: slot_interval_minutes,
         max_bookings_per_day: max_bookings_per_day,

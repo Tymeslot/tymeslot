@@ -41,15 +41,15 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         title={dgettext("dashboard_embed", "Inline Embed")}
         description={dgettext("dashboard_embed", "Embed directly into your webpage")}
         badge={dgettext("dashboard_embed", "Recommended")}
-        badge_class="bg-turquoise-100 text-turquoise-700"
+        badge_tone={:brand}
         myself={@myself}
       >
         <:preview>
           <div class="bg-white rounded shadow-sm p-4">
             <div class="flex items-center space-x-2 mb-3">
-              <div class="w-3 h-3 rounded-full bg-red-400"></div>
-              <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
-              <div class="w-3 h-3 rounded-full bg-green-400"></div>
+              <div class="w-3 h-3 rounded-token-full bg-red-400"></div>
+              <div class="w-3 h-3 rounded-token-full bg-yellow-400"></div>
+              <div class="w-3 h-3 rounded-token-full bg-green-400"></div>
             </div>
             <div class="space-y-2">
               <div class="h-2 bg-tymeslot-200 rounded w-3/4"></div>
@@ -84,15 +84,15 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         title={dgettext("dashboard_embed", "Popup Modal")}
         description={dgettext("dashboard_embed", "Trigger a modal overlay with a button")}
         badge={dgettext("dashboard_embed", "Popular")}
-        badge_class="bg-blue-100 text-blue-700"
+        badge_tone={:info}
         myself={@myself}
       >
         <:preview>
           <div class="bg-white rounded shadow-sm p-4">
             <div class="flex items-center space-x-2 mb-3">
-              <div class="w-3 h-3 rounded-full bg-red-400"></div>
-              <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
-              <div class="w-3 h-3 rounded-full bg-green-400"></div>
+              <div class="w-3 h-3 rounded-token-full bg-red-400"></div>
+              <div class="w-3 h-3 rounded-token-full bg-yellow-400"></div>
+              <div class="w-3 h-3 rounded-token-full bg-green-400"></div>
             </div>
             <div class="space-y-2">
               <div class="h-2 bg-tymeslot-200 rounded w-3/4"></div>
@@ -123,15 +123,15 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         title={dgettext("dashboard_embed", "Direct Link")}
         description={dgettext("dashboard_embed", "Simple link to your booking page")}
         badge={dgettext("dashboard_embed", "Easiest")}
-        badge_class="bg-tymeslot-100 text-tymeslot-700"
+        badge_tone={:neutral}
         myself={@myself}
       >
         <:preview>
           <div class="bg-white rounded shadow-sm p-4">
             <div class="flex items-center space-x-2 mb-3">
-              <div class="w-3 h-3 rounded-full bg-red-400"></div>
-              <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
-              <div class="w-3 h-3 rounded-full bg-green-400"></div>
+              <div class="w-3 h-3 rounded-token-full bg-red-400"></div>
+              <div class="w-3 h-3 rounded-token-full bg-yellow-400"></div>
+              <div class="w-3 h-3 rounded-token-full bg-green-400"></div>
             </div>
             <div class="space-y-2">
               <div class="h-2 bg-tymeslot-200 rounded w-3/4"></div>
@@ -162,16 +162,16 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         title={dgettext("dashboard_embed", "Floating Button")}
         description={dgettext("dashboard_embed", "Fixed button in corner of page")}
         badge={dgettext("dashboard_embed", "Pro")}
-        badge_class="bg-purple-100 text-purple-700"
+        badge_tone={:brand}
         myself={@myself}
       >
         <:preview>
           <div class="mb-0 bg-tymeslot-50 rounded-token-lg p-0 relative overflow-hidden">
             <div class="bg-white rounded shadow-sm p-4">
               <div class="flex items-center space-x-2 mb-3">
-                <div class="w-3 h-3 rounded-full bg-red-400"></div>
-                <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
-                <div class="w-3 h-3 rounded-full bg-green-400"></div>
+                <div class="w-3 h-3 rounded-token-full bg-red-400"></div>
+                <div class="w-3 h-3 rounded-token-full bg-yellow-400"></div>
+                <div class="w-3 h-3 rounded-token-full bg-green-400"></div>
               </div>
               <div class="space-y-2">
                 <div class="h-2 bg-tymeslot-200 rounded w-3/4"></div>
@@ -181,7 +181,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
             </div>
             <%!-- Floating button preview --%>
             <div class="absolute bottom-4 right-4">
-              <div class="w-8 h-8 rounded-full shadow-lg flex items-center justify-center bg-turquoise-600">
+              <div class="w-8 h-8 rounded-token-full shadow-lg flex items-center justify-center bg-turquoise-600">
                 <.icon name="hero-calendar" class="w-4 h-4 text-white" />
               </div>
             </div>
@@ -202,11 +202,11 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
     <%!-- WordPress plugin callout. Hardcoded links: Core standalone has no /docs,
          and the plugin (on WordPress.org, source on GitHub) works against any
          instance, cloud or self-hosted. --%>
-    <div class="mt-8 flex items-start gap-3 rounded-token-xl border-2 border-indigo-200 bg-linear-to-r from-indigo-50 to-blue-50 p-5">
-      <.icon name="hero-puzzle-piece" class="mt-0.5 h-6 w-6 shrink-0 text-indigo-600" />
+    <div class="mt-8 flex items-start gap-3 rounded-token-xl border-2 border-blue-200 bg-blue-50 p-5">
+      <.icon name="hero-puzzle-piece" class="mt-0.5 h-6 w-6 shrink-0 text-blue-600" />
       <div class="space-y-1">
-        <p class="font-semibold text-indigo-900">{dgettext("dashboard_embed", "Using WordPress?")}</p>
-        <p class="text-token-sm text-indigo-800">
+        <p class="font-semibold text-blue-900">{dgettext("dashboard_embed", "Using WordPress?")}</p>
+        <p class="text-token-sm text-blue-800">
           {dgettext(
             "dashboard_embed",
             "Install the official Tymeslot plugin to embed your booking page with a block or shortcode - no code."
@@ -217,18 +217,18 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
             rel="noopener noreferrer"
             data-analytics-event="wordpress_plugin_cta_clicked"
             data-analytics-props={Jason.encode!(%{source_page: "embed_settings"})}
-            class="font-bold text-indigo-700 underline hover:text-indigo-900"
+            class="font-bold text-blue-700 underline hover:text-blue-900"
           >
             {dgettext("dashboard_embed", "Get it on WordPress.org")}
           </a>
-          <span class="text-indigo-400" aria-hidden="true">·</span>
+          <span class="text-blue-400" aria-hidden="true">·</span>
           <a
             href="https://github.com/Tymeslot/tymeslot-wordpress"
             target="_blank"
             rel="noopener noreferrer"
             data-analytics-event="github_cta_clicked"
             data-analytics-props={Jason.encode!(%{source_page: "embed_settings"})}
-            class="font-semibold text-indigo-600 underline hover:text-indigo-900"
+            class="font-semibold text-blue-700 underline hover:text-blue-900"
           >
             {dgettext("dashboard_embed", "source")}
           </a>
@@ -266,9 +266,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
     <div class="mb-6 bg-white border-2 border-tymeslot-200 rounded-token-lg p-6">
       <div class="flex items-center justify-between mb-4">
         <div>
-          <h3 class="text-token-lg font-bold text-tymeslot-900">
+          <h2 class="text-token-lg font-semibold text-tymeslot-900">
             {dgettext("dashboard_embed", "Customise")}
-          </h3>
+          </h2>
           <p class="text-token-sm text-tymeslot-600 mt-1">
             {dgettext(
               "dashboard_embed",
@@ -382,14 +382,14 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
   attr :title, :string, required: true
   attr :description, :string, required: true
   attr :badge, :string, default: nil
-  attr :badge_class, :string, default: nil
+  attr :badge_tone, :atom, default: :neutral
   attr :myself, :any, required: true
 
   defp embed_option_card(assigns) do
     ~H"""
     <div
       class={[
-        "embed-option-card cursor-pointer group relative",
+        "embed-option-card cursor-pointer group relative min-w-0",
         @selected && "border-turquoise-500 shadow-md"
       ]}
       phx-click="select_embed_type"
@@ -399,22 +399,17 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
     >
       <div
         :if={@selected}
-        class="absolute -top-3 -right-3 w-8 h-8 bg-turquoise-600 rounded-full flex items-center justify-center text-white shadow-lg z-10"
+        class="absolute -top-3 -right-3 w-8 h-8 bg-turquoise-600 rounded-token-full flex items-center justify-center text-white shadow-lg z-10"
       >
         <.icon name="hero-check" class="w-5 h-5" />
       </div>
       <div class="p-6">
         <div class="flex items-start justify-between mb-4">
           <div>
-            <h3 class="text-token-xl font-bold text-tymeslot-900">{@title}</h3>
+            <h2 class="text-token-lg font-semibold text-tymeslot-900">{@title}</h2>
             <p class="text-token-sm text-tymeslot-600 mt-1">{@description}</p>
           </div>
-          <span
-            :if={@badge}
-            class={["px-3 py-1 text-token-xs font-semibold rounded-full", @badge_class]}
-          >
-            {@badge}
-          </span>
+          <.pill :if={@badge} tone={@badge_tone} size={:sm} uppercase>{@badge}</.pill>
         </div>
 
         <%!-- Preview --%>
@@ -422,18 +417,19 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           {render_slot(@preview)}
         </div>
 
-        <%!-- Code Snippet --%>
+        <%!-- Code Snippet: lines keep their shape and scroll sideways inside
+              the block rather than breaking mid-token. --%>
         <div class="relative">
-          <pre class="bg-tymeslot-900 text-tymeslot-100 rounded-token-lg p-4 pr-20 text-token-xs whitespace-pre-wrap break-all"><code class="block"><%= @code |> render_slot() |> Phoenix.HTML.Safe.to_iodata() |> IO.iodata_to_binary() |> String.split("\n") |> Enum.map_join("\n", &String.trim/1) |> String.trim() |> Phoenix.HTML.raw() %></code></pre>
-          <button
-            type="button"
+          <pre class="bg-tymeslot-900 text-tymeslot-100 rounded-token-lg p-4 pr-20 text-token-xs whitespace-pre overflow-x-auto"><code class="block"><%= @code |> render_slot() |> Phoenix.HTML.Safe.to_iodata() |> IO.iodata_to_binary() |> String.split("\n") |> Enum.map_join("\n", &String.trim/1) |> String.trim() |> Phoenix.HTML.raw() %></code></pre>
+          <.action_button
+            size={:sm}
+            class="absolute top-2 right-2"
             phx-click="copy_code"
             phx-value-type={@type}
             phx-target={@myself}
-            class="absolute top-2 right-2 px-3 py-1 bg-turquoise-600 hover:bg-turquoise-700 text-white text-token-xs font-semibold rounded transition-colors"
           >
             {dgettext("dashboard_embed", "Copy")}
-          </button>
+          </.action_button>
         </div>
 
         <div class="mt-4 flex items-start space-x-2 text-token-xs text-tymeslot-700">

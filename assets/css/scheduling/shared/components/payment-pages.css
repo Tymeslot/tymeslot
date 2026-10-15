@@ -2,8 +2,11 @@
    ink and link treatment come from each theme's --payment-* tokens. */
 
 /* Full-viewport centred wrapper — replaces min-h-screen flex items-center
-   justify-center px-4 py-8 on the theme's root wrapper */
+   justify-center px-4 py-8 on the theme's root wrapper. A theme whose
+   booking page paints its background on an element these pages do not
+   render sets --payment-page-background to the same background. */
 .payment-page-layout {
+  background: var(--payment-page-background, none);
   display: flex;
   align-items: center;
   justify-content: center;

@@ -23,6 +23,9 @@ defmodule Tymeslot.Emails.Shared.Callouts do
   Options:
   - `:title` — optional bold title
   - `:icon` — optional emoji/icon prefix for the title
+  - `:items` — optional list of plain-text entries rendered as a bulleted
+    list under the message. Each entry is escaped like the message, so the
+    caller never builds list markup itself.
   """
   @spec alert_box(Tokens.intent(), String.t(), keyword()) :: String.t()
   def alert_box(intent, message, opts \\ []) when is_atom(intent) do
@@ -32,6 +35,7 @@ defmodule Tymeslot.Emails.Shared.Callouts do
     safe_message = Sanitise.sanitize_for_email(message)
     safe_title = if title, do: Sanitise.sanitize_for_email(title)
     safe_icon = if icon, do: Sanitise.sanitize_for_email(icon)
+    items_markup = items_markup(Keyword.get(opts, :items, []))
 
     tokens = Styles.intent(intent)
 
@@ -70,10 +74,16 @@ defmodule Tymeslot.Emails.Shared.Callouts do
           line-height="1.5"
           padding="0"
         >
-          #{safe_message}
+          #{safe_message}#{items_markup}
         </mj-text>
       </mj-column>
     </mj-section>
     """)
+  end
+
+  defp items_markup([]), do: ""
+
+  defp items_markup(items) do
+    Enum.map_join(items, fn item -> "<br/>• " <> Sanitise.sanitize_for_email(item) end)
   end
 end

@@ -111,4 +111,52 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.TimezoneHandlerComponentTest do
 
     assert updated.assigns == socket.assigns
   end
+
+  # The picker can be handed a legacy id (a bookmarked `?timezone=`, an old
+  # browser). It is stored under its current name, and that must still count
+  # as accepted: comparing the stored name with the raw request treated the
+  # rename as a rejection, so the old zone's time and slots were kept and the
+  # picker stayed open. Reloading the slots is the caller's job (see above).
+  test "handle_timezone_change accepts a legacy id under its current name" do
+    socket = %Socket{
+      assigns: %{
+        __changed__: %{},
+        user_timezone: "UTC",
+        selected_date: ~D[2024-01-01],
+        selected_duration: 30,
+        duration: nil,
+        selected_time: "10:00",
+        available_slots: ["10:00"],
+        timezone_dropdown_open: true,
+        timezone_search: "Kie"
+      }
+    }
+
+    {:ok, updated} = TimezoneHandlerComponent.handle_timezone_change(socket, "Europe/Kiev")
+
+    assert %{
+             user_timezone: "Europe/Kyiv",
+             timezone_dropdown_open: false,
+             selected_time: nil,
+             available_slots: []
+           } = updated.assigns
+  end
+
+  @tag :capture_log
+  test "handle_timezone_change leaves the socket untouched for an unknown zone" do
+    socket = %Socket{
+      assigns: %{
+        __changed__: %{},
+        user_timezone: "UTC",
+        selected_date: ~D[2024-01-01],
+        selected_time: "10:00",
+        timezone_dropdown_open: true
+      }
+    }
+
+    {:ok, updated} = TimezoneHandlerComponent.handle_timezone_change(socket, "Mars/Olympus")
+
+    assert updated.assigns == socket.assigns
+    refute_received {:fetch_available_slots, _date, _duration, _zone}
+  end
 end

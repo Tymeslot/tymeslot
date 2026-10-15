@@ -200,4 +200,39 @@ defmodule Tymeslot.Meetings.GuestQueriesTest do
       assert [%{confirmation_sent_at: %DateTime{}}] = GuestQueries.list_for_meeting(meeting.id)
     end
   end
+
+  # A guest belongs to the booker who invited them: one partial unique index
+  # per booking shape.
+  describe "insert_guest/1 uniqueness" do
+    test "lets two bookers of one slot invite the same address, but not one booker twice" do
+      meeting = insert(:group_meeting)
+      first = insert(:participant, meeting: meeting)
+      second = insert(:participant, meeting: meeting)
+
+      invite = fn participant ->
+        GuestQueries.insert_guest(%{
+          meeting_id: meeting.id,
+          participant_id: participant.id,
+          email: "shared@example.com"
+        })
+      end
+
+      assert {:ok, _guest} = invite.(first)
+      assert {:ok, _guest} = invite.(second)
+      assert {:error, changeset} = invite.(first)
+      assert {"has already been added", _opts} = changeset.errors[:meeting_id]
+    end
+
+    test "keeps one-to-one bookings from inviting an address twice" do
+      meeting = insert(:meeting)
+
+      invite = fn ->
+        GuestQueries.insert_guest(%{meeting_id: meeting.id, email: "a@example.com"})
+      end
+
+      assert {:ok, _guest} = invite.()
+      assert {:error, changeset} = invite.()
+      assert {"has already been added", _opts} = changeset.errors[:meeting_id]
+    end
+  end
 end

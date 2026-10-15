@@ -63,7 +63,7 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
       render_click(view, "confirm_skip_calendar")
 
       # Verify buffer_time step
-      assert has_element?(view, "button[phx-value-buffer_minutes]")
+      assert has_element?(view, "button[phx-value-buffer_before_minutes]")
 
       # Continue through booking_window and minimum_notice to ready
       view |> element("button[phx-click='next_step']") |> render_click()
@@ -121,7 +121,7 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
       # Continuing without a calendar opens a nudge modal — confirm to advance.
       render_click(view, "confirm_skip_calendar")
 
-      assert has_element?(view, "button[phx-value-buffer_minutes]")
+      assert has_element?(view, "button[phx-value-buffer_before_minutes]")
       assert has_element?(view, "button[phx-click='next_step']", "Continue")
 
       # Navigate through booking_window and minimum_notice to ready
@@ -149,7 +149,7 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
       render_click(view, "confirm_skip_calendar")
 
       # Verify buffer_time step
-      assert has_element?(view, "button[phx-value-buffer_minutes]")
+      assert has_element?(view, "button[phx-value-buffer_before_minutes]")
 
       # Go back to connect_calendar
       view
@@ -285,7 +285,7 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
       render_click(view, "confirm_skip_calendar")
 
       # Should now be at buffer_time
-      assert has_element?(view, "button[phx-value-buffer_minutes]")
+      assert has_element?(view, "button[phx-value-buffer_before_minutes]")
     end
 
     test "user can cancel skip modal and continue", %{conn: conn} do

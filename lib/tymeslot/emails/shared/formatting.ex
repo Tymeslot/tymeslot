@@ -12,10 +12,10 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   one, and silently ships `02:30 PM` into a German email. Callers that genuinely
   want English (admin alerts) pass `"en"` and say so.
 
-  The one exception is `format_location/1`, which resolves through `dgettext/2`
-  and so reads the ambient Gettext locale. It must be called inside a
-  `Gettext.with_locale/3` block. The rule: **pure formatters take a locale,
-  gettext-backed helpers read the ambient one.**
+  The exceptions are `format_location/1` and `location_note/1`, which resolve
+  through `dgettext/2` and so read the ambient Gettext locale. They must be
+  called inside a `Gettext.with_locale/3` block. The rule: **pure formatters
+  take a locale, gettext-backed helpers read the ambient one.**
   """
 
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
@@ -28,7 +28,7 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   @doc """
   Formats a date according to locale conventions.
   Delegates to LocaleFormat for locale-aware formatting.
-  - en: November 25, 2024
+  - en: 25 November 2024
   - de: 25. November 2024
   """
   @spec format_date(Date.t() | DateTime.t() | NaiveDateTime.t(), String.t()) :: String.t()
@@ -43,13 +43,46 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   end
 
   @doc """
+  When a meeting starting at `start_time` (already in the recipient's zone)
+  ends on a later date, "ends 01:00 AM on Tue 15 Jun" in the recipient's
+  locale and clock; nil otherwise.
+  """
+  @spec format_next_day_end(DateTime.t(), integer() | nil, String.t(), String.t() | nil) ::
+          String.t() | nil
+  def format_next_day_end(%DateTime{} = start_time, duration, locale, time_format)
+      when is_integer(duration) do
+    finish = DateTime.add(start_time, duration, :minute)
+    day = DateTime.to_date(finish)
+
+    if Date.compare(day, DateTime.to_date(start_time)) == :gt do
+      # No zone and no year: the time line already names the zone, and a
+      # meeting never ends more than a few days after it starts.
+      date = LocaleFormat.format_short_weekday_date(day, locale)
+
+      Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+        dgettext("emails", "ends %{time} on %{date}",
+          time: clock(finish, locale, time_format),
+          date: date
+        )
+      end)
+    end
+  end
+
+  def format_next_day_end(_start_time, _duration, _locale, _time_format), do: nil
+
+  defp clock(finish, locale, nil), do: LocaleFormat.format_time(DateTime.to_time(finish), locale)
+  defp clock(finish, _locale, time_format), do: TimeFormat.format(finish, time_format)
+
+  @doc """
   Formats a date into a short locale-aware format.
-  English: "Nov 25", others: "25.11."
+  English: "25 Nov" (day before month, as in British English),
+  French, Italian and Portuguese: "25/11", others: "25.11."
   """
   @spec format_date_short(Date.t() | DateTime.t() | NaiveDateTime.t(), String.t()) :: String.t()
-  def format_date_short(%Date{} = date, "en"), do: "#{Calendar.strftime(date, "%b")} #{date.day}"
+  def format_date_short(%Date{} = date, "en"), do: "#{date.day} #{Calendar.strftime(date, "%b")}"
   def format_date_short(%Date{} = date, "fr"), do: "#{date.day}/#{date.month}"
   def format_date_short(%Date{} = date, "it"), do: "#{date.day}/#{date.month}"
+  def format_date_short(%Date{} = date, "pt"), do: "#{date.day}/#{date.month}"
   def format_date_short(%Date{} = date, _locale), do: "#{date.day}.#{date.month}."
 
   def format_date_short(%DateTime{} = datetime, locale) do
@@ -228,6 +261,46 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   end
 
   def format_location(details), do: details[:location] || dgettext("emails", "TBD")
+
+  @doc """
+  The line shown under the location of an in-person meeting whose address is
+  arranged after booking, or nil for any other location.
+
+  Worded for whoever reads the email: `audience: :host` (set by the
+  organiser renders, see `Tymeslot.Emails.Shared.TemplateHelper`) is told to
+  arrange it with the booker; `audience: :guest` (a guest the booker
+  invited, who arranges nothing) only that it will be arranged; the booker,
+  the default, that it will be arranged with them.
+  Must be called within a `Gettext.with_locale` block.
+  """
+  @spec location_note(%{
+          optional(:location_type) => atom() | nil,
+          optional(:audience) => :host | :guest,
+          optional(atom()) => term()
+        }) :: String.t() | nil
+  def location_note(%{location_type: :in_person_to_arrange, audience: :host}),
+    do: dgettext("emails", "The address is to be arranged with the booker.")
+
+  def location_note(%{location_type: :in_person_to_arrange, audience: :guest}),
+    do: dgettext("emails", "The address will be arranged after booking.")
+
+  def location_note(%{location_type: :in_person_to_arrange}),
+    do: dgettext("emails", "The address will be arranged with you after booking.")
+
+  def location_note(_details), do: nil
+
+  @doc """
+  `details` without the arranged-after-booking note: an in-person meeting
+  whose address was still to be arranged reads as a plain in-person one.
+
+  For the details of a meeting that is not going ahead, such as a
+  cancellation, where there is no longer an address to arrange.
+  """
+  @spec without_location_note(map()) :: map()
+  def without_location_note(%{location_type: :in_person_to_arrange} = details),
+    do: %{details | location_type: :in_person}
+
+  def without_location_note(details), do: details
 
   @doc """
   Formats currency based on cents (or raw units for zero-decimal currencies) and currency code.

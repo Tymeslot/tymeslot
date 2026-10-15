@@ -7,6 +7,12 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.ScheduleAccents do
   and background with its hue, and the meeting-type form marks its chip with the
   same one, so a host recognises "the amber schedule" across both.
 
+  The hues are categorical, not semantic, and step outside the brand palette on
+  purpose: five schedules need five colours that stay apart at a glance, which
+  the turquoise, cyan and neutral scales alone cannot give. Violet and emerald
+  are deliberate for that reason; the status colours (green, amber, red, blue)
+  keep their meaning elsewhere, and a schedule's colour carries none.
+
   Assigned by position in the profile's schedule list, which both callers get
   from `Tymeslot.Availability.Schedules.list_for_profile/1` and therefore see in
   the same order. The list is as long as the schedule cap; `rem/2` keeps

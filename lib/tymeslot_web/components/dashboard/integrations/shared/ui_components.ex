@@ -1,118 +1,67 @@
 defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
   @moduledoc """
-  Shared UI components for integration configuration pages.
-  Reduces code duplication across calendar and video integration configs.
+  Shared helpers for integration configuration pages, used by the calendar
+  and video integration configs alike.
   """
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Components.Icons.ProviderIcon
+  alias TymeslotWeb.Live.Shared.DocsUrl
+
   @doc """
-  Renders a form submit button with loading state.
-
-  ## Examples
-
-      <.form_submit_button saving={@saving} />
-      <.form_submit_button saving={@saving} text="Save Integration" />
+  Maps a connection status variant to the `Feedback.pill/1` tone that
+  shows it, for the integrations hub's category tabs.
   """
-  attr :saving, :boolean, required: true
-  attr :text, :string, default: nil
-  attr :saving_text, :string, default: nil
-  attr :class, :string, default: "btn btn-primary"
+  @spec status_tone(:ok | :warning | :error | :paused | :info) :: atom()
+  def status_tone(:ok), do: :success
+  def status_tone(:warning), do: :warning
+  def status_tone(:error), do: :danger
+  def status_tone(:info), do: :info
+  def status_tone(:paused), do: :neutral
 
-  @spec form_submit_button(map()) :: Phoenix.LiveView.Rendered.t()
-  def form_submit_button(assigns) do
+  @doc """
+  The heading of a provider's connect form: its icon, name and tagline, plus a
+  link to the provider's setup guide in the docs when `guide_slug` names one.
+  Shared by every calendar and video connect form.
+  """
+  attr :provider, :string, required: true
+  attr :type, :string, required: true, values: ["calendar", "video"]
+  attr :title, :string, required: true
+  attr :tagline, :string, required: true
+  attr :guide_slug, :string, default: nil, doc: "A docs article slug, e.g. \"caldav-nextcloud\""
+
+  @spec provider_config_header(map()) :: Phoenix.LiveView.Rendered.t()
+  def provider_config_header(assigns) do
     ~H"""
-    <button type="submit" disabled={@saving} class={@class}>
-      <%= if @saving do %>
-        <span class="flex items-center">
-          <.spinner class="h-4 w-4 mr-2" />
-          {@saving_text || dgettext("dashboard_integrations", "Adding...")}
-        </span>
-      <% else %>
-        {@text || dgettext("dashboard_integrations", "Add Integration")}
-      <% end %>
-    </button>
+    <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+      <div class="flex min-w-0 items-center gap-4">
+        <ProviderIcon.provider_icon provider={@provider} type={@type} size="large" class="shrink-0" />
+        <div class="min-w-0">
+          <h3 class="text-token-lg font-semibold text-tymeslot-900">{@title}</h3>
+          <p class="text-token-sm font-medium text-tymeslot-500">{@tagline}</p>
+        </div>
+      </div>
+      <a
+        :if={@guide_slug}
+        href={DocsUrl.article_url(@guide_slug)}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="mt-1 flex shrink-0 items-center gap-1.5 text-token-xs font-semibold text-tymeslot-500 transition-colors hover:text-tymeslot-700"
+      >
+        <.icon name="hero-question-mark-circle" class="h-4 w-4" />
+        {dgettext("dashboard_integrations", "Setup guide")}
+      </a>
+    </div>
     """
   end
-
-  @doc """
-  Renders a secondary button for cancel/back actions.
-  """
-  attr :target, :any, required: true
-  attr :label, :string, default: nil
-  attr :icon, :string, default: nil
-  attr :phx_click, :string, default: "back_to_providers"
-  attr :class, :string, default: "btn btn-secondary"
-
-  @spec secondary_button(map()) :: Phoenix.LiveView.Rendered.t()
-  def secondary_button(assigns) do
-    ~H"""
-    <button
-      type="button"
-      class={@class}
-      phx-click={@phx_click}
-      phx-target={@target}
-    >
-      <%= if @icon do %>
-        <.icon name={@icon} class="w-4 h-4 mr-2" />
-      <% end %>
-      {@label || dgettext("dashboard_integrations", "Cancel")}
-    </button>
-    """
-  end
-
-  @doc """
-  Renders a small status pill with a coloured dot and label, driven by a
-  `:variant`. Colours mirror the shared `info_box` variant map so status
-  indicators stay visually consistent across the integrations UI.
-
-  ## Examples
-
-      <.status_badge variant={:ok} label="Healthy" />
-      <.status_badge variant={:paused} label="Paused" />
-  """
-  attr :variant, :atom, required: true, values: [:ok, :warning, :error, :paused, :info]
-  attr :label, :string, required: true
-  attr :class, :string, default: nil
-
-  @spec status_badge(map()) :: Phoenix.LiveView.Rendered.t()
-  def status_badge(assigns) do
-    ~H"""
-    <span class={[
-      "inline-flex items-center gap-1.5 rounded-token-full px-2.5 py-1 text-token-xs font-semibold",
-      variant_classes(@variant),
-      @class
-    ]}>
-      <span class={["h-1.5 w-1.5 rounded-token-full", dot_classes(@variant)]} aria-hidden="true" />
-      {@label}
-    </span>
-    """
-  end
-
-  defp variant_classes(:ok), do: "bg-emerald-50 border border-emerald-200 text-emerald-800"
-  defp variant_classes(:warning), do: "bg-amber-50 border border-amber-200 text-amber-800"
-  defp variant_classes(:error), do: "bg-red-50 border border-red-200 text-red-800"
-  defp variant_classes(:info), do: "bg-sky-50 border border-sky-200 text-sky-800"
-  defp variant_classes(:paused), do: "bg-tymeslot-50 border border-tymeslot-200 text-tymeslot-800"
-
-  @doc """
-  Maps a status variant to its coloured-dot background class. Shared by
-  `status_badge/1` and `TabNav.integrations_tab_nav/1` so the two status
-  indicators never drift out of sync.
-  """
-  @spec dot_classes(atom()) :: String.t()
-  def dot_classes(:ok), do: "bg-emerald-500"
-  def dot_classes(:warning), do: "bg-amber-500"
-  def dot_classes(:error), do: "bg-red-500"
-  def dot_classes(:info), do: "bg-sky-500"
-  def dot_classes(:paused), do: "bg-tymeslot-400"
 
   @doc """
   Attributes that make a `type="url"` input forgiving about the scheme.
 
   Spread onto every server URL input, calendar and video alike, so all of them
   behave the same way: `{UIComponents.server_url_attrs()}` on the element that
-  carries `type="url"`, whether that is a `CoreComponents.input/1` call or the
+  carries `type="url"`, whether that is a `Forms.input/1` call or the
   markup inside a form component.
 
   The element keeps its `type="url"`, and the `ServerUrlField` hook adds two
@@ -135,5 +84,38 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
           "Enter a full address starting with https://, for example https://cloud.example.com"
         )
     }
+  end
+
+  @doc """
+  The Cancel and submit row at the foot of a provider's connect form.
+
+  Cancel pushes `cancel_event` (by default back to the provider list) to
+  `target`; the submit button shows a spinner and `saving_text` while
+  `saving` is true. `class` sets the colour of the divider above the row:
+  calendar forms pass their turquoise border.
+  """
+  attr :target, :any, required: true
+  attr :saving, :boolean, default: false
+  attr :cancel_event, :string, default: "back_to_providers"
+  attr :submit_text, :string, default: nil, doc: "Defaults to \"Add Integration\""
+  attr :saving_text, :string, default: nil, doc: "Defaults to \"Adding...\""
+  attr :class, :any, default: "border-tymeslot-100"
+
+  @spec form_actions(map()) :: Phoenix.LiveView.Rendered.t()
+  def form_actions(assigns) do
+    ~H"""
+    <div class={["flex justify-between items-center pt-4 border-t", @class]}>
+      <.action_button variant={:secondary} phx-click={@cancel_event} phx-target={@target}>
+        {dgettext("dashboard_integrations", "Cancel")}
+      </.action_button>
+      <.loading_button
+        type="submit"
+        loading={@saving}
+        loading_text={@saving_text || dgettext("dashboard_integrations", "Adding...")}
+      >
+        {@submit_text || dgettext("dashboard_integrations", "Add Integration")}
+      </.loading_button>
+    </div>
+    """
   end
 end

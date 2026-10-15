@@ -51,7 +51,6 @@ msgid "%{day} at %{time}"
 msgstr "%{day} о %{time}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
 #, elixir-autogen, elixir-format
 msgid "%{event}, %{time}"
 msgstr "%{event}, %{time}"
@@ -71,15 +70,6 @@ msgstr "%{minutes} хв тому"
 msgid "%{when_text} · %{location}"
 msgstr "%{when_text} · %{location}"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/all_day_row.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/month_view.ex
-#, elixir-autogen, elixir-format
-msgid "(No title)"
-msgstr "(Без назви)"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/all_day_row.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/month_view.ex
 #, elixir-autogen, elixir-format
@@ -96,22 +86,10 @@ msgid "3 Days"
 msgstr "3 дні"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
-#, elixir-autogen, elixir-format
-msgid "Add event"
-msgstr "Додати подію"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Agenda"
 msgstr "Розклад"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header/search_box.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/time_formatting.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
-#, elixir-autogen, elixir-format
-msgid "All day"
-msgstr "Увесь день"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/all_day_row.ex
 #, elixir-autogen, elixir-format
@@ -148,11 +126,6 @@ msgstr "День"
 #, elixir-autogen, elixir-format
 msgid "Keyboard shortcuts"
 msgstr "Комбінації клавіш"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
-#, elixir-autogen, elixir-format
-msgid "Keyboard shortcuts (?)"
-msgstr "Комбінації клавіш (?)"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
@@ -241,7 +214,6 @@ msgstr "Змінити режим перегляду"
 msgid "Syncing calendars%{progress}..."
 msgstr "Синхронізація календарів%{progress}..."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Today"
@@ -251,19 +223,6 @@ msgstr "Сьогодні"
 #, elixir-autogen, elixir-format
 msgid "Toggle calendars"
 msgstr "Перемкнути календарі"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
-#, elixir-autogen, elixir-format
-msgid "Tomorrow"
-msgstr "Завтра"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header/search_box.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/all_day_row.ex
-#, elixir-autogen, elixir-format
-msgid "Untitled event"
-msgstr "Подія без назви"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
@@ -346,11 +305,6 @@ msgstr "Типовий колір"
 msgid "All"
 msgstr "Усі"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Booked through your Tymeslot page"
-msgstr "Заброньовано через вашу сторінку Tymeslot"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
 #, elixir-autogen, elixir-format
 msgid "Bookings"
@@ -366,16 +320,6 @@ msgstr "Додайте свій календар у Tymeslot"
 msgid "Filter agenda"
 msgstr "Фільтрувати розклад"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Join meeting"
-msgstr "Приєднатися до зустрічі"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Manage in Meetings"
-msgstr "Керувати в розділі «Зустрічі»"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
 #, elixir-autogen, elixir-format
 msgid "Meetings booked through your Tymeslot page will appear here."
@@ -390,3 +334,28 @@ msgstr "Немає майбутніх бронювань"
 #, elixir-autogen, elixir-format
 msgid "Your bookings already show here. Connect a calendar to see the rest of your events and prevent double-bookings."
 msgstr "Ваші бронювання вже відображаються тут. Підключіть календар, щоб бачити решту подій і уникнути подвійних бронювань."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
+#, elixir-autogen, elixir-format
+msgid "Import"
+msgstr "Імпортувати"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
+#, elixir-autogen, elixir-format
+msgid "Import events from an .ics file"
+msgstr "Імпортувати події з файлу .ics"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "Drop an .ics file to import its events"
+msgstr "Перетягніть сюди файл .ics, щоб імпортувати його події"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{count}/%{capacity} seats taken"
+msgstr "%{count}/%{capacity} місць зайнято"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Participants"
+msgstr "Учасники"

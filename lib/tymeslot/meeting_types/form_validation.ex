@@ -5,8 +5,8 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
   Two different questions, both of which must be answered server-side because
   the form can be forged:
 
-    * **May this host make this change?** Custom questions and paid meeting
-      types sit behind feature flags. Core's default checker allows everything,
+    * **May this host make this change?** Custom questions, group bookings
+      and paid meeting types sit behind feature flags. Core's default checker allows everything,
       so self-hosters are unaffected; the managed overlay narrows them.
 
     * **Do the referenced records exist, still work, and belong to this host?**
@@ -18,12 +18,15 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
       provider of every video location is checked, not just the one the
       schema projects onto `video_integration_id`: a meeting type may offer
       several, and an unchecked one would book rooms on someone else's
-      account.
+      account. Every venue an in-person location lists must be the host's
+      own for the same reason: a foreign one would put someone else's
+      address on this host's bookings.
 
-  Both gates deliberately restrict only the *permissive* direction. Turning
-  payment off, or saving no questions, is always allowed, so a host who has
-  downgraded can still edit their way back into compliance rather than being
-  locked out of their own meeting types.
+  The gates deliberately restrict only the *permissive* direction. Turning
+  payment off, saving no questions, or lowering (or keeping) a group type's
+  participant limit is always allowed, so a host who has downgraded can
+  still edit their way back into compliance rather than being locked out of
+  their own meeting types.
   """
 
   alias Tymeslot.Availability.Schedules
@@ -33,26 +36,34 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.UriUtils
+  alias Tymeslot.Venues
 
   @typedoc "Why a write was refused."
   @type error ::
           :video_integration_required
           | :invalid_video_integration
           | :invalid_location
+          | :invalid_venue
           | :calendar_integration_required
           | :calendar_integration_invalid
           | :target_calendar_required
           | :target_calendar_invalid
           | :no_writable_calendars
           | :invalid_availability_schedule
+          | :group_bookings_not_allowed
           | atom()
 
   @doc """
   Runs every precondition against the attributes about to be written.
+
+  `current_max_participants` is the participant limit stored before this
+  write: 1 when creating. Only a write raising the limit above both it and 1
+  needs group-bookings access.
   """
-  @spec check(integer(), map()) :: :ok | {:error, error()}
-  def check(user_id, attrs) do
+  @spec check(integer(), map(), pos_integer()) :: :ok | {:error, error()}
+  def check(user_id, attrs, current_max_participants \\ 1) do
     with :ok <- gate_custom_fields(user_id, attrs),
+         :ok <- gate_group_bookings(user_id, attrs, current_max_participants),
          :ok <- gate_payment(user_id, attrs),
          :ok <- validate_availability_schedule(attrs, user_id),
          :ok <- validate_video_integration(attrs, user_id),
@@ -62,15 +73,25 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
   end
 
   # Each video location must name at least one integration, and every one it
-  # names must be this host's and active. The list arrives as raw form input, so it can be either a list
-  # (the auto-save path, which builds params from socket assigns) or the
-  # index-keyed map Plug parses `locations[0][kind]` into; the values are
-  # likewise string- or atom-keyed. Both shapes are normalised before the
-  # lookup, because a shape this function fails to recognise would silently
-  # skip the check rather than fail it.
+  # names must be this host's and active; every venue an in-person location
+  # lists must be this host's own. The list arrives as raw form input, so it
+  # can be either a list (the auto-save path, which builds params from socket
+  # assigns) or the index-keyed map Plug parses `locations[0][kind]` into; the
+  # values are likewise string- or atom-keyed. Both shapes are normalised
+  # before the lookup, because a shape this function fails to recognise would
+  # silently skip the check rather than fail it.
   defp validate_locations(%{locations: locations}, user_id) do
+    locations = location_list(locations)
+
+    with :ok <- validate_video_locations(locations, user_id) do
+      validate_venues(locations, user_id)
+    end
+  end
+
+  defp validate_locations(_attrs, _user_id), do: :ok
+
+  defp validate_video_locations(locations, user_id) do
     locations
-    |> location_list()
     |> Enum.filter(&(location_field(&1, "kind") == "video"))
     |> Enum.flat_map(&video_integration_ids/1)
     |> Enum.reduce_while(:ok, fn id, :ok ->
@@ -81,7 +102,19 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
     end)
   end
 
-  defp validate_locations(_attrs, _user_id), do: :ok
+  # An in-person location listing no venue is valid: it is the "address
+  # arranged after booking" location. Any id it does list has to be owned;
+  # `Venues.owns_all?/2` parses the ids itself and refuses one that is not a
+  # valid id.
+  defp validate_venues(locations, user_id) do
+    ids =
+      locations
+      |> Enum.filter(&(location_field(&1, "kind") == "in_person"))
+      |> Enum.flat_map(&(&1 |> location_field("venue_ids") |> List.wrap()))
+      |> Enum.reject(&(&1 in [nil, ""]))
+
+    if Venues.owns_all?(user_id, ids), do: :ok, else: {:error, :invalid_venue}
+  end
 
   defp location_list(locations) when is_list(locations), do: locations
 
@@ -183,6 +216,23 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
       _non_empty -> Features.check_access(user_id, :custom_questions_allowed)
     end
   end
+
+  # Enabling group bookings, or raising a group type's limit, needs access;
+  # keeping or lowering it never does, so a host who lost access can go on
+  # saving an existing group type, or turn it back into a one-to-one type.
+  # A plan refusal is reported as its own reason, so the form can say which
+  # feature it was about; a checker failure keeps its own reason too, since
+  # it means "try again" rather than "upgrade".
+  defp gate_group_bookings(user_id, %{max_participants: max}, current)
+       when is_integer(max) and max > 1 and max > current do
+    case Features.check_access(user_id, :group_bookings_allowed) do
+      :ok -> :ok
+      {:error, :feature_access_checker_failed} = error -> error
+      {:error, _denied} -> {:error, :group_bookings_not_allowed}
+    end
+  end
+
+  defp gate_group_bookings(_user_id, _attrs, _current), do: :ok
 
   # Mirrors `Features.meeting_payments_allowed?/1`'s yes/no decision
   # (`:stripe_required` counts as allowed: the host has the plan but no

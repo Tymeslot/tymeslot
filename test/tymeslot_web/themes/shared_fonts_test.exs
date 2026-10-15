@@ -2,7 +2,9 @@ defmodule TymeslotWeb.Themes.SharedFontsTest do
   @moduledoc """
   Pins the self-hosted fonts behind the booking themes' font stacks
   (`assets/css/scheduling/shared/fonts.css`): every `url()` there names a woff2
-  file that ships under `priv/static/fonts/` and is served, every shipped font
+  file that ships under `priv/static/fonts/` and is served from this instance
+  (no font is fetched from a third party), every shipped theme imports them
+  through the shared entry, every shipped font
   file is declared, each family carries its licence, and every font id a theme
   or the font option group can pick has a body and a heading stack.
   """
@@ -38,6 +40,17 @@ defmodule TymeslotWeb.Themes.SharedFontsTest do
 
   test "the shared entry imports the font rules" do
     assert File.read!(@entry_css) =~ ~s(@import "./fonts.css";)
+  end
+
+  # A theme that drops the shared entry loses the self-hosted faces and falls
+  # back to whatever the visitor's system has.
+  test "every shipped theme's stylesheet imports the shared entry" do
+    stylesheets = Path.wildcard("assets/css/scheduling/themes/*/theme.css")
+    assert length(stylesheets) == length(ThemeTestMatrix.all())
+
+    assert Enum.reject(stylesheets, fn path ->
+             File.read!(path) =~ ~s(@import "../../shared/entry.css";)
+           end) == []
   end
 
   # The font picker shows each choice's name in its heading stack.
@@ -126,11 +139,15 @@ defmodule TymeslotWeb.Themes.SharedFontsTest do
            end) == []
   end
 
-  test "the endpoint serves the font files", %{conn: conn} do
-    conn = get(conn, "/fonts/inter-latin-wght-normal.woff2")
+  test "the endpoint serves every font file a font face references", %{conn: conn} do
+    urls = font_urls()
+    assert urls != []
 
-    assert conn.status == 200
-    assert [content_type] = get_resp_header(conn, "content-type")
-    assert content_type =~ "font/woff2"
+    assert Enum.reject(urls, fn url ->
+             response = get(conn, url)
+
+             response.status == 200 and
+               match?(["font/woff2" <> _rest], get_resp_header(response, "content-type"))
+           end) == []
   end
 end

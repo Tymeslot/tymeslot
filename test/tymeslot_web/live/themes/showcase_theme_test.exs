@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Live.Themes.ShowcaseThemeTest do
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
 
+  alias Tymeslot.Test.MediaFixtures
   alias Tymeslot.TestMocks
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.Presets
@@ -389,9 +390,9 @@ defmodule TymeslotWeb.Live.Themes.ShowcaseThemeTest do
   end
 
   describe "every group together" do
-    @png <<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, "IHDR", 0x00,
-           0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77,
-           0x53, 0xDE>>
+    # Complete and decodable: a stored image is re-encoded, so magic bytes
+    # alone are refused.
+    @png MediaFixtures.png()
 
     setup do
       upload_root =

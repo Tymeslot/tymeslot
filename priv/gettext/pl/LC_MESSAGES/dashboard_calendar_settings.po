@@ -45,11 +45,6 @@ msgstr "Wszystkie kalendarze zostały odświeżone"
 msgid "CalDAV servers"
 msgstr "Serwery CalDAV"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/component_view.ex
-#, elixir-autogen, elixir-format
-msgid "Calendar Settings"
-msgstr "Ustawienia kalendarza"
-
 #: lib/tymeslot_web/live/dashboard/calendar_settings/config_view_component.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar integration added successfully"
@@ -187,11 +182,6 @@ msgstr "Wygeneruj link ponownie"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
-msgid "Remove connection"
-msgstr "Usuń połączenie"
-
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
-#, elixir-autogen, elixir-format
 msgid "Share a read-only link that publishes when you're busy (not the event details) as a standard iCalendar feed, so other calendar systems can overlay your availability."
 msgstr "Udostępnij link tylko do odczytu, który publikuje twoje zajęte terminy (bez szczegółów wydarzeń) jako standardowy kanał iCalendar, aby inne systemy kalendarzy mogły nałożyć twoją dostępność na własny widok."
 
@@ -234,16 +224,6 @@ msgstr "Będziemy sprawdzać te kalendarze, aby automatycznie unikać podwójnyc
 #, elixir-autogen, elixir-format
 msgid "books into %{calendar}"
 msgstr "kalendarz rezerwacji: %{calendar}"
-
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
-#, elixir-autogen, elixir-format
-msgid "conflict-checks %{selected} of %{total} calendars"
-msgstr "kalendarze sprawdzane pod kątem konfliktów: %{selected} z %{total}"
-
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
-#, elixir-autogen, elixir-format
-msgid "synced %{time}"
-msgstr "zsynchronizowano %{time}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -309,3 +289,51 @@ msgstr "Serwery Exchange"
 #, elixir-autogen, elixir-format
 msgid "read-only, blocks time but takes no bookings"
 msgstr "tylko do odczytu, blokuje terminy, ale nie przyjmuje rezerwacji"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "checks %{selected} of %{count} calendar for conflicts"
+msgid_plural "checks %{selected} of %{count} calendars for conflicts"
+msgstr[0] "kalendarze sprawdzane pod kątem konfliktów: %{selected} z %{count}"
+msgstr[1] "kalendarze sprawdzane pod kątem konfliktów: %{selected} z %{count}"
+msgstr[2] "kalendarze sprawdzane pod kątem konfliktów: %{selected} z %{count}"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Last synced %{time}"
+msgstr "Ostatnia synchronizacja %{time}"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Delete"
+msgstr "Usuń"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}"
+msgstr "Usuń %{name}"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Block the time of every event in this feed, also those it marks as free"
+msgstr "Blokuj czas każdego wydarzenia z tego kanału, także oznaczonych jako wolne"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Events this calendar marks as free no longer block time"
+msgstr "Wydarzenia oznaczone w tym kalendarzu jako wolne nie blokują już czasu"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Every event busy"
+msgstr "Każde wydarzenie zajęte"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Every event in this calendar now blocks time"
+msgstr "Każde wydarzenie z tego kalendarza blokuje teraz czas"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "read-only, every event blocks time, also those marked free"
+msgstr "tylko do odczytu, każde wydarzenie blokuje czas, także oznaczone jako wolne"

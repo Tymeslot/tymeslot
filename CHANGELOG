@@ -1,4 +1,131 @@
 
+[1.25.0]
+* payments: Refuse paid bookings when the host's plan lacks payments
+* calendar: Let quick add set the meeting's reminders (#146)
+
+
+[1.24.0]
+* calendar: Refuse Outlook series on days that some months lack
+* ui: Stop a flash's auto-dismiss closing the dialog that is open
+* privacy: Anonymise invitee details two years after a meeting ends
+* emails: Send attendee replies to the organiser, not the sender
+* group-bookings: Let organisers choose how full group times look
+* calendar: Let a subscribed calendar count every event as busy
+
+
+[1.23.0]
+* dashboard: Tighten the gap between tabs on a phone
+* meeting-types: Match Add Meeting Type to the other page header buttons
+* meeting-types: Name the meeting type in its card's Edit and Delete buttons
+* meeting-types: Translate default location names everywhere they show
+* calendar: Put Cancel before Create in the quick-add dialog
+* dashboard: Write confirmation dialog titles in sentence case
+* dashboard: Fit short tab strips on a phone without cutting labels off
+* calendar: Show the .ics import button on phones
+* emails: Draw the banner eyebrow and subtitle at full contrast
+* availability: Rebuild the end time options when a day's start moves past its end
+* calendar: Stop retrying calendar writes when no calendar is connected
+* emails: Make the event update change table labels readable
+* emails: Show calendar sync error causes as a list, not raw markup
+* onboarding: Show buffer example times on the organiser's clock
+* emails: Make text on the amber alert banner readable
+* calendar: Explain a quick-add failure instead of showing its error code
+* onboarding: Stop Continue past a refused scheduling preference
+* meeting-types: Mark next-day times in the slot interval preview
+* profile: Make the username field's browser check work in Chromium
+* booking: Keep a literal + in a prefilled booking link email
+* i18n: Format dates on meeting slots and payment tables per language
+* booking: Update the calendar's bookable days when the timezone changes
+* dashboard: Keep the Join meeting button inside its column in longer languages
+* calendar: Keep the spaces in long imported event titles and descriptions
+* profiles: Stop guest and seat being taken as usernames
+* bookings: Join from the meetings list with the host's own video link
+* meeting-types: Say when a meeting type's name is already taken
+* Write English dates in British order, day before month
+* dashboard: Stop the Integrations sidebar item looking selected
+* meeting-types: Show the minimum price error while editing a paid meeting type
+* dashboard: Show a disabled field's value darker than its placeholder
+* embed: Name each allowed domain's remove button for screen readers
+* dashboard: Make muted availability controls and disabled field text readable
+* dashboard: Keep sidebar icons white when the current page's link is hovered
+* dashboard: Draw each switch size at its own size with a keyboard focus ring
+* profile: Name each profile field once
+* dashboard: Show one add button on empty pages, inside the empty state
+* dashboard: Make empty states readable and let Time Off add from one
+* dashboard: Stop the sidebar covering the page at exactly 1024px
+* analytics: Say when there is no traffic instead of drawing an empty chart
+* dashboard: Show poll and analytics times on the organiser's clock
+* dashboard: Give every dashboard section its own page title
+* calendar: Reword the calendar summary's conflict-check count
+* availability: Colour the minimum notice chips like the others
+* dashboard: Keep switches and the reminder unit showing their real state
+* embed: Scroll embed snippets instead of breaking lines mid-word
+* calendar: Stop the calendar grid running to the screen edge on phones
+* dashboard: Keep the closed mobile sidebar out of keyboard focus
+* bookings: Keep booking actions and filters on screen on phones
+* bookings: List upcoming meetings soonest first
+* calendar: Keep the app running when a calendar's credentials cannot be decrypted
+* dashboard: Keep profile saves from crashing after a slow profile load
+* availability: Offer slots that cross midnight
+* meeting-types: Add meeting types with the same tabbed form as editing
+* meeting-types: Allow meeting types up to 24 hours long
+* availability: Set separate buffers before and after meetings
+* booking: Prefill the booking form from a link's #name and #email
+* calendar: Import events from an .ics file
+* emails: Add dark mode to every email
+* Support group bookings with per-slot participant limits
+
+
+[1.22.0]
+* security: Accept bookings and sign-ups when Google cannot be reached
+* uploads: Say when an image is refused for its size
+* uploads: Keep image quality when removing metadata from uploads
+* security: Stop a rollback bringing back replaced links and secrets
+* security: Stop a form submit hanging when the reCAPTCHA check stalls
+* analytics: Keep encrypted link tokens out of logs and analytics
+* timezones: Correct booking times for Manitoba and the Northwest Territories
+* timezones: Stop production instances contacting data.iana.org
+* payments: Delete payment records once their legal retention ends
+* analytics: Stop storing ad click identifiers on bookings
+* privacy: Stop keeping visitors' IP addresses without limit
+* emails: Stop writing email recipients and subjects to the log
+* security: Stop storing poll, RSVP and free/busy link tokens in plain text
+* email: Stop rewriting email links for click tracking
+* security: Narrow the Content-Security-Policy to the origins the app uses
+* privacy: Load reCAPTCHA only once a visitor starts filling in a form
+* analytics: Stop visitor hashes being reversible to an IP address
+* uploads: Stop publishing the location and device details in uploaded media
+* guests: Keep the booker's private details out of guests' calendar files
+* analytics: Keep reset, RSVP, poll and other link tokens out of analytics
+* calendar: Stop a stuck tab holding up the calendar grid's mount
+* calendar: Hold another tab's occurrence edits while a whole series saves
+* caldav: Recreate a booking's event the calendar reports as gone
+* calendar: Stop an edit being written twice after a quick return to the calendar
+* calendar: Stop an occurrence edit overwriting a whole-series change
+* calendar: Stop two calendar grids waiting on each other's edits
+* calendar: Stop an older calendar grid edit overwriting a newer one after reconnecting
+* calendar: Keep CalDAV event details added outside Tymeslot on reschedule
+* Save in-person locations and let bookers pick one
+
+
+[1.21.0]
+* booking: Show the booking title to guests in their own language
+* calendar: Move the iCloud event when a booking is rescheduled
+* booking: Translate the preview booking title into the host's language
+* calendar: Translate booking event titles into the host's language
+* privacy: Stop loading fonts from Google in booking pages and emails
+* calendar: Write dashboard calendar dates in each language's order
+* Redirect URLs with a trailing slash to the slashless path
+* i18n: Capitalise month headings and use the standalone month name
+* booking: Show the chosen time on the visitor's clock after booking
+* accessibility: Announce required form fields to screen readers
+* calendar: Stop mailbox.org adding your login address to bookings
+* booking: Show the booking page error card in the visitor's language
+* embed: Stop an embed URL opened in its own tab from reloading endlessly
+* auth: Name the Cloudron identity provider on the SSO button
+* i18n: Add Polish translation
+
+
 [1.20.0]
 * calendar: Limit how often quick add can create meetings
 * calendar: Delete a removed event's video room despite shared calendars

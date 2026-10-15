@@ -224,7 +224,7 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequired do
     %{
       steps: [
         "Open your calendar settings",
-        {"Select ", "Remove connection", " on the #{provider_label} row"},
+        {"Select ", "Delete", " on the #{provider_label} row"},
         {"Choose ", "Calendar subscription", ", paste the current feed link and select Subscribe"}
       ],
       button: "Open calendar settings",

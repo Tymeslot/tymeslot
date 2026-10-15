@@ -78,7 +78,8 @@
   font-weight: var(--font-weight-semibold);
   box-shadow:
     var(--shadow-primary-sm),
-    var(--inset-highlight-strong);
+    var(--inset-highlight-strong),
+    var(--selected-ring);
 }
 
 .slot-list__slot--selected:hover {

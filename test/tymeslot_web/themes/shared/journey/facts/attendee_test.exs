@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.AttendeeTest do
              :field_blur,
              :select_location,
              :select_video_provider,
+             :select_venue,
              :location_phone,
              :toggle_guests,
              :close_guests,

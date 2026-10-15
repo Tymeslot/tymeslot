@@ -35,23 +35,44 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       {:ok, view, _html} = live(conn, "/dashboard/embed")
 
       # Security section tab panel should be hidden initially
-      assert has_element?(view, "#panel-security[hidden]")
+      assert has_element?(view, "#embed-settings-tabs-panel-security[hidden]")
 
       # Click to show security section tab
       view
-      |> element("button#tab-security")
+      |> element("button#embed-settings-tabs-tab-security")
       |> render_click()
 
       # Now it should be visible (hidden attribute removed)
-      refute has_element?(view, "#panel-security[hidden]")
+      refute has_element?(view, "#embed-settings-tabs-panel-security[hidden]")
       assert has_element?(view, "input[name='allowed_domains']")
+    end
+
+    test "each panel is a tabpanel labelled by its tab", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/dashboard/embed")
+
+      for id <- ~w(options security preview) do
+        assert has_element?(
+                 view,
+                 "#embed-settings-tabs-panel-#{id}[role='tabpanel'][aria-labelledby='embed-settings-tabs-tab-#{id}']"
+               )
+
+        assert has_element?(view, "button#embed-settings-tabs-tab-#{id}[role='tab']")
+      end
+
+      # Only the selected tab names its panel.
+      assert has_element?(
+               view,
+               "#embed-settings-tabs-tab-options[aria-controls='embed-settings-tabs-panel-options']"
+             )
+
+      refute has_element?(view, "#embed-settings-tabs-tab-security[aria-controls]")
     end
 
     test "updates allowed domains successfully", %{conn: conn, profile: profile} do
       {:ok, view, _html} = live(conn, "/dashboard/embed")
 
       # Show security section tab
-      view |> element("button#tab-security") |> render_click()
+      view |> element("button#embed-settings-tabs-tab-security") |> render_click()
 
       # Submit domains
       view
@@ -83,7 +104,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       {:ok, _result} = Profiles.update_allowed_embed_domains(profile, ["example.com", "test.org"])
 
       {:ok, view, _html} = live(conn, "/dashboard/embed")
-      view |> element("button#tab-security") |> render_click()
+      view |> element("button#embed-settings-tabs-tab-security") |> render_click()
 
       # Click remove on one domain
       view
@@ -97,7 +118,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       assert updated_profile.allowed_embed_domains == ["test.org"]
 
       # Verify UI (ensure we are on security tab)
-      view |> element("button#tab-security") |> render_click()
+      view |> element("button#embed-settings-tabs-tab-security") |> render_click()
 
       # The domain should no longer be in the list of tags
       # We check that test.org is still there but example.com is gone
@@ -114,7 +135,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       {:ok, _result} = Profiles.update_allowed_embed_domains(profile, ["only-domain.com"])
 
       {:ok, view, _html} = live(conn, "/dashboard/embed")
-      view |> element("button#tab-security") |> render_click()
+      view |> element("button#embed-settings-tabs-tab-security") |> render_click()
 
       view
       |> element("button[phx-click='remove_domain'][phx-value-domain='only-domain.com']")
@@ -130,7 +151,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
     test "shows error for invalid domains", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/dashboard/embed")
 
-      view |> element("button#tab-security") |> render_click()
+      view |> element("button#embed-settings-tabs-tab-security") |> render_click()
 
       view
       |> form("form[phx-submit='save_embed_domains']", %{allowed_domains: "user@example.com"})
@@ -142,7 +163,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
     test "shows error when too many domains", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/dashboard/embed")
 
-      view |> element("button#tab-security") |> render_click()
+      view |> element("button#embed-settings-tabs-tab-security") |> render_click()
 
       # Create 21 domains
       many_domains = for i <- 1..21, do: "example#{i}.com"
@@ -158,7 +179,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
     test "shows error for domain exceeding maximum length", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/dashboard/embed")
 
-      view |> element("button#tab-security") |> render_click()
+      view |> element("button#embed-settings-tabs-tab-security") |> render_click()
 
       # Domain too long (> 255 characters)
       long_domain = String.duplicate("a", 252) <> ".com"
@@ -177,7 +198,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       {:ok, _result} = Profiles.update_allowed_embed_domains(profile, ["existing.com"])
 
       {:ok, view, _html} = live(conn, "/dashboard/embed")
-      view |> element("button#tab-security") |> render_click()
+      view |> element("button#embed-settings-tabs-tab-security") |> render_click()
 
       # Try to add a domain that is already whitelisted
       view
@@ -195,7 +216,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       profile: profile
     } do
       {:ok, view, _html} = live(conn, "/dashboard/embed")
-      view |> element("button#tab-security") |> render_click()
+      view |> element("button#embed-settings-tabs-tab-security") |> render_click()
 
       # Submit the same domain with different casing
       view
@@ -219,7 +240,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       {:ok, _result} = Profiles.update_allowed_embed_domains(profile, ["none"])
 
       {:ok, view, _html} = live(conn, "/dashboard/embed")
-      view |> element("button#tab-security") |> render_click()
+      view |> element("button#embed-settings-tabs-tab-security") |> render_click()
 
       view
       |> form("form[phx-submit='save_embed_domains']", %{allowed_domains: "new-site.com"})
@@ -239,7 +260,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
 
       {:ok, view, _html} = live(conn, "/dashboard/embed")
 
-      view |> element("button#tab-security") |> render_click()
+      view |> element("button#embed-settings-tabs-tab-security") |> render_click()
 
       # Should show disable button when domains are set
       assert has_element?(view, "button", "Disable All Embedding")
@@ -323,7 +344,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
 
       {:ok, view, _html} = live(conn, "/dashboard/embed")
 
-      view |> element("button#tab-security") |> render_click()
+      view |> element("button#embed-settings-tabs-tab-security") |> render_click()
 
       # Should show the domains as tags
       assert has_element?(view, "span", "example.com")
@@ -334,7 +355,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
     test "handles empty domain input", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/dashboard/embed")
 
-      view |> element("button#tab-security") |> render_click()
+      view |> element("button#embed-settings-tabs-tab-security") |> render_click()
 
       view
       |> form("form[phx-submit='save_embed_domains']", %{allowed_domains: ""})
@@ -354,7 +375,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
 
       {:ok, view, _html} = live(conn, "/dashboard/embed")
 
-      view |> element("button#tab-security") |> render_click()
+      view |> element("button#embed-settings-tabs-tab-security") |> render_click()
 
       # Submitting 2 new domains would bring total to 21 → should error
       view
@@ -547,15 +568,15 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       {:ok, view, _html} = live(conn, "/dashboard/embed")
 
       # Preview should be hidden initially (it's in a tab)
-      assert has_element?(view, "#panel-preview[hidden]")
+      assert has_element?(view, "#embed-settings-tabs-panel-preview[hidden]")
 
       # Click to show preview tab
       view
-      |> element("button#tab-preview")
+      |> element("button#embed-settings-tabs-tab-preview")
       |> render_click()
 
       # Now preview should be visible
-      refute has_element?(view, "#panel-preview[hidden]")
+      refute has_element?(view, "#embed-settings-tabs-panel-preview[hidden]")
       assert has_element?(view, "#live-preview-container")
     end
 
@@ -566,7 +587,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       # and only the final submit fails, with "Preview session expired".
       {:ok, view, _html} = live(conn, "/dashboard/embed")
 
-      view |> element("button#tab-preview") |> render_click()
+      view |> element("button#embed-settings-tabs-tab-preview") |> render_click()
 
       token =
         view

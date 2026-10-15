@@ -54,7 +54,8 @@ defmodule TymeslotWeb.Live.Scheduling.LinkedDateTest do
         is_default: true,
         advance_booking_days: @window_days,
         min_advance_hours: 0,
-        buffer_minutes: 0
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0
       )
 
     Enum.each(1..7, fn day_of_week ->
@@ -184,8 +185,8 @@ defmodule TymeslotWeb.Live.Scheduling.LinkedDateTest do
   # Availability is cached per display range and timezone, and a failed
   # computation is never cached, so this probe cannot add an entry of its own.
   defp month_cached?(view, profile, meeting_type) do
-    %{current_year: year, current_month: month} = live_assigns(view)
-    {start_date, end_date} = Calculate.display_range(year, month)
+    %{current_year: year, current_month: month, week_start: week_start} = live_assigns(view)
+    {start_date, end_date} = Calculate.display_range(year, month, week_start)
 
     key =
       AvailabilityCache.availability_range_key(

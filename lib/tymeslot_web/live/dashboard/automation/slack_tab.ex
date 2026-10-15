@@ -8,8 +8,8 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackTab do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.Automation.SlackCard
-  alias TymeslotWeb.Dashboard.Automation.SlackEmptyState
 
   attr :integrations, :list, required: true
   attr :time_format, :string, required: true
@@ -22,27 +22,23 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackTab do
     ~H"""
     <%= if @integrations != [] do %>
       <div class="space-y-6">
-        <div class="flex items-center justify-between">
-          <.section_header
-            level={2}
-            title={dgettext("dashboard_automation_chat", "Your Slack Integrations")}
-            count={length(@integrations)}
-          />
-          <div class="flex items-center gap-3">
-            <%= if @oauth_mode_available? do %>
-              <.link href={~p"/api/slack/oauth/start"} class="btn-primary">
-                {dgettext("dashboard_automation_chat", "Add to Slack")}
-              </.link>
-            <% end %>
-            <button
+        <.section_header
+          title={dgettext("dashboard_automation_chat", "Your Slack Integrations")}
+          count={length(@integrations)}
+        >
+          <:actions>
+            <.action_link :if={@oauth_mode_available?} href={~p"/api/slack/oauth/start"}>
+              {dgettext("dashboard_automation_chat", "Add to Slack")}
+            </.action_link>
+            <.action_button
+              variant={:secondary}
               phx-click="slack_show_webhook_form"
               phx-target={@myself}
-              class="btn-secondary"
             >
               {dgettext("dashboard_automation_chat", "Add via webhook URL")}
-            </button>
-          </div>
-        </div>
+            </.action_button>
+          </:actions>
+        </.section_header>
 
         <div class="grid grid-cols-1 gap-6">
           <%= for integration <- @integrations do %>
@@ -84,11 +80,38 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackTab do
         </div>
       </div>
     <% else %>
-      <SlackEmptyState.slack_empty_state
-        oauth_mode_available?={@oauth_mode_available?}
-        oauth_start_path={~p"/api/slack/oauth/start"}
-        on_use_webhook_url={JS.push("slack_show_webhook_form", target: @myself)}
-      />
+      <.empty_state
+        size={:lg}
+        tone={:brand}
+        heading={:h2}
+        title={dgettext("dashboard_automation_chat", "No Slack Integrations")}
+        description={
+          dgettext(
+            "dashboard_automation_chat",
+            "Connect Slack to receive instant notifications when meetings are booked, cancelled, or rescheduled."
+          )
+        }
+      >
+        <:graphic><IconComponents.icon name={:slack} class="w-10 h-10" /></:graphic>
+        <:action :if={@oauth_mode_available?}>
+          <.action_link href={~p"/api/slack/oauth/start"}>
+            <IconComponents.icon name={:slack} class="w-5 h-5" />
+            {dgettext("dashboard_automation_chat", "Add to Slack")}
+          </.action_link>
+          <.action_button
+            variant={:secondary}
+            phx-click="slack_show_webhook_form"
+            phx-target={@myself}
+          >
+            {dgettext("dashboard_automation_chat", "Add via webhook URL")}
+          </.action_button>
+        </:action>
+        <:action :if={!@oauth_mode_available?}>
+          <.action_button phx-click="slack_show_webhook_form" phx-target={@myself}>
+            {dgettext("dashboard_automation_chat", "Add Slack via Webhook URL")}
+          </.action_button>
+        </:action>
+      </.empty_state>
     <% end %>
     """
   end

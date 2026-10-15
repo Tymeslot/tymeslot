@@ -6,8 +6,8 @@ defmodule Tymeslot.Timezones.IanaDataTest do
   silently shifts bookings by an hour rather than failing loudly. The `tz`
   package bundles whichever release it shipped with, so Core pins its own
   vendored copy (`config :tz, :iana_version` plus `priv/tz/`). These tests fail
-  if the pin and the vendored files drift apart, and cover the two 2026
-  transitions that motivated the pin.
+  if the pin and the vendored files drift apart, and cover the 2026
+  transitions that motivated the pin and its updates.
   """
 
   use ExUnit.Case, async: true
@@ -37,7 +37,7 @@ defmodule Tymeslot.Timezones.IanaDataTest do
     end
 
     test "the pin is not older than the release carrying the 2026 changes" do
-      assert Tz.iana_version() >= "2026c"
+      assert Tz.iana_version() >= "2026e"
     end
   end
 
@@ -73,6 +73,24 @@ defmodule Tymeslot.Timezones.IanaDataTest do
   describe "British Columbia's move to permanent -07" do
     test "stays on -07 through the winter" do
       assert offset_hours("America/Vancouver", ~N[2027-01-15 12:00:00]) == -7
+    end
+  end
+
+  describe "Manitoba's move to permanent -05 on 2026-11-01" do
+    test "observes -05 before the transition" do
+      assert offset_hours("America/Winnipeg", ~N[2026-10-15 12:00:00]) == -5
+    end
+
+    test "stays on -05 through the winter instead of falling back" do
+      assert offset_hours("America/Winnipeg", ~N[2026-11-15 12:00:00]) == -5
+      assert offset_hours("America/Winnipeg", ~N[2027-01-15 12:00:00]) == -5
+    end
+  end
+
+  describe "the Northwest Territories' move to permanent -06 on 2026-11-01" do
+    test "stays on -06 through the winter instead of falling back" do
+      assert offset_hours("America/Inuvik", ~N[2026-10-15 12:00:00]) == -6
+      assert offset_hours("America/Inuvik", ~N[2026-11-15 12:00:00]) == -6
     end
   end
 end

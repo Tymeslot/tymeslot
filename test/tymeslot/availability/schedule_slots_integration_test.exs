@@ -78,7 +78,8 @@ defmodule Tymeslot.Availability.ScheduleSlotsIntegrationTest do
   defp slots_for(schedule, duration_minutes) do
     config = %{
       schedule_id: schedule.id,
-      buffer_minutes: schedule.buffer_minutes,
+      buffer_before_minutes: schedule.buffer_before_minutes,
+      buffer_after_minutes: schedule.buffer_after_minutes,
       min_advance_hours: 0,
       max_advance_booking_days: 3650,
       duration_minutes: duration_minutes
@@ -179,16 +180,21 @@ defmodule Tymeslot.Availability.ScheduleSlotsIntegrationTest do
     morning_type: morning_type
   } do
     {:ok, evenings} =
-      Schedules.update_policy(evenings, %{buffer_minutes: 45, min_advance_hours: 72})
+      Schedules.update_policy(evenings, %{
+        buffer_before_minutes: 45,
+        buffer_after_minutes: 45,
+        min_advance_hours: 72
+      })
 
     evening_config = Policy.scheduling_config(user.id, evening_type)
     morning_config = Policy.scheduling_config(user.id, morning_type)
 
-    assert evenings.buffer_minutes == 45
-    assert evening_config.buffer_minutes == 45
+    assert evenings.buffer_before_minutes == 45
+    assert evening_config.buffer_before_minutes == 45
+    assert evening_config.buffer_after_minutes == 45
     assert evening_config.min_advance_hours == 72
 
-    refute morning_config.buffer_minutes == 45
+    refute morning_config.buffer_before_minutes == 45
     refute morning_config.min_advance_hours == 72
   end
 end

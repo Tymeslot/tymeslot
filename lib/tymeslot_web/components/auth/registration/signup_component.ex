@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Registration.SignupComponent do
   import TymeslotWeb.Shared.Auth.ButtonComponents
   import TymeslotWeb.Shared.SocialAuthButtons
   import TymeslotWeb.Shared.PasswordToggleButtonComponent
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
 
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
@@ -58,17 +58,7 @@ defmodule TymeslotWeb.Registration.SignupComponent do
             end
           }
         >
-          <div class="sr-only" aria-hidden="true">
-            <label for="signup-website">Website</label>
-            <input
-              id="signup-website"
-              type="text"
-              name="user[website]"
-              tabindex="-1"
-              autocomplete="off"
-              value=""
-            />
-          </div>
+          <.honeypot_field id="signup-website" param_root="user" />
           <div class="space-y-4 sm:space-y-5 mb-2">
             <.input
               name="user[email]"

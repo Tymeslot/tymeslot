@@ -48,6 +48,10 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   @doc """
   Gets all active video integrations across all users.
   Used for health checks and monitoring.
+
+  Credentials are deliberately left encrypted: the sweep only needs the id,
+  user, provider and base URL, and decrypting every row would let a single
+  row that no longer decrypts abort the whole listing.
   """
   @spec list_all_active() :: list(VideoIntegrationSchema.t())
   def list_all_active do
@@ -56,7 +60,6 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
     |> where([v], v.is_active == true)
     |> order_by([v], asc: v.name)
     |> Repo.all()
-    |> Enum.map(&VideoIntegrationSchema.decrypt_credentials/1)
   end
 
   @doc """

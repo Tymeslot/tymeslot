@@ -34,6 +34,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
       attendee_timezone: attendee_timezone,
 
       # Organizer information
+      organizer_user_id: Map.get(meeting, :organizer_user_id),
       organizer_note: meeting.organizer_note,
       organizer_name: meeting.organizer_name,
       organizer_email: meeting.organizer_email,
@@ -190,17 +191,19 @@ defmodule Tymeslot.Notifications.ContentBuilder do
 
   @doc """
   Validates that notification content is complete.
+
+  `group?` is true for a group meeting, whose row carries no attendee of its
+  own (`attendee_name`/`attendee_email` are always nil) — those fields are
+  validated per participant elsewhere, not here.
   """
-  @spec validate_content(%{atom() => term()}) :: :ok | {:error, String.t()}
-  def validate_content(content) do
-    required_fields = [
-      :uid,
-      :attendee_name,
-      :attendee_email,
-      :organizer_name,
-      :organizer_email,
-      :start_time
-    ]
+  @spec validate_content(%{atom() => term()}, boolean()) :: :ok | {:error, String.t()}
+  def validate_content(content, group? \\ false) do
+    required_fields =
+      if group? do
+        [:uid, :organizer_name, :organizer_email, :start_time]
+      else
+        [:uid, :attendee_name, :attendee_email, :organizer_name, :organizer_email, :start_time]
+      end
 
     missing_fields =
       Enum.reject(required_fields, fn field -> Map.has_key?(content, field) and content[field] end)

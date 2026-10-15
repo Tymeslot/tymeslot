@@ -19,21 +19,13 @@ body {
   min-height: 100vh;
 }
 
-/* Footer gradient */
-.footer-gradient {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-  padding: 20px;
-}
-
 /* Glass morphism cards */
 .glass-card {
   background: var(--color-glass-bg-card-enhanced);
   backdrop-filter: var(--glass-blur-strong);
   -webkit-backdrop-filter: var(--glass-blur-strong);
   border: 1px solid var(--color-border-glass-light);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   box-shadow: var(--shadow-glass-card-enhanced);
   transition: var(--transition-glass-smooth);
   color: var(--color-text-glass-primary);

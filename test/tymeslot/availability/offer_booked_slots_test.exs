@@ -21,6 +21,7 @@ defmodule Tymeslot.Availability.OfferBookedSlotsTest do
   import Tymeslot.AvailabilityTestHelpers
 
   alias Tymeslot.Availability.Offer
+  alias Tymeslot.Bookings.Create
   alias Tymeslot.CalendarMock
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.TestMocks
@@ -171,6 +172,114 @@ defmodule Tymeslot.Availability.OfferBookedSlotsTest do
 
       assert Map.fetch!(days(context, date, date), Date.to_iso8601(date))
     end
+  end
+
+  describe "busy data reach for a day-long meeting" do
+    test "a booking two days out blocks a day-long slot that would run into it" do
+      # Host open around the clock in UTC; booker eleven hours behind. A 24-hour
+      # meeting at 11:00 PM on `date` (Pago Pago) starts at 10:00 UTC the next
+      # day and ends at 10:00 UTC the day after. The host's booking at 09:00 UTC
+      # that day has to be in the busy set, or the slot is offered and then
+      # refused at submit.
+      host = around_the_clock_host()
+
+      # An hourly grid makes 11:00 PM a candidate start for a 24-hour meeting.
+      meeting_type =
+        insert(:meeting_type, user: host.user, duration_minutes: 1440, slot_interval_minutes: 60)
+
+      date = next_bookable_weekday()
+      blocker_start = DateTime.new!(Date.add(date, 2), ~T[09:00:00], "Etc/UTC")
+
+      insert(:meeting,
+        organizer_user_id: host.user.id,
+        start_time: blocker_start,
+        end_time: DateTime.add(blocker_start, 30, :minute),
+        duration: 30,
+        status: "confirmed"
+      )
+
+      request = %{
+        profile: host.profile,
+        user_timezone: "Pacific/Pago_Pago",
+        meeting_type: meeting_type
+      }
+
+      {:ok, slots} = Offer.slots_for_date(request, Date.to_iso8601(date), 1440)
+
+      assert "10:00 AM" in slots,
+             "the day must still offer something, or the refutation below proves nothing"
+
+      refute "11:00 PM" in slots
+    end
+
+    test "a calendar event the day after the last bookable date withdraws a day-long slot, as the submit does" do
+      # Host open around the clock in UTC, booked from a UTC page on the last
+      # date the booking window reaches. A 24-hour meeting at midnight that day
+      # ends at midnight the day after, and its fifteen-minute after-buffer
+      # runs into an event at 00:05. The provider only returns events inside
+      # the range it is asked for, so the page has to ask past the window's
+      # last date or it offers a slot the submit, which reads the slot's own
+      # range, then refuses.
+      host = around_the_clock_host()
+      last_date = Date.add(Date.utc_today(), host.schedule.advance_booking_days)
+      event_start = DateTime.new!(Date.add(last_date, 1), ~T[00:05:00], "Etc/UTC")
+
+      AvailabilityCache.clear_all()
+
+      assert "12:00 AM" in offered(host.profile, last_date, 1440),
+             "without the event the slot is on offer, or the refutation below proves nothing"
+
+      stub_ranged_calendar([
+        %{
+          uid: "evening-after",
+          start_time: event_start,
+          end_time: DateTime.add(event_start, 60, :minute),
+          status: "confirmed",
+          transparency: "opaque",
+          summary: "Busy"
+        }
+      ])
+
+      AvailabilityCache.clear_all()
+      refute "12:00 AM" in offered(host.profile, last_date, 1440)
+
+      assert {:error, :slot_taken} =
+               Create.execute(
+                 %{
+                   date: last_date,
+                   time: "12:00 AM",
+                   duration: "1440min",
+                   user_timezone: "Etc/UTC",
+                   organizer_user_id: host.user.id,
+                   meeting_type_id: nil
+                 },
+                 %{"name" => "Late", "email" => "late@example.com", "message" => ""}
+               )
+    end
+  end
+
+  defp around_the_clock_host do
+    create_bookable_profile(
+      timezone: "Etc/UTC",
+      days: Enum.to_list(1..7),
+      hours: %{
+        is_available: true,
+        start_time: ~T[00:00:00],
+        end_time: ~T[00:00:00],
+        ends_next_day: true
+      }
+    )
+  end
+
+  # A provider answers for the range it is asked about and nothing else.
+  defp stub_ranged_calendar(events) do
+    stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, start_date, end_date ->
+      {:ok,
+       Enum.filter(events, fn event ->
+         Date.compare(DateTime.to_date(event.start_time), end_date) != :gt and
+           Date.compare(DateTime.to_date(event.end_time), start_date) != :lt
+       end)}
+    end)
   end
 
   defp next_weekday_after(date) do

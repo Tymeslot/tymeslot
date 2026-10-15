@@ -16,6 +16,16 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverter do
   scope. Monthly/yearly RRULEs round-trip back without a `BYMONTHDAY`/`BYMONTH`
   part because the anchor is reconstructed from the event's start date, not the
   RRULE.
+
+  ## Days some months lack
+
+  The two calendars read a monthly day the month lacks differently: RFC 5545
+  skips the month, so a series on the 31st has no occurrence in April, while
+  Graph moves it to the month's last day. Graph has no pattern that skips, so
+  a series that would reach such a month is refused
+  (`{:error, :day_missing_in_some_months}`) rather than written with dates the
+  organiser never chose. A yearly series from 29 February is refused the same
+  way, unless it ends before a common year.
   """
 
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
@@ -43,8 +53,13 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverter do
   no `recurrenceTimeZone` is sent, which this converter never sends). Parsing
   without the zone reads the UNTIL as a UTC date, so an organiser west of UTC
   had the series written one day late and Graph generated an extra occurrence.
+
+  Returns `nil` for a missing or unreadable rule, and
+  `{:error, :day_missing_in_some_months}` for a monthly or yearly series that
+  Graph would move onto a month's last day (see the moduledoc).
   """
-  @spec rrule_to_outlook(String.t() | nil, Date.t(), String.t() | nil) :: map() | nil
+  @spec rrule_to_outlook(String.t() | nil, Date.t(), String.t() | nil) ::
+          map() | nil | {:error, :day_missing_in_some_months}
   def rrule_to_outlook(rrule, start_date, timezone \\ nil)
   def rrule_to_outlook(nil, _start_date, _timezone), do: nil
   def rrule_to_outlook("", _start_date, _timezone), do: nil
@@ -56,11 +71,15 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverter do
       nil ->
         nil
 
-      _freq ->
-        %{
-          "pattern" => build_pattern(parsed, start_date),
-          "range" => build_range(parsed, start_date)
-        }
+      freq ->
+        if moves_to_month_end?(freq, parsed, start_date) do
+          {:error, :day_missing_in_some_months}
+        else
+          %{
+            "pattern" => build_pattern(parsed, start_date),
+            "range" => build_range(parsed, start_date)
+          }
+        end
     end
   end
 
@@ -81,6 +100,28 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverter do
   def outlook_to_rrule(_other), do: nil
 
   # --- rrule -> outlook ---
+
+  # Graph's dates are the start date shifted by whole periods, each clamped to
+  # the month's last day (as `Date.shift/2` clamps), so the series is moved
+  # somewhere exactly when one of those dates is not on the start's day. An
+  # open-ended series is walked over a full Gregorian cycle, which also finds
+  # the common year that a 29 February series every fourth year reaches.
+  @gregorian_cycle_months 400 * 12
+
+  defp moves_to_month_end?(freq, parsed, %Date{day: day} = start_date)
+       when freq in [:monthly, :yearly] and day > 28 do
+    step = Map.get(parsed, :interval, 1) * if(freq == :yearly, do: 12, else: 1)
+    until = Map.get(parsed, :until)
+
+    0
+    |> Stream.iterate(&(&1 + step))
+    |> Stream.take(Map.get(parsed, :count, div(@gregorian_cycle_months, step) + 1))
+    |> Stream.map(&Date.shift(start_date, month: &1))
+    |> Stream.take_while(&(is_nil(until) or Date.compare(&1, until) != :gt))
+    |> Enum.any?(&(&1.day != day))
+  end
+
+  defp moves_to_month_end?(_freq, _parsed, _start_date), do: false
 
   defp build_pattern(parsed, start_date) do
     interval = Map.get(parsed, :interval, 1)

@@ -91,11 +91,16 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
         description: invitation_details.description,
         organizer_name: invitation_details.organizer_name,
         organizer_email: invitation_details.organizer_email,
+        organizer_user_id: Map.get(invitation_details, :organizer_user_id),
         attendee_email: attendee_email
       }
 
       MjmlEmail.base_email()
       |> to(attendee_email)
+      |> MjmlEmail.put_reply_to(
+        invitation_details.organizer_name,
+        invitation_details.organizer_email
+      )
       |> subject(Sanitise.sanitize_for_header(copy.subject))
       |> html_body(html_body)
       |> text_body(build_text_body(invitation_details, copy, locale))

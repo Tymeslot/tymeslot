@@ -66,7 +66,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotificationTest do
 
       html = EmailChangeNotification.render(user, new_email, request_time)
 
-      assert html =~ "January 15, 2025 at 10:30 AM UTC"
+      assert html =~ "15 January 2025 at 10:30 AM UTC"
     end
 
     test "includes security warning about unauthorized access" do

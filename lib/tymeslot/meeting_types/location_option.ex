@@ -10,14 +10,21 @@ defmodule Tymeslot.MeetingTypes.LocationOption do
   option *does* at booking time, a host-authored `label` the booker sees,
   and kind-specific config:
 
-    * `video` — binds to one or more of the host's video integrations via
+    * `video`: binds to one or more of the host's video integrations via
       `video_integration_ids`, in the host's order. With one, choosing the
       option creates the room there; with several, the booker also picks
       which provider, and the first is the one the picker opens on.
-    * `in_person` — `details` carries the address.
-    * `phone` — `details` carries the number to call, unless
+    * `in_person`: binds to any number of the host's saved venues via
+      `venue_ids`, in the host's order (see `Tymeslot.Venues`). With one,
+      the booker is told where the meeting is; with several, the booker
+      also picks which, and the first is the one the picker opens on; with
+      none, the address is arranged after booking. `details` is not used.
+    * `phone`: `details` carries the number to call, unless
       `collect_from_guest` is set, in which case the booker supplies theirs.
-    * `custom` — `details` is free text.
+    * `custom`: `details` is free text.
+
+  Ownership of the listed integrations and venues is checked where a form
+  saves the list, `Tymeslot.MeetingTypes.FormValidation`.
 
   Host-editable: everything but `id`. Changing the kind clears config that
   no longer applies, the same way `Tymeslot.CustomFields.FieldDefinition`
@@ -44,6 +51,7 @@ defmodule Tymeslot.MeetingTypes.LocationOption do
     field :details, :string
     field :collect_from_guest, :boolean, default: false
     field :video_integration_ids, {:array, :integer}, default: []
+    field :venue_ids, {:array, :integer}, default: []
     field :position, :integer, default: 0
   end
 
@@ -58,15 +66,18 @@ defmodule Tymeslot.MeetingTypes.LocationOption do
       :details,
       :collect_from_guest,
       :video_integration_ids,
+      :venue_ids,
       :position
     ])
     |> maybe_set_id()
-    |> dedupe_video_integrations()
+    |> dedupe(:video_integration_ids)
+    |> dedupe(:venue_ids)
     |> validate_required([:kind, :label])
     |> validate_inclusion(:kind, @kinds)
     |> validate_length(:label, max: @label_max_length)
     |> validate_length(:details, max: @details_max_length)
     |> clear_irrelevant_kind_config(option)
+    |> clear_in_person_details()
     |> then(fn cs -> if cs.valid?, do: validate_kind_specific(cs), else: cs end)
   end
 
@@ -97,10 +108,11 @@ defmodule Tymeslot.MeetingTypes.LocationOption do
     end
   end
 
-  # The same provider twice would be two identical choices for the booker.
-  defp dedupe_video_integrations(cs) do
-    case get_change(cs, :video_integration_ids) do
-      ids when is_list(ids) -> put_change(cs, :video_integration_ids, Enum.uniq(ids))
+  # The same provider or venue twice would be two identical choices for the
+  # booker.
+  defp dedupe(cs, field) do
+    case get_change(cs, field) do
+      ids when is_list(ids) -> put_change(cs, field, Enum.uniq(ids))
       _unchanged -> cs
     end
   end
@@ -108,14 +120,16 @@ defmodule Tymeslot.MeetingTypes.LocationOption do
   # When the kind changes, clear config that belongs exclusively to the
   # *previous* kind so a video option demoted to in-person does not keep
   # pointing at an integration that will never be consulted again.
-  # `details` survives every transition because it means "the specifics of
-  # this place" for all three kinds that use it.
+  # `details` survives transitions between the kinds that use it (phone and
+  # custom); an in-person option never keeps it, see
+  # `clear_in_person_details/1`.
   defp clear_irrelevant_kind_config(cs, old) do
     new_kind = get_field(cs, :kind)
 
     if new_kind && new_kind != old.kind do
       cs
       |> maybe_clear_video_integration(new_kind)
+      |> maybe_clear_venues(new_kind)
       |> maybe_clear_collect_from_guest(new_kind)
     else
       cs
@@ -125,8 +139,20 @@ defmodule Tymeslot.MeetingTypes.LocationOption do
   defp maybe_clear_video_integration(cs, "video"), do: cs
   defp maybe_clear_video_integration(cs, _kind), do: put_change(cs, :video_integration_ids, [])
 
+  defp maybe_clear_venues(cs, "in_person"), do: cs
+  defp maybe_clear_venues(cs, _kind), do: put_change(cs, :venue_ids, [])
+
   defp maybe_clear_collect_from_guest(cs, "phone"), do: cs
   defp maybe_clear_collect_from_guest(cs, _kind), do: put_change(cs, :collect_from_guest, false)
+
+  # An in-person option's address lives in its venues. A `details` value left
+  # on one, by an older form or a kind change, would be a second address
+  # source that nothing reads, so it is dropped.
+  defp clear_in_person_details(cs) do
+    if get_field(cs, :kind) == "in_person" and not is_nil(get_field(cs, :details)),
+      do: put_change(cs, :details, nil),
+      else: cs
+  end
 
   defp validate_kind_specific(cs) do
     case get_field(cs, :kind) do

@@ -10,6 +10,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.ApprovalJobs
 
   alias Tymeslot.Notifications.{
@@ -152,7 +153,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
     content = ContentBuilder.build_appointment_details(meeting)
 
     with :ok <- Recipients.validate_recipients(recipients),
-         :ok <- ContentBuilder.validate_content(content),
+         :ok <- ContentBuilder.validate_content(content, Meetings.group?(meeting)),
          result <- schedule_confirmation_job(meeting.id) do
       case result do
         :ok -> :ok
@@ -177,7 +178,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
     content = ContentBuilder.build_reminder_details(meeting)
 
     with :ok <- Recipients.validate_recipients(recipients),
-         :ok <- ContentBuilder.validate_content(content) do
+         :ok <- ContentBuilder.validate_content(content, Meetings.group?(meeting)) do
       {result, scheduled_any?} = schedule_reminders(meeting, reminders)
 
       case {result, scheduled_any?} do
@@ -219,6 +220,63 @@ defmodule Tymeslot.Notifications.Orchestrator do
         :ok -> {:ok, :cancellation_scheduled}
         {:error, reason} -> {:error, reason}
       end
+    end
+  end
+
+  @doc """
+  Schedules the confirmation email job for one seat on a group meeting.
+  """
+  @spec schedule_seat_confirmation(%{atom() => term()}, %{atom() => term()}) ::
+          {:ok, atom()} | {:error, term()}
+  def schedule_seat_confirmation(meeting, participant) do
+    worker_module = get_email_worker_module()
+
+    case worker_module.schedule_seat_confirmation_emails(meeting.id, participant.id) do
+      :ok -> {:ok, :seat_confirmation_scheduled}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Schedules the cancellation email job for one seat on a group meeting.
+  """
+  @spec schedule_seat_cancellation(%{atom() => term()}, %{atom() => term()}, boolean()) ::
+          {:ok, atom()} | {:error, term()}
+  def schedule_seat_cancellation(meeting, participant, slot_freed?) do
+    worker_module = get_email_worker_module()
+
+    case worker_module.schedule_seat_cancellation_emails(
+           meeting.id,
+           participant.id,
+           slot_freed?
+         ) do
+      :ok -> {:ok, :seat_cancellation_scheduled}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Schedules the reschedule email job for one seat on a group meeting:
+  `participant` is the seat at its new time, `old_participant` the seat it
+  moved from.
+  """
+  @spec schedule_seat_reschedule(
+          %{atom() => term()},
+          %{atom() => term()},
+          %{atom() => term()},
+          boolean()
+        ) :: {:ok, atom()} | {:error, term()}
+  def schedule_seat_reschedule(meeting, participant, old_participant, old_slot_freed?) do
+    worker_module = get_email_worker_module()
+
+    case worker_module.schedule_seat_reschedule_emails(
+           meeting.id,
+           participant.id,
+           old_participant.id,
+           old_slot_freed?
+         ) do
+      :ok -> {:ok, :seat_reschedule_scheduled}
+      {:error, reason} -> {:error, reason}
     end
   end
 

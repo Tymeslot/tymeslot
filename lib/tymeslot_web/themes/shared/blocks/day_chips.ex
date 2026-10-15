@@ -112,10 +112,10 @@ defmodule TymeslotWeb.Themes.Shared.Blocks.DayChips do
     end
   end
 
-  # `weekday_headers/0` is Sunday first; `Date.day_of_week/1` is Monday 1 to
-  # Sunday 7, so Sunday's 7 wraps to index 0.
+  # Monday-first headings line up with `Date.day_of_week/1`, Monday 1 to
+  # Sunday 7.
   defp weekday_short(day),
-    do: Enum.at(LocalizationHelpers.weekday_headers(), rem(Date.day_of_week(day), 7))
+    do: Enum.at(LocalizationHelpers.weekday_headings(:monday), Date.day_of_week(day) - 1)
 
   defp free_days(availability, today, count) when is_map(availability) do
     availability

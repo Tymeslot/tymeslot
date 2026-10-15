@@ -67,7 +67,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
       #{dgettext("emails_integrations", "Please manually add this meeting to your calendar to ensure you don't miss it. Both you and the attendee have already received your confirmation emails - this is purely a technical calendar sync issue that doesn't affect the booking itself.")}
     </mj-text>
 
-    #{Callouts.alert_box(:alert, common_causes_html())}
+    #{Callouts.alert_box(:alert, dgettext("emails_integrations", "Common causes:"), items: common_causes())}
 
     #{Text.system_footer_note(dgettext("emails_integrations", "This is an automated system notification. Please check your calendar sync settings if this issue persists."))}
     """
@@ -113,9 +113,9 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
     """
   end
 
-  # The four causes are one list translated once, then joined for whichever body
+  # The four causes are one list translated once, then laid out by whichever body
   # needs them. Keeping them as separate msgids from the surrounding prose means
-  # a translator never has to reproduce `<br/>•` markup by hand.
+  # a translator never has to reproduce list markup by hand.
   defp common_causes do
     [
       dgettext("emails_integrations", "CalDAV server temporarily unavailable"),
@@ -123,11 +123,6 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
       dgettext("emails_integrations", "Calendar permissions or authentication problems"),
       dgettext("emails_integrations", "Maximum retries exceeded")
     ]
-  end
-
-  defp common_causes_html do
-    causes = Enum.map_join(common_causes(), "<br/>• ", & &1)
-    "#{dgettext("emails_integrations", "Common causes:")}<br/>• #{causes}"
   end
 
   defp common_causes_text do

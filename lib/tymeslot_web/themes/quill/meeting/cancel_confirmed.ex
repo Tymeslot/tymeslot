@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Themes.Quill.Scheduling.Wrapper
 
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
 
   attr :theme_tokens, :any, required: true
   attr :locale, :string, required: true

@@ -23,7 +23,7 @@ defmodule TymeslotWeb.Components.DashboardModalsTest do
 
     html = render_component(&ClearDayModal.clear_day_modal/1, assigns)
 
-    assert html =~ "Clear Day Settings"
+    assert html =~ "Clear day settings"
     # The day name must appear inside the single interpolated question, not
     # merely somewhere on the page — guards against the sentence being split
     # back into gettext fragments around the value.

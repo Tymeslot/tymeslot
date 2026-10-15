@@ -95,6 +95,19 @@ defmodule Tymeslot.Emails.PollTemplatesTest do
       assert email.html_body =~ "Open Ended"
       assert email.text_body =~ url
     end
+
+    test "replies to the poll's host, from the instance's address", %{
+      participant: participant,
+      voting_url: url
+    } do
+      host = insert(:user, name: "Hana Host", email: "hana@example.com")
+      poll = insert(:poll, user: host)
+
+      email = PollDeadlineReminder.render(poll, participant, url)
+
+      assert email.reply_to == {"Hana Host", "hana@example.com"}
+      assert email.from == {"Hana Host", Application.get_env(:tymeslot, :email)[:from_email]}
+    end
   end
 
   describe "PollHostNudge.render/3" do

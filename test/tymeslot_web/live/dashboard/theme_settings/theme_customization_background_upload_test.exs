@@ -6,8 +6,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationBackgroundUpload
 
   A successful upload pushes "upload-complete" so the `AutoUpload` hook clears
   the file picker, mirroring the avatar upload fixes (dashboard and
-  onboarding). Preset choices are clicked on the real buttons, so a picker
-  that stopped sending `phx-value-choice` fails here.
+  onboarding), and what is published carries none of the uploaded file's
+  metadata. Preset choices are clicked on the real buttons, so a picker that
+  stopped sending `phx-value-choice` fails here.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -22,6 +23,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationBackgroundUpload
   alias Ecto.Changeset
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Test.MediaFixtures
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.Presets
   alias Tymeslot.ThemeCustomizations.Specs
@@ -29,13 +31,13 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationBackgroundUpload
   alias Tymeslot.Workers.VideoTranscoder
   alias TymeslotWeb.ThemeTestMatrix
 
-  # Minimal valid PNG (magic bytes + IHDR) — accepted by allow_upload's accept
-  # list without triggering the file-size limit.
-  @valid_png <<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13, "IHDR", 0, 0, 0, 1, 0,
-               0, 0, 1, 8, 2, 0, 0, 0, 0x90, 0x77, 0x53, 0xDE>>
+  # Complete and decodable: a stored image is re-encoded, so magic bytes
+  # alone are refused.
+  @valid_png MediaFixtures.png()
 
-  # An MP4 by its magic bytes; the content check reads no further.
-  @valid_mp4 <<0x00, 0x00, 0x00, 0x18, "ftypisom", "fake video data">>
+  # A complete MP4: a stored video has its metadata stripped, which reads the
+  # whole container, so magic bytes alone are refused.
+  @valid_mp4 MediaFixtures.read!("gps.mp4")
 
   # The themes whose spec offers each kind, so a new theme is covered once it
   # does.
@@ -195,6 +197,56 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationBackgroundUpload
       assert saved.settings["background_video_path"] == nil
       refute File.exists?(video_abs)
     end
+
+    test "publishes a WebP background without its EXIF location", %{
+      conn: conn,
+      profile: profile
+    } do
+      view = open_tab(conn, "1", "image")
+
+      image = %{
+        last_modified: System.system_time(:millisecond),
+        name: "garden.webp",
+        content: MediaFixtures.read!("gps.webp"),
+        type: "image/webp"
+      }
+
+      view
+      |> file_input("#theme-background-image-form", :background_image_path, [image])
+      |> render_upload("garden.webp")
+
+      assert_push_event(view, "upload-complete", %{})
+
+      customization = ThemeCustomizations.get_by_profile_and_theme(profile.id, "1")
+      response = get(build_conn(), "/uploads/" <> customization.settings["background_image_path"])
+      assert response.status == 200
+      assert MediaFixtures.image_metadata_fields(response.resp_body) == []
+      refute response.resp_body =~ "Model-X"
+    end
+
+    test "refuses an image over 40 megapixels and says how large it may be", %{
+      conn: conn,
+      profile: profile
+    } do
+      view = open_tab(conn, "1", "image")
+
+      image = %{
+        last_modified: System.system_time(:millisecond),
+        name: "huge.png",
+        content: MediaFixtures.png_declaring(20_000, 20_000),
+        type: "image/png"
+      }
+
+      view
+      |> file_input("#theme-background-image-form", :background_image_path, [image])
+      |> render_upload("huge.png")
+
+      assert render(view) =~
+               "This image is too large (400.0 megapixels). " <>
+                 "Please upload an image of at most 40 megapixels."
+
+      assert ThemeCustomizations.get_by_profile_and_theme(profile.id, "1") == nil
+    end
   end
 
   describe "preset backgrounds" do
@@ -320,6 +372,22 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationBackgroundUpload
         refute_enqueued(worker: VideoTranscoder)
         refute File.exists?(Path.join(upload_root, "themes/#{profile.id}/#{theme_id}/videos"))
       end
+    end
+
+    test "refuses a QuickTime file", %{conn: conn} do
+      view = open_tab(conn, hd(@video_themes).id, "video")
+
+      video = %{
+        last_modified: System.system_time(:millisecond),
+        name: "clip.mov",
+        content: <<0, 0, 0, 20, "ftypqt  ", 0, 0, 0, 0, "qt  ">>,
+        type: "video/quicktime"
+      }
+
+      assert {:error, [[_ref, :not_accepted]]} =
+               view
+               |> file_input("#theme-background-video-form", :background_video_path, [video])
+               |> render_upload("clip.mov")
     end
   end
 

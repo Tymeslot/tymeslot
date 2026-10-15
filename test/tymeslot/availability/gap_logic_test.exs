@@ -119,7 +119,12 @@ defmodule Tymeslot.Availability.GapLogicTest do
       timezone,
       events,
       DateTimeUtils.now_in_timezone(timezone),
-      %{buffer_minutes: buffer, duration_minutes: duration, min_advance_hours: 0}
+      %{
+        buffer_before_minutes: buffer,
+        buffer_after_minutes: buffer,
+        duration_minutes: duration,
+        min_advance_hours: 0
+      }
     )
   end
 

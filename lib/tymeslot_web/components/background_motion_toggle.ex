@@ -27,7 +27,7 @@ defmodule TymeslotWeb.Components.BackgroundMotionToggle do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.CoreComponents, only: [icon: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
   @doc """
   Renders the background-motion pause/play button.

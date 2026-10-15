@@ -53,7 +53,8 @@ defmodule Tymeslot.Availability.ConflictsPropertyTest do
       date = Date.add(Date.utc_today(), days_ahead)
 
       config = %{
-        buffer_minutes: buffer,
+        buffer_before_minutes: buffer,
+        buffer_after_minutes: buffer,
         min_advance_hours: 0,
         duration_minutes: duration,
         slot_interval_minutes: slot_interval_minutes
@@ -169,7 +170,7 @@ defmodule Tymeslot.Availability.ConflictsPropertyTest do
                slot_start,
                slot_end,
                events_in_tz,
-               0
+               {0, 0}
              ),
              "All-day Monday event blocked slot at #{slot_start} on Tuesday in #{timezone}"
 
@@ -188,7 +189,7 @@ defmodule Tymeslot.Availability.ConflictsPropertyTest do
                monday_slot_start,
                monday_slot_end,
                events_in_tz,
-               0
+               {0, 0}
              ),
              "All-day Monday event failed to block slot at #{monday_slot_start} on Monday in #{timezone}"
     end
@@ -282,7 +283,12 @@ defmodule Tymeslot.Availability.ConflictsPropertyTest do
           synced_at: DateTime.utc_now()
         })
 
-      config = %{buffer_minutes: 0, min_advance_hours: 0, duration_minutes: 30}
+      config = %{
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0,
+        min_advance_hours: 0,
+        duration_minutes: 30
+      }
 
       events_in_tz =
         [event]

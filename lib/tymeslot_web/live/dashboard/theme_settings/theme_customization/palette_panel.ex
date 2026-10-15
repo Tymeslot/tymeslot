@@ -20,64 +20,58 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PalettePanel do
   @impl Panel
   def render(assigns) do
     ~H"""
-    <div class="card-glass">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
-        <div>
-          <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
-            {dgettext("dashboard_appearance", "Colour Palette")}
-          </h3>
-          <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
-            {dgettext(
-              "dashboard_appearance",
-              "Select the primary colours for your booking page interface."
-            )}
-          </p>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-3">
-          <% current_scheme = Palette.resolve(@customization.settings, @group) %>
-          <% custom_selected = not is_nil(@customization.settings["custom_palette_seed"]) %>
-          <%= if current_scheme do %>
-            <.current_indicator
-              swatches={
-                if custom_selected,
-                  do: primary_swatches(current_scheme),
-                  else: swatches(current_scheme, @group)
-              }
-              label={scheme_name(current_scheme)}
-              code={
-                if custom_selected,
-                  do: String.upcase(@customization.settings["custom_palette_seed"])
-              }
-              highlighted={custom_selected}
-            />
-          <% end %>
-          <button
-            type="button"
-            phx-click="theme:toggle_palette_picker"
-            phx-value-option={@group.key}
-            phx-target={@myself}
-            aria-expanded={to_string(@palette_picker_open)}
-            aria-controls="custom-palette-picker"
-            class={[
-              "flex items-center gap-2 px-3.5 py-2 rounded-token-xl border-2 text-token-2xs font-black uppercase tracking-widest transition-all duration-300",
-              if(@palette_picker_open,
-                do:
-                  "bg-turquoise-50 border-turquoise-300 text-turquoise-700 shadow-sm shadow-turquoise-500/10",
-                else:
-                  "bg-tymeslot-50 border-transparent text-tymeslot-600 hover:bg-tymeslot-100 hover:border-tymeslot-200"
-              )
-            ]}
-          >
-            <.icon name="hero-swatch-mini" class="w-4 h-4" />
-            <span>{dgettext("dashboard_appearance", "Custom")}</span>
-            <.icon
-              name="hero-chevron-down-mini"
-              class={"w-4 h-4 transition-transform duration-300 #{if @palette_picker_open, do: "rotate-180"}"}
-            />
-          </button>
-        </div>
-      </div>
+    <.card
+      title={dgettext("dashboard_appearance", "Colour Palette")}
+      description={
+        dgettext(
+          "dashboard_appearance",
+          "Select the primary colours for your booking page interface."
+        )
+      }
+    >
+      <:actions>
+        <% current_scheme = Palette.resolve(@customization.settings, @group) %>
+        <% custom_selected = not is_nil(@customization.settings["custom_palette_seed"]) %>
+        <%= if current_scheme do %>
+          <.current_indicator
+            swatches={
+              if custom_selected,
+                do: primary_swatches(current_scheme),
+                else: swatches(current_scheme, @group)
+            }
+            label={scheme_name(current_scheme)}
+            code={
+              if custom_selected,
+                do: String.upcase(@customization.settings["custom_palette_seed"])
+            }
+            highlighted={custom_selected}
+          />
+        <% end %>
+        <button
+          type="button"
+          phx-click="theme:toggle_palette_picker"
+          phx-value-option={@group.key}
+          phx-target={@myself}
+          aria-expanded={to_string(@palette_picker_open)}
+          aria-controls="custom-palette-picker"
+          class={[
+            "flex items-center gap-2 px-3.5 py-2 rounded-token-xl border-2 text-token-2xs font-black uppercase tracking-widest transition-all duration-300",
+            if(@palette_picker_open,
+              do:
+                "bg-turquoise-50 border-turquoise-300 text-turquoise-700 shadow-sm shadow-turquoise-500/10",
+              else:
+                "bg-tymeslot-50 border-transparent text-tymeslot-600 hover:bg-tymeslot-100 hover:border-tymeslot-200"
+            )
+          ]}
+        >
+          <.icon name="hero-swatch-mini" class="w-4 h-4" />
+          <span>{dgettext("dashboard_appearance", "Custom")}</span>
+          <.icon
+            name="hero-chevron-down-mini"
+            class={"w-4 h-4 transition-transform duration-300 #{if @palette_picker_open, do: "rotate-180"}"}
+          />
+        </button>
+      </:actions>
 
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         <% active_scheme_id =
@@ -115,7 +109,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PalettePanel do
             >
               <div
                 :for={colour <- swatches(scheme, @group)}
-                class="w-6 h-6 rounded-full shadow-sm border border-white"
+                class="w-6 h-6 rounded-token-full shadow-sm border border-white"
                 style={"background-color: #{colour}"}
               >
               </div>
@@ -131,7 +125,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PalettePanel do
             </p>
 
             <%= if active_scheme_id == scheme_id do %>
-              <div class="absolute top-2 right-2 w-6 h-6 bg-turquoise-500 text-white rounded-full flex items-center justify-center shadow-lg">
+              <div class="absolute top-2 right-2 w-6 h-6 bg-turquoise-500 text-white rounded-token-full flex items-center justify-center shadow-lg">
                 <.icon name="hero-check-mini" class="w-4 h-4" />
               </div>
             <% end %>
@@ -150,7 +144,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PalettePanel do
           />
         </div>
       <% end %>
-    </div>
+    </.card>
     """
   end
 

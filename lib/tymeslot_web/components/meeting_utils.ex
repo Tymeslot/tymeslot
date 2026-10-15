@@ -11,17 +11,42 @@ defmodule TymeslotWeb.Components.MeetingUtils do
     normalize_slot_value(slot)
   end
 
-  @spec normalize_slot_list(term()) :: [String.t()]
+  @typedoc "Normalised slot: time plus group-seat data (nil seat fields for solo types)."
+  @type slot :: %{
+          time: String.t(),
+          seats_left: non_neg_integer() | nil,
+          capacity: pos_integer() | nil
+        }
+
+  @spec normalize_slot_list(term()) :: [slot()]
   def normalize_slot_list(slots) when is_list(slots) do
     Enum.flat_map(slots, fn slot ->
       case normalize_slot_time(slot) do
-        {:ok, value} -> [value]
-        :error -> []
+        {:ok, time} ->
+          [
+            %{
+              time: time,
+              seats_left: seat_field(slot, :seats_left),
+              capacity: seat_field(slot, :capacity)
+            }
+          ]
+
+        :error ->
+          []
       end
     end)
   end
 
   def normalize_slot_list(_other), do: []
+
+  defp seat_field(%{} = slot, key) do
+    case Map.get(slot, key) do
+      count when is_integer(count) -> count
+      _other -> nil
+    end
+  end
+
+  defp seat_field(_slot, _key), do: nil
 
   @spec normalize_slot_value(term()) :: {:ok, String.t()} | :error
   defp normalize_slot_value(slot) when is_binary(slot) do

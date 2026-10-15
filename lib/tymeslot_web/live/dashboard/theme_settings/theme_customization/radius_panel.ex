@@ -17,19 +17,16 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.RadiusPanel do
       assign(assigns, :choice, Radius.choice(assigns.customization.settings, assigns.group))
 
     ~H"""
-    <div class="card-glass" data-testid="radius-panel">
-      <div class="mb-8">
-        <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
-          {dgettext("dashboard_appearance", "Corners")}
-        </h3>
-        <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
-          {dgettext(
-            "dashboard_appearance",
-            "How rounded the buttons and cards on your booking page are."
-          )}
-        </p>
-      </div>
-
+    <.card
+      title={dgettext("dashboard_appearance", "Corners")}
+      description={
+        dgettext(
+          "dashboard_appearance",
+          "How rounded the buttons and cards on your booking page are."
+        )
+      }
+      data-testid="radius-panel"
+    >
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <button
           :for={radius <- Radius.choices()}
@@ -63,7 +60,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.RadiusPanel do
           </span>
         </button>
       </div>
-    </div>
+    </.card>
     """
   end
 

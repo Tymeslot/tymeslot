@@ -34,8 +34,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   also handed to a `Tymeslot.CalendarGrid.WriteGuardian` after every
   change, and each write's result is sent to it as well; should the
   LiveView go, or the grid be taken off the page, before the queue drains,
-  the guardian finishes it, and a grid mounted again takes it back
-  (`adopt/1`).
+  the guardian finishes it. A grid mounted again in this LiveView takes the
+  queue back from it. One mounted in another LiveView, after the
+  connection came back or in another tab, takes nothing: it waits for the
+  events the other LiveView's guardian is still writing, and starts its own
+  edits of them once that guardian has released them (`adopt/1`).
 
   ## Results
 
@@ -50,6 +53,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.CalendarGrid.QueuedWrite
   alias Tymeslot.CalendarGrid.WriteGuardian
   alias Tymeslot.CalendarGrid.WriteQueue
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
@@ -94,6 +98,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   @spec settle(Phoenix.LiveView.Socket.t(), WriteQueue.ref(), WriteQueue.outcome()) ::
           Phoenix.LiveView.Socket.t()
   def settle(socket, ref, outcome), do: drive(socket, &WriteQueue.settle(&1, ref, outcome))
+
+  @doc """
+  Starts the edits kept for an event another LiveView was still writing,
+  once it has finished with it, applied to the event as its writes left it
+  (see `Tymeslot.CalendarGrid.WriteQueue.resume/2`).
+  """
+  @spec resume(Phoenix.LiveView.Socket.t(), WriteQueue.release()) :: Phoenix.LiveView.Socket.t()
+  def resume(socket, release), do: drive(socket, &WriteQueue.resume(&1, release))
 
   @doc """
   Holds every write to an event of the series `event` belongs to while
@@ -141,17 +153,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
     do: WriteQueue.series_busy?(socket.assigns.event_writes, event)
 
   @doc """
-  Takes back the writes a guardian is still making for this LiveView, when
-  the grid mounts again after the organiser left the calendar for another
-  dashboard page (see `Tymeslot.CalendarGrid.WriteGuardian.adopt/0`), so
-  that a new edit of an event still being written waits behind it.
+  The queue the grid starts from when it mounts, so that a new edit of an
+  event still being written waits behind it (see
+  `Tymeslot.CalendarGrid.WriteGuardian.adopt/2`): this LiveView's own,
+  taken back from its guardian after the organiser left the calendar for
+  another dashboard page, waiting for the events and series every other
+  guardian of the organiser is still writing, after the connection dropped
+  and came back, or in another tab. Those are written by the guardian
+  writing them, and this grid's edits of them start once it has released
+  them. The queue is handed straight to this LiveView's guardian.
   """
   @spec adopt(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def adopt(socket) do
-    case WriteGuardian.adopt() do
-      nil -> socket
-      queue -> assign(socket, :event_writes, queue)
-    end
+    user_id = socket.assigns.current_user.id
+
+    socket
+    |> drive(&{WriteGuardian.adopt(&1, user_id), []})
+    |> assign(:writes_adopted_after, socket.assigns[:calendar_left])
   end
 
   @doc """
@@ -183,9 +201,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
 
     EditWorkflow.run_async(
       socket,
-      WriteQueue.result_tag(write),
-      fn -> WriteQueue.perform(user_id, write, event) end,
-      WriteQueue.crash_result(write, event),
+      QueuedWrite.result_tag(write),
+      fn -> QueuedWrite.perform(user_id, write, event) end,
+      QueuedWrite.crash_result(write, event),
       report_to_guardian: true
     )
   end

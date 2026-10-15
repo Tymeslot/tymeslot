@@ -31,54 +31,49 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.AccentPanel do
       )
 
     ~H"""
-    <div class="card-glass" data-testid="accent-panel">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
-        <div>
-          <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
-            {dgettext("dashboard_appearance", "Accent Colour")}
-          </h3>
-          <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
-            {dgettext(
-              "dashboard_appearance",
-              "The colour of the buttons, links and highlights on your booking page."
-            )}
-          </p>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-3">
-          <.current_indicator
-            :if={@colour}
-            swatches={[@colour]}
-            label={current_label(@choice, @presets)}
-            code={if @custom, do: String.upcase(@colour)}
-            highlighted={@custom}
+    <.card
+      title={dgettext("dashboard_appearance", "Accent Colour")}
+      description={
+        dgettext(
+          "dashboard_appearance",
+          "The colour of the buttons, links and highlights on your booking page."
+        )
+      }
+      data-testid="accent-panel"
+    >
+      <:actions>
+        <.current_indicator
+          :if={@colour}
+          swatches={[@colour]}
+          label={current_label(@choice, @presets)}
+          code={if @custom, do: String.upcase(@colour)}
+          highlighted={@custom}
+        />
+        <button
+          type="button"
+          phx-click="theme:toggle_accent_picker"
+          phx-value-option={@group.key}
+          phx-target={@myself}
+          aria-expanded={to_string(@accent_picker_open)}
+          aria-controls="custom-accent-picker"
+          class={[
+            "flex items-center gap-2 px-3.5 py-2 rounded-token-xl border-2 text-token-2xs font-black uppercase tracking-widest transition-all duration-300",
+            if(@accent_picker_open,
+              do:
+                "bg-turquoise-50 border-turquoise-300 text-turquoise-700 shadow-sm shadow-turquoise-500/10",
+              else:
+                "bg-tymeslot-50 border-transparent text-tymeslot-600 hover:bg-tymeslot-100 hover:border-tymeslot-200"
+            )
+          ]}
+        >
+          <.icon name="hero-swatch-mini" class="w-4 h-4" />
+          <span>{dgettext("dashboard_appearance", "Custom")}</span>
+          <.icon
+            name="hero-chevron-down-mini"
+            class={"w-4 h-4 transition-transform duration-300 #{if @accent_picker_open, do: "rotate-180"}"}
           />
-          <button
-            type="button"
-            phx-click="theme:toggle_accent_picker"
-            phx-value-option={@group.key}
-            phx-target={@myself}
-            aria-expanded={to_string(@accent_picker_open)}
-            aria-controls="custom-accent-picker"
-            class={[
-              "flex items-center gap-2 px-3.5 py-2 rounded-token-xl border-2 text-token-2xs font-black uppercase tracking-widest transition-all duration-300",
-              if(@accent_picker_open,
-                do:
-                  "bg-turquoise-50 border-turquoise-300 text-turquoise-700 shadow-sm shadow-turquoise-500/10",
-                else:
-                  "bg-tymeslot-50 border-transparent text-tymeslot-600 hover:bg-tymeslot-100 hover:border-tymeslot-200"
-              )
-            ]}
-          >
-            <.icon name="hero-swatch-mini" class="w-4 h-4" />
-            <span>{dgettext("dashboard_appearance", "Custom")}</span>
-            <.icon
-              name="hero-chevron-down-mini"
-              class={"w-4 h-4 transition-transform duration-300 #{if @accent_picker_open, do: "rotate-180"}"}
-            />
-          </button>
-        </div>
-      </div>
+        </button>
+      </:actions>
 
       <%!-- The param is named `choice` rather than `value`: see PalettePanel. --%>
       <div class="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-3">
@@ -100,7 +95,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.AccentPanel do
           aria-pressed={to_string(@choice == id)}
         >
           <span
-            class="w-8 h-8 rounded-full shadow-sm border-2 border-white"
+            class="w-8 h-8 rounded-token-full shadow-sm border-2 border-white"
             style={"background-color: #{preset.color}"}
           ></span>
           <span class={[
@@ -124,7 +119,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.AccentPanel do
           commit_params={%{option: @group.key, field: "custom"}}
         />
       </div>
-    </div>
+    </.card>
     """
   end
 

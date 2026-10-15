@@ -17,7 +17,9 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
+  alias Tymeslot.CalendarGrid.IcsImport
   alias Tymeslot.CalendarGrid.SeriesCarry
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.CalendarAppearanceSchema
@@ -336,6 +338,35 @@ defmodule Tymeslot.CalendarGrid do
   defp to_usec(%DateTime{} = dt), do: %{dt | microsecond: {elem(dt.microsecond, 0), 6}}
   defp to_usec(other), do: other
 
+  @doc "Parses an uploaded `.ics` file into an import plan. See `IcsImport.plan/2`."
+  defdelegate plan_ics_import(content, timezone), to: IcsImport, as: :plan
+
+  @doc "Whether an `.ics` import of the user's is under way. See `IcsImport.running?/1`."
+  defdelegate ics_import_running?(user_id), to: IcsImport, as: :running?
+
+  @doc """
+  Writes an import plan to one of the user's calendars (see `IcsImport.run/3`),
+  then drops the user's cached availability and syncs the calendar, so the
+  imported events block their time and appear on the grid. While another
+  import of the user's runs, it returns `{:error, :already_running}`.
+  """
+  @spec import_ics(pos_integer(), pos_integer(), String.t() | nil, IcsImport.plan(), keyword()) ::
+          {:ok, IcsImport.summary()} | {:error, :not_found | IcsImport.import_error()}
+  def import_ics(user_id, integration_id, calendar_id, plan, opts \\ []) do
+    with {:ok, target} <- IcsImport.target(user_id, integration_id, calendar_id) do
+      IcsImport.exclusively(user_id, fn ->
+        summary = IcsImport.run(target, plan, opts)
+
+        if summary.created > 0 do
+          AvailabilityCache.invalidate_for_user(user_id)
+          enqueue_sync_worker(target.integration)
+        end
+
+        {:ok, summary}
+      end)
+    end
+  end
+
   @doc """
   Applies `changes` to an existing event, writes the whole updated event to
   its provider, and records the edit on the cached row. See
@@ -379,14 +410,6 @@ defmodule Tymeslot.CalendarGrid do
   """
   @spec ensure_video_changeable(map()) :: :ok | {:error, :linked_to_booking}
   defdelegate ensure_video_changeable(event), to: EventVideo
-
-  @doc """
-  Returns `description` with the "Join video call" line for the previous URL
-  taken out and one for the new URL appended. See
-  `Tymeslot.CalendarGrid.EventVideo.put_join_link/3`.
-  """
-  @spec put_join_link(String.t() | nil, String.t() | nil, String.t() | nil) :: String.t() | nil
-  defdelegate put_join_link(description, previous_url, url), to: EventVideo
 
   @doc """
   Deletes an event from its calendar, cancels the Tymeslot meeting it was
@@ -440,32 +463,6 @@ defmodule Tymeslot.CalendarGrid do
   end
 
   # --- Video rooms of grid events (see `EventVideoRooms`) ---
-
-  @doc "Records a video room made for a grid event. See `EventVideoRooms.record/2`."
-  @spec record_event_video_room(map(), map()) :: :ok
-  defdelegate record_event_video_room(meeting_context, event), to: EventVideoRooms, as: :record
-
-  @doc "Brings a grid event's video rooms in step with its timing. See `EventVideoRooms.rescheduled/1`."
-  @spec reschedule_event_video_rooms(map()) :: :ok
-  defdelegate reschedule_event_video_rooms(event), to: EventVideoRooms, as: :rescheduled
-
-  @doc "Follows a grid event moved to another integration. See `EventVideoRooms.moved/4`."
-  @spec move_event_video_rooms(
-          map(),
-          pos_integer(),
-          String.t(),
-          String.t() | nil,
-          String.t() | nil
-        ) :: :ok
-  defdelegate move_event_video_rooms(
-                event,
-                to_integration_id,
-                new_uid,
-                provider_uid,
-                provider_calendar_id
-              ),
-              to: EventVideoRooms,
-              as: :moved
 
   @doc "Deletes a deleted grid event's video rooms. See `EventVideoRooms.event_deleted/1`."
   @spec delete_event_video_rooms(map()) :: :ok

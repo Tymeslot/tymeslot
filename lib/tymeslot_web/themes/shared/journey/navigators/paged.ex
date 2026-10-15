@@ -13,7 +13,8 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Navigators.Paged do
   it); otherwise the booker stays. The step indicator (`go_to/3`) numbers
   the moments with a needed fact from 1, gives every outcome the number
   after them, and only moves back to a moment that may be revisited, as Back
-  does. On the payment wait (`:awaiting_payment`) it moves nowhere: that
+  does; `can_go_to?/3` is the same rule, so the indicator offers a step
+  exactly when a click on it would move. On the payment wait (`:awaiting_payment`) it moves nowhere: that
   outcome's number would let it back to the booking form while the checkout
   is open, so only the payment webhook ends the wait.
 
@@ -75,25 +76,46 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Navigators.Paged do
     end
   end
 
+  @impl Navigator
+  def go_to(journey, socket, step) do
+    case target(journey, socket.assigns, step) do
+      nil -> {:noreply, socket}
+      key -> {:noreply, Runtime.transition_to(socket, key, %{})}
+    end
+  end
+
+  @doc """
+  Whether a click on the step indicator's `step` would move the booker
+  (`go_to/3` moves exactly when this is true), so the indicator offers only
+  the steps it would take: a number before the current one, whose moment
+  may be revisited, and never on the payment wait.
+  """
+  @impl Navigator
+  def can_go_to?(journey, assigns, step), do: target(journey, assigns, step) != nil
+
   # While a checkout is open only the payment webhook moves the booker on
   # (`:paid` to the confirmation, `:expired` to the booking form): a moment
   # behind the wait would take a second submit for the slot it holds.
-  @impl Navigator
-  def go_to(_journey, %{assigns: %{current_state: :awaiting_payment}} = socket, _step),
-    do: {:noreply, socket}
+  defp target(_journey, %{current_state: :awaiting_payment}, _step), do: nil
 
   # `step` is the page's string; one that is not a number moves nothing.
-  def go_to(journey, socket, step) do
-    numbered = numbered_moments(journey, socket.assigns)
-    current = number_of(journey, numbered, socket.assigns[:current_state])
+  defp target(journey, assigns, step) when is_binary(step) do
+    case Integer.parse(step) do
+      {number, _rest} -> target(journey, assigns, number)
+      :error -> nil
+    end
+  end
 
-    with {number, _rest} <- Integer.parse(step),
-         {target, ^number} <- List.keyfind(numbered, number, 1),
+  defp target(journey, assigns, number) when is_integer(number) do
+    numbered = numbered_moments(journey, assigns)
+    current = number_of(journey, numbered, assigns[:current_state])
+
+    with {target, ^number} <- List.keyfind(numbered, number, 1),
          true <- is_integer(current) and number < current,
-         true <- Journey.revisitable?(Journey.moment(journey, target), socket.assigns) do
-      {:noreply, Runtime.transition_to(socket, target, %{})}
+         true <- Journey.revisitable?(Journey.moment(journey, target), assigns) do
+      target
     else
-      _no_move -> {:noreply, socket}
+      _no_move -> nil
     end
   end
 

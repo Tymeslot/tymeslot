@@ -20,8 +20,18 @@ defmodule TymeslotWeb.OnboardingLive.StepConfigTest do
     # leaves the field in custom-input mode, so a value offered here that
     # `preset_value?/2` rejects is a live defect, not just untidiness.
 
-    test "every buffer time option is a value preset_value?/2 accepts" do
-      assert_options_validate(StepConfig.buffer_time_options(), :buffer_minutes)
+    test "every before-buffer option is a value preset_value?/2 accepts" do
+      assert_options_validate(
+        StepConfig.buffer_time_options(:buffer_before_minutes),
+        :buffer_before_minutes
+      )
+    end
+
+    test "every after-buffer option is a value preset_value?/2 accepts" do
+      assert_options_validate(
+        StepConfig.buffer_time_options(:buffer_after_minutes),
+        :buffer_after_minutes
+      )
     end
 
     test "every advance booking option is a value preset_value?/2 accepts" do
@@ -43,17 +53,20 @@ defmodule TymeslotWeb.OnboardingLive.StepConfigTest do
     end
   end
 
-  describe "buffer_time_options/0" do
-    test "returns labelled tuples for every preset" do
-      assert StepConfig.buffer_time_options() == [
-               {"No buffer", 0},
-               {"5 min", 5},
-               {"10 min", 10},
-               {"15 min", 15},
-               {"30 min", 30},
-               {"45 min", 45},
-               {"60 min", 60}
-             ]
+  describe "buffer_time_options/1" do
+    test "labels every preset the same way for either buffer" do
+      expected = [
+        {"No buffer", 0},
+        {"5 min", 5},
+        {"10 min", 10},
+        {"15 min", 15},
+        {"30 min", 30},
+        {"45 min", 45},
+        {"60 min", 60}
+      ]
+
+      assert StepConfig.buffer_time_options(:buffer_before_minutes) == expected
+      assert StepConfig.buffer_time_options(:buffer_after_minutes) == expected
     end
   end
 
@@ -94,14 +107,19 @@ defmodule TymeslotWeb.OnboardingLive.StepConfigTest do
     # preset outside the range would render as a normal one-click choice and
     # then be rejected on submit, with the user blamed for a value we offered.
 
-    test "every buffer time preset and the custom default are bookable" do
+    test "every buffer preset and the custom default are bookable" do
       range = Constraints.buffer_minutes_range()
-      presets = CustomInputModeHelper.presets(:buffer_minutes)
+
+      presets =
+        Enum.flat_map(
+          [:buffer_before_minutes, :buffer_after_minutes],
+          &CustomInputModeHelper.presets/1
+        )
 
       # Anchor: an empty preset list would make the rejection below vacuous.
       refute Enum.empty?(presets)
       assert Enum.reject(presets, &(&1 in range)) == []
-      assert StepConfig.buffer_minutes_constraints().default_custom in range
+      assert StepConfig.buffer_constraints().default_custom in range
     end
 
     test "every advance booking preset and the custom default are bookable" do
@@ -132,7 +150,12 @@ defmodule TymeslotWeb.OnboardingLive.StepConfigTest do
     # `:slot_interval_minutes` is deliberately absent: it sits on the meeting
     # type, and its default is NULL, which the form offers as "Same as meeting
     # length" rather than as a preset integer.
-    @schedule_policy_fields [:buffer_minutes, :advance_booking_days, :min_advance_hours]
+    @schedule_policy_fields [
+      :buffer_before_minutes,
+      :buffer_after_minutes,
+      :advance_booking_days,
+      :min_advance_hours
+    ]
 
     test "every custom-input field is accounted for by one of the two defaults rules" do
       # Without this, adding a field to the preset table would silently drop out

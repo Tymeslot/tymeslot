@@ -136,7 +136,12 @@ defmodule Tymeslot.Availability.TimeOffSlotsIntegrationTest do
       {profile, default_schedule, monday} = weekday_schedule()
 
       second =
-        insert(:availability_schedule, profile: profile, is_default: false, buffer_minutes: 0)
+        insert(:availability_schedule,
+          profile: profile,
+          is_default: false,
+          buffer_before_minutes: 0,
+          buffer_after_minutes: 0
+        )
 
       insert(:weekly_availability,
         schedule: second,
@@ -311,7 +316,12 @@ defmodule Tymeslot.Availability.TimeOffSlotsIntegrationTest do
     profile = insert(:profile, timezone: @timezone)
 
     schedule =
-      insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 0)
+      insert(:availability_schedule,
+        profile: profile,
+        is_default: true,
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0
+      )
 
     for day_of_week <- 1..3 do
       insert(:weekly_availability,
@@ -333,7 +343,12 @@ defmodule Tymeslot.Availability.TimeOffSlotsIntegrationTest do
     profile = insert(:profile, timezone: @timezone)
 
     schedule =
-      insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 0)
+      insert(:availability_schedule,
+        profile: profile,
+        is_default: true,
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0
+      )
 
     insert(:weekly_availability, schedule: schedule, day_of_week: 6, is_available: false)
 
@@ -351,6 +366,11 @@ defmodule Tymeslot.Availability.TimeOffSlotsIntegrationTest do
   end
 
   defp config(schedule) do
-    %{schedule_id: schedule.id, buffer_minutes: 0, min_advance_hours: 0}
+    %{
+      schedule_id: schedule.id,
+      buffer_before_minutes: 0,
+      buffer_after_minutes: 0,
+      min_advance_hours: 0
+    }
   end
 end

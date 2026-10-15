@@ -491,6 +491,14 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
       assert String.contains?(join_url, "displayName=John")
       assert String.contains?(join_url, "Doe")
     end
+
+    test "hands back the room URL unchanged when there is nobody to name" do
+      meeting_url = "https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc123%40thread.v2/0"
+
+      room_data = %{meeting_url: meeting_url}
+
+      assert {:ok, ^meeting_url} = TeamsProvider.create_join_url(room_data, nil, nil, "x", nil)
+    end
   end
 
   describe "extract_room_id/1" do

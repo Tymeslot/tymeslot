@@ -3,21 +3,13 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
 
   @moduletag :utils
 
-  import Phoenix.Component
   import Phoenix.LiveViewTest
-  import TymeslotWeb.Components.CoreComponents
   alias Floki
 
   alias Tymeslot.Integrations.Calendar.CalendarEntry
-  alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavConfig
-  alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase
-  alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.MailboxOrgConfig
-  alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.NextcloudConfig
-  alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.RadicaleConfig
+  alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavFamilyConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormComponents
-  alias TymeslotWeb.Components.Dashboard.Integrations.IntegrationForm
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
-  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig
   alias TymeslotWeb.Dashboard.CalendarSettings.Components, as: CalendarComponents
@@ -103,38 +95,49 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     assert html =~ "Manage calendars"
   end
 
-  test "renders shared form_submit_button correctly" do
-    # Non-saving state
-    assigns = %{saving: false, text: "Save Me"}
-    html = render_component(&UIComponents.form_submit_button/1, assigns)
-    doc = Floki.parse_document!(html)
-    assert html =~ "Save Me"
-    # The saving branch renders the spinner plus either `saving_text` or the
-    # "Adding..." default — never the string "Saving...", so refuting that could
-    # never fire. Refute what the branch actually emits.
-    refute html =~ "Adding..."
-    refute html =~ "spinner"
-    assert Floki.find(doc, "button[type='submit'][disabled]") == []
+  test "calendar config form submit button reflects the saving state" do
+    # The form's Cancel and submit controls are the shared design-system
+    # buttons, so this covers their wiring as one caller renders them.
+    assigns = %{
+      provider: "caldav",
+      show_calendar_selection: true,
+      discovered_calendars: [%{name: "Work", path: "/cal1"}],
+      discovery_credentials: %{url: "https://example.com/dav", username: "u", password: "p"},
+      form_errors: %{},
+      form_values: %{},
+      saving: false,
+      target: "parent-target",
+      myself: "self-target",
+      suggested_name: "Suggested"
+    }
 
-    # Saving state
-    assigns = %{saving: true, saving_text: "Saving Now..."}
-    html = render_component(&UIComponents.form_submit_button/1, assigns)
+    # Idle: the default label, enabled, no spinner.
+    html = render_component(&SharedFormComponents.config_form/1, assigns)
     doc = Floki.parse_document!(html)
-    assert html =~ "Saving Now..."
-    # The design-system `<.spinner>` carries the `spinner` class; the spin
-    # animation comes from CSS (`.spinner { @apply animate-spin }`), not from a
-    # utility class in the markup.
-    assert html =~ "spinner"
-    assert Floki.find(doc, "button[type='submit'][disabled]") != []
-  end
+    [submit] = Floki.find(doc, "button[type='submit']")
 
-  test "renders shared secondary_button correctly" do
-    assigns = %{target: "some-target", label: "Back", phx_click: "go_back", icon: "hero-x-mark"}
-    html = render_component(&UIComponents.secondary_button/1, assigns)
+    assert Floki.text(submit) =~ "Add Integration"
+    refute Floki.text(submit) =~ "Adding..."
+    assert Floki.attribute(submit, "disabled") == []
+    assert Floki.find(submit, ".spinner") == []
+
+    assert [cancel] =
+             Floki.find(
+               doc,
+               "button[type='button'][phx-click='back_to_providers'][phx-target='parent-target']"
+             )
+
+    assert Floki.text(cancel) =~ "Cancel"
+
+    # Saving: disabled, with the spinner and the saving label in place of the
+    # default one.
+    html = render_component(&SharedFormComponents.config_form/1, %{assigns | saving: true})
     doc = Floki.parse_document!(html)
+    [submit] = Floki.find(doc, "button[type='submit'][disabled]")
 
-    assert Floki.find(doc, "button[phx-click='go_back'][phx-target='some-target']") != []
-    assert Floki.text(doc) =~ "Back"
+    assert Floki.text(submit) =~ "Adding..."
+    refute Floki.text(submit) =~ "Add Integration"
+    assert Floki.find(submit, ".spinner") != []
   end
 
   test "renders delete_integration_modal copy for calendar and video" do
@@ -146,7 +149,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
 
     html = render_component(DeleteIntegrationModal, base_assigns)
 
-    assert html =~ "Delete Calendar Integration"
+    assert html =~ "Delete calendar integration"
     assert html =~ "calendar data"
     assert html =~ "Delete Integration"
 
@@ -156,64 +159,9 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
         | integration_type: :video
       })
 
-    assert html =~ "Delete Video Integration"
+    assert html =~ "Delete video integration"
     assert html =~ "video conferencing configuration"
     assert html =~ "Delete Integration"
-  end
-
-  test "renders integration_form with provider info and base errors" do
-    inner_block = [
-      %{__slot__: :inner_block, inner_block: fn assigns, _index -> ~H[<.input name="x" />] end}
-    ]
-
-    assigns = %{
-      title: "Add Integration",
-      cancel_event: "cancel",
-      submit_event: "submit",
-      target: "some-target",
-      provider_info: "Nextcloud",
-      show_errors: true,
-      form_errors: %{base: ["Something went wrong"]},
-      saving: false,
-      submit_text: "Add It",
-      inner_block: inner_block
-    }
-
-    html = render_component(&IntegrationForm.render/1, assigns)
-    doc = Floki.parse_document!(html)
-
-    assert html =~ "Add Integration"
-    assert html =~ "Provider:"
-    assert html =~ "Nextcloud"
-    assert html =~ "Something went wrong"
-    assert Floki.find(doc, "form[phx-submit='submit'][phx-target='some-target']") != []
-    assert Floki.find(doc, "button[type='submit']") != []
-    assert html =~ "Add It"
-  end
-
-  test "renders integration_form submit button in saving state" do
-    inner_block = [
-      %{__slot__: :inner_block, inner_block: fn assigns, _index -> ~H[<.input name="x" />] end}
-    ]
-
-    assigns = %{
-      title: "Add Integration",
-      cancel_event: "cancel",
-      submit_event: "submit",
-      target: "some-target",
-      provider_info: nil,
-      show_errors: false,
-      form_errors: %{},
-      saving: true,
-      submit_text: "Add It",
-      inner_block: inner_block
-    }
-
-    html = render_component(&IntegrationForm.render/1, assigns)
-    doc = Floki.parse_document!(html)
-
-    assert html =~ "Adding..."
-    assert Floki.find(doc, "button[type='submit'][disabled]") != []
   end
 
   test "renders shared calendar config_form in discovery and selection modes" do
@@ -269,7 +217,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     assert Floki.find(doc, "input[type='hidden'][name='integration[username]'][value='u']") != []
   end
 
-  test "ConfigBase event handlers update assigns without external calls" do
+  test "calendar config event handlers update assigns without external calls" do
     socket =
       %Phoenix.LiveView.Socket{
         assigns: %{
@@ -332,22 +280,42 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
       discovery_credentials: %{}
     }
 
-    html = render_component(&CaldavConfig.render/1, base_assigns)
+    html =
+      render_component(
+        &CaldavFamilyConfig.caldav_family_config/1,
+        Map.put(base_assigns, :provider, :caldav)
+      )
+
     assert html =~ "CalDAV"
     assert html =~ "Connect any CalDAV-compatible server"
     assert html =~ ~s(name="integration[provider]" value="caldav")
 
-    html = render_component(&NextcloudConfig.render/1, base_assigns)
+    html =
+      render_component(
+        &CaldavFamilyConfig.caldav_family_config/1,
+        Map.put(base_assigns, :provider, :nextcloud)
+      )
+
     assert html =~ "Nextcloud"
     assert html =~ "Sync calendars from your Nextcloud server"
     assert html =~ ~s(name="integration[provider]" value="nextcloud")
 
-    html = render_component(&RadicaleConfig.render/1, base_assigns)
+    html =
+      render_component(
+        &CaldavFamilyConfig.caldav_family_config/1,
+        Map.put(base_assigns, :provider, :radicale)
+      )
+
     assert html =~ "Radicale"
     assert html =~ "Lightweight CalDAV server integration"
     assert html =~ ~s(name="integration[provider]" value="radicale")
 
-    html = render_component(&MailboxOrgConfig.render/1, base_assigns)
+    html =
+      render_component(
+        &CaldavFamilyConfig.caldav_family_config/1,
+        Map.put(base_assigns, :provider, :mailbox_org)
+      )
+
     assert html =~ "mailbox.org"
     assert html =~ "Sync calendars from your mailbox.org account"
     assert html =~ "application-specific password"
@@ -367,7 +335,11 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
       discovery_credentials: %{}
     }
 
-    html = render_component(&NextcloudConfig.render/1, base_assigns)
+    html =
+      render_component(
+        &CaldavFamilyConfig.caldav_family_config/1,
+        Map.put(base_assigns, :provider, :nextcloud)
+      )
 
     assert html =~ "Create an app password in Nextcloud under"
     assert html =~ "Personal settings → Security"
@@ -378,7 +350,11 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     # Radicale, Baïkal, Zimbra and generic CalDAV servers take an ordinary
     # login password, so they must keep the neutral label and gain no
     # app-password guidance.
-    html = render_component(&CaldavConfig.render/1, base_assigns)
+    html =
+      render_component(
+        &CaldavFamilyConfig.caldav_family_config/1,
+        Map.put(base_assigns, :provider, :caldav)
+      )
 
     assert html =~ "Password / App Password"
     refute html =~ "Create an app password in Nextcloud under"
@@ -412,32 +388,6 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
              []
 
     assert html =~ "Meeting URL"
-  end
-
-  test "ConfigBase macro can be exercised at runtime" do
-    # credo:disable-for-lines:2 Credo.Check.Warning.UnsafeToAtom
-    module_name =
-      Module.concat(__MODULE__, "ConfigBaseRuntime#{System.unique_integer([:positive])}")
-
-    code = """
-    defmodule #{module_name} do
-      use #{ConfigBase}, provider: :caldav, default_name: "X"
-    end
-    """
-
-    [{compiled, _bin}] = Code.compile_string(code)
-    assert compiled == module_name
-
-    # The macro must inject working defaults, not merely define the function.
-    assert %{
-             show_calendar_selection: false,
-             discovered_calendars: [],
-             discovery_credentials: %{},
-             form_values: %{},
-             form_errors: %{},
-             saving: false,
-             metadata: %{}
-           } = module_name.assign_config_defaults(%{__changed__: %{}})
   end
 
   describe "refresh_all_calendars" do

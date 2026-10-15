@@ -39,6 +39,10 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
     * `:ambient_locale` - the same resolution without the user's saved
       preference (source 2): what the page resolves to once that preference
       is cleared. Equal to `:locale` unless `prefer_user_locale` is set.
+    * `:visitor_week_start` - `:monday` or `:sunday` when the header's
+      language tags settle it (`Tymeslot.Locales.WeekStart`), else `nil`.
+      Read from the header alone: the region it carries is where the
+      visitor lives, which a chosen interface language does not change.
 
   A connected LiveView mounts in its own process from a websocket, with no
   conn and no request headers. `live_session_data/1` carries these assigns to
@@ -69,6 +73,7 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
   Raw input is length-capped before any work is done on it.
   """
   alias Tymeslot.Locales
+  alias Tymeslot.Locales.WeekStart
   import Plug.Conn
   require Logger
 
@@ -90,7 +95,8 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
     conn = if session? and choice, do: put_session(conn, @session_key, choice), else: conn
 
     path_locale = normalize_locale(conn.assigns[:path_locale])
-    detected = [choice, remembered_choice(conn, session?) | header_locales(conn)]
+    tags = header_tags(conn)
+    detected = [choice, remembered_choice(conn, session?) | Enum.map(tags, &normalize_locale/1)]
     fallback = surface_default(opts)
 
     locale = Locales.resolve([path_locale, user_locale(conn, opts) | detected], fallback)
@@ -99,7 +105,11 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
     # Global: reaches every Gettext backend in this process, not just Core's.
     Gettext.put_locale(locale)
 
-    merge_assigns(conn, locale: locale, ambient_locale: ambient_locale)
+    merge_assigns(conn,
+      locale: locale,
+      ambient_locale: ambient_locale,
+      visitor_week_start: WeekStart.from_language_tags(tags)
+    )
   end
 
   @doc """
@@ -111,7 +121,8 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
 
       live_session :name, session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []}
 
-  `TymeslotWeb.Hooks.LocaleHook` reads `"resolved_locale"`;
+  `TymeslotWeb.Hooks.LocaleHook` reads `"resolved_locale"` and
+  `"visitor_week_start"`;
   `TymeslotWeb.Hooks.AppLocaleHook` reads `"path_locale"` and
   `"ambient_locale"` and re-applies the user's saved preference itself, so a
   preference changed after the page loaded still takes effect on a live
@@ -123,11 +134,15 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
       %{
         "resolved_locale" => conn.assigns[:locale],
         "ambient_locale" => conn.assigns[:ambient_locale],
-        "path_locale" => conn.assigns[:path_locale]
+        "path_locale" => conn.assigns[:path_locale],
+        "visitor_week_start" => week_start_string(conn.assigns[:visitor_week_start])
       },
       fn {_key, value} -> is_nil(value) end
     )
   end
+
+  defp week_start_string(nil), do: nil
+  defp week_start_string(week_start), do: Atom.to_string(week_start)
 
   # The end of the chain: the admin-editable fallback for the surface this
   # pipeline serves. Reached only when no source above yielded a supported
@@ -154,8 +169,10 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
   defp remembered_choice(conn, true), do: get_session(conn, @session_key)
   defp remembered_choice(_conn, false), do: nil
 
-  # The header's languages, highest weight first. Ties keep header order.
-  defp header_locales(conn) do
+  # The header's language tags as sent (`en-US`), highest weight first. Ties
+  # keep header order. Over-long tags are dropped here, before anyone reads
+  # them.
+  defp header_tags(conn) do
     case get_req_header(conn, "accept-language") do
       [header | _rest] -> parse_accept_language(header)
       [] -> []
@@ -168,8 +185,9 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
       |> String.split(",")
       |> Enum.take(@max_tags_count)
       |> Enum.flat_map(&parse_language_range/1)
-      |> Enum.sort_by(fn {_locale, weight} -> weight end, :desc)
-      |> Enum.map(fn {locale, _weight} -> locale end)
+      |> Enum.sort_by(fn {_tag, weight} -> weight end, :desc)
+      |> Enum.map(fn {tag, _weight} -> tag end)
+      |> Enum.filter(&(byte_size(&1) <= @max_locale_length))
     else
       Logger.warning("Invalid or oversized Accept-Language header",
         valid_utf8: String.valid?(header),
@@ -191,12 +209,8 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
     end
   end
 
-  defp weighted(tag, weight) when is_float(weight) and weight > 0.0 do
-    case normalize_locale(tag) do
-      nil -> []
-      locale -> [{locale, weight}]
-    end
-  end
+  defp weighted(tag, weight) when is_float(weight) and weight > 0.0 and tag != "",
+    do: [{tag, weight}]
 
   defp weighted(_tag, _weight), do: []
 

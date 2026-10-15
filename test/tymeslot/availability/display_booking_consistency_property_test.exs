@@ -15,9 +15,10 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyPropertyTest do
       zones on either hemisphere and a half-hour offset), sub-hour and
       multi-hour durations, and blocking-event layouts with partial overlaps
       and multiple events;
-    * the host's rules - a buffer, a minimum notice, a meeting type with and
-      without its own slot interval, and a daily booking limit with bookings
-      already counting against it.
+    * the host's rules - a buffer before and a buffer after, drawn
+      independently, a minimum notice, a meeting type with and without its own
+      slot interval, and a daily booking limit with bookings already counting
+      against it.
 
   It asserts the safety-critical direction of the invariant: **any slot the
   display offers must be bookable via the booking API.** A violation means a
@@ -143,7 +144,8 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyPropertyTest do
 
     schedule
     |> Changeset.change(
-      buffer_minutes: rules.buffer_minutes,
+      buffer_before_minutes: rules.buffer_before_minutes,
+      buffer_after_minutes: rules.buffer_after_minutes,
       min_advance_hours: rules.min_advance_hours
     )
     |> Repo.update!()
@@ -184,13 +186,15 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyPropertyTest do
   # present.
   defp rules_generator do
     gen all(
-          buffer_minutes <- member_of([0, 15, 30]),
+          buffer_before_minutes <- member_of([0, 10, 30]),
+          buffer_after_minutes <- member_of([0, 15, 30]),
           min_advance_hours <- member_of([0, 24, 48, 480]),
           slot_interval_minutes <- member_of([:no_meeting_type, nil, 15, 30]),
           {max_bookings_per_day, existing_bookings} <- booking_limit()
         ) do
       %{
-        buffer_minutes: buffer_minutes,
+        buffer_before_minutes: buffer_before_minutes,
+        buffer_after_minutes: buffer_after_minutes,
         min_advance_hours: min_advance_hours,
         slot_interval_minutes: slot_interval_minutes,
         max_bookings_per_day: max_bookings_per_day,

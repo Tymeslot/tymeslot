@@ -72,10 +72,10 @@ defmodule Tymeslot.MeetingTypes.InputValidationTest do
       assert Map.has_key?(errors, :duration)
     end
 
-    test "rejects duration above 480 minutes" do
+    test "rejects duration above 1440 minutes" do
       params = %{
         "name" => "Chat",
-        "duration" => "481",
+        "duration" => "1441",
         "icon" => "none",
         "meeting_mode" => "personal"
       }
@@ -107,10 +107,10 @@ defmodule Tymeslot.MeetingTypes.InputValidationTest do
       assert {:ok, _sanitized} = InputValidation.validate_meeting_type_form(params)
     end
 
-    test "accepts maximum valid duration (480 minutes)" do
+    test "accepts maximum valid duration (1440 minutes)" do
       params = %{
         "name" => "Chat",
-        "duration" => "480",
+        "duration" => "1440",
         "icon" => "none",
         "meeting_mode" => "personal"
       }
@@ -268,30 +268,37 @@ defmodule Tymeslot.MeetingTypes.InputValidationTest do
     end
   end
 
-  describe "validate_buffer_minutes/2" do
-    test "accepts valid buffer (0)" do
-      assert {:ok, 0} = InputValidation.validate_buffer_minutes("0")
-    end
+  for fun <- [:validate_buffer_before_minutes, :validate_buffer_after_minutes] do
+    describe "#{fun}/2" do
+      test "accepts both ends of 0..120 and a value between" do
+        assert {:ok, 0} = InputValidation.unquote(fun)("0")
+        assert {:ok, 60} = InputValidation.unquote(fun)("60")
+        assert {:ok, 120} = InputValidation.unquote(fun)("120")
+      end
 
-    test "accepts valid buffer (60)" do
-      assert {:ok, 60} = InputValidation.validate_buffer_minutes("60")
-    end
+      test "rejects a negative value" do
+        assert {:error, message} = InputValidation.unquote(fun)("-1")
+        assert message =~ "must be at least 0"
+      end
 
-    test "accepts maximum buffer (120)" do
-      assert {:ok, 120} = InputValidation.validate_buffer_minutes("120")
-    end
+      test "rejects a value above 120" do
+        assert {:error, message} = InputValidation.unquote(fun)("121")
+        assert message =~ "cannot exceed 120"
+      end
 
-    test "rejects negative buffer" do
-      assert {:error, _msg} = InputValidation.validate_buffer_minutes("-1")
+      test "rejects non-numeric input" do
+        assert {:error, message} = InputValidation.unquote(fun)("lots")
+        assert message =~ "must be a valid number"
+      end
     end
+  end
 
-    test "rejects buffer exceeding 120" do
-      assert {:error, _msg} = InputValidation.validate_buffer_minutes("121")
-    end
+  test "names which buffer a rejection is about" do
+    assert {:error, "Buffer before cannot exceed 120"} =
+             InputValidation.validate_buffer_before_minutes("121")
 
-    test "rejects non-numeric input" do
-      assert {:error, _msg} = InputValidation.validate_buffer_minutes("lots")
-    end
+    assert {:error, "Buffer after cannot exceed 120"} =
+             InputValidation.validate_buffer_after_minutes("121")
   end
 
   describe "validate_advance_booking_days/2" do
@@ -369,6 +376,115 @@ defmodule Tymeslot.MeetingTypes.InputValidationTest do
 
       assert {:error, errors} = InputValidation.validate_meeting_type_form(params)
       assert errors.name =~ "at least one letter or number"
+    end
+  end
+
+  describe "validate_field/3 for :max_participants" do
+    test "accepts a limit inside the range" do
+      assert {:ok, "25"} = InputValidation.validate_field(:max_participants, "25", %{})
+    end
+
+    test "accepts the solo default of 1" do
+      assert {:ok, "1"} = InputValidation.validate_field(:max_participants, "1", %{})
+    end
+
+    test "rejects a limit above 999" do
+      assert {:error, %{max_participants: "Participant limit cannot exceed 999"}} =
+               InputValidation.validate_field(:max_participants, "1500", %{})
+    end
+
+    test "rejects zero" do
+      assert {:error, %{max_participants: "Participant limit must be at least 1"}} =
+               InputValidation.validate_field(:max_participants, "0", %{})
+    end
+
+    test "rejects a non-numeric value" do
+      assert {:error, %{max_participants: "Participant limit must be a valid number"}} =
+               InputValidation.validate_field(:max_participants, "lots", %{})
+    end
+  end
+
+  describe "validate_meeting_type_form/2 with max_participants" do
+    test "sanitises max_participants when present" do
+      params = %{
+        "name" => "Group Demo",
+        "duration" => "30",
+        "icon" => "hero-bolt",
+        "meeting_mode" => "personal",
+        "max_participants" => "10"
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_meeting_type_form(params)
+      assert sanitized["max_participants"] == "10"
+    end
+
+    test "returns an error for an out-of-range max_participants" do
+      params = %{
+        "name" => "Group Demo",
+        "duration" => "30",
+        "icon" => "hero-bolt",
+        "meeting_mode" => "personal",
+        "max_participants" => "1000"
+      }
+
+      assert {:error, errors} = InputValidation.validate_meeting_type_form(params)
+      assert Map.has_key?(errors, :max_participants)
+    end
+
+    test "omits max_participants from sanitised params when absent" do
+      params = %{
+        "name" => "Solo Chat",
+        "duration" => "30",
+        "icon" => "hero-bolt",
+        "meeting_mode" => "personal"
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_meeting_type_form(params)
+      refute Map.has_key?(sanitized, "max_participants")
+    end
+
+    # The canonical param is how the form says "this type is solo", so 1 is
+    # a legitimate value here even though the group input rejects it.
+    test "accepts a canonical max_participants of 1 for a solo type" do
+      params = %{
+        "name" => "Solo Chat",
+        "duration" => "30",
+        "icon" => "hero-bolt",
+        "meeting_mode" => "personal",
+        "max_participants" => "1"
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_meeting_type_form(params)
+      assert sanitized["max_participants"] == "1"
+    end
+  end
+
+  describe "validate_field/3 for the group participant limit" do
+    # The visible input only exists while group bookings are switched on, so
+    # 1 is not a small group — it is the toggle being off. Accepting it there
+    # silently stored a solo type behind an enabled toggle, stranding any
+    # bookings already taken on the slot.
+    test "rejects a limit of 1" do
+      assert {:error, %{max_participants: message}} =
+               InputValidation.validate_field(:group_participants, "1", %{})
+
+      assert message =~ "at least 2"
+    end
+
+    test "accepts the smallest real group" do
+      assert {:ok, "2"} = InputValidation.validate_field(:group_participants, "2", %{})
+    end
+
+    test "still rejects values above the maximum" do
+      assert {:error, %{max_participants: _message}} =
+               InputValidation.validate_field(:group_participants, "1000", %{})
+    end
+
+    test "rejects a non-numeric limit" do
+      assert {:error, %{max_participants: message}} =
+               InputValidation.validate_field(:group_participants, "abc", %{})
+
+      assert message =~ "valid number"
     end
   end
 end

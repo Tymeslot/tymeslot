@@ -48,7 +48,8 @@ defmodule Tymeslot.BookingTestHelpers do
         is_default: true,
         advance_booking_days: 30,
         min_advance_hours: 0,
-        buffer_minutes: 0
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0
       )
 
     insert(:meeting_type, user: user, duration_minutes: 30, name: "Quick Chat", is_active: true)
@@ -66,6 +67,45 @@ defmodule Tymeslot.BookingTestHelpers do
     insert(:calendar_integration, user: user, is_active: true)
 
     %{user: user, profile: profile}
+  end
+
+  @doc """
+  A profile on `theme_id` that `navigate_to_booking_form/3` can book: open
+  09:00 to 17:00 New York time every day, up to 30 days ahead, with no
+  notice or buffer, and an active calendar.
+  """
+  @spec bookable_profile(struct(), String.t(), String.t()) :: struct()
+  def bookable_profile(user, theme_id, username) do
+    profile =
+      insert(:profile,
+        user: user,
+        username: username,
+        booking_theme: theme_id,
+        timezone: "America/New_York"
+      )
+
+    schedule =
+      insert(:availability_schedule,
+        profile: profile,
+        is_default: true,
+        advance_booking_days: 30,
+        min_advance_hours: 0,
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0
+      )
+
+    Enum.each(1..7, fn day_of_week ->
+      insert(:weekly_availability,
+        schedule: schedule,
+        day_of_week: day_of_week,
+        is_available: true,
+        start_time: ~T[09:00:00],
+        end_time: ~T[17:00:00]
+      )
+    end)
+
+    insert(:calendar_integration, user: user, is_active: true)
+    profile
   end
 
   @doc """
@@ -130,7 +170,19 @@ defmodule Tymeslot.BookingTestHelpers do
   def walk_to_booking_form(view, timezone, duration_slug \\ nil) do
     BookingDriver.choose_meeting_type(view, duration_slug || first_meeting_type(view))
     BookingDriver.continue(view)
+    walk_from_schedule_to_booking_form(view, timezone)
+  end
 
+  @doc """
+  The second half of `walk_to_booking_form/3`: from the schedule step, picks
+  tomorrow's first offered time and moves on to the booking form.
+
+  Public for a page that opens on the schedule step, as `/:username/:slug`
+  does, where there is no overview card to pick.
+  """
+  @spec walk_from_schedule_to_booking_form(Phoenix.LiveViewTest.View.t(), String.t()) ::
+          Phoenix.LiveViewTest.View.t()
+  def walk_from_schedule_to_booking_form(view, timezone) do
     tomorrow =
       timezone |> DateTime.now!() |> DateTime.to_date() |> Date.add(1) |> Date.to_iso8601()
 
@@ -149,6 +201,15 @@ defmodule Tymeslot.BookingTestHelpers do
       {[], nil} -> flunk("Expected at least one meeting type card on the overview step")
     end
   end
+
+  @doc """
+  Brings `target_date` into the displayed range on whichever picker of days
+  the rendered theme offers (Quill's month arrows, Rhythm's week arrows),
+  through the markup contract (`BookingDriver.show_date/2`).
+  """
+  @spec advance_calendar_to(Phoenix.LiveViewTest.View.t(), Date.t()) :: :ok
+  def advance_calendar_to(view, %Date{} = target_date),
+    do: BookingDriver.show_date(view, Date.to_iso8601(target_date))
 
   @doc """
   Brings `date`'s month onto Quill's month grid, stepping one month towards

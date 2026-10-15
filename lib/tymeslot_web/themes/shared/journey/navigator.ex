@@ -44,6 +44,14 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Navigator do
   @callback go_to(Journey.t(), Socket.t(), step :: String.t()) :: {:noreply, Socket.t()}
 
   @doc """
+  Whether `go_to/3` with `step` would move the booker, so the step indicator
+  offers a step as clickable only then. Optional: a navigator without it
+  offers none.
+  """
+  @callback can_go_to?(Journey.t(), assigns :: map(), step :: String.t() | integer()) ::
+              boolean()
+
+  @doc """
   Reveals what the booking reaches now: for a navigator that shows several
   moments and moves on by itself, opens each newly reached moment
   (`Journey.Runtime.open_moment/3`) and sets `:current_state` to the moment
@@ -60,5 +68,5 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Navigator do
   """
   @callback frame() :: {String.t(), keyword()}
 
-  @optional_callbacks settle: 2, frame: 0
+  @optional_callbacks settle: 2, frame: 0, can_go_to?: 3
 end

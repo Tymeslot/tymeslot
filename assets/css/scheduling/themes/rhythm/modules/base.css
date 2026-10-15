@@ -45,11 +45,16 @@ body.rhythm-theme {
   min-height: 100dvh;
 }
 
+/* A column at every width: what sits beside the box is positioned out of the
+   flow, and what shares the flow with it (the owner-preview notice, the
+   language switcher's own row below 1024px) belongs above it, never in a lane
+   beside it. */
 .video-background-theme.theme-grid .content-area {
   display: flex;
-  align-items: flex-start;   /* fallback: top-align */
-  align-items: safe center;  /* center when fits, fall back to start when overflows */
-  justify-content: center;
+  flex-direction: column;
+  justify-content: flex-start;  /* fallback: top-align */
+  justify-content: safe center; /* center when fits, fall back to start when overflows */
+  align-items: center;
   padding: var(--space-lg);
   min-height: 0;
   /* Scroll when the box exceeds the viewport row (short screens / confirmation
@@ -62,24 +67,17 @@ body.rhythm-theme {
 }
 
 /* A demo page's theme switcher (shared/components/preview-notice.css) sits
-   above the box at every width, so the row becomes a column, centred as
-   the box alone is. The switcher is no wider than the box, which keeps it
-   out of the lane beside the box where the language switcher floats from
-   1024px. As in the column below 1024px (language-switcher.css), the box
-   keeps its content height and the content area scrolls. */
-.video-background-theme.theme-grid .content-area:has(> .demo-theme-switcher) {
-  flex-direction: column;
-  justify-content: flex-start;  /* fallback: top-align */
-  justify-content: safe center;
-  align-items: center;
-}
-
+   above the box, like everything else that shares the flow. It is no wider
+   than the box, which keeps it out of the lane beside the box where the
+   language switcher floats from 1024px. */
 .video-background-theme.theme-grid .content-area > .demo-theme-switcher {
   flex-shrink: 0;
   max-width: min(520px, calc(100% - 2 * var(--space-md)));
 }
 
-.video-background-theme.theme-grid .content-area:has(> .demo-theme-switcher) > .scheduling-box {
+/* A column item may shrink along the main axis; the box keeps its content
+   height and the content area scrolls instead. */
+.video-background-theme.theme-grid .content-area > .scheduling-box {
   flex-shrink: 0;
 }
 

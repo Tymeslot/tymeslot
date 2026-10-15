@@ -11,11 +11,17 @@
    booking is not what it looks like. Reads the --notice-warning role and the
    --theme-warning input (see shared/tokens.css).
 
+   Unlike .approval-notice, which sits inside the card, this one sits on the
+   page background itself: a video, an image or a colour the organiser chose,
+   which a tint alone cannot be read against. Its ground is a near-opaque dark
+   scrim, so the amber text keeps its contrast whatever lies beneath.
+
    The demo's theme switcher matches TymeslotWeb.Themes.Shared.Components.
    DemoThemeSwitcher, which Shared.SchedulingPage renders on demo pages only.
    ========================================================================== */
 
 .preview-notice {
+  --preview-notice-ground: rgb(15 23 42 / 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -23,9 +29,11 @@
   padding: var(--space-2xs) var(--space-sm);
   margin: 0 auto var(--space-sm);
   max-width: 32rem;
-  border: var(--border-width-thin) solid color-mix(in srgb, var(--notice-warning) 35%, transparent);
+  border: var(--border-width-thin) solid color-mix(in srgb, var(--notice-warning) 55%, transparent);
   border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--notice-warning) 10%, transparent);
+  background: color-mix(in srgb, var(--notice-warning) 12%, var(--preview-notice-ground));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: var(--theme-warning);
   font-size: var(--theme-font-size-xs);
   font-weight: var(--font-weight-semibold);

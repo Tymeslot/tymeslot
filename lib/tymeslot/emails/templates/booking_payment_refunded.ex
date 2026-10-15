@@ -51,6 +51,7 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
     defstruct [
       :attendee_email,
       :attendee_name,
+      :host_email,
       :host_name,
       :meeting_title,
       :amount_cents,
@@ -63,6 +64,7 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
     @type t :: %__MODULE__{
             attendee_email: String.t(),
             attendee_name: String.t() | nil,
+            host_email: String.t() | nil,
             host_name: String.t() | nil,
             meeting_title: String.t() | nil,
             amount_cents: pos_integer(),
@@ -123,6 +125,7 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
           do: {context.attendee_name, context.attendee_email},
           else: context.attendee_email
       )
+      |> MjmlEmail.put_reply_to(context.host_name, context.host_email)
       |> subject(
         if context.is_full_refund? do
           dgettext("emails_booking", "Refund Issued - %{amount}", amount: refunded_amount)

@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImageUp
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias TymeslotWeb.Helpers.UploadConstraints
+  alias Tymeslot.Media.UploadConstraints
 
   attr :id, :string, required: true, doc: "the form's DOM id"
   attr :field, :atom, required: true, doc: "the image asset field the upload saves into"
@@ -39,34 +39,15 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImageUp
               upload={@upload}
               class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
             />
-            <div class="btn-secondary w-full py-4 flex items-center justify-center gap-3">
-              <svg
-                class="w-5 h-5 text-turquoise-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2.5"
-                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-                />
-              </svg>
+            <div class={[button_classes(:secondary), "w-full"]}>
+              <.icon name="hero-arrow-up-tray" class="w-5 h-5 shrink-0 text-turquoise-600" />
               <span>{dgettext("dashboard_appearance", "Select Image")}</span>
             </div>
           </div>
 
           <%= for err <- upload_errors(@upload) do %>
             <div class="mt-4 p-3 bg-red-50 border border-red-100 rounded-token-xl text-red-600 text-xs font-bold flex items-center gap-2">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2.5"
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+              <.icon name="hero-exclamation-circle" class="w-4 h-4" />
               {Phoenix.Naming.humanize(err)}
             </div>
           <% end %>
@@ -79,7 +60,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImageUp
                 </span>
                 <span class="text-turquoise-600 font-black text-token-xs">{entry.progress}%</span>
               </div>
-              <div class="bg-tymeslot-100 rounded-full h-2 overflow-hidden shadow-inner">
+              <div class="bg-tymeslot-100 rounded-token-full h-2 overflow-hidden shadow-inner">
                 <div
                   class="bg-linear-to-r from-turquoise-500 to-cyan-500 h-full transition-all duration-300"
                   style={"width: #{entry.progress}%"}
@@ -89,21 +70,14 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImageUp
 
               <%= for err <- upload_errors(@upload, entry) do %>
                 <div class="mt-2 p-3 bg-red-50 border border-red-100 rounded-token-xl text-red-600 text-xs font-bold flex items-center gap-2">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2.5"
-                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
+                  <.icon name="hero-exclamation-circle" class="w-4 h-4" />
                   {Phoenix.Naming.humanize(err)}
                 </div>
               <% end %>
             </div>
           <% end %>
         <% else %>
-          <div class="btn-secondary w-full opacity-50 cursor-not-allowed py-4">
+          <div class={[button_classes(:secondary), "w-full opacity-50"]} aria-disabled="true">
             {dgettext("dashboard_appearance", "Upload not available")}
           </div>
         <% end %>

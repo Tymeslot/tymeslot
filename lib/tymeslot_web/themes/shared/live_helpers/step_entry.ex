@@ -17,10 +17,11 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   use Gettext, backend: TymeslotWeb.Gettext
 
   import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [put_flash: 3, redirect: 2]
+  import Phoenix.LiveView, only: [connected?: 1, put_flash: 3, redirect: 2]
 
   alias Tymeslot.Bookings.SubmissionToken
   alias Tymeslot.CustomFields
+  alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Scheduling.ThemeFlow
   alias TymeslotWeb.Helpers.ClientIP
@@ -34,6 +35,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
 
   alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine, as: QEngine
+  alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.Journey.Facts.Answers
   alias TymeslotWeb.Themes.Shared.Journey.Progress
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
@@ -64,10 +66,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   # rules the submit will be validated against. Everything else picks by
   # duration, which is what the visitor actually chose.
   defp resolve_meeting_type(socket, duration_str) do
-    ThemeFlow.resolve_meeting_type_for_reschedule(
-      socket.assigns[:reschedule_meeting_uid],
-      socket.assigns[:organizer_user_id]
-    ) ||
+    ReschedulePin.meeting_type(socket) ||
       ThemeFlow.resolve_meeting_type_for_duration(
         socket.assigns[:organizer_user_id],
         duration_str
@@ -189,6 +188,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
     socket
     |> assign(:meeting_type, meeting_type)
     |> assign(:engine, refreshed_engine(socket, meeting_type))
+    |> maybe_subscribe_to_group_seats()
     |> BookingLocation.assign_for_meeting_type(
       meeting_type,
       ThemeFlow.reschedule_location_choice(
@@ -283,17 +283,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   """
   @spec handle_booking_entry(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def handle_booking_entry(socket, params) do
-    has_selection =
-      (socket.assigns[:selected_date] != nil ||
-         (is_binary(params["date"]) && params["date"] != "")) &&
-        (socket.assigns[:selected_time] != nil ||
-           (is_binary(params["time"]) && params["time"] != ""))
-
-    is_reschedule =
-      socket.assigns[:reschedule_meeting_uid] != nil ||
-        is_binary(params["reschedule_meeting_uid"])
-
-    if has_selection || is_reschedule do
+    if selection_made?(socket, params) || reschedule?(socket, params) do
       case resolve_entry_meeting_type(socket, params) do
         {:unresolvable, socket} ->
           socket
@@ -304,20 +294,43 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
           |> do_handle_booking_entry(params)
       end
     else
-      username = socket.assigns[:username_context]
-      slug = socket.assigns[:selected_duration] || params["slug"]
+      redirect_to_schedule_step(socket, params)
+    end
+  end
 
-      if is_binary(username) && is_binary(slug) do
-        redirect(socket,
-          to:
-            PathHandlers.with_query(
-              ~p"/#{username}/#{slug}",
-              PathHandlers.demo_theme_param(socket.assigns)
-            )
-        )
-      else
-        redirect(socket, to: ~p"/")
-      end
+  # Either half of the selection can arrive on the socket (carried from an
+  # earlier step) or in the params (a deep link straight to `/book`).
+  defp selection_made?(socket, params) do
+    selected?(socket.assigns[:selected_date], params["date"]) &&
+      selected?(socket.assigns[:selected_time], params["time"])
+  end
+
+  defp selected?(assigned, param), do: assigned != nil || (is_binary(param) && param != "")
+
+  # A whole-meeting reschedule carries a meeting uid; a group participant
+  # moving their own seat carries a seat token instead. Either one enters the
+  # booking step without a prior date/time selection.
+  defp reschedule?(socket, params) do
+    socket.assigns[:reschedule_meeting_uid] != nil ||
+      is_binary(params["reschedule_meeting_uid"]) ||
+      socket.assigns[:reschedule_seat_token] != nil ||
+      is_binary(params["reschedule_seat_token"])
+  end
+
+  defp redirect_to_schedule_step(socket, params) do
+    username = socket.assigns[:username_context]
+    slug = socket.assigns[:selected_duration] || params["slug"]
+
+    if is_binary(username) && is_binary(slug) do
+      redirect(socket,
+        to:
+          PathHandlers.with_query(
+            ~p"/#{username}/#{slug}",
+            PathHandlers.demo_theme_param(socket.assigns)
+          )
+      )
+    else
+      redirect(socket, to: ~p"/")
     end
   end
 
@@ -354,15 +367,54 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
     client_ip = ClientIP.get(socket)
     submission_token = SubmissionToken.generate()
 
-    # Pre-fill form if rescheduling, scoped to the organizer to prevent PII leaks
-    reschedule_uid = socket.assigns[:reschedule_meeting_uid]
-    organizer_user_id = socket.assigns[:organizer_user_id]
-    form_data = ThemeFlow.build_booking_form_data(reschedule_uid, organizer_user_id)
+    # Pre-fill form if rescheduling, scoped to the organizer to prevent PII
+    # leaks; otherwise from the booking link's fragment, if it carried one
+    form_data =
+      case socket.assigns[:reschedule_seat_token] do
+        nil ->
+          ThemeFlow.build_booking_form_data(
+            socket.assigns[:reschedule_meeting_uid],
+            socket.assigns[:organizer_user_id],
+            socket.assigns[:attendee_prefill] || %{}
+          )
+
+        seat_token ->
+          ThemeFlow.build_seat_booking_form_data(seat_token)
+      end
 
     socket
     |> OrganizerHelpers.setup_form_state(form_data, as: :booking)
+    |> GuestBooking.assign_seat_cap()
     |> assign(:client_ip, client_ip)
     |> assign(:submission_token, submission_token)
     |> assign(:submission_processed, false)
+  end
+
+  @doc """
+  Subscribes the booking page to live seat updates for the resolved meeting
+  type. Group types only; mirrors the calendar subscription `Mount` makes.
+
+  Re-invoked whenever a meeting type is assigned. Switching between group
+  types adds a subscription per type without unsubscribing: the
+  `{:seat_update, id}` handler matches on the current meeting type's id, so
+  broadcasts for a previously viewed type are no-ops. Every id subscribed to
+  this session is tracked (not just the most recent one), so returning to a
+  type visited earlier is a no-op rather than a second `PubSub.subscribe/2`
+  to the same topic, which would otherwise double every later broadcast for
+  that type, once per subscription.
+  """
+  @spec maybe_subscribe_to_group_seats(Phoenix.LiveView.Socket.t()) ::
+          Phoenix.LiveView.Socket.t()
+  def maybe_subscribe_to_group_seats(socket) do
+    meeting_type = socket.assigns[:meeting_type]
+    subscribed_ids = socket.assigns[:group_seats_subscribed_ids] || MapSet.new()
+
+    if connected?(socket) && MeetingTypes.group_type?(meeting_type) &&
+         not MapSet.member?(subscribed_ids, meeting_type.id) do
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, SeatBroadcast.topic(meeting_type.id))
+      assign(socket, :group_seats_subscribed_ids, MapSet.put(subscribed_ids, meeting_type.id))
+    else
+      socket
+    end
   end
 end

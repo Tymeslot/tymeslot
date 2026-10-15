@@ -119,9 +119,15 @@ defmodule Mix.Tasks.Precommit do
     # as a literal because it appears in a guard, and the video provider
     # picker fails the build when a provider has no group, mirroring the
     # calendar picker. Both exist because a newly registered provider was
-    # once missed. Lower it again if either goes away.
-    {"xref", ~w[xref graph --label compile-connected --fail-above 24], :dev},
+    # once missed. Lower it again if either goes away. Deriving each theme's
+    # module from its catalogue key took three files off the list; the
+    # registry, built from the catalogue while it compiles, and the
+    # onboarding preview's default theme are on it on purpose.
+    {"xref", ~w[xref graph --label compile-connected --fail-above 26], :dev},
     {"test", ~w[test], :test},
+    # Vitest, over the hooks under assets/js. `mix test` never reaches it, so
+    # without this step a JavaScript change could pass the whole gate unrun.
+    {"js", ~w[test.js], :dev},
     {"dialyzer", ~w[dialyzer.incremental --list-unused-filters], :dev}
   ]
 

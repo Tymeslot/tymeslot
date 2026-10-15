@@ -90,8 +90,6 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       assert {:error, "Fatal server error"} = CalendarEventSync.create(meeting.id, 5)
     end
 
-    # Issue #104: a concurrent update job (enqueued once the video room
-    # attached) wrote the event first, so the create's `If-None-Match: *` 412s.
     test "updates from a fresh read when the event already exists at the meeting's UID" do
       %{meeting: meeting} = setup_calendar_scenario()
       uid = meeting.calendar_uid
@@ -195,8 +193,10 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       assert :ok = CalendarEventSync.update(meeting.id, 1)
     end
 
-    test "retries the update only once when the event keeps going missing" do
-      %{meeting: meeting} = setup_calendar_scenario()
+    # Issue #158: the create proves the event exists, so an update that still
+    # calls it missing has failed, and the owner hears of it once retries run out.
+    test "fails an update the provider still reports missing after the create found the event" do
+      %{meeting: %{id: meeting_id}} = setup_calendar_scenario()
 
       expect(Tymeslot.CalendarMock, :update_event, 2, fn _uid, _data, _ctx ->
         {:error, :not_found}
@@ -206,7 +206,12 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
         {:error, :precondition_failed}
       end)
 
-      assert {:error, :not_found} = CalendarEventSync.update(meeting.id, 1)
+      expect(Tymeslot.EmailServiceMock, :send_calendar_sync_error, fn meeting, reason ->
+        assert {meeting.id, reason} == {meeting_id, :calendar_event_not_updatable}
+        :ok
+      end)
+
+      assert {:error, :calendar_event_not_updatable} = CalendarEventSync.update(meeting_id, 5)
     end
 
     test "returns {:error, :meeting_not_found} for a non-existent meeting" do

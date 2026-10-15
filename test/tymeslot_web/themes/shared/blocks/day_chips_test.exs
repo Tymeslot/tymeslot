@@ -85,7 +85,7 @@ defmodule TymeslotWeb.Themes.Shared.Blocks.DayChipsTest do
     assert [label] = Floki.find(chip, ".day-chips__label")
     assert Floki.attribute(label, "aria-hidden") == ["true"]
     assert Floki.text(label) == "Sat 13"
-    assert chip |> Floki.find(".sr-only") |> Floki.text() == "Saturday, March 13, 2027"
+    assert chip |> Floki.find(".sr-only") |> Floki.text() == "Saturday, 13 March 2027"
   end
 
   test "marks the chosen day" do

@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.MeetingPageBodies do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.CoreComponents, only: [icon: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
   import TymeslotWeb.Themes.Shared.Components.MeetingDetails, only: [meeting_detail_rows: 1]
 
   alias Phoenix.LiveView.JS

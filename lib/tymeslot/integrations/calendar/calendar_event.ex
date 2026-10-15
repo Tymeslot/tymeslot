@@ -123,6 +123,15 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEvent do
   def blocking?(%{transparency: "transparent"}), do: false
   def blocking?(%{}), do: true
 
+  @doc """
+  Returns the event marked busy whatever its feed said, as a subscription set
+  to count every event as busy (`all_events_busy`) hands it out. A cancelled or
+  declined event still does not block.
+  """
+  @spec as_busy(t() | map()) :: t() | map()
+  def as_busy(%__MODULE__{} = event), do: %{event | transparency: :opaque}
+  def as_busy(%{} = event), do: Map.put(event, :transparency, "opaque")
+
   # --- Validation helpers ---
 
   defp validate_uid(%{uid: uid}) when is_binary(uid) and byte_size(uid) > 0, do: :ok

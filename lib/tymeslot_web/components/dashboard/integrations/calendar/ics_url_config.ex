@@ -14,7 +14,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.IcsUrlConfig do
     as: SharedForm
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
-  alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   @impl Phoenix.LiveComponent
@@ -33,17 +32,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.IcsUrlConfig do
   def render(assigns) do
     ~H"""
     <div id={"ics-url-config-#{@id}"} class="space-y-6">
-      <div class="flex items-center gap-4">
-        <ProviderIcon.provider_icon provider="ics_url" type="calendar" size="large" />
-        <div>
-          <h3 class="text-xl font-black text-tymeslot-900 tracking-tight">
-            {dgettext("dashboard_calendar_providers", "Calendar subscription")}
-          </h3>
-          <p class="text-sm text-tymeslot-500 font-medium">
-            {dgettext("dashboard_calendar_providers", "Subscribe to a published calendar feed")}
-          </p>
-        </div>
-      </div>
+      <UIComponents.provider_config_header
+        provider="ics_url"
+        type="calendar"
+        title={dgettext("dashboard_calendar_providers", "Calendar subscription")}
+        tagline={dgettext("dashboard_calendar_providers", "Subscribe to a published calendar feed")}
+      />
 
       <form
         id="calendar-subscription-form"
@@ -82,6 +76,29 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.IcsUrlConfig do
           />
         </div>
 
+        <label
+          for="subscription_all_events_busy"
+          class="flex items-start gap-3 p-4 rounded-token-xl border-2 border-tymeslot-100 hover:border-turquoise-200 cursor-pointer transition-colors"
+        >
+          <.input
+            type="checkbox"
+            id="subscription_all_events_busy"
+            name="integration[all_events_busy]"
+            value={Map.get(@form_values, "all_events_busy", "false")}
+          />
+          <div class="flex-1">
+            <div class="font-bold text-tymeslot-900">
+              {dgettext("dashboard_calendar_providers", "Count every event as busy")}
+            </div>
+            <div class="text-token-sm text-tymeslot-600 font-medium">
+              {dgettext(
+                "dashboard_calendar_providers",
+                "Holiday and school-holiday calendars mark their events as free, so they would block nothing. With this on, every event in the feed blocks the time, however it is marked."
+              )}
+            </div>
+          </div>
+        </label>
+
         <.info_box variant={:info}>
           {dgettext(
             "dashboard_calendar_providers",
@@ -94,14 +111,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.IcsUrlConfig do
           error={error}
         />
 
-        <div class="flex justify-between items-center pt-4 border-t border-turquoise-200/30">
-          <UIComponents.secondary_button target={@target} />
-          <UIComponents.form_submit_button
-            saving={@saving}
-            text={dgettext("dashboard_calendar_providers", "Subscribe")}
-            saving_text={dgettext("dashboard_calendar_providers", "Subscribing...")}
-          />
-        </div>
+        <UIComponents.form_actions
+          target={@target}
+          saving={@saving}
+          class="border-turquoise-200/30"
+          submit_text={dgettext("dashboard_calendar_providers", "Subscribe")}
+          saving_text={dgettext("dashboard_calendar_providers", "Subscribing...")}
+        />
       </form>
     </div>
     """

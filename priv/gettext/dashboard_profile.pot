@@ -36,11 +36,6 @@ msgstr ""
 msgid "Basic Information"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Cancel"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a unique username for your personal booking page."
@@ -116,11 +111,6 @@ msgstr ""
 msgid "Profile Picture"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Profile Settings"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
@@ -180,11 +170,6 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Username updated! Your booking page: %{url}"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
-#, elixir-autogen, elixir-format
-msgid "Your Custom URL"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
@@ -322,4 +307,8 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Shown on your booking page by themes that introduce you, such as Folio. Leave an empty line between paragraphs."
+
+#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete avatar"
 msgstr ""

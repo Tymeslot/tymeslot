@@ -152,7 +152,7 @@ defmodule Tymeslot.Integrations.Calendar.Apple.ProviderTest do
   describe "setup_component/0" do
     test "points at the matching LiveComponent" do
       assert Provider.setup_component() ==
-               TymeslotWeb.Components.Dashboard.Integrations.Calendar.AppleConfig
+               TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavFamilyConfig
     end
   end
 end

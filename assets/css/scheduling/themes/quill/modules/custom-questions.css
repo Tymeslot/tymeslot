@@ -48,11 +48,11 @@
 }
 
 .custom-question-yes-no-tile.is-selected {
-  box-shadow: 0 6px 16px var(--option-tile-selected-glow);
+  box-shadow: 0 6px 16px var(--option-tile-selected-glow), var(--selected-ring);
 }
 
 .custom-question-option-card.is-selected {
-  box-shadow: 0 4px 14px var(--option-tile-selected-glow);
+  box-shadow: 0 4px 14px var(--option-tile-selected-glow), var(--selected-ring);
 }
 
 .custom-question-yes-no-label {

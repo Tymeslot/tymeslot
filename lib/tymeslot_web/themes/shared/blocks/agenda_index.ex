@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Themes.Shared.Blocks.AgendaIndex do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.CoreComponents, only: [icon: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Live.Scheduling.{CalendarHelpers, CalendarNavigation, WeekSlots}

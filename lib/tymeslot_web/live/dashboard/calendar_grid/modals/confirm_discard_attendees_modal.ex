@@ -12,15 +12,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDiscardAttendeesModal
   @spec confirm_discard_attendees_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def confirm_discard_attendees_modal(assigns) do
     ~H"""
-    <.modal
+    <.confirm_modal
       id="confirm-discard-attendees-modal"
-      show={true}
-      on_cancel={JS.push("cancel_discard_attendees", target: @myself)}
+      show
       size={:small}
+      title={dgettext("dashboard_calendar_events", "Unsent invitations")}
+      confirm_label={dgettext("dashboard_calendar_events", "Discard")}
+      cancel_label={dgettext("dashboard_calendar_events", "Go back")}
+      on_cancel={JS.push("cancel_discard_attendees", target: @myself)}
+      on_confirm={JS.push("discard_pending_attendees", target: @myself)}
     >
-      <:header>{dgettext("dashboard_calendar_events", "Unsent invitations")}</:header>
-
-      <p class="text-token-sm text-tymeslot-500">
+      <p>
         {dngettext(
           "dashboard_calendar_events",
           "%{count} attendee hasn't been invited yet. Discard?",
@@ -28,25 +30,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDiscardAttendeesModal
           @count
         )}
       </p>
-
-      <:footer>
-        <div class="flex gap-2">
-          <.action_button
-            variant={:danger}
-            phx-click="discard_pending_attendees"
-            phx-target={@myself}
-          >
-            {dgettext("dashboard_calendar_events", "Discard")}
-          </.action_button>
-          <.action_button
-            variant={:secondary}
-            phx-click={JS.push("cancel_discard_attendees", target: @myself)}
-          >
-            {dgettext("dashboard_calendar_events", "Go back")}
-          </.action_button>
-        </div>
-      </:footer>
-    </.modal>
+    </.confirm_modal>
     """
   end
 end

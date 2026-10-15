@@ -23,8 +23,10 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
   alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry
+  alias TymeslotWeb.Themes.Shared.PathHandlers
   alias TymeslotWeb.Themes.Shared.ReschedulePin
   alias TymeslotWeb.Themes.Shared.SchedulingInit
+  alias TymeslotWeb.Themes.Shared.SeatMoveLink
   alias TymeslotWeb.Themes.Shared.TimezoneHelpers
 
   @doc """
@@ -41,8 +43,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
       socket
       |> SchedulingInit.assign_theme_state()
       |> TimezoneHelpers.assign_user_timezone(params)
-      # After the timezone, so the calendar opens on the booker's today.
-      |> CalendarHelpers.anchor_on_today()
+      |> ThemeUtils.assign_attendee_prefill()
       |> ThemeUtils.assign_theme_with_preview(params)
 
     # Resolve the username context (which sets meeting_types) unless the
@@ -53,6 +54,14 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
       else
         OrganizerHelpers.handle_username_resolution(socket, params["username"])
       end
+
+    # The week start falls back to the organiser's own, so it needs them
+    # resolved; the calendar then opens on the booker's today (after the
+    # timezone) in a week that starts on it.
+    socket =
+      socket
+      |> SchedulingInit.assign_week_start()
+      |> CalendarHelpers.anchor_on_today()
 
     # Verify an owner-preview token now that the organiser (and so the page
     # owner's user id) is resolved. Gates simulate-vs-persist downstream.
@@ -109,19 +118,25 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
 
   def handle_scheduling_params(socket, params) do
     initial_state = entry(socket)
+    socket = handle_param_updates(socket, params)
 
-    socket =
-      socket
-      |> handle_param_updates(params)
-      |> ThemeUtils.assign_theme_with_preview(params)
-      |> assign_owner_preview(params)
-      |> Runtime.transition_to(initial_state, params)
-
+    # A spent seat link is sent on to a fresh booking before any moment is
+    # entered for it (`SeatMoveLink.leave_if_spent/2`).
     if socket.redirected do
       {:noreply, socket}
     else
-      {:ok, socket} = SlotFetchingHandlerComponent.maybe_reload_slots(socket)
-      {:noreply, socket}
+      socket =
+        socket
+        |> ThemeUtils.assign_theme_with_preview(params)
+        |> assign_owner_preview(params)
+        |> Runtime.transition_to(initial_state, params)
+
+      if socket.redirected do
+        {:noreply, socket}
+      else
+        {:ok, socket} = SlotFetchingHandlerComponent.maybe_reload_slots(socket)
+        {:noreply, socket}
+      end
     end
   end
 
@@ -152,9 +167,18 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
     if PreviewToken.owner?(token, socket.assigns[:organizer_user_id]), do: token
   end
 
-  # Updates socket assigns from URL parameters.
-  defp handle_param_updates(socket, params) do
+  @doc """
+  Applies the URL parameters to the socket: the meeting type, day and time
+  they name, the reschedule or seat move they carry, and the page's own query
+  (`:page_query_params`, which a restart keeps). A spent seat-move token is
+  dropped and the page sent on to a fresh booking (`SeatMoveLink`).
+  """
+  @spec handle_param_updates(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
+  def handle_param_updates(socket, params) do
+    seat_token = params["reschedule_seat_token"]
+
     socket
+    |> assign(:page_query_params, PathHandlers.query_params(params))
     |> StepEntry.maybe_assign_from_params(:duration, StepEntry.normalize_duration_param(params))
     |> StepEntry.maybe_assign_from_params(
       :selected_duration,
@@ -168,9 +192,21 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
       :reschedule_meeting_uid,
       params["reschedule_meeting_uid"]
     )
-    |> assign(:is_rescheduling, is_binary(params["reschedule_meeting_uid"]))
+    |> SeatMoveLink.assign_from_url(seat_token)
+    |> assign_rescheduling(params)
     |> pin_reschedule_meeting_type()
     |> handle_confirmation_params(params)
+    |> SeatMoveLink.leave_if_spent(seat_token)
+  end
+
+  # A whole-meeting reschedule names the meeting; a group participant moving
+  # their own seat carries a live seat token instead.
+  defp assign_rescheduling(socket, params) do
+    assign(
+      socket,
+      :is_rescheduling,
+      is_binary(params["reschedule_meeting_uid"]) or socket.assigns.reschedule_seat_token != nil
+    )
   end
 
   # A reschedule is pinned to the type it booked; `ReschedulePin` says why.

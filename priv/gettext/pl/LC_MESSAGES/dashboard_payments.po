@@ -28,7 +28,6 @@ msgstr "Kwota przekracza pozostałą kwotę do zwrotu."
 msgid "Attendee"
 msgstr "Uczestnik"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
@@ -221,11 +220,6 @@ msgstr "Zwrócono częściowo"
 #, elixir-autogen, elixir-format
 msgid "Payment setup is temporarily unavailable. Please try again later."
 msgstr "Konfiguracja płatności jest chwilowo niedostępna. Spróbuj ponownie później."
-
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Payments"
-msgstr "Płatności"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format

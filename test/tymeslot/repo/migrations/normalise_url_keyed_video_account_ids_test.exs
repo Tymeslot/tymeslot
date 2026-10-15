@@ -167,20 +167,31 @@ defmodule Tymeslot.Repo.Migrations.NormaliseUrlKeyedVideoAccountIdsTest do
   end
 
   # A row as an earlier release saved it: keyed on the address as typed unless
-  # `:key` says otherwise.
+  # `:key` says otherwise. A custom link went into the plain
+  # `custom_meeting_url` column then, which is the one this migration reads.
   defp integration(user, provider, url, overrides \\ []) do
     url_field = if provider == "custom", do: :custom_meeting_url, else: :base_url
 
-    insert(
-      :video_integration,
-      [
-        {:user, user},
-        {:provider, provider},
-        {url_field, url},
-        {:provider_account_id, Keyword.get(overrides, :key, url)}
-        | Keyword.delete(overrides, :key)
-      ]
-    )
+    row =
+      insert(
+        :video_integration,
+        [
+          {:user, user},
+          {:provider, provider},
+          {url_field, url},
+          {:provider_account_id, Keyword.get(overrides, :key, url)}
+          | Keyword.delete(overrides, :key)
+        ]
+      )
+
+    if provider == "custom" do
+      Repo.query!("UPDATE video_integrations SET custom_meeting_url = $1 WHERE id = $2", [
+        url,
+        row.id
+      ])
+    end
+
+    row
   end
 
   defp key(row), do: Repo.get!(VideoIntegrationSchema, row.id).provider_account_id

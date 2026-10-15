@@ -211,14 +211,24 @@ defmodule Tymeslot.ProfilesContextTest do
       %{schedule: insert(:availability_schedule, profile: profile, is_default: true)}
     end
 
-    test "update_policy accepts a valid buffer_minutes value", %{schedule: schedule} do
-      assert {:ok, updated} = Schedules.update_policy(schedule, %{buffer_minutes: 30})
-      assert updated.buffer_minutes == 30
+    test "update_policy accepts valid buffer values", %{schedule: schedule} do
+      assert {:ok, updated} =
+               Schedules.update_policy(schedule, %{
+                 buffer_before_minutes: 30,
+                 buffer_after_minutes: 30
+               })
+
+      assert {updated.buffer_before_minutes, updated.buffer_after_minutes} == {30, 30}
     end
 
-    test "update_policy rejects an out-of-range buffer_minutes value", %{schedule: schedule} do
-      assert {:error, changeset} = Schedules.update_policy(schedule, %{buffer_minutes: 200})
-      assert "must be less than or equal to 120" in errors_on(changeset).buffer_minutes
+    test "update_policy rejects an out-of-range buffer value", %{schedule: schedule} do
+      assert {:error, changeset} =
+               Schedules.update_policy(schedule, %{
+                 buffer_before_minutes: 200,
+                 buffer_after_minutes: 200
+               })
+
+      assert "must be less than or equal to 120" in errors_on(changeset).buffer_before_minutes
     end
 
     test "update_policy accepts a valid advance_booking_days value", %{schedule: schedule} do

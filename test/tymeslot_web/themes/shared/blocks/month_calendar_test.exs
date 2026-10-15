@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Themes.Shared.Blocks.MonthCalendarTest do
   @moduledoc """
   The month of days a theme picks a date from. The days are passed in (the
-  shape `CalendarHelpers.get_calendar_days/6` returns), so the block is
+  shape `CalendarHelpers.get_calendar_days/7` returns), so the block is
   pinned apart from the availability rules: which days are buttons for the
   date fact, which are disabled, and the month navigation's bounds. The clock
   is frozen on Wednesday 10 March 2027.
@@ -77,6 +77,7 @@ defmodule TymeslotWeb.Themes.Shared.Blocks.MonthCalendarTest do
           current_year: 2027,
           current_month: 3,
           user_timezone: "Etc/UTC",
+          first_day: :monday,
           booking_window_days: 90,
           days: @days,
           target: nil
@@ -109,7 +110,7 @@ defmodule TymeslotWeb.Themes.Shared.Blocks.MonthCalendarTest do
     assert Floki.attribute(doc, "[data-value='2027-03-10']", "aria-pressed") == ["false"]
 
     assert Floki.attribute(doc, "[data-value='2027-03-12']", "aria-label") == [
-             "Friday, March 12, 2027"
+             "Friday, 12 March 2027"
            ]
   end
 
@@ -120,6 +121,15 @@ defmodule TymeslotWeb.Themes.Shared.Blocks.MonthCalendarTest do
              "March 2027"
 
     assert length(Floki.find(doc, ".month-calendar__weekday")) == 7
+  end
+
+  test "starts the weekday headings on the week's first day" do
+    weekdays = fn doc ->
+      doc |> Floki.find(".month-calendar__weekday") |> Enum.map(&String.trim(Floki.text(&1)))
+    end
+
+    assert weekdays.(render_calendar(first_day: :monday)) == ~w(Mon Tue Wed Thu Fri Sat Sun)
+    assert weekdays.(render_calendar(first_day: :sunday)) == ~w(Sun Mon Tue Wed Thu Fri Sat)
   end
 
   test "goes back no further than the current month, and forward to the booking window's end" do

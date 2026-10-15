@@ -307,7 +307,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
       <Components.config_view
         selected_provider={@selected_provider}
         myself={@myself}
-        security_metadata={@security_metadata}
         form_errors={@form_errors}
         form_values={@form_values}
         discovered_calendars={@discovered_calendars}

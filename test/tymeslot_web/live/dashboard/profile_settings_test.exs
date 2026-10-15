@@ -3,13 +3,16 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
   @moduletag :profiles
   @moduletag :live
 
+  import Tymeslot.AuthTestHelpers
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
+  alias Tymeslot.Profiles
   alias Tymeslot.Profiles.Avatars
   alias Tymeslot.Repo
 
   alias Ecto.Changeset
+  alias Tymeslot.Test.MediaFixtures
   alias Tymeslot.Timezones
 
   setup :setup_dashboard_user
@@ -18,10 +21,8 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
     test "successfully uploads an avatar", %{conn: conn, profile: profile} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
 
-      # Prepare file for upload with valid PNG magic bytes
-      png_content =
-        <<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13, "IHDR", 0, 0, 0, 1, 0, 0,
-          0, 1, 8, 2, 0, 0, 0, 0x90, 0x77, 0x53, 0xDE>>
+      # Prepare a complete, decodable PNG for upload
+      png_content = MediaFixtures.png()
 
       avatar = %{
         last_modified: System.system_time(:millisecond),
@@ -52,9 +53,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
     } do
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
 
-      png_content =
-        <<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13, "IHDR", 0, 0, 0, 1, 0, 0,
-          0, 1, 8, 2, 0, 0, 0, 0x90, 0x77, 0x53, 0xDE>>
+      png_content = MediaFixtures.png()
 
       png = fn name ->
         %{
@@ -82,9 +81,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
     } do
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
 
-      png_content =
-        <<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13, "IHDR", 0, 0, 0, 1, 0, 0,
-          0, 1, 8, 2, 0, 0, 0, 0x90, 0x77, 0x53, 0xDE>>
+      png_content = MediaFixtures.png()
 
       avatar = %{
         last_modified: System.system_time(:millisecond),
@@ -108,6 +105,57 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
 
       assert response.status == 200
       assert get_resp_header(response, "x-content-type-options") == ["nosniff"]
+    end
+
+    test "publishes a phone photo without its EXIF location, turned upright", %{
+      conn: conn,
+      profile: profile
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      avatar = %{
+        last_modified: System.system_time(:millisecond),
+        name: "selfie.jpg",
+        content: MediaFixtures.read!("gps_portrait.jpg"),
+        type: "image/jpeg"
+      }
+
+      view
+      |> file_input("#avatar-upload-form", :avatar, [avatar])
+      |> render_upload("selfie.jpg")
+
+      assert render(view) =~ "Avatar updated successfully"
+
+      # What a visitor to the booking page can download.
+      response = get(build_conn(), Avatars.avatar_url(Repo.reload!(profile)))
+      assert response.status == 200
+      assert MediaFixtures.image_metadata_fields(response.resp_body) == []
+      refute response.resp_body =~ "SN12345"
+      assert MediaFixtures.image_dimensions(response.resp_body) == {16, 32}
+    end
+
+    test "refuses an image over 40 megapixels and says how large it may be", %{
+      conn: conn,
+      profile: profile
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      avatar = %{
+        last_modified: System.system_time(:millisecond),
+        name: "huge.png",
+        content: MediaFixtures.png_declaring(20_000, 20_000),
+        type: "image/png"
+      }
+
+      view
+      |> file_input("#avatar-upload-form", :avatar, [avatar])
+      |> render_upload("huge.png")
+
+      assert render(view) =~
+               "This image is too large (400.0 megapixels). " <>
+                 "Please upload an image of at most 40 megapixels."
+
+      assert Repo.reload!(profile).avatar == nil
     end
 
     test "does not show error when no files are provided on submit (auto-upload fallback)", %{
@@ -172,6 +220,57 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
       # Verify profile was updated in DB
       updated_profile = Repo.reload!(profile)
       assert updated_profile.avatar == nil
+
+      # With nothing left to delete, the action goes away.
+      refute has_element?(view, "button", "Delete Photo")
+    end
+
+    test "cancelling the delete avatar confirmation keeps the avatar", %{
+      conn: conn,
+      profile: profile
+    } do
+      profile = Repo.update!(Changeset.change(profile, avatar: "test_avatar.png"))
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      view |> element("button", "Delete Photo") |> render_click()
+
+      assert has_element?(view, "#delete-avatar-modal-modal[style*='display: flex']")
+
+      view |> element("#delete-avatar-modal-modal button", "Cancel") |> render_click()
+
+      refute has_element?(view, "#delete-avatar-modal-modal[style*='display: flex']")
+      assert Repo.reload!(profile).avatar == "test_avatar.png"
+      assert has_element?(view, "button", "Delete Photo")
+      refute render(view) =~ "Avatar deleted successfully"
+    end
+
+    test "offers no delete action when no avatar has been uploaded", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      assert has_element?(view, "#avatar-upload-form")
+      refute has_element?(view, "button", "Delete Photo")
+    end
+  end
+
+  describe "Field headings" do
+    test "each heading names its field once, and still labels the input", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      assert has_element?(view, "h3#display-name-heading", "Display Name")
+
+      assert has_element?(
+               view,
+               ~s|input[name="full_name"][aria-labelledby="display-name-heading"]|
+             )
+
+      refute has_element?(view, "#display-name-form-container label", "Display Name")
+
+      assert has_element?(view, "h3#custom-url-heading", "Custom URL")
+      assert has_element?(view, ~s|input[name="username"][aria-labelledby="custom-url-heading"]|)
+      refute has_element?(view, "#username-form-container label", "Custom URL")
+
+      refute has_element?(view, "#timezone-form-container .label", "Your Timezone")
     end
   end
 
@@ -396,6 +495,33 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
       |> render_click(%{timezone: "Invalid-Timezone-Format"})
 
       assert render(view) =~ "Unknown timezone"
+    end
+  end
+
+  describe "an onboarded host with no stored profile" do
+    # The dashboard must work on the stored row: a save made from it has to
+    # land, rather than crash the page and discard what the host entered.
+    setup do
+      user = insert(:user, onboarding_completed_at: DateTime.utc_now())
+      conn = build_conn() |> init_test_session(%{}) |> log_in_user(user)
+      {:ok, conn: conn, user: user}
+    end
+
+    test "saves a timezone change to a stored profile", %{conn: conn, user: user} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      view
+      |> element("#timezone-form-container button[phx-click='toggle_timezone_dropdown']")
+      |> render_click()
+
+      view
+      |> element("#timezone-search")
+      |> render_keyup(%{value: "New York"})
+
+      view |> element("[phx-click='change_timezone']", "New York") |> render_click()
+
+      assert render(view) =~ "Timezone updated to #{Timezones.format("America/New_York")}"
+      assert Profiles.get_profile(user.id).timezone == "America/New_York"
     end
   end
 end

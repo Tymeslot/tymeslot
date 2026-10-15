@@ -15,6 +15,7 @@ defmodule Tymeslot.Dashboard.DashboardContext do
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
+  alias Tymeslot.Venues
 
   @typep integration_status :: %{
            has_calendar: boolean(),
@@ -85,23 +86,26 @@ defmodule Tymeslot.Dashboard.DashboardContext do
   @spec get_meeting_settings_data(integer()) :: %{
           meeting_types: list(),
           video_integrations: list(),
-          calendar_integrations: list()
+          calendar_integrations: list(),
+          venues: list()
         }
   def get_meeting_settings_data(user_id) when is_integer(user_id) do
     %{
       meeting_types: MeetingTypes.get_all_meeting_types(user_id),
       video_integrations: VideoIntegrationQueries.list_active_for_user_public(user_id),
-      calendar_integrations: CalendarManagement.list_calendar_integrations(user_id)
+      calendar_integrations: CalendarManagement.list_calendar_integrations(user_id),
+      venues: Venues.list_venues(user_id)
     }
   end
 
   @spec get_meeting_settings_data(nil | any()) :: %{
           meeting_types: list(),
           video_integrations: list(),
-          calendar_integrations: list()
+          calendar_integrations: list(),
+          venues: list()
         }
   def get_meeting_settings_data(_user_id),
-    do: %{meeting_types: [], video_integrations: [], calendar_integrations: []}
+    do: %{meeting_types: [], video_integrations: [], calendar_integrations: [], venues: []}
 
   @doc """
   Gets dashboard-specific data for a given action.

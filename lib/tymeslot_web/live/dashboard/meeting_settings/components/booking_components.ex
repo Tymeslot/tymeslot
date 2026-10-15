@@ -1,5 +1,5 @@
 defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
-  @moduledoc "Booking destination and mode components for meeting type forms."
+  @moduledoc "Icon picker and booking destination components for meeting type forms."
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -11,10 +11,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
   alias Phoenix.LiveView.JS
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
-  alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
-  import TymeslotWeb.Components.CoreComponents, only: [spinner: 1]
+
+  use TymeslotWeb.Components.CoreComponents,
+    only: [icon: 1, pill: 1, spinner: 1, subsection_header: 1]
+
   import TymeslotWeb.Components.Icons.ProviderIcon
 
   @doc """
@@ -28,12 +30,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
   def icon_picker(assigns) do
     ~H"""
     <section class="space-y-2">
-      <div class="flex items-center gap-2">
-        <Icons.icon name="hero-face-smile" class="w-5 h-5 text-turquoise-500" />
-        <h3 class="text-token-base font-semibold text-tymeslot-800">
-          {dgettext("dashboard_meeting_form", "Icon")}
-        </h3>
-      </div>
+      <.subsection_header icon="hero-face-smile" title={dgettext("dashboard_meeting_form", "Icon")} />
       <div class="grid grid-cols-8 sm:grid-cols-10 md:grid-cols-14 lg:grid-cols-16 gap-1">
         <%= for {icon_value, icon_name} <- MeetingTypeSchema.valid_icons_with_names() do %>
           <button
@@ -53,21 +50,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
             title={icon_name}
           >
             <%= if icon_value == "none" do %>
-              <svg
-                class="w-6 h-6 text-tymeslot-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              <.icon name="hero-x-mark" class="w-6 h-6 text-tymeslot-400" />
             <% else %>
-              <Icons.icon
+              <.icon
                 name={icon_value}
                 class={
                   "w-8 h-8 block " <>
@@ -95,113 +80,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
   end
 
   @doc """
-  Section for selecting meeting mode (Personal vs Video).
-  """
-  attr :meeting_mode, :string, required: true
-  attr :video_integrations, :list, required: true
-  attr :selected_video_integration_id, :any, required: true
-  attr :form_errors, :map, required: true
-  attr :myself, :any, required: true
-  attr :icon_size, :string, default: "compact", values: ["compact", "medium", "large", "mini"]
-
-  @spec meeting_mode_section(map()) :: Phoenix.LiveView.Rendered.t()
-  def meeting_mode_section(assigns) do
-    ~H"""
-    <section class="space-y-3">
-      <div class="flex items-center gap-2">
-        <Icons.icon name="hero-map-pin" class="w-5 h-5 text-turquoise-500" />
-        <h3 class="text-token-base font-semibold text-tymeslot-800">
-          {dgettext("dashboard_meeting_form", "Location")}
-        </h3>
-      </div>
-      <div class="flex items-center space-x-4">
-        <button
-          type="button"
-          phx-click={JS.push("toggle_meeting_mode", value: %{mode: "personal"}, target: @myself)}
-          class={[
-            "glass-selector",
-            if(@meeting_mode == "personal", do: "glass-selector--active")
-          ]}
-        >
-          <div class="flex items-center justify-center">
-            <Icons.icon name="hero-user" class="selector-icon" />
-            <span class="font-medium">{dgettext("dashboard_meeting_form", "In-Person")}</span>
-          </div>
-        </button>
-
-        <button
-          type="button"
-          phx-click={JS.push("toggle_meeting_mode", value: %{mode: "video"}, target: @myself)}
-          class={[
-            "glass-selector",
-            if(@meeting_mode == "video", do: "glass-selector--active")
-          ]}
-        >
-          <div class="flex items-center justify-center">
-            <Icons.icon name="hero-video-camera" class="selector-icon" />
-            <span class="font-medium">{dgettext("dashboard_meeting_form", "Video Meeting")}</span>
-          </div>
-        </button>
-      </div>
-
-      <%= if @meeting_mode == "video" do %>
-        <div class="mt-4">
-          <label class="label text-token-sm">
-            {dgettext("dashboard_meeting_form", "Select Video Provider")}
-          </label>
-          <%= if @video_integrations == [] do %>
-            <div class="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-token-lg">
-              <p class="text-token-sm text-yellow-700">
-                {dgettext("dashboard_meeting_form", "No video integrations configured.")}
-                <a
-                  href={~p"/dashboard/integrations?tab=video"}
-                  class="underline hover:text-yellow-800"
-                >
-                  {dgettext("dashboard_meeting_form", "Set up video integration")}
-                </a>
-              </p>
-            </div>
-          <% else %>
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              <%= for integration <- @video_integrations do %>
-                <button
-                  type="button"
-                  phx-click={
-                    JS.push("select_video_integration",
-                      value: %{id: integration.id},
-                      target: @myself
-                    )
-                  }
-                  class={[
-                    "glass-selector h-20!",
-                    if(@selected_video_integration_id == integration.id, do: "glass-selector--active")
-                  ]}
-                  title={integration.name}
-                >
-                  <div class="flex flex-col items-center justify-center space-y-1">
-                    <.provider_icon provider={integration.provider} size={@icon_size} />
-                    <span class="text-token-sm font-medium truncate max-w-full">{integration.name}</span>
-                    <span
-                      :if={integration.provider_account_email}
-                      class="text-token-xs text-muted truncate max-w-full"
-                    >
-                      {integration.provider_account_email}
-                    </span>
-                  </div>
-                </button>
-              <% end %>
-            </div>
-            <%= for error <- FormValidationHelpers.field_errors(@form_errors, :video_integration) do %>
-              <p class="form-error mt-2">{Helpers.format_errors(error)}</p>
-            <% end %>
-          <% end %>
-        </div>
-      <% end %>
-    </section>
-    """
-  end
-
-  @doc """
   Section for selecting the booking destination calendar.
   """
   attr :calendar_integrations, :list, required: true
@@ -219,18 +97,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
   def booking_destination_section(assigns) do
     ~H"""
     <section class="pt-4 border-t border-tymeslot-100">
-      <div class="flex items-center gap-2">
-        <Icons.icon name="hero-calendar-days" class="w-5 h-5 text-turquoise-500" />
-        <h3 class="text-token-base font-semibold text-tymeslot-800">
-          {dgettext("dashboard_meeting_form", "Booking Destination")}
-        </h3>
-      </div>
-      <p class="mt-2 text-token-sm text-tymeslot-600 mb-4">
-        {dgettext(
-          "dashboard_meeting_form",
-          "Choose where new bookings for this meeting type should be created."
-        )}
-      </p>
+      <.subsection_header
+        icon="hero-calendar-days"
+        title={dgettext("dashboard_meeting_form", "Booking Destination")}
+        description={
+          dgettext(
+            "dashboard_meeting_form",
+            "Choose where new bookings for this meeting type should be created."
+          )
+        }
+        class="mb-4"
+      />
 
       <div class="space-y-4">
         <div>
@@ -276,11 +153,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                     <span class="text-token-sm font-medium truncate max-w-full">
                       {integration.name}
                     </span>
-                    <%= if not integration.is_active do %>
-                      <span class="text-token-2xs font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full leading-tight">
-                        {dgettext("dashboard_meeting_form", "Reconnect")}
-                      </span>
-                    <% end %>
+                    <.pill :if={not integration.is_active} tone={:warning}>
+                      {dgettext("dashboard_meeting_form", "Reconnect")}
+                    </.pill>
                   </div>
                 </button>
               <% end %>
@@ -368,16 +243,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                       ]}
                     >
                       <div class={[
-                        "w-4 h-4 rounded-full border-2 mr-3 flex items-center justify-center",
+                        "w-4 h-4 rounded-token-full border-2 mr-3 flex items-center justify-center",
                         if(@selected_target_calendar_id == cal.id,
                           do: "border-turquoise-50 bg-turquoise-500",
                           else: "border-tymeslot-300"
                         )
                       ]}>
                         <%= if @selected_target_calendar_id == (cal.id) do %>
-                          <svg class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
-                          </svg>
+                          <.icon name="hero-check-mini" class="w-2.5 h-2.5 text-white" />
                         <% end %>
                       </div>
                       <span class={[

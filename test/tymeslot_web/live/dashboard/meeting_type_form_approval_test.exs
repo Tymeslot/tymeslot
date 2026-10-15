@@ -24,40 +24,55 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormApprovalTest do
 
   setup :setup_dashboard_user
 
-  defp open_new_form(conn) do
+  setup %{user: user} do
+    %{meeting_type: insert(:meeting_type, user: user, name: "Vetted intro")}
+  end
+
+  # Opens the editor on an existing meeting type: approval sits on the Booking
+  # Rules tab, which only exists once the type does, and every change there
+  # auto-saves.
+  defp open_form(conn, meeting_type) do
     {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
-    view |> element("button", "Add Meeting Type") |> render_click()
-    # The default reminder's hidden inputs break Plug.Conn.Query re-encoding on
-    # submit; the other form tests remove it the same way.
-    view |> element("button[aria-label='Remove reminder']") |> render_click()
+
+    view
+    |> element("button[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
+    |> render_click()
+
     view
   end
 
-  defp gated_form(conn) do
-    view = open_new_form(conn)
+  defp gated_form(conn, meeting_type) do
+    view = open_form(conn, meeting_type)
     view |> element("[data-testid='requires-approval-toggle']") |> render_click()
     view
   end
 
-  defp submit(view, attrs) do
+  defp type_window(view, hours) do
     view
-    |> form("form[phx-submit='save_meeting_type']", %{"meeting_type" => attrs})
-    |> render_submit()
+    |> element("[data-testid='approval-window-hours']")
+    |> render_change(%{"meeting_type" => %{"approval_window_hours" => hours}})
   end
 
-  defp saved_type(user, name) do
-    Enum.find(MeetingTypes.get_all_meeting_types(user.id), &(&1.name == name))
-  end
+  defp saved(meeting_type),
+    do: MeetingTypes.get_meeting_type(meeting_type.id, meeting_type.user_id)
 
   describe "the toggle" do
-    test "is offered on the booking rules tab", %{conn: conn} do
-      html = render(open_new_form(conn))
+    test "is offered on the booking rules tab", %{conn: conn, meeting_type: meeting_type} do
+      view = open_form(conn, meeting_type)
 
-      assert html =~ "Confirm each booking myself"
+      assert has_element?(
+               view,
+               "#meeting-type-form-tabs-panel-booking [data-testid='requires-approval-toggle']"
+             )
+
+      assert render(view) =~ "Confirm each booking myself"
     end
 
-    test "hides the window until approval is actually on", %{conn: conn} do
-      view = open_new_form(conn)
+    test "hides the window until approval is actually on", %{
+      conn: conn,
+      meeting_type: meeting_type
+    } do
+      view = open_form(conn, meeting_type)
 
       refute render(view) =~ "data-testid=\"approval-window-hours\""
 
@@ -68,11 +83,11 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormApprovalTest do
   end
 
   describe "saving" do
-    test "a meeting type saved with the toggle on actually gates its bookings",
-         %{conn: conn, user: user} do
-      submit(gated_form(conn), %{"name" => "Vetted intro", "duration" => "30"})
+    test "turning the toggle on actually gates the meeting type's bookings",
+         %{conn: conn, meeting_type: meeting_type} do
+      gated_form(conn, meeting_type)
 
-      saved = saved_type(user, "Vetted intro")
+      saved = saved(meeting_type)
 
       assert saved.requires_approval
       # The switch is only real if the domain agrees with it.
@@ -80,90 +95,67 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormApprovalTest do
     end
 
     test "leaving the window blank means the application default, not a frozen copy",
-         %{conn: conn, user: user} do
-      submit(gated_form(conn), %{"name" => "Default window", "duration" => "30"})
+         %{conn: conn, meeting_type: meeting_type} do
+      gated_form(conn, meeting_type)
 
-      saved = saved_type(user, "Default window")
+      saved = saved(meeting_type)
 
       assert is_nil(saved.approval_window_hours)
       assert Approval.window_hours(saved) == Constraints.default_approval_window_hours()
     end
 
-    test "a window the host types is stored and used", %{conn: conn, user: user} do
-      view = gated_form(conn)
+    test "a window the host types is stored and used", %{conn: conn, meeting_type: meeting_type} do
+      conn |> gated_form(meeting_type) |> type_window("6")
 
-      view
-      |> element("[data-testid='approval-window-hours']")
-      |> render_change(%{"meeting_type" => %{"approval_window_hours" => "6"}})
-
-      submit(view, %{"name" => "Six hours", "duration" => "30"})
-
-      saved = saved_type(user, "Six hours")
+      saved = saved(meeting_type)
 
       assert saved.approval_window_hours == 6
       assert Approval.window_hours(saved) == 6
     end
 
-    test "a window outside the allowed range is refused", %{conn: conn, user: user} do
-      view = gated_form(conn)
+    test "a window outside the allowed range is refused", %{
+      conn: conn,
+      meeting_type: meeting_type
+    } do
       too_long = Constraints.approval_window_hours_range().last + 1
 
-      view
-      |> element("[data-testid='approval-window-hours']")
-      |> render_change(%{"meeting_type" => %{"approval_window_hours" => to_string(too_long)}})
+      conn |> gated_form(meeting_type) |> type_window(to_string(too_long))
 
-      submit(view, %{"name" => "Too long", "duration" => "30"})
-
-      assert is_nil(saved_type(user, "Too long"))
+      assert is_nil(saved(meeting_type).approval_window_hours)
     end
   end
 
   describe "typing an invalid window" do
     test "a non-numeric value surfaces an error rather than becoming the default silently", %{
-      conn: conn
+      conn: conn,
+      meeting_type: meeting_type
     } do
-      view = gated_form(conn)
-
-      html =
-        view
-        |> element("[data-testid='approval-window-hours']")
-        |> render_change(%{"meeting_type" => %{"approval_window_hours" => "abc"}})
+      html = conn |> gated_form(meeting_type) |> type_window("abc")
 
       assert html =~ "Enter a whole number of hours"
     end
 
-    test "zero and a negative number are refused the same way", %{conn: conn} do
-      view = gated_form(conn)
+    test "zero and a negative number are refused the same way", %{
+      conn: conn,
+      meeting_type: meeting_type
+    } do
+      view = gated_form(conn, meeting_type)
 
       for bad <- ["0", "-5"] do
-        html =
-          view
-          |> element("[data-testid='approval-window-hours']")
-          |> render_change(%{"meeting_type" => %{"approval_window_hours" => bad}})
-
-        assert html =~ "Enter a whole number of hours"
+        assert type_window(view, bad) =~ "Enter a whole number of hours"
       end
     end
 
     test "does not overwrite a previously saved good value with a parse failure", %{
       conn: conn,
-      user: user
+      meeting_type: meeting_type
     } do
-      view = gated_form(conn)
+      view = gated_form(conn, meeting_type)
 
-      view
-      |> element("[data-testid='approval-window-hours']")
-      |> render_change(%{"meeting_type" => %{"approval_window_hours" => "6"}})
+      type_window(view, "6")
+      type_window(view, "abc")
 
-      view
-      |> element("[data-testid='approval-window-hours']")
-      |> render_change(%{"meeting_type" => %{"approval_window_hours" => "abc"}})
-
-      submit(view, %{"name" => "Kept the good value", "duration" => "30"})
-
-      saved = saved_type(user, "Kept the good value")
-
-      assert saved.approval_window_hours == 6
+      assert saved(meeting_type).approval_window_hours == 6
     end
   end
 

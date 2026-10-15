@@ -60,7 +60,7 @@ defmodule Tymeslot.Integrations.Calendar.MeetingEventIdentityTest do
     meeting: meeting,
     event_data: event_data
   } do
-    body = OutlookEventMapper.format_event_data(event_data)
+    {:ok, body} = OutlookEventMapper.format_event_data(event_data)
 
     refute leaks_uid?(body, meeting)
   end

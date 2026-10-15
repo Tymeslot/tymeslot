@@ -51,11 +51,6 @@ msgstr ""
 msgid "Are you sure you want to delete this break%{label}?"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Availability"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
 #, elixir-autogen, elixir-format
 msgid "Break"
@@ -71,10 +66,6 @@ msgstr ""
 msgid "Break deleted"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex
-#: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex
-#: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
-#: lib/tymeslot_web/components/dashboard/availability/delete_time_off_modal.ex
 #: lib/tymeslot_web/components/dashboard/availability/schedule_form_modal.ex
 #: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
@@ -90,11 +81,6 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
 #, elixir-autogen, elixir-format
 msgid "Clear Day"
-msgstr ""
-
-#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Clear Day Settings"
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex
@@ -235,7 +221,6 @@ msgstr ""
 msgid "Duration must be greater than 0 minutes"
 msgstr ""
 
-#: lib/tymeslot/availability/input_validation.ex
 #: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "End time must be after start time"
@@ -334,21 +319,6 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Are you sure you want to delete %{name}?"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
-#, elixir-autogen, elixir-format
-msgid "Buffer Between Appointments"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Buffer time set to custom value"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Buffer time updated to %{minutes} minutes"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
@@ -496,11 +466,6 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
 msgid "These rules apply to every meeting type booked against this schedule."
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
-#, elixir-autogen, elixir-format
-msgid "Time to block after each appointment for preparation, travel, or breaks."
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
@@ -778,11 +743,6 @@ msgstr ""
 msgid "Current and upcoming"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
-#, elixir-autogen, elixir-format
-msgid "No upcoming time off. Anything you add appears here."
-msgstr ""
-
 #: lib/tymeslot/availability/schedules.ex
 #, elixir-autogen, elixir-format
 msgid "(copy)"
@@ -823,3 +783,93 @@ msgid "and 1 more"
 msgid_plural "and %{count} more"
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Anything you add appears here."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "No upcoming time off"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Schedules"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer Time"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer after meetings set to custom value"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer after meetings updated to %{minutes} minutes"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer before meetings set to custom value"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer before meetings updated to %{minutes} minutes"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "A new booking can start this long after your previous meeting ends, at the earliest."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "A new booking must end at least this long before your next meeting starts."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "After a new booking"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Before a new booking"
+msgstr ""
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "End time must be after start time. To run past midnight, pick an end time marked (+1)."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Ends the next day"
+msgstr ""
+
+#: lib/tymeslot/availability/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Hours that end the next day can last at most 24 hours"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Clear day settings"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete break"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete schedule"
+msgstr ""

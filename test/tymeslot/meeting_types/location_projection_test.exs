@@ -120,7 +120,7 @@ defmodule Tymeslot.MeetingTypes.LocationProjectionTest do
               location(
                 kind: "in_person",
                 label: "The office",
-                details: "12 High St",
+                venue_ids: [42],
                 position: 0
               ),
               location(
@@ -138,7 +138,7 @@ defmodule Tymeslot.MeetingTypes.LocationProjectionTest do
 
       assert [in_person, video] = reloaded.locations
       assert in_person.kind == "in_person"
-      assert in_person.details == "12 High St"
+      assert in_person.venue_ids == [42]
       assert video.video_integration_ids == [integration.id]
       assert reloaded.allow_video == true
       assert reloaded.video_integration_id == integration.id

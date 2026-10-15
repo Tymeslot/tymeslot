@@ -17,12 +17,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SubmissionTest d
         },
         type: %{is_active: true},
         selected_icon: "hero-bolt",
+        venues: [%{id: 1}, %{id: 3}],
         locations: [
           %LocationOption{
             id: "loc-1",
             kind: "in_person",
             label: "The office",
-            details: "12 High Street",
+            venue_ids: [3, 1],
             position: 0
           }
         ],
@@ -80,10 +81,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SubmissionTest d
       assert location["id"] == "loc-1"
       assert location["kind"] == "in_person"
       assert location["label"] == "The office"
-      assert location["details"] == "12 High Street"
+      assert location["details"] == ""
+      assert location["venue_ids"] == ["3", "1"]
       assert location["collect_from_guest"] == "false"
       assert location["position"] == "0"
       assert location["video_integration_ids"] == []
+    end
+
+    test "drops a venue that is no longer among the host's locations" do
+      params = Submission.build_params(base_assigns(%{venues: [%{id: 1}]}))
+
+      assert [%{"venue_ids" => ["1"]}] = params["locations"]
     end
 
     test "carries every integration a video location offers, in order" do

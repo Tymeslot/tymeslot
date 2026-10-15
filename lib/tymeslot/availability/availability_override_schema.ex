@@ -6,7 +6,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchema do
   import Ecto.Changeset
 
   alias Tymeslot.Availability.AvailabilityScheduleSchema
-  alias Tymeslot.ChangesetValidators.TimeOrder
+  alias Tymeslot.ChangesetValidators.AvailabilityWindow
   alias Tymeslot.Validation.Constraints
 
   @type t :: %__MODULE__{
@@ -16,6 +16,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchema do
           override_type: String.t() | nil,
           start_time: Time.t() | nil,
           end_time: Time.t() | nil,
+          ends_next_day: boolean(),
           reason: String.t() | nil,
           schedule: AvailabilityScheduleSchema.t() | Ecto.Association.NotLoaded.t(),
           inserted_at: DateTime.t() | nil,
@@ -29,6 +30,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchema do
     field(:override_type, :string)
     field(:start_time, :time)
     field(:end_time, :time)
+    field(:ends_next_day, :boolean, default: false)
     field(:reason, :string)
 
     belongs_to(:schedule, AvailabilityScheduleSchema)
@@ -40,9 +42,18 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchema do
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(override, attrs) do
     override
-    |> cast(attrs, [:schedule_id, :date, :override_type, :start_time, :end_time, :reason])
+    |> cast(attrs, [
+      :schedule_id,
+      :date,
+      :override_type,
+      :start_time,
+      :end_time,
+      :ends_next_day,
+      :reason
+    ])
     |> validate_required([:schedule_id, :date, :override_type])
     |> validate_inclusion(:override_type, @override_types)
+    |> AvailabilityWindow.normalise_next_day(:availability_overrides_next_day_end_check)
     |> validate_times()
     |> validate_reason()
     |> unique_constraint([:schedule_id, :date])
@@ -55,7 +66,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchema do
     if override_type == "custom_hours" do
       changeset
       |> validate_required([:start_time, :end_time], message: "are required for custom hours")
-      |> TimeOrder.validate_time_order(:start_time, :end_time)
+      |> AvailabilityWindow.validate_window()
     else
       changeset
     end

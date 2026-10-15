@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 240" fill="none" role="img" aria-label="Several people booking seats in the same time slot">
+  <defs>
+    <linearGradient id="gb-bg" x1="0" y1="0" x2="640" y2="240" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ecfeff"/>
+      <stop offset="1" stop-color="#f0fdfa"/>
+    </linearGradient>
+    <filter id="gb-shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0d9488" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+  <rect width="640" height="240" fill="url(#gb-bg)"/>
+
+  <!-- the shared slot: one time, several seats -->
+  <g filter="url(#gb-shadow)">
+    <rect x="72" y="40" width="300" height="160" rx="18" fill="#ffffff"/>
+  </g>
+  <rect x="96" y="62" width="96" height="8" rx="4" fill="#cbd5e1"/>
+  <rect x="96" y="86" width="252" height="34" rx="10" fill="#ccfbf1"/>
+  <rect x="112" y="99" width="64" height="8" rx="4" fill="#0d9488"/>
+  <rect x="96" y="130" width="252" height="34" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="112" y="143" width="52" height="8" rx="4" fill="#cbd5e1"/>
+
+  <!-- seats: three taken, one free -->
+  <circle cx="276" cy="103" r="11" fill="#0d9488"/>
+  <circle cx="302" cy="103" r="11" fill="#14b8a6"/>
+  <circle cx="328" cy="103" r="11" fill="#5eead4"/>
+
+  <!-- the participant limit -->
+  <g filter="url(#gb-shadow)">
+    <rect x="420" y="52" width="148" height="136" rx="16" fill="#ffffff"/>
+  </g>
+  <rect x="440" y="72" width="72" height="7" rx="3.5" fill="#cbd5e1"/>
+  <circle cx="454" cy="108" r="12" fill="#0d9488"/>
+  <circle cx="486" cy="108" r="12" fill="#14b8a6"/>
+  <circle cx="518" cy="108" r="12" fill="#5eead4"/>
+  <circle cx="454" cy="144" r="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-dasharray="3 3"/>
+  <circle cx="486" cy="144" r="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-dasharray="3 3"/>
+  <text x="518" y="149" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#0f766e" text-anchor="middle">3/5</text>
+</svg>

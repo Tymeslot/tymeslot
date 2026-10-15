@@ -92,7 +92,8 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
           is_default: true,
           advance_booking_days: 90,
           min_advance_hours: 0,
-          buffer_minutes: 0
+          buffer_before_minutes: 0,
+          buffer_after_minutes: 0
         )
 
       insert(:meeting_type,
@@ -265,9 +266,11 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
 
       # The requested day's window opens at 14:00 and closes at 16:00. A 9:00
       # slot could only have come from a fetch for a different day.
-      assert "2:00 PM" in state.available_slots
-      refute "9:00 AM" in state.available_slots
-      refute "4:00 PM" in state.available_slots
+      slot_times = Enum.map(state.available_slots, & &1.time)
+
+      assert "2:00 PM" in slot_times
+      refute "9:00 AM" in slot_times
+      refute "4:00 PM" in slot_times
     end
 
     # Rhythm's day button used to toggle: clicking the day already selected
@@ -616,6 +619,7 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
         month_availability_map: availability_map,
         current_year: today.year,
         current_month: today.month,
+        week_start: :monday,
         current_week_start: Date.beginning_of_week(today, :monday),
         user_timezone: "Etc/UTC",
         booking_window_days: Keyword.get(overrides, :advance_booking_days, 90),

@@ -37,14 +37,14 @@ defmodule TymeslotWeb.Dashboard.Availability.Helpers do
   @spec timezone_display(map()) :: Phoenix.LiveView.Rendered.t()
   def timezone_display(assigns) do
     ~H"""
-    <div class="flex items-center space-x-2 text-token-sm text-tymeslot-600">
+    <div class="flex items-center space-x-2 min-w-0 text-token-sm text-tymeslot-600">
       <.safe_flag
         country_code={@country_code}
-        class="w-4 h-3 shrink-0 rounded-sm shadow-sm"
+        class="w-4 h-3 shrink-0 rounded-token-sm shadow-sm"
         fallback_icon="🌐"
         show_fallback={true}
       />
-      <span data-testid="timezone-display">{@timezone_display}</span>
+      <span data-testid="timezone-display" class="truncate" title={@timezone_display}>{@timezone_display}</span>
     </div>
     """
   end

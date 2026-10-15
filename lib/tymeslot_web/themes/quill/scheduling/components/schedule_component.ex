@@ -10,13 +10,15 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Live.Scheduling.CalendarHelpers
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Themes.Shared.BookingText
+  alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.SlotList
   alias TymeslotWeb.Themes.Shared.Components.TimezonePicker
+  alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
   alias TymeslotWeb.Themes.Shared.TimezoneHelpers
 
-  import TymeslotWeb.Components.CoreComponents
+  use TymeslotWeb.Components.CoreComponents
   import TymeslotWeb.Components.FlagHelpers, only: [timezone_flag: 1]
 
   @impl Phoenix.LiveComponent
@@ -86,10 +88,13 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
+    assigns = assign(assigns, :navigable_steps, Runtime.navigable_steps(assigns))
+
     ~H"""
     <div class="container quill-container flex-1" data-locale={@locale}>
       <.page_layout
         show_steps={true}
+        navigable_steps={@navigable_steps}
         current_step={2}
         slug={@duration}
         username_context={@username_context}
@@ -102,13 +107,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                   <%!-- Header: title + compact timezone trigger --%>
                   <div class="schedule-card-header">
                     <div class="flex-1 min-w-0">
-                      <.section_header
-                        level={2}
-                        class="mb-1"
-                        title_class="section-header schedule-title"
-                      >
+                      <h1 class="section-header schedule-title">
                         {dgettext("booking", "Select a Date & Time")}
-                      </.section_header>
+                      </h1>
 
                       <%= if @organizer_profile do %>
                         <p class="schedule-advance-notice text-glass-primary">
@@ -124,6 +125,14 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                           duration: BookingText.duration_label(assigns)
                         )}
                       </p>
+
+                      <GroupSession.hint meeting_type={@meeting_type} class="mt-2" />
+
+                      <GroupSession.seat_move_notice
+                        from={assigns[:reschedule_seat_from]}
+                        timezone={@user_timezone}
+                        class="mt-2"
+                      />
                     </div>
 
                     <div class="schedule-timezone-area">
@@ -270,14 +279,14 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                         <div class="calendar-grid-container flex-1">
                           <div class="calendar-month-grid grid grid-cols-7 gap-0.5 text-center mb-1">
                             <div
-                              :for={day <- LocalizationHelpers.weekday_headers()}
+                              :for={day <- LocalizationHelpers.weekday_headings(@week_start)}
                               class="calendar-weekday text-xs font-medium"
                             >
                               {day}
                             </div>
                           </div>
                           <div class="calendar-month-grid grid grid-cols-7 gap-0.5">
-                            <%= for day <- CalendarHelpers.get_calendar_days(@user_timezone, @current_year, @current_month, @organizer_profile, @month_availability_map, @meeting_type) do %>
+                            <%= for day <- CalendarHelpers.get_calendar_days(@user_timezone, @current_year, @current_month, @week_start, @organizer_profile, @month_availability_map, @meeting_type) do %>
                               <.calendar_day
                                 phx-click="select_date"
                                 phx-target={@myself}
@@ -303,6 +312,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                       slot_interval_minutes={@slot_interval_minutes}
                       duration_minutes={@duration_minutes}
                       expanded_hour={@expanded_hour}
+                      meeting_type={@meeting_type}
                       target={@myself}
                     >
                       <:loading>
@@ -319,20 +329,34 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                         </.info_box>
                       </:error>
                       <:empty>
-                        <.empty_state
-                          message={dgettext("booking", "This date is fully booked")}
-                          secondary_message={dgettext("booking", "Please select another date")}
-                        >
-                          <:icon>
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                        <%!-- Drawn in Quill's own light-on-glass colours, so it
+                             stays local rather than using the dashboard's empty
+                             state. --%>
+                        <div class="h-full flex items-center justify-center">
+                          <div class="text-center p-4">
+                            <svg
+                              class="w-12 h-12 mx-auto mb-2 text-tymeslot-400"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
                             >
-                            </path>
-                          </:icon>
-                        </.empty_state>
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                              >
+                              </path>
+                            </svg>
+                            <p class="text-sm font-medium" style="color: rgba(255,255,255,0.8);">
+                              {dgettext("booking", "This date is fully booked")}
+                            </p>
+                            <p class="text-xs mt-1" style="color: rgba(255,255,255,0.6);">
+                              {dgettext("booking", "Please select another date")}
+                            </p>
+                          </div>
+                        </div>
                       </:empty>
                     </SlotList.slot_list>
                   </div>

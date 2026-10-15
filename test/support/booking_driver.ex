@@ -163,10 +163,20 @@ defmodule TymeslotWeb.BookingDriver do
   """
   @spec pick_date(View.t(), String.t()) :: :ok
   def pick_date(view, iso) do
+    show_date(view, iso)
+    click(view, "#{@date}[data-value='#{iso}']")
+  end
+
+  @doc """
+  Brings the day `iso` (an ISO 8601 date) into view on a picker of days, as
+  `pick_date/2` does, without picking it: for a test that reads the days on
+  show (which are bookable) before choosing one.
+  """
+  @spec show_date(View.t(), String.t()) :: :ok
+  def show_date(view, iso) do
     load(view)
     marks_slot_fact!(view)
     show(view, iso, @date, "data-value", @max_periods)
-    click(view, "#{@date}[data-value='#{iso}']")
   end
 
   @doc "Picks the time whose `data-value` is `time`, once the chosen day's times are on show."

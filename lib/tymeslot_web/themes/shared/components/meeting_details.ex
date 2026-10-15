@@ -12,7 +12,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.MeetingDetails do
   alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
-  import TymeslotWeb.Components.CoreComponents, only: [icon: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
   attr :start_time, :any, required: true, doc: "the meeting's stored UTC DateTime"
   attr :timezone, :string, default: nil, doc: "the attendee's zone; nil falls back"

@@ -391,7 +391,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
       # The new 12:00 PM end edge must appear in the rendered time label —
       # this catches a regression where the resize is authorised but the
       # end time is silently not updated in the optimistic event.
-      assert html =~ "12:00 PM"
+      assert html =~ "12:00\u00A0PM"
     end
   end
 

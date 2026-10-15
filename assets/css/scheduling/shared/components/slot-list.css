@@ -30,6 +30,57 @@
   transform: translateY(-1px);
 }
 
+/* Seat availability (group bookings): a group time stacks itself above a
+   spots badge (TymeslotWeb.Themes.Shared.Components.SeatBadge); a solo time
+   (no --seats) keeps its single line. Each theme sets the --seat-* colours
+   in its variables.css: translucent washes of its status palette, and the
+   pair a badge takes on the selected slot, whose primary surface leaves a
+   faint wash unreadable. */
+.slot-list__slot--seats {
+  flex-direction: column;
+  gap: var(--space-3xs);
+}
+
+.seat-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-2xs);
+  border-radius: var(--radius-md);
+  font-size: var(--theme-font-size-3xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.6;
+  /* Labels are translated, and some outgrow a narrow slot button: they wrap
+     inside it rather than spill past its edge. */
+  max-width: 100%;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.seat-badge.seat-green {
+  background: var(--seat-green-bg);
+  color: var(--seat-green);
+}
+
+.seat-badge.seat-amber {
+  background: var(--seat-amber-bg);
+  color: var(--seat-amber);
+}
+
+.seat-badge.seat-red {
+  background: var(--seat-red-bg);
+  color: var(--seat-red);
+}
+
+.seat-badge.seat-neutral {
+  background: var(--seat-neutral-bg);
+  color: var(--seat-neutral);
+}
+
+.slot-list__slot--selected .seat-badge {
+  background: var(--seat-selected-bg);
+  color: var(--seat-selected);
+}
+
 /* Slot grid: fluid columns. auto-fill (not auto-fit) keeps the empty trailing
    tracks instead of collapsing them, so every period grid lays out the same
    number of equal-width columns regardless of how many slots it holds.

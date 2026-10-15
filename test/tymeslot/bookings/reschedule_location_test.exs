@@ -52,7 +52,6 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
       id: "loc-office",
       kind: "in_person",
       label: "Our office",
-      details: "12 High Street",
       position: 0
     }
   end
@@ -110,7 +109,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
 
   defp office_meeting_attrs do
     %{
-      location: "Our office (12 High Street)",
+      location: "Our office",
       location_kind: "in_person",
       location_option_id: "loc-office"
     }
@@ -241,7 +240,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
 
       updated = reschedule(meeting, %{location_option_id: "loc-office"})
 
-      assert updated.location == "Our office (12 High Street)"
+      assert updated.location == "Our office"
       assert updated.location_kind == "in_person"
       assert updated.video_integration_id == nil
 

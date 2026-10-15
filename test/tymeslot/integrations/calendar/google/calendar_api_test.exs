@@ -157,6 +157,38 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
                CalendarAPI.create_event(integration, "primary", event_data)
     end
 
+    test "writes a new series' excluded occurrences after its rule" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          access_token_encrypted: Encryption.encrypt("valid_token"),
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
+        )
+
+      event_data = %{
+        summary: "Standup",
+        start_time: ~U[2026-11-02 09:00:00Z],
+        end_time: ~U[2026-11-02 09:15:00Z],
+        recurrence_rule: "FREQ=WEEKLY;COUNT=4",
+        recurrence_exceptions: [~U[2026-11-09 09:00:00Z]]
+      }
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, body, _headers, _opts ->
+        assert Jason.decode!(body)["recurrence"] == [
+                 "RRULE:FREQ=WEEKLY;COUNT=4",
+                 "EXDATE:20261109T090000Z"
+               ]
+
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"id" => "series_id"})}}
+      end)
+
+      assert {:ok, %{"id" => "series_id"}} =
+               CalendarAPI.create_event(integration, "primary", event_data)
+    end
+
     test "returns Meet URL immediately when entryPoints are populated in the create response" do
       user = insert(:user)
 

@@ -24,13 +24,26 @@ defmodule Tymeslot.Infrastructure.AvailabilityCache do
   end
 
   @doc """
-  Cache key for range-based availability lookups.
+  Cache key for range-based availability lookups, with no meeting type.
+
+  See the six-argument form for why the meeting type participates in the key.
+  """
+  @spec availability_range_key(integer(), Date.t(), Date.t(), String.t(), integer() | nil) ::
+          {atom(), integer(), Date.t(), Date.t(), String.t(), integer() | nil, nil, nil}
+  def availability_range_key(user_id, start_date, end_date, timezone, duration) do
+    availability_range_key(user_id, start_date, end_date, timezone, duration, nil)
+  end
+
+  @doc """
+  Range key including the meeting type.
 
   `meeting_type_id` is part of the key because per-meeting-type booking
-  limits make availability differ between types sharing a duration.
-  `moving_uid` is too, because a reschedule page does not count the meeting
-  being moved against those limits; pass only a uid already proven to be the
-  organiser's, so visitor input cannot mint entries. Nil for every other page.
+  limits make availability differ between types sharing a duration, and
+  because group meeting types cache their own seat-overlaid range maps; solo
+  lookups with no type pass (or default to) nil. `moving_uid` is part of it
+  too, because a reschedule page does not count the meeting being moved
+  against those limits; pass only a uid already proven to be the organiser's,
+  so visitor input cannot mint entries. Nil for every other page.
   """
   @spec availability_range_key(
           integer(),
@@ -73,7 +86,8 @@ defmodule Tymeslot.Infrastructure.AvailabilityCache do
 
   @doc """
   Invalidates all cached availability data for a user.
-  Call after any mutation to the user's availability schedule or bookings.
+  Call after any mutation to the user's availability schedule or bookings, and
+  after any committed seat change on one of the user's group meeting types.
   A `nil` user id is a no-op, so callers can pass `meeting.organizer_user_id`
   unconditionally.
   """

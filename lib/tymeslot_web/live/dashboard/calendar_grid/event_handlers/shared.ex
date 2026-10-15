@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
 
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.DateTimeUtils
@@ -76,6 +77,45 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
       :ok -> :ok
       {:error, :rate_limited, message} -> {:error, :rate_limited, message}
     end
+  end
+
+  @doc """
+  Refuses a change to a calendar event that a group meeting with live seats
+  sits on: moving or resizing it, changing its recurrence, deleting it, or
+  adding or removing its attendees.
+
+  The organiser's provider event is a projection of the Tymeslot meeting, not
+  the meeting itself. Moving it does not move the participants' seats (their
+  reschedule links still point at the booked slot, and the next sync reports
+  the organiser's own edit back as an external change); deleting it leaves
+  everyone booked on a meeting with no calendar event; and its attendee list
+  is not who holds a seat. The grid hides these controls on a locked event,
+  so reaching here means the client asked anyway: this is the guard, not a
+  hint.
+
+  Deliberately re-read from the database rather than taken from the socket:
+  the assigned lock set is as old as the last event load, and a seat booked
+  since then must still count. Scoped to the acting organiser's meetings.
+  """
+  @spec check_seat_lock(Phoenix.LiveView.Socket.t(), map()) :: :ok | {:error, :group_booking}
+  def check_seat_lock(socket, event) do
+    if Meetings.group_booking_uid?(socket.assigns.current_user.id, Map.get(event, :uid)) do
+      {:error, :group_booking}
+    else
+      :ok
+    end
+  end
+
+  @doc """
+  Why an event `check_seat_lock/2` refuses cannot be changed here: the one
+  wording the refusal flash, the locked badge and the event modal share.
+  """
+  @spec seat_lock_message() :: String.t()
+  def seat_lock_message do
+    dgettext(
+      "dashboard_calendar_events",
+      "This is a group booking. Move it, cancel it or change who attends from the meeting instead."
+    )
   end
 
   @spec check_move_rate_limit(Phoenix.LiveView.Socket.t()) ::
@@ -316,13 +356,21 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
     * `{:error, :unauthorized}` — "You don't have permission to modify this event"
     * `{:error, :read_only}` — "This calendar is read-only..."
     * `{:error, :rate_limited, _message}` — "Too many edits. Please wait a moment."
+    * `{:error, :group_booking}`: a group meeting with live seats sits on the event
 
   Flash messages are sent via `send(self(), {:flash, ...})` (the LiveComponent
   pattern; `put_flash/3` does not propagate from LiveComponents).
   """
   @spec flash_guard_error(Phoenix.LiveView.Socket.t(), term()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def flash_guard_error(socket, {:error, :unauthorized}) do
+  def flash_guard_error(socket, error), do: {:noreply, flash_guard(socket, error)}
+
+  @doc """
+  The socket-returning form of `flash_guard_error/2`, for callers already
+  inside a continuation that has to hand a socket back.
+  """
+  @spec flash_guard(Phoenix.LiveView.Socket.t(), term()) :: Phoenix.LiveView.Socket.t()
+  def flash_guard(socket, {:error, :unauthorized}) do
     send(
       self(),
       {:flash,
@@ -330,10 +378,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
         dgettext("dashboard_calendar_events", "You don't have permission to modify this event")}}
     )
 
-    {:noreply, socket}
+    socket
   end
 
-  def flash_guard_error(socket, {:error, :read_only}) do
+  def flash_guard(socket, {:error, :read_only}) do
     send(
       self(),
       {:flash,
@@ -344,20 +392,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
         )}}
     )
 
-    {:noreply, socket}
+    socket
   end
 
-  def flash_guard_error(socket, {:error, :rate_limited, _message}) do
+  def flash_guard(socket, {:error, :rate_limited, _message}) do
     send(
       self(),
       {:flash,
        {:warning, dgettext("dashboard_calendar_events", "Too many edits. Please wait a moment.")}}
     )
 
-    {:noreply, socket}
+    socket
   end
 
-  def flash_guard_error(socket, {:error, :until_before_start}) do
+  def flash_guard(socket, {:error, :group_booking}) do
+    send(self(), {:flash, {:warning, seat_lock_message()}})
+    socket
+  end
+
+  def flash_guard(socket, {:error, :until_before_start}) do
     send(
       self(),
       {:flash,
@@ -368,7 +421,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
         )}}
     )
 
-    {:noreply, socket}
+    socket
   end
 
   # ---------------------------------------------------------------------------

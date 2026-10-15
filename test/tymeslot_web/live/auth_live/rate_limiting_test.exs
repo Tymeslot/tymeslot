@@ -93,7 +93,8 @@ defmodule TymeslotWeb.AuthLive.RateLimitingTest do
                       }},
                      1_000
 
-      assert meta.ip_address == "127.0.0.1"
+      # Logged as its network: the redactor truncates every client IP.
+      assert meta.ip_address == "127.0.0.0/24"
     end
 
     test "submit_reset_request is blocked by the per-IP limit even with fresh emails", %{

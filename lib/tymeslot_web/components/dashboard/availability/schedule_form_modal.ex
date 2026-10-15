@@ -9,7 +9,9 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.ScheduleFormModal do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Availability.AvailabilityScheduleSchema
-  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents.Icons
+  alias TymeslotWeb.Components.CoreComponents.Modal
 
   @doc """
   Renders the schedule name form modal.
@@ -41,10 +43,10 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.ScheduleFormModal do
   @spec schedule_form_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def schedule_form_modal(assigns) do
     ~H"""
-    <CoreComponents.modal id={@id} show={@show} on_cancel={@on_cancel} size={:medium}>
+    <Modal.modal id={@id} show={@show} on_cancel={@on_cancel} size={:medium}>
       <:header>
         <div class="flex items-center gap-2">
-          <CoreComponents.icon name="hero-calendar-days" class="w-5 h-5 text-turquoise-500" />
+          <Icons.icon name="hero-calendar-days" class="w-5 h-5 text-turquoise-500" />
           {header_title(@schedule_data)}
         </div>
       </:header>
@@ -82,15 +84,15 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.ScheduleFormModal do
 
       <:footer>
         <div class="flex justify-end gap-3">
-          <CoreComponents.action_button variant={:secondary} phx-click={@on_cancel}>
+          <Buttons.action_button variant={:secondary} phx-click={@on_cancel}>
             {dgettext("dashboard_availability", "Cancel")}
-          </CoreComponents.action_button>
-          <CoreComponents.action_button variant={:primary} type="submit" form="schedule-name-form">
+          </Buttons.action_button>
+          <Buttons.action_button variant={:primary} type="submit" form="schedule-name-form">
             {dgettext("dashboard_availability", "Save")}
-          </CoreComponents.action_button>
+          </Buttons.action_button>
         </div>
       </:footer>
-    </CoreComponents.modal>
+    </Modal.modal>
     """
   end
 

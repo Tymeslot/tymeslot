@@ -8,7 +8,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
   given — disabling the toggle and showing a connect-Stripe hint when the
   host cannot yet accept charges. A type that is already paid keeps its price
   in that state, so the stored amount is stated in words where the price input
-  cannot be rendered.
+  cannot be rendered. Payments and group bookings are mutually exclusive:
+  while group bookings is enabled the toggle renders disabled with a hint.
 
   The toggle and price input dispatch `toggle_payment_required` and
   `change_payment_price` events back to the parent form component
@@ -24,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
   import TymeslotWeb.Components.PaymentHelpers, only: [currency_symbol: 1]
 
   attr :charges_enabled, :boolean, required: true
+  attr :group_bookings_enabled, :boolean, required: true
   attr :payment_required, :boolean, required: true
   attr :payment_price, :string, required: true
   attr :currency, :string, required: true
@@ -34,44 +36,38 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
   @spec payments_section(map()) :: Phoenix.LiveView.Rendered.t()
   def payments_section(assigns) do
     ~H"""
-    <div class="space-y-3">
-      <div class="flex items-center gap-2">
-        <.icon name="hero-banknotes" class="w-5 h-5 text-turquoise-500" />
-        <h3 class="text-token-base font-semibold text-tymeslot-800">
-          {dgettext("dashboard_meeting_form", "Payments")}
-        </h3>
-      </div>
+    <section class="space-y-4">
+      <.subsection_header
+        icon="hero-banknotes"
+        title={dgettext("dashboard_meeting_form", "Payments")}
+      />
 
-      <.info_box :if={not @charges_enabled} variant={:info}>
-        {raw(
-          dgettext(
-            "dashboard_meeting_form",
-            "Connect Stripe on the %{payments_link} page to charge for this meeting type.",
-            payments_link:
-              ~s(<a href=") <>
-                ~p"/dashboard/integrations?tab=payments" <>
-                ~s(" data-phx-link="redirect" data-phx-link-state="push" class="underline text-turquoise-600">) <>
-                dgettext("dashboard_meeting_form", "Payments") <> ~s(</a>)
-          )
-        )}
-      </.info_box>
-
-      <label class={[
-        "flex items-center gap-3",
-        not @charges_enabled && "opacity-60 cursor-not-allowed"
-      ]}>
-        <input
-          type="checkbox"
-          class="checkbox"
-          checked={@payment_required}
-          disabled={not @charges_enabled}
-          phx-click="toggle_payment_required"
-          phx-target={@myself}
-        />
-        <span class="text-token-sm text-tymeslot-700">
-          {dgettext("dashboard_meeting_form", "Require payment for this meeting type")}
-        </span>
-      </label>
+      <.setting_row
+        id="payment-required-toggle"
+        label={dgettext("dashboard_meeting_form", "Require payment for this meeting type")}
+        checked={@payment_required}
+        disabled={not @charges_enabled or @group_bookings_enabled}
+        on_change="toggle_payment_required"
+        target={@myself}
+      >
+        <:disabled_reason>
+          <%= if @charges_enabled do %>
+            {dgettext("dashboard_meeting_form", "Turn off group bookings to require payment.")}
+          <% else %>
+            {raw(
+              dgettext(
+                "dashboard_meeting_form",
+                "Connect Stripe on the %{payments_link} page to charge for this meeting type.",
+                payments_link:
+                  ~s(<a href=") <>
+                    ~p"/dashboard/integrations?tab=payments" <>
+                    ~s(" data-phx-link="redirect" data-phx-link-state="push" class="underline text-turquoise-600">) <>
+                    dgettext("dashboard_meeting_form", "Payments") <> ~s(</a>)
+              )
+            )}
+          <% end %>
+        </:disabled_reason>
+      </.setting_row>
 
       <%!-- The price is kept while the host cannot take charges, so it resumes
             when they reconnect rather than being cleared behind their back.
@@ -125,7 +121,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
       <%= for error <- FormValidationHelpers.field_errors(@form_errors, :payment_required) do %>
         <p class="form-error">{Helpers.format_errors(error)}</p>
       <% end %>
-    </div>
+    </section>
     """
   end
 

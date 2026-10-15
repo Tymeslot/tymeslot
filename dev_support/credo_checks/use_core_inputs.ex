@@ -90,11 +90,11 @@ defmodule CredoChecks.UseCoreInputs do
 
     message =
       if type == :tag do
-        "Avoid using raw `<#{tag}>` tags. Use `TymeslotWeb.Components.CoreComponents.input/1` instead."
+        "Avoid using raw `<#{tag}>` tags. Use `TymeslotWeb.Components.CoreComponents.Forms.input/1` instead."
       else
         component = if tag == "label", do: "label/1", else: "input/1"
 
-        "Avoid using `Phoenix.HTML.Form.#{tag}/3` helpers. Use `TymeslotWeb.Components.CoreComponents.#{component}` instead."
+        "Avoid using `Phoenix.HTML.Form.#{tag}/3` helpers. Use `TymeslotWeb.Components.CoreComponents.Forms.#{component}` instead."
       end
 
     format_issue(issue_meta,

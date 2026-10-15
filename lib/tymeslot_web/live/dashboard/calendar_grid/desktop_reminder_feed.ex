@@ -21,8 +21,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Calendar.Reminder
-  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
-  alias TymeslotWeb.Helpers.LocaleFormat
+  alias TymeslotWeb.Dashboard.DashboardFormat
 
   # Reminders whose fire time is older than this are pruned from the feed.
   @stale_grace_ms 120_000
@@ -45,7 +44,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed do
   @spec build([map()], DateTime.t(), String.t(), String.t()) :: [entry()]
   def build(events, now, timezone, time_format) do
     now_ms = DateTime.to_unix(now, :millisecond)
-    today = now |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
+    today = DashboardFormat.local_date(now, timezone)
 
     events
     |> Enum.flat_map(&entries_for_event(&1, today, timezone, time_format))
@@ -62,7 +61,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed do
        ) do
     title =
       dgettext("dashboard_calendar", "Reminder: %{title}",
-        title: event.summary || dgettext("dashboard_calendar", "(No title)")
+        title: DashboardFormat.title(event.summary)
       )
 
     body = build_body(event, start_at, today, timezone, time_format)
@@ -87,12 +86,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed do
   defp entries_for_event(_event, _today, _timezone, _time_format), do: []
 
   defp build_body(event, start_at, today, timezone, time_format) do
-    local = DateTime.shift_zone!(start_at, timezone)
-
     when_label =
       dgettext("dashboard_calendar", "%{day} at %{time}",
-        day: day_label(DateTime.to_date(local), today),
-        time: time_label(local, time_format)
+        day: DashboardFormat.relative_date(DashboardFormat.local_date(start_at, timezone), today),
+        time: DashboardFormat.clock(start_at, timezone, time_format)
       )
 
     case event.location do
@@ -106,22 +103,4 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed do
         when_label
     end
   end
-
-  defp day_label(date, today) do
-    cond do
-      Date.compare(date, today) == :eq ->
-        dgettext("dashboard_calendar", "Today")
-
-      Date.compare(date, Date.add(today, 1)) == :eq ->
-        dgettext("dashboard_calendar", "Tomorrow")
-
-      true ->
-        locale = Gettext.get_locale(TymeslotWeb.Gettext)
-
-        "#{LocaleFormat.format_weekday_name(Date.day_of_week(date), locale, :short)} " <>
-          "#{date.day} #{LocaleFormat.format_month_name(date.month, locale, :short)}"
-    end
-  end
-
-  defp time_label(local, time_format), do: TimeFormat.format(local, time_format)
 end

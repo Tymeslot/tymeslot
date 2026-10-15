@@ -52,7 +52,8 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Navigators.RevealGuardsTest do
             selected_date: nil,
             selected_time: nil,
             timezone_dropdown_open: false,
-            user_timezone: "Europe/London"
+            user_timezone: "Europe/London",
+            week_start: :monday
           },
           assigns
         )

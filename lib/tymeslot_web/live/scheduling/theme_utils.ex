@@ -7,7 +7,9 @@ defmodule TymeslotWeb.Live.Scheduling.ThemeUtils do
   """
 
   import Phoenix.Component, only: [assign: 3]
+  import Phoenix.LiveView, only: [get_connect_params: 1]
 
+  alias Tymeslot.Scheduling.ThemeFlow
   alias TymeslotWeb.Live.Scheduling.PreviewMode
   alias TymeslotWeb.Themes.Core.Registry
 
@@ -41,5 +43,20 @@ defmodule TymeslotWeb.Live.Scheduling.ThemeUtils do
     socket
     |> assign(:scheduling_theme_id, theme_id)
     |> assign(:theme_preview, PreviewMode.claimed?(params))
+  end
+
+  @doc """
+  Assigns `:attendee_prefill`, the name and email a booking link carried in
+  its URL fragment, which the booking form starts from.
+
+  The browser reads the fragment on page load and sends it with the LiveView
+  connection (`attendee_prefill` in the connect params), so it never appears in
+  a request URL. The static render has no connect params and assigns an empty
+  map. Reads connect params, so it runs only during `mount/3`.
+  """
+  @spec assign_attendee_prefill(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def assign_attendee_prefill(socket) do
+    prefill = ThemeFlow.attendee_prefill((get_connect_params(socket) || %{})["attendee_prefill"])
+    assign(socket, :attendee_prefill, prefill)
   end
 end

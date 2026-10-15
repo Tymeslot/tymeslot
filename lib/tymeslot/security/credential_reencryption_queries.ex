@@ -13,23 +13,30 @@ defmodule Tymeslot.Security.CredentialReencryptionQueries do
   alias Tymeslot.Repo
 
   @doc """
-  Fetches up to `limit` rows of the given table with `id > after_id`, ordered by
-  `id`, selecting only the id and the requested encrypted columns.
+  Fetches up to `limit` rows of the given table with `id > after_id` (every
+  row from the start for a `nil` `after_id`), ordered by `id`, selecting only
+  the id and the requested encrypted columns. The id may be an integer or a
+  UUID, which comes back as its raw bytes and is passed back the same way.
   """
-  @spec fetch_batch(String.t(), [atom()], integer(), pos_integer()) :: [map()]
+  @spec fetch_batch(String.t(), [atom()], integer() | binary() | nil, pos_integer()) ::
+          [map()]
   def fetch_batch(table, columns, after_id, limit) do
     fields = [:id | columns]
 
     query =
       from(r in table,
-        where: r.id > ^after_id,
         order_by: [asc: r.id],
         limit: ^limit,
         select: map(r, ^fields)
       )
 
-    Repo.all(query)
+    query
+    |> after_id(after_id)
+    |> Repo.all()
   end
+
+  defp after_id(query, nil), do: query
+  defp after_id(query, id), do: where(query, [r], r.id > ^id)
 
   @doc """
   Writes the given column updates for a single row, one column at a time,
@@ -44,7 +51,8 @@ defmodule Tymeslot.Security.CredentialReencryptionQueries do
   Returns `true` if at least one column was updated, `false` otherwise
   (including the no-op case of an empty `updates` list).
   """
-  @spec update_row(String.t(), integer(), [{atom(), binary(), binary()}]) :: boolean()
+  @spec update_row(String.t(), integer() | binary(), [{atom(), binary(), binary()}]) ::
+          boolean()
   def update_row(_table, _id, []), do: false
 
   def update_row(table, id, updates) do

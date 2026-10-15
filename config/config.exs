@@ -84,6 +84,10 @@ config :tymeslot,
   # This should remain false in the standalone open-source version.
   show_branding: false,
 
+  # Link appended to the description of every .ics Tymeslot sends while
+  # branding is shown for the organiser. nil leaves the footer off.
+  ics_branding_url: nil,
+
   # Demo provider - no-op by default (can be provided by external layers)
   demo_provider: Tymeslot.Demo.NoOp,
 
@@ -127,6 +131,7 @@ config :tymeslot, :announcement_catalogs, [Tymeslot.Announcements.Catalog]
 config :tymeslot, :feature_assigns,
   automations_allowed: true,
   custom_questions_allowed: true,
+  group_bookings_allowed: true,
   analytics_allowed: true,
   meeting_payments: false
 
@@ -213,11 +218,27 @@ config :tymeslot, TymeslotWeb.Gettext, default_locale: "en"
 # Locale configuration (single source of truth)
 # All supported languages with their metadata for UI rendering.
 #
-# A locale listed here is a promise: the completeness tests require every gettext
-# domain and every /for profession page to be fully translated into it, and the
-# marketing pages need a `localized_slugs` entry per profession. Add a locale only
-# once its catalogues, its `priv/professions/<locale>/` files, and its URL slugs
-# are all done — see priv/gettext/TRANSLATING.md.
+# A locale listed here is a promise: it appears in the language switcher at
+# once, so every string a user can reach must already exist in it. Adding one
+# takes, in this order:
+#
+#   1. A catalogue for every domain in priv/gettext/, plus a
+#      GLOSSARY.<code>.md settling register and terminology.
+#   2. The per-locale formatting code: month and weekday names, date order and
+#      number separators in `TymeslotWeb.Helpers.LocaleFormat`, the clock in
+#      `Tymeslot.Utils.DateTimeUtils.TimeFormat`, the checkout language in
+#      `Tymeslot.MeetingPayments.CheckoutSessions.stripe_locale/1`, and the flag
+#      in `TymeslotWeb.Components.FlagHelpers`.
+#   3. Every application built on this list. It is read at compile time
+#      elsewhere too, and anything that keeps its own per-locale content
+#      (catalogues, content files, localised URL slugs, images) must cover the
+#      new code before it lands here, or that build fails.
+#   4. Only then, the entry below.
+#
+# The code is a bare language subtag ("pt", never "pt_BR"): `LocalePlug` reduces
+# every request locale to its primary subtag, so a regional code would be listed
+# in the switcher and never selected. Name the variant in `name` instead, and see
+# priv/gettext/TRANSLATING.md for the translator-facing side.
 config :tymeslot, :locales,
   supported: [
     %{code: "en", name: "English", country_code: :gbr},
@@ -226,7 +247,8 @@ config :tymeslot, :locales,
     %{code: "it", name: "Italiano", country_code: :ita},
     %{code: "uk", name: "Українська", country_code: :ukr},
     %{code: "cs", name: "Čeština", country_code: :cze},
-    %{code: "pl", name: "Polski", country_code: :pol}
+    %{code: "pl", name: "Polski", country_code: :pol},
+    %{code: "pt", name: "Português (Brasil)", country_code: :bra}
   ],
   default: "en"
 
@@ -379,14 +401,12 @@ config :elixir, :time_zone_database, Tz.TimeZoneDatabase
 #
 #     mix tz.download <version> && mix deps.compile tz --force
 #
-# then bump :iana_version to match. Tz.WatchPeriodically logs when a newer
-# release appears upstream; see Tymeslot.Application.
+# then bump :iana_version to match. Running instances never contact IANA, so
+# new rules reach users only through a release: the nightly `tz_freshness`
+# suite (test/tymeslot/timezones/iana_freshness_test.exs, run by the Excluded
+# suites workflow) fails once IANA publishes a release newer than this pin.
 config :tz, :data_dir, Path.expand("../priv/tz", __DIR__)
-config :tz, :iana_version, "2026c"
-
-# Watch data.iana.org for time zone releases newer than the pinned one. Logs
-# only; enabled in prod.exs so dev and test make no outbound calls.
-config :tymeslot, :tz_watch_enabled, false
+config :tz, :iana_version, "2026e"
 
 # Authentication configuration
 config :tymeslot, :auth,
@@ -506,7 +526,19 @@ config :tymeslot, :payments,
     outgoing_webhook_days: 60,
     stripe_event_days: 90,
     analytics_event_days: 90,
-    payload_days: 30
+    payload_days: 30,
+    # How long what invitees gave (names, emails, messages, answers) is kept
+    # after their meeting or poll ends, before it is anonymised. The meeting
+    # rows themselves stay for statistics. See Tymeslot.InviteeData.
+    invitee_data_days: 730,
+    # Statutory retention for financial records (booking payments, payment
+    # transactions, subscription invoices), in years counted from the end of
+    # the financial year a record belongs to. Ten is the longest period common
+    # in EU and Swiss commercial law; set the period your jurisdiction
+    # requires. See Tymeslot.MeetingPayments.DataRetention.
+    financial_record_years: 10,
+    # The month the financial year starts in (1 = the calendar year).
+    financial_year_start_month: 1
   ]
 
 # HSTS directives sent by TymeslotWeb.Plugs.SecurityHeadersPlug, read via
@@ -558,10 +590,6 @@ config :tymeslot, :booking_analytics_enabled, false
 # rather than broken. `nil` (the default) shows no such notice; the managed
 # SaaS sets its go-live date.
 config :tymeslot, :booking_analytics_launch_date, nil
-
-# Analytics — secret used to derive the daily-rotated visitor fingerprint salt.
-# Required in production; dev/test override with fixed values for repeatability.
-config :tymeslot, :analytics_salt_secret, nil
 
 # Migration safety analysis (excellent_migrations, run as its own gate step
 # rather than a Credo check: migrations are deliberately outside .credo.exs's

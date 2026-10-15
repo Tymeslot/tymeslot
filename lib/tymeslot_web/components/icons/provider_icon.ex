@@ -50,6 +50,10 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
   attr :icon_class, :string, default: ""
   attr :loading, :string, default: "lazy", values: ["lazy", "eager"]
 
+  attr :alt, :string,
+    default: nil,
+    doc: "Defaults to naming the provider; pass \"\" where the name is already written beside it"
+
   @spec provider_icon(map()) :: Phoenix.LiveView.Rendered.t()
   def provider_icon(assigns) do
     icon_path = build_icon_path(assigns.provider, assigns.type, assigns.size)
@@ -58,7 +62,7 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
       assigns
       |> assign(:icon_path, icon_path && Endpoint.static_path(icon_path))
       |> assign(:icon_px, icon_pixels(assigns.size))
-      |> assign(:alt_text, alt_text(assigns.provider))
+      |> assign(:alt_text, assigns.alt || alt_text(assigns.provider))
 
     ~H"""
     <img

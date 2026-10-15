@@ -51,6 +51,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.CalendarEventDetails do
          description: args["event_description"],
          organizer_name: user.name || user.email,
          organizer_email: user.email,
+         organizer_user_id: user.id,
          method: parse_method(args["method"]),
          sequence: args["sequence"],
          series: args["event_series"] == true
@@ -139,6 +140,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.CalendarEventDetails do
          description: current_event.description,
          organizer_name: user.name || user.email,
          organizer_email: user.email,
+         organizer_user_id: user.id,
          changes: changes,
          first_notification: first_notification?(args),
          method: parse_method(args["method"]),

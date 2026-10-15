@@ -12,11 +12,17 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   import Phoenix.LiveView, only: [clear_flash: 2, put_flash: 3, send_update: 2]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Video.RoomCreationError
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.IcsImport
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGridComponent
+  alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
+
+  require Logger
 
   @doc "Advances the clock-tick timer and pushes the current time to the calendar grid."
   @spec handle_tick(Phoenix.LiveView.Socket.t()) :: {:noreply, Phoenix.LiveView.Socket.t()}
@@ -95,13 +101,13 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
         ) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event_update_result({:ok, payload}, socket) do
-    settle_write(payload[:write], {:ok, payload[:updated_event]})
+    settle_write(socket, payload[:write], {:ok, payload[:updated_event]})
     {:noreply, socket}
   end
 
   def handle_event_update_result({:error, payload}, socket) do
     if payload[:retry] == :queued do
-      settle_write(payload[:write], :queued)
+      settle_write(socket, payload[:write], :queued)
 
       {:noreply,
        put_flash(
@@ -117,9 +123,38 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     end
   end
 
-  defp settle_write(write, outcome) do
-    send_update(CalendarGridComponent,
-      id: "calendar",
+  @doc """
+  Hands the grid an event another LiveView's writes have finished with, so
+  that the edits it kept for it start (see
+  `Tymeslot.CalendarGrid.WriteGuardian`, "A grid mounted in another
+  LiveView").
+  """
+  @spec handle_event_writes_released(tuple(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_event_writes_released(release, socket) do
+    to_grid(socket,
+      action: :event_writes_released,
+      release: release
+    )
+
+    {:noreply, socket}
+  end
+
+  # A write's result reaches the grid only while it is on screen. Once the
+  # organiser has left the calendar, the LiveView's write guardian drives
+  # the queue (`Tymeslot.CalendarGrid.WriteGuardian.detach/0`) and hears
+  # every result itself, and a grid component LiveView has yet to delete
+  # would otherwise drive the same queue as well, starting its writes a
+  # second time.
+  defp to_grid(socket, assigns) do
+    if socket.assigns.live_action == :calendar,
+      do: send_update(CalendarGridComponent, [{:id, "calendar"} | assigns])
+
+    :ok
+  end
+
+  defp settle_write(socket, write, outcome) do
+    to_grid(socket,
       action: :event_write_settled,
       write: write,
       outcome: outcome
@@ -127,8 +162,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   end
 
   defp revert_failed_update(payload, socket) do
-    send_update(CalendarGridComponent,
-      id: "calendar",
+    to_grid(socket,
       action: :revert_event,
       write: payload[:write],
       original_event: payload[:original_event]
@@ -170,6 +204,9 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     )
   end
 
+  defp update_failed_message(:day_missing_in_some_months),
+    do: EditWorkflow.month_end_refused_message()
+
   defp update_failed_message(:not_organiser), do: EditWorkflow.not_organiser_message()
 
   defp update_failed_message(reason)
@@ -198,8 +235,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   def handle_event_move_result({:ok, new_event_info}, socket) do
     case new_event_info[:series_to] do
       nil ->
-        send_update(CalendarGridComponent,
-          id: "calendar",
+        to_grid(socket,
           action: :event_moved,
           new_event_uid: new_event_info[:uid],
           new_event_integration_id: new_event_info[:integration_id]
@@ -209,8 +245,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
         {:noreply, put_flash(socket, level, message)}
 
       calendar ->
-        send_update(CalendarGridComponent,
-          id: "calendar",
+        to_grid(socket,
           action: :series_moved,
           moved_event: new_event_info[:original_event]
         )
@@ -223,8 +258,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   def handle_event_move_result({:error, payload}, socket) do
     case payload[:series_to] do
       nil ->
-        send_update(CalendarGridComponent,
-          id: "calendar",
+        to_grid(socket,
           action: :revert_event,
           original_event: payload[:original_event]
         )
@@ -232,8 +266,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
         {:noreply, put_flash(socket, :error, move_failed_message(payload[:reason]))}
 
       _calendar ->
-        send_update(CalendarGridComponent,
-          id: "calendar",
+        to_grid(socket,
           action: :series_move_failed,
           moved_event: payload[:original_event]
         )
@@ -317,6 +350,81 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     EventCrud.handle_create_result(result, socket)
   end
 
+  # A send_update re-renders the whole grid, so a long import reports its
+  # progress every few events rather than after each one.
+  @ics_import_progress_every 10
+
+  @doc """
+  Spawns a supervised task that imports an `.ics` plan into a calendar,
+  reporting progress and the result back to this LiveView.
+
+  The task is not linked: an import the user walked away from still finishes,
+  rather than stopping part-way with some of the file's events written.
+  """
+  @spec handle_execute_ics_import(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_execute_ics_import(payload, socket) do
+    lv_pid = self()
+    total = length(payload.plan.events)
+
+    on_progress = fn done ->
+      if rem(done, @ics_import_progress_every) == 0 or done == total,
+        do: send(lv_pid, {:ics_import_progress, done})
+    end
+
+    Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
+      send(lv_pid, {:ics_import_result, run_ics_import(payload, on_progress)})
+    end)
+
+    {:noreply, socket}
+  end
+
+  # Whatever happens, the LiveView hears how the import ended; otherwise its
+  # modal would show the import running until the page is reloaded.
+  defp run_ics_import(payload, on_progress) do
+    CalendarGrid.import_ics(
+      payload.user_id,
+      payload.integration_id,
+      payload.calendar_id,
+      payload.plan,
+      on_progress: on_progress
+    )
+  catch
+    kind, reason ->
+      Logger.error("ICS import failed",
+        user_id: payload.user_id,
+        kind: kind,
+        error: LogFormat.reason(reason),
+        stacktrace: LogFormat.stacktrace(__STACKTRACE__)
+      )
+
+      {:error, :failed}
+  end
+
+  @doc "Passes a running import's progress to the calendar grid."
+  @spec handle_ics_import_progress(non_neg_integer(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_ics_import_progress(done, socket) do
+    to_grid(socket, action: :ics_import_progress, done: done)
+    {:noreply, socket}
+  end
+
+  @doc """
+  Hands a finished import to the calendar grid, which closes its modal and
+  flashes the outcome; off the calendar page the outcome is flashed here.
+  """
+  @spec handle_ics_import_result(term(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_ics_import_result(result, %{assigns: %{live_action: :calendar}} = socket) do
+    to_grid(socket, action: :ics_import_finished, result: result)
+    {:noreply, socket}
+  end
+
+  def handle_ics_import_result(result, socket) do
+    {kind, message} = IcsImport.result_flash(result)
+    {:noreply, put_flash(socket, kind, message)}
+  end
+
   @doc "Spawns a supervised task to create an ad-hoc meeting."
   @spec handle_execute_create_ad_hoc_meeting(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -332,7 +440,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
 
   @doc "Handles the result of an ad-hoc meeting creation."
   @spec handle_create_ad_hoc_meeting_result(
-          {:ok, any()} | {:error, String.t()},
+          {:ok, any()} | {:error, term()},
           Phoenix.LiveView.Socket.t()
         ) :: {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_create_ad_hoc_meeting_result({:ok, _result}, socket) do
@@ -355,8 +463,21 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
       action: :ad_hoc_meeting_failed
     )
 
-    {:noreply, put_flash(socket, :error, reason)}
+    {:noreply, put_flash(socket, :error, ad_hoc_failed_message(reason))}
   end
+
+  # The reason is a domain term, never copy: an atom such as `:time_conflict`
+  # would otherwise reach the flash verbatim. `CreateAdHoc`'s own refusals are
+  # the binaries `BookingErrorMessage` already translates, and anything it does
+  # not recognise falls back to a generic sentence there.
+  defp ad_hoc_failed_message(:time_conflict) do
+    dgettext(
+      "dashboard_calendar_events",
+      "You already have a meeting at this time. Please choose a different time."
+    )
+  end
+
+  defp ad_hoc_failed_message(reason), do: BookingErrorMessage.message(reason)
 
   @doc """
   Handles the result of changing an event's video room: shows the new link,
@@ -373,30 +494,26 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
           Phoenix.LiveView.Socket.t()
         ) :: {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event_video_result({:unchanged, payload}, socket) do
-    settle_write(payload[:write], :unchanged)
+    settle_write(socket, payload[:write], :unchanged)
     {:noreply, socket}
   end
 
   def handle_event_video_result({:ok, result}, socket) do
     updated_event = result[:updated_event]
 
-    if socket.assigns.live_action == :calendar do
-      send_update(CalendarGridComponent,
-        id: "calendar",
-        action: :video_link_updated,
-        write: result[:write],
-        original_event: result[:original_event],
-        updated_event: updated_event
-      )
-    end
+    to_grid(socket,
+      action: :video_link_updated,
+      write: result[:write],
+      original_event: result[:original_event],
+      updated_event: updated_event
+    )
 
     {:noreply,
      put_flash(socket, :info, EditWorkflow.video_changed_message(updated_event.video_link))}
   end
 
   def handle_event_video_result({:error, payload}, socket) do
-    send_update(CalendarGridComponent,
-      id: "calendar",
+    to_grid(socket,
       action: :revert_event,
       write: payload[:write],
       original_event: payload[:original_event]
@@ -440,10 +557,27 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   Deletes the event `payload` names, in the scope it names, in the background
   through `Tymeslot.CalendarGrid.delete_event/3`, reporting back with
   `{:delete_event_result, result}`.
+
+  Every way the grid confirms a delete (with or without notifying the
+  attendees) ends here, so the seat lock is checked here once more, against
+  the database: an event a group meeting with live seats sits on is never
+  deleted from the grid, however its delete was confirmed
+  (`Shared.check_seat_lock/2`).
   """
   @spec handle_execute_delete_event(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_execute_delete_event(payload, socket) do
+    case Shared.check_seat_lock(socket, payload) do
+      :ok ->
+        start_delete(payload, socket)
+
+      {:error, :group_booking} ->
+        send_update(CalendarGridComponent, id: "calendar", action: :event_delete_failed)
+        {:noreply, put_flash(socket, :warning, Shared.seat_lock_message())}
+    end
+  end
+
+  defp start_delete(payload, socket) do
     socket
     |> EditWorkflow.run_async(
       :delete_event_result,

@@ -213,6 +213,7 @@ defmodule TymeslotWeb.Endpoint do
     {["auth", "oauth", "confirm", :_], false},
     {["email-change", :_], false},
     {["guest", :_], false},
+    {["seat", :_], false},
     {["free-busy", :_], false},
     {["meeting-request", :_], false},
     {[:_, "poll", :_], false},

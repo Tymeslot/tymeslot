@@ -5,6 +5,7 @@ defmodule Tymeslot.Polls.PollQueries do
 
   alias Tymeslot.Polls.PollSchema
   alias Tymeslot.Repo
+  alias Tymeslot.Security.Token
 
   @preloads [time_slots: [], participants: [:votes]]
 
@@ -14,8 +15,10 @@ defmodule Tymeslot.Polls.PollQueries do
 
   @spec get_by_token(String.t()) :: PollSchema.t() | nil
   def get_by_token(token) when is_binary(token) do
+    token_hash = Token.hash_token(token)
+
     PollSchema
-    |> where([p], p.token == ^token)
+    |> where([p], p.token_hash == ^token_hash)
     |> preload(^@voting_preloads)
     |> Repo.one()
   end

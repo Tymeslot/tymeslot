@@ -17,7 +17,9 @@ defmodule TymeslotWeb.MeetingCalendarControllerTest do
 
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Ecto.UUID
+  alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
 
   defp confirmed_meeting(attrs) do
@@ -186,6 +188,89 @@ defmodule TymeslotWeb.MeetingCalendarControllerTest do
         )
 
       assert response(conn, 429)
+    end
+  end
+
+  describe "a group meeting" do
+    setup do
+      user = insert(:user)
+      profile = insert(:profile, user: user, username: "grouphost")
+      start_time = DateTime.utc_now() |> DateTime.add(3600) |> DateTime.truncate(:second)
+
+      meeting =
+        insert(:group_meeting,
+          organizer_user: user,
+          title: "Pottery Workshop",
+          status: "confirmed",
+          start_time: start_time,
+          end_time: DateTime.add(start_time, 3600)
+        )
+
+      seat =
+        insert(:participant,
+          meeting: meeting,
+          name: "Bea Booker",
+          email: "bea@example.com",
+          locale: "de"
+        )
+
+      %{profile: profile, meeting: meeting, seat: seat}
+    end
+
+    test "a seat's token downloads the participant's own calendar entry",
+         %{conn: conn, meeting: meeting, seat: seat} do
+      conn = get(conn, ~p"/seat/#{seat.management_token}/calendar.ics")
+
+      assert conn.status == 200
+      assert conn |> get_resp_header("content-type") |> List.first() =~ "text/calendar"
+
+      # The token is a credential: it names neither the file nor the event.
+      assert conn |> get_resp_header("content-disposition") |> List.first() ==
+               ~s(attachment; filename="meeting.ics")
+
+      body = String.replace(conn.resp_body, "\r\n ", "")
+
+      # The seat's own UID, the one its emails invite to, never the slot's.
+      assert body =~ "UID:#{seat.id}@"
+      refute body =~ meeting.calendar_uid
+      refute body =~ meeting.uid
+      assert body =~ ~s(ATTENDEE;SCHEDULE-AGENT=CLIENT;CN="Bea Booker":mailto:bea@example.com)
+      # Written in the participant's language, not the slot row's.
+      assert body =~ "LANGUAGE=de"
+      assert body =~ "Pottery Workshop"
+    end
+
+    test "the shared slot's own uid exports nothing",
+         %{conn: conn, profile: profile, meeting: meeting} do
+      conn = get(conn, ~p"/#{profile.username}/meeting/#{meeting.uid}/calendar.ics")
+
+      assert conn.status == 404
+    end
+
+    test "404s for a seat its participant has given up", %{conn: conn, meeting: meeting} do
+      gone = insert(:participant, meeting: meeting, cancelled_at: DateTime.utc_now(:second))
+
+      conn = get(conn, ~p"/seat/#{gone.management_token}/calendar.ics")
+
+      assert conn.status == 404
+    end
+
+    test "404s for a seat on a meeting the host cancelled", %{
+      conn: conn,
+      meeting: meeting,
+      seat: seat
+    } do
+      meeting |> Changeset.change(status: "cancelled") |> Repo.update!()
+
+      conn = get(conn, ~p"/seat/#{seat.management_token}/calendar.ics")
+
+      assert conn.status == 404
+    end
+
+    test "404s for a token naming no seat", %{conn: conn} do
+      conn = get(conn, ~p"/seat/not-a-real-token/calendar.ics")
+
+      assert conn.status == 404
     end
   end
 end

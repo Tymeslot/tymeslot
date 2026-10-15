@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTimezoneTest do
     __changed__: %{},
     current_state: :schedule,
     user_timezone: "Europe/Tallinn",
+    week_start: :monday,
     booking_window_days: 90,
     selected_date: nil,
     selected_time: nil,
@@ -36,8 +37,8 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTimezoneTest do
 
     # A page opened in Tallinn that landed on today, 31 January, as its first
     # free day and spent the attempt; the booker has then picked Kiritimati.
-    defp landed_then_switched(changes \\ %{}) do
-      %Socket{assigns: @spent_landing}
+    defp landed_then_switched(changes \\ %{}, week_start \\ :monday) do
+      %Socket{assigns: Map.put(@spent_landing, :week_start, week_start)}
       |> CalendarHelpers.anchor_on_today()
       |> put_assigns(%{selected_date: "2027-01-31"})
       |> CalendarHelpers.land_on(~D[2027-01-31])
@@ -57,6 +58,20 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTimezoneTest do
                current_week_start: ~D[2027-02-01],
                auto_select_settled: false,
                auto_select_months_searched: 0
+             } = socket.assigns
+    end
+
+    test "re-arms on the new zone's week as the visitor's week start has it" do
+      # Monday 1 February in Kiritimati sits in the Sunday-started week of
+      # 31 January.
+      socket =
+        NextAvailable.follow_timezone_change(landed_then_switched(%{}, :sunday))
+
+      assert %{
+               selected_date: nil,
+               calendar_today: ~D[2027-02-01],
+               current_week_start: ~D[2027-01-31],
+               auto_select_settled: false
              } = socket.assigns
     end
 

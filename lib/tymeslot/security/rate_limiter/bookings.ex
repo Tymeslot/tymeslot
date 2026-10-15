@@ -97,6 +97,22 @@ defmodule Tymeslot.Security.RateLimiter.Bookings do
     )
   end
 
+  @doc """
+  Limits a group participant's seat-management requests (the cancel landing
+  page, the cancellation itself, and the reschedule redirect) from one
+  address. Keyed on the client for the same reason as `check_guest_rsvp/1`.
+  """
+  @spec check_seat_manage(String.t()) :: :ok | {:error, :rate_limited, String.t()}
+  def check_seat_manage(client_ip) do
+    Helpers.check_with_logging(
+      "seat_manage:#{client_ip}",
+      60,
+      60_000,
+      "seat management",
+      client_ip
+    )
+  end
+
   @spec check_meeting_keep(String.t()) :: :ok | {:error, :rate_limited, String.t()}
   def check_meeting_keep(client_ip) do
     Helpers.check_with_logging(

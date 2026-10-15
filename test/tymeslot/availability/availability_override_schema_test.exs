@@ -139,6 +139,43 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
       assert "must be after start time" in errors_on(changeset).end_time
     end
 
+    test "custom hours may end the next day when flagged" do
+      attrs = %{
+        schedule_id: 1,
+        date: ~D[2027-06-14],
+        override_type: "custom_hours",
+        start_time: ~T[22:00:00],
+        end_time: ~T[03:00:00]
+      }
+
+      refute AvailabilityOverrideSchema.changeset(%AvailabilityOverrideSchema{}, attrs).valid?
+
+      assert AvailabilityOverrideSchema.changeset(
+               %AvailabilityOverrideSchema{},
+               Map.put(attrs, :ends_next_day, true)
+             ).valid?
+    end
+
+    test "an explicit nil flag is stored as same-day custom hours" do
+      schedule = insert(:availability_schedule)
+
+      attrs = %{
+        schedule_id: schedule.id,
+        date: ~D[2027-06-14],
+        override_type: "custom_hours",
+        start_time: ~T[10:00:00],
+        end_time: ~T[14:00:00],
+        ends_next_day: nil
+      }
+
+      assert {:ok, override} =
+               %AvailabilityOverrideSchema{}
+               |> AvailabilityOverrideSchema.changeset(attrs)
+               |> Repo.insert()
+
+      assert override.ends_next_day == false
+    end
+
     test "rejects equal start_time and end_time for custom_hours" do
       schedule = insert(:availability_schedule)
 

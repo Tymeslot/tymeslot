@@ -13,6 +13,7 @@ defmodule Tymeslot.Telegram.TelegramQueries do
   alias Tymeslot.Infrastructure.BatchDeleteQueries
   alias Tymeslot.Notifications.IntegrationQueries
   alias Tymeslot.Repo
+  alias Tymeslot.Security.Token
   alias Tymeslot.Telegram.{TelegramDeliverySchema, TelegramIntegrationSchema}
 
   # ============================================================================
@@ -93,9 +94,11 @@ defmodule Tymeslot.Telegram.TelegramQueries do
   @spec find_by_link_token(String.t(), DateTime.t()) ::
           {:ok, TelegramIntegrationSchema.t()} | {:error, :not_found}
   def find_by_link_token(token, issued_after) do
+    token_hash = Token.hash_token(token)
+
     result =
       TelegramIntegrationSchema
-      |> where([i], i.link_token == ^token and is_nil(i.chat_id))
+      |> where([i], i.link_token_hash == ^token_hash and is_nil(i.chat_id))
       |> where([i], i.link_token_issued_at > ^issued_after)
       |> Repo.one()
 

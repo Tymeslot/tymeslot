@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
   import Phoenix.Component, only: [assign: 3, assign_new: 3]
 
   alias Phoenix.LiveView
+  alias Tymeslot.Integrations.CalendarManagement
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Live.Scheduling.WeekSlots
   alias TymeslotWeb.Themes.Shared.BookingLocation
@@ -19,10 +20,14 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
     |> assign(:duration, nil)
     |> assign(:meeting_type, nil)
     |> assign(:meeting_type_pinned, false)
-    # The calendar window (current_year, current_month, current_week_start,
-    # calendar_today, and calendar_landing, where the page itself left the
-    # calendar) is set by `CalendarHelpers.anchor_on_today/1` once the
-    # booker's timezone is known; `LiveHelpers.Mount` calls it.
+    # Which day the calendar's weeks start on; `assign_week_start/1` settles
+    # it once the organiser is resolved, and this keeps a socket that never
+    # gets that far on a defined value. The calendar window (current_year,
+    # current_month, current_week_start, calendar_today, and calendar_landing,
+    # where the page itself left the calendar) is set on it by
+    # `CalendarHelpers.anchor_on_today/1` once the booker's timezone is known;
+    # `LiveHelpers.Mount` calls it.
+    |> assign(:week_start, :monday)
     |> assign(:month_availability_map, nil)
     |> assign(:availability_status, :not_loaded)
     |> assign(:availability_task, nil)
@@ -36,6 +41,22 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
     # Engine starts empty; it is re-initialised with the meeting type's custom
     # field snapshot in maybe_assign_meeting_type/2 once the organiser is resolved.
     |> assign(:engine, QEngine.init([]))
+  end
+
+  @doc """
+  Settles which day the booking calendar's weeks start on, once the
+  organiser is resolved: the visitor's own (`:visitor_week_start`, read from
+  their `Accept-Language` by `LocalePlug`), else the organiser's calendar
+  setting. Only assigns `:week_start`; `CalendarHelpers.anchor_on_today/1`
+  builds the calendar window on it.
+  """
+  @spec assign_week_start(LiveView.Socket.t()) :: LiveView.Socket.t()
+  def assign_week_start(socket) do
+    week_start =
+      socket.assigns[:visitor_week_start] ||
+        CalendarManagement.get_week_start(socket.assigns[:organizer_user_id])
+
+    assign(socket, :week_start, week_start)
   end
 
   # The organizer context (username_context, organizer_profile,
@@ -76,8 +97,12 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
     |> assign(:language_dropdown_open, false)
     |> assign(:timezone_search, "")
     |> assign(:reschedule_meeting_uid, nil)
+    |> assign(:reschedule_seat_token, nil)
+    |> assign(:reschedule_seat_from, nil)
+    |> assign(:page_query_params, %{})
     |> assign(:is_rescheduling, false)
     |> assign(:meeting_uid, nil)
+    |> assign(:seat_calendar_url, nil)
     |> assign(:name, "")
     |> assign(:email, "")
     |> assign(:submitting, false)

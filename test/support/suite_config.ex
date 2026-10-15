@@ -8,6 +8,9 @@ defmodule Tymeslot.Test.SuiteConfig do
   suites can't drift on how many cases they run or which tags they skip.
   """
 
+  alias Oban.Job
+  alias Tymeslot.Repo
+  alias Tymeslot.Test.HtmlFailureFormatter
   alias Tymeslot.Test.LogCapture
 
   # Slow/external suites are opt-in — run them explicitly with `--include`
@@ -20,7 +23,8 @@ defmodule Tymeslot.Test.SuiteConfig do
     migrations: true,
     proxy_integration: true,
     catalogue_freshness: true,
-    tld_freshness: true
+    tld_freshness: true,
+    tz_freshness: true
   ]
 
   @doc """
@@ -33,9 +37,9 @@ defmodule Tymeslot.Test.SuiteConfig do
   in the suite that owns them. Excluding them keeps the guarantee on a schedule
   rather than on every local run.
 
-  `:tld_freshness` needs outbound network access to IANA, which a local run
-  cannot be assumed to have and which would make the suite fail offline for a
-  reason that has nothing to do with the change under test.
+  `:tld_freshness` and `:tz_freshness` need outbound network access to IANA,
+  which a local run cannot be assumed to have and which would make the suite
+  fail offline for a reason that has nothing to do with the change under test.
 
   `:git_cliff` is excluded only where the binary is missing, so the changelog
   config tests run by default for anyone able to cut a release (and in the
@@ -48,6 +52,19 @@ defmodule Tymeslot.Test.SuiteConfig do
     case System.find_executable("git-cliff") do
       nil -> Keyword.put(@default_exclude_tags, :git_cliff, true)
       _found -> @default_exclude_tags
+    end
+  end
+
+  @doc """
+  The configured ExUnit formatters with `ExUnit.CLIFormatter` swapped for
+  `Tymeslot.Test.HtmlFailureFormatter`, so a failed `html =~` prints an excerpt
+  rather than the whole page. Any `--formatter` given on the command line is
+  kept.
+  """
+  @spec formatters() :: [module()]
+  def formatters do
+    for formatter <- ExUnit.configuration()[:formatters] do
+      if formatter == ExUnit.CLIFormatter, do: HtmlFailureFormatter, else: formatter
     end
   end
 
@@ -134,6 +151,23 @@ defmodule Tymeslot.Test.SuiteConfig do
       :ok
     end)
 
+    :ok
+  end
+
+  @doc """
+  Deletes every Oban job committed to the test database, outside any sandbox.
+
+  Tests insert jobs inside their sandbox transaction, so nothing they enqueue
+  survives them. What does survive is a job a migration inserts (see
+  `Tymeslot.Workers.UploadMetadataSweepWorker`), which `test_helper.exs`
+  commits when it migrates the database; left in place, it would show up in
+  every `all_enqueued/1` and every drain of its queue. Run from
+  `test_helper.exs`, after migrating and before the sandbox goes manual, and
+  by any test that rebuilds the schema outside the sandbox.
+  """
+  @spec discard_committed_jobs!() :: :ok
+  def discard_committed_jobs! do
+    {_count, _rows} = Repo.delete_all(Job)
     :ok
   end
 

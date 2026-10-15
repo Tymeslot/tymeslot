@@ -20,8 +20,15 @@ defmodule TymeslotWeb.Themes.ThemeTailwindSourcesTest do
   @entry_css "assets/css/scheduling/shared/entry.css"
 
   # Reached from theme code without rendering anything of their own; following
-  # them would pull in the whole web layer.
-  @not_followed [TymeslotWeb.Router, TymeslotWeb.Endpoint, TymeslotWeb.Gettext]
+  # them would pull in the whole web layer. `AuthLive` is named only as a value
+  # in `Layouts`' list of credential-bearing views, never rendered by a booking
+  # page.
+  @not_followed [
+    TymeslotWeb.Router,
+    TymeslotWeb.Endpoint,
+    TymeslotWeb.Gettext,
+    TymeslotWeb.AuthLive
+  ]
 
   test "every web-layer file a booking page reaches is a Tailwind source" do
     sources = tailwind_sources()

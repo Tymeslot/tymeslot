@@ -10,7 +10,7 @@ defmodule Tymeslot.Profiles.Settings do
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Security.FieldValidators.UsernameValidator
 
-  @policy_param_keys ~w(buffer_minutes advance_booking_days min_advance_hours)
+  @policy_param_keys ~w(buffer_before_minutes buffer_after_minutes advance_booking_days min_advance_hours)
 
   @type profile :: ProfileSchema.t()
 
@@ -19,7 +19,7 @@ defmodule Tymeslot.Profiles.Settings do
           optional(String.t()) => term()
         }
 
-  @typedoc ~S'String-keyed params from the scheduling-preferences form (expects "buffer_minutes", "advance_booking_days", "min_advance_hours").'
+  @typedoc ~S'String-keyed params from the scheduling-preferences form (expects "buffer_before_minutes", "buffer_after_minutes", "advance_booking_days", "min_advance_hours").'
   @type scheduling_params :: %{
           optional(String.t()) => term()
         }
@@ -70,7 +70,7 @@ defmodule Tymeslot.Profiles.Settings do
 
   Used by the onboarding wizard, which sets the account's starting policy before
   any additional schedule exists. The wizard submits one field at a time, so
-  whichever of the three is present in `params` is the one that is written.
+  whichever of the four is present in `params` is the one that is written.
   """
   @spec update_scheduling_preferences(ProfileSchema.t(), %{String.t() => term()}) ::
           {:ok, AvailabilityScheduleSchema.t()} | {:error, term()}

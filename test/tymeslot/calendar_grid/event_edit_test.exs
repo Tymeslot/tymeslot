@@ -452,7 +452,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       timed_payload: timed_payload,
       all_day_payload: all_day_payload
     } do
-      body = OutlookMapper.format_event_data(timed_payload)
+      {:ok, body} = OutlookMapper.format_event_data(timed_payload)
 
       assert [%{"emailAddress" => %{"address" => "guest@example.com"}}] = body["attendees"]
       assert body["reminderMinutesBeforeStart"] == 15
@@ -460,7 +460,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       assert body["showAs"] == "free"
       refute Map.has_key?(body, "isAllDay")
 
-      assert OutlookMapper.format_event_data(all_day_payload)["isAllDay"] == true
+      assert {:ok, %{"isAllDay" => true}} = OutlookMapper.format_event_data(all_day_payload)
     end
 
     test "CalDAV rebuilds the VEVENT with every modelled property", %{

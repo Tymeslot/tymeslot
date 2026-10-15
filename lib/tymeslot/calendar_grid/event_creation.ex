@@ -36,6 +36,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ICalBuilder
+  alias Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverter
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.MeetingProvisioning
   alias Tymeslot.Integrations.Video.EventDetails
@@ -68,10 +69,21 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   a retry can recover (see `Calendar.Events.queueable_error?/1`) and the
   integration has an offline queue (the CalDAV family), and the failure reports
   `retry: :queued`; otherwise `retry: :not_queued`.
+
+  A repeat rule Outlook would write with other dates is refused first
+  (`:day_missing_in_some_months`, see `Outlook.RecurrenceConverter`), before
+  a video room is made for an event that is never written.
   """
   @spec run_create_event(map()) ::
           {:ok, map()} | {:error, %{reason: term(), retry: :queued | :not_queued}}
   def run_create_event(payload) do
+    case refused_rule(payload.creating, payload.start_at) do
+      nil -> write_event(payload)
+      reason -> {:error, %{reason: reason, retry: :not_queued}}
+    end
+  end
+
+  defp write_event(payload) do
     %{creating: creating, user_id: user_id, start_at: start_at, end_at: end_at} = payload
 
     # Generate the UID upfront so both the provider write AND the offline
@@ -157,7 +169,8 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
       # `CreateAdHoc` expects a pre-validated list. The form checks each address
       # as it is added, but the main guest can still be typed in afterwards as
       # one of them, so the list is settled here against the final address.
-      guest_emails: Guests.sanitize_emails(params[:guest_emails] || [], params.attendee_email)
+      guest_emails: Guests.sanitize_emails(params[:guest_emails] || [], params.attendee_email),
+      reminders: params[:reminders] || []
     }
 
     case CreateAdHoc.execute(ad_hoc_params) do
@@ -170,6 +183,19 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   end
 
   # Private
+
+  # An all-day start is a `Date`, a timed one a `DateTime`; both name its day.
+  defp refused_rule(%{recurrence_rule: rule} = creating, %{year: y, month: m, day: d})
+       when is_binary(rule) and rule != "" do
+    with {:ok, %{provider: "outlook"}} <- CalendarIntegrationQueries.get(creating.integration_id),
+         {:error, reason} <- RecurrenceConverter.rrule_to_outlook(rule, Date.new!(y, m, d)) do
+      reason
+    else
+      _writable -> nil
+    end
+  end
+
+  defp refused_rule(_creating, _start_at), do: nil
 
   defp build_event_data(uid, creating, start_at, end_at, event_details, video_context, plan) do
     description = build_description(creating[:description], video_context)

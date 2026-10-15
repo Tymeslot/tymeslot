@@ -13,6 +13,12 @@ defmodule Tymeslot.Security.EncryptedStorage do
   callback on its context module.
   """
 
-  @doc "Returns the table source and the encrypted columns the domain owns."
-  @callback encrypted_storage() :: {table_source :: String.t(), columns :: [atom()]}
+  @typedoc "A table and the encrypted columns the domain owns in it."
+  @type table :: {table_source :: String.t(), columns :: [atom()]}
+
+  @doc """
+  Returns the table source and the encrypted columns the domain owns, or a
+  list of them for a domain keeping encrypted columns in several tables.
+  """
+  @callback encrypted_storage() :: table() | [table()]
 end

@@ -10,12 +10,23 @@ defmodule Tymeslot.Infrastructure.Logging.PathMasker do
   copied into an error record or an alert email would hand that capability
   to whoever reads it.
 
-  The rule is by shape, so it needs no knowledge of the router: a UUID, or a
+  The rule is by shape, so it needs no knowledge of the router: a UUID, a
   segment of 20 or more URL-safe characters (`A-Z a-z 0-9 _ -`), which is
-  what random tokens are encoded as. Ordinary segments such as
-  `dashboard`, a username or a meeting type's slug are kept. A long, readable
-  slug can be masked too; losing it costs a little context, while keeping a
-  token would leak it.
+  what random tokens are encoded as, or a dotted token: URL-safe parts
+  joined by dots whose last part is 20 or more characters long. That last
+  shape covers both kinds of `Phoenix.Token`: a signed one
+  (`SFMyNTY.<payload>.<signature>`, used for sign-up confirmation links) and
+  an encrypted one (`XCP.<ciphertext>`, used for unsubscribe links). A file
+  name such as `app-3f2a8b.js` is kept, since its extension is short.
+  Ordinary segments such as `dashboard`, a username or a meeting type's slug
+  are kept. A long, readable slug can be masked too; losing it costs a little
+  context, while keeping a token would leak it.
+
+  The browser analytics scrubber (`maskPath` in `assets/js/analytics.js`)
+  applies the same rule, so that a page address reaches the analytics store
+  masked as it is in the logs. The cases both must agree on live in
+  `test/support/fixtures/path_masking.json`; change the rule in both places
+  and add the case there.
 
   Only the path is touched; a query string or fragment is kept as it is (see
   `Tymeslot.Infrastructure.Logging.Redactor` for query parameters).
@@ -24,6 +35,7 @@ defmodule Tymeslot.Infrastructure.Logging.PathMasker do
   @mask ":id"
   @uuid ~r/\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
   @token ~r/\A[A-Za-z0-9_-]{20,}\z/
+  @dotted_token ~r/\A(?:[A-Za-z0-9_-]+\.)+[A-Za-z0-9_-]{20,}\z/
 
   @doc """
   Returns `path` (a request path or a full URL) with capability-shaped
@@ -54,7 +66,7 @@ defmodule Tymeslot.Infrastructure.Logging.PathMasker do
   def mask(other), do: other
 
   defp mask_segment(segment) do
-    if Regex.match?(@uuid, segment) or Regex.match?(@token, segment),
+    if Enum.any?([@uuid, @token, @dotted_token], &Regex.match?(&1, segment)),
       do: @mask,
       else: segment
   end

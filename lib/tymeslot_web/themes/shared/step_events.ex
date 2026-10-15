@@ -18,8 +18,8 @@ defmodule TymeslotWeb.Themes.Shared.StepEvents do
   `search_timezone`, `toggle_timezone_dropdown`, `close_timezone_dropdown`,
   `prev_month`, `next_month`, `prev_week`, `next_week`, `load_week`, `select_slot`, `first_available_week`, `back_step`,
   `next_step` (schedule); `validate`, `field_blur`, `submit`, `back_step`,
-  `select_location`, `select_video_provider`, `location_phone_change`,
-  `toggle_guests`, `close_guests`, `guest_input_change`, `add_guest`,
+  `select_location`, `select_video_provider`, `select_venue`,
+  `location_phone_change`, `toggle_guests`, `close_guests`, `guest_input_change`, `add_guest`,
   `remove_guest` (booking); `answer`, `multi_toggle`, `next_step`, `back_step`
   (questions, relayed by `Shared.CustomQuestions.Events`); `schedule_another`
   (confirmation).
@@ -137,6 +137,7 @@ defmodule TymeslotWeb.Themes.Shared.StepEvents do
   defp message("field_blur", %{"field" => field}), do: {:field_blur, field}
   defp message("select_location", %{"id" => id}), do: {:select_location, id}
   defp message("select_video_provider", %{"id" => id}), do: {:select_video_provider, id}
+  defp message("select_venue", %{"id" => id}), do: {:select_venue, id}
 
   defp message("location_phone_change", params),
     do: {:location_phone, params["location_phone"] || ""}

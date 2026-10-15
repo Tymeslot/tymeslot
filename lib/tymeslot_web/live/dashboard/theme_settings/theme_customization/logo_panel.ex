@@ -22,19 +22,16 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.LogoPanel do
       assign(assigns, :logo, Logo.media(assigns.customization.settings, assigns.group).logo)
 
     ~H"""
-    <div class="card-glass" data-testid="logo-panel">
-      <div class="mb-8">
-        <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
-          {dgettext("dashboard_appearance", "Logo")}
-        </h3>
-        <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
-          {dgettext(
-            "dashboard_appearance",
-            "Your logo, for the themes that show one on your booking page."
-          )}
-        </p>
-      </div>
-
+    <.card
+      title={dgettext("dashboard_appearance", "Logo")}
+      description={
+        dgettext(
+          "dashboard_appearance",
+          "Your logo, for the themes that show one on your booking page."
+        )
+      }
+      data-testid="logo-panel"
+    >
       <div class="flex flex-col sm:flex-row sm:items-start gap-8">
         <div class="w-40 h-40 shrink-0 p-4 rounded-token-2xl bg-tymeslot-50 border-2 border-tymeslot-100 flex items-center justify-center overflow-hidden">
           <%= if @logo do %>
@@ -50,7 +47,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.LogoPanel do
         </div>
 
         <div class="flex-1 space-y-6">
-          <div class="bg-tymeslot-50 p-8 rounded-[2rem] border-2 border-tymeslot-100 border-dashed">
+          <div class="bg-tymeslot-50 p-8 rounded-token-4xl border-2 border-tymeslot-100 border-dashed">
             <.image_upload
               id="theme-logo-form"
               field={:logo_path}
@@ -79,7 +76,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.LogoPanel do
           <% end %>
         </div>
       </div>
-    </div>
+    </.card>
     """
   end
 end

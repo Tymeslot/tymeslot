@@ -23,19 +23,16 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.CoverPanel do
       assign(assigns, :current, Cover.media(assigns.customization.settings, assigns.group).cover)
 
     ~H"""
-    <div class="card-glass" data-testid="cover-panel">
-      <div class="mb-8">
-        <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
-          {dgettext("dashboard_appearance", "Cover Image")}
-        </h3>
-        <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
-          {dgettext(
-            "dashboard_appearance",
-            "The wide image across the top of your booking page, for the themes that show one."
-          )}
-        </p>
-      </div>
-
+    <.card
+      title={dgettext("dashboard_appearance", "Cover Image")}
+      description={
+        dgettext(
+          "dashboard_appearance",
+          "The wide image across the top of your booking page, for the themes that show one."
+        )
+      }
+      data-testid="cover-panel"
+    >
       <div class="space-y-10">
         <div>
           <p class="text-token-sm font-black text-tymeslot-400 uppercase tracking-widest mb-6">
@@ -68,7 +65,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.CoverPanel do
                 />
                 <div
                   :if={selected?(@current, id)}
-                  class="absolute top-3 right-3 w-8 h-8 bg-turquoise-500 text-white rounded-full flex items-center justify-center shadow-lg z-10"
+                  class="absolute top-3 right-3 w-8 h-8 bg-turquoise-500 text-white rounded-token-full flex items-center justify-center shadow-lg z-10"
                 >
                   <.icon name="hero-check-mini" class="w-5 h-5" />
                 </div>
@@ -96,7 +93,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.CoverPanel do
           </div>
         </div>
 
-        <div class="bg-tymeslot-50 p-8 rounded-[2rem] border-2 border-tymeslot-100 border-dashed">
+        <div class="bg-tymeslot-50 p-8 rounded-token-4xl border-2 border-tymeslot-100 border-dashed">
           <.image_upload
             id="theme-cover-form"
             field={:cover_path}
@@ -124,7 +121,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.CoverPanel do
           </div>
         </div>
       </div>
-    </div>
+    </.card>
     """
   end
 

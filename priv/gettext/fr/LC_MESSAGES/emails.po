@@ -537,3 +537,62 @@ msgstr "NOTE DE L’ORGANISATEUR :"
 #, elixir-autogen, elixir-format
 msgid "Note from the organiser"
 msgstr "Note de l’organisateur"
+
+#: lib/tymeslot/bookings/booking_title.ex
+#, elixir-autogen, elixir-format
+msgid "%{meeting_type} with %{name}"
+msgstr "%{meeting_type} avec %{name}"
+
+#: lib/tymeslot/bookings/demo_orchestrator.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting with %{name}"
+msgstr "Réunion avec %{name}"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "The address is to be arranged with the booker."
+msgstr "L'adresse est à convenir avec la personne qui a réservé."
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "The address will be arranged after booking."
+msgstr "L'adresse sera convenue après la réservation."
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "The address will be arranged with you after booking."
+msgstr "L'adresse sera convenue avec vous après la réservation."
+
+#: lib/tymeslot/emails/appointment_builder.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} participant"
+msgid_plural "%{count} participants"
+msgstr[0] "%{count} participant"
+msgstr[1] "%{count} participants"
+
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
+#, elixir-autogen, elixir-format
+msgid "Attendees (%{count}):"
+msgstr "Participants (%{count}) :"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Open in dashboard:"
+msgstr "Ouvrir dans le tableau de bord :"
+
+#: lib/tymeslot/emails/shared/group_session.ex
+#, elixir-autogen, elixir-format
+msgid "Group session: you have one of %{count} spot."
+msgid_plural "Group session: you have one of %{count} spots."
+msgstr[0] "Session de groupe : vous avez l'une des %{count} places."
+msgstr[1] "Session de groupe : vous avez l'une des %{count} places."
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "ends %{time} on %{date}"
+msgstr "se termine à %{time} le %{date}"
+
+#: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
+#, elixir-autogen, elixir-format
+msgid "Scheduled with %{brand}: %{url}"
+msgstr "Planifié avec %{brand} : %{url}"

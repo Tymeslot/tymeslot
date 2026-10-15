@@ -40,44 +40,54 @@ defmodule Tymeslot.Utils.TimeRange do
     Time.compare(start1, end2) == :lt and Time.compare(end1, start2) == :gt
   end
 
-  @doc """
-  Adds buffer time to a time range.
+  @typedoc """
+  Minutes of padding as `{before, after}`: how far a range reaches back from
+  its start, and forward from its end.
+  """
+  @type buffers :: {non_neg_integer(), non_neg_integer()}
 
-  Expands the range by subtracting buffer from start and adding to end.
+  @doc """
+  Pads a time range: the start moves `buffer_before` minutes earlier and the
+  end `buffer_after` minutes later.
 
   ## Examples
 
-      iex> TimeRange.add_buffer(~U[2024-01-01 10:00:00Z], ~U[2024-01-01 11:00:00Z], 15)
-      {~U[2024-01-01 09:45:00Z], ~U[2024-01-01 11:15:00Z]}
+      iex> TimeRange.add_buffer(~U[2024-01-01 10:00:00Z], ~U[2024-01-01 11:00:00Z], 15, 5)
+      {~U[2024-01-01 09:45:00Z], ~U[2024-01-01 11:05:00Z]}
   """
-  @spec add_buffer(DateTime.t(), DateTime.t(), non_neg_integer()) :: {DateTime.t(), DateTime.t()}
-  def add_buffer(%DateTime{} = start_time, %DateTime{} = end_time, buffer_minutes)
-      when is_integer(buffer_minutes) and buffer_minutes >= 0 do
-    buffered_start = DateTime.add(start_time, -buffer_minutes, :minute)
-    buffered_end = DateTime.add(end_time, buffer_minutes, :minute)
-    {buffered_start, buffered_end}
+  @spec add_buffer(DateTime.t(), DateTime.t(), non_neg_integer(), non_neg_integer()) ::
+          {DateTime.t(), DateTime.t()}
+  def add_buffer(%DateTime{} = start_time, %DateTime{} = end_time, buffer_before, buffer_after)
+      when is_integer(buffer_before) and buffer_before >= 0 and is_integer(buffer_after) and
+             buffer_after >= 0 do
+    {
+      DateTime.add(start_time, -buffer_before, :minute),
+      DateTime.add(end_time, buffer_after, :minute)
+    }
   end
 
   @doc """
-  Checks if a time range has a conflict with any event in a list.
+  Checks whether a candidate range clashes with any event once the candidate is
+  padded by `buffers`.
 
-  Takes buffer time into account when checking conflicts.
+  The buffers belong to the range being checked, never to the events: the
+  candidate `[start, end]` is free only if `[start - before, end + after]`
+  overlaps no event. An event's own buffers are not applied.
 
   ## Examples
 
       iex> events = [%{start_time: ~U[2024-01-01 09:00:00Z], end_time: ~U[2024-01-01 10:00:00Z]}]
-      iex> TimeRange.has_conflict_with_events?(~U[2024-01-01 09:30:00Z], ~U[2024-01-01 10:30:00Z], events, 0)
+      iex> TimeRange.has_conflict_with_events?(~U[2024-01-01 10:00:00Z], ~U[2024-01-01 10:30:00Z], events, {15, 0})
       true
+      iex> TimeRange.has_conflict_with_events?(~U[2024-01-01 10:00:00Z], ~U[2024-01-01 10:30:00Z], events, {0, 15})
+      false
   """
-  @spec has_conflict_with_events?(DateTime.t(), DateTime.t(), [map()], non_neg_integer()) ::
-          boolean()
-  def has_conflict_with_events?(start_time, end_time, events, buffer_minutes \\ 0) do
-    Enum.any?(events, fn event ->
-      {buffered_start, buffered_end} =
-        add_buffer(event.start_time, event.end_time, buffer_minutes)
+  @spec has_conflict_with_events?(DateTime.t(), DateTime.t(), [map()], buffers()) :: boolean()
+  def has_conflict_with_events?(start_time, end_time, events, buffers \\ {0, 0}) do
+    {buffer_before, buffer_after} = buffers
+    {padded_start, padded_end} = add_buffer(start_time, end_time, buffer_before, buffer_after)
 
-      overlaps?(start_time, end_time, buffered_start, buffered_end)
-    end)
+    Enum.any?(events, &overlaps?(padded_start, padded_end, &1.start_time, &1.end_time))
   end
 
   @doc """

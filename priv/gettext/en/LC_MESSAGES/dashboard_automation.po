@@ -11,7 +11,7 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delivery_components.ex
 #, elixir-autogen, elixir-format
 msgid "%{rate}% success rate"
 msgstr ""
@@ -36,7 +36,7 @@ msgstr ""
 msgid "All webhook requests include a unique security token in the HTTP headers for verification:"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/regenerate_token_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Are you sure? The current security token will be immediately invalidated and any existing integrations using it will stop working."
 msgstr ""
@@ -46,14 +46,9 @@ msgstr ""
 msgid "At least one event subscription is required."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delivery_components.ex
 #, elixir-autogen, elixir-format
 msgid "Attempt %{count}"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Automation"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/automation/helpers.ex
@@ -71,7 +66,6 @@ msgstr ""
 msgid "Build automation"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
@@ -82,7 +76,8 @@ msgstr ""
 msgid "Choose which booking events to monitor"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/chat_deliveries_modal.ex
+#: lib/tymeslot_web/live/dashboard/automation/deliveries_modal.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Close"
@@ -119,7 +114,7 @@ msgstr ""
 msgid "Create Webhook"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Create Your First Webhook"
 msgstr ""
@@ -134,30 +129,15 @@ msgstr ""
 msgid "Create a workflow"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delete_slack_modal.ex
+#: lib/tymeslot_web/live/dashboard/automation/delete_telegram_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Delete Integration"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
-#, elixir-autogen, elixir-format
-msgid "Delete Slack Integration?"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
-#, elixir-autogen, elixir-format
-msgid "Delete Telegram Integration?"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/delete_webhook_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Delete Webhook"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
-#, elixir-autogen, elixir-format
-msgid "Delete Webhook?"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
@@ -176,17 +156,17 @@ msgstr ""
 msgid "Enable webhook to test"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delivery_components.ex
 #, elixir-autogen, elixir-format
 msgid "Error: %{message}"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#: lib/tymeslot_web/live/dashboard/automation/event_subscriptions.ex
 #, elixir-autogen, elixir-format
 msgid "Event Subscriptions"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delivery_components.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
 msgid "Failed"
@@ -242,12 +222,12 @@ msgstr ""
 msgid "Never triggered"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_tab.ex
 #, elixir-autogen, elixir-format
 msgid "No Webhooks Yet"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delivery_components.ex
 #, elixir-autogen, elixir-format
 msgid "No deliveries yet"
 msgstr ""
@@ -262,20 +242,15 @@ msgstr ""
 msgid "Quick Setup with n8n"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/deliveries_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Recent Deliveries"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/regenerate_token_modal.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Regenerate"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
-#, elixir-autogen, elixir-format
-msgid "Regenerate Token?"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
@@ -318,12 +293,12 @@ msgstr ""
 msgid "Select which events should trigger this webhook."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Set up webhooks to automatically trigger actions in n8n, Zapier, or your custom tools when bookings are created, cancelled, or rescheduled."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex
+#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Slack"
 msgstr ""
@@ -333,12 +308,12 @@ msgstr ""
 msgid "Start a new workflow in your n8n instance"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delivery_components.ex
 #, elixir-autogen, elixir-format
 msgid "Success"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex
+#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Telegram"
 msgstr ""
@@ -353,7 +328,7 @@ msgstr ""
 msgid "Test Connection"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/deliveries_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Test calls are not logged"
 msgstr ""
@@ -378,12 +353,13 @@ msgstr ""
 msgid "Testing..."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delete_slack_modal.ex
+#: lib/tymeslot_web/live/dashboard/automation/delete_telegram_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This action cannot be undone. All delivery logs for this integration will also be deleted."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delete_webhook_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This action cannot be undone. All delivery logs for this webhook will also be deleted."
 msgstr ""
@@ -393,7 +369,7 @@ msgstr ""
 msgid "This automation feature is available on the Pro plan."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delivery_components.ex
 #, elixir-autogen, elixir-format
 msgid "Total"
 msgstr ""
@@ -511,7 +487,7 @@ msgstr ""
 msgid "Webhook updated successfully"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex
+#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Webhooks"
 msgstr ""
@@ -546,14 +522,14 @@ msgstr ""
 msgid "%{date} at %{time}"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/delivery_components.ex
 #, elixir-autogen, elixir-format
 msgid "Last %{days} day"
 msgid_plural "Last %{days} days"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/chat_deliveries_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Delivery History - %{name}"
 msgstr ""
@@ -676,4 +652,44 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "The delivery ID is the same on every retry of one delivery and different for every other delivery. A failed or timed-out delivery can be retried, so your endpoint may receive the same event twice: record the delivery ID and ignore a request whose ID you have already processed."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Automation channels"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Active"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Delete"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/delete_slack_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Slack integration"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/delete_telegram_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Telegram integration"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/delete_webhook_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete webhook"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/regenerate_token_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Regenerate token"
 msgstr ""

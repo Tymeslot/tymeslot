@@ -156,11 +156,14 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   # the booking just made: kept, the schedule step would reopen the calendar
   # on them, with a time that is no longer free. The answers are the last
   # booker's, and the booking's `meeting_uid` would leave the attendee
-  # known, so the next booking's details moment would open as done.
+  # known, so the next booking's details moment would open as done. A
+  # reschedule still named in the URL is patched out of it, to the route the
+  # booking starts again on, so a reload does not start the move over.
   @spec restart(Socket.t()) :: Socket.t()
   def restart(socket) do
     journey = socket.assigns.journey
-    opening = journey.navigator.entry(journey, restart_route(socket.assigns), socket.assigns)
+    route = restart_route(socket.assigns)
+    opening = journey.navigator.entry(journey, route, socket.assigns)
 
     socket
     |> clear(Progress.dependents(:meeting_type, socket.assigns) -- [:meeting_type])
@@ -170,6 +173,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
     |> assign(selected_date: nil, selected_time: nil)
     |> assign(:journey_opened, MapSet.new())
     |> transition_to(opening, %{})
+    |> ReschedulePin.drop_from_url(route)
   end
 
   @doc """
@@ -199,6 +203,20 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
       do: journey.navigator.go_to(journey, socket, step)
 
   def navigate_to_step(socket, _params), do: {:noreply, socket}
+
+  @doc """
+  The step numbers the step indicator may offer as clickable: those its
+  `navigate_to_step` would move to (`Navigator.can_go_to?/3`). None on a
+  page without a journey, or whose navigator has no numbered steps.
+  """
+  @spec navigable_steps(map()) :: [pos_integer()]
+  def navigable_steps(%{journey: %Journey{navigator: navigator} = journey} = assigns) do
+    if Code.ensure_loaded?(navigator) and function_exported?(navigator, :can_go_to?, 3),
+      do: Enum.filter(1..length(journey.moments)//1, &navigator.can_go_to?(journey, assigns, &1)),
+      else: []
+  end
+
+  def navigable_steps(_assigns), do: []
 
   defp navigation?(journey, assigns, moment_key, event) do
     event in [:next_step, :back_step] and moment_key == assigns[:current_state] and

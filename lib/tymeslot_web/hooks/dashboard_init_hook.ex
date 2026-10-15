@@ -17,7 +17,6 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
-  alias Tymeslot.Profiles.ProfileSchema
 
   @spec on_mount(:default, map(), map(), Phoenix.LiveView.Socket.t()) ::
           {:cont, Phoenix.LiveView.Socket.t()} | {:halt, Phoenix.LiveView.Socket.t()}
@@ -90,16 +89,14 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
     if connected?(socket) do
       fetch_profile_and_integration_status(user)
     else
-      {profile_or_placeholder(user), DashboardContext.get_integration_status(user.id)}
+      {load_profile!(user), DashboardContext.get_integration_status(user.id)}
     end
   end
 
   defp fetch_profile_and_integration_status(user) do
     # Load profile and integration status concurrently — they are independent
     profile_task =
-      Tasks.async_nolink(Tymeslot.TaskSupervisor, fn ->
-        profile_or_placeholder(user)
-      end)
+      Tasks.async_nolink(Tymeslot.TaskSupervisor, fn -> load_profile!(user) end)
 
     integration_task =
       Tasks.async_nolink(Tymeslot.TaskSupervisor, fn ->
@@ -113,10 +110,16 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
       _result -> :ok
     end)
 
+    # Unlike integration status, the profile has no stand-in: every section
+    # keys its queries off `profile.id` and every save writes the row, so an
+    # unsaved struct only moves the crash to the host's first save and throws
+    # away what they typed. A load that timed out or failed is retried here,
+    # synchronously like the time-format and payments reads below; if the
+    # database cannot answer that either, the mount fails and LiveView rejoins.
     profile =
       case Enum.at(results, 0) do
         {_task, {:ok, value}} -> value
-        _timeout_or_error -> %ProfileSchema{user_id: user.id}
+        _timeout_or_error -> load_profile!(user)
       end
 
     integration_status =
@@ -128,8 +131,12 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
     {profile, integration_status}
   end
 
-  defp profile_or_placeholder(user) do
-    Profiles.get_profile(user.id) || %ProfileSchema{user_id: user.id}
+  # Signup and onboarding both create the profile, so a finished host without
+  # one is an anomaly; creating it here as onboarding does keeps the dashboard
+  # on a stored row instead of one that cannot be saved.
+  defp load_profile!(user) do
+    {:ok, profile} = Profiles.get_or_create_profile(user.id)
+    profile
   end
 
   defp payments_allowed?(user_id), do: Features.meeting_payments_allowed?(user_id)

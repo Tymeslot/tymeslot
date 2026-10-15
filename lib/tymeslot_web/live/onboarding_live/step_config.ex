@@ -60,7 +60,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   # converting user-supplied text into an atom.
   @all_step_names Enum.map(@all_steps, &Atom.to_string/1)
 
-  @buffer_minutes_constraints %{
+  @buffer_constraints %{
     min: Constraints.buffer_minutes_range().first,
     max: Constraints.buffer_minutes_range().last,
     step: 5,
@@ -88,9 +88,13 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   }
 
   @custom_input_config %{
-    "buffer_minutes" => %{
-      field: :buffer_minutes,
-      constraints: @buffer_minutes_constraints
+    "buffer_before_minutes" => %{
+      field: :buffer_before_minutes,
+      constraints: @buffer_constraints
+    },
+    "buffer_after_minutes" => %{
+      field: :buffer_after_minutes,
+      constraints: @buffer_constraints
     },
     "advance_booking_days" => %{
       field: :advance_booking_days,
@@ -232,7 +236,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
     do:
       dgettext(
         "onboarding_wizard",
-        "Breathing room between appointments so you never feel rushed."
+        "How much free time a new booking needs before and after it."
       )
 
   def step_description(:booking_window),
@@ -276,11 +280,12 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   # preset click against, so a tag here can never be read as client tampering.
   # Only the labels are the wizard's own; the dashboard availability card words
   # the same values differently and in its own gettext domain.
-  @spec buffer_time_options() :: [option()]
-  def buffer_time_options, do: options(:buffer_minutes, &buffer_time_label/1)
+  @spec buffer_time_options(:buffer_before_minutes | :buffer_after_minutes) :: [option()]
+  def buffer_time_options(field) when field in [:buffer_before_minutes, :buffer_after_minutes],
+    do: options(field, &buffer_time_label/1)
 
-  @spec buffer_minutes_constraints() :: map()
-  def buffer_minutes_constraints, do: @buffer_minutes_constraints
+  @spec buffer_constraints() :: map()
+  def buffer_constraints, do: @buffer_constraints
 
   @spec advance_booking_options() :: [option()]
   def advance_booking_options, do: options(:advance_booking_days, &advance_booking_label/1)

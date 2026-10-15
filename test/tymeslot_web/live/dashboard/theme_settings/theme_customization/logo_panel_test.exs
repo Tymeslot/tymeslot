@@ -15,14 +15,15 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.LogoPanelTest d
   import Phoenix.LiveViewTest
   import Tymeslot.DashboardTestHelpers
 
+  alias Tymeslot.Test.MediaFixtures
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.Storage
 
   @theme_id "97"
 
-  @png <<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, "IHDR", 0x00,
-         0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
-         0xDE>>
+  # Complete and decodable: a stored image is re-encoded, so magic bytes
+  # alone are refused.
+  @png MediaFixtures.png()
 
   setup :set_mox_global
   setup :verify_on_exit!

@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.GridViews
@@ -21,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmSeriesMoveModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ImportIcsModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.NotifyPromptModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal
@@ -38,7 +40,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
       class="flex flex-col h-full relative"
       phx-hook="CalendarMobile"
       phx-target={@myself}
+      phx-drop-target={@uploads.ics_file.ref}
     >
+      <%!-- The full-bleed grid has no room for the page header every other
+           section carries, so its title is for screen readers only. --%>
+      <h1 class="sr-only">{dgettext("dashboard_common", "Calendar")}</h1>
+      <%!-- The `.ics` import's file input lives here rather than in its modal,
+            so a file dropped anywhere on the calendar uploads with the modal
+            closed; the upload then opens it. The modal's picker button opens
+            this input. --%>
+      <form id="import-ics-upload" phx-change="validate_ics_import" phx-target={@myself}>
+        <.live_file_input upload={@uploads.ics_file} class="sr-only" />
+      </form>
+      <div
+        class="hidden phx-drop-target-active:flex absolute inset-0 z-40 flex-col items-center justify-center gap-2 bg-turquoise-50/90 border-2 border-dashed border-turquoise-400 rounded-token-lg pointer-events-none"
+        aria-hidden="true"
+      >
+        <.icon name="hero-arrow-down-tray" class="w-8 h-8 text-turquoise-600" />
+        <p class="text-token-base font-semibold text-turquoise-800">
+          {dgettext("dashboard_calendar", "Drop an .ics file to import its events")}
+        </p>
+      </div>
       <%!-- Drives browser desktop reminders while the calendar is open. The hook
             reads the JSON feed and fires Notifications on its own timer; the feed
             refreshes on every 60s tick. --%>
@@ -98,6 +120,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           sync_completed={@sync_completed}
           date={@date}
           guest_rsvp_summaries={@guest_rsvp_summaries}
+          group_booking_uids={@group_booking_uids}
           myself={@myself}
         />
         <GridViews.month_view
@@ -135,6 +158,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           myself={@myself}
           video_integrations={@video_integrations}
         />
+        <ImportIcsModal.import_ics_modal
+          :if={@ics_import && @ics_import.open}
+          ics_import={@ics_import}
+          upload={@uploads.ics_file}
+          integrations={@integrations}
+          integration_colors={@integration_colors}
+          myself={@myself}
+        />
         <RecurrencePromptModal.recurrence_prompt_modal
           :if={@recurrence_prompt}
           recurrence_prompt={@recurrence_prompt}
@@ -159,6 +190,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           time_format={Helpers.time_format(assigns)}
           myself={@myself}
           editable={EditWorkflow.event_editable?(assigns, @selected_event)}
+          time_locked={MapSet.member?(@group_booking_uids, @selected_event.uid)}
           attendee_input={@attendee_input}
           pending_attendees={@pending_attendees}
           video_integrations={@video_integrations}
@@ -167,6 +199,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
         <BookingDetailModal.booking_detail_modal
           :if={@selected_booking}
           booking={@selected_booking}
+          now={@current_time}
           user_timezone={@user_timezone}
           time_format={Helpers.time_format(assigns)}
           myself={@myself}

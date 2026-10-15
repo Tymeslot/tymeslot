@@ -30,14 +30,14 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.HelpersTest do
       Gettext.put_locale(TymeslotWeb.Gettext, "en")
       m = meeting(~U[2026-01-05 14:30:00Z], ~U[2026-01-05 15:00:00Z])
 
-      assert Helpers.format_meeting_date(m, "Etc/UTC") == "January 05, 2026"
+      assert Helpers.format_meeting_date(m, "Etc/UTC") == "Monday, 5 January 2026"
     end
 
     test "formats in German day-first order for the de locale" do
       Gettext.put_locale(TymeslotWeb.Gettext, "de")
       m = meeting(~U[2026-01-05 14:30:00Z], ~U[2026-01-05 15:00:00Z])
 
-      assert Helpers.format_meeting_date(m, "Etc/UTC") == "5. Januar 2026"
+      assert Helpers.format_meeting_date(m, "Etc/UTC") == "Montag, 5. Januar 2026"
     end
   end
 
@@ -45,13 +45,14 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.HelpersTest do
     test "formats the range on a 12-hour clock" do
       m = meeting(~U[2026-01-05 14:30:00Z], ~U[2026-01-05 15:00:00Z])
 
-      assert Helpers.format_meeting_time(m, "Etc/UTC", "12h") == "2:30 PM - 3:00 PM"
+      assert Helpers.format_meeting_time(m, "Etc/UTC", "12h") ==
+               "2:30\u00A0PM\u00A0– 3:00\u00A0PM"
     end
 
     test "formats the range on a 24-hour clock" do
       m = meeting(~U[2026-01-05 14:30:00Z], ~U[2026-01-05 15:00:00Z])
 
-      assert Helpers.format_meeting_time(m, "Etc/UTC", "24h") == "14:30 - 15:00"
+      assert Helpers.format_meeting_time(m, "Etc/UTC", "24h") == "14:30\u00A0– 15:00"
     end
 
     test "follows the chosen clock even when the language would imply the other" do
@@ -60,14 +61,16 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.HelpersTest do
       Gettext.put_locale(TymeslotWeb.Gettext, "de")
       m = meeting(~U[2026-01-05 14:30:00Z], ~U[2026-01-05 15:00:00Z])
 
-      assert Helpers.format_meeting_time(m, "Etc/UTC", "12h") == "2:30 PM - 3:00 PM"
-      assert Helpers.format_meeting_date(m, "Etc/UTC") == "5. Januar 2026"
+      assert Helpers.format_meeting_time(m, "Etc/UTC", "12h") ==
+               "2:30\u00A0PM\u00A0– 3:00\u00A0PM"
+
+      assert Helpers.format_meeting_date(m, "Etc/UTC") == "Montag, 5. Januar 2026"
     end
 
     test "converts into the given timezone before formatting" do
       m = meeting(~U[2026-01-05 22:30:00Z], ~U[2026-01-05 23:00:00Z])
 
-      assert Helpers.format_meeting_time(m, "Europe/Tallinn", "24h") == "00:30 - 01:00"
+      assert Helpers.format_meeting_time(m, "Europe/Tallinn", "24h") == "00:30\u00A0– 01:00"
     end
   end
 end

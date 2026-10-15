@@ -113,7 +113,13 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpersTest do
       week = CalendarHelpers.get_week_days(week_start, profile, nil, "Etc/UTC")
 
       grid =
-        Calculate.get_calendar_days("Etc/UTC", today.year, today.month, month_config(schedule))
+        Calculate.get_calendar_days(
+          "Etc/UTC",
+          today.year,
+          today.month,
+          :sunday,
+          month_config(schedule)
+        )
 
       today_string = Date.to_string(today)
       week_today = Enum.find(week, &(&1.date == today_string))
@@ -130,7 +136,8 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpersTest do
         schedule_id: schedule.id,
         max_advance_booking_days: schedule.advance_booking_days,
         min_advance_hours: schedule.min_advance_hours,
-        buffer_minutes: schedule.buffer_minutes,
+        buffer_before_minutes: schedule.buffer_before_minutes,
+        buffer_after_minutes: schedule.buffer_after_minutes,
         owner_timezone: "Etc/UTC"
       }
     end
@@ -144,21 +151,21 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpersTest do
     end
   end
 
-  describe "display_range/2" do
+  describe "display_range/3" do
     test "returns range covering 42-day calendar grid" do
-      {start_date, end_date} = Calculate.display_range(2027, 6)
+      {start_date, end_date} = Calculate.display_range(2027, 6, :sunday)
       assert Date.diff(end_date, start_date) + 1 == 42
     end
 
     test "start date is a Sunday" do
-      {start_date, _end_date} = Calculate.display_range(2027, 6)
+      {start_date, _end_date} = Calculate.display_range(2027, 6, :sunday)
       # Date.day_of_week returns 7 for Sunday
       assert Date.day_of_week(start_date) == 7
     end
 
     test "matches Calculate.get_calendar_days range exactly" do
-      {start_date, end_date} = Calculate.display_range(2027, 3)
-      calendar_days = Calculate.get_calendar_days("Etc/UTC", 2027, 3, %{})
+      {start_date, end_date} = Calculate.display_range(2027, 3, :sunday)
+      calendar_days = Calculate.get_calendar_days("Etc/UTC", 2027, 3, :sunday, %{})
       assert Date.to_string(start_date) == List.first(calendar_days).date
       assert Date.to_string(end_date) == List.last(calendar_days).date
     end
@@ -202,7 +209,7 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpersTest do
     test "keeps full weeks, all current-month days, and no all-next-month tail" do
       profile = insert(:profile)
       insert(:availability_schedule, profile: profile, is_default: true, advance_booking_days: 90)
-      days = CalendarHelpers.get_calendar_days("Etc/UTC", 2025, 6, profile, nil)
+      days = CalendarHelpers.get_calendar_days("Etc/UTC", 2025, 6, :sunday, profile, nil)
 
       # Whole weeks only, and the last rendered week still has a real June day.
       assert rem(length(days), 7) == 0
@@ -219,18 +226,18 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpersTest do
   # so the distinction between "the calendar says no" and "nobody asked the
   # calendar" is made once, here, for both themes.
   describe "get_week_days/5 with a week the availability map does not cover" do
-    test "the fetched block genuinely fails to cover the week of a month's last day" do
-      # August 2026 is the shape: a 31-day month whose 1st is a Saturday. The
-      # fetch is Sunday-anchored and the strip is Monday-anchored, so the week
-      # of the 31st runs one day past the block. Next occurrence 2027-05.
-      {_start_date, end_date} = Calculate.display_range(2026, 8)
-      week_start = Date.beginning_of_week(~D[2026-08-31], :monday)
+    test "the fetched block covers the week of a month's last day on either week start" do
+      # August 2026 is the shape that once escaped: a 31-day month whose 1st
+      # is a Saturday, fetched Sunday-anchored while the strip was
+      # Monday-anchored. Both now follow `:week_start`, so the week of the
+      # 31st ends inside the block whichever day the weeks start on.
+      for week_start <- [:monday, :sunday] do
+        {_start_date, end_date} = Calculate.display_range(2026, 8, week_start)
+        strip_start = Date.beginning_of_week(~D[2026-08-31], week_start)
 
-      assert end_date == ~D[2026-09-05]
-      assert week_start == ~D[2026-08-31]
-
-      assert Date.compare(Date.add(week_start, 6), end_date) == :gt,
-             "the week strip no longer escapes the fetched block; this fixture is stale"
+        assert Date.compare(Date.add(strip_start, 6), end_date) != :gt,
+               "the #{week_start} week of 31 August runs past the fetched block"
+      end
     end
 
     test "a day past the end of the block is offered, not greyed out" do
@@ -297,7 +304,8 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpersTest do
           is_default: true,
           advance_booking_days: 90,
           min_advance_hours: 0,
-          buffer_minutes: 0
+          buffer_before_minutes: 0,
+          buffer_after_minutes: 0
         )
 
       for day_of_week <- 1..7 do
@@ -379,6 +387,19 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpersTest do
                current_month: 2,
                current_week_start: ~D[2027-02-01]
              } = socket.assigns
+    end
+
+    test "opens on the week that starts on the visitor's week start" do
+      freeze_clock(~U[2027-02-03 12:00:00Z])
+
+      socket =
+        CalendarHelpers.anchor_on_today(
+          calendar_socket(%{user_timezone: "Etc/UTC", week_start: :sunday})
+        )
+
+      assert socket.assigns.current_week_start == ~D[2027-01-31]
+      assert socket.assigns.calendar_landing.current_week_start == ~D[2027-01-31]
+      assert CalendarHelpers.untouched?(socket.assigns)
     end
 
     test "opens on the visitor's date when it is still yesterday there" do
@@ -591,7 +612,9 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpersTest do
 
   # A socket with no organiser, so a month availability fetch stands down.
   defp calendar_socket(assigns) do
-    %Socket{assigns: Map.merge(%{__changed__: %{}, selected_date: nil}, assigns)}
+    %Socket{
+      assigns: Map.merge(%{__changed__: %{}, selected_date: nil, week_start: :monday}, assigns)
+    }
   end
 
   # A calendar in Tallinn whose meeting type allows booking 90 days ahead.

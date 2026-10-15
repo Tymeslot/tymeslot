@@ -53,9 +53,12 @@ defmodule Tymeslot.Utils.MediaValidator do
   @doc """
   Validates if a binary is a supported video format using magic bytes.
 
-  Recognises only the containers the video upload allowlist admits
-  (`.mp4`, `.mov`, `.webm`): Matroska/WebM (the EBML header), and the ISO
-  base media family (MP4 and QuickTime), read from the leading `ftyp` box.
+  Recognises the containers behind the video upload allowlist (`.mp4`,
+  `.webm`): Matroska/WebM (the EBML header), and the ISO base media family,
+  read from the leading `ftyp` box. QuickTime's brand belongs to that family
+  and passes here too: the extension allowlist, not this check, keeps `.mov`
+  uploads out, and `Tymeslot.Media.VideoMetadata` then refuses any file whose
+  structure it cannot walk.
   A file of that family passes when its major brand is a known video brand,
   or when the major brand is not a known image or audio brand and one of its
   compatible brands is a video brand, which admits cameras' own brands

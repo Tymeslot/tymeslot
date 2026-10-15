@@ -174,6 +174,11 @@ So the order of work for a new language is: translate every catalogue, *then* ad
 the config. Adding it first turns the suite red, which is the point — the alternative is shipping
 a language switcher that quietly serves English.
 
+The comment above `config :tymeslot, :locales` lists everything else a new locale needs: the
+per-locale formatting code, and any application built on this repository that keeps its own
+translated content and reads the same list. Use a bare language code (`pt`, not `pt_BR`);
+region tags never reach the locale resolver.
+
 ## Locale resolution
 
 For HTTP requests, `LocalePlug` resolves in priority order: a locale-prefixed path, the

@@ -111,11 +111,13 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
         description: details.description,
         organizer_name: details.organizer_name,
         organizer_email: details.organizer_email,
+        organizer_user_id: Map.get(details, :organizer_user_id),
         attendee_email: attendee_email
       }
 
       MjmlEmail.base_email()
       |> to(attendee_email)
+      |> MjmlEmail.put_reply_to(details.organizer_name, details.organizer_email)
       |> subject(
         Sanitise.sanitize_for_header(
           dgettext("emails_booking", "Updated: %{title} - %{date}",
@@ -179,9 +181,9 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
 
         change_section(dgettext("emails_booking", "What changed"), """
         <tr>
-          <th style="padding: 6px 12px 6px 0; font-size: 10px; font-weight: 700; color: #{Styles.ink_whisper()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails_booking", "Field")}</th>
-          <th style="padding: 6px 12px; font-size: 10px; font-weight: 700; color: #{Styles.ink_whisper()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails_booking", "Before")}</th>
-          <th style="padding: 6px 12px 6px 0; font-size: 10px; font-weight: 700; color: #{Styles.ink_whisper()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails_booking", "After")}</th>
+          <th style="padding: 6px 12px 6px 0; font-size: 10px; font-weight: 700; color: #{Styles.ink_muted()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails_booking", "Field")}</th>
+          <th style="padding: 6px 12px; font-size: 10px; font-weight: 700; color: #{Styles.ink_muted()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails_booking", "Before")}</th>
+          <th style="padding: 6px 12px 6px 0; font-size: 10px; font-weight: 700; color: #{Styles.ink_muted()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails_booking", "After")}</th>
         </tr>
         #{body_rows}
         """)

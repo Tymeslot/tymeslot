@@ -131,6 +131,11 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
         recurrence_rule: recurrence_rule,
         recurrence_id: recurrence_id,
         recurrence_id_range: extract_recurrence_id_range(lines),
+        # A RECURRENCE-ID carrying its own TZID, resolved to UTC as DTSTART is
+        # (through the file's VTIMEZONE for a zone the database lacks). `nil`
+        # for the UTC, floating and DATE forms, which `recurrence_id` above
+        # already says all there is to say about.
+        recurrence_id_at: zoned_recurrence_id(lines, vtimezones),
         exdates: exdates,
         start_time: start_time,
         end_time: end_time,
@@ -141,6 +146,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
         # `Tymeslot.Integrations.Calendar.ICalNormaliser.expand_event/3`). `nil` for UTC, floating, and
         # DATE-valued events, none of which have a zone to restore.
         timezone: dtstart_timezone(dtstart),
+        # A DTSTART with neither a TZID nor a `Z` is a floating wall-clock time,
+        # which `start_time`/`end_time` above read as UTC. Kept so a caller that
+        # knows whose wall clock it is can place it there.
+        floating: floating?(dtstart),
         transparency: normalize_transp(extract_property(lines, "TRANSP")),
         status: extract_property(lines, "STATUS"),
         class: extract_property(lines, "CLASS"),
@@ -161,15 +170,22 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   defp dtstart_timezone(%{timezone: timezone}) when is_binary(timezone), do: timezone
   defp dtstart_timezone(_dtstart), do: nil
 
+  defp floating?(%{value: value, timezone: nil}),
+    do: Regex.match?(~r/T\d{6}$/, String.trim(value))
+
+  defp floating?(_dtstart), do: false
+
   defp unfold_lines(content) do
     content
     |> String.split("\n")
     |> Enum.reduce([], fn line, acc ->
       # Continuation line (starts with space or tab)
-      if String.match?(line, ~r/^[\s\t]/) && acc != [] do
+      if acc != [] and match?(<<c, _::binary>> when c in [?\s, ?\t], line) do
         [last | rest] = acc
-        # RFC 5545 §3.1: unfold by removing the leading whitespace, no extra space
-        [last <> String.trim_leading(line) | rest]
+        # RFC 5545 §3.1: unfold by removing the line break and exactly ONE
+        # whitespace character; any further whitespace belongs to the value
+        <<_fold, continuation::binary>> = line
+        [last <> continuation | rest]
       else
         # New line
         [line | acc]
@@ -239,6 +255,13 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     case line do
       nil -> nil
       line -> line |> String.split(":", parts: 2) |> List.last() |> String.trim()
+    end
+  end
+
+  defp zoned_recurrence_id(lines, vtimezones) do
+    case extract_datetime_property(lines, "RECURRENCE-ID") do
+      %{timezone: zone} = rid when is_binary(zone) -> parse_datetime_property(rid, vtimezones)
+      _no_zone -> nil
     end
   end
 

@@ -14,13 +14,18 @@ defmodule Tymeslot.ThemeCustomizations.Assets do
   per asset field) and the field's transcoding job queued, marking the field
   `failed` if the job cannot be queued. A save that fails deletes the file it stored
   (`FileLifecycle.discard_upload/2`). Errors come back as translated,
-  user-facing messages.
+  user-facing messages, except an image refused by
+  `Tymeslot.Media.ImageMetadata.strip/3` for its size
+  (`{:image_too_large, oversize}`) or because the node is busy with other
+  uploads (`:busy`): those keep the reason, whose message depends on the
+  figures it carries and is worded by the web layer.
 
   The web layer calls this from inside `consume_uploaded_entries/3`, because
   the temporary upload is deleted as soon as that callback returns.
   """
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Media.ImageMetadata
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.FileLifecycle
   alias Tymeslot.ThemeCustomizations.Specs
@@ -31,7 +36,8 @@ defmodule Tymeslot.ThemeCustomizations.Assets do
   alias Tymeslot.Workers.VideoTranscoder
 
   @type upload :: %{path: String.t(), filename: String.t()}
-  @type result :: {:ok, ThemeCustomizationSchema.t()} | {:error, String.t()}
+  @type refusal :: {:image_too_large, ImageMetadata.oversize()} | :busy
+  @type result :: {:ok, ThemeCustomizationSchema.t()} | {:error, String.t() | refusal()}
 
   @doc """
   Stores `upload` for the theme's asset field `field` (an upload setting such as
@@ -90,6 +96,12 @@ defmodule Tymeslot.ThemeCustomizations.Assets do
            "dashboard_appearance",
            "Invalid captions file. Please upload a WebVTT (.vtt) file."
          )}
+
+      {:error, {:image_too_large, _oversize} = reason} ->
+        {:error, reason}
+
+      {:error, :busy} ->
+        {:error, :busy}
 
       {:error, _reason} ->
         {:error, upload_failed()}

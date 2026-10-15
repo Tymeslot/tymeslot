@@ -79,12 +79,17 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
     end
   end
 
-  # Recover from a lost slot race: drop the stale time, return to the moment
-  # collecting the slot (the classic schedule step), which refreshes month
-  # availability, and reload that day's slots so
-  # the just-taken time disappears and the booker can immediately pick another.
-  # The error flash was already set by the submission handler.
-  defp return_to_schedule_for_new_slot(socket, transition_fun) do
+  @doc """
+  Recovers from a lost slot race: drops the stale time, returns to the moment
+  collecting the slot (the classic schedule step), which refreshes month
+  availability, and reloads that day's slots so the just-taken time
+  disappears and the booker can immediately pick another. The error flash is
+  expected to already be set by the caller (the submission handler, or a live
+  seat update that found the chosen time full).
+  """
+  @spec return_to_schedule_for_new_slot(Phoenix.LiveView.Socket.t(), transition_fun()) ::
+          Phoenix.LiveView.Socket.t()
+  def return_to_schedule_for_new_slot(socket, transition_fun) do
     socket =
       socket
       |> assign(:submitting, false)

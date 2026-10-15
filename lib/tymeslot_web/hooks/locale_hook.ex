@@ -8,6 +8,10 @@ defmodule TymeslotWeb.Hooks.LocaleHook do
   live_session carries in as `"resolved_locale"` (see
   `LocalePlug.live_session_data/1`). A `?locale=` param on the mount URL still
   wins, so a locale switch applied by patching the URL is honoured.
+
+  It also assigns `:visitor_week_start` (`:monday`, `:sunday` or `nil`), the
+  week start the dead render read from `Accept-Language`, for the booking
+  calendar.
   """
 
   import Phoenix.Component
@@ -25,8 +29,16 @@ defmodule TymeslotWeb.Hooks.LocaleHook do
     # Global: reaches every Gettext backend in this process, not just Core's.
     Gettext.put_locale(locale)
 
-    {:cont, assign(socket, :locale, locale)}
+    {:cont,
+     assign(socket,
+       locale: locale,
+       visitor_week_start: visitor_week_start(session["visitor_week_start"])
+     )}
   end
+
+  defp visitor_week_start("monday"), do: :monday
+  defp visitor_week_start("sunday"), do: :sunday
+  defp visitor_week_start(_absent), do: nil
 
   # A page rendered before `live_session_data/1` existed reconnects after a
   # deploy with a signed session that has no "resolved_locale". Reading the

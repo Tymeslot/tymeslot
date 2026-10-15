@@ -55,8 +55,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.AgendaViewTest do
       assert html =~ "Boardroom A"
       assert html =~ "Design Workshop"
 
-      assert html =~ Calendar.strftime(day_one, "%a %-d %B")
-      assert html =~ Calendar.strftime(day_two, "%a %-d %B")
+      assert html =~ Calendar.strftime(day_one, "%a %-d %b")
+      assert html =~ Calendar.strftime(day_two, "%a %-d %b")
 
       # The agenda container is present and visible.
       assert html =~ "calendar-agenda"
@@ -172,6 +172,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.AgendaViewTest do
 
       assert alpha_pos < zeta_pos,
              "Alpha Offsite should appear before Zeta Conference in the rendered output"
+    end
+  end
+
+  describe "switching back to a timed view" do
+    # The time grid stays mounted but hidden under the agenda, and the
+    # CalendarDrag hook scrolls to the current time when `data-timed` flips
+    # from "false" to "true" (see calendar_drag.test.js), so the attribute must
+    # track the view.
+    test "flags the drag zone as hidden in agenda and timed again in week", %{
+      conn: conn,
+      user: user
+    } do
+      insert(:calendar_integration, user: user, is_active: true)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      lv |> element("#calendar-grid") |> render_hook("set_view", %{"view" => "agenda"})
+      assert has_element?(lv, ~s(#calendar-drag-zone[data-timed="false"]))
+
+      lv |> element("#calendar-grid") |> render_hook("set_view", %{"view" => "week"})
+      assert has_element?(lv, ~s(#calendar-drag-zone[data-timed="true"]))
     end
   end
 

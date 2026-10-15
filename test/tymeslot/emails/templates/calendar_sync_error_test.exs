@@ -86,6 +86,13 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
       assert html =~ "Common causes:"
     end
 
+    test "lays the common causes out as list lines, not escaped markup" do
+      html = html_body(insert(:meeting), :invalid_credentials)
+
+      assert html =~ ~r{<br\s*/?>• CalDAV server temporarily unavailable}
+      refute html =~ "&lt;br/&gt;"
+    end
+
     test "renders each error reason into the error details section" do
       meeting = insert(:meeting)
 

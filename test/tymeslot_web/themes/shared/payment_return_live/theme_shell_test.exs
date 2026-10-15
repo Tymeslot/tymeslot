@@ -3,7 +3,9 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ThemeShellTest do
   One pair of LiveViews serves the payment return pages for every theme. For
   each theme in the matrix: Stripe's return URLs route to the shared pages,
   and a paid booking lands on pages that load that theme's own stylesheet
-  and class, never another theme's.
+  and class, never another theme's; the processing page turns from pending
+  to confirmed inside that shell, and the cancelled page offers the way back
+  to the booking page.
   """
 
   use TymeslotWeb.ConnCase, async: true
@@ -16,6 +18,9 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ThemeShellTest do
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
 
+  alias Phoenix.PubSub
+  alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.Themes.Catalog
@@ -54,13 +59,15 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ThemeShellTest do
         {:ok, profile} = Profiles.update_profile(profile, %{booking_theme: unquote(theme_id)})
         meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
 
-        insert(:booking_payment,
-          meeting: meeting,
-          host_user_id: user.id,
-          stripe_checkout_session_id: "cs_TEST"
-        )
+        payment =
+          insert(:booking_payment,
+            meeting: meeting,
+            host_user_id: user.id,
+            status: "pending",
+            stripe_checkout_session_id: "cs_TEST"
+          )
 
-        %{meeting: meeting, profile: profile}
+        %{meeting: meeting, payment: payment, profile: profile, user: user}
       end
 
       test "Stripe's return URLs route to the shared pages" do
@@ -99,6 +106,60 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ThemeShellTest do
           )
 
         assert html =~ "Confirming your payment"
+      end
+
+      test "the processing page flips from pending to paid inside the theme's shell",
+           %{conn: conn, meeting: meeting, payment: payment} do
+        path = "/themes/#{unquote(slug)}/payment-processing/#{meeting.id}?session_id=cs_TEST"
+        shell = "[data-testid='#{unquote(slug)}-payment-processing']"
+
+        assert_theme_stylesheet(conn |> get(path) |> html_response(200), unquote(slug))
+
+        {:ok, view, _html} = live(conn, path)
+        assert has_element?(view, "#{shell} h1", "Confirming your payment")
+
+        # The webhook's side effects: the row paid and the meeting confirmed in
+        # one transaction, then the broadcast.
+        {:ok, _payment} =
+          BookingPaymentQueries.update(payment, %{
+            status: "paid",
+            paid_at: DateTime.utc_now(:second)
+          })
+
+        {:ok, _meeting} = MeetingQueries.update_meeting(meeting, %{status: "confirmed"})
+        PubSub.broadcast(Tymeslot.PubSub, "meeting_payment:#{meeting.id}", :paid)
+
+        assert has_element?(view, "#{shell} h1", "Booking confirmed")
+        refute has_element?(view, "#{shell} h1", "Confirming your payment")
+      end
+
+      test "the cancelled page offers the way back to the meeting type's booking page",
+           %{conn: conn, profile: profile, user: user} do
+        username = "rebook#{unquote(theme_id)}"
+        {:ok, _profile} = Profiles.update_profile(profile, %{username: username})
+
+        meeting_type =
+          insert(:meeting_type, user: user, name: "Paid Consultation", slug: "vip-consult")
+
+        meeting =
+          insert(:meeting,
+            organizer_user_id: user.id,
+            meeting_type_id: meeting_type.id,
+            status: "awaiting_payment"
+          )
+
+        {:ok, view, _html} =
+          live(conn, "/themes/#{unquote(slug)}/payment-cancelled/#{meeting.id}")
+
+        shell = "[data-testid='#{unquote(slug)}-payment-cancelled']"
+
+        assert has_element?(view, "#{shell} h1", "Payment cancelled")
+
+        assert has_element?(
+                 view,
+                 "#{shell} a[href='/#{username}/vip-consult']",
+                 "Return to booking"
+               )
       end
 
       test "both connected pages carry the organiser's customised palette",

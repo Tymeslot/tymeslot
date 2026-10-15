@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.TimezonePicker do
 
   alias Tymeslot.Timezones
 
-  import TymeslotWeb.Components.CoreComponents, only: [dropdown: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [dropdown: 1]
   import TymeslotWeb.Components.FlagHelpers, only: [timezone_flag: 1]
 
   attr :id, :string, default: "timezone-picker"

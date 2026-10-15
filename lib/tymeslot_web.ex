@@ -181,7 +181,7 @@ defmodule TymeslotWeb do
       # HTML escaping functionality
       import Phoenix.HTML
       # Core UI components
-      import TymeslotWeb.Components.CoreComponents
+      use TymeslotWeb.Components.CoreComponents
       import TymeslotWeb.StepNavigation
 
       # Shortcut for generating JS commands

@@ -249,6 +249,13 @@
 .animate-float-gentle { animation: floatGentle 6s ease-in-out infinite; }
 .animate-float-slow { animation: floatSlow 9s ease-in-out infinite; }
 
+/* Respect reduced motion: an endlessly pulsing dot (a live status pill, a
+   loading placeholder) is exactly the motion the setting asks to stop. The
+   element keeps its colour and shape, so nothing it signals is lost. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse { animation: none; }
+}
+
 /* Flash Message Animation Classes */
 .animate-flash-message { animation: flashSlideIn 0.3s ease-out forwards; }
 .animate-flash-exit { animation: flashSlideOut 0.3s ease-in forwards; }

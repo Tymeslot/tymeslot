@@ -34,7 +34,13 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Navigators.PagedTest do
   end
 
   defp socket(assigns),
-    do: %Socket{assigns: Map.merge(%{__changed__: %{}, flash: %{}, journey: classic()}, assigns)}
+    do: %Socket{
+      assigns:
+        Map.merge(
+          %{__changed__: %{}, flash: %{}, journey: classic(), week_start: :monday},
+          assigns
+        )
+    }
 
   defp question(id), do: %{"id" => id, "type" => "short_text", "label" => id, "required" => true}
 
@@ -316,6 +322,54 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Navigators.PagedTest do
       socket = socket(%{current_state: :schedule})
 
       assert {:noreply, ^socket} = Paged.go_to(classic(), socket, "first")
+    end
+  end
+
+  describe "can_go_to?/3" do
+    # The step indicator offers a step exactly when a click on it moves, so
+    # the predicate must agree with `go_to/3` wherever the booker stands.
+    test "is true exactly for the steps go_to/3 moves to" do
+      states = [:overview, :schedule, :questions, :booking, :confirmation, :awaiting_payment]
+      types = [nil, %{custom_fields: []}, with_questions(["company"])]
+
+      cases =
+        for state <- states, type <- types, via_overview <- [true, false], step <- 1..5 do
+          socket =
+            socket(%{
+              current_state: state,
+              meeting_type: type,
+              entered_via_overview: via_overview
+            })
+
+          {:noreply, after_click} = Paged.go_to(classic(), socket, Integer.to_string(step))
+          moved = after_click.assigns.current_state != state
+
+          %{
+            at: {state, type, via_overview, step},
+            offered: Paged.can_go_to?(classic(), socket.assigns, step),
+            moved: moved
+          }
+        end
+
+      assert Enum.any?(cases, & &1.offered)
+      assert Enum.reject(cases, &(&1.offered == &1.moved)) == []
+    end
+
+    test "offers nothing while the booker waits on an open checkout" do
+      assigns = %{
+        current_state: :awaiting_payment,
+        meeting_type: %{custom_fields: []},
+        entered_via_overview: true
+      }
+
+      refute Enum.any?(1..4, &Paged.can_go_to?(classic(), assigns, &1))
+    end
+
+    test "never offers the overview to a booker who came by a direct link" do
+      assigns = %{current_state: :booking, meeting_type: nil, entered_via_overview: false}
+
+      refute Paged.can_go_to?(classic(), assigns, 1)
+      assert Paged.can_go_to?(classic(), assigns, 2)
     end
   end
 end

@@ -29,14 +29,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
       </label>
       <div class="relative">
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <svg class="w-5 h-5 text-tymeslot-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-            />
-          </svg>
+          <Icons.icon name="hero-tag" class="w-5 h-5 text-tymeslot-400" />
         </div>
         <input
           type="text"
@@ -101,14 +94,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
       </label>
       <div class="relative">
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <svg class="w-5 h-5 text-tymeslot-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 919-9"
-            />
-          </svg>
+          <Icons.icon name="hero-globe-alt" class="w-5 h-5 text-tymeslot-400" />
         </div>
         <input
           type="url"
@@ -173,7 +159,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
     ~H"""
     <div class="group/field">
       <div class="flex items-center gap-1.5 mb-2">
-        <label for={@id} class="label mb-0!">
+        <label for={@id} class="label mb-0">
           {dgettext("dashboard_video", "Server URL")}
         </label>
         <span class="group relative inline-flex text-tymeslot-500 shrink-0">
@@ -229,14 +215,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
       </label>
       <div class="relative">
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <svg class="w-5 h-5 text-tymeslot-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
-            />
-          </svg>
+          <Icons.icon name="hero-key" class="w-5 h-5 text-tymeslot-400" />
         </div>
         <input
           type="password"
@@ -339,13 +318,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
     ~H"""
     <div role="alert" class="brand-card p-3 bg-red-50/50 border border-red-200/50">
       <p class="text-sm text-red-600 flex items-center">
-        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-          <path
-            fill-rule="evenodd"
-            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-            clip-rule="evenodd"
-          />
-        </svg>
+        <Icons.icon name="hero-exclamation-circle-mini" class="w-4 h-4 mr-2" />
         {@error}
       </p>
     </div>

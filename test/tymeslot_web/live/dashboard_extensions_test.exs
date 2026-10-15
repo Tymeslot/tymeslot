@@ -195,7 +195,7 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
       # Standard actions should not be affected
       assert PageTitles.dashboard_title(:overview) == "Overview - Dashboard"
       assert PageTitles.dashboard_title(:calendar) == "Dashboard"
-      assert PageTitles.dashboard_title(:settings) == "Settings - Dashboard"
+      assert PageTitles.dashboard_title(:settings) == "Profile - Dashboard"
       assert PageTitles.dashboard_title(:availability) == "Availability - Dashboard"
     end
   end

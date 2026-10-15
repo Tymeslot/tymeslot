@@ -42,8 +42,8 @@ defmodule Tymeslot.Emails.EmailService do
           optional(:start_time_owner_tz) => DateTime.t(),
           optional(:attendee_video_url) => String.t() | nil,
           optional(:guest_video_url) => String.t() | nil,
-          optional(:reschedule_url) => String.t(),
-          optional(:cancel_url) => String.t(),
+          optional(:reschedule_url) => String.t() | nil,
+          optional(:cancel_url) => String.t() | nil,
           optional(:booking_url) => String.t(),
           optional(:meeting_url) => String.t(),
           optional(atom()) => term()
@@ -93,6 +93,18 @@ defmodule Tymeslot.Emails.EmailService do
   defdelegate send_guest_confirmation(guest_email, appointment_details), to: AppointmentEmails
 
   @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_seat_reschedule_to_participant(
+                participant_email,
+                appointment_details,
+                old_event
+              ),
+              to: AppointmentEmails
+
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_seat_update_to_organizer(variant, organizer_email, appointment_details),
+    to: AppointmentEmails
+
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_guest_reschedule(guest_email, appointment_details), to: AppointmentEmails
 
   @impl Tymeslot.Emails.EmailServiceBehaviour
@@ -133,9 +145,11 @@ defmodule Tymeslot.Emails.EmailService do
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_appointment_cancellation(email, appointment_details), to: AppointmentEmails
 
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_cancellation_email_to_attendee(attendee_email, appointment_details),
     to: AppointmentEmails
 
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_cancellation_email_to_organizer(organizer_email, appointment_details),
     to: AppointmentEmails
 

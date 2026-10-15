@@ -9,7 +9,7 @@ defmodule TymeslotWeb.OnboardingLive.WelcomeStep do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.CoreComponents, only: [icon: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
   @doc """
   Renders the welcome step with three feature preview items.

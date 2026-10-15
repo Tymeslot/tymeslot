@@ -224,7 +224,12 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
     # The booking-window cap and minimum-advance-notice defaults (90 days and
     # 3 hours) would filter every slot on these far-future dates; loosen both
     # for the DST suite so we are asserting on the DST behaviour in isolation.
-    @dst_config %{max_advance_booking_days: 2000, min_advance_hours: 0, buffer_minutes: 0}
+    @dst_config %{
+      max_advance_booking_days: 2000,
+      min_advance_hours: 0,
+      buffer_before_minutes: 0,
+      buffer_after_minutes: 0
+    }
 
     test "spring-forward Sunday (Europe/Berlin) does not affect normal business hours" do
       schedule = insert_always_on_schedule("Europe/Berlin")
@@ -383,7 +388,12 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
     profile = insert(:profile, timezone: timezone)
 
     schedule =
-      insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 0)
+      insert(:availability_schedule,
+        profile: profile,
+        is_default: true,
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0
+      )
 
     for dow <- 1..7 do
       insert(:weekly_availability,
@@ -402,7 +412,12 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
     profile = insert(:profile, timezone: timezone)
 
     schedule =
-      insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 15)
+      insert(:availability_schedule,
+        profile: profile,
+        is_default: true,
+        buffer_before_minutes: 15,
+        buffer_after_minutes: 15
+      )
 
     for dow <- 1..5 do
       insert(:weekly_availability,
@@ -460,7 +475,12 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
     profile = insert(:profile, timezone: timezone)
 
     schedule =
-      insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 0)
+      insert(:availability_schedule,
+        profile: profile,
+        is_default: true,
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0
+      )
 
     for dow <- 1..6 do
       insert(:weekly_availability,

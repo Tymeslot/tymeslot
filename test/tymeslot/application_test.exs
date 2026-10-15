@@ -2,7 +2,15 @@ defmodule Tymeslot.ApplicationTest do
   use ExUnit.Case, async: false
   @moduletag :infrastructure
 
-  alias Tymeslot.Infrastructure.{AvailabilityCache, CircuitBreaker, DashboardCache}
+  alias Tymeslot.CalendarGrid.WriteGuardianSupervisor
+
+  alias Tymeslot.Infrastructure.{
+    AvailabilityCache,
+    CircuitBreaker,
+    CircuitBreakerSupervisor,
+    DashboardCache
+  }
+
   alias Tymeslot.Integrations.Calendar.RequestCoalescer
   alias Tymeslot.Payments.Webhooks.IdempotencyCache
   alias Tymeslot.Security.AccountLockout
@@ -68,6 +76,41 @@ defmodule Tymeslot.ApplicationTest do
 
       assert RequestCoalescer.coalesce(1, today, today, fn -> {:ok, [%{uid: "evt-1"}]} end) ==
                {:ok, [%{uid: "evt-1"}]}
+    end
+  end
+
+  describe "shutdown order" do
+    # Children stop in reverse start order. A calendar grid's write guardian
+    # drives its queue once the Endpoint has taken its LiveView down, and
+    # saves what is left when it is stopped itself, so everything it writes
+    # through must still be up when it stops. The tree's order is the
+    # behaviour, and there is no application function to call for it.
+    # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
+    test "the write guardians stop right after the Endpoint, before what they write through" do
+      start_order =
+        Tymeslot.Supervisor
+        |> Supervisor.which_children()
+        |> Enum.map(fn {id, _pid, _type, _modules} -> id end)
+        |> Enum.reverse()
+
+      position = fn id ->
+        Enum.find_index(start_order, &(&1 == id)) || flunk("#{inspect(id)} is not a child")
+      end
+
+      guardians = position.(WriteGuardianSupervisor)
+
+      assert position.(TymeslotWeb.Endpoint) == guardians + 1
+
+      for dependency <- [
+            CircuitBreakerSupervisor,
+            Oban,
+            AvailabilityCache,
+            Tymeslot.TaskSupervisor,
+            Tymeslot.Repo
+          ] do
+        assert position.(dependency) < guardians,
+               "#{inspect(dependency)} would stop before the write guardians"
+      end
     end
   end
 

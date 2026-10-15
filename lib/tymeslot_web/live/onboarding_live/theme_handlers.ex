@@ -2,7 +2,8 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
   @moduledoc """
   Theme, onboarding-choice and booking-page-preview handlers for the onboarding flow.
 
-  Owns the "choose your theme" feature end to end: selecting a booking theme or
+  Owns the "choose your theme" feature end to end: switching between the theme
+  stories and every theme's look, selecting a booking theme or
   one of its onboarding choices, seeding a random video background once a calendar is connected,
   and opening/closing the real full-page preview of the user's own booking page.
   It also exposes the theme-state helpers the mount pipeline needs, so every
@@ -46,6 +47,15 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
       {:noreply, socket}
     end
   end
+
+  @doc """
+  Switches the theme step between the stories (`:stories`, "Which of these
+  sounds like you?") and the visual picker of every theme's look (`:all`).
+  """
+  @spec handle_theme_picker(:stories | :all, LiveView.Socket.t()) ::
+          {:noreply, LiveView.Socket.t()}
+  def handle_theme_picker(picker, socket) when picker in [:stories, :all],
+    do: {:noreply, Component.assign(socket, :theme_picker, picker)}
 
   @doc """
   Applies one of the current theme's onboarding choices (`:onboarding_choices`)

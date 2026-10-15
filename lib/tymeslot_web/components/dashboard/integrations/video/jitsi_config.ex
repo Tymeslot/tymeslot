@@ -9,11 +9,11 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
+
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponents,
     as: SharedForm
 
-  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
-  alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   @impl Phoenix.LiveComponent
@@ -39,17 +39,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig do
   def render(assigns) do
     ~H"""
     <div id="jitsi-video-config-modal" class="space-y-6">
-      <div class="flex items-center gap-4 mb-2">
-        <ProviderIcon.provider_icon provider="jitsi" type="video" size="large" />
-        <div>
-          <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
-            {dgettext("dashboard_video", "Jitsi Meet")}
-          </h3>
-          <p class="text-token-sm text-tymeslot-500 font-medium">
-            {dgettext("dashboard_video", "Your own Jitsi Meet server")}
-          </p>
-        </div>
-      </div>
+      <UIComponents.provider_config_header
+        provider="jitsi"
+        type="video"
+        title={dgettext("dashboard_video", "Jitsi Meet")}
+        tagline={dgettext("dashboard_video", "Your own Jitsi Meet server")}
+      />
 
       <form
         id="jitsi-video-integration-form"
@@ -85,17 +80,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig do
           <SharedForm.error_banner error={error} />
         <% end %>
 
-        <div class="flex justify-between items-center pt-4 border-t border-tymeslot-100">
-          <button
-            type="button"
-            phx-click="back_to_providers"
-            phx-target={@target}
-            class="btn-secondary"
-          >
-            {dgettext("dashboard_video", "Cancel")}
-          </button>
-          <UIComponents.form_submit_button saving={@saving} />
-        </div>
+        <UIComponents.form_actions
+          target={@target}
+          saving={@saving}
+        />
       </form>
     </div>
     """

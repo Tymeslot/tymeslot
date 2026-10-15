@@ -45,6 +45,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingModeTest do
       refute html =~ ~s(data-testid="create-mode-meeting")
     end
 
+    test "puts Cancel before Create, as the confirmation dialogs do", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+
+      labels =
+        lv
+        |> open_create_form()
+        |> Floki.parse_document!()
+        |> Floki.find("#create-event-modal .modal-footer button")
+        |> Enum.map(&String.trim(Floki.text(&1)))
+
+      assert labels == ["Cancel", "Create"]
+    end
+
     test "saving without guest details flashes a validation error", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard")
       open_create_form(lv)
@@ -296,6 +309,29 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingModeTest do
 
       assert html =~ ~s(id="create-event-modal")
       assert html =~ "Attendee email is required"
+    end
+
+    test "a time conflict flashes a sentence, not the reason atom", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_create_form(lv)
+
+      send(lv.pid, {:create_ad_hoc_meeting_result, {:error, :time_conflict}})
+      html = render(lv)
+
+      assert html =~ "You already have a meeting at this time."
+      refute html =~ "time_conflict"
+    end
+
+    test "an unrecognised reason flashes a generic sentence, never the raw term",
+         %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_create_form(lv)
+
+      send(lv.pid, {:create_ad_hoc_meeting_result, {:error, :queue_unavailable}})
+      html = render(lv)
+
+      assert html =~ "Failed to create appointment. Please try again."
+      refute html =~ "queue_unavailable"
     end
   end
 end

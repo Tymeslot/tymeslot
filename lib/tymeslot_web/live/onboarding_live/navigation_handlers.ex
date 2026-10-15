@@ -22,6 +22,13 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   alias TymeslotWeb.OnboardingLive.ProfileHandlers
   alias TymeslotWeb.OnboardingLive.StepConfig
 
+  # The fields each preference step edits, keyed as in `form_errors`.
+  @preference_step_fields %{
+    buffer_time: [:buffer_before_minutes, :buffer_after_minutes],
+    booking_window: [:advance_booking_days],
+    minimum_notice: [:min_advance_hours]
+  }
+
   @doc """
   Handles the next step navigation event.
 
@@ -41,8 +48,18 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
         handle_complete_onboarding(socket, redirect_to: ~p"/dashboard")
 
       step ->
-        {:noreply, advance_step(socket, step)}
+        if refused_value?(socket, step),
+          do: {:noreply, socket},
+          else: {:noreply, advance_step(socket, step)}
     end
+  end
+
+  # A refused value is never saved, so advancing past it would silently keep
+  # the last valid one. Continue stays put instead, leaving the field's error
+  # beside the value it describes.
+  defp refused_value?(socket, step) do
+    errors = Map.get(socket.assigns, :form_errors, %{})
+    Enum.any?(Map.get(@preference_step_fields, step, []), &Map.has_key?(errors, &1))
   end
 
   # Continue on the calendar step is a forced choice: act on the selected

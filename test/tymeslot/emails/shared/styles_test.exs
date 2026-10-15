@@ -55,17 +55,26 @@ defmodule Tymeslot.Emails.Shared.StylesTest do
       end
     end
 
-    test "the stage band clears AA for the brand and cancelled families" do
+    test "the stage band clears AA for every intent family" do
       # `deep` also backs the stage band, drawn in near-white band text. Amber
-      # is a known exception at 2.99:1 — a pre-existing defect in the alert
-      # family that predates email branding and needs a design decision on the
-      # alert band's colour, so it is deliberately not asserted here.
-      for intent <- [:confirmed, :cancelled] do
+      # sat at 2.99:1 until its `deep` was darkened.
+      for intent <- [:confirmed, :alert, :cancelled] do
         assert Colour.contrast_ratio(
                  BrandPalette.band_text(),
                  Tokens.intent_accent_deep(intent)
                ) >= 4.5,
                "#{intent}: stage band text fails 4.5:1"
+      end
+    end
+
+    test "the alert family's deep reads as text on the card surface and the amber tint" do
+      # Alert emails draw `accent_deep` as inline text (deadline notes, links)
+      # on the cream surface and inside amber callouts.
+      alert = Tokens.intent(:alert)
+
+      for background <- [Tokens.surface(), alert.tint] do
+        assert Colour.contrast_ratio(alert.accent_deep, background) >= 4.5,
+               "#{alert.accent_deep} on #{background} fails 4.5:1"
       end
     end
   end

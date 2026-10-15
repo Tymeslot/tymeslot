@@ -10,6 +10,7 @@ defmodule Tymeslot.Emails.DeliveryTest do
   alias Tymeslot.Infrastructure.CircuitBreaker
   alias Tymeslot.Infrastructure.CircuitBreakerSupervisor
   alias Tymeslot.Test.FailingMailerAdapter
+  alias Tymeslot.Test.LogCapture
 
   @suppressed_recipient {422,
                          %{
@@ -76,6 +77,56 @@ defmodule Tymeslot.Emails.DeliveryTest do
       email = valid_email(html_body: nil)
 
       assert {:ok, _result} = Delivery.deliver(email)
+    end
+  end
+
+  # Every delivery is logged, and the recipient is usually an invitee without
+  # an account: the log may say which domain mail went to, never to whom or
+  # what it said about them.
+  describe "deliver/1 — what the delivery log reveals" do
+    setup do
+      CircuitBreaker.reset(CircuitBreakerSupervisor.email_breaker_name())
+      on_exit(fn -> CircuitBreaker.reset(CircuitBreakerSupervisor.email_breaker_name()) end)
+      LogCapture.attach(logger_level: :debug)
+      :ok
+    end
+
+    defp invitee_email do
+      Email.new(
+        to: {"Jane Invitee", "jane.invitee@Guest-Mail.test"},
+        from: {"Tymeslot", "noreply@example.com"},
+        subject: "Meeting Cancelled with Jane Invitee",
+        text_body: "Plain-text body."
+      )
+    end
+
+    defp delivery_log do
+      Enum.map_join(LogCapture.drain(), "\n", &LogCapture.dump/1)
+    end
+
+    test "a successful delivery is logged by recipient domain alone" do
+      assert {:ok, _receipt} = Delivery.deliver(invitee_email())
+
+      event = LogCapture.await_log("Email delivered successfully")
+      assert event.meta.recipient_domains == ["guest-mail.test"]
+
+      log = LogCapture.dump(event) <> "\n" <> delivery_log()
+      refute log =~ "jane.invitee"
+      refute log =~ "Jane Invitee"
+    end
+
+    test "a rejected delivery names neither the recipient nor the subject" do
+      setup_config(:tymeslot, Tymeslot.Mailer, adapter: FailingMailerAdapter)
+      setup_config(:tymeslot, :test_delivery_error, @suppressed_recipient)
+
+      assert {:error, {:recipient_rejected, _reason}} = Delivery.deliver(invitee_email())
+
+      event = LogCapture.await_log("permanently undeliverable")
+      assert event.meta.recipient_domains == ["guest-mail.test"]
+
+      log = LogCapture.dump(event) <> "\n" <> delivery_log()
+      refute log =~ "jane.invitee"
+      refute log =~ "Jane Invitee"
     end
   end
 

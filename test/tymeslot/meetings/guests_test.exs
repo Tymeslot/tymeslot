@@ -6,6 +6,7 @@ defmodule Tymeslot.Meetings.GuestsTest do
 
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Workers.EmailWorker
 
   describe "sanitize_emails/2" do
@@ -107,6 +108,48 @@ defmodule Tymeslot.Meetings.GuestsTest do
     end
   end
 
+  describe "create_for_participant/3" do
+    setup do
+      %{meeting: insert(:meeting)}
+    end
+
+    test "links inserted guests to the participant", %{meeting: meeting} do
+      {:ok, participant} =
+        ParticipantQueries.insert(%{
+          meeting_id: meeting.id,
+          name: "First Booker",
+          email: "first@example.com",
+          timezone: "Etc/UTC",
+          locale: "en"
+        })
+
+      participant_id = participant.id
+
+      assert {:ok, [guest_a, guest_b]} =
+               Guests.create_for_participant(meeting.id, participant_id, [
+                 "guest-a@example.com",
+                 "guest-b@example.com"
+               ])
+
+      assert guest_a.participant_id == participant_id
+      assert guest_b.participant_id == participant_id
+      assert guest_a.meeting_id == meeting.id
+    end
+
+    test "returns {:ok, []} for an empty list", %{meeting: meeting} do
+      {:ok, participant} =
+        ParticipantQueries.insert(%{
+          meeting_id: meeting.id,
+          name: "First Booker",
+          email: "first@example.com",
+          timezone: "Etc/UTC",
+          locale: "en"
+        })
+
+      assert {:ok, []} = Guests.create_for_participant(meeting.id, participant.id, [])
+    end
+  end
+
   describe "invite_for_organizer/3" do
     setup do
       host = insert(:user)
@@ -185,6 +228,26 @@ defmodule Tymeslot.Meetings.GuestsTest do
         assert GuestQueries.list_for_meeting(meeting.id) == []
         refute_enqueued(worker: EmailWorker)
       end
+    end
+
+    test "refuses a group meeting, whose guests take seats through a participant", %{
+      host: host
+    } do
+      start_time = DateTime.add(DateTime.utc_now(:second), 4, :day)
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: host.id,
+          capacity: 3,
+          start_time: start_time,
+          end_time: DateTime.add(start_time, 60, :minute)
+        )
+
+      assert {:error, :closed} =
+               Guests.invite_for_organizer(meeting.id, host.id, ["extra@example.com"])
+
+      assert GuestQueries.list_for_meeting(meeting.id) == []
+      refute_enqueued(worker: EmailWorker)
     end
 
     test "refuses a meeting that has already started", %{host: host} do
@@ -389,6 +452,54 @@ defmodule Tymeslot.Meetings.GuestsTest do
   defp started_meeting_attrs do
     start_time = DateTime.utc_now() |> DateTime.add(-5, :minute) |> DateTime.truncate(:second)
     [start_time: start_time, end_time: DateTime.add(start_time, 60, :minute)]
+  end
+
+  describe "record_rsvp/2 voids the link when the invitation is no longer live" do
+    test "rejects an RSVP once the meeting has been cancelled" do
+      meeting = insert(:cancelled_meeting)
+      {:ok, [guest]} = Guests.create_for_meeting(meeting.id, ["guest@example.com"])
+
+      assert {:error, :meeting_closed} = Guests.record_rsvp(guest.rsvp_token, "accepted")
+    end
+
+    test "rejects an RSVP for a guest whose owning participant has cancelled their seat" do
+      meeting = insert(:meeting)
+
+      {:ok, participant} =
+        ParticipantQueries.insert(%{
+          meeting_id: meeting.id,
+          name: "Booker",
+          email: "booker@example.com",
+          timezone: "Etc/UTC",
+          locale: "en"
+        })
+
+      {:ok, [guest]} =
+        Guests.create_for_participant(meeting.id, participant.id, ["guest@example.com"])
+
+      {:ok, _cancelled} = ParticipantQueries.cancel(participant)
+
+      assert {:error, :not_found} = Guests.record_rsvp(guest.rsvp_token, "accepted")
+    end
+
+    test "accepts an RSVP for a guest whose owning participant is still live" do
+      meeting = insert(:meeting)
+
+      {:ok, participant} =
+        ParticipantQueries.insert(%{
+          meeting_id: meeting.id,
+          name: "Booker",
+          email: "booker@example.com",
+          timezone: "Etc/UTC",
+          locale: "en"
+        })
+
+      {:ok, [guest]} =
+        Guests.create_for_participant(meeting.id, participant.id, ["guest@example.com"])
+
+      assert {:ok, updated} = Guests.record_rsvp(guest.rsvp_token, "accepted")
+      assert updated.status == "accepted"
+    end
   end
 
   describe "summarize/1" do

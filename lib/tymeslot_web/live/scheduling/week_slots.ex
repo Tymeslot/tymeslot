@@ -91,7 +91,7 @@ defmodule TymeslotWeb.Live.Scheduling.WeekSlots do
   @spec offered?(map(), String.t(), String.t()) :: boolean()
   def offered?(assigns, date, time) do
     case assigns[:week_slots] do
-      %{^date => slots} -> time in MeetingUtils.normalize_slot_list(slots)
+      %{^date => slots} -> time in times(slots)
       _no_such_day -> false
     end
   end
@@ -112,14 +112,23 @@ defmodule TymeslotWeb.Live.Scheduling.WeekSlots do
     |> Enum.flat_map(fn {iso, slots} ->
       with {:ok, date} <- Date.from_iso8601(iso),
            false <- Date.compare(date, today) == :lt,
-           [_first | _rest] = slots <- MeetingUtils.normalize_slot_list(slots) do
-        [%{date: date, iso: iso, slots: slots}]
+           [_first | _rest] = times <- times(slots) do
+        [%{date: date, iso: iso, slots: times}]
       else
         _not_offered -> []
       end
     end)
     |> Enum.sort_by(& &1.date, Date)
   end
+
+  @doc """
+  A day's offered times as the labels `select_time` and `select_slot` send:
+  a group type's slots arrive as seat-carrying maps
+  (`MeetingUtils.normalize_slot_list/1`), whose seats the week views do not
+  show.
+  """
+  @spec times(term()) :: [String.t()]
+  def times(slots), do: slots |> MeetingUtils.normalize_slot_list() |> Enum.map(& &1.time)
 
   @doc """
   What a block listing the week shows: `:error` when the fetch failed (the
