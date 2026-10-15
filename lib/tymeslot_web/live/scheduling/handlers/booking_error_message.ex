@@ -3,9 +3,13 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
   Renders `Tymeslot.Bookings.Errors.classified_error/0` atoms (and legacy
   Policy/Validation binary strings) into user-facing flash copy — display
   copy is a presentation-layer concern, not baked into the domain contract.
+  A taken time can be worded by the rendering theme's voice (`voiced/2`).
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
+
+  alias Tymeslot.Themes.Catalog
+  alias TymeslotWeb.Themes.Shared.Voice
 
   @doc """
   Renders a booking error reason to user-facing flash text.
@@ -154,6 +158,27 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
   def message(reason, fallback) when is_binary(reason), do: legacy_message(reason) || fallback
   def message(:meeting_not_found, _fallback), do: message(:meeting_not_found)
   def message(_reason, fallback), do: fallback
+
+  @doc """
+  `message/1`, in the voice of the theme with id `theme_id` where that voice
+  words the line. Only a taken time (`:slot_taken`) is a voice line; every
+  other reason, a theme without a voice and an unknown or missing id keep
+  `message/1`'s wording.
+  """
+  @spec voiced(atom() | String.t(), String.t() | nil) :: String.t()
+  def voiced(:slot_taken, theme_id),
+    do: Voice.line(voice(theme_id), :slot_taken, %{}, fn -> message(:slot_taken) end)
+
+  def voiced(reason, _theme_id), do: message(reason)
+
+  defp voice(theme_id) when is_binary(theme_id) do
+    case Catalog.id_to_key(theme_id) do
+      {:ok, key} -> Voice.of(key)
+      {:error, _unknown} -> nil
+    end
+  end
+
+  defp voice(_no_theme), do: nil
 
   @notice_hours_regex ~r/^Booking requires at least (\d+) hours (?:in advance|advance notice)$/
   @window_days_regex ~r/^(?:Cannot book more than|Booking cannot be more than) (\d+) days in advance$/

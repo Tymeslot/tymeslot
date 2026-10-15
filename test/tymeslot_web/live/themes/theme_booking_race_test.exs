@@ -12,8 +12,10 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingRaceTest do
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
 
+  alias Phoenix.HTML
   alias Tymeslot.TestMocks
   alias TymeslotWeb.BookingDriver
+  alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
   alias TymeslotWeb.ThemeTestMatrix
 
   setup :verify_on_exit!
@@ -85,14 +87,20 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingRaceTest do
         # synchronous `:sys.get_state/1` before asserting on the render.
         _drain = :sys.get_state(view2.pid)
 
-        # Second one should fail because the slot is now taken
-        assert render(view2) =~ "This time slot is no longer available"
+        # Second one should fail because the slot is now taken, said in the
+        # theme's own words where its voice has them.
+        assert render(view2) =~
+                 escaped(BookingErrorMessage.voiced(:slot_taken, unquote(theme.id)))
+
         refute has_element?(view2, "[data-testid='confirmation-heading']")
       end
     end
   end
 
+  defp escaped(text), do: text |> HTML.html_escape() |> HTML.safe_to_string()
+
   # The next weekday strictly after `start_date`.
+
   defp next_business_day(%Date{} = start_date) do
     Enum.find_value(1..14, fn offset ->
       date = Date.add(start_date, offset)

@@ -1,9 +1,10 @@
 defmodule TymeslotWeb.Test.FixtureTheme.Voice do
   @moduledoc """
-  The fixture theme's voice: five of the shared booking lines in its own
+  The fixture theme's voice: six of the shared booking lines in its own
   words (the generic heading, the greeting, the instruction, the
-  held-request sentence without an organiser name, and the submit button),
-  every other line left to the shared wording. It proves a theme's voice
+  held-request sentence without an organiser name, the submit button and the
+  notice for a time taken meanwhile), every other line left to the shared
+  wording. It proves a theme's voice
   reaches `BookingText`, `ConfirmationText` and `BookingLabels`, and that a
   line it leaves alone (the request labels, the sentences naming the
   organiser) keeps the shared wording. Its strings live in the test build
@@ -30,5 +31,9 @@ defmodule TymeslotWeb.Test.FixtureTheme.Voice do
     do: dpgettext("booking_voice", "fixture", "%{name}, your request is in.", name: name)
 
   def text(:submit, _bindings), do: dpgettext("booking_voice", "fixture", "Book it")
+
+  def text(:slot_taken, _bindings),
+    do: dpgettext("booking_voice", "fixture", "That time just went.")
+
   def text(_key, _bindings), do: nil
 end

@@ -347,7 +347,10 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     socket =
       socket
       |> BookingGuards.release_submission()
-      |> Flash.put_flash(:error, BookingErrorMessage.message(:slot_taken))
+      |> Flash.put_flash(
+        :error,
+        BookingErrorMessage.voiced(:slot_taken, socket.assigns[:theme_id])
+      )
 
     {:slot_taken, socket}
   end
