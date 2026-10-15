@@ -163,7 +163,8 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
   component that is not a loaded LiveComponent; a default for a fact the
   moment does not collect, or with a strategy its fact does not take; a
   navigator that is not one; a moment key used twice or named like an
-  outcome; an unknown outcome; a malformed entry.
+  outcome; an unknown outcome; a `url:` other than `:facts` or `:route`; a
+  malformed entry.
   """
   @spec build!(keyword(), Macro.Env.t()) :: t()
   def build!(opts, caller) do
@@ -239,6 +240,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
 
     Enum.concat([
       navigator_problems(journey.navigator),
+      url_problems(journey.url),
       moment_key_problems(journey.moments),
       unknown_fact_problems(collected, facts),
       twice_problems(collected),
@@ -265,6 +267,9 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
       ["navigator #{inspect(navigator)} is not a loaded module implementing Journey.Navigator"]
     end
   end
+
+  defp url_problems(url) when url in [:facts, :route], do: []
+  defp url_problems(url), do: ["url #{inspect(url)} is not :facts or :route"]
 
   defp moment_key_problems(moments) do
     keys = Enum.map(moments, & &1.key)

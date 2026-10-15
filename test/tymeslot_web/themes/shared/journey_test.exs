@@ -319,6 +319,12 @@ defmodule TymeslotWeb.Themes.Shared.JourneyTest do
                    end
     end
 
+    test "refuses an address rule that is neither :facts nor :route" do
+      assert_raise CompileError, ~r/url :screen is not :facts or :route/, fn ->
+        build!(Keyword.put(questions_first(), :url, :screen))
+      end
+    end
+
     test "refuses a navigator that is not one" do
       assert_raise CompileError, ~r/navigator NoSuchNavigator is not a loaded module/, fn ->
         build!(Keyword.put(questions_first(), :navigator, NoSuchNavigator))

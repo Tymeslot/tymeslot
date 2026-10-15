@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
   use Gettext, backend: TymeslotWeb.Gettext
 
   import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [connected?: 1]
+  import Phoenix.LiveView, only: [connected?: 1, push_navigate: 2]
 
   alias TymeslotWeb.Live.Scheduling.{
     AvailabilityHelpers,
@@ -139,10 +139,12 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
 
   def handle_scheduling_params(socket, params) do
     initial_state = entry(socket)
-    socket = handle_param_updates(socket, params)
+    socket = socket |> handle_param_updates(params) |> leave_empty_confirmation()
 
-    # A spent seat link is sent on to a fresh booking before any moment is
-    # entered for it (`SeatMoveLink.leave_if_spent/2`).
+    # A spent seat link, and a declared journey's thank-you address with no
+    # booking behind it, are sent on to a fresh booking before any moment is
+    # entered for them (`SeatMoveLink.leave_if_spent/2`,
+    # `leave_empty_confirmation/1`).
     if socket.redirected do
       {:noreply, socket}
     else
@@ -267,6 +269,22 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
   end
 
   defp follows_facts?(socket), do: match?(%{url: :facts}, socket.assigns[:journey])
+
+  # A declared journey's `/thank-you` is only ever the address of a booking
+  # just made on this page. Reached on its own (a reload, a shared link) it
+  # names no meeting, and the confirmation would thank a "Guest" for
+  # nothing, so the visitor starts a booking instead, with the page's own
+  # query and never a name or an email. The classic journey keeps showing
+  # its confirmation there.
+  defp leave_empty_confirmation(%{redirected: redirected} = socket) when redirected != nil,
+    do: socket
+
+  defp leave_empty_confirmation(socket) do
+    if follows_facts?(socket) and socket.assigns[:live_action] == :confirmation and
+         socket.assigns[:meeting_uid] in [nil, ""],
+       do: push_navigate(socket, to: PathHandlers.facts_start(socket.assigns)),
+       else: socket
+  end
 
   # Only a journey whose address follows its facts keeps its address, so the
   # classic journey's assigns are what they were.

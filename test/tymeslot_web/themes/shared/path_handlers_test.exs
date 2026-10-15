@@ -458,6 +458,17 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
       assert PathHandlers.facts_path(%{base | current_state: :confirmation}) == "/ana/thank-you"
     end
 
+    test "takes the meeting type's own slug, encoded as a path segment" do
+      assigns = %{
+        username_context: "ana",
+        current_state: :offer,
+        selected_duration: "30-minutes",
+        meeting_type: %{slug: "café chat", name: "Café chat"}
+      }
+
+      assert PathHandlers.facts_path(assigns) == "/ana/caf%C3%A9%20chat"
+    end
+
     test "is nil without an organiser" do
       assert PathHandlers.facts_path(%{selected_duration: "intro-call"}) == nil
     end
@@ -477,6 +488,19 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
       }
 
       assert PathHandlers.facts_query(assigns) == "timezone=Etc%2FUTC"
+    end
+
+    test "never carries a confirmation link's name, email or meeting" do
+      assigns = %{
+        page_query_params: %{
+          "embed" => "true",
+          "name" => "Ana",
+          "email" => "ana@example.com",
+          "meeting_uid" => "m-1"
+        }
+      }
+
+      assert PathHandlers.facts_query(assigns) == "embed=true"
     end
 
     test "keeps a reschedule while it lasts, and drops it once abandoned" do

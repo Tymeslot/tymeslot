@@ -170,23 +170,14 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
     do: socket
 
   def follow_url(%Socket{assigns: %{journey: %Journey{url: :facts}}} = socket) do
-    case PathHandlers.facts_path(socket.assigns) do
-      nil ->
-        socket
+    address = PathHandlers.facts_address(socket.assigns)
 
-      path ->
-        address = with_query(path, PathHandlers.facts_query(socket.assigns))
-
-        if connected?(socket) and address != socket.assigns[:journey_url],
-          do: socket |> assign(:journey_url, address) |> push_patch(to: address, replace: true),
-          else: socket
-    end
+    if connected?(socket) and is_binary(address) and address != socket.assigns[:journey_url],
+      do: socket |> assign(:journey_url, address) |> push_patch(to: address, replace: true),
+      else: socket
   end
 
   def follow_url(socket), do: socket
-
-  defp with_query(path, nil), do: path
-  defp with_query(path, query), do: "#{path}?#{query}"
 
   defp ready?(fact, assigns),
     do: Enum.all?(fact.requires(assigns), &Journey.fact!(&1).known?(assigns))
@@ -228,7 +219,9 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   Starts the booking again, in place: the confirmation's "Schedule another
   meeting". It keeps the meeting type and forgets every fact depending on
   it (the time, the answers, the booking just made). A booker who came
-  through the overview returns to the journey's opening moment; any other
+  through the overview, or whose booking names no meeting type (a
+  confirmation reached by its own address), returns to the journey's
+  opening moment, as a visit to the overview would; any other
   (a private or direct link, a reschedule) to the moment a meeting type's
   own link opens on, for the same meeting type, so the organiser's other
   types stay hidden.
@@ -241,7 +234,8 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   # booker's, and the booking's `meeting_uid` would leave the attendee
   # known, so the next booking's details moment would open as done. A
   # reschedule still named in the URL is patched out of it, to the route the
-  # booking starts again on, so a reload does not start the move over.
+  # booking starts again on, so a reload does not start the move over. That
+  # route is also the one the language switch now rebuilds (`:entry_action`).
   @spec restart(Socket.t()) :: Socket.t()
   def restart(socket) do
     journey = socket.assigns.journey
@@ -254,7 +248,11 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
     |> GuestBooking.assign_defaults()
     |> ReschedulePin.abandon()
     |> assign(selected_date: nil, selected_time: nil)
-    |> assign(:journey_opened, MapSet.new())
+    |> assign(
+      journey_opened: MapSet.new(),
+      entry_action: route,
+      entered_via_overview: route == :overview
+    )
     |> transition_to(opening, %{})
     |> ReschedulePin.drop_from_url(route)
   end
@@ -311,9 +309,14 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
 
   # The route whose entry the booking starts again on: the overview, or the
   # meeting type's own link (`/:username/:slug`, live action `:schedule`),
-  # so a restart opens where a fresh visit by the same way in would.
+  # so a restart opens where a fresh visit by the same way in would. A
+  # booking with no meeting type known (a confirmation reached by its own
+  # address) starts on the overview, since a type's link needs a type.
   defp restart_route(%{entered_via_overview: true}), do: :overview
-  defp restart_route(_assigns), do: :schedule
+
+  defp restart_route(assigns) do
+    if Journey.fact!(:meeting_type).known?(assigns), do: :schedule, else: :overview
+  end
 
   defp restart?(assigns, moment_key, event) do
     event == :schedule_another and moment_key == :confirmation and

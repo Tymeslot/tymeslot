@@ -94,21 +94,7 @@ defmodule TymeslotWeb.Live.Themes.JourneyUrlTest do
     %{user: user, profile: profile, meeting_types: [meeting_type]} =
       seed_organiser("96", "url-restart")
 
-    start = DateTime.utc_now() |> DateTime.add(2, :day) |> DateTime.truncate(:second)
-
-    meeting =
-      insert(:meeting,
-        organizer_user_id: user.id,
-        organizer_name: user.name,
-        meeting_type_id: meeting_type.id,
-        attendee_name: "Ana Silva",
-        attendee_email: "ana-url@example.com",
-        attendee_timezone: "Etc/UTC",
-        start_time: start,
-        end_time: DateTime.add(start, 30, :minute),
-        duration: 30,
-        status: "confirmed"
-      )
+    meeting = insert_meeting(user, meeting_type)
 
     {:ok, view, _html} =
       live(conn, "/#{profile.username}/quick-chat?reschedule_meeting_uid=#{meeting.uid}")
@@ -126,13 +112,99 @@ defmodule TymeslotWeb.Live.Themes.JourneyUrlTest do
     refute live_assigns(view).journey_url =~ "reschedule"
   end
 
-  test "the classic journey keeps the route it arrived on", %{conn: conn} do
+  test "a thank-you address with no booking behind it sends the visitor to the start",
+       %{conn: conn} do
+    %{profile: profile} = seed_organiser("96", "url-empty-thanks")
+    user = profile.username
+
+    assert {:error, {:live_redirect, %{to: to}}} =
+             live(
+               conn,
+               "/#{user}/thank-you?timezone=Etc%2FUTC&name=Ana&email=ana-url%40example.com"
+             )
+
+    # The start keeps the page's own query and never the visitor's name or email.
+    assert to == "/#{user}?timezone=Etc%2FUTC"
+  end
+
+  test "a classic thank-you address still shows the confirmation", %{conn: conn} do
+    %{profile: profile} = seed_organiser("1", "url-quill-thanks")
+
+    assert {:ok, view, _html} = live(conn, "/#{profile.username}/thank-you")
+    assert live_assigns(view).current_state == :confirmation
+  end
+
+  @tag :capture_log
+  test "a restart from a paged journey's thank-you address opens on the meeting types",
+       %{conn: conn} do
+    %{user: user, profile: profile, meeting_types: [meeting_type]} =
+      seed_organiser("93", "url-two-thanks")
+
+    meeting = insert_meeting(user, meeting_type)
+
+    {:ok, view, _html} = live(conn, "/#{profile.username}/thank-you?meeting_uid=#{meeting.uid}")
+    assert live_assigns(view).current_state == :confirmation
+
+    BookingDriver.restart(view)
+
+    # No meeting type is known, so the booking starts on the types, not on a
+    # time screen with none chosen.
+    assert live_assigns(view).current_state == :offer
+    assert_patch(view, "/#{profile.username}")
+  end
+
+  @tag :capture_log
+  test "after a restart from the thank-you address the language switch rebuilds the start",
+       %{conn: conn} do
+    %{user: user, profile: profile, meeting_types: [meeting_type]} =
+      seed_organiser("96", "url-scroll-thanks")
+
+    meeting = insert_meeting(user, meeting_type)
+
+    {:ok, view, _html} = live(conn, "/#{profile.username}/thank-you?meeting_uid=#{meeting.uid}")
+    BookingDriver.restart(view)
+
+    view |> element("button[phx-click='toggle_language_dropdown']") |> render_click()
+
+    assert {:error, {:redirect, %{to: to}}} =
+             view
+             |> element("button[phx-click='change_locale'][phx-value-locale='de']")
+             |> render_click()
+
+    assert URI.parse(to).path == "/#{profile.username}"
+  end
+
+  @tag :capture_log
+  test "the classic journey keeps the route it arrived on, through the confirmation",
+       %{conn: conn} do
     %{profile: profile} = seed_organiser("1", "url-quill")
     {:ok, view, _html} = live(conn, "/#{profile.username}")
 
-    BookingDriver.choose_meeting_type(view, "quick-chat")
-    BookingDriver.continue(view)
+    BookingDriver.book(view,
+      meeting_type: "quick-chat",
+      attendee: %{name: "Ana Silva", email: "ana-quill@example.com"}
+    )
+
+    await(view, "[data-testid='confirmation-heading']")
 
     assert live_assigns(view)[:journey_url] == nil
+    assert live_assigns(view).request_path == "/#{profile.username}"
+  end
+
+  defp insert_meeting(user, meeting_type) do
+    start = DateTime.utc_now() |> DateTime.add(2, :day) |> DateTime.truncate(:second)
+
+    insert(:meeting,
+      organizer_user_id: user.id,
+      organizer_name: user.name,
+      meeting_type_id: meeting_type.id,
+      attendee_name: "Ana Silva",
+      attendee_email: "ana-url@example.com",
+      attendee_timezone: "Etc/UTC",
+      start_time: start,
+      end_time: DateTime.add(start, 30, :minute),
+      duration: 30,
+      status: "confirmed"
+    )
   end
 end

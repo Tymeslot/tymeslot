@@ -14,8 +14,10 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   # What makes a page a reschedule rather than a booking.
   @reschedule_params ["reschedule_meeting_uid", "reschedule_seat_token"]
 
-  # What the path or the booking's facts now say, never carried in the query.
-  @fact_params ~w(date time duration)
+  # What the path or the booking's facts now say, and what a classic
+  # confirmation link names (who booked, and which meeting), never carried in
+  # a facts address's query.
+  @fact_params ~w(date time duration name email meeting_uid)
 
   @doc """
   Builds a path with locale and theme query parameters.
@@ -31,13 +33,13 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   @doc """
   The address a booking's known facts give, for a journey whose address
   follows them (`url: :facts`): `/:username` before a meeting type is known,
-  `/:username/:slug` with one, `/:username/:slug/book` once the day and the
-  time are, and `/:username/thank-you` on the confirmation. `nil` without an
-  organiser.
+  `/:username/:slug` with one (the type's own slug, `MeetingTypes.effective_slug/1`),
+  `/:username/:slug/book` once the day and the time are, and
+  `/:username/thank-you` on the confirmation. `nil` without an organiser.
   """
   @spec facts_path(map()) :: String.t() | nil
   def facts_path(%{username_context: username} = assigns) when is_binary(username) do
-    slug = MeetingTypes.normalize_duration_slug(assigns[:duration] || assigns[:selected_duration])
+    slug = facts_slug(assigns)
 
     cond do
       assigns[:current_state] == :confirmation -> "/#{username}/thank-you"
@@ -49,15 +51,51 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
 
   def facts_path(_assigns), do: nil
 
+  @doc """
+  `facts_path/1` with `facts_query/1`: the whole address a journey whose
+  address follows its facts moves to. `nil` without an organiser.
+  """
+  @spec facts_address(map()) :: String.t() | nil
+  def facts_address(assigns) do
+    if path = facts_path(assigns), do: with_query(path, facts_query(assigns))
+  end
+
+  @doc """
+  The start of a journey whose address follows its facts, `/:username`, with
+  the page's own query (`facts_query/1`); `/` without an organiser.
+  """
+  @spec facts_start(map()) :: String.t()
+  def facts_start(%{username_context: username} = assigns) when is_binary(username),
+    do: with_query("/#{username}", facts_query(assigns))
+
+  def facts_start(_assigns), do: "/"
+
+  defp facts_slug(assigns) do
+    slug =
+      case assigns[:meeting_type] do
+        %{} = meeting_type ->
+          MeetingTypes.effective_slug(meeting_type)
+
+        _none ->
+          MeetingTypes.normalize_duration_slug(assigns[:duration] || assigns[:selected_duration])
+      end
+
+    if is_binary(slug) and slug != "", do: URI.encode(slug, &URI.char_unreserved?/1)
+  end
+
   defp slot_known?(assigns),
     do: is_binary(assigns[:selected_date]) and is_binary(assigns[:selected_time])
+
+  defp with_query(path, nil), do: path
+  defp with_query(path, query), do: "#{path}?#{query}"
 
   @doc """
   The query string a journey whose address follows its facts keeps: the
   page's own parameters (`:page_query_params`) less the day, the time and
-  the duration, which the facts now say, and less the reschedule once it is
-  abandoned (no `reschedule_meeting_uid` and no `reschedule_seat_token`
-  left on the page). `nil` when nothing is left.
+  the duration, which the facts now say, less a confirmation link's name,
+  email and meeting, and less the reschedule once it is abandoned (no
+  `reschedule_meeting_uid` and no `reschedule_seat_token` left on the
+  page). `nil` when nothing is left.
   """
   @spec facts_query(map()) :: String.t() | nil
   def facts_query(assigns) do
