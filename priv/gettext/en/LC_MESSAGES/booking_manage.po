@@ -620,3 +620,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Your seat was given to someone else after you declined. Your answer stays as it was; please contact the person who invited you or the meeting host."
 msgstr ""
+
+#: lib/tymeslot_web/themes/core/meeting_management.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting was arranged by a poll, so only its host can move or cancel it. If you can't make it, use \"Can't make it\" in your invitation, or reply to it."
+msgstr ""

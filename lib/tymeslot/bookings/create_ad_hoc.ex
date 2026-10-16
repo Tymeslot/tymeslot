@@ -33,7 +33,8 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
           optional(:guest_emails) => [String.t()],
           optional(:organizer_note) => String.t() | nil,
           optional(:attendee_locale) => String.t() | nil,
-          optional(:reminders) => [%{value: pos_integer(), unit: String.t()}]
+          optional(:reminders) => [%{value: pos_integer(), unit: String.t()}],
+          optional(:managed_by_host) => boolean()
         }
 
   @spec execute(params()) ::
@@ -140,6 +141,7 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
       attendee_locale:
         Locales.acceptable(params[:attendee_locale]) || Locales.booking_default_locale(),
       status: "confirmed",
+      managed_by_host: params[:managed_by_host] == true,
       view_url: build_meeting_url(uid, "", org_username),
       reschedule_url: build_meeting_url(uid, "/reschedule", org_username),
       cancel_url: build_meeting_url(uid, "/cancel", org_username),

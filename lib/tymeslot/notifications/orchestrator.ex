@@ -12,6 +12,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.ApprovalJobs
+  alias Tymeslot.Meetings.MeetingSchema
 
   alias Tymeslot.Notifications.{
     ContentBuilder,
@@ -293,7 +294,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
     with :ok <- Recipients.validate_recipients(recipients),
          :ok <- ContentBuilder.validate_content(content) do
       # Send immediately via EmailService
-      result = send_reschedule_emails(content)
+      result = send_reschedule_emails(content, updated_meeting)
       GuestNotifications.notify_rescheduled(updated_meeting, content)
       result
     end
@@ -435,6 +436,27 @@ defmodule Tymeslot.Notifications.Orchestrator do
       schedule_at
     )
   end
+
+  # A meeting the host manages has no booker: the person in its attendee
+  # fields is a guest and hears of the move with the other guests.
+  defp send_reschedule_emails(content, %MeetingSchema{managed_by_host: true}) do
+    case Config.email_service_module().send_reschedule_email_to_organizer(
+           content.organizer_email,
+           content
+         ) do
+      {:ok, _organizer} ->
+        {:ok, :reschedules_sent}
+
+      error ->
+        Logger.warning("Reschedule email to the organiser may have failed",
+          organizer_result: LogFormat.reason(error)
+        )
+
+        {:ok, :reschedules_partially_sent}
+    end
+  end
+
+  defp send_reschedule_emails(content, _meeting), do: send_reschedule_emails(content)
 
   defp send_reschedule_emails(content) do
     email_service = Config.email_service_module()

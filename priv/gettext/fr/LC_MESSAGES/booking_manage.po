@@ -620,3 +620,8 @@ msgstr "Cette réunion est désormais complète"
 #, elixir-autogen, elixir-format
 msgid "Your seat was given to someone else after you declined. Your answer stays as it was; please contact the person who invited you or the meeting host."
 msgstr "Votre place a été attribuée à quelqu’un d’autre après votre refus. Votre réponse reste inchangée ; veuillez contacter la personne qui vous a invité ou l’organisateur."
+
+#: lib/tymeslot_web/themes/core/meeting_management.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting was arranged by a poll, so only its host can move or cancel it. If you can't make it, use \"Can't make it\" in your invitation, or reply to it."
+msgstr "Cette réunion a été fixée par un sondage : seul son organisateur peut la déplacer ou l'annuler. Si vous ne pouvez pas venir, utilisez « Je ne pourrai pas venir » dans votre invitation, ou répondez-y."

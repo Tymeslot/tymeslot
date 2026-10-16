@@ -44,6 +44,7 @@ defmodule Tymeslot.Bookings.Reschedule do
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Meetings.VideoRooms
   alias Tymeslot.MeetingTypes
@@ -136,6 +137,61 @@ defmodule Tymeslot.Bookings.Reschedule do
       {:error, :not_found} -> {:error, :meeting_not_found}
       error -> error
     end
+  end
+
+  @doc """
+  Moves a meeting the host manages (`MeetingSchema.managed_by_host?/1`, one
+  confirmed from a poll) to start at `new_start`, keeping its length.
+
+  The host chooses the time, as they did when they confirmed the poll, so the
+  schedule the booking page offers is not consulted; only another meeting of
+  theirs at that time refuses it (`:slot_taken`). Everything else follows the
+  reschedule path: the calendar entry and any video room move, reminders are
+  pinned to the new time, and the host and every guest get the new time with
+  an updated calendar entry, the guests asked again whether they can come.
+
+  Returns `{:error, :not_managed_by_host}` for a meeting with a booker, who
+  moves it themselves, and `{:error, :slot_in_past}` for a time that has
+  started.
+  """
+  @spec move_by_host(String.t(), DateTime.t(), integer()) ::
+          {:ok, MeetingSchema.t()}
+          | {:error,
+             Errors.classified_error() | :not_managed_by_host | :slot_in_past | String.t()}
+  def move_by_host(meeting_uid, %DateTime{} = new_start, organizer_user_id)
+      when is_binary(meeting_uid) and is_integer(organizer_user_id) do
+    with {:ok, original} <-
+           MeetingQueries.get_meeting_by_uid_for_organizer(meeting_uid, organizer_user_id),
+         :ok <- ensure_host_managed(original),
+         :ok <- Policy.can_reschedule_meeting?(original),
+         :ok <- ensure_future(new_start),
+         {:ok, updated} <-
+           apply_time_update_and_schedule_job(original, host_times(original, new_start), nil, %{}) do
+      after_commit(updated, original)
+      {:ok, updated}
+    else
+      {:error, :not_found} -> {:error, :meeting_not_found}
+      error -> error
+    end
+  end
+
+  defp ensure_host_managed(meeting) do
+    if MeetingSchema.managed_by_host?(meeting), do: :ok, else: {:error, :not_managed_by_host}
+  end
+
+  defp ensure_future(start) do
+    if DateTime.compare(start, Clock.utc_now()) == :gt, do: :ok, else: {:error, :slot_in_past}
+  end
+
+  defp host_times(meeting, new_start) do
+    length = DateTime.diff(meeting.end_time, meeting.start_time, :second)
+    start = DateTime.truncate(new_start, :second)
+
+    %{
+      start_time: start,
+      end_time: DateTime.add(start, length, :second),
+      duration_minutes: div(length, 60)
+    }
   end
 
   # Private functions
@@ -417,9 +473,16 @@ defmodule Tymeslot.Bookings.Reschedule do
   end
 
   defp validate_can_reschedule(meeting) do
-    with :ok <- Policy.can_reschedule_meeting?(meeting) do
-      refuse_group_meeting(meeting)
+    with :ok <- Policy.can_reschedule_meeting?(meeting),
+         :ok <- refuse_group_meeting(meeting) do
+      refuse_host_managed(meeting)
     end
+  end
+
+  # A meeting confirmed from a poll has no booker to move it: the host does,
+  # with `move_by_host/3`.
+  defp refuse_host_managed(meeting) do
+    if MeetingSchema.managed_by_host?(meeting), do: {:error, :managed_by_host}, else: :ok
   end
 
   # A group slot is shared, so moving the meeting row would move everybody on

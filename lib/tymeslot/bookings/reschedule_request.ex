@@ -67,6 +67,7 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
   @spec send_reschedule_request(MeetingSchema.t()) :: :ok | {:error, String.t() | atom()}
   def send_reschedule_request(meeting) do
     with :ok <- check_not_already_requested(meeting),
+         :ok <- refuse_host_managed(meeting),
          :ok <- Policy.can_request_reschedule?(meeting) do
       update_and_send_reschedule_request(meeting)
     else
@@ -87,6 +88,12 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
   # A meeting already awaiting a new time must reject a second request
   # outright — re-stamping `reschedule_requested_at` here would re-run the
   # slot-voiding side effects and queue a duplicate attendee email.
+  # A meeting confirmed from a poll has nobody to ask for a new time: the host
+  # picks it with `Tymeslot.Bookings.Reschedule.move_by_host/3`.
+  defp refuse_host_managed(meeting) do
+    if MeetingSchema.managed_by_host?(meeting), do: {:error, :managed_by_host}, else: :ok
+  end
+
   defp check_not_already_requested(meeting) do
     if MeetingState.awaiting_new_time?(meeting) do
       {:error, :already_requested}

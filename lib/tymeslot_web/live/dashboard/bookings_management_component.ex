@@ -11,10 +11,13 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Approval
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Security.RateLimiter
 
   alias Phoenix.LiveView
 
+  alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
+  alias TymeslotWeb.Components.Dashboard.Meetings.HostMoveModal
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents
   alias TymeslotWeb.Dashboard.BookingsManagement.Cancellation
   alias TymeslotWeb.Dashboard.BookingsManagement.GuestActions
@@ -56,10 +59,16 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
        add_guests: false
      )
      |> assign(:staged_guests, [])
-     |> assign(:add_guests_existing, [])}
+     |> assign(:add_guests_existing, [])
+     |> assign(:host_move_meeting, nil)}
   end
 
   @impl Phoenix.LiveComponent
+  def update(%{host_move: result}, socket) do
+    socket = assign(socket, :host_move_meeting, nil)
+    {:ok, if(result == :moved, do: load_meetings(socket), else: socket)}
+  end
+
   def update(assigns, socket) do
     # Apply incoming assigns first
     socket = assign(socket, assigns)
@@ -183,7 +192,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
           %{user_id: socket.assigns.current_user.id, meeting_id: meeting.id}
         )
 
-        {:noreply, ModalHook.show_modal(socket, :reschedule_request, meeting)}
+        {:noreply, open_reschedule(socket, meeting)}
 
       {:error, :validation_failed, _error} ->
         {:noreply, socket}
@@ -430,11 +439,31 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         time_format={@time_format}
         target={@myself}
       />
+
+      <.live_component
+        :if={@host_move_meeting}
+        module={HostMoveModal}
+        id="host-move-modal"
+        meeting={@host_move_meeting}
+        timezone={Helpers.get_meeting_timezone(@host_move_meeting, @profile)}
+        time_format={@time_format}
+        user_id={@current_user.id}
+        parent_module={__MODULE__}
+        parent_id={@id}
+      />
     </div>
     """
   end
 
   # Private functions
+
+  # A meeting confirmed from a poll has nobody to ask for a new time, so the
+  # host picks it themselves.
+  defp open_reschedule(socket, meeting) do
+    if MeetingSchema.managed_by_host?(meeting),
+      do: assign(socket, :host_move_meeting, meeting),
+      else: ModalHook.show_modal(socket, :reschedule_request, meeting)
+  end
 
   defp do_cancel_meeting(socket, meeting, params) do
     booking_payment = socket.assigns.cancel_booking_payment

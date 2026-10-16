@@ -119,6 +119,14 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
          |> LiveView.put_flash(:error, MeetingManagement.group_meeting_message())
          |> LiveView.redirect(to: ~p"/#{profile.username}")}
 
+      # A meeting confirmed from a poll is the host's to move or cancel; the
+      # person in its attendee fields is a guest like everyone else.
+      {:error, :managed_by_host} ->
+        {:ok,
+         socket
+         |> LiveView.put_flash(:error, MeetingManagement.managed_by_host_message())
+         |> LiveView.redirect(to: ~p"/#{profile.username}")}
+
       {:error, reason} ->
         {:ok,
          socket

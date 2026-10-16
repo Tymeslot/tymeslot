@@ -620,3 +620,8 @@ msgstr "Esta reunião agora está lotada"
 #, elixir-autogen, elixir-format
 msgid "Your seat was given to someone else after you declined. Your answer stays as it was; please contact the person who invited you or the meeting host."
 msgstr "Sua vaga foi passada para outra pessoa depois que você recusou. Sua resposta continua a mesma; entre em contato com quem convidou você ou com o organizador."
+
+#: lib/tymeslot_web/themes/core/meeting_management.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting was arranged by a poll, so only its host can move or cancel it. If you can't make it, use \"Can't make it\" in your invitation, or reply to it."
+msgstr "Esta reunião foi marcada por uma enquete, então só o anfitrião pode remarcá-la ou cancelá-la. Se você não puder ir, use “Não vou poder” no seu convite ou responda a ele."

@@ -724,3 +724,58 @@ msgstr "Залишив(-ла) цей слот"
 #, elixir-autogen, elixir-format
 msgid "Cancel meeting"
 msgstr "Скасувати зустріч"
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Currently: %{date}, %{time}"
+msgstr "Зараз: %{date}, %{time}"
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Enter the new date and time."
+msgstr "Введіть нові дату й час."
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "It was arranged by a poll, so you choose its new time. Everyone invited is sent the new time with an updated calendar entry and asked again whether they can come."
+msgstr "Її призначено за опитуванням, тож новий час обираєте ви. Усі запрошені отримають новий час з оновленою подією в календарі, і їх знову запитають, чи зможуть вони прийти."
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting moved. Everyone invited has been told."
+msgstr "Зустріч перенесено. Усіх запрошених повідомлено."
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Move meeting"
+msgstr "Перенести зустріч"
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Move this meeting"
+msgstr "Перенести цю зустріч"
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "New start (%{timezone})"
+msgstr "Новий початок (%{timezone})"
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting could not be moved. Please try again."
+msgstr "Не вдалося перенести зустріч. Спробуйте ще раз."
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The new time must be in the future."
+msgstr "Новий час має бути в майбутньому."
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a meeting at that time."
+msgstr "На цей час у вас уже є зустріч."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Poll"
+msgstr "Опитування"

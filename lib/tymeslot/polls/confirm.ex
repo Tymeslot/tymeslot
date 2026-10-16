@@ -4,10 +4,15 @@ defmodule Tymeslot.Polls.Confirm do
 
   Confirmation runs the winning slot through the regular ad-hoc booking path
   (`Bookings.CreateAdHoc`), so the resulting meeting gets the same calendar
-  sync, notifications and optional video provisioning as any other booking. The
-  first participant available for the slot becomes the attendee; everyone else
-  rides along as a guest. On success the poll transitions to `:confirmed` and
-  subscribers are notified.
+  sync, notifications and optional video provisioning as any other booking. On
+  success the poll transitions to `:confirmed` and subscribers are notified.
+
+  The meeting is managed by the host (`MeetingSchema.managed_by_host?/1`): it
+  has no booker. Every participant is invited as a guest and answers yes or no
+  like one, and only the host can move or cancel it. The first participant
+  available for the slot fills the meeting's attendee fields, which a calendar
+  entry needs, but is not sent the booking emails with their reschedule and
+  cancel links.
   """
 
   alias Tymeslot.Availability.TimeOff
@@ -144,11 +149,10 @@ defmodule Tymeslot.Polls.Confirm do
     end)
   end
 
-  defp guest_emails(participants, primary) do
+  # Everyone, the primary included: they are a guest like the rest.
+  defp guest_emails(participants) do
     participants
-    |> Enum.reject(&(&1.id == primary.id))
-    |> Enum.map(& &1.email)
-    |> Enum.reject(&(&1 == primary.email))
+    |> Enum.map(&String.downcase(&1.email))
     |> Enum.uniq()
   end
 
@@ -183,7 +187,8 @@ defmodule Tymeslot.Polls.Confirm do
       attendee_timezone: primary.timezone || poll.timezone,
       calendar_integration_id: calendar_integration_id,
       video_integration_id: video_integration_id,
-      guest_emails: guest_emails(poll.participants, primary),
+      guest_emails: guest_emails(poll.participants),
+      managed_by_host: true,
       # What the host wrote to the participants while they voted is still
       # their note to them once the meeting is set.
       organizer_note: organizer_note(poll.description)

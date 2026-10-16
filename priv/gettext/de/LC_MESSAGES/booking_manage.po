@@ -620,3 +620,8 @@ msgstr "Dieser Termin ist inzwischen ausgebucht"
 #, elixir-autogen, elixir-format
 msgid "Your seat was given to someone else after you declined. Your answer stays as it was; please contact the person who invited you or the meeting host."
 msgstr "Ihr Platz wurde nach Ihrer Absage an jemand anderen vergeben. Ihre Antwort bleibt unverändert; wenden Sie sich bitte an die Person, die Sie eingeladen hat, oder an den Gastgeber."
+
+#: lib/tymeslot_web/themes/core/meeting_management.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting was arranged by a poll, so only its host can move or cancel it. If you can't make it, use \"Can't make it\" in your invitation, or reply to it."
+msgstr "Dieser Termin wurde per Umfrage festgelegt, daher kann nur der Gastgeber ihn verschieben oder absagen. Wenn Sie nicht können, nutzen Sie „Kann nicht teilnehmen“ in Ihrer Einladung oder antworten Sie darauf."
