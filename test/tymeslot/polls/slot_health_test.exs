@@ -56,6 +56,60 @@ defmodule Tymeslot.Polls.SlotHealthTest do
       assert SlotHealth.check(poll) == %{conflicting.id => :conflict, free.id => :ok}
     end
 
+    # The calendar cache hands an all-day event back with `Date` bounds, as
+    # the booking path's conflict check receives it too. It blocks the whole
+    # day in the host's time zone, and must not crash the comparison.
+    test "an all-day busy event blocks the slots on its day" do
+      poll = insert(:poll)
+      tomorrow = Date.add(Date.utc_today(), 1)
+
+      on_the_day =
+        insert(:poll_time_slot, poll: poll, start_time: at(10), end_time: at(11), position: 0)
+
+      next_day =
+        insert(:poll_time_slot,
+          poll: poll,
+          start_time: DateTime.add(at(10), 1, :day),
+          end_time: DateTime.add(at(11), 1, :day),
+          position: 1
+        )
+
+      TestMocks.setup_calendar_mocks(
+        events: [event(tomorrow, Date.add(tomorrow, 1), %{all_day: true})]
+      )
+
+      poll = %{poll | time_slots: [on_the_day, next_day]}
+      assert SlotHealth.check(poll) == %{on_the_day.id => :conflict, next_day.id => :ok}
+    end
+
+    # The events are fetched for every day from the first candidate time to
+    # the last, so an all-day event between them is compared with each slot
+    # even when it touches none of them.
+    test "an all-day busy event between the slots leaves them free" do
+      poll = insert(:poll)
+      tomorrow = Date.add(Date.utc_today(), 1)
+
+      first =
+        insert(:poll_time_slot, poll: poll, start_time: at(10), end_time: at(11), position: 0)
+
+      last =
+        insert(:poll_time_slot,
+          poll: poll,
+          start_time: DateTime.add(at(10), 4, :day),
+          end_time: DateTime.add(at(11), 4, :day),
+          position: 1
+        )
+
+      holiday = Date.add(tomorrow, 2)
+
+      TestMocks.setup_calendar_mocks(
+        events: [event(holiday, Date.add(holiday, 1), %{all_day: true})]
+      )
+
+      poll = %{poll | time_slots: [first, last]}
+      assert SlotHealth.check(poll) == %{first.id => :ok, last.id => :ok}
+    end
+
     test "a cancelled event does not cause a conflict" do
       poll = insert(:poll)
 
