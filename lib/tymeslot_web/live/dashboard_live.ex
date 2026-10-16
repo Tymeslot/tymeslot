@@ -172,22 +172,18 @@ defmodule TymeslotWeb.DashboardLive do
     reschedule_agenda_tick(socket, action)
   end
 
-  # Which calendar surface the organiser chose, read once per process, on the
-  # connected render only (the dead render shows the default surface): later
+  # Which calendar surface the organiser chose, read once per process (the
+  # dead render too, so the page never flashes the other surface): later
   # switches go through `handle_event("calendar:switch_surface", ...)`, which
   # keeps this assign current.
   defp assign_calendar_redesign(
          %{assigns: %{calendar_redesign: nil, current_user: %{id: user_id}}} = socket
        ) do
-    if connected?(socket) do
-      assign(
-        socket,
-        :calendar_redesign,
-        CalendarGrid.get_or_create_preferences(user_id).redesign_enabled
-      )
-    else
-      socket
-    end
+    assign(
+      socket,
+      :calendar_redesign,
+      CalendarGrid.get_or_create_preferences(user_id).redesign_enabled
+    )
   end
 
   defp assign_calendar_redesign(socket), do: socket
