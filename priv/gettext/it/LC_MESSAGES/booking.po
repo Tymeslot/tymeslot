@@ -1405,41 +1405,6 @@ msgstr "Telefonata"
 msgid "Somewhere else"
 msgstr "Altro luogo"
 
-#: lib/tymeslot_web/themes/shared/components/session_list.ex
-#, elixir-autogen, elixir-format
-msgid "Dates"
-msgstr "Date"
-
-#: lib/tymeslot_web/themes/shared/components/session_list.ex
-#, elixir-autogen, elixir-format
-msgid "Fully booked"
-msgstr "Completo"
-
-#: lib/tymeslot_web/themes/shared/components/session_list.ex
-#, elixir-autogen, elixir-format
-msgid "No dates are planned at the moment."
-msgstr "Al momento non ci sono date pianificate."
-
-#: lib/tymeslot_web/themes/shared/components/session_list.ex
-#, elixir-autogen, elixir-format
-msgid "Registration closed"
-msgstr "Iscrizioni chiuse"
-
-#: lib/tymeslot_web/themes/shared/components/session_list.ex
-#, elixir-autogen, elixir-format
-msgid "Registration is closed."
-msgstr "Le iscrizioni sono chiuse."
-
-#: lib/tymeslot_web/themes/shared/components/session_list.ex
-#, elixir-autogen, elixir-format
-msgid "Registration until %{datetime}"
-msgstr "Iscrizioni fino al %{datetime}"
-
-#: lib/tymeslot_web/themes/shared/components/session_list.ex
-#, elixir-autogen, elixir-format
-msgid "This event has ended."
-msgstr "Questo evento è terminato."
-
 #: lib/tymeslot_web/themes/shared/components/seat_badge.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} spot left"
