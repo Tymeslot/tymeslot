@@ -16,6 +16,10 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
           show_week_numbers: boolean(),
           show_weekends: boolean(),
           desktop_reminders_enabled: boolean(),
+          redesign_enabled: boolean(),
+          density: String.t(),
+          fold_night: boolean(),
+          focus_mode: boolean(),
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
@@ -31,6 +35,12 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
     field :show_week_numbers, :boolean, default: false
     field :show_weekends, :boolean, default: true
     field :desktop_reminders_enabled, :boolean, default: false
+    # The redesigned calendar: which surface `/dashboard/calendar` renders,
+    # and how its grid is drawn. `focus_mode` has no control yet.
+    field :redesign_enabled, :boolean, default: false
+    field :density, :string, default: "comfortable"
+    field :fold_night, :boolean, default: true
+    field :focus_mode, :boolean, default: false
 
     timestamps(type: :utc_datetime)
   end
@@ -38,6 +48,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
   @valid_views ~w(week day month agenda)
   @valid_week_starts ~w(monday sunday)
   @valid_time_formats TimeFormat.formats()
+  @valid_densities ~w(comfortable compact)
 
   @castable_fields [
     :user_id,
@@ -47,7 +58,11 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
     :time_format,
     :show_week_numbers,
     :show_weekends,
-    :desktop_reminders_enabled
+    :desktop_reminders_enabled,
+    :redesign_enabled,
+    :density,
+    :fold_night,
+    :focus_mode
   ]
 
   @spec changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
@@ -58,6 +73,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
     |> validate_inclusion(:default_view, @valid_views)
     |> validate_inclusion(:week_start_day, @valid_week_starts)
     |> validate_inclusion(:time_format, @valid_time_formats)
+    |> validate_inclusion(:density, @valid_densities)
     |> unique_constraint(:user_id)
     |> foreign_key_constraint(:user_id)
   end
