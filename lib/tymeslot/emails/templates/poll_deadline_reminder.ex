@@ -13,6 +13,7 @@ defmodule Tymeslot.Emails.Templates.PollDeadlineReminder do
     Buttons,
     Formatting,
     MjmlEmail,
+    PollHost,
     Sanitise,
     Styles,
     TemplateHelper,
@@ -21,8 +22,6 @@ defmodule Tymeslot.Emails.Templates.PollDeadlineReminder do
   }
 
   alias Tymeslot.Polls.{PollParticipantSchema, PollSchema}
-  alias Tymeslot.Profiles
-  alias Tymeslot.Profiles.ProfileSchema
 
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -33,7 +32,7 @@ defmodule Tymeslot.Emails.Templates.PollDeadlineReminder do
   def render(%PollSchema{} = poll, %PollParticipantSchema{} = participant, voting_url)
       when is_binary(voting_url) do
     locale = participant.locale || "en"
-    host_name = host_display_name(poll)
+    host_name = PollHost.display_name(poll)
     deadline = formatted_deadline(poll, participant, locale)
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
@@ -60,7 +59,7 @@ defmodule Tymeslot.Emails.Templates.PollDeadlineReminder do
       MjmlEmail.base_email()
       |> to({participant.name, participant.email})
       |> from({host_name, MjmlEmail.fetch_from_email()})
-      |> MjmlEmail.put_reply_to(host_name, host_email(poll))
+      |> MjmlEmail.put_reply_to(host_name, PollHost.email(poll))
       |> subject(
         Sanitise.sanitize_for_header(
           dgettext("emails_polls", "Reminder: vote on \"%{title}\"", title: poll.title)
@@ -120,16 +119,4 @@ defmodule Tymeslot.Emails.Templates.PollDeadlineReminder do
     |> TimezoneHelper.convert_to_timezone(timezone)
     |> Formatting.format_datetime(locale)
   end
-
-  defp host_display_name(%PollSchema{user: %{profile: %ProfileSchema{} = profile}}) do
-    Profiles.display_name(profile) || MjmlEmail.fetch_from_name()
-  end
-
-  defp host_display_name(%PollSchema{user: %{name: name}}) when is_binary(name) and name != "",
-    do: name
-
-  defp host_display_name(_poll), do: MjmlEmail.fetch_from_name()
-
-  defp host_email(%PollSchema{user: %{email: email}}), do: email
-  defp host_email(_poll), do: nil
 end

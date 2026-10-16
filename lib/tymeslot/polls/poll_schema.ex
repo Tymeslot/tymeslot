@@ -16,6 +16,11 @@ defmodule Tymeslot.Polls.PollSchema do
 
   @max_slots 40
   @max_participants 40
+  # Requests for a voting link not yet confirmed, counted apart from the cap
+  # above so that requests nobody confirms cannot fill a poll. Bounded too,
+  # since each one stores an address and sends an email; they expire after
+  # `PollParticipantSchema.unconfirmed_ttl_seconds/0`.
+  @max_unconfirmed_participants 100
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -33,6 +38,11 @@ defmodule Tymeslot.Polls.PollSchema do
     field(:token, EncryptedString, source: :token_encrypted, redact: true)
     field(:token_hash, :string)
     field(:status, Ecto.Enum, values: [:open, :confirmed, :cancelled], default: :open)
+    # Whether the host is emailed about new votes, bundled per quarter hour
+    # (`Tymeslot.Emails.EmailScheduler.PollScheduler.schedule_vote_digest/1`),
+    # and when they last were, so the next update names only who voted since.
+    field(:notify_on_vote, :boolean, default: false)
+    field(:vote_digest_sent_at, :utc_datetime)
     field(:deadline_at, :utc_datetime)
     field(:timezone, :string)
     field(:confirmed_at, :utc_datetime)
@@ -52,8 +62,13 @@ defmodule Tymeslot.Polls.PollSchema do
     # poll link land in the same second often enough that the arbitrary winner
     # reached `Confirm.pick_primary/2`, which promotes the first available
     # voter to primary attendee.
+    #
+    # Only confirmed participants: someone who asked for a link but never
+    # saved responses through it has proved nothing about their address, so
+    # they stay out of the tallies, the results and the confirmed meeting.
     has_many(:participants, PollParticipantSchema,
       foreign_key: :poll_id,
+      where: [confirmed_at: {:not, nil}],
       preload_order: [asc: :inserted_at, asc: :email]
     )
 
@@ -66,6 +81,9 @@ defmodule Tymeslot.Polls.PollSchema do
   @spec max_participants() :: pos_integer()
   def max_participants, do: @max_participants
 
+  @spec max_unconfirmed_participants() :: pos_integer()
+  def max_unconfirmed_participants, do: @max_unconfirmed_participants
+
   @spec creation_changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
   def creation_changeset(poll, attrs) do
     poll
@@ -76,7 +94,8 @@ defmodule Tymeslot.Polls.PollSchema do
       :description,
       :duration_minutes,
       :deadline_at,
-      :timezone
+      :timezone,
+      :notify_on_vote
     ])
     |> validate_required([:user_id, :title, :duration_minutes, :timezone])
     |> validate_number(:duration_minutes, Constraints.poll_duration_minutes_opts())
@@ -92,15 +111,15 @@ defmodule Tymeslot.Polls.PollSchema do
   @doc """
   Changeset for a host editing a poll's wording after it exists.
 
-  Deliberately narrow: only the title and description, never the candidate
-  times, duration, timezone, or deadline. Guests vote against the slots they
-  were shown, so changing those under an in-flight poll would silently
-  invalidate votes already cast.
+  Deliberately narrow: only the title, the description and whether the host
+  is told about new votes, never the candidate times, duration, timezone, or
+  deadline. Guests vote against the slots they were shown, so changing those
+  under an in-flight poll would silently invalidate votes already cast.
   """
   @spec details_changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
   def details_changeset(poll, attrs) do
     poll
-    |> cast(attrs, [:title, :description])
+    |> cast(attrs, [:title, :description, :notify_on_vote])
     # `cast/3` already nils a whitespace-only string, so these have to tolerate
     # nil as well as trim: a title of "   " arrives here as a nil *change*, and
     # `validate_required/2` is what turns it into an error.
@@ -122,6 +141,11 @@ defmodule Tymeslot.Polls.PollSchema do
     |> cast(attrs, [:status, :confirmed_meeting_id, :confirmed_at])
     |> validate_required([:status, :confirmed_meeting_id, :confirmed_at])
   end
+
+  @doc "Marks the host as told about every vote cast up to `sent_at`."
+  @spec vote_digest_sent_changeset(%__MODULE__{}, DateTime.t()) :: Ecto.Changeset.t()
+  def vote_digest_sent_changeset(poll, sent_at),
+    do: change(poll, vote_digest_sent_at: DateTime.truncate(sent_at, :second))
 
   @spec cancel_changeset(%__MODULE__{}) :: Ecto.Changeset.t()
   def cancel_changeset(poll), do: change(poll, status: :cancelled)

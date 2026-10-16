@@ -742,3 +742,21 @@ msgstr "%{date}, %{time}"
 #, elixir-autogen, elixir-format
 msgid "Cancel this poll"
 msgstr "Diese Umfrage absagen"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} more person asked for a voting link but hasn't voted with it yet."
+msgid_plural "%{count} more people asked for a voting link but haven't voted with it yet."
+msgstr[0] "%{count} weitere Person hat einen Abstimmungslink angefordert, aber noch nicht damit abgestimmt."
+msgstr[1] "%{count} weitere Personen haben einen Abstimmungslink angefordert, aber noch nicht damit abgestimmt."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#, elixir-autogen, elixir-format
+msgid "At most one email every 15 minutes, naming who voted, with the current standings."
+msgstr "Höchstens eine E-Mail alle 15 Minuten, mit den neuen Abstimmenden und dem aktuellen Stand."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "Email me about new votes"
+msgstr "Bei neuen Stimmen per E-Mail benachrichtigen"

@@ -748,3 +748,22 @@ msgstr "%{date}, %{time}"
 #, elixir-autogen, elixir-format
 msgid "Cancel this poll"
 msgstr "Скасувати це опитування"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} more person asked for a voting link but hasn't voted with it yet."
+msgid_plural "%{count} more people asked for a voting link but haven't voted with it yet."
+msgstr[0] "Ще %{count} особа запросила посилання для голосування, але ще не проголосувала ним."
+msgstr[1] "Ще %{count} особи запросили посилання для голосування, але ще не проголосували ним."
+msgstr[2] "Ще %{count} осіб запросили посилання для голосування, але ще не проголосували ним."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#, elixir-autogen, elixir-format
+msgid "At most one email every 15 minutes, naming who voted, with the current standings."
+msgstr "Не більше одного листа на 15 хвилин — з іменами тих, хто проголосував, і поточними результатами."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "Email me about new votes"
+msgstr "Повідомляти електронною поштою про нові голоси"
