@@ -227,7 +227,7 @@ test("a resize redraws only when the width changed, batched per frame", () => {
 });
 
 function shortViewport() {
-  vi.stubGlobal("innerWidth", 400);
+  vi.stubGlobal("innerWidth", 380);
   vi.stubGlobal("innerHeight", 300);
 }
 

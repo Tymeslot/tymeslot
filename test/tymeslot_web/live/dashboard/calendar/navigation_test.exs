@@ -50,6 +50,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.NavigationTest do
       assert strings.also_here =~ "%{titles}"
       assert strings.allday_more =~ "%{count}"
       assert strings.allday_more =~ "%{date}"
+
+      refute ExUnit.CaptureLog.capture_log(fn -> ClientStrings.build("en") end) =~
+               "missing Gettext bindings"
     end
   end
 end
