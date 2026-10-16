@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
 
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.BookingDriver
 
   setup :verify_on_exit!
 
@@ -144,14 +145,14 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
 
       {view, _date} = open_schedule_and_pick_tomorrow(profile, "group-chat")
 
-      wait_until(fn -> has_element?(view, "button.time-slot-button") end)
+      wait_until(fn -> has_element?(view, ~s([data-testid="time-slot"])) end)
 
       html = render(view)
       assert html =~ ~s(data-testid="seat-badge")
       assert html =~ "seat-green"
       assert html =~ "Plenty left"
       refute html =~ "spots left"
-      assert html =~ "has-seats"
+      assert html =~ "slot-list__slot--seats"
     end
 
     @tag :capture_log
@@ -161,12 +162,12 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
 
       {view, _date} = open_schedule_and_pick_tomorrow(profile, "solo-chat")
 
-      wait_until(fn -> has_element?(view, "button.time-slot-button") end)
+      wait_until(fn -> has_element?(view, ~s([data-testid="time-slot"])) end)
 
       html = render(view)
       refute html =~ "seat-badge"
       refute html =~ "spots left"
-      refute html =~ "has-seats"
+      refute html =~ "slot-list__slot--seats"
     end
 
     @tag :capture_log
@@ -176,20 +177,17 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
 
       # First booker fills the slot: capacity 2 as themselves plus one guest.
       {first, _date} = open_schedule_and_pick_tomorrow(profile, "tiny-group")
-      wait_until(fn -> has_element?(first, "button.time-slot-button") end)
+      wait_until(fn -> has_element?(first, ~s([data-testid="time-slot"])) end)
 
       taken_time =
         first
         |> render()
         |> Floki.parse_document!()
-        |> Floki.attribute("button.time-slot-button", "phx-value-time")
+        |> Floki.attribute(~s([data-testid="time-slot"]), "phx-value-time")
         |> List.first()
 
-      first
-      |> element("button.time-slot-button[phx-value-time='#{taken_time}']")
-      |> render_click()
-
-      first |> element("button[phx-click='next_step']") |> render_click()
+      BookingDriver.pick_time(first, taken_time)
+      BookingDriver.continue(first)
 
       send(first.pid, {:step_event, :booking, :toggle_guests, nil})
       send(first.pid, {:step_event, :booking, :add_guest, "guest@example.com"})
@@ -204,11 +202,11 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
 
       # A fresh visitor no longer sees that slot; the rest of the day remains.
       {second, _date} = open_schedule_and_pick_tomorrow(profile, "tiny-group")
-      wait_until(fn -> has_element?(second, "button.time-slot-button") end)
+      wait_until(fn -> has_element?(second, ~s([data-testid="time-slot"])) end)
 
       refute has_element?(
                second,
-               "button.time-slot-button[phx-value-time='#{taken_time}']"
+               ~s([data-testid="time-slot"][phx-value-time="#{taken_time}"])
              )
     end
   end
@@ -221,7 +219,7 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
 
       {view, _date} = open_schedule_and_pick_tomorrow(profile, "group-beat")
 
-      wait_until(fn -> has_element?(view, "button.time-slot") end)
+      wait_until(fn -> has_element?(view, ~s([data-testid="time-slot"])) end)
 
       html = render(view)
       assert html =~ ~s(data-testid="seat-badge")
@@ -236,7 +234,7 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
 
       {view, _date} = open_schedule_and_pick_tomorrow(profile, "solo-beat")
 
-      wait_until(fn -> has_element?(view, "button.time-slot") end)
+      wait_until(fn -> has_element?(view, ~s([data-testid="time-slot"])) end)
 
       html = render(view)
       refute html =~ "seat-badge"
@@ -256,7 +254,7 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
         view = group_schedule(user, @theme, show_seat_availability: false)
 
         refute has_element?(view, ~s([data-testid="seat-badge"]))
-        refute has_element?(view, ~s([data-testid="time-slot"].has-seats))
+        refute has_element?(view, ~s([data-testid="time-slot"].slot-list__slot--seats))
         assert has_element?(view, ~s([data-testid="group-session-hint"]), "up to 10 people")
       end
 

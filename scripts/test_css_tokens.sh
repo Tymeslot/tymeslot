@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
 # CSS Design Token Validator
-# Tests for hardcoded values in all theme CSS files
+# Tests for hardcoded values in all theme CSS files and the shared component
+# styles (shared/components/), and for colour literals outside the token files
 # Usage: ./scripts/test_css_tokens.sh [theme_name]
 #   Without arguments: checks all themes
 #   With theme_name: checks only that theme
 
 set -e
 
-THEMES_BASE="assets/css/scheduling/themes"
+# Overridable so the checks can be tested against a fixture tree.
+SCHEDULING_CSS_ROOT="${SCHEDULING_CSS_ROOT:-assets/css/scheduling}"
+THEMES_BASE="$SCHEDULING_CSS_ROOT/themes"
+LITERALS_FAILED=0
+EMBED_QUERIES_FAILED=0
+SHARED_FAILED=0
 FAILED=0
 TOTAL_VIOLATIONS=0
 THEMES_TESTED=0
@@ -43,6 +49,148 @@ ALLOWED_VALUES=(
   "50%"    # percentage for centering
   "150%"   # saturation values
   "0.5rem" # Special case for word-spacing or very small values in animations
+)
+
+# Every token a theme's modules/variables.css must define: the token contract
+# documented in shared/tokens.css, plus every token the shared styles read
+# that no shared file defines (test_shared_token_contract keeps that part
+# complete). Tokens shared/tokens.css defaults on :where(:root) are not
+# listed; a theme may still set them.
+REQUIRED_TOKENS=(
+  "--space-3xs"
+  "--space-2xs"
+  "--space-xs"
+  "--space-sm"
+  "--space-md"
+  "--space-lg"
+  "--space-xl"
+  "--space-2xl"
+  # The token contract (documented in shared/tokens.css): palette and
+  # status inputs, shadow geometry, roles and the shared screens' tokens.
+  # --theme-background is left out on purpose.
+  "--theme-primary"
+  "--theme-primary-hover"
+  "--theme-secondary"
+  "--theme-accent"
+  "--theme-on-primary"
+  "--theme-on-accent"
+  "--theme-text"
+  "--theme-text-secondary"
+  "--theme-canvas"
+  "--theme-success"
+  "--theme-warning"
+  "--theme-danger"
+  "--theme-info"
+  "--shadow-geometry-sm"
+  "--shadow-geometry-md"
+  "--shadow-geometry-lg"
+  "--surface-2"
+  "--surface-3"
+  "--ink-1"
+  "--ink-2"
+  "--ink-3"
+  "--notice-warning-surface"
+  "--notice-warning-border"
+  "--radius-control"
+  "--radius-card"
+  "--theme-font-family"
+  "--status-surface"
+  "--status-surface-opaque"
+  "--status-shadow"
+  "--status-ink-heading"
+  "--status-ink"
+  "--status-ink-soft"
+  "--status-ink-hint"
+  # The seat badge's traffic light (shared/components/slot-list.css): each
+  # theme picks its own colours for it.
+  "--seat-green"
+  "--seat-green-bg"
+  "--seat-amber"
+  "--seat-amber-bg"
+  "--seat-red"
+  "--seat-red-bg"
+  "--seat-neutral"
+  "--seat-neutral-bg"
+  "--seat-selected"
+  "--seat-selected-bg"
+  # Tokens the shared component styles (shared/components/*.css) read.
+  "--approval-icon-surface"
+  "--approval-notice-font-size"
+  "--approval-notice-gap"
+  "--approval-notice-ink"
+  "--approval-notice-max-width"
+  "--approval-pill-surface"
+  "--poll-input-focus-ring"
+  "--poll-input-line"
+  "--poll-input-surface"
+  "--poll-option-line"
+  "--poll-option-selected-surface"
+  "--poll-panel-surface"
+  "--poll-row-line"
+  "--poll-row-surface"
+  "--poll-voting-padding"
+  "--payment-body-ink"
+  "--payment-card-line"
+  "--payment-card-radius"
+  "--payment-card-surface"
+  "--payment-heading-ink"
+  "--payment-link-radius"
+  "--payment-link-transition"
+  "--payment-link-weight"
+  "--payment-page-max-width"
+  "--lang-switcher-surface"
+  "--lang-switcher-surface-hover"
+  "--lang-switcher-panel-surface"
+  "--lang-switcher-panel-line"
+  "--lang-switcher-item-line"
+  "--lang-switcher-item-hover"
+  "--lang-switcher-item-active"
+  "--slot-list-grid-gap"
+  "--guest-remove-ink-hover"
+  "--dropdown-surface"
+  # The scale tokens the shared styles read. With the entries above, this is
+  # every var() that shared/*.css reads without a fallback and no shared file
+  # defines; test_shared_token_contract fails when a new one is not listed.
+  "--border-subtle"
+  "--border-light"
+  "--border-medium"
+  "--surface-subtle"
+  "--surface-light"
+  "--surface-medium"
+  "--surface-intense"
+  "--theme-error-light"
+  "--theme-font-size-3xs"
+  "--theme-font-size-2xs"
+  "--theme-font-size-xs"
+  "--theme-font-size-sm"
+  "--theme-font-size-base"
+  "--theme-font-size-md"
+  "--theme-font-size-lg"
+  "--theme-font-size-2xl"
+  "--theme-font-size-3xl"
+  "--letter-spacing-wide"
+  "--space-hairline"
+  "--icon-sm"
+  "--shadow-md"
+)
+
+# Shared files every theme's theme.css must import: the entry, the token
+# contract and the embed rules, and each shared component file whose markup
+# every theme renders through shared code. A file a theme may replace with its
+# own markup (slot-list, timezone-picker, week-grid, manage-pages) is not
+# listed. One entry per line, quoted: the ExUnit test reads the list from here.
+REQUIRED_SHARED_IMPORTS=(
+  "shared/entry.css"
+  "shared/tokens.css"
+  "shared/embed.css"
+  "shared/components/language-switcher.css"
+  "shared/components/preview-notice.css"
+  "shared/components/flash.css"
+  "shared/components/approval-notice.css"
+  "shared/components/booking-fields.css"
+  "shared/components/custom-questions.css"
+  "shared/components/polls.css"
+  "shared/components/payment-pages.css"
 )
 
 # Strip the "path:lineno:" prefix that stripped_css_lines prepends, leaving only
@@ -89,6 +237,21 @@ stripped_css_lines() {
   local theme_path="$1"
   find "$theme_path" -name "*.css" -type f | sort | while IFS= read -r f; do
     perl -0777 -pe 's{/\*.*?\*/}{ $x = $&; $x =~ tr/\n//cd; $x }ges' "$f" \
+      | awk -v fn="$f" '{ print fn ":" NR ":" $0 }'
+  done
+}
+
+# Like stripped_css_lines, but with every selector and at-rule prelude (the
+# text before a "{", back to the previous "{", "}" or ";") blanked as well, so
+# only declarations remain. A selector list spread over several lines is
+# blanked whole, so an ID such as "#add-guest," can never read as a hex colour.
+declaration_css_lines() {
+  local root="$1"
+  find "$root" -name "*.css" -type f | sort | while IFS= read -r f; do
+    perl -0777 -pe '
+      s{/\*.*?\*/}{ $x = $&; $x =~ tr/\n//cd; $x }ges;
+      s{(^|[{};])([^{};]*)(?=\{)}{ $y = $2; $y =~ tr/\n//cd; $1 . $y }ge;
+    ' "$f" \
       | awk -v fn="$f" '{ print fn ":" NR ":" $0 }'
   done
 }
@@ -194,30 +357,17 @@ test_token_usage() {
   # Check if all required tokens are defined
   local tokens_file="$theme_path/modules/variables.css"
 
-  # Skip if no variables file exists yet
   if [ ! -f "$tokens_file" ]; then
-    echo -e "${YELLOW}⚠ No variables.css found - skipping token checks${NC}"
+    echo -e "${RED}✗ No modules/variables.css: every theme defines its tokens there${NC}"
+    FAILED=1
+    TOTAL_VIOLATIONS=$((TOTAL_VIOLATIONS + 1))
     echo ""
     return 0
   fi
 
-  local required_tokens=(
-    "--space-3xs"
-    "--space-2xs"
-    "--space-xs"
-    "--space-sm"
-    "--space-md"
-    "--space-lg"
-    "--space-xl"
-    "--space-2xl"
-    "--border-width-thin"
-    "--border-width-medium"
-    "--border-width-thick"
-    "--flag-height"
-  )
 
   local missing_tokens=0
-  for token in "${required_tokens[@]}"; do
+  for token in "${REQUIRED_TOKENS[@]}"; do
     if ! grep -qF -- "$token:" "$tokens_file"; then
       echo -e "${RED}✗ Missing token: $token${NC}"
       missing_tokens=$((missing_tokens + 1))
@@ -238,14 +388,14 @@ test_duplicate_tokens() {
 
   local tokens_file="$theme_path/modules/variables.css"
 
-  # Skip if no variables file exists yet
+  # A missing file is reported once, by test_token_usage.
   if [ ! -f "$tokens_file" ]; then
-    echo -e "${YELLOW}⚠ No variables.css found - skipping duplicate checks${NC}"
     echo ""
     return 0
   fi
 
-  local duplicates=$(grep -oP '^\s*--[\w-]+(?=:)' "$tokens_file" | sort | uniq -d)
+  local duplicates=$(grep -oE '^[[:space:]]*--[A-Za-z0-9_-]+[[:space:]]*:' "$tokens_file" \
+    | sed -E 's/^[[:space:]]*//; s/[[:space:]]*:$//' | sort | uniq -d)
 
   if [ -n "$duplicates" ]; then
     echo -e "${RED}✗ Found duplicate token definitions:${NC}"
@@ -267,8 +417,15 @@ test_module_imports() {
   echo "📦 Testing module import integrity..."
 
   local theme_css="$theme_path/theme.css"
-  if [ ! -f "$theme_css" ] || [ ! -d "$theme_path/modules" ]; then
-    echo -e "${YELLOW}⚠ No theme.css/modules - skipping import checks${NC}"
+  if [ ! -f "$theme_css" ]; then
+    echo -e "${RED}✗ No theme.css: every theme's stylesheet starts there${NC}"
+    FAILED=1
+    TOTAL_VIOLATIONS=$((TOTAL_VIOLATIONS + 1))
+    echo ""
+    return 0
+  fi
+  if [ ! -d "$theme_path/modules" ]; then
+    echo -e "${YELLOW}⚠ No modules/ - skipping the orphan check${NC}"
     echo ""
     return 0
   fi
@@ -313,8 +470,10 @@ test_keyframes() {
   local theme_path="$1"
   echo "🎞  Testing @keyframes integrity..."
 
-  # Shared booking CSS (reset/layout/utilities) sits beside the themes dir and is
-  # @imported by every theme.css — its keyframes (e.g. `spin`) count as defined.
+  # Shared booking CSS sits beside the themes dir. Every theme.css imports
+  # shared/entry.css (reset, layout, utilities and the other primitives) and
+  # shared/tokens.css, and picks the shared/components/*.css files it uses, so
+  # keyframes defined anywhere under shared/ (e.g. `spin`) count as defined.
   local shared="$(dirname "$THEMES_BASE")/shared"
 
   # Keyframes defined anywhere the theme can see (its own modules + shared).
@@ -379,6 +538,167 @@ test_keyframes() {
   echo ""
 }
 
+# A media query on the viewport's height (height, aspect-ratio, orientation)
+# sees the iframe's own height inside an embed, and iframe_embed.js sets that
+# height from the content. A rule that changes the content's height at a
+# threshold then decides the very height it tests, so the page can settle
+# above or below the threshold depending on the step the visitor came from.
+# Every such @media block therefore holds exactly one rule,
+# `:where(html:not([data-embedded])) { ... }`, with the block's rules nested
+# inside it: they apply to a page opened on its own and never to an embed, at
+# the specificity they had without the wrapper. Scans the whole scheduling tree.
+test_embed_height_queries() {
+  echo "📐 Testing that no height media query applies to an embedded page..."
+
+  local violations
+  violations=$(find "$SCHEDULING_CSS_ROOT" -name "*.css" -type f | sort | while IFS= read -r f; do
+    perl -0777 -ne '
+      s{/\*.*?\*/}{ $x = $&; $x =~ tr/\n//cd; $x }ges;
+      my $css = $_;
+      # The index just past the brace that closes the one opened before $from.
+      sub close_of { my ($s, $from) = @_; my $depth = 1; my $i = $from;
+        while ($depth && $i < length $s) { my $c = substr($s, $i, 1);
+          $depth++ if $c eq "{"; $depth-- if $c eq "}"; $i++ } $i }
+      while ($css =~ /\@media([^{;]*)\{/g) {
+        my ($prelude, $start) = ($1, pos($css));
+        next unless $prelude =~ /\b(?:min-|max-)?(?:device-)?(?:height|aspect-ratio|orientation)\b/;
+        my $body = substr($css, $start, close_of($css, $start) - 1 - $start);
+        my $ok = 0;
+        if ($body =~ /\A\s*:where\(html:not\(\[data-embedded\]\)\)\s*\{/g) {
+          $ok = substr($body, close_of($body, pos($body))) =~ /\A\s*\z/;
+        }
+        unless ($ok) {
+          my $line = 1 + (substr($css, 0, $start) =~ tr/\n//);
+          $prelude =~ s/^\s+|\s+$//g;
+          print "$ARGV:$line: \@media $prelude\n";
+        }
+        pos($css) = $start;
+      }
+    ' "$f"
+  done)
+
+  if [ -n "$violations" ]; then
+    echo -e "${RED}✗ Height media queries that also apply to an embedded page (nest the block's rules in :where(html:not([data-embedded]))):${NC}"
+    echo "$violations"
+    EMBED_QUERIES_FAILED=1
+    TOTAL_VIOLATIONS=$((TOTAL_VIOLATIONS + $(echo "$violations" | grep -c "^")))
+  else
+    echo -e "${GREEN}✓ Every height media query leaves embedded pages alone${NC}"
+  fi
+  echo ""
+}
+
+# Colour literals (rgb(), rgba(), hsl(), hsla(), hex) belong only in token
+# files: each theme's modules/variables.css, shared/tokens.css, and
+# shared/brand-tokens.css (the Tailwind @theme block). Everything else reads
+# colours through tokens, so a custom palette, a new theme or a light mode
+# changes them in one place. Scans the whole scheduling tree, shared files
+# included; selectors are blanked first (declaration_css_lines) so an ID can
+# never look like a hex.
+test_colour_literals() {
+  echo "🎨 Testing for colour literals outside the token files..."
+
+  local violations
+  violations=$(declaration_css_lines "$SCHEDULING_CSS_ROOT" \
+    | grep -vE '(/modules/variables\.css|/shared/tokens\.css|/shared/brand-tokens\.css):[0-9]+:' \
+    | grep -E '^[^:]+:[0-9]+:.*((rgba?|hsla?)\(|#[0-9a-fA-F]{3,8}\b)' \
+    || true)
+
+  if [ -n "$violations" ]; then
+    echo -e "${RED}✗ Found colour literals outside the token files (move them into variables.css):${NC}"
+    echo "$violations"
+    LITERALS_FAILED=1
+    TOTAL_VIOLATIONS=$((TOTAL_VIOLATIONS + $(echo "$violations" | grep -c "^")))
+  else
+    echo -e "${GREEN}✓ No colour literals outside the token files${NC}"
+  fi
+  echo ""
+}
+
+# The shared component styles (shared/components/) hold rules moved out of
+# the themes, and the blocks (shared/blocks/) the markup any theme may render
+# for a fact, so both follow the same spacing and border-width rules.
+test_shared_components() {
+  local dir path
+  for dir in components blocks; do
+    path="$SCHEDULING_CSS_ROOT/shared/$dir"
+    [ -d "$path" ] || continue
+
+    echo ""
+    echo "🧩 Testing shared $dir: $path"
+    echo "================================"
+
+    FAILED=0
+    test_hardcoded_spacing "$path"
+    test_hardcoded_borders "$path"
+    [ $FAILED -eq 1 ] && SHARED_FAILED=1
+  done
+  return 0
+}
+
+# The shared styles (shared/) read tokens only a theme defines. Every var()
+# they read without a fallback must be defined in a shared file or be listed
+# in REQUIRED_TOKENS, so a theme that passes test_token_usage defines them
+# all; a token the theme leaves out would silently drop every declaration
+# reading it.
+test_shared_token_contract() {
+  local shared="$SCHEDULING_CSS_ROOT/shared"
+  [ -d "$shared" ] || return 0
+  echo "📜 Testing that REQUIRED_TOKENS covers every token shared/ reads..."
+
+  local css read defined undeclared
+  css=$(stripped_css_lines "$shared" | cut -d: -f3-)
+  read=$(printf '%s\n' "$css" \
+    | grep -oE 'var\(--[A-Za-z0-9_-]+[[:space:]]*[,)]' \
+    | grep -vE ',$' \
+    | sed -E 's/^var\(//; s/[[:space:]]*\)$//' | sort -u || true)
+  defined=$( { printf '%s\n' "$css" \
+      | grep -oE '(^|[;{[:space:]])--[A-Za-z0-9_-]+[[:space:]]*:' \
+      | grep -oE -- '--[A-Za-z0-9_-]+' || true
+    printf '%s\n' "${REQUIRED_TOKENS[@]}"; } | sort -u)
+  undeclared=$(comm -23 <(printf '%s\n' "$read") <(printf '%s\n' "$defined") | sed '/^$/d')
+
+  if [ -n "$undeclared" ]; then
+    echo -e "${RED}✗ Tokens read in shared/ that no shared file defines and REQUIRED_TOKENS does not list:${NC}"
+    echo "$undeclared"
+    SHARED_FAILED=1
+    TOTAL_VIOLATIONS=$((TOTAL_VIOLATIONS + $(echo "$undeclared" | grep -c "^")))
+  else
+    echo -e "${GREEN}✓ Every token shared/ reads is defined there or required of each theme${NC}"
+  fi
+  echo ""
+}
+
+# Every file in REQUIRED_SHARED_IMPORTS is imported by the theme's theme.css:
+# an @import naming it with any relative prefix and either quote, or url(),
+# outside a comment.
+test_shared_imports() {
+  local theme_path="$1"
+  local theme_css="$theme_path/theme.css"
+  echo "🔗 Testing the shared imports every theme needs..."
+  [ -f "$theme_css" ] || { echo ""; return 0; }
+
+  local imports missing=0 file
+  imports=$(perl -0777 -pe 's{/\*.*?\*/}{}gs' "$theme_css" \
+    | grep -oE "@import[[:space:]]+(url\()?[\"'][^\"']+[\"']" \
+    | sed -E "s/^@import[[:space:]]+(url\()?[\"']//; s/[\"']$//; s#^(\.\./|\./)+##")
+
+  for file in "${REQUIRED_SHARED_IMPORTS[@]}"; do
+    if ! printf '%s\n' "$imports" | grep -qxF -- "$file"; then
+      echo -e "${RED}✗ Missing shared import: $file${NC}"
+      missing=$((missing + 1))
+      FAILED=1
+    fi
+  done
+
+  if [ "$missing" -eq 0 ]; then
+    echo -e "${GREEN}✓ All shared imports every theme needs are present${NC}"
+  else
+    TOTAL_VIOLATIONS=$((TOTAL_VIOLATIONS + missing))
+  fi
+  echo ""
+}
+
 # Function to test a single theme
 test_theme() {
   local theme_path="$1"
@@ -394,6 +714,7 @@ test_theme() {
   test_token_usage "$theme_path"
   test_duplicate_tokens "$theme_path"
   test_module_imports "$theme_path"
+  test_shared_imports "$theme_path"
   test_keyframes "$theme_path"
   test_hardcoded_spacing "$theme_path"
   test_hardcoded_borders "$theme_path"
@@ -430,18 +751,23 @@ for theme in "${THEMES[@]}"; do
   test_theme "$theme"
 done
 
+test_shared_components
+test_shared_token_contract
+test_colour_literals
+test_embed_height_queries
+
 # Overall summary
 echo ""
 echo "================================"
 echo "📊 Summary"
 echo "================================"
 echo "Themes tested: $THEMES_TESTED"
-if [ $THEMES_FAILED -eq 0 ]; then
+if [ $THEMES_FAILED -eq 0 ] && [ $SHARED_FAILED -eq 0 ] && [ $LITERALS_FAILED -eq 0 ] && [ $EMBED_QUERIES_FAILED -eq 0 ]; then
   echo -e "${GREEN}✅ All themes passed!${NC}"
   echo "All theme CSS files are properly tokenized."
   exit 0
 else
-  echo -e "${RED}❌ $THEMES_FAILED theme(s) failed!${NC}"
+  echo -e "${RED}❌ CSS token checks failed!${NC}"
   echo "Found $TOTAL_VIOLATIONS total violations across all themes."
   echo ""
   echo "Fix suggestions:"
@@ -449,5 +775,7 @@ else
   echo "  • Replace hardcoded borders with border tokens (--border-width-*)"
   echo "  • Use calc() with tokens for complex values"
   echo "  • Add new tokens to variables.css if needed"
+  echo "  • Move colour literals into the theme's variables.css and read them through a token"
+  echo "  • Nest a height media query's rules in :where(html:not([data-embedded]))"
   exit 1
 fi

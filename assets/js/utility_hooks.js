@@ -150,11 +150,11 @@ export const ConnectionStatus = {
 // keyboard focus into the slots region so a screen-reader / keyboard user who
 // just picked a date is carried to the next step of the flow.
 //
-// Mounted on both Quill's `.time-slots-panel` and Rhythm's `.time-slots-section`
-// containers (both `#slots-container`), so the selectors below must keep
-// matching both themes' markup — update both sides together if either changes.
+// Mounted on the shared slot list (`Shared.Components.SlotList`,
+// `#slots-container.slot-list`), which every theme renders, so the selectors
+// below follow that component's markup: change them together.
 const SLOTS_LOADED_SELECTOR = '[data-slots-loaded]';
-const SLOTS_HEADING_SELECTOR = '.slots-heading, .time-slots-section-heading';
+const SLOTS_HEADING_SELECTOR = '.slot-list__heading';
 const FOCUS_SOURCE_SELECTOR = '[data-testid="calendar-day"], .week-day-cell';
 
 export const AutoScrollToSlots = {
@@ -177,7 +177,6 @@ export const AutoScrollToSlots = {
       if (window.innerWidth < 1024) {
         // Check if slots have been loaded (not empty state)
         const hasSlots = this.el.querySelector(SLOTS_LOADED_SELECTOR) ||
-                        this.el.querySelector('.space-y-3') ||
                         this.el.querySelector('.animate-spin');
 
         const signature = this.slotsSignature();
@@ -213,7 +212,6 @@ export const AutoScrollToSlots = {
     const loaded = this.el.querySelector(SLOTS_LOADED_SELECTOR);
     if (loaded) return `loaded:${loaded.getAttribute('data-slots-loaded')}`;
     if (this.el.querySelector('.animate-spin')) return 'loading';
-    if (this.el.querySelector('.space-y-3')) return 'legacy';
     return null;
   },
 

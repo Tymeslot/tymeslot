@@ -142,7 +142,7 @@ defmodule TymeslotWeb.Themes.Rhythm.ScheduleSlotsTest do
 
       assert has_element?(
                view,
-               "button.time-slot--hour.selected[phx-value-hour='#{open}']"
+               "button.slot-list__slot--hour.slot-list__slot--selected[phx-value-hour='#{open}']"
              )
     end
 
@@ -191,7 +191,7 @@ defmodule TymeslotWeb.Themes.Rhythm.ScheduleSlotsTest do
       # minutes really are nested under their hour.
       assert has_element?(
                view,
-               "#slot-hour-panel-#{open} button.time-slot.selected[data-time='#{chosen}']"
+               "#slot-hour-panel-#{open} button.slot-list__slot--selected[data-time='#{chosen}']"
              )
     end
   end
@@ -228,11 +228,11 @@ defmodule TymeslotWeb.Themes.Rhythm.ScheduleSlotsTest do
       chosen = view |> rendered_times() |> List.first()
 
       view |> element(slot_selector(chosen)) |> render_click()
-      assert has_element?(view, "button.time-slot.selected[data-time='#{chosen}']")
+      assert has_element?(view, "button.slot-list__slot--selected[data-time='#{chosen}']")
       refute has_element?(view, "button[data-testid='next-step'][disabled]")
 
       view |> element(slot_selector(chosen)) |> render_click()
-      refute has_element?(view, "button.time-slot.selected")
+      refute has_element?(view, "button.slot-list__slot--selected")
       assert has_element?(view, "button[data-testid='next-step'][disabled]")
     end
 
@@ -254,8 +254,8 @@ defmodule TymeslotWeb.Themes.Rhythm.ScheduleSlotsTest do
 
       assert has_element?(view, "button.calendar-day.selected[phx-value-date='#{other_day}']")
       refute has_element?(view, "button.calendar-day.selected[phx-value-date='#{first_day}']")
-      refute has_element?(view, "button.time-slot.selected")
-      wait_until(fn -> has_element?(view, "button.time-slot") end)
+      refute has_element?(view, "button.slot-list__slot--selected")
+      wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
     end
   end
 
@@ -282,7 +282,7 @@ defmodule TymeslotWeb.Themes.Rhythm.ScheduleSlotsTest do
     end)
 
     view |> element("button.calendar-day[phx-value-date='#{date}']") |> render_click()
-    wait_until(fn -> has_element?(view, "button.time-slot") end)
+    wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
 
     view
   end
@@ -312,8 +312,8 @@ defmodule TymeslotWeb.Themes.Rhythm.ScheduleSlotsTest do
 
   # Hour buttons carry no `data-time`, so this is exactly the minute slots.
   defp rendered_times(view) do
-    view |> document() |> Floki.attribute("button.time-slot", "data-time")
+    view |> document() |> Floki.attribute("button[data-testid='time-slot']", "data-time")
   end
 
-  defp slot_selector(time), do: "button.time-slot[data-time='#{time}']"
+  defp slot_selector(time), do: "button[data-testid='time-slot'][data-time='#{time}']"
 end

@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.BookingLimitsLiveTest do
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
 
@@ -50,6 +51,34 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.BookingLimitsLiveTest do
 
       assert Profiles.get_profile(user.id).max_bookings_per_week == 12
       assert render(view) =~ "Booking limit updated to 12 bookings"
+    end
+  end
+
+  describe "the weekly cap names the host's first day of the week" do
+    test "Monday when the host has not chosen one", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      assert has_element?(view, "#booking-limits-week-start", "Weeks start on Monday")
+    end
+
+    test "Sunday on both limit forms once the host chose it in Calendar Settings",
+         %{conn: conn, user: user} do
+      {:ok, _prefs} = CalendarManagement.save_preferences(user.id, %{week_start_day: "sunday"})
+      meeting_type = insert(:meeting_type, user: user)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      assert has_element?(view, "#booking-limits-week-start", "Weeks start on Sunday")
+
+      view
+      |> element("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
+      |> render_click()
+
+      assert has_element?(
+               view,
+               "#meeting-type-booking-limits-week-start",
+               "Weeks start on Sunday"
+             )
     end
   end
 end

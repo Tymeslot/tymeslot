@@ -1,0 +1,233 @@
+/* Custom questions: the yes/no tile pair and the option-card stack the shared
+   question inputs render (Shared.CustomQuestions.Inputs: yes_no.ex,
+   option_card.ex, used by single-select, multi-select and the note
+   acknowledgement), the note body, and the chevron on the dropdown a
+   single-select with more than five options falls back to.
+
+   Tokens, each optional (the fallback in brackets):
+     --option-tile-border        tile and card border        (--line-2)
+     --option-tile-bg            tile and card surface       (--surface-2)
+     --option-tile-text          tile and card ink           (--theme-text-secondary)
+     --option-tile-text-hover    ink on hover                (--theme-text)
+     --option-tile-bg-hover      surface on hover            (--surface-3)
+     --option-tile-border-hover  border on hover             (--theme-primary)
+     --option-tile-focus-ring    ring while focused          (--focus-ring)
+     --option-indicator-idle     radio/check ring            (--theme-text-secondary)
+     --option-indicator-hover    radio/check ring on hover   (--theme-text)
+     --option-card-min-height    option card height          (3.25rem)
+     --select-chevron-ink        dropdown chevron            (--ink-2)
+   A treatment a theme adds (a glass blur, a glow on the selected tile) goes
+   in the theme's own module under the same selector, after this file. */
+
+.custom-question-note-body {
+  white-space: pre-wrap;
+  margin-bottom: var(--space-sm);
+}
+
+/* ===== Yes / No tiles: visually distinct from the actions row below ===== */
+
+.custom-question-yes-no {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  margin: var(--space-sm) 0 var(--space-md);
+  padding: 0;
+  border: 0;
+}
+
+.custom-question-yes-no-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  min-height: 7.5rem;
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  border: var(--border-width-thin) solid var(--option-tile-border, var(--line-2));
+  background: var(--option-tile-bg, var(--surface-2));
+  color: var(--option-tile-text, var(--theme-text-secondary));
+  cursor: pointer;
+  transition: border-color var(--transition-normal), background var(--transition-normal), color var(--transition-normal), transform var(--transition-normal);
+}
+
+.custom-question-yes-no-tile:hover {
+  color: var(--option-tile-text-hover, var(--theme-text));
+  background: var(--option-tile-bg-hover, var(--surface-3));
+  border-color: var(--option-tile-border-hover, var(--theme-primary));
+  transform: translateY(-2px);
+}
+
+.custom-question-yes-no-tile:focus-within {
+  outline: none;
+  border-color: var(--theme-primary);
+  box-shadow: var(--option-tile-focus-ring, var(--focus-ring));
+}
+
+.custom-question-yes-no-tile.is-selected {
+  color: var(--theme-on-primary);
+  background: var(--theme-primary-solid);
+  border-color: var(--theme-primary-solid);
+}
+
+.custom-question-yes-no-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  border: var(--border-width-thin) solid currentColor;
+  transition: var(--transition-normal);
+}
+
+.custom-question-yes-no-icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.custom-question-yes-no-tile.is-selected .custom-question-yes-no-icon {
+  background: var(--theme-on-primary);
+  border-color: var(--theme-on-primary);
+  color: var(--theme-primary-solid);
+}
+
+.custom-question-yes-no-label {
+  font-size: var(--theme-font-size-base);
+  font-weight: var(--font-weight-medium);
+}
+
+.custom-question-cta-nowrap {
+  white-space: nowrap;
+}
+
+/* ===== Option cards: single-select, multi-select and the note ack ===== */
+
+.custom-question-option-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: var(--space-sm) 0 var(--space-md);
+  padding: 0;
+  border: 0;
+}
+
+.custom-question-option-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: var(--option-card-min-height, 3.25rem);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-lg);
+  border: var(--border-width-thin) solid var(--option-tile-border, var(--line-2));
+  background: var(--option-tile-bg, var(--surface-2));
+  color: var(--option-tile-text, var(--theme-text-secondary));
+  cursor: pointer;
+  transition: border-color var(--transition-normal), background var(--transition-normal), color var(--transition-normal), transform var(--transition-normal);
+}
+
+.custom-question-option-card:hover {
+  color: var(--option-tile-text-hover, var(--theme-text));
+  background: var(--option-tile-bg-hover, var(--surface-3));
+  border-color: var(--option-tile-border-hover, var(--theme-primary));
+  transform: translateY(-1px);
+}
+
+.custom-question-option-card:focus-within {
+  outline: none;
+  border-color: var(--theme-primary);
+  box-shadow: var(--option-tile-focus-ring, var(--focus-ring));
+}
+
+.custom-question-option-card.is-selected {
+  color: var(--theme-on-primary);
+  background: var(--theme-primary-solid);
+  border-color: var(--theme-primary-solid);
+}
+
+.custom-question-option-indicator {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: var(--border-width-medium) solid currentColor;
+  color: var(--option-indicator-idle, var(--theme-text-secondary));
+  transition: var(--transition-normal);
+}
+
+.custom-question-option-indicator.is-radio {
+  border-radius: 50%;
+}
+
+.custom-question-option-indicator.is-check {
+  border-radius: 0.375rem;
+}
+
+.custom-question-option-indicator svg {
+  width: 1rem;
+  height: 1rem;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: var(--transition-normal);
+}
+
+.custom-question-option-card:hover .custom-question-option-indicator {
+  color: var(--option-indicator-hover, var(--theme-text));
+}
+
+.custom-question-option-card.is-selected .custom-question-option-indicator {
+  background: var(--theme-on-primary);
+  border-color: var(--theme-on-primary);
+  color: var(--theme-primary-solid);
+}
+
+.custom-question-option-card.is-selected .custom-question-option-indicator.is-radio::after {
+  content: "";
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--theme-primary-solid);
+}
+
+.custom-question-option-card.is-selected .custom-question-option-indicator.is-check svg {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.custom-question-option-label {
+  font-size: var(--theme-font-size-base);
+  line-height: 1.35;
+}
+
+/* ===== Dropdown chevron: a single-select with more than five options =====
+
+   The select is appearance-none, so nothing draws its arrow. The
+   .custom-question-select wrapper (single_select.ex) holds the select
+   alone, so a chevron centred on the wrapper is centred on the select. The
+   mask takes the chevron's shape from the SVG and its colour from the
+   token, so the SVG's own stroke colour never shows. The select's padding
+   rule outranks each theme's `.<theme>-wrapper select.input` padding. */
+
+.scheduling-app .custom-question-select {
+  position: relative;
+}
+
+.scheduling-app .custom-question-select::after {
+  content: "";
+  position: absolute;
+  inset-inline-end: var(--space-sm);
+  top: 50%;
+  translate: 0 -50%;
+  width: 1rem;
+  height: 1rem;
+  background: var(--select-chevron-ink, var(--ink-2));
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+  pointer-events: none;
+}
+
+.scheduling-app .custom-question-select select.input {
+  padding-inline-end: calc(var(--space-sm) * 2 + 1rem);
+}

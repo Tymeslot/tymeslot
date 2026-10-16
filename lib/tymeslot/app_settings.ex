@@ -2,16 +2,21 @@ defmodule Tymeslot.AppSettings do
   @moduledoc """
   Admin-editable application settings.
 
-  Each setting has three layers of precedence, highest first:
+  Each setting has up to four layers of precedence, highest first:
 
-    1. **DB override** — a non-nil value in the `app_settings` singleton row,
+    1. **Environment pin**: the operator set the setting's environment
+       variable, so `config/runtime.exs` lists it in `:env_pinned_settings`.
+       The config value stands, the admin UI shows it greyed out, and
+       `update/1` refuses to store a value for it. A value stored earlier is
+       kept and applies again once the variable is removed.
+    2. **DB override**: a non-nil value in the `app_settings` singleton row,
        set via the admin UI or `update/1` below.
-    2. **Application config** — the value in `config.exs` / `runtime.exs`,
-       typically populated from an environment variable.
-    3. **Built-in default** — the fallback in `default_for/1`.
+    3. **Application config**: the value in `config.exs` / `runtime.exs`.
+    4. **Built-in default**: the fallback in `default_for/1`.
 
   At application boot, `load!/0` snapshots the current config-layer value for
-  each key, then pushes any non-nil DB overrides into `Application.put_env/3`.
+  each key, then pushes any non-nil DB overrides into `Application.put_env/3`,
+  skipping pinned keys so their config value stands.
   Existing call sites (e.g. `Tymeslot.Infrastructure.Config.registration_enabled?/0`)
   read via `Application.get_env/3` and transparently see the DB-backed value
   without any code changes.
@@ -66,13 +71,17 @@ defmodule Tymeslot.AppSettings do
           | :admin_default_locale
           | :booking_default_locale
 
-  @type effective_source :: :db | :config | :default
+  @type effective_source :: :env | :db | :config | :default
   @type effective_value :: %{
           value: term(),
           source: effective_source(),
           db_value: term() | nil,
+          env_var: String.t() | nil,
           locked_states: [term()]
         }
+
+  @type update_error ::
+          Changeset.t() | :would_lock_out | {:pinned, setting_key(), String.t()}
 
   @doc """
   Returns the list of admin-editable setting keys.
@@ -82,8 +91,9 @@ defmodule Tymeslot.AppSettings do
 
   @doc """
   Snapshots the current config-layer values, then applies any DB overrides on
-  top. Safe to call multiple times — the baseline is only captured once per
-  BEAM lifetime, so subsequent calls just re-apply current DB overrides.
+  top, except to pinned keys. Safe to call multiple times — the baseline is
+  only captured once per BEAM lifetime, so subsequent calls just re-apply
+  current DB overrides.
   Returns `:ok` even if the DB is unreachable (defaults remain in effect).
   """
   @spec load!() :: :ok
@@ -113,13 +123,16 @@ defmodule Tymeslot.AppSettings do
   def get(key) when is_atom(key), do: Env.read(key)
 
   @doc """
-  Returns a map of `key -> %{value, source, db_value, locked_states}` for
-  every editable setting. `value` is the effective value an admin would see;
-  `source` shows whether it came from the DB, the config layer, or the
-  built-in default; `locked_states` lists values the setting cannot currently
-  transition to because `update/1` would reject the change (e.g. would lock
-  out admins). The admin UI uses `locked_states` to disable controls
-  upfront so the user never has to click and read an error.
+  Returns a map of `key -> %{value, source, db_value, env_var, locked_states}`
+  for every editable setting. `value` is the effective value an admin would
+  see; `source` shows whether it came from an environment pin (`:env`), the
+  DB, the config layer, or the built-in default; `env_var` names the
+  environment variable that pins the setting, or is `nil` when none does
+  (`db_value` still reports any value stored before the pin);
+  `locked_states` lists values the setting cannot currently transition to
+  because `update/1` would reject the change (e.g. would lock out admins).
+  The admin UI uses `locked_states` to disable controls upfront so the user
+  never has to click and read an error.
   """
   @spec effective_values() :: %{setting_key() => effective_value()}
   def effective_values do
@@ -133,6 +146,7 @@ defmodule Tymeslot.AppSettings do
          value: effective_value(key, db_value),
          source: source_for(key, db_value),
          db_value: db_value,
+         env_var: Env.pinned_var(key),
          locked_states: LockoutPolicy.locked_states_for(key, settings)
        }}
     end)
@@ -155,6 +169,9 @@ defmodule Tymeslot.AppSettings do
   Updates from an already locked-out state (e.g. an admin recovering via a
   still-valid session) are allowed through unchanged.
 
+  Returns `{:error, {:pinned, key, var}}`, storing nothing, when a non-nil
+  value targets a setting the environment variable `var` fixes.
+
   String keys are accepted and normalised against `keys/0`; an unrecognised
   key returns an `{:error, %Ecto.Changeset{}}` rather than silently applying.
 
@@ -162,12 +179,11 @@ defmodule Tymeslot.AppSettings do
   against the merged row about to be committed — so two concurrent saves
   cannot each pass the check and jointly disable the last auth path.
   """
-  @spec update(map()) ::
-          {:ok, AppSettingsSchema.t()} | {:error, Changeset.t() | :would_lock_out}
+  @spec update(map()) :: {:ok, AppSettingsSchema.t()} | {:error, update_error()}
   def update(attrs) when is_map(attrs) do
-    case normalise_keys(attrs) do
-      {:ok, normalised} -> apply_update(normalised)
-      {:error, changeset} -> {:error, changeset}
+    with {:ok, normalised} <- normalise_keys(attrs),
+         :ok <- reject_pinned(normalised) do
+      apply_update(normalised)
     end
   end
 
@@ -197,6 +213,24 @@ defmodule Tymeslot.AppSettings do
   end
 
   defp normalise_key(_key), do: :error
+
+  # A value for a setting an environment variable fixes would be stored but
+  # never take effect, so it is refused. Clearing a stored value (nil) is
+  # allowed: it cannot conflict with the pin.
+  defp reject_pinned(attrs) do
+    Enum.find_value(attrs, :ok, fn {key, value} ->
+      var = Env.pinned_var(key)
+
+      if var && value != nil do
+        Logger.warning("App settings update blocked: setting is fixed by an environment variable",
+          key: key,
+          env_var: var
+        )
+
+        {:error, {:pinned, key, var}}
+      end
+    end)
+  end
 
   defp unknown_key_changeset(key) do
     %AppSettingsSchema{}
@@ -252,11 +286,83 @@ defmodule Tymeslot.AppSettings do
   end
 
   @doc """
+  Logs an error when the environment variables fixing the authentication
+  settings leave no admin a way to sign in, naming the variables and how to
+  recover. Run at boot, after `load!/0`; see
+  `LockoutPolicy.pins_blocking_sign_in/0` for when it fires.
+  """
+  @spec warn_if_pins_block_sign_in() :: :ok
+  def warn_if_pins_block_sign_in do
+    case LockoutPolicy.pins_blocking_sign_in() do
+      [] ->
+        :ok
+
+      pins ->
+        vars = Enum.map_join(pins, ", ", fn {_key, var} -> var end)
+
+        Logger.error(
+          "No admin can sign in: no sign-in method is usable, and the environment " <>
+            "variables #{vars} fix sign-in settings, so the admin page cannot turn " <>
+            "one back on. Unset these variables, or correct them (for example, " <>
+            "enable a provider whose client ID and secret are set), then restart.",
+          env_vars: Enum.map(pins, fn {_key, var} -> var end)
+        )
+    end
+  end
+
+  @doc """
+  Logs a warning for each environment variable whose value does not fix its
+  setting, as `Tymeslot.AppSettings.EnvPins` decided in `config/runtime.exs`,
+  naming the variable, its value and the values it accepts. Run at boot, so
+  the warning reaches the configured log handlers, which runtime.exs runs
+  before.
+  """
+  @spec warn_unrecognised_env_values() :: :ok
+  def warn_unrecognised_env_values do
+    :tymeslot
+    |> Application.get_env(:env_unrecognised_settings, [])
+    |> Enum.each(fn %{var: var, value: value, accepted: accepted} ->
+      Logger.warning(
+        "#{var}=#{inspect(value)} is not a recognised value, so it does not fix the " <>
+          "setting: the admin settings page can still change it. #{var} accepts " <>
+          "#{accepted}.",
+        env_var: var
+      )
+    end)
+  end
+
+  @doc """
+  Logs a warning for each setting whose environment variable now overrides a
+  different value saved on the admin settings page, naming the variable, the
+  value it fixes and the saved one it hides. An install upgraded with an old
+  `.env` (`ENABLE_GOOGLE_AUTH=false` from the example file, say) would
+  otherwise switch off what an admin had turned on, without a word. Run at
+  boot, after `load!/0`.
+  """
+  @spec warn_pins_overriding_saved_values() :: :ok
+  def warn_pins_overriding_saved_values do
+    settings = get!()
+
+    Enum.each(keys(), fn key ->
+      saved = Map.get(settings, key)
+      var = Env.pinned_var(key)
+      pinned = Env.read(key)
+
+      if var && not is_nil(saved) && saved != pinned do
+        Logger.warning(
+          "#{var} fixes #{key} to #{inspect(pinned)}, overriding #{inspect(saved)} saved " <>
+            "on the admin settings page. Unset #{var} to use the saved value.",
+          env_var: var
+        )
+      end
+    end)
+  end
+
+  @doc """
   Clears the DB override for `key`, falling back to the config layer or
   built-in default. Convenience wrapper over `update/1`.
   """
-  @spec reset(setting_key()) ::
-          {:ok, AppSettingsSchema.t()} | {:error, Changeset.t() | :would_lock_out}
+  @spec reset(setting_key()) :: {:ok, AppSettingsSchema.t()} | {:error, update_error()}
   def reset(key) when is_atom(key), do: update(%{key => nil})
 
   @doc """
@@ -266,15 +372,16 @@ defmodule Tymeslot.AppSettings do
   @spec default_for(setting_key()) :: term()
   defdelegate default_for(key), to: Env
 
-  defp effective_value(key, nil), do: Env.read(key)
-  defp effective_value(_key, value), do: value
-
-  defp source_for(key, nil) do
-    case Env.baseline_value(key) do
-      {:ok, _value} -> :config
-      _other -> :default
-    end
+  defp effective_value(key, db_value) do
+    if is_nil(db_value) or Env.pinned?(key), do: Env.read(key), else: db_value
   end
 
-  defp source_for(_key, _value), do: :db
+  defp source_for(key, db_value) do
+    cond do
+      Env.pinned?(key) -> :env
+      not is_nil(db_value) -> :db
+      match?({:ok, _value}, Env.baseline_value(key)) -> :config
+      true -> :default
+    end
+  end
 end

@@ -70,6 +70,8 @@ defmodule TymeslotWeb.AccountLiveTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/account")
 
       assert view |> element("button", "Change Email") |> render_click() =~ "New Email Address"
+      # Empty required fields reach the server, which answers in the form.
+      assert has_element?(view, "#account-email-form[novalidate]")
       assert view |> element("button", "Cancel") |> render_click() =~ "Change Email"
     end
 
@@ -77,6 +79,8 @@ defmodule TymeslotWeb.AccountLiveTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/account")
 
       assert view |> element("button", "Change Password") |> render_click() =~ "Current Password"
+      # Empty required fields reach the server, which answers in the form.
+      assert has_element?(view, "#account-password-form[novalidate]")
       assert view |> element("button", "Cancel") |> render_click() =~ "Change Password"
     end
   end

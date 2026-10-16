@@ -5,6 +5,8 @@
  * to the LiveSocket instance created by the core bundle.
  */
 
+import { topLevelEmbedRedirect } from "../live_socket_path";
+
 const MAX_RETRIES = 100; // 10 seconds max (100 * 100ms)
 const RETRY_INTERVAL = 100; // ms between retries
 
@@ -29,8 +31,14 @@ export function initializeBundle(bundleName, additionalHooks = {}) {
           // Update LiveSocket hooks before connection
           window.liveSocket.hooks = bundleHooks;
 
-          // Connect if not already connected
-          if (!window.liveSocket.isConnected()) {
+          // An embed page opened in its own tab reloads as an ordinary page
+          // instead of connecting (see topLevelEmbedRedirect).
+          const embedRedirect = topLevelEmbedRedirect();
+
+          if (embedRedirect) {
+            window.location.replace(embedRedirect);
+          } else if (!window.liveSocket.isConnected()) {
+            // Connect if not already connected
             window.liveSocket.connect();
           }
 

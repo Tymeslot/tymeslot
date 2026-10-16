@@ -1,90 +1,56 @@
 /* Language Switcher - Quill Theme */
 
-/* Language switcher visibility (only on slide 1) */
-.language-switcher-wrapper.hidden {
-  display: none;
-}
+/* The shared structure and the --lang-switcher-* colours are in
+   shared/components/language-switcher.css; this file adds Quill's glass
+   treatment and responsive widths. */
 
-.language-switcher-button-quill {
-  background: rgba(0, 0, 0, 0.45);
+.lang-switcher__button {
   backdrop-filter: blur(var(--glass-blur-md));
   -webkit-backdrop-filter: blur(var(--glass-blur-md));
   border: var(--border-width-thin) solid var(--border-medium);
-  color: white;
+  color: var(--lang-switcher-ink);
 }
 
-.language-switcher-button-quill:hover {
-  background: rgba(0, 0, 0, 0.55);
+.lang-switcher__button:hover {
   border-color: var(--border-intense);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
 }
 
-.language-switcher-button-quill:active {
-  transform: translateY(0);
-}
-
-.language-dropdown-quill {
-  background: rgba(255, 255, 255, 0.95);
+.lang-switcher__panel {
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: var(--border-width-thin) solid rgba(0, 0, 0, 0.1);
-  animation: fadeInDown var(--transition-normal) ease-out;
-  max-height: var(--dropdown-max-height);
-  overflow-y: auto;
-}
-
-.language-dropdown-item-quill {
-  border-bottom: var(--border-width-thin) solid rgba(0, 0, 0, 0.05);
-}
-
-.language-dropdown-item-quill:last-child {
-  border-bottom: none;
-}
-
-.language-dropdown-item-quill:hover {
-  background: rgba(59, 130, 246, 0.1);
-}
-
-.language-dropdown-item-quill.active {
-  background: rgba(59, 130, 246, 0.15);
-  font-weight: var(--font-weight-semibold);
-}
-
-@keyframes fadeInDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 /* ===== Responsive ===== */
 
+/* From 641px the switcher floats in the page's top-right corner (the
+   wrapper's absolute top-6 right-6), level with the step navigation, and
+   scrolls away with the page. At 640px and below the step navigation is
+   hidden and the card reaches the corner, so a heading (a long locale's
+   above all) would run underneath the switcher. There it takes a row of its
+   own at the top of the page, right-aligned, and the step container's auto
+   margins centre the card in the space below. Embeds follow the same rule. */
 @media (max-width: 640px) {
-  .language-switcher {
-    position: fixed;
-    top: var(--space-lg);
-    right: var(--space-lg);
-    z-index: 1000;
+  .quill-theme-wrapper .language-switcher-wrapper {
+    position: relative;
+    top: auto;
+    right: auto;
+    align-self: flex-end;
+    margin: var(--space-lg) var(--space-lg) 0;
   }
 
-  .language-dropdown-quill {
+  .lang-switcher__panel {
     width: var(--dropdown-width-sm);
   }
 }
 
 @media (min-width: 640px) and (max-width: 767px) {
-  .language-dropdown-quill {
+  .lang-switcher__panel {
     width: var(--dropdown-width-md);
   }
 }
 
 @media (min-width: 768px) and (max-width: 1023px) {
-  .language-dropdown-quill {
+  .lang-switcher__panel {
     width: var(--dropdown-width-md);
   }
 }

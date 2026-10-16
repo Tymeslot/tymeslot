@@ -10,7 +10,6 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Infrastructure.ErrorTracking
-  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
 
   alias TymeslotWeb.Themes.Core.{
@@ -115,6 +114,15 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     delegate_to_theme(theme_id, :handle_info, [msg, socket])
   end
 
+  # A `start_async/3` result: a task reports to the LiveView that started it,
+  # which for a booking page is always this one, so the result goes to the
+  # theme as a message does (the flow's week of slots, `WeekSlots`).
+  @impl Phoenix.LiveView
+  def handle_async(name, result, socket) do
+    theme_id = socket.assigns[:theme_id] || Registry.default_theme_id()
+    delegate_to_theme(theme_id, :handle_async, [name, result, socket])
+  end
+
   @impl Phoenix.LiveView
   def render(assigns) do
     # Ensure Gettext locale is set correctly for this render cycle
@@ -123,32 +131,40 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     end
 
     cond do
-      # A theme that could not be loaded (`:error`) or that raised inside a
-      # callback (`:theme_error`, from `ErrorBoundary`). The cause is already
-      # logged and reported; the visitor gets the same generic card for both.
-      assigns[:error] || assigns[:theme_error] ->
-        render_error(assigns)
+      msg = assigns[:error] ->
+        render_error(assigns, msg)
+
+      error_context = assigns[:theme_error] ->
+        # Use theme_error_message if available, fallback to format_error
+        msg = assigns[:theme_error_message] || ErrorBoundary.format_error(error_context)
+        render_error(assigns, msg)
 
       # An organiser who has not connected a calendar yet is a configuration
       # state, not a crash, so it goes to the theme, which shows it in the
       # organiser's own branding via `Shared.Components.ErrorComponent`. The
       # notice replaces the whole booker, poll route included, so it is decided
-      # here rather than per action. `render_error/1` stays reserved for a theme
+      # here rather than per action. `render_error/2` stays reserved for a theme
       # that could not be loaded or that raised inside a callback.
       assigns[:scheduling_error_message] ->
         render_scheduling_component(assigns)
 
       true ->
-        action = assigns[:live_action]
+        case assigns[:live_action] do
+          action when action in [:reschedule, :cancel, :cancel_confirmed] ->
+            render_theme(
+              assigns,
+              ErrorBoundary.load_failed_message(),
+              & &1.render_meeting_action(assigns, action)
+            )
 
-        cond do
-          action in [:reschedule, :cancel, :cancel_confirmed] ->
-            render_meeting_management_component(assigns, action)
+          :poll_voting ->
+            render_theme(
+              assigns,
+              ErrorBoundary.load_failed_message(),
+              & &1.render_poll_action(assigns)
+            )
 
-          action == :poll_voting ->
-            render_poll_voting_component(assigns)
-
-          true ->
+          _scheduling ->
             render_scheduling_component(assigns)
         end
     end
@@ -156,83 +172,36 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
 
   # Private functions
 
-  defp render_poll_voting_component(assigns) do
-    theme_id = assigns[:theme_id] || Registry.default_theme_id()
-
-    case ThemeInfo.get_theme_module(theme_id) do
-      nil ->
-        Logger.error("Theme module not found", theme_id: theme_id)
-        render_error(assigns)
-
-      module ->
-        try do
-          module.render_poll_action(assigns)
-        rescue
-          e in UndefinedFunctionError ->
-            Logger.error("render_poll_action not implemented in theme module",
-              module: LogFormat.reason(module),
-              error: LogFormat.reason(e)
-            )
-
-            render_error(assigns)
-
-          e ->
-            ErrorTracking.report_error(e, __STACKTRACE__, %{theme_id: theme_id})
-            render_error(assigns)
-        end
-    end
-  end
-
-  defp render_meeting_management_component(assigns, action) do
-    theme_id = assigns[:theme_id] || Registry.default_theme_id()
-
-    case ThemeInfo.get_theme_module(theme_id) do
-      nil ->
-        Logger.error("Theme module not found", theme_id: theme_id)
-        render_error(assigns)
-
-      module ->
-        try do
-          module.render_meeting_action(assigns, action)
-        rescue
-          e in UndefinedFunctionError ->
-            Logger.error("render_meeting_action not implemented in theme module",
-              module: LogFormat.reason(module),
-              error: LogFormat.reason(e)
-            )
-
-            render_error(assigns)
-
-          e ->
-            ErrorTracking.report_error(e, __STACKTRACE__, %{theme_id: theme_id, action: action})
-            render_error(assigns)
-        end
-    end
-  end
-
   defp render_scheduling_component(assigns) do
+    render_theme(
+      assigns,
+      ErrorBoundary.load_failed_message(),
+      & &1.live_view_module().render(assigns)
+    )
+  end
+
+  # Renders through the current theme's module. An id that resolves to no
+  # theme falls back to the error card, and so does an exception raised while
+  # the theme builds its render. An exception inside the template's dynamic
+  # parts is raised later, when the render is turned into HTML, and crashes
+  # the LiveView instead. Every callback exists (the compiler checks the
+  # behaviour), so any exception here is a real error in the theme, logged as
+  # such.
+  defp render_theme(assigns, failure_message, render) do
     theme_id = assigns[:theme_id] || Registry.default_theme_id()
 
-    case ThemeInfo.get_live_view_module(theme_id) do
+    case ThemeInfo.get_theme_module(theme_id) do
       nil ->
         Logger.error("Theme module not found", theme_id: theme_id)
-        render_error(assigns)
+        render_error(assigns, ErrorBoundary.load_failed_message())
 
       module ->
         try do
-          module.render(assigns)
+          render.(module)
         rescue
-          e in UndefinedFunctionError ->
-            Logger.error("Render function not implemented in theme module",
-              module: LogFormat.reason(module),
-              error: LogFormat.reason(e)
-            )
-
-            render_error(assigns)
-
           e ->
             ErrorTracking.report_error(e, __STACKTRACE__, %{theme_id: theme_id})
-            render_error(assigns)
+            render_error(assigns, failure_message)
         end
     end
   end
@@ -257,11 +226,10 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     theme_id =
       case socket.assigns do
         %{theme_id: current_theme_id} ->
-          override = params["theme"]
-          if override && override != current_theme_id, do: override, else: current_theme_id
+          Registry.requested_theme_id(params) || current_theme_id
 
         _no_theme ->
-          params["theme"] || params["theme_id"] || Registry.default_theme_id()
+          Registry.requested_theme_id(params) || Registry.default_theme_id()
       end
 
     socket = assign(socket, :theme_id, theme_id)
@@ -291,37 +259,39 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     end
   end
 
-  defp handle_theme_error(:mount, [_params, _session, socket]) do
-    {:ok, assign(socket, :error, :theme_not_found)}
-  end
+  # The theme could not be resolved at all, so the error boundary never ran;
+  # show the visitor the same message it would have.
+  defp handle_theme_error(:mount = function, [_params, _session, socket]),
+    do: {:ok, assign_theme_error(socket, function)}
 
-  defp handle_theme_error(callback, [_first, _second, socket])
-       when callback in [:handle_params, :handle_event] do
-    {:noreply, assign(socket, :error, :theme_not_found)}
-  end
+  defp handle_theme_error(function, [_first, _second, socket])
+       when function in [:handle_params, :handle_event, :handle_async],
+       do: {:noreply, assign_theme_error(socket, function)}
 
-  defp handle_theme_error(:handle_info, [_msg, socket]) do
-    {:noreply, assign(socket, :error, :theme_not_found)}
-  end
+  defp handle_theme_error(:handle_info = function, [_msg, socket]),
+    do: {:noreply, assign_theme_error(socket, function)}
 
-  defp render_error(assigns) do
+  defp assign_theme_error(socket, function),
+    do: assign(socket, :error, ErrorBoundary.format_error(%{function: function}))
+
+  defp render_error(assigns, message) do
+    assigns = assign(assigns, :error_message, message)
+
     ~H"""
     <div class="min-h-screen bg-tymeslot-100 flex items-center justify-center">
       <div class="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
         <div class="text-center">
           <div class="text-red-500 text-6xl mb-4">⚠️</div>
-          <h1 class="text-xl font-bold text-tymeslot-900 mb-2">
+          <h1 class="theme-error-title text-xl font-bold text-tymeslot-900 mb-2">
             {dgettext("booking", "Something went wrong")}
           </h1>
-          <p class="text-tymeslot-600 mb-4">
-            {dgettext("booking", "This page could not be loaded. Please try again.")}
-          </p>
+          <p class="text-tymeslot-600 mb-4">{@error_message}</p>
           <button
             id="theme-error-retry-button"
             phx-hook="PageReload"
             class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
           >
-            {dgettext("booking", "Reload page")}
+            {dgettext("booking", "Try again")}
           </button>
         </div>
       </div>

@@ -11,8 +11,8 @@ defmodule TymeslotWeb.Live.Themes.MultipleLengthsFlowTest do
   import Ecto.Query, only: [from: 2]
   import Mox
   import Phoenix.LiveViewTest
+  import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
   import Tymeslot.Factory
-  import Tymeslot.ThemeBookingFlowHelpers
   import Tymeslot.TestHelpers.Eventually
 
   alias Tymeslot.Infrastructure.AvailabilityCache
@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Live.Themes.MultipleLengthsFlowTest do
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.BookingDriver
 
   setup :verify_on_exit!
 
@@ -74,21 +75,8 @@ defmodule TymeslotWeb.Live.Themes.MultipleLengthsFlowTest do
   end
 
   defp pick_first_slot_and_continue(view) do
-    select_first_available_day(view)
-    eventually(fn -> has_element?(view, "button[data-testid='time-slot']") end, timeout: 5000)
-
-    slot = view |> render() |> Floki.parse_document!() |> first_slot_time()
-
-    view
-    |> element("button[data-testid='time-slot'][phx-value-time='#{slot}']")
-    |> render_click()
-
-    eventually(
-      fn -> not has_element?(view, "button[data-testid='next-step'][disabled]") end,
-      timeout: 5000
-    )
-
-    view |> element("button[data-testid='next-step']") |> render_click()
+    BookingDriver.pick_first_slot(view)
+    BookingDriver.continue(view)
     eventually(fn -> has_element?(view, "form[data-testid='booking-form']") end, timeout: 5000)
   end
 
@@ -125,10 +113,9 @@ defmodule TymeslotWeb.Live.Themes.MultipleLengthsFlowTest do
         pick_first_slot_and_continue(view)
         assert render(view) =~ "1 hour"
 
-        submit_booking_form(view, unquote(theme_id), %{
+        BookingDriver.submit(view, %{
           name: "Test Attendee",
-          email: "lengths-#{unquote(theme)}@example.com",
-          message: ""
+          email: "lengths-#{unquote(theme)}@example.com"
         })
 
         eventually(fn -> has_element?(view, "[data-testid='confirmation-heading']") end,
@@ -259,6 +246,26 @@ defmodule TymeslotWeb.Live.Themes.MultipleLengthsFlowTest do
         refute has_element?(view, "[data-testid='length-step']")
         assert render(view) =~ "1 hour"
       end
+    end
+  end
+
+  describe "quill's step indicator" do
+    # The length choice is a step of the journey of its own but sits under
+    # "Duration" in the indicator, so "Date & Time" has to send the calendar's
+    # number rather than its own position.
+    @tag :capture_log
+    test "Date & Time leads back to the calendar, past the length choice", %{conn: conn} do
+      %{profile: profile} = seed_several_lengths("1", "indicator-quill")
+
+      {:ok, view, _html} = live(conn, ~p"/#{profile.username}/quick-chat?minutes=60")
+
+      pick_first_slot_and_continue(view)
+
+      view |> element("button[phx-click='navigate_to_step']", "Date & Time") |> render_click()
+
+      refute has_element?(view, "form[data-testid='booking-form']")
+      refute has_element?(view, "[data-testid='length-step']")
+      assert has_element?(view, "[data-testid='schedule-actions']")
     end
   end
 end

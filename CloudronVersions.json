@@ -4210,6 +4210,53 @@
       },
       "publishState": "published",
       "ts": "Wed, 14 Oct 2026 07:39:42 GMT"
+    },
+    "1.26.0": {
+      "creationDate": "Fri, 16 Oct 2026 14:09:39 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "* [BREAKING] admin: Let environment variables outrank settings saved on the admin page: an environment variable such as REGISTRATION_ENABLED or ENABLE_GOOGLE_AUTH, when set, now takes precedence over a value saved on the admin settings page; before, the saved value won. Before upgrading, check your .env for the lines older versions of .env.example shipped uncommented: ENABLE_GOOGLE_AUTH=false, ENABLE_GITHUB_AUTH=false and ENABLE_OAUTH_AUTH=false. Left in place, they now switch those sign-in methods off; if you turned SSO on from the admin page, comment them out or no one can sign in. Unset any variable for a setting you want to manage from the admin page. Values already saved there are kept, and apply again once the variable is removed.\nBooking pages that follow the visitor's week and the organiser's colours more closely, a run of booking-flow fixes, and environment variables that now take precedence over the admin settings page. Internally, the booking theme system was restructured so new themes can be added without changing the existing ones. Bandit is also updated to address security advisory EEF-CVE-2026-105659.\n* Self-hosters: a sign-in, registration or other admin setting fixed by an environment variable now overrides the admin settings page, which shows it greyed out\n* The booking calendar starts the week on the visitor's first day, such as Sunday in the US or Monday in most of Europe\n* Onboarding helps you choose a booking theme by asking which theme's story sounds like you\n* A custom colour palette now carries through the booking page's focus rings, highlights and payment pages, instead of falling back to cyan\n* A link to a specific date opens the booking calendar on that date's month, instead of the current month\n* A single-choice question with many options on the booking page now keeps the booker's answer, instead of losing it\n* A guest who declines a group booking now frees their seat for someone else",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:1.26.0",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!\n\nSet PHX_HOST to your app domain, either on the Environment tab or by editing /app/data/.env, which is pre-filled with every supported variable, commented out (cloudron exec --app <domain> -- vi /app/data/.env). Values set on the Environment tab take precedence over that file. Restart the app after editing it.\n\nThe first user to register becomes the admin.",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "1.26.0",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Fri, 16 Oct 2026 14:09:39 GMT"
     }
   }
 }

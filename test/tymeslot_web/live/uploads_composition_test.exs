@@ -23,9 +23,9 @@ defmodule TymeslotWeb.UploadsCompositionTest do
     * concurrent progress replacement — a Phoenix LiveView framework
       guarantee (`max_entries: 1` cancels a second in-flight entry); not
       ours to pin.
-    * video transcoder failure surface — lives in ThemeUploadHelper and
-      is better covered at the helper-unit layer where Oban / transcoder
-      stubs can be wired cleanly.
+    * video transcoder failure surface: lives in
+      `ThemeCustomizations.Assets` and is covered by `assets_test.exs`,
+      where the transcoder stub can be wired cleanly.
   """
 
   use TymeslotWeb.LiveCase, async: true

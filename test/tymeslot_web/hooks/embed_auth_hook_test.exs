@@ -75,6 +75,10 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
                EmbedAuthHook.on_mount(:default, %{}, %{"embed_token" => token}, socket)
 
       assert updated_socket.assigns.embedded == true
+
+      # The verified origin rides along so a self-issued redirect (the
+      # language switcher) can rebuild the embed URL from it.
+      assert updated_socket.assigns.embed_parent_origin == "https://example.com"
     end
 
     test "halts with redirect when parent_origin is not allowed" do

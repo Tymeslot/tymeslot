@@ -241,17 +241,17 @@ defmodule TymeslotWeb.Live.Scheduling.BookingUtmFlowTest do
 
     view |> element("button.calendar-day[phx-value-date='#{date_str}']") |> render_click()
 
-    wait_until(fn -> has_element?(view, "button.time-slot-button") end)
+    wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
 
     slot =
       view
       |> render()
       |> Floki.parse_document!()
-      |> Floki.attribute("button.time-slot-button", "phx-value-time")
+      |> Floki.attribute("button[data-testid='time-slot']", "phx-value-time")
       |> List.first() ||
         flunk("Expected at least one available time slot button after selecting a date")
 
-    view |> element("button.time-slot-button[phx-value-time='#{slot}']") |> render_click()
+    view |> element("button[data-testid='time-slot'][phx-value-time='#{slot}']") |> render_click()
     view |> element("button[phx-click='next_step']") |> render_click()
 
     view

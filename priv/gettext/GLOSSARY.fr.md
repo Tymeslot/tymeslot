@@ -228,7 +228,7 @@ Loanwords kept as-is: **webhook**, **slug**, **open source**, **cloud**, **SaaS*
 - A build gate checks this. A dropped or invented placeholder is a runtime crash.
 
 > **`%{organizer}` is not a bare name.** In `booking.po` it already expands to a *translated*
-> string (`"avec Jean Dupont"`), because `get_organizer_text/1` renders
+> string (`"avec Jean Dupont"`), because `ConfirmationText.organizer_fragment/1` renders
 > `dgettext("booking", "with %{name}")` before interpolating. So the French msgstr must **not**
 > add its own *avec*, or the page reads "votre réunion **avec avec** Jean Dupont". The English
 > msgids deliberately omit the preposition for this reason. (In `emails.po`, by contrast,

@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dev.EmbedTestControllerTest do
   alias Phoenix.Controller
   alias TymeslotWeb.Dev.EmbedTestController
   alias TymeslotWeb.Endpoint
+  alias TymeslotWeb.Themes.Core.ThemeInfo
 
   # The route is only compiled in when `config :tymeslot, :dev_routes` is true,
   # which only `config/dev.exs` sets, so the page is unreachable through the
@@ -66,6 +67,18 @@ defmodule TymeslotWeb.Dev.EmbedTestControllerTest do
 
       assert String.starts_with?(body, "<!DOCTYPE html>")
       refute body =~ "phx-main"
+    end
+
+    test "offers every theme the pickers offer, plus the user's default" do
+      body = html_response(request(%{}), 200)
+      options = ThemeInfo.theme_options()
+      assert options != []
+
+      assert body =~ ~s(<option value="">User default</option>)
+
+      for {name, id} <- options do
+        assert body =~ ~s{<option value="#{id}">#{name} (#{id})</option>}
+      end
     end
   end
 end

@@ -219,17 +219,19 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
       end)
 
       view |> element("button.calendar-day[phx-value-date='#{date_str}']") |> render_click()
-      wait_until(fn -> has_element?(view, "button.time-slot-button") end)
+      wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
 
       slot =
         view
         |> render()
         |> Floki.parse_document!()
-        |> Floki.attribute("button.time-slot-button", "phx-value-time")
+        |> Floki.attribute("button[data-testid='time-slot']", "phx-value-time")
         |> List.first() ||
           flunk("Expected at least one available time slot button after selecting a date")
 
-      view |> element("button.time-slot-button[phx-value-time='#{slot}']") |> render_click()
+      view
+      |> element("button[data-testid='time-slot'][phx-value-time='#{slot}']")
+      |> render_click()
 
       # After picking both date and time the next-step button must not
       # be disabled — this pins the healthy baseline before the
@@ -237,7 +239,7 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
       refute has_next_step_disabled?(view)
 
       # Re-click the same calendar day. The shared scheduling core
-      # (`handle_schedule_date_selection/2`) clears selected_time on
+      # (`Journey.Facts.Slot`'s `select_date/2`) clears selected_time on
       # every date click — without this, the user would land on the
       # booking form with a stale time the UI no longer displays.
       view |> element("button.calendar-day[phx-value-date='#{date_str}']") |> render_click()

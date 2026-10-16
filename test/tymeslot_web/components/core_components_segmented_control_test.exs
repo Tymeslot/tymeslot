@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Components.CoreComponentsSegmentedControlTest do
   alias TymeslotWeb.Components.CoreComponents.Navigation
 
   defp render_control(value, extra \\ %{}) do
-    assigns = Map.merge(%{value: value, disabled: false, count: nil}, extra)
+    assigns = Map.merge(%{value: value, disabled: false, count: nil, values: %{}}, extra)
 
     ~H"""
     <Navigation.segmented_control
@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Components.CoreComponentsSegmentedControlTest do
       param="range"
       target="#owner"
       aria_label="Date range"
+      values={@values}
       disabled={@disabled}
     >
       <:option value="7d" label="7 days" icon="hero-clock" testid="range-week" />
@@ -68,6 +69,15 @@ defmodule TymeslotWeb.Components.CoreComponentsSegmentedControlTest do
     assert attr_of(doc, "#range-7d", "phx-value-range") == ["7d"]
     assert attr_of(doc, "#range-7d", "phx-target") == ["#owner"]
     assert attr_of(doc, "#range-7d", "phx-value-value") == []
+  end
+
+  test "sends its fixed values with every option, beside the chosen one" do
+    doc = render_control("30d", %{values: %{group: "background", range: "ignored"}})
+
+    assert attr_of(doc, "#range-7d", "phx-value-group") == ["background"]
+    assert attr_of(doc, "#range-90d", "phx-value-group") == ["background"]
+    # The chosen value wins over a fixed one of the same name.
+    assert attr_of(doc, "#range-7d", "phx-value-range") == ["7d"]
   end
 
   test "carries an option's test id and disables only the options marked so" do

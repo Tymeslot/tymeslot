@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Features
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.LocationOption
@@ -42,6 +43,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> Component.assign(:show_as_free, get_show_as_free(type))
     |> assign_group_bookings_state(type)
     |> Component.assign(:booking_limits, get_booking_limits(type))
+    |> Component.assign(
+      :week_start,
+      assigns |> Map.get(:current_user) |> user_id() |> CalendarManagement.get_week_start()
+    )
     |> Component.assign(
       :selected_availability_schedule_id,
       get_availability_schedule_id(type)

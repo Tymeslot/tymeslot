@@ -9,9 +9,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
     - theme_id: String.t()
   - Provided/managed by this component (do not pass these in):
     - customization: map with current customization state (see customization_t())
-    - presets: preset collections for color schemes and backgrounds (see presets_t())
-    - browsing_type: String.t() – which background category is currently browsed ("gradient" | "color" | "image" | "video")
-    - uploads: map() | nil – upload entries (managed by this component)
+    - option_groups: the theme spec's option groups, one panel each (`ThemeCustomizations.option_groups/1`)
+    - panels: the panel module for each group, keyed by the group's key (`Panels.for_group/2`)
+    - panel_ui: each group's panel UI state, keyed by the group's key (`Panel.ui/3`, `Panel.handle_ui/5`)
+    - uploads: map() – upload entries keyed by asset field (`AssetUploads`), present only when the spec declares asset fields
     - parent_component: term() – reference to parent component for close actions (optional)
   """
   use TymeslotWeb, :live_component
@@ -23,100 +24,61 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.ThemeCustomizations
-  alias TymeslotWeb.Dashboard.ThemeSettings.BackgroundUploads
+  alias Tymeslot.Themes.Catalog
+  alias TymeslotWeb.Dashboard.ThemeSettings.AssetUploads
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components
+  alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Panels
   alias TymeslotWeb.Live.Shared.Flash
 
-  @typedoc "Preset collections used by the component"
-  @type presets_t :: %{
-          required(:color_schemes) => %{optional(String.t()) => map()},
-          required(:gradients) => %{
-            optional(String.t()) => %{
-              required(:name) => String.t(),
-              required(:value) => String.t()
-            }
-          },
-          required(:images) => %{
-            optional(String.t()) => %{
-              required(:name) => String.t(),
-              required(:file) => String.t(),
-              optional(:description) => String.t()
-            }
-          },
-          required(:videos) => %{
-            optional(String.t()) => %{
-              required(:name) => String.t(),
-              required(:file) => String.t(),
-              required(:thumbnail) => String.t(),
-              optional(:description) => String.t()
-            }
-          }
-        }
-
-  @typedoc "Customization map applied to the theme"
-  @type customization_t :: %{
-          required(:background_type) => String.t(),
-          optional(:background_value) => String.t() | nil,
-          optional(:background_image_path) => String.t() | nil,
-          optional(:background_video_path) => String.t() | nil,
-          optional(:color_scheme) => String.t()
-        }
+  @typedoc "Customization applied to the theme"
+  @type customization_t :: Tymeslot.ThemeCustomizations.ThemeCustomizationSchema.t()
 
   @typedoc "Assigns contract for this component"
   @type assigns_t :: %{
           required(:profile) => Tymeslot.Profiles.ProfileSchema.t(),
           required(:theme_id) => String.t(),
           required(:customization) => customization_t(),
-          required(:presets) => presets_t(),
-          required(:browsing_type) => String.t(),
+          required(:option_groups) => [map()],
+          required(:panels) => %{atom() => module()},
+          required(:panel_ui) => %{atom() => map()},
           optional(:uploads) => map() | nil,
           optional(:parent_component) => term()
         }
 
   @impl Phoenix.LiveComponent
   @spec mount(Socket.t()) :: {:ok, Socket.t()}
-  def mount(socket) do
-    socket = BackgroundUploads.configure(socket, __MODULE__)
-
-    {:ok, socket}
-  end
+  def mount(socket), do: {:ok, socket}
 
   @impl Phoenix.LiveComponent
   @spec update(map(), Socket.t()) :: {:ok, Socket.t()}
-  def update(%{consume_upload: type}, socket) do
-    # Handle async consumption from progress handlers
-    {:noreply, socket} =
-      case type do
-        :image -> handle_event("save_background_image", %{}, socket)
-        :video -> handle_event("save_background_video", %{}, socket)
-      end
-
-    {:ok, socket}
-  end
+  def update(%{consume_upload: field}, socket),
+    do: {:ok, consume_upload_and_notify(socket, field)}
 
   def update(assigns, socket) do
-    theme_id = assigns[:theme_id] || "1"
+    theme_id = assigns[:theme_id] || Catalog.default_id()
 
-    # Initialize customization data from the domain
-    %{
-      customization: customization,
-      original: _original_state,
-      presets: presets
-    } = ThemeCustomizations.initialize_customization(assigns.profile.id, theme_id)
+    %{customization: customization} =
+      ThemeCustomizations.initialize_customization(assigns.profile.id, theme_id)
 
-    # Narrow assigns surface: expose a small, consistent contract
+    option_groups = ThemeCustomizations.option_groups(theme_id)
+    panels = Map.new(option_groups, &{&1.key, Panels.for_group(theme_id, &1)})
+
     {:ok,
      socket
-     |> assign(:id, assigns.id)
-     |> assign(:profile, assigns.profile)
-     |> assign(:parent_component, assigns[:parent_component])
-     |> assign(:theme_id, theme_id)
-     |> assign(:customization, customization)
-     |> assign(:presets, presets)
-     |> assign_new(:browsing_type, fn -> customization.background_type end)
-     |> assign_new(:custom_picker_open, fn -> false end)
-     |> assign_new(:palette_picker_open, fn ->
-       not is_nil(customization.custom_palette_seed)
+     |> assign(
+       id: assigns.id,
+       profile: assigns.profile,
+       parent_component: assigns[:parent_component],
+       theme_id: theme_id,
+       customization: customization,
+       option_groups: option_groups,
+       panels: panels
+     )
+     |> AssetUploads.configure(__MODULE__, ThemeCustomizations.asset_fields(theme_id))
+     |> assign_new(:panel_ui, fn ->
+       Map.new(option_groups, fn group ->
+         {group.key, panels[group.key].ui(group, customization, %{})}
+       end)
      end)}
   end
 
@@ -130,20 +92,14 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
         parent_component={@parent_component}
       />
 
-      <Components.color_scheme_section
+      <Components.option_panel
+        :for={group <- @option_groups}
+        panel={@panels[group.key]}
+        group={group}
         customization={@customization}
-        presets={@presets}
+        uploads={assigns[:uploads]}
         myself={@myself}
-        palette_picker_open={@palette_picker_open}
-      />
-
-      <Components.background_section
-        browsing_type={@browsing_type}
-        customization={@customization}
-        presets={@presets}
-        uploads={@uploads}
-        myself={@myself}
-        custom_picker_open={@custom_picker_open}
+        {@panel_ui[group.key]}
       />
     </div>
     """
@@ -151,173 +107,95 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
 
   @impl Phoenix.LiveComponent
   @spec handle_event(String.t(), map(), Socket.t()) :: {:noreply, Socket.t()}
-  def handle_event("theme:select_color_scheme", %{"scheme" => scheme_id}, socket) do
-    with_rate_limit(socket, "color_scheme", fn ->
-      case ThemeCustomizations.apply_color_scheme_change(
-             socket.assigns.profile.id,
-             socket.assigns.theme_id,
-             socket.assigns.customization,
-             scheme_id
-           ) do
-        {:ok, updated_customization} ->
-          emit_telemetry(:color_scheme_changed, socket, %{scheme_id: scheme_id})
-
-          {:noreply,
-           socket
-           |> assign(:customization, updated_customization)
-           |> assign(:palette_picker_open, not is_nil(updated_customization.custom_palette_seed))}
-
-        {:error, reason} ->
-          Flash.error(reason)
-          {:noreply, socket}
-      end
-    end)
+  def handle_event(
+        "theme:set_option",
+        %{"option" => option, "field" => field, "choice" => choice},
+        socket
+      )
+      when is_binary(option) and is_binary(field) and is_binary(choice) do
+    with_group(socket, option, &set_option(socket, &1, field, choice))
   end
 
-  def handle_event("theme:toggle_palette_picker", _params, socket) do
-    if is_nil(socket.assigns.customization.custom_palette_seed) do
-      with_rate_limit(socket, "color_scheme", fn ->
-        case ThemeCustomizations.apply_color_scheme_change(
-               socket.assigns.profile.id,
-               socket.assigns.theme_id,
-               socket.assigns.customization,
-               "custom"
-             ) do
-          {:ok, updated} ->
-            emit_telemetry(:palette_seed_set, socket, %{
-              seed: updated.custom_palette_seed
-            })
+  def handle_event("theme:set_option", _params, socket), do: {:noreply, socket}
 
-            {:noreply,
-             socket
-             |> assign(:customization, updated)
-             |> assign(:palette_picker_open, true)}
+  # Any other `theme:` event is a UI event of the panel whose group it names.
+  def handle_event("theme:" <> _action = event, %{"option" => option} = params, socket)
+      when is_binary(option) do
+    with_group(socket, option, &panel_event(socket, &1, event, params))
+  end
 
-          {:error, reason} ->
-            Flash.error(reason)
-            {:noreply, socket}
-        end
-      end)
-    else
-      {:noreply, update(socket, :palette_picker_open, &(!&1))}
+  def handle_event("theme:" <> _action, _params, socket), do: {:noreply, socket}
+
+  # Every upload form sends this on change and on submit; its hidden
+  # `asset_field` input names the field. A name the theme does not declare is
+  # ignored rather than turned into an atom.
+  def handle_event("upload_asset", params, socket) do
+    case upload_field(socket.assigns.theme_id, params) do
+      nil -> {:noreply, socket}
+      field -> {:noreply, consume_upload_and_notify(socket, field)}
     end
-  end
-
-  @valid_browsing_types ~w[gradient color image video]
-
-  def handle_event("theme:set_browsing_type", %{"type" => type}, socket)
-      when type in @valid_browsing_types do
-    # Only update the browsing type - this is just UI navigation, not a selection
-    {:noreply, assign(socket, :browsing_type, type)}
-  end
-
-  def handle_event("theme:set_browsing_type", _params, socket) do
-    {:noreply, socket}
-  end
-
-  def handle_event("theme:toggle_custom_picker", _params, socket) do
-    {:noreply, update(socket, :custom_picker_open, &(!&1))}
-  end
-
-  def handle_event("theme:set_palette_seed", %{"value" => hex}, socket) do
-    with_rate_limit(socket, "palette_seed", fn ->
-      case ThemeCustomizations.apply_custom_palette_change(
-             socket.assigns.profile.id,
-             socket.assigns.theme_id,
-             socket.assigns.customization,
-             hex
-           ) do
-        {:ok, updated} ->
-          emit_telemetry(:palette_seed_changed, socket, %{seed: hex})
-          {:noreply, assign(socket, :customization, updated)}
-
-        {:error, reason} ->
-          Flash.error(reason)
-          {:noreply, socket}
-      end
-    end)
-  end
-
-  def handle_event("theme:set_custom_background", %{"value" => hex}, socket) do
-    with_rate_limit(socket, "background", fn ->
-      case ThemeCustomizations.apply_background_change(
-             socket.assigns.profile.id,
-             socket.assigns.theme_id,
-             socket.assigns.customization,
-             "color",
-             hex
-           ) do
-        {:ok, updated} ->
-          emit_telemetry(:background_changed, socket, %{type: "color", value: hex})
-
-          {:noreply,
-           socket
-           |> assign(:customization, updated)
-           |> assign(:browsing_type, "color")}
-
-        {:error, reason} ->
-          Flash.error(reason)
-          {:noreply, socket}
-      end
-    end)
-  end
-
-  def handle_event("theme:select_background", params, socket) do
-    type = params["type"]
-    value = params["id"] || params["value"]
-
-    with_rate_limit(socket, "background", fn ->
-      case ThemeCustomizations.apply_background_change(
-             socket.assigns.profile.id,
-             socket.assigns.theme_id,
-             socket.assigns.customization,
-             type,
-             value
-           ) do
-        {:ok, updated_customization} ->
-          emit_telemetry(:background_changed, socket, %{type: type, value: value})
-
-          {:noreply,
-           socket
-           |> assign(:customization, updated_customization)
-           |> assign(:browsing_type, type)}
-
-        {:error, reason} ->
-          Flash.error(reason)
-          {:noreply, socket}
-      end
-    end)
-  end
-
-  def handle_event("validate_image", _params, socket) do
-    {:noreply, consume_upload_and_notify(socket, :image)}
-  end
-
-  def handle_event("save_background_image", _params, socket) do
-    {:noreply, consume_upload_and_notify(socket, :image)}
-  end
-
-  def handle_event("validate_video", _params, socket) do
-    {:noreply, consume_upload_and_notify(socket, :video)}
-  end
-
-  def handle_event("save_background_video", _params, socket) do
-    {:noreply, consume_upload_and_notify(socket, :video)}
   end
 
   # Private functions
 
+  defp with_group(socket, option, fun) do
+    case Enum.find(socket.assigns.option_groups, &(Atom.to_string(&1.key) == option)) do
+      nil -> {:noreply, socket}
+      group -> fun.(group)
+    end
+  end
+
+  defp panel_event(socket, group, event, params) do
+    %{panels: panels, panel_ui: panel_ui, customization: customization} = socket.assigns
+
+    case panels[group.key].handle_ui(event, params, group, panel_ui[group.key], customization) do
+      {:ui, ui} -> {:noreply, put_panel_ui(socket, group, ui)}
+      {:set, field, value} -> set_option(socket, group, field, value)
+      :ignore -> {:noreply, socket}
+    end
+  end
+
+  defp set_option(socket, group, field, value) do
+    panel = socket.assigns.panels[group.key]
+    {event, action, metadata} = panel.telemetry(group, field, value)
+
+    with_rate_limit(socket, action, fn ->
+      case ThemeCustomizations.apply_option(
+             socket.assigns.profile.id,
+             socket.assigns.theme_id,
+             group.key,
+             %{"field" => field, "value" => value}
+           ) do
+        {:ok, updated} ->
+          emit_telemetry(event, socket, metadata)
+          ui = panel.ui(group, updated, socket.assigns.panel_ui[group.key])
+
+          {:noreply,
+           socket
+           |> assign(:customization, updated)
+           |> put_panel_ui(group, ui)}
+
+        {:error, reason} ->
+          Flash.error(reason)
+          {:noreply, socket}
+      end
+    end)
+  end
+
+  defp put_panel_ui(socket, group, ui),
+    do: update(socket, :panel_ui, &Map.put(&1, group.key, ui))
+
   # `AutoUpload` (mounted at the root of this component's markup, see
   # `render/1`) only clears the file picker once it receives "upload-complete",
   # so re-selecting the same background file after a successful upload needs
-  # this pushed explicitly. `BackgroundUploads.consume/2` doesn't report
+  # this pushed explicitly. `AssetUploads.consume/2` doesn't report
   # success directly, so success is inferred from the stored path changing;
   # a no-op (not ready yet, rate-limited, or a validation error) leaves the
   # path untouched and pushes nothing.
-  defp consume_upload_and_notify(socket, kind) do
-    path_before = background_path(socket.assigns.customization, kind)
-    socket = BackgroundUploads.consume(socket, kind)
-    path_after = background_path(socket.assigns.customization, kind)
+  defp consume_upload_and_notify(socket, field) do
+    path_before = stored_path(socket.assigns.customization, field)
+    socket = AssetUploads.consume(socket, field)
+    path_after = stored_path(socket.assigns.customization, field)
 
     if path_after != path_before do
       push_event(socket, "upload-complete", %{})
@@ -326,8 +204,16 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
     end
   end
 
-  defp background_path(customization, :image), do: customization.background_image_path
-  defp background_path(customization, :video), do: customization.background_video_path
+  defp stored_path(customization, field), do: customization.settings[Atom.to_string(field)]
+
+  defp upload_field(theme_id, %{"asset_field" => name}) when is_binary(name) do
+    theme_id
+    |> ThemeCustomizations.asset_fields()
+    |> Keyword.keys()
+    |> Enum.find(&(Atom.to_string(&1) == name))
+  end
+
+  defp upload_field(_theme_id, _params), do: nil
 
   # Rate limiting helper that validates user_id and checks rate limit before executing operation
   @spec with_rate_limit(Socket.t(), String.t(), (-> {:noreply, Socket.t()})) ::

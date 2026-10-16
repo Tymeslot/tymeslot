@@ -5,9 +5,12 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.VideoPi
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Media.UploadConstraints
+  alias TymeslotWeb.Dashboard.ThemeSettings.AssetUploads
+
   @doc """
   Renders the video picker.
-  Expects assigns: customization, presets, uploads, myself
+  Expects assigns: option, customization, presets (the group's videos as `{id, preset}`, in order), uploads, myself
   """
   @spec video_picker(map()) :: Phoenix.LiveView.Rendered.t()
   def video_picker(assigns) do
@@ -18,20 +21,21 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.VideoPi
           {dgettext("dashboard_appearance", "Choose from our collection")}
         </p>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <%= for {video_id, video} <- @presets.videos do %>
+          <%= for {video_id, video} <- @presets do %>
             <button
               type="button"
               class={[
                 "group/video relative flex flex-col rounded-token-2xl overflow-hidden border-4 transition-all duration-500",
-                if(@customization.background_value == video_id,
+                if(@customization.settings["background_value"] == video_id,
                   do: "border-turquoise-400 shadow-2xl shadow-turquoise-500/20 scale-[1.02]",
                   else:
                     "border-white hover:border-turquoise-200 hover:shadow-xl hover:shadow-tymeslot-200/50"
                 )
               ]}
-              phx-click="theme:select_background"
-              phx-value-type="video"
-              phx-value-id={video_id}
+              phx-click="theme:set_option"
+              phx-value-option={@option}
+              phx-value-field="video"
+              phx-value-choice={video_id}
               phx-target={@myself}
             >
               <div
@@ -67,7 +71,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.VideoPi
                     </div>
                   </div>
                 </div>
-                <%= if @customization.background_value == video_id do %>
+                <%= if @customization.settings["background_value"] == video_id do %>
                   <div class="absolute top-3 right-3 w-8 h-8 bg-turquoise-500 text-white rounded-token-full flex items-center justify-center shadow-lg z-30">
                     <.icon name="hero-check" class="w-5 h-5" />
                   </div>
@@ -75,7 +79,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.VideoPi
               </div>
               <div class={[
                 "p-5 text-left transition-colors",
-                if(@customization.background_value == video_id,
+                if(@customization.settings["background_value"] == video_id,
                   do: "bg-turquoise-50",
                   else: "bg-white"
                 )
@@ -106,17 +110,18 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.VideoPi
       <div class="bg-tymeslot-50 p-8 rounded-token-4xl border-2 border-tymeslot-100 border-dashed">
         <form
           id="theme-background-video-form"
-          phx-submit="save_background_video"
-          phx-change="validate_video"
+          phx-submit="upload_asset"
+          phx-change="upload_asset"
           phx-target={@myself}
           data-auto-upload="true"
           class="flex flex-col items-center gap-6"
         >
+          <input type="hidden" name="asset_field" value="background_video_path" />
           <div class="w-full max-w-md">
-            <%= if @uploads && @uploads[:background_video] do %>
+            <%= if @uploads && @uploads[:background_video_path] do %>
               <div class="relative group/upload">
                 <.live_file_input
-                  upload={@uploads.background_video}
+                  upload={@uploads.background_video_path}
                   class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
                 />
                 <div class={[button_classes(:secondary), "w-full"]}>
@@ -133,15 +138,15 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.VideoPi
               </div>
             <% end %>
 
-            <%= if @uploads && @uploads[:background_video] do %>
-              <%= for err <- upload_errors(@uploads.background_video) do %>
+            <%= if @uploads && @uploads[:background_video_path] do %>
+              <%= for err <- upload_errors(@uploads.background_video_path) do %>
                 <div class="mt-4 p-3 bg-red-50 border border-red-100 rounded-token-xl text-red-600 text-xs font-bold flex items-center gap-2">
                   <.icon name="hero-exclamation-circle" class="w-4 h-4" />
-                  {Phoenix.Naming.humanize(err)}
+                  {AssetUploads.error_message(:video, err)}
                 </div>
               <% end %>
 
-              <%= for entry <- @uploads.background_video.entries do %>
+              <%= for entry <- @uploads.background_video_path.entries do %>
                 <div class="mt-6 p-4 bg-white rounded-token-2xl border-2 border-tymeslot-100 shadow-sm">
                   <div class="flex items-center justify-between mb-2">
                     <span class="text-tymeslot-700 font-black text-xs uppercase tracking-wider truncate mr-4">
@@ -157,10 +162,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.VideoPi
                     </div>
                   </div>
 
-                  <%= for err <- upload_errors(@uploads.background_video, entry) do %>
+                  <%= for err <- upload_errors(@uploads.background_video_path, entry) do %>
                     <div class="mt-2 p-3 bg-red-50 border border-red-100 rounded-token-xl text-red-600 text-xs font-bold flex items-center gap-2">
                       <.icon name="hero-exclamation-circle" class="w-4 h-4" />
-                      {Phoenix.Naming.humanize(err)}
+                      {AssetUploads.error_message(:video, err)}
                     </div>
                   <% end %>
                 </div>
@@ -172,11 +177,13 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.VideoPi
           </div>
 
           <p class="text-token-2xs font-black text-tymeslot-400 uppercase tracking-[0.2em]">
-            {dgettext("dashboard_appearance", "MP4 or WebM. Max 20MB.")}
+            {dgettext("dashboard_appearance", "MP4 or WebM. Max %{size} MB.",
+              size: UploadConstraints.max_file_size_mb(:video)
+            )}
           </p>
         </form>
 
-        <%= if @customization.background_video_path && @customization.background_value == "custom" do %>
+        <%= if @customization.settings["background_video_path"] && @customization.settings["background_value"] == "custom" do %>
           <div class="mt-8 p-4 bg-amber-50 border border-amber-100 rounded-token-2xl flex items-center gap-3">
             <.icon name="hero-exclamation-triangle" class="w-5 h-5 text-amber-600 shrink-0" />
             <p class="text-token-sm font-bold text-amber-800">

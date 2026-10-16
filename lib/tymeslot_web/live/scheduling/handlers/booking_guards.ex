@@ -72,10 +72,13 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingGuards do
   Logs the honeypot hit and returns the socket for a simulated success.
 
   The caller reports success to the bot. Telling it the truth would let it
-  discover the field and skip it next time.
+  discover the field and skip it next time. The socket carries what the
+  confirmation step shows a real booker (the submitted name and email, no
+  answers), so the caller can move to that step exactly as a real booking
+  does.
   """
-  @spec handle_honeypot(socket()) :: socket()
-  def handle_honeypot(socket) do
+  @spec handle_honeypot(socket(), map()) :: socket()
+  def handle_honeypot(socket, params) do
     SecurityLogger.log_security_event("booking_honeypot_triggered", %{
       ip_address: ClientIP.get(socket),
       user_agent: ClientIP.get_user_agent(socket)
@@ -85,8 +88,18 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingGuards do
 
     socket
     |> assign(:submitting, false)
+    |> assign(:name, string_param(params, "name"))
+    |> assign(:email, string_param(params, "email"))
     |> assign(:custom_fields_snapshot, [])
     |> assign(:custom_field_answers, %{})
+    |> assign(:guest_emails, socket.assigns[:guest_emails] || [])
+  end
+
+  defp string_param(params, key) do
+    case Map.get(params, key) do
+      value when is_binary(value) -> String.trim(value)
+      _other -> ""
+    end
   end
 
   @doc """

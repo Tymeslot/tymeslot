@@ -1,0 +1,281 @@
+/* Polls: public voting page. Structure from the shared PollVotingComponents
+   classes; colours from the --poll-* tokens each theme defines, and
+   --poll-yes-ink, the "yes" colour (the yes tally's icon, the checked yes
+   option's border, the closed poll's success icon), which shared/tokens.css
+   defaults to --theme-accent: a theme sets it only to change it. */
+
+html.scheduling-app .poll-voting {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  padding: var(--poll-voting-padding);
+  color: var(--theme-text);
+}
+
+html.scheduling-app .poll-voting-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  text-align: center;
+}
+
+html.scheduling-app .poll-voting-title {
+  font-size: var(--theme-font-size-2xl);
+  font-weight: 700;
+  line-height: var(--theme-line-height-snug);
+  color: var(--theme-text);
+}
+
+html.scheduling-app .poll-voting-description {
+  font-size: var(--theme-font-size-base);
+  color: var(--theme-text-secondary);
+}
+
+html.scheduling-app .poll-voting-timezone {
+  /* A badge, not a line of prose: it labels every time below it rather than
+     saying something in its own right. `align-self: center` keeps it centred
+     inside the header's flex column without stretching the pill full width. */
+  display: inline-flex;
+  align-self: center;
+  align-items: center;
+  gap: var(--space-3xs);
+  padding: var(--space-3xs) var(--space-sm);
+  border-radius: var(--radius-full);
+  background: var(--poll-panel-surface);
+  border: var(--border-width-thin) solid var(--line-1);
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-text-secondary);
+}
+
+html.scheduling-app .poll-voting-timezone-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+html.scheduling-app .poll-voting-greeting {
+  font-size: var(--theme-font-size-sm);
+  font-weight: 600;
+  color: var(--theme-primary);
+}
+
+html.scheduling-app .poll-voting-notice {
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-text-secondary);
+  text-align: center;
+}
+
+/* Deadline banner */
+html.scheduling-app .poll-deadline-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-lg);
+  background: var(--poll-panel-surface);
+  border: var(--border-width-thin) solid var(--line-1);
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-text-secondary);
+}
+
+html.scheduling-app .poll-deadline-icon {
+  width: 1rem;
+  height: 1rem;
+  color: var(--theme-warning);
+}
+
+/* Registration form */
+html.scheduling-app .poll-identity-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+html.scheduling-app .poll-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+html.scheduling-app .poll-field-label {
+  font-size: var(--theme-font-size-sm);
+  font-weight: 600;
+  color: var(--theme-text);
+}
+
+html.scheduling-app .poll-field-input {
+  width: 100%;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-control);
+  background: var(--poll-input-surface);
+  border: var(--border-width-thin) solid var(--poll-input-line);
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-base);
+}
+
+html.scheduling-app .poll-field-input:focus {
+  outline: none;
+  border-color: var(--theme-primary);
+  box-shadow: var(--poll-input-focus-ring);
+}
+
+html.scheduling-app .poll-submit-button {
+  align-self: stretch;
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-control);
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+  font-size: var(--theme-font-size-base);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+html.scheduling-app .poll-submit-button:hover {
+  background: var(--theme-primary-solid-hover);
+}
+
+/* Slot grid */
+html.scheduling-app .poll-slot-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+html.scheduling-app .poll-slot-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+html.scheduling-app .poll-slot-row {
+  /* Time, tallies and controls on one line. They wrap onto their own lines
+     only when the card is too narrow to hold them, which is what keeps a
+     forty-slot poll from running to several screens. The tallies' auto
+     start margin keeps them and the controls together at the end, so each
+     row's tallies line up with the next row's. */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  border: var(--border-width-thin) solid var(--poll-row-line);
+  border-radius: var(--radius-lg);
+  background: var(--poll-row-surface);
+}
+
+html.scheduling-app .poll-slot-time {
+  /* A fixed 10rem basis, not the date's own width, decides when the row
+     wraps, so every row wraps at the same card width whatever its date's
+     length: the time then takes the whole first line and the tallies and
+     controls the second. Above that width the time grows into the free
+     space, and a long localised date wraps inside it (min-width: 0). */
+  flex: 1 1 10rem;
+  min-width: 0;
+  /* One step down from base so the date and its tallies fit on a single line
+     at the card's default width. */
+  font-size: var(--theme-font-size-sm);
+  font-weight: 600;
+  color: var(--theme-text);
+}
+
+html.scheduling-app .poll-slot-tallies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-inline-start: auto;
+}
+
+html.scheduling-app .poll-tally {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-text-secondary);
+}
+
+html.scheduling-app .poll-tally-count {
+  /* Equal-width digits, so a 1 and an 8 take the same room and the tallies
+     stay aligned from row to row. */
+  font-variant-numeric: tabular-nums;
+}
+
+html.scheduling-app .poll-tally-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+html.scheduling-app .poll-tally--yes .poll-tally-icon {
+  color: var(--poll-yes-ink);
+}
+
+html.scheduling-app .poll-tally--if_need_be .poll-tally-icon {
+  color: var(--theme-warning);
+}
+
+html.scheduling-app .poll-tally--no .poll-tally-icon {
+  color: var(--theme-danger);
+}
+
+/* Vote controls (three-state) */
+html.scheduling-app .poll-vote-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+html.scheduling-app .poll-vote-option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) var(--space-sm);
+  border-radius: var(--radius-full);
+  border: var(--border-width-thin) solid var(--poll-option-line);
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-text);
+  cursor: pointer;
+}
+
+html.scheduling-app .poll-vote-option:has(input:checked) {
+  border-color: var(--theme-primary);
+  background: var(--poll-option-selected-surface);
+  font-weight: 600;
+}
+
+html.scheduling-app .poll-vote-option--yes:has(input:checked) {
+  border-color: var(--poll-yes-ink);
+}
+
+html.scheduling-app .poll-vote-option--no:has(input:checked) {
+  border-color: var(--theme-danger);
+}
+
+/* Closed states */
+html.scheduling-app .poll-closed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  text-align: center;
+  padding: var(--space-md) 0;
+}
+
+html.scheduling-app .poll-closed-icon {
+  width: 3rem;
+  height: 3rem;
+}
+
+html.scheduling-app .poll-closed-icon--success {
+  color: var(--poll-yes-ink);
+}
+
+html.scheduling-app .poll-closed-icon--danger {
+  color: var(--theme-danger);
+}
+
+html.scheduling-app .poll-closed-message {
+  font-size: var(--theme-font-size-md);
+  color: var(--theme-text);
+}

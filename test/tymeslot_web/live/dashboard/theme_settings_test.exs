@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
   import Tymeslot.DashboardTestHelpers
 
   alias Ecto.Changeset
+  alias Tymeslot.Media.UploadConstraints
   alias Tymeslot.Repo
   alias Tymeslot.Test.MediaFixtures
   alias Tymeslot.ThemeCustomizations
@@ -115,15 +116,39 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
   end
 
   describe "Theme customization" do
+    # Customisations are kept per theme and the booking page renders only the
+    # chosen one, so customising another saves changes no visitor sees.
+    test "says when the theme being customised is not the booking page's", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+
+      view
+      |> element("button[phx-value-theme='2']", "Customise Style")
+      |> render_click()
+
+      assert view |> element("#customising-inactive-theme") |> render() =~
+               "You are customising Rhythm, but your booking page uses Quill."
+    end
+
+    test "says nothing of the kind for the booking page's own theme", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+
+      view
+      |> element("button[phx-value-theme='1']", "Customise Style")
+      |> render_click()
+
+      assert has_element?(view, "#theme-customization-uploads")
+      refute has_element?(view, "#customising-inactive-theme")
+    end
+
     test "opens and closes customization", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
       view
-      |> element("button[phx-value-theme='1']", "Customize Style")
+      |> element("button[phx-value-theme='1']", "Customise Style")
       |> render_click()
 
-      assert render(view) =~ "Customize Style"
-      assert render(view) =~ "Color Palette"
+      assert render(view) =~ "Customise Style"
+      assert render(view) =~ "Colour Palette"
       assert render(view) =~ "Background Design"
 
       view
@@ -131,14 +156,14 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       |> render_click()
 
       assert has_element?(view, "button[phx-click='show_customization'][phx-value-theme='1']")
-      refute render(view) =~ "Color Palette"
+      refute render(view) =~ "Colour Palette"
     end
 
     test "navigates directly to the customize URL without going through the selection screen",
          %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard/theme/customize/1")
 
-      assert html =~ "Color Palette"
+      assert html =~ "Colour Palette"
       assert html =~ "Background Design"
     end
 
@@ -158,7 +183,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
       view
-      |> element("button[phx-value-theme='1']", "Customize Style")
+      |> element("button[phx-value-theme='1']", "Customise Style")
       |> render_click()
 
       # The Current badge (span.text-tymeslot-700) shows the loaded scheme's display name.
@@ -171,65 +196,69 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
       view
-      |> element("button[phx-value-theme='1']", "Customize Style")
+      |> element("button[phx-value-theme='1']", "Customise Style")
       |> render_click()
 
       view
-      |> element("button[phx-click='theme:select_color_scheme'][phx-value-scheme='forest']")
+      |> element(
+        "button[phx-click='theme:set_option'][phx-value-field='scheme'][phx-value-choice='forest']"
+      )
       |> render_click()
 
       # Scheme name appears in the "Current" badge
       assert render(view) =~ "Forest Green"
 
       saved = Repo.get_by(ThemeCustomizationSchema, profile_id: profile.id, theme_id: "1")
-      assert saved.color_scheme == "forest"
+      assert saved.settings["color_scheme"] == "forest"
     end
 
     test "changes background type tabs", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
       view
-      |> element("button[phx-value-theme='1']", "Customize Style")
+      |> element("button[phx-value-theme='1']", "Customise Style")
       |> render_click()
 
       view
-      |> element("button", "Solid Color")
+      |> element("button", "Solid Colour")
       |> render_click()
 
-      assert render(view) =~ "Select a solid color"
+      assert render(view) =~ "Select a solid colour"
 
       view
       |> element("button", "Gradient")
       |> render_click()
 
-      refute render(view) =~ "Select a solid color"
+      refute render(view) =~ "Select a solid colour"
     end
 
     test "selects a solid color background and persists it", %{conn: conn, profile: profile} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
       view
-      |> element("button[phx-value-theme='1']", "Customize Style")
+      |> element("button[phx-value-theme='1']", "Customise Style")
       |> render_click()
 
       view
-      |> element("button", "Solid Color")
+      |> element("button", "Solid Colour")
       |> render_click()
 
       view
-      |> element("button[phx-click='theme:select_background'][phx-value-id='#dc2626']")
+      |> element(
+        "button[phx-click='theme:set_option'][phx-value-field='color'][phx-value-choice='#dc2626']"
+      )
       |> render_click()
 
       saved = Repo.get_by(ThemeCustomizationSchema, profile_id: profile.id, theme_id: "1")
-      assert saved.background_type == "color"
-      assert saved.background_value == "#dc2626"
+      assert saved.settings["background_type"] == "color"
+      assert saved.settings["background_value"] == "#dc2626"
     end
 
     test "handles background image upload safely", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
       view
-      |> element("button[phx-value-theme='1']", "Customize Style")
+      |> element("button[phx-value-theme='1']", "Customise Style")
       |> render_click()
 
       view
@@ -249,7 +278,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       |> render_submit()
 
       view
-      |> file_input("#theme-background-image-form", :background_image, [image])
+      |> file_input("#theme-background-image-form", :background_image_path, [image])
       |> render_upload("bg.png")
 
       eventually(fn ->
@@ -270,7 +299,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
       view
-      |> element("button[phx-value-theme='1']", "Customize Style")
+      |> element("button[phx-value-theme='1']", "Customise Style")
       |> render_click()
 
       view
@@ -285,7 +314,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       }
 
       view
-      |> file_input("#theme-background-image-form", :background_image, [image])
+      |> file_input("#theme-background-image-form", :background_image_path, [image])
       |> render_upload("bg.png")
 
       eventually(fn ->
@@ -307,45 +336,54 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
 
       assert [only_row] = matching_rows
       assert only_row.id == first_row.id
-      assert only_row.background_image_path == first_row.background_image_path
+
+      assert only_row.settings["background_image_path"] ==
+               first_row.settings["background_image_path"]
     end
 
     test "switching browsing type tabs renders each valid category", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
       view
-      |> element("button[phx-value-theme='1']", "Customize Style")
+      |> element("button[phx-value-theme='1']", "Customise Style")
       |> render_click()
 
       html_solid =
         view
-        |> element("button", "Solid Color")
+        |> element("button", "Solid Colour")
         |> render_click()
 
-      assert html_solid =~ "Select a solid color"
+      assert html_solid =~ "Select a solid colour"
 
       html_gradient =
         view
         |> element("button", "Gradient")
         |> render_click()
 
-      refute html_gradient =~ "Select a solid color"
-      refute html_gradient =~ "JPG, PNG or WebP. Max 5MB."
-      refute html_gradient =~ "MP4 or WebM. Max 20MB."
+      # The hints state the limits the uploads enforce.
+      image_hint =
+        "JPG, PNG or WebP. Max #{UploadConstraints.max_file_size_mb(:image)} MB " <>
+          "and 40 megapixels (16 for WebP)."
+
+      video_hint = "MP4 or WebM. Max #{UploadConstraints.max_file_size_mb(:video)} MB."
+
+      refute html_gradient =~ "Select a solid colour"
+      refute html_gradient =~ image_hint
+      refute html_gradient =~ video_hint
 
       html_image =
         view
         |> element("button", "Image")
         |> render_click()
 
-      assert html_image =~ "JPG, PNG or WebP. Max 5MB."
+      assert html_image =~ image_hint
 
       html_video =
         view
         |> element("button", "Video")
         |> render_click()
 
-      assert html_video =~ "MP4 or WebM. Max 20MB."
+      assert html_video =~ video_hint
     end
 
     test "theme:toggle_palette_picker with no seed persists default seed and opens picker",
@@ -357,7 +395,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       |> element("button[phx-click='theme:toggle_palette_picker']")
       |> render_click()
 
-      assert %{custom_palette_seed: seed} =
+      assert %{settings: %{"custom_palette_seed" => seed}} =
                ThemeCustomizations.get_by_profile_and_theme(profile.id, "1")
 
       assert seed == ThemeCustomizations.default_custom_palette_seed()
@@ -392,10 +430,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
 
       # DB value is unchanged
       saved = ThemeCustomizations.get_by_profile_and_theme(profile.id, "1")
-      assert saved.custom_palette_seed == "#ff6b35"
+      assert saved.settings["custom_palette_seed"] == "#ff6b35"
     end
 
-    test "theme:set_palette_seed with valid hex persists lowercased seed",
+    test "theme:set_option with a palette seed, valid hex persists lowercased seed",
          %{conn: conn, profile: profile} do
       # First open the picker by toggling (no seed stored)
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
@@ -404,22 +442,26 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       |> element("button[phx-click='theme:toggle_palette_picker']")
       |> render_click()
 
-      # Now the palette picker widget is rendered — push the set_palette_seed event
+      # Now the palette picker widget is rendered: push its commit event
       view
       |> element("#custom-palette-picker")
-      |> render_hook("theme:set_palette_seed", %{"value" => "#AABBCC"})
+      |> render_hook("theme:set_option", %{
+        "option" => "palette",
+        "field" => "seed",
+        "choice" => "#AABBCC"
+      })
 
       saved = ThemeCustomizations.get_by_profile_and_theme(profile.id, "1")
-      assert saved.custom_palette_seed == "#aabbcc"
+      assert saved.settings["custom_palette_seed"] == "#aabbcc"
     end
 
     test "theme:toggle_custom_picker toggles the custom background picker",
          %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
 
-      # Switch to Solid Color tab first so the picker button is visible
+      # Switch to Solid Colour tab first so the picker button is visible
       view
-      |> element("button", "Solid Color")
+      |> element("button", "Solid Colour")
       |> render_click()
 
       html_before = render(view)
@@ -432,27 +474,60 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       assert render(view) =~ ~s(aria-expanded="true")
     end
 
-    test "theme:set_custom_background persists hex color",
+    test "theme:set_option persists a custom background hex color",
          %{conn: conn, profile: profile} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
 
-      # Switch to Solid Color tab and open the custom picker
+      # Switch to Solid Colour tab and open the custom picker
       view
-      |> element("button", "Solid Color")
+      |> element("button", "Solid Colour")
       |> render_click()
 
       view
       |> element("button[phx-click='theme:toggle_custom_picker']")
       |> render_click()
 
-      # Push the set_custom_background event from the hook element
+      # Push the commit event from the hook element
       view
       |> element("#custom-background-picker")
-      |> render_hook("theme:set_custom_background", %{"value" => "#123456"})
+      |> render_hook("theme:set_option", %{
+        "option" => "background",
+        "field" => "color",
+        "choice" => "#123456"
+      })
 
       saved = ThemeCustomizations.get_by_profile_and_theme(profile.id, "1")
-      assert saved.background_type == "color"
-      assert saved.background_value == "#123456"
+      assert saved.settings["background_type"] == "color"
+      assert saved.settings["background_value"] == "#123456"
+    end
+
+    test "theme:set_option saves a custom background as a three-digit hex colour",
+         %{conn: conn, profile: profile} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+
+      view |> element("button", "Solid Colour") |> render_click()
+      view |> element("button[phx-click='theme:toggle_custom_picker']") |> render_click()
+
+      view
+      |> element("#custom-background-picker")
+      |> render_hook("theme:set_option", %{
+        "option" => "background",
+        "field" => "color",
+        "choice" => "#FA0"
+      })
+
+      saved = ThemeCustomizations.get_by_profile_and_theme(profile.id, "1")
+      assert saved.settings["background_type"] == "color"
+      assert saved.settings["background_value"] == "#ffaa00"
+    end
+
+    test "the image picker shows presets from the booking pages' image path", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+
+      html = view |> element("button", "Image") |> render_click()
+
+      assert html =~ ~s(src="/images/themes/backgrounds/ocean-sunset.webp")
+      refute html =~ "/images/ui/backgrounds/"
     end
   end
 

@@ -10,30 +10,13 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.LengthComponent do
 
   alias Tymeslot.MeetingTypes.Lengths
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+  alias TymeslotWeb.Themes.Shared.StepEvents
 
   @impl Phoenix.LiveComponent
-  def update(assigns, socket) do
-    filtered_assigns = Map.drop(assigns, [:flash, :socket])
-    {:ok, assign(socket, filtered_assigns)}
-  end
+  defdelegate update(assigns, socket), to: StepEvents
 
   @impl Phoenix.LiveComponent
-  def handle_event("select_length", %{"minutes" => minutes}, socket) do
-    send(self(), {:step_event, :length, :select_length, minutes})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("next_slide", _params, socket) do
-    send(self(), {:step_event, :length, :next_step, nil})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("prev_slide", _params, socket) do
-    send(self(), {:step_event, :length, :back_step, nil})
-    {:noreply, socket}
-  end
+  defdelegate handle_event(event, params, socket), to: StepEvents
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
@@ -48,7 +31,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.LengthComponent do
       )
 
     ~H"""
-    <div class="scheduling-box" data-locale={@locale} data-testid="length-step">
+    <div class="scheduling-box booker-card" data-locale={@locale} data-testid="length-step">
       <div class="slide-container">
         <div class="slide active">
           <div class="slide-content">
@@ -72,6 +55,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.LengthComponent do
                   class="duration-button"
                   data-testid="length-option"
                   data-minutes={minutes}
+                  data-fact="length"
+                  data-value={minutes}
                   aria-pressed={to_string(@chosen == minutes)}
                 >
                   <div class="duration-icon shrink-0">
@@ -91,21 +76,23 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.LengthComponent do
                 :if={@entered_via_overview}
                 type="button"
                 class="prev-button"
-                phx-click="prev_slide"
+                phx-click="back_step"
                 phx-target={@myself}
                 data-testid="back-step"
+                data-intent="back"
               >
-                ← {dgettext("booking", "back")}
+                ← {dgettext("booking", "Back")}
               </button>
               <button
                 type="button"
                 class={if is_nil(@chosen), do: "next-button disabled", else: "next-button"}
-                phx-click="next_slide"
+                phx-click="next_step"
                 phx-target={@myself}
                 data-testid="next-step"
+                data-intent="continue"
                 disabled={is_nil(@chosen)}
               >
-                {dgettext("booking", "next")} →
+                {dgettext("booking", "Next")} →
               </button>
             </div>
           </div>

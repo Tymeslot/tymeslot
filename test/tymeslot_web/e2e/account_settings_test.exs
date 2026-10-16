@@ -5,7 +5,14 @@ defmodule TymeslotWeb.E2E.AccountSettingsTest do
   @moduletag :profiles
 
   feature "user changes password from account settings", %{session: session} do
-    {session, user} = log_in_via_browser(session)
+    # A realistic address, longer than the factory's `user<n>@example.com`. An
+    # email has no natural break points, so the account card only fits at 320px
+    # if the layout breaks it. With the factory default the check below passed
+    # or failed on the sequence number, i.e. on how many users earlier tests had
+    # inserted, and so on test order.
+    {session, user} =
+      log_in_via_browser(session, %{email: "firstname.lastname@example-company.com"})
+
     new_password = "NewSecurePass456!"
 
     session =
@@ -13,10 +20,14 @@ defmodule TymeslotWeb.E2E.AccountSettingsTest do
       |> visit("/dashboard/account")
       |> wait_for_live()
 
-    # Open the password change form
+    # Open the password change form. Submitting it empty first shows the
+    # form's own errors: it sets `novalidate`, so the browser lets the empty
+    # required fields through to the server instead of blocking the submit.
     session =
       session
       |> click(css("button[phx-click='toggle_password_form']"))
+      |> click(css("form[phx-submit='update_password'] button[type='submit']"))
+      |> assert_has(css("#account-password-form .form-field-error", minimum: 1))
       |> fill_in(css("input[name='password_form[current_password]']"), with: default_password())
       |> fill_in(css("input[name='password_form[new_password]']"), with: new_password)
       |> fill_in(

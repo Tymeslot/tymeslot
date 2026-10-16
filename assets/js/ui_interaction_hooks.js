@@ -33,11 +33,12 @@ export const VideoHoverPreview = {
 };
 
 
-// Stop click events from bubbling past this element (e.g. an all-day event chip
-// nested in a clickable day cell). Replaces inline onclick="event.stopPropagation()".
-export const StopClickPropagation = {
+// Keep a click on an element inside a <summary> (an all-day event chip) from
+// toggling the surrounding <details>. It cancels the default action only: the
+// click must still bubble to window, where LiveView dispatches phx-click.
+export const PreventSummaryToggle = {
   mounted() {
-    this.onClick = (e) => e.stopPropagation();
+    this.onClick = (e) => e.preventDefault();
     this.el.addEventListener('click', this.onClick);
   },
   destroyed() {

@@ -21,6 +21,9 @@ defmodule Tymeslot.Demo do
   @spec get_profile_by_user_id(integer()) :: map() | nil
   def get_profile_by_user_id(user_id), do: provider().get_profile_by_user_id(user_id)
 
+  @spec demo_username?(String.t()) :: boolean()
+  def demo_username?(username), do: provider().demo_username?(username)
+
   @spec demo_profile?(map() | nil) :: boolean()
   def demo_profile?(profile), do: provider().demo_profile?(profile)
 
@@ -103,12 +106,19 @@ defmodule Tymeslot.Demo do
           duration_minutes
         )
 
-  @spec get_calendar_days(String.t(), integer(), integer(), map(), map() | atom() | nil) ::
-          [map()]
+  @spec get_calendar_days(
+          String.t(),
+          integer(),
+          integer(),
+          :monday | :sunday,
+          map(),
+          map() | atom() | nil
+        ) :: [map()]
   def get_calendar_days(
         user_timezone,
         year,
         month,
+        week_start,
         organizer_profile,
         availability_map
       ),
@@ -117,6 +127,7 @@ defmodule Tymeslot.Demo do
           user_timezone,
           year,
           month,
+          week_start,
           organizer_profile,
           availability_map
         )

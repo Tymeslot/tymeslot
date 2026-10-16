@@ -11,31 +11,14 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.LengthComponent do
 
   alias Tymeslot.MeetingTypes.Lengths
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+  alias TymeslotWeb.Themes.Shared.StepEvents
   use TymeslotWeb.Components.CoreComponents
 
   @impl Phoenix.LiveComponent
-  def update(assigns, socket) do
-    filtered_assigns = Map.drop(assigns, [:flash, :socket])
-    {:ok, assign(socket, filtered_assigns)}
-  end
+  defdelegate update(assigns, socket), to: StepEvents
 
   @impl Phoenix.LiveComponent
-  def handle_event("select_length", %{"minutes" => minutes}, socket) do
-    send(self(), {:step_event, :length, :select_length, minutes})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("next_step", _params, socket) do
-    send(self(), {:step_event, :length, :next_step, nil})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("back_step", _params, socket) do
-    send(self(), {:step_event, :length, :back_step, nil})
-    {:noreply, socket}
-  end
+  defdelegate handle_event(event, params, socket), to: StepEvents
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
@@ -50,7 +33,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.LengthComponent do
       )
 
     ~H"""
-    <div class="container flex-1" data-locale={@locale} data-testid="length-step">
+    <div class="container quill-container flex-1" data-locale={@locale} data-testid="length-step">
       <.page_layout
         show_steps={true}
         current_step={1}
@@ -59,7 +42,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.LengthComponent do
       >
         <div class="overview-content-area flex items-start justify-center">
           <div class="w-full">
-            <.glass_morphism_card>
+            <.glass_morphism_card class="booker-card">
               <div class="overview-card-body">
                 <h1 class="section-header overview-title">
                   {@meeting_type && @meeting_type.name}
@@ -80,6 +63,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.LengthComponent do
                     phx-target={@myself}
                     data-testid="length-option"
                     data-minutes={minutes}
+                    data-fact="length"
+                    data-value={minutes}
                     aria-pressed={to_string(@chosen == minutes)}
                     class={"duration-card w-full rounded-xl cursor-pointer #{if @chosen == minutes, do: "duration-card--selected", else: "duration-card--unselected"}"}
                   >
@@ -99,15 +84,17 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.LengthComponent do
                     phx-click="back_step"
                     phx-target={@myself}
                     data-testid="back-step"
+                    data-intent="back"
                     variant={:secondary}
                     class="flex-1"
                   >
-                    ← {dgettext("booking", "back")}
+                    ← {dgettext("booking", "Back")}
                   </.action_button>
                   <.action_button
                     phx-click="next_step"
                     phx-target={@myself}
                     data-testid="next-step"
+                    data-intent="continue"
                     disabled={is_nil(@chosen)}
                     title={
                       if is_nil(@chosen),
@@ -115,7 +102,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.LengthComponent do
                     }
                     class="flex-1"
                   >
-                    {dgettext("booking", "next")} →
+                    {dgettext("booking", "Next")} →
                   </.action_button>
                 </div>
               </div>

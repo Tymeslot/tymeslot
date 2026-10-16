@@ -204,19 +204,22 @@ defmodule TymeslotWeb.AccountLive.Components do
   @spec card_header(map) :: Phoenix.LiveView.Rendered.t()
   defp card_header(assigns) do
     ~H"""
-    <div class="flex items-center justify-between mb-4">
-      <div>
+    <div class="flex items-center justify-between gap-4 mb-4">
+      <%!-- min-w-0 lets this column shrink below its widest word, and the
+           addresses break anywhere, so a long email wraps instead of pushing
+           the action button off a narrow screen. --%>
+      <div class="min-w-0">
         <h3 class="text-lg font-medium text-tymeslot-800">{@title}</h3>
         <%= if @current_value do %>
           <p class="text-sm text-tymeslot-600 mt-1">
             {dgettext("account", "Current email:")}
-            <span class="font-medium text-tymeslot-800">{@current_value}</span>
+            <span class="font-medium text-tymeslot-800 break-all">{@current_value}</span>
           </p>
         <% end %>
         <%= if @pending_email do %>
           <p class="text-sm text-amber-600 mt-1">
             {dgettext("account", "Pending change to:")}
-            <span class="font-medium">{@pending_email}</span>
+            <span class="font-medium break-all">{@pending_email}</span>
           </p>
         <% end %>
         <%= if @subtitle do %>
@@ -247,7 +250,7 @@ defmodule TymeslotWeb.AccountLive.Components do
   @spec card_toggle_button(map) :: Phoenix.LiveView.Rendered.t()
   def card_toggle_button(assigns) do
     ~H"""
-    <div class="relative group">
+    <div class="relative group shrink-0">
       <.action_button phx-click={@toggle_event} size={:sm} disabled={@is_social}>
         {@button_text}
       </.action_button>
@@ -290,14 +293,14 @@ defmodule TymeslotWeb.AccountLive.Components do
             />
           </svg>
         </div>
-        <div class="ml-3 flex-1">
+        <div class="ml-3 flex-1 min-w-0">
           <h3 class="text-sm font-medium text-amber-800">
             {dgettext("account", "Email Change Pending")}
           </h3>
           <div class="mt-2 text-sm text-amber-700">
             <p>
               {dgettext("account", "A verification email has been sent to")}
-              <strong>{@pending_email}</strong>
+              <strong class="break-all">{@pending_email}</strong>
             </p>
             <%= if @email_change_sent_at do %>
               <p class="mt-1 text-xs text-amber-600">

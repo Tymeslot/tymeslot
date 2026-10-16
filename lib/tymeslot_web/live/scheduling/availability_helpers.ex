@@ -145,7 +145,11 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
     duration_minutes = duration_minutes(socket)
 
     {start_date, end_date} =
-      Calculate.display_range(socket.assigns.current_year, socket.assigns.current_month)
+      Calculate.display_range(
+        socket.assigns.current_year,
+        socket.assigns.current_month,
+        socket.assigns.week_start
+      )
 
     fetch = fn -> Offer.days_in_range(request, start_date, end_date, duration_minutes) end
 
