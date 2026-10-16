@@ -42,33 +42,36 @@ defmodule TymeslotWeb.Dashboard.Calendar.CompactChromeTest do
     refute has_element?(lv, "[data-testid='onboarding-checklist']")
   end
 
-  # The agenda feeds only the Up-next strip here, so the new surface neither
-  # queries it on navigation nor keeps its minute timer.
-  test "the new calendar loads no agenda and keeps no agenda timer", %{conn: conn} do
+  # The agenda feeds only the Up-next strip, which the new surface does not
+  # draw: neither a navigation nor the agenda's minute tick brings it back or
+  # changes anything on the page.
+  test "the agenda tick leaves the new calendar's markup unchanged", %{conn: conn} do
     %{conn: conn, user: user} = owner(conn)
     upcoming_booking(user)
 
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
     lv |> element("#calendar-next") |> render_click()
-    send(lv.pid, :agenda_tick)
-    _html = render(lv)
+    before = render(lv)
 
-    assert %{agenda: nil, agenda_tick_ref: nil} = live_assigns(lv)
+    send(lv.pid, :agenda_tick)
+
+    assert render(lv) == before
+    refute has_element?(lv, "[data-testid='up-next-strip']")
+    refute before =~ "Strategy sync"
   end
 
-  test "switching back to the old calendar loads the agenda and starts its timer", %{conn: conn} do
+  test "switching back to the old calendar shows the Up-next strip with the next booking", %{
+    conn: conn
+  } do
     %{conn: conn, user: user} = owner(conn)
     upcoming_booking(user)
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
     render_hook(lv, "calendar:switch_surface", %{"enabled" => false})
+    send(lv.pid, :agenda_tick)
 
-    assert %{agenda: %{next: %{}}, agenda_tick_ref: ref} = live_assigns(lv)
-    assert is_reference(ref)
-    assert has_element?(lv, "[data-testid='up-next-strip']")
+    assert has_element?(lv, "[data-testid='up-next-strip']", "Strategy sync")
   end
-
-  defp live_assigns(lv), do: :sys.get_state(lv.pid).socket.assigns
 
   test "the old calendar keeps the full top bar and the Up-next strip", %{conn: conn} do
     %{conn: conn, user: user} = owner(conn, redesign_enabled: false)
