@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   attr :accounts, :list, required: true
   attr :mini_cursor, :any, required: true
   attr :view, :atom, required: true
+  attr :date, :any, required: true
   attr :days, :list, required: true
   attr :today, :any, required: true
   attr :week_start, :atom, required: true
@@ -35,6 +36,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
         id="calendar-rail-month"
         cursor={@mini_cursor}
         view={@view}
+        date={@date}
         days={@days}
         today={@today}
         week_start={@week_start}

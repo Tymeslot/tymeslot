@@ -241,6 +241,36 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTest do
     refute_push_event(lv, "calendar:events", _payload)
   end
 
+  test "controls aiming at the period shown draw without adding a history entry", %{conn: conn} do
+    {:ok, lv, html} = live(conn, ~p"/dashboard/calendar?view=week&date=2026-10-14")
+
+    ops = fn selector ->
+      html
+      |> Floki.parse_document!()
+      |> Floki.find(selector)
+      |> Floki.attribute("phx-click")
+      |> List.first()
+      |> Jason.decode!()
+      |> Enum.map(&hd/1)
+    end
+
+    assert ops.("#calendar-today") == ["dispatch"]
+    assert ops.("#calendar-view-week") == ["dispatch"]
+
+    # The shown day closes the picker it sits in instead of patching.
+    assert ops.("#calendar-rail-month button[aria-label='Wednesday, 14 October 2026']") ==
+             ["push", "dispatch"]
+
+    # Still clickable, and every other target still patches.
+    assert has_element?(lv, "#calendar-today")
+    assert ops.("#calendar-view-day") == ["patch", "dispatch"]
+
+    assert ops.("#calendar-rail-month button[aria-label='Thursday, 15 October 2026']") == [
+             "patch",
+             "dispatch"
+           ]
+  end
+
   test "the parent re-rendering pushes no events", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 

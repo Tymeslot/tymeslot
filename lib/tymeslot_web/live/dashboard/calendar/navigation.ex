@@ -15,6 +15,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.Navigation do
   the target the first click saw, so the hook steps from the target it is
   already heading for and asks the server for the period beyond with
   `calendar:goto`, which then arrives after the stale patch and wins.
+
+  A control whose target is the period already shown (Today while today is
+  shown, the active view, the selected day) dispatches without patching:
+  patching to the URL the page is already at would push a history entry
+  that Back then has to step over. Pass the shown period as `from:`, and
+  `unchanged:` for a command to run in the patch's place (the date picker
+  closes itself, as the patch's answer would have closed it).
   """
 
   use TymeslotWeb, :verified_routes
@@ -31,7 +38,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Navigation do
 
   @doc """
   The click that shows `view` around `date`: patch, then draw. Pass `step:`
-  (-1 or 1) for a control that moves by one period.
+  (-1 or 1) for a control that moves by one period, and `from: {view, date}`
+  (the period shown) so a click that changes nothing leaves history alone.
   """
   @spec js(Period.view(), Date.t(), keyword()) :: struct()
   def js(view, date, opts \\ []) do
@@ -41,9 +49,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.Navigation do
         Map.new(Keyword.take(opts, [:step]))
       )
 
-    # `__MODULE__.` because `path/2` alone is the verified-routes macro.
-    __MODULE__.path(view, date)
-    |> JS.patch()
-    |> JS.dispatch("calendar:navigate", to: @canvas, detail: detail)
+    first =
+      case Keyword.get(opts, :from) do
+        {^view, ^date} -> Keyword.get(opts, :unchanged, %JS{})
+        # `__MODULE__.` because `path/2` alone is the verified-routes macro.
+        _shown -> JS.patch(__MODULE__.path(view, date))
+      end
+
+    JS.dispatch(first, "calendar:navigate", to: @canvas, detail: detail)
   end
 end

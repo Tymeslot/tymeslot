@@ -121,6 +121,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
           accounts={@accounts}
           mini_cursor={@mini_cursor}
           view={@view}
+          date={@date}
           days={@days}
           today={@today}
           week_start={Period.week_start(@preferences.week_start_day)}

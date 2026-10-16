@@ -34,6 +34,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.NavigationTest do
     assert dispatch.detail == %{view: "day", date: "2026-10-19", step: -1}
   end
 
+  test "js/3 does not patch to the period already shown, but still tells the canvas" do
+    assert [["dispatch", dispatch]] =
+             Navigation.js(:week, ~D[2026-10-14], from: {:week, ~D[2026-10-14]}).ops
+
+    assert dispatch.detail == %{view: "week", date: "2026-10-14"}
+  end
+
+  test "js/3 patches when the shown period differs in view or date" do
+    assert [["patch", _patch], _dispatch] =
+             Navigation.js(:day, ~D[2026-10-14], from: {:week, ~D[2026-10-14]}).ops
+
+    assert [["patch", _patch], _dispatch] =
+             Navigation.js(:week, ~D[2026-10-15], from: {:week, ~D[2026-10-14]}).ops
+  end
+
   describe "ClientStrings.build/1" do
     test "weekdays run Monday to Sunday, whatever order the locale table keeps" do
       strings = ClientStrings.build("en")

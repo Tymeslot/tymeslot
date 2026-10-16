@@ -55,7 +55,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
         id="calendar-today"
         variant={:secondary}
         size={:sm}
-        phx-click={Navigation.js(@view, @today)}
+        phx-click={Navigation.js(@view, @today, from: {@view, @date})}
       >
         {dgettext("dashboard_calendar", "Today")}
       </.action_button>
@@ -107,6 +107,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
             id="calendar-picker-month"
             cursor={@mini_cursor}
             view={@view}
+            date={@date}
             days={@days}
             today={@today}
             week_start={@week_start}
@@ -155,7 +156,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
           type="button"
           id={"calendar-view-#{view}"}
           aria-pressed={to_string(view == @view)}
-          phx-click={Navigation.js(view, @date)}
+          phx-click={Navigation.js(view, @date, from: {@view, @date})}
           class={[
             "inline-flex items-center whitespace-nowrap rounded-token-md px-3 py-1 text-token-sm font-semibold transition-colors",
             "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-turquoise-400",

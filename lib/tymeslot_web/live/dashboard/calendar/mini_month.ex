@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.MiniMonth do
   attr :id, :string, required: true
   attr :cursor, :any, required: true, doc: "the first of the month shown"
   attr :view, :atom, required: true
+  attr :date, :any, required: true, doc: "the date the grid is shown around"
   attr :days, :list, required: true, doc: "the days the grid shows, marked"
   attr :today, :any, required: true
   attr :week_start, :atom, required: true
@@ -60,7 +61,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.MiniMonth do
         <button
           :for={day <- week}
           type="button"
-          phx-click={Navigation.js(@view, day)}
+          phx-click={
+            Navigation.js(@view, day,
+              from: {@view, @date},
+              unchanged: JS.push("calendar:close_menu", target: @target)
+            )
+          }
           aria-label={LocaleFormat.format_weekday_date(day, @locale)}
           aria-current={if(day == @today, do: "date")}
           aria-pressed={to_string(day in @days)}
