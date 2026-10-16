@@ -1,0 +1,117 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: fr\n"
+"Plural-Forms: nplurals=2; plural=(n>1);\n"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/group_event_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Add a saved location or connect a video service to hold an event."
+msgstr "Ajoutez un lieu enregistré ou connectez un service vidéo pour organiser un événement."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
+#, elixir-autogen, elixir-format
+msgid "Allow between %{min} and %{max} participants."
+msgstr "Autorisez entre %{min} et %{max} participants."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
+#, elixir-autogen, elixir-format
+msgid "An event lasts at least 5 minutes and at most 24 hours."
+msgstr "Un événement dure au moins 5 minutes et au plus 24 heures."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/group_event_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a location"
+msgstr "Choisir un lieu"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
+#, elixir-autogen, elixir-format
+msgid "Choose where the event takes place."
+msgstr "Choisissez où se déroule l'événement."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/group_event_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Creates a one-off event with its own booking link. People sign up until registration closes, and it is on your calendar at once."
+msgstr "Crée un événement ponctuel avec son propre lien de réservation. Les participants s'inscrivent jusqu'à la clôture des inscriptions, et il figure aussitôt dans votre calendrier."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/group_event_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Description (optional)"
+msgstr "Description (facultatif)"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
+#, elixir-autogen, elixir-format
+msgid "Event created. Its booking link: %{link}"
+msgstr "Événement créé. Son lien de réservation : %{link}"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
+#, elixir-autogen, elixir-format
+msgid "Give the event a title."
+msgstr "Donnez un titre à l'événement."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Group event"
+msgstr "Événement de groupe"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
+#, elixir-autogen, elixir-format
+msgid "Group events are not included in your plan."
+msgstr "Les événements de groupe ne sont pas inclus dans votre offre."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/group_event_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Location"
+msgstr "Lieu"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "New Group Event"
+msgstr "Nouvel événement de groupe"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/group_event_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Participant limit"
+msgstr "Nombre maximum de participants"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/group_event_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closes (optional, %{timezone})"
+msgstr "Clôture des inscriptions (facultatif, %{timezone})"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
+#, elixir-autogen, elixir-format
+msgid "Registration has to close in the future, and no later than the event starts."
+msgstr "La clôture des inscriptions doit être dans le futur et au plus tard au début de l'événement."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/group_event_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Saved locations"
+msgstr "Lieux enregistrés"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
+#, elixir-autogen, elixir-format
+msgid "The event could not be created. Please try again."
+msgstr "L'événement n'a pas pu être créé. Veuillez réessayer."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
+#, elixir-autogen, elixir-format
+msgid "The event has to start in the future."
+msgstr "L'événement doit commencer dans le futur."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/group_event_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Video call"
+msgstr "Appel vidéo"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a booking at that time."
+msgstr "Vous avez déjà une réservation à cette heure-là."

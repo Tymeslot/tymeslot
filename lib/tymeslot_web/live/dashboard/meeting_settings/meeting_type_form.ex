@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     FormView,
     GroupRules,
     Init,
+    SessionHandlers,
     SlotIntervalField,
     Validation
   }
@@ -32,6 +33,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
+
+  # The fixed dates' events, all handled by `SessionHandlers`.
+  @session_events SessionHandlers.events()
 
   # Public assigns passed from parent
   # - type: existing meeting type or nil
@@ -400,6 +404,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       {:noreply, socket}
     end
   end
+
+  @impl Phoenix.LiveComponent
+  def handle_event(event, params, socket) when event in @session_events,
+    do: {:noreply, SessionHandlers.handle_event(event, params, socket)}
 
   @impl Phoenix.LiveComponent
   def handle_event(
