@@ -355,3 +355,84 @@ test("reconnecting asks the server for the data again", () => {
   expect(hook.pushEventTo.mock.calls).toHaveLength(2);
   expect(hook.pushEventTo.mock.calls[1][1]).toBe("calendar:ready");
 });
+
+test("a navigation to the days already shown holds nothing pending, so Back is still followed", () => {
+  const { el, reply, handlers } = mountHook();
+  reply(payload());
+  el.dispatchEvent(new CustomEvent("calendar:navigate", { detail: { view: "week", date: "2026-10-16" } }));
+  expect(days("2026-10-14")).toBe(true);
+  handlers["calendar:events"](payload({ date: "2026-10-21", range: { from: "2026-10-12", to: "2026-11-02" }, reset: false }));
+  expect(days("2026-10-21")).toBe(true);
+});
+
+test("the server's period answer settles a pending navigation that needed no new events", () => {
+  const { el, reply, handlers } = mountHook();
+  reply(payload());
+  el.dispatchEvent(new CustomEvent("calendar:navigate", { detail: { view: "week", date: "2026-10-21" } }));
+  handlers["calendar:period"]({ view: "week", date: "2026-10-21" });
+  // Browser Back: nothing is pending any more, so the server leads.
+  handlers["calendar:period"]({ view: "week", date: "2026-10-14" });
+  expect(days("2026-10-14")).toBe(true);
+  expect(days("2026-10-21")).toBe(false);
+});
+
+test("a period answer for an intermediate target leaves the pending one alone", () => {
+  const { el, reply, handlers } = mountHook();
+  reply(payload());
+  el.dispatchEvent(new CustomEvent("calendar:navigate", { detail: { view: "week", date: "2026-10-21" } }));
+  handlers["calendar:period"]({ view: "week", date: "2026-10-14" });
+  expect(days("2026-10-21")).toBe(true);
+});
+
+test("two steps before the server answers advance two periods and tell the server", () => {
+  const { el, hook, reply, handlers } = mountHook();
+  reply(payload());
+  const next = () => el.dispatchEvent(new CustomEvent("calendar:navigate", { detail: { view: "week", date: "2026-10-21", step: 1 } }));
+  next();
+  expect(hook.pushEventTo.mock.calls.map((call) => call[1])).not.toContain("calendar:goto");
+  next();
+  expect(hook.pushEventTo.mock.calls.at(-1).slice(1, 3)).toEqual(["calendar:goto", { view: "week", date: "2026-10-28" }]);
+
+  // The first click's payload must not pull the grid back a week.
+  handlers["calendar:events"](payload({ date: "2026-10-21", range: { from: "2026-10-12", to: "2026-11-02" }, reset: false }));
+  expect(days("2026-10-28")).toBe(true);
+});
+
+test("closing a preview opened from a +N list hands focus back to its chip", () => {
+  const { el, reply, handlers } = mountHook();
+  reply(payload({ events: fiveAt() }));
+  el.querySelector(".cal-more").click();
+  const item = el.querySelector('.cal-list [data-event-id="event-e"]');
+  item.focus();
+  item.click();
+  document.body.focus();
+  handlers["calendar:preview-closed"]();
+  expect(document.activeElement.classList.contains("cal-more")).toBe(true);
+});
+
+test("the minute tick keeps focus on a day header", () => {
+  vi.useFakeTimers();
+  try {
+    const { el, reply } = mountHook();
+    reply(payload());
+    el.querySelector('[data-goto-day="2026-10-15"]').focus();
+    vi.advanceTimersByTime(60_000);
+    expect(document.activeElement.dataset.gotoDay).toBe("2026-10-15");
+    expect(el.contains(document.activeElement)).toBe(true);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test("the minute tick keeps focus on a column's early-hours button, not the axis one", () => {
+  vi.useFakeTimers();
+  try {
+    const { el, reply } = mountHook();
+    reply(payload({ events: [event("event-3", "Gym", "2026-10-15T05:00", "2026-10-15T06:00")] }));
+    el.querySelector('.cal-col[data-day="2026-10-15"] .cal-early').focus();
+    vi.advanceTimersByTime(60_000);
+    expect(document.activeElement.closest(".cal-col")?.dataset.day).toBe("2026-10-15");
+  } finally {
+    vi.useRealTimers();
+  }
+});

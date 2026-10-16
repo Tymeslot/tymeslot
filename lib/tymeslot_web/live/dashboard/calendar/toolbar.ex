@@ -5,7 +5,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
   options. Rare actions (import, refresh, settings) stay out of it, as the
   spec asks.
 
-  Navigation controls use `Navigation.js/2`, so the grid redraws in the
+  Navigation controls use `Navigation.js/3`, so the grid redraws in the
   browser in the same click that patches the URL.
   """
 
@@ -65,14 +65,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
           icon="hero-chevron-left"
           size={:sm}
           label={step_label(@view, :previous)}
-          phx-click={Navigation.js(@view, Period.shift(@view, @date, -1))}
+          phx-click={Navigation.js(@view, Period.shift(@view, @date, -1), step: -1)}
         />
         <.icon_button
           id="calendar-next"
           icon="hero-chevron-right"
           size={:sm}
           label={step_label(@view, :next)}
-          phx-click={Navigation.js(@view, Period.shift(@view, @date, 1))}
+          phx-click={Navigation.js(@view, Period.shift(@view, @date, 1), step: 1)}
         />
       </div>
       <.dropdown

@@ -258,22 +258,32 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   # The same period again only closes the date picker. A different day whose
   # window is the one already loaded (another day of the visible week) updates
   # the title and range but needs no query: the hook already holds the events.
+  # Either way the hook still hears which period the URL settled on
+  # (`calendar:period`), because it holds a navigation as pending until the
+  # server confirms it and follows nothing else (not even Back) meanwhile.
   defp follow_params(socket) do
     socket = assign_clock(socket)
     %{view: view, date: date, window: loaded} = socket.assigns
 
     case target(socket.assigns) do
       {^view, ^date} ->
-        assign(socket, :open_menu, nil)
+        socket |> assign(:open_menu, nil) |> push_period()
 
       _other ->
         socket = apply_params(socket)
 
         if window_for(socket.assigns) == loaded,
-          do: socket,
+          do: push_period(socket),
           else: socket |> load_window() |> push_events(false)
     end
   end
+
+  defp push_period(%{assigns: %{view: view, date: date}} = socket),
+    do:
+      push_event(socket, "calendar:period", %{
+        view: Atom.to_string(view),
+        date: Date.to_iso8601(date)
+      })
 
   defp window_for(%{view: view, date: date, preferences: preferences}),
     do:

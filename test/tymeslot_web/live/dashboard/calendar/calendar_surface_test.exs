@@ -217,6 +217,30 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTest do
     refute has_element?(lv, "#calendar-date-picker-panel")
   end
 
+  # The hook holds a navigation as pending until the server confirms it, and
+  # follows nothing else meanwhile; without this answer Back would stop working.
+  test "a URL change that needs no new events still tells the hook the period", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    lv |> element("#calendar-date-picker > button") |> render_click()
+
+    lv
+    |> element("#calendar-picker-month button[aria-label='Friday, 16 October 2026']")
+    |> render_click()
+
+    assert_patch(lv, "/dashboard/calendar?view=week&date=2026-10-16")
+    assert_push_event(lv, "calendar:period", %{view: "week", date: "2026-10-16"})
+  end
+
+  test "Today from another day of this week answers with the period", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar?view=week&date=2026-10-16")
+
+    lv |> element("#calendar-today") |> render_click()
+
+    assert_patch(lv, "/dashboard/calendar?view=week&date=2026-10-14")
+    assert_push_event(lv, "calendar:period", %{view: "week", date: "2026-10-14"})
+    refute_push_event(lv, "calendar:events", _payload)
+  end
+
   test "the parent re-rendering pushes no events", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 

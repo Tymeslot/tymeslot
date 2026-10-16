@@ -11,10 +11,13 @@
  *    lazily loaded hook never misses data pushed before it existed;
  *  - the server pushes `calendar:events` whenever what the grid shows changes,
  *    and `calendar:settings` when density or the night fold changes;
- *  - navigation controls dispatch `calendar:navigate` on this element and
- *    patch the URL in the same click; the hook draws the target period at once
+ *  - navigation controls patch the URL and dispatch `calendar:navigate` on
+ *    this element in the same click; the hook draws the target period at once
  *    when its days are cached, otherwise shows the skeleton until the
- *    server's payload arrives;
+ *    server's payload arrives. The target stays pending until the server
+ *    confirms it, with `calendar:events` or, when no reload was needed,
+ *    `calendar:period`; a step (previous, next) taken while one is pending
+ *    steps from it and tells the server with `calendar:goto`;
  *  - it pushes `calendar:open` (an event was clicked) and `calendar:goto`
  *    (a day header was clicked) back to the component.
  *
@@ -25,10 +28,13 @@
 import { applyPayload, emptyCache, eventsForDays, isLoaded } from "../calendar/cache.js";
 import { placePopover } from "../calendar/popover.js";
 import { renderGrid, renderList, renderSkeleton } from "../calendar/render.js";
-import { HOUR_HEIGHT, MINUTES_PER_DAY, NIGHT_END, dayNumber, isoFromDay, makeScale, parseWall, periodDays } from "../calendar/time.js";
+import { HOUR_HEIGHT, MINUTES_PER_DAY, NIGHT_END, dayNumber, isoFromDay, makeScale, parseWall, periodDays, shiftPeriod } from "../calendar/time.js";
 
 const TICK_MS = 60_000;
 const PREVIEW_ESTIMATE = { width: 320, height: 240 };
+// What a redraw can hand focus back to, most specific first. `day` tells the
+// per-column night buttons apart, which share an empty attribute value.
+const FOCUS_ATTRS = ["data-event-id", "data-more", "data-allday-more", "data-goto-day", "data-night-toggle"];
 
 function canvasMeasure() {
   let context = null;
@@ -76,11 +82,12 @@ export const CalendarCanvas = {
     for (const [name, listener] of this.listeners) this.el.addEventListener(name, listener);
 
     this.handleEvent("calendar:events", (payload) => this.receive(payload));
+    this.handleEvent("calendar:period", (period) => this.follow(period));
     this.handleEvent("calendar:settings", (settings) => {
       this.settings = settings;
       this.render();
     });
-    this.handleEvent("calendar:preview-closed", () => this.focusEvent(this.lastOpened));
+    this.handleEvent("calendar:preview-closed", () => this.previewClosed());
 
     if (typeof ResizeObserver !== "undefined") {
       this.resizer = new ResizeObserver(() => this.resized());
@@ -115,11 +122,7 @@ export const CalendarCanvas = {
   // for instance after browser Back, the server leads.
   receive(payload) {
     this.cache = applyPayload(this.cache, payload);
-    if (!this.pending || (payload.view === this.pending.view && payload.date === this.pending.date)) {
-      this.view = payload.view;
-      this.date = payload.date;
-      this.pending = null;
-    }
+    this.settle(payload);
     if (payload.settings) this.settings = payload.settings;
     this.clock = { wall: parseWall(payload.now), at: Date.now() };
     // An open "+N" list is not torn down by a background payload for the period it
@@ -131,12 +134,54 @@ export const CalendarCanvas = {
     this.render();
   },
 
+  // Takes the server's period unless the organiser has asked for another one
+  // that it has not confirmed yet. True when the grid now shows it.
+  settle({ view, date }) {
+    if (this.pending && !(view === this.pending.view && date === this.pending.date)) return false;
+    this.pending = null;
+    this.view = view;
+    this.date = date;
+    return true;
+  },
+
+  // The server's answer to a URL change that needed no new events.
+  follow(period) {
+    const { view, date } = this;
+    if (!this.settle(period) || (view === this.view && date === this.date)) return;
+    this.render();
+  },
+
   navigate(detail) {
     if (!detail || !detail.view || !detail.date) return;
-    this.view = detail.view;
-    this.date = detail.date;
-    this.pending = { view: detail.view, date: detail.date };
+    const { view } = detail;
+    const from = this.pending ?? { view: this.view, date: this.date };
+    let { date } = detail;
+
+    // The control's own patch named the period it saw rendered; a step taken
+    // while another is pending lands one period further on, so the server is
+    // told where the grid really went.
+    if (detail.step && from.view === view) {
+      date = shiftPeriod(view, from.date, detail.step);
+      if (date !== detail.date) this.pushEventTo(this.el, "calendar:goto", { view, date });
+    }
+
+    // The same days again (Today while today shows, the active view, another
+    // day of the visible week) need no redraw and no pending answer.
+    if (!this.pending && this.sameDays(view, date)) {
+      this.date = date;
+      return;
+    }
+
+    this.view = view;
+    this.date = date;
+    this.pending = { view, date };
     this.render();
+  },
+
+  sameDays(view, date) {
+    if (!this.settings || view !== this.view) return false;
+    const { week_start: start, show_weekends: weekends } = this.settings;
+    return periodDays(view, date, start, weekends).join() === periodDays(this.view, this.date, start, weekends).join();
   },
 
   // The minute tick moves the now line; an open "+N" list must not be torn down for it.
@@ -171,7 +216,7 @@ export const CalendarCanvas = {
       return;
     }
 
-    const focused = this.el.contains(document.activeElement) ? document.activeElement.closest("[data-event-id]")?.dataset.eventId : null;
+    const focused = this.focusKey();
     const now = this.nowMinute();
 
     this.dropList();
@@ -191,7 +236,7 @@ export const CalendarCanvas = {
 
     const scroller = this.el.querySelector("[data-scroll]");
     if (scroller) scroller.scrollTop = this.scrollTop ?? this.initialScroll(days, now);
-    if (focused) this.focusEvent(focused);
+    this.focusBy(focused);
   },
 
   // First draw: an hour and a half before now when today is in view, else 08:00.
@@ -250,6 +295,9 @@ export const CalendarCanvas = {
 
   open(id, anchor) {
     this.lastOpened = id;
+    // Opened from a "+N" list, focus returns to its chip: the event itself may
+    // be one the chip hides.
+    this.returnTo = this.list?.contains(anchor) ? this.listAnchor : null;
     const rect = anchor.getBoundingClientRect();
     this.setPreviewPosition(placePopover(rect, PREVIEW_ESTIMATE, viewport()));
     this.closeList();
@@ -274,10 +322,34 @@ export const CalendarCanvas = {
     style.setProperty("--cal-pop-y", `${Math.round(top)}px`);
   },
 
-  focusEvent(id) {
-    if (!id) return;
-    const target = [...this.el.querySelectorAll("[data-event-id]")].find((node) => node.dataset.eventId === id);
+  previewClosed() {
+    const returnTo = this.returnTo;
+    this.returnTo = null;
+    if (!this.focusBy(returnTo) && this.lastOpened) this.focusBy({ attr: "data-event-id", value: this.lastOpened });
+  },
+
+  // A description of the focused control that survives a redraw.
+  focusKey() {
+    const active = document.activeElement;
+    return active && this.el.contains(active) ? this.focusKeyOf(active) : null;
+  },
+
+  focusKeyOf(element) {
+    for (const attr of FOCUS_ATTRS) {
+      const node = element.closest(`[${attr}]`);
+      if (node && this.el.contains(node)) return { attr, value: node.getAttribute(attr), day: node.closest("[data-day]")?.dataset.day };
+    }
+    return null;
+  },
+
+  // Focuses the control `key` describes; true when one was found.
+  focusBy(key) {
+    if (!key) return false;
+    const target = [...this.el.querySelectorAll(`[${key.attr}]`)].find(
+      (node) => node.getAttribute(key.attr) === key.value && (key.day === undefined || node.closest("[data-day]")?.dataset.day === key.day),
+    );
     target?.focus({ preventScroll: true });
+    return !!target;
   },
 
   showList(events, anchor, label) {
@@ -292,7 +364,7 @@ export const CalendarCanvas = {
     list.style.top = `${Math.round(position.top)}px`;
     list.style.maxHeight = position.maxHeight ? `${Math.round(position.maxHeight)}px` : "";
     this.list = list;
-    this.listAnchor = { name: anchor.hasAttribute("data-more") ? "more" : "alldayMore", value: anchor.dataset.more ?? anchor.dataset.alldayMore };
+    this.listAnchor = this.focusKeyOf(anchor);
     document.addEventListener("pointerdown", this.outside);
     list.querySelector("button")?.focus();
   },
@@ -311,9 +383,6 @@ export const CalendarCanvas = {
     this.list.remove();
     this.dropList();
     if (stale) this.render();
-    if (!hadFocus || !this.listAnchor) return;
-    const { name, value } = this.listAnchor;
-    const chip = [...this.el.querySelectorAll("[data-more], [data-allday-more]")].find((node) => node.dataset[name] === value);
-    chip?.focus({ preventScroll: true });
+    if (hadFocus) this.focusBy(this.listAnchor);
   },
 };

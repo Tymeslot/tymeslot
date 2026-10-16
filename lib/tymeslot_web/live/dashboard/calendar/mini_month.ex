@@ -2,7 +2,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.MiniMonth do
   @moduledoc """
   A month of day buttons with the visible range marked, used in the rail and
   in the period title's date picker. A day click navigates like every other
-  control (`Navigation.js/2`), keeping the current view.
+  control (`Navigation.js/3`), keeping the current view.
   """
 
   use TymeslotWeb, :html

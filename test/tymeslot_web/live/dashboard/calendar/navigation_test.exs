@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.NavigationTest do
   @moduletag :calendar
   @moduletag :unit
 
+  alias ExUnit.CaptureLog
   alias TymeslotWeb.Dashboard.Calendar.ClientStrings
   alias TymeslotWeb.Dashboard.Calendar.Navigation
 
@@ -18,13 +19,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.NavigationTest do
              "/dashboard/calendar?view=three_day&date=2026-10-16"
   end
 
-  test "js/2 dispatches to the canvas first, then patches the URL" do
-    assert [["dispatch", dispatch], ["patch", patch]] = Navigation.js(:week, ~D[2026-10-19]).ops
+  test "js/3 patches the URL first, then dispatches to the canvas" do
+    assert [["patch", patch], ["dispatch", dispatch]] = Navigation.js(:week, ~D[2026-10-19]).ops
 
     assert dispatch.event == "calendar:navigate"
     assert dispatch.to == "#calendar-canvas"
     assert dispatch.detail == %{view: "week", date: "2026-10-19"}
     assert patch.href == "/dashboard/calendar?view=week&date=2026-10-19"
+  end
+
+  test "js/3 tells the canvas the step of a previous or next control" do
+    assert [_patch, ["dispatch", dispatch]] = Navigation.js(:day, ~D[2026-10-19], step: -1).ops
+
+    assert dispatch.detail == %{view: "day", date: "2026-10-19", step: -1}
   end
 
   describe "ClientStrings.build/1" do
@@ -51,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.NavigationTest do
       assert strings.allday_more =~ "%{count}"
       assert strings.allday_more =~ "%{date}"
 
-      refute ExUnit.CaptureLog.capture_log(fn -> ClientStrings.build("en") end) =~
+      refute CaptureLog.capture_log(fn -> ClientStrings.build("en") end) =~
                "missing Gettext bindings"
     end
   end
