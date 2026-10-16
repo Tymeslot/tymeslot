@@ -1,14 +1,20 @@
 defmodule TymeslotWeb.Themes.Folio.Pages do
   @moduledoc """
-  Folio's page shell (`page_shell:`): its wrapper and one card, a slim cover
-  band at its top, around each default page body (`Shared.DefaultPages`),
-  the meeting, poll and payment pages. The pages have no organiser profile,
-  so the band carries no portrait or name.
+  Folio's page shell (`page_shell:`): its wrapper around each default page
+  body (`Shared.DefaultPages`): the meeting and poll pages in one card with
+  a slim cover band at its top, the payment pages, which follow a booking on
+  the card-less page, with the band edge to edge and the body in the reading
+  column. The pages have no organiser profile, so the band carries no
+  portrait or name.
   """
   use Phoenix.Component
 
   alias TymeslotWeb.Themes.Folio.Components.Masthead
   alias TymeslotWeb.Themes.Folio.Scheduling.Wrapper
+
+  # The payment pages follow a booking made on Folio's card-less page, so
+  # they are drawn without a card too; the meeting and poll pages keep it.
+  @plain_pages [:payment_processing, :payment_cancelled]
 
   attr :page, :atom, required: true
   attr :theme_tokens, :any, default: nil
@@ -18,6 +24,8 @@ defmodule TymeslotWeb.Themes.Folio.Pages do
 
   @spec page_shell(map()) :: Phoenix.LiveView.Rendered.t()
   def page_shell(assigns) do
+    assigns = assign(assigns, :plain, assigns.page in @plain_pages)
+
     ~H"""
     <Wrapper.folio_wrapper
       theme_tokens={@theme_tokens}
@@ -25,9 +33,15 @@ defmodule TymeslotWeb.Themes.Folio.Pages do
       language_dropdown_open={@language_dropdown_open}
       show_language_switcher={@locale != nil}
     >
-      <section class="folio-card folio-card--page booker-card" data-page={@page}>
+      <section
+        class={[
+          if(@plain, do: "folio-plain-page", else: "folio-card folio-card--page"),
+          "booker-card"
+        ]}
+        data-page={@page}
+      >
         <Masthead.masthead variant={:slim} theme_tokens={@theme_tokens} />
-        <div class="folio-card__body">
+        <div class={if @plain, do: "folio-section folio-plain-page__body", else: "folio-card__body"}>
           {render_slot(@inner_block)}
         </div>
       </section>

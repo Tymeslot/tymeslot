@@ -11,8 +11,13 @@
   position: relative;
   height: var(--folio-cover-height);
   overflow: hidden;
-  border-radius: calc(var(--radius-card) - var(--border-width-thin)) calc(var(--radius-card) - var(--border-width-thin)) 0 0;
   background: var(--folio-cover-fallback);
+}
+
+/* Inside a card (the default pages) the band rounds the card's top
+   corners; on the booking page it runs edge to edge. */
+.folio-card .folio-cover {
+  border-radius: calc(var(--radius-card) - var(--border-width-thin)) calc(var(--radius-card) - var(--border-width-thin)) 0 0;
 }
 
 .folio-cover--slim {
@@ -86,6 +91,9 @@
   align-items: end;
   column-gap: var(--space-md);
   row-gap: var(--space-md);
+  box-sizing: content-box;
+  max-width: var(--folio-column);
+  margin-inline: auto;
   padding: 0 var(--folio-gutter);
 }
 

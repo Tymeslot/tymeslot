@@ -20,7 +20,7 @@ html.folio-theme[data-embedded] > body {
 }
 
 html.folio-theme[data-embedded] .folio-page > .content-area {
-  padding: var(--space-sm);
+  padding: 0 0 var(--space-sm);
 }
 
 /* The card sits on the host's page: no floating shadow. */
@@ -32,4 +32,23 @@ html.folio-theme[data-embedded] .folio-card {
 html.folio-theme[data-embed-layout="column"] .folio-page > .content-area {
   max-width: 100%;
   padding-inline: 0;
+}
+
+/* ...and so does the page's column: the shared rule above gives every
+   .booker-card (Folio's sections among them) the container's whole width,
+   so the sections count their gutter inside it, and the identity, the jump
+   link, the language row and the summary bar follow rather than keep the
+   standalone reading column. */
+html.folio-theme[data-embed-layout="column"] .folio-section {
+  box-sizing: border-box;
+}
+
+html.folio-theme[data-embed-layout="column"] .folio-identity,
+html.folio-theme[data-embed-layout="column"] .folio-jump,
+html.folio-theme[data-embed-layout="column"] .folio-language {
+  max-width: none;
+}
+
+html.folio-theme[data-embed-layout="column"] .folio-summary-bar {
+  padding-inline: var(--folio-gutter);
 }

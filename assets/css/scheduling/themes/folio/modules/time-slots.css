@@ -7,7 +7,7 @@
   gap: var(--space-sm);
 }
 
-.folio-card .slot-list__heading {
+.folio-when .slot-list__heading {
   font-size: var(--theme-font-size-lg);
 }
 
@@ -29,7 +29,7 @@
   gap: var(--space-xs);
 }
 
-.folio-card .slot-list__period-label {
+.folio-when .slot-list__period-label {
   font-family: var(--theme-font-family);
   font-size: var(--theme-font-size-2xs);
   font-weight: var(--font-weight-semibold);

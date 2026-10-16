@@ -129,7 +129,7 @@
   /* Sizes. */
   --icon-sm: 1.25rem;
   --icon-md: 1.75rem;
-  --folio-column: 46rem;
+  --folio-column: 40rem;
   --folio-gutter: clamp(var(--space-md), 6cqi, var(--space-2xl));
   --folio-control-height: 2.75rem;
   --folio-chevron-size: 0.3125rem;
@@ -142,6 +142,16 @@
   /* The cover's lower third eases into the card, so the portrait's ring
      meets a calm edge; the upper two thirds keep the photo as it is. */
   --folio-cover-fade: linear-gradient(to bottom, transparent 62%, color-mix(in srgb, var(--theme-surface) 30%, transparent) 82%, color-mix(in srgb, var(--theme-surface) 80%, transparent) 100%);
+  /* On the booking page there is no card: the cover eases into the canvas,
+     and the portrait's ring is the canvas's colour. */
+  --folio-cover-fade-page: linear-gradient(to bottom, transparent 62%, color-mix(in srgb, var(--theme-canvas) 30%, transparent) 82%, color-mix(in srgb, var(--theme-canvas) 80%, transparent) 100%);
+  /* How far below the window's top a section a summary link jumps to
+     stops, so the sticky summary bar does not cover its heading. */
+  --folio-summary-offset: 4.5rem;
+  /* The summary bar's ground (shared/blocks/summary-bar.css). */
+  --summary-bar-surface: var(--theme-canvas);
+  /* The organiser's portrait in the summary bar. */
+  --folio-bar-portrait: 1.75rem;
 
   /* Shared status screens (shared/layout.css: awaiting payment, readiness). */
   --status-surface: var(--theme-surface);

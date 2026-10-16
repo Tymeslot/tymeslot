@@ -8,31 +8,31 @@
   --poll-voting-padding: 0;
 }
 
-.folio-card--page .manage-page__button,
-.folio-card--page .payment-page-link {
+:is(.folio-card--page, .folio-plain-page) .manage-page__button,
+:is(.folio-card--page, .folio-plain-page) .payment-page-link {
   min-height: var(--folio-control-height);
   font-family: var(--theme-font-family);
 }
 
 /* A notice runs to several lines: the panel radius, not the pill a "round"
    control radius would make of it. */
-.folio-card--page .manage-page__notice {
+:is(.folio-card--page, .folio-plain-page) .manage-page__notice {
   border-radius: var(--folio-radius-panel);
 }
 
 /* The payment return pages: centred, as the meeting pages' headers are,
    their heading at the cancel and reschedule titles' size, and the way
    back a compact button in the middle rather than a full-width bar. */
-.folio-card--page .manage-page--payment-processing,
-.folio-card--page .manage-page--payment-cancelled {
+:is(.folio-card--page, .folio-plain-page) .manage-page--payment-processing,
+:is(.folio-card--page, .folio-plain-page) .manage-page--payment-cancelled {
   text-align: center;
 }
 
-.folio-card--page .payment-page-heading {
+:is(.folio-card--page, .folio-plain-page) .payment-page-heading {
   font-size: var(--theme-font-size-2xl);
 }
 
-.folio-card--page .payment-page-link {
+:is(.folio-card--page, .folio-plain-page) .payment-page-link {
   display: inline-flex;
   align-items: center;
   justify-content: center;

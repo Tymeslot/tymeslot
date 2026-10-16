@@ -1,5 +1,5 @@
-/* Folio: the page, its one column, and the card every step draws. The page
-   scrolls; nothing is locked to the viewport. */
+/* Folio: the page, which spans the window, and the card the meeting, poll and
+   payment pages draw. The page scrolls; nothing is locked to the viewport. */
 
 html.folio-theme {
   background: var(--theme-canvas);
@@ -43,30 +43,33 @@ body.folio-theme {
 
 .folio-page > .content-area {
   width: 100%;
-  max-width: calc(var(--folio-column) + 2 * var(--space-md));
-  margin-inline: auto;
-  padding: var(--space-xl) var(--space-md) var(--space-2xl);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
+  padding: 0 0 var(--space-2xl);
 }
 
 /* The language switcher (overview only) has a row of its own above the
-   card. ThemeShell hides it with Tailwind's `hidden`, which this unlayered
-   rule would override, so the hidden state is restated. */
+   page, in the column. ThemeShell hides it with Tailwind's `hidden`, which
+   this unlayered rule would override, so the hidden state is restated. */
 .folio-language {
   display: flex;
   justify-content: flex-end;
+  box-sizing: content-box;
+  width: auto;
+  max-width: var(--folio-column);
+  margin-inline: auto;
+  padding: var(--space-sm) var(--folio-gutter);
 }
 
 .folio-language.theme-shell__language--hidden {
   display: none;
 }
 
-/* The card: the container every step's layout queries. It never clips its
+/* The card: the container the page's layout queries. It never clips its
    content (the timezone panel drops out of it); the cover band rounds its
-   own top corners. */
+   own top corners. Only the meeting, poll and payment pages draw it
+   (`Pages.page_shell/1`); the booking page is a card-less page (`page.css`). */
 .folio-card {
   container-type: inline-size;
   container-name: scheduling;
@@ -87,7 +90,17 @@ body.folio-theme {
   padding: var(--space-lg) var(--folio-gutter) var(--space-xl);
 }
 
-.folio-card :focus-visible {
+/* A default page's card keeps the column it had. */
+.folio-page > .content-area > .folio-card {
+  max-width: var(--folio-column);
+  margin: var(--space-xl) auto 0;
+}
+
+/* Folio's focus ring: inside a card (the meeting, poll and payment pages),
+   and on the booking page and its confirmation, which have none. */
+.folio-card :focus-visible,
+.journey--continuous :focus-visible,
+.folio-outcome-page :focus-visible {
   outline: var(--border-width-medium) solid var(--theme-primary);
   outline-offset: var(--border-width-medium);
 }

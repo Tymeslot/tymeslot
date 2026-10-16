@@ -1,5 +1,5 @@
-/* Folio: the organiser's page. A cover band and portrait on every card,
-   serif headings, one column on the scheme's canvas. */
+/* Folio: the organiser's page. A cover band edge to edge, the portrait on
+   it, serif headings, one reading column on the scheme's canvas. */
 
 /* Tailwind, the shared primitives, the LiveView loading variants and the
    content sources, shared by every theme. */
@@ -14,6 +14,7 @@
 @import "./modules/profile-intro.css";
 @import "../../shared/blocks/summary-bar.css";
 @import "./modules/overview.css";
+@import "./modules/page.css";
 @import "../../shared/components/approval-notice.css";
 @import "../../shared/components/group-session.css";
 @import "./modules/group-session.css";

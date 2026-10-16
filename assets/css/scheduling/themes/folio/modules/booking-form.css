@@ -100,35 +100,6 @@
 
 /* --- The booking step --- */
 
-.folio-summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-sm) var(--space-md);
-  margin: 0;
-  padding: var(--space-md);
-  border-radius: var(--radius-card);
-  background: var(--folio-tint);
-}
-
-.folio-summary__item {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3xs);
-  min-width: 0;
-}
-
-.folio-summary dd {
-  margin: 0;
-  font-weight: var(--font-weight-semibold);
-  color: var(--theme-text);
-}
-
-@container scheduling (width >= 40rem) {
-  .folio-summary {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
 .folio-booking,
 .folio-booking-form {
   display: flex;
@@ -329,13 +300,6 @@
   color: var(--theme-text);
   font-size: var(--theme-font-size-sm);
   font-weight: var(--font-weight-semibold);
-}
-
-/* The day the meeting ends on, under the time, when it is the next. */
-.folio-summary .folio-summary__note {
-  font-size: var(--theme-font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--theme-text-secondary);
 }
 
 .folio-booking__price {

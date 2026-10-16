@@ -1,0 +1,274 @@
+/* Folio's booking page (Navigators.Continuous): no card. The cover runs
+   edge to edge; the identity and every section sit in one reading column
+   (--folio-column) with Folio's gutter outside it, on the canvas. The
+   journey's frame, and the confirmation's page, are the `scheduling`
+   container the masthead's and the calendar's sizes read. */
+
+.journey--continuous,
+.folio-outcome-page {
+  container-type: inline-size;
+  container-name: scheduling;
+  --folio-cover-fade: var(--folio-cover-fade-page);
+}
+
+/* The masthead moment lends its children to the frame, so the summary
+   bar's sticky box is the whole page and it follows the visitor down. */
+.folio-masthead-moment {
+  display: contents;
+}
+
+.journey--continuous .folio-portrait,
+.folio-outcome-page .folio-portrait {
+  border-color: var(--theme-canvas);
+  background: var(--theme-canvas);
+}
+
+/* --- The summary bar: the organiser, then what is chosen. Folio's
+   wrapper is the sticky box, across the canvas, its contents in the
+   column; the shared bar inside it stays in place. --- */
+
+.folio-summary-bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2xs) var(--space-md);
+  margin-top: var(--space-lg);
+  padding: var(--space-xs) max(var(--folio-gutter), calc((100% - var(--folio-column)) / 2));
+  border-top: var(--border-width-thin) solid var(--folio-line);
+  border-bottom: var(--border-width-thin) solid var(--folio-line);
+  background: var(--summary-bar-surface);
+}
+
+.folio-summary-bar .summary-bar {
+  position: static;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.folio-summary-bar__person {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  color: var(--theme-text);
+  font-family: var(--theme-font-heading);
+  font-weight: var(--font-weight-semibold);
+}
+
+.folio-summary-bar__portrait {
+  width: var(--folio-bar-portrait);
+  height: var(--folio-bar-portrait);
+  border-radius: var(--radius-full);
+  object-fit: cover;
+}
+
+.folio-summary-bar__name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The link from under the masthead down to the ways to work. */
+.folio-jump {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  box-sizing: content-box;
+  max-width: var(--folio-column);
+  margin: var(--space-md) auto 0;
+  padding-inline: var(--folio-gutter);
+  color: var(--theme-primary);
+  font-family: var(--theme-font-heading);
+  text-decoration: underline;
+  text-underline-offset: var(--space-3xs);
+}
+
+.folio-jump__icon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+.folio-theme-wrapper .summary-bar__link:focus-visible {
+  outline: var(--border-width-medium) solid var(--theme-primary);
+  outline-offset: var(--border-width-medium);
+}
+
+/* --- Sections --- */
+
+.folio-section {
+  box-sizing: content-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  max-width: var(--folio-column);
+  margin-inline: auto;
+  padding: var(--space-2xl) var(--folio-gutter) 0;
+  scroll-margin-top: var(--folio-summary-offset);
+}
+
+.folio-section + .folio-section::before {
+  content: "";
+  display: block;
+  margin-bottom: var(--space-sm);
+  border-top: var(--border-width-thin) solid var(--folio-line);
+}
+
+.folio-section__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.folio-section__title {
+  margin: 0;
+  font-family: var(--theme-font-heading);
+  font-size: var(--theme-font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--theme-line-height-snug);
+  color: var(--theme-text);
+  overflow-wrap: anywhere;
+}
+
+/* A heading takes the focus when its section opens, to bring it into view;
+   a ring there would read as a control. A keyboard user tabbing to it
+   still sees one. */
+.folio-section__title:focus {
+  outline: none;
+}
+
+.folio-section__title:focus-visible {
+  outline: var(--border-width-medium) solid var(--theme-primary);
+  outline-offset: var(--border-width-medium);
+}
+
+/* --- The ways to work: ruled entries, not boxes --- */
+
+.folio-offer .folio-meetings {
+  gap: 0;
+  border-bottom: var(--border-width-thin) solid var(--folio-line);
+}
+
+.folio-offer .folio-meeting {
+  padding: var(--space-lg) var(--space-md);
+  border: 0;
+  border-top: var(--border-width-thin) solid var(--folio-line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.folio-offer .folio-meeting:hover {
+  background: var(--folio-tint);
+}
+
+.folio-offer .folio-meeting[aria-pressed="true"],
+.folio-offer .folio-meeting--chosen {
+  background: var(--folio-tint);
+  box-shadow: inset var(--border-width-thick) 0 0 var(--theme-primary);
+}
+
+.folio-offer .folio-meeting--chosen {
+  cursor: default;
+}
+
+.folio-offer .folio-meeting:focus-visible {
+  outline: var(--border-width-medium) solid var(--theme-primary);
+  outline-offset: calc(-1 * var(--border-width-medium));
+}
+
+/* An entry's facts on one line under its name: length, places, price. */
+.folio-meeting__facts {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2xs) var(--space-sm);
+  color: var(--theme-text-secondary);
+  font-size: var(--theme-font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.folio-meeting__location {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+}
+
+.folio-meeting__icon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+.folio-meeting__price {
+  color: var(--theme-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* --- The payment pages: no card, as the page they follow --- */
+
+.folio-plain-page {
+  container-type: inline-size;
+  container-name: scheduling;
+  --folio-cover-fade: var(--folio-cover-fade-page);
+}
+
+.folio-plain-page__body {
+  padding-top: var(--space-xl);
+}
+
+/* --- The details --- */
+
+.folio-you__when {
+  margin: 0;
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-lg);
+  font-family: var(--theme-font-heading);
+  font-variant-numeric: tabular-nums;
+}
+
+.folio-you__when--end {
+  color: var(--theme-text-secondary);
+  font-size: var(--theme-font-size-sm);
+  font-family: var(--theme-font-family);
+}
+
+.folio-questions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.folio-question__label {
+  margin: 0;
+  font-family: var(--theme-font-heading);
+  font-size: var(--theme-font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--theme-line-height-snug);
+}
+
+/* A question's label and the details group take the focus when they open,
+   to bring them into view; a ring there would read as a control. A keyboard
+   user sees one. */
+.folio-question__label:focus,
+#folio-details:focus {
+  outline: none;
+}
+
+.folio-question__label:focus-visible,
+#folio-details:focus-visible {
+  outline: var(--border-width-medium) solid var(--theme-primary);
+  outline-offset: var(--border-width-medium);
+}
+
+#folio-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* --- The confirmation: the masthead, then the outcome in the column --- */
+
+.folio-outcome {
+  padding-top: var(--space-xl);
+}

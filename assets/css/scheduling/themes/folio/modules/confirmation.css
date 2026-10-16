@@ -72,7 +72,7 @@
   color: var(--theme-text);
 }
 
-.folio-card .custom-answers__heading {
+.folio-outcome .custom-answers__heading {
   font-family: var(--theme-font-family);
   font-size: var(--theme-font-size-2xs);
   font-weight: var(--font-weight-semibold);

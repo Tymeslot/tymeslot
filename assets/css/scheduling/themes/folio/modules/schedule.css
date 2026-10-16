@@ -17,7 +17,7 @@
   gap: var(--space-xs);
 }
 
-.folio-card .folio-calendar__month {
+.folio-when .folio-calendar__month {
   font-size: var(--theme-font-size-lg);
   text-align: center;
 }

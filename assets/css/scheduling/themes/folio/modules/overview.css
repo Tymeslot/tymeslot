@@ -1,13 +1,5 @@
-/* The overview below the masthead: a ruled introduction to the meeting
-   types, then one card per type with its description in full. */
-
-.folio-meetings-intro {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2xs);
-  padding-top: var(--space-lg);
-  border-top: var(--border-width-thin) solid var(--folio-line);
-}
+/* The ways to work below the masthead: one entry per meeting type with its
+   description in full (page.css rules them as editorial entries). */
 
 .folio-meetings {
   display: grid;
@@ -59,20 +51,7 @@
 }
 
 .folio-meeting__duration {
-  padding: var(--space-3xs) var(--space-xs);
-  border: var(--border-width-thin) solid var(--border-light);
-  border-radius: var(--radius-full);
-  background: var(--surface-light);
-  color: var(--theme-text-secondary);
-  font-size: var(--theme-font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  font-variant-numeric: tabular-nums;
   white-space: nowrap;
-}
-
-.folio-meeting__price {
-  color: var(--theme-text);
-  font-variant-numeric: tabular-nums;
 }
 
 .folio-meeting__description {

@@ -1,14 +1,14 @@
 /* Folio's type: serif headings (the font option's heading stack), body text
    in the body stack, long words broken anywhere so a long name or heading
-   never widens the card. */
+   never widens the page. The page is the card (the meeting, poll and payment
+   pages), or the card-less booking page, its confirmation and the payment
+   pages' plain variant. */
 
-.folio-card {
+:is(.folio-card, .journey--continuous, .folio-outcome-page, .folio-plain-page) {
   overflow-wrap: anywhere;
 }
 
-.folio-card h1,
-.folio-card h2,
-.folio-card h3 {
+:is(.folio-card, .journey--continuous, .folio-outcome-page, .folio-plain-page) :is(h1, h2, h3) {
   margin: 0;
   font-family: var(--theme-font-heading);
   font-weight: var(--font-weight-semibold);
@@ -17,16 +17,12 @@
   color: var(--theme-text);
 }
 
-.folio-card p {
+:is(.folio-card, .journey--continuous, .folio-outcome-page, .folio-plain-page) p {
   margin: 0;
 }
 
 .folio-title {
   font-size: var(--theme-font-size-2xl);
-}
-
-.folio-subtitle {
-  font-size: var(--theme-font-size-xl);
 }
 
 .folio-lead {
@@ -40,7 +36,7 @@
 }
 
 /* A small uppercase label; also on headings, hence the doubled class. */
-.folio-card .folio-eyebrow {
+:is(.folio-card, .journey--continuous, .folio-outcome-page, .folio-plain-page) .folio-eyebrow {
   font-family: var(--theme-font-family);
   font-size: var(--theme-font-size-2xs);
   font-weight: var(--font-weight-semibold);
@@ -53,10 +49,4 @@
 .folio-error {
   font-size: var(--theme-font-size-sm);
   color: var(--theme-danger);
-}
-
-.folio-step-header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2xs);
 }

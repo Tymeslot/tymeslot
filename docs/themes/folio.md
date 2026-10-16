@@ -14,7 +14,7 @@ Coaches, therapists, consultants, writers and freelancers whose booking page is 
 
 ## Look
 
-One card on the scheme's canvas, a reading column of 46rem, with the cover band across its top and the portrait overlapping its lower edge; from the schedule on, the band is slim and the portrait small. Serif headings in one of four pairings (Inter with Source Serif 4, Source Sans 3 with Lora, Inter with Fraunces, or the system's own), on warm, low-saturation grounds with one strong accent: Ivory, Sage, Harbour and Blush light, Dusk and Ink dark. Each scheme keeps its own mode; the page never follows the visitor's system. It never has a background behind the card: the cover is the page's hero, not glass over an image or video.
+One continuous page on the scheme's canvas, with the cover band across its top and the portrait overlapping the band's lower edge. Serif headings in one of four pairings (Inter with Source Serif 4, Source Sans 3 with Lora, Inter with Fraunces, or the system's own), on warm, low-saturation grounds with one strong accent: Ivory, Sage, Harbour and Blush light, Dusk and Ink dark. Each scheme keeps its own mode; the page never follows the visitor's system. It never has a background behind the page: the cover is the page's hero, not glass over an image or video. The booking page has no card: the cover runs edge to edge, every section sits in one centred reading column of 40rem, separated by space and a hairline, the meeting types are ruled entries with their facts on one line and the chosen one marked by the accent, and the summary bar, with the organiser's portrait and name, sticks on the canvas; the payment pages that follow a paid booking have no card either, and the meeting and poll pages keep a card in the same column.
 
 ## Options
 
