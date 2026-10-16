@@ -1,0 +1,259 @@
+/* Default meeting pages (Shared.Components.MeetingPageBodies, drawn by
+   Shared.DefaultPages inside a theme's page shell): cancel and its kept
+   state, reschedule, cancel-confirmed, with the date, time and organiser
+   rows of their details panel (Shared.Components.MeetingDetails); plus the
+   wrapper every default page body sits in, and the default payment pages'
+   layout, heading and status icon (their card and inks are
+   payment-pages.css's). Imported by a theme that takes the default pages
+   (a page_shell: in use TymeslotWeb.Themes.Core.Theme).
+
+   Tokens: the contract's --ink-1/2, --surface-2/3, --line-1/2,
+   --radius-card, --radius-control, the solid primary pair, the status
+   colours, --theme-font-heading and the type scale; optional
+   --manage-page-danger-ink (--theme-danger), the cancel button's ink, for
+   a theme whose danger colour is too light as text. */
+
+.manage-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+/* The payment pages space their own heading and link with margins (see
+   payment-pages.css), so their body flows as a block: the wrapper's gap
+   doubled it and stretched the link to full width. Centred under their
+   status icon, at a reading width, like the meeting pages' header. */
+.manage-page--payment-processing,
+.manage-page--payment-cancelled {
+  display: block;
+  max-width: 32rem;
+  margin-inline: auto;
+  text-align: center;
+}
+
+/* The meeting pages' title and lead, for the payment pages' heading and
+   text; two classes, so this holds whatever order the files load in. */
+:is(.manage-page--payment-processing, .manage-page--payment-cancelled) .payment-page-heading {
+  margin: 0 0 var(--space-xs);
+  font-family: var(--theme-font-heading);
+  font-size: var(--theme-font-size-2xl);
+}
+
+:is(.manage-page--payment-processing, .manage-page--payment-cancelled) .payment-page-body {
+  font-size: var(--theme-font-size-md);
+}
+
+/* A date and time ("3 March 2027 at 10:00 AM CET") stays on one line. */
+:is(.manage-page--payment-processing, .manage-page--payment-cancelled) .payment-page-date {
+  white-space: nowrap;
+}
+
+.manage-page__header {
+  text-align: center;
+}
+
+.manage-page__icon {
+  width: 3rem;
+  height: 3rem;
+  margin: 0 auto var(--space-sm);
+}
+
+.manage-page__icon--success {
+  color: var(--theme-success);
+}
+
+.manage-page__icon--danger {
+  color: var(--theme-danger);
+}
+
+.manage-page__icon--primary {
+  color: var(--theme-primary);
+}
+
+.manage-page__title {
+  margin: 0 0 var(--space-xs);
+  color: var(--ink-1);
+  font-family: var(--theme-font-heading);
+  font-size: var(--theme-font-size-2xl);
+  font-weight: var(--font-weight-bold);
+}
+
+.manage-page__lead {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-md);
+}
+
+/* A sentence of body text below the details (the reschedule page's "Ready
+   to pick a new time?", the kept meeting's closing line): --ink-2, since
+   --ink-3 falls under 4.5:1 at body size. */
+.manage-page__muted {
+  margin: 0;
+  color: var(--ink-2);
+  text-align: center;
+}
+
+.manage-page__details {
+  padding: var(--space-md);
+  border: var(--border-width-thin) solid var(--line-1);
+  border-radius: var(--radius-card);
+  background: var(--surface-2);
+}
+
+.manage-page__details-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.manage-page__details-title {
+  margin: 0;
+  color: var(--ink-1);
+  font-size: var(--theme-font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* The details panel's rows: an icon in a small tile, then the value over
+   its label. The markup puts the organiser's label first (a theme's own
+   styling may rely on that), so its info column is reversed here to read
+   the name over "Meeting with" like the other rows. Scoped to the panel,
+   so a theme's own meeting-detail-* rules elsewhere are untouched. */
+.manage-page__details .meeting-detail-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.manage-page__details .meeting-detail-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.manage-page__details .meeting-detail-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-control);
+  background: var(--surface-3);
+  color: var(--ink-2);
+}
+
+.manage-page__details .meeting-detail-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.manage-page__details .meeting-detail-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.manage-page__details .meeting-detail-row--organizer .meeting-detail-info {
+  flex-direction: column-reverse;
+}
+
+.manage-page__details .meeting-detail-value {
+  color: var(--ink-1);
+  font-weight: var(--font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.manage-page__details .meeting-detail-label {
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+}
+
+.manage-page__duration {
+  padding: var(--space-3xs) var(--space-sm);
+  border-radius: var(--radius-full);
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.manage-page__notice {
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  border: var(--border-width-thin) solid transparent;
+  border-radius: var(--radius-control);
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+}
+
+.manage-page__notice--danger {
+  background: color-mix(in srgb, var(--theme-danger) 10%, transparent);
+  border-color: color-mix(in srgb, var(--theme-danger) 25%, transparent);
+}
+
+.manage-page__notice--success {
+  background: color-mix(in srgb, var(--theme-success) 10%, transparent);
+  border-color: color-mix(in srgb, var(--theme-success) 25%, transparent);
+}
+
+.manage-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  justify-content: center;
+}
+
+.manage-page__button {
+  flex: 1 1 12rem;
+  padding: var(--space-sm) var(--space-lg);
+  border: var(--border-width-thin) solid transparent;
+  border-radius: var(--radius-control);
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.manage-page__button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* A solid outline, as on the slot list and week grid: --focus-ring is a
+   25% tint, too faint against the card to show keyboard focus. */
+.manage-page__button:focus-visible {
+  outline: var(--border-width-thick) solid var(--theme-primary);
+  outline-offset: var(--space-3xs);
+}
+
+.manage-page__button--primary {
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+}
+
+.manage-page__button--primary:hover:not(:disabled) {
+  background: var(--theme-primary-solid-hover);
+}
+
+.manage-page__button--secondary {
+  background: var(--surface-2);
+  border-color: var(--line-2);
+  color: var(--ink-1);
+}
+
+.manage-page__button--secondary:hover:not(:disabled) {
+  background: var(--surface-3);
+}
+
+.manage-page__button--danger {
+  background: transparent;
+  border-color: var(--theme-danger);
+  color: var(--manage-page-danger-ink, var(--theme-danger));
+}
+
+.manage-page__button--danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--theme-danger) 12%, transparent);
+}

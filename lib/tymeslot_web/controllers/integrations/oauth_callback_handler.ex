@@ -209,7 +209,7 @@ defmodule TymeslotWeb.Integrations.OAuthCallbackHandler do
         )
 
       error == "access_denied" ->
-        dgettext("dashboard_integrations", "Authorization was denied. Please try again.")
+        dgettext("dashboard_integrations", "Authorisation was denied. Please try again.")
 
       true ->
         dgettext("dashboard_integrations", "Authentication failed. Please try again.")

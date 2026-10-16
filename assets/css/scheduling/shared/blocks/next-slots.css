@@ -1,0 +1,121 @@
+/* ==========================================================================
+   Next slots block: the shared structure
+
+   Matches TymeslotWeb.Themes.Shared.Blocks.NextSlots. No shipped theme
+   imports it; a theme rendering the block imports it after shared/tokens.css.
+   It reads the contract tokens plus one of its own, which a theme may set in
+   its variables.css:
+
+     --next-slots-gap   the space between days and between times
+                        (default var(--space-sm))
+
+   Times are large touch targets in a grid that fills its row.
+   ========================================================================== */
+
+.next-slots {
+  display: flex;
+  flex-direction: column;
+  gap: var(--next-slots-gap, var(--space-sm));
+}
+
+.next-slots__days {
+  display: flex;
+  flex-direction: column;
+  gap: var(--next-slots-gap, var(--space-sm));
+}
+
+.next-slots__day {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.next-slots__day-heading {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.next-slots__slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(calc(var(--space-2xl) * 2), 1fr));
+  gap: var(--next-slots-gap, var(--space-sm));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.next-slots__slot {
+  width: 100%;
+  min-height: calc(var(--space-xl) + var(--space-sm));
+  padding: var(--space-xs) var(--space-sm);
+  border: var(--border-width-thin) solid var(--line-1);
+  border-radius: var(--radius-control);
+  background: var(--surface-1);
+  color: var(--ink-1);
+  font-size: var(--theme-font-size-md);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.next-slots__slot:hover:not(:disabled) {
+  border-color: var(--theme-primary);
+}
+
+.next-slots__slot.next-slots__slot--selected {
+  background: var(--theme-primary-solid);
+  border-color: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+}
+
+.next-slots__more,
+.next-slots__next-week {
+  align-self: flex-start;
+  padding: var(--space-2xs) var(--space-xs);
+  border: none;
+  background: none;
+  color: var(--theme-primary);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.next-slots__more:hover,
+.next-slots__next-week:hover {
+  text-decoration: underline;
+}
+
+.next-slots__slot:focus-visible,
+.next-slots__more:focus-visible,
+.next-slots__next-week:focus-visible,
+.next-slots__day-heading:focus-visible {
+  outline: var(--border-width-thick) solid var(--theme-primary);
+  outline-offset: var(--space-3xs);
+}
+
+.next-slots--loading .next-slots__days {
+  opacity: 0.6;
+}
+
+.next-slots__empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.next-slots__empty p,
+.next-slots__loading,
+.next-slots__error {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+}
+
+.next-slots__error {
+  color: var(--theme-danger);
+}

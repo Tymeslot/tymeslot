@@ -60,11 +60,12 @@ defmodule TymeslotWeb.AdminLiveSettingRowTest do
     String.contains?(row_classes, "opacity-60")
   end
 
-  # True when only the description block is dimmed.
+  # True when only the description block (name, description and chip, the
+  # first element inside the row header) is dimmed.
   defp row_header_muted?(html, key) do
     chunk = settings_row(html, key)
 
-    case Regex.run(~r/<div class="(flex-1 min-w-0[^"]*)"/, chunk) do
+    case Regex.run(~r/<div class="flex-1 min-w-0">\s*<div class="([^"]*)"/, chunk) do
       [_all, classes] -> String.contains?(classes, "opacity-60")
       nil -> flunk("no row header found for #{key}")
     end

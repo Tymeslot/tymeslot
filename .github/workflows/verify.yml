@@ -59,6 +59,13 @@ jobs:
       - run: mix deps.get
       - run: mix format --check-formatted
       - run: mix compile --warnings-as-errors
+      # The booking-theme CSS token rules (scripts/test_css_tokens.sh): shared
+      # contract tokens defined by every theme, no colour literal outside the
+      # token files, spacing and borders through tokens. A theme missing a
+      # token silently loses every declaration that reads it, so nothing but
+      # this check notices. The task is part of the project, which the step
+      # above has just compiled.
+      - run: mix css.check_tokens
       - run: mix credo --strict
       - run: mix sobelow
       - run: mix deps.audit

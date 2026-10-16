@@ -6,7 +6,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
 
     * `Tymeslot.Utils.DateTimeUtils.ICal` — iCal/CalDAV formatters and parsers.
     * `Tymeslot.Utils.DateTimeUtils.Duration` — ISO 8601 duration parsing and
-      human-readable duration formatting.
+      URL duration slugs.
     * `Tymeslot.Utils.DateTimeUtils.Display` — UI-facing date/time formatting
       and time-period grouping for booking slots.
   """

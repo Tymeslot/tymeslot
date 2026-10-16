@@ -1,7 +1,7 @@
 /* Animations — motion utilities used by the Quill booking flow.
    (Theme-local keyframes that belong to a single component live with that
-   component: `quill-pulse` in calendar.css, `fadeInDown` in
-   language-switcher.css; the shared `spin` is in shared/utilities.css.) */
+   component: `quill-pulse` in calendar.css; the shared `spin` is in
+   shared/utilities.css.) */
 
 .animate-fade-in-up {
   animation: fadeInUp 0.3s ease-out;

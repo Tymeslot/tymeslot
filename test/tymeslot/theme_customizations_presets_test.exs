@@ -33,13 +33,9 @@ defmodule Tymeslot.ThemeCustomizationsPresetsTest do
       assert Map.has_key?(images, "preset:artistic-studio")
     end
 
-    test "get_all_presets/0 returns organized presets" do
-      all = Presets.get_all_presets()
-
-      assert Map.has_key?(all, :color_schemes)
-      assert Map.has_key?(all, :gradients)
-      assert Map.has_key?(all, :videos)
-      assert Map.has_key?(all, :images)
+    test "take/2 returns the named presets in the order given, leaving out unknown ids" do
+      assert [{"ocean", %{name: "Ocean Breeze"}}, {"default", %{name: "Default Turquoise"}}] =
+               Presets.take(:color_scheme, ["ocean", "nope", "default"])
     end
 
     test "find_preset_by_id/2 finds color scheme" do
@@ -47,6 +43,21 @@ defmodule Tymeslot.ThemeCustomizationsPresetsTest do
 
       assert preset.name == "Purple Dream"
       assert Map.has_key?(preset, :colors)
+    end
+
+    test "every colour scheme names its mode, and only a light one carries dark colours" do
+      schemes = Map.values(Presets.get_color_schemes())
+
+      assert schemes != []
+      assert Enum.reject(schemes, &(&1.mode in [:light, :dark])) == []
+
+      # A light scheme's dark counterpart is optional; a dark scheme has none.
+      assert Enum.filter(schemes, &(&1.mode == :dark and Map.has_key?(&1, :dark_colors))) == []
+
+      assert Enum.reject(schemes, fn scheme ->
+               scheme.mode == :dark or not Map.has_key?(scheme, :dark_colors) or
+                 Map.keys(scheme.dark_colors) == Map.keys(scheme.colors)
+             end) == []
     end
 
     test "find_preset_by_id/2 finds gradient" do
@@ -58,6 +69,19 @@ defmodule Tymeslot.ThemeCustomizationsPresetsTest do
 
     test "find_preset_by_id/2 returns nil for unknown type" do
       assert Presets.find_preset_by_id(:unknown, "test") == nil
+    end
+
+    test "every image preset ships in the one preset image directory" do
+      dir = Application.app_dir(:tymeslot, "priv/static/images/themes/backgrounds")
+
+      missing =
+        Presets.get_image_presets()
+        |> Map.values()
+        |> Enum.flat_map(&[&1.file, &1.thumbnail])
+        |> Enum.reject(&File.exists?(Path.join(dir, &1)))
+
+      assert Presets.get_image_presets() != %{}
+      assert missing == []
     end
   end
 end

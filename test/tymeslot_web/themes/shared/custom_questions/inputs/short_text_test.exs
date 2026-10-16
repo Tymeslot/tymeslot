@@ -23,7 +23,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.ShortTextTest do
     html = render_input(%{"type" => "short_text", "label" => "Company"})
 
     assert html =~ "<form"
-    assert html =~ ~s(phx-submit="next")
+    assert html =~ ~s(phx-submit="next_step")
   end
 
   test "debounces input until blur and disables browser autocomplete" do

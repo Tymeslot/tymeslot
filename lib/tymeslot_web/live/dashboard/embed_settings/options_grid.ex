@@ -241,7 +241,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
       {raw(
         dgettext(
           "dashboard_embed",
-          "Need help? See the %{guide} for step-by-step instructions, platform tips, and customization options.",
+          "Need help? See the %{guide} for step-by-step instructions, platform tips, and customisation options.",
           guide: DocsUrl.article_link("embed", dgettext("dashboard_embed", "embedding guide"))
         )
       )}

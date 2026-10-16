@@ -1,645 +1,343 @@
-# credo:disable-for-this-file Credo.Check.Refactor.LongQuoteBlocks
 defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
   @moduledoc """
   Shared LiveView macro for scheduling themes.
 
-  Provides all common mount/handle_params/handle_info/handle_event callbacks
-  for the 4-step booking flow. Themes `use` this macro and only need to define:
-
-  - `render/1` — wrapper component and step layout
-  - `handle_theme_event/3` (optional) — for theme-specific events
-  - `handle_theme_schedule_event/3` (optional) — for theme-specific schedule events
-  - `handle_theme_info/2` (optional) — for theme-specific `handle_info/2` messages
-
-  ## Example
+  A theme passes its wrapper component and its journey, and gets a `render/1`
+  that handles every state the booking can be in. The classic journey, the
+  five steps Quill and Rhythm show, is one LiveComponent per step:
 
       defmodule MyTheme.Scheduling.Live do
-        use TymeslotWeb.Themes.Shared.SchedulingLive, theme_id: "3"
+        alias MyTheme.Scheduling.Components.{
+          BookingComponent,
+          ConfirmationComponent,
+          CustomQuestionsComponent,
+          OverviewComponent,
+          ScheduleComponent
+        }
 
         alias MyTheme.Scheduling.Wrapper
 
-        @impl Phoenix.LiveView
-        def render(assigns) do
-          ~H\"""
-          <Wrapper.my_wrapper ...>
-            ...
-          </Wrapper.my_wrapper>
-          \"""
-        end
+        use TymeslotWeb.Themes.Shared.SchedulingLive,
+          wrapper: &Wrapper.my_wrapper/1,
+          steps: %{
+            overview: OverviewComponent,
+            schedule: ScheduleComponent,
+            questions: CustomQuestionsComponent,
+            booking: BookingComponent,
+            confirmation: ConfirmationComponent
+          }
       end
+
+  Any other journey is written out (`TymeslotWeb.Themes.Shared.Journey`):
+
+      use TymeslotWeb.Themes.Shared.SchedulingLive,
+        wrapper: &Wrapper.my_wrapper/1,
+        journey: [
+          navigator: Paged,
+          moments: [
+            {:now,
+             collects: [:meeting_type, :slot],
+             component: NowComponent,
+             defaults: [meeting_type: :first]},
+            {:you, collects: [:answers, :attendee], component: YouComponent}
+          ],
+          outcomes: %{confirmation: ConfirmationComponent, awaiting_payment: :shared}
+        ]
+
+  A theme gives `steps:` or `journey:`, never both; `steps:` is
+  `Journey.classic/1` of its map. Either is literal data (atoms, lists,
+  tuples, maps and module names), checked while the theme compiles
+  (`Journey.build!/2`): a fact asked before one it needs, a component that is
+  not a LiveComponent or an unknown default fails the build, naming the
+  problem (`defaults:` are checked now and applied once the runtime opens
+  moments). The macro generates `__journey__/0`, the theme's `%Journey{}`, and
+  assigns it as `:journey` on mount and on every `handle_params/3`.
+
+  The aliases must come before `use`: the options are expanded where `use` is
+  written. One optional hook, a multi-clause `defp`:
+  `handle_theme_event/3`, for events of the theme's own. A step template's
+  `phx-click="theme:<name>"`, from any step, arrives as `<name>` with its
+  params (the step on screen is `socket.assigns.current_state`), and so does
+  one sent to the LiveView itself. An override replaces the default clause
+  wholesale, and any visitor can send `theme:<anything>`, so it ends with a
+  catch-all clause calling `super/3`, which logs the name and returns
+  `{:noreply, socket}`; without one, an unknown name raises.
+
+  Step events are routed by `Journey.Runtime.handle_step_event/4`: an event
+  it does not take (an unknown name, or a canonical one from a moment not on
+  screen) is dropped with a warning (`StepEvents.log_ignored/3`), as is an
+  event no hook clause takes, and a message nothing routes is logged and
+  ignored (`InfoHandlers.handle_unexpected/2`).
+
+  The macro also generates `handle_async/3` for the flow's `start_async/3`
+  results (a week view's week of slots,
+  `TymeslotWeb.Live.Scheduling.WeekSlots`); a theme writes none.
   """
 
+  @steps [:overview, :schedule, :questions, :booking, :confirmation]
+
+  # The generated code names every module in full rather than through an
+  # alias, which would also apply to the theme's own code (see `__using__/1`).
+  # credo:disable-for-this-file Credo.Check.Design.AliasUsage
+
   defmacro __using__(opts) do
-    theme_id = Keyword.fetch!(opts, :theme_id)
+    opts = Keyword.validate!(opts, [:wrapper, :steps, :journey])
+    wrapper = Keyword.fetch!(opts, :wrapper)
+    journey = journey!(opts, __CALLER__)
 
     quote do
       use TymeslotWeb, :live_view
-      require Logger
 
-      alias TymeslotWeb.Live.Scheduling.{AvailabilityHelpers, CalendarHelpers, OrganizerHelpers}
-
-      alias TymeslotWeb.Live.Scheduling.Handlers.{
-        SlotFetchingHandlerComponent,
-        TimezoneHandlerComponent
-      }
-
-      alias TymeslotWeb.Themes.Shared.BookingFlow
-      alias TymeslotWeb.Themes.Shared.BookingLocation
-      alias TymeslotWeb.Themes.Shared.BookingTracking
-      alias TymeslotWeb.Themes.Shared.GuestBooking
-
-      alias TymeslotWeb.Components.MeetingUtils
-
-      alias TymeslotWeb.Themes.Shared.{
-        EventHandlers,
-        InfoHandlers,
-        LiveHelpers,
-        PathHandlers,
-        ReschedulePin,
-        SchedulingInit,
-        SlotGrouping
-      }
-
-      alias TymeslotWeb.Themes.Shared.StateMachineHelpers, as: StateMachine
-
-      alias Tymeslot.CustomFields
-
-      alias TymeslotWeb.Themes.Shared.Components.ErrorComponent
-      alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine, as: QEngine
-
-      @theme_id unquote(theme_id)
+      # Module names are written in full here, never through an alias of
+      # this code's own, which would also apply to the theme's code around
+      # it. The theme's journey, built from the literal `use` was given with
+      # its aliases already resolved, as it was checked when the theme
+      # compiled.
+      @doc false
+      @spec __journey__() :: TymeslotWeb.Themes.Shared.Journey.t()
+      def __journey__, do: TymeslotWeb.Themes.Shared.Journey.new(unquote(journey))
 
       @impl Phoenix.LiveView
       def mount(params, _session, socket) do
-        initial_state = StateMachine.determine_initial_state(socket.assigns[:live_action])
-
         socket =
-          LiveHelpers.mount_scheduling_view(
-            socket,
-            params,
-            initial_state,
-            &assign_initial_state/1,
-            &setup_initial_state/3
-          )
-
-        socket = BookingTracking.assign_tracking(socket, params)
+          socket
+          |> assign(:journey, __journey__())
+          |> TymeslotWeb.Themes.Shared.LiveHelpers.Mount.mount_scheduling_view(params)
+          |> TymeslotWeb.Themes.Shared.LiveHelpers.Tracking.assign_tracking(params)
 
         {:ok, socket}
       end
 
       @impl Phoenix.LiveView
-      def handle_params(params, _url, socket) do
-        new_state = StateMachine.determine_initial_state(socket.assigns[:live_action])
+      # From `__journey__/0`, not `assigns.journey`: an error page renders
+      # before mount has assigned it.
+      def render(assigns),
+        do:
+          TymeslotWeb.Themes.Shared.SchedulingPage.render(
+            assigns,
+            unquote(wrapper),
+            __journey__()
+          )
 
-        LiveHelpers.handle_scheduling_params(
-          socket,
-          params,
-          new_state,
-          &handle_param_updates/2,
-          &handle_state_entry/3
-        )
-      end
-
+      # Assigned again: the dispatcher may hand the page to another theme on
+      # a patch (`?theme=`), and the journey is the rendering theme's.
       @impl Phoenix.LiveView
+      def handle_params(params, _url, socket),
+        do:
+          socket
+          |> assign(:journey, __journey__())
+          |> TymeslotWeb.Themes.Shared.LiveHelpers.Mount.handle_scheduling_params(params)
+
+      # A theme's own event (`theme:<name>`, relayed untouched by the step
+      # relays) goes to the theme's hook without its prefix, from any step;
+      # the flow never sees it, so it cannot stand in for a canonical event.
+      @impl Phoenix.LiveView
+      def handle_info({:step_event, _step, "theme:" <> name, params}, socket),
+        do: handle_theme_event(name, params, socket)
+
       def handle_info({:step_event, step, event, data}, socket) do
-        case step do
-          :overview -> handle_overview_events(socket, event, data)
-          :schedule -> handle_schedule_events(socket, event, data)
-          :questions -> handle_questions_events(socket, event, data)
-          :booking -> handle_booking_events(socket, event, data)
-          :confirmation -> handle_confirmation_events(socket, event, data)
-          _other -> {:noreply, socket}
+        case TymeslotWeb.Themes.Shared.Journey.Runtime.handle_step_event(
+               socket,
+               step,
+               event,
+               data
+             ) do
+          :unhandled ->
+            TymeslotWeb.Themes.Shared.StepEvents.log_ignored(socket.assigns, step, event)
+            {:noreply, socket}
+
+          reply ->
+            reply
         end
-      end
-
-      @impl Phoenix.LiveView
-      def handle_info({:flash, {type, message}}, socket) do
-        {:noreply, put_flash(socket, type, message)}
-      end
-
-      @impl Phoenix.LiveView
-      def handle_info({:calendar_events_updated, _user_id, _changed_uids}, socket) do
-        InfoHandlers.handle_calendar_events_updated(socket)
-      end
-
-      @impl Phoenix.LiveView
-      def handle_info({:calendar_sync_complete, _user_id, _integration_id}, socket) do
-        InfoHandlers.handle_calendar_events_updated(socket)
-      end
-
-      @impl Phoenix.LiveView
-      def handle_info(:close_dropdown, socket), do: InfoHandlers.handle_close_dropdown(socket)
-
-      @impl Phoenix.LiveView
-      def handle_info({:fetch_available_slots, date, duration, timezone}, socket) do
-        InfoHandlers.handle_fetch_available_slots(socket, date, duration, timezone)
-      end
-
-      @impl Phoenix.LiveView
-      def handle_info({:load_slots, date}, socket) do
-        InfoHandlers.handle_load_slots(socket, date)
-      end
-
-      @impl Phoenix.LiveView
-      def handle_info({:seat_update, meeting_type_id}, socket) do
-        InfoHandlers.handle_seat_update(socket, meeting_type_id, &transition_to/3)
-      end
-
-      @impl Phoenix.LiveView
-      def handle_info({ref, {:ok, availability_map}}, socket) when is_reference(ref) do
-        InfoHandlers.handle_availability_ok(socket, ref, availability_map)
-      end
-
-      @impl Phoenix.LiveView
-      def handle_info({ref, {:error, reason}}, socket) when is_reference(ref) do
-        InfoHandlers.handle_availability_error(socket, ref, reason)
-      end
-
-      # A monitor this LiveView never asked for — LiveView's own channel
-      # intercepts the ones it owns before delegating here. The availability
-      # fetch cannot produce one (its task is linked, so a crash kills this
-      # process instead), so there is nothing to finalise: ignore it rather
-      # than let it reach `handle_unexpected/2` and log a warning per stray
-      # monitor on a public page.
-      @impl Phoenix.LiveView
-      def handle_info({:DOWN, _ref, :process, _pid, _reason}, socket) do
-        {:noreply, socket}
-      end
-
-      # PubSub broadcasts for embedded paid bookings — see
-      # `BookingSubmissionHandlerComponent.handle_payment_required_embedded/3`.
-      @impl Phoenix.LiveView
-      def handle_info(:paid, socket) do
-        InfoHandlers.handle_payment_paid(socket, &transition_to/3)
-      end
-
-      @impl Phoenix.LiveView
-      def handle_info(:expired, socket) do
-        InfoHandlers.handle_payment_expired(socket, &transition_to/3)
       end
 
       # Must stay last: a public page cannot afford to raise on a message it
-      # has no clause for. `handle_event/3` below already ends the same way.
-      #
-      # Delegates to `handle_theme_info/2` (an extension point, not the
-      # clauses above) rather than being itself overridable: `defoverridable`
-      # replaces a function's clauses wholesale, so making the whole
-      # `handle_info/2` overridable would let one theme-specific clause
-      # silently drop every clause above (slot loading, calendar refresh,
-      # `:paid`/`:expired`) with no compiler warning.
-      @impl Phoenix.LiveView
+      # has no clause for. A theme has no hook here: `defoverridable` replaces
+      # a function's clauses wholesale, so one theme-specific clause would
+      # silently drop slot loading, calendar refresh and payment handling.
       def handle_info(message, socket) do
-        handle_theme_info(message, socket)
-      end
-
-      @impl Phoenix.LiveView
-      def handle_event("toggle_language_dropdown", _params, socket) do
-        EventHandlers.handle_toggle_language_dropdown(socket)
-      end
-
-      @impl Phoenix.LiveView
-      def handle_event("close_language_dropdown", _params, socket) do
-        EventHandlers.handle_close_language_dropdown(socket)
-      end
-
-      @impl Phoenix.LiveView
-      def handle_event("change_locale", %{"locale" => locale}, socket) do
-        EventHandlers.handle_change_locale(socket, locale, PathHandlers)
-      end
-
-      @impl Phoenix.LiveView
-      def handle_event(event, params, socket) do
-        handle_theme_event(event, params, socket)
-      end
-
-      defp handle_overview_events(socket, event, data) do
-        callbacks = %{
-          maybe_assign_meeting_type: &maybe_assign_meeting_type/2,
-          validate_state_transition: &validate_state_transition/3,
-          transition_to: &transition_to/3
-        }
-
-        EventHandlers.handle_overview_events(socket, event, data, callbacks)
-      end
-
-      defp handle_schedule_events(socket, event, data) do
-        cond do
-          event in [:select_date, :select_time] ->
-            handle_schedule_selection_events(socket, event, data)
-
-          event == :toggle_hour ->
-            handle_toggle_hour(socket, data)
-
-          event in [
-            :change_timezone,
-            :search_timezone,
-            :toggle_timezone_dropdown,
-            :close_timezone_dropdown
-          ] ->
-            handle_timezone_events(socket, event, data)
-
-          event in [:prev_week, :next_week] ->
-            handle_week_navigation_events(socket, event)
-
-          event in [:back_step, :next_step] ->
-            handle_schedule_navigation_events(socket, event)
-
-          true ->
-            handle_theme_schedule_event(socket, event, data)
+        case TymeslotWeb.Themes.Shared.InfoHandlers.route(message, socket) do
+          :unhandled -> TymeslotWeb.Themes.Shared.InfoHandlers.handle_unexpected(socket, message)
+          reply -> reply
         end
       end
 
-      defp handle_schedule_selection_events(socket, event, data) do
-        case event do
-          :select_date ->
-            handle_schedule_date_selection(socket, data)
-
-          :select_time ->
-            new_time = if socket.assigns[:selected_time] == data, do: nil, else: data
-            {:noreply, assign(socket, :selected_time, new_time)}
+      # The flow's `start_async/3` results, forwarded by the dispatcher: a
+      # week view's week of slots is the only one.
+      @impl Phoenix.LiveView
+      def handle_async(name, result, socket) do
+        case TymeslotWeb.Live.Scheduling.WeekSlots.handle_async(name, result, socket) do
+          :unhandled -> {:noreply, socket}
+          reply -> reply
         end
       end
 
-      # `expanded_hour` holds three states, not two: nil means "not chosen, so
-      # open the earliest hour", an integer means that hour, and :none means the
-      # booker closed it and it must stay closed until they choose again.
-      #
-      # `hour` is guarded to a binary because event payloads for non-"form"
-      # events reach `handle_event/3` verbatim from client JSON with no type
-      # coercion — a crafted socket push can deliver a list or map here, which
-      # `Integer.parse/1` has no clause for. A non-binary payload is ignored,
-      # leaving state untouched, the same way an unparsable string already is.
-      defp handle_toggle_hour(socket, hour) when is_binary(hour) do
-        grouping =
-          SlotGrouping.group(
-            MeetingUtils.normalize_slot_list(socket.assigns[:available_slots] || []),
-            socket.assigns[:slot_interval_minutes],
-            socket.assigns[:duration_minutes]
+      @impl Phoenix.LiveView
+      def handle_event("toggle_language_dropdown", _params, socket),
+        do: TymeslotWeb.Themes.Shared.EventHandlers.handle_toggle_language_dropdown(socket)
+
+      def handle_event("close_language_dropdown", _params, socket),
+        do: TymeslotWeb.Themes.Shared.EventHandlers.handle_close_language_dropdown(socket)
+
+      def handle_event("change_locale", %{"locale" => locale}, socket),
+        do:
+          TymeslotWeb.Themes.Shared.EventHandlers.handle_change_locale(
+            socket,
+            locale,
+            TymeslotWeb.Themes.Shared.PathHandlers
           )
 
-        current = SlotGrouping.effective_expanded_hour(socket.assigns[:expanded_hour], grouping)
+      # Step navigation belongs to the flow, not to a theme: a clause of
+      # `handle_theme_event/3` would be replaced wholesale by a theme's own
+      # override of that hook.
+      def handle_event("navigate_to_step", params, socket),
+        do: TymeslotWeb.Themes.Shared.Journey.Runtime.navigate_to_step(socket, params)
 
-        next =
-          case Integer.parse(hour) do
-            {^current, ""} -> :none
-            {requested, ""} -> requested
-            _unparsable -> socket.assigns[:expanded_hour]
-          end
+      def handle_event("theme:" <> name, params, socket),
+        do: handle_theme_event(name, params, socket)
 
-        {:noreply, assign(socket, :expanded_hour, next)}
-      end
+      def handle_event(event, params, socket), do: handle_theme_event(event, params, socket)
 
-      defp handle_toggle_hour(socket, _hour), do: {:noreply, socket}
+      # Extension point. Override with multi-clause defps ending in a
+      # catch-all clause that calls super/3, so an unknown name is logged.
+      defp handle_theme_event(event, _params, socket) do
+        TymeslotWeb.Themes.Shared.StepEvents.log_ignored(
+          socket.assigns,
+          socket.assigns[:current_state],
+          event
+        )
 
-      defp handle_timezone_events(socket, event, data) do
-        callbacks = %{
-          timezone_handler_component: TimezoneHandlerComponent,
-          handle_timezone_search: &EventHandlers.handle_timezone_search/2
-        }
-
-        EventHandlers.handle_timezone_events(socket, event, data, callbacks)
-      end
-
-      defp handle_week_navigation_events(socket, event) do
-        case event do
-          :prev_week -> {:noreply, CalendarHelpers.handle_week_navigation(socket, :prev)}
-          :next_week -> {:noreply, CalendarHelpers.handle_week_navigation(socket, :next)}
-        end
-      end
-
-      defp handle_schedule_navigation_events(socket, event) do
-        case event do
-          :back_step ->
-            # Only allow returning to the overview when the booker actually
-            # entered via it. A direct/private-link entry sets
-            # `entered_via_overview: false` and must never expose the
-            # organiser's other meeting types — enforce this server-side so a
-            # client cannot bypass the template-level `:if` guard by pushing
-            # the event directly.
-            if socket.assigns[:entered_via_overview] do
-              handle_state_transition(socket, :schedule, :overview)
-            else
-              {:noreply, socket}
-            end
-
-          :next_step ->
-            # Route to :questions when the meeting type has custom fields, else :booking.
-            states = StateMachine.states_for(socket.assigns[:meeting_type] || %{})
-            next = get_in(states, [:schedule, :next]) || :booking
-            handle_state_transition(socket, :schedule, next)
-        end
-      end
-
-      defp handle_booking_events(socket, event, data) do
-        case event do
-          :validate ->
-            BookingFlow.handle_form_validation(socket, data)
-
-          :field_blur ->
-            {:noreply, OrganizerHelpers.mark_field_touched(socket, data)}
-
-          picker_event
-          when picker_event in [
-                 :select_location,
-                 :select_video_provider,
-                 :select_venue,
-                 :location_phone
-               ] ->
-            {:noreply, BookingLocation.apply_event(socket, picker_event, data)}
-
-          :toggle_guests ->
-            {:noreply, GuestBooking.open(socket)}
-
-          :close_guests ->
-            {:noreply, GuestBooking.close(socket)}
-
-          :guest_input ->
-            {:noreply, GuestBooking.set_input(socket, data)}
-
-          :add_guest ->
-            {:noreply, GuestBooking.add(socket, data)}
-
-          :remove_guest ->
-            {:noreply, GuestBooking.remove(socket, data)}
-
-          :submit ->
-            BookingFlow.submit_booking(socket, data, &transition_to/3)
-
-          :back_step ->
-            # Route back to :questions when the meeting type has custom fields, else :schedule.
-            states = StateMachine.states_for(socket.assigns[:meeting_type] || %{})
-            prev = get_in(states, [:booking, :prev]) || :schedule
-            handle_state_transition(socket, :booking, prev)
-
-          _other ->
-            {:noreply, socket}
-        end
-      end
-
-      defp handle_questions_events(socket, event, data) do
-        case event do
-          :answer ->
-            {id, value} = data
-            engine = QEngine.answer(socket.assigns.engine, id, value)
-            {:noreply, assign(socket, :engine, engine)}
-
-          :next ->
-            handle_questions_next(socket)
-
-          :back ->
-            handle_questions_back(socket)
-
-          _other ->
-            {:noreply, socket}
-        end
-      end
-
-      # Advance within the questions wizard, or proceed to :booking when all
-      # questions have been answered and validated.
-      #
-      # Transitions to :booking only when the booker is already on the last
-      # question and presses Next — this ensures a single optional question is
-      # always shown before the wizard exits, even when it validates as empty.
-      defp handle_questions_next(socket) do
-        engine = socket.assigns.engine
-
-        if QEngine.skipped?(engine) do
-          {:noreply, transition_to(socket, :booking, %{})}
-        else
-          last_index = QEngine.total(engine) - 1
-
-          cond do
-            engine.current_index < last_index ->
-              case QEngine.next(engine) do
-                {:ok, engine} -> {:noreply, assign(socket, :engine, engine)}
-                {:error, engine} -> {:noreply, assign(socket, :engine, engine)}
-              end
-
-            engine.current_index == last_index ->
-              case QEngine.validate_all(engine) do
-                {:ok, _answers} ->
-                  socket = assign(socket, :engine, QEngine.mark_reviewed(engine))
-                  {:noreply, transition_to(socket, :booking, %{})}
-
-                {:error, _errors} ->
-                  case QEngine.next(engine) do
-                    {:ok, engine} -> {:noreply, assign(socket, :engine, engine)}
-                    {:error, engine} -> {:noreply, assign(socket, :engine, engine)}
-                  end
-              end
-
-            true ->
-              {:noreply, socket}
-          end
-        end
-      end
-
-      # Move backwards within the wizard, or return to :schedule from the first question.
-      defp handle_questions_back(socket) do
-        engine = socket.assigns.engine
-
-        if engine.current_index == 0 do
-          {:noreply, transition_to(socket, :schedule, %{})}
-        else
-          {:noreply, assign(socket, :engine, QEngine.prev(engine))}
-        end
-      end
-
-      defp handle_confirmation_events(socket, event, _data) do
-        case event do
-          :schedule_another ->
-            # The flow restarts here without navigating, so the reschedule
-            # context has to be dropped explicitly or the next submit moves the
-            # meeting that was just moved. See `ReschedulePin.abandon/1`.
-            #
-            # The booker is on the overview now, with every meeting type in
-            # front of them, so the date step offers the way back to it
-            # whichever page they first entered on.
-            socket =
-              socket
-              |> GuestBooking.assign_defaults()
-              |> ReschedulePin.abandon()
-              |> assign(:entered_via_overview, true)
-              |> transition_to(:overview, %{})
-
-            {:noreply, ReschedulePin.drop_from_url(socket)}
-
-          _other ->
-            {:noreply, socket}
-        end
-      end
-
-      defp maybe_assign_meeting_type(socket, duration) do
-        LiveHelpers.maybe_assign_meeting_type(socket, duration)
-      end
-
-      defp assign_initial_state(socket) do
-        SchedulingInit.assign_theme_state(socket, @theme_id)
-      end
-
-      defp handle_param_updates(socket, params) do
-        LiveHelpers.handle_param_updates(socket, params)
-      end
-
-      defp setup_initial_state(socket, initial_state, params) do
-        LiveHelpers.setup_initial_state(socket, initial_state, params, &handle_state_entry/3)
-      end
-
-      defp handle_state_entry(socket, :schedule, params) do
-        socket
-        |> LiveHelpers.handle_schedule_entry(params)
-        |> refresh_stale_slot_snapshot()
-      end
-
-      defp handle_state_entry(socket, :questions, _params) do
-        # Re-sync the engine snapshot on entry so that forward/back navigation always
-        # reflects the latest custom field definitions for this meeting type. Only
-        # re-init when definitions actually changed so back-navigation preserves answers.
-        meeting_type = socket.assigns[:meeting_type] || %{}
-        defs = CustomFields.snapshot_for(meeting_type)
-
-        engine =
-          if defs != socket.assigns.engine.definitions,
-            do: LiveHelpers.init_questions_engine(socket, defs),
-            else: socket.assigns.engine
-
-        assign(socket, :engine, engine)
-      end
-
-      defp handle_state_entry(socket, :booking, params) do
-        LiveHelpers.handle_booking_entry(socket, params)
-      end
-
-      defp handle_state_entry(socket, _state, _params), do: socket
-
-      # `:available_slots`, `:duration_minutes`, `:slot_interval_minutes` and
-      # `:expanded_hour` are snapshotted by `SlotFetchingHandlerComponent` at
-      # fetch time and do not track a meeting-type/duration change made while
-      # away from this step (e.g. back to :overview, pick a different
-      # duration, forward again). Only compare against a snapshot that
-      # actually exists (`:duration_minutes` non-nil) — the very first entry
-      # into :schedule has no snapshot yet and nothing stale to refresh.
-      defp refresh_stale_slot_snapshot(socket) do
-        case socket.assigns[:duration_minutes] do
-          nil ->
-            socket
-
-          snapshot_duration ->
-            current_duration = AvailabilityHelpers.duration_minutes(socket)
-            current_interval = AvailabilityHelpers.slot_interval_minutes(socket)
-
-            if snapshot_duration == current_duration and
-                 socket.assigns[:slot_interval_minutes] == current_interval do
-              socket
-            else
-              socket
-              |> assign(
-                available_slots: [],
-                selected_time: nil,
-                expanded_hour: nil,
-                duration_minutes: nil,
-                slot_interval_minutes: nil
-              )
-              |> then(fn socket ->
-                {:ok, socket} = SlotFetchingHandlerComponent.maybe_reload_slots(socket)
-                socket
-              end)
-            end
-        end
-      end
-
-      defp handle_state_transition(socket, current_state, next_state) do
-        callbacks = %{
-          validate_state_transition: &validate_state_transition/3,
-          transition_to: &transition_to/3
-        }
-
-        EventHandlers.handle_state_transition(socket, current_state, next_state, callbacks)
-      end
-
-      defp transition_to(socket, new_state, params) do
-        socket
-        |> assign(:current_state, new_state)
-        |> handle_state_entry(new_state, params)
-      end
-
-      defp validate_state_transition(socket, current_state, next_state) do
-        StateMachine.validate_state_transition(socket, current_state, next_state)
-      end
-
-      # Defensive on the nil date: neither theme's day button deselects any
-      # more, so nothing reaches here with nil today. The guard stays because
-      # sending {:load_slots, nil} would fetch slots for no day at all.
-      #
-      # Resets `:expanded_hour` here, at the point the booker actively picks
-      # a date, rather than in the fetch that follows: the fetch also runs
-      # for refetches the booker did not cause a date change with (a
-      # timezone change, a lost-slot retry), which must not spring a
-      # deliberately collapsed `:none` back open.
-      defp handle_schedule_date_selection(socket, date) do
-        socket =
-          assign(socket,
-            selected_date: date,
-            selected_time: nil,
-            expanded_hour: nil,
-            loading_slots: date != nil,
-            calendar_error: nil
-          )
-
-        if date, do: send(self(), {:load_slots, date})
         {:noreply, socket}
       end
 
-      # Step navigation — shared across all themes.
-      # Uses states_for/1 so that the step numbers match the active state map
-      # (4 steps without custom fields, 5 steps with).
-      # `step` is guarded to a binary for the same reason `handle_toggle_hour/2`
-      # above is: a crafted socket push can deliver a non-binary payload, which
-      # `Integer.parse/1` has no clause for.
-      defp handle_theme_event("navigate_to_step", %{"step" => step}, socket)
-           when is_binary(step) do
-        states = StateMachine.states_for(socket.assigns[:meeting_type] || %{})
-
-        target_step =
-          case Integer.parse(step) do
-            {n, _rest} -> n
-            :error -> nil
-          end
-
-        target_state =
-          case Enum.find(states, fn {_state, %{step: n}} -> n == target_step end) do
-            {state, _meta} -> state
-            nil -> socket.assigns[:current_state]
-          end
-
-        if target_state != socket.assigns[:current_state] and
-             StateMachine.can_navigate_to_step?(socket, target_state, states) do
-          {:noreply, transition_to(socket, target_state, %{})}
-        else
-          {:noreply, socket}
-        end
-      end
-
-      defp handle_theme_event("navigate_to_step", _params, socket), do: {:noreply, socket}
-
-      # Extension point for theme-specific handle_event clauses.
-      # Override with multi-clause defp to handle custom events.
-      defp handle_theme_event(_event, _params, socket), do: {:noreply, socket}
-
-      # Extension point for theme-specific schedule events (e.g., month navigation).
-      # Override with multi-clause defp to handle custom schedule events.
-      defp handle_theme_schedule_event(socket, _event, _data), do: {:noreply, socket}
-
-      # Extension point for theme-specific handle_info clauses. Override with a
-      # multi-clause defp to react to a theme-specific message; unmatched
-      # messages still fall through to `InfoHandlers.handle_unexpected/2` via
-      # this default clause, so a theme override only augments the shared
-      # `handle_info/2` routing above instead of being able to replace it.
-      defp handle_theme_info(message, socket), do: InfoHandlers.handle_unexpected(socket, message)
-
-      defoverridable handle_theme_event: 3,
-                     handle_theme_schedule_event: 3,
-                     handle_theme_info: 2
+      defoverridable handle_theme_event: 3
     end
+  end
+
+  # The journey's literal for `__journey__/0`, after checking it: `steps:`
+  # (today's five steps) becomes `Journey.classic/1` of its map. Its aliases
+  # are resolved here, where they were checked (`qualify/2`).
+  defp journey!(opts, caller) do
+    case {Keyword.fetch(opts, :steps), Keyword.fetch(opts, :journey)} do
+      {{:ok, steps}, :error} ->
+        validate_steps!(steps)
+        validate_step_components!(steps, caller)
+        journey_module().build!(journey_module().classic(literal!(steps, caller)), caller)
+        quote do: TymeslotWeb.Themes.Shared.Journey.classic(unquote(qualify(steps, caller)))
+
+      {:error, {:ok, journey}} ->
+        journey_module().build!(literal!(journey, caller), caller)
+        qualify(journey, caller)
+
+      {{:ok, _steps}, {:ok, _journey}} ->
+        raise ArgumentError,
+              "use SchedulingLive takes :steps (the classic journey) or :journey, not both"
+
+      {:error, :error} ->
+        raise ArgumentError,
+              "use SchedulingLive needs :steps (the classic journey) or :journey"
+    end
+  end
+
+  # `Journey`, named through a module atom returned at run time rather than an
+  # alias: xref records an alias as a reference, and every theme's
+  # compile-time edge to this module would then count everything `Journey`
+  # reaches on its compile-connected graph. Only the macro calls it, while a
+  # theme compiles.
+  defp journey_module, do: :"Elixir.TymeslotWeb.Themes.Shared.Journey"
+
+  # The journey's options as data, while the theme compiles: aliases expanded
+  # as if inside a function (see `validate_step_components!/2` for why), the
+  # rest literal. Walked by hand rather than evaluated, so nothing but data
+  # can run here.
+  defp literal!({:__aliases__, _meta, _parts} = alias_ast, caller),
+    do: Macro.expand(alias_ast, %{caller | function: {:__journey__, 0}})
+
+  defp literal!({:%{}, _meta, pairs}, caller),
+    do: Map.new(pairs, fn {key, value} -> {literal!(key, caller), literal!(value, caller)} end)
+
+  defp literal!({:{}, _meta, items}, caller),
+    do: items |> Enum.map(&literal!(&1, caller)) |> List.to_tuple()
+
+  defp literal!({left, right}, caller), do: {literal!(left, caller), literal!(right, caller)}
+  defp literal!(list, caller) when is_list(list), do: Enum.map(list, &literal!(&1, caller))
+
+  defp literal!(term, _caller) when is_atom(term) or is_number(term) or is_binary(term),
+    do: term
+
+  defp literal!(other, _caller) do
+    raise ArgumentError,
+          "use SchedulingLive expects its journey as literal data (atoms, lists, tuples, " <>
+            "maps and module names), got: " <> Macro.to_string(other)
+  end
+
+  # The literal with each alias replaced by the module it names in the
+  # theme, written in full and marked so no alias applies to it again: the
+  # generated code adds aliases of its own (`use TymeslotWeb, :live_view`),
+  # which must not change what the theme's journey names. A module name
+  # stays a runtime reference, as an alias is.
+  defp qualify(literal, caller) do
+    Macro.prewalk(literal, fn
+      {:__aliases__, meta, _parts} = alias_ast ->
+        alias_ast |> literal!(caller) |> full_alias(meta)
+
+      other ->
+        other
+    end)
+  end
+
+  # `alias: false` is how `quote` marks a name no alias may change; one
+  # segment holding the whole module expands to that module.
+  defp full_alias(module, meta) do
+    case Atom.to_string(module) do
+      "Elixir." <> _name -> {:__aliases__, Keyword.put(meta, :alias, false), [module]}
+      _erlang -> module
+    end
+  end
+
+  defp validate_steps!({:%{}, _meta, pairs}) do
+    keys = Keyword.keys(pairs)
+
+    case {@steps -- keys, keys -- @steps} do
+      {[], []} ->
+        :ok
+
+      {[], unknown} ->
+        raise ArgumentError,
+              "use SchedulingLive got steps it does not know: #{inspect(unknown)}; " <>
+                "the steps are #{inspect(@steps)}"
+
+      {missing, _unknown} ->
+        raise ArgumentError,
+              "use SchedulingLive needs a component for every step; missing: #{inspect(missing)}"
+    end
+  end
+
+  defp validate_steps!(other) do
+    raise ArgumentError,
+          "use SchedulingLive expects :steps as a literal map of step => component, got: " <>
+            Macro.to_string(other)
+  end
+
+  # Checked here, while the theme compiles, rather than in an `@after_verify`
+  # callback: an exception raised there crashes the compiler's checker process
+  # instead of surfacing from `Code.compile_quoted/1`, so no test could see it.
+  # The aliases are expanded as if inside a function, so the theme's `live.ex`
+  # keeps a runtime dependency on its step components rather than a
+  # compile-time one: the components import `StepEvents`, and a compile-time
+  # edge to them would pull that chain into every theme's recompilation.
+  defp validate_step_components!({:%{}, _meta, pairs}, caller) do
+    Enum.each(pairs, fn {step, alias_ast} ->
+      module = Macro.expand(alias_ast, %{caller | function: {:render, 1}})
+
+      unless journey_module().live_component?(module) do
+        raise CompileError,
+          file: caller.file,
+          line: caller.line,
+          description:
+            "use SchedulingLive needs a LiveComponent for step #{inspect(step)}, " <>
+              "got #{inspect(module)}, which is not a loaded LiveComponent"
+      end
+    end)
   end
 end

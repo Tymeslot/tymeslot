@@ -20,6 +20,7 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Shared.ReauthHandling
+  alias Tymeslot.Locales.WeekStart
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
   require Logger
@@ -52,6 +53,23 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   @spec get_or_create_preferences(user_id()) :: struct()
   def get_or_create_preferences(user_id) do
     CalendarPreferencesQueries.get_or_create(user_id)
+  end
+
+  @doc """
+  The day the user's week starts on, as set in their calendar settings:
+  `:monday` unless they chose Sunday.
+
+  Governs their weekly booking caps, and is their booking page's fallback
+  when a visitor's language does not settle it.
+  """
+  @spec get_week_start(user_id() | nil) :: WeekStart.t()
+  def get_week_start(nil), do: :monday
+
+  def get_week_start(user_id) do
+    user_id
+    |> CalendarPreferencesQueries.get_or_create()
+    |> Map.get(:week_start_day)
+    |> WeekStart.parse()
   end
 
   @doc """

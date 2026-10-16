@@ -3,6 +3,10 @@ defmodule Tymeslot.ReleaseTest do
 
   @moduletag :auth
 
+  import Tymeslot.AppSettingsEnvHelpers, only: [pin_setting: 2, restore_app_settings_env: 1]
+
+  alias Tymeslot.AppSettings
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Release
   alias Tymeslot.Repo
 
@@ -84,6 +88,39 @@ defmodule Tymeslot.ReleaseTest do
       assert [%{id: id, email: email}] = Release.list_admins()
       assert id == admin.id
       assert email == admin.email
+    end
+  end
+
+  describe "reopen_registration/0" do
+    setup :restore_app_settings_env
+
+    test "opens registration when the admin setting has closed it" do
+      assert {:ok, _settings} = AppSettings.update(%{registration_enabled: false})
+      refute Config.registration_enabled?()
+
+      assert {:ok, _settings} = Release.reopen_registration()
+
+      assert Config.registration_enabled?()
+      assert AppSettings.get!().registration_enabled == true
+    end
+
+    test "refuses to run when admin UI is disabled" do
+      assert {:ok, _settings} = AppSettings.update(%{registration_enabled: false})
+      Application.put_env(:tymeslot, :enable_admin_ui, false)
+
+      assert {:error, :admin_ui_disabled} = Release.reopen_registration()
+      refute Config.registration_enabled?()
+    end
+
+    test "points at the variable when REGISTRATION_ENABLED fixes registration" do
+      Application.put_env(:tymeslot, :registration_enabled, false)
+      pin_setting(:registration_enabled, "REGISTRATION_ENABLED")
+
+      assert {:error, {:pinned, :registration_enabled, "REGISTRATION_ENABLED"}} =
+               Release.reopen_registration()
+
+      refute Config.registration_enabled?()
+      assert AppSettings.get!().registration_enabled == nil
     end
   end
 end

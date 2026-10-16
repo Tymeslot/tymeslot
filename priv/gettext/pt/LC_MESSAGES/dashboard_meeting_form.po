@@ -1167,3 +1167,13 @@ msgstr "Sem limite, cada reserva pode trazer até %{count} convidados."
 #, elixir-autogen, elixir-format
 msgid "Each guest takes one of the time's seats, as the booker does."
 msgstr "Cada convidado ocupa uma das vagas do horário, assim como quem agenda."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_limit_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Weeks start on Monday, as set in Calendar Settings."
+msgstr "As semanas começam na segunda-feira, conforme definido em Configurações de calendário."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_limit_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Weeks start on Sunday, as set in Calendar Settings."
+msgstr "As semanas começam no domingo, conforme definido em Configurações de calendário."

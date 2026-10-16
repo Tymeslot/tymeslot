@@ -16,9 +16,8 @@
   background: var(--theme-background);
 }
 
-.video-background-container[style*="--theme-background-image"],
+/* Fit an image background, which the page sets inline */
 .video-background-container[style*="background-image"] {
-  background-image: var(--theme-background-image);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -38,24 +37,28 @@
 
 /* Video scaling for different aspect ratios */
 @media (min-aspect-ratio: 16/9) {
-  .video-background-video {
-    width: 100%;
-    height: auto;
-    min-height: 100%;
-    top: 50%;
-    transform: translateY(-50%);
-    left: 0;
+  :where(html:not([data-embedded])) {
+    .video-background-video {
+      width: 100%;
+      height: auto;
+      min-height: 100%;
+      top: 50%;
+      transform: translateY(-50%);
+      left: 0;
+    }
   }
 }
 
 @media (max-aspect-ratio: 16/9) {
-  .video-background-video {
-    width: auto;
-    height: 100%;
-    min-width: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    top: 0;
+  :where(html:not([data-embedded])) {
+    .video-background-video {
+      width: auto;
+      height: 100%;
+      min-width: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      top: 0;
+    }
   }
 }
 
@@ -84,13 +87,6 @@
   .video-background-video {
     max-width: 100%;
     max-height: 100%;
-  }
-}
-
-/* Low Memory Devices — hide video to save resources */
-@media (max-device-memory: 4) {
-  .video-background-video {
-    display: none;
   }
 }
 

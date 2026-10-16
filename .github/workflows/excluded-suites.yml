@@ -102,6 +102,21 @@ jobs:
       - name: tz_freshness
         if: ${{ !cancelled() }}
         run: mix test --only tz_freshness
+      # Fetches the Cloudron App Store package's Dockerfile. That package, not
+      # Dockerfile.cloudron, is what Cloudron users run, and it is built from a
+      # repository outside ours, so this is the only thing that notices it
+      # building with a stale toolchain or dropping a runtime dependency.
+      # Advisory only: the fix lands in a repository we do not control, so a
+      # drift must not turn the job red. It surfaces as a warning annotation on
+      # the run instead.
+      - name: cloudron_package_freshness
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: |
+          mix test --only cloudron_package_freshness || {
+            echo "::warning title=Cloudron package drift::packages/tymeslot-app on git.cloudron.io has drifted from Dockerfile.cloudron; see this step's log."
+            exit 1
+          }
       # `:e2e` is deliberately absent. The 11 Wallaby features need a Chrome
       # binary and a matching chromedriver, and no workflow in this repo
       # installs either; config/test.exs also pins the browser to a developer's

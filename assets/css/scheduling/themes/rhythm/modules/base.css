@@ -30,7 +30,7 @@ body.rhythm-theme {
   align-items: center;
   justify-content: center;
   padding: var(--space-lg);
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--surface-dark-light);
   overflow-x: hidden;
   box-sizing: border-box;
 }
@@ -45,11 +45,16 @@ body.rhythm-theme {
   min-height: 100dvh;
 }
 
+/* A column at every width: what sits beside the box is positioned out of the
+   flow, and what shares the flow with it (the owner-preview notice, the
+   language switcher's own row below 1024px) belongs above it, never in a lane
+   beside it. */
 .video-background-theme.theme-grid .content-area {
   display: flex;
-  align-items: flex-start;   /* fallback: top-align */
-  align-items: safe center;  /* center when fits, fall back to start when overflows */
-  justify-content: center;
+  flex-direction: column;
+  justify-content: flex-start;  /* fallback: top-align */
+  justify-content: safe center; /* center when fits, fall back to start when overflows */
+  align-items: center;
   padding: var(--space-lg);
   min-height: 0;
   /* Scroll when the box exceeds the viewport row (short screens / confirmation
@@ -61,15 +66,17 @@ body.rhythm-theme {
   position: relative;
 }
 
+/* A column item may shrink along the main axis; the box keeps its content
+   height and the content area scrolls instead. */
+.video-background-theme.theme-grid .content-area > .scheduling-box {
+  flex-shrink: 0;
+}
+
 /* Scheduling Box */
 .scheduling-box {
   container-type: inline-size;
   container-name: scheduling;
-  background: linear-gradient(
-    135deg,
-    rgba(20, 20, 35, var(--box-opacity)) 0%,
-    rgba(15, 15, 25, 0.6) 100%
-  );
+  background: var(--box-surface);
   backdrop-filter: blur(var(--box-blur)) saturate(150%);
   -webkit-backdrop-filter: blur(var(--box-blur)) saturate(150%);
   border-radius: var(--radius-2xl);
@@ -194,13 +201,9 @@ body.rhythm-theme {
   justify-content: center;
 }
 
-/* Flex Utilities */
-.flex-1 { flex: 1 1 auto; }
-.flex-shrink-0 { flex-shrink: 0; }
-.flex-grow { flex-grow: 1; }
-
 /* Scrollable Containers */
-.scroll-y {
+.scroll-y,
+.slot-list__body {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
@@ -208,35 +211,27 @@ body.rhythm-theme {
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
-.scroll-y::-webkit-scrollbar {
+.scroll-y::-webkit-scrollbar,
+.slot-list__body::-webkit-scrollbar {
   width: var(--scrollbar-width);
 }
 
-.scroll-y::-webkit-scrollbar-track {
+.scroll-y::-webkit-scrollbar-track,
+.slot-list__body::-webkit-scrollbar-track {
   background: var(--scrollbar-track);
   border-radius: 3px;
 }
 
-.scroll-y::-webkit-scrollbar-thumb {
+.scroll-y::-webkit-scrollbar-thumb,
+.slot-list__body::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 
-.scroll-y::-webkit-scrollbar-thumb:hover {
+.scroll-y::-webkit-scrollbar-thumb:hover,
+.slot-list__body::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);
 }
-
-/* Width Constraints */
-.max-w-xs { max-width: var(--container-xs); }
-.max-w-sm { max-width: var(--container-sm); }
-.max-w-md { max-width: var(--container-md); }
-.max-w-lg { max-width: var(--container-lg); }
-.max-w-xl { max-width: var(--container-xl); }
-
-.w-full { width: 100%; }
-
-/* Aspect Ratio */
-.aspect-video { aspect-ratio: 16 / 9; }
 
 /* ============================================
    RESPONSIVE — WIDTH BREAKPOINTS
@@ -343,7 +338,7 @@ body.rhythm-theme {
 @media (max-width: 479px) {
   .video-background-theme {
     padding: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: var(--surface-dark-medium);
     align-items: flex-start;
   }
 
@@ -378,58 +373,64 @@ body.rhythm-theme {
 
 /* Short screens — compact mode */
 @media (max-height: 600px) {
-  .video-background-theme {
-    padding: var(--space-sm);
-  }
+  :where(html:not([data-embedded])) {
+    .video-background-theme {
+      padding: var(--space-sm);
+    }
 
-  .video-background-theme.theme-grid .content-area {
-    padding: var(--space-sm);
-  }
+    .video-background-theme.theme-grid .content-area {
+      padding: var(--space-sm);
+    }
 
-  .slide-title {
-    font-size: var(--theme-font-size-lg);
-    margin-bottom: var(--space-xs);
-  }
+    .slide-title {
+      font-size: var(--theme-font-size-lg);
+      margin-bottom: var(--space-xs);
+    }
 
-  .slide-actions {
-    padding-top: var(--space-xs);
+    .slide-actions {
+      padding-top: var(--space-xs);
+    }
   }
 }
 
 /* Extremely short screens — minimal chrome */
 @media (max-height: 400px) {
-  .video-background-theme {
-    padding: var(--space-xs);
-  }
+  :where(html:not([data-embedded])) {
+    .video-background-theme {
+      padding: var(--space-xs);
+    }
 
-  .video-background-theme.theme-grid .content-area {
-    padding: var(--space-xs);
-  }
+    .video-background-theme.theme-grid .content-area {
+      padding: var(--space-xs);
+    }
 
-  .slide {
-    padding: var(--space-xs);
-  }
+    .slide {
+      padding: var(--space-xs);
+    }
 
-  .slide-title {
-    font-size: var(--theme-font-size-md);
-    margin-bottom: var(--space-xs);
-  }
+    .slide-title {
+      font-size: var(--theme-font-size-md);
+      margin-bottom: var(--space-xs);
+    }
 
-  .meeting-summary {
-    padding: var(--space-xs);
-    gap: var(--space-3xs);
+    .meeting-summary {
+      padding: var(--space-xs);
+      gap: var(--space-3xs);
+    }
   }
 }
 
 /* Bare minimum for extremely constrained viewports */
 @media (max-height: 350px) {
-  .slide-title {
-    font-size: var(--theme-font-size-sm);
-    margin-bottom: var(--space-hairline);
-  }
+  :where(html:not([data-embedded])) {
+    .slide-title {
+      font-size: var(--theme-font-size-sm);
+      margin-bottom: var(--space-hairline);
+    }
 
-  .slide-actions {
-    padding-top: var(--space-hairline);
+    .slide-actions {
+      padding-top: var(--space-hairline);
+    }
   }
 }
 
@@ -454,18 +455,10 @@ body.rhythm-theme {
     background: white;
     color: black;
     box-shadow: none;
-    border: var(--border-width-thin) solid #ccc;
+    border: var(--border-width-thin) solid var(--print-line);
   }
 
   button {
     display: none;
-  }
-}
-
-/* Low Memory Devices — scheduling-box fallback */
-@media (max-device-memory: 4) {
-  .scheduling-box {
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
   }
 }

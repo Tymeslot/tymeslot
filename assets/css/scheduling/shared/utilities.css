@@ -2,23 +2,6 @@
    SHARED UTILITIES — identical across all themes
    ============================================================================ */
 
-/* Disabled state for interactive elements */
-.interactive:disabled,
-.interactive[disabled],
-.interactive.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  pointer-events: none;
-  transform: none;
-}
-
-/* Focus visible outline for keyboard navigation */
-.interactive:focus-visible,
-.selectable:focus-visible {
-  outline: 2px solid var(--theme-primary);
-  outline-offset: 2px;
-}
-
 /* Loading spinner animation */
 .loading-spinner {
   animation: spin 1s linear infinite;
@@ -34,7 +17,7 @@
 }
 
 /* Two-Tier Hour Picker: count badge on the hour toggle */
-.slot-hour-count {
+.slot-list__hour-count {
   font-size: var(--theme-font-size-xs);
   opacity: 0.7;
   font-variant-numeric: tabular-nums;

@@ -95,13 +95,16 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
     |> Repo.one()
   end
 
-  @doc "Counts the seats taken on a meeting: live participants plus their guests."
+  @doc """
+  Counts the seats taken on a meeting: live participants plus their guests,
+  except guests who declined, whose seats are free again.
+  """
   @spec count_seats_taken(binary()) :: non_neg_integer()
   def count_seats_taken(meeting_id) do
     Repo.one(
       from(p in Participant,
         left_join: g in Guest,
-        on: g.participant_id == p.id,
+        on: g.participant_id == p.id and g.status != "declined",
         where: p.meeting_id == ^meeting_id and is_nil(p.cancelled_at),
         select: count(p.id, :distinct) + count(g.id)
       )
@@ -110,9 +113,10 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
 
   @doc """
   Seats taken per meeting start time for live meetings of a meeting type
-  whose `start_time` falls in `[from_utc, to_utc)`. One grouped query over
-  meetings, participants and guests; meetings without live participants do
-  not appear in the result.
+  whose `start_time` falls in `[from_utc, to_utc)`, counted as
+  `count_seats_taken/1` does. One grouped query over meetings, participants
+  and guests; meetings without live participants do not appear in the
+  result.
 
   Composed through `MeetingState.where_slot_live/1` — the same "live slot"
   definition `GroupMeetingQueries.list_live_for_type_in_range/3` uses — so a
@@ -128,7 +132,7 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
     |> where([m], m.meeting_type_id == ^meeting_type_id)
     |> where([m], m.start_time >= ^from_utc and m.start_time < ^to_utc)
     |> join(:inner, [m], p in Participant, on: p.meeting_id == m.id and is_nil(p.cancelled_at))
-    |> join(:left, [m, p], g in Guest, on: g.participant_id == p.id)
+    |> join(:left, [m, p], g in Guest, on: g.participant_id == p.id and g.status != "declined")
     |> group_by([m], m.start_time)
     |> select([m, p, g], {m.start_time, count(p.id, :distinct) + count(g.id)})
     |> Repo.all()

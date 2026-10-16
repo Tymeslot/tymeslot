@@ -27,9 +27,18 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Line breaking. `pretty` keeps a paragraph from ending on a lone word, and
+     headings balance their lines instead of leaving one short word behind.
+     Both inherit, so a module can still opt a centred block into `balance`,
+     and `white-space: nowrap` on a label still wins. */
   body {
     min-height: 100vh;
     line-height: 1.5;
+    text-wrap: pretty;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    text-wrap: balance;
   }
 
   img, picture, video, canvas, svg {

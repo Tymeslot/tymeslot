@@ -8,16 +8,33 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SchedulingTest do
   fallback that fixed it left the organiser's calendar showing a meeting with
   nobody in it.
   """
-  use ExUnit.Case, async: true
+  use Tymeslot.HttpTransportCase, async: false
 
   @moduletag :calendar
-  @moduletag :unit
+  @moduletag :integrations
 
+  alias Tymeslot.CalDAVTestHelpers
   alias Tymeslot.Integrations.Calendar.CalDAV.Client
   alias Tymeslot.Integrations.Calendar.CalDAV.Scheduling
 
-  defp client(provider, base_url, calendar_paths \\ []),
-    do: %Client{provider: provider, base_url: base_url, calendar_paths: calendar_paths}
+  @addresses ["login@mailbox.org", "alias@mailbox.org"]
+
+  # An Open-Xchange answer reads the account's own addresses, which every
+  # test is given; the other servers never ask.
+  setup do
+    ReqTest.stub(:tymeslot_http, &CalDAVTestHelpers.answer_address_lookup(&1, @addresses))
+    :ok
+  end
+
+  defp client(provider, base_url, calendar_paths \\ []) do
+    %Client{
+      provider: provider,
+      base_url: base_url,
+      username: "user",
+      password: "pass",
+      calendar_paths: calendar_paths
+    }
+  end
 
   @ox_collection "/caldav/Y2FsOi8vMC8zMg/"
 
@@ -63,29 +80,31 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SchedulingTest do
 
     test "lists the organiser too on mailbox.org, which adds its owner otherwise" do
       assert Scheduling.attendee_mode(client(:mailbox_org, "https://dav.mailbox.org")) ==
-               :organiser_attendee
+               {:organiser_attendee, @addresses}
     end
 
     test "recognises mailbox.org connected through the generic CalDAV provider" do
       assert Scheduling.attendee_mode(client(:caldav, "https://dav.mailbox.org/caldav/")) ==
-               :organiser_attendee
+               {:organiser_attendee, @addresses}
     end
 
     test "recognises Open-Xchange on another host by its collection paths" do
       assert Scheduling.attendee_mode(
                client(:caldav, "https://dav.example-hosting.de/caldav/", [@ox_collection])
-             ) == :organiser_attendee
+             ) == {:organiser_attendee, @addresses}
     end
 
     test "recognises it from a collection among the writable paths alone" do
       client = %Client{
         provider: :caldav,
         base_url: "https://dav.example-hosting.de/",
+        username: "user",
+        password: "pass",
         calendar_paths: [],
         writable_calendar_paths: [@ox_collection]
       }
 
-      assert Scheduling.attendee_mode(client) == :organiser_attendee
+      assert Scheduling.attendee_mode(client) == {:organiser_attendee, @addresses}
     end
 
     # Server-issued collection ids outrank the Zimbra guess a principal URL,
@@ -93,13 +112,41 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SchedulingTest do
     test "trusts the collection paths over a URL that looks like Zimbra's" do
       assert Scheduling.attendee_mode(
                client(:caldav, "https://dav.example.net/principals/users/3", [@ox_collection])
-             ) == :organiser_attendee
+             ) == {:organiser_attendee, @addresses}
     end
 
     test "keeps the Zimbra provider on CONTACT whatever its paths look like" do
       assert Scheduling.attendee_mode(
                client(:zimbra, "https://mail.example.com/dav/user@x.com", [@ox_collection])
              ) == :contact
+    end
+
+    test "carries no addresses when the account will not say which are its own" do
+      ReqTest.stub(:tymeslot_http, &Conn.send_resp(&1, 500, ""))
+
+      assert Scheduling.attendee_mode(client(:mailbox_org, "https://dav.mailbox.org")) ==
+               {:organiser_attendee, []}
+    end
+  end
+
+  describe "owner_attendee_address/2" do
+    test "is the organiser when the account owns their address, whatever its case" do
+      assert Scheduling.owner_attendee_address("Alias@mailbox.org", @addresses) ==
+               "Alias@mailbox.org"
+    end
+
+    test "is the account's preferred address for an organiser it does not own" do
+      assert Scheduling.owner_attendee_address("me@custom.example", @addresses) ==
+               "login@mailbox.org"
+    end
+
+    test "is the organiser when the account's addresses are unknown" do
+      assert Scheduling.owner_attendee_address("me@custom.example", []) == "me@custom.example"
+    end
+
+    test "is nobody without an organiser" do
+      assert Scheduling.owner_attendee_address(nil, @addresses) == nil
+      assert Scheduling.owner_attendee_address("  ", @addresses) == nil
     end
   end
 end

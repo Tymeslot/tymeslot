@@ -17,6 +17,8 @@ defmodule Tymeslot.Utils.Colour do
   `[0.0, 1.0]`. Hex input is tolerant — a leading `#` is optional, and 3-, 6-,
   and 8-character forms are all accepted (the alpha pair of an 8-character
   value is parsed and discarded). Hex output is always lowercase `#rrggbb`.
+  `cast_hex/1` is the strict variant for stored colour settings: `#RGB` or
+  `#RRGGBB` only.
 
   ## Contrast
 
@@ -117,6 +119,35 @@ defmodule Tymeslot.Utils.Colour do
       rgb -> to_hex(rgb)
     end
   end
+
+  @doc """
+  Casts a stored colour setting: accepts only `#RGB` and `#RRGGBB` (the `#` is
+  required, surrounding whitespace is trimmed) and returns lower-case
+  `#rrggbb`.
+
+  Stricter than `parse_hex/1` on purpose. A colour a user saves must mean the
+  same thing in every place that renders it, so the forms CSS and our pickers
+  disagree on (no `#`, eight-digit alpha) are refused rather than guessed at.
+
+  ## Examples
+
+      iex> Tymeslot.Utils.Colour.cast_hex("#FA0")
+      {:ok, "#ffaa00"}
+
+      iex> Tymeslot.Utils.Colour.cast_hex("#ffaa0080")
+      :error
+  """
+  @spec cast_hex(term()) :: {:ok, String.t()} | :error
+  def cast_hex(value) when is_binary(value) do
+    with "#" <> digits when byte_size(digits) in [3, 6] <- String.trim(value),
+         {_r, _g, _b} = rgb <- parse_digits(String.downcase(digits)) do
+      {:ok, to_hex(rgb)}
+    else
+      _invalid -> :error
+    end
+  end
+
+  def cast_hex(_value), do: :error
 
   @spec rgb_to_hsl(rgb()) :: hsl()
   defp rgb_to_hsl({r, g, b}) do

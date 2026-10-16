@@ -8,6 +8,7 @@ defmodule Tymeslot.Availability.Calculate do
   alias Tymeslot.Availability.{BusinessHours, Conflicts, Events, Reach, SlotGrid, TimeSlots}
   alias Tymeslot.Availability.TimeOffPeriodQueries
   alias Tymeslot.Integrations.Calendar.CalendarEvent
+  alias Tymeslot.Locales.WeekStart
   alias Tymeslot.Utils.{DateTimeUtils, TimeRange}
   alias Tymeslot.Validation.Constraints
 
@@ -242,17 +243,13 @@ defmodule Tymeslot.Availability.Calculate do
   Computes the 42-day display range for a calendar grid.
 
   Returns `{start_date, end_date}` covering exactly the dates rendered by
-  `get_calendar_days/5` — a 6-week (42-day) window starting on the Sunday
-  at or before the first of the month.
+  `get_calendar_days/6` — a 6-week (42-day) window starting on the
+  `week_start` day at or before the first of the month.
   """
-  @spec display_range(integer(), integer()) :: {Date.t(), Date.t()}
-  def display_range(year, month) do
-    first_day = Date.new!(year, month, 1)
-    days_before = Date.day_of_week(first_day)
-    days_before = if days_before == 7, do: 0, else: days_before
-    start_date = Date.add(first_day, -days_before)
-    end_date = Date.add(start_date, 41)
-    {start_date, end_date}
+  @spec display_range(integer(), integer(), WeekStart.t()) :: {Date.t(), Date.t()}
+  def display_range(year, month, week_start) do
+    start_date = year |> Date.new!(month, 1) |> Date.beginning_of_week(week_start)
+    {start_date, Date.add(start_date, 41)}
   end
 
   @doc """
@@ -265,6 +262,7 @@ defmodule Tymeslot.Availability.Calculate do
     - user_timezone: Timezone of the user viewing the calendar
     - year: Year to display
     - month: Month to display (1-12)
+    - week_start: `:monday` or `:sunday`, the grid's first column
     - config: Configuration map with schedule_id, max_advance_booking_days, etc.
     - availability_map: Optional map of date strings to boolean availability.
       Can be:
@@ -276,14 +274,15 @@ defmodule Tymeslot.Availability.Calculate do
           String.t(),
           integer(),
           integer(),
+          WeekStart.t(),
           availability_config(),
           %{String.t() => boolean()} | atom() | nil
         ) :: [calendar_day()]
-  def get_calendar_days(user_timezone, year, month, config, availability_map \\ nil) do
+  def get_calendar_days(user_timezone, year, month, week_start, config, availability_map \\ nil) do
     now = DateTimeUtils.now_in_timezone(user_timezone)
     today = DateTime.to_date(now)
 
-    {first_display_date, end_date} = display_range(year, month)
+    {first_display_date, end_date} = display_range(year, month, week_start)
 
     # Prefetch once for the whole grid, as `available_slots/6` and
     # `range_availability/6` already do. Without it the per-day fallback runs an

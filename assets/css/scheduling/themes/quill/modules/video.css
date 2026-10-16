@@ -5,27 +5,16 @@
   background: transparent;
 }
 
-/* Image background. Presets render `background-image: url(...)` inline; uploads
-   set the `--theme-background-image` custom property which this rule paints. */
-.main-gradient[style*="--theme-background-image"] {
-  background-image: var(--theme-background-image);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-
 /* Darkening veil over any image background. The glass content is tuned for the
    dark default gradient, so a bright photo leaves card text, the step heading,
    and the floating chrome under-contrasted. `isolation` turns the background
    layer into a stacking context, so the z-index:-1 veil sits above the image but
    below every piece of content — no per-element z-index needed. */
-.main-gradient[style*="background-image"],
-.main-gradient[style*="--theme-background-image"] {
+.main-gradient[style*="background-image"] {
   isolation: isolate;
 }
 
-.main-gradient[style*="background-image"]::after,
-.main-gradient[style*="--theme-background-image"]::after {
+.main-gradient[style*="background-image"]::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -57,10 +46,8 @@
   pointer-events: none;
 }
 
-/* Apply custom background image if set */
-.video-background[style*="--theme-background-image"],
+/* Fit an image background, which the page sets inline */
 .video-background[style*="background-image"] {
-  background-image: var(--theme-background-image);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -78,34 +65,31 @@
 
 /* Scale video to prevent edges showing on different aspect ratios */
 @media (min-aspect-ratio: 16/9) {
-  .video-background video {
-    width: 100vw;
-    height: auto;
-    min-height: 100vh;
-    top: 50%;
-    transform: translateY(-50%);
+  :where(html:not([data-embedded])) {
+    .video-background video {
+      width: 100vw;
+      height: auto;
+      min-height: 100vh;
+      top: 50%;
+      transform: translateY(-50%);
+    }
   }
 }
 
 @media (max-aspect-ratio: 16/9) {
-  .video-background video {
-    width: auto;
-    height: 100vh;
-    min-width: 100vw;
-    left: 50%;
-    transform: translateX(-50%);
+  :where(html:not([data-embedded])) {
+    .video-background video {
+      width: auto;
+      height: 100vh;
+      min-width: 100vw;
+      left: 50%;
+      transform: translateX(-50%);
+    }
   }
 }
 
 /* Hide video for users with reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
-  .video-background video {
-    display: none;
-  }
-}
-
-/* Performance optimization for low-end devices */
-@media (max-device-memory: 4) {
   .video-background video {
     display: none;
   }

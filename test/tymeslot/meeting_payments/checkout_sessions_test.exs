@@ -13,6 +13,8 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Profiles
+  alias Tymeslot.Themes.Catalog
+  alias TymeslotWeb.Endpoint
 
   setup :verify_on_exit!
 
@@ -222,6 +224,50 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
       assert CheckoutSessions.stripe_locale("cs") == "cs"
       assert CheckoutSessions.stripe_locale("pl") == "pl"
       assert CheckoutSessions.stripe_locale("pt") == "pt-BR"
+    end
+  end
+
+  describe "Stripe return URLs" do
+    # Stripe keeps these URLs on every Checkout Session it creates, so a
+    # session opened before a deploy still returns to them after it. Their
+    # path and query are a contract with in-flight sessions and must never
+    # change shape, whatever serves them.
+    for {key, %{id: theme_id}} <- Catalog.all() do
+      test "keep the exact #{key} success and cancel URL shape",
+           %{user: user, meeting_type: mt} do
+        {:ok, profile} = Profiles.get_profile_by_user_id(user.id)
+        {:ok, _profile} = Profiles.update_profile(profile, %{booking_theme: unquote(theme_id)})
+
+        meeting =
+          insert(:meeting,
+            organizer_user_id: user.id,
+            meeting_type_ref: mt,
+            attendee_email: "alice@example.com",
+            attendee_name: "Alice",
+            attendee_locale: "en",
+            status: "awaiting_payment"
+          )
+
+        slug = unquote(Atom.to_string(key))
+        origin = Endpoint.url()
+
+        expect(StripeAdapterMock, :create_checkout_session, fn params, _opts ->
+          success = URI.parse(params.success_url)
+          assert String.starts_with?(params.success_url, origin <> "/")
+          assert success.path == "/themes/#{slug}/payment-processing/#{meeting.id}"
+          assert success.query == "session_id={CHECKOUT_SESSION_ID}"
+
+          cancel = URI.parse(params.cancel_url)
+          assert String.starts_with?(params.cancel_url, origin <> "/")
+          assert cancel.path == "/themes/#{slug}/payment-cancelled/#{meeting.id}"
+          assert cancel.query == nil
+
+          {:ok, %{id: "cs_URL", url: "https://checkout.stripe.com/cs_URL"}}
+        end)
+
+        assert {:ok, %{checkout_url: "https://checkout.stripe.com/cs_URL"}} =
+                 CheckoutSessions.create_session_for_booking(meeting)
+      end
     end
   end
 end

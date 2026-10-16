@@ -12,11 +12,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
 
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Events
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Renderer, as: InputRenderer
+  alias TymeslotWeb.Themes.Shared.StepEvents
 
   @impl Phoenix.LiveComponent
-  def update(assigns, socket) do
-    {:ok, assign(socket, Map.drop(assigns, [:flash, :socket]))}
-  end
+  defdelegate update(assigns, socket), to: StepEvents
 
   @impl Phoenix.LiveComponent
   defdelegate handle_event(event, params, socket), to: Events
@@ -26,7 +25,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
     assigns = Events.assign_render_state(assigns)
 
     ~H"""
-    <div class="scheduling-box" data-locale={@locale}>
+    <div class="scheduling-box booker-card" data-locale={@locale}>
       <div class="slide-container">
         <div class="slide active">
           <div class="slide-content">
@@ -72,8 +71,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
               <button
                 type="button"
                 class="prev-button"
-                phx-click="back"
+                phx-click="back_step"
                 phx-target={@myself}
+                data-intent="back"
               >
                 <span class="custom-question-cta-nowrap">← {dgettext("booking", "Back")}</span>
               </button>
@@ -81,8 +81,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
               <button
                 type="button"
                 class="submit-button"
-                phx-click="next"
+                phx-click="next_step"
                 phx-target={@myself}
+                data-intent="continue"
               >
                 <span class="custom-question-cta-nowrap">
                   <%= if @last? do %>

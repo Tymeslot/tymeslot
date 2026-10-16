@@ -10,12 +10,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Profiles
   alias TymeslotWeb.Dashboard.MeetingSettings.Components.BookingLimitFields
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
-    {:ok, assign(socket, assigns)}
+    socket = assign(socket, assigns)
+
+    {:ok,
+     assign_new(socket, :week_start, fn ->
+       CalendarManagement.get_week_start(socket.assigns.profile && socket.assigns.profile.user_id)
+     end)}
   end
 
   @impl Phoenix.LiveComponent
@@ -42,6 +48,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
             day={@profile && @profile.max_bookings_per_day}
             week={@profile && @profile.max_bookings_per_week}
             month={@profile && @profile.max_bookings_per_month}
+            week_start={@week_start}
             phx-debounce="500"
           />
         </form>

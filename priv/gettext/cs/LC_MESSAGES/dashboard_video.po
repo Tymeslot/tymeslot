@@ -299,11 +299,6 @@ msgstr "Chcete-li se připojit k jinému serveru, zadejte heslo pro aplikaci zn
 msgid "Enter your video meeting URL. Use {{meeting_id}} for unique rooms per meeting"
 msgstr "Zadejte URL své videoschůzky. Pomocí {{meeting_id}} získáte pro každou schůzku jedinečnou místnost"
 
-#: lib/tymeslot/integrations/video/provider_config.ex
-#, elixir-autogen, elixir-format
-msgid "Enterprise OAuth integration with organizational accounts"
-msgstr "Podniková integrace přes OAuth s organizačními účty"
-
 #: lib/tymeslot_web/components/dashboard/integrations/video/kmeet_config.ex
 #, elixir-autogen, elixir-format
 msgid "Every booking gets its own room, generated automatically."
@@ -1149,3 +1144,8 @@ msgstr "Smazat"
 #, elixir-autogen, elixir-format
 msgid "Delete %{name}"
 msgstr "Smazat %{name}"
+
+#: lib/tymeslot/integrations/video/provider_config.ex
+#, elixir-autogen, elixir-format
+msgid "Enterprise OAuth integration with organisational accounts"
+msgstr "Podniková integrace přes OAuth s organizačními účty"

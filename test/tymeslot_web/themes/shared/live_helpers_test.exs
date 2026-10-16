@@ -1,7 +1,8 @@
 defmodule TymeslotWeb.Themes.Shared.LiveHelpersTest do
   @moduledoc """
-  Coverage for the seat-token handling in `handle_param_updates/2`, and for
-  the booking entry with a meeting type that is not a stored one.
+  Coverage for the seat-token handling in `LiveHelpers.Mount.handle_param_updates/2`,
+  and for the booking entry (`LiveHelpers.StepEntry`) with a meeting type that
+  is not a stored one.
 
   The token rides in the picker URL as `reschedule_seat_token`. If the seat it
   names dies mid-session (given up, reassigned), the next `handle_params` must
@@ -18,7 +19,9 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpersTest do
 
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.ParticipantQueries
-  alias TymeslotWeb.Themes.Shared.LiveHelpers
+  alias TymeslotWeb.Themes.Quill.Scheduling.Live, as: QuillLive
+  alias TymeslotWeb.Themes.Shared.LiveHelpers.Mount
+  alias TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry
 
   defp socket_with(assigns) do
     %Phoenix.LiveView.Socket{assigns: Map.merge(%{__changed__: %{}}, assigns)}
@@ -62,13 +65,13 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpersTest do
       # Visit A, then B, then back to A — each call carries forward the
       # assigns (including the subscribed-ids set) the previous one left.
       socket_a = connected_socket_with(%{meeting_type: type_a})
-      socket = LiveHelpers.maybe_subscribe_to_group_seats(socket_a)
+      socket = StepEntry.maybe_subscribe_to_group_seats(socket_a)
 
       socket_b = connected_socket_with(Map.put(socket.assigns, :meeting_type, type_b))
-      socket = LiveHelpers.maybe_subscribe_to_group_seats(socket_b)
+      socket = StepEntry.maybe_subscribe_to_group_seats(socket_b)
 
       socket_a_again = connected_socket_with(Map.put(socket.assigns, :meeting_type, type_a))
-      socket = LiveHelpers.maybe_subscribe_to_group_seats(socket_a_again)
+      socket = StepEntry.maybe_subscribe_to_group_seats(socket_a_again)
 
       Phoenix.PubSub.broadcast(Tymeslot.PubSub, "group_seats:1", {:seat_update, 1})
 
@@ -89,7 +92,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpersTest do
       socket = socket_with(%{})
       params = %{"reschedule_seat_token" => participant.management_token}
 
-      updated = LiveHelpers.handle_param_updates(socket, params)
+      updated = Mount.handle_param_updates(socket, params)
 
       assert updated.assigns.reschedule_seat_token == participant.management_token
       assert updated.assigns.is_rescheduling
@@ -121,7 +124,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpersTest do
         "reschedule_seat_token" => participant.management_token
       }
 
-      updated = LiveHelpers.handle_param_updates(socket, params)
+      updated = Mount.handle_param_updates(socket, params)
 
       assert updated.assigns.reschedule_seat_token == nil
       assert updated.assigns.reschedule_seat_from == nil
@@ -149,6 +152,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpersTest do
 
       socket =
         socket_with(%{
+          journey: QuillLive.__journey__(),
           meeting_type_pinned: true,
           meeting_type: demo_type,
           selected_date: Date.add(Date.utc_today(), 1),
@@ -159,7 +163,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpersTest do
           attendee_prefill: %{}
         })
 
-      updated = LiveHelpers.handle_booking_entry(socket, %{})
+      updated = StepEntry.handle_booking_entry(socket, %{})
 
       assert updated.assigns.max_guests == Guests.max_guests()
       assert %Phoenix.HTML.Form{} = updated.assigns.form
