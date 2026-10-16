@@ -23,12 +23,16 @@ defmodule Tymeslot.Polls.PollQueries do
     |> Repo.one()
   end
 
-  @doc "Fetches a poll by id with its host (user and profile) preloaded, for email sending."
+  @doc """
+  Fetches a poll by id for email sending, with its host (user and profile),
+  its slots and its participants' votes preloaded, the last two for the
+  standings the host's emails carry.
+  """
   @spec get_with_host(Ecto.UUID.t()) :: PollSchema.t() | nil
   def get_with_host(id) do
     PollSchema
     |> where([p], p.id == ^id)
-    |> preload(user: :profile)
+    |> preload([:time_slots, user: :profile, participants: :votes])
     |> Repo.one()
   end
 
@@ -90,4 +94,8 @@ defmodule Tymeslot.Polls.PollQueries do
 
   @spec update(Ecto.Changeset.t()) :: {:ok, PollSchema.t()} | {:error, Ecto.Changeset.t()}
   def update(changeset), do: Repo.update(changeset)
+
+  @doc "Deletes a poll; its slots, participants and votes go with it."
+  @spec delete(PollSchema.t()) :: {:ok, PollSchema.t()} | {:error, Ecto.Changeset.t()}
+  def delete(poll), do: Repo.delete(poll)
 end

@@ -11,6 +11,9 @@ defmodule Tymeslot.Polls do
   alias Tymeslot.MeetingTypes
 
   alias Tymeslot.Polls.{
+    Editing,
+    Invitations,
+    PollParticipantQueries,
     PollParticipantSchema,
     PollQueries,
     PollSchema,
@@ -37,7 +40,9 @@ defmodule Tymeslot.Polls do
   `attrs` carries `:title`, `:duration_minutes`, `:timezone`, and `:slots` (a
   list of `%{start_time: dt, end_time: dt}`; `end_time` may be omitted and then
   defaults to `start_time` plus the poll duration). `:description`,
-  `:deadline_at`, and `:meeting_type_id` are optional.
+  `:deadline_at`, and `:meeting_type_id` are optional, and so is `:invitees`,
+  entries from `Tymeslot.Polls.Invitations.parse/1` invited with the poll and
+  emailed once it is saved.
 
   When `:meeting_type_id` is given it is loaded scoped to `user_id`; the poll
   snapshots the type's name and duration unless those are given explicitly.
@@ -50,6 +55,7 @@ defmodule Tymeslot.Polls do
              | :no_slots
              | :too_many_slots
              | :slot_in_past
+             | :poll_full
              | Ecto.Changeset.t()}
   def create_poll(user_id, attrs) do
     with {:ok, attrs} <- apply_meeting_type(user_id, attrs),
@@ -102,26 +108,88 @@ defmodule Tymeslot.Polls do
   def count_open_polls(user_id), do: PollQueries.count_open_for_user(user_id)
 
   @doc """
-  Updates an open poll's title and description, and notifies subscribers.
+  Updates the user's open poll: its title and description, whether the host
+  is emailed about new votes, the voting deadline and the reminders before it,
+  and adds a candidate time at each of `new_starts`. Existing times are never
+  changed. See `Tymeslot.Polls.Editing`.
 
-  Only these two fields, and only while the poll is open. The candidate times,
-  duration, timezone, and deadline are the terms guests voted against, so they
-  are not editable; a confirmed poll has already minted a meeting that carries
-  its own title, and a cancelled one is history.
-
-  Subscribers are notified because the title and description are both on the
-  public voting page, so an open voting tab shows the correction immediately.
+  Subscribers are notified, since the title, description, deadline and times
+  are all on the public voting page.
   """
-  @spec update_details(Ecto.UUID.t(), integer(), map()) ::
-          {:ok, PollSchema.t()} | {:error, :not_found | :not_open | Ecto.Changeset.t()}
-  def update_details(id, user_id, attrs) do
+  @spec update_details(Ecto.UUID.t(), integer(), map(), [DateTime.t()]) ::
+          {:ok, PollSchema.t()} | {:error, Editing.reason()}
+  def update_details(id, user_id, attrs, new_starts \\ []),
+    do: Editing.update(id, user_id, attrs, new_starts)
+
+  @doc """
+  Removes a participant from the user's open poll, with their responses, for
+  someone the host does not want counted: a joke entry, or someone who has
+  dropped out. Nobody is emailed.
+  """
+  @spec remove_participant(Ecto.UUID.t(), integer(), Ecto.UUID.t()) ::
+          :ok | {:error, :not_found | :not_open}
+  def remove_participant(id, user_id, participant_id) do
     with_poll(id, user_id, fn
-      %{status: :open} = poll -> do_update_details(poll, attrs)
-      _poll -> {:error, :not_open}
+      %{status: :open} = poll ->
+        case PollParticipantQueries.delete_from_poll(poll.id, participant_id) do
+          {1, _rows} ->
+            broadcast_update(poll.id)
+            :ok
+
+          {0, _rows} ->
+            {:error, :not_found}
+        end
+
+      _closed ->
+        {:error, :not_open}
     end)
   end
 
-  @doc "Cancels an open poll and notifies subscribers. Only open polls may be cancelled."
+  @doc """
+  Deletes the user's poll once it is over, confirmed or cancelled, with its
+  times, participants and votes, to tidy the list. The meeting a confirmed
+  poll minted stays. An open poll has to be cancelled first, so nothing
+  people are still voting on disappears.
+  """
+  @spec delete_poll(Ecto.UUID.t(), integer()) :: :ok | {:error, :not_found | :still_open}
+  def delete_poll(id, user_id) do
+    with_poll(id, user_id, fn
+      %{status: :open} ->
+        {:error, :still_open}
+
+      poll ->
+        :ok = PollScheduler.cancel_deadline_jobs(poll.id)
+        {:ok, _deleted} = PollQueries.delete(poll)
+        broadcast_update(poll.id)
+        :ok
+    end)
+  end
+
+  @doc """
+  Invites `entries` (from `Tymeslot.Polls.Invitations.parse/1`) to the user's
+  open poll and emails each new invitee their link. See
+  `Tymeslot.Polls.Invitations.invite/2`.
+  """
+  @spec invite_participants(Ecto.UUID.t(), integer(), [Invitations.entry()]) ::
+          {:ok, Invitations.result()}
+          | {:error, :not_found | :not_open | :poll_full | Ecto.Changeset.t()}
+  def invite_participants(id, user_id, entries) do
+    with_poll(id, user_id, fn poll ->
+      case Invitations.invite(poll, entries) do
+        {:ok, result} ->
+          broadcast_update(poll.id)
+          {:ok, result}
+
+        error ->
+          error
+      end
+    end)
+  end
+
+  @doc """
+  Cancels an open poll, notifies subscribers and emails every participant
+  that it will not go ahead. Only open polls may be cancelled.
+  """
   @spec cancel_poll(Ecto.UUID.t(), integer()) ::
           {:ok, PollSchema.t()} | {:error, :not_found | :not_open | Ecto.Changeset.t()}
   def cancel_poll(id, user_id) do
@@ -147,6 +215,48 @@ defmodule Tymeslot.Polls do
         }
   def tallies(%{time_slots: time_slots, participants: participants}) do
     Map.new(time_slots, fn slot -> {slot.id, tally_slot(participants, slot.id)} end)
+  end
+
+  @doc """
+  Counts the people on a poll who asked for a voting link and have not yet
+  confirmed it by saving responses. They are not among `poll.participants`.
+  """
+  @spec count_unconfirmed(PollSchema.t()) :: non_neg_integer()
+  def count_unconfirmed(%PollSchema{id: poll_id}),
+    do: PollParticipantQueries.count_unconfirmed(poll_id)
+
+  @doc """
+  Deletes the participants who never confirmed their voting link within its
+  lifetime. Run daily by `Tymeslot.Workers.DataRetentionWorker`.
+  """
+  @spec prune_unconfirmed_participants() :: {non_neg_integer(), nil}
+  def prune_unconfirmed_participants do
+    PollParticipantQueries.delete_expired_unconfirmed(PollParticipantQueries.expiry_cutoff())
+  end
+
+  @doc """
+  The slots leading on the votes in `tallies` (from `tallies/1`): those tied
+  on the most yes votes, ties broken on "if need be", so a time half the group
+  can only just make does not outrank one they can.
+
+  Empty when nobody has said yes or if need be anywhere, and when every slot
+  scores the same, since then no time leads.
+  """
+  @spec leading_slot_ids([map()], map()) :: [Ecto.UUID.t()]
+  def leading_slot_ids(time_slots, tallies) do
+    scores =
+      Map.new(time_slots, fn slot ->
+        counts = Map.get(tallies, slot.id, %{})
+        {slot.id, {Map.get(counts, :yes, 0), Map.get(counts, :if_need_be, 0)}}
+      end)
+
+    leaders =
+      case scores |> Map.values() |> Enum.max(fn -> {0, 0} end) do
+        {0, 0} -> []
+        best -> for {id, score} <- scores, score == best, do: id
+      end
+
+    if length(leaders) == map_size(scores), do: [], else: leaders
   end
 
   @doc "Whether voting is currently open: open status and no deadline, or a deadline still in the future."
@@ -241,6 +351,7 @@ defmodule Tymeslot.Polls do
   end
 
   defp insert_poll(user_id, attrs, slots) do
+    {invitees, attrs} = Map.pop(attrs, :invitees, [])
     poll_attrs = attrs |> Map.put(:user_id, user_id) |> Map.drop([:slots])
 
     transaction =
@@ -248,15 +359,16 @@ defmodule Tymeslot.Polls do
         with {:ok, poll} <-
                PollQueries.insert(PollSchema.creation_changeset(%PollSchema{}, poll_attrs)),
              :ok <- insert_slots(poll, slots) do
-          poll
+          {poll, Invitations.insert(poll, invitees)}
         else
           {:error, changeset} -> Repo.rollback(changeset)
         end
       end)
 
     case transaction do
-      {:ok, poll} ->
+      {:ok, {poll, invitations}} ->
         :ok = PollScheduler.schedule_deadline_jobs(poll)
+        :ok = Invitations.send_invitations(invitations.invited)
         {:ok, PollQueries.get_for_user(poll.id, user_id)}
 
       {:error, reason} ->
@@ -285,19 +397,9 @@ defmodule Tymeslot.Polls do
     case PollQueries.update(PollSchema.cancel_changeset(poll)) do
       {:ok, cancelled} ->
         :ok = PollScheduler.cancel_deadline_jobs(cancelled.id)
+        :ok = PollScheduler.schedule_cancellation(cancelled)
         broadcast_update(cancelled.id)
         {:ok, cancelled}
-
-      {:error, changeset} ->
-        {:error, changeset}
-    end
-  end
-
-  defp do_update_details(poll, attrs) do
-    case PollQueries.update(PollSchema.details_changeset(poll, attrs)) do
-      {:ok, updated} ->
-        broadcast_update(updated.id)
-        {:ok, updated}
 
       {:error, changeset} ->
         {:error, changeset}

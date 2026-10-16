@@ -8,6 +8,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   stop the poll being created, because confirmation is where time off is
   enforced.
 
+  The host may list people to invite by email (see `PollInvite`); they are
+  invited with the poll and emailed once it is saved.
+
   On submit it converts the local datetime values to UTC and calls
   `Tymeslot.Polls.create_poll/2`. Success flashes via the parent LiveView and
   asks the parent `PollsComponent` to refresh and close the form; failures map
@@ -18,13 +21,14 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
 
   alias Ecto.Changeset
   alias Tymeslot.Polls
-  alias Tymeslot.Polls.PollSchema
+  alias Tymeslot.Polls.{Invitations, PollSchema}
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
-  alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Validation.Constraints
-  alias TymeslotWeb.Dashboard.Polls.PollsComponent
+  alias TymeslotWeb.Dashboard.Polls.{LocalTime, PollInvite, PollReminders, PollsComponent}
   alias TymeslotWeb.Live.Shared.Flash
+
+  @reminder_events PollReminders.events()
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -35,6 +39,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
        meeting_type_id: "",
        duration: "30",
        deadline: "",
+       notify_on_vote: true,
+       reminder_picker: PollReminders.new([%{value: 1, unit: "days"}]),
+       invitees: "",
        slots: [],
        slot_counter: 0,
        time_off_keys: MapSet.new(),
@@ -207,21 +214,50 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
             </.action_button>
           </div>
 
-          <p :for={error <- error_list(@errors, :base)} class="form-error">{error}</p>
+          <.input
+            type="checkbox"
+            id={"poll-notify-on-vote-#{@id}"}
+            name="poll[notify_on_vote]"
+            value={@notify_on_vote}
+            label={dgettext("dashboard_common", "Email me about new votes")}
+          >
+            <:description>
+              {dgettext(
+                "dashboard_common",
+                "At most one email every 15 minutes, naming who voted, with the current standings."
+              )}
+            </:description>
+          </.input>
+          <PollInvite.invitees_input
+            name="poll[invitees]"
+            value={@invitees}
+            errors={error_list(@errors, :invitees)}
+          />
 
-          <div class="flex justify-end gap-3 pt-2">
-            <.action_button
-              variant={:secondary}
-              phx-click="cancel_poll_form"
-              phx-target={@parent_myself}
-            >
-              {dgettext("dashboard_common", "Cancel")}
-            </.action_button>
-            <.action_button type="submit">
-              {dgettext("dashboard_common", "Create poll")}
-            </.action_button>
-          </div>
+          <p :for={error <- error_list(@errors, :base)} class="form-error">{error}</p>
         </form>
+
+        <PollReminders.reminders_form
+          id={"poll-create-reminders-#{@id}"}
+          state={@reminder_picker}
+          myself={@myself}
+        />
+        <p :for={error <- error_list(@errors, :reminder_config)} class="form-error">{error}</p>
+
+        <%!-- Outside the form above, so the reminder picker can sit before it;
+              `form` ties the submit button back to the poll. --%>
+        <div class="flex justify-end gap-3 pt-2">
+          <.action_button
+            variant={:secondary}
+            phx-click="cancel_poll_form"
+            phx-target={@parent_myself}
+          >
+            {dgettext("dashboard_common", "Cancel")}
+          </.action_button>
+          <.action_button type="submit" form={"poll-create-form-#{@id}"}>
+            {dgettext("dashboard_common", "Create poll")}
+          </.action_button>
+        </div>
       </.card>
     </div>
     """
@@ -240,6 +276,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
        meeting_type_id: meeting_type_id,
        duration: duration,
        deadline: Map.get(params, "deadline", socket.assigns.deadline),
+       notify_on_vote: checked?(params, "notify_on_vote", socket.assigns.notify_on_vote),
+       invitees: Map.get(params, "invitees", socket.assigns.invitees),
        timezone: Map.get(params, "timezone", socket.assigns.timezone),
        slots: merge_slot_values(socket.assigns.slots, Map.get(params, "slots", %{}))
      )
@@ -247,6 +285,16 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   end
 
   def handle_event("form_change", _params, socket), do: {:noreply, socket}
+
+  @impl Phoenix.LiveComponent
+  def handle_event(event, params, socket) when event in @reminder_events do
+    {:noreply,
+     assign(
+       socket,
+       :reminder_picker,
+       PollReminders.apply_event(event, socket.assigns.reminder_picker, params)
+     )}
+  end
 
   @impl Phoenix.LiveComponent
   def handle_event("add_slot", _params, socket) do
@@ -268,16 +316,17 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
 
   @impl Phoenix.LiveComponent
   def handle_event("create_poll", %{"poll" => params}, socket) do
-    attrs = build_attrs(params, socket)
-
-    case Polls.create_poll(socket.assigns.current_user.id, attrs) do
-      {:ok, _poll} ->
-        Flash.info(dgettext("dashboard_common", "Poll created"))
-        send_update(PollsComponent, id: socket.assigns.parent_id, poll_created: true)
-        {:noreply, socket}
-
-      {:error, reason} ->
-        {:noreply, assign(socket, :errors, errors_for(reason))}
+    with {:ok, invitees} <- parse_invitees(params),
+         {:ok, _poll} <-
+           Polls.create_poll(
+             socket.assigns.current_user.id,
+             Map.put(build_attrs(params, socket), :invitees, invitees)
+           ) do
+      Flash.info(dgettext("dashboard_common", "Poll created"))
+      send_update(PollsComponent, id: socket.assigns.parent_id, poll_created: true)
+      {:noreply, socket}
+    else
+      {:error, reason} -> {:noreply, assign(socket, :errors, errors_for(reason))}
     end
   end
 
@@ -311,7 +360,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
 
     starts =
       for %{key: key, value: value} <- slots,
-          start_time = to_utc(value, timezone),
+          start_time = LocalTime.to_utc(value, timezone),
           start_time != nil,
           do: {key, start_time}
 
@@ -337,33 +386,26 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
       timezone: timezone,
       duration_minutes: parse_duration(Map.get(params, "duration", socket.assigns.duration)),
       meeting_type_id: parse_meeting_type_id(Map.get(params, "meeting_type_id")),
-      deadline_at: to_utc(Map.get(params, "deadline"), timezone),
+      deadline_at: LocalTime.to_utc(Map.get(params, "deadline"), timezone),
+      notify_on_vote: checked?(params, "notify_on_vote", socket.assigns.notify_on_vote),
+      reminder_config: PollReminders.to_config(socket.assigns.reminder_picker),
       slots: build_slots(Map.get(params, "slots", %{}), timezone)
     }
+  end
+
+  defp parse_invitees(params) do
+    case Invitations.parse(Map.get(params, "invitees")) do
+      {:ok, invitees} -> {:ok, invitees}
+      {:error, reason} -> {:error, {:invitees, reason}}
+    end
   end
 
   defp build_slots(values, timezone) do
     values
     |> Enum.sort_by(fn {key, _value} -> String.to_integer(key) end)
-    |> Enum.map(fn {_key, value} -> to_utc(value, timezone) end)
+    |> Enum.map(fn {_key, value} -> LocalTime.to_utc(value, timezone) end)
     |> Enum.reject(&is_nil/1)
     |> Enum.map(fn start_time -> %{start_time: start_time} end)
-  end
-
-  defp to_utc(value, _timezone) when value in [nil, ""], do: nil
-
-  defp to_utc(value, timezone) do
-    with {:ok, naive} <- parse_naive(value),
-         {:ok, datetime} <- DateTimeUtils.convert_to_utc(naive, timezone) do
-      DateTime.truncate(datetime, :second)
-    else
-      _other -> nil
-    end
-  end
-
-  defp parse_naive(value) do
-    normalized = if String.length(value) == 16, do: value <> ":00", else: value
-    NaiveDateTime.from_iso8601(normalized)
   end
 
   # --- Meeting-type / duration resolution ---
@@ -411,6 +453,13 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
 
   defp parse_duration(_other), do: 30
 
+  defp checked?(params, key, default) do
+    case Map.get(params, key) do
+      nil -> default
+      value -> value == "true"
+    end
+  end
+
   defp blank_to_nil(value) when value in [nil, ""], do: nil
   defp blank_to_nil(value), do: value
 
@@ -426,6 +475,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
       message -> [message]
     end
   end
+
+  defp errors_for({:invitees, reason}), do: %{invitees: [PollInvite.error_message(reason)]}
+  defp errors_for(:poll_full), do: %{invitees: [PollInvite.error_message(:poll_full)]}
 
   defp errors_for(:no_slots),
     do: %{slots: [dgettext("dashboard_common", "Add at least one candidate time")]}

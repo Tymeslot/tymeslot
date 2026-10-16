@@ -5,7 +5,8 @@ defmodule Tymeslot.PollsTest do
   @moduletag :polls
 
   alias Tymeslot.Polls
-  alias Tymeslot.Polls.PollSchema
+  alias Tymeslot.Polls.{PollParticipantSchema, PollSchema}
+  alias Tymeslot.Repo
 
   import Tymeslot.Factory
 
@@ -298,6 +299,64 @@ defmodule Tymeslot.PollsTest do
       assert tallies[slot1.id] == %{yes: 2, if_need_be: 0, no: 0}
       assert tallies[slot2.id] == %{yes: 0, if_need_be: 1, no: 1}
       assert tallies[slot3.id] == %{yes: 0, if_need_be: 0, no: 0}
+    end
+  end
+
+  describe "unconfirmed participants" do
+    setup do
+      poll = insert(:poll)
+      now = DateTime.utc_now(:second)
+
+      confirmed = insert(:poll_participant, poll: poll)
+      fresh = insert(:poll_participant, poll: poll, confirmed_at: nil, link_sent_at: now)
+
+      expired =
+        insert(:poll_participant,
+          poll: poll,
+          confirmed_at: nil,
+          link_sent_at: DateTime.add(now, -49, :hour)
+        )
+
+      %{poll: poll, confirmed: confirmed, fresh: fresh, expired: expired}
+    end
+
+    test "count_unconfirmed/1 counts only those whose link is still live", %{poll: poll} do
+      assert Polls.count_unconfirmed(poll) == 1
+    end
+
+    test "prune_unconfirmed_participants/0 deletes only the expired ones", ctx do
+      assert {1, nil} = Polls.prune_unconfirmed_participants()
+
+      remaining =
+        PollParticipantSchema
+        |> Repo.all()
+        |> Enum.map(& &1.id)
+        |> MapSet.new()
+
+      assert MapSet.equal?(remaining, MapSet.new([ctx.confirmed.id, ctx.fresh.id]))
+    end
+  end
+
+  describe "leading_slot_ids/2" do
+    test "leads on yes votes, ties broken on if need be" do
+      slots = [%{id: "a"}, %{id: "b"}, %{id: "c"}]
+
+      tallies = %{
+        "a" => %{yes: 2, if_need_be: 0, no: 0},
+        "b" => %{yes: 2, if_need_be: 1, no: 0},
+        "c" => %{yes: 0, if_need_be: 0, no: 2}
+      }
+
+      assert Polls.leading_slot_ids(slots, tallies) == ["b"]
+    end
+
+    test "no time leads when nobody is available or every time scores the same" do
+      slots = [%{id: "a"}, %{id: "b"}]
+
+      assert Polls.leading_slot_ids(slots, %{}) == []
+
+      even = %{"a" => %{yes: 1, if_need_be: 0}, "b" => %{yes: 1, if_need_be: 0}}
+      assert Polls.leading_slot_ids(slots, even) == []
     end
   end
 

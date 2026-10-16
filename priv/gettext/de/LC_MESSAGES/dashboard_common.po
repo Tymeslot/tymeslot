@@ -227,6 +227,7 @@ msgid_plural "%{count} of %{max} times"
 msgstr[0] "%{count} von %{max} Zeit"
 msgstr[1] "%{count} von %{max} Zeiten"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} participant"
@@ -248,8 +249,8 @@ msgid_plural "%{count} votes"
 msgstr[0] "%{count} Stimme"
 msgstr[1] "%{count} Stimmen"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Add any context for your guests"
 msgstr "Fügen Sie Kontext für Ihre Gäste hinzu"
@@ -259,6 +260,7 @@ msgstr "Fügen Sie Kontext für Ihre Gäste hinzu"
 msgid "Add at least one candidate time"
 msgstr "Fügen Sie mindestens eine Zeitoption hinzu"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Add time"
@@ -269,8 +271,8 @@ msgstr "Zeit hinzufügen"
 msgid "Calendar conflict"
 msgstr "Kalenderkonflikt"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Abbrechen"
@@ -341,8 +343,8 @@ msgstr "Erstellen Sie eine Umfrage, schlagen Sie einige Zeiten vor und lassen Si
 msgid "Create poll"
 msgstr "Umfrage erstellen"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Description (optional)"
 msgstr "Beschreibung (optional)"
@@ -372,6 +374,7 @@ msgstr "Zur Not"
 msgid "Meeting confirmed. Your guests have been notified."
 msgstr "Termin bestätigt. Ihre Gäste wurden benachrichtigt."
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting type (optional)"
@@ -393,6 +396,7 @@ msgstr "Nein"
 msgid "No answer"
 msgstr "Keine Antwort"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "No meeting type"
@@ -408,6 +412,7 @@ msgstr "Noch keine Umfragen"
 msgid "Open"
 msgstr "Offen"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Paid meeting types can't be used for polls"
@@ -435,11 +440,13 @@ msgstr "Umfrage-Link in die Zwischenablage kopiert!"
 msgid "Polls"
 msgstr "Umfragen"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Remove time"
 msgstr "Zeit entfernen"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "That meeting type is unavailable"
@@ -450,6 +457,8 @@ msgstr "Dieser Termintyp ist nicht verfügbar"
 msgid "This poll is confirmed. The winning time is highlighted below."
 msgstr "Diese Umfrage ist bestätigt. Die gewählte Zeit ist unten hervorgehoben."
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
 #: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "This poll is no longer open."
@@ -470,6 +479,7 @@ msgstr "Diese Zeit überschneidet sich mit einem Termin in Ihrem Kalender"
 msgid "This time is no longer free"
 msgstr "Diese Zeit ist nicht mehr frei"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Times must be in the future"
@@ -485,12 +495,13 @@ msgstr "Zeiten angezeigt in %{timezone}"
 msgid "Timezone"
 msgstr "Zeitzone"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr "Titel"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Up to %{max} times"
@@ -506,6 +517,7 @@ msgstr "Termin ansehen"
 msgid "View results"
 msgstr "Ergebnisse ansehen"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Voting deadline (optional)"
@@ -554,6 +566,7 @@ msgstr[0] "%{count} Gast hat bereits abgestimmt. Diese Antworten gehen verloren.
 msgstr[1] "%{count} Gäste haben bereits abgestimmt. Diese Antworten gehen verloren."
 
 #: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
+#: lib/tymeslot_web/live/dashboard/polls/delete_poll_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Keep poll"
 msgstr "Umfrage behalten"
@@ -590,22 +603,17 @@ msgstr "Wer abgestimmt hat"
 msgid "Hide who voted"
 msgstr "Abstimmung ausblenden"
 
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Couldn't save this poll. Please try again."
 msgstr "Diese Umfrage konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "Edit title and description"
-msgstr "Titel und Beschreibung bearbeiten"
-
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Poll updated"
 msgstr "Umfrage aktualisiert"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Save changes"
 msgstr "Änderungen speichern"
@@ -742,3 +750,191 @@ msgstr "%{date}, %{time}"
 #, elixir-autogen, elixir-format
 msgid "Cancel this poll"
 msgstr "Diese Umfrage absagen"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} more person asked for a voting link but hasn't voted with it yet."
+msgid_plural "%{count} more people asked for a voting link but haven't voted with it yet."
+msgstr[0] "%{count} weitere Person hat einen Abstimmungslink angefordert, aber noch nicht damit abgestimmt."
+msgstr[1] "%{count} weitere Personen haben einen Abstimmungslink angefordert, aber noch nicht damit abgestimmt."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#, elixir-autogen, elixir-format
+msgid "At most one email every 15 minutes, naming who voted, with the current standings."
+msgstr "Höchstens eine E-Mail alle 15 Minuten, mit den neuen Abstimmenden und dem aktuellen Stand."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#, elixir-autogen, elixir-format
+msgid "Email me about new votes"
+msgstr "Bei neuen Stimmen per E-Mail benachrichtigen"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} address was already on the poll."
+msgid_plural "%{count} addresses were already on the poll."
+msgstr[0] "%{count} Adresse war bereits in der Umfrage."
+msgstr[1] "%{count} Adressen waren bereits in der Umfrage."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "A poll can have up to %{max} participants."
+msgstr "Eine Umfrage kann bis zu %{max} Teilnehmer haben."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't send the invitations. Please try again."
+msgstr "Die Einladungen konnten nicht verschickt werden. Bitte versuchen Sie es erneut."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Enter at least one email address."
+msgstr "Geben Sie mindestens eine E-Mail-Adresse ein."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation sent to %{count} person."
+msgid_plural "Invitations sent to %{count} people."
+msgstr[0] "Einladung an %{count} Person verschickt."
+msgstr[1] "Einladungen an %{count} Personen verschickt."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Invite by email (optional)"
+msgstr "Per E-Mail einladen (optional)"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Not valid email addresses: %{entries}"
+msgstr "Keine gültigen E-Mail-Adressen: %{entries}"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "One address per line or separated by commas. Each person gets an email with their own voting link."
+msgstr "Eine Adresse pro Zeile oder durch Kommas getrennt. Jede Person erhält eine E-Mail mit ihrem eigenen Abstimmungslink."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Send invitations"
+msgstr "Einladungen verschicken"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting for: %{names}"
+msgstr "Ausstehend: %{names}"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "ada@example.com, Grace Hopper <grace@example.com>"
+msgstr "max@example.com, Erika Mustermann <erika@example.com>"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Add times"
+msgstr "Zeiten hinzufügen"
+
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't delete this poll. Please try again."
+msgstr "Die Umfrage konnte nicht gelöscht werden. Bitte versuchen Sie es erneut."
+
+#: lib/tymeslot_web/live/dashboard/polls/delete_poll_modal.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "Delete poll"
+msgstr "Umfrage löschen"
+
+#: lib/tymeslot_web/live/dashboard/polls/delete_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete this poll"
+msgstr "Diese Umfrage löschen"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "Edit poll"
+msgstr "Umfrage bearbeiten"
+
+#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Everyone on the poll is told by email that it will not go ahead."
+msgstr "Alle Teilnehmer der Umfrage werden per E-Mail informiert, dass sie nicht stattfindet."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Existing times stay as they are. Everyone who has voted is emailed about the new ones."
+msgstr "Bestehende Zeiten bleiben unverändert. Alle, die schon abgestimmt haben, erhalten eine E-Mail zu den neuen Zeiten."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Move it, clear it, or set it again after it has passed to reopen voting. Times in %{timezone}."
+msgstr "Verschieben, entfernen oder nach Ablauf neu setzen, um die Abstimmung wieder zu öffnen. Zeiten in %{timezone}."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "New time"
+msgstr "Neue Zeit"
+
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#, elixir-autogen, elixir-format
+msgid "Poll deleted"
+msgstr "Umfrage gelöscht"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Remove %{name} and their responses from this poll? They are not told."
+msgstr "%{name} samt Antworten aus dieser Umfrage entfernen? Die Person wird nicht benachrichtigt."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Remove from the poll"
+msgstr "Aus der Umfrage entfernen"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Removed from the poll"
+msgstr "Aus der Umfrage entfernt"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_reminders.ex
+#, elixir-autogen, elixir-format
+msgid "Sent before the voting deadline to everyone who has not voted yet. A poll without a deadline sends none."
+msgstr "Wird vor dem Abstimmungsende an alle gesendet, die noch nicht abgestimmt haben. Ohne Frist werden keine verschickt."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "The deadline must be in the future"
+msgstr "Die Frist muss in der Zukunft liegen"
+
+#: lib/tymeslot_web/live/dashboard/polls/delete_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting it scheduled stays in your calendar."
+msgstr "Der dadurch festgelegte Termin bleibt in Ihrem Kalender."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "The poll already has this time"
+msgstr "Diese Zeit ist in der Umfrage bereits vorhanden"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "invited"
+msgstr "eingeladen"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "not voted yet"
+msgstr "noch nicht abgestimmt"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "voted"
+msgstr "abgestimmt"
+
+#: lib/tymeslot_web/live/dashboard/polls/delete_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "“%{title}” will be removed with its times and everyone's responses. This cannot be undone."
+msgstr "„%{title}“ wird mit allen Zeiten und Antworten entfernt. Das kann nicht rückgängig gemacht werden."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Its calendar and video provider are used for the meeting when you confirm a time. The poll's times and title stay as they are."
+msgstr "Sein Kalender und sein Video-Anbieter werden für den Termin verwendet, wenn Sie eine Zeit bestätigen. Zeiten und Titel der Umfrage bleiben unverändert."

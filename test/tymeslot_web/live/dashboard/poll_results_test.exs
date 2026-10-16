@@ -70,8 +70,21 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
           position: 1
         )
 
-      alice = insert(:poll_participant, poll: poll, name: "Alice", email: "alice@example.com")
-      bob = insert(:poll_participant, poll: poll, name: "Bob", email: "bob@example.com")
+      alice =
+        insert(:poll_participant,
+          poll: poll,
+          name: "Alice",
+          email: "alice@example.com",
+          voted_at: DateTime.utc_now(:second)
+        )
+
+      bob =
+        insert(:poll_participant,
+          poll: poll,
+          name: "Bob",
+          email: "bob@example.com",
+          voted_at: DateTime.utc_now(:second)
+        )
 
       insert(:poll_vote, participant: alice, time_slot: slot1, response: :yes)
       insert(:poll_vote, participant: alice, time_slot: slot2, response: :no)
@@ -217,18 +230,19 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
       # An emptied title reaches the server, which answers in the form.
       assert has_element?(view, "[data-testid='poll-details-form'][novalidate]")
 
-      html =
-        view
-        |> form("[data-testid='poll-details-form']",
-          poll: %{title: "Team offsite (moved)", description: "Now ninety minutes."}
-        )
-        |> render_submit()
+      view
+      |> form("[data-testid='poll-details-form']",
+        poll: %{title: "Team offsite (moved)", description: "Now ninety minutes."}
+      )
+      |> render_submit()
 
       # Persisted, and the panel is back to its reading state showing the change.
       {:ok, reloaded} = Polls.get_poll_for_host(poll.id, user.id)
       assert reloaded.title == "Team offsite (moved)"
       assert reloaded.description == "Now ninety minutes."
 
+      # The editor tells the panel it saved; the panel redraws on the next render.
+      html = render(view)
       refute has_element?(view, "[data-testid='poll-details-form']")
       assert html =~ "Team offsite (moved)"
       assert html =~ "Now ninety minutes."
@@ -504,7 +518,14 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
       refute render(view) =~ "Carol"
 
       # A guest votes: insert the vote, then broadcast as the domain does.
-      carol = insert(:poll_participant, poll: poll, name: "Carol", email: "carol@example.com")
+      carol =
+        insert(:poll_participant,
+          poll: poll,
+          name: "Carol",
+          email: "carol@example.com",
+          voted_at: DateTime.utc_now(:second)
+        )
+
       insert(:poll_vote, participant: carol, time_slot: slot1, response: :yes)
       Polls.broadcast_update(poll.id)
 

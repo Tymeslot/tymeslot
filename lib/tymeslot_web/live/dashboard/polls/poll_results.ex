@@ -23,13 +23,16 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Polls
+  alias Tymeslot.Polls.PollParticipantSchema
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.CoreComponents.Containers
   alias TymeslotWeb.Components.CoreComponents.Feedback
-  alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.CoreComponents.Icons
+  alias TymeslotWeb.Dashboard.Polls.PollEditor
+  alias TymeslotWeb.Dashboard.Polls.PollInvite
   alias TymeslotWeb.Dashboard.Polls.PollShareLink
   alias TymeslotWeb.Helpers.LocaleFormat
 
@@ -40,6 +43,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   Renders the results panel for a single selected poll.
   """
   attr :poll, :map, required: true
+  attr :unconfirmed_count, :integer, default: 0
+  attr :invite_value, :string, default: ""
+  attr :invite_error, :string, default: nil
   attr :tallies, :map, required: true
   attr :slot_health, :map, required: true
   attr :slot_health_loading, :boolean, default: false
@@ -49,7 +55,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   attr :profile, :any, required: true
   attr :integration_status, :map, required: true
   attr :editing_details?, :boolean, default: false
-  attr :detail_errors, :map, default: %{}
+  attr :meeting_types, :list, default: []
+  attr :user_id, :integer, required: true
+  attr :parent_id, :string, required: true
   attr :meetings_path, :string, required: true
   attr :time_format, :string, default: nil
   attr :myself, :any, required: true
@@ -61,15 +69,20 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
       |> assign(:votes, vote_index(assigns.poll.participants))
       |> assign(:open?, assigns.poll.status == :open)
       |> assign(:participant_count, length(assigns.poll.participants))
-      |> assign(:leaders, leader_ids(assigns.poll.time_slots, assigns.tallies))
+      |> assign(:voted_count, Enum.count(assigns.poll.participants, & &1.voted_at))
+      |> assign(:leaders, Polls.leading_slot_ids(assigns.poll.time_slots, assigns.tallies))
 
     ~H"""
     <Containers.card id={"poll-results-#{@poll.id}"} class="space-y-6">
-      <.details_form
+      <.live_component
         :if={@editing_details?}
+        module={PollEditor}
+        id={"poll-editor-#{@poll.id}"}
         poll={@poll}
-        errors={@detail_errors}
-        myself={@myself}
+        meeting_types={@meeting_types}
+        user_id={@user_id}
+        parent_id={@parent_id}
+        parent_myself={@myself}
       />
 
       <div :if={!@editing_details?} class="flex items-start justify-between gap-3">
@@ -113,12 +126,12 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
             profile={@profile}
             integration_status={@integration_status}
           />
-          <%!-- Wording only, and only while the poll is open: see
-                `Polls.update_details/3` for why the times are not editable. --%>
+          <%!-- Only while the poll is open: see `Polls.Editing` for what
+                can change while people vote. --%>
           <Buttons.icon_button
             :if={@open?}
             icon="hero-pencil-square"
-            label={dgettext("dashboard_common", "Edit title and description")}
+            label={dgettext("dashboard_common", "Edit poll")}
             phx-click="edit_poll_details"
             phx-target={@myself}
             data-testid="poll-edit-details"
@@ -147,7 +160,26 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
           "dashboard_common",
           "%{count} guest has voted so far.",
           "%{count} guests have voted so far.",
-          @participant_count
+          @voted_count
+        )}
+      </p>
+
+      <PollInvite.waiting_for :if={@open?} participants={@poll.participants} />
+
+      <%!-- People who asked for a voting link but have not saved responses
+            through it yet. They prove nothing until they do, so they are not
+            in the counts above; this tells the host why someone who says they
+            voted is not listed. --%>
+      <p
+        :if={@open? && @unconfirmed_count > 0}
+        class="text-token-xs text-tymeslot-500"
+        data-testid="poll-unconfirmed-count"
+      >
+        {dngettext(
+          "dashboard_common",
+          "%{count} more person asked for a voting link but hasn't voted with it yet.",
+          "%{count} more people asked for a voting link but haven't voted with it yet.",
+          @unconfirmed_count
         )}
       </p>
 
@@ -171,6 +203,29 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
         />
       </div>
 
+      <PollInvite.invite_form
+        :if={@open?}
+        poll={@poll}
+        value={@invite_value}
+        error={@invite_error}
+        myself={@myself}
+      />
+
+      <%!-- A poll that is over can be deleted to tidy the list; an open one is
+            cancelled first, so nothing people still vote on disappears. --%>
+      <div :if={!@open?} class="flex justify-end pt-2 border-t border-tymeslot-100">
+        <Buttons.action_button
+          variant={:danger_soft}
+          size={:sm}
+          icon="hero-trash"
+          phx-click="request_delete_poll"
+          phx-target={@myself}
+          data-testid="poll-delete"
+        >
+          {dgettext("dashboard_common", "Delete poll")}
+        </Buttons.action_button>
+      </div>
+
       <div :if={@open?} class="flex justify-end pt-2 border-t border-tymeslot-100">
         <Buttons.action_button
           variant={:danger_soft}
@@ -185,60 +240,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
     </Containers.card>
     """
   end
-
-  # --- Details form ---
-
-  attr :poll, :map, required: true
-  attr :errors, :map, required: true
-  attr :myself, :any, required: true
-
-  defp details_form(assigns) do
-    ~H"""
-    <form
-      id={"poll-details-form-#{@poll.id}"}
-      novalidate
-      phx-submit="save_poll_details"
-      phx-target={@myself}
-      class="space-y-4"
-      data-testid="poll-details-form"
-    >
-      <Forms.input
-        type="text"
-        name="poll[title]"
-        label={dgettext("dashboard_common", "Title")}
-        value={@poll.title}
-        required
-        errors={error_list(@errors, :title)}
-        icon="hero-hand-raised"
-      />
-
-      <Forms.input
-        type="textarea"
-        name="poll[description]"
-        label={dgettext("dashboard_common", "Description (optional)")}
-        value={@poll.description}
-        placeholder={dgettext("dashboard_common", "Add any context for your guests")}
-        errors={error_list(@errors, :description)}
-      />
-
-      <div class="flex justify-end gap-2">
-        <Buttons.action_button
-          variant={:secondary}
-          size={:sm}
-          phx-click="cancel_edit_poll_details"
-          phx-target={@myself}
-        >
-          {dgettext("dashboard_common", "Cancel")}
-        </Buttons.action_button>
-        <Buttons.action_button type="submit" size={:sm}>
-          {dgettext("dashboard_common", "Save changes")}
-        </Buttons.action_button>
-      </div>
-    </form>
-    """
-  end
-
-  defp error_list(errors, field), do: Map.get(errors, field, [])
 
   # --- Lifecycle banner ---
 
@@ -499,7 +500,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   defp voter_names(participants, votes, slot_id, response) do
     participants
     |> Enum.filter(&(vote_for(votes, &1.id, slot_id) == response))
-    |> Enum.map(& &1.name)
+    |> Enum.map(&PollParticipantSchema.display_name/1)
   end
 
   # `:none` is not stored as a vote — it is everyone the tallies did not
@@ -514,30 +515,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   defp percent(count, total), do: count / total * 100
 
   defp empty_counts, do: %{yes: 0, if_need_be: 0, no: 0}
-
-  # The slots tied on the most yes votes, breaking ties on "if need be" so a
-  # slot half the group can only just make does not outrank one they can.
-  #
-  # A badge only means something if it distinguishes. An unanswered poll has no
-  # leader, and neither does one where every slot scores the same — a poll where
-  # the group is equally free throughout is a real outcome, and marking all six
-  # slots "most votes" tells the host nothing they can act on.
-  @spec leader_ids([map()], map()) :: [binary()]
-  defp leader_ids(time_slots, tallies) do
-    scores =
-      Map.new(time_slots, fn slot ->
-        counts = Map.get(tallies, slot.id, empty_counts())
-        {slot.id, {Map.get(counts, :yes, 0), Map.get(counts, :if_need_be, 0)}}
-      end)
-
-    leaders =
-      case scores |> Map.values() |> Enum.max(fn -> {0, 0} end) do
-        {0, 0} -> []
-        best -> for {id, score} <- scores, score == best, do: id
-      end
-
-    if length(leaders) == map_size(scores), do: [], else: leaders
-  end
 
   # The weekday and month follow the organiser's language and the clock their
   # own 12/24-hour preference, as everywhere else on the dashboard.

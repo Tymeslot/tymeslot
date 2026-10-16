@@ -228,6 +228,7 @@ msgstr[0] "%{count} z %{max} termínů"
 msgstr[1] "%{count} z %{max} termínů"
 msgstr[2] "%{count} z %{max} termínů"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} participant"
@@ -252,8 +253,8 @@ msgstr[0] "%{count} hlas"
 msgstr[1] "%{count} hlasy"
 msgstr[2] "%{count} hlasů"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Add any context for your guests"
 msgstr "Doplňte pro hosty další kontext"
@@ -263,6 +264,7 @@ msgstr "Doplňte pro hosty další kontext"
 msgid "Add at least one candidate time"
 msgstr "Přidejte alespoň jeden navržený termín"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Add time"
@@ -273,8 +275,8 @@ msgstr "Přidat termín"
 msgid "Calendar conflict"
 msgstr "Konflikt v kalendáři"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Zrušit"
@@ -345,8 +347,8 @@ msgstr "Vytvořte anketu, navrhněte několik termínů a nechte hosty hlasovat.
 msgid "Create poll"
 msgstr "Vytvořit anketu"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Description (optional)"
 msgstr "Popis (nepovinné)"
@@ -376,6 +378,7 @@ msgstr "V nouzi"
 msgid "Meeting confirmed. Your guests have been notified."
 msgstr "Schůzka byla potvrzena. Hosté byli informováni."
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting type (optional)"
@@ -397,6 +400,7 @@ msgstr "Ne"
 msgid "No answer"
 msgstr "Bez odpovědi"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "No meeting type"
@@ -412,6 +416,7 @@ msgstr "Zatím žádné ankety"
 msgid "Open"
 msgstr "Otevřeno"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Paid meeting types can't be used for polls"
@@ -439,11 +444,13 @@ msgstr "Odkaz na anketu byl zkopírován do schránky!"
 msgid "Polls"
 msgstr "Ankety"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Remove time"
 msgstr "Odebrat termín"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "That meeting type is unavailable"
@@ -454,6 +461,8 @@ msgstr "Tento typ schůzky není dostupný"
 msgid "This poll is confirmed. The winning time is highlighted below."
 msgstr "Tato anketa je potvrzena. Vítězný termín je zvýrazněn níže."
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
 #: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "This poll is no longer open."
@@ -474,6 +483,7 @@ msgstr "Tento termín se překrývá s událostí ve vašem kalendáři"
 msgid "This time is no longer free"
 msgstr "Tento termín už není volný"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Times must be in the future"
@@ -489,12 +499,13 @@ msgstr "Časy jsou uvedeny v časovém pásmu %{timezone}"
 msgid "Timezone"
 msgstr "Časové pásmo"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr "Název"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Up to %{max} times"
@@ -510,6 +521,7 @@ msgstr "Zobrazit schůzku"
 msgid "View results"
 msgstr "Zobrazit výsledky"
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Voting deadline (optional)"
@@ -559,6 +571,7 @@ msgstr[1] "%{count} hosté už hlasovali. Jejich odpovědi budou smazány."
 msgstr[2] "%{count} hostů už hlasovalo. Jejich odpovědi budou smazány."
 
 #: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
+#: lib/tymeslot_web/live/dashboard/polls/delete_poll_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Keep poll"
 msgstr "Ponechat anketu"
@@ -596,22 +609,17 @@ msgstr "Kdo hlasoval"
 msgid "Hide who voted"
 msgstr "Skrýt hlasování"
 
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Couldn't save this poll. Please try again."
 msgstr "Tuto anketu se nepodařilo uložit. Zkuste to prosím znovu."
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "Edit title and description"
-msgstr "Upravit název a popis"
-
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Poll updated"
 msgstr "Anketa aktualizována"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Save changes"
 msgstr "Uložit změny"
@@ -748,3 +756,194 @@ msgstr "%{date}, %{time}"
 #, elixir-autogen, elixir-format
 msgid "Cancel this poll"
 msgstr "Zrušit tuto anketu"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} more person asked for a voting link but hasn't voted with it yet."
+msgid_plural "%{count} more people asked for a voting link but haven't voted with it yet."
+msgstr[0] "%{count} další osoba požádala o odkaz k hlasování, ale zatím s ním nehlasovala."
+msgstr[1] "%{count} další osoby požádaly o odkaz k hlasování, ale zatím s ním nehlasovaly."
+msgstr[2] "%{count} dalších osob požádalo o odkaz k hlasování, ale zatím s ním nehlasovalo."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#, elixir-autogen, elixir-format
+msgid "At most one email every 15 minutes, naming who voted, with the current standings."
+msgstr "Nejvýše jeden e-mail za 15 minut, se jmény hlasujících a aktuálním stavem."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#, elixir-autogen, elixir-format
+msgid "Email me about new votes"
+msgstr "Upozorňovat e-mailem na nové hlasy"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} address was already on the poll."
+msgid_plural "%{count} addresses were already on the poll."
+msgstr[0] "%{count} adresa už v anketě byla."
+msgstr[1] "%{count} adresy už v anketě byly."
+msgstr[2] "%{count} adres už v anketě bylo."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "A poll can have up to %{max} participants."
+msgstr "Anketa může mít nejvýše %{max} účastníků."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't send the invitations. Please try again."
+msgstr "Pozvánky se nepodařilo odeslat. Zkuste to znovu."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Enter at least one email address."
+msgstr "Zadejte alespoň jednu e-mailovou adresu."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation sent to %{count} person."
+msgid_plural "Invitations sent to %{count} people."
+msgstr[0] "Pozvánka odeslána %{count} osobě."
+msgstr[1] "Pozvánky odeslány %{count} osobám."
+msgstr[2] "Pozvánky odeslány %{count} osobám."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Invite by email (optional)"
+msgstr "Pozvat e-mailem (volitelné)"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Not valid email addresses: %{entries}"
+msgstr "Neplatné e-mailové adresy: %{entries}"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "One address per line or separated by commas. Each person gets an email with their own voting link."
+msgstr "Jedna adresa na řádek nebo oddělené čárkami. Každý dostane e-mail s vlastním odkazem k hlasování."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Send invitations"
+msgstr "Odeslat pozvánky"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting for: %{names}"
+msgstr "Čeká se na: %{names}"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "ada@example.com, Grace Hopper <grace@example.com>"
+msgstr "jan.novak@example.com, Jana Nováková <jana@example.com>"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Add times"
+msgstr "Přidat termíny"
+
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't delete this poll. Please try again."
+msgstr "Anketu se nepodařilo smazat. Zkuste to znovu."
+
+#: lib/tymeslot_web/live/dashboard/polls/delete_poll_modal.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "Delete poll"
+msgstr "Smazat anketu"
+
+#: lib/tymeslot_web/live/dashboard/polls/delete_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete this poll"
+msgstr "Smazat tuto anketu"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "Edit poll"
+msgstr "Upravit anketu"
+
+#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Everyone on the poll is told by email that it will not go ahead."
+msgstr "Všichni v anketě dostanou e-mail, že se neuskuteční."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Existing times stay as they are. Everyone who has voted is emailed about the new ones."
+msgstr "Stávající termíny zůstávají beze změny. Kdo už hlasoval, dostane e-mail o nových termínech."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Move it, clear it, or set it again after it has passed to reopen voting. Times in %{timezone}."
+msgstr "Posuňte ji, smažte ji, nebo ji po uplynutí nastavte znovu a hlasování se znovu otevře. Časy v zóně %{timezone}."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "New time"
+msgstr "Nový termín"
+
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#, elixir-autogen, elixir-format
+msgid "Poll deleted"
+msgstr "Anketa smazána"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Remove %{name} and their responses from this poll? They are not told."
+msgstr "Odebrat %{name} i s odpověďmi z této ankety? Dotyčný o tom nedostane zprávu."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Remove from the poll"
+msgstr "Odebrat z ankety"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Removed from the poll"
+msgstr "Odebráno z ankety"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_reminders.ex
+#, elixir-autogen, elixir-format
+msgid "Sent before the voting deadline to everyone who has not voted yet. A poll without a deadline sends none."
+msgstr "Posílají se před koncem hlasování všem, kdo ještě nehlasovali. Anketa bez termínu ukončení žádné neposílá."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "The deadline must be in the future"
+msgstr "Termín ukončení musí být v budoucnosti"
+
+#: lib/tymeslot_web/live/dashboard/polls/delete_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting it scheduled stays in your calendar."
+msgstr "Schůzka, kterou naplánovala, zůstává ve vašem kalendáři."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "The poll already has this time"
+msgstr "Tento termín už anketa má"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "invited"
+msgstr "pozvánka odeslána"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "not voted yet"
+msgstr "zatím bez hlasu"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "voted"
+msgstr "hlas odevzdán"
+
+#: lib/tymeslot_web/live/dashboard/polls/delete_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "“%{title}” will be removed with its times and everyone's responses. This cannot be undone."
+msgstr "Anketa „%{title}“ bude odstraněna i s termíny a všemi odpověďmi. Tuto akci nelze vrátit."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Its calendar and video provider are used for the meeting when you confirm a time. The poll's times and title stay as they are."
+msgstr "Jeho kalendář a videoslužba se použijí pro schůzku, když potvrdíte termín. Termíny a název ankety zůstávají beze změny."

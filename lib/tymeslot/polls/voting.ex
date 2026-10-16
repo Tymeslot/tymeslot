@@ -1,12 +1,14 @@
 defmodule Tymeslot.Polls.Voting do
   @moduledoc """
-  Participant registration and vote casting for meeting polls.
+  Voting-link requests and vote casting for meeting polls.
 
-  This is the write path behind the public voting page: a person registers with
-  their name and email (resuming a prior registration for the same email), then
-  casts one response per candidate slot. Both operations refuse to proceed once
-  voting has closed, and vote casting whitelists slot ids against the poll rather
-  than trusting client-supplied ids.
+  This is the write path behind the public voting page. A visitor asks for a
+  voting link with their name and email; the link is emailed and never shown
+  on the page, so holding it proves they own the address. Responses can only be
+  cast through that link, and the first time they are saved confirms the
+  participant: from then on they count. Both operations refuse to proceed once
+  voting has closed, and vote casting whitelists slot ids against the poll
+  rather than trusting client-supplied ids.
   """
 
   alias Tymeslot.Emails.EmailScheduler.PollScheduler
@@ -23,25 +25,30 @@ defmodule Tymeslot.Polls.Voting do
 
   @unique_email_constraint "poll_participants_poll_id_email_index"
 
+  # A repeat request for the same address within this window sends nothing:
+  # anyone can type any address, so the form must not become a way to flood
+  # someone's inbox.
+  @resend_interval_seconds 10 * 60
+
   @doc """
-  Registers a participant on `poll` from `attrs` (`name`, `email`, optional
-  `timezone` and `locale`; string or atom keys).
+  Emails a personal voting link to the address in `attrs` (`name`, `email`,
+  optional `timezone` and `locale`; string or atom keys).
 
-  Registration is idempotent per email: a repeated registration for an email
-  already on the poll resumes the existing participant rather than erroring. This
-  is a deliberate trade-off, someone who returns to the voting page keeps their
-  identity and previous votes, at the cost of not distinguishing two people who
-  share an address.
+  An address new to the poll becomes an unconfirmed participant. An address
+  already on it, confirmed or not, gets its existing link again, at most once
+  per #{div(@resend_interval_seconds, 60)} minutes; its name is left as it
+  was. Both return `:ok`, so the answer never tells a visitor whether an
+  address takes part.
 
-  Returns `{:error, :voting_closed}` when voting has closed and
-  `{:error, :poll_full}` once the participant cap is reached.
+  Returns `{:error, :voting_closed}` once voting has closed,
+  `{:error, :poll_full}` when the participant cap is reached, and
+  `{:error, :too_many_requests}` when too many links are out unconfirmed.
   """
-  @spec register_participant(PollSchema.t(), map()) ::
-          {:ok, PollParticipantSchema.t()}
-          | {:error, :voting_closed | :poll_full | Ecto.Changeset.t()}
-  def register_participant(poll, attrs) do
+  @spec request_link(PollSchema.t(), map()) ::
+          :ok | {:error, :voting_closed | :poll_full | :too_many_requests | Ecto.Changeset.t()}
+  def request_link(poll, attrs) do
     if Polls.voting_open?(poll) do
-      register_open(poll, attrs)
+      request_open(poll, attrs)
     else
       {:error, :voting_closed}
     end
@@ -59,17 +66,36 @@ defmodule Tymeslot.Polls.Voting do
   An empty `votes_map` is a no-op that returns the participant without stamping
   `voted_at`, the participant has not yet expressed anything.
 
+  The first responses an unconfirmed participant saves confirm them, provided
+  the poll still has room (`{:error, :poll_full}` otherwise). Anyone's first
+  saved responses send them a receipt carrying their link.
+
+  A participant the host invited without a name gives it with their first
+  responses, as the `:name` option; without a valid one nothing is saved and
+  the name changeset is returned.
+
   Returns `{:error, :voting_closed}`, `{:error, :unknown_participant}`,
-  `{:error, :invalid_slot}`, or `{:error, :invalid_response}` on the respective
-  failure.
+  `{:error, :invalid_slot}`, `{:error, :invalid_response}`,
+  `{:error, :poll_full}` or `{:error, changeset}` on the respective failure.
   """
-  @spec cast_votes(PollSchema.t(), String.t(), %{optional(Ecto.UUID.t()) => String.t() | atom()}) ::
+  @spec cast_votes(
+          PollSchema.t(),
+          String.t(),
+          %{optional(Ecto.UUID.t()) => String.t() | atom()},
+          keyword()
+        ) ::
           {:ok, PollParticipantSchema.t()}
-          | {:error, :voting_closed | :unknown_participant | :invalid_slot | :invalid_response}
-  def cast_votes(poll, participant_token, votes_map) do
+          | {:error,
+             :voting_closed
+             | :unknown_participant
+             | :invalid_slot
+             | :invalid_response
+             | :poll_full
+             | Ecto.Changeset.t()}
+  def cast_votes(poll, participant_token, votes_map, opts \\ []) do
     with :ok <- ensure_open(poll),
          {:ok, participant} <- resolve_participant(poll, participant_token) do
-      cast_for_participant(poll, participant, votes_map)
+      cast_for_participant(poll, participant, votes_map, Keyword.get(opts, :name))
     end
   end
 
@@ -78,8 +104,9 @@ defmodule Tymeslot.Polls.Voting do
   preloaded, or `nil`.
 
   The token is the per-person `?p=` value from the voting link. A token that
-  belongs to a different poll, an unknown token, and a non-string value all
-  return `nil`, so a participant can never be resolved across polls.
+  belongs to a different poll, an unknown token, an unconfirmed participant's
+  expired token, and a non-string value all return `nil`, so a participant can
+  never be resolved across polls.
   """
   @spec get_participant(PollSchema.t(), term()) :: PollParticipantSchema.t() | nil
   def get_participant(%PollSchema{id: poll_id}, token) when is_binary(token),
@@ -87,28 +114,54 @@ defmodule Tymeslot.Polls.Voting do
 
   def get_participant(%PollSchema{}, _token), do: nil
 
-  # --- Registration helpers ---
+  # --- Link request helpers ---
 
-  defp register_open(poll, attrs) do
+  defp request_open(poll, attrs) do
     email = normalise_email(attrs)
 
-    case PollParticipantQueries.get_by_poll_and_email(poll.id, email) do
-      %PollParticipantSchema{} = existing -> {:ok, existing}
+    case find_existing(poll, email) do
+      %PollParticipantSchema{} = existing -> resend_link(existing)
       nil -> insert_participant(poll, attrs, email)
     end
   end
 
-  # The cap is a best-effort soft limit: this is a check-then-insert, so
-  # concurrent registrations with distinct emails could overshoot the max
-  # slightly. That is acceptable here, so no advisory lock is taken.
-  defp insert_participant(poll, attrs, email) do
-    if PollParticipantQueries.count_for_poll(poll.id) >= PollSchema.max_participants() do
-      {:error, :poll_full}
+  # A missing address fails the changeset; looking it up would raise first.
+  defp find_existing(_poll, nil), do: nil
+
+  defp find_existing(poll, email),
+    do: PollParticipantQueries.get_by_poll_and_email(poll.id, email)
+
+  # The send is claimed by a conditional update, so two requests racing for
+  # the same address send one email between them.
+  defp resend_link(participant) do
+    now = DateTime.utc_now()
+    resend_before = DateTime.add(now, -@resend_interval_seconds, :second)
+
+    if PollParticipantQueries.claim_link_send(participant.id, now, resend_before) do
+      PollScheduler.schedule_participant_link(participant)
     else
-      %PollParticipantSchema{}
-      |> PollParticipantSchema.creation_changeset(participant_attrs(poll, attrs, email))
-      |> PollParticipantQueries.insert()
-      |> handle_insert(poll, email)
+      :ok
+    end
+  end
+
+  # Both caps are best-effort soft limits: this is a check-then-insert, so
+  # concurrent requests with distinct emails could overshoot them slightly.
+  # That is acceptable here, so no advisory lock is taken.
+  defp insert_participant(poll, attrs, email) do
+    cond do
+      PollParticipantQueries.count_confirmed(poll.id) >= PollSchema.max_participants() ->
+        {:error, :poll_full}
+
+      PollParticipantQueries.count_unconfirmed(poll.id) >=
+          PollSchema.max_unconfirmed_participants() ->
+        {:error, :too_many_requests}
+
+      true ->
+        %PollParticipantSchema{}
+        |> PollParticipantSchema.creation_changeset(participant_attrs(poll, attrs, email))
+        |> PollParticipantSchema.link_sent_changeset(DateTime.utc_now())
+        |> PollParticipantQueries.insert()
+        |> handle_insert()
     end
   end
 
@@ -124,17 +177,13 @@ defmodule Tymeslot.Polls.Voting do
     |> Map.new()
   end
 
-  # On the unique-constraint race (a concurrent registration for the same email
-  # slipped in between the existence check and this insert) resume the participant
-  # that now exists. Any other changeset error is a genuine failure.
-  defp handle_insert({:ok, participant}, _poll, _email), do: {:ok, participant}
+  defp handle_insert({:ok, participant}), do: PollScheduler.schedule_participant_link(participant)
 
-  defp handle_insert({:error, changeset}, poll, email) do
-    if unique_email_violation?(changeset) do
-      {:ok, PollParticipantQueries.get_by_poll_and_email(poll.id, email)}
-    else
-      {:error, changeset}
-    end
+  # On the unique-constraint race a concurrent request for the same address
+  # inserted first, and its link is already on the way. Any other changeset
+  # error is a genuine failure.
+  defp handle_insert({:error, changeset}) do
+    if unique_email_violation?(changeset), do: :ok, else: {:error, changeset}
   end
 
   defp unique_email_violation?(changeset) do
@@ -165,14 +214,14 @@ defmodule Tymeslot.Polls.Voting do
     end
   end
 
-  defp cast_for_participant(_poll, participant, votes_map) when map_size(votes_map) == 0 do
+  defp cast_for_participant(_poll, participant, votes_map, _name) when map_size(votes_map) == 0 do
     {:ok, participant}
   end
 
-  defp cast_for_participant(poll, participant, votes_map) do
+  defp cast_for_participant(poll, participant, votes_map, name) do
     with :ok <- validate_slots(poll, votes_map),
          {:ok, vote_maps} <- build_vote_maps(participant, votes_map) do
-      persist(poll, participant, vote_maps)
+      persist(poll, participant, vote_maps, name)
     end
   end
 
@@ -216,17 +265,24 @@ defmodule Tymeslot.Polls.Voting do
   # Upsert and voted_at stamp must land together: Task 11's all-voted
   # notification keys off voted_at, so a vote persisted without the stamp would
   # be invisible to it. Broadcast only after the transaction commits.
-  defp persist(poll, participant, vote_maps) do
+  defp persist(poll, participant, vote_maps, name) do
     transaction =
       Repo.transaction(fn ->
-        PollVoteQueries.upsert_votes(vote_maps)
-        {:ok, stamped} = stamp_voted(participant)
-        stamped
+        with :ok <- ensure_room(poll, participant),
+             {:ok, named} <- ensure_named(participant, name) do
+          PollVoteQueries.upsert_votes(vote_maps)
+          {:ok, stamped} = stamp_voted(named)
+          stamped
+        else
+          {:error, reason} -> Repo.rollback(reason)
+        end
       end)
 
     case transaction do
       {:ok, stamped} ->
         Polls.broadcast_update(poll.id)
+        maybe_send_receipt(participant, stamped)
+        maybe_update_host(poll)
         maybe_notify_all_voted(poll)
         {:ok, stamped}
 
@@ -235,16 +291,54 @@ defmodule Tymeslot.Polls.Voting do
     end
   end
 
+  # Confirming adds the participant to the count the cap is about. Best-effort
+  # like the check on request.
+  defp ensure_room(_poll, %PollParticipantSchema{confirmed_at: %DateTime{}}), do: :ok
+
+  defp ensure_room(poll, _participant) do
+    if PollParticipantQueries.count_confirmed(poll.id) < PollSchema.max_participants() do
+      :ok
+    else
+      {:error, :poll_full}
+    end
+  end
+
+  # Only a participant invited without a name lacks one, and they give it with
+  # their first responses. Anyone else's name stays as it is.
+  defp ensure_named(%PollParticipantSchema{name: nil} = participant, name) do
+    participant
+    |> PollParticipantSchema.name_changeset(name)
+    |> PollParticipantQueries.update()
+  end
+
+  defp ensure_named(participant, _name), do: {:ok, participant}
+
+  # One receipt, for the first responses saved. Later changes are saved
+  # silently: the receipt already holds the link to come back with.
+  defp maybe_send_receipt(%PollParticipantSchema{voted_at: nil}, stamped),
+    do: PollScheduler.schedule_vote_receipt(stamped)
+
+  defp maybe_send_receipt(_participant, _stamped), do: :ok
+
   defp stamp_voted(participant) do
     participant
     |> PollParticipantSchema.voted_changeset(DateTime.utc_now())
     |> PollParticipantQueries.update()
   end
 
-  # Once every registered participant has voted, nudge the host to pick a time.
-  # The count is re-checked against the database rather than the (now stale)
-  # in-memory poll, since the just-cast vote stamped voted_at inside the
-  # transaction above.
+  # A host who asked to hear about new votes gets them bundled: this joins the
+  # update already waiting, or schedules one.
+  defp maybe_update_host(%PollSchema{notify_on_vote: true} = poll),
+    do: PollScheduler.schedule_vote_digest(poll)
+
+  defp maybe_update_host(_poll), do: :ok
+
+  # Once everyone has voted, nudge the host to pick a time. Only a poll the
+  # host invited people to knows who everyone is: on a poll shared only by
+  # link, "everyone" would be whoever happened to ask for a link so far, often
+  # just the first voter. The check runs against the database rather than the
+  # (now stale) in-memory poll, since the just-cast vote stamped voted_at
+  # inside the transaction above.
   defp maybe_notify_all_voted(poll) do
     if all_participants_voted?(poll) do
       PollScheduler.schedule_all_voted_nudge(poll)
@@ -254,7 +348,7 @@ defmodule Tymeslot.Polls.Voting do
   end
 
   defp all_participants_voted?(poll) do
-    PollParticipantQueries.count_for_poll(poll.id) > 0 and
-      PollParticipantQueries.list_unvoted_for_poll(poll.id) == []
+    PollParticipantQueries.any_invited?(poll.id) and
+      not PollParticipantQueries.awaiting_votes?(poll.id)
   end
 end
