@@ -1221,6 +1221,44 @@ describe('modal keyboard and focus management', () => {
     expect(closeBtn).not.toBeNull()
   })
 
+  test('close button sits outside the booking frame, never over the page', () => {
+    // The booking page keeps its own controls (the language switcher) in its
+    // top corners, so the close button must not be laid over the iframe.
+    window.TymeslotBooking.open('alice')
+
+    const container = document.querySelector('#tymeslot-modal [data-tymeslot-container]')
+    const closeBtn = container.querySelector('[data-tymeslot-close]')
+    const frame = container.querySelector('[data-tymeslot-frame]')
+
+    // Above the container's top edge, so the container must not clip it...
+    expect(parseInt(closeBtn.style.top, 10)).toBeLessThan(0)
+    expect(container.style.overflow).not.toBe('hidden')
+    // ...and the frame clips the iframe to the rounded corners instead.
+    expect(frame.querySelector('iframe[title="Booking Widget"]')).not.toBeNull()
+    expect(frame.style.overflow).toBe('hidden')
+  })
+
+  test('full-screen sheet gives the close button its own top bar', () => {
+    window.TymeslotBooking.open('alice')
+
+    const css = document.getElementById('tymeslot-modal-styles').textContent
+    expect(css).toContain('padding-top: 56px !important')
+    expect(css).toMatch(/\[data-tymeslot-close\] \{top: 6px !important;/)
+    expect(css).toContain('width: 44px !important')
+  })
+
+  test('full-screen sheet caps the frame at the viewport below the top bar', () => {
+    const original = window.matchMedia
+    window.matchMedia = (query) => ({ matches: query === '(max-width: 768px)', media: query })
+    try {
+      window.TymeslotBooking.open('alice')
+      const wrapper = document.querySelector('#tymeslot-modal [data-tymeslot-frame]')
+      expect(wrapper.dataset.constraintHeight).toBe(String(window.innerHeight - 56))
+    } finally {
+      window.matchMedia = original
+    }
+  })
+
   test('Tab on last focusable element wraps to first', () => {
     window.TymeslotBooking.open('alice')
 

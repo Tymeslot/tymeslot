@@ -71,6 +71,16 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponentTest 
       refute html =~ "Ready to grow your business?"
     end
 
+    test "never introduces a nameless organiser by a filler word" do
+      profile = build(:profile, full_name: nil, user: build(:user, name: nil))
+
+      html = render_overview(organizer_profile: profile)
+
+      refute html =~ "there"
+      assert html =~ "Let&#39;s Connect!"
+      refute html =~ "Hi! I&#39;m"
+    end
+
     test "escapes wording the organiser typed rather than rendering it as markup" do
       profile =
         build(:profile,
@@ -84,6 +94,20 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponentTest 
 
       refute html =~ "<script>alert(1)</script>"
       assert html =~ "&lt;script&gt;"
+    end
+  end
+
+  describe "avatar badge" do
+    # A text check needs a font on the booker's device that has the glyph,
+    # which draws an empty box without one; the badge draws an inline icon.
+    test "draws its check as an icon, not as a text glyph" do
+      badge =
+        render_overview([])
+        |> Floki.parse_document!()
+        |> Floki.find(".avatar-checkmark")
+
+      assert Floki.find(badge, "svg.avatar-checkmark__icon") != []
+      assert String.trim(Floki.text(badge)) == ""
     end
   end
 

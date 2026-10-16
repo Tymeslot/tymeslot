@@ -26,16 +26,17 @@ msgstr "%{theme_name}-Design-Vorschau"
 msgid "An error occurred. Please refresh the page and try again."
 msgstr "Ein Fehler ist aufgetreten. Bitte laden Sie die Seite neu und versuchen Sie es erneut."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/background_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Background Design"
 msgstr "Hintergrund-Design"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/background_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a visual style that matches your professional identity."
 msgstr "Wählen Sie einen visuellen Stil, der zu Ihrer beruflichen Identität passt."
 
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/cover_panel.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
@@ -47,16 +48,6 @@ msgstr "Aus unserer Sammlung wählen"
 msgid "Close"
 msgstr "Schließen"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
-#, elixir-autogen, elixir-format
-msgid "Color Palette"
-msgstr "Farbpalette"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
-#, elixir-autogen, elixir-format
-msgid "Confirm"
-msgstr "Bestätigen"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Connect Calendar to Preview"
@@ -67,24 +58,19 @@ msgstr "Für die Vorschau Kalender verbinden"
 msgid "Current"
 msgstr "Aktuell"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/accent_panel.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/palette_panel.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/color_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Custom"
 msgstr "Benutzerdefiniert"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Customize Style"
-msgstr "Stil anpassen"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to update theme"
 msgstr "Design konnte nicht aktualisiert werden"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/background_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Gradient"
 msgstr "Farbverlauf"
@@ -99,7 +85,7 @@ msgstr "Hex-Farbwert"
 msgid "Hue"
 msgstr "Farbton"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/background_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Image"
 msgstr "Bild"
@@ -109,11 +95,6 @@ msgstr "Bild"
 msgid "Invalid theme selection"
 msgstr "Ungültige Design-Auswahl"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
-#, elixir-autogen, elixir-format
-msgid "JPG, PNG or WebP. Max 5MB."
-msgstr "JPG, PNG oder WebP. Max. 5 MB."
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
@@ -121,28 +102,14 @@ msgstr "JPG, PNG oder WebP. Max. 5 MB."
 msgid "Live Preview"
 msgstr "Live-Vorschau"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
-#, elixir-autogen, elixir-format
-msgid "MP4 or WebM. Max 20MB."
-msgstr "MP4 oder WebM. Max. 20 MB."
-
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/cover_panel.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Or upload your own"
 msgstr "Oder eigenes hochladen"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
-#, elixir-autogen, elixir-format
-msgid "Primary"
-msgstr "Primär"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
-#, elixir-autogen, elixir-format
-msgid "Secondary"
-msgstr "Sekundär"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_upload.ex
 #, elixir-autogen, elixir-format
 msgid "Select Image"
 msgstr "Bild auswählen"
@@ -152,28 +119,11 @@ msgstr "Bild auswählen"
 msgid "Select Video"
 msgstr "Video auswählen"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/color_picker.ex
-#, elixir-autogen, elixir-format
-msgid "Select a solid color"
-msgstr "Volltonfarbe auswählen"
-
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Select the interface that best represents your personal brand and creates the best experience for your clients."
 msgstr "Wählen Sie die Oberfläche, die Ihre persönliche Marke am besten repräsentiert und Ihren Kunden das beste Erlebnis bietet."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
-#, elixir-autogen, elixir-format
-msgid "Select the primary colors for your booking page interface."
-msgstr "Wählen Sie die Primärfarben für die Oberfläche Ihrer Buchungsseite."
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/color_picker.ex
-#, elixir-autogen, elixir-format
-msgid "Solid Color"
-msgstr "Volltonfarbe"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_preview.ex
 #, elixir-autogen, elixir-format
 msgid "Theme Preview"
@@ -184,17 +134,12 @@ msgstr "Design-Vorschau"
 msgid "Theme updated to %{theme_name}"
 msgstr "Design auf %{theme_name} geändert"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
-#, elixir-autogen, elixir-format
-msgid "This preview reflects your current color scheme and background."
-msgstr "Diese Vorschau zeigt Ihr aktuelles Farbschema und Ihren Hintergrund."
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/background_uploads.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/asset_uploads.ex
 #, elixir-autogen, elixir-format
 msgid "Too many upload attempts. Please wait a few minutes and try again."
 msgstr "Zu viele Upload-Versuche. Bitte warten Sie einige Minuten und versuchen Sie es erneut."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_upload.ex
 #, elixir-autogen, elixir-format
 msgid "Upload Image"
 msgstr "Bild hochladen"
@@ -204,13 +149,13 @@ msgstr "Bild hochladen"
 msgid "Upload Video"
 msgstr "Video hochladen"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_upload.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Upload not available"
 msgstr "Upload nicht verfügbar"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/background_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Video"
 msgstr "Video"
@@ -234,11 +179,6 @@ msgstr "Glasmorphismus-Design mit eleganten Transparenzeffekten und einem 4-stuf
 #, elixir-autogen, elixir-format
 msgid "Modern sliding design with video background and a 4-slide booking flow."
 msgstr "Modernes Design mit gleitenden Übergängen, Videohintergrund und einem Buchungsablauf in 4 Slides."
-
-#: lib/tymeslot/theme_customizations.ex
-#, elixir-autogen, elixir-format
-msgid "Could not save your theme customization. Please try again."
-msgstr "Ihre Design-Anpassung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
@@ -335,7 +275,7 @@ msgstr "Nicht gespeicherte Änderungen"
 msgid "Complete the form to save"
 msgstr "Formular ausfüllen, um zu speichern"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/background_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Background type"
 msgstr "Hintergrundtyp"
@@ -344,3 +284,398 @@ msgstr "Hintergrundtyp"
 #, elixir-autogen, elixir-format
 msgid "Current style"
 msgstr "Aktueller Stil"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/asset_uploads.ex
+#, elixir-autogen, elixir-format
+msgid "Background image uploaded successfully"
+msgstr "Hintergrundbild erfolgreich hochgeladen"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/asset_uploads.ex
+#, elixir-autogen, elixir-format
+msgid "Background video uploaded successfully"
+msgstr "Hintergrundvideo erfolgreich hochgeladen"
+
+#: lib/tymeslot/theme_customizations/assets.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid image format. Please upload a valid image file."
+msgstr "Ungültiges Bildformat. Bitte laden Sie eine gültige Bilddatei hoch."
+
+#: lib/tymeslot/theme_customizations/assets.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid video format. Please upload a valid video file."
+msgstr "Ungültiges Videoformat. Bitte laden Sie eine gültige Videodatei hoch."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/asset_uploads.ex
+#, elixir-autogen, elixir-format
+msgid "No file was uploaded"
+msgstr "Es wurde keine Datei hochgeladen"
+
+#: lib/tymeslot/theme_customizations.ex
+#: lib/tymeslot/theme_customizations/assets.ex
+#, elixir-autogen, elixir-format
+msgid "This option is not available for this theme."
+msgstr "Diese Option ist für dieses Design nicht verfügbar."
+
+#: lib/tymeslot/theme_customizations/assets.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/asset_uploads.ex
+#, elixir-autogen, elixir-format
+msgid "Upload failed"
+msgstr "Upload fehlgeschlagen"
+
+#: lib/tymeslot/theme_customizations/assets.ex
+#, elixir-autogen, elixir-format
+msgid "Video processing is unavailable on this server because ffmpeg is not installed. Install ffmpeg or use a background image instead."
+msgstr "Die Videoverarbeitung ist auf diesem Server nicht verfügbar, weil ffmpeg nicht installiert ist. Installieren Sie ffmpeg oder verwenden Sie stattdessen ein Hintergrundbild."
+
+#: lib/tymeslot/theme_customizations/assets.ex
+#, elixir-autogen, elixir-format
+msgid "Your video was saved but could not be queued for processing. Please upload it again."
+msgstr "Ihr Video wurde gespeichert, konnte aber nicht zur Verarbeitung eingereiht werden. Bitte laden Sie es erneut hoch."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/asset_uploads.ex
+#, elixir-autogen, elixir-format
+msgid "File uploaded successfully"
+msgstr "Datei erfolgreich hochgeladen"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/logo_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Logo"
+msgstr "Logo"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/asset_uploads.ex
+#, elixir-autogen, elixir-format
+msgid "Logo uploaded successfully"
+msgstr "Logo erfolgreich hochgeladen"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/logo_panel.ex
+#, elixir-autogen, elixir-format
+msgid "No logo uploaded yet."
+msgstr "Noch kein Logo hochgeladen."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/logo_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Remove logo"
+msgstr "Logo entfernen"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/logo_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Your logo"
+msgstr "Ihr Logo"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/logo_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Your logo, for the themes that show one on your booking page."
+msgstr "Ihr Logo, für Designs, die eines auf Ihrer Buchungsseite zeigen."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/cover_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Cover Image"
+msgstr "Titelbild"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/asset_uploads.ex
+#, elixir-autogen, elixir-format
+msgid "Cover image uploaded successfully"
+msgstr "Titelbild erfolgreich hochgeladen"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/cover_panel.ex
+#, elixir-autogen, elixir-format
+msgid "The wide image across the top of your booking page, for the themes that show one."
+msgstr "Das breite Bild oben auf Ihrer Buchungsseite, für Designs, die eines zeigen."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/cover_panel.ex
+#, elixir-autogen, elixir-format
+msgid "You have a custom cover image. Selecting a preset will remove it."
+msgstr "Sie haben ein eigenes Titelbild. Wenn Sie eine Voreinstellung wählen, wird es entfernt."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/cover_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Your cover image"
+msgstr "Ihr Titelbild"
+
+#: lib/tymeslot/theme_customizations/presets/accents.ex
+#, elixir-autogen, elixir-format
+msgid "Cobalt"
+msgstr "Kobalt"
+
+#: lib/tymeslot/theme_customizations/presets/accents.ex
+#, elixir-autogen, elixir-format
+msgid "Ember"
+msgstr "Glut"
+
+#: lib/tymeslot/theme_customizations/presets/accents.ex
+#, elixir-autogen, elixir-format
+msgid "Emerald"
+msgstr "Smaragd"
+
+#: lib/tymeslot/theme_customizations/presets/accents.ex
+#, elixir-autogen, elixir-format
+msgid "Graphite"
+msgstr "Graphit"
+
+#: lib/tymeslot/theme_customizations/presets/accents.ex
+#, elixir-autogen, elixir-format
+msgid "Indigo"
+msgstr "Indigo"
+
+#: lib/tymeslot/theme_customizations/presets/accents.ex
+#, elixir-autogen, elixir-format
+msgid "Rose"
+msgstr "Rose"
+
+#: lib/tymeslot/theme_customizations/presets/accents.ex
+#, elixir-autogen, elixir-format
+msgid "Teal"
+msgstr "Petrol"
+
+#: lib/tymeslot/theme_customizations/presets/accents.ex
+#, elixir-autogen, elixir-format
+msgid "Violet"
+msgstr "Violett"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/accent_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Accent Colour"
+msgstr "Akzentfarbe"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/accent_panel.ex
+#, elixir-autogen, elixir-format
+msgid "The colour of the buttons, links and highlights on your booking page."
+msgstr "Die Farbe der Schaltflächen, Links und Hervorhebungen auf Ihrer Buchungsseite."
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Cool"
+msgstr "Kühl"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Neutral"
+msgstr "Neutral"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Warm"
+msgstr "Warm"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/colour_mode_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Colour Mode"
+msgstr "Farbmodus"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/colour_mode_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Dark"
+msgstr "Dunkel"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/colour_mode_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Light"
+msgstr "Hell"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/colour_mode_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Match device"
+msgstr "Wie Gerät"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/colour_mode_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Show your booking page light or dark, or let it follow each visitor's device."
+msgstr "Zeigen Sie Ihre Buchungsseite hell oder dunkel an, oder lassen Sie sie der Einstellung auf dem Gerät jedes Besuchers folgen."
+
+#: lib/tymeslot/theme_customizations/presets/fonts.ex
+#, elixir-autogen, elixir-format
+msgid "Classic"
+msgstr "Klassisch"
+
+#: lib/tymeslot/theme_customizations/presets/fonts.ex
+#, elixir-autogen, elixir-format
+msgid "Editorial"
+msgstr "Redaktionell"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/font_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Font"
+msgstr "Schrift"
+
+#: lib/tymeslot/theme_customizations/presets/fonts.ex
+#, elixir-autogen, elixir-format
+msgid "Literary"
+msgstr "Literarisch"
+
+#: lib/tymeslot/theme_customizations/presets/fonts.ex
+#, elixir-autogen, elixir-format
+msgid "Quiet"
+msgstr "Schlicht"
+
+#: lib/tymeslot/theme_customizations/presets/fonts.ex
+#, elixir-autogen, elixir-format
+msgid "System"
+msgstr "System"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/font_panel.ex
+#, elixir-autogen, elixir-format
+msgid "The typeface of the text and headings on your booking page."
+msgstr "Die Schriftart für Text und Überschriften auf Ihrer Buchungsseite."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/density_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Comfortable"
+msgstr "Großzügig"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/density_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Compact"
+msgstr "Kompakt"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/radius_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Corners"
+msgstr "Ecken"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/density_panel.ex
+#, elixir-autogen, elixir-format
+msgid "How much room your booking page leaves around its content."
+msgstr "Wie viel Raum Ihre Buchungsseite um ihre Inhalte lässt."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/radius_panel.ex
+#, elixir-autogen, elixir-format
+msgid "How rounded the buttons and cards on your booking page are."
+msgstr "Wie stark die Schaltflächen und Karten auf Ihrer Buchungsseite abgerundet sind."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/radius_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Round"
+msgstr "Rund"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/radius_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Sharp"
+msgstr "Eckig"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/radius_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Soft"
+msgstr "Sanft"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/density_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Spacing"
+msgstr "Abstände"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Blush"
+msgstr "Rosé"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Dusk"
+msgstr "Dämmerung"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Harbour"
+msgstr "Hafen"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Ink"
+msgstr "Tinte"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Ivory"
+msgstr "Elfenbein"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Sage"
+msgstr "Salbei"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/palette_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Colour Palette"
+msgstr "Farbpalette"
+
+#: lib/tymeslot/theme_customizations.ex
+#: lib/tymeslot/theme_customizations/assets.ex
+#, elixir-autogen, elixir-format
+msgid "Could not save your theme customisation. Please try again."
+msgstr "Ihre Design-Anpassung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Customise Style"
+msgstr "Stil anpassen"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/color_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Select a solid colour"
+msgstr "Volltonfarbe auswählen"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/palette_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Select the primary colours for your booking page interface."
+msgstr "Wählen Sie die Primärfarben für die Oberfläche Ihrer Buchungsseite."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/background_panel.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/color_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Solid Colour"
+msgstr "Volltonfarbe"
+
+#: lib/tymeslot_web/themes/quill/theme.ex
+#, elixir-autogen, elixir-format
+msgid "My clients should feel they are booking someone established. The page should look as considered as my work."
+msgstr "Meine Kunden sollen spüren, dass sie bei jemandem buchen, der etabliert ist. Die Seite soll so durchdacht aussehen wie meine Arbeit."
+
+#: lib/tymeslot_web/themes/rhythm/theme.ex
+#, elixir-autogen, elixir-format
+msgid "When someone books me, I want them to feel the atmosphere first: motion, mood, then a time."
+msgstr "Wer bei mir bucht, soll zuerst die Atmosphäre spüren: Bewegung, Stimmung, dann einen Termin."
+
+#: lib/tymeslot/theme_customizations/assets.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid captions file. Please upload a WebVTT (.vtt) file."
+msgstr "Ungültige Untertiteldatei. Bitte laden Sie eine WebVTT-Datei (.vtt) hoch."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "MP4 or WebM. Max %{size} MB."
+msgstr "MP4 oder WebM. Max. %{size} MB."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_upload.ex
+#, elixir-autogen, elixir-format
+msgid "JPG, PNG or WebP. Max %{size} MB and %{megapixels} megapixels (%{webp_megapixels} for WebP)."
+msgstr "JPG, PNG oder WebP. Max. %{size} MB und %{megapixels} Megapixel (%{webp_megapixels} bei WebP)."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/asset_uploads.ex
+#, elixir-autogen, elixir-format
+msgid "Please upload one file at a time."
+msgstr "Bitte laden Sie jeweils nur eine Datei hoch."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/asset_uploads.ex
+#, elixir-autogen, elixir-format
+msgid "The upload failed. Please try again."
+msgstr "Der Upload ist fehlgeschlagen. Bitte versuchen Sie es erneut."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/asset_uploads.ex
+#, elixir-autogen, elixir-format
+msgid "This file is too large. Please upload one of at most %{size} MB."
+msgstr "Diese Datei ist zu groß. Bitte laden Sie eine Datei mit höchstens %{size} MB hoch."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/asset_uploads.ex
+#, elixir-autogen, elixir-format
+msgid "This file type is not supported. Please upload a JPG, PNG or WebP image."
+msgstr "Dieser Dateityp wird nicht unterstützt. Bitte laden Sie ein JPG-, PNG- oder WebP-Bild hoch."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/asset_uploads.ex
+#, elixir-autogen, elixir-format
+msgid "This file type is not supported. Please upload an MP4 or WebM video."
+msgstr "Dieser Dateityp wird nicht unterstützt. Bitte laden Sie ein MP4- oder WebM-Video hoch."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#, elixir-autogen, elixir-format
+msgid "You are customising %{theme}, but your booking page uses %{current}. These changes appear on your booking page once you choose %{theme} as your style."
+msgstr "Sie passen gerade %{theme} an, Ihre Buchungsseite verwendet aber %{current}. Die Änderungen erscheinen auf Ihrer Buchungsseite, sobald Sie %{theme} als Stil auswählen."

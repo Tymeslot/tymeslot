@@ -118,10 +118,7 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
              )
     end
 
-    test "counts link requests nobody has voted with apart from the voters", %{
-      conn: conn,
-      user: user
-    } do
+    test "counts unanswered link requests apart from the voters", %{conn: conn, user: user} do
       %{poll: poll} = open_poll_with_votes(user)
       now = DateTime.utc_now(:second)
 
@@ -244,6 +241,8 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
 
       view |> element("[data-testid='poll-edit-details']") |> render_click()
       assert has_element?(view, "[data-testid='poll-details-form']")
+      # An emptied title reaches the server, which answers in the form.
+      assert has_element?(view, "[data-testid='poll-details-form'][novalidate]")
 
       html =
         view

@@ -2,8 +2,8 @@ defmodule Tymeslot.ThemeCustomizationsUploadValidationTest do
   use Tymeslot.DataCase, async: true
   @moduletag :utils
 
+  alias Tymeslot.Media.UploadConstraints
   alias Tymeslot.ThemeCustomizations.Validation
-  alias TymeslotWeb.Helpers.UploadConstraints
 
   describe "Validation file upload tests" do
     test "validate_file_size/2 validates image size limit" do

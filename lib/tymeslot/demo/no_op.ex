@@ -151,6 +151,7 @@ defmodule Tymeslot.Demo.NoOp do
         _user_timezone,
         _year,
         _month,
+        _week_start,
         _organizer_profile,
         _availability_map \\ nil
       ) do

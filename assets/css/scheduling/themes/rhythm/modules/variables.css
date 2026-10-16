@@ -10,7 +10,7 @@
      350px  bare     — last-resort trims for the tiniest landscape viewports */
 :root {
   /* Typography - Comprehensive scale */
-  --theme-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --theme-font-family: var(--font-stack-inter);
 
   /* Font size scale - fluid responsive using clamp() */
   --theme-font-size-3xs: clamp(0.688rem, 1.1vw, 0.75rem);     /* ~11-12px - tiny labels */
@@ -26,16 +26,10 @@
 
   /* Line heights */
   --theme-line-height-tight: 1.1;
-  --theme-line-height-snug: 1.2;
   --theme-line-height-normal: 1.4;
-  --theme-line-height-relaxed: 1.5;
-  --theme-line-height-loose: 1.6;
 
   /* Font weights */
   --font-weight-normal: 400;
-  --font-weight-medium: 500;
-  --font-weight-semibold: 600;
-  --font-weight-bold: 700;
 
   /* Letter spacing */
   --letter-spacing-tight: 0.025em;
@@ -60,12 +54,10 @@
      because borders, focus rings and bright text on the dark card need it
      bright. */
   --theme-on-primary: #0f172a;
-  --theme-primary-solid: var(--theme-primary);
-  --theme-primary-solid-hover: var(--theme-primary-hover);
   --theme-on-accent: #0f172a;
-  --theme-accent-solid: var(--theme-accent);
 
   --theme-warning: #fbbf24;
+  --theme-success: #10b981;
   --theme-info: #6366f1;
   --theme-info-dark: #4f46e5;
   --theme-error: rgba(239, 68, 68, 0.95);
@@ -74,15 +66,17 @@
   --theme-error-light: #fca5a5;
   --theme-danger: #ef4444;
   --theme-danger-dark: #dc2626;
-  --theme-background-color: #0f172a;
   --theme-surface: rgba(30, 41, 59, 0.5);
   --theme-text: #e2e8f0;
   --theme-text-secondary: #94a3b8;
   --theme-text-muted: #64748b;
+  /* The palette's page colour. The server overrides it per organiser; it is
+     what shows behind an image or video background (--theme-background falls
+     back to it). */
+  --theme-canvas: #0f172a;
 
   /* Background gradients */
   --theme-background: linear-gradient(135deg, #1a1f2e 0%, #2d3561 50%, #1a1f2e 100%);
-  --theme-background-image: none;
 
   /* Glassmorphism surface opacity levels */
   --surface-subtle: rgba(255, 255, 255, 0.06);
@@ -97,6 +91,10 @@
   --border-medium: rgba(255, 255, 255, 0.20);
   --border-strong: rgba(255, 255, 255, 0.30);
 
+  /* Answer tiles and option cards (shared/components/custom-questions.css) */
+  --option-tile-border: var(--border-strong);
+  --option-tile-bg-hover: var(--surface-strong);
+
   /* Border radius scale */
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -104,11 +102,6 @@
   --radius-xl: 12px;
   --radius-2xl: 16px;
   --radius-full: 9999px;
-
-  /* Border width scale */
-  --border-width-thin: 1px;
-  --border-width-medium: 2px;
-  --border-width-thick: 3px;
 
   /* Spacing scale - fluid responsive */
   --space-hairline: 2px; /* sub-grid gap, compact calendar cells only */
@@ -122,8 +115,6 @@
   --space-2xl: clamp(32px, 4.5vw, 40px);
 
   /* Transition speeds */
-  --transition-fast: 0.15s ease;
-  --transition-normal: 0.2s ease;
   --transition-smooth: 0.3s ease;
   --transition-slow: 0.4s ease-in-out;
 
@@ -144,15 +135,10 @@
   --container-xs: 280px;
   --container-sm: 360px;
   --container-md: 520px;
-  --container-lg: 640px;
   --container-xl: 820px;
 
   /* Dropdown/Popover specific */
   --dropdown-width: var(--container-xs);
-  --dropdown-max-height: clamp(200px, 50vh, 420px);
-
-  /* Z-Index Scale */
-  --z-dropdown: 50;
 
   /* Calendar specific */
   --calendar-gap: clamp(8px, 1.2vw, 12px);
@@ -162,9 +148,6 @@
   --calendar-day-min-height-tablet: 54px;
 
   /* Time slots specific */
-  --time-slot-min-width: 88px;
-  --time-slot-min-width-tablet: 96px;
-  --time-slot-min-height: 40px;
   --time-slots-max-height: clamp(280px, 50vh, 420px);
 
   /* Seat availability (group bookings) */
@@ -189,23 +172,17 @@
   --icon-md: 24px;
   --icon-lg: 32px;
   --icon-xl: 40px;
-  --icon-2xl: 48px;
-
-  /* Flag dimensions */
-  --flag-height: 14px;
 
   /* Elevation shadows */
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.2);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.25);
-  --shadow-xl: 0 10px 40px rgba(0, 0, 0, 0.3);
-  --shadow-primary-sm: 0 4px 16px rgba(6, 182, 212, 0.3);
-  --shadow-primary-md: 0 6px 20px rgba(6, 182, 212, 0.4);
-  --shadow-success-sm: 0 4px 16px rgba(16, 185, 129, 0.3);
-  --shadow-success-md: 0 6px 20px rgba(16, 185, 129, 0.4);
-  --shadow-success-lg: 0 8px 24px rgba(16, 185, 129, 0.3);
-  --shadow-danger-sm: 0 4px 16px rgba(239, 68, 68, 0.3);
-  --shadow-danger-md: 0 6px 20px rgba(239, 68, 68, 0.4);
+
+  /* Coloured-shadow geometry (offset and blur). The colour is mixed from the
+     palette in shared/tokens.css. */
+  --shadow-geometry-sm: 0 4px 16px;
+  --shadow-geometry-md: 0 6px 20px;
+  --shadow-geometry-lg: 0 8px 24px;
 
   /* Scrollbar styling */
   --scrollbar-width: 6px;
@@ -218,4 +195,85 @@
   --button-padding-x: 28px;
   --button-padding-y-sm: 12px;
   --button-padding-x-sm: 24px;
+
+  /* Roles (shared/tokens.css, section 2), as aliases of Rhythm's own names */
+  --surface-2: var(--surface-light);
+  --surface-3: var(--surface-strong);
+  --ink-1: var(--theme-text);
+  --ink-2: var(--theme-text-secondary);
+  --ink-3: var(--theme-text-muted);
+  --notice-warning-surface: rgba(251, 191, 36, 0.12);
+  --notice-warning-border: rgba(251, 191, 36, 0.4);
+  --radius-control: var(--radius-md);
+  --radius-card: var(--radius-2xl);
+
+  /* Shared status screens (shared/layout.css: awaiting payment, readiness) */
+  --status-surface: rgba(255, 255, 255, 0.08);
+  --status-surface-opaque: linear-gradient(135deg, rgba(20, 20, 35, 0.86) 0%, rgba(15, 15, 25, 0.78) 100%);
+  --status-shadow: 0 1.25rem 2.5rem rgba(0, 0, 0, 0.35);
+  --status-ink-heading: #ffffff;
+  --status-ink: rgba(255, 255, 255, 0.92);
+  --status-ink-soft: rgba(255, 255, 255, 0.85);
+  --status-ink-hint: rgba(255, 255, 255, 0.7);
+
+  /* Approval notice (shared/components/approval-notice.css) */
+  --approval-pill-surface: rgba(251, 191, 36, 0.14);
+  --approval-icon-surface: rgba(251, 191, 36, 0.2);
+  --approval-notice-gap: var(--space-xs);
+  --approval-notice-font-size: var(--theme-font-size-xs);
+  --approval-notice-ink: var(--theme-text-secondary);
+  --approval-notice-max-width: 30rem;
+
+  /* Poll voting page (shared/components/polls.css) */
+  --poll-voting-padding: var(--space-lg);
+  --poll-panel-surface: rgba(255, 255, 255, 0.08);
+  --poll-input-surface: rgba(255, 255, 255, 0.1);
+  --poll-input-line: rgba(255, 255, 255, 0.2);
+  --poll-input-focus-ring: var(--focus-ring);
+  --poll-row-surface: rgba(255, 255, 255, 0.08);
+  --poll-row-line: rgba(255, 255, 255, 0.16);
+  --poll-option-line: rgba(255, 255, 255, 0.22);
+  --poll-option-selected-surface: var(--theme-primary-tint);
+
+  /* Payment return pages (shared/components/payment-pages.css). They have
+     no video background container, so the page itself carries the
+     background the container shows behind its media. */
+  --payment-page-background: var(--theme-background);
+  --payment-page-max-width: 36rem;
+  --payment-card-surface: rgba(0, 0, 0, var(--box-opacity));
+  --payment-card-line: var(--border-subtle);
+  --payment-card-radius: var(--radius-2xl);
+  --payment-heading-ink: #ffffff;
+  --payment-body-ink: rgba(255, 255, 255, 0.9);
+  --payment-link-radius: var(--radius-md);
+  --payment-link-weight: var(--font-weight-bold);
+  --payment-link-transition: background var(--transition-smooth);
+
+  /* Booking fields (shared/components/booking-fields.css) */
+  --guest-remove-ink-hover: #ffffff;
+
+  /* Language switcher (shared/components/language-switcher.css) */
+  --lang-switcher-surface: rgba(0, 0, 0, 0.6);
+  --lang-switcher-surface-hover: rgba(0, 0, 0, 0.7);
+  --lang-switcher-panel-surface: rgba(0, 0, 0, 0.9);
+  --lang-switcher-panel-line: var(--border-light);
+  --lang-switcher-item-line: var(--border-subtle);
+  --lang-switcher-item-hover: var(--surface-light);
+  --lang-switcher-item-active: var(--surface-medium);
+  --lang-switcher-item-ink-active: #ffffff;
+
+  /* Slot list (shared/components/slot-list.css) */
+  --slot-list-grid-gap: var(--space-3xs);
+
+  /* Timezone picker (shared/components/timezone-picker.css) */
+  --dropdown-surface: linear-gradient(135deg, rgba(20, 20, 35, 0.98) 0%, rgba(15, 15, 25, 0.96) 100%);
+
+  /* Surfaces and lines used by individual modules */
+  --box-surface: linear-gradient(135deg, rgba(20, 20, 35, var(--box-opacity)) 0%, rgba(15, 15, 25, 0.6) 100%);
+  --surface-dark-light: rgba(0, 0, 0, 0.3);
+  --surface-dark-medium: rgba(0, 0, 0, 0.4);
+  --surface-faint: rgba(255, 255, 255, 0.05);
+  --surface-ghost: rgba(255, 255, 255, 0.03);
+  --border-hover: rgba(255, 255, 255, 0.45);
+  --avatar-ring: rgba(255, 255, 255, 0.8);
 }

@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.CurrentIndicator do
   @moduledoc """
   Pill component that shows the active theme selection — used by both the
-  Color Palette and Solid Color sections.
+  Colour Palette and Solid Colour sections.
 
   Pass one or more `swatches` (CSS `background` values: hex, rgba, gradient
   strings — anything inline-style accepts), a short `label`, an optional

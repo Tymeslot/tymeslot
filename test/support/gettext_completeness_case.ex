@@ -18,7 +18,10 @@ defmodule Tymeslot.GettextCompletenessCase do
       English included. CI's `mix gettext.extract --check-up-to-date` compares the
       templates against source; this compares the catalogues against the templates.
       Together they close the chain, so an extract without `--merge` cannot leave a
-      new string silently untranslated everywhere.
+      new string silently untranslated everywhere. A template with no messages fails,
+      unless the caller lists its domain in `:empty_domains` (a domain created ahead
+      of its first string); a listed domain must then stay empty, so the listing
+      fails the moment the first string lands and is removed with it.
     * **Source language**: the default locale's msgstrs are all empty. The msgid *is*
       the English copy, so a filled English msgstr is either a redundant duplicate
       that can drift from the source, or a sign the msgid is a key rather than text.
@@ -68,6 +71,9 @@ defmodule Tymeslot.GettextCompletenessCase do
     async = Keyword.fetch!(opts, :async)
     max_msgids = Keyword.get(opts, :max_msgids, @default_max_msgids)
 
+    {empty_domains, _bindings} =
+      Code.eval_quoted(Keyword.get(opts, :empty_domains, []), [], __CALLER__)
+
     # Every extracted domain, derived from the `.pot` templates so a domain is covered
     # the moment it is first extracted; there is no allowlist to forget to update.
     # One consistency test per domain is spliced in via a nested quote, since the outer
@@ -79,14 +85,31 @@ defmodule Tymeslot.GettextCompletenessCase do
       |> Enum.map(&Path.basename(&1, ".pot"))
       |> Enum.sort()
 
+    # A listed domain with no template would exempt nothing and check nothing,
+    # so a typo or a removed domain fails the build rather than passing quietly.
+    case Enum.reject(empty_domains, &(&1 in domains)) do
+      [] ->
+        :ok
+
+      unknown ->
+        raise ArgumentError,
+              ":empty_domains names #{inspect(unknown)}, which has no .pot template " <>
+                "in #{gettext_path}"
+    end
+
     msgid_consistency_tests =
       for domain <- domains do
         quote do
           test unquote("every locale matches the #{domain}.pot template") do
             domain = unquote(domain)
+            template_keys = Catalogue.template_keys(@gettext_path, domain)
 
-            refute Catalogue.template_keys(@gettext_path, domain) == [],
-                   "#{domain}.pot has no messages"
+            if unquote(domain in empty_domains) do
+              assert template_keys == [],
+                     "#{domain}.pot has messages now; remove it from :empty_domains"
+            else
+              refute template_keys == [], "#{domain}.pot has no messages"
+            end
 
             for locale <- Locales.supported_codes() do
               {missing, extra} = Catalogue.template_drift(@gettext_path, locale, domain)

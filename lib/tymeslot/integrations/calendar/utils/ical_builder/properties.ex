@@ -226,9 +226,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
   # to say "stored, but don't mail them — I already did". `:contact` emits
   # `CONTACT` (RFC 5545 §3.8.4.2), which carries the same name and address
   # outside the iTIP model entirely, for a server that ignores the parameter
-  # and would invite the attendee a second time. `:organiser_attendee` is
-  # `:attendee` with the organiser listed first as the chair, for a server
-  # that adds its calendar's owner to any event not already listing them.
+  # and would invite the attendee a second time. `{:organiser_attendee, _}`
+  # is `:attendee` with the account's owner listed first as the chair, for a
+  # server that adds its calendar's owner to any event not already listing
+  # them; `Scheduling.owner_attendee_address/2` picks the address.
   #
   # Either way the attendee identity is also folded into the event DESCRIPTION
   # (see `CalendarEventBuilder.build_event_description/2`), which is what
@@ -237,16 +238,22 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
   @spec build_attendee_lines(map(), Scheduling.mode()) :: String.t() | nil
   def build_attendee_lines(event, mode \\ :contact)
 
-  def build_attendee_lines(event, :organiser_attendee) do
-    organiser = normalise_address(Map.get(event, :organizer_email))
+  def build_attendee_lines(event, {:organiser_attendee, addresses}) do
+    owner = Scheduling.owner_attendee_address(Map.get(event, :organizer_email), addresses)
+
+    hosts =
+      Enum.reject(
+        [normalise_address(Map.get(event, :organizer_email)), normalise_address(owner)],
+        &is_nil/1
+      )
 
     guest_lines =
       event
       |> guests()
-      |> Enum.reject(&(organiser != nil and guest_address(&1) == organiser))
+      |> Enum.reject(&(guest_address(&1) in hosts))
       |> Enum.map(&format_attendee(&1, :attendee))
 
-    join_lines([organiser_attendee_line(event) | guest_lines])
+    join_lines([owner_attendee_line(owner, event) | guest_lines])
   end
 
   def build_attendee_lines(event, mode) do
@@ -318,19 +325,20 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
     end
   end
 
-  # The organiser attends the meeting they organised, so they are the chair
-  # and have accepted; `SCHEDULE-AGENT=CLIENT` keeps the server from treating
-  # the line as an invitation to send.
-  defp organiser_attendee_line(%{organizer_email: email} = event)
-       when is_binary(email) and email != "" do
+  # The account's owner attends the meeting they organised, so they are the
+  # chair and have accepted; `SCHEDULE-AGENT=CLIENT` keeps the server from
+  # treating the line as an invitation to send. The address may be the
+  # account's rather than the organiser's (see `CalDAV.Scheduling`), but the
+  # person is the organiser, so the name is theirs.
+  defp owner_attendee_line(owner, event) when is_binary(owner) do
     with_cn(
       "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=CHAIR;PARTSTAT=ACCEPTED;RSVP=FALSE",
       Map.get(event, :organizer_name),
-      sanitize_ical_value(email)
+      sanitize_ical_value(owner)
     )
   end
 
-  defp organiser_attendee_line(_event), do: nil
+  defp owner_attendee_line(_owner, _event), do: nil
 
   defp with_cn(property, name, email) when is_binary(name) and name != "",
     do: "#{property};CN=#{escape_text(name)}:mailto:#{email}"

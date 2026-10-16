@@ -35,8 +35,35 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
   alias TymeslotWeb.Live.Scheduling.NextAvailable
+  alias TymeslotWeb.Themes.Shared.Journey
+  alias TymeslotWeb.Themes.Shared.Journey.Moment
+  alias TymeslotWeb.Themes.Shared.Journey.Navigators.Paged
 
   setup :verify_on_exit!
+
+  # The classic journey's moments, as `Journey.classic/1` lays them out; only
+  # their keys and facts matter here.
+  @classic %Journey{
+    navigator: Paged,
+    outcomes: %{},
+    moments: [
+      %Moment{key: :overview, collects: [:meeting_type], component: nil, defaults: []},
+      %Moment{key: :schedule, collects: [:slot], component: nil, defaults: []},
+      %Moment{key: :questions, collects: [:answers], component: nil, defaults: []},
+      %Moment{key: :booking, collects: [:attendee], component: nil, defaults: []}
+    ]
+  }
+
+  # A journey of a theme's own, whose slot moment is not called :schedule.
+  @own_journey %Journey{
+    navigator: TymeslotWeb.Themes.Shared.Journey.Navigators.Continuous,
+    outcomes: %{},
+    moments: [
+      %Moment{key: :offer, collects: [:meeting_type], component: nil, defaults: []},
+      %Moment{key: :when, collects: [:slot], component: nil, defaults: []},
+      %Moment{key: :you, collects: [:attendee], component: nil, defaults: []}
+    ]
+  }
 
   describe "landing on the first available day" do
     setup tags do
@@ -101,7 +128,7 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
 
       # The slot list arrives on a follow-up message, exactly as it does
       # after a manual day click.
-      wait_until(fn -> has_element?(view, "button.time-slot-button") end)
+      wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
 
       html = render(view)
       document = Floki.parse_document!(html)
@@ -120,7 +147,7 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
 
       # The times for that day are on screen, so the booker's next action
       # is picking a time rather than hunting for a day.
-      slots = Floki.attribute(document, "button.time-slot-button", "phx-value-time")
+      slots = Floki.attribute(document, "button[data-testid='time-slot']", "phx-value-time")
       assert slots != [], "expected the auto-selected day's slots to be rendered"
 
       # No time is pre-picked — choosing the hour stays the booker's decision.
@@ -230,7 +257,7 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
           "/#{profile.username}/quick-chat?timezone=#{timezone}&date=#{chosen_string}"
         )
 
-      wait_until(fn -> has_element?(view, "button.time-slot-button") end)
+      wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
 
       state = :sys.get_state(view.pid).socket.assigns
 
@@ -350,7 +377,7 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
       view |> element("button[data-testid='duration-option']") |> render_click()
       view |> element("button[data-testid='next-step']") |> render_click()
 
-      wait_until(fn -> has_element?(view, "button.time-slot-button") end)
+      wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
 
       before = :sys.get_state(view.pid).socket.assigns
       expected = next_month(before.current_year, before.current_month)
@@ -470,6 +497,24 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
 
       assert {_socket, :done} = NextAvailable.apply(socket)
     end
+
+    test "lands on a journey's own slot moment, whatever it is called" do
+      tomorrow = Date.utc_today() |> Date.add(1) |> Date.to_string()
+      socket = socket_with(%{tomorrow => true}, journey: @own_journey, current_state: :when)
+
+      assert {landed, :done} = NextAvailable.apply(socket)
+      assert landed.assigns.selected_date == tomorrow
+      assert_received {:load_slots, ^tomorrow}
+    end
+
+    test "keeps the landing for later while the moment on screen collects no slot" do
+      tomorrow = Date.utc_today() |> Date.add(1) |> Date.to_string()
+      socket = socket_with(%{tomorrow => true}, journey: @own_journey, current_state: :offer)
+
+      assert {waiting, :done} = NextAvailable.apply(socket)
+      assert waiting.assigns.selected_date == nil
+      assert waiting.assigns.auto_select_settled == false
+    end
   end
 
   describe "spending the landing attempt" do
@@ -565,6 +610,7 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
     assigns =
       %{
         __changed__: %{},
+        journey: Keyword.get(overrides, :journey, @classic),
         current_state: Keyword.get(overrides, :current_state, :schedule),
         auto_select_settled: Keyword.get(overrides, :auto_select_settled, false),
         selected_date: Keyword.get(overrides, :selected_date, nil),
@@ -573,6 +619,7 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
         month_availability_map: availability_map,
         current_year: today.year,
         current_month: today.month,
+        week_start: :monday,
         current_week_start: Date.beginning_of_week(today, :monday),
         user_timezone: "Etc/UTC",
         booking_window_days: Keyword.get(overrides, :advance_booking_days, 90),

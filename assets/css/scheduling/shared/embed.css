@@ -1,0 +1,62 @@
+/* Embed shell rules shared by every theme.
+
+   When the booking page runs inside an iframe (data-embedded on <html>, set
+   by iframe_embed.js), the body grows to its natural content height and
+   iframe_embed.js posts that height to the parent, which resizes the iframe
+   both ways. Never add `height: 100%` chains here: they lock the body to the
+   parent-supplied viewport and defeat the resize.
+
+   Every page rendered through a theme wrapper carries one outermost element
+   marked [data-booker-root] (ThemeShell renders it), and themes mark their
+   own elements with hook classes:
+     [data-booker-root]  the theme's outermost element, sized to content
+     .booker-card        every card that fills the column layout
+     .booker-scroll      the time-slot scroll region
+   A theme with a page grid of its own (Quill's and Rhythm's .booker-page)
+   sizes it to content in its own modules/iframe.css, which keeps only what
+   is specific to the theme.
+
+   Height media queries (height, aspect-ratio, orientation) never apply in an
+   embed: there the viewport is the iframe, whose height iframe_embed.js sets
+   from the content, so a rule that changes the content's height at a
+   threshold would decide the height it tests, and the page would settle above
+   or below it depending on the step the visitor came from. Each theme nests
+   the rules of such a block in `:where(html:not([data-embedded]))`, which
+   keeps their specificity; `mix css.check_tokens` rejects a block that does
+   not. */
+
+html.scheduling-app[data-embedded] {
+  min-height: auto;
+  margin: 0;
+}
+
+html.scheduling-app[data-embedded] > body {
+  margin: 0;
+  display: flow-root;
+  height: max-content;
+  min-height: 0;
+}
+
+/* The theme's outermost element is sized by its content in an embed, never
+   by a viewport height it sets for a page opened on its own. */
+html.scheduling-app[data-embedded] [data-booker-root] {
+  min-height: auto;
+}
+
+html.scheduling-app[data-embedded] .footer-gradient {
+  display: none;
+}
+
+/* Time slots flow to natural height: one page-level scroll, not two. */
+html.scheduling-app[data-embedded] .booker-scroll {
+  max-height: none;
+  overflow-y: visible;
+  height: auto;
+}
+
+/* Column layout (data-embed-layout, set by the server): the booker fills
+   the embed container's width instead of its centred standalone cap. */
+html.scheduling-app[data-embed-layout="column"] .booker-card {
+  max-width: 100%;
+  width: 100%;
+}

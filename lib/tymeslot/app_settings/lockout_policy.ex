@@ -53,6 +53,37 @@ defmodule Tymeslot.AppSettings.LockoutPolicy do
       meeting_payments_would_be_unusable?(merged_row, attrs)
   end
 
+  @auth_keys [
+    :password_auth_enabled,
+    :google_auth_enabled,
+    :github_auth_enabled,
+    :oauth_auth_enabled
+  ]
+
+  @doc """
+  The authentication settings an environment variable fixes, as `{key, var}`
+  pairs, when the settings now in effect leave no admin a way to sign in.
+
+  Empty when some sign-in path is usable, when no admin exists, or when no
+  authentication setting is pinned. The guard in `would_cause_lockout?/2`
+  stops the admin page from causing a lockout, but it cannot stop an
+  operator's environment from causing one at boot: an install that switched
+  password sign-in off and SSO on from the admin page is locked out once a
+  variable pins SSO off. Removing or correcting the variables returned here,
+  then restarting, is the way back in. A lockout no pin is involved in is the
+  database's doing, and nothing here reports it.
+
+  Reads the Application env, so call it after `AppSettings.load!/0`.
+  """
+  @spec pins_blocking_sign_in() :: [{atom(), String.t()}]
+  def pins_blocking_sign_in do
+    pins = for key <- @auth_keys, var = Env.pinned_var(key), do: {key, var}
+
+    if pins != [] and Auth.any_admin?() and not currently_has_usable_path?(),
+      do: pins,
+      else: []
+  end
+
   # Mirrors `locked_states_for(:meeting_payments_enabled, ...)` below so the
   # UI hint and the actual write-path enforcement cannot drift apart: a
   # concurrent request that races past the UI's greyed-out toggle must still
@@ -162,17 +193,24 @@ defmodule Tymeslot.AppSettings.LockoutPolicy do
   def locked_states_for(_key, _current_row), do: []
 
   # Computes what the effective value of `key` would be after applying `attrs`,
-  # without performing any side effects. Precedence: an explicit value in the
-  # update wins; clearing an override (`nil`) falls back to the captured
-  # baseline; an absent key falls back to the value already persisted in the
-  # merged row (DB override) or, failing that, the config layer. Evaluating
-  # absent keys against `merged_row` rather than the live Application env is
-  # what makes the commit-path guard see concurrent writes.
+  # without performing any side effects. A setting an environment variable
+  # fixes keeps its config value whatever the update or the row holds; the
+  # row may carry an override stored before the variable was set. Otherwise:
+  # an explicit value in the update wins; clearing an override (`nil`) falls
+  # back to the captured baseline; an absent key falls back to the value
+  # already persisted in the merged row (DB override) or, failing that, the
+  # config layer. Evaluating absent keys against `merged_row` rather than the
+  # live Application env is what makes the commit-path guard see concurrent
+  # writes.
   defp next_effective_value(key, merged_row, attrs) do
-    case Map.fetch(attrs, key) do
-      {:ok, nil} -> baseline_or_default(key)
-      {:ok, value} -> value
-      :error -> row_value_or_config(key, merged_row)
+    if Env.pinned?(key) do
+      Env.read(key)
+    else
+      case Map.fetch(attrs, key) do
+        {:ok, nil} -> baseline_or_default(key)
+        {:ok, value} -> value
+        :error -> row_value_or_config(key, merged_row)
+      end
     end
   end
 

@@ -21,7 +21,8 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Engine do
           answers: %{String.t() => any()},
           errors: %{String.t() => String.t()},
           touched: term(),
-          pending_review: boolean()
+          pending_review: boolean(),
+          confirmed: boolean()
         }
 
   defstruct definitions: [],
@@ -29,7 +30,8 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Engine do
             answers: %{},
             errors: %{},
             touched: MapSet.new(),
-            pending_review: false
+            pending_review: false,
+            confirmed: false
 
   @spec init([map()]) :: t()
   def init(definitions) when is_list(definitions) do
@@ -74,6 +76,17 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Engine do
   @spec pending_review?(t()) :: boolean()
   def pending_review?(%__MODULE__{pending_review: pending}), do: pending
 
+  @doc """
+  Records that the booker has confirmed the answers (Continue past the last
+  question). Answers that validate are not yet confirmed: optional questions
+  validate blank, and a multiple choice validates after its first choice.
+  """
+  @spec confirm(t()) :: t()
+  def confirm(%__MODULE__{} = s), do: %{s | confirmed: true}
+
+  @spec confirmed?(t()) :: boolean()
+  def confirmed?(%__MODULE__{confirmed: confirmed}), do: confirmed
+
   @spec skipped?(t()) :: boolean()
   def skipped?(%__MODULE__{definitions: []}), do: true
   def skipped?(%__MODULE__{}), do: false
@@ -84,13 +97,16 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Engine do
   @spec current_definition(t()) :: map() | nil
   def current_definition(%__MODULE__{definitions: defs, current_index: i}), do: Enum.at(defs, i)
 
+  # A changed answer is no longer the one the booker confirmed, so it needs
+  # confirming again; the same value sent twice changes nothing.
   @spec answer(t(), String.t(), any()) :: t()
   def answer(%__MODULE__{} = s, id, value) do
     %{
       s
       | answers: Map.put(s.answers, id, value),
         touched: MapSet.put(s.touched, id),
-        errors: Map.delete(s.errors, id)
+        errors: Map.delete(s.errors, id),
+        confirmed: s.confirmed and Map.get(s.answers, id) == value
     }
   end
 

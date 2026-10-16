@@ -1,86 +1,34 @@
 /* Rhythm Theme - Self-Contained Video Background with Sliding Interface */
 
-/* Tailwind v4: the framework import must come before every other rule, so it
-   leads the file (the shared layout.css no longer carries @tailwind). */
-@import "tailwindcss";
-
-/* Import only the minimal shared utilities */
-@import "../../shared/reset.css";
-@import "../../shared/layout.css";
-@import "../../shared/utilities.css";
-@import "../../shared/brand-tokens.css";
-@import "../../shared/fonts.css";
-@import "../../shared/background-motion.css";
-
-/* ===========================================================================
-   Tailwind v4 CSS-first configuration
-   ---------------------------------------------------------------------------
-   The standalone v4 CLI cannot load a legacy JS config via @config, so the
-   theme-template needs (LiveView loading variants + content sources) are
-   expressed CSS-first here. The themes are self-contained: they carry their own
-   token system, so none of the core's custom @theme tokens (turquoise / token-*
-   / glass) are needed — the theme TEMPLATES only consume standard utilities, the
-   inline-SVG <.icon> component, and the phx-*-loading variants. Paths are
-   relative to this file.
-   =========================================================================== */
-
-/* Heroicons render as inline SVG via Core's CoreComponents.Heroicons (through
-   <.icon>), so the theme needs no icon plugin and no hero-* safelist.
-   @tailwindcss/forms is not needed either — the theme uses no forms utilities. */
-
-/* LiveView state variants — the theme schedule components use
-   phx-click-loading:animate-pulse; the other two are kept for parity. The block
-   form (with @slot) is required: the inline array form `([".sel&", ".sel &"])`
-   is emitted verbatim as a literal selector by the v4 standalone CLI instead of
-   being expanded, so the rule never matches. The block form below compiles to
-   the v3-equivalent `.phx-click-loading.phx-…, .phx-click-loading .phx-…` pair. */
-@custom-variant phx-click-loading {
-  .phx-click-loading& { @slot; }
-  .phx-click-loading & { @slot; }
-}
-@custom-variant phx-submit-loading {
-  .phx-submit-loading& { @slot; }
-  .phx-submit-loading & { @slot; }
-}
-@custom-variant phx-change-loading {
-  .phx-change-loading& { @slot; }
-  .phx-change-loading & { @slot; }
-}
-
-/* Content sources (formerly tailwind.config.js `content`). Paths are relative
-   to this file; mirror the v3 globs that scanned the web layer + JS. */
-@source "../../../../js";
-@source "../../../../../lib/tymeslot_web.ex";
-@source "../../../../../lib/tymeslot_web";
-
-/* v4 compatibility: restore v3's gray-200 default border colour. */
-@layer base {
-  *,
-  ::after,
-  ::before,
-  ::backdrop,
-  ::file-selector-button {
-    border-color: var(--color-gray-200, currentColor);
-  }
-}
+/* Tailwind, the shared primitives, the LiveView loading variants and the
+   content sources, shared by every theme. */
+@import "../../shared/entry.css";
 
 /* Import Rhythm Theme Modules */
 @import "./modules/variables.css";
+@import "../../shared/tokens.css";
 @import "./modules/base.css";
 @import "./modules/typography.css";
 @import "./modules/video.css";
 @import "./modules/overview.css";
-@import "./modules/approval-notice.css";
-@import "./modules/group-session.css";
-@import "./modules/preview-notice.css";
+@import "../../shared/components/approval-notice.css";
+@import "../../shared/components/group-session.css";
+@import "../../shared/components/preview-notice.css";
+@import "../../shared/components/flash.css";
+@import "../../shared/components/timezone-picker.css";
 @import "./modules/schedule-header.css";
+@import "../../shared/components/booking-fields.css";
 @import "./modules/booking-form.css";
+@import "../../shared/components/custom-questions.css";
 @import "./modules/custom-questions.css";
 @import "./modules/confirmation.css";
-@import "./modules/polls.css";
-@import "./modules/payment-pages.css";
+@import "../../shared/components/polls.css";
+@import "../../shared/components/payment-pages.css";
 @import "./modules/components.css";
+@import "../../shared/components/language-switcher.css";
 @import "./modules/language-switcher.css";
 @import "./modules/calendar.css";
+@import "../../shared/components/slot-list.css";
 @import "./modules/time-slots.css";
+@import "../../shared/embed.css";
 @import "./modules/iframe.css";

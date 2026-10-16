@@ -132,4 +132,16 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationSchemaTest do
              end)
     end
   end
+
+  describe "profile association" do
+    test "a profile holds one customisation per theme" do
+      profile = insert(:profile)
+      insert(:theme_customization, profile: profile, theme_id: "1")
+      insert(:theme_customization, profile: profile, theme_id: "2")
+
+      loaded = Repo.preload(profile, :theme_customizations)
+
+      assert loaded.theme_customizations |> Enum.map(& &1.theme_id) |> Enum.sort() == ["1", "2"]
+    end
+  end
 end

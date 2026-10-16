@@ -143,12 +143,15 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.JitsiFormTest do
         assert render(view) =~ "Video integration added successfully"
       end
 
-      assert_receive {:probing, slow_probe}
+      # The probe runs in its own task after the save, so both waits return
+      # once it acts but allow for a loaded CI box, not the 100ms default.
+      assert_receive {:probing, slow_probe}, 5_000
       send(slow_probe, :answer)
 
-      eventually(fn ->
-        assert render(view) =~ "Saved, but the server did not answer as expected"
-      end)
+      eventually(
+        fn -> assert render(view) =~ "Saved, but the server did not answer as expected" end,
+        timeout: 5_000
+      )
 
       assert length(Video.list_integrations(user.id)) == 2
     end

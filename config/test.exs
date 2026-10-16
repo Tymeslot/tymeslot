@@ -17,6 +17,61 @@ config :tymeslot, :pubsub_name, Tymeslot.PubSub
 # Force core router for tests
 config :tymeslot, :router, TymeslotWeb.Router
 
+# Test-only booking themes, which prove a new theme attaches without editing
+# shared code. The fixture (test/support/fixture_theme/) is shaped unlike
+# Quill and Rhythm; the showcase theme (test/support/showcase_theme/) offers
+# the shared option groups no shipped theme offers yet, so their dashboard
+# panels are reachable, and borrows the fixture's booking pages.
+# Tymeslot.Themes.Catalog and TymeslotWeb.Themes.Core.Registry read this at
+# compile time; no other environment sets it.
+config :tymeslot, :extra_themes, [
+  %{
+    id: "97",
+    key: :showcase,
+    name: "Showcase",
+    heading_style: :generic,
+    customization_spec: Tymeslot.Test.ShowcaseThemeSpec,
+    status: :beta,
+    module: TymeslotWeb.Test.ShowcaseTheme.Theme
+  },
+  %{
+    id: "96",
+    key: :fixture_scroll,
+    name: "Fixture Scroll",
+    heading_style: :generic,
+    customization_spec: Tymeslot.Test.JourneyFixtureSpec,
+    status: :beta,
+    module: TymeslotWeb.Test.JourneyFixtures.Scroll.Theme
+  },
+  %{
+    id: "95",
+    key: :fixture_talk,
+    name: "Fixture Talk",
+    heading_style: :generic,
+    customization_spec: Tymeslot.Test.JourneyFixtureSpec,
+    status: :beta,
+    module: TymeslotWeb.Test.JourneyFixtures.Talk.Theme
+  },
+  %{
+    id: "94",
+    key: :fixture_express,
+    name: "Fixture Express",
+    heading_style: :generic,
+    customization_spec: Tymeslot.Test.JourneyFixtureSpec,
+    status: :beta,
+    module: TymeslotWeb.Test.JourneyFixtures.Express.Theme
+  },
+  %{
+    id: "99",
+    key: :fixture,
+    name: "Fixture",
+    heading_style: :generic,
+    customization_spec: Tymeslot.Test.FixtureThemeSpec,
+    status: :beta,
+    module: TymeslotWeb.Test.FixtureTheme.Theme
+  }
+]
+
 # What keeps one test run's database and upload directory apart from
 # another's. A worktree sets MIX_TEST_PARTITION to its own suffix; a
 # partitioned run (`mix precommit`, via Tymeslot.Precommit.Runner) needs that
@@ -70,7 +125,7 @@ test_pool_size =
 
     value ->
       case Integer.parse(value) do
-        {int, _} -> int
+        {int, _rest} -> int
         :error -> default_pool_size
       end
   end

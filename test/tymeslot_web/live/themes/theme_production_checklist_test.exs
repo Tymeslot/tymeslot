@@ -6,17 +6,18 @@ defmodule TymeslotWeb.Live.Themes.ThemeProductionChecklistTest do
   import Tymeslot.Factory
 
   alias Tymeslot.TestMocks
-  alias Tymeslot.Themes.Catalog
+  alias TymeslotWeb.ThemeTestMatrix
 
   @moduledoc """
   Production readiness checklist for themes.
   Run this for any new theme before releasing to production.
 
-  To test a new theme, add it to @themes_to_test.
+  A shipped theme is covered once it has a `ThemeTestMatrix` entry.
   """
 
-  # Use the catalog to get all theme IDs
-  @themes_to_test Catalog.valid_ids()
+  # The shipped themes: the test-only themes are no release candidates, and the
+  # suites over ThemeTestMatrix.registered/0 cover them.
+  @themes_to_test ThemeTestMatrix.ids()
 
   describe "production readiness checklist" do
     setup tags do

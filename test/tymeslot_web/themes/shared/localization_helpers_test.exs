@@ -229,6 +229,46 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
     end
   end
 
+  describe "format_advance_booking_days/1" do
+    test "names the booking window in the largest whole unit" do
+      assert LocalizationHelpers.format_advance_booking_days(0) == "same day only"
+      assert LocalizationHelpers.format_advance_booking_days(-3) == "same day only"
+      assert LocalizationHelpers.format_advance_booking_days(1) == "1 day in advance"
+      assert LocalizationHelpers.format_advance_booking_days(3) == "3 days in advance"
+      assert LocalizationHelpers.format_advance_booking_days(7) == "1 week in advance"
+      assert LocalizationHelpers.format_advance_booking_days(14) == "2 weeks in advance"
+      assert LocalizationHelpers.format_advance_booking_days(30) == "1 month in advance"
+      assert LocalizationHelpers.format_advance_booking_days(90) == "3 months in advance"
+      assert LocalizationHelpers.format_advance_booking_days(365) == "1 year in advance"
+      assert LocalizationHelpers.format_advance_booking_days(730) == "2 years in advance"
+    end
+
+    test "falls back to the default window when none is set" do
+      assert LocalizationHelpers.format_advance_booking_days(nil) == "90 days in advance"
+    end
+
+    test "speaks the visitor's language" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+
+      assert LocalizationHelpers.format_advance_booking_days(14) == "2 Wochen im Voraus"
+    end
+  end
+
+  describe "weekday_headings/1" do
+    test "starts on the week start it is given" do
+      assert LocalizationHelpers.weekday_headings(:monday) == ~w(Mon Tue Wed Thu Fri Sat Sun)
+      assert LocalizationHelpers.weekday_headings(:sunday) == ~w(Sun Mon Tue Wed Thu Fri Sat)
+    end
+
+    test "cuts a longer translation to three characters so it cannot widen a column" do
+      # French abbreviates with a trailing full stop ("Dim."), one character
+      # more than the grid's header cell is sized for.
+      Gettext.put_locale(TymeslotWeb.Gettext, "fr")
+
+      assert LocalizationHelpers.weekday_headings(:sunday) == ~w(Dim Lun Mar Mer Jeu Ven Sam)
+    end
+  end
+
   describe "format_slot_label/1" do
     test "labels a slot key on a 24-hour clock for a German visitor" do
       Gettext.put_locale(TymeslotWeb.Gettext, "de")
@@ -259,11 +299,11 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
     @year_crossing ~D[2025-12-29]
 
     for {locale, same, two, crossing} <- [
-          {"en", "September 2026", "September - October 2026", "December 2025 - January 2026"},
+          {"en", "September 2026", "September – October 2026", "December 2025 – January 2026"},
           {"de", "September 2026", "September – Oktober 2026", "Dezember 2025 – Januar 2026"},
           {"fr", "Septembre 2026", "Septembre – octobre 2026", "Décembre 2025 – janvier 2026"},
-          {"it", "Settembre 2026", "Settembre - ottobre 2026", "Dicembre 2025 - gennaio 2026"},
-          {"uk", "Вересень 2026", "Вересень - жовтень 2026", "Грудень 2025 - січень 2026"},
+          {"it", "Settembre 2026", "Settembre – ottobre 2026", "Dicembre 2025 – gennaio 2026"},
+          {"uk", "Вересень 2026", "Вересень – жовтень 2026", "Грудень 2025 – січень 2026"},
           {"cs", "Září 2026", "Září – říjen 2026", "Prosinec 2025 – leden 2026"},
           {"pl", "Wrzesień 2026", "Wrzesień – październik 2026", "Grudzień 2025 – styczeń 2026"},
           {"pt", "Setembro de 2026", "Setembro – outubro de 2026",

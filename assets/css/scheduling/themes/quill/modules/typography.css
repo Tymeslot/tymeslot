@@ -41,36 +41,33 @@
 }
 
 /* Time slot and small interactive elements */
-.time-slot-button,
+.slot-list__slot,
 .calendar-day {
   font-size: clamp(0.7rem, 1.3vw, 0.875rem);
 }
 
-/* Responsive heading sizes */
-h1, .text-3xl {
+/* Responsive heading sizes. Element selectors only: this file is unlayered,
+   so a class here named after a Tailwind utility (.text-3xl, .font-bold, ...)
+   would override that utility on every element of the page. */
+h1 {
   font-size: clamp(1.5rem, 3vw, 2rem);
   line-height: var(--theme-line-height-tight);
 }
 
-h2, .text-2xl {
+h2 {
   font-size: clamp(1.25rem, 2.5vw, 1.5rem);
   line-height: var(--theme-line-height-snug);
 }
 
-h3, .text-xl {
+h3 {
   font-size: clamp(1rem, 2vw, 1.25rem);
   line-height: var(--theme-line-height-normal);
 }
 
-/* Font weight utilities */
-.font-medium {
-  font-weight: var(--font-weight-medium);
-}
-
-.font-semibold {
-  font-weight: var(--font-weight-semibold);
-}
-
-.font-bold {
-  font-weight: var(--font-weight-bold);
+/* The dispatcher's "Theme Error" card heading (themes/core/dispatcher.ex) is
+   an h1 sized with text-xl, which the h1 rule above outranks; it keeps the h3
+   step of this scale. */
+.theme-error-title {
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  line-height: var(--theme-line-height-normal);
 }

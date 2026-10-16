@@ -6,38 +6,38 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
   alias TymeslotWeb.Themes.Shared.BookingLocation
-  alias TymeslotWeb.Themes.Shared.CalendarDownload
+  alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
+  alias TymeslotWeb.Themes.Shared.Components.CustomAnswers
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.LocationField
+  alias TymeslotWeb.Themes.Shared.ConfirmationText
+  alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+  alias TymeslotWeb.Themes.Shared.PathHandlers
+  alias TymeslotWeb.Themes.Shared.StepEvents
 
   use TymeslotWeb.Components.CoreComponents
 
   @impl Phoenix.LiveComponent
-  def update(assigns, socket) do
-    # Filter out reserved assigns that can't be set directly
-    filtered_assigns = Map.drop(assigns, [:flash, :socket])
-    {:ok, assign(socket, filtered_assigns)}
-  end
+  defdelegate update(assigns, socket), to: StepEvents
 
   @impl Phoenix.LiveComponent
-  def handle_event("schedule_another", _params, socket) do
-    send(self(), {:step_event, :confirmation, :schedule_another, nil})
-    {:noreply, socket}
-  end
+  defdelegate handle_event(event, params, socket), to: StepEvents
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
+    assigns = assign(assigns, :navigable_steps, Runtime.navigable_steps(assigns))
+
     ~H"""
-    <div class="container flex-1" data-locale={@locale}>
+    <div class="container quill-container flex-1" data-locale={@locale}>
       <.page_layout
         show_steps={true}
+        navigable_steps={@navigable_steps}
         current_step={4}
         slug={@duration}
         username_context={@username_context}
@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
         <div class="stack">
           <div class="confirmation-outer flex-1 flex items-center justify-center">
             <div class="w-full confirmation-container">
-              <.glass_morphism_card>
+              <.glass_morphism_card class="booker-card">
                 <div class="confirmation-content">
                   <div class="confirmation-heading-row flex items-center">
                     <div class="shrink-0">
@@ -117,8 +117,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                     <.booking_details
                       date={@selected_date}
                       time={@selected_time}
-                      duration={if @meeting_type, do: @meeting_type.duration_minutes, else: @duration}
+                      duration={BookingText.duration_label(assigns)}
                       timezone={@user_timezone}
+                      next_day_end={LocalizationHelpers.booking_next_day_end(assigns)}
                       variant={:compact}
                     />
 
@@ -189,26 +190,15 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                     </div>
                   </.meeting_details_card>
 
-                  <%= if length(@custom_fields_snapshot) > 0 do %>
-                    <section class="custom-answers-section">
-                      <h3 class="custom-answers-heading">{dgettext("booking", "Your answers")}</h3>
-                      <dl class="custom-answers-list">
-                        <%= for d <- @custom_fields_snapshot do %>
-                          <div class="custom-answer-row">
-                            <dt class="custom-answer-label">{d["label"]}</dt>
-                            <dd class="custom-answer-value">
-                              {AnswerRenderer.render(d, @custom_field_answers[d["id"]])}
-                            </dd>
-                          </div>
-                        <% end %>
-                      </dl>
-                    </section>
-                  <% end %>
+                  <CustomAnswers.custom_answers
+                    snapshot={@custom_fields_snapshot}
+                    answers={@custom_field_answers}
+                  />
 
                   <div class="confirmation-actions">
                     <a
-                      :if={CalendarDownload.href(assigns)}
-                      href={CalendarDownload.href(assigns)}
+                      :if={PathHandlers.calendar_ics_path(assigns)}
+                      href={PathHandlers.calendar_ics_path(assigns)}
                       download
                       class="action-button action-button--secondary calendar-download-button"
                       data-testid="add-to-calendar"
@@ -222,6 +212,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                       phx-click="schedule_another"
                       phx-target={@myself}
                       data-testid="schedule-another"
+                      data-intent="restart"
                       class="inline-block"
                     >
                       {dgettext("booking", "Schedule Another Meeting")}
@@ -265,8 +256,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
 
   attr :date, :string, required: true
   attr :time, :string, required: true
-  attr :duration, :any, required: true
+  attr :duration, :string, required: true, doc: "the formatted duration"
   attr :timezone, :string, required: true
+  attr :next_day_end, :string, default: nil, doc: "when the meeting ends on a later day"
   attr :variant, :atom, default: :compact, values: [:compact, :expanded]
 
   defp booking_details(assigns) do
@@ -285,17 +277,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
       |> assign_new(:timezone_label, fn -> dgettext("booking", "Timezone") end)
       |> assign_new(:formatted_date, fn -> LocalizationHelpers.format_date(assigns.date) end)
       |> assign_new(:formatted_time, fn -> LocalizationHelpers.format_slot_label(assigns.time) end)
-      |> assign_new(:formatted_duration, fn ->
-        LocalizationHelpers.format_duration(assigns.duration)
-      end)
-      |> assign_new(:next_day_end, fn ->
-        LocalizationHelpers.format_next_day_end(
-          assigns.date,
-          assigns.time,
-          assigns.duration,
-          assigns.timezone
-        )
-      end)
       |> assign_new(:formatted_timezone, fn -> Timezones.format(assigns.timezone) end)
 
     ~H"""
@@ -313,7 +294,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
       </div>
       <div>
         <p class="booking-detail-label">{@duration_label}</p>
-        <p class="booking-detail-value">{@formatted_duration}</p>
+        <p class="booking-detail-value">{@duration}</p>
       </div>
       <div>
         <p class="booking-detail-label">{@timezone_label}</p>
@@ -325,64 +306,34 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
 
   # ========== PRIVATE HELPERS ==========
 
-  defp get_organizer_text(nil), do: ""
-
-  defp get_organizer_text(organizer_profile) do
-    case Profiles.display_name(organizer_profile) do
-      nil -> ""
-      name -> dgettext("booking", "with %{name}", name: name)
-    end
-  end
-
-  # A held request is not a confirmed meeting, and the screen that says so is
-  # the last thing an invitee sees before the emails arrive. Getting this wrong
-  # is what the whole feature exists to fix, so the heading changes too — not
-  # just a note underneath a heading that still says "Confirmed!". The
-  # approval check runs first: a gated reschedule re-enters the hold (see
-  # `Tymeslot.Bookings.Reschedule`), so `is_rescheduling` must not short-circuit
-  # it.
+  # A held request is not a confirmed meeting, and this screen is the last thing
+  # an invitee sees before the emails arrive, so the heading changes too, not
+  # just a note underneath it. Which status applies is decided in
+  # ConfirmationText; only the wording is Quill's.
   defp headline(assigns) do
-    cond do
-      ApprovalDisplay.awaiting_approval?(assigns) -> dgettext("booking", "Request sent!")
-      assigns[:is_rescheduling] -> dgettext("booking", "Meeting Rescheduled!")
-      true -> dgettext("booking", "Meeting Confirmed!")
+    case ConfirmationText.status(assigns) do
+      :held -> dgettext("booking", "Request sent!")
+      :rescheduled -> dgettext("booking", "Meeting Rescheduled!")
+      :confirmed -> dgettext("booking", "Meeting Confirmed!")
     end
   end
 
   defp subtitle(assigns) do
-    cond do
-      ApprovalDisplay.awaiting_approval?(assigns) ->
-        held_subtitle(assigns[:name], assigns[:organizer_profile])
+    case ConfirmationText.status(assigns) do
+      :held ->
+        ConfirmationText.held_message(assigns[:name], assigns[:organizer_profile], :quill)
 
-      assigns[:is_rescheduling] ->
+      :rescheduled ->
         dgettext("booking", "%{name}, your meeting %{organizer} has been rescheduled.",
           name: assigns[:name],
-          organizer: get_organizer_text(assigns[:organizer_profile])
+          organizer: ConfirmationText.organizer_fragment(assigns[:organizer_profile], :quill)
         )
 
-      true ->
+      :confirmed ->
         dgettext("booking", "%{name}, your meeting %{organizer} is all set.",
           name: assigns[:name],
-          organizer: get_organizer_text(assigns[:organizer_profile])
+          organizer: ConfirmationText.organizer_fragment(assigns[:organizer_profile], :quill)
         )
-    end
-  end
-
-  # The confirmed/rescheduled sentences compose "with %{name}" onto a fixed
-  # stem and read correctly ("your meeting with Jane"). "Request" cannot take
-  # that same fragment ("your request with Jane" reads as the wrong
-  # preposition, and mistranslates in every non-English locale), so the held
-  # case is its own self-contained sentence rather than reusing the fragment.
-  defp held_subtitle(name, organizer_profile) do
-    case Profiles.display_name(organizer_profile) do
-      organizer_name when is_binary(organizer_name) and organizer_name != "" ->
-        dgettext("booking", "%{name}, your request to %{organizer_name} has been sent.",
-          name: name,
-          organizer_name: organizer_name
-        )
-
-      _no_organizer_name ->
-        dgettext("booking", "%{name}, your request has been sent.", name: name)
     end
   end
 end

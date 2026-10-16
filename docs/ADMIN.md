@@ -132,18 +132,30 @@ the commands above.
 
 ## What you can change from the admin UI
 
-| Setting | What it controls |
-|---|---|
-| `registration_enabled` | Whether new user registration is open |
-| `password_auth_enabled` | Whether the email/password login form is available (OAuth still works when disabled) |
+The settings page at `/admin` controls sign-up, sign-in methods, reCAPTCHA, admin alerts, meeting payments, booking analytics, email branding and default languages. Twelve of these settings also have an environment variable, and a variable that is set wins over the admin page:
 
-Each setting has three layers of precedence:
+| Setting | Environment variable | What it controls |
+|---|---|---|
+| `registration_enabled` | `REGISTRATION_ENABLED` | Whether new user registration is open |
+| `password_auth_enabled` | `PASSWORD_AUTH_ENABLED` | Whether the email/password login form is available (SSO still works when disabled) |
+| `google_auth_enabled` | `ENABLE_GOOGLE_AUTH` | Sign-in with Google |
+| `github_auth_enabled` | `ENABLE_GITHUB_AUTH` | Sign-in with GitHub |
+| `oauth_auth_enabled` | `ENABLE_OAUTH_AUTH` | Sign-in with a generic OpenID Connect provider |
+| `recaptcha_signup_enabled` | `RECAPTCHA_SIGNUP_ENABLED` | reCAPTCHA on the sign-up form |
+| `recaptcha_booking_enabled` | `RECAPTCHA_BOOKING_ENABLED` | reCAPTCHA on the booking form |
+| `recaptcha_signup_min_score` | `RECAPTCHA_SIGNUP_MIN_SCORE` | Minimum reCAPTCHA score accepted at sign-up |
+| `recaptcha_booking_min_score` | `RECAPTCHA_BOOKING_MIN_SCORE` | Minimum reCAPTCHA score accepted when booking |
+| `admin_alerts_enabled` | `ADMIN_ALERTS_ENABLED` | Whether operational alerts are emailed |
+| `admin_alert_email` | `ADMIN_ALERT_EMAIL` | Where operational alerts are sent |
+| `meeting_payments_enabled` | `MEETING_PAYMENTS_ENABLED` | Whether hosts can take payment for meetings |
 
-1. **DB override** — the value set from the admin UI (highest priority).
-2. **Application config / environment variable** — what `config.exs` or
-   `runtime.exs` sees on boot.
-3. **Built-in default** — the value Core falls back to if neither of the
-   above is set.
+Each setting takes its value from the first of these layers that provides one:
 
-The admin UI shows you the current source for each setting and lets you
-reset the DB override to fall back to the config/environment layer.
+1. **Environment variable**: the setting's variable from the table above, when it is set to a value it recognises (`true` or `false`; also `1`, `yes`, `0` and `no` for `ADMIN_ALERTS_ENABLED` and `MEETING_PAYMENTS_ENABLED`; a number from 0.0 to 1.0 for the two scores; any non-blank value for `ADMIN_ALERT_EMAIL`). An unrecognised value, such as `REGISTRATION_ENABLED=1`, logs a warning at boot and does not take precedence, so the admin page keeps managing the setting. The admin page shows the setting greyed out and names the variable, and refuses to change it.
+2. **Admin page**: the value saved on `/admin`, stored in the database.
+3. **Application config**: what `config.exs` or `runtime.exs` sets on boot, other than from the variable.
+4. **Built-in default**: the value Core falls back to if none of the above is set.
+
+Settings without a variable in the table only have the last three layers. The admin page shows the current source for each setting and lets you reset a saved value, so the setting falls back to the config layer or the default.
+
+A value saved on the admin page before its variable was set is kept, not deleted. To manage that setting from the admin page again, remove the variable and restart: the stored value applies again. If a variable fixing a sign-in setting leaves no admin a way to sign in, Tymeslot logs an error at boot naming the variable; unset or correct it, then restart.
