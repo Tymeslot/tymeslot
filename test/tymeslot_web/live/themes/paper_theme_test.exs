@@ -317,6 +317,41 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
       assert_patch(view, "/#{user}/quick-chat/book")
     end
 
+    @tag :capture_log
+    test "the address follows the booking to the thank-you page", %{
+      conn: conn,
+      profile: profile
+    } do
+      user = profile.username
+      {:ok, view, _html} = live(conn, "/#{user}")
+
+      BookingDriver.book(view)
+
+      assert_patch(view, "/#{user}/thank-you")
+      assert has_element?(view, "[data-testid='confirmation-heading']")
+    end
+
+    test "a deep link's details heading does not take the focus on load, a picked time's does",
+         %{conn: conn, profile: profile} do
+      day = Date.utc_today() |> Date.add(3) |> Date.to_iso8601()
+      heading = "[data-testid='paper-book'] #paper-book-heading"
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          "/#{profile.username}/quick-chat/book?date=#{day}&time=10:00%20AM&timezone=Etc%2FUTC"
+        )
+
+      assert has_element?(view, heading)
+      refute has_element?(view, "#{heading}[phx-mounted]")
+
+      {:ok, view, _html} = live(conn, "/#{profile.username}/quick-chat?timezone=Etc%2FUTC")
+
+      refute has_element?(view, heading)
+      BookingDriver.pick_first_slot(view, on: day)
+      assert has_element?(view, "#{heading}[phx-mounted*='focus']")
+    end
+
     test "a link to /book with no day and time opens the schedule screen, with no form", %{
       conn: conn,
       profile: profile

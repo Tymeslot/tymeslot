@@ -435,11 +435,12 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
 
         BookingDriver.pick_first_slot(view)
 
-        wait_until(fn -> not has_element?(view, "button[data-testid='next-step'][disabled]") end)
+        wait_until(fn ->
+          has_element?(view, "[data-testid=next-step]:not([disabled]), form[data-fact=attendee]")
+        end)
       end
 
-      # Paper's schedule screen picks the time itself, so its /book link opens
-      # there (paper_theme_test.exs).
+      # Paper picks the time on its schedule screen, so /book opens there (paper_theme_test.exs).
       if theme.key != :paper do
         @tag :capture_log
         test "visitor can open booking route directly with #{theme.slug} theme", %{conn: conn} do

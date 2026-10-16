@@ -13,9 +13,11 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
   question's form submits `next_step` on Enter, which the schedule
   component drops: the screen has no way on, and the questions never step.
 
-  The heading takes the keyboard focus when the part first appears (a time
-  just picked), which on a phone scrolls the questions and the form into
-  view. No question input takes the focus itself (`autofocus={false}`).
+  The heading takes the keyboard focus when the part appears after the
+  visitor picked a time in this page view (`focus_details`, set by the
+  schedule component), which on a phone scrolls the questions and the form
+  into view; a deep link to /book never moves the focus on load, as with
+  `Journey.Components.moment_heading/1`. No question input takes the focus itself (`autofocus={false}`).
   """
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -51,7 +53,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
         id="paper-book-heading"
         class="paper-heading paper-book__title"
         tabindex="-1"
-        phx-mounted={JS.focus()}
+        phx-mounted={assigns[:focus_details] && JS.focus()}
       >
         {dgettext("booking", "Enter Your Details")}
       </h2>

@@ -66,6 +66,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   import TymeslotWeb.Components.FlagHelpers, only: [timezone_flag: 1]
 
   @question_events ~w(answer multi_toggle)
+  @pick_events ~w(select_time select_slot)
 
   @impl Phoenix.LiveComponent
   defdelegate update(assigns, socket), to: StepEvents
@@ -76,6 +77,17 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   @impl Phoenix.LiveComponent
   def handle_event(event, params, socket) when event in @question_events,
     do: Events.handle_event(event, params, socket)
+
+  # The visitor's own pick of a time: from here on the details heading may
+  # take the focus when it appears (`Details.book/1`). The screen stays one
+  # moment, so the runtime's `:journey_focus` never changes on a pick; this
+  # flag is the same rule at the component's level. A deep link to /book
+  # never sends a pick, so it never moves the focus on load.
+  def handle_event(event, params, socket) when event in @pick_events do
+    socket
+    |> assign(:focus_details, true)
+    |> then(&StepEvents.handle_event(event, params, &1))
+  end
 
   # Enter in a question's field submits its form with `next_step`. The
   # screen has no way on, and stepping the questions would make Back step
