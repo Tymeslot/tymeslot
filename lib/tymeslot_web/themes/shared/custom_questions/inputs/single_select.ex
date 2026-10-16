@@ -35,6 +35,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelect do
         :for={opt <- @definition["options"]}
         indicator={:radio}
         input_type="radio"
+        name={"cq-#{@definition["id"]}"}
         value={opt["key"]}
         selected?={@value == opt["key"]}
         event="answer"
@@ -57,6 +58,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelect do
       data-fact="answer"
       data-question={@definition["id"]}
     >
+      <input type="hidden" name="question" value={@definition["id"]} />
       <div class="custom-question-select">
         <.input
           id={"cq-input-#{@definition["id"]}"}

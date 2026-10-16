@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
   use Gettext, backend: TymeslotWeb.Gettext
 
   import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [connected?: 1]
+  import Phoenix.LiveView, only: [connected?: 1, push_navigate: 2]
 
   alias TymeslotWeb.Live.Scheduling.{
     AvailabilityHelpers,
@@ -42,6 +42,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
     socket =
       socket
       |> SchedulingInit.assign_theme_state()
+      |> assign(:entry_action, socket.assigns[:live_action])
       |> TimezoneHelpers.assign_user_timezone(params)
       |> ThemeUtils.assign_attendee_prefill()
       |> ThemeUtils.assign_theme_with_preview(params)
@@ -105,6 +106,26 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
   end
 
   @doc """
+  `handle_scheduling_params/2`, given the request's `url`: a patch the page
+  made itself, moving its address to its facts (`Runtime.follow_url/1`), is
+  not a new arrival and changes nothing; any other request records the
+  address and is handled as an arrival.
+  """
+  @spec handle_scheduling_params(Phoenix.LiveView.Socket.t(), map(), String.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_scheduling_params(socket, params, url) do
+    address = address(url)
+
+    if follows_facts?(socket) and address == socket.assigns[:journey_url] do
+      {:noreply, socket}
+    else
+      socket
+      |> remember_address(address)
+      |> handle_scheduling_params(params)
+    end
+  end
+
+  @doc """
   Applies the URL parameters and enters the moment the route opens on.
 
   On the payment wait (`:awaiting_payment`) it applies nothing: a client may
@@ -118,10 +139,12 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
 
   def handle_scheduling_params(socket, params) do
     initial_state = entry(socket)
-    socket = handle_param_updates(socket, params)
+    socket = socket |> handle_param_updates(params) |> leave_empty_confirmation()
 
-    # A spent seat link is sent on to a fresh booking before any moment is
-    # entered for it (`SeatMoveLink.leave_if_spent/2`).
+    # A spent seat link, and a declared journey's thank-you address with no
+    # booking behind it, are sent on to a fresh booking before any moment is
+    # entered for them (`SeatMoveLink.leave_if_spent/2`,
+    # `leave_empty_confirmation/1`).
     if socket.redirected do
       {:noreply, socket}
     else
@@ -243,6 +266,35 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
   defp entry(socket) do
     journey = socket.assigns.journey
     journey.navigator.entry(journey, socket.assigns[:live_action], socket.assigns)
+  end
+
+  defp follows_facts?(socket), do: match?(%{url: :facts}, socket.assigns[:journey])
+
+  # A declared journey's `/thank-you` is only ever the address of a booking
+  # just made on this page. Reached on its own (a reload, a shared link) it
+  # names no meeting, and the confirmation would thank a "Guest" for
+  # nothing, so the visitor starts a booking instead, with the page's own
+  # query and never a name or an email. The classic journey keeps showing
+  # its confirmation there.
+  defp leave_empty_confirmation(%{redirected: redirected} = socket) when redirected != nil,
+    do: socket
+
+  defp leave_empty_confirmation(socket) do
+    if follows_facts?(socket) and socket.assigns[:live_action] == :confirmation and
+         socket.assigns[:meeting_uid] in [nil, ""],
+       do: push_navigate(socket, to: PathHandlers.facts_start(socket.assigns)),
+       else: socket
+  end
+
+  # Only a journey whose address follows its facts keeps its address, so the
+  # classic journey's assigns are what they were.
+  defp remember_address(socket, address) do
+    if follows_facts?(socket), do: assign(socket, :journey_url, address), else: socket
+  end
+
+  defp address(url) do
+    %URI{path: path, query: query} = URI.parse(url)
+    if query in [nil, ""], do: path, else: "#{path}?#{query}"
   end
 
   defp maybe_subscribe_to_calendar_events(socket) do

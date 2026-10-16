@@ -171,6 +171,22 @@
   color: var(--theme-on-primary);
 }
 
+/* A group time (WeekGrid with a meeting_type): the time stacks above its
+   spots badge, whose colours are the slot list's (slot-list.css, .seat-badge,
+   from the theme's --seat-* tokens); on the selected time the badge takes
+   the selected pair, as it does there. */
+.week-grid__slot--seats {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3xs);
+}
+
+.week-grid__slot--selected .seat-badge {
+  background: var(--seat-selected-bg);
+  color: var(--seat-selected);
+}
+
 .week-grid__empty {
   margin: 0;
   color: var(--ink-3);

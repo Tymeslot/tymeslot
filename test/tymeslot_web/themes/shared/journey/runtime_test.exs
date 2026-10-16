@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.RuntimeTest do
   @moduletag :scheduling
   @moduletag :themes
 
+  alias Phoenix.Component
   alias Phoenix.LiveView.Socket
 
   alias TymeslotWeb.Test.FixtureTheme.Scheduling.{
@@ -77,9 +78,9 @@ defmodule TymeslotWeb.Themes.Shared.Journey.RuntimeTest do
       assert_received {:load_slots, "2027-01-05"}
     end
 
-    # The answers beside the details form: submitting the form is the
-    # confirmation, so answers that validate let the form's events through
-    # with no Continue of their own.
+    # The answers beside the details form: submitting the form sends the
+    # answers with it, so the form's events go through whatever the answers
+    # hold, and the submission validates them.
     test "a moment asking the questions beside the details takes the form's events" do
       journey =
         Journey.new(
@@ -107,8 +108,15 @@ defmodule TymeslotWeb.Themes.Shared.Journey.RuntimeTest do
       assert {:noreply, socket} = Runtime.handle_step_event(socket, :booking, :toggle_guests, nil)
       assert socket.assigns.guests_open
 
-      blank = put_in(socket.assigns.engine, Engine.init([question("company")]))
-      assert Runtime.handle_step_event(blank, :booking, :toggle_guests, nil) == :unhandled
+      # Blank answers beside the form no longer hold its events back: the
+      # submit sends them, and the submission refuses them.
+      blank =
+        socket
+        |> put_in([Access.key!(:assigns), :engine], Engine.init([question("company")]))
+        |> put_in([Access.key!(:assigns), :guests_open], false)
+
+      assert {:noreply, blank} = Runtime.handle_step_event(blank, :booking, :toggle_guests, nil)
+      assert blank.assigns.guests_open
     end
 
     test "a fact's event waits for the facts it needs" do
@@ -241,6 +249,69 @@ defmodule TymeslotWeb.Themes.Shared.Journey.RuntimeTest do
                :schedule_another,
                nil
              ) == :unhandled
+    end
+  end
+
+  # One paged moment picking the time and taking the details (Fixture
+  # Two's shape): the attendee waits on the slot its own moment collects.
+  defp one_screen do
+    Journey.new(
+      navigator: Journey.Navigators.Paged,
+      moments: [
+        {:overview, collects: [:meeting_type], component: OverviewStep},
+        {:pick, collects: [:slot, :answers, :attendee], component: ScheduleStep}
+      ],
+      outcomes: %{confirmation: ConfirmationStep}
+    )
+  end
+
+  describe "a fact put off by its own moment" do
+    test "is entered once the slot is known, with no redirect before" do
+      socket =
+        socket(%{
+          journey: one_screen(),
+          current_state: :overview,
+          client_ip: "127.0.0.1",
+          meeting_type: @intro,
+          selected_duration: "intro-call",
+          submission_token: nil
+        })
+
+      opened = Runtime.transition_to(socket, :pick, %{})
+
+      assert opened.assigns.current_state == :pick
+      assert opened.assigns.submission_token == nil
+      refute opened.redirected
+
+      picked =
+        opened
+        |> Component.assign(selected_date: "2027-01-05", selected_time: "9:00 AM")
+        |> Runtime.enter_ready()
+
+      assert byte_size(picked.assigns.submission_token) > 0
+      assert picked.assigns.journey_deferred == %{}
+    end
+
+    test "is not entered once its moment has closed" do
+      socket =
+        socket(%{
+          journey: one_screen(),
+          current_state: :overview,
+          client_ip: "127.0.0.1",
+          meeting_type: @intro,
+          selected_duration: "intro-call",
+          submission_token: nil
+        })
+
+      closed =
+        socket
+        |> Runtime.transition_to(:pick, %{})
+        |> Runtime.transition_to(:overview, %{})
+        |> Component.assign(selected_date: "2027-01-05", selected_time: "9:00 AM")
+        |> Runtime.enter_ready()
+
+      assert closed.assigns.current_state == :overview
+      assert closed.assigns.submission_token == nil
     end
   end
 

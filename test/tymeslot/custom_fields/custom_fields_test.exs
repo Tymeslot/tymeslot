@@ -109,6 +109,23 @@ defmodule Tymeslot.CustomFieldsTest do
       assert CustomFields.snapshot_for(mt) == []
     end
 
+    test "validate_answer/2 refuses a raw answer over the length cap, as validate_answers/2 does" do
+      long = String.duplicate("𝄞", 1300)
+
+      d = %{
+        "id" => "c",
+        "type" => "single_select",
+        "required" => false,
+        "label" => "X",
+        "options" => [%{"key" => long, "label" => "Long"}]
+      }
+
+      assert {:error, "Answer is too long"} = CustomFields.validate_answer(long, d)
+
+      assert {:error, %{"c" => "Answer is too long"}} =
+               CustomFields.validate_answers([d], %{"c" => long})
+    end
+
     test "validate_answer/2 delegates to Validator.validate/2" do
       d = %{"type" => "short_text", "required" => true, "label" => "X"}
       assert {:ok, "Acme"} = CustomFields.validate_answer("Acme", d)

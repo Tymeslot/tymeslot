@@ -2,11 +2,12 @@ defmodule TymeslotWeb.Themes.Shared.Voice do
   @moduledoc """
   A theme's own wording of the booking lines every theme shares.
 
-  `BookingText`, `ConfirmationText` and `BookingLabels` decide which line a
-  page shows; a theme's voice only words it. Each of those modules asks the
-  rendering theme's voice first (`line/4`) and keeps the shared wording when
-  the theme has no voice or the voice leaves the line alone. A theme names
-  its voice with `use TymeslotWeb.Themes.Core.Theme, voice: MyTheme.Voice`.
+  `BookingText`, `ConfirmationText`, `BookingLabels` and
+  `BookingErrorMessage` decide which line a page shows; a theme's voice only
+  words it. Each of those modules asks the rendering theme's voice first
+  (`line/4`) and keeps the shared wording when the theme has no voice or the
+  voice leaves the line alone. A theme names its voice with
+  `use TymeslotWeb.Themes.Core.Theme, voice: MyTheme.Voice`.
 
   A voice implements `c:text/2`: given a key and its bindings, the line in
   the theme's words, or `nil` to keep the shared one. Each line is a literal
@@ -38,6 +39,7 @@ defmodule TymeslotWeb.Themes.Shared.Voice do
   | `:submit_request` | none | "Request meeting" |
   | `:submit_request_reschedule` | none | "Request new time" |
   | `:submit_reschedule` | none | "Reschedule Meeting" |
+  | `:slot_taken` | none | "This time slot is no longer available. Please select a different time." (the notice when the time was booked meanwhile) |
 
   The organiser's own wording (`booking_text_enabled`) still wins over any
   voice, as it wins over the shared wording.
@@ -60,7 +62,8 @@ defmodule TymeslotWeb.Themes.Shared.Voice do
     submit: [],
     submit_request: [],
     submit_request_reschedule: [],
-    submit_reschedule: []
+    submit_reschedule: [],
+    slot_taken: []
   }
 
   @doc "Every key a voice may word, sorted."

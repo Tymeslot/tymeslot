@@ -181,7 +181,9 @@ defmodule TymeslotWeb.BookingDriverTest do
             {day, "10:00 AM"}
           end
 
-        BookingDriver.continue(view)
+        # A screen that asks for the details beside the picker (Fixture
+        # Two) shows the form as soon as the time is picked.
+        unless has_element?(view, "form[data-fact='attendee']"), do: BookingDriver.continue(view)
         BookingDriver.submit(view, %{name: "Ada Lovelace", email: "slot-#{slug}@example.com"})
 
         wait_until(fn -> Repo.get_by(MeetingSchema, organizer_user_id: user.id) end)
@@ -398,13 +400,20 @@ defmodule TymeslotWeb.BookingDriverTest do
   # The slot picker. The classic journey shows it one way on past the meeting
   # types; a custom journey shows it on the page once the type is chosen
   # (Fixture Scroll) or defaulted (Fixture Talk, Fixture Express), so no
-  # step-level move is taken there.
+  # step-level move is taken there. Fixture Two shows it one way on past its
+  # meeting types, as the classic journey does.
   defp to_picker(view, :classic) do
     BookingDriver.choose_meeting_type(view, "quick-chat")
     BookingDriver.continue(view)
   end
 
-  defp to_picker(view, :custom), do: BookingDriver.choose_meeting_type(view, "quick-chat")
+  defp to_picker(view, :custom) do
+    BookingDriver.choose_meeting_type(view, "quick-chat")
+
+    # A paged journey of its own (Fixture Two) shows the picker one way on.
+    unless has_element?(view, "[data-fact='date'], [data-fact='slot'], [data-fact='time']"),
+      do: BookingDriver.continue(view)
+  end
 
   # The last day a bounded picker shows, as a day button or a slot button.
   defp last_day_on_show(view), do: view |> days_on_show() |> Enum.max()

@@ -133,4 +133,29 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessageTest do
                "Failed to create appointment. Please try again."
     end
   end
+
+  describe "voiced/2, in the rendering theme's voice" do
+    setup do
+      Gettext.put_locale(TymeslotWeb.Gettext, "en")
+      :ok
+    end
+
+    test "words a taken time the theme's way where its voice has the line" do
+      # The fixture theme ("99") has a voice with a line for a taken time.
+      assert BookingErrorMessage.voiced(:slot_taken, "99") == "That time just went."
+    end
+
+    test "keeps the shared wording for a theme without a voice, an unknown id and no id" do
+      shared = BookingErrorMessage.message(:slot_taken)
+
+      assert BookingErrorMessage.voiced(:slot_taken, "1") == shared
+      assert BookingErrorMessage.voiced(:slot_taken, "nope") == shared
+      assert BookingErrorMessage.voiced(:slot_taken, nil) == shared
+    end
+
+    test "leaves every other reason to message/1" do
+      assert BookingErrorMessage.voiced(:booking_limit_reached, "99") ==
+               BookingErrorMessage.message(:booking_limit_reached)
+    end
+  end
 end

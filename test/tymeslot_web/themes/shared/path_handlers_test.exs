@@ -438,6 +438,82 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
     end
   end
 
+  describe "facts_path/1" do
+    test "follows what the booking knows, not the screen" do
+      base = %{username_context: "ana", current_state: :offer}
+
+      assert PathHandlers.facts_path(base) == "/ana"
+
+      assert PathHandlers.facts_path(Map.put(base, :selected_duration, "intro-call")) ==
+               "/ana/intro-call"
+
+      assert PathHandlers.facts_path(
+               Map.merge(base, %{
+                 selected_duration: "intro-call",
+                 selected_date: "2030-03-06",
+                 selected_time: "10:30 AM"
+               })
+             ) == "/ana/intro-call/book"
+
+      assert PathHandlers.facts_path(%{base | current_state: :confirmation}) == "/ana/thank-you"
+    end
+
+    test "takes the meeting type's own slug, encoded as a path segment" do
+      assigns = %{
+        username_context: "ana",
+        current_state: :offer,
+        selected_duration: "30-minutes",
+        meeting_type: %{slug: "café chat", name: "Café chat"}
+      }
+
+      assert PathHandlers.facts_path(assigns) == "/ana/caf%C3%A9%20chat"
+    end
+
+    test "is nil without an organiser" do
+      assert PathHandlers.facts_path(%{selected_duration: "intro-call"}) == nil
+    end
+  end
+
+  describe "facts_query/1" do
+    test "keeps the page's own parameters and drops what the facts say" do
+      assigns = %{
+        page_query_params: %{
+          "timezone" => "Etc/UTC",
+          "date" => "2030-03-06",
+          "time" => "10:00 AM",
+          "duration" => "30"
+        },
+        reschedule_meeting_uid: nil,
+        reschedule_seat_token: nil
+      }
+
+      assert PathHandlers.facts_query(assigns) == "timezone=Etc%2FUTC"
+    end
+
+    test "never carries a confirmation link's name, email or meeting" do
+      assigns = %{
+        page_query_params: %{
+          "embed" => "true",
+          "name" => "Ana",
+          "email" => "ana@example.com",
+          "meeting_uid" => "m-1"
+        }
+      }
+
+      assert PathHandlers.facts_query(assigns) == "embed=true"
+    end
+
+    test "keeps a reschedule while it lasts, and drops it once abandoned" do
+      query = %{"reschedule_meeting_uid" => "m-1"}
+
+      assert PathHandlers.facts_query(%{page_query_params: query, reschedule_meeting_uid: "m-1"}) ==
+               "reschedule_meeting_uid=m-1"
+
+      assert PathHandlers.facts_query(%{page_query_params: query, reschedule_meeting_uid: nil}) ==
+               nil
+    end
+  end
+
   defp preview_socket(opts) do
     %Phoenix.LiveView.Socket{
       assigns: %{

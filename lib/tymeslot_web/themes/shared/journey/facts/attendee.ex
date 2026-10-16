@@ -3,7 +3,9 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Attendee do
   The attendee: the booking form, its location answer and its guests, and
   the submit that ends the booking.
 
-  Needs the slot, and the answers when the meeting type has questions.
+  Needs the slot, and the answers when the meeting type has questions
+  asked in a moment of their own; answers asked in its own moment go with
+  its submit, which validates them.
   Showing a moment that collects it sets the form up
   (`StepEntry.handle_booking_entry/2`): the submission token, the reschedule
   prefill, and for a `/book` link without a day and a time the redirect to
@@ -43,9 +45,18 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Attendee do
   @impl Fact
   def key, do: :attendee
 
+  # Answers asked in a moment of their own must be known before the details
+  # open. Answers asked in the attendee's own moment are not waited for: the
+  # submit sends them with the details, and the submission validates them
+  # and names each question that fails (`:refused_questions`),
+  # so a screen that shows the questions above the form opens the form with
+  # the time, and its submit is never dropped for an answer left blank.
   @impl Fact
-  def requires(assigns),
-    do: if(Answers.required?(assigns), do: [:slot, :answers], else: [:slot])
+  def requires(assigns) do
+    if Answers.required?(assigns) and not Answers.beside_attendee?(assigns),
+      do: [:slot, :answers],
+      else: [:slot]
+  end
 
   @impl Fact
   def required?(_assigns), do: true

@@ -143,6 +143,54 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGridTest do
       assert attr(Floki.find(doc, "[data-testid=week-grid-prev]"), "aria-label") ==
                "Vorherige Woche"
     end
+
+    test "shows a group time's spots under the time, as the slot list does" do
+      group = %{show_seat_availability: true, last_spots_threshold: 3}
+
+      doc =
+        render_grid(
+          meeting_type: group,
+          week_slots: %{
+            "2027-03-08" => [
+              %{time: "9:00 AM", seats_left: 2, capacity: 10},
+              %{time: "10:00 AM", seats_left: 8, capacity: 10}
+            ]
+          }
+        )
+
+      assert slots(doc) == [{"2027-03-08", "9:00 AM"}, {"2027-03-08", "10:00 AM"}]
+      assert [_one, _two] = Floki.find(doc, ".week-grid__slot.week-grid__slot--seats")
+
+      assert [_badge] =
+               Floki.find(doc, "[data-time='9:00 AM'] [data-testid='seat-badge'].seat-red")
+
+      assert [_badge] =
+               Floki.find(doc, "[data-time='10:00 AM'] [data-testid='seat-badge'].seat-green")
+    end
+
+    test "keeps a solo time's markup, and every time's without a meeting type" do
+      solo = render_grid(week_slots: %{"2027-03-08" => ["9:00 AM"]}, meeting_type: %{})
+
+      without =
+        render_grid(
+          week_slots: %{"2027-03-08" => [%{time: "9:00 AM", seats_left: 2, capacity: 10}]}
+        )
+
+      for doc <- [solo, without] do
+        assert Floki.find(doc, "[data-testid='seat-badge']") == []
+        assert Floki.find(doc, ".week-grid__slot--seats") == []
+      end
+    end
+
+    test "shows no badge when the organiser hides the spots" do
+      doc =
+        render_grid(
+          meeting_type: %{show_seat_availability: false, last_spots_threshold: nil},
+          week_slots: %{"2027-03-08" => [%{time: "9:00 AM", seats_left: 6, capacity: 10}]}
+        )
+
+      assert Floki.find(doc, "[data-testid='seat-badge']") == []
+    end
   end
 
   describe "fetching the week" do

@@ -28,12 +28,13 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.YesNo do
       ]}>
         <input
           type="radio"
-          name="value"
+          name={"cq-#{@definition["id"]}"}
           value="true"
           checked={@value == true}
           class="sr-only"
           phx-click="answer"
           phx-value-value="true"
+          phx-value-question={@definition["id"]}
           phx-target={@myself}
           data-fact="answer"
           data-question={@definition["id"]}
@@ -61,12 +62,13 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.YesNo do
       ]}>
         <input
           type="radio"
-          name="value"
+          name={"cq-#{@definition["id"]}"}
           value="false"
           checked={@value == false}
           class="sr-only"
           phx-click="answer"
           phx-value-value="false"
+          phx-value-question={@definition["id"]}
           phx-target={@myself}
           data-fact="answer"
           data-question={@definition["id"]}

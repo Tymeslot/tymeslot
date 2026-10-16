@@ -29,9 +29,18 @@ defmodule Tymeslot.CustomFields do
   @spec snapshot_for(map()) :: [map()]
   defdelegate snapshot_for(meeting_type), to: Snapshot, as: :from_meeting_type
 
-  @doc "Validates a single answer for a definition (or snapshot row)."
+  @doc """
+  Validates a single answer for a definition (or snapshot row): the raw
+  length cap first, then the type's own check. The one per-answer check,
+  so a screen naming a failing answer agrees with the submission
+  (`validate_answers/2`).
+  """
   @spec validate_answer(any(), map()) :: {:ok, term()} | {:error, String.t()}
-  defdelegate validate_answer(value, definition), to: Validator, as: :validate
+  def validate_answer(raw, _definition)
+      when is_binary(raw) and byte_size(raw) > @max_raw_answer_length,
+      do: {:error, "Answer is too long"}
+
+  def validate_answer(raw, definition), do: Validator.validate(raw, definition)
 
   @doc """
   Validates every answer in a `%{id => raw}` map against a list of
@@ -49,7 +58,7 @@ defmodule Tymeslot.CustomFields do
       Enum.reduce(snapshot, {%{}, %{}}, fn defn, {ok_acc, err_acc} ->
         raw = Map.get(answers, defn["id"])
 
-        case validate_raw(raw, defn) do
+        case validate_answer(raw, defn) do
           {:ok, normalised} -> {Map.put(ok_acc, defn["id"], normalised), err_acc}
           {:error, msg} -> {ok_acc, Map.put(err_acc, defn["id"], msg)}
         end
@@ -57,11 +66,4 @@ defmodule Tymeslot.CustomFields do
 
     if map_size(errs) == 0, do: {:ok, ok}, else: {:error, errs}
   end
-
-  defp validate_raw(raw, _defn)
-       when is_binary(raw) and byte_size(raw) > @max_raw_answer_length do
-    {:error, "Answer is too long"}
-  end
-
-  defp validate_raw(raw, defn), do: Validator.validate(raw, defn)
 end

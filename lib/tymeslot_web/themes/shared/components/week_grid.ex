@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
   (`--loading` while a fetch is on its way), `__nav`, `__nav-button`
   (`--prev`, `--next`), `__nav-icon`, `__range`, `__days`, `__day`
   (`--today`), `__day-heading`, `__day-name`, `__day-date`, `__slots`,
-  `__slot` (`--selected`), `__empty`, `__loading`, `__error` and `__jump`. The shared
+  `__slot` (`--selected`, `--seats`), `__empty`, `__loading`, `__error` and `__jump`. The shared
   structure is `scheduling/shared/components/week-grid.css`; a theme styles
   the classes through tokens and never restructures the DOM. `heading_tag` is
   an attribute because it is document semantics: the level of each day's
@@ -21,6 +21,12 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
   to the same `@container week-grid` queries as the days, in every state:
   while the week loads, after a failed fetch, and once it is loaded. A caller
   that passes none renders nothing there.
+
+  On a group meeting type (`meeting_type`) a time also shows its spots, as
+  `SlotList` does (`SeatBadge`, under the organiser's display settings): the
+  button gains `week-grid__slot--seats`, which stacks the time above the
+  badge. A solo time, and every time when the caller passes no `meeting_type`,
+  keeps its single line.
 
   Everything the grid shows comes from the flow's assigns
   (`TymeslotWeb.Live.Scheduling.WeekSlots`): `week_slots` is nil until the
@@ -49,7 +55,9 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
   use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
   alias Phoenix.LiveView.JS
-  alias TymeslotWeb.Live.Scheduling.{CalendarHelpers, CalendarNavigation, WeekSlots}
+  alias TymeslotWeb.Components.MeetingUtils
+  alias TymeslotWeb.Live.Scheduling.{CalendarHelpers, CalendarNavigation}
+  alias TymeslotWeb.Themes.Shared.Components.SeatBadge
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   attr :week_start, Date, required: true, doc: "the Monday of the week shown"
@@ -65,6 +73,10 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
   attr :today, Date, default: nil, doc: "the visitor's today, marked on its day"
   attr :user_timezone, :string, required: true
   attr :booking_window_days, :integer, default: nil
+
+  attr :meeting_type, :any,
+    default: nil,
+    doc: "the meeting type, whose spots a group time shows (as `SlotList`'s)"
 
   attr :landing_week, Date,
     default: nil,
@@ -157,26 +169,14 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
               </.dynamic_tag>
               <ul :if={day.slots != []} class="week-grid__slots">
                 <li :for={slot <- day.slots}>
-                  <button
-                    type="button"
-                    class={[
-                      "week-grid__slot",
-                      selected?(@selected_date, @selected_time, day.iso, slot) &&
-                        "week-grid__slot--selected"
-                    ]}
-                    data-testid="week-slot"
-                    data-fact="slot"
-                    data-date={day.iso}
-                    data-time={slot}
-                    phx-click="select_slot"
-                    phx-value-date={day.iso}
-                    phx-value-time={slot}
-                    phx-target={@target}
-                    disabled={@loading}
-                    aria-pressed={to_string(selected?(@selected_date, @selected_time, day.iso, slot))}
-                  >
-                    {LocalizationHelpers.format_time_by_locale(CalendarHelpers.parse_slot_time(slot))}
-                  </button>
+                  <.slot_button
+                    slot={slot}
+                    iso={day.iso}
+                    selected={selected?(@selected_date, @selected_time, day.iso, slot.time)}
+                    loading={@loading}
+                    meeting_type={@meeting_type}
+                    target={@target}
+                  />
                 </li>
               </ul>
               <p :if={day.slots == []} class="week-grid__empty">
@@ -189,6 +189,50 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
     """
   end
 
+  # One time of a day. On a group meeting type it stacks the time above its
+  # spots (`SeatBadge`, as the organiser chose to show them), as the slot
+  # list's button does; a solo time keeps its single line.
+  attr :slot, :map, required: true
+  attr :iso, :string, required: true
+  attr :selected, :boolean, default: false
+  attr :loading, :boolean, default: false
+  attr :meeting_type, :any, default: nil
+  attr :target, :any, required: true
+
+  defp slot_button(assigns) do
+    # Only for the meeting type passed: `SeatBadge.display/2` with no type
+    # falls back to the default display settings and would show a badge, so
+    # a caller passing none would see its markup change.
+    seat_display =
+      assigns.meeting_type && SeatBadge.display(assigns.slot, assigns.meeting_type)
+
+    assigns = assign(assigns, :seat_display, seat_display)
+
+    ~H"""
+    <button
+      type="button"
+      class={[
+        "week-grid__slot",
+        @seat_display && "week-grid__slot--seats",
+        @selected && "week-grid__slot--selected"
+      ]}
+      data-testid="week-slot"
+      data-fact="slot"
+      data-date={@iso}
+      data-time={@slot.time}
+      phx-click="select_slot"
+      phx-value-date={@iso}
+      phx-value-time={@slot.time}
+      phx-target={@target}
+      disabled={@loading}
+      aria-pressed={to_string(@selected)}
+    >
+      {LocalizationHelpers.format_time_by_locale(CalendarHelpers.parse_slot_time(@slot.time))}
+      <SeatBadge.seat_badge display={@seat_display} />
+    </button>
+    """
+  end
+
   defp days(week_start, week_slots, today) do
     for offset <- 0..6 do
       date = Date.add(week_start, offset)
@@ -198,7 +242,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
         date: date,
         iso: iso,
         today: date == today,
-        slots: WeekSlots.times(Map.get(week_slots || %{}, iso, []))
+        slots: MeetingUtils.normalize_slot_list(Map.get(week_slots || %{}, iso, []))
       }
     end
   end

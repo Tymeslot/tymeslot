@@ -21,6 +21,10 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.TextInput do
   Without the form, the only commit was `phx-blur`, so a value typed and then
   submitted with Enter — which never blurs — was lost, advancing the wizard
   against a stale (often empty) answer.
+
+  The form carries the question's id (`question`), so the answer reaches its
+  own question on a screen that shows several; such a screen passes
+  `autofocus={false}`.
   """
   use Phoenix.Component
 
@@ -30,6 +34,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.TextInput do
   attr :definition, :map, required: true
   attr :value, :any, required: true
   attr :myself, :any, required: true
+  attr :autofocus, :boolean, default: true
   attr :rest, :global, include: ~w(autocomplete)
 
   @spec text_like(map()) :: Phoenix.LiveView.Rendered.t()
@@ -43,6 +48,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.TextInput do
       data-fact="answer"
       data-question={@definition["id"]}
     >
+      <input type="hidden" name="question" value={@definition["id"]} />
       <.input
         id={"cq-input-#{@definition["id"]}"}
         type={@input_type}
@@ -50,7 +56,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.TextInput do
         value={@value}
         aria-label={@definition["label"]}
         aria-required={to_string(@definition["required"] == true)}
-        autofocus
+        autofocus={@autofocus}
         {@rest}
       />
     </form>
