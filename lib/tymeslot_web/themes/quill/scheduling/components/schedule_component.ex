@@ -6,100 +6,27 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Utils.DateTimeUtils.Duration
+  alias Tymeslot.Timezones
   alias TymeslotWeb.Live.Scheduling.CalendarHelpers
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
-  alias TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels
+  alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.SessionList
+  alias TymeslotWeb.Themes.Shared.Components.SlotList
+  alias TymeslotWeb.Themes.Shared.Components.TimezonePicker
+  alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+  alias TymeslotWeb.Themes.Shared.StepEvents
+  alias TymeslotWeb.Themes.Shared.TimezoneHelpers
 
   use TymeslotWeb.Components.CoreComponents
+  import TymeslotWeb.Components.FlagHelpers, only: [timezone_flag: 1]
 
   @impl Phoenix.LiveComponent
-  def update(assigns, socket) do
-    # Filter out reserved assigns that can't be set directly
-    filtered_assigns = Map.drop(assigns, [:flash, :socket])
-    {:ok, assign(socket, filtered_assigns)}
-  end
+  defdelegate update(assigns, socket), to: StepEvents
 
   @impl Phoenix.LiveComponent
-  def handle_event("select_date", %{"date" => date}, socket) do
-    send(self(), {:step_event, :schedule, :select_date, date})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("select_time", %{"time" => time}, socket) do
-    send(self(), {:step_event, :schedule, :select_time, time})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("toggle_hour", %{"hour" => hour}, socket) do
-    send(self(), {:step_event, :schedule, :toggle_hour, hour})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("change_timezone", %{"timezone" => timezone}, socket) do
-    send(self(), {:step_event, :schedule, :change_timezone, timezone})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("search_timezone", params, socket) do
-    send(self(), {:step_event, :schedule, :search_timezone, params})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("toggle_timezone_dropdown", _params, socket) do
-    send(self(), {:step_event, :schedule, :toggle_timezone_dropdown, nil})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("close_timezone_dropdown", _params, socket) do
-    send(self(), {:step_event, :schedule, :close_timezone_dropdown, nil})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("prev_month", _params, socket) do
-    send(self(), {:step_event, :schedule, :prev_month, nil})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("next_month", _params, socket) do
-    send(self(), {:step_event, :schedule, :next_month, nil})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("prev_week", _params, socket) do
-    send(self(), {:step_event, :schedule, :prev_week, nil})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("next_week", _params, socket) do
-    send(self(), {:step_event, :schedule, :next_week, nil})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("back_step", _params, socket) do
-    send(self(), {:step_event, :schedule, :back_step, nil})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("next_step", _params, socket) do
-    send(self(), {:step_event, :schedule, :next_step, nil})
-    {:noreply, socket}
-  end
+  defdelegate handle_event(event, params, socket), to: StepEvents
 
   # ========== CALENDAR COMPONENTS ==========
 
@@ -124,6 +51,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
       ]}
       data-testid="calendar-day"
       data-date={@day[:date] || @day["date"]}
+      data-fact={@current_month && "date"}
+      data-value={@current_month && (@day[:date] || @day["date"])}
       disabled={!@available || !@current_month || @loading}
       aria-label={LocalizationHelpers.format_full_date_label(@day[:date] || @day["date"])}
       aria-current={@day.is_today && "date"}
@@ -160,10 +89,13 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
+    assigns = assign(assigns, :navigable_steps, Runtime.navigable_steps(assigns))
+
     ~H"""
-    <div class="container flex-1" data-locale={@locale}>
+    <div class="container quill-container flex-1" data-locale={@locale}>
       <.page_layout
         show_steps={true}
+        navigable_steps={@navigable_steps}
         current_step={2}
         slug={@duration}
         username_context={@username_context}
@@ -171,7 +103,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
         <div class="stack">
           <div class="schedule-content-area flex-1 flex items-start justify-center">
             <div class="w-full min-h-0">
-              <.glass_morphism_card class="calendar-card">
+              <.glass_morphism_card class="booker-card calendar-card">
                 <div class="schedule-card-body min-h-0">
                   <%!-- Header: title + compact timezone trigger --%>
                   <div class="schedule-card-header">
@@ -183,22 +115,16 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                       <%= if @organizer_profile do %>
                         <p class="schedule-advance-notice text-glass-primary">
                           {dgettext("booking", "Bookings available up to %{advance}",
-                            advance: Panels.format_advance_booking_days(@booking_window_days)
+                            advance:
+                              LocalizationHelpers.format_advance_booking_days(@booking_window_days)
                           )}
                         </p>
                       <% end %>
 
                       <p class="schedule-duration-label text-glass-primary">
-                        <%= if @meeting_type do %>
-                          {dgettext("booking", "Duration: %{duration}",
-                            duration:
-                              LocalizationHelpers.format_duration(@meeting_type.duration_minutes)
-                          )}
-                        <% else %>
-                          {dgettext("booking", "Duration: %{duration}",
-                            duration: Duration.format(@duration)
-                          )}
-                        <% end %>
+                        {dgettext("booking", "Duration: %{duration}",
+                          duration: BookingText.duration_label(assigns)
+                        )}
                       </p>
 
                       <GroupSession.hint meeting_type={@meeting_type} class="mt-2" />
@@ -211,7 +137,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                     </div>
 
                     <div class="schedule-timezone-area">
-                      <Panels.timezone_selector
+                      <.timezone_selector
                         user_timezone={@user_timezone}
                         timezone_search={@timezone_search}
                         timezone_dropdown_open={@timezone_dropdown_open}
@@ -323,6 +249,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                             <button
                               phx-click="prev_month"
                               phx-target={@myself}
+                              data-intent="earlier"
                               phx-disable-with="..."
                               disabled={
                                 CalendarNavigation.prev_month_disabled?(
@@ -344,6 +271,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                             <button
                               phx-click="next_month"
                               phx-target={@myself}
+                              data-intent="later"
                               phx-disable-with="..."
                               disabled={
                                 CalendarNavigation.next_month_disabled?(
@@ -360,26 +288,16 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                           </div>
                         </div>
                         <div class="calendar-grid-container flex-1">
-                          <div class="grid grid-cols-7 gap-0.5 text-center mb-1">
+                          <div class="calendar-month-grid grid grid-cols-7 gap-0.5 text-center mb-1">
                             <div
-                              :for={
-                                day <- [
-                                  dgettext("booking", "Sun"),
-                                  dgettext("booking", "Mon"),
-                                  dgettext("booking", "Tue"),
-                                  dgettext("booking", "Wed"),
-                                  dgettext("booking", "Thu"),
-                                  dgettext("booking", "Fri"),
-                                  dgettext("booking", "Sat")
-                                ]
-                              }
+                              :for={day <- LocalizationHelpers.weekday_headings(@week_start)}
                               class="calendar-weekday text-xs font-medium"
                             >
-                              {String.slice(day, 0, 3)}
+                              {day}
                             </div>
                           </div>
-                          <div class="grid grid-cols-7 gap-0.5">
-                            <%= for day <- CalendarHelpers.get_calendar_days(@user_timezone, @current_year, @current_month, @organizer_profile, @month_availability_map, @meeting_type) do %>
+                          <div class="calendar-month-grid grid grid-cols-7 gap-0.5">
+                            <%= for day <- CalendarHelpers.get_calendar_days(@user_timezone, @current_year, @current_month, @week_start, @organizer_profile, @month_availability_map, @meeting_type) do %>
                               <.calendar_day
                                 phx-click="select_date"
                                 phx-target={@myself}
@@ -396,18 +314,62 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                       </div>
                     </div>
 
-                    <Panels.time_slots_panel
+                    <SlotList.slot_list
                       selected_date={@selected_date}
+                      selected_time={@selected_time}
+                      available_slots={@available_slots}
                       loading_slots={@loading_slots}
                       calendar_error={@calendar_error}
-                      available_slots={@available_slots}
-                      selected_time={@selected_time}
                       slot_interval_minutes={@slot_interval_minutes}
                       duration_minutes={@duration_minutes}
                       expanded_hour={@expanded_hour}
                       meeting_type={@meeting_type}
                       target={@myself}
-                    />
+                    >
+                      <:loading>
+                        <div class="h-full flex items-center justify-center">
+                          <.spinner />
+                          <span class="ml-3 text-white">
+                            {dgettext("booking", "Loading available times...")}
+                          </span>
+                        </div>
+                      </:loading>
+                      <:error :let={message}>
+                        <.info_box variant={:warning}>
+                          {message}
+                        </.info_box>
+                      </:error>
+                      <:empty>
+                        <%!-- Drawn in Quill's own light-on-glass colours, so it
+                             stays local rather than using the dashboard's empty
+                             state. --%>
+                        <div class="h-full flex items-center justify-center">
+                          <div class="text-center p-4">
+                            <svg
+                              class="w-12 h-12 mx-auto mb-2 text-tymeslot-400"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                            >
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                              >
+                              </path>
+                            </svg>
+                            <p class="text-sm font-medium" style="color: rgba(255,255,255,0.8);">
+                              {dgettext("booking", "This date is fully booked")}
+                            </p>
+                            <p class="text-xs mt-1" style="color: rgba(255,255,255,0.6);">
+                              {dgettext("booking", "Please select another date")}
+                            </p>
+                          </div>
+                        </div>
+                      </:empty>
+                    </SlotList.slot_list>
                   </div>
 
                   <div class="schedule-actions shrink-0" data-testid="schedule-actions">
@@ -417,6 +379,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                       phx-click="back_step"
                       phx-target={@myself}
                       data-testid="back-step"
+                      data-intent="back"
                       variant={:secondary}
                       class="flex-1"
                     >
@@ -427,6 +390,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                       phx-click="next_step"
                       phx-target={@myself}
                       data-testid="next-step"
+                      data-intent="continue"
                       disabled={!(@selected_date && @selected_time)}
                       class="flex-1"
                     >
@@ -439,6 +403,76 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
           </div>
         </div>
       </.page_layout>
+    </div>
+    """
+  end
+
+  attr :user_timezone, :string, required: true
+  attr :timezone_search, :string, required: true
+  attr :timezone_dropdown_open, :boolean, required: true
+  attr :target, :any, required: true
+  attr :locale, :string, required: true
+
+  defp timezone_selector(assigns) do
+    ~H"""
+    <div class="relative" data-locale={@locale}>
+      <%!-- Visual label only: it names no control (the trigger below carries its
+           own accessible name), so it must not be a <label> element. --%>
+      <div class="timezone-label">
+        <div class="timezone-label-content">
+          <svg class="timezone-label-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          {dgettext("booking", "Your timezone")}
+        </div>
+      </div>
+
+      <TimezonePicker.timezone_picker
+        open={@timezone_dropdown_open}
+        search={@timezone_search}
+        target={@target}
+      >
+        <:trigger>
+          <div class="timezone-trigger-row">
+            <div class="timezone-trigger-info">
+              <.timezone_flag timezone={@user_timezone} class="timezone-flag" fallback_icon="🌐" />
+              <div class="timezone-trigger-text">
+                <div class="timezone-name">
+                  {Timezones.format(@user_timezone)}
+                </div>
+                <div class="timezone-time-display timezone-time-inline">
+                  {dgettext("booking", "%{time} local time",
+                    time: TimezoneHelpers.format_local_time(@user_timezone)
+                  )}
+                </div>
+              </div>
+            </div>
+            <div class="timezone-meta">
+              <div class="timezone-offset-badge">
+                {Timezones.utc_offset(@user_timezone)}
+              </div>
+              <svg
+                class={["timezone-chevron", @timezone_dropdown_open && "open"]}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </div>
+          </div>
+        </:trigger>
+      </TimezonePicker.timezone_picker>
     </div>
     """
   end

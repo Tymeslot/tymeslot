@@ -14,44 +14,29 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+  alias TymeslotWeb.Themes.Shared.StepEvents
 
   import TymeslotWeb.Components.FlagHelpers
 
   @impl Phoenix.LiveComponent
-  def update(assigns, socket) do
-    filtered_assigns = Map.drop(assigns, [:flash, :socket])
-    {:ok, assign(socket, filtered_assigns)}
-  end
+  defdelegate update(assigns, socket), to: StepEvents
 
   @impl Phoenix.LiveComponent
-  def handle_event("select_duration", %{"duration" => duration}, socket) do
-    # duration is already a string like "30min" from the button
-    new_duration =
-      if socket.assigns[:selected_duration] == duration do
-        nil
-      else
-        duration
-      end
-
-    send(self(), {:step_event, :overview, :select_duration, new_duration})
-    {:noreply, assign(socket, :selected_duration, new_duration)}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("next_slide", _params, socket) do
-    send(self(), {:step_event, :overview, :next_step, nil})
-    {:noreply, socket}
-  end
+  defdelegate handle_event(event, params, socket), to: StepEvents
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div class="scheduling-box" data-locale={@locale}>
+    <div class="scheduling-box booker-card" data-locale={@locale}>
       <div class="slide-container">
         <div class="slide active">
           <div class="slide-content">
             <h1 class="slide-title">
-              {BookingText.heading(@organizer_profile, :rhythm, display_name(@organizer_profile))}
+              {BookingText.heading(
+                @organizer_profile,
+                :rhythm,
+                Profiles.display_name(@organizer_profile)
+              )}
             </h1>
 
             <div class="organizer-profile">
@@ -61,14 +46,20 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                   alt={Demo.avatar_alt_text(@organizer_profile)}
                   class="avatar-image"
                 />
-                <div class="avatar-checkmark">✓</div>
+                <div class="avatar-checkmark">
+                  <.icon name="hero-check-mini" class="avatar-checkmark__icon" />
+                </div>
               </div>
               <div class="organizer-info">
                 <p class="organizer-greeting">
-                  {BookingText.greeting(@organizer_profile, display_name(@organizer_profile))}
+                  {BookingText.greeting(
+                    @organizer_profile,
+                    Profiles.display_name(@organizer_profile),
+                    :rhythm
+                  )}
                 </p>
                 <p class="organizer-instruction">
-                  {BookingText.instruction(@organizer_profile)}
+                  {BookingText.instruction(@organizer_profile, :rhythm)}
                 </p>
               </div>
             </div>
@@ -79,7 +70,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                   {dgettext("booking", "No meeting types available")}
                 </p>
                 <p class="overview-empty-subtitle">
-                  {dgettext("booking", "Please contact the organizer")}
+                  {dgettext("booking", "Please contact the organiser")}
                 </p>
               </div>
             <% else %>
@@ -94,6 +85,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                       class="duration-button"
                       data-testid="duration-option"
                       data-duration={slug}
+                      data-fact="meeting_type"
+                      data-value={slug}
                     >
                       <div class="duration-icon shrink-0">
                         {render_icon(meeting_type.icon || get_default_icon(meeting_type))}
@@ -120,9 +113,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
             <div class="slide-actions">
               <button
                 class={if is_nil(@selected_duration), do: "next-button disabled", else: "next-button"}
-                phx-click="next_slide"
+                phx-click="next_step"
                 phx-target={@myself}
                 data-testid="next-step"
+                data-intent="continue"
                 disabled={is_nil(@selected_duration)}
               >
                 {dgettext("booking", "Next")} →
@@ -136,10 +130,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
   end
 
   # Helpers
-  defp display_name(profile) do
-    Profiles.display_name(profile) || "there"
-  end
-
   defp get_default_icon(meeting_type) do
     case meeting_type.duration_minutes do
       15 -> "hero-bolt"

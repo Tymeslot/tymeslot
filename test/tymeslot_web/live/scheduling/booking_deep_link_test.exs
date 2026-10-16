@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Live.Scheduling.BookingDeepLinkTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
 
@@ -129,6 +130,55 @@ defmodule TymeslotWeb.Live.Scheduling.BookingDeepLinkTest do
     assigns = :sys.get_state(view.pid).socket.assigns
 
     assert assigns.meeting_type.id == meeting_type.id
+  end
+
+  @tag :capture_log
+  test "a link to the booking step with no day and no time goes back to the schedule",
+       %{conn: conn, profile: profile} do
+    assert {:error, {:redirect, %{to: to}}} =
+             live(conn, "/#{profile.username}/deep-dive/book")
+
+    assert String.starts_with?(to, "/#{profile.username}/")
+    refute String.ends_with?(to, "/book")
+  end
+
+  @tag :capture_log
+  test "a reschedule link to the booking step with no day and no time is not sent back",
+       %{conn: conn, profile: profile} do
+    {:ok, view, _html} =
+      live(
+        conn,
+        "/#{profile.username}/deep-dive/book?reschedule_meeting_uid=does-not-exist"
+      )
+
+    # The meeting type has no questions, so the link opens the booking form.
+    assert has_element?(view, "[data-testid='booking-form']")
+  end
+
+  # The questions are confirmed, never assumed: optional ones validate blank,
+  # yet a link to the booking step still shows them first.
+  @tag :capture_log
+  test "a link to the booking step shows a meeting type's optional questions first",
+       %{conn: conn, profile: profile, meeting_type: meeting_type, date: date} do
+    {:ok, _meeting_type} =
+      MeetingTypes.update_meeting_type(meeting_type, %{
+        "custom_fields" => [
+          %{
+            "id" => "dl-topic",
+            "type" => "short_text",
+            "label" => "Anything to prepare?",
+            "required" => false,
+            "position" => 0
+          }
+        ]
+      })
+
+    {:ok, view, html} =
+      live(conn, "/#{profile.username}/deep-dive/book?date=#{date}&time=10:00%20AM")
+
+    assert html =~ "Anything to prepare?"
+    assert :sys.get_state(view.pid).socket.assigns.current_state == :questions
+    refute has_element?(view, "[data-testid='booking-form']")
   end
 
   describe "query parameters of an unexpected shape" do

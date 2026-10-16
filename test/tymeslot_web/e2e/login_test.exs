@@ -28,6 +28,20 @@ defmodule TymeslotWeb.E2E.LoginTest do
     |> assert_has(css(".bg-red-50"))
   end
 
+  # The login form leaves validation to the app (`novalidate`): an empty
+  # submit reaches the server and comes back with the app's own message,
+  # not the browser's bubble.
+  feature "an empty login is answered by the app's own message", %{session: session} do
+    session
+    |> visit("/auth/login")
+    |> wait_for_live()
+    |> refute_has(css(".bg-red-50"))
+    |> click(css("button[type='submit']"))
+    |> assert_has(css(".bg-red-50"))
+
+    assert current_path(session) == "/auth/login"
+  end
+
   feature "login page fits the narrowest supported viewport", %{session: session} do
     session
     |> resize_to_mobile()

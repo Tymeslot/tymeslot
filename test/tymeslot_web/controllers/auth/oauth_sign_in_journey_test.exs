@@ -24,6 +24,7 @@ defmodule TymeslotWeb.OAuthSignInJourneyTest do
   alias Tymeslot.Emails.EmailScheduler.LinkArg
   alias Tymeslot.Repo
   alias Tymeslot.Test.ClockHelpers
+  alias Tymeslot.Workers.DataRetentionWorker
   alias Tymeslot.Workers.EmailWorker
   alias TymeslotWeb.Endpoint
 
@@ -264,6 +265,38 @@ defmodule TymeslotWeb.OAuthSignInJourneyTest do
         worker: EmailWorker,
         args: %{"action" => "send_email_verification", "user_id" => user.id}
       )
+    end
+  end
+
+  describe "an SSO account from before sign-in required a verified email" do
+    test "survives the retention job and still signs in with registration closed" do
+      original = Application.get_env(:tymeslot, :registration_enabled)
+      Application.put_env(:tymeslot, :registration_enabled, false)
+      on_exit(fn -> Application.put_env(:tymeslot, :registration_enabled, original) end)
+
+      user =
+        insert(:user,
+          email: "sso-legacy@example.com",
+          provider: "oauth",
+          provider_uid: "sub-legacy",
+          password_hash: nil,
+          verified_at: nil,
+          is_admin: true,
+          inserted_at: DateTime.add(DateTime.utc_now(:second), -400, :day)
+        )
+
+      assert :ok = perform_job(DataRetentionWorker, %{})
+
+      stub_sso(%{
+        "sub" => "sub-legacy",
+        "email" => "sso-legacy@example.com",
+        "email_verified" => true
+      })
+
+      conn = sign_in(build_conn(), "oauth")
+
+      assert get_session(conn, :user_token)
+      assert Repo.reload!(user).verified_at
     end
   end
 

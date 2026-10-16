@@ -196,11 +196,11 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
     ~H"""
     <form
       id={"poll-details-form-#{@poll.id}"}
+      novalidate
       phx-submit="save_poll_details"
       phx-target={@myself}
       class="space-y-4"
       data-testid="poll-details-form"
-      novalidate
     >
       <Forms.input
         type="text"

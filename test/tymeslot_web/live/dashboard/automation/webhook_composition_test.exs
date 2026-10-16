@@ -73,6 +73,9 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCompositionTest do
       |> element("button", "Create Your First Webhook")
       |> render_click()
 
+      # Empty required fields reach the server, which answers in the form.
+      assert has_element?(view, "#webhook-form[novalidate]")
+
       view
       |> form("#webhook-form", %{
         "webhook" => %{

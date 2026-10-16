@@ -1,151 +1,72 @@
 defmodule TymeslotWeb.ThemeCommonTestCases do
   @moduledoc """
-  Shared test cases for common theme behavior that all themes must implement.
+  The contract every registered theme honours, asserted for each theme in
+  `TymeslotWeb.ThemeTestMatrix` by `theme_contract_test.exs`.
+
+  Each function raises on the first failed expectation and returns `:ok`, so
+  a call site asserts that it ran to completion.
   """
 
   import ExUnit.Assertions
-  import Phoenix.LiveViewTest, only: [rendered_to_string: 1]
+  import Phoenix.LiveViewTest, only: [render_component: 2]
 
-  @doc """
-  Tests the standard 4-step state machine structure.
-  """
-  @spec test_states_structure(module()) :: :ok
-  def test_states_structure(theme_module) do
-    states = theme_module.states()
+  alias Tymeslot.ThemeCustomizations
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
 
-    assert map_size(states) == 4
-    assert Map.has_key?(states, :overview)
-    assert Map.has_key?(states, :schedule)
-    assert Map.has_key?(states, :booking)
-    assert Map.has_key?(states, :confirmation)
-  end
+  @doc "The theme's LiveView module exists and is a LiveView."
+  @spec test_live_view_module(module()) :: :ok
+  def test_live_view_module(theme_module) do
+    live_view = theme_module.live_view_module()
 
-  @doc """
-  Tests the state flow configuration for a 4-step theme.
-  Allows customization of confirmation's previous state.
-  """
-  @spec test_state_flow(module(), atom() | nil) :: :ok
-  def test_state_flow(theme_module, confirmation_prev \\ nil) do
-    states = theme_module.states()
-
-    # Overview: step 1, no previous
-    assert states.overview.step == 1
-    assert states.overview.next == :schedule
-    assert states.overview.prev == nil
-
-    # Schedule: step 2, links overview and booking
-    assert states.schedule.step == 2
-    assert states.schedule.prev == :overview
-    assert states.schedule.next == :booking
-
-    # Booking: step 3, links schedule and confirmation
-    assert states.booking.step == 3
-    assert states.booking.prev == :schedule
-    assert states.booking.next == :confirmation
-
-    # Confirmation: step 4, configurable previous
-    assert states.confirmation.step == 4
-    assert states.confirmation.prev == confirmation_prev
-  end
-
-  @doc """
-  Tests that components map to expected modules.
-  """
-  @spec test_components_mapping(module(), module(), module(), module(), module()) :: :ok
-  def test_components_mapping(
-        theme_module,
-        overview_component,
-        schedule_component,
-        booking_component,
-        confirmation_component
-      ) do
-    components = theme_module.components()
-
-    assert map_size(components) == 4
-    assert components.overview == overview_component
-    assert components.schedule == schedule_component
-    assert components.booking == booking_component
-    assert components.confirmation == confirmation_component
-  end
-
-  @doc """
-  Tests that every module in `components/0` is a real `Phoenix.LiveComponent`.
-
-  A module listed as a component but never declared with
-  `use Phoenix.LiveComponent` compiles fine and fails only when its step is
-  first rendered, so the shape is checked here for every theme rather than left
-  to whichever flow happens to reach it. `update/2` is an optional callback, so
-  the `__live__/0` marker the `use` defines is what identifies one.
-  """
-  @spec test_components_are_live_components(module()) :: :ok
-  def test_components_are_live_components(theme_module) do
-    components = theme_module.components()
-
-    assert components != %{}, "theme declares no components"
-
-    not_live_components =
-      Enum.reject(components, fn {_state, module} ->
-        match?({:module, ^module}, Code.ensure_loaded(module)) and
-          function_exported?(module, :__live__, 0) and
-          match?(%{kind: :component}, module.__live__())
-      end)
-
-    assert not_live_components == [],
-           "not Phoenix.LiveComponents: #{inspect(not_live_components)}"
-
+    assert Code.ensure_loaded?(live_view), "#{inspect(live_view)} does not exist"
+    assert function_exported?(live_view, :__live__, 0), "#{inspect(live_view)} is no LiveView"
+    assert %{kind: :view} = live_view.__live__()
     :ok
   end
 
-  @doc """
-  Tests the `initial_state_for_action/1` function common to all themes.
-  Expects the theme module as the first argument.
-  """
-  @spec test_initial_state_for_action(module()) :: :ok
-  def test_initial_state_for_action(theme_module) do
-    assert theme_module.initial_state_for_action(:index) == :overview
+  @doc "`metadata/0` names a preview image that exists and a description."
+  @spec test_metadata(module()) :: :ok
+  def test_metadata(theme_module) do
+    assert %{preview_image: "/" <> _rest = image, description: description} =
+             theme_module.metadata()
 
-    assert theme_module.initial_state_for_action(:overview) == :overview
-    assert theme_module.initial_state_for_action(:schedule) == :schedule
-    assert theme_module.initial_state_for_action(:booking) == :booking
-    assert theme_module.initial_state_for_action(:confirmation) == :confirmation
+    assert is_binary(description) and description != ""
 
-    assert theme_module.initial_state_for_action(:unknown) == :overview
-    assert theme_module.initial_state_for_action(:random_action) == :overview
+    path = Path.join(Application.app_dir(:tymeslot, "priv/static"), image)
+    assert File.exists?(path), "preview image #{image} is not under priv/static"
+    :ok
   end
 
-  @doc """
-  Tests the `render_meeting_action/2` function common to all themes.
-  Expects the theme module and a function to build meeting assigns.
-  """
-  @spec test_render_meeting_action(module(), (-> map())) :: :ok
-  def test_render_meeting_action(theme_module, build_assigns_fn) do
-    assigns = build_assigns_fn.()
-
-    reschedule = render_meeting_action_html(theme_module, assigns, :reschedule)
+  @doc "`render_meeting_action/2` renders the three meeting pages and rejects others."
+  @spec test_render_meeting_action(module(), map()) :: :ok
+  def test_render_meeting_action(theme_module, assigns) do
+    reschedule = render(&theme_module.render_meeting_action(&1, :reschedule), assigns)
     assert reschedule =~ "Reschedule Appointment"
     assert reschedule =~ "Select a new time for your meeting"
     refute reschedule =~ "Yes, Cancel Meeting"
 
-    cancel = render_meeting_action_html(theme_module, assigns, :cancel)
+    cancel = render(&theme_module.render_meeting_action(&1, :cancel), assigns)
     assert cancel =~ "Cancel Appointment"
     assert cancel =~ "Are you sure you want to cancel this appointment?"
     assert cancel =~ "Yes, Cancel Meeting"
     assert cancel =~ "Keep Meeting"
 
     kept =
-      render_meeting_action_html(theme_module, Map.put(assigns, :meeting_kept, true), :cancel)
+      render(
+        &theme_module.render_meeting_action(&1, :cancel),
+        Map.put(assigns, :meeting_kept, true)
+      )
 
     assert kept =~ "Meeting Confirmed"
     assert kept =~ "Great! Your meeting is still scheduled as planned."
     refute kept =~ "Yes, Cancel Meeting"
 
-    cancel_confirmed = render_meeting_action_html(theme_module, assigns, :cancel_confirmed)
+    cancel_confirmed = render(&theme_module.render_meeting_action(&1, :cancel_confirmed), assigns)
     assert cancel_confirmed =~ "Meeting Cancelled"
     assert cancel_confirmed =~ "Your meeting has been successfully cancelled."
     assert cancel_confirmed =~ "Schedule a New Meeting"
     refute cancel_confirmed =~ "Are you sure you want to cancel this appointment?"
 
-    # Test unsupported action raises error
     assert_raise RuntimeError, "Unsupported meeting action: invalid", fn ->
       theme_module.render_meeting_action(assigns, :invalid)
     end
@@ -153,17 +74,55 @@ defmodule TymeslotWeb.ThemeCommonTestCases do
     :ok
   end
 
-  defp render_meeting_action_html(theme_module, assigns, action) do
-    result = theme_module.render_meeting_action(assigns, action)
-    assert %Phoenix.LiveView.Rendered{} = result
-    rendered_to_string(result)
+  @doc "`render_poll_action/1` renders the shared poll body in the theme's shell."
+  @spec test_render_poll_action(module(), map()) :: :ok
+  def test_render_poll_action(theme_module, assigns) do
+    poll = %{
+      title: "Roadmap sync",
+      description: nil,
+      timezone: "Etc/UTC",
+      status: :open,
+      deadline_at: nil,
+      time_slots: []
+    }
+
+    html =
+      render(
+        &theme_module.render_poll_action/1,
+        Map.merge(assigns, %{poll: poll, tallies: %{}, voting_open: false, participant: nil})
+      )
+
+    assert html =~ ~s(data-testid="poll-voting")
+    assert html =~ "Roadmap sync"
+    assert html =~ "Voting has closed."
+    :ok
   end
 
-  @doc """
-  Builds default meeting assigns with theme-specific overrides.
-  """
-  @spec build_meeting_assigns(String.t(), String.t(), String.t()) :: map()
-  def build_meeting_assigns(theme_id, color_scheme, background_value) do
+  @doc "`render_payment_page/2` renders both payment return pages."
+  @spec test_render_payment_page(module(), map()) :: :ok
+  def test_render_payment_page(theme_module, assigns) do
+    processing =
+      render(
+        &theme_module.render_payment_page(&1, :processing),
+        Map.merge(assigns, %{loading: true, payment: nil, meeting: nil, rebook_path: nil})
+      )
+
+    assert processing =~ "Confirming your payment"
+
+    cancelled =
+      render(
+        &theme_module.render_payment_page(&1, :cancelled),
+        Map.merge(assigns, %{loading: false, meeting: nil, rebook_path: "/host/consult"})
+      )
+
+    assert cancelled =~ "Payment cancelled"
+    assert cancelled =~ ~s(href="/host/consult")
+    :ok
+  end
+
+  @doc "Builds the base assigns every theme page expects."
+  @spec build_meeting_assigns(String.t()) :: map()
+  def build_meeting_assigns(theme_id) do
     %{
       meeting: %{
         uid: "test-123",
@@ -173,17 +132,23 @@ defmodule TymeslotWeb.ThemeCommonTestCases do
         attendee_timezone: "UTC"
       },
       organizer_profile: %{username: "testuser"},
-      theme_customization: %{
-        theme_id: theme_id,
-        color_scheme: color_scheme,
-        background_type: "gradient",
-        background_value: background_value
-      },
-      custom_css: nil,
+      theme_tokens:
+        ThemeCustomizations.tokens(theme_id, %ThemeCustomizationSchema{
+          theme_id: theme_id,
+          settings: %{
+            "color_scheme" => "turquoise",
+            "background_type" => "gradient",
+            "background_value" => "gradient_1"
+          }
+        }),
       locale: "en",
       language_dropdown_open: false,
       loading: false,
       meeting_kept: false
     }
   end
+
+  # A page renders as LiveView renders it, from assigns that carry change
+  # tracking, never from a bare map.
+  defp render(page, assigns), do: render_component(page, assigns)
 end

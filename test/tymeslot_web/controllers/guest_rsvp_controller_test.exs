@@ -184,4 +184,43 @@ defmodule TymeslotWeb.GuestRsvpControllerTest do
       assert {:ok, %{status: "pending"}} = GuestQueries.get_by_token(guest.rsvp_token)
     end
   end
+
+  describe "a guest of a group booking who declined" do
+    # A slot of two seats: the participant and their guest, who declined and
+    # so gave the second seat back.
+    setup do
+      meeting = Factory.insert(:meeting, capacity: 2)
+      participant = Factory.insert(:participant, meeting: meeting)
+
+      {:ok, [guest]} =
+        Guests.create_for_participant(meeting.id, participant.id, ["g@example.com"])
+
+      {:ok, _declined} = Guests.record_rsvp(guest.rsvp_token, "declined")
+      %{meeting: meeting, guest: guest}
+    end
+
+    test "can answer yes again while their seat is free", %{conn: conn, guest: guest} do
+      assert html_response(get(conn, ~p"/guest/#{guest.rsvp_token}/accept"), 200) =~
+               "about to accept"
+
+      post(conn, ~p"/guest/#{guest.rsvp_token}/accept")
+      assert {:ok, %{status: "accepted"}} = GuestQueries.get_by_token(guest.rsvp_token)
+    end
+
+    test "is told the meeting is fully booked once their seat has gone", %{
+      conn: conn,
+      meeting: meeting,
+      guest: guest
+    } do
+      Factory.insert(:participant, meeting: meeting)
+
+      assert html_response(get(conn, ~p"/guest/#{guest.rsvp_token}/accept"), 409) =~
+               "fully booked"
+
+      assert html_response(post(conn, ~p"/guest/#{guest.rsvp_token}/accept"), 409) =~
+               "fully booked"
+
+      assert {:ok, %{status: "declined"}} = GuestQueries.get_by_token(guest.rsvp_token)
+    end
+  end
 end

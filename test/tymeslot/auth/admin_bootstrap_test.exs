@@ -1,8 +1,10 @@
 defmodule Tymeslot.Auth.AdminBootstrapTest do
-  use Tymeslot.DataCase, async: true
+  # Not async: one test pins a setting, which lives in the global Application env.
+  use Tymeslot.DataCase, async: false
 
   @moduletag :auth
 
+  import Tymeslot.AppSettingsEnvHelpers, only: [pin_setting: 2, restore_app_settings_env: 1]
   import Tymeslot.Test.AdminBootstrapHelpers, only: [reopen_admin_bootstrap: 1]
 
   alias ExUnit.CaptureLog
@@ -96,13 +98,43 @@ defmodule Tymeslot.Auth.AdminBootstrapTest do
       refute log =~ "no admin"
     end
 
-    test "returns :ok silently when no users exist at all" do
+    test "returns :ok silently on a fresh install with no users" do
+      reopen_admin_bootstrap(%{})
+
       log =
         CaptureLog.capture_log(fn ->
           assert :ok = AdminBootstrap.warn_if_orphaned_install()
         end)
 
-      refute log =~ "no admin"
+      refute log =~ ~r/no admin|no accounts/i
+    end
+
+    test "warns, with the way back in, when every account of a bootstrapped install is gone" do
+      reopen_admin_bootstrap(%{})
+      AppSettingsQueries.claim_admin_bootstrap()
+
+      log =
+        CaptureLog.capture_log(fn ->
+          assert :ok = AdminBootstrap.warn_if_orphaned_install()
+        end)
+
+      assert log =~ ~r/no accounts/i
+      assert log =~ "Tymeslot.Release.reopen_registration()"
+    end
+
+    test "names the variable instead when REGISTRATION_ENABLED fixes registration" do
+      restore_app_settings_env(%{})
+      reopen_admin_bootstrap(%{})
+      AppSettingsQueries.claim_admin_bootstrap()
+      pin_setting(:registration_enabled, "REGISTRATION_ENABLED")
+
+      log =
+        CaptureLog.capture_log(fn ->
+          assert :ok = AdminBootstrap.warn_if_orphaned_install()
+        end)
+
+      assert log =~ "REGISTRATION_ENABLED=true"
+      refute log =~ "reopen_registration"
     end
   end
 

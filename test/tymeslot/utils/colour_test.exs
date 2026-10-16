@@ -154,4 +154,30 @@ defmodule Tymeslot.Utils.ColourTest do
       assert Colour.wrap_hue(180) == 180.0
     end
   end
+
+  describe "cast_hex/1" do
+    test "normalises the three- and six-digit forms to lower-case #rrggbb" do
+      assert Colour.cast_hex("#abc") == {:ok, "#aabbcc"}
+      assert Colour.cast_hex("#FA0") == {:ok, "#ffaa00"}
+      assert Colour.cast_hex("#14B8A6") == {:ok, "#14b8a6"}
+    end
+
+    test "trims surrounding whitespace" do
+      assert Colour.cast_hex("  #14b8a6\n") == {:ok, "#14b8a6"}
+    end
+
+    test "rejects a missing hash, the alpha forms, wrong lengths and non-hex digits" do
+      assert Colour.cast_hex("14b8a6") == :error
+      assert Colour.cast_hex("#14b8a680") == :error
+      assert Colour.cast_hex("#abcd") == :error
+      assert Colour.cast_hex("#12345") == :error
+      assert Colour.cast_hex("#gggggg") == :error
+      assert Colour.cast_hex("rgb(1, 2, 3)") == :error
+    end
+
+    test "rejects non-strings" do
+      assert Colour.cast_hex(nil) == :error
+      assert Colour.cast_hex(123) == :error
+    end
+  end
 end

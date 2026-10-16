@@ -95,6 +95,8 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackEventHandlersTest do
 
       assert html =~ "Slack Webhook URL"
       assert html =~ "Incoming Webhook"
+      # Empty required fields reach the server, which answers in the form.
+      assert has_element?(view, "#slack-form[novalidate]")
     end
 
     test "creates an integration on successful submit and shows it in the list",

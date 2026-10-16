@@ -251,11 +251,6 @@ msgstr "Bonjour %{name}, votre demande de report n'a pas reçu de réponse à te
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
 msgid "I apologise for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience."
-msgstr "Je vous présente mes excuses pour ce désagrément. Votre rendez-vous actuel a été annulé et je souhaite vous aider à le reporter dès que possible."
-
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#, elixir-autogen, elixir-format
-msgid "I apologize for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience."
 msgstr "Je vous présente mes excuses pour ce désagrément. Votre rendez-vous a été annulé et je souhaite vous aider à le reporter dès que possible."
 
 #: lib/tymeslot/emails/templates/reschedule_request.ex

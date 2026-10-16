@@ -26,7 +26,7 @@ msgstr "%{count} хв"
 msgid "%{date} at %{time}"
 msgstr "%{date} о %{time}"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{days} days in advance"
 msgstr "%{days} дн."
@@ -46,7 +46,7 @@ msgstr "%{hour_text} %{minute_text}"
 msgid "%{minutes} minutes"
 msgstr "%{minutes} хв"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{months} months in advance"
 msgstr "%{months} міс."
@@ -68,15 +68,15 @@ msgstr "%{name}, вашу зустріч %{organizer} підтверджено"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
-msgid "%{start_month} %{start_year} - %{end_month} %{end_year}"
-msgstr "%{start_month} %{start_year} - %{end_month} %{end_year}"
+msgid "%{start_month} %{start_year} – %{end_month} %{end_year}"
+msgstr "%{start_month} %{start_year} – %{end_month} %{end_year}"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
-msgid "%{start_month} - %{end_month} %{year}"
-msgstr "%{start_month} - %{end_month} %{year}"
+msgid "%{start_month} – %{end_month} %{year}"
+msgstr "%{start_month} – %{end_month} %{year}"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{time} local time"
 msgstr "%{time} за місцевим часом"
@@ -86,17 +86,17 @@ msgstr "%{time} за місцевим часом"
 msgid "%{weekday}, %{day} %{month} %{year} at %{time} %{timezone}"
 msgstr "%{weekday}, %{day} %{month} %{year} о %{time} %{timezone}"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{weeks} weeks in advance"
 msgstr "%{weeks} тиж."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{years} years in advance"
 msgstr "%{years} р."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "1 day in advance"
 msgstr "1 день"
@@ -111,27 +111,27 @@ msgstr "1 год"
 msgid "1 minute"
 msgstr "1 хв"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "1 month in advance"
 msgstr "1 місяць"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "1 week in advance"
 msgstr "1 тиждень"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "1 year in advance"
 msgstr "1 рік"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "90 days in advance"
 msgstr "90 днів"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
+#: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #, elixir-autogen, elixir-format
 msgid "Additional Message (Optional)"
 msgstr "Додаткове повідомлення (необов'язково)"
@@ -146,22 +146,17 @@ msgstr "День"
 msgid "Appointment host"
 msgstr "Організатор зустрічі"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/blocks/next_slots.ex
+#: lib/tymeslot_web/themes/shared/components/slot_list.ex
+#: lib/tymeslot_web/themes/shared/components/week_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Available Times"
 msgstr "Доступний час"
 
-#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
-#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "Booking confirmed"
 msgstr "Бронювання підтверджено"
-
-#: lib/tymeslot_web/themes/shared/booking_flow.ex
-#, elixir-autogen, elixir-format
-msgid "Booking submitted successfully! You'll receive a confirmation email shortly."
-msgstr "Бронювання успішно надіслано! Незабаром ви отримаєте електронний лист із підтвердженням."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
@@ -169,6 +164,8 @@ msgid "Bookings available up to %{advance}"
 msgstr "Період бронювання наперед: %{advance}"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/blocks/day_chips.ex
+#: lib/tymeslot_web/themes/shared/blocks/month_calendar.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar is loading slowly"
 msgstr "Календар завантажується повільно"
@@ -188,8 +185,7 @@ msgstr "Завершіть оплату в новій вкладці"
 msgid "Confirmation sent to"
 msgstr "Підтвердження надіслано на"
 
-#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
-#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "Confirming your payment…"
 msgstr "Підтвердження платежу…"
@@ -227,7 +223,7 @@ msgstr "Тривалість: %{duration}"
 msgid "Early Morning"
 msgstr "Ранній ранок"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
+#: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #, elixir-autogen, elixir-format
 msgid "Email Address"
 msgstr "Електронна адреса"
@@ -247,7 +243,7 @@ msgstr "Вечір"
 msgid "FRI"
 msgstr "Пт"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Fri"
 msgstr "Пт"
@@ -273,7 +269,7 @@ msgstr "Я підтверджую вищезазначене"
 msgid "Invalid date/time"
 msgstr "Некоректна дата або час"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
+#: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #, elixir-autogen, elixir-format
 msgid "John Doe"
 msgstr "Іван Петренко"
@@ -283,7 +279,7 @@ msgstr "Іван Петренко"
 msgid "Late Night"
 msgstr "Пізня ніч"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
+#: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #, elixir-autogen, elixir-format
 msgid "Let me know what you'd like to discuss..."
 msgstr "Напишіть, що ви хочете обговорити…"
@@ -293,8 +289,12 @@ msgstr "Напишіть, що ви хочете обговорити…"
 msgid "Let's Connect!"
 msgstr "Зв'яжімося!"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/blocks/agenda_index.ex
+#: lib/tymeslot_web/themes/shared/blocks/day_chips.ex
+#: lib/tymeslot_web/themes/shared/blocks/next_slots.ex
+#: lib/tymeslot_web/themes/shared/components/slot_list.ex
+#: lib/tymeslot_web/themes/shared/components/week_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Loading available times..."
 msgstr "Завантаження доступного часу…"
@@ -305,6 +305,7 @@ msgid "MON"
 msgstr "Пн"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/shared/blocks/summary_bar.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Details"
 msgstr "Деталі зустрічі"
@@ -319,7 +320,7 @@ msgstr "Зустріч перенесено!"
 msgid "Meeting with"
 msgstr "Зустріч із"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Mon"
 msgstr "Пн"
@@ -365,8 +366,7 @@ msgstr "Час не обрано"
 msgid "Open Stripe Checkout"
 msgstr "Відкрити Stripe Checkout"
 
-#: lib/tymeslot_web/themes/quill/payment_cancelled/live.ex
-#: lib/tymeslot_web/themes/rhythm/payment_cancelled/live.ex
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "Payment cancelled"
 msgstr "Платіж скасовано"
@@ -375,12 +375,6 @@ msgstr "Платіж скасовано"
 #, elixir-autogen, elixir-format
 msgid "Payment was cancelled. Please try booking again."
 msgstr "Платіж було скасовано. Будь ласка, спробуйте забронювати ще раз."
-
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
-#, elixir-autogen, elixir-format
-msgid "Please contact the organizer"
-msgstr "Зв'яжіться з організатором"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex
 #, elixir-autogen, elixir-format
@@ -397,8 +391,7 @@ msgstr "Будь ласка, виправте наведені нижче пом
 msgid "Please fill in all required fields"
 msgstr "Заповніть усі обов'язкові поля"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/components/slot_list.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a date to see available times"
 msgstr "Оберіть дату, щоб побачити вільний час"
@@ -408,14 +401,13 @@ msgstr "Оберіть дату, щоб побачити вільний час"
 msgid "Please select a meeting duration first"
 msgstr "Спочатку оберіть тривалість зустрічі"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/components/slot_list.ex
 #, elixir-autogen, elixir-format
 msgid "Please select another date"
 msgstr "Оберіть іншу дату"
 
-#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
-#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "Please wait while we confirm your booking."
 msgstr "Будь ласка, зачекайте на підтвердження бронювання."
@@ -431,10 +423,7 @@ msgstr "Політика конфіденційності"
 msgid "Question %{n} of %{m}"
 msgstr "Запитання %{n} з %{m}"
 
-#: lib/tymeslot_web/themes/quill/payment_cancelled/live.ex
-#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
-#: lib/tymeslot_web/themes/rhythm/payment_cancelled/live.ex
-#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "Return to booking"
 msgstr "Повернутися до бронювання"
@@ -449,7 +438,7 @@ msgstr "Сб"
 msgid "SUN"
 msgstr "Нд"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Sat"
 msgstr "Сб"
@@ -476,13 +465,13 @@ msgstr "Зустріч із"
 msgid "Schedule with %{name}"
 msgstr "Зустріч із %{name}"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/components/timezone_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Search cities, countries, or timezones..."
 msgstr "Пошук міст, країн або часових поясів…"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/blocks/day_chips.ex
 #, elixir-autogen, elixir-format
 msgid "Select a Date"
 msgstr "Оберіть дату"
@@ -492,8 +481,7 @@ msgstr "Оберіть дату"
 msgid "Select a Date & Time"
 msgstr "Оберіть дату й час"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/components/timezone_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Select timezone"
 msgstr "Виберіть часовий пояс"
@@ -519,7 +507,7 @@ msgstr "Сервіс відповідає повільно"
 msgid "Successfully Rescheduled!"
 msgstr "Успішно перенесено!"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Sun"
 msgstr "Нд"
@@ -544,14 +532,13 @@ msgstr "Вт"
 msgid "Terms of Service"
 msgstr "Умови використання"
 
-#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
-#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "Thank you, your booking is confirmed for %{date}."
 msgstr "Дякуємо, ваше бронювання на %{date} підтверджено."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/components/slot_list.ex
 #, elixir-autogen, elixir-format
 msgid "This date is fully booked"
 msgstr "На цей день усе заброньовано"
@@ -561,7 +548,7 @@ msgstr "На цей день усе заброньовано"
 msgid "This site is protected by reCAPTCHA and the Google %{privacy_link} and %{terms_link} apply."
 msgstr "Цей сайт захищено системою reCAPTCHA; до нього застосовуються %{privacy_link} та %{terms_link} Google."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Thu"
 msgstr "Чт"
@@ -581,7 +568,7 @@ msgstr "Час"
 msgid "Timezone"
 msgstr "Часовий пояс"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Tue"
 msgstr "Вт"
@@ -617,7 +604,7 @@ msgstr "Ср"
 msgid "We opened Stripe Checkout in a new browser tab. Once your payment is confirmed, this page updates automatically."
 msgstr "Ми відкрили Stripe Checkout у новій вкладці браузера. Щойно платіж буде підтверджено, ця сторінка оновиться автоматично."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Wed"
 msgstr "Ср"
@@ -647,27 +634,24 @@ msgstr "Ви бронюєте зустріч на %{duration}"
 msgid "You're booking a %{duration} meeting with %{name}"
 msgstr "Ви бронюєте зустріч на %{duration} з %{name}"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
+#: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #, elixir-autogen, elixir-format
 msgid "Your Name"
 msgstr "Ваше ім'я"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/shared/components/custom_answers.ex
 #, elixir-autogen, elixir-format
 msgid "Your answers"
 msgstr "Ваші відповіді"
 
-#: lib/tymeslot_web/themes/quill/payment_cancelled/live.ex
-#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
-#: lib/tymeslot_web/themes/rhythm/payment_cancelled/live.ex
-#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "Your booking is not confirmed. You can return and try again at any time."
 msgstr "Бронювання не підтверджено. Ви можете повернутися та спробувати знову будь-коли."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/components/timezone_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Your timezone"
 msgstr "Ваш часовий пояс"
@@ -697,7 +681,7 @@ msgstr "your.email@example.com"
 msgid "Enter your full name"
 msgstr "Введіть повне ім'я"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
+#: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #, elixir-autogen, elixir-format
 msgid "john@example.com"
 msgstr "ivan@example.com"
@@ -741,7 +725,7 @@ msgstr "Наступний крок"
 msgid "Reschedule Meeting"
 msgstr "Перенести зустріч"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "same day only"
 msgstr "лише поточний день"
@@ -751,8 +735,7 @@ msgstr "лише поточний день"
 msgid "Submit"
 msgstr "Надіслати"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/shared/confirmation_text.ex
 #, elixir-autogen, elixir-format
 msgid "with %{name}"
 msgstr "з %{name}"
@@ -857,11 +840,6 @@ msgstr "Організатора не знайдено. Оновіть стор�
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "Organizer is required for booking"
-msgstr "Для бронювання потрібно вказати організатора"
-
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
-#, elixir-autogen, elixir-format
 msgid "Payments are not available for this booking. Please contact the host."
 msgstr "Оплата для цього бронювання недоступна. Зверніться до організатора."
 
@@ -895,7 +873,7 @@ msgstr "Цей часовий слот більше недоступний. Ви
 msgid "We couldn't start the payment process. Please try again."
 msgstr "Не вдалося розпочати процес оплати. Спробуйте ще раз."
 
-#: lib/tymeslot_web/themes/shared/live_helpers.ex
+#: lib/tymeslot_web/themes/shared/live_helpers/step_entry.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid meeting type"
 msgstr "Некоректний тип зустрічі"
@@ -932,11 +910,6 @@ msgstr "Оберіть варіант нижче."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex
 #, elixir-autogen, elixir-format
-msgid "Booking submitted successfully!"
-msgstr "Бронювання успішно надіслано!"
-
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex
-#, elixir-autogen, elixir-format
 msgid "Demo: Booking submitted successfully! (Using the app, you would receive a confirmation email)"
 msgstr "Демо: бронювання успішно надіслано! (У застосунку ви б отримали лист із підтвердженням)"
 
@@ -944,11 +917,6 @@ msgstr "Демо: бронювання успішно надіслано! (У з
 #, elixir-autogen, elixir-format
 msgid "Demo: Meeting rescheduled successfully! (Using the app, you would receive a confirmation email)"
 msgstr "Демо: зустріч успішно перенесено! (У застосунку ви б отримали лист із підтвердженням)"
-
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting rescheduled successfully!"
-msgstr "Зустріч успішно перенесено!"
 
 #: lib/tymeslot_web/components/layouts/scheduling_root.html.heex
 #, elixir-autogen, elixir-format
@@ -1005,16 +973,6 @@ msgstr "Будь ласка, виберіть тривалість зустрі�
 #, elixir-autogen, elixir-format
 msgid "Please select a time"
 msgstr "Будь ласка, виберіть час"
-
-#: lib/tymeslot/scheduling/link_access_policy.ex
-#, elixir-autogen, elixir-format
-msgid "This scheduling page isn’t available right now. The organizer hasn’t connected a calendar yet."
-msgstr "Ця сторінка бронювання наразі недоступна. Організатор ще не підключив календар."
-
-#: lib/tymeslot/scheduling/link_access_policy.ex
-#, elixir-autogen, elixir-format
-msgid "This scheduling page isn’t available yet. The organizer hasn’t set a username."
-msgstr "Ця сторінка бронювання ще недоступна. Організатор ще не встановив ім'я користувача."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
@@ -1106,8 +1064,7 @@ msgstr "Потрібно вказати назву"
 msgid "You cannot book more than %{days} days in advance"
 msgstr "Бронювати можна щонайбільше на %{days} дн. наперед"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/components/slot_list.ex
 #, elixir-autogen, elixir-format
 msgid "%{hour}, %{count} available time"
 msgid_plural "%{hour}, %{count} available times"
@@ -1116,6 +1073,7 @@ msgstr[1] "%{hour}, %{count} вільні слоти"
 msgstr[2] "%{hour}, %{count} вільних слотів"
 
 #: lib/tymeslot_web/live/scheduling/handlers/slot_fetching_handler_component.ex
+#: lib/tymeslot_web/live/scheduling/week_slots.ex
 #, elixir-autogen, elixir-format
 msgid "No time slots could be loaded. Please try again."
 msgstr "Не вдалося завантажити часові слоти. Спробуйте ще раз."
@@ -1150,8 +1108,7 @@ msgstr "Потребує підтвердження"
 msgid "Not confirmed yet"
 msgstr "Ще не підтверджено"
 
-#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
-#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "Payment received"
 msgstr "Платіж отримано"
@@ -1167,8 +1124,7 @@ msgstr "Надіслати запит"
 msgid "Request sent!"
 msgstr "Запит надіслано!"
 
-#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
-#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "Thanks, your payment went through. Your booking is not confirmed yet though:"
 msgstr "Дякуємо, платіж пройшов успішно. Однак ваше бронювання ще не підтверджено:"
@@ -1183,44 +1139,37 @@ msgstr "Організатор"
 msgid "This booking needs approval"
 msgstr "Це бронювання потребує підтвердження"
 
-#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
-#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "Booking not accepted"
 msgstr "Бронювання не прийнято"
 
-#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
-#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "Booking request expired"
 msgstr "Запит на бронювання протерміновано"
 
-#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
-#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "If there's no answer by %{deadline}, the request lapses and you're refunded automatically."
 msgstr "Якщо до %{deadline} не буде відповіді, запит утратить чинність, а кошти буде повернено автоматично."
 
-#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
-#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "Nobody responded to this request in time, so it has lapsed. Your payment is being refunded."
 msgstr "Ніхто не відповів вчасно, тож запит протерміновано. Ваш платіж повертається."
 
-#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
-#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "This booking wasn't accepted, so it won't be going ahead. Your payment is being refunded."
 msgstr "Це бронювання не було прийнято, тож воно не відбудеться. Ваш платіж повертається."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/shared/confirmation_text.ex
 #, elixir-autogen, elixir-format
 msgid "%{name}, your request has been sent."
 msgstr "%{name}, ваш запит надіслано."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/shared/confirmation_text.ex
 #, elixir-autogen, elixir-format
 msgid "%{name}, your request to %{organizer_name} has been sent."
 msgstr "%{name}, ваш запит до %{organizer_name} надіслано."
@@ -1257,8 +1206,7 @@ msgstr "Вітаю!"
 msgid "Cannot reschedule an expired meeting"
 msgstr "Протерміновану зустріч не можна перенести"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/shared/components/timezone_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Search timezones"
 msgstr "Пошук часових поясів"
@@ -1268,38 +1216,32 @@ msgstr "Пошук часових поясів"
 msgid "Preview mode: bookings made here are simulated. Nothing is saved or sent."
 msgstr "Режим попереднього перегляду: бронювання тут імітується. Нічого не зберігається і не надсилається."
 
-#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
-#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "Booking cancelled"
 msgstr "Бронювання скасовано"
 
-#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
-#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "If there's no answer by %{deadline}, the request lapses."
 msgstr "Якщо до %{deadline} не буде відповіді, запит утратить чинність."
 
-#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
-#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "Nobody responded to this request in time, so it has lapsed."
 msgstr "Ніхто не відповів вчасно, тож запит протерміновано."
 
-#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
-#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "Payment not completed"
 msgstr "Оплату не завершено"
 
-#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
-#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "This booking has been cancelled, so it won't be going ahead."
 msgstr "Це бронювання скасовано, тож воно не відбудеться."
 
-#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
-#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "This booking wasn't accepted, so it won't be going ahead."
 msgstr "Це бронювання не було прийнято, тож воно не відбудеться."
@@ -1345,17 +1287,32 @@ msgstr "Який відеосервіс?"
 msgid "Your phone number"
 msgstr "Ваш номер телефону"
 
-#: lib/tymeslot_web/themes/core/dispatcher.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
-msgid "Reload page"
-msgstr "Перезавантажити сторінку"
+msgid "%{minutes} min"
+msgstr "%{minutes} хв"
+
+#: lib/tymeslot_web/themes/shared/live_helpers/mount.ex
+#, elixir-autogen, elixir-format
+msgid "Guest"
+msgstr "Гість"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot cancel an expired meeting"
+msgstr "Протерміновану зустріч не можна скасувати"
 
 #: lib/tymeslot_web/themes/core/dispatcher.ex
 #, elixir-autogen, elixir-format
 msgid "Something went wrong"
 msgstr "Щось пішло не так"
 
-#: lib/tymeslot_web/themes/core/dispatcher.ex
+#: lib/tymeslot_web/themes/core/error_boundary.ex
+#, elixir-autogen, elixir-format
+msgid "Something went wrong on this page. Please try again."
+msgstr "На цій сторінці щось пішло не так. Спробуйте ще раз."
+
+#: lib/tymeslot_web/themes/core/error_boundary.ex
 #, elixir-autogen, elixir-format
 msgid "This page could not be loaded. Please try again."
 msgstr "Не вдалося завантажити цю сторінку. Спробуйте ще раз."
@@ -1509,3 +1466,100 @@ msgstr "Заповнюється"
 #, elixir-autogen, elixir-format
 msgid "Plenty left"
 msgstr "Багато місць"
+
+#: lib/tymeslot_web/themes/core/error_boundary.ex
+#, elixir-autogen, elixir-format
+msgid "This page could not be updated. Please try again."
+msgstr "Не вдалося оновити цю сторінку. Спробуйте ще раз."
+
+#: lib/tymeslot_web/themes/core/error_boundary.ex
+#, elixir-autogen, elixir-format
+msgid "This step could not be opened. Please try again."
+msgstr "Не вдалося відкрити цей крок. Спробуйте ще раз."
+
+#: lib/tymeslot_web/themes/core/dispatcher.ex
+#, elixir-autogen, elixir-format
+msgid "Try again"
+msgstr "Спробувати ще раз"
+
+#: lib/tymeslot_web/themes/core/error_boundary.ex
+#, elixir-autogen, elixir-format
+msgid "Your last action could not be completed. Please try again."
+msgstr "Не вдалося виконати вашу останню дію. Спробуйте ще раз."
+
+#: lib/tymeslot_web/themes/shared/blocks/agenda_index.ex
+#: lib/tymeslot_web/themes/shared/blocks/next_slots.ex
+#: lib/tymeslot_web/themes/shared/components/week_grid.ex
+#, elixir-autogen, elixir-format
+msgid "Next week"
+msgstr "Наступний тиждень"
+
+#: lib/tymeslot_web/themes/shared/blocks/agenda_index.ex
+#: lib/tymeslot_web/themes/shared/blocks/day_chips.ex
+#: lib/tymeslot_web/themes/shared/blocks/next_slots.ex
+#: lib/tymeslot_web/themes/shared/components/week_grid.ex
+#, elixir-autogen, elixir-format
+msgid "No times available"
+msgstr "Немає доступного часу"
+
+#: lib/tymeslot_web/themes/shared/blocks/agenda_index.ex
+#: lib/tymeslot_web/themes/shared/components/week_grid.ex
+#, elixir-autogen, elixir-format
+msgid "Previous week"
+msgstr "Попередній тиждень"
+
+#: lib/tymeslot_web/themes/shared/components/week_grid.ex
+#, elixir-autogen, elixir-format
+msgid "Jump to first available"
+msgstr "До першого доступного часу"
+
+#: lib/tymeslot_web/live/scheduling/calendar_navigation.ex
+#, elixir-autogen, elixir-format
+msgid "Next month"
+msgstr "Наступний місяць"
+
+#: lib/tymeslot_web/live/scheduling/calendar_navigation.ex
+#, elixir-autogen, elixir-format
+msgid "Previous month"
+msgstr "Попередній місяць"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Organiser is required for booking"
+msgstr "Для бронювання потрібно вказати організатора"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
+#, elixir-autogen, elixir-format
+msgid "Please contact the organiser"
+msgstr "Зв'яжіться з організатором"
+
+#: lib/tymeslot/scheduling/link_access_policy.ex
+#, elixir-autogen, elixir-format
+msgid "This scheduling page isn’t available right now. The organiser hasn’t connected a calendar yet."
+msgstr "Ця сторінка бронювання наразі недоступна. Організатор ще не підключив календар."
+
+#: lib/tymeslot/scheduling/link_access_policy.ex
+#, elixir-autogen, elixir-format
+msgid "This scheduling page isn’t available yet. The organiser hasn’t set a username."
+msgstr "Ця сторінка бронювання ще недоступна. Організатор ще не встановив ім'я користувача."
+
+#: lib/tymeslot_web/themes/shared/blocks/day_chips.ex
+#, elixir-autogen, elixir-format
+msgid "%{weekday} %{day}"
+msgstr "%{weekday}, %{day}"
+
+#: lib/tymeslot_web/themes/shared/blocks/day_chips.ex
+#, elixir-autogen, elixir-format
+msgid "Today"
+msgstr "Сьогодні"
+
+#: lib/tymeslot_web/themes/shared/blocks/day_chips.ex
+#, elixir-autogen, elixir-format
+msgid "Tomorrow"
+msgstr "Завтра"
+
+#: lib/tymeslot_web/themes/shared/blocks/next_slots.ex
+#, elixir-autogen, elixir-format
+msgid "More times"
+msgstr "Інші варіанти часу"

@@ -133,7 +133,7 @@ msgstr "Ajouter automatiquement des liens aux réunions en ligne"
 msgid "Back"
 msgstr "Retour"
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#: lib/tymeslot_web/live/onboarding_live/preview_parts.ex
 #, elixir-autogen, elixir-format
 msgid "Book"
 msgstr "Réserver"
@@ -883,3 +883,18 @@ msgstr "Avant"
 #, elixir-autogen, elixir-format
 msgid "How much free time a new booking needs before and after it."
 msgstr "Le temps libre à prévoir avant et après une nouvelle réservation."
+
+#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
+#, elixir-autogen, elixir-format
+msgid "Choose by description instead"
+msgstr "Choisir plutôt d’après la description"
+
+#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
+#, elixir-autogen, elixir-format
+msgid "Show all themes"
+msgstr "Afficher tous les thèmes"
+
+#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
+#, elixir-autogen, elixir-format
+msgid "Which of these sounds like you?"
+msgstr "Laquelle de ces descriptions vous ressemble ?"

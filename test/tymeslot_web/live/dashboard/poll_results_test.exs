@@ -214,6 +214,8 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
 
       view |> element("[data-testid='poll-edit-details']") |> render_click()
       assert has_element?(view, "[data-testid='poll-details-form']")
+      # An emptied title reaches the server, which answers in the form.
+      assert has_element?(view, "[data-testid='poll-details-form'][novalidate]")
 
       html =
         view

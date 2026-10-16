@@ -13,12 +13,14 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsUsernameChangeTest do
   @moduletag :profiles
   @moduletag :live
 
+  import Tymeslot.ConfigTestHelpers
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Test.ReservingDemoProvider
 
   setup :setup_dashboard_user
 
@@ -134,6 +136,18 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsUsernameChangeTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
 
       html = submit_username(view, "admin")
+
+      refute html =~ "Change your URL to"
+      assert html =~ "This username is reserved"
+      assert current_username(profile) == "sarah"
+    end
+
+    test "a username the demo pages serve is refused as reserved",
+         %{conn: conn, profile: profile} do
+      with_config(:tymeslot, demo_provider: ReservingDemoProvider)
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      html = submit_username(view, ReservingDemoProvider.reserved_username())
 
       refute html =~ "Change your URL to"
       assert html =~ "This username is reserved"

@@ -1,0 +1,47 @@
+/* ==========================================================================
+   Language switcher: the shared structure
+
+   Matches TymeslotWeb.Components.LanguageSwitcher, which emits the
+   lang-switcher__* classes. Each theme sets the --lang-switcher-* colours in
+   its variables.css and keeps its own treatment (blur, borders, shadows,
+   positioning, animation, sizes) in its modules/language-switcher.css,
+   imported right after this file.
+   ========================================================================== */
+
+.lang-switcher__button {
+  background: var(--lang-switcher-surface);
+}
+
+.lang-switcher__button:hover {
+  background: var(--lang-switcher-surface-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.lang-switcher__button:active {
+  transform: translateY(0);
+}
+
+.lang-switcher__panel {
+  background: var(--lang-switcher-panel-surface);
+  border: var(--border-width-thin) solid var(--lang-switcher-panel-line);
+  max-height: var(--dropdown-max-height);
+  overflow-y: auto;
+}
+
+.lang-switcher__item {
+  border-bottom: var(--border-width-thin) solid var(--lang-switcher-item-line);
+}
+
+.lang-switcher__item:last-child {
+  border-bottom: none;
+}
+
+.lang-switcher__item:hover {
+  background: var(--lang-switcher-item-hover);
+}
+
+.lang-switcher__item.lang-switcher__item--active {
+  background: var(--lang-switcher-item-active);
+  font-weight: var(--font-weight-semibold);
+}

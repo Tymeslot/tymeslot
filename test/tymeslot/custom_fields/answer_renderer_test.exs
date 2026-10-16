@@ -50,12 +50,42 @@ defmodule Tymeslot.CustomFields.AnswerRendererTest do
       assert "Apple, Cherry" = AnswerRenderer.render(d, ["a", "c"])
     end
 
-    test "note returns acknowledgement string with timestamp" do
-      assert "✓ Acknowledged (2026-05-13T12:00:00Z)" =
+    test "a ticked note shows the tick without the stored UTC timestamp" do
+      assert "✓ Acknowledged" =
                AnswerRenderer.render(
                  %{"type" => "note"},
-                 %{"confirmed" => true, "confirmed_at" => "2026-05-13T12:00:00Z"}
+                 %{"confirmed" => true, "confirmed_at" => "2026-05-13T23:30:00Z"}
                )
+    end
+
+    test "a ticked note is translated" do
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        assert "✓ Bestätigt" =
+                 AnswerRenderer.render(
+                   %{"type" => "note"},
+                   %{"confirmed" => true, "confirmed_at" => "2026-05-13T12:00:00Z"}
+                 )
+      end)
+    end
+
+    test "a date answer is written out in English" do
+      Gettext.with_locale(TymeslotWeb.Gettext, "en", fn ->
+        assert "19 January 2027" = AnswerRenderer.render(%{"type" => "date"}, "2027-01-19")
+      end)
+    end
+
+    test "a date answer follows the ambient locale" do
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        assert "19. Januar 2027" = AnswerRenderer.render(%{"type" => "date"}, "2027-01-19")
+      end)
+    end
+
+    test "a date answer that does not parse is shown as stored" do
+      assert "next week" = AnswerRenderer.render(%{"type" => "date"}, "next week")
+    end
+
+    test "a time answer is shown as stored" do
+      assert "09:00" = AnswerRenderer.render(%{"type" => "time"}, "09:00")
     end
 
     test "short_text returns the value as-is" do

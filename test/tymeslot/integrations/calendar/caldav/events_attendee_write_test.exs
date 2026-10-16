@@ -16,6 +16,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsAttendeeWriteTest do
 
   alias Plug.Conn
   alias Req.Test, as: ReqTest
+  alias Tymeslot.CalDAVTestHelpers
   alias Tymeslot.Integrations.Calendar.CalDAV.Client
   alias Tymeslot.Integrations.Calendar.CalDAV.Events
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
@@ -47,14 +48,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsAttendeeWriteTest do
 
   # The lines a calendar client reads: the document goes out folded, and an
   # ATTENDEE line is long enough that it always is.
-  defp create_and_capture(client) do
-    test_pid = self()
-
-    ReqTest.stub(:tymeslot_http, fn conn ->
-      {:ok, body, conn} = Conn.read_body(conn)
-      send(test_pid, {:body, body})
-      Conn.send_resp(conn, 201, "")
-    end)
+  #
+  # An Open-Xchange write first asks the account for its own addresses
+  # (`CalDAV.Scheduling`), which `addresses` answers; `:unreadable` fails
+  # that lookup.
+  defp create_and_capture(client, addresses \\ ["owner@example.com"]) do
+    stub_server(addresses)
 
     assert {:ok, _created} =
              Events.create_calendar_event(client, @calendar_path, @booking, skip_breaker: true)
@@ -62,6 +61,25 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsAttendeeWriteTest do
     assert_received {:body, body}
     LineFolder.unfold_lines(body)
   end
+
+  defp stub_server(addresses) do
+    test_pid = self()
+
+    ReqTest.stub(:tymeslot_http, fn
+      %{method: "PROPFIND"} = conn when addresses == :unreadable ->
+        Conn.send_resp(conn, 500, "")
+
+      %{method: "PROPFIND"} = conn ->
+        CalDAVTestHelpers.answer_address_lookup(conn, addresses)
+
+      conn ->
+        {:ok, body, conn} = Conn.read_body(conn)
+        send(test_pid, {:body, body})
+        Conn.send_resp(conn, 201, "")
+    end)
+  end
+
+  defp attendee_lines(lines), do: Enum.filter(lines, &String.starts_with?(&1, "ATTENDEE"))
 
   describe "create_calendar_event/4" do
     test "writes the attendee as a real ATTENDEE on a server that honours SCHEDULE-AGENT" do
@@ -117,14 +135,46 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsAttendeeWriteTest do
       assert Enum.any?(lines, &(&1 =~ ~r/^ATTENDEE;.*ROLE=CHAIR.*:mailto:owner@example\.com$/))
     end
 
-    test "writes an organiser who booked their own slot once, as the chair" do
-      test_pid = self()
+    # The reporter's case: an organiser on a custom domain the account does
+    # not list as its own. The server adds its owner whatever the event says,
+    # so the owner line is written under the address it would have added.
+    test "lists the account's own address as the chair for an organiser the account does not own" do
+      lines =
+        create_and_capture(
+          client(:mailbox_org, "https://dav.mailbox.org"),
+          ["login@mailbox.org", "alias@mailbox.org"]
+        )
 
-      ReqTest.stub(:tymeslot_http, fn conn ->
-        {:ok, body, conn} = Conn.read_body(conn)
-        send(test_pid, {:body, body})
-        Conn.send_resp(conn, 201, "")
-      end)
+      assert attendee_lines(lines) == [
+               "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=CHAIR;PARTSTAT=ACCEPTED;RSVP=FALSE;CN=Owner:mailto:login@mailbox.org",
+               "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=FALSE;CN=Julian:mailto:julian@example.com"
+             ]
+
+      assert "ORGANIZER;SCHEDULE-AGENT=CLIENT;CN=Owner:mailto:owner@example.com" in lines
+    end
+
+    test "lists an organiser writing from an alias the account owns under that alias" do
+      lines =
+        create_and_capture(
+          client(:mailbox_org, "https://dav.mailbox.org"),
+          ["login@mailbox.org", "owner@example.com"]
+        )
+
+      assert hd(attendee_lines(lines)) ==
+               "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=CHAIR;PARTSTAT=ACCEPTED;RSVP=FALSE;CN=Owner:mailto:owner@example.com"
+
+      refute Enum.any?(lines, &(&1 =~ "login@mailbox.org"))
+    end
+
+    test "lists the organiser when the account's addresses cannot be read" do
+      lines = create_and_capture(client(:mailbox_org, "https://dav.mailbox.org"), :unreadable)
+
+      assert hd(attendee_lines(lines)) ==
+               "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=CHAIR;PARTSTAT=ACCEPTED;RSVP=FALSE;CN=Owner:mailto:owner@example.com"
+    end
+
+    test "writes an organiser who booked their own slot once, as the chair" do
+      stub_server(["owner@example.com"])
 
       booking = %{@booking | attendee_email: "Owner@example.com", attendee_name: "Owner"}
 

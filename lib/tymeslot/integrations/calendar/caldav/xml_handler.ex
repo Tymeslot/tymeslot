@@ -289,6 +289,46 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
       {:error, "Failed to parse calendar-home-set response"}
   end
 
+  @doc """
+  Parses the `calendar-user-address-set` (RFC 6638 §2.4.1) from a PROPFIND of
+  a principal: the addresses the server counts as that principal's own.
+
+  Answers the `mailto:` addresses only, normalised to lower case, with the one
+  the server marks `preferred` first; a server that marks none keeps its own
+  order. An empty set is `{:error, :not_found}`.
+  """
+  @spec parse_calendar_user_address_set(String.t()) ::
+          {:ok, [String.t(), ...]} | {:error, term()}
+  def parse_calendar_user_address_set(xml_body) do
+    doc = parse_with_security(xml_body)
+
+    addresses =
+      doc
+      |> xpath(~x"//*[local-name()='calendar-user-address-set']/*[local-name()='href']"l,
+        href: ~x"./text()"s,
+        preferred: ~x"./@preferred"s
+      )
+      |> Enum.sort_by(&(&1.preferred not in ["1", "true"]))
+      |> Enum.flat_map(&mailto_address(&1.href))
+      |> Enum.uniq()
+
+    case addresses do
+      [] -> {:error, :not_found}
+      addresses -> {:ok, addresses}
+    end
+  rescue
+    e ->
+      Logger.error("XML parsing error in calendar-user-address-set", error: LogFormat.reason(e))
+      {:error, "Failed to parse calendar-user-address-set response"}
+  end
+
+  defp mailto_address(href) do
+    case Regex.run(~r/^\s*mailto:(.+?)\s*$/i, href) do
+      [_match, address] -> [String.downcase(address)]
+      _other -> []
+    end
+  end
+
   # Private helper functions
 
   defp parse_with_security(xml_string) do
@@ -323,6 +363,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
 
   defp build_prop_element(:calendar_home_set),
     do: "<c:calendar-home-set xmlns:c=\"urn:ietf:params:xml:ns:caldav\"/>"
+
+  defp build_prop_element(:calendar_user_address_set),
+    do: "<c:calendar-user-address-set xmlns:c=\"urn:ietf:params:xml:ns:caldav\"/>"
 
   defp build_prop_element(:current_user_privilege_set), do: "<d:current-user-privilege-set/>"
 

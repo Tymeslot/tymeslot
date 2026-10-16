@@ -40,12 +40,27 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Scheduling do
   syncs from it, whether the event carried the booker as an `ATTENDEE`, as a
   `CONTACT`, or not at all.
 
-  `:organiser_attendee` lists the organiser as an attendee as well, which
-  RFC 5545 permits and most calendar clients do anyway. The server then finds
-  its owner already present, under the address the organiser chose, and adds
-  nobody. It cannot help an organiser address the account does not own: the
-  server adds its owner then too, which is its rule and not Tymeslot's to
-  override.
+  `{:organiser_attendee, addresses}` lists the account's owner as an attendee, so the
+  server finds them already present and adds nobody. The server recognises its
+  owner only by an address in the account's `calendar-user-address-set`,
+  matched on the `mailto:` itself (an `EMAIL=` parameter is rewritten, and
+  `SENT-BY` changes nothing), so which address that line carries depends on
+  the organiser's:
+
+    * an address on the account, the login or an alias the account lists:
+      the organiser themselves, as the chair, and the event shows exactly the
+      organiser and whoever booked;
+    * any other address, typically a custom domain the account does not list
+      as its own: the account's preferred address, the one the server would
+      have added. The server then adds nothing more, and the event shows the
+      organiser, that address once, and whoever booked. Listing the organiser
+      instead, as the first fix for #151 did, left the owner added beside
+      them, which put the organiser in the event twice.
+
+  The mode carries the addresses `Discovery.calendar_user_addresses/1`
+  answers, read per write; a failed lookup carries none, and the organiser is
+  then listed as in the first case, which is right whenever their address is
+  on the account.
 
   Recognised by the provider (`:mailbox_org`), by the host, or by the
   collection paths discovery returned (`ServerDetector.open_xchange_path?/1`),
@@ -56,18 +71,28 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Scheduling do
   (`/principals/users/3`) would otherwise attract.
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalDAV.Client
+  alias Tymeslot.Integrations.Calendar.CalDAV.Discovery
   alias Tymeslot.Integrations.Calendar.CalDAV.ServerDetector
 
-  @type mode :: :attendee | :organiser_attendee | :contact
+  require Logger
+
+  @typedoc """
+  `{:organiser_attendee, addresses}` carries the account's own addresses, the
+  preferred one first, or `[]` when they could not be read.
+  """
+  @type mode :: :attendee | {:organiser_attendee, [String.t()]} | :contact
 
   @doc """
   Returns the attendee mode for `client`.
 
   `:contact` for Zimbra, whether it was connected through the Zimbra provider
   or through generic CalDAV against a recognisably Zimbra URL;
-  `:organiser_attendee` for Open-Xchange (see the moduledoc); `:attendee` for
-  every other CalDAV server.
+  `{:organiser_attendee, addresses}` for Open-Xchange (see the moduledoc),
+  which asks the server for the account's addresses; `:attendee` for every
+  other CalDAV server. Called on the write path only, so the lookup costs a
+  request per write to an Open-Xchange calendar and nothing anywhere else.
 
   Matches the client structurally, as the rest of the CalDAV layer reads it:
   there is no malformed input to reject here, only a server to classify, and
@@ -77,8 +102,42 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Scheduling do
   def attendee_mode(client) when is_map(client) do
     case server(client) do
       :zimbra -> :contact
-      :open_xchange -> :organiser_attendee
+      :open_xchange -> {:organiser_attendee, owner_addresses(client)}
       _other -> :attendee
+    end
+  end
+
+  @doc """
+  The address an `{:organiser_attendee, addresses}` event lists for its
+  owner, given the organiser's (see the moduledoc): the organiser's own when
+  it is on the account or the account's addresses are unknown, otherwise the
+  account's preferred one. `nil` without an organiser.
+  """
+  @spec owner_attendee_address(String.t() | nil, [String.t()]) :: String.t() | nil
+  def owner_attendee_address(organiser, addresses) when is_binary(organiser) do
+    organiser = String.trim(organiser)
+
+    cond do
+      organiser == "" -> nil
+      addresses == [] or String.downcase(organiser) in addresses -> organiser
+      true -> hd(addresses)
+    end
+  end
+
+  def owner_attendee_address(_organiser, _addresses), do: nil
+
+  defp owner_addresses(client) do
+    case Discovery.calendar_user_addresses(client) do
+      {:ok, addresses} ->
+        addresses
+
+      {:error, reason} ->
+        Logger.warning("Could not read the CalDAV account's own addresses",
+          reason: LogFormat.reason(reason),
+          provider: Map.get(client, :provider)
+        )
+
+        []
     end
   end
 

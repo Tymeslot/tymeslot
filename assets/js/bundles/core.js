@@ -12,7 +12,7 @@ import topbar from "../../vendor/topbar.cjs"
 
 // Core utility hooks used everywhere
 import { initializeBundle } from "./bundle_utils"
-import { PageReload, VideoHoverPreview, StopClickPropagation, ModalFocusTrap, SidebarEscape } from "../ui_interaction_hooks"
+import { PageReload, VideoHoverPreview, PreventSummaryToggle, ModalFocusTrap, SidebarEscape } from "../ui_interaction_hooks"
 import { Flash, ConnectionStatus, AutoFocus, ScrollReset, CopyOnClick, scrollPageToTop, shouldScrollToTopOnNavigate } from "../utility_hooks"
 import { ClipboardCopy } from "../clipboard_hook"
 import { RecaptchaV3Hook } from "../hooks/recaptcha_v3_hook"
@@ -22,6 +22,7 @@ import { ScrollStrip } from "../hooks/scroll_strip"
 import { installAnalytics, installEventBridge, installClickTracking, AnalyticsView } from "../analytics"
 import { installImageFallback } from "../image_fallback"
 import { installClipboardCopy } from "../clipboard_copy"
+import { liveSocketPath } from "../live_socket_path"
 import { takeAttendeePrefill } from "../attendee_prefill"
 
 // Reveal image fallbacks on load error (replaces inline onerror handlers).
@@ -47,7 +48,7 @@ const CoreHooks = {
   // UI interactions
   PageReload,
   VideoHoverPreview,
-  StopClickPropagation,
+  PreventSummaryToggle,
   ModalFocusTrap,
   SidebarEscape,
 
@@ -87,9 +88,8 @@ const CoreHooks = {
   ScrollStrip
 }
 
-// Use /embed-live in cross-site iframes to avoid session cookie dependency
-// (mobile browsers block SameSite=Lax cookies in third-party iframe context)
-const socketPath = (window.self !== window.top) ? "/embed-live" : "/live"
+// /embed-live for framed pages and pages served as an embed (see liveSocketPath)
+const socketPath = liveSocketPath()
 
 // Initialize LiveSocket with core hooks
 // Route-specific bundles will extend this with additional hooks before connecting

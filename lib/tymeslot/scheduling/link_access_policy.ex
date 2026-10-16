@@ -108,13 +108,13 @@ defmodule Tymeslot.Scheduling.LinkAccessPolicy do
       :no_username ->
         dgettext(
           "booking",
-          "This scheduling page isn’t available yet. The organizer hasn’t set a username."
+          "This scheduling page isn’t available yet. The organiser hasn’t set a username."
         )
 
       :no_calendar ->
         dgettext(
           "booking",
-          "This scheduling page isn’t available right now. The organizer hasn’t connected a calendar yet."
+          "This scheduling page isn’t available right now. The organiser hasn’t connected a calendar yet."
         )
 
       _other_reason ->
