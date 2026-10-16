@@ -133,7 +133,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
                 <TymeslotWeb.Components.CoreComponents.Brand.logo
                   mode={:full}
                   img_class={
-                    if(@compact, do: "h-8 shrink min-w-0", else: "h-10 sm:h-16 shrink min-w-0")
+                    if(@compact, do: "h-8 sm:h-10 shrink min-w-0", else: "h-10 sm:h-16 shrink min-w-0")
                   }
                 />
               </div>

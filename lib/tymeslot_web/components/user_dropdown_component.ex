@@ -39,7 +39,7 @@ defmodule TymeslotWeb.Components.UserDropdownComponent do
           Enum.join(
             [
               "flex items-center space-x-3 bg-white border-2 border-tymeslot-50 rounded-2xl px-3 shadow-sm hover:border-turquoise-100 hover:shadow-md transition-all focus:outline-hidden focus:ring-2 focus:ring-turquoise-500",
-              if(Map.get(assigns, :compact, false), do: "py-1", else: "py-2")
+              if(Map.get(assigns, :compact, false), do: "py-1 min-h-11", else: "py-2")
             ],
             " "
           )
