@@ -27,6 +27,7 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
   alias Ecto.Changeset
   alias Tymeslot.Repo
   alias Tymeslot.RescheduleTestSetup
+  alias TymeslotWeb.Themes.Shared.Journey.Navigators.Paged
   alias TymeslotWeb.Themes.Shared.Journey.Progress
   alias TymeslotWeb.ThemeTestMatrix
 
@@ -267,10 +268,13 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
         # above the calendar, done.
         assert has_element?(view, "##{moment_for(view, :slot)}-step[data-moment-state='current']")
 
-        refute has_element?(
-                 view,
-                 "##{moment_for(view, :meeting_type)}-step[data-moment-state='current']"
-               )
+        offer = "##{moment_for(view, :meeting_type)}-step"
+
+        if paged?(view) do
+          refute has_element?(view, offer)
+        else
+          assert has_element?(view, "#{offer}[data-moment-state='done']")
+        end
 
         assert :sys.get_state(view.pid).socket.assigns.selected_duration == "quick-chat"
       end
@@ -286,5 +290,11 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
   # classic `:overview` and `:schedule`, Folio's `:offer` and `:when`).
   defp moment_for(view, fact) do
     Progress.moment_for(:sys.get_state(view.pid).socket.assigns.journey, fact)
+  end
+
+  # Whether the page shows one moment at a time: a paged journey drops the
+  # moment left behind, a continuous or transcript one keeps it, done.
+  defp paged?(view) do
+    :sys.get_state(view.pid).socket.assigns.journey.navigator == Paged
   end
 end

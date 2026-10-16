@@ -44,6 +44,25 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.YouMoment do
   def handle_event(event, params, socket) when event in @question_events,
     do: Events.handle_event(event, params, socket)
 
+  # The visitor's own Continue or Back. The questions block loses the
+  # control that held the focus when the last answer is confirmed (Continue
+  # goes with the block) and when Back reaches the first question (Back
+  # goes), and `:journey_focus` does not move, as the moment stays current.
+  # `:focus_after` says where the focus goes once the screen has changed;
+  # the markup acts on it only for the stage it names, so a deep link or a
+  # plain mount, which never send these events, move nothing.
+  def handle_event("next_step", params, socket),
+    do:
+      socket
+      |> assign(:focus_after, :details)
+      |> then(&Events.handle_event("next_step", params, &1))
+
+  def handle_event("back_step", params, socket),
+    do:
+      socket
+      |> assign(:focus_after, :question)
+      |> then(&Events.handle_event("back_step", params, &1))
+
   def handle_event(event, params, socket), do: StepEvents.handle_event(event, params, socket)
 
   @impl Phoenix.LiveComponent
@@ -53,7 +72,8 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.YouMoment do
     assigns =
       assign(assigns,
         stage: stage,
-        next_day_end: LocalizationHelpers.booking_next_day_end(assigns)
+        next_day_end: LocalizationHelpers.booking_next_day_end(assigns),
+        focus_after: assigns[:focus_after]
       )
 
     assigns = if stage == :questions, do: Events.assign_render_state(assigns), else: assigns
@@ -109,7 +129,14 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.YouMoment do
         </span>
       </div>
 
-      <h3 class="folio-question__label">{@definition["label"]}</h3>
+      <h3
+        id={"folio-question-#{@index}"}
+        class="folio-question__label"
+        tabindex="-1"
+        phx-mounted={(@focus_after == :question and @index == 0) && JS.focus()}
+      >
+        {@definition["label"]}
+      </h3>
       <p :if={@definition["help_text"]} class="folio-muted">{@definition["help_text"]}</p>
 
       <div class="folio-question">
@@ -146,88 +173,96 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.YouMoment do
 
   defp details(assigns) do
     ~H"""
-    <LocationField.location_field
-      :if={BookingLocation.choice_required?(assigns)}
-      location_options={@location_options}
-      selected_location_id={@selected_location_id}
-      video_choices={BookingLocation.video_choices(assigns)}
-      selected_video_id={@selected_video_id}
-      venue_choices={BookingLocation.venue_choices(assigns)}
-      selected_venue_id={@selected_venue_id}
-      kept_location={BookingLocation.kept_location(assigns)}
-      location_phone={@location_phone}
-      location_error={@location_error}
-      phone_required={BookingLocation.phone_required?(assigns)}
-      target={@myself}
-    />
-
-    <LocationField.stated_location
-      :if={BookingLocation.stated_location?(assigns)}
-      option={BookingLocation.selected(assigns)}
-      venue_choices={BookingLocation.venue_choices(assigns)}
-    />
-
-    <div class="folio-booking">
-      <BookingForm.booking_form
-        form={@form}
-        validation_errors={@validation_errors}
+    <div
+      id="folio-details"
+      role="group"
+      tabindex="-1"
+      aria-labelledby={"#{@moment}-heading-#{@moment_state}"}
+      phx-mounted={@focus_after == :details && JS.focus()}
+    >
+      <LocationField.location_field
+        :if={BookingLocation.choice_required?(assigns)}
+        location_options={@location_options}
+        selected_location_id={@selected_location_id}
+        video_choices={BookingLocation.video_choices(assigns)}
+        selected_video_id={@selected_video_id}
+        venue_choices={BookingLocation.venue_choices(assigns)}
+        selected_venue_id={@selected_venue_id}
+        kept_location={BookingLocation.kept_location(assigns)}
+        location_phone={@location_phone}
+        location_error={@location_error}
+        phone_required={BookingLocation.phone_required?(assigns)}
         target={@myself}
-        class="folio-booking-form"
-        contact_class="folio-contact"
-        message_rows={4}
-        labels={BookingForm.short_labels()}
-      >
-        <GuestField.guest_field
-          :if={GuestBooking.guests_allowed?(assigns)}
-          guest_emails={@guest_emails}
-          guest_input={@guest_input}
-          guest_error={@guest_error}
-          guests_open={@guests_open}
-          max_guests={@max_guests}
+      />
+
+      <LocationField.stated_location
+        :if={BookingLocation.stated_location?(assigns)}
+        option={BookingLocation.selected(assigns)}
+        venue_choices={BookingLocation.venue_choices(assigns)}
+      />
+
+      <div class="folio-booking">
+        <BookingForm.booking_form
+          form={@form}
+          validation_errors={@validation_errors}
           target={@myself}
-        />
-      </BookingForm.booking_form>
-    </div>
+          class="folio-booking-form"
+          contact_class="folio-contact"
+          message_rows={4}
+          labels={BookingForm.short_labels()}
+        >
+          <GuestField.guest_field
+            :if={GuestBooking.guests_allowed?(assigns)}
+            guest_emails={@guest_emails}
+            guest_input={@guest_input}
+            guest_error={@guest_error}
+            guests_open={@guests_open}
+            max_guests={@max_guests}
+            target={@myself}
+          />
+        </BookingForm.booking_form>
+      </div>
 
-    <ApprovalNotice.block
-      :if={Approval.required?(@meeting_type)}
-      organizer_name={BookingLabels.organizer_display_name(@organizer_profile, @username_context)}
-      payment_required={@meeting_type.payment_required}
-      stage={:before}
-    />
+      <ApprovalNotice.block
+        :if={Approval.required?(@meeting_type)}
+        organizer_name={BookingLabels.organizer_display_name(@organizer_profile, @username_context)}
+        payment_required={@meeting_type.payment_required}
+        stage={:before}
+      />
 
-    <SubmitPrice.price
-      meeting_type={@meeting_type}
-      currency={@host_currency}
-      locale={@locale}
-      rescheduling={@is_rescheduling}
-      class="folio-booking__price"
-    />
+      <SubmitPrice.price
+        meeting_type={@meeting_type}
+        currency={@host_currency}
+        locale={@locale}
+        rescheduling={@is_rescheduling}
+        class="folio-booking__price"
+      />
 
-    <div class="folio-actions">
-      <button
-        type="submit"
-        form="booking-form"
-        class="folio-button folio-button--primary"
-        data-testid="submit-booking"
-        aria-describedby={
-          SubmitPrice.describedby(@meeting_type, @host_currency, @locale, @is_rescheduling)
-        }
-        data-intent="submit"
-        disabled={@submitting || !OrganizerHelpers.form_valid?(@form)}
-      >
-        <%= if @submitting do %>
-          <span class="folio-spinner" aria-hidden="true"></span>
-          <span>{dgettext("booking", "Verifying...")}</span>
-        <% else %>
-          {BookingLabels.submit_label(
-            @is_rescheduling,
-            @meeting_type,
-            dgettext("booking", "Submit"),
-            :folio
-          )}
-        <% end %>
-      </button>
+      <div class="folio-actions">
+        <button
+          type="submit"
+          form="booking-form"
+          class="folio-button folio-button--primary"
+          data-testid="submit-booking"
+          aria-describedby={
+            SubmitPrice.describedby(@meeting_type, @host_currency, @locale, @is_rescheduling)
+          }
+          data-intent="submit"
+          disabled={@submitting || !OrganizerHelpers.form_valid?(@form)}
+        >
+          <%= if @submitting do %>
+            <span class="folio-spinner" aria-hidden="true"></span>
+            <span>{dgettext("booking", "Verifying...")}</span>
+          <% else %>
+            {BookingLabels.submit_label(
+              @is_rescheduling,
+              @meeting_type,
+              dgettext("booking", "Submit"),
+              :folio
+            )}
+          <% end %>
+        </button>
+      </div>
     </div>
     """
   end

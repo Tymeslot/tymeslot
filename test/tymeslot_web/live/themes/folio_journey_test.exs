@@ -137,6 +137,70 @@ defmodule TymeslotWeb.Live.Themes.FolioJourneyTest do
     assert meeting.custom_field_answers == %{"cf-company" => "Acme"}
   end
 
+  describe "focus when the questions close" do
+    @role %{
+      "id" => "cf-role",
+      "type" => "short_text",
+      "label" => "Role",
+      "required" => true,
+      "position" => 1
+    }
+
+    defp open_questions(conn, slug, fields) do
+      %{profile: profile} =
+        seed_organiser(@theme_id, slug,
+          types: [[name: "Quick Chat", duration_minutes: 30, custom_fields: fields]]
+        )
+
+      {:ok, view, _html} = live(conn, "/#{profile.username}")
+      BookingDriver.choose_meeting_type(view, "quick-chat")
+      BookingDriver.pick_first_slot(view, on: ahead())
+      view
+    end
+
+    test "the details take the focus after the last Continue, not before", %{conn: conn} do
+      view = open_questions(conn, "folio-focus-last", [@company])
+
+      refute has_element?(view, "#folio-details")
+      refute has_element?(view, "#folio-question-0[phx-mounted]")
+
+      BookingDriver.answer(view, "cf-company", "Acme")
+      BookingDriver.continue(view)
+
+      assert has_element?(view, "#you-step #folio-details[phx-mounted*='focus']")
+    end
+
+    test "Back to the first question focuses its label, a fresh mount does not", %{conn: conn} do
+      view = open_questions(conn, "folio-focus-back", [@company, @role])
+
+      assert has_element?(view, "#folio-question-0")
+      refute has_element?(view, "#folio-question-0[phx-mounted]")
+
+      BookingDriver.answer(view, "cf-company", "Acme")
+      BookingDriver.continue(view)
+
+      assert has_element?(view, "#folio-question-1")
+      refute has_element?(view, "#folio-question-1[phx-mounted]")
+
+      BookingDriver.back(view)
+
+      assert has_element?(view, "#folio-question-0[phx-mounted*='focus']")
+    end
+
+    test "a deep link to the details does not move the focus", %{conn: conn} do
+      %{profile: profile} = seed_organiser(@theme_id, "folio-focus-deep")
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          "/#{profile.username}/quick-chat/book?date=#{ahead()}&time=10:00%20AM&timezone=Etc%2FUTC"
+        )
+
+      assert has_element?(view, "#folio-details")
+      refute has_element?(view, "#folio-details[phx-mounted]")
+    end
+  end
+
   test "a meeting type's own link shows that type alone, with the calendar open",
        %{conn: conn} do
     %{profile: profile} =

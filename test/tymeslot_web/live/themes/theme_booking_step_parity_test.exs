@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingStepParityTest do
   import Tymeslot.BookingTestHelpers
 
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.Themes.Shared.Journey.Navigators.Paged
   alias TymeslotWeb.Themes.Shared.Journey.Progress
   alias TymeslotWeb.ThemeTestMatrix
 
@@ -57,7 +58,11 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingStepParityTest do
 
       # Paged, the overview leaves the page; on a continuous page it stays
       # above the calendar, done.
-      refute has_element?(view, "#{offer}[data-moment-state='current']")
+      if paged?(view) do
+        refute has_element?(view, offer)
+      else
+        assert has_element?(view, "#{offer}[data-moment-state='done']")
+      end
 
       slot = moment_for(view, :slot)
 
@@ -124,5 +129,11 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingStepParityTest do
   # The moment that collects `fact`, whatever the journey calls it.
   defp moment_for(view, fact) do
     Progress.moment_for(:sys.get_state(view.pid).socket.assigns.journey, fact)
+  end
+
+  # Whether the page shows one moment at a time: a paged journey drops the
+  # moment left behind, a continuous or transcript one keeps it, done.
+  defp paged?(view) do
+    :sys.get_state(view.pid).socket.assigns.journey.navigator == Paged
   end
 end
