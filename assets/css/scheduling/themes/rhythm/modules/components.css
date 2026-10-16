@@ -1,78 +1,13 @@
 /* Reusable UI Components */
 
 /* ============================================
-   INTERACTIVE STATE BASE PATTERNS
-   ============================================ */
-
-/* Base interactive element */
-.interactive {
-  cursor: pointer;
-  transition: transform var(--transition-normal);
-}
-
-.interactive:hover {
-  transform: translateY(-1px);
-}
-
-.interactive:active {
-  transform: translateY(0);
-}
-
-/* Disabled states — in shared/utilities.css */
-
-/* Selection state pattern */
-.selectable {
-  transition: background var(--transition-smooth), border-color var(--transition-smooth), box-shadow var(--transition-smooth);
-}
-
-.selectable:hover {
-  background: var(--surface-medium);
-  border-color: var(--theme-primary);
-}
-
-.selectable.is-selected,
-.selectable[aria-selected="true"] {
-  background: var(--theme-surface);
-  border-color: var(--theme-primary);
-  box-shadow: var(--shadow-md);
-}
-
-/* Focus visible — in shared/utilities.css */
-
-/* ============================================
    ICON UTILITIES
    ============================================ */
 
-/* Icon wrapper for proper styling */
-.icon-wrapper {
-  display: inline-block;
-  color: var(--theme-text);
-}
-
 /* Icon sizing utilities */
-.icon-xs {
-  width: var(--icon-xs);
-  height: var(--icon-xs);
-}
-
 .icon-sm {
   width: var(--icon-sm);
   height: var(--icon-sm);
-}
-
-.icon-md {
-  width: var(--icon-md);
-  height: var(--icon-md);
-}
-
-.icon-lg {
-  width: var(--icon-lg);
-  height: var(--icon-lg);
-}
-
-.icon-xl {
-  width: var(--icon-xl);
-  height: var(--icon-xl);
 }
 
 /* Hero icon specific (for Heroicons) */
@@ -81,31 +16,19 @@
   color: var(--theme-text);
 }
 
-.hero-icon--xs {
-  width: var(--icon-xs);
-  height: var(--icon-xs);
-}
-
-.hero-icon--sm {
-  width: var(--icon-sm);
-  height: var(--icon-sm);
-}
-
 .hero-icon--md {
   width: var(--icon-md);
   height: var(--icon-md);
-}
-
-.hero-icon--lg {
-  width: var(--icon-lg);
-  height: var(--icon-lg);
 }
 
 /* ============================================
    FLAG UTILITIES
    ============================================ */
 
-.timezone-flag--fallback {
+/* A timezone with no flag of its own shows the globe fallback, dimmed. The
+   fallback is the only flag rendered as a <span>. */
+span.timezone-flag,
+span.tz-picker__option-flag {
   opacity: 0.6;
 }
 
@@ -130,7 +53,7 @@
 .calendar-error-inline {
   font-size: var(--theme-font-size-xs);
   color: var(--theme-warning);
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--surface-dark-medium);
   padding: var(--space-3xs) var(--space-xs);
   border-radius: var(--radius-sm);
   display: flex;
@@ -210,9 +133,20 @@
   box-shadow: var(--shadow-danger-md);
 }
 
+/* The secondary variant sits on the glass card, not on the primary fill, so
+   it takes the card's text colour; without it the primary's on-primary ink
+   is dark on dark. */
 .action-button-primary.action-button-secondary {
   background: var(--surface-light);
+  border: var(--border-width-thin) solid var(--border-medium);
+  color: var(--theme-text);
   backdrop-filter: blur(10px);
+  box-shadow: none;
+}
+
+.action-button-primary.action-button-secondary:hover {
+  background: var(--surface-strong);
+  border-color: var(--border-strong);
   box-shadow: none;
 }
 
@@ -260,7 +194,7 @@
 }
 
 /* Loading States */
-.loading-slots {
+.slot-list__loading {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -268,7 +202,8 @@
   color: var(--theme-text-secondary);
 }
 
-.no-slots {
+.slot-list__empty,
+.slot-list__prompt {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -279,13 +214,14 @@
   gap: var(--space-sm);
 }
 
-.no-slots p {
+.slot-list__empty p,
+.slot-list__prompt p {
   margin: 0;
 }
 
 /* Error States - Unified Pattern */
 .theme-error,
-.calendar-error {
+.slot-list__error {
   padding: var(--space-lg);
   background: var(--theme-error-bg);
   border: var(--border-width-thin) solid var(--theme-error-border);
@@ -328,11 +264,11 @@
   }
 
   /* Loading and error states */
-  .loading-slots {
+  .slot-list__loading {
     padding: var(--space-2xl) var(--space-lg);
   }
 
-  .calendar-error,
+  .slot-list__error,
   .theme-error {
     padding: var(--space-md);
   }
@@ -350,43 +286,49 @@
 
 /* Short screens — compact duration grid */
 @media (max-height: 600px) {
-  .duration-grid {
-    grid-template-columns: 1fr;
-    margin-top: var(--space-sm);
-  }
+  :where(html:not([data-embedded])) {
+    .duration-grid {
+      grid-template-columns: 1fr;
+      margin-top: var(--space-sm);
+    }
 
-  .duration-button {
-    padding: var(--space-sm);
-  }
+    .duration-button {
+      padding: var(--space-sm);
+    }
 
-  .duration-description {
-    display: none;
+    .duration-description {
+      display: none;
+    }
   }
 }
 
 /* Very short screens — aggressive compaction */
 @media (max-height: 500px) {
-  .duration-button {
-    padding: var(--space-xs);
-  }
+  :where(html:not([data-embedded])) {
+    .duration-button {
+      padding: var(--space-xs);
+    }
 
-  .duration-card {
-    border-radius: var(--radius-md);
-  }
+    .duration-card {
+      border-radius: var(--radius-md);
+    }
 
-  .action-button-primary,
-  .submit-button,
-  .next-button,
-  .prev-button {
-    padding: var(--space-xs) var(--space-md);
-    font-size: var(--theme-font-size-sm);
+    .action-button-primary,
+    .submit-button,
+    .next-button,
+    .prev-button {
+      padding: var(--space-xs) var(--space-md);
+      font-size: var(--theme-font-size-sm);
+    }
   }
 }
 
 /* Extremely short screens */
 @media (max-height: 400px) {
-  .duration-grid {
-    gap: var(--space-3xs);
+  :where(html:not([data-embedded])) {
+    .duration-grid {
+      gap: var(--space-3xs);
+    }
   }
 }
 
@@ -394,7 +336,7 @@
 @media (prefers-reduced-motion: reduce) {
   .duration-card,
   .calendar-day,
-  .time-slot,
+  .slot-list__slot,
   .prev-button,
   .next-button,
   .submit-button,

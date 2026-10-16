@@ -1,75 +1,96 @@
 defmodule TymeslotWeb.Themes.Core.Behaviour do
   @moduledoc """
-  Behaviour for theme implementations to ensure complete independence.
+  The contract a booking theme implements.
 
-  Each theme can define its own flow, components, and UI patterns while
-  maintaining a consistent interface for the main scheduling system.
+  A theme owns presentation only: its scheduling LiveView, its metadata for
+  the dashboard's theme picker, and the pages it draws around shared bodies
+  (meeting management, poll voting, payment return). The booking flow is
+  shared (`Shared.SchedulingLive`), and theme facts live in
+  `Tymeslot.Themes.Catalog`.
+
+  A theme module implements this through `use TymeslotWeb.Themes.Core.Theme`,
+  which generates every callback and dispatches the renders to conventional
+  modules under the theme's namespace. Completeness is therefore checked by
+  the compiler; there is no runtime check.
   """
 
-  @doc """
-  Returns the state machine definition for this theme.
-  Each theme can have its own flow (2-step, 4-step, etc.)
-
-  Declarative only: the *runtime* flow comes from the shared
-  `Shared.StateMachineHelpers.states_for/1`, not from this callback. No
-  production code calls `states/0` today — `Loader` still enforces it via
-  `function_exported?/3`, and `ThemeCommonTestCases` exercises it directly, so
-  it stays part of the contract as a documented, tested declaration of each
-  theme's step shape.
-  """
-  @callback states() :: map()
-
-  @doc """
-  Returns the CSS file path for this theme.
-  """
-  @callback css_file() :: String.t()
-
-  @doc """
-  Returns the available components for this theme.
-  Components are mapped by their role in the scheduling flow.
-  """
-  @callback components() :: map()
-
-  @doc """
-  Returns the main LiveView module for this theme.
-  Each theme can have its own LiveView implementation.
-  """
+  @doc "The theme's scheduling LiveView."
   @callback live_view_module() :: module()
 
   @doc """
-  Returns theme-specific configuration or options.
+  Presentation metadata for the dashboard's theme picker: `preview_image`, a
+  path under `priv/static`, and `description`, translated into the current
+  Gettext locale.
   """
-  @callback theme_config() :: map()
+  @callback metadata() :: %{preview_image: String.t(), description: String.t()}
 
   @doc """
-  Validates that all required components exist for this theme.
+  The theme's story: its persona's one-sentence first-person line, translated
+  into the current Gettext locale (the `:story` option).
   """
-  @callback validate_theme() :: :ok | {:error, String.t()}
+  @callback story() :: String.t()
 
   @doc """
-  Returns the initial state for a given live_action.
-  Allows themes to customize how routes map to states.
-
-  No production code calls this today — `Loader` still enforces it via
-  `function_exported?/3`, and `ThemeCommonTestCases` exercises it directly, so
-  it stays part of the contract as documented, tested behaviour.
+  The theme's value on each of the seven design axes, in the canonical order
+  of `TymeslotWeb.Themes.Core.Axes.names/0` (the `:axes` option).
   """
-  @callback initial_state_for_action(atom()) :: atom()
+  @callback axes() :: keyword()
 
   @doc """
-  Returns whether this theme supports a specific feature.
-  Allows themes to opt-in/out of certain functionality.
-  """
-  @callback supports_feature?(atom()) :: boolean()
-
-  @doc """
-  Renders a meeting management action (cancel, reschedule, etc.)
+  Renders a meeting management page: `:reschedule`, `:cancel` or
+  `:cancel_confirmed`. Any other action raises. The generated default draws
+  either the theme's conventional module or, with `:page_shell`,
+  `Shared.DefaultPages`.
   """
   @callback render_meeting_action(assigns :: map(), action :: atom()) ::
               Phoenix.LiveView.Rendered.t()
 
   @doc """
-  Renders the public poll voting page for this theme.
+  Renders the public poll voting page. The generated default draws either
+  the theme's conventional module or, with `:page_shell`,
+  `Shared.DefaultPages`.
   """
   @callback render_poll_action(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
+
+  @doc """
+  Renders a payment return page, `:processing` or `:cancelled`: the theme's
+  shell around `Shared.PaymentReturnComponents`. The generated default draws
+  either the theme's conventional module or, with `:page_shell`,
+  `Shared.DefaultPages`.
+  """
+  @callback render_payment_page(assigns :: map(), page :: :processing | :cancelled) ::
+              Phoenix.LiveView.Rendered.t()
+
+  @doc """
+  Draws the theme in the onboarding wizard. `assigns.variant` is:
+
+    * `:thumbnail`, the theme step's picker tile, with `primary` (the
+      scheme's primary colour);
+    * `:card`, the live preview card, with `colors`, `slots`, `locale`,
+      `highlight_card`, `highlight_slots` and a `header` slot holding the
+      shared identity header the card is drawn around.
+
+  Optional: `use TymeslotWeb.Themes.Core.Theme` supplies the generic mock
+  (`TymeslotWeb.OnboardingLive.PreviewParts.generic/1`), and the wizard falls
+  back to it for a module without this callback.
+  """
+  @callback onboarding_preview(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
+
+  @doc """
+  The dashboard panels for the theme's own option groups, keyed by the
+  group's module: `%{MyGroup => MyPanel}`. The shared groups
+  (`Options.Palette`, `Options.Background`) have built-in panels and need no
+  entry; an entry for one replaces its built-in panel for this theme. See
+  `TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Panels`.
+  """
+  @callback option_panels() :: %{optional(module()) => module()}
+
+  @doc """
+  The module implementing `TymeslotWeb.Themes.Shared.Voice` that words the
+  shared booking lines for this theme, or `nil` for the shared wording (the
+  `:voice` option of `use TymeslotWeb.Themes.Core.Theme`).
+  """
+  @callback voice() :: module() | nil
+
+  @optional_callbacks onboarding_preview: 1
 end

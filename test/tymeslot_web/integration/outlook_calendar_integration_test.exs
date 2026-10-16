@@ -264,7 +264,7 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
       # Access denied
       conn = get(build_conn(), "/auth/outlook/calendar/callback", %{"error" => "access_denied"})
       assert redirected_to(conn, 302)
-      assert Flash.get(conn.assigns.flash, :error) =~ "Authorization was denied"
+      assert Flash.get(conn.assigns.flash, :error) =~ "Authorisation was denied"
     end
   end
 end

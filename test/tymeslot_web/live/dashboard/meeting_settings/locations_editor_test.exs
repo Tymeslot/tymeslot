@@ -289,6 +289,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
 
       # The editor stays open with the error, and nothing is written.
       assert has_element?(view, "#location-editor-form")
+      # The error comes from the server: `novalidate` lets the browser send the
+      # empty required fields rather than block the submit with its own bubble.
+      assert has_element?(view, "#location-editor-form[novalidate]")
       assert [%{label: "Our office"}] = reload(view, meeting_type, user).locations
     end
   end

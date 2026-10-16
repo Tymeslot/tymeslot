@@ -112,7 +112,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityAsyncFetchTest do
 
     view |> element("button[data-testid='next-step']") |> render_click()
 
-    wait_until(fn -> has_element?(view, "button.time-slot-button") end)
+    wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
 
     assert_received {:fetched_in, fetch_pid}
 

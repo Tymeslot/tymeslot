@@ -131,11 +131,13 @@ defmodule Tymeslot.Auth.AccountDeletion do
   Deletes accounts still unverified `days` after sign-up, through
   `delete_account/1`, so each goes exactly as an erasure request would.
 
-  An unverified account cannot sign in, so after a month it is an abandoned
-  sign-up, or one made with somebody else's address, holding an email
-  address and the IP it was registered from. An account sent a fresh
-  verification link within the window is spared. At most #{@purge_batch_size}
-  are deleted per call, and none for a `days` below one.
+  An unverified password account cannot sign in, so after a month one that
+  never had a session is an abandoned sign-up, or one made with somebody
+  else's address, holding an email address and the IP it was registered
+  from. Anything evidently in use is spared: see
+  `Tymeslot.Auth.UserQueries.list_stale_unverified_users/2`. So is an account
+  sent a fresh verification link within the window. At most
+  #{@purge_batch_size} are deleted per call, and none for a `days` below one.
 
   Returns `{deleted_count, nil}`, the shape `Tymeslot.Workers.DataRetentionWorker`
   expects of a prune function.

@@ -327,7 +327,9 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
 
   Choosing an option pushes `on_change` to `target` with the option's value
   under `param` (default `"value"`), so an existing handler keeps its
-  parameter name. Each button has the id `<id>-<value>`.
+  parameter name, along with any fixed `values` (each sent as a
+  `phx-value-*` of its own, such as the key of the settings group the
+  control belongs to). Each button has the id `<id>-<value>`.
 
   Options take a `label`, and optionally an `icon` (`hero-…`; shown from the
   `sm` breakpoint up, so a phone gets the labels alone), a `count` shown in a
@@ -343,6 +345,11 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
   attr :value, :any, required: true, doc: "the chosen option's value"
   attr :on_change, :any, required: true, doc: "event pushed when an option is chosen"
   attr :param, :string, default: "value", doc: "the parameter the chosen value is sent under"
+
+  attr :values, :map,
+    default: %{},
+    doc: "fixed parameters sent with every option, beside the chosen value"
+
   attr :target, :any, default: nil
   attr :aria_label, :string, required: true, doc: "what the options choose"
   attr :size, :atom, default: :md, values: [:sm, :md]
@@ -382,7 +389,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
         data-testid={option[:testid]}
         phx-click={@on_change}
         phx-target={@target}
-        {%{"phx-value-#{@param}" => to_string(option.value)}}
+        {phx_values(@values, @param, option.value)}
         class={[
           "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-token-md font-semibold transition-colors",
           "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-turquoise-400",
@@ -409,6 +416,12 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
   end
 
   defp chosen?(option, value), do: to_string(option.value) == to_string(value)
+
+  defp phx_values(values, param, value) do
+    values
+    |> Map.new(fn {key, fixed} -> {"phx-value-#{key}", to_string(fixed)} end)
+    |> Map.put("phx-value-#{param}", to_string(value))
+  end
 
   defp segment_size_class(:sm), do: "px-2.5 py-1 text-token-xs"
   defp segment_size_class(:md), do: "px-3 py-1.5 text-token-sm"

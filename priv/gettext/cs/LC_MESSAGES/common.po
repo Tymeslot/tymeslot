@@ -21,11 +21,6 @@ msgstr "Ne"
 msgid "Yes"
 msgstr "Ano"
 
-#: lib/tymeslot/custom_fields/answer_renderer.ex
-#, elixir-autogen, elixir-format
-msgid "✓ Acknowledged (%{at})"
-msgstr "✓ Potvrzeno (%{at})"
-
 #: lib/tymeslot_web/components/core_components/flash.ex
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
@@ -374,3 +369,8 @@ msgstr[2] "Můžete nastavit až %{count} připomínek"
 #, elixir-autogen, elixir-format
 msgid "Loading"
 msgstr "Načítání"
+
+#: lib/tymeslot/custom_fields/answer_renderer.ex
+#, elixir-autogen, elixir-format
+msgid "✓ Acknowledged"
+msgstr "✓ Potvrzeno"

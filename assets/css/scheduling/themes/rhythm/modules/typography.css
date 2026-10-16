@@ -76,14 +76,10 @@
 
 .organizer-name,
 .meeting-duration,
-.timezone-option-offset,
+.tz-picker__option-offset,
 .timezone-arrow,
 .help-text,
 .email-confirmation {
-  font-size: var(--theme-font-size-sm);
-}
-
-.avatar-checkmark {
   font-size: var(--theme-font-size-sm);
 }
 
@@ -102,17 +98,17 @@
   font-weight: var(--font-weight-semibold);
 }
 
-.time-period-header {
+.slot-list__period-label {
   font-size: var(--theme-font-size-xs);
   font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
   letter-spacing: var(--letter-spacing-normal);
 }
 
-.time-slot,
-.timezone-trigger,
-.timezone-search,
-.timezone-option {
+.slot-list__slot,
+.tz-picker__trigger,
+.tz-picker__search,
+.tz-picker__option {
   font-size: var(--theme-font-size-sm);
 }
 
@@ -133,7 +129,7 @@
 }
 
 /* Error messages */
-.rhythm-theme-wrapper .booking-form .form-field-wrapper > div.mt-2.flex.items-center {
+.rhythm-theme-wrapper .booking-form .form-field-wrapper > .form-field-error {
   font-size: var(--theme-font-size-sm);
 }
 
@@ -202,9 +198,10 @@
   font-weight: var(--font-weight-medium);
 }
 
-.loading-slots,
-.calendar-error,
-.no-slots p {
+.slot-list__loading,
+.slot-list__error,
+.slot-list__empty p,
+.slot-list__prompt p {
   font-size: var(--theme-font-size-md);
 }
 
@@ -217,15 +214,15 @@
 }
 
 .timezone-text,
-.timezone-option-label {
+.tz-picker__option-label {
   font-weight: var(--font-weight-medium);
 }
 
-.time-slot {
+.slot-list__slot {
   font-weight: var(--font-weight-medium);
 }
 
-.time-slot.selected {
+.slot-list__slot.slot-list__slot--selected {
   font-weight: var(--font-weight-semibold);
 }
 
@@ -271,7 +268,9 @@
 
 /* Compact mode for short viewports */
 @media (max-height: 600px) {
-  .slide-title {
-    font-size: var(--theme-font-size-xl);
+  :where(html:not([data-embedded])) {
+    .slide-title {
+      font-size: var(--theme-font-size-xl);
+    }
   }
 }

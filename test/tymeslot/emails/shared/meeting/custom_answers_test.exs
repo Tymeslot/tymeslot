@@ -139,18 +139,50 @@ defmodule Tymeslot.Emails.Shared.Meeting.CustomAnswersTest do
       assert html =~ "Safe"
     end
 
-    test "renders empty string for unanswered field" do
-      field_id = UUID.generate()
+    test "gives an unanswered field no row" do
+      answered = UUID.generate()
+      skipped = UUID.generate()
 
       html =
         CustomAnswers.custom_answers_section(%{
           custom_fields_snapshot: [
-            %{"id" => field_id, "type" => "short_text", "label" => "Skipped"}
+            %{"id" => answered, "type" => "short_text", "label" => "Company"},
+            %{"id" => skipped, "type" => "short_text", "label" => "Skipped"}
           ],
+          custom_field_answers: %{answered => "Acme"}
+        })
+
+      assert html =~ "Company"
+      refute html =~ "Skipped"
+    end
+
+    test "gives an unticked note no row" do
+      answered = UUID.generate()
+      note = UUID.generate()
+
+      html =
+        CustomAnswers.custom_answers_section(%{
+          custom_fields_snapshot: [
+            %{"id" => answered, "type" => "short_text", "label" => "Company"},
+            %{"id" => note, "type" => "note", "label" => "Read the terms"}
+          ],
+          custom_field_answers: %{answered => "Acme"}
+        })
+
+      assert html =~ "Company"
+      refute html =~ "Read the terms"
+    end
+
+    test "returns empty string when every answer is empty" do
+      note = UUID.generate()
+
+      html =
+        CustomAnswers.custom_answers_section(%{
+          custom_fields_snapshot: [%{"id" => note, "type" => "note", "label" => "Read the terms"}],
           custom_field_answers: %{}
         })
 
-      assert html =~ "Skipped"
+      assert html == ""
     end
   end
 end

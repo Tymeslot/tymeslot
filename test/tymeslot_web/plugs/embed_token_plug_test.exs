@@ -112,6 +112,45 @@ defmodule TymeslotWeb.Plugs.EmbedTokenPlugTest do
       assert {:ok, {"sarah", "https://mysite.com"}} = Token.verify(conn.assigns.embed_token)
     end
 
+    test "a Referer from this site defers to the parent-origin param", %{conn: conn} do
+      # A navigation the framed page makes itself (the language switcher's
+      # redirect) arrives with the booking page as its Referer. That names
+      # this site, not the embedder, and would fail the allowlist check.
+      conn =
+        conn
+        |> Map.put(:request_path, "/sarah")
+        |> Map.put(:query_string, "embed=1&parent-origin=https://mysite.com")
+        |> put_req_header("referer", "http://#{conn.host}/sarah?embed=1")
+        |> EmbedTokenPlug.call([])
+
+      assert {:ok, {"sarah", "https://mysite.com"}} = Token.verify(conn.assigns.embed_token)
+    end
+
+    test "a Referer from this site is kept when there is no parent-origin param",
+         %{conn: conn} do
+      conn =
+        conn
+        |> Map.put(:request_path, "/sarah")
+        |> Map.put(:query_string, "embed=1")
+        |> put_req_header("referer", "http://#{conn.host}/dashboard")
+        |> EmbedTokenPlug.call([])
+
+      expected = "http://#{conn.host}"
+      assert {:ok, {"sarah", ^expected}} = Token.verify(conn.assigns.embed_token)
+    end
+
+    test "keeps a non-default port in the Referer origin", %{conn: conn} do
+      conn =
+        conn
+        |> Map.put(:request_path, "/sarah")
+        |> Map.put(:query_string, "embed=1")
+        |> put_req_header("referer", "http://embedder.test:8080/page")
+        |> EmbedTokenPlug.call([])
+
+      assert {:ok, {"sarah", "http://embedder.test:8080"}} =
+               Token.verify(conn.assigns.embed_token)
+    end
+
     test "assigns embed_token for nested username paths", %{conn: conn} do
       conn =
         conn
@@ -226,6 +265,76 @@ defmodule TymeslotWeb.Plugs.EmbedTokenPlugTest do
       assert conn.assigns[:embed_token]
       assert {:ok, {"sarah", "https://example.com"}} = Token.verify(conn.assigns.embed_token)
     end
+  end
+
+  # A copied embed URL opened in its own tab used to be treated as an embed,
+  # so the CSRF state its page generated was never written back. The page
+  # connects to the session socket when it is not framed, found no session
+  # there and reloaded for ever. `Sec-Fetch-Dest` tells the two apart.
+  describe "Sec-Fetch-Dest" do
+    test "a top-level visit (document) is served as an ordinary page", %{conn: conn} do
+      response = embed_request_writing_session(conn, "document")
+
+      refute response.assigns[:embed_token]
+      assert Map.has_key?(response.resp_cookies, @session_key)
+    end
+
+    test "a framed request (iframe) keeps the embed behaviour", %{conn: conn} do
+      response = embed_request_writing_session(conn, "iframe")
+
+      assert {:ok, {"sarah", nil}} = Token.verify(response.assigns.embed_token)
+      refute Map.has_key?(response.resp_cookies, @session_key)
+    end
+
+    test "a request without the header keeps the embed behaviour", %{conn: conn} do
+      response = embed_request_writing_session(conn, nil)
+
+      assert {:ok, {"sarah", nil}} = Token.verify(response.assigns.embed_token)
+      refute Map.has_key?(response.resp_cookies, @session_key)
+    end
+
+    test "an embed path naming no organiser keeps its session", %{conn: conn} do
+      # No token means no marker, so the page would connect to the session
+      # socket; it must then have its session.
+      response = embed_request_writing_session(conn, nil, "/dashboard")
+
+      refute response.assigns[:embed_token]
+      assert Map.has_key?(response.resp_cookies, @session_key)
+    end
+
+    test "every embed response varies on the header", %{conn: conn} do
+      # A shared cache must not hand a framed visitor the top-level response,
+      # or the reverse.
+      for sec_fetch_dest <- ["document", "iframe", nil] do
+        response = embed_request_writing_session(conn, sec_fetch_dest)
+        assert "sec-fetch-dest" in get_resp_header(response, "vary")
+      end
+    end
+
+    test "a non-embed response does not vary on it", %{conn: conn} do
+      conn =
+        conn
+        |> Map.put(:request_path, "/sarah")
+        |> Map.put(:query_string, "")
+        |> EmbedTokenPlug.call([])
+
+      assert get_resp_header(conn, "vary") == []
+    end
+  end
+
+  # An `?embed=1` request whose page then writes session state, as rendering
+  # the CSRF token does.
+  defp embed_request_writing_session(conn, sec_fetch_dest, path \\ "/sarah") do
+    conn =
+      if sec_fetch_dest, do: put_req_header(conn, "sec-fetch-dest", sec_fetch_dest), else: conn
+
+    conn
+    |> Map.put(:request_path, path)
+    |> Map.put(:query_string, "embed=1")
+    |> start_session()
+    |> EmbedTokenPlug.call([])
+    |> put_session(:csrf_state, "generated-by-the-page")
+    |> send_resp(200, "ok")
   end
 
   # The `:drop` vs `:ignore` difference only materialises in Plug.Session's

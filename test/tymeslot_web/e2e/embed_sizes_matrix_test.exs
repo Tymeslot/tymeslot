@@ -24,6 +24,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
   alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
+  alias TymeslotWeb.ThemeTestMatrix
   alias Wallaby.Element
 
   @moduletag :e2e
@@ -37,9 +38,6 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
   # `assert_no_horizontal_overflow/2` in `E2EHelpers`, which carries its own
   # copy: the tolerance is a property of the bridge, not of either module.
   @overflow_tolerance 1
-
-  # Both shipping themes, overridden at view time via `?theme=`.
-  @themes [{"1", "Quill"}, {"2", "Rhythm"}]
 
   # Short viewports where the schedule step used to overflow its card and overlap
   # the action buttons. Includes the common laptop-height band (~660-820px inner
@@ -66,15 +64,15 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
           %{session: session} do
     {profile, _slug} = create_user_with_meeting_type()
 
-    for {theme_id, theme_name} <- @themes, width <- @widths, reduce: session do
+    for theme <- ThemeTestMatrix.all(), width <- @widths, reduce: session do
       acc ->
         acc
         |> resize_window(width, @height)
-        |> visit("/#{profile.username}?theme=#{theme_id}")
+        |> visit("/#{profile.username}?theme=#{theme.id}")
         |> wait_for_live()
-        |> assert_no_horizontal_overflow("#{theme_name} overview width=#{width}px")
+        |> assert_no_horizontal_overflow("#{theme.name} overview width=#{width}px")
         |> advance_to_schedule()
-        |> assert_no_horizontal_overflow("#{theme_name} schedule width=#{width}px")
+        |> assert_no_horizontal_overflow("#{theme.name} schedule width=#{width}px")
     end
   end
 
@@ -86,13 +84,13 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     # viewport the booker supports; this is what holds them to that.
     {profile, _slug} = create_user_with_max_length_booking_text()
 
-    for {theme_id, theme_name} <- @themes, {width, height} <- @short_sizes, reduce: session do
+    for theme <- ThemeTestMatrix.all(), {width, height} <- @short_sizes, reduce: session do
       acc ->
-        context = "#{theme_name} overview max text #{width}x#{height}"
+        context = "#{theme.name} overview max text #{width}x#{height}"
 
         acc
         |> resize_window(width, height)
-        |> visit("/#{profile.username}?theme=#{theme_id}")
+        |> visit("/#{profile.username}?theme=#{theme.id}")
         |> wait_for_live()
         |> assert_no_horizontal_overflow(context)
         |> assert_cta_reachable(context)
@@ -103,13 +101,13 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
           %{session: session} do
     {profile, slug} = create_user_with_meeting_type()
 
-    for {theme_id, theme_name} <- @themes, {width, height} <- @short_sizes, reduce: session do
+    for theme <- ThemeTestMatrix.all(), {width, height} <- @short_sizes, reduce: session do
       acc ->
-        context = "#{theme_name} schedule #{width}x#{height}"
+        context = "#{theme.name} schedule #{width}x#{height}"
 
         acc
         |> resize_window(width, height)
-        |> visit("/#{profile.username}/#{slug}?theme=#{theme_id}")
+        |> visit("/#{profile.username}/#{slug}?theme=#{theme.id}")
         |> wait_for_live()
         |> assert_has(css("[data-testid='schedule-actions']"))
         |> assert_no_horizontal_overflow(context)
@@ -118,21 +116,23 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     end
   end
 
-  feature "Quill schedule pins the actions row inside the viewport at short heights",
+  feature "schedule pins the actions row inside the viewport at short heights (app-shell themes)",
           %{session: session} do
-    # Quill viewport-locks the schedule step (app-shell): the calendar's internal
-    # scroll is the single scroll region, and the header + actions are pinned. So
-    # at every short height — down to extreme landscape — the actions row stays
-    # fully on-screen, not merely reachable by scrolling.
+    # A viewport-locked schedule step (app shell): the calendar's internal
+    # scroll is the single scroll region, and the header + actions are pinned.
+    # So at every short height, down to extreme landscape, the actions row
+    # stays fully on-screen, not merely reachable by scrolling.
     {profile, slug} = create_user_with_meeting_type()
+    themes = Enum.filter(ThemeTestMatrix.all(), & &1.pins_schedule_actions)
+    assert themes != []
 
-    for {width, height} <- @short_sizes, reduce: session do
+    for theme <- themes, {width, height} <- @short_sizes, reduce: session do
       acc ->
-        context = "Quill schedule #{width}x#{height}"
+        context = "#{theme.name} schedule #{width}x#{height}"
 
         acc
         |> resize_window(width, height)
-        |> visit("/#{profile.username}/#{slug}?theme=1")
+        |> visit("/#{profile.username}/#{slug}?theme=#{theme.id}")
         |> wait_for_live()
         |> assert_has(css("[data-testid='schedule-actions']"))
         |> assert_actions_within_viewport(context)
@@ -321,9 +321,10 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
 
   # ── Layout assertions ─────────────────────────────────────────────────
 
-  # Stronger than assert_cta_reachable: on Quill's bounded-card model the pinned
-  # actions must sit fully inside the viewport at short heights — proving the
-  # calendar scrolls internally rather than pushing the buttons off-screen.
+  # Stronger than assert_cta_reachable: on the bounded-card model of an
+  # app-shell theme the pinned actions must sit fully inside the viewport at
+  # short heights — proving the calendar scrolls internally rather than
+  # pushing the buttons off-screen.
   #
   # Measures the actions row rather than the individual buttons: Back only exists
   # when the booker came via the overview, but the row it lives in is what has to
@@ -386,7 +387,9 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
   end
 
   # Guards the wide-short schedule fix: the layout must not let the calendar
-  # overflow its card and paint over the actions row.
+  # overflow its card and paint over the actions row. A week grid's navigation
+  # row stands in for the calendar's first day: it sits at the top of the
+  # picker, as that day does, and is there before the week's times load.
   defp assert_no_actions_calendar_overlap(session, context) do
     me = self()
     ref = make_ref()
@@ -395,8 +398,8 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
       session,
       """
       const actions = document.querySelector("[data-testid='schedule-actions']");
-      const day = document.querySelector("[data-testid='calendar-day']");
-      if (!actions || !day) return null;
+      const day = document.querySelector("[data-testid='calendar-day'], .week-grid__nav");
+      if (!actions || !day) return "missing";
       const a = actions.getBoundingClientRect(), c = day.getBoundingClientRect();
       // overlap iff the rects intersect on both axes
       return !(a.right <= c.left || a.left >= c.right || a.bottom <= c.top || a.top >= c.bottom);
@@ -405,6 +408,10 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     )
 
     assert_receive {:overlap, ^ref, overlap}, 5_000
+
+    # Nothing to compare would let the check pass without testing anything.
+    refute overlap == "missing",
+           "#{context}: no schedule actions row, or neither calendar days nor a week grid's navigation"
 
     refute overlap,
            "The schedule actions row overlaps the calendar at #{context} — the " <>

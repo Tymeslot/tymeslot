@@ -19,14 +19,17 @@ defmodule Tymeslot.Meetings.Guests do
   `subscribe_to_rsvp_updates/1`.
   """
 
+  alias Tymeslot.Bookings.SeatEffects
   alias Tymeslot.Clock
   alias Tymeslot.Emails.EmailScheduler.MeetingScheduler
+  alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.GuestSchema
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.Meetings.Seats
   alias Tymeslot.Repo
   alias Tymeslot.Security.FieldValidators.EmailValidator
 
@@ -227,22 +230,78 @@ defmodule Tymeslot.Meetings.Guests do
   the current time and broadcasts `{:guest_rsvp_updated, meeting_id}` to the
   organiser's RSVP topic. Returns the updated guest with its `:meeting`
   preloaded, `{:error, :not_found}` for an unknown token,
-  `{:error, :meeting_closed}` when the meeting no longer takes responses, and
+  `{:error, :meeting_closed}` when the meeting no longer takes responses,
+  `{:error, :full}` when a guest of a group booking who had declined answers
+  yes while no seat is free (see `can_accept?/1`), and
   `{:error, :invalid_response}` for anything other than accept/decline.
+
+  A guest of a group booking holds a seat until they decline; their seat is
+  then free for others. An answer that frees or takes a seat refreshes what
+  the booking page offers at once.
   """
   @spec record_rsvp(String.t(), String.t()) ::
           {:ok, GuestSchema.t()}
-          | {:error, :not_found | :meeting_closed | :invalid_response | Ecto.Changeset.t()}
+          | {:error,
+             :not_found | :meeting_closed | :full | :invalid_response | Ecto.Changeset.t()}
   def record_rsvp(token, response) when response in ["accepted", "declined"] do
     with {:ok, guest} <- get_open_invitation(token),
-         {:ok, updated} <-
-           GuestQueries.update_rsvp(guest, %{status: response, responded_at: now()}) do
+         {:ok, updated} <- update_response(guest, response) do
       broadcast_rsvp_update(updated.meeting)
+      if seat_changed?(guest, updated), do: SeatEffects.broadcast_and_invalidate(updated.meeting)
       {:ok, updated}
     end
   end
 
   def record_rsvp(_token, _response), do: {:error, :invalid_response}
+
+  @doc """
+  Whether `guest` can answer yes now. Always, except for a guest of a group
+  booking who declined and so gave their seat back: they can only while a
+  seat is free. Read without a lock, for the page offering the answer;
+  `record_rsvp/2` decides under the slot's lock.
+  """
+  @spec can_accept?(GuestSchema.t()) :: boolean()
+  def can_accept?(%GuestSchema{status: "declined", participant_id: id, meeting: meeting})
+      when is_binary(id) and is_struct(meeting, MeetingSchema),
+      do: Seats.seats_left(meeting, meeting.capacity) > 0
+
+  def can_accept?(_guest), do: true
+
+  # A declined guest of a group booking answering yes takes a seat again, so
+  # the seat is checked under the slot's lock, as a booking's are
+  # (`GroupScheduling`): two such answers for the last seat cannot both win.
+  defp update_response(%{status: "declined", participant_id: id} = guest, "accepted")
+       when is_binary(id) do
+    Repo.transaction(fn ->
+      meeting = GroupMeetingQueries.lock_for_update(guest.meeting_id)
+
+      with true <- seat_for_yes?(guest, meeting) || {:error, :full},
+           {:ok, updated} <- GuestQueries.update_rsvp(guest, rsvp_attrs("accepted")) do
+        updated
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
+  end
+
+  defp update_response(guest, response), do: GuestQueries.update_rsvp(guest, rsvp_attrs(response))
+
+  # The status is re-read under the lock: a yes submitted twice finds the
+  # seat the first submit took already its own, rather than none left.
+  defp seat_for_yes?(guest, meeting),
+    do:
+      GuestQueries.get_status(guest) != "declined" or
+        Seats.seats_left(meeting, meeting.capacity) > 0
+
+  defp rsvp_attrs(response), do: %{status: response, responded_at: now()}
+
+  # Only a group booking's guests take seats; a decline gives one back and a
+  # yes after a decline takes one.
+  defp seat_changed?(%{participant_id: id, status: before}, %{status: now_status})
+       when is_binary(id),
+       do: before == "declined" != (now_status == "declined")
+
+  defp seat_changed?(_guest, _updated), do: false
 
   # A guest brought by a group-booking participant loses their invitation when
   # that participant cancels their seat, even though the meeting carries on.

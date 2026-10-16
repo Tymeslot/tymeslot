@@ -32,11 +32,14 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
+  alias Ecto.UUID
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
   alias TymeslotWeb.ThemeMeetingTestCases
+  alias TymeslotWeb.ThemeTestMatrix
 
   setup :verify_on_exit!
 
@@ -193,5 +196,80 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
     assert rendered =~ "still scheduled as planned"
 
     assert Repo.get!(MeetingSchema, meeting.id).status == "confirmed"
+  end
+
+  # The cancel page has no booking journey: a booking event pushed at it is
+  # ignored, never an error card.
+  @tag :capture_log
+  test "a step-indicator click or a step event pushed at the cancel page leaves it as it was",
+       %{conn: conn, user: user, profile: profile} do
+    meeting =
+      insert(:meeting,
+        organizer_user: user,
+        organizer_user_id: user.id,
+        organizer_name: user.name,
+        attendee_timezone: profile.timezone,
+        status: "confirmed"
+      )
+
+    {:ok, view, _html} =
+      live(conn, "/#{profile.username}/meeting/#{meeting.uid}/cancel")
+
+    render_hook(view, "navigate_to_step", %{"step" => "1"})
+    send(view.pid, {:step_event, :schedule, :next_step, nil})
+
+    assert has_element?(view, "[data-testid='cancel-meeting']")
+    assert has_element?(view, "[data-testid='keep-meeting']")
+    refute has_element?(view, "#scheduling-error")
+    assert Repo.get!(MeetingSchema, meeting.id).status == "confirmed"
+  end
+
+  for theme <- ThemeTestMatrix.all() do
+    @tag :capture_log
+    test "#{theme.name}: the cancel page states the duration in the visitor's language",
+         %{conn: conn, user: user, profile: profile} do
+      profile |> Changeset.change(booking_theme: unquote(theme.id)) |> Repo.update!()
+      meeting = insert(:meeting, organizer_user: user, organizer_user_id: user.id, duration: 60)
+
+      {:ok, _view, html} =
+        live(conn, "/#{profile.username}/meeting/#{meeting.uid}/cancel?locale=de")
+
+      assert html =~ unquote(theme.wrapper_class)
+      assert html =~ "60 Min."
+      refute html =~ "60 min<"
+    end
+  end
+
+  @tag :capture_log
+  test "a refused cancel explains itself in the visitor's language",
+       %{conn: conn, user: user, profile: profile} do
+    meeting =
+      insert(:meeting, organizer_user: user, organizer_user_id: user.id, status: "cancelled")
+
+    assert {:error, {:redirect, %{to: "/", flash: flash}}} =
+             live(conn, "/#{profile.username}/meeting/#{meeting.uid}/cancel?locale=de")
+
+    assert flash["error"] == "Der Termin wurde bereits abgesagt"
+  end
+
+  @tag :capture_log
+  test "an unknown meeting is reported without the internal wording",
+       %{conn: conn, profile: profile} do
+    assert {:error, {:redirect, %{to: "/", flash: flash}}} =
+             live(conn, "/#{profile.username}/meeting/#{UUID.generate()}/cancel")
+
+    assert flash["error"] == "This meeting could not be found. Please refresh and try again."
+  end
+
+  @tag :capture_log
+  test "an expired meeting's refusal is translated too",
+       %{conn: conn, user: user, profile: profile} do
+    meeting =
+      insert(:meeting, organizer_user: user, organizer_user_id: user.id, status: "expired")
+
+    assert {:error, {:redirect, %{to: "/", flash: flash}}} =
+             live(conn, "/#{profile.username}/meeting/#{meeting.uid}/cancel?locale=de")
+
+    assert flash["error"] == "Ein abgelaufener Termin kann nicht abgesagt werden"
   end
 end

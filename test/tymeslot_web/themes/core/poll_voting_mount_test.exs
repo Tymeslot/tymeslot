@@ -12,22 +12,23 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
   import Phoenix.LiveViewTest
   import Tymeslot.ConfigTestHelpers, only: [setup_config: 3]
   import Tymeslot.Factory
-  import Tymeslot.ThemeBookingFlowHelpers, only: [seed_booking_account: 3]
+  import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
 
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Polls
   alias Tymeslot.Polls.PollParticipantSchema
   alias Tymeslot.Repo
+  alias TymeslotWeb.ThemeTestMatrix
 
   setup :verify_on_exit!
 
   defp poll_path(username, token), do: "/#{username}/poll/#{token}"
 
   describe "mount for a booking-ready host" do
-    for {theme_id, theme_name} <- [{"1", "quill"}, {"2", "rhythm"}] do
-      test "renders the poll title in the #{theme_name} theme", %{conn: conn} do
+    for theme <- ThemeTestMatrix.all() do
+      test "renders the poll title in the #{theme.slug} theme", %{conn: conn} do
         %{user: user, profile: profile} =
-          seed_booking_account(unquote(theme_id), "host-#{unquote(theme_name)}", "Etc/UTC")
+          seed_booking_account(unquote(theme.id), "host-#{unquote(theme.slug)}", "Etc/UTC")
 
         poll = insert(:poll, user: user, title: "Roadmap sync")
         insert(:poll_time_slot, poll: poll)
@@ -38,9 +39,9 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
         assert html =~ "poll-voting"
       end
 
-      test "states the poll's timezone once in the #{theme_name} theme", %{conn: conn} do
+      test "states the poll's timezone once in the #{theme.slug} theme", %{conn: conn} do
         %{user: user, profile: profile} =
-          seed_booking_account(unquote(theme_id), "tz-host-#{unquote(theme_name)}", "Etc/UTC")
+          seed_booking_account(unquote(theme.id), "tz-host-#{unquote(theme.slug)}", "Etc/UTC")
 
         poll = insert(:poll, user: user, timezone: "Europe/Berlin")
         insert(:poll_time_slot, poll: poll, start_time: ~U[2026-06-15 08:00:00Z])
@@ -95,7 +96,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
       # The notice belongs to the theme, in the host's own branding, not to the
       # dispatcher's last-resort crash card.
       assert has_element?(view, "[data-testid='readiness-notice']")
-      refute html =~ "theme-error-retry-button"
+      refute html =~ "theme-error-title"
     end
   end
 

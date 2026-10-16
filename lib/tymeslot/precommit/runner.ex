@@ -8,6 +8,12 @@ defmodule Tymeslot.Precommit.Runner do
   as a second compile in a different `MIX_ENV`) is a barrier: if it fails,
   downstream steps would only report noise, so the run stops there.
 
+  A `mix compile` step also fails when it prints a warning located in a path
+  dependency, even though it exits zero. `--warnings-as-errors` never reaches a
+  dependency (`mix deps.compile` passes `--no-warnings-as-errors`), and a path
+  dependency is source the workspace owns, so its warnings are defects too.
+  Warnings in fetched packages still pass.
+
   ## What runs at the same time
 
   Once the compile barriers have passed, nothing downstream needs anything from
@@ -75,7 +81,10 @@ defmodule Tymeslot.Precommit.Runner do
   is what lets another repository's suite use that one at the same time.
   """
 
+  alias Mix.Project
+  alias Mix.SCM.Path, as: PathSCM
   alias Tymeslot.Infrastructure.Tasks
+  alias Tymeslot.Precommit.Tee
 
   @barrier_prefix "compile"
   @result_prefix "precommit: "
@@ -323,6 +332,34 @@ defmodule Tymeslot.Precommit.Runner do
 
   defp barrier?(name), do: String.starts_with?(name, @barrier_prefix)
 
+  # A compile step also fails on a warning located in a path dependency.
+  # `mix deps.compile` always compiles a dependency with
+  # `--no-warnings-as-errors`, so the flag on the step reaches this project's
+  # own modules only, and a warning in a sibling checkout this workspace owns
+  # would otherwise scroll past a green step. Warnings in fetched packages are
+  # left alone: they are not ours to fix.
+  defp cmd(["compile" | _rest] = args, env) do
+    {tee, code} =
+      System.cmd("mix", args,
+        into: %Tee{},
+        stderr_to_stdout: true,
+        env: [{"MIX_ENV", to_string(env)} | step_env(args)]
+      )
+
+    warned = dependency_warnings(Tee.output(tee), path_dependencies())
+
+    if code == 0 and warned != [] do
+      Mix.shell().error(
+        "Warnings in path dependencies: #{Enum.map_join(warned, ", ", &to_string/1)}. " <>
+          "Mix compiles dependencies without --warnings-as-errors, so this step fails on them instead."
+      )
+
+      1
+    else
+      code
+    end
+  end
+
   defp cmd(args, env) do
     {_output, code} =
       System.cmd("mix", args,
@@ -381,6 +418,25 @@ defmodule Tymeslot.Precommit.Runner do
   end
 
   def step_env(_args), do: []
+
+  @doc false
+  @spec dependency_warnings(String.t(), [atom()]) :: [atom()]
+  def dependency_warnings(_output, []), do: []
+
+  def dependency_warnings(output, apps) do
+    names = Map.new(apps, &{Atom.to_string(&1), &1})
+
+    # The compiler names a dependency's file as `(app version) path:line`,
+    # on the location line under each warning it prints.
+    ~r/^[\s│├└─]*\(([a-z][a-z0-9_]*) [^\s)]+\) \S+:\d+/mu
+    |> Regex.scan(output, capture: :all_but_first)
+    |> Enum.flat_map(fn [name] -> List.wrap(names[name]) end)
+    |> Enum.uniq()
+  end
+
+  defp path_dependencies do
+    for {app, PathSCM} <- Project.deps_scms(), do: app
+  end
 
   @doc false
   @spec dialyzer_schedulers(pos_integer()) :: pos_integer()
