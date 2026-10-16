@@ -5,8 +5,10 @@ defmodule Tymeslot.CalendarGrid.WorkingHours do
   midnight keyed by ISO weekday (1 is Monday), or `nil` for a day off.
 
   Breaks are not cut out: the shading says roughly when the organiser works,
-  and plan 4's bookable layer draws the exact bookable windows. An organiser
-  with no schedule gets weekdays from 08:00 to 18:00.
+  and the bookable-slot layer draws the exact bookable windows. A window that
+  runs past midnight is unshaded to midnight only; its after-midnight part is
+  not carried into the next day. An organiser with no schedule gets weekdays
+  from 08:00 to 18:00.
   """
 
   alias Tymeslot.Availability.Schedules
