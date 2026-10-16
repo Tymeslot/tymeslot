@@ -1075,6 +1075,7 @@ Each step is a separate LiveComponent:
 defmodule TymeslotWeb.Themes.Aurora.Scheduling.Components.OverviewComponent do
   use TymeslotWeb, :live_component
 
+  alias Tymeslot.MeetingTypes
   alias TymeslotWeb.Themes.Shared.StepEvents
 
   @impl Phoenix.LiveComponent
@@ -1090,13 +1091,19 @@ defmodule TymeslotWeb.Themes.Aurora.Scheduling.Components.OverviewComponent do
       <h1>Select Meeting Duration</h1>
       <div class="meeting-types">
         <%= for mt <- @meeting_types do %>
+          <% slug = MeetingTypes.effective_slug(mt) %>
           <button
+            type="button"
             phx-click="choose_duration"
-            phx-value-duration={mt.duration}
+            phx-value-duration={slug}
             phx-target={@myself}
-            class={duration_button_class(mt.duration, @duration)}
+            data-testid="duration-option"
+            data-duration={slug}
+            data-fact="meeting_type"
+            data-value={slug}
+            aria-current={if @selected_duration == slug, do: "true"}
           >
-            <%= format_duration(mt.duration) %>
+            {mt.name}
           </button>
         <% end %>
       </div>
@@ -1106,7 +1113,7 @@ defmodule TymeslotWeb.Themes.Aurora.Scheduling.Components.OverviewComponent do
 end
 ```
 
-Choosing a meeting type is the way on; a theme that wants a separate Next sends `select_duration` instead and renders one.
+Choosing a meeting type is the way on; a theme that wants a separate Next sends `select_duration` instead and renders one. A choice that navigates is not a toggle: mark the chosen one `aria-current="true"` (no attribute on the others), reserving `aria-pressed` for a control that stays put.
 
 **What a step may read.** Each step component receives the scheduling LiveView's assigns (`SchedulingPage` passes them through, `StepEvents.update/2` copies them in). A step relies only on those below; every other assign the LiveView holds belongs to the flow and may change. "mount" means the page holds the assign from the moment it mounts, possibly as a default (`nil`, `[]`, `""`) until the step that fills it; read an "optional" one as `assigns[:name]`. An assign a theme sets itself (in `handle_theme_event/3`) is absent until then, so it is read as `assigns[:name]` too. `step_assigns_doc_test.exs` holds every "mount" row to the mounted page of every registered theme.
 

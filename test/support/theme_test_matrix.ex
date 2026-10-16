@@ -115,7 +115,7 @@ defmodule TymeslotWeb.ThemeTestMatrix do
       video_background: false,
       pins_schedule_actions: false,
       schedule_view: :calendar,
-      selected_duration_selector: "[data-testid='duration-option'][aria-pressed='true']",
+      selected_duration_selector: "[data-testid='duration-option'][aria-current='true']",
       journey: :custom,
       fixture: false
     },
@@ -128,7 +128,7 @@ defmodule TymeslotWeb.ThemeTestMatrix do
       video_background: false,
       pins_schedule_actions: false,
       schedule_view: :calendar,
-      selected_duration_selector: "[data-testid='duration-option'][aria-pressed='true']",
+      selected_duration_selector: "[data-testid='duration-option'][aria-current='true']",
       journey: :classic,
       fixture: false
     },

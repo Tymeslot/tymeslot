@@ -288,6 +288,9 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     session
     |> pick_first_duration()
     |> assert_has(css("[data-fact='date'], [data-fact='time'], [data-fact='slot']", minimum: 1))
+    # The full two-button row the overflow check is meant to prove: a Back that
+    # never rendered would leave only the primary action to measure.
+    |> assert_has(css("[data-testid='schedule-actions'] [data-testid='back-step']"))
   end
 
   defp pick_first_duration(session) do
@@ -425,9 +428,11 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     session
   end
 
-  # The overview's primary action (its first meeting type, which is the way on,
-  # or a Next where a theme has one) must live inside the scrollable page
-  # (reachable by scrolling), not be clipped beyond the document's scroll height.
+  # The page's primary action must live inside the scrollable page (reachable
+  # by scrolling), not be clipped beyond the document's scroll height. On the
+  # overview that is its first meeting type, which is the way on; on the
+  # schedule it is the actions row's Next. Whichever of the two the page
+  # renders is the one measured.
   defp assert_cta_reachable(session, context) do
     me = self()
     ref = make_ref()
@@ -445,7 +450,9 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
 
     assert_receive {:cta, ^ref, value}, 5_000
 
-    assert is_list(value), "primary action not found at #{context}"
+    assert is_list(value),
+           "primary action (a Next, or else a meeting type) not found at #{context}"
+
     [cta_doc_bottom, cta_height, scroll_height] = value
 
     assert cta_height > 0, "primary action has zero height at #{context}"

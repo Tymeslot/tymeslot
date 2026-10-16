@@ -4,7 +4,7 @@ defmodule TymeslotWeb.Themes.Paper.ComponentsTest do
   logo, the avatar at its sizes, a meeting fact, and the overview: the
   introduction in the left pane, then in the right pane the list of meeting
   types with each type's length, locations, price and approval pill, the
-  choice marked by `aria-pressed`, and Next held back until one is chosen;
+  choice marked by `aria-current`, and Next held back until one is chosen;
   and the confirmation's duration badge.
   """
   use ExUnit.Case, async: true
@@ -138,7 +138,7 @@ defmodule TymeslotWeb.Themes.Paper.ComponentsTest do
 
       assert [row] = Floki.find(page, "button.paper-type[data-testid='duration-option']")
       assert Floki.attribute(row, "data-duration") == ["quick-chat"]
-      assert Floki.attribute(row, "aria-pressed") == ["false"]
+      assert Floki.attribute(row, "aria-current") == []
       assert text([row], ".paper-type__name") == "Quick Chat"
       assert text([row], ".paper-type__duration") == "30 minutes"
       assert text([row], ".paper-type__description") == "A short call"
@@ -154,7 +154,7 @@ defmodule TymeslotWeb.Themes.Paper.ComponentsTest do
       chosen = overview(selected_duration: "quick-chat")
 
       assert [row] = Floki.find(chosen, "button[data-duration='quick-chat']")
-      assert Floki.attribute(row, "aria-pressed") == ["true"]
+      assert Floki.attribute(row, "aria-current") == ["true"]
     end
 
     test "shows a paid type's price in the organiser's currency" do

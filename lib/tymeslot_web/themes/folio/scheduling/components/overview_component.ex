@@ -76,7 +76,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.OverviewComponent do
                   data-duration={slug}
                   data-fact="meeting_type"
                   data-value={slug}
-                  aria-pressed={to_string(@selected_duration == slug)}
+                  aria-current={if @selected_duration == slug, do: "true"}
                 >
                   <span class="folio-meeting__name">
                     {meeting_type.name}

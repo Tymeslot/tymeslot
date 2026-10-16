@@ -22,7 +22,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
 
   Choosing a row goes straight on to the schedule screen, the journey's
   second moment (`choose_duration`); back there, the row the visitor chose
-  stays marked (`aria-pressed`). The rows keep the test ids the shared
+  stays marked (`aria-current`). The rows keep the test ids the shared
   suites and the visual harness drive: `duration-option` with
   `data-duration`.
   """
@@ -124,7 +124,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
       data-duration={@slug}
       data-fact="meeting_type"
       data-value={@slug}
-      aria-pressed={to_string(@selected_duration == @slug)}
+      aria-current={if @selected_duration == @slug, do: "true"}
     >
       <span class="paper-type__main">
         <span class="paper-type__name">

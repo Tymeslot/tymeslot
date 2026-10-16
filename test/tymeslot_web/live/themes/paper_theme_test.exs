@@ -54,7 +54,7 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
 
     assert has_element?(
              view,
-             "button.paper-type[data-duration='quick-chat'][aria-pressed='false']"
+             "button.paper-type[data-duration='quick-chat']"
            )
 
     assert has_element?(view, "button.paper-type .paper-type__duration", "30 minutes")
@@ -75,7 +75,7 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
     # Back on the overview, the row the visitor chose stays marked.
     view |> element("[data-intent='back']") |> render_click()
 
-    assert has_element?(view, "button[data-duration='quick-chat'][aria-pressed='true']")
+    assert has_element?(view, "button[data-duration='quick-chat'][aria-current='true']")
   end
 
   test "each meeting type on the overview names where it is held",

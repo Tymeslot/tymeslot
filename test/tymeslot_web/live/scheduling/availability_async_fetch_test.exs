@@ -37,6 +37,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityAsyncFetchTest do
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Test.LogCapture
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.Live.Scheduling.{AvailabilityHelpers, CalendarHelpers}
 
   setup :verify_on_exit!
 
@@ -215,6 +216,39 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityAsyncFetchTest do
 
     wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
     assert :sys.get_state(view.pid).socket.assigns.availability_status == :loaded
+  end
+
+  @tag :capture_log
+  test "an arrival asking another question restarts the fetch in flight",
+       %{conn: conn, profile: profile} do
+    {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{profile.timezone}")
+    settle_availability(view)
+    view |> element("button[data-testid='duration-option']") |> render_click()
+    settle_availability(view)
+
+    # The fetches run inline here: killing a real task mid-query takes the
+    # sandbox connection with it (see `settle_availability/1`), and the fetch
+    # key, not where the work runs, is what is under test.
+    Application.put_env(:tymeslot, :async_availability_fetch, false)
+
+    socket = :sys.get_state(view.pid).socket
+    started = AvailabilityHelpers.ensure_month_availability(socket)
+    assert started.assigns.availability_status == :loading
+
+    # The same question (what choosing a type, then arriving, asks): kept.
+    kept = AvailabilityHelpers.ensure_month_availability(started)
+    assert kept.assigns.availability_task_ref == started.assigns.availability_task_ref
+    assert kept.assigns.availability_fetch_key == started.assigns.availability_fetch_key
+
+    # An arrival that anchors on another month asks another question: the
+    # fetch in flight answers the wrong month, so a new one replaces it.
+    next_month = Date.utc_today() |> Date.beginning_of_month() |> Date.shift(month: 1)
+    moved = CalendarHelpers.anchor_on(kept, next_month)
+    restarted = AvailabilityHelpers.ensure_month_availability(moved)
+
+    assert restarted.assigns.availability_task_ref != started.assigns.availability_task_ref
+    assert restarted.assigns.availability_fetch_key != started.assigns.availability_fetch_key
+    assert restarted.assigns.availability_status == :loading
   end
 
   # Every step of the flow that re-enters the schedule view cancels the

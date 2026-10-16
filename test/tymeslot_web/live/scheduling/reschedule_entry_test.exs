@@ -237,6 +237,7 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
         # Already chosen, and choosing it is the way on: the overview offers
         # no Next of its own to hold the booker back.
         assert has_element?(view, unquote(theme.selected_duration_selector))
+        assert has_element?(view, "#overview-step")
         refute has_element?(view, "#overview-step [data-testid='next-step']")
       end
 

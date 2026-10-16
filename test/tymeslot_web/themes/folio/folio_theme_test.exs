@@ -119,7 +119,7 @@ defmodule TymeslotWeb.Themes.Folio.FolioThemeTest do
       view = overview(profile)
       card = "[data-testid='duration-option'][data-duration='quick-chat']"
 
-      assert has_element?(view, "#{card}[aria-pressed='false']", "Quick Chat")
+      assert has_element?(view, "#{card}", "Quick Chat")
       refute has_element?(view, "#overview-step [data-testid='next-step']")
 
       view |> element(card) |> render_click()
@@ -127,7 +127,7 @@ defmodule TymeslotWeb.Themes.Folio.FolioThemeTest do
       refute has_element?(view, card)
 
       view |> element("[data-intent='back']") |> render_click()
-      assert has_element?(view, "#{card}[aria-pressed='true']")
+      assert has_element?(view, "#{card}[aria-current='true']")
     end
   end
 
