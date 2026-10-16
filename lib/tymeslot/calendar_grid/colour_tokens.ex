@@ -50,6 +50,10 @@ defmodule Tymeslot.CalendarGrid.ColourTokens do
     end
   end
 
+  @doc "The neutral token for anything without a colour of its own."
+  @spec fallback() :: String.t()
+  def fallback, do: token(EventColour.fallback_class())
+
   defp token(nil), do: nil
   defp token("bg-" <> name), do: name
 end

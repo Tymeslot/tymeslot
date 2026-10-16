@@ -11,10 +11,9 @@ defmodule Tymeslot.CalendarGrid.CalendarDirectory do
   unnoticed.
   """
 
+  alias Tymeslot.CalendarGrid.ColourTokens
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.ProviderConfig
-
-  @fallback_colour "calendar-fallback"
 
   @type calendar :: %{
           id: String.t(),
@@ -33,12 +32,16 @@ defmodule Tymeslot.CalendarGrid.CalendarDirectory do
           calendars: [calendar()]
         }
 
-  @doc "The rail's accounts, in the order the integrations are given."
+  @doc """
+  The rail's accounts, in the order the integrations are given. A calendar's
+  `hidden` flag is its own choice only: inside a hidden account it can still
+  be `false`, so a reader combines it with the account's flag.
+  """
   @spec accounts([map()], map(), map(), [integer()], MapSet.t()) :: [account()]
   def accounts(integrations, integration_tokens, calendar_tokens, hidden_ids, hidden_keys) do
     Enum.map(integrations, fn integration ->
       provider_read_only = ProviderConfig.read_only?(integration.provider)
-      colour = Map.get(integration_tokens, integration.id, @fallback_colour)
+      colour = Map.get(integration_tokens, integration.id, ColourTokens.fallback())
 
       calendars =
         integration
