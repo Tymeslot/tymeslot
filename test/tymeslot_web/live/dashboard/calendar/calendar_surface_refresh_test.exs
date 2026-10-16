@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRefreshTest do
 
   import TymeslotWeb.CalendarSurfaceHelpers
 
+  alias Ecto.Changeset
   alias Tymeslot.Repo
 
   # Refreshes are batched for 250 ms before they reload.
@@ -63,7 +64,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRefreshTest do
     lv = mounted(conn)
 
     integration
-    |> Ecto.Changeset.change(
+    |> Changeset.change(
       calendar_list: [
         %{"id" => "work", "name" => "Work", "selected" => true},
         %{"id" => "family", "name" => "Family", "selected" => true},
@@ -112,7 +113,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRefreshTest do
     lv = mounted(conn)
 
     integration
-    |> Ecto.Changeset.change(
+    |> Changeset.change(
       calendar_list: [
         %{"id" => "work", "name" => "Work", "selected" => true},
         %{"id" => "travel", "name" => "Travel", "selected" => true}
@@ -140,7 +141,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRefreshTest do
       open(lv, "event-#{review.id}")
       assert has_element?(lv, "#calendar-preview-title", "Design review")
 
-      review |> Ecto.Changeset.change(summary: "Design review, moved") |> Repo.update!()
+      review |> Changeset.change(summary: "Design review, moved") |> Repo.update!()
       send(lv.pid, {:calendar_events_updated, user.id, []})
       assert_push_event(lv, "calendar:events", %{reset: true}, @window)
 

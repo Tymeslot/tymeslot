@@ -23,22 +23,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.Visibility do
 
   @type socket :: Phoenix.LiveView.Socket.t()
 
-  @doc "Hides a shown account, or shows a hidden one."
+  @doc """
+  Hides a shown account, or shows a hidden one. Rate limited on the same
+  visibility budget as `toggle_calendar/3`.
+  """
   @spec toggle_account(socket(), term()) :: socket()
   def toggle_account(socket, raw_id) do
-    case owned_integration(socket, raw_id) do
-      {:ok, integration_id} ->
-        hidden = stored_hidden_accounts(socket)
+    with {:ok, integration_id} <- owned_integration(socket, raw_id),
+         :ok <- RateLimiter.check(:calendar_visibility, socket.assigns.current_user.id) do
+      hidden = stored_hidden_accounts(socket)
 
-        new_hidden =
-          if integration_id in hidden,
-            do: List.delete(hidden, integration_id),
-            else: [integration_id | hidden]
+      new_hidden =
+        if integration_id in hidden,
+          do: List.delete(hidden, integration_id),
+          else: [integration_id | hidden]
 
-        save_hidden_accounts(socket, new_hidden)
-
-      :error ->
-        socket
+      save_hidden_accounts(socket, new_hidden)
+    else
+      :error -> socket
+      {:error, :rate_limited, message} -> Flash.put_flash(socket, :warning, message)
     end
   end
 

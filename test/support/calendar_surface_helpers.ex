@@ -12,6 +12,7 @@ defmodule TymeslotWeb.CalendarSurfaceHelpers do
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
 
+  alias Plug.Conn
   alias Plug.Test
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
   alias Tymeslot.Test.ClockHelpers
@@ -27,7 +28,7 @@ defmodule TymeslotWeb.CalendarSurfaceHelpers do
   `timezone` (default `"Europe/London"`), `preferences` (a keyword list
   merged into the stored calendar preferences).
   """
-  @spec owner(Plug.Conn.t(), keyword()) :: %{conn: Plug.Conn.t(), user: map(), integration: map()}
+  @spec owner(Conn.t(), keyword()) :: %{conn: Conn.t(), user: map(), integration: map()}
   def owner(conn, opts \\ []) do
     ClockHelpers.freeze_clock(@now)
 
@@ -57,7 +58,7 @@ defmodule TymeslotWeb.CalendarSurfaceHelpers do
     conn =
       conn
       |> Test.init_test_session(%{})
-      |> Plug.Conn.fetch_session()
+      |> Conn.fetch_session()
       |> log_in_user(user)
 
     %{conn: conn, user: user, integration: integration}

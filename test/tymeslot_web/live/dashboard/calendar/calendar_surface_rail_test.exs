@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRailTest do
   import Tymeslot.Factory
   import TymeslotWeb.CalendarSurfaceHelpers
 
+  alias Phoenix.HTML
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
   alias Tymeslot.Security.RateLimiter
@@ -165,20 +166,43 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRailTest do
     conn: conn,
     user: user
   } do
+    message = exhaust_visibility_budget(user)
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    lv |> element("#calendar-rail [data-calendar-id='family']") |> render_click()
+
+    assert render(lv) =~ escaped(message)
+    refute_push_event(lv, "calendar:events", _payload)
+    assert Appearance.hidden_keys(Appearance.list_for_user(user.id)) == MapSet.new()
+    assert has_element?(lv, "#calendar-rail [data-calendar-id='family'][aria-checked='true']")
+  end
+
+  test "toggling an account past the rate limit shows the warning and changes nothing", %{
+    conn: conn,
+    user: user,
+    integration: integration
+  } do
+    message = exhaust_visibility_budget(user)
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    lv |> element("#calendar-rail [data-account-id='#{integration.id}']") |> render_click()
+
+    assert render(lv) =~ escaped(message)
+    refute_push_event(lv, "calendar:events", _payload)
+    assert CalendarPreferencesQueries.get_or_create(user.id).hidden_integration_ids == []
+  end
+
+  defp exhaust_visibility_budget(user) do
     {:error, :rate_limited, message} =
       Enum.find(
         Stream.repeatedly(fn -> RateLimiter.check(:calendar_visibility, user.id) end),
         &match?({:error, :rate_limited, _message}, &1)
       )
 
-    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-    lv |> element("#calendar-rail [data-calendar-id='family']") |> render_click()
-
-    assert render(lv) =~ message |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
-    refute_push_event(lv, "calendar:events", _payload)
-    assert Appearance.hidden_keys(Appearance.list_for_user(user.id)) == MapSet.new()
-    assert has_element?(lv, "#calendar-rail [data-calendar-id='family'][aria-checked='true']")
+    message
   end
+
+  defp escaped(message), do: message |> HTML.html_escape() |> HTML.safe_to_string()
 
   test "showing everything clears a hidden account as well as hidden calendars", %{
     conn: conn,
