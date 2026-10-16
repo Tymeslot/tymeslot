@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Themes.Paper.ScheduleComponentTest do
   import Phoenix.LiveViewTest, only: [render_component: 2]
   import Tymeslot.Factory
 
+  alias Phoenix.Component
   alias Tymeslot.ThemeCustomizations.Tokens
   alias TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent
 
@@ -211,7 +212,7 @@ defmodule TymeslotWeb.Themes.Paper.ScheduleComponentTest do
           week_slots: week_slots(),
           selected_date: @wednesday,
           selected_time: "10:00 AM",
-          form: Phoenix.Component.to_form(%{"name" => "", "email" => "", "message" => ""}),
+          form: Component.to_form(%{"name" => "", "email" => "", "message" => ""}),
           is_rescheduling: false,
           username_context: "ada",
           validation_errors: %{},
