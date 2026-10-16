@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
   alias Tymeslot.CalendarGrid.Period
   alias TymeslotWeb.Dashboard.Calendar.MiniMonth
   alias TymeslotWeb.Dashboard.Calendar.Navigation
+  alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Helpers.LocaleFormat
 
   attr :view, :atom, required: true
@@ -26,6 +27,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
   attr :open_menu, :atom, default: nil
   attr :mini_cursor, :any, required: true
   attr :week_start, :atom, required: true
+  attr :density, :string, required: true
+  attr :fold_night, :boolean, required: true
   attr :target, :any, required: true
 
   @spec toolbar(map()) :: Phoenix.LiveView.Rendered.t()
@@ -139,7 +142,36 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
           <.icon name="hero-adjustments-horizontal" class="h-4 w-4" />
         </:trigger>
         <:panel>
-          <%!-- Display controls --%>
+          <div class="flex items-center justify-between gap-3">
+            <span class="text-token-sm font-medium text-tymeslot-700">
+              {dgettext("dashboard_calendar", "Density")}
+            </span>
+            <.segmented_control
+              id="calendar-density"
+              size={:sm}
+              value={@density}
+              on_change="calendar:set_density"
+              param="option"
+              target={@target}
+              aria_label={dgettext("dashboard_calendar", "Density")}
+            >
+              <:option value="comfortable" label={dgettext("dashboard_calendar", "Comfortable")} />
+              <:option value="compact" label={dgettext("dashboard_calendar", "Compact")} />
+            </.segmented_control>
+          </div>
+          <div class="flex items-center justify-between gap-3">
+            <span class="text-token-sm font-medium text-tymeslot-700">
+              {dgettext("dashboard_calendar", "Fold early hours")}
+            </span>
+            <StatusSwitch.status_switch
+              id="calendar-fold-night"
+              checked={@fold_night}
+              on_change="calendar:toggle_fold_night"
+              target={@target}
+              size={:small}
+              aria_label={dgettext("dashboard_calendar", "Fold early hours")}
+            />
+          </div>
           <div class="border-t border-tymeslot-100 pt-3">
             <%!-- No phx-target: DashboardLive swaps the component. --%>
             <.action_button

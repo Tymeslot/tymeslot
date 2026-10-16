@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias Tymeslot.CalendarGrid.Period
   alias TymeslotWeb.Dashboard.Calendar.Canvas
   alias TymeslotWeb.Dashboard.Calendar.ClientStrings
+  alias TymeslotWeb.Dashboard.Calendar.DisplayPreferences
   alias TymeslotWeb.Dashboard.Calendar.Navigation
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Dashboard.Calendar.Toolbar
@@ -53,6 +54,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         open_menu={@open_menu}
         mini_cursor={@mini_cursor}
         week_start={Period.week_start(@preferences.week_start_day)}
+        density={@preferences.density}
+        fold_night={@preferences.fold_night}
         target={@myself}
       />
       <div class="flex min-h-0 flex-1">
@@ -99,4 +102,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   def handle_event("calendar:mini_shift", %{"dir" => dir}, socket) when dir in [-1, 1],
     do:
       {:noreply, assign(socket, :mini_cursor, Date.shift(socket.assigns.mini_cursor, month: dir))}
+
+  def handle_event("calendar:set_density", %{"option" => density}, socket),
+    do: {:noreply, DisplayPreferences.set_density(socket, density)}
+
+  def handle_event("calendar:toggle_fold_night", _params, socket),
+    do: {:noreply, DisplayPreferences.toggle_fold_night(socket)}
 end
