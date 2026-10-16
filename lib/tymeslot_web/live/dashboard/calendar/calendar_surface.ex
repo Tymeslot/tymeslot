@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.ClientStrings
   alias TymeslotWeb.Dashboard.Calendar.DisplayPreferences
   alias TymeslotWeb.Dashboard.Calendar.Navigation
+  alias TymeslotWeb.Dashboard.Calendar.Preview
   alias TymeslotWeb.Dashboard.Calendar.Rail
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Dashboard.Calendar.Toolbar
@@ -82,7 +83,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
           target={@myself}
         />
       </div>
-      <%!-- Preview --%>
+      <Preview.preview :if={@preview} preview={@preview} target={@myself} />
     </div>
     """
   end
@@ -138,4 +139,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   def handle_event("calendar:show_all", _params, socket),
     do: {:noreply, Visibility.show_all(socket)}
+
+  # Only an event in the loaded window, which holds this organiser's events
+  # alone, can be opened; anything else answers `opened: false`.
+  def handle_event("calendar:open", %{"id" => id}, socket) when is_binary(id) do
+    case Map.fetch(socket.assigns.events_by_id, id) do
+      {:ok, event} ->
+        preview = Preview.build(event, Preview.context(socket.assigns))
+        {:reply, %{opened: true}, assign(socket, preview: preview, open_menu: nil)}
+
+      :error ->
+        {:reply, %{opened: false}, assign(socket, :preview, nil)}
+    end
+  end
+
+  def handle_event("calendar:close_preview", _params, socket),
+    do: {:noreply, socket |> assign(:preview, nil) |> push_event("calendar:preview-closed", %{})}
 end
