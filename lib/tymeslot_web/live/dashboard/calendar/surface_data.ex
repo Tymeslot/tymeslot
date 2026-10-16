@@ -87,7 +87,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       preferences: preferences,
       integrations: integrations,
       integration_tokens: ColourTokens.for_integrations(integrations),
-      calendar_tokens: ColourTokens.for_calendars(appearances),
+      calendar_tokens: ColourTokens.for_calendars(integrations, appearances),
       hidden_integration_ids: preferences.hidden_integration_ids,
       hidden_calendar_keys: Appearance.hidden_keys(appearances),
       working_hours: WorkingHours.for_profile(socket.assigns[:profile])

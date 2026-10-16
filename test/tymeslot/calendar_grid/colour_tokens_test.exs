@@ -23,13 +23,58 @@ defmodule Tymeslot.CalendarGrid.ColourTokensTest do
              %{5 => "calendar-1", 9 => "calendar-2"}
   end
 
-  test "only calendars with a chosen colour get a token" do
-    appearances = [
-      %{calendar_integration_id: 1, provider_calendar_id: "work", colour: "sage"},
-      %{calendar_integration_id: 1, provider_calendar_id: "home", colour: nil}
-    ]
+  describe "for_calendars/2" do
+    defp account(id, calendar_ids, colour \\ nil) do
+      %{
+        id: id,
+        colour: colour,
+        calendar_list: Enum.map(calendar_ids, &%{"id" => &1, "selected" => true})
+      }
+    end
 
-    assert ColourTokens.for_calendars(appearances) == %{{1, "work"} => "calendar-sage"}
+    test "a chosen colour wins; the account's first calendar falls through to the account" do
+      appearances = [
+        %{calendar_integration_id: 1, provider_calendar_id: "home", colour: "sage"},
+        %{calendar_integration_id: 1, provider_calendar_id: "work", colour: nil}
+      ]
+
+      assert ColourTokens.for_calendars([account(1, ["work", "home"])], appearances) == %{
+               {1, "home"} => "calendar-sage"
+             }
+    end
+
+    test "further calendars of one account take rotation tokens no account uses" do
+      tokens = ColourTokens.for_calendars([account(1, ["work", "family", "gym"])], [])
+
+      assert tokens == %{{1, "family"} => "calendar-2", {1, "gym"} => "calendar-3"}
+    end
+
+    test "the spare tokens skip every account's colour and every chosen one" do
+      appearances = [%{calendar_integration_id: 2, provider_calendar_id: "a", colour: "sage"}]
+      integrations = [account(2, ["a", "b"]), account(1, ["x", "y"], "tomato")]
+
+      tokens = ColourTokens.for_calendars(integrations, appearances)
+
+      # Account 1 is tomato, account 2 takes the rotation's second slot.
+      assert tokens == %{
+               {1, "y"} => "calendar-1",
+               {2, "a"} => "calendar-sage",
+               {2, "b"} => "calendar-3"
+             }
+    end
+
+    test "unselected calendars get nothing" do
+      integration = %{
+        id: 1,
+        colour: nil,
+        calendar_list: [
+          %{"id" => "work", "selected" => true},
+          %{"id" => "old", "selected" => false}
+        ]
+      }
+
+      assert ColourTokens.for_calendars([integration], []) == %{}
+    end
   end
 
   describe "for_event/3" do

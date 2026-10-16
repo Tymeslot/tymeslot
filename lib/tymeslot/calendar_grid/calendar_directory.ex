@@ -82,13 +82,18 @@ defmodule Tymeslot.CalendarGrid.CalendarDirectory do
     end)
   end
 
-  # `calendar_list` is persisted as embedded entries, but a hand-written row
-  # or an older record may still be a plain map, so normalise before reading.
-  defp synced_entries(%{calendar_list: list}) when is_list(list) do
+  @doc """
+  An account's synced calendars (those marked `selected`), in its
+  `calendar_list` order. The list is persisted as embedded entries, but a
+  hand-written row or an older record may still hold plain maps, so each is
+  normalised before it is read.
+  """
+  @spec synced_entries(map()) :: [CalendarEntry.t()]
+  def synced_entries(%{calendar_list: list}) when is_list(list) do
     list
     |> Enum.map(&CalendarEntry.normalize/1)
     |> Enum.filter(&(&1.selected and is_binary(&1.id)))
   end
 
-  defp synced_entries(_integration), do: []
+  def synced_entries(_integration), do: []
 end

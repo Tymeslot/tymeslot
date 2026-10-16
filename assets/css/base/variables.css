@@ -339,6 +339,8 @@
   --cal-focus: var(--color-primary-500);
   --cal-today: var(--color-primary-700);
   --cal-booking: var(--color-primary-700);
+  /* So a booking's swatch reads var(--color-<token>) like every calendar's. */
+  --color-booking: var(--cal-booking);
   --cal-on-booking: #ffffff;
   --cal-on-check: #ffffff;
   --cal-now: var(--color-error-strong);
