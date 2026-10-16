@@ -597,8 +597,3 @@
 .cal-check.is-checked {
   background: var(--cal-ev);
 }
-
-.cal-check:focus-visible {
-  outline: 2px solid var(--cal-focus);
-  outline-offset: 2px;
-}

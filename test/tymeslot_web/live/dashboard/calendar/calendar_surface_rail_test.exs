@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRailTest do
 
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
+  alias Tymeslot.Security.RateLimiter
 
   setup %{conn: conn}, do: owner(conn)
 
@@ -108,5 +109,96 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRailTest do
     |> render_hook("calendar:toggle_account", %{"integration-id" => "999999999"})
 
     assert CalendarPreferencesQueries.get_or_create(user.id).hidden_integration_ids == []
+  end
+
+  test "inside a hidden account the calendars keep their own ticks and cannot be toggled", %{
+    conn: conn,
+    user: user,
+    integration: integration
+  } do
+    event(integration, "work", "Design review", ~U[2026-10-14 09:00:00Z])
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    lv |> element("#calendar-rail [data-account-id='#{integration.id}']") |> render_click()
+    _hidden = pushed_titles(lv)
+
+    assert has_element?(lv, "#calendar-rail [data-calendar-id='work'][aria-checked='true']")
+
+    assert has_element?(
+             lv,
+             "#calendar-rail [data-calendar-id='work'][aria-disabled='true'][disabled]"
+           )
+
+    refute has_element?(lv, "#calendar-rail [data-calendar-id='work'][phx-click]")
+
+    lv
+    |> element("#calendar-canvas")
+    |> render_hook("calendar:toggle_calendar", %{
+      "integration-id" => to_string(integration.id),
+      "calendar-id" => "work"
+    })
+
+    refute_push_event(lv, "calendar:events", _payload)
+    appearances = Appearance.list_for_user(user.id)
+    assert Enum.reject(appearances, &(&1.hidden == false)) == []
+    assert Appearance.hidden_keys(appearances) == MapSet.new()
+  end
+
+  test "a calendar id on an account that is not the organiser's changes nothing", %{
+    conn: conn,
+    user: user
+  } do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    lv
+    |> element("#calendar-canvas")
+    |> render_hook("calendar:toggle_calendar", %{
+      "integration-id" => "999999999",
+      "calendar-id" => "work"
+    })
+
+    refute_push_event(lv, "calendar:events", _payload)
+    assert Appearance.list_for_user(user.id) == []
+  end
+
+  test "toggling past the rate limit shows the warning and changes nothing", %{
+    conn: conn,
+    user: user
+  } do
+    {:error, :rate_limited, message} =
+      Enum.find(
+        Stream.repeatedly(fn -> RateLimiter.check(:calendar_visibility, user.id) end),
+        &match?({:error, :rate_limited, _message}, &1)
+      )
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    lv |> element("#calendar-rail [data-calendar-id='family']") |> render_click()
+
+    assert render(lv) =~ message |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+    refute_push_event(lv, "calendar:events", _payload)
+    assert Appearance.hidden_keys(Appearance.list_for_user(user.id)) == MapSet.new()
+    assert has_element?(lv, "#calendar-rail [data-calendar-id='family'][aria-checked='true']")
+  end
+
+  test "showing everything clears a hidden account as well as hidden calendars", %{
+    conn: conn,
+    user: user,
+    integration: integration
+  } do
+    event(integration, "work", "Design review", ~U[2026-10-14 09:00:00Z])
+    event(integration, "family", "School run", ~U[2026-10-14 07:00:00Z])
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    lv |> element("#calendar-rail [data-calendar-id='family']") |> render_click()
+    _titles = pushed_titles(lv)
+    lv |> element("#calendar-rail [data-account-id='#{integration.id}']") |> render_click()
+    assert pushed_titles(lv) == []
+
+    lv |> element("#calendar-show-all") |> render_click()
+
+    assert Enum.sort(pushed_titles(lv)) == ["Design review", "School run"]
+
+    assert CalendarPreferencesQueries.get_or_create(user.id).hidden_integration_ids == []
+    assert Appearance.hidden_keys(Appearance.list_for_user(user.id)) == MapSet.new()
   end
 end

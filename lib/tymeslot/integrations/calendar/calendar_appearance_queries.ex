@@ -47,4 +47,16 @@ defmodule Tymeslot.Integrations.Calendar.CalendarAppearanceQueries do
     |> where([a], a.calendar_integration_id in ^integration_ids)
     |> Repo.all()
   end
+
+  @doc "Clears `hidden` on every stored choice for the given integrations, in one statement."
+  @spec unhide_all([integer()]) :: :ok
+  def unhide_all([]), do: :ok
+
+  def unhide_all(integration_ids) do
+    CalendarAppearanceSchema
+    |> where([a], a.calendar_integration_id in ^integration_ids and a.hidden == true)
+    |> Repo.update_all(set: [hidden: false, updated_at: DateTime.utc_now()])
+
+    :ok
+  end
 end

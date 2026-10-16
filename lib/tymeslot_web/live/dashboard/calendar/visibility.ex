@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Visibility do
   `Tymeslot.Integrations.Calendar.Appearance`, which checks the account is
   the organiser's. Every change reloads the window and pushes it with a
   cache reset, so events from a hidden calendar cannot linger in the hook.
+  Toggles filter the window already loaded rather than querying it again.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -27,7 +28,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Visibility do
   def toggle_account(socket, raw_id) do
     case owned_integration(socket, raw_id) do
       {:ok, integration_id} ->
-        hidden = socket.assigns.hidden_integration_ids
+        hidden = stored_hidden_accounts(socket)
 
         new_hidden =
           if integration_id in hidden,
@@ -51,6 +52,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Visibility do
     user_id = socket.assigns.current_user.id
 
     with {:ok, integration_id} <- owned_integration(socket, raw_id),
+         false <- integration_id in socket.assigns.hidden_integration_ids,
          key = {integration_id, calendar_id},
          hide? = not MapSet.member?(socket.assigns.hidden_calendar_keys, key),
          :ok <- RateLimiter.check(:calendar_visibility, user_id),
@@ -63,6 +65,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Visibility do
       socket |> assign(hidden_calendar_keys: keys) |> SurfaceData.refresh()
     else
       :error -> socket
+      true -> socket
       {:error, :rate_limited, message} -> Flash.put_flash(socket, :warning, message)
       {:error, _reason} -> failed(socket)
     end
@@ -76,9 +79,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Visibility do
     user_id = socket.assigns.current_user.id
 
     with :ok <- RateLimiter.check(:calendar_visibility, user_id),
-         :ok <- unhide_calendars(user_id, socket.assigns.hidden_calendar_keys),
-         {:ok, _preferences} <-
-           CalendarGrid.save_preferences(user_id, %{hidden_integration_ids: []}) do
+         {:ok, _preferences} <- Appearance.show_all(user_id) do
       socket
       |> SurfaceData.put_preference(:hidden_integration_ids, [])
       |> assign(hidden_integration_ids: [], hidden_calendar_keys: MapSet.new())
@@ -89,13 +90,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.Visibility do
     end
   end
 
-  defp unhide_calendars(user_id, keys) do
-    Enum.reduce_while(keys, :ok, fn {integration_id, calendar_id}, :ok ->
-      case Appearance.set_hidden(user_id, integration_id, calendar_id, false) do
-        {:ok, _appearance} -> {:cont, :ok}
-        error -> {:halt, error}
-      end
-    end)
+  # What is stored, not what this socket last saw: a second tab may have
+  # hidden another account since, and a write from stale assigns would undo it.
+  defp stored_hidden_accounts(socket) do
+    socket.assigns.current_user.id
+    |> CalendarGrid.get_or_create_preferences()
+    |> Map.fetch!(:hidden_integration_ids)
   end
 
   defp save_hidden_accounts(socket, hidden) do

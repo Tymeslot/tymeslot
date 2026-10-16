@@ -42,6 +42,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       accounts: [],
       hidden_count: 0,
       working_hours: WorkingHours.fallback(),
+      window_events: [],
       events: [],
       events_by_id: %{},
       window: nil,
@@ -145,19 +146,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
 
     {start_dt, end_dt} = EventWindow.utc_range(window.first, window.last, timezone)
 
+    window_events =
+      EventWindow.list_events(user.id, socket.assigns.integrations, start_dt, end_dt)
+
+    socket |> assign(window: window, window_events: window_events) |> filter_events()
+  end
+
+  # Applies the hidden choices to the window's unfiltered events, so a toggle
+  # needs no query.
+  defp filter_events(socket) do
     events =
-      user.id
-      |> EventWindow.list_events(socket.assigns.integrations, start_dt, end_dt)
-      |> EventWindow.reject_hidden(
+      EventWindow.reject_hidden(
+        socket.assigns.window_events,
         socket.assigns.hidden_integration_ids,
         socket.assigns.hidden_calendar_keys
       )
 
-    assign(socket,
-      window: window,
-      events: events,
-      events_by_id: Map.new(events, &{EventPayload.id(&1), &1})
-    )
+    assign(socket, events: events, events_by_id: Map.new(events, &{EventPayload.id(&1), &1}))
   end
 
   @doc "The days the current view shows."
@@ -212,9 +217,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   @spec push_settings(socket()) :: socket()
   def push_settings(socket), do: push_event(socket, "calendar:settings", settings(socket.assigns))
 
-  @doc "After a visibility change: rebuild the rail, reload, and push with a cache reset."
+  @doc """
+  After a visibility change: rebuild the rail, re-filter the loaded window
+  (no query) and push with a cache reset.
+  """
   @spec refresh(socket()) :: socket()
-  def refresh(socket), do: socket |> assign_accounts() |> load_window() |> push_events(true)
+  def refresh(socket), do: socket |> assign_accounts() |> filter_events() |> push_events(true)
 
   @doc "After a sync or an outside change: reload everything and push with a cache reset."
   @spec reload(socket()) :: socket()

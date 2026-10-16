@@ -16,6 +16,8 @@ defmodule Tymeslot.Integrations.Calendar.Appearance do
   alias Tymeslot.Integrations.Calendar.CalendarAppearanceQueries
   alias Tymeslot.Integrations.Calendar.CalendarAppearanceSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
+  alias Tymeslot.Repo
 
   @type result ::
           {:ok, CalendarAppearanceSchema.t()} | {:error, :not_found | Ecto.Changeset.t()}
@@ -36,6 +38,25 @@ defmodule Tymeslot.Integrations.Calendar.Appearance do
   def set_hidden(user_id, integration_id, provider_calendar_id, hidden) do
     with_owned_integration(user_id, integration_id, fn ->
       CalendarAppearanceQueries.upsert(integration_id, provider_calendar_id, %{hidden: hidden})
+    end)
+  end
+
+  @doc """
+  Shows every account and calendar the organiser has hidden: clears each
+  stored calendar choice and the hidden-account list together, or neither.
+  """
+  @spec show_all(integer()) :: {:ok, term()} | {:error, term()}
+  def show_all(user_id) do
+    Repo.transaction(fn ->
+      user_id
+      |> CalendarIntegrationQueries.list_active_for_user()
+      |> Enum.map(& &1.id)
+      |> CalendarAppearanceQueries.unhide_all()
+
+      case CalendarPreferencesQueries.upsert(user_id, %{hidden_integration_ids: []}) do
+        {:ok, preferences} -> preferences
+        {:error, reason} -> Repo.rollback(reason)
+      end
     end)
   end
 

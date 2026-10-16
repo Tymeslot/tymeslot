@@ -47,7 +47,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
         icon="hero-bars-3"
         size={:sm}
         label={dgettext("dashboard_calendar", "Show or hide the calendar list")}
-        aria-controls="calendar-rail"
+        aria-controls={@rail_open && "calendar-rail"}
         aria-expanded={to_string(@rail_open)}
         phx-click="calendar:toggle_rail"
         phx-target={@target}

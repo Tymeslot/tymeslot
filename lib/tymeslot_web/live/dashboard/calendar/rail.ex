@@ -62,15 +62,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
               data={[{"data-account-id", account.id}]}
               target={@target}
             />
-            <span class="min-w-0 flex-1 truncate text-token-sm font-semibold text-tymeslot-800">
+            <span
+              id={"calendar-account-#{account.id}-name"}
+              class="min-w-0 flex-1 truncate text-token-sm font-semibold text-tymeslot-800"
+            >
               {account.name}
             </span>
             <.lock :if={account.read_only} label={dgettext("dashboard_calendar", "Read only")} />
           </div>
-          <ul class={["ml-6 space-y-0.5", account.hidden && "opacity-60"]}>
+          <ul
+            role="group"
+            aria-labelledby={"calendar-account-#{account.id}-name"}
+            class={["ml-6 space-y-0.5", account.hidden && "opacity-60"]}
+          >
             <li :for={calendar <- account.calendars} class="flex items-center gap-2 py-0.5">
               <.check
-                checked={not (account.hidden or calendar.hidden)}
+                checked={not calendar.hidden}
+                disabled={account.hidden}
                 colour={calendar.colour}
                 label={calendar.name}
                 event="calendar:toggle_calendar"
@@ -92,6 +100,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   end
 
   attr :checked, :boolean, required: true
+  attr :disabled, :boolean, default: false
   attr :colour, :string, required: true, doc: "a colour token from ColourTokens"
   attr :label, :string, required: true
   attr :event, :string, required: true
@@ -106,9 +115,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
       role="checkbox"
       aria-checked={to_string(@checked)}
       aria-label={@label}
-      phx-click={@event}
+      aria-disabled={@disabled && "true"}
+      disabled={@disabled}
+      phx-click={!@disabled && @event}
       phx-target={@target}
-      class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-token-sm focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400"
+      class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-token-sm disabled:cursor-not-allowed focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400"
       {value_attrs(@values)}
       {@data}
     >
