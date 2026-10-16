@@ -15,13 +15,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgctxt "paper"
 msgid "Book a meeting"
-msgstr "Prenota un incontro"
+msgstr "Prenota una riunione"
 
 #: lib/tymeslot_web/themes/paper/voice.ex
 #, elixir-autogen, elixir-format
 msgctxt "paper"
 msgid "Book a meeting with %{name}"
-msgstr "Prenota un incontro con %{name}"
+msgstr "Prenota una riunione con %{name}"
 
 #: lib/tymeslot_web/themes/paper/voice.ex
 #, elixir-autogen, elixir-format
@@ -33,7 +33,7 @@ msgstr "Conferma la prenotazione"
 #, elixir-autogen, elixir-format
 msgctxt "paper"
 msgid "Select a meeting type"
-msgstr "Seleziona un tipo di incontro"
+msgstr "Seleziona un tipo di riunione"
 
 #: lib/tymeslot_web/themes/paper/voice.ex
 #, elixir-autogen, elixir-format

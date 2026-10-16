@@ -17,7 +17,9 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
   import Tymeslot.Factory
   import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
 
+  alias Ecto.Changeset
   alias Tymeslot.MeetingTypes.LocationOption
+  alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
@@ -167,6 +169,23 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
     assert has_element?(view, ".paper-title", "Book a meeting with")
     assert has_element?(view, ".paper-intro__instruction", "Select a meeting type")
     refute has_element?(view, ".paper-intro__greeting")
+  end
+
+  test "the organiser's own booking text replaces Paper's voice",
+       %{conn: conn, profile: profile} do
+    profile
+    |> Changeset.change(%{
+      booking_text_enabled: true,
+      booking_heading: "Ready to grow your business?",
+      booking_greeting: "I am Ana.",
+      booking_instruction: "Choose a session."
+    })
+    |> Repo.update!()
+
+    {:ok, view, _html} = live(conn, ~p"/#{profile.username}")
+
+    assert has_element?(view, ".paper-title", "Ready to grow your business?")
+    assert has_element?(view, ".paper-intro__greeting", "I am Ana.")
   end
 
   test "the dashboard's and the onboarding wizard's pickers offer Paper" do

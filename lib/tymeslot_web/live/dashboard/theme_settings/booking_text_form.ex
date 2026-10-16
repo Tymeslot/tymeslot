@@ -161,9 +161,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
                 phx-debounce="600"
                 maxlength={Constraints.booking_welcome_line_max_length()}
                 label={dgettext("dashboard_appearance", "Greeting")}
-                placeholder={
-                  BookingText.default_greeting(name(@profile), current_theme_key(@profile))
-                }
+                placeholder={default_for(:booking_greeting, @profile)}
               />
 
               <.input
@@ -174,7 +172,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
                 phx-debounce="600"
                 maxlength={Constraints.booking_welcome_line_max_length()}
                 label={dgettext("dashboard_appearance", "Instruction")}
-                placeholder={BookingText.default_instruction(current_theme_key(@profile))}
+                placeholder={default_for(:booking_instruction, @profile)}
               />
 
               <.info_box variant={:info}>
@@ -329,7 +327,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
   # instruction label). The field is required while the customisation is on,
   # so it starts from the shared wording, which the organiser edits or keeps.
   defp seeded(text, shared) do
-    if is_binary(text) and String.trim(text) != "", do: text, else: shared.()
+    if String.trim(text) != "", do: text, else: shared.()
   end
 
   # Clearing on the way in is what makes a newer edit replace a held one: this

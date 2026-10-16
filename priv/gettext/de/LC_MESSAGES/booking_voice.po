@@ -33,10 +33,10 @@ msgstr "Buchung bestätigen"
 #, elixir-autogen, elixir-format
 msgctxt "paper"
 msgid "Select a meeting type"
-msgstr "Terminart auswählen"
+msgstr "Termintyp auswählen"
 
 #: lib/tymeslot_web/themes/paper/voice.ex
 #, elixir-autogen, elixir-format
 msgctxt "paper"
 msgid "That time was just booked. Choose another."
-msgstr "Diese Zeit wurde gerade gebucht. Wählen Sie eine andere."
+msgstr "Dieser Termin wurde gerade gebucht. Wählen Sie einen anderen."

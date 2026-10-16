@@ -33,7 +33,7 @@ msgstr "Confirmer la réservation"
 #, elixir-autogen, elixir-format
 msgctxt "paper"
 msgid "Select a meeting type"
-msgstr "Sélectionnez un type de rendez-vous"
+msgstr "Sélectionnez un type de réunion"
 
 #: lib/tymeslot_web/themes/paper/voice.ex
 #, elixir-autogen, elixir-format

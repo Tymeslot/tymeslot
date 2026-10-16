@@ -22,7 +22,7 @@ A tone (neutral, cool or warm, or a custom seed colour), a colour mode (light, d
 
 ## Voice
 
-Today Paper shares the booking copy every theme shares, its heading naming the organiser ("Schedule with Ana Silva") and its confirmation headline its own ("Booking confirmed"). Its own voice, **neutral**, is the brief below; it lands as Paper's voice module.
+Paper speaks in its own voice, **neutral**, which is the brief below. `Paper.Voice` words the shared booking lines (heading "Book a meeting with Ana Silva", "Select a meeting type", "Confirm booking", the slot-taken notice) and gives no greeting; its time prompt, empty week and confirmation headline are still shared or component copy until its own lines land.
 
 - **Tone:** plain, short, invisible. It never talks about itself or the organiser's personality.
 - **Rules:** imperative labels, no exclamation marks, no greetings, numbers before words.

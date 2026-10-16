@@ -37,7 +37,9 @@ defmodule TymeslotWeb.Themes.Paper.VoiceTest do
   end
 
   test "keeps the shared wording for the lines it leaves alone" do
-    for key <- [:held_message, :organizer_fragment, :submit_request, :submit_reschedule] do
+    for key <-
+          Voice.keys() --
+            [:heading, :heading_named, :greeting, :instruction, :submit, :slot_taken] do
       bindings = Map.new(Voice.bindings(key), &{&1, "Ana Silva"})
       assert line(key, bindings) == :shared, "expected #{key} to keep the shared wording"
     end
