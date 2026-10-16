@@ -55,9 +55,9 @@ body.folio-theme {
 .folio-language {
   display: flex;
   justify-content: flex-end;
-  box-sizing: content-box;
-  width: auto;
-  max-width: var(--folio-column);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: calc(var(--folio-column) + 2 * var(--folio-gutter));
   margin-inline: auto;
   padding: var(--space-sm) var(--folio-gutter);
 }
@@ -92,6 +92,7 @@ body.folio-theme {
 
 /* A default page's card keeps the column it had. */
 .folio-page > .content-area > .folio-card {
+  width: min(100% - 2 * var(--space-md), var(--folio-column));
   max-width: var(--folio-column);
   margin: var(--space-xl) auto 0;
 }
@@ -100,7 +101,8 @@ body.folio-theme {
    and on the booking page and its confirmation, which have none. */
 .folio-card :focus-visible,
 .journey--continuous :focus-visible,
-.folio-outcome-page :focus-visible {
+.folio-outcome-page :focus-visible,
+.folio-plain-page :focus-visible {
   outline: var(--border-width-medium) solid var(--theme-primary);
   outline-offset: var(--border-width-medium);
 }

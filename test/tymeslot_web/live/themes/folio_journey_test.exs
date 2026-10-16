@@ -71,6 +71,12 @@ defmodule TymeslotWeb.Live.Themes.FolioJourneyTest do
     assert has_element?(view, "#offer-step[data-moment-state='done']")
     assert has_element?(view, "#when-step [data-fact='date']")
 
+    # The stylesheet marks the chosen type by this attribute.
+    assert has_element?(
+             view,
+             "#offer-step [data-fact='meeting_type'][data-value='quick-chat'][aria-current='true']"
+           )
+
     assert has_element?(
              view,
              "#masthead-step [data-testid='summary-bar-meeting-type']",

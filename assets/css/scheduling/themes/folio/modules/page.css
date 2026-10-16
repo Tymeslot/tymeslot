@@ -122,6 +122,7 @@
 }
 
 .folio-section__title {
+  scroll-margin-top: var(--folio-summary-offset);
   margin: 0;
   font-family: var(--theme-font-heading);
   font-size: var(--theme-font-size-2xl);
@@ -162,7 +163,7 @@
   background: var(--folio-tint);
 }
 
-.folio-offer .folio-meeting[aria-pressed="true"],
+.folio-offer .folio-meeting[aria-current="true"],
 .folio-offer .folio-meeting--chosen {
   background: var(--folio-tint);
   box-shadow: inset var(--border-width-thick) 0 0 var(--theme-primary);
@@ -240,6 +241,7 @@
 }
 
 .folio-question__label {
+  scroll-margin-top: var(--folio-summary-offset);
   margin: 0;
   font-family: var(--theme-font-heading);
   font-size: var(--theme-font-size-lg);
@@ -262,6 +264,7 @@
 }
 
 #folio-details {
+  scroll-margin-top: var(--folio-summary-offset);
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
