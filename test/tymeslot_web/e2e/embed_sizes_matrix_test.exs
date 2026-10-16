@@ -108,6 +108,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     # journey's shape; a theme with a journey of its own (Paper's second
     # screen opens the details below the picker) has neither.
     themes = Enum.filter(ThemeTestMatrix.all(), &(&1.journey == :classic))
+    assert themes != []
 
     for theme <- themes, {width, height} <- @short_sizes, reduce: session do
       acc ->
@@ -121,6 +122,35 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         |> assert_no_horizontal_overflow(context)
         |> assert_no_actions_calendar_overlap(context)
         |> assert_cta_reachable(context)
+    end
+  end
+
+  feature "a theme with a journey of its own keeps its slot and submit reachable on short viewports",
+          %{session: session} do
+    # Paper opens the details below the picker, so there is no schedule actions
+    # row or Next to measure: the first time on offer, and after picking it the
+    # details' submit, must instead sit inside the scrollable page.
+    {profile, slug} = create_user_with_meeting_type()
+    themes = Enum.reject(ThemeTestMatrix.all(), &(&1.journey == :classic))
+    assert themes != []
+
+    for theme <- themes, {width, height} <- @short_sizes, reduce: session do
+      acc ->
+        context = "#{theme.name} journey #{width}x#{height}"
+
+        acc
+        |> resize_window(width, height)
+        |> visit("/#{profile.username}/#{slug}?theme=#{theme.id}")
+        |> wait_for_live()
+        |> assert_has(css("[data-fact='slot'], [data-fact='date']", minimum: 1))
+        |> assert_no_horizontal_overflow(context)
+        |> click_first_free_date()
+        |> assert_has(css("[data-fact='slot'], [data-fact='time']", minimum: 1))
+        |> assert_reachable("[data-fact='slot'], [data-fact='time']", "first time at #{context}")
+        |> pick_first_free_slot()
+        |> assert_has(css("[data-testid='submit-booking']"))
+        |> assert_reachable("[data-testid='submit-booking']", "submit at #{context}")
+        |> assert_no_horizontal_overflow("details at #{context}")
     end
   end
 
@@ -331,6 +361,26 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     session
   end
 
+  defp click_first_free_date(session) do
+    session
+    |> find(css("[data-fact='date']:not([disabled])", count: :any))
+    |> List.first()
+    |> Element.click()
+
+    session
+  end
+
+  defp pick_first_free_slot(session) do
+    session
+    |> find(
+      css("[data-fact='slot']:not([disabled]), [data-fact='time']:not([disabled])", count: :any)
+    )
+    |> List.first()
+    |> Element.click()
+
+    session
+  end
+
   # ── Layout assertions ─────────────────────────────────────────────────
 
   # Stronger than assert_cta_reachable: on the bounded-card model of an
@@ -465,6 +515,37 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     assert cta_doc_bottom <= scroll_height + @overflow_tolerance,
            "primary action at #{context} sits below the document scroll height " <>
              "(#{cta_doc_bottom}px > #{scroll_height}px) — it is clipped and unreachable."
+
+    session
+  end
+
+  # The first element matching `selector` must live inside the scrollable page
+  # (its document bottom within the scroll height), not be clipped beyond it.
+  defp assert_reachable(session, selector, context) do
+    me = self()
+    ref = make_ref()
+
+    execute_script(
+      session,
+      """
+      const el = document.querySelector(arguments[0]);
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return [Math.round(r.bottom + window.scrollY), r.height, document.documentElement.scrollHeight];
+      """,
+      [selector],
+      fn value -> send(me, {:reachable, ref, value}) end
+    )
+
+    assert_receive {:reachable, ^ref, value}, 5_000
+    assert is_list(value), "#{context}: not found"
+
+    [doc_bottom, height, scroll_height] = value
+    assert height > 0, "#{context}: zero height"
+
+    assert doc_bottom <= scroll_height + @overflow_tolerance,
+           "#{context} sits below the document scroll height " <>
+             "(#{doc_bottom}px > #{scroll_height}px) — it is clipped and unreachable."
 
     session
   end

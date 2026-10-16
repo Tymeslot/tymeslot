@@ -6,11 +6,11 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
   framed in an inline embed in the column layout, where all seven days sit
   side by side under the compact details. Picking a time opens the details
   below the week on the same screen, and the embed's frame grows to show
-  their submit button. The embed is framed through the
-  embed token (`?embed=1` with `parent-origin`) on a same-origin host page,
-  with the host page's own origin as the parent origin so that the heights
-  the frame posts reach it. Each journey ends in the database, at the day
-  and time the visitor clicked.
+  their submit button. The embed is framed through the embed token
+  (`?embed=1` with `parent-origin`) on a same-origin host page, with the
+  host page's own origin as the parent origin so that the heights the frame
+  posts reach it. Each journey ends in the database, at the day and time the
+  visitor clicked.
   """
   use TymeslotWeb.BrowserCase, async: false
 
@@ -130,8 +130,8 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
 
   # Picks the first free time on screen, checks the actions bar names it and
   # the details open below with no Next, runs `after_pick` there, and books
-  # it. Returns the day
-  # and the time the clicked slot carries, `{iso_date, time}`.
+  # it. Returns the day and the time the clicked slot carries,
+  # `{iso_date, time}`.
   defp book(session, email, after_pick \\ fn _session -> :ok end) do
     slot =
       session
@@ -139,19 +139,27 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
       |> List.first()
 
     picked = {Element.attr(slot, "data-date"), Element.attr(slot, "data-time")}
+    label = Element.text(slot)
     Element.click(slot)
 
     session =
       session
-      |> assert_has(css("[data-testid='paper-selection'] .paper-selection__time"))
+      |> assert_has(css("[data-testid='paper-selection'] .paper-selection__time", text: label))
       |> assert_has(css("[data-testid='paper-book'] [data-testid='booking-form']"))
 
     refute_has(session, css("[data-testid='next-step']"))
 
     after_pick.(session)
 
+    # The details open with the focus on their heading, so Change time is what
+    # has to move it back to the chosen time.
     session =
       session
+      |> execute_script(
+        "return document.activeElement !== null && document.activeElement.id === \"paper-book-heading\"",
+        [],
+        fn focused -> assert focused, "The details did not take the focus on opening" end
+      )
       |> click(css("[data-testid='paper-change-time']"))
       |> execute_script(
         "return document.activeElement !== null && document.activeElement.matches(\"[data-fact='slot'][aria-pressed='true']\")",
@@ -268,8 +276,8 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
   #
   # The frame is taller than the week, as an inline embed grows to its
   # content. In a shorter frame the browser scrolls the frame and the host
-  # page only far enough to clip Next at the frame's edge, and the click is
-  # lost.
+  # page only far enough to clip the details' submit at the frame's edge, and
+  # the click is lost.
   defp frame(session, path, width) do
     session
     |> execute_script(
