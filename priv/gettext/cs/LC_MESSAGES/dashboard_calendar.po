@@ -707,6 +707,6 @@ msgid "waiting to sync"
 msgstr "čeká na synchronizaci"
 
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Choose a date, %{period}"
-msgstr "Vybrat datum"
+msgstr "Vybrat datum, %{period}"
