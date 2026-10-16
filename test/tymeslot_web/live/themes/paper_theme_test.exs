@@ -190,7 +190,7 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
       # The button hands the focus to the chosen time, so that element has
       # to exist once the time is picked.
       selector = Page.focus_target(view, "[data-testid='paper-change-time']")
-      assert is_binary(selector)
+      assert selector =~ "selected"
       assert has_element?(view, selector)
     end
 
@@ -302,7 +302,7 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
         |> Page.attribute("[data-fact='time']", "data-value")
         |> Enum.find(&(&1 != first))
 
-      assert is_binary(second)
+      assert second =~ ":"
       BookingDriver.pick_time(view, second)
 
       assert Page.attribute(view, "[data-fact='time'][aria-pressed='true']", "data-value") ==

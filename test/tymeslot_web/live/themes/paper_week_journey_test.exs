@@ -153,7 +153,7 @@ defmodule TymeslotWeb.Live.Themes.PaperWeekJourneyTest do
 
     assert has_element?(view, @chip)
     selector = Page.focus_target(view, @chip)
-    assert is_binary(selector)
+    assert selector =~ "#schedule-step"
     assert has_element?(view, selector)
 
     # Paging keeps the chosen time, but its slot leaves the page, so the

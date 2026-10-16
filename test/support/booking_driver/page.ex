@@ -32,9 +32,9 @@ defmodule TymeslotWeb.BookingDriver.Page do
   """
   @spec focus_target(View.t(), String.t()) :: String.t() | nil
   def focus_target(view, selector) do
-    with [json | _] <- attribute(view, selector, "phx-click"),
+    with [json | _others] <- attribute(view, selector, "phx-click"),
          {:ok, commands} when is_list(commands) <- Jason.decode(json),
-         [_op, %{"to" => to}] <- Enum.find(commands, &match?(["focus", _], &1)) do
+         ["focus", %{"to" => to}] <- Enum.find(commands, &match?(["focus", _args], &1)) do
       to
     else
       _other -> nil
