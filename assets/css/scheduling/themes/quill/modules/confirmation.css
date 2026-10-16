@@ -164,7 +164,7 @@
   gap: var(--space-xs);
 }
 
-/* Add-to-calendar download link — reuses the shared .action-button secondary
+/* Add-to-calendar download link — reuses the shared .action-button primary
    styling (rendered on an <a>) with a leading calendar icon. */
 .calendar-download-button {
   gap: var(--space-2xs);

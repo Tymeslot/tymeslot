@@ -162,6 +162,14 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       loading_text={dgettext("booking", "Verifying...")}
                       disabled={!OrganizerHelpers.form_valid?(@form)}
                       data-testid="submit-booking"
+                      aria-describedby={
+                        SubmitPrice.describedby(
+                          @meeting_type,
+                          @host_currency,
+                          @locale,
+                          @is_rescheduling
+                        )
+                      }
                       data-intent="submit"
                       class="flex-1"
                       title={get_submit_title(@submitting, @form)}

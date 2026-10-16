@@ -164,7 +164,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponentTest d
       assert Floki.find(doc, ".overview-success-badge") == []
       assert Floki.find(doc, ".overview-avatar") != []
       assert html =~ "Arrange a meeting"
-      refute html =~ "Let's Connect!"
+      refute html =~ "Let&#39;s Connect!"
     end
   end
 

@@ -46,6 +46,51 @@ defmodule TymeslotWeb.Live.Themes.ThemePaidDisclosureTest do
     :ok
   end
 
+  # A paid organiser with one 30-minute type, a connected Stripe account
+  # (so a price can be shown) and `type_attrs` on the type.
+  defp seed_paid(theme, username, type_attrs \\ []) do
+    seeded =
+      seed_organiser(theme.id, username,
+        types: [
+          [
+            name: "Paid Consult",
+            duration_minutes: 30,
+            payment_required: true,
+            price_cents: 5000
+          ] ++ type_attrs
+        ]
+      )
+
+    insert(:connect_account,
+      user: seeded.user,
+      stripe_account_id: "acct_SHOW",
+      default_currency: "usd",
+      charges_enabled: true
+    )
+
+    price =
+      BookingText.price_label(
+        %{payment_required: true, price_cents: 5000},
+        MeetingPayments.host_currency(seeded.user.id),
+        "en"
+      )
+
+    Map.put(seeded, :price, price)
+  end
+
+  # The submit's `aria-describedby` and the price element's id, as rendered.
+  defp described_by(view) do
+    view |> element("[data-testid='submit-booking']") |> render() |> attribute("aria-describedby")
+  end
+
+  defp attribute(html, name) do
+    html |> Floki.parse_fragment!() |> Floki.attribute(name) |> List.first()
+  end
+
+  defp price_id(view) do
+    view |> element("[data-testid='submit-price']") |> render() |> attribute("id")
+  end
+
   for theme <- ThemeTestMatrix.all() do
     @tag :capture_log
     test "theme #{theme.slug}: a paid type names its price and the payment before the submit",
@@ -83,6 +128,52 @@ defmodule TymeslotWeb.Live.Themes.ThemePaidDisclosureTest do
 
       assert has_element?(view, "[data-testid='submit-price']", price)
       assert has_element?(view, "[data-testid='submit-booking']", "Continue to payment")
+
+      assert price_id(view) == "submit-price-amount"
+      assert described_by(view) == price_id(view)
+    end
+
+    @tag :capture_log
+    test "theme #{theme.slug}: a paid type that needs approval shows the price on a request",
+         %{conn: conn} do
+      %{profile: profile, price: price} =
+        seed_paid(unquote(Macro.escape(theme)), "paid-gated-#{unquote(theme.slug)}",
+          requires_approval: true
+        )
+
+      {:ok, view, _html} = live(conn, "/#{profile.username}")
+      BookingDriver.book(view, until: :attendee)
+
+      assert has_element?(view, "[data-testid='submit-price']", price)
+      assert has_element?(view, "[data-testid='submit-booking']", "Request meeting")
+      assert described_by(view) == price_id(view)
+    end
+
+    @tag :capture_log
+    test "theme #{theme.slug}: rescheduling a paid booking shows no price", %{conn: conn} do
+      %{user: user, profile: profile, meeting_types: [type]} =
+        seed_paid(unquote(Macro.escape(theme)), "paid-move-#{unquote(theme.slug)}")
+
+      start_time = DateTime.utc_now() |> DateTime.add(2, :day) |> DateTime.truncate(:second)
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          meeting_type_id: type.id,
+          duration: 30,
+          start_time: start_time,
+          end_time: DateTime.add(start_time, 30, :minute)
+        )
+
+      {:ok, view, _html} =
+        live(conn, "/#{profile.username}?reschedule_meeting_uid=#{meeting.uid}")
+
+      BookingDriver.book(view, until: :attendee)
+
+      assert has_element?(view, "[data-testid='submit-booking']", "Reschedule Meeting")
+      refute has_element?(view, "[data-testid='submit-price']")
+      assert described_by(view) == nil
     end
 
     @tag :capture_log
@@ -97,6 +188,8 @@ defmodule TymeslotWeb.Live.Themes.ThemePaidDisclosureTest do
 
       refute has_element?(view, "[data-testid='submit-price']")
       refute has_element?(view, "[data-testid='submit-booking']", "Continue to payment")
+      assert has_element?(view, "[data-testid='submit-booking']")
+      assert described_by(view) == nil
     end
   end
 end

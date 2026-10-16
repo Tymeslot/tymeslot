@@ -158,6 +158,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 form="booking-form"
                 class="submit-button"
                 data-testid="submit-booking"
+                aria-describedby={
+                  SubmitPrice.describedby(@meeting_type, @host_currency, @locale, @is_rescheduling)
+                }
                 data-intent="submit"
                 disabled={@submitting || !OrganizerHelpers.form_valid?(@form)}
               >
