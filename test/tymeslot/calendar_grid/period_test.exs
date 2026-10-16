@@ -37,6 +37,7 @@ defmodule Tymeslot.CalendarGrid.PeriodTest do
     assert Period.parse_date("2026-10-16", ~D[2026-01-01]) == ~D[2026-10-16]
     assert Period.parse_date("16/10/2026", ~D[2026-01-01]) == ~D[2026-01-01]
     assert Period.parse_date(nil, ~D[2026-01-01]) == ~D[2026-01-01]
+    assert Period.parse_date("9999-12-31", ~D[2026-01-01]) == ~D[2026-01-01]
   end
 
   test "week_start/1 reads the stored preference" do

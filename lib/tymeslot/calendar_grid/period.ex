@@ -32,12 +32,15 @@ defmodule Tymeslot.CalendarGrid.Period do
   def default_view("day"), do: :day
   def default_view(_stored), do: :week
 
-  @doc "Reads an ISO date from a URL parameter, or `fallback`."
+  @doc """
+  Reads an ISO date from a URL parameter, or `fallback`. Years outside
+  1900 to 2200 fall back too, so stepping and window maths stay in range.
+  """
   @spec parse_date(term(), Date.t()) :: Date.t()
   def parse_date(value, fallback) when is_binary(value) do
     case Date.from_iso8601(value) do
-      {:ok, date} -> date
-      {:error, _reason} -> fallback
+      {:ok, %Date{year: year} = date} when year in 1900..2200 -> date
+      _invalid_or_out_of_range -> fallback
     end
   end
 
