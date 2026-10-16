@@ -393,6 +393,7 @@ msgid "%{date}, open day view"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #, elixir-autogen, elixir-format
 msgid "%{first} – %{last}"
 msgstr ""
@@ -452,11 +453,6 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/calendar/calendar_surface.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
-#, elixir-autogen, elixir-format
-msgid "Calendar controls"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
@@ -701,4 +697,9 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
 #, elixir-autogen, elixir-format
 msgid "waiting to sync"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a date, %{period}"
 msgstr ""
