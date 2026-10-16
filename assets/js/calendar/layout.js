@@ -4,14 +4,16 @@
  * Ported from the approved sketch (spec, "Grid and density"):
  *  - events that start close together (about 25px apart) share the width;
  *  - an event that starts later overlays the earlier one with an indent, so
- *    the earlier title stays readable;
+ *    the earlier title stays readable; the indent reuses the first depth no
+ *    overlapping event holds, and never leaves less than MIN_EVENT_WIDTH;
  *  - a short event inside a long one overlays the long one's right half (on a
  *    narrow host, all but its left third) instead of halving it throughout;
  *  - touching events do not overlap;
  *  - when shared columns would fall below MIN_EVENT_WIDTH, the crowd folds
  *    into a "+N more" chip, each remaining column FOLD_COLUMN_WIDTH wide or
- *    more. A column too narrow for even one such column beside the chip
- *    (under about 94px) still keeps one, narrower column.
+ *    more. Under about 94px only one, narrower column fits beside the chip,
+ *    so such a group folds only where that widens its columns (or where they
+ *    would be under 20px anyway).
  * Added to the sketch: the fold is decided per moment, not per group. An
  * event is hidden only if, at some point in its life, more events than there
  * are columns run at once and it ranks below them: one that needs attention
@@ -63,11 +65,14 @@ export function countLines(text, width, measureWidth) {
 // How many columns fit beside the chip once `width` folds: at least one.
 const foldSlots = (width) => Math.max(1, Math.floor((width - CHIP_WIDTH) / FOLD_COLUMN_WIDTH));
 
+// Whether `width` split `n` ways folds: only below MIN_EVENT_WIDTH a column,
+// and only when folding widens the columns, unless they would be too thin to
+// read or click either way (under 20px), where the chip at least opens a list.
+const folds = (width, n) =>
+  n > 1 && width / n < MIN_EVENT_WIDTH && ((width - CHIP_WIDTH) / foldSlots(width) > width / n || width / n < 20);
+
 // The width of one column of `width` split `n` ways, after any fold.
-function columnWidth(width, n) {
-  if (n > 1 && width / n < MIN_EVENT_WIDTH) return (width - CHIP_WIDTH) / foldSlots(width);
-  return width / n;
-}
+const columnWidth = (width, n) => (folds(width, n) ? (width - CHIP_WIDTH) / foldSlots(width) : width / n);
 
 /**
  * Lays out one day's segments ({ id, s, e, title, attention }, minutes from
@@ -96,20 +101,26 @@ export function layoutDay(segments, { colWidth, hourHeight, yOf, measureLines })
     const shortInLong = close.length > 0 && close.every((p) => p.e - p.s >= 90) && isShort;
 
     if (!close.length || shortInLong) {
+      // Drawn above everything it overlaps, but indented only to the first
+      // depth no overlapping event holds, so a chain reuses ended indents.
       const level = over.length ? Math.max(...over.map((p) => p.level)) + 1 : 0;
-      let left = Math.min(level * indent, Math.round(colWidth * 0.6));
+      let depth = 0;
+      while (over.some((p) => p.depth === depth)) depth += 1;
+      let left = Math.max(0, Math.min(depth * indent, Math.round(colWidth * 0.6), colWidth - MIN_EVENT_WIDTH));
       if (shortInLong) {
         // Nest in the topmost close event, the strongest of those at that
         // level, and overlay its right half (two thirds when it is narrow).
         const top = Math.max(...close.map((p) => p.level));
         const host = close.filter((p) => p.level === top).sort(byStrength)[0];
         const { left: hostLeft, width: hostWidth } = host.group;
-        left = Math.round(hostLeft + (hostWidth < 140 ? hostWidth / 3 : hostWidth * 0.5));
+        left = nestLeft(hostLeft, hostWidth);
+        depth = host.depth + 1;
         g.nestIn = host.id;
       }
       const group = { left, width: colWidth - left, members: [], ends: [], nested: shortInLong };
       groups.push(group);
       g.level = level;
+      g.depth = depth;
       join(group, g);
     } else {
       // A long event shares with an event of its own kind, never with a short
@@ -118,6 +129,7 @@ export function layoutDay(segments, { colWidth, hourHeight, yOf, measureLines })
       const candidates = own.length ? own : close;
       const host = candidates[candidates.length - 1];
       g.level = host.level;
+      g.depth = host.depth;
       if (host.nestIn) g.nestIn = host.nestIn;
       join(host.group, g);
     }
@@ -126,7 +138,17 @@ export function layoutDay(segments, { colWidth, hourHeight, yOf, measureLines })
   }
 
   const chipZ = 4 + Math.max(0, ...segs.map((g) => g.level));
-  const out = groups.flatMap((group) => layoutGroup(group, chipZ));
+  const out = [];
+  for (const group of groups) {
+    // A nested group overlays its host's drawn box, not the host's group,
+    // which a later event may have split into columns.
+    const host = group.nested && out.find((item) => !item.chip && item.id === group.members[0].nestIn);
+    if (host) {
+      group.left = nestLeft(host.left, host.width);
+      group.width = host.left + host.width - group.left;
+    }
+    out.push(...layoutGroup(group, chipZ));
+  }
 
   // A nested event whose host folded behind a chip nests in a visible event
   // of the host's group instead, or in none.
@@ -138,6 +160,13 @@ export function layoutDay(segments, { colWidth, hourHeight, yOf, measureLines })
   }
 
   return out;
+}
+
+// Where a short event nested in a box at `left`, `width` wide starts: its right
+// half, or its right two thirds when narrow, keeping MIN_EVENT_WIDTH if it can.
+function nestLeft(left, width) {
+  const start = left + (width < 140 ? width / 3 : width * 0.5);
+  return Math.round(Math.max(left, Math.min(start, left + width - MIN_EVENT_WIDTH)));
 }
 
 function join(group, g) {
@@ -156,7 +185,7 @@ function layoutGroup(group, chipZ) {
 
 function layoutRun(group, members, chipZ) {
   const n = assignSlots(members).length;
-  const folding = n > 1 && group.width / n < MIN_EVENT_WIDTH;
+  const folding = folds(group.width, n);
   const slots = folding ? foldSlots(group.width) : n;
   const unit = columnWidth(group.width, n);
   const shown = folding ? chooseVisible(members, slots) : members;
@@ -239,7 +268,8 @@ function runsOf(members) {
  * The vertical pass: px top and height for each item, chips that touch merged
  * into one, nested short events pushed below their host's first line, and
  * each title clamped (`lineClamp`) so nothing drawn above an event covers its
- * title text. `hideTime` drops the time line where the title needs the room;
+ * title text, and any event whose title line runs into a chip stops at the
+ * chip. `hideTime` drops the time line where the title needs the room;
  * `timeGap` moves a host's time line below the short event nested in it.
  */
 export function placeDay(laid, { yOf, minHeight = 20 }) {
@@ -283,6 +313,15 @@ export function placeDay(laid, { yOf, minHeight = 20 }) {
       item.top = minTop;
       item.height = Math.max(minHeight, bottom - item.top);
       clamp(item);
+    }
+  }
+
+  // A chip draws above every event, so one whose title line runs into a
+  // chip stops at the chip's edge instead of losing its end under it.
+  for (const a of evs) {
+    const lineEnd = a.top + Math.min(a.height, PAD_TOP + LINE_HEIGHT);
+    for (const c of merged) {
+      if (a.left < c.left && c.left < a.left + a.width && c.top < lineEnd && c.top + c.height > a.top) a.width = c.left - a.left;
     }
   }
 

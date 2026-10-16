@@ -228,4 +228,35 @@ describe("review regressions", () => {
     const [item] = place([ev("a", 1435, 1440)]);
     expect(item.top + item.height).toBeLessThanOrEqual(scale.yOf(1440));
   });
+
+  test("a nested short event sits inside its host's own column, clear of the event sharing it", () => {
+    const laid = place([ev("standup", 800, 920, "Standup"), ev("short", 810, 840, "Call"), ev("review", 825, 945, "Review")]);
+    const host = byId(laid, "standup");
+    const short = byId(laid, "short");
+    expect(short.nestIn).toBe("standup");
+    expect(short.left).toBeGreaterThan(host.left);
+    expect(short.left + short.width).toBeLessThanOrEqual(host.left + host.width);
+  });
+
+  test("an overlay crossing a chip stops at the chip instead of running under it", () => {
+    const crowd = ["a", "b", "c", "d", "e"].map((id) => ev(id, 540, 720));
+    const laid = place([...crowd, ev("x", 660, 700, "Overlay")]);
+    const [chip] = chips(laid);
+    const x = byId(laid, "x");
+    expect(x.left + x.width).toBeLessThanOrEqual(chip.left);
+  });
+
+  test("a staggered chain reuses the indent of events that have ended instead of folding", () => {
+    const chain = Array.from({ length: 8 }, (_, i) => ev(`m${i}`, 480 + i * 30, 570 + i * 30, "Weekly sync"));
+    const laid = layoutDay(chain, opts(200));
+    expect(chips(laid)).toEqual([]);
+    expect(byId(laid, "m3").left).toBe(0);
+    expect(byId(laid, "m3").z).toBeGreaterThan(byId(laid, "m2").z);
+  });
+
+  test("a deep cascade on a narrow column keeps every event readable", () => {
+    const deep = [ev("A", 480, 720), ev("B", 540, 720), ev("C", 600, 720), ev("D", 660, 720), ev("D2", 660, 720)];
+    const laid = layoutDay(deep, opts(80));
+    for (const item of events(laid)) expect(item.width).toBeGreaterThanOrEqual(24);
+  });
 });
