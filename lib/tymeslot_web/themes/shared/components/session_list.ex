@@ -94,7 +94,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.SessionList do
   def session_list(assigns) do
     ~H"""
     <section class={["session-list", @class]} data-testid="session-list">
-      <h3 class="session-list-title">{dgettext("booking", "Dates")}</h3>
+      <h3 class="session-list-title">{dgettext("booking_sessions", "Dates")}</h3>
 
       <p
         :if={@sessions.entries == []}
@@ -103,9 +103,9 @@ defmodule TymeslotWeb.Themes.Shared.Components.SessionList do
         data-testid="sessions-none"
       >
         <%= if @sessions.ended? do %>
-          {dgettext("booking", "This event has ended.")}
+          {dgettext("booking_sessions", "This event has ended.")}
         <% else %>
-          {dgettext("booking", "No dates are planned at the moment.")}
+          {dgettext("booking_sessions", "No dates are planned at the moment.")}
         <% end %>
       </p>
 
@@ -115,7 +115,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.SessionList do
         role="status"
         data-testid="registration-closed"
       >
-        {dgettext("booking", "Registration is closed.")}
+        {dgettext("booking_sessions", "Registration is closed.")}
       </p>
 
       <ul :if={@sessions.entries != []} class="session-list-items">
@@ -142,13 +142,13 @@ defmodule TymeslotWeb.Themes.Shared.Components.SessionList do
     """
   end
 
-  defp status(%{seats_left: 0}, _timezone), do: dgettext("booking", "Fully booked")
+  defp status(%{seats_left: 0}, _timezone), do: dgettext("booking_sessions", "Fully booked")
 
-  defp status(%{open?: false}, _timezone), do: dgettext("booking", "Registration closed")
+  defp status(%{open?: false}, _timezone), do: dgettext("booking_sessions", "Registration closed")
 
   defp status(%{closes_at: %DateTime{} = closes_at}, timezone),
     do:
-      dgettext("booking", "Registration until %{datetime}",
+      dgettext("booking_sessions", "Registration until %{datetime}",
         datetime: LocalizationHelpers.format_meeting_datetime_compact(closes_at, timezone)
       )
 
