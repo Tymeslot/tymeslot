@@ -12,6 +12,7 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
   import Tymeslot.Factory
   import Tymeslot.WorkerTestHelpers, only: [expect_mirotalk_group_success: 0]
 
+  alias Ecto.Changeset
   alias Tymeslot.Bookings.Create
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Infrastructure.AvailabilityCache
@@ -125,6 +126,19 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
     assert participant_id == participant.id
 
     assert {:error, :slot_taken} = execute(ctx, "late@example.com")
+  end
+
+  test "keeps only as many guests as the meeting type lets a booking bring", ctx do
+    ctx.meeting_type
+    |> Changeset.change(max_participants: 5, max_guests_per_booking: 1)
+    |> Repo.update!()
+
+    assert {:ok, meeting} =
+             execute(ctx, "host@example.com", %{
+               guest_emails: ["one@example.com", "two@example.com", "three@example.com"]
+             })
+
+    assert [%{email: "one@example.com"}] = Guests.list_for_meeting(meeting.id)
   end
 
   test "a committed group booking broadcasts a seat update and invalidates the cache",

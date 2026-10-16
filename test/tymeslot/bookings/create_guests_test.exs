@@ -78,6 +78,15 @@ defmodule Tymeslot.Bookings.CreateGuestsTest do
     assert byte_size(guest.rsvp_token) >= 20
   end
 
+  test "keeps only as many guests as the meeting type lets a booking bring" do
+    %{meeting_params: meeting_params, form_data: form_data} =
+      booking_setup(allow_guests: true, max_guests_per_booking: 1)
+
+    assert {:ok, meeting} = Create.execute(meeting_params, form_data, skip_calendar_check: true)
+
+    assert [%{email: "guest.one@example.com"}] = Guests.list_for_meeting(meeting.id)
+  end
+
   test "ignores guests when the meeting type disallows them" do
     %{meeting_params: meeting_params, form_data: form_data} =
       booking_setup(allow_guests: false)
