@@ -33,7 +33,8 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
       reschedule_uid: socket.assigns[:reschedule_meeting_uid],
       reschedule_seat_token: socket.assigns[:reschedule_seat_token],
       demo_mode?: Demo.demo_mode?(socket),
-      debug_calendar_module: socket.private[:debug_calendar_module]
+      debug_calendar_module: socket.private[:debug_calendar_module],
+      shared_availability_guests: socket.assigns[:shared_availability_guests] || []
     }
   end
 

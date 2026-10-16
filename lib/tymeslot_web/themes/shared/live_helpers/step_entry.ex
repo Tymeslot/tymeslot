@@ -30,7 +30,8 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
     AvailabilityHelpers,
     CalendarHelpers,
     NextAvailable,
-    OrganizerHelpers
+    OrganizerHelpers,
+    SharedAvailabilityGuests
   }
 
   alias TymeslotWeb.Themes.Shared.BookingLocation
@@ -168,15 +169,14 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   # Carries the reschedule context across the redirect so a bad slug doesn't
   # silently turn a reschedule into a new, duplicate booking.
   defp invalid_meeting_type_redirect_path(socket) do
-    base = ~p"/#{socket.assigns[:username_context]}"
+    query =
+      case socket.assigns[:reschedule_meeting_uid] do
+        uid when is_binary(uid) and uid != "" -> %{"reschedule_meeting_uid" => uid}
+        _other -> %{}
+      end
 
-    case socket.assigns[:reschedule_meeting_uid] do
-      uid when is_binary(uid) and uid != "" ->
-        "#{base}?#{URI.encode_query(%{"reschedule_meeting_uid" => uid})}"
-
-      _other ->
-        base
-    end
+    path = ~p"/#{socket.assigns[:username_context]}"
+    SharedAvailabilityGuests.link_path(path, socket, query)
   end
 
   @doc "Makes `meeting_type` the one this booking is for, with its questions, locations and booking window."
@@ -194,6 +194,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
       )
     )
     |> OrganizerHelpers.assign_booking_window()
+    |> SharedAvailabilityGuests.check_meeting_type(meeting_type)
   end
 
   @doc """
@@ -319,7 +320,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
     slug = socket.assigns[:selected_duration] || params["slug"]
 
     if is_binary(username) && is_binary(slug) do
-      redirect(socket, to: ~p"/#{username}/#{slug}")
+      redirect(socket, to: SharedAvailabilityGuests.link_path(~p"/#{username}/#{slug}", socket))
     else
       redirect(socket, to: ~p"/")
     end

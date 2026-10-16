@@ -88,6 +88,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingPage do
   # else `{component, id, extra assigns}` for each component, the outcome's
   # or the visible moments'.
   defp parts(journey, assigns) do
+    assigns = overview_for_unusable_link(assigns)
     state = assigns[:current_state]
 
     case Map.fetch(journey.outcomes, state) do
@@ -104,6 +105,15 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingPage do
                %{moment: moment.key, moment_state: moment_state}}
     end
   end
+
+  # A `?with=` link that cannot be used keeps the page on the overview, which
+  # says why (`SharedAvailabilityGuests`), whatever step the route names.
+  defp overview_for_unusable_link(%{shared_availability_error: nil} = assigns), do: assigns
+
+  defp overview_for_unusable_link(%{shared_availability_error: _error} = assigns),
+    do: Map.put(assigns, :current_state, :overview)
+
+  defp overview_for_unusable_link(assigns), do: assigns
 
   defp step_assigns(assigns, extra), do: assigns |> Map.drop(@page_keys) |> Map.merge(extra)
 end

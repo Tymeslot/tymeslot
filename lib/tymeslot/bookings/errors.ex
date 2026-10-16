@@ -63,7 +63,8 @@ defmodule Tymeslot.Bookings.Errors do
     validation_error: :booking_failed,
     payments_unavailable: :payments_unavailable,
     host_not_found: :host_not_found,
-    host_missing: :host_not_found
+    host_missing: :host_not_found,
+    unavailable_guests: :booking_failed
   }
 
   # `Tymeslot.Bookings.ScheduleCheck` is shared by `Create` and `Reschedule`,

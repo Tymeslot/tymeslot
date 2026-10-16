@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
     CalendarHelpers,
     OrganizerHelpers,
     PreviewToken,
+    SharedAvailabilityGuests,
     ThemeUtils
   }
 
@@ -54,6 +55,9 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
       else
         OrganizerHelpers.handle_username_resolution(socket, params["username"])
       end
+
+    # `?with=michael,sandy` adds guests every offered time must also suit.
+    socket = SharedAvailabilityGuests.assign_from_params(socket, params)
 
     # The week start falls back to the organiser's own, so it needs them
     # resolved; the calendar then opens on the booker's today (after the
