@@ -85,6 +85,11 @@ defmodule TymeslotWeb.Endpoint do
   # when deploying your static files in production.
   plug :serve_robots
 
+  @unversioned_cache_control (case Application.compile_env(:tymeslot, :environment) do
+                                :dev -> "public"
+                                _env -> "public, max-age=3600, must-revalidate"
+                              end)
+
   # Precompiled `*.zst` and `*.gz` siblings (written by `mix phx.digest`) are
   # served in preference to the plain asset, best-first. The list is empty
   # outside production, where the watchers rebuild the plain file but never its
@@ -98,8 +103,11 @@ defmodule TymeslotWeb.Endpoint do
     # a bare `public`, which browsers treat as "revalidate every time". An
     # hour of freshness plus the ETag revalidation Plug.Static already sends
     # keeps them out of the critical path on repeat visits without risking a
-    # stale asset for long.
-    cache_control_for_etags: "public, max-age=3600, must-revalidate",
+    # stale asset for long. Development keeps the bare `public`: nothing is
+    # digested there, so every asset is unfingerprinted and an hour of
+    # freshness would let a reload run yesterday's CSS and JS against a fresh
+    # build.
+    cache_control_for_etags: @unversioned_cache_control,
     only: TymeslotWeb.static_paths() ++ ["embed.js"],
     # embed.js is a standalone file at the root (not under /assets/).
     # `only` handles the canonical /embed.js path.
