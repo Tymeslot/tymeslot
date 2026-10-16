@@ -12,16 +12,24 @@ defmodule Tymeslot.Repo.Migrations.AddInvitationsToPollParticipants do
 
   def up do
     alter table(:poll_participants) do
+      # Dropping NOT NULL is a catalogue-only change: no rewrite, no scan.
+      # excellent_migrations:safety-assured-for-next-line column_type_changed
       modify :name, :string, null: true
       add :invited_at, :utc_datetime
     end
   end
 
   # Unnamed invitees fall back to their address so the constraint can return.
+  # The rollback only ever runs deliberately, on a small table (a row per
+  # person on a poll), and removing what `up` added is its whole point.
+  # excellent_migrations:safety-assured-for-this-file raw_sql_executed
+  # excellent_migrations:safety-assured-for-this-file not_null_added
+  # excellent_migrations:safety-assured-for-this-file column_removed
   def down do
     execute("UPDATE poll_participants SET name = email WHERE name IS NULL")
 
     alter table(:poll_participants) do
+      # excellent_migrations:safety-assured-for-next-line column_type_changed
       modify :name, :string, null: false
       remove :invited_at
     end
