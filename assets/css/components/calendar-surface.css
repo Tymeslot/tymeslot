@@ -294,16 +294,28 @@
 }
 
 /* render.js clamps the title to the lines that fit (--cal-lines), so neither
-   line shrinks to a sliver that cuts through its glyphs. */
+   line shrinks to a sliver that cuts through its glyphs. Words never break
+   inside: one too wide for the block is wrapped in .cal-ev-word and ends in an
+   ellipsis on a line of its own, which is how countLines in layout.js counts
+   it. */
 .cal-ev-title {
   display: -webkit-box;
   flex-shrink: 0;
   overflow: hidden;
   font-weight: 600;
-  overflow-wrap: break-word;
+  overflow-wrap: normal;
   word-break: normal;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: var(--cal-lines, 4);
+}
+
+.cal-ev-word {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: top;
 }
 
 .cal-ev-time {

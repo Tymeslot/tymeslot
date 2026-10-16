@@ -237,6 +237,38 @@ describe("renderGrid", () => {
     expect(block.getAttribute("style")).toContain("--cal-lines:1");
   });
 
+  // 56px of axis and seven 60px columns: each lone event is 54px wide.
+  const narrow = 56 + 7 * 60;
+
+  test("a word too wide for a narrow block truncates on its own line, never breaking inside", () => {
+    const block = draw({ events: [timed("event-1", "Strategy workshop", "2026-10-14T09:00", "2026-10-14T10:30")], width: narrow }).querySelector('[data-event-id="event-1"]');
+    const words = [...block.querySelectorAll(".cal-ev-title .cal-ev-word")].map((el) => el.textContent);
+    expect(words).toEqual(["Strategy", "workshop"]);
+    // Counted as one line per word, the title fits above the time line; split
+    // mid-word it took four lines and pushed the time out.
+    expect(block.querySelector(".cal-ev-time").textContent).toBe("09:00");
+    expect(block.getAttribute("style")).toContain("--cal-lines:3");
+  });
+
+  test("a word that fits is left as plain text", () => {
+    const block = draw({ events: [timed("event-1", "Retro", "2026-10-14T09:00", "2026-10-14T12:30")], width: narrow }).querySelector('[data-event-id="event-1"]');
+    expect(block.querySelector(".cal-ev-word")).toBeNull();
+    expect(block.querySelector(".cal-ev-title").textContent).toBe("Retro");
+  });
+
+  test("a one-row block too narrow for title and time drops the time so the title shows", () => {
+    const block = draw({ events: [timed("event-1", "Hiring sync", "2026-10-14T10:15", "2026-10-14T10:45")], width: narrow }).querySelector('[data-event-id="event-1"]');
+    expect(block.classList.contains("is-short")).toBe(true);
+    expect(block.querySelector(".cal-ev-time")).toBeNull();
+    expect(block.querySelector(".cal-ev-title").textContent).toBe("Hiring sync");
+  });
+
+  test("a one-row block with room for both keeps its time beside the title", () => {
+    const block = draw({ events: [timed("event-1", "Hiring sync", "2026-10-14T10:15", "2026-10-14T10:45")] }).querySelector('[data-event-id="event-1"]');
+    expect(block.classList.contains("is-short")).toBe(true);
+    expect(block.querySelector(".cal-ev-time").textContent).toBe("10:15");
+  });
+
   test("compact density uses 38px hours", () => {
     expect(draw({ settings: { ...settings, density: "compact" } }).querySelector(".cal-grid").getAttribute("style")).toContain("--cal-hour:38px");
   });

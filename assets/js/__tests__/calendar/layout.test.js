@@ -20,6 +20,15 @@ test("countLines wraps by whole words", () => {
   expect(countLines("Design review", 200, (w) => w.length * 7)).toBe(1);
 });
 
+test("countLines gives a word wider than the line one line of its own, never splitting it", () => {
+  const seven = (w) => w.length * 7;
+  // "Strategy" and "workshop" are 56px each against 30px: two truncated lines, not four.
+  expect(countLines("Strategy workshop", 30, seven)).toBe(2);
+  expect(countLines("Strategy", 30, seven)).toBe(1);
+  // A short word after a long one still starts a new line.
+  expect(countLines("Strategy at 9", 30, seven)).toBe(2);
+});
+
 test("a lone event takes the whole column", () => {
   const [item] = layoutDay([ev("a", 540, 600)], opts(200));
   expect(item).toMatchObject({ id: "a", left: 0, width: 200, level: 0 });

@@ -46,7 +46,12 @@ const compareIds = (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 // Stronger first: attention, then longer, then earlier, then by id.
 const byStrength = (a, b) => Number(!!b.attention) - Number(!!a.attention) || b.e - b.s - (a.e - a.s) || a.s - b.s || compareIds(a, b);
 
-/** How many lines `text` wraps to in `width` px, by whole words. */
+/**
+ * How many lines `text` wraps to in `width` px, by whole words. A title never
+ * breaks inside a word: a word wider than the line takes a line of its own,
+ * cut short with an ellipsis (render.js marks it, see `isLongWord`), so it
+ * counts as one full line.
+ */
 export function countLines(text, width, measureWidth) {
   const room = Math.max(24, width);
   const space = measureWidth(" ");
@@ -54,20 +59,26 @@ export function countLines(text, width, measureWidth) {
   let current = 0;
 
   for (const word of String(text ?? "").split(/\s+/).filter(Boolean)) {
-    const w = measureWidth(word);
+    const w = Math.min(room, measureWidth(word));
     if (current && current + space + w > room) {
       lines += 1;
       current = w;
     } else {
       current += (current ? space : 0) + w;
     }
-    while (current > room) {
-      lines += 1;
-      current -= room;
-    }
   }
 
   return lines;
+}
+
+/**
+ * Whether a word is too wide for a line of `width` px and so must truncate on
+ * its own line rather than wrap mid-word. A little slack covers the gap
+ * between canvas measurement and the browser's layout; marking a word that
+ * would just fit costs nothing, since it draws the same.
+ */
+export function isLongWord(word, width, measureWidth) {
+  return measureWidth(word) > Math.max(24, width) - 2;
 }
 
 // MIN_EVENT_WIDTH, less the sub-pixel share a column split leaves over.

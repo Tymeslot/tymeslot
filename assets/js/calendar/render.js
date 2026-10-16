@@ -8,7 +8,7 @@
  * server renders into `data-strings`; nothing here is hard-coded English.
  */
 import { layoutAllDay } from "./allday.js";
-import { LINE_HEIGHT, countLines, layoutColumn } from "./layout.js";
+import { LINE_HEIGHT, countLines, isLongWord, layoutColumn } from "./layout.js";
 import {
   HOUR_HEIGHT,
   MINUTES_PER_DAY,
@@ -30,6 +30,14 @@ const TOKEN = /^[a-z0-9-]+$/;
 // An event block's border and vertical padding, and the time line under a title.
 const EVENT_CHROME = 8;
 const TIME_LINE = 16;
+// The room a title's text has inside a block `width` wide: the block's inset,
+// border and padding. countLines and the long-word marks share it.
+const TITLE_INSET = 15;
+// Below this a one-row block's title is a letter or two: the time beside it
+// gives way. The time is 10px against the 12px the title is measured at.
+const SHORT_TITLE_ROOM = 40;
+const TIME_SCALE = 10 / 12;
+const SHORT_GAP = 5;
 const ENTITIES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
 
 export function escapeHtml(value) {
@@ -210,12 +218,28 @@ function offHours(hours, first) {
 function textFit(item, title, wantsTime, measureWidth) {
   const inner = item.height - EVENT_CHROME;
   const cap = item.lineClamp ?? 4;
-  const wanted = Math.min(cap, countLines(title, Math.max(1, item.width - 15), measureWidth));
+  const wanted = Math.min(cap, countLines(title, Math.max(1, item.width - TITLE_INSET), measureWidth));
   const withTime = Math.max(1, Math.floor((inner - TIME_LINE - (item.timeGap || 0)) / LINE_HEIGHT));
   const without = Math.max(1, Math.floor(inner / LINE_HEIGHT));
   if (!wantsTime) return { lines: Math.min(cap, without), time: false };
   if (wanted <= withTime || without <= withTime) return { lines: Math.min(cap, withTime), time: true };
   return { lines: Math.min(wanted, without), time: false };
+}
+
+// Whether a one-row block keeps its start time beside the title: only while
+// the title keeps enough room to be recognised, or all the room it needs.
+function shortRowFits(item, title, time, measureWidth) {
+  const room = item.width - TITLE_INSET - SHORT_GAP - measureWidth(time) * TIME_SCALE;
+  return room >= Math.min(SHORT_TITLE_ROOM, measureWidth(title));
+}
+
+// The title, with every word too wide for its line marked to truncate on a
+// line of its own (`.cal-ev-word`) instead of breaking mid-word.
+function titleHtml(title, width, measureWidth) {
+  return String(title ?? "")
+    .split(/(\s+)/)
+    .map((part) => (part.trim() && isLongWord(part, width, measureWidth) ? `<span class="cal-ev-word">${escapeHtml(part)}</span>` : escapeHtml(part)))
+    .join("");
 }
 
 function eventBlock(item, event, { strings, settings, now, measureWidth }) {
@@ -225,7 +249,8 @@ function eventBlock(item, event, { strings, settings, now, measureWidth }) {
   const start = formatMinutes(event.startMin % MINUTES_PER_DAY, tf);
   const range = `${start}–${formatMinutes(event.endMin % MINUTES_PER_DAY, tf)}`;
   const fit = short ? null : textFit(item, event.title, !item.hideTime, measureWidth);
-  const time = item.hideTime || (fit && !fit.time) ? "" : short || item.width < 110 ? start : range;
+  const shortWithoutTime = short && !shortRowFits(item, event.title, start, measureWidth);
+  const time = item.hideTime || shortWithoutTime || (fit && !fit.time) ? "" : short || item.width < 110 ? start : range;
   const tiny = short && item.height < LINE_HEIGHT + 4;
   const classes = ["cal-ev", short && "is-short", tiny && "is-tiny", item.width < 92 && "is-narrow", past && "is-past", event.free && "is-free", event.kind === "booking" && "is-booking", event.attention && "is-attention"]
     .filter(Boolean)
@@ -241,7 +266,7 @@ function eventBlock(item, event, { strings, settings, now, measureWidth }) {
 
   return (
     `<div class="${classes}" role="button" tabindex="0" data-event-id="${escapeHtml(event.id)}" aria-label="${escapeHtml(label)}" style="${style}">` +
-    `<span class="cal-ev-title">${escapeHtml(event.title)}</span>${timeHtml}` +
+    `<span class="cal-ev-title">${short ? escapeHtml(event.title) : titleHtml(event.title, item.width - TITLE_INSET, measureWidth)}</span>${timeHtml}` +
     (event.attention ? `<span class="cal-ev-dot" aria-hidden="true"></span>` : "") +
     `</div>`
   );
