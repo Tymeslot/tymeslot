@@ -13,7 +13,8 @@
  *    into a "+N more" chip, each remaining column FOLD_COLUMN_WIDTH wide or
  *    more. Under about 94px only one, narrower column fits beside the chip,
  *    so such a group folds only where that widens its columns (or where they
- *    would be under 20px anyway).
+ *    would be under 20px anyway); where even that one would be under 20px,
+ *    the chip takes the whole width.
  * Added to the sketch: the fold is decided per moment, not per group. An
  * event is hidden only if, at some point in its life, more events than there
  * are columns run at once and it ranks below them: one that needs attention
@@ -65,9 +66,11 @@ export function countLines(text, width, measureWidth) {
 // Narrower than this, an event can be neither read nor clicked.
 const MIN_USABLE_WIDTH = 20;
 
-// How many columns fit beside the chip once `width` folds: at least one.
-const foldSlots = (width) => Math.max(1, Math.floor((width - CHIP_WIDTH) / FOLD_COLUMN_WIDTH));
-const foldedWidth = (width) => (width - CHIP_WIDTH) / foldSlots(width);
+// How many columns fit beside the chip once `width` folds: at least one, or
+// none when even one would be unusable and the chip takes the whole width.
+const foldSlots = (width) =>
+  width - CHIP_WIDTH < MIN_USABLE_WIDTH ? 0 : Math.max(1, Math.floor((width - CHIP_WIDTH) / FOLD_COLUMN_WIDTH));
+const foldedWidth = (width) => (foldSlots(width) ? (width - CHIP_WIDTH) / foldSlots(width) : 0);
 
 // Whether `width` split `n` ways folds: only below MIN_EVENT_WIDTH a column,
 // and only when folding widens the columns, unless they would be unusable
@@ -236,8 +239,8 @@ function layoutRun(group, members, chipZ) {
       hidden: hidden.map((m) => m.id),
       s,
       e,
-      left: group.left + group.width - CHIP_WIDTH,
-      width: CHIP_WIDTH,
+      left: slots ? group.left + group.width - CHIP_WIDTH : group.left,
+      width: slots ? CHIP_WIDTH : group.width,
       z: chipZ,
       warn: hidden.some((m) => m.attention),
     });

@@ -270,4 +270,10 @@ describe("review regressions", () => {
     }
     for (const item of visible) expect(item.nestIn === null || ids.has(item.nestIn)).toBe(true);
   });
+
+  test("a column too narrow for a readable event beside the chip gives the chip the whole column", () => {
+    const laid = layoutDay(["a", "b", "c"].map((id) => ev(id, 540, 600)), opts(34));
+    expect(events(laid)).toEqual([]);
+    expect(chips(laid)).toEqual([expect.objectContaining({ hidden: ["a", "b", "c"], left: 0, width: 34 })]);
+  });
 });

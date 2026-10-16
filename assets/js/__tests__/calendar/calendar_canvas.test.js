@@ -313,6 +313,8 @@ test("the scroll position survives a visit to the skeleton", () => {
 
 test("destroyed removes the popover variables and the document listener", () => {
   const { el, hook, reply } = mountHook();
+  // Wide enough for a visible event beside the chip.
+  Object.defineProperty(el, "clientWidth", { value: 700, configurable: true });
   reply(payload({ events: fiveAt() }));
   el.querySelector('[data-event-id="event-a"]').click();
   el.querySelector(".cal-more").click();
