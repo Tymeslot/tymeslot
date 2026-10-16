@@ -562,6 +562,8 @@
   border-radius: var(--radius-2xl);
   background: var(--cal-surface);
   box-shadow: var(--shadow-lg);
+  max-height: var(--cal-pop-h, calc(100vh - 16px));
+  overflow-y: auto;
 }
 
 .cal-preview:focus {

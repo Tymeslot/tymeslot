@@ -60,8 +60,14 @@ export const CalendarCanvas = {
     this.nightOpen = false;
     this.scrollTop = null;
     this.list = null;
+    this.listAnchor = null;
+    this.pending = null;
+    this.lastWidth = null;
     this.measureWidth = this.measureWidth || canvasMeasure();
 
+    this.outside = (e) => {
+      if (this.list && !this.list.contains(e.target)) this.closeList();
+    };
     this.listeners = [
       ["calendar:navigate", (e) => this.navigate(e.detail)],
       ["click", (e) => this.handleClick(e)],
@@ -77,10 +83,10 @@ export const CalendarCanvas = {
     this.handleEvent("calendar:preview-closed", () => this.focusEvent(this.lastOpened));
 
     if (typeof ResizeObserver !== "undefined") {
-      this.resizer = new ResizeObserver(() => this.render());
+      this.resizer = new ResizeObserver(() => this.resized());
       this.resizer.observe(this.el);
     }
-    this.timer = setInterval(() => this.render(), TICK_MS);
+    this.timer = setInterval(() => this.tick(), TICK_MS);
     this.requestData();
   },
 
@@ -91,6 +97,11 @@ export const CalendarCanvas = {
   destroyed() {
     clearInterval(this.timer);
     this.resizer?.disconnect();
+    if (this.frame) cancelAnimationFrame(this.frame);
+    this.frame = null;
+    this.closeList();
+    const style = document.documentElement.style;
+    for (const name of ["--cal-pop-x", "--cal-pop-y", "--cal-pop-h"]) style.removeProperty(name);
     for (const [name, listener] of this.listeners) this.el.removeEventListener(name, listener);
   },
 
@@ -98,10 +109,17 @@ export const CalendarCanvas = {
     this.pushEventTo(this.el, "calendar:ready", {}, (reply) => this.receive(reply));
   },
 
+  // The cache always takes the payload, but the grid only follows its period
+  // when the organiser has not since asked for another one (a late payload for
+  // an intermediate period must not snap the grid back). With nothing pending,
+  // for instance after browser Back, the server leads.
   receive(payload) {
     this.cache = applyPayload(this.cache, payload);
-    this.view = payload.view;
-    this.date = payload.date;
+    if (!this.pending || (payload.view === this.pending.view && payload.date === this.pending.date)) {
+      this.view = payload.view;
+      this.date = payload.date;
+      this.pending = null;
+    }
     if (payload.settings) this.settings = payload.settings;
     this.clock = { wall: parseWall(payload.now), at: Date.now() };
     this.render();
@@ -111,7 +129,23 @@ export const CalendarCanvas = {
     if (!detail || !detail.view || !detail.date) return;
     this.view = detail.view;
     this.date = detail.date;
+    this.pending = { view: detail.view, date: detail.date };
     this.render();
+  },
+
+  // The minute tick moves the now line; an open "+N" list must not be torn down for it.
+  tick() {
+    if (this.list) return;
+    this.render();
+  },
+
+  resized() {
+    if (this.el.clientWidth === this.lastWidth) return;
+    if (this.frame) cancelAnimationFrame(this.frame);
+    this.frame = requestAnimationFrame(() => {
+      this.frame = null;
+      this.render();
+    });
   },
 
   nowMinute() {
@@ -121,19 +155,21 @@ export const CalendarCanvas = {
   render() {
     if (!this.settings || !this.clock) return;
     const days = periodDays(this.view, this.date, this.settings.week_start, this.settings.show_weekends);
+    const previous = this.el.querySelector("[data-scroll]");
+    if (previous) this.scrollTop = previous.scrollTop;
 
     if (!isLoaded(this.cache, days)) {
+      this.dropList();
       this.el.innerHTML = renderSkeleton(days, this.strings);
       this.el.setAttribute("aria-busy", "true");
       return;
     }
 
-    const previous = this.el.querySelector("[data-scroll]");
-    if (previous) this.scrollTop = previous.scrollTop;
     const focused = this.el.contains(document.activeElement) ? document.activeElement.closest("[data-event-id]")?.dataset.eventId : null;
     const now = this.nowMinute();
 
-    this.list = null;
+    this.dropList();
+    this.lastWidth = this.el.clientWidth;
     this.el.innerHTML = renderGrid({
       view: this.view,
       days,
@@ -192,6 +228,7 @@ export const CalendarCanvas = {
   },
 
   handleKey(e) {
+    if (e.repeat) return undefined;
     if (e.key === "Escape") return this.closeList();
     if ((e.key === "Enter" || e.key === " ") && e.target.matches?.('[data-event-id][role="button"]')) {
       e.preventDefault();
@@ -211,14 +248,17 @@ export const CalendarCanvas = {
   positionPreview(rect) {
     const preview = document.getElementById("calendar-preview");
     if (!preview) return;
+    document.documentElement.style.removeProperty("--cal-pop-h");
     this.setPreviewPosition(placePopover(rect, { width: preview.offsetWidth || PREVIEW_ESTIMATE.width, height: preview.offsetHeight || PREVIEW_ESTIMATE.height }, viewport()));
     preview.focus({ preventScroll: true });
   },
 
   // The preview is rendered by LiveView outside this element, so its position
   // travels as CSS variables on <html>, which LiveView never patches.
-  setPreviewPosition({ left, top }) {
+  setPreviewPosition({ left, top, maxHeight }) {
     const style = document.documentElement.style;
+    if (maxHeight) style.setProperty("--cal-pop-h", `${Math.round(maxHeight)}px`);
+    else style.removeProperty("--cal-pop-h");
     style.setProperty("--cal-pop-x", `${Math.round(left)}px`);
     style.setProperty("--cal-pop-y", `${Math.round(top)}px`);
   },
@@ -239,12 +279,27 @@ export const CalendarCanvas = {
     const position = placePopover(anchor.getBoundingClientRect(), { width: list.offsetWidth || 240, height: list.offsetHeight || 160 }, viewport());
     list.style.left = `${Math.round(position.left)}px`;
     list.style.top = `${Math.round(position.top)}px`;
+    list.style.maxHeight = position.maxHeight ? `${Math.round(position.maxHeight)}px` : "";
     this.list = list;
+    this.listAnchor = { name: anchor.hasAttribute("data-more") ? "more" : "alldayMore", value: anchor.dataset.more ?? anchor.dataset.alldayMore };
+    document.addEventListener("pointerdown", this.outside);
     list.querySelector("button")?.focus();
   },
 
-  closeList() {
-    this.list?.remove();
+  // Forget the list without touching focus (the grid redraw has removed it).
+  dropList() {
+    document.removeEventListener("pointerdown", this.outside);
     this.list = null;
+  },
+
+  closeList() {
+    if (!this.list) return;
+    const hadFocus = this.list.contains(document.activeElement);
+    this.list.remove();
+    this.dropList();
+    if (!hadFocus || !this.listAnchor) return;
+    const { name, value } = this.listAnchor;
+    const chip = [...this.el.querySelectorAll("[data-more], [data-allday-more]")].find((node) => node.dataset[name] === value);
+    chip?.focus({ preventScroll: true });
   },
 };

@@ -166,3 +166,166 @@ test("the days it draws match the week the server named", () => {
   const drawn = [...el.querySelectorAll(".cal-col")].map((col) => col.dataset.day);
   expect(drawn).toEqual(Array.from({ length: 7 }, (_, k) => addDays("2026-10-12", k)));
 });
+
+const fiveAt = () => ["a", "b", "c", "d", "e"].map((id) => event(`event-${id}`, `Meeting ${id}`, "2026-10-14T13:00", "2026-10-14T14:00"));
+const days = (iso) => [...document.querySelectorAll(".cal-col")].map((c) => c.dataset.day).includes(iso);
+
+test("a late payload for an intermediate week does not snap the grid back", () => {
+  const { el, reply, handlers } = mountHook();
+  reply(payload());
+  el.dispatchEvent(new CustomEvent("calendar:navigate", { detail: { view: "week", date: "2026-10-21" } }));
+  el.dispatchEvent(new CustomEvent("calendar:navigate", { detail: { view: "week", date: "2026-11-04" } }));
+  handlers["calendar:events"](payload({ date: "2026-10-21", range: { from: "2026-10-12", to: "2026-11-02" }, reset: false }));
+  expect(el.querySelector(".cal-skeleton")).not.toBeNull();
+  expect(el.querySelector(".cal-col")).toBeNull();
+
+  handlers["calendar:events"](payload({ date: "2026-11-04", range: { from: "2026-10-26", to: "2026-11-16" }, reset: false, events: [] }));
+  expect(el.querySelector(".cal-skeleton")).toBeNull();
+  expect(days("2026-11-04")).toBe(true);
+});
+
+test("a payload with nothing pending (browser Back) is followed", () => {
+  const { el, reply, handlers } = mountHook();
+  reply(payload());
+  handlers["calendar:events"](payload({ date: "2026-10-21", range: { from: "2026-10-12", to: "2026-11-02" }, reset: false }));
+  expect(days("2026-10-21")).toBe(true);
+});
+
+test("the minute tick leaves an open list and its focus alone", () => {
+  vi.useFakeTimers();
+  try {
+    const { el, reply } = mountHook();
+    reply(payload({ events: fiveAt() }));
+    el.querySelector(".cal-more").click();
+    const focused = document.activeElement;
+    vi.advanceTimersByTime(60_000);
+    expect(el.querySelector(".cal-list")).not.toBeNull();
+    expect(document.activeElement).toBe(focused);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test("a resize redraws only when the width changed, batched per frame", () => {
+  const frames = [];
+  vi.stubGlobal("requestAnimationFrame", (fn) => frames.push(fn) && frames.length);
+  vi.stubGlobal("cancelAnimationFrame", () => {});
+  try {
+    const { el, hook, reply } = mountHook();
+    reply(payload());
+    const render = vi.spyOn(hook, "render");
+    hook.resized();
+    expect(frames).toHaveLength(0);
+    Object.defineProperty(el, "clientWidth", { value: 700, configurable: true });
+    hook.resized();
+    expect(render).not.toHaveBeenCalled();
+    frames.pop()();
+    expect(render).toHaveBeenCalledTimes(1);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
+function shortViewport() {
+  vi.stubGlobal("innerWidth", 400);
+  vi.stubGlobal("innerHeight", 300);
+}
+
+function middleAnchor(node) {
+  node.getBoundingClientRect = () => ({ left: 100, right: 140, top: 150, bottom: 170, width: 40, height: 20 });
+}
+
+test("a list that fits neither side is capped and scrolls", () => {
+  shortViewport();
+  try {
+    const { el, reply } = mountHook();
+    reply(payload({ events: fiveAt() }));
+    const chip = el.querySelector(".cal-more");
+    chip.getBoundingClientRect = () => ({ left: 100, right: 140, top: 120, bottom: 160, width: 40, height: 40 });
+    chip.click();
+    expect(el.querySelector(".cal-list").style.maxHeight).toMatch(/^\d+px$/);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
+test("a preview that fits neither side is capped through --cal-pop-h", () => {
+  shortViewport();
+  try {
+    const { el, hook, reply } = mountHook();
+    reply(payload());
+    const anchor = el.querySelector('[data-event-id="event-1"]');
+    middleAnchor(anchor);
+    anchor.click();
+    expect(document.documentElement.style.getPropertyValue("--cal-pop-h")).toMatch(/^\d+px$/);
+
+    const preview = document.createElement("div");
+    preview.id = "calendar-preview";
+    preview.tabIndex = -1;
+    Object.defineProperty(preview, "offsetHeight", { value: 20 });
+    document.body.appendChild(preview);
+    hook.pushEventTo.mock.calls.at(-1)[3]();
+    expect(document.documentElement.style.getPropertyValue("--cal-pop-h")).toBe("");
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
+test("Escape in the list hands focus back to its chip, even after a redraw", () => {
+  const { el, reply, handlers } = mountHook();
+  reply(payload({ events: fiveAt() }));
+  el.querySelector(".cal-more").click();
+  handlers["calendar:settings"]({ ...settings, density: "compact" });
+  el.querySelector(".cal-more").click();
+  expect(el.contains(document.activeElement)).toBe(true);
+  document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  expect(el.querySelector(".cal-list")).toBeNull();
+  expect(document.activeElement.classList.contains("cal-more")).toBe(true);
+});
+
+test("a held key does not repeat Escape or Enter", () => {
+  const { el, hook, reply } = mountHook();
+  reply(payload());
+  const before = hook.pushEventTo.mock.calls.length;
+  el.querySelector('[data-event-id="event-1"]').dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", repeat: true, bubbles: true }));
+  expect(hook.pushEventTo.mock.calls).toHaveLength(before);
+});
+
+test("a pointer press outside the list closes it", () => {
+  const { el, reply } = mountHook();
+  reply(payload({ events: fiveAt() }));
+  el.querySelector(".cal-more").click();
+  el.querySelector(".cal-list").dispatchEvent(new Event("pointerdown", { bubbles: true }));
+  expect(el.querySelector(".cal-list")).not.toBeNull();
+  document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+  expect(el.querySelector(".cal-list")).toBeNull();
+});
+
+test("the scroll position survives a visit to the skeleton", () => {
+  const { el, hook, reply, handlers } = mountHook();
+  reply(payload());
+  el.querySelector("[data-scroll]").scrollTop = 123;
+  el.dispatchEvent(new CustomEvent("calendar:navigate", { detail: { view: "week", date: "2026-11-04" } }));
+  expect(hook.scrollTop).toBe(123);
+  handlers["calendar:events"](payload({ date: "2026-11-04", range: { from: "2026-10-26", to: "2026-11-16" }, reset: false, events: [] }));
+  expect(el.querySelector("[data-scroll]").scrollTop).toBe(123);
+});
+
+test("destroyed removes the popover variables and the document listener", () => {
+  const { el, hook, reply } = mountHook();
+  reply(payload({ events: fiveAt() }));
+  el.querySelector('[data-event-id="event-a"]').click();
+  el.querySelector(".cal-more").click();
+  const remove = vi.spyOn(document, "removeEventListener");
+  hook.destroyed();
+  expect(remove).toHaveBeenCalledWith("pointerdown", hook.outside);
+  for (const name of ["--cal-pop-x", "--cal-pop-y", "--cal-pop-h"]) expect(document.documentElement.style.getPropertyValue(name)).toBe("");
+});
+
+test("reconnecting asks the server for the data again", () => {
+  const { hook, reply } = mountHook();
+  reply(payload());
+  hook.reconnected();
+  expect(hook.pushEventTo.mock.calls).toHaveLength(2);
+  expect(hook.pushEventTo.mock.calls[1][1]).toBe("calendar:ready");
+});
