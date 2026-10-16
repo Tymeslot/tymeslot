@@ -312,10 +312,25 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
     do: BookingText.default_heading(current_theme_key(profile), name(profile))
 
   defp default_for(:booking_greeting, profile),
-    do: BookingText.seed_greeting(name(profile), current_theme_key(profile))
+    do:
+      seeded(
+        BookingText.seed_greeting(name(profile), current_theme_key(profile)),
+        fn -> BookingText.seed_greeting(name(profile)) end
+      )
 
   defp default_for(:booking_instruction, profile),
-    do: BookingText.default_instruction(current_theme_key(profile))
+    do:
+      seeded(
+        BookingText.default_instruction(current_theme_key(profile)),
+        &BookingText.default_instruction/0
+      )
+
+  # A voice may say nothing for a line (Paper greets nobody, Folio gives no
+  # instruction label). The field is required while the customisation is on,
+  # so it starts from the shared wording, which the organiser edits or keeps.
+  defp seeded(text, shared) do
+    if is_binary(text) and String.trim(text) != "", do: text, else: shared.()
+  end
 
   # Clearing on the way in is what makes a newer edit replace a held one: this
   # attempt supersedes it, and only a throttle puts anything back.

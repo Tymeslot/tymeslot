@@ -29,6 +29,7 @@ defmodule TymeslotWeb.Themes.Paper.Theme do
       voice: :neutral,
       surface: :flat_light_card
     ],
+    voice: TymeslotWeb.Themes.Paper.Voice,
     page_shell: &Pages.page_shell/1
 
   @impl TymeslotWeb.Themes.Core.Behaviour

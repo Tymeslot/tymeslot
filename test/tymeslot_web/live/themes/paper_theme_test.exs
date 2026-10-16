@@ -161,6 +161,14 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
     assert html =~ ~s(class="scheduling-app theme-3 paper-theme")
   end
 
+  test "the overview speaks in Paper's neutral voice", %{conn: conn, profile: profile} do
+    {:ok, view, _html} = live(conn, ~p"/#{profile.username}")
+
+    assert has_element?(view, ".paper-title", "Book a meeting with")
+    assert has_element?(view, ".paper-intro__instruction", "Select a meeting type")
+    refute has_element?(view, ".paper-intro__greeting")
+  end
+
   test "the dashboard's and the onboarding wizard's pickers offer Paper" do
     assert {"Paper", "3"} in ThemeInfo.theme_options()
   end

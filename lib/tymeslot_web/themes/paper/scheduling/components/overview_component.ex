@@ -5,7 +5,9 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
 
   On the left the organiser's introduction, left-aligned: their avatar (or,
   when they have uploaded a logo, the logo in the brand row above and no
-  avatar), the page's heading, greeting and instruction. On the right the
+  avatar), the page's heading and instruction (in Paper's voice,
+  `Paper.Voice`, which greets nobody; an organiser's own greeting still
+  shows). On the right the
   meeting types as one bordered list, each row with its name, approval
   pill and description, then its facts with their icons: length, each
   location (`MeetingTypes.location_options/1`, drawn with
@@ -66,7 +68,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
         <header class="paper-intro">
           <Components.avatar :if={is_nil(@logo)} profile={@organizer_profile} size={:lg} />
           <h1 class="paper-title">{@heading}</h1>
-          <p :if={@greeting} class="paper-intro__greeting">{@greeting}</p>
+          <p :if={@greeting not in [nil, ""]} class="paper-intro__greeting">{@greeting}</p>
           <p class="paper-intro__instruction">{@instruction}</p>
         </header>
 

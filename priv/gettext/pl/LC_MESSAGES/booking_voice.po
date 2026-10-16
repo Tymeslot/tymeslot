@@ -10,3 +10,33 @@ msgid ""
 msgstr ""
 "Language: pl\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Book a meeting"
+msgstr "Zarezerwuj spotkanie"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Book a meeting with %{name}"
+msgstr "Zarezerwuj spotkanie: %{name}"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Confirm booking"
+msgstr "Potwierdź rezerwację"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Select a meeting type"
+msgstr "Wybierz rodzaj spotkania"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "That time was just booked. Choose another."
+msgstr "Ten termin został właśnie zarezerwowany. Wybierz inny."

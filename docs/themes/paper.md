@@ -26,7 +26,7 @@ Today Paper shares the booking copy every theme shares, its heading naming the o
 
 - **Tone:** plain, short, invisible. It never talks about itself or the organiser's personality.
 - **Rules:** imperative labels, no exclamation marks, no greetings, numbers before words.
-- **Lines:** heading "Book a meeting with Ana Silva"; type prompt "Select a meeting type"; time prompt "Select a date and time"; empty "No times available this week"; button "Confirm booking"; confirmation "Booking confirmed"; slot taken "That time was just booked. Choose another."
+- **Lines:** heading "Book a meeting with Ana Silva" (no greeting); type prompt "Select a meeting type"; button "Confirm booking"; slot taken "That time was just booked. Choose another." Words in `Paper.Voice`, context `paper` of `booking_voice`.
 
 ## Axes
 
