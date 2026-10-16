@@ -140,6 +140,16 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotListTest do
       assert Floki.attribute(doc, ".slot-list__slot--selected", "data-time") == ["9:30 AM"]
     end
 
+    test "announces the chosen time as pressed and the others as not", %{doc: doc} do
+      pressed = fn time ->
+        Floki.attribute(doc, "[data-testid=time-slot][data-time='#{time}']", "aria-pressed")
+      end
+
+      assert pressed.("9:30 AM") == ["true"]
+      assert pressed.("9:00 AM") == ["false"]
+      assert pressed.("2:00 PM") == ["false"]
+    end
+
     test "offers no hour toggles", %{doc: doc} do
       assert Floki.find(doc, "[data-testid=slot-hour]") == []
     end
@@ -196,6 +206,11 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotListTest do
       doc = hours(selected_time: "10:00 AM")
 
       assert Floki.attribute(doc, ".slot-list__slot--selected", "phx-value-hour") == ["10"]
+
+      # The hour button discloses its minutes; it is not a choice, so it
+      # carries aria-expanded and never aria-pressed.
+      assert hour_attr(doc, 10, "aria-pressed") == []
+      assert hour_attr(doc, 10, "aria-expanded") == ["false"]
       assert Floki.attribute(doc, ".slot-list__slot--expanded", "phx-value-hour") == ["9"]
     end
   end

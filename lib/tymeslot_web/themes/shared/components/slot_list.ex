@@ -20,7 +20,9 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotList do
   `assets/js/utility_hooks.js` relies on `#slots-container`,
   `.slot-list__heading` and `[data-slots-loaded]`; change them together.
   Each time button carries the markup contract's `data-fact="time"`, its
-  `data-value` the value `select_time` sends.
+  `data-value` the value `select_time` sends, and `aria-pressed` says whether
+  it is the chosen time; the hour toggle only discloses its minutes, so it
+  carries `aria-expanded` and no `aria-pressed`.
 
   On a group meeting type (`meeting_type`) a time also shows its spots
   (`SeatBadge`, as the organiser chose to show them): the button then gains
@@ -213,6 +215,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotList do
       data-time={@slot.time}
       data-fact="time"
       data-value={@slot.time}
+      aria-pressed={to_string(@selected)}
       phx-click="select_time"
       phx-value-time={@slot.time}
       phx-target={@target}
