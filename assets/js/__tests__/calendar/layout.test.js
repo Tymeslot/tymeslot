@@ -4,7 +4,7 @@
  * at least its first title line uncovered.
  */
 import { describe, expect, test } from "vitest";
-import { CHIP_WIDTH, LINE_HEIGHT, PAD_TOP, countLines, layoutColumn, layoutDay, placeDay } from "../../calendar/layout.js";
+import { CHIP_WIDTH, LINE_HEIGHT, MIN_EVENT_WIDTH, PAD_TOP, countLines, layoutColumn, layoutDay, placeDay } from "../../calendar/layout.js";
 import { makeScale } from "../../calendar/time.js";
 
 const scale = makeScale(52, false);
@@ -201,10 +201,16 @@ describe("review regressions", () => {
     expect(chip.z).toBeGreaterThan(Math.max(...events(laid).map((item) => item.z)));
   });
 
-  test("a column too narrow for one 64px column still keeps one column beside the chip", () => {
-    const laid = layoutDay([ev("a", 540, 600), ev("b", 540, 600)], opts(80));
+  test("a column with room for one 56px column beside the chip keeps it", () => {
+    const laid = layoutDay([ev("a", 540, 600), ev("b", 540, 600)], opts(90));
     expect(events(laid)).toHaveLength(1);
-    expect(events(laid)[0].width).toBe(80 - CHIP_WIDTH);
+    expect(events(laid)[0].width).toBe(90 - CHIP_WIDTH);
+  });
+
+  test("a column without room for a 56px column beside the chip gives the chip the column", () => {
+    const laid = layoutDay([ev("a", 540, 600), ev("b", 540, 600)], opts(80));
+    expect(events(laid)).toEqual([]);
+    expect(chips(laid)).toEqual([expect.objectContaining({ hidden: ["a", "b"], left: 0, width: 80 })]);
   });
 
   test("whether a later event can overlay is measured in the earlier event's own column", () => {
@@ -275,5 +281,93 @@ describe("review regressions", () => {
     const laid = layoutDay(["a", "b", "c"].map((id) => ev(id, 540, 600)), opts(34));
     expect(events(laid)).toEqual([]);
     expect(chips(laid)).toEqual([expect.objectContaining({ hidden: ["a", "b", "c"], left: 0, width: 34 })]);
+  });
+});
+
+describe("the busy Wednesday: every visible event stays readable", () => {
+  const wednesday = (extra = {}) =>
+    [
+      ev("workshop", 540, 750, "Strategy workshop"),
+      ev("design", 540, 600, "Design review"),
+      ev("standup", 555, 570, "Standup"),
+      ev("dentist", 570, 660, "Dentist"),
+      ev("sam", 600, 630, "1:1 with Sam"),
+      ev("hiring", 615, 660, "Hiring sync"),
+    ].map((segment) => ({ ...segment, ...extra[segment.id] }));
+  const byId = (laid, id) => laid.find((item) => item.id === id);
+
+  // Whatever is drawn above `a` (a chip, a higher event, or a later one at
+  // its level) and crosses its first title line.
+  const coveringTitle = (laid, a) => {
+    const lineEnd = a.top + Math.min(a.height, PAD_TOP + LINE_HEIGHT);
+    return laid.filter((b, j) => {
+      if (b === a || !(b.chip || b.z > a.z || (b.z === a.z && j > laid.indexOf(a)))) return false;
+      const across = Math.min(a.left + a.width, b.left + b.width) - Math.max(a.left, b.left);
+      const down = Math.min(lineEnd, b.top + b.height) - Math.max(a.top, b.top);
+      return across > 4 && down > 0.5;
+    });
+  };
+
+  const expectReadable = (laid, segments) => {
+    for (const item of events(laid)) {
+      expect(item.width, item.id).toBeGreaterThanOrEqual(MIN_EVENT_WIDTH - 0.5);
+      expect(coveringTitle(laid, item).map((b) => b.id ?? "chip"), item.id).toEqual([]);
+    }
+    const shown = events(laid).map((item) => item.id);
+    const hidden = chips(laid).flatMap((chip) => chip.hidden);
+    expect([...shown, ...hidden].sort()).toEqual(segments.map((g) => g.id).sort());
+  };
+
+  test.each([100, 116, 200])("at %ipx no event is narrower than 56px or has its title covered", (width) => {
+    const laid = layoutColumn(wednesday(), opts(width));
+    expectReadable(laid, wednesday());
+    expect(byId(laid, "workshop")).toBeDefined();
+  });
+
+  test("at 100px the workshop keeps all the width beside the chip, and the rest fold", () => {
+    const laid = layoutColumn(wednesday(), opts(100));
+    expect(events(laid).map((item) => [item.id, item.left, item.width])).toEqual([["workshop", 0, 100 - CHIP_WIDTH]]);
+    expect(chips(laid)).toHaveLength(1);
+    expect(chips(laid)[0].hidden.sort()).toEqual(["dentist", "design", "hiring", "sam", "standup"]);
+  });
+
+  test("at 116px the longer of the two indented events shows, at least 56px wide", () => {
+    const laid = layoutColumn(wednesday(), opts(116));
+    expect(events(laid).map((item) => item.id)).toEqual(["workshop", "hiring"]);
+    expect(byId(laid, "workshop").width).toBe(116 - CHIP_WIDTH);
+    expect(chips(laid)[0].hidden.sort()).toEqual(["dentist", "design", "sam", "standup"]);
+  });
+
+  test("an indented event that needs attention displaces one that does not", () => {
+    const segments = wednesday({ sam: { attention: true } });
+    const laid = layoutColumn(segments, opts(116));
+    expect(events(laid).map((item) => item.id)).toEqual(["workshop", "sam"]);
+    expectReadable(laid, segments);
+  });
+
+  test("an attention item that cannot get 56px folds behind a warning chip", () => {
+    const laid = layoutColumn(wednesday({ sam: { attention: true } }), opts(100));
+    expect(chips(laid)[0]).toMatchObject({ warn: true });
+    expect(chips(laid)[0].hidden).toContain("sam");
+  });
+
+  test("every width from a narrow week column to a day column stays readable", () => {
+    for (let width = 86; width <= 720; width += 7) expectReadable(layoutColumn(wednesday(), opts(width)), wednesday());
+  });
+
+  test("in the day view a 15-minute standup is not covered by the event starting as it ends", () => {
+    const laid = layoutColumn(wednesday(), opts(700));
+    const standup = byId(laid, "standup");
+    expect(standup).toBeDefined();
+    expect(coveringTitle(laid, standup)).toEqual([]);
+    expect(chips(laid)).toEqual([]);
+  });
+
+  test("a short event's box shares the width with an event that starts under it", () => {
+    const laid = layoutColumn([ev("standup", 555, 570, "Standup"), ev("dentist", 570, 660, "Dentist")], opts(700));
+    const standup = byId(laid, "standup");
+    const dentist = byId(laid, "dentist");
+    expect(standup.top + standup.height).toBeGreaterThan(dentist.top);
+    expect(standup.left + standup.width <= dentist.left || dentist.left + dentist.width <= standup.left).toBe(true);
   });
 });

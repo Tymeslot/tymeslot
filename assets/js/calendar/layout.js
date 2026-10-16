@@ -11,16 +11,22 @@
  *  - touching events do not overlap;
  *  - when shared columns would fall below MIN_EVENT_WIDTH, the crowd folds
  *    into a "+N more" chip, each remaining column FOLD_COLUMN_WIDTH wide or
- *    more. Under about 94px only one, narrower column fits beside the chip,
- *    so such a group folds only where that widens its columns (or where they
- *    would be under 20px anyway); where even that one would be under 20px,
- *    the chip takes the whole width.
+ *    more. Under about 94px only one, narrower column fits beside the chip;
+ *    where even that one would be under MIN_EVENT_WIDTH, the chip shows alone
+ *    (across the whole column, or at the right edge of an indented group).
  * Added to the sketch: the fold is decided per moment, not per group. An
  * event is hidden only if, at some point in its life, more events than there
  * are columns run at once and it ranks below them: one that needs attention
  * (sync pending or failed) ranks first, then the longer one. Each chip covers
  * only the stretch where something is hidden, and a chip still hiding an
  * attention item is marked `warn`.
+ *
+ * Also added: an event takes the room its drawn box needs, not just its
+ * minutes, so a 15-minute event whose box (and title line) runs past its end
+ * shares the width with the event that starts there instead of lying under
+ * it. And no visible event is ever narrower than MIN_EVENT_WIDTH (or the
+ * column, if that is narrower): `layoutColumn` folds any event the cascade
+ * would still squeeze below it into the chip, keeping attention items first.
  *
  * All inputs are plain data; text measurement is injected (`measureLines`),
  * so the module is testable without a canvas.
@@ -34,7 +40,8 @@ export const PAD_TOP = 3;
 const SHORT_EVENT = 30;
 const MINUTES_PER_DAY = 1440;
 const ceil15 = (minutes) => Math.ceil(minutes / 15) * 15;
-const overlaps = (a, b) => a.s < b.e && a.e > b.s;
+// Overlap by the room each box takes on screen (`ve`, its visual end).
+const overlaps = (a, b) => a.s < b.ve && a.ve > b.s;
 const compareIds = (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 // Stronger first: attention, then longer, then earlier, then by id.
 const byStrength = (a, b) => Number(!!b.attention) - Number(!!a.attention) || b.e - b.s - (a.e - a.s) || a.s - b.s || compareIds(a, b);
@@ -63,20 +70,19 @@ export function countLines(text, width, measureWidth) {
   return lines;
 }
 
-// Narrower than this, an event can be neither read nor clicked.
-const MIN_USABLE_WIDTH = 20;
+// MIN_EVENT_WIDTH, less the sub-pixel share a column split leaves over.
+const READABLE = MIN_EVENT_WIDTH - 0.5;
 
 // How many columns fit beside the chip once `width` folds: at least one, or
-// none when even one would be unusable and the chip takes the whole width.
+// none when even one would be narrower than MIN_EVENT_WIDTH and the chip
+// shows alone.
 const foldSlots = (width) =>
-  width - CHIP_WIDTH < MIN_USABLE_WIDTH ? 0 : Math.max(1, Math.floor((width - CHIP_WIDTH) / FOLD_COLUMN_WIDTH));
+  width - CHIP_WIDTH < READABLE ? 0 : Math.max(1, Math.floor((width - CHIP_WIDTH) / FOLD_COLUMN_WIDTH));
 const foldedWidth = (width) => (foldSlots(width) ? (width - CHIP_WIDTH) / foldSlots(width) : 0);
 
-// Whether `width` split `n` ways folds: only below MIN_EVENT_WIDTH a column,
-// and only when folding widens the columns, unless they would be unusable
-// either way, where the chip at least opens a list.
-const folds = (width, n) =>
-  n > 1 && width / n < MIN_EVENT_WIDTH && (foldedWidth(width) > width / n || width / n < MIN_USABLE_WIDTH);
+// Whether `width` split `n` ways folds: whenever a column would be narrower
+// than MIN_EVENT_WIDTH.
+const folds = (width, n) => n > 1 && width / n < READABLE;
 
 // The width of one column of `width` split `n` ways, after any fold.
 const columnWidth = (width, n) => (folds(width, n) ? foldedWidth(width) : width / n);
@@ -85,10 +91,17 @@ const columnWidth = (width, n) => (folds(width, n) ? foldedWidth(width) : width 
  * Lays out one day's segments ({ id, s, e, title, attention }, minutes from
  * midnight). Returns events ({ id, s, e, level, left, width, z, nestIn }) and
  * chips ({ chip: true, ids, hidden, s, e, left, width, z, warn }), in px
- * across the column; `placeDay` adds the vertical pass.
+ * across the column; `placeDay` adds the vertical pass. `minHeight` is the
+ * shortest box `placeDay` draws; `hide` lists ids to fold into a chip whatever
+ * the room (`layoutColumn` uses it to keep every event readable).
  */
-export function layoutDay(segments, { colWidth, hourHeight, yOf, measureLines }) {
-  const segs = segments.map((segment) => ({ ...segment })).sort((a, b) => a.s - b.s || b.e - b.s - (a.e - a.s) || compareIds(a, b));
+export function layoutDay(segments, { colWidth, hourHeight, yOf, measureLines, minHeight = 20, hide = [] }) {
+  // The minutes a box of `px` pixels (plus the 2px gap below it) spans.
+  const minutesOf = (px) => ((px + 2) / hourHeight) * 60;
+  const forced = new Set(hide);
+  const segs = segments
+    .map((segment) => ({ ...segment, ve: Math.max(segment.e, segment.s + minutesOf(minHeight)), drop: 0, forced: forced.has(segment.id) }))
+    .sort((a, b) => a.s - b.s || b.e - b.s - (a.e - a.s) || compareIds(a, b));
 
   const startGap = Math.max(15, ceil15((22 / hourHeight) * 60));
   const indent = Math.max(12, Math.round(colWidth * 0.18));
@@ -102,7 +115,7 @@ export function layoutDay(segments, { colWidth, hourHeight, yOf, measureLines })
     const close = over.filter(
       (p) =>
         g.s - p.s < startGap ||
-        yOf(g.s) - yOf(p.s) < 4 + LINE_HEIGHT * Math.min(2, measureLines(p.title, columnWidth(p.group.width, p.group.ends.length) - 14)),
+        yOf(g.s) - yOf(p.s) - p.drop < 4 + LINE_HEIGHT * Math.min(2, measureLines(p.title, columnWidth(p.group.width, p.group.ends.length) - 14)),
     );
     const isShort = g.e - g.s <= SHORT_EVENT;
     const shortInLong = close.length > 0 && close.every((p) => p.e - p.s >= 90) && isShort;
@@ -141,6 +154,12 @@ export function layoutDay(segments, { colWidth, hourHeight, yOf, measureLines })
       join(host.group, g);
     }
 
+    if (g.nestIn) {
+      // placeDay pushes a nested box below its host's first line.
+      const host = placed.find((p) => p.id === g.nestIn);
+      g.drop = Math.max(0, yOf(host.s) + host.drop + PAD_TOP + LINE_HEIGHT + 3 - yOf(g.s));
+      g.ve = Math.max(g.ve, g.s + minutesOf(g.drop + minHeight));
+    }
     placed.push(g);
   }
 
@@ -155,10 +174,10 @@ export function layoutDay(segments, { colWidth, hourHeight, yOf, measureLines })
   }
 
   // A nested event whose host folded behind a chip nests in a visible event
-  // of the host's group instead, or in none.
+  // of the host's group that starts no later instead, or in none.
   for (const item of out) {
     if (item.chip || !item.nestIn || !seg.get(item.nestIn).hidden) continue;
-    const other = seg.get(item.nestIn).group.members.find((o) => !o.hidden && o.id !== item.id && overlaps(o, item));
+    const other = seg.get(item.nestIn).group.members.find((o) => !o.hidden && o.id !== item.id && o.s <= item.s && overlaps(o, item));
     item.nestIn = other ? other.id : null;
   }
 
@@ -166,14 +185,15 @@ export function layoutDay(segments, { colWidth, hourHeight, yOf, measureLines })
 }
 
 // Places a nested group against its host's drawn box. A host folded behind
-// its group's chip hands the nest to a visible event of that group; failing
+// its group's chip hands the nest to a visible event of that group that
+// starts no later (placeDay drops a nested box below its host's top); failing
 // one, the nested group ends at the chip's edge rather than under it.
 function placeNested(group, out, seg) {
   const first = group.members[0];
   let host = seg.get(first.nestIn);
   const hostGroup = host.group;
   if (host.hidden) {
-    host = hostGroup.members.find((o) => !o.hidden && overlaps(o, first));
+    host = hostGroup.members.find((o) => !o.hidden && o.s <= first.s && overlaps(o, first));
     for (const m of group.members) m.nestIn = host ? host.id : null;
   }
 
@@ -197,8 +217,8 @@ function nestLeft(left, width) {
 
 function join(group, g) {
   const col = group.ends.findIndex((end) => end <= g.s);
-  if (col < 0) group.ends.push(g.e);
-  else group.ends[col] = g.e;
+  if (col < 0) group.ends.push(g.ve);
+  else group.ends[col] = g.ve;
   group.members.push(g);
   g.group = group;
 }
@@ -211,10 +231,11 @@ function layoutGroup(group, chipZ) {
 
 function layoutRun(group, members, chipZ) {
   const n = assignSlots(members).length;
-  const folding = folds(group.width, n);
+  // A member that must fold needs the chip, so its whole run folds.
+  const folding = members.some((m) => m.forced) || folds(group.width, n);
   const slots = folding ? foldSlots(group.width) : n;
-  const unit = columnWidth(group.width, n);
-  const shown = folding ? chooseVisible(members, slots) : members;
+  const unit = folding ? foldedWidth(group.width) : group.width / n;
+  const shown = folding ? chooseVisible(members.filter((m) => !m.forced), slots) : members;
   for (const m of members) m.hidden = !shown.includes(m);
   const visible = members.filter((m) => !m.hidden);
   assignSlots(visible);
@@ -230,17 +251,22 @@ function layoutRun(group, members, chipZ) {
     out.push({ id: m.id, s: m.s, e: m.e, level: m.level, left: group.left + m.slot * unit, width: span * unit, z: 3 + m.level, nestIn: m.nestIn ?? null });
   }
 
+  // A chip alone takes the whole of a column's own group, but only the right
+  // edge of an indented or nested group, clear of the event underneath.
+  const whole = !slots && group.left === 0 && !group.nested;
+  const chipWidth = whole ? group.width : Math.min(CHIP_WIDTH, group.width);
   for (const hidden of runsOf(members.filter((m) => m.hidden))) {
     const s = Math.min(...hidden.map((m) => m.s));
     const e = Math.max(...hidden.map((m) => m.e));
+    const ve = Math.max(...hidden.map((m) => m.ve));
     out.push({
       chip: true,
-      ids: members.filter((m) => m.s < e && m.e > s).map((m) => m.id),
+      ids: members.filter((m) => m.s < ve && m.ve > s).map((m) => m.id),
       hidden: hidden.map((m) => m.id),
       s,
       e,
-      left: slots ? group.left + group.width - CHIP_WIDTH : group.left,
-      width: slots ? CHIP_WIDTH : group.width,
+      left: group.left + group.width - chipWidth,
+      width: chipWidth,
       z: chipZ,
       warn: hidden.some((m) => m.attention),
     });
@@ -255,8 +281,8 @@ function assignSlots(members) {
   const ends = [];
   for (const m of members) {
     let slot = ends.findIndex((end) => end <= m.s);
-    if (slot < 0) slot = ends.push(m.e) - 1;
-    else ends[slot] = m.e;
+    if (slot < 0) slot = ends.push(m.ve) - 1;
+    else ends[slot] = m.ve;
     m.slot = slot;
   }
   return ends;
@@ -267,8 +293,8 @@ function assignSlots(members) {
 function chooseVisible(members, slots) {
   const kept = [];
   for (const m of [...members].sort(byStrength)) {
-    const moments = [m.s, ...kept.filter((o) => o.s > m.s && o.s < m.e).map((o) => o.s)];
-    const peak = Math.max(...moments.map((t) => kept.filter((o) => o.s <= t && o.e > t).length));
+    const moments = [m.s, ...kept.filter((o) => o.s > m.s && o.s < m.ve).map((o) => o.s)];
+    const peak = Math.max(...moments.map((t) => kept.filter((o) => o.s <= t && o.ve > t).length));
     if (peak < slots) kept.push(m);
   }
   return members.filter((m) => kept.includes(m));
@@ -281,10 +307,10 @@ function runsOf(members) {
   for (const m of members) {
     if (!runs.length || m.s >= end) {
       runs.push([m]);
-      end = m.e;
+      end = m.ve;
     } else {
       runs[runs.length - 1].push(m);
-      end = Math.max(end, m.e);
+      end = Math.max(end, m.ve);
     }
   }
   return runs;
@@ -379,7 +405,62 @@ export function placeDay(laid, { yOf, minHeight = 20 }) {
   return [...evs, ...merged];
 }
 
-/** layoutDay then placeDay, for one column. */
+/**
+ * layoutDay then placeDay, for one column, folding into the chip any event
+ * that is still not readable as drawn (narrower than MIN_EVENT_WIDTH, as an
+ * indented or nested event or one cut short at a chip can be, or with an
+ * event or chip over its title line) until none is. An event that needs
+ * attention is never the one folded while it can displace one that does not.
+ */
 export function layoutColumn(segments, opts) {
-  return placeDay(layoutDay(segments, opts), { yOf: opts.yOf, minHeight: opts.minHeight ?? 20 });
+  const minHeight = opts.minHeight ?? 20;
+  const floor = Math.min(READABLE, opts.colWidth - 0.5);
+  const seg = new Map(segments.map((g) => [g.id, g]));
+  const hide = [];
+
+  // Each pass folds one more event, so this ends within segments.length passes.
+  for (;;) {
+    const placed = placeDay(layoutDay(segments, { ...opts, minHeight, hide }), { yOf: opts.yOf, minHeight });
+    const clashing = unreadable(placed, floor);
+    if (!clashing.length) return placed;
+    hide.push(foldVictim(clashing.map((id) => seg.get(id)), placed, seg).id);
+  }
+}
+
+// The ids of events not readable as drawn: too narrow, or with a chip or a
+// later-drawn event across their first title line (both events count then).
+function unreadable(placed, floor) {
+  const ids = new Set();
+  placed.forEach((a, i) => {
+    if (a.chip) return;
+    if (a.width < floor) ids.add(a.id);
+    const lineEnd = a.top + Math.min(a.height, PAD_TOP + LINE_HEIGHT);
+    placed.forEach((b, j) => {
+      if (b === a || !(b.chip || b.z > a.z || (b.z === a.z && j > i))) return;
+      const across = Math.min(a.left + a.width, b.left + b.width) - Math.max(a.left, b.left);
+      const down = Math.min(lineEnd, b.top + b.height) - Math.max(a.top, b.top);
+      if (across <= 4 || down <= 0.5) return;
+      ids.add(a.id);
+      if (!b.chip) ids.add(b.id);
+    });
+  });
+  return [...ids];
+}
+
+// The event to fold among clashing ones: the weakest that does not need
+// attention; failing that, the weakest event without attention drawn across
+// the weakest clashing one; failing that, that one itself.
+function foldVictim(clashing, placed, seg) {
+  const weakest = (list) => [...list].sort(byStrength).at(-1);
+  const plain = clashing.filter((g) => !g.attention);
+  if (plain.length) return weakest(plain);
+
+  const target = weakest(clashing);
+  const box = placed.find((item) => item.id === target.id);
+  const rivals = placed
+    .filter((item) => !item.chip && item.id !== box.id && item.s < box.e && item.e > box.s)
+    .filter((item) => item.left < box.left + box.width && item.left + item.width > box.left)
+    .map((item) => seg.get(item.id))
+    .filter((g) => !g.attention);
+  return rivals.length ? weakest(rivals) : target;
 }
