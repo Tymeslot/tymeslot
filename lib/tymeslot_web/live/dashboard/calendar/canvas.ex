@@ -38,8 +38,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Canvas do
       >
         <div class="cal-skeleton">
           <div :for={_column <- 1..7} class="cal-skeleton-col">
-            <span class="cal-skeleton-block animate-shimmer"></span>
-            <span class="cal-skeleton-block is-short animate-shimmer"></span>
+            <span class="cal-skeleton-block"></span>
+            <span class="cal-skeleton-block is-short"></span>
           </div>
         </div>
       </div>

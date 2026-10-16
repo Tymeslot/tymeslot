@@ -37,6 +37,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   # finished, events changed elsewhere, or a refresh fell back on its timer.
   @refresh_actions [:events_updated, :integration_synced, :refresh_events]
 
+  # The mini month only pages within the years the grid can show.
+  @mini_years 1900..2200
+
   @impl Phoenix.LiveComponent
   def mount(socket), do: {:ok, SurfaceData.defaults(socket)}
 
@@ -67,6 +70,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   defp schedule_reload(%{assigns: %{pending_reload: scope}} = socket, action),
     do: assign(socket, :pending_reload, widest(scope, scope(action)))
+
+  defp shift_mini_cursor(socket, dir) do
+    cursor = Date.shift(socket.assigns.mini_cursor, month: step(dir))
+
+    if cursor.year in @mini_years,
+      do: assign(socket, :mini_cursor, cursor),
+      else: socket
+  end
+
+  defp step(dir) when dir in [-1, "-1"], do: -1
+  defp step(dir) when dir in [1, "1"], do: 1
+  defp step(_dir), do: 0
 
   defp scope(:events_updated), do: :events
   defp scope(_action), do: :full
@@ -151,12 +166,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   def handle_event("calendar:close_menu", _params, socket),
     do: {:noreply, assign(socket, :open_menu, nil)}
 
-  def handle_event("calendar:mini_shift", %{"dir" => dir}, socket) when dir in [-1, 1],
-    do:
-      {:noreply, assign(socket, :mini_cursor, Date.shift(socket.assigns.mini_cursor, month: dir))}
+  def handle_event("calendar:mini_shift", %{"dir" => dir}, socket),
+    do: {:noreply, shift_mini_cursor(socket, dir)}
 
   def handle_event("calendar:set_density", %{"option" => density}, socket),
     do: {:noreply, DisplayPreferences.set_density(socket, density)}
+
+  def handle_event("calendar:set_density", _params, socket), do: {:noreply, socket}
 
   def handle_event("calendar:toggle_fold_night", _params, socket),
     do: {:noreply, DisplayPreferences.toggle_fold_night(socket)}

@@ -10,12 +10,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayPreferences do
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Live.Shared.Flash
 
-  @densities ~w(comfortable compact)
-
   @doc "Saves `density` when it is one the grid can draw."
   @spec set_density(Phoenix.LiveView.Socket.t(), term()) :: Phoenix.LiveView.Socket.t()
-  def set_density(socket, density) when density in @densities, do: save(socket, :density, density)
-  def set_density(socket, _density), do: socket
+  def set_density(socket, density) do
+    if density in CalendarGrid.densities(), do: save(socket, :density, density), else: socket
+  end
 
   @doc "Flips whether the hours before 07:00 fold into one strip."
   @spec toggle_fold_night(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()

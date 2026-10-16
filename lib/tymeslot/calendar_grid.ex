@@ -30,6 +30,7 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.Integrations.Calendar.CalendarAppearanceSchema
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarPreferencesSchema
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -532,6 +533,10 @@ defmodule Tymeslot.CalendarGrid do
   def list_active_integrations(user_id) do
     Management.list_active_calendar_integrations(user_id)
   end
+
+  @doc "The densities a calendar grid can be drawn in."
+  @spec densities() :: [String.t()]
+  defdelegate densities(), to: CalendarPreferencesSchema, as: :densities
 
   @doc """
   Returns calendar preferences for the given user, or a default struct if none exist.

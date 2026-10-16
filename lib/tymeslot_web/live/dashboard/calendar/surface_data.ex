@@ -135,16 +135,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   @doc "Loads the events for the period plus one period either side."
   @spec load_window(socket()) :: socket()
   def load_window(socket) do
-    %{current_user: user, view: view, date: date, preferences: preferences, timezone: timezone} =
-      socket.assigns
+    %{current_user: user, timezone: timezone} = socket.assigns
 
-    window =
-      Period.window(
-        view,
-        date,
-        Period.week_start(preferences.week_start_day),
-        preferences.show_weekends
-      )
+    window = window_for(socket.assigns)
 
     {start_dt, end_dt} = EventWindow.utc_range(window.first, window.last, timezone)
 
@@ -262,13 +255,34 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   def put_preference(socket, key, value),
     do: assign(socket, :preferences, Map.put(socket.assigns.preferences, key, value))
 
+  # The same period again only closes the date picker. A different day whose
+  # window is the one already loaded (another day of the visible week) updates
+  # the title and range but needs no query: the hook already holds the events.
   defp follow_params(socket) do
     socket = assign_clock(socket)
+    %{view: view, date: date, window: loaded} = socket.assigns
 
-    if target(socket.assigns) == {socket.assigns.view, socket.assigns.date},
-      do: socket,
-      else: socket |> apply_params() |> load_window() |> push_events(false)
+    case target(socket.assigns) do
+      {^view, ^date} ->
+        assign(socket, :open_menu, nil)
+
+      _other ->
+        socket = apply_params(socket)
+
+        if window_for(socket.assigns) == loaded,
+          do: socket,
+          else: socket |> load_window() |> push_events(false)
+    end
   end
+
+  defp window_for(%{view: view, date: date, preferences: preferences}),
+    do:
+      Period.window(
+        view,
+        date,
+        Period.week_start(preferences.week_start_day),
+        preferences.show_weekends
+      )
 
   defp target(%{params: params, preferences: preferences, today: today}) do
     params = params || %{}

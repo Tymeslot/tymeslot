@@ -14,9 +14,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.CalendarGrid.Period
+  alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.Calendar.MiniMonth
   alias TymeslotWeb.Dashboard.Calendar.Navigation
-  alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Helpers.LocaleFormat
 
   attr :view, :atom, required: true
@@ -38,8 +38,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
     ~H"""
     <div
       id="calendar-toolbar"
-      role="toolbar"
-      aria-label={dgettext("dashboard_calendar", "Calendar controls")}
       class="flex h-11 shrink-0 items-center gap-2 border-b border-tymeslot-200 bg-white px-3"
     >
       <.icon_button
@@ -87,6 +85,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
         position={:bottom_start}
         role="dialog"
         panel_label={dgettext("dashboard_calendar", "Choose a date")}
+        aria-label={
+          dgettext("dashboard_calendar", "Choose a date, %{period}",
+            period: period_title(@view, @date, @days, @locale)
+          )
+        }
         trigger_class="flex items-center gap-1 rounded-token-md px-2 py-1 hover:bg-tymeslot-50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400"
         class="mt-1 w-72 rounded-token-xl bg-white p-3 shadow-lg ring-1 ring-tymeslot-200"
       >
@@ -258,12 +261,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
         LocaleFormat.format_month_year(first.month, first.year, locale)
 
       first.year == last.year ->
-        "#{LocaleFormat.format_month_name(first.month, locale, :short)} – " <>
+        range_title(
+          LocaleFormat.format_month_name(first.month, locale, :short),
           LocaleFormat.format_month_year(last.month, last.year, locale)
+        )
 
       true ->
-        "#{LocaleFormat.format_month_year(first.month, first.year, locale)} – " <>
+        range_title(
+          LocaleFormat.format_month_year(first.month, first.year, locale),
           LocaleFormat.format_month_year(last.month, last.year, locale)
+        )
     end
   end
+
+  defp range_title(first, last),
+    do: dgettext("dashboard_calendar", "%{first} – %{last}", first: first, last: last)
 end

@@ -63,6 +63,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.MiniMonth do
           phx-click={Navigation.js(@view, day)}
           aria-label={LocaleFormat.format_weekday_date(day, @locale)}
           aria-current={if(day == @today, do: "date")}
+          aria-pressed={to_string(day in @days)}
           class={day_class(day, @cursor, @days, @today)}
         >
           {day.day}

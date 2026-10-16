@@ -50,6 +50,10 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
   @valid_time_formats TimeFormat.formats()
   @valid_densities ~w(comfortable compact)
 
+  @doc "The densities a calendar grid can be drawn in."
+  @spec densities() :: [String.t()]
+  def densities, do: @valid_densities
+
   @castable_fields [
     :user_id,
     :default_view,

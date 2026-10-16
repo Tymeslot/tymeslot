@@ -474,6 +474,22 @@
   height: 56px;
   border-radius: var(--radius-md);
   background: var(--cal-skeleton);
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--cal-surface) 55%, transparent),
+    transparent
+  );
+  background-repeat: no-repeat;
+  background-size: 1000px 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cal-skeleton-block {
+    background-image: none;
+    animation: none;
+  }
 }
 
 .cal-skeleton-block.is-short {
@@ -513,7 +529,10 @@
   cursor: pointer;
 }
 
-.cal-list-item:hover,
+.cal-list-item:hover {
+  background: var(--cal-hover);
+}
+
 .cal-list-item:focus-visible {
   background: var(--cal-hover);
   outline: 2px solid var(--cal-focus);

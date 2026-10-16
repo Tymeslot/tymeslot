@@ -238,7 +238,7 @@ function chip(item, byId, strings) {
 
 export function renderSkeleton(days, strings) {
   const columns = days
-    .map(() => `<div class="cal-skeleton-col"><span class="cal-skeleton-block animate-shimmer"></span><span class="cal-skeleton-block is-short animate-shimmer"></span></div>`)
+    .map(() => `<div class="cal-skeleton-col"><span class="cal-skeleton-block"></span><span class="cal-skeleton-block is-short"></span></div>`)
     .join("");
   return `<div class="cal-grid is-loading" role="status" aria-label="${escapeHtml(strings.loading)}" style="--cal-days:${days.length};--cal-axis:${AXIS_WIDTH}px"><div class="cal-skeleton">${columns}</div></div>`;
 }

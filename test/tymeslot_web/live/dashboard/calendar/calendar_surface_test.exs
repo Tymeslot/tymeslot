@@ -12,6 +12,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTest do
 
   import TymeslotWeb.CalendarSurfaceHelpers
 
+  alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
+
   setup %{conn: conn}, do: owner(conn)
 
   test "an organiser with the switch on gets the new surface, not the old grid", %{conn: conn} do
@@ -160,5 +162,92 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTest do
     |> render_hook("calendar:goto", %{"view" => "day", "date" => "2026-10-15"})
 
     assert_patch(lv, "/dashboard/calendar?view=day&date=2026-10-15")
+  end
+
+  test "the date picker's trigger names the period it shows", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    assert has_element?(
+             lv,
+             "#calendar-date-picker > button[aria-label='Choose a date, October 2026']"
+           )
+
+    refute has_element?(lv, "#calendar-toolbar[role='toolbar']")
+  end
+
+  test "the picker marks the visible range for screen readers, not by colour alone", %{
+    conn: conn
+  } do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    lv |> element("#calendar-date-picker > button") |> render_click()
+
+    assert has_element?(
+             lv,
+             "#calendar-picker-month button[aria-label='Friday, 16 October 2026'][aria-pressed='true']"
+           )
+
+    assert has_element?(
+             lv,
+             "#calendar-picker-month button[aria-label='Thursday, 22 October 2026'][aria-pressed='false']"
+           )
+  end
+
+  test "picking the day already shown closes the date picker", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    lv |> element("#calendar-date-picker > button") |> render_click()
+    assert has_element?(lv, "#calendar-date-picker-panel")
+
+    lv
+    |> element("#calendar-picker-month button[aria-label='Wednesday, 14 October 2026']")
+    |> render_click()
+
+    refute has_element?(lv, "#calendar-date-picker-panel")
+  end
+
+  test "picking another day of the visible week pushes no new events", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    lv |> element("#calendar-date-picker > button") |> render_click()
+
+    lv
+    |> element("#calendar-picker-month button[aria-label='Friday, 16 October 2026']")
+    |> render_click()
+
+    assert_patch(lv, "/dashboard/calendar?view=week&date=2026-10-16")
+    refute_push_event(lv, "calendar:events", _payload)
+    refute has_element?(lv, "#calendar-date-picker-panel")
+  end
+
+  test "the parent re-rendering pushes no events", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    send(lv.pid, :agenda_tick)
+    _html = render(lv)
+
+    refute_push_event(lv, "calendar:events", _payload)
+  end
+
+  test "a mini month shift in an unknown direction changes nothing and does not crash", %{
+    conn: conn
+  } do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    lv |> element("#calendar-date-picker > button") |> render_click()
+
+    for dir <- ["sideways", nil, 2, "1.5"] do
+      lv |> element("#calendar-canvas") |> render_hook("calendar:mini_shift", %{"dir" => dir})
+    end
+
+    assert lv |> element("#calendar-picker-month") |> render() =~ "October 2026"
+    assert has_element?(lv, "#calendar-surface")
+  end
+
+  test "an unknown density is ignored", %{conn: conn, user: user} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    for params <- [%{"option" => "cramped"}, %{"option" => 5}, %{}] do
+      lv |> element("#calendar-canvas") |> render_hook("calendar:set_density", params)
+    end
+
+    refute_push_event(lv, "calendar:settings", _payload)
+    assert CalendarPreferencesQueries.get_or_create(user.id).density == "comfortable"
   end
 end
