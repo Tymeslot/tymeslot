@@ -17,7 +17,9 @@
  *    server's payload arrives. The target stays pending until the server
  *    confirms it, with `calendar:events` or, when no reload was needed,
  *    `calendar:period`; a step (previous, next) taken while one is pending
- *    steps from it and tells the server with `calendar:goto`;
+ *    steps from it and tells the server with `calendar:goto`. Answers for
+ *    another period only overrule it after a short grace, and a reconnect
+ *    drops it, since the server reads the URL again;
  *  - it pushes `calendar:open` (an event was clicked) and `calendar:goto`
  *    (a day header was clicked) back to the component.
  *
@@ -31,6 +33,12 @@ import { renderGrid, renderList, renderSkeleton } from "../calendar/render.js";
 import { HOUR_HEIGHT, MINUTES_PER_DAY, NIGHT_END, dayNumber, isoFromDay, makeScale, parseWall, periodDays, shiftPeriod } from "../calendar/time.js";
 
 const TICK_MS = 60_000;
+// How long an answer for another period may disagree with a pending
+// navigation before the grid takes it. Long enough for the answer to an
+// intermediate step to be overtaken by the one asked for, short enough that a
+// period the server corrected (a date out of range falling back) or a request
+// it never answered does not leave the grid on a target nobody is loading.
+export const PENDING_GRACE_MS = 1_500;
 const PREVIEW_ESTIMATE = { width: 320, height: 240 };
 // What a redraw can hand focus back to, most specific first. `day` tells the
 // per-column night buttons apart, which share an empty attribute value.
@@ -68,6 +76,7 @@ export const CalendarCanvas = {
     this.list = null;
     this.listAnchor = null;
     this.pending = null;
+    this.graceTimer = null;
     this.lastWidth = null;
     this.measureWidth = this.measureWidth || canvasMeasure();
 
@@ -97,12 +106,17 @@ export const CalendarCanvas = {
     this.requestData();
   },
 
+  // The URL is the source of truth after a reconnect: the server reads it
+  // again, so a target still pending from before the drop would wait for an
+  // answer that may never come.
   reconnected() {
+    this.clearPending();
     this.requestData();
   },
 
   destroyed() {
     clearInterval(this.timer);
+    clearTimeout(this.graceTimer);
     this.resizer?.disconnect();
     if (this.frame) cancelAnimationFrame(this.frame);
     this.frame = null;
@@ -137,11 +151,36 @@ export const CalendarCanvas = {
   // Takes the server's period unless the organiser has asked for another one
   // that it has not confirmed yet. True when the grid now shows it.
   settle({ view, date }) {
-    if (this.pending && !(view === this.pending.view && date === this.pending.date)) return false;
-    this.pending = null;
+    if (this.pending && !(view === this.pending.view && date === this.pending.date)) {
+      this.awaitPending({ view, date });
+      return false;
+    }
+    this.clearPending();
     this.view = view;
     this.date = date;
     return true;
+  },
+
+  // An answer for another period arrived while one is pending. If the
+  // pending one has not been confirmed once the grace runs out, the server's
+  // latest period wins.
+  awaitPending(answer) {
+    this.serverPeriod = answer;
+    if (this.graceTimer) return;
+    const pending = this.pending;
+    this.graceTimer = setTimeout(() => {
+      this.graceTimer = null;
+      if (this.pending !== pending) return;
+      this.pending = null;
+      ({ view: this.view, date: this.date } = this.serverPeriod);
+      this.render();
+    }, PENDING_GRACE_MS);
+  },
+
+  clearPending() {
+    clearTimeout(this.graceTimer);
+    this.graceTimer = null;
+    this.pending = null;
   },
 
   // The server's answer to a URL change that needed no new events.
@@ -174,6 +213,7 @@ export const CalendarCanvas = {
 
     this.view = view;
     this.date = date;
+    this.clearPending();
     this.pending = { view, date };
     this.render();
   },

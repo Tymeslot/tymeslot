@@ -4,7 +4,7 @@
  * and pushes intents back to the LiveComponent.
  */
 import { afterEach, expect, test, vi } from "vitest";
-import { CalendarCanvas } from "../../hooks/calendar_canvas.js";
+import { CalendarCanvas, PENDING_GRACE_MS } from "../../hooks/calendar_canvas.js";
 import { addDays } from "../../calendar/time.js";
 
 const strings = {
@@ -68,6 +68,7 @@ function mountHook() {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   while (mounted.length) mounted.pop().destroyed();
   document.body.innerHTML = "";
 });
@@ -435,4 +436,55 @@ test("the minute tick keeps focus on a column's early-hours button, not the axis
   } finally {
     vi.useRealTimers();
   }
+});
+
+test("a reconnect drops the pending target and follows the server's answer", () => {
+  const { el, hook, reply } = mountHook();
+  reply(payload());
+  el.dispatchEvent(new CustomEvent("calendar:navigate", { detail: { view: "week", date: "2026-11-04" } }));
+  expect(el.querySelector(".cal-skeleton")).not.toBeNull();
+
+  hook.reconnected();
+  // The server read the URL it had, which still names the week before.
+  hook.pushEventTo.mock.calls.at(-1)[3](payload());
+  expect(el.querySelector(".cal-skeleton")).toBeNull();
+  expect(days("2026-10-14")).toBe(true);
+});
+
+test("an answer for another period takes over once the grace runs out", () => {
+  vi.useFakeTimers();
+  const { el, reply, handlers } = mountHook();
+  reply(payload());
+  // A date the server cannot show (far future): it falls back to this week.
+  el.dispatchEvent(new CustomEvent("calendar:navigate", { detail: { view: "week", date: "9999-12-29" } }));
+  handlers["calendar:events"](payload({ reset: false }));
+  expect(el.querySelector(".cal-skeleton")).not.toBeNull();
+
+  vi.advanceTimersByTime(PENDING_GRACE_MS);
+  expect(el.querySelector(".cal-skeleton")).toBeNull();
+  expect(days("2026-10-14")).toBe(true);
+});
+
+test("the answer asked for, arriving within the grace, still wins over an intermediate one", () => {
+  vi.useFakeTimers();
+  const { el, reply, handlers } = mountHook();
+  reply(payload());
+  el.dispatchEvent(new CustomEvent("calendar:navigate", { detail: { view: "week", date: "2026-10-21" } }));
+  el.dispatchEvent(new CustomEvent("calendar:navigate", { detail: { view: "week", date: "2026-11-04" } }));
+  handlers["calendar:events"](payload({ date: "2026-10-21", range: { from: "2026-10-12", to: "2026-11-02" }, reset: false }));
+  vi.advanceTimersByTime(PENDING_GRACE_MS / 2);
+  handlers["calendar:events"](payload({ date: "2026-11-04", range: { from: "2026-10-26", to: "2026-11-16" }, reset: false, events: [] }));
+  vi.advanceTimersByTime(PENDING_GRACE_MS);
+  expect(days("2026-11-04")).toBe(true);
+});
+
+test("a period answer for another week also takes over after the grace", () => {
+  vi.useFakeTimers();
+  const { el, reply, handlers } = mountHook();
+  reply(payload());
+  el.dispatchEvent(new CustomEvent("calendar:navigate", { detail: { view: "week", date: "2026-10-21" } }));
+  handlers["calendar:period"]({ view: "week", date: "2026-10-14" });
+  expect(days("2026-10-21")).toBe(true);
+  vi.advanceTimersByTime(PENDING_GRACE_MS);
+  expect(days("2026-10-14")).toBe(true);
 });
