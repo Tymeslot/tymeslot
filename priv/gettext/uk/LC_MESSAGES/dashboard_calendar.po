@@ -106,6 +106,7 @@ msgstr "Дані календаря можуть бути застарілими
 msgid "Calendar settings"
 msgstr "Налаштування календаря"
 
+#: lib/tymeslot_web/live/dashboard/calendar/rail.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Calendars"
@@ -116,6 +117,7 @@ msgstr "Календарі"
 msgid "Connect a calendar"
 msgstr "Підключити календар"
 
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
@@ -214,6 +216,7 @@ msgstr "Змінити режим перегляду"
 msgid "Syncing calendars%{progress}..."
 msgstr "Синхронізація календарів%{progress}..."
 
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Today"
@@ -224,6 +227,7 @@ msgstr "Сьогодні"
 msgid "Toggle calendars"
 msgstr "Перемкнути календарі"
 
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
@@ -364,3 +368,344 @@ msgstr "Учасники"
 #, elixir-autogen, elixir-format
 msgid "Doesn't block"
 msgstr "Не блокує"
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "%{calendar} · %{account}"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} calendar hidden"
+msgid_plural "%{count} calendars hidden"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{count} more all-day events on %{date}"
+msgstr "ще %{count} подія"
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "%{date}, all day"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "%{date}, open day view"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "%{first} – %{last}"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "%{names} and %{count} more"
+msgid_plural "%{names} and %{count} more"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "%{start_day}, %{start_time} – %{end_day}, %{end_time}"
+msgstr ""
+
+#: lib/tymeslot/calendar_grid/event_payload.ex
+#, elixir-autogen, elixir-format
+msgid "(No title)"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "3 days"
+msgstr "3 дні"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "A faster calendar with previews and a clearer week. You can come back here at any time."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "All day"
+msgstr "увесь день"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Also here: %{titles}"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format
+msgid "Back to the old calendar"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Before %{time}: %{count}"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "Busy"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/calendar_surface.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Calendar"
+msgstr "Календарі"
+
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar controls"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a date"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "Close"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format
+msgid "Comfortable"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format
+msgid "Compact"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/display_preferences.ex
+#: lib/tymeslot_web/live/dashboard/calendar/visibility.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't save that change. Please try again."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard_live.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't switch calendars. Please try again."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format
+msgid "Density"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format
+msgid "Display options"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "Ended"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Events at this time"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format
+msgid "Fold early hours"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Fold the hours before %{time}"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "Free"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "Guests can book this time"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "Guests can't book this time"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "Happening now"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "Join"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/canvas.ex
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Loading calendar"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "New calendar"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Next day"
+msgstr "Наступні 30 днів"
+
+#: lib/tymeslot_web/live/dashboard/calendar/mini_month.ex
+#, elixir-autogen, elixir-format
+msgid "Next month"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Next three days"
+msgstr "Наступні 30 днів"
+
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format
+msgid "Next week"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No calendars connected yet."
+msgstr "Немає підключених календарів"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing planned on these days."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing planned on this day."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing planned this week."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Previous day"
+msgstr "Попередній період"
+
+#: lib/tymeslot_web/live/dashboard/calendar/mini_month.ex
+#, elixir-autogen, elixir-format
+msgid "Previous month"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format
+msgid "Previous three days"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Previous week"
+msgstr "Попередній період"
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail.ex
+#, elixir-autogen, elixir-format
+msgid "Read only"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "Repeats"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "Saved here, waiting to reach %{account}"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format
+msgid "Show all calendars"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format
+msgid "Show or hide the calendar list"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Show the hours before %{time}"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "This calendar doesn't block bookings"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Try the new calendar"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot booking"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format
+msgid "View"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "ended"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "in %{count} day"
+msgid_plural "in %{count} days"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "in %{count} h"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "in %{count} min"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "more"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "shown as free"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "waiting to sync"
+msgstr ""
