@@ -12,18 +12,19 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
   pill and description, then its facts with their icons: length, each
   location (`MeetingTypes.location_options/1`, drawn with
   `LocationIcons.icon/1`) and, for a paid type, its price, then, for a
-  group type, how many people it takes (`GroupSession.hint`). Under the list
-  the actions bar with Next; with no meeting types the right pane says so.
+  group type, how many people it takes (`GroupSession.hint`). With no
+  meeting types the right pane says so.
 
   The card lays the panes out by its own width (`overview.css`, the frame
   shared with the schedule step in `base.css`): the introduction above the
   list on a narrow card, beside it with the schedule step's rule between
   them once both fit, so the rule stays put going on to the next step.
 
-  Choosing a row marks it (`aria-pressed`); Next goes on to the schedule
-  screen, the journey's second moment. The rows keep the test ids the
-  shared suites and the visual harness drive: `duration-option` with
-  `data-duration`, and `next-step`.
+  Choosing a row goes straight on to the schedule screen, the journey's
+  second moment (`choose_duration`); back there, the row the visitor chose
+  stays marked (`aria-pressed`). The rows keep the test ids the shared
+  suites and the visual harness drive: `duration-option` with
+  `data-duration`.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -93,21 +94,6 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
               />
             </li>
           </ul>
-
-          <div class="paper-actions">
-            <button
-              type="button"
-              class="paper-button paper-button--primary"
-              phx-click="next_step"
-              phx-target={@myself}
-              data-testid="next-step"
-              data-intent="continue"
-              disabled={is_nil(@selected_duration)}
-            >
-              {dgettext("booking", "Next")}
-              <.icon name="hero-arrow-right-mini" class="paper-button__icon" />
-            </button>
-          </div>
         </div>
       </div>
     </section>
@@ -131,7 +117,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
     <button
       type="button"
       class="paper-type"
-      phx-click="select_duration"
+      phx-click="choose_duration"
       phx-value-duration={@slug}
       phx-target={@target}
       data-testid="duration-option"

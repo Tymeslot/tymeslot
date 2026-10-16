@@ -23,7 +23,13 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.CustomQuestionsComponen
     assigns = Events.assign_render_state(assigns)
 
     ~H"""
-    <section class="folio-card folio-card--questions booker-card" data-locale={@locale}>
+    <section
+      class="folio-card folio-card--questions booker-card"
+      data-locale={@locale}
+      id={assigns[:moment] && "#{assigns[:moment]}-step"}
+      data-moment={assigns[:moment]}
+      data-moment-state={assigns[:moment_state]}
+    >
       <Masthead.masthead
         variant={:slim}
         theme_tokens={@theme_tokens}

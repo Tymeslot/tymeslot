@@ -58,16 +58,10 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
            )
 
     assert has_element?(view, "button.paper-type .paper-type__duration", "30 minutes")
-    assert has_element?(view, "button[data-testid='next-step'][disabled]")
+    refute has_element?(view, "[data-testid='paper-overview'] [data-testid='next-step']")
 
+    # Choosing the type is the way on: no Next between.
     view |> element("button[data-duration='quick-chat']") |> render_click()
-
-    assert has_element?(view, "button[data-duration='quick-chat'][aria-pressed='true']")
-    refute has_element?(view, "button[data-testid='next-step'][disabled]")
-
-    view
-    |> element("[data-testid='paper-overview'] button[data-testid='next-step']")
-    |> render_click()
 
     assert has_element?(
              view,
@@ -77,6 +71,11 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
 
     refute has_element?(view, "[data-testid='paper-overview']")
     refute has_element?(view, "[data-testid='next-step']")
+
+    # Back on the overview, the row the visitor chose stays marked.
+    view |> element("[data-intent='back']") |> render_click()
+
+    assert has_element?(view, "button[data-duration='quick-chat'][aria-pressed='true']")
   end
 
   test "each meeting type on the overview names where it is held",

@@ -434,7 +434,6 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
     _meeting_type = meeting_type
 
     view |> element("button[data-testid='duration-option']") |> render_click()
-    view |> element("button[data-testid='next-step']") |> render_click()
 
     today = timezone |> DateTime.now!() |> DateTime.to_date()
     target_date = Date.add(today, 1)

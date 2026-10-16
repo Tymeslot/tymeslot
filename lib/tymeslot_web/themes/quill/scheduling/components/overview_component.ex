@@ -2,6 +2,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
   @moduledoc """
   Quill theme component for the overview/duration selection step.
   Features glassmorphism design with elegant transparency effects.
+
+  Choosing a meeting type goes straight on to the schedule step
+  (`choose_duration`); there is no Next.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -37,7 +40,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
   defp duration_card(assigns) do
     ~H"""
     <button
-      phx-click="select_duration"
+      phx-click="choose_duration"
       phx-value-duration={@duration}
       phx-target={@target}
       data-testid="duration-option"
@@ -77,7 +80,13 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div class="container quill-container flex-1" data-locale={@locale}>
+    <div
+      class="container quill-container flex-1"
+      data-locale={@locale}
+      id={assigns[:moment] && "#{assigns[:moment]}-step"}
+      data-moment={assigns[:moment]}
+      data-moment-state={assigns[:moment_state]}
+    >
       <.page_layout
         show_steps={true}
         current_step={1}
@@ -149,23 +158,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                           />
                         <% end %>
                       <% end %>
-                    </div>
-
-                    <div class="overview-next-action animate-fade-in-up">
-                      <.action_button
-                        phx-click="next_step"
-                        phx-target={@myself}
-                        data-testid="next-step"
-                        data-intent="continue"
-                        disabled={!assigns[:selected_duration]}
-                        title={
-                          unless assigns[:selected_duration],
-                            do: dgettext("booking", "Please select a meeting duration first")
-                        }
-                        class="w-full"
-                      >
-                        {dgettext("booking", "Next")} →
-                      </.action_button>
                     </div>
                   </div>
                 </div>

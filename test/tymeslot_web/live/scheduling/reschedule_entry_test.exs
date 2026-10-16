@@ -61,7 +61,6 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
         )
 
       view |> element("button[data-testid='duration-option']") |> render_click()
-      view |> element("button[data-testid='next-step']") |> render_click()
 
       wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
 
@@ -235,36 +234,35 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
         assert length(cards) == 1
         assert Floki.attribute(cards, "phx-value-duration") == ["quick-chat"]
 
-        # Already selected, so "next" is one click rather than a forced pick.
+        # Already chosen, and choosing it is the way on: the overview offers
+        # no Next of its own to hold the booker back.
         assert has_element?(view, unquote(theme.selected_duration_selector))
-        refute has_element?(view, "[data-testid='next-step'][disabled]")
+        refute has_element?(view, "#overview-step [data-testid='next-step']")
       end
 
       @tag :capture_log
-      test "#{theme.name}: clicking the pinned card does not deselect it", %{
+      test "#{theme.name}: clicking the pinned card moves on with the pinned type", %{
         conn: conn,
         profile: profile,
         meeting: meeting
       } do
-        # A theme may deselect the selected card when it is clicked again,
-        # which is how a booker changes their mind there (Rhythm does). On a
-        # pinned reschedule that would disable "next" over a choice that was
-        # never theirs and leave them stuck on the step, so the selection has
-        # to survive the click.
+        # The choice is the way on, so clicking the pinned card can neither
+        # deselect it nor leave the booker stuck on the step: it goes
+        # straight to the schedule with the meeting's own type.
         profile = use_theme(profile, unquote(theme.id))
 
         {:ok, view, _html} =
           live(conn, "/#{profile.username}?timezone=UTC&reschedule_meeting_uid=#{meeting.uid}")
 
-        # Anchored first: without this the refute below passes just as well on
-        # a page that never pinned anything, where the click selects a card.
+        # Anchored first: without this the assertions below pass just as well
+        # on a page that never pinned anything, where the click chooses a card.
         assert has_element?(view, unquote(theme.selected_duration_selector))
 
         view |> element("[data-testid='duration-option']") |> render_click()
-        render(view)
 
-        assert has_element?(view, unquote(theme.selected_duration_selector))
-        refute has_element?(view, "[data-testid='next-step'][disabled]")
+        assert has_element?(view, "#schedule-step[data-moment-state='current']")
+        refute has_element?(view, "#overview-step")
+        assert :sys.get_state(view.pid).socket.assigns.selected_duration == "quick-chat"
       end
     end
   end

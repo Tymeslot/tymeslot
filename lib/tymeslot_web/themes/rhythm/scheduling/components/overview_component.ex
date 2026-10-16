@@ -27,7 +27,13 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div class="scheduling-box booker-card" data-locale={@locale}>
+    <div
+      class="scheduling-box booker-card"
+      data-locale={@locale}
+      id={assigns[:moment] && "#{assigns[:moment]}-step"}
+      data-moment={assigns[:moment]}
+      data-moment-state={assigns[:moment_state]}
+    >
       <div class="slide-container">
         <div class="slide active">
           <div class="slide-content">
@@ -79,7 +85,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                   <% slug = MeetingTypes.effective_slug(meeting_type) %>
                   <div class={"duration-card #{if @selected_duration == slug, do: "selected", else: ""}"}>
                     <button
-                      phx-click="select_duration"
+                      phx-click="choose_duration"
                       phx-value-duration={slug}
                       phx-target={@myself}
                       class="duration-button"
@@ -109,19 +115,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                 <% end %>
               </div>
             <% end %>
-
-            <div class="slide-actions">
-              <button
-                class={if is_nil(@selected_duration), do: "next-button disabled", else: "next-button"}
-                phx-click="next_step"
-                phx-target={@myself}
-                data-testid="next-step"
-                data-intent="continue"
-                disabled={is_nil(@selected_duration)}
-              >
-                {dgettext("booking", "Next")} →
-              </button>
-            </div>
           </div>
         </div>
       </div>

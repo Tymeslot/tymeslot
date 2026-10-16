@@ -50,7 +50,6 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeAvailabilityTest do
       {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{@booker_zone}")
 
       view |> element("button[data-testid='duration-option']") |> render_click()
-      view |> element("button[data-testid='next-step']") |> render_click()
 
       monday = next_monday()
       tuesday = Date.add(monday, 1)

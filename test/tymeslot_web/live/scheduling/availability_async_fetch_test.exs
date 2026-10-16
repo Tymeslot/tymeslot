@@ -35,6 +35,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityAsyncFetchTest do
 
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Test.LogCapture
   alias Tymeslot.TestMocks
 
   setup :verify_on_exit!
@@ -110,8 +111,6 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityAsyncFetchTest do
     view |> element("button[data-testid='duration-option']") |> render_click()
     settle_availability(view)
 
-    view |> element("button[data-testid='next-step']") |> render_click()
-
     wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
 
     assert_received {:fetched_in, fetch_pid}
@@ -139,8 +138,6 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityAsyncFetchTest do
 
     view |> element("button[data-testid='duration-option']") |> render_click()
     settle_availability(view)
-
-    view |> element("button[data-testid='next-step']") |> render_click()
 
     wait_until(fn ->
       :sys.get_state(view.pid).socket.assigns[:availability_status] == :error
@@ -172,8 +169,6 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityAsyncFetchTest do
     view |> element("button[data-testid='duration-option']") |> render_click()
     settle_availability(view)
 
-    view |> element("button[data-testid='next-step']") |> render_click()
-
     wait_until(fn ->
       :sys.get_state(view.pid).socket.assigns[:availability_status] == :loaded
     end)
@@ -192,6 +187,34 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityAsyncFetchTest do
     state = :sys.get_state(view.pid).socket.assigns
     assert state.month_availability_map == loaded
     assert state.availability_status == :loaded
+  end
+
+  @tag :capture_log
+  test "the arrival at the schedule keeps the fetch the meeting type's choice started",
+       %{conn: conn, profile: profile} do
+    {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{profile.timezone}")
+    settle_availability(view)
+
+    # Choosing the type fetches its month and moves on to the schedule, whose
+    # arrival asks the same question: it must keep that fetch, not kill it
+    # mid-query to start it again. The relay sends the two back to back, so
+    # the first is always still in flight when the second is handled.
+    LogCapture.attach(logger_level: :debug)
+    view |> element("button[data-testid='duration-option']") |> render_click()
+    # The LiveView logs in its own process: once this round trip returns, it
+    # has handled the arrival and any cancellation it logged has arrived.
+    _html = render(view)
+
+    cancelled =
+      Enum.filter(
+        LogCapture.drain(),
+        &(LogCapture.message_text(&1.msg) =~ "Cancelling previous availability fetch")
+      )
+
+    assert cancelled == []
+
+    wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
+    assert :sys.get_state(view.pid).socket.assigns.availability_status == :loaded
   end
 
   # Every step of the flow that re-enters the schedule view cancels the

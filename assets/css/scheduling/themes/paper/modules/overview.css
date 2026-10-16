@@ -25,10 +25,6 @@
   container-type: inline-size;
 }
 
-.paper-choices .paper-actions {
-  margin-top: var(--space-lg);
-}
-
 /* --- The list --- */
 
 .paper-types {

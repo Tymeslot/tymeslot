@@ -325,6 +325,12 @@ defmodule TymeslotWeb.BookingDriverTest do
       assert BookingDriver.continue_move(page(offer: "done", ask: "current"), "offer") == :opened
     end
 
+    test "accepts a paged page that replaced the moment of the last action" do
+      # A paged journey shows one moment at a time: the overview is gone, not
+      # marked done, once the choice moved the page on.
+      assert BookingDriver.continue_move(page(schedule: "current"), "overview") == :opened
+    end
+
     test "takes no way on of a moment that opened by itself after the last action" do
       html =
         page(

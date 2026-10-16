@@ -10,7 +10,7 @@ A consultant, an agency or a professional service that wants its booking page to
 
 ## Journey
 
-`Paged`, the classic journey (`steps:`): the overview (the meeting types), the schedule (a month calendar, then the chosen day's times), the questions when the meeting type has any, the booking form, then the confirmation. A pill step indicator above the card shows where the visitor is. Nothing is defaulted; the visitor chooses every fact.
+`Paged`, the classic journey (`steps:`): the overview (the meeting types; choosing one goes straight on), the schedule (a month calendar, then the chosen day's times), the questions when the meeting type has any, the booking form, then the confirmation. A pill step indicator above the card shows where the visitor is. Nothing is defaulted; the visitor chooses every fact.
 
 ## Look
 

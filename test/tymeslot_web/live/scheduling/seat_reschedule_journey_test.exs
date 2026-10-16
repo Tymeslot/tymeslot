@@ -210,8 +210,6 @@ defmodule TymeslotWeb.Live.Scheduling.SeatRescheduleJourneyTest do
       |> element("[data-testid='duration-option'][phx-value-duration='group-session']")
       |> render_click()
 
-      view |> element("[data-testid='next-step']") |> render_click()
-
       # The normal flow, with its way back to the meeting types.
       assert has_element?(view, "[data-testid='back-step']")
       refute has_element?(view, "[data-testid='seat-move-notice']")

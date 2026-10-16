@@ -10,7 +10,7 @@ A creative (a photographer, a musician, a studio, a wellness space) whose bookin
 
 ## Journey
 
-`Paged`, the classic journey (`steps:`), its moments sliding into one another with no step indicator: the overview (the meeting types), the schedule (a week strip, then the chosen day's times), the questions when the meeting type has any, the booking form, then the confirmation. Nothing is defaulted.
+`Paged`, the classic journey (`steps:`), its moments sliding into one another with no step indicator: the overview (the meeting types; choosing one goes straight on), the schedule (a week strip, then the chosen day's times), the questions when the meeting type has any, the booking form, then the confirmation. Nothing is defaulted.
 
 ## Look
 

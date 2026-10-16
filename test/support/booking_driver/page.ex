@@ -122,8 +122,8 @@ defmodule TymeslotWeb.BookingDriver.Page do
 
   @doc """
   The journey moments the page marks (`data-moment`, `data-moment-state`),
-  as `{moment, state}` in document order, which is journey order. A page of
-  the classic journey marks none.
+  as `{moment, state}` in document order, which is journey order. A paged
+  page marks the one moment it shows.
   """
   @spec moments(Floki.html_tree()) :: [{String.t(), String.t()}]
   def moments(doc) do
@@ -135,9 +135,10 @@ defmodule TymeslotWeb.BookingDriver.Page do
   end
 
   @doc """
-  Whether the page has moved on: with `last`, the moment `last` is done and
-  another is current; with no `last`, a done moment comes before a current
-  one.
+  Whether the page has moved on: with `last`, the moment `last` was left
+  (marked done, or no longer on the page: a paged journey shows one moment
+  at a time) and another is current; with no `last`, a done moment comes
+  before a current one.
   """
   @spec moved_on?([{String.t(), String.t()}], String.t() | nil) :: boolean()
   def moved_on?(moments, nil) do
@@ -147,8 +148,10 @@ defmodule TymeslotWeb.BookingDriver.Page do
     |> Enum.member?("current")
   end
 
-  def moved_on?(moments, last),
-    do: {last, "done"} in moments and Enum.any?(moments, &match?({_moment, "current"}, &1))
+  def moved_on?(moments, last) do
+    left? = {last, "done"} in moments or not List.keymember?(moments, last, 0)
+    left? and Enum.any?(moments, &match?({_moment, "current"}, &1))
+  end
 
   @doc """
   Remembers the moment current now, so that `BookingDriver.continue/1` can

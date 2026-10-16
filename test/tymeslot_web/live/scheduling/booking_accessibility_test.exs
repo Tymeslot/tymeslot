@@ -58,8 +58,6 @@ defmodule TymeslotWeb.Live.Scheduling.BookingAccessibilityTest do
     |> element("button[data-testid='duration-option'][data-duration='quick-chat']")
     |> render_click()
 
-    view |> element("button[data-testid='next-step']") |> render_click()
-
     view
   end
 

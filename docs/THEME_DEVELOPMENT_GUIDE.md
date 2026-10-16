@@ -1091,7 +1091,7 @@ defmodule TymeslotWeb.Themes.Aurora.Scheduling.Components.OverviewComponent do
       <div class="meeting-types">
         <%= for mt <- @meeting_types do %>
           <button
-            phx-click="select_duration"
+            phx-click="choose_duration"
             phx-value-duration={mt.duration}
             phx-target={@myself}
             class={duration_button_class(mt.duration, @duration)}
@@ -1105,6 +1105,8 @@ defmodule TymeslotWeb.Themes.Aurora.Scheduling.Components.OverviewComponent do
   end
 end
 ```
+
+Choosing a meeting type is the way on; a theme that wants a separate Next sends `select_duration` instead and renders one.
 
 **What a step may read.** Each step component receives the scheduling LiveView's assigns (`SchedulingPage` passes them through, `StepEvents.update/2` copies them in). A step relies only on those below; every other assign the LiveView holds belongs to the flow and may change. "mount" means the page holds the assign from the moment it mounts, possibly as a default (`nil`, `[]`, `""`) until the step that fills it; read an "optional" one as `assigns[:name]`. An assign a theme sets itself (in `handle_theme_event/3`) is absent until then, so it is read as `assigns[:name]` too. `step_assigns_doc_test.exs` holds every "mount" row to the mounted page of every registered theme.
 
@@ -1184,7 +1186,7 @@ Leverage the shared modules rather than duplicating them: the table under [Share
 
 #### 6. **Event Communication Pattern**
 
-Templates send one of the canonical events (listed in `Shared.StepEvents`'s moduledoc) with `phx-target={@myself}`; the component delegates `handle_event/3` to `Shared.StepEvents`, which relays `{:step_event, moment, event, data}` to the LiveView, where `Journey.Runtime.handle_step_event/4` routes it to the fact that owns it. A theme never writes its own relay. For an event of its own, a template sends `phx-click="theme:<name>"` (with `phx-target={@myself}`); the relay forwards it untouched and the macro calls your `handle_theme_event(name, params, socket)` with the prefix stripped, from whichever step sent it (`socket.assigns.current_state` says which). The prefix cannot take over a canonical event: `theme:next_step` reaches your hook as `"next_step"` and moves nothing. An unprefixed step event the engine does not take is dropped with a warning (theme id, step, event; once per name and page view), on every step. Any visitor can send `theme:<anything>`, so an override of the hook replaces its default wholesale and must end with a catch-all clause, or an unknown name raises. Make it `defp handle_theme_event(event, params, socket), do: super(event, params, socket)`: the default logs the name with the same warning and returns `{:noreply, socket}` (the fixture theme's `live.ex` shows the pattern).
+Templates send one of the canonical events (listed in `Shared.StepEvents`'s moduledoc) with `phx-target={@myself}`; an overview whose meeting type is the way on sends `choose_duration` (`phx-value-duration` the type's slug), which the relay passes on as `select_duration`, then `next_step`; the component delegates `handle_event/3` to `Shared.StepEvents`, which relays `{:step_event, moment, event, data}` to the LiveView, where `Journey.Runtime.handle_step_event/4` routes it to the fact that owns it. A theme never writes its own relay. For an event of its own, a template sends `phx-click="theme:<name>"` (with `phx-target={@myself}`); the relay forwards it untouched and the macro calls your `handle_theme_event(name, params, socket)` with the prefix stripped, from whichever step sent it (`socket.assigns.current_state` says which). The prefix cannot take over a canonical event: `theme:next_step` reaches your hook as `"next_step"` and moves nothing. An unprefixed step event the engine does not take is dropped with a warning (theme id, step, event; once per name and page view), on every step. Any visitor can send `theme:<anything>`, so an override of the hook replaces its default wholesale and must end with a catch-all clause, or an unknown name raises. Make it `defp handle_theme_event(event, params, socket), do: super(event, params, socket)`: the default logs the name with the same warning and returns `{:noreply, socket}` (the fixture theme's `live.ex` shows the pattern).
 
 ### Theme Template Rendering
 
@@ -1253,9 +1255,10 @@ The readers are: `TymeslotWeb.BookingDriver` (`test/support/booking_driver.ex`, 
 
 | Hook | Must be on | Provided by | Read by |
 |---|---|---|---|
-| `[data-testid="duration-option"]` | a `<button>` per meeting type, with `phx-click="select_duration"`, `phx-value-duration` and `data-duration` both the meeting type's slug (`MeetingTypes.effective_slug/1`) and `phx-target={@myself}`; choosing the chosen one again keeps it chosen | theme | parity and reschedule suites, e2e, visual harness (`[data-duration="<slug>"]`); `BookingDriver` reads its `data-fact="meeting_type"` |
+| `[data-testid="duration-option"]` | a `<button>` per meeting type, with `phx-click="choose_duration"` (or `select_duration` where a theme keeps a Next of its own), `phx-value-duration` and `data-duration` both the meeting type's slug (`MeetingTypes.effective_slug/1`) and `phx-target={@myself}`; on a pinned reschedule the pinned card shows chosen, and choosing it moves on with that type | theme | parity and reschedule suites, e2e, visual harness (`[data-duration="<slug>"]`); `BookingDriver` reads its `data-fact="meeting_type"` |
 | The `selected_duration_selector` of the `ThemeTestMatrix` entry | matches the card only while it is selected (Quill marks the button with `.duration-card--selected`, Rhythm its wrapper with `.selected`) | theme (you choose the marker and register the selector) | `reschedule_entry_test.exs` |
-| `[data-testid="next-step"]` | a `<button>` with `phx-click="next_step"` and `phx-target={@myself}`, `disabled` until a duration is chosen | theme | parity and reschedule suites, e2e, visual harness; `BookingDriver` reads its `data-intent="continue"` |
+| `[data-testid="next-step"]` | only an overview that keeps a Next of its own (no shipped theme does: the meeting type is the way on): a `<button>` with `phx-click="next_step"` and `phx-target={@myself}`, `disabled` until a duration is chosen | theme | parity and reschedule suites, e2e, visual harness; `BookingDriver` reads its `data-intent="continue"` |
+| `id="<moment>-step"`, `data-moment`, `data-moment-state` | the root of every moment's component, the classic steps' included | theme (`SchedulingPage` gives the component `moment` and `moment_state`) | `BookingDriver.continue/1`, which tells a page that moved on by itself through them |
 | `[data-testid="approval-pill"]` | inside the duration card of a meeting type that needs approval (`Approval.required?/1`) | shared (`ApprovalNotice.pill/1`), placed by the theme | `theme_approval_disclosure_test.exs` |
 
 #### Schedule step: calendar view

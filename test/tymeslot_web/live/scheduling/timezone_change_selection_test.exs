@@ -292,7 +292,6 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
 
     if entry == :from_overview do
       view |> element("button[data-testid='duration-option']") |> render_click()
-      view |> element("button[data-testid='next-step']") |> render_click()
     end
 
     wait_until(fn -> settled?(view) end)

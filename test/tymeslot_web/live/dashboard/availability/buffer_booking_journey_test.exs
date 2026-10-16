@@ -127,7 +127,6 @@ defmodule TymeslotWeb.Dashboard.Availability.BufferBookingJourneyTest do
     {:ok, view, _html} = live(conn, ~p"/#{profile.username}?timezone=#{@timezone}")
 
     view |> element("button[phx-value-duration='quick-chat']") |> render_click()
-    view |> element("button[phx-click='next_step']") |> render_click()
 
     BookingTestHelpers.show_month(view, date)
     date_str = Date.to_string(date)

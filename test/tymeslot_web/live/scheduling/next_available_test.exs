@@ -124,7 +124,6 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
       {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{profile.timezone}")
 
       view |> element("button[data-testid='duration-option']") |> render_click()
-      view |> element("button[data-testid='next-step']") |> render_click()
 
       # The slot list arrives on a follow-up message, exactly as it does
       # after a manual day click.
@@ -177,7 +176,6 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
       {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{timezone}")
 
       view |> element("button[data-testid='duration-option']") |> render_click()
-      view |> element("button[data-testid='next-step']") |> render_click()
 
       wait_until(fn ->
         :sys.get_state(view.pid).socket.assigns[:selected_date] != nil
@@ -293,7 +291,6 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
       {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{profile.timezone}")
 
       view |> element("button[data-testid='duration-option']") |> render_click()
-      view |> element("button[data-testid='next-step']") |> render_click()
 
       wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
 
@@ -347,7 +344,6 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
       {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{profile.timezone}")
 
       view |> element("button[data-testid='duration-option']") |> render_click()
-      view |> element("button[data-testid='next-step']") |> render_click()
 
       wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
 
@@ -375,7 +371,6 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
       {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{profile.timezone}")
 
       view |> element("button[data-testid='duration-option']") |> render_click()
-      view |> element("button[data-testid='next-step']") |> render_click()
 
       wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
 

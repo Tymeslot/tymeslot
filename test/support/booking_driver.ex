@@ -32,7 +32,8 @@ defmodule TymeslotWeb.BookingDriver do
 
   A page that moves on by itself renders no way on: there `continue/1`
   checks, through `data-moment` and `data-moment-state` on the moments'
-  roots, that the next moment opened. A page that defaulted the meeting type
+  roots, that the next moment opened. That includes every shipped
+  overview, where choosing a meeting type is the way on. A page that defaulted the meeting type
   renders no choice: there `choose_meeting_type/2` reads the type the
   booking holds (`:selected_duration`) and does nothing when it is the one
   asked for.
@@ -290,8 +291,9 @@ defmodule TymeslotWeb.BookingDriver do
   acted, or the page marks no moments):
 
     * `:opened` - the page has moved on by itself since that action: the
-      moment `last` is now marked done (`data-moment-state="done"`) and
-      another is current. A way on the newly opened moment renders is not
+      moment `last` is now marked done (`data-moment-state="done"`) or
+      gone from the page (a paged journey replaced it), and another is
+      current. A way on the newly opened moment renders is not
       taken (it belongs to that moment, which has asked nothing yet);
     * `:click` - otherwise, the page renders a way on
       (`data-intent="continue"`), enabled or about to be;

@@ -154,7 +154,6 @@ defmodule TymeslotWeb.Live.Themes.PaperWeekJourneyTest do
     assert has_element?(view, "[data-testid='paper-overview']")
 
     view |> element("[data-testid='duration-option']") |> render_click()
-    view |> element("[data-testid='next-step']") |> render_click()
 
     assert has_element?(view, "[data-testid='paper-week'] [data-testid='week-grid']")
 

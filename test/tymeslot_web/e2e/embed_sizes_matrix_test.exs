@@ -60,6 +60,9 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     end)
   end
 
+  # Twenty walks (every shipped theme at every width), each waiting for the
+  # schedule's day, time or slot to show: past ExUnit's default minute.
+  @tag timeout: 180_000
   feature "overview + schedule fit without horizontal overflow in both themes",
           %{session: session} do
     {profile, _slug} = create_user_with_meeting_type()
@@ -265,7 +268,12 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
 
   # ── Navigation helpers ────────────────────────────────────────────────
 
-  # Walks the overview → schedule journey: pick the meeting type, then Next.
+  # Walks the overview → schedule journey. Choosing a meeting type is the way
+  # on (the matrix runs the shipped themes, none of which has an overview
+  # Next): on a paged theme it shows the schedule step; on a continuous page
+  # (Folio, from J5F2) it opens the calendar below. Either way a day, a time
+  # or a slot to pick shows: at its narrowest Quill hides the month grid that
+  # carries the days' marks and shows the landed day's times.
   #
   # This is the only entry path that renders the Back button, and so the only one
   # that produces the full two-button actions row: a direct booking link sets
@@ -273,17 +281,13 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
   # It is also the journey an embedded booker actually takes.
   #
   # The short-viewport features deliberately deep-link instead. Below roughly
-  # 250px of usable height the overview's own CTA sits past the end of a page
-  # that doesn't scroll, so it can't be clicked — a limit of the overview, not of
-  # the schedule layout those features guard.
+  # 250px of usable height the overview's own primary action sits past the end
+  # of a page that doesn't scroll, so it can't be clicked — a limit of the
+  # overview, not of the schedule layout those features guard.
   defp advance_to_schedule(session) do
     session
     |> pick_first_duration()
-    # Both themes disable Next until the selected duration round-trips to the
-    # server. Clicking it before then is a no-op, so wait for it to enable.
-    |> assert_has(css("[data-testid='next-step']:not([disabled])"))
-    |> click_next_step()
-    |> assert_has(css("[data-testid='back-step']"))
+    |> assert_has(css("[data-fact='date'], [data-fact='time'], [data-fact='slot']", minimum: 1))
   end
 
   defp pick_first_duration(session) do
@@ -421,8 +425,9 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     session
   end
 
-  # The primary CTA must live inside the scrollable page (reachable by scrolling),
-  # not be clipped beyond the document's scroll height.
+  # The overview's primary action (its first meeting type, which is the way on,
+  # or a Next where a theme has one) must live inside the scrollable page
+  # (reachable by scrolling), not be clipped beyond the document's scroll height.
   defp assert_cta_reachable(session, context) do
     me = self()
     ref = make_ref()
@@ -430,7 +435,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     execute_script(
       session,
       """
-      const cta = document.querySelector("[data-testid='next-step']");
+      const cta = document.querySelector("[data-testid='next-step']") || document.querySelector("[data-fact='meeting_type']");
       if (!cta) return null;
       const r = cta.getBoundingClientRect();
       return [Math.round(r.bottom + window.scrollY), r.height, document.documentElement.scrollHeight];
@@ -440,13 +445,13 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
 
     assert_receive {:cta, ^ref, value}, 5_000
 
-    assert is_list(value), "next-step CTA not found at #{context}"
+    assert is_list(value), "primary action not found at #{context}"
     [cta_doc_bottom, cta_height, scroll_height] = value
 
-    assert cta_height > 0, "next-step CTA has zero height at #{context}"
+    assert cta_height > 0, "primary action has zero height at #{context}"
 
     assert cta_doc_bottom <= scroll_height + @overflow_tolerance,
-           "next-step CTA at #{context} sits below the document scroll height " <>
+           "primary action at #{context} sits below the document scroll height " <>
              "(#{cta_doc_bottom}px > #{scroll_height}px) — it is clipped and unreachable."
 
     session

@@ -122,8 +122,6 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
     |> Element.click()
 
     session
-    |> assert_has(css("[data-testid='next-step']:not([disabled])"))
-    |> click(css("[data-testid='next-step']"))
     |> assert_has(css("[data-testid='paper-schedule'][data-calendar-view='week']"))
     |> assert_has(css("[data-testid='paper-week'] [data-testid='week-grid']"))
   end

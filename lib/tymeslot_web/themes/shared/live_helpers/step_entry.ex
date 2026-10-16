@@ -268,9 +268,10 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
       # booking window is dropped here, and `NextAvailable` lands the booker.
       |> CalendarHelpers.anchor_on_selection()
 
-    # Trigger month availability fetch in background if not already loading or loaded for this month
+    # Trigger the month availability fetch in the background, unless the
+    # meeting type's choice has just started the same one.
     if AvailabilityHelpers.can_fetch_availability?(socket) do
-      AvailabilityHelpers.fetch_month_availability_async(socket)
+      AvailabilityHelpers.ensure_month_availability(socket)
     else
       socket
     end

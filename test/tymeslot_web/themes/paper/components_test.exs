@@ -144,12 +144,15 @@ defmodule TymeslotWeb.Themes.Paper.ComponentsTest do
       assert text([row], ".paper-type__description") == "A short call"
     end
 
-    test "holds Next back until a type is chosen, and marks the chosen one" do
-      assert [_next] = Floki.find(overview([]), "button[data-testid='next-step'][disabled]")
+    test "offers no Next: a row is the way on, and the chosen one stays marked" do
+      page = overview([])
+
+      assert Floki.find(page, "[data-testid='next-step']") == []
+      assert [row] = Floki.find(page, "button[data-duration='quick-chat']")
+      assert Floki.attribute(row, "phx-click") == ["choose_duration"]
 
       chosen = overview(selected_duration: "quick-chat")
 
-      assert Floki.find(chosen, "button[data-testid='next-step'][disabled]") == []
       assert [row] = Floki.find(chosen, "button[data-duration='quick-chat']")
       assert Floki.attribute(row, "aria-pressed") == ["true"]
     end
@@ -208,9 +211,6 @@ defmodule TymeslotWeb.Themes.Paper.ComponentsTest do
 
       assert text(page, ".paper-overview > .paper-choices .paper-empty") =~
                "No meeting types available"
-
-      assert [_next] =
-               Floki.find(page, ".paper-choices button[data-testid='next-step'][disabled]")
     end
 
     test "is the schedule step's wide card, the introduction beside the list" do
@@ -224,9 +224,6 @@ defmodule TymeslotWeb.Themes.Paper.ComponentsTest do
                  page,
                  ".paper-overview > .paper-choices [data-testid='duration-option']"
                )
-
-      assert [_next] =
-               Floki.find(page, ".paper-choices > .paper-actions [data-testid='next-step']")
     end
 
     test "opens with the avatar, or with the logo in its place" do

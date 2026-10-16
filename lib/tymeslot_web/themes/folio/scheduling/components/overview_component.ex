@@ -30,7 +30,13 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.OverviewComponent do
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <section class="folio-card folio-card--overview booker-card" data-locale={@locale}>
+    <section
+      class="folio-card folio-card--overview booker-card"
+      data-locale={@locale}
+      id={assigns[:moment] && "#{assigns[:moment]}-step"}
+      data-moment={assigns[:moment]}
+      data-moment-state={assigns[:moment_state]}
+    >
       <Masthead.masthead
         variant={:full}
         theme_tokens={@theme_tokens}
@@ -63,7 +69,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.OverviewComponent do
                 <button
                   type="button"
                   class="folio-meeting"
-                  phx-click="select_duration"
+                  phx-click="choose_duration"
                   phx-value-duration={slug}
                   phx-target={@myself}
                   data-testid="duration-option"
@@ -88,21 +94,6 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.OverviewComponent do
             <% end %>
           </ul>
         <% end %>
-
-        <div class="folio-actions">
-          <button
-            type="button"
-            class="folio-button folio-button--primary"
-            phx-click="next_step"
-            phx-target={@myself}
-            data-testid="next-step"
-            data-intent="continue"
-            disabled={is_nil(@selected_duration)}
-          >
-            {dgettext("booking", "Next")}
-            <.icon name="hero-arrow-right-mini" class="folio-button__icon" />
-          </button>
-        </div>
       </div>
     </section>
     """

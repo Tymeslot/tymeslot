@@ -41,7 +41,13 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ScheduleComponent do
       )
 
     ~H"""
-    <section class="folio-card folio-card--schedule booker-card" data-locale={@locale}>
+    <section
+      class="folio-card folio-card--schedule booker-card"
+      data-locale={@locale}
+      id={assigns[:moment] && "#{assigns[:moment]}-step"}
+      data-moment={assigns[:moment]}
+      data-moment-state={assigns[:moment_state]}
+    >
       <Masthead.masthead
         variant={:slim}
         theme_tokens={@theme_tokens}

@@ -74,6 +74,28 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
   end
 
   @doc """
+  `fetch_month_availability_async/1`, unless a fetch asking the very same
+  question (request, range on display, meeting length) is still in flight.
+
+  Choosing a meeting type fetches its month, and arriving at the schedule
+  right after fetches it again: where the choice is the way on, the two come
+  back to back, and the second would cancel the first mid-query for the
+  same answer. The arrival keeps the fetch already running instead.
+  """
+  @spec ensure_month_availability(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def ensure_month_availability(socket) do
+    if fetch_in_flight?(socket),
+      do: socket,
+      else: fetch_month_availability_async(socket)
+  end
+
+  defp fetch_in_flight?(socket) do
+    socket.assigns[:availability_status] == :loading and
+      socket.assigns[:availability_task_ref] != nil and
+      socket.assigns[:availability_fetch_key] == fetch_key(socket)
+  end
+
+  @doc """
   Checks if all conditions for fetching availability are met.
   """
   @spec can_fetch_availability?(Phoenix.LiveView.Socket.t()) :: boolean()
@@ -141,17 +163,10 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
   defp start_availability_task(socket) do
     # Build the request and the range up front so the closure captures plain
     # values, never the socket.
-    request = request(socket)
-    duration_minutes = duration_minutes(socket)
-
-    {start_date, end_date} =
-      Calculate.display_range(
-        socket.assigns.current_year,
-        socket.assigns.current_month,
-        socket.assigns.week_start
-      )
+    {request, start_date, end_date, duration_minutes} = key = fetch_key(socket)
 
     fetch = fn -> Offer.days_in_range(request, start_date, end_date, duration_minutes) end
+    socket = assign(socket, :availability_fetch_key, key)
 
     if async_fetch?() do
       task = Tasks.async(fetch)
@@ -169,6 +184,19 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
       |> assign(:availability_task, nil)
       |> assign(:availability_task_ref, ref)
     end
+  end
+
+  # What a month fetch asks: the request, the range on display and the
+  # meeting length. Two fetches with the same key answer the same question.
+  defp fetch_key(socket) do
+    {start_date, end_date} =
+      Calculate.display_range(
+        socket.assigns.current_year,
+        socket.assigns.current_month,
+        socket.assigns.week_start
+      )
+
+    {request(socket), start_date, end_date, duration_minutes(socket)}
   end
 
   defp async_fetch?, do: Application.get_env(:tymeslot, :async_availability_fetch, true)

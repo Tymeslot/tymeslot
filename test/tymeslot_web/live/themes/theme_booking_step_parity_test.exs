@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Live.Themes.ThemeBookingStepParityTest do
   @moduledoc """
-  Behaviour every theme's steps share, whatever they look like: choosing the
-  meeting type already chosen keeps it chosen, and the booking form marks the
+  Behaviour every theme's steps share, whatever they look like: choosing a
+  meeting type goes straight to its schedule, and the booking form marks the
   name and the email as required while leaving empty fields to its own
   messages, and it carries the honeypot and the reCAPTCHA hook, token and
   notice.
@@ -38,18 +38,26 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingStepParityTest do
 
   for theme <- ThemeTestMatrix.all() do
     @tag :capture_log
-    test "theme #{theme.slug}: choosing the chosen meeting type again keeps it chosen",
+    test "theme #{theme.slug}: choosing a meeting type goes straight to its schedule",
          %{conn: conn} do
       %{profile: profile} =
         seed_booking_account(unquote(theme.id), "reselect-#{unquote(theme.slug)}", "Etc/UTC")
 
       {:ok, view, _html} = live(conn, "/#{profile.username}")
 
-      view |> element(@duration_option) |> render_click()
+      # The overview is the page's current moment and offers no way on of
+      # its own: the meeting type is it.
+      assert has_element?(view, "#overview-step[data-moment-state='current'] #{@duration_option}")
+      refute has_element?(view, "#overview-step [data-intent='continue']")
+
       view |> element(@duration_option) |> render_click()
 
-      assert has_element?(view, "button[data-testid='next-step']")
-      refute has_element?(view, "button[data-testid='next-step'][disabled]")
+      refute has_element?(view, "#overview-step")
+
+      assert has_element?(
+               view,
+               "#schedule-step[data-moment='schedule'][data-moment-state='current']"
+             )
     end
 
     @tag :capture_log

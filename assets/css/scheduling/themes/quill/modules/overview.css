@@ -131,11 +131,6 @@
   clear: both;
 }
 
-/* overview-next-action: replaces mt-4 md:mt-8 */
-.overview-next-action {
-  margin-top: var(--space-md);
-}
-
 /* duration-card: replaces p-2.5 sm:p-3 md:p-5 */
 .duration-card {
   padding: var(--space-sm);
@@ -267,10 +262,6 @@
 
   .overview-duration-list {
     gap: var(--space-md);
-  }
-
-  .overview-next-action {
-    margin-top: var(--space-2xl);
   }
 
   .duration-card {

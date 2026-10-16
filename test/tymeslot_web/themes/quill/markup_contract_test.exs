@@ -41,7 +41,7 @@ defmodule TymeslotWeb.Themes.Quill.MarkupContractTest do
     :ok
   end
 
-  test "the overview marks each meeting type and the way on", %{conn: conn} do
+  test "the overview marks each meeting type, which is the way on", %{conn: conn} do
     %{profile: profile} = seed_booking_account(@theme_id, "quill-mc-overview", @timezone)
     {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{@timezone}")
     doc = document(view)
@@ -52,7 +52,8 @@ defmodule TymeslotWeb.Themes.Quill.MarkupContractTest do
                "[data-testid='duration-option'][data-fact='meeting_type'][data-value='quick-chat']"
              )
 
-    assert [_next] = Floki.find(doc, "[data-testid='next-step'][data-intent='continue']")
+    assert [_overview] = Floki.find(doc, "#overview-step[data-moment-state='current']")
+    assert Floki.find(doc, "#overview-step [data-intent='continue']") == []
     assert Floki.find(doc, "[data-intent='back']") == []
   end
 
@@ -122,7 +123,6 @@ defmodule TymeslotWeb.Themes.Quill.MarkupContractTest do
   defp open_schedule(conn, profile) do
     {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{@timezone}")
     view |> element("[data-testid='duration-option']") |> render_click()
-    view |> element("[data-testid='next-step']") |> render_click()
     wait_until(fn -> has_element?(view, "[data-testid='calendar-day']:not([disabled])") end)
     view
   end

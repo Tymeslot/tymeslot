@@ -35,7 +35,13 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.BookingComponent do
     assigns = assign(assigns, :next_day_end, LocalizationHelpers.booking_next_day_end(assigns))
 
     ~H"""
-    <section class="folio-card folio-card--booking booker-card" data-locale={@locale}>
+    <section
+      class="folio-card folio-card--booking booker-card"
+      data-locale={@locale}
+      id={assigns[:moment] && "#{assigns[:moment]}-step"}
+      data-moment={assigns[:moment]}
+      data-moment-state={assigns[:moment_state]}
+    >
       <Masthead.masthead
         variant={:slim}
         theme_tokens={@theme_tokens}

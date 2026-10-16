@@ -126,8 +126,6 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
       |> element("button[data-testid='duration-option'][phx-value-duration='deep-dive']")
       |> render_click()
 
-      view |> element("button[data-testid='next-step']") |> render_click()
-
       assert :sys.get_state(view.pid).socket.assigns.booking_window_days == 180
     end
 
@@ -140,7 +138,6 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
       {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{profile.timezone}")
 
       view |> element("button[data-testid='duration-option']") |> render_click()
-      view |> element("button[data-testid='next-step']") |> render_click()
 
       assert :sys.get_state(view.pid).socket.assigns.booking_window_days == 30
 
@@ -164,7 +161,6 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
       {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{timezone}")
 
       view |> element("button[data-testid='duration-option']") |> render_click()
-      view |> element("button[data-testid='next-step']") |> render_click()
 
       today = timezone |> DateTime.now!() |> DateTime.to_date()
       target = Date.add(today, 1)
@@ -205,7 +201,6 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
 
       # Overview → schedule.
       view |> element("button[data-testid='duration-option']") |> render_click()
-      view |> element("button[data-testid='next-step']") |> render_click()
 
       today = timezone |> DateTime.now!() |> DateTime.to_date()
       target = Date.add(today, 1)
@@ -256,7 +251,10 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
       {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{profile.timezone}")
 
       view |> element("button[data-testid='duration-option']") |> render_click()
-      view |> element("button[data-testid='next-step']") |> render_click()
+
+      # The choice moves on, and the step lands on the first bookable day
+      # once the month's fetch is in.
+      wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
 
       html = render(view)
 
@@ -310,7 +308,10 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
       {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{profile.timezone}")
 
       view |> element("button[data-testid='duration-option']") |> render_click()
-      view |> element("button[data-testid='next-step']") |> render_click()
+
+      # The choice moves on, and the step lands on the first bookable day
+      # once the month's fetch is in.
+      wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
 
       html = render(view)
 

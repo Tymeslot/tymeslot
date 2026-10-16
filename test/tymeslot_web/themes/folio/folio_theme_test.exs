@@ -114,14 +114,20 @@ defmodule TymeslotWeb.Themes.Folio.FolioThemeTest do
       refute has_element?(view, "[data-testid='profile-bio']")
     end
 
-    test "lists each meeting type as a card that marks its selection", %{profile: profile} do
+    test "lists each meeting type as a card; choosing one moves on, and back it shows chosen",
+         %{profile: profile} do
       view = overview(profile)
       card = "[data-testid='duration-option'][data-duration='quick-chat']"
 
       assert has_element?(view, "#{card}[aria-pressed='false']", "Quick Chat")
+      refute has_element?(view, "#overview-step [data-testid='next-step']")
+
       view |> element(card) |> render_click()
+      assert has_element?(view, "#schedule-step[data-moment-state='current']")
+      refute has_element?(view, card)
+
+      view |> element("[data-intent='back']") |> render_click()
       assert has_element?(view, "#{card}[aria-pressed='true']")
-      refute has_element?(view, "[data-testid='next-step'][disabled]")
     end
   end
 

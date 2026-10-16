@@ -75,10 +75,6 @@ defmodule TymeslotWeb.PublicBookingHappyPathTest do
     |> element("button[phx-value-duration='quick-chat']")
     |> render_click()
 
-    view
-    |> element("button[phx-click='next_step']")
-    |> render_click()
-
     today = timezone |> DateTime.now!() |> DateTime.to_date()
     target_date = Date.add(today, 1)
     BookingTestHelpers.show_month(view, target_date)
@@ -183,10 +179,6 @@ defmodule TymeslotWeb.PublicBookingHappyPathTest do
 
     view
     |> element("button[phx-value-duration='60-minutes']")
-    |> render_click()
-
-    view
-    |> element("button[phx-click='next_step']")
     |> render_click()
 
     today = timezone |> DateTime.now!() |> DateTime.to_date()
