@@ -99,11 +99,6 @@ msgstr "Abbrechen"
 msgid "Cannot demote the last admin. Promote someone else first."
 msgstr "Der letzte Administrator kann nicht herabgestuft werden. Bitte befördern Sie zuerst eine andere Person."
 
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
-#, elixir-autogen, elixir-format
-msgid "Changes here take effect immediately and override the matching environment variables and application configuration (e.g. REGISTRATION_ENABLED, PASSWORD_AUTH_ENABLED) for this install."
-msgstr "Änderungen an dieser Stelle werden sofort wirksam und überschreiben die entsprechenden Umgebungsvariablen und die Anwendungskonfiguration (z. B. REGISTRATION_ENABLED, PASSWORD_AUTH_ENABLED) für diese Installation."
-
 #: lib/tymeslot_web/live/admin_live.ex
 #, elixir-autogen, elixir-format
 msgid "Could not demote user."
@@ -392,11 +387,6 @@ msgstr "Dieser Anmeldeanbieter kann nicht deaktiviert werden, solange er der ein
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
-msgid "Email address that receives admin alerts when the toggle above is enabled. Leave blank to fall back to the ADMIN_ALERT_EMAIL environment variable."
-msgstr "E-Mail-Adresse, die Admin-Benachrichtigungen erhält, wenn der obige Schalter aktiviert ist. Leer lassen, um auf die Umgebungsvariable ADMIN_ALERT_EMAIL zurückzugreifen."
-
-#: lib/tymeslot_web/live/admin_live/formatters.ex
-#, elixir-autogen, elixir-format
 msgid "Email operational alerts (webhook failures, integration health issues, background job errors) to the admin alert recipient. Requires a recipient address to be set below."
 msgstr "Betriebsbenachrichtigungen (Webhook-Fehler, Probleme mit dem Zustand von Integrationen, Fehler bei Hintergrundaufgaben) per E-Mail an den Empfänger für Admin-Benachrichtigungen senden. Erfordert, dass unten eine Empfängeradresse festgelegt ist."
 
@@ -645,3 +635,18 @@ msgstr "Sprache, auf die Dashboard, Kontoseiten und Konto-E-Mails zurückfallen.
 #, elixir-autogen, elixir-format
 msgid "General"
 msgstr "Allgemein"
+
+#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Changes here take effect immediately. A setting fixed by an environment variable, such as REGISTRATION_ENABLED, is greyed out and changes only when you edit that variable and restart Tymeslot."
+msgstr "Änderungen an dieser Stelle werden sofort wirksam. Eine Einstellung, die durch eine Umgebungsvariable wie REGISTRATION_ENABLED festgelegt ist, ist ausgegraut und ändert sich erst, wenn Sie diese Variable bearbeiten und Tymeslot neu starten."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Set by the %{variable} environment variable. To change it here, remove the variable and restart Tymeslot."
+msgstr "Durch die Umgebungsvariable %{variable} festgelegt. Um die Einstellung hier zu ändern, entfernen Sie die Variable und starten Sie Tymeslot neu."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Email address that receives admin alerts when the toggle above is enabled. Leave blank to send no alert emails."
+msgstr "E-Mail-Adresse, die Admin-Benachrichtigungen erhält, wenn der obige Schalter aktiviert ist. Leer lassen, wenn keine Benachrichtigungen per E-Mail versendet werden sollen."

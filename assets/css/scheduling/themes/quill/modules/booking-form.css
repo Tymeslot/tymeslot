@@ -23,7 +23,7 @@
   backdrop-filter: blur(var(--glass-blur-md));
   -webkit-backdrop-filter: blur(var(--glass-blur-md));
   color: white;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  text-shadow: var(--text-shadow-input);
   font-size: var(--theme-font-size-sm);
   transition: var(--transition-normal);
   box-shadow: 0 2px 8px var(--input-shadow-base), inset 0 1px 0 var(--input-inset-highlight);
@@ -77,10 +77,10 @@
   width: 100%;
   max-width: 100%;
   padding: var(--input-padding);
-  border: var(--border-width-thin) solid rgba(255, 255, 255, 0.28);
+  border: var(--border-width-thin) solid var(--input-light-line);
   border-radius: var(--input-border-radius);
-  background: rgba(255, 255, 255, 0.92);
-  color: rgb(15, 23, 42);
+  background: var(--input-light-surface);
+  color: var(--input-light-ink);
   font-size: var(--theme-font-size-base);
   transition: var(--transition-normal);
   box-sizing: border-box;
@@ -90,7 +90,7 @@
 .quill-theme-wrapper input.input::placeholder,
 .quill-theme-wrapper textarea.input::placeholder,
 .quill-theme-wrapper .guest-add__input::placeholder {
-  color: rgba(15, 23, 42, 0.45);
+  color: var(--input-light-placeholder);
 }
 
 .quill-theme-wrapper .input:hover,
@@ -99,7 +99,7 @@
 .quill-theme-wrapper select.input:hover,
 .quill-theme-wrapper .guest-add__input:hover {
   background: white;
-  border-color: rgba(255, 255, 255, 0.45);
+  border-color: var(--input-light-line-hover);
 }
 
 .quill-theme-wrapper .input:focus,
@@ -201,11 +201,6 @@
   flex-direction: column;
 }
 
-.glass-morphism-card form[phx-change="validate"] .space-y-2 {
-  display: flex;
-  flex-direction: column;
-}
-
 /* Comfortable spacing before the action buttons cluster */
 .glass-morphism-card form[phx-change="validate"] .booking-actions {
   margin-top: var(--space-xl);
@@ -269,6 +264,13 @@
   margin-top: var(--space-sm);
 }
 
+/* A button label never breaks ("Book" above "Meeting"). When the two
+   buttons no longer fit side by side, the row wraps and the second takes a
+   line of its own. */
+.booking-actions .action-button {
+  white-space: nowrap;
+}
+
 /* Booking card typography & spacing scale with the card's own width,
    not the viewport — so the heading shrinks correctly in narrow embeds
    even when the host page is wide. */
@@ -312,184 +314,61 @@
 
 /* ===== Add Guests field ===== */
 /* A collapsible token/chip field; scoped to the Quill wrapper so it inherits
-   the theme's glass surfaces, radii and cyan accent. */
-
-.quill-theme-wrapper .guest-field {
-  margin-top: var(--space-sm);
-}
+   the theme's glass surfaces, radii and cyan accent. The structure both
+   themes share is in shared/components/booking-fields.css. */
 
 /* Quiet "+ Add guests" link shown while collapsed.
    Uses the high-contrast text colour (not --theme-primary, which is a
    user-chosen colour that can sit low-contrast on the card) with an underline
    to keep the link affordance regardless of the booking page's palette. */
 .quill-theme-wrapper .guest-field__toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-3xs);
-  padding: var(--space-3xs) 0;
-  background: transparent;
-  border: none;
   color: var(--text-opacity-medium-high);
-  font-size: var(--theme-font-size-sm);
-  font-weight: var(--font-weight-medium);
   text-decoration: underline;
   text-underline-offset: 2px;
-  cursor: pointer;
-  transition: color var(--transition-fast);
 }
 
 .quill-theme-wrapper .guest-field__toggle:hover {
   color: var(--text-opacity-high);
 }
 
-.quill-theme-wrapper .guest-field__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-xs);
-}
-
 .quill-theme-wrapper .guest-field__label {
-  font-size: var(--theme-font-size-sm);
-  font-weight: var(--font-weight-medium);
   color: var(--text-opacity-medium-high);
 }
 
-.quill-theme-wrapper .guest-field__header-meta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2xs);
-}
-
 .quill-theme-wrapper .guest-field__count {
-  font-size: var(--theme-font-size-2xs);
   color: var(--text-opacity-subtle);
-  font-variant-numeric: tabular-nums;
 }
 
 .quill-theme-wrapper .guest-field__close {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 1.25rem;
-  height: 1.25rem;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-full);
   color: var(--text-opacity-subtle);
-  font-size: var(--theme-font-size-md);
-  line-height: 1;
-  cursor: pointer;
-  transition: color var(--transition-fast), background var(--transition-fast);
-}
-
-.quill-theme-wrapper .guest-field__close:hover {
-  color: white;
-  background: var(--theme-danger);
 }
 
 /* Chip list */
-.quill-theme-wrapper .guest-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2xs);
-  margin: 0 0 var(--space-xs);
-  padding: 0;
-  list-style: none;
-}
-
 .quill-theme-wrapper .guest-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2xs);
-  max-width: 100%;
-  padding: var(--space-hairline) var(--space-2xs) var(--space-hairline) var(--space-hairline);
-  background: var(--surface-light);
   border: var(--border-width-thin) solid var(--border-light);
-  border-radius: var(--radius-full);
   backdrop-filter: blur(var(--glass-blur-sm));
   -webkit-backdrop-filter: blur(var(--glass-blur-sm));
 }
 
-.quill-theme-wrapper .guest-chip__avatar {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: var(--radius-full);
-  background: var(--theme-primary-solid);
-  color: var(--theme-on-primary);
-  font-size: var(--theme-font-size-3xs);
-  font-weight: var(--font-weight-semibold);
-  text-transform: uppercase;
-}
-
 .quill-theme-wrapper .guest-chip__email {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--theme-font-size-2xs);
   color: var(--text-opacity-medium-high);
 }
 
 .quill-theme-wrapper .guest-chip__remove {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 1.25rem;
-  height: 1.25rem;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-full);
   color: var(--text-opacity-low);
   font-size: var(--theme-font-size-base);
-  line-height: 1;
-  cursor: pointer;
-  transition: color var(--transition-fast), background var(--transition-fast);
 }
 
-.quill-theme-wrapper .guest-chip__remove:hover {
-  color: white;
-  background: var(--theme-danger);
-}
-
-/* Add-guest input row (its own form, sibling of the booking form) */
-.quill-theme-wrapper .guest-add {
-  display: flex;
-  gap: var(--space-xs);
-  align-items: stretch;
-}
-
-.quill-theme-wrapper .guest-add__input {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
+/* Add-guest button (the input is styled by the input group above) */
 .quill-theme-wrapper .guest-add__button {
-  flex: none;
   padding: var(--button-padding-sm);
-  border: var(--border-width-thin) solid var(--border-medium);
   border-radius: var(--button-radius-sm);
-  background: var(--surface-light);
   color: var(--text-opacity-high);
-  font-size: var(--theme-font-size-sm);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
   transition: var(--transition-normal);
-}
-
-.quill-theme-wrapper .guest-add__button:hover {
-  background: var(--surface-medium);
-  border-color: var(--theme-primary);
 }
 
 .quill-theme-wrapper .guest-field__error {
   display: block;
-  margin-top: var(--space-3xs);
-  font-size: var(--theme-font-size-sm);
   color: var(--theme-danger);
   font-weight: var(--font-weight-medium);
 }
@@ -536,35 +415,39 @@
 
 /* Short screens — compact booking form */
 @media (max-height: 700px) {
-  /* Constrain textarea height (rows attribute sets intrinsic size,
-     min-height from variables.css must also be overridden) */
-  .booking-form-card textarea.input {
-    min-height: 0;
-    max-height: 5rem;
-  }
+  :where(html:not([data-embedded])) {
+    /* Constrain textarea height (rows attribute sets intrinsic size,
+       min-height from variables.css must also be overridden) */
+    .booking-form-card textarea.input {
+      min-height: 0;
+      max-height: 5rem;
+    }
 
-  /* Tighter button cluster margin */
-  .glass-morphism-card form[phx-change="validate"] .booking-actions {
-    margin-top: var(--space-md);
-  }
+    /* Tighter button cluster margin */
+    .glass-morphism-card form[phx-change="validate"] .booking-actions {
+      margin-top: var(--space-md);
+    }
 
-  /* Compact booking header */
-  .booking-form-card .section-header {
-    font-size: var(--theme-font-size-lg);
-    margin-bottom: var(--space-xs);
+    /* Compact booking header */
+    .booking-form-card .section-header {
+      font-size: var(--theme-font-size-lg);
+      margin-bottom: var(--space-xs);
+    }
   }
 }
 
 @media (max-height: 500px) {
-  /* Minimal textarea */
-  .booking-form-card textarea.input {
-    min-height: 0;
-    max-height: 3rem;
-  }
+  :where(html:not([data-embedded])) {
+    /* Minimal textarea */
+    .booking-form-card textarea.input {
+      min-height: 0;
+      max-height: 3rem;
+    }
 
-  /* Minimal button cluster margin */
-  .glass-morphism-card form[phx-change="validate"] .booking-actions {
-    margin-top: var(--space-xs);
+    /* Minimal button cluster margin */
+    .glass-morphism-card form[phx-change="validate"] .booking-actions {
+      margin-top: var(--space-xs);
+    }
   }
 }
 
@@ -572,37 +455,18 @@
 /* The radio group the booker chooses a location from, shown only when the
    meeting type offers more than one. Scoped to the Quill wrapper so it
    inherits the theme's glass surfaces, radii and accent, exactly as the
-   guest field does. */
+   guest field does. The shared structure is in
+   shared/components/booking-fields.css. */
 
 .quill-theme-wrapper .location-field {
   margin: 0 0 var(--space-sm);
-  padding: 0;
-  border: none;
 }
 
 .quill-theme-wrapper .location-field__label {
-  padding: 0;
-  margin-bottom: var(--space-xs);
-  font-size: var(--theme-font-size-sm);
-  font-weight: var(--font-weight-medium);
   color: var(--text-opacity-medium-high);
 }
 
-.quill-theme-wrapper .location-group {
-  margin: 0;
-  padding: 0;
-  border: none;
-  min-width: 0;
-}
-.quill-theme-wrapper .location-group + .location-group {
-  margin-top: var(--space-sm);
-}
 .quill-theme-wrapper .location-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3xs);
-  margin: 0;
-  padding: var(--space-3xs);
   background: var(--option-tile-bg);
   border: var(--border-width-thin) solid var(--option-tile-border);
   border-radius: var(--input-border-radius);
@@ -610,21 +474,7 @@
   -webkit-backdrop-filter: blur(var(--glass-blur-sm));
 }
 .quill-theme-wrapper .location-option {
-  position: relative;
-  flex: 1 1 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2xs);
-  padding: var(--space-2xs) var(--space-sm);
-  border-radius: var(--radius-md);
   color: var(--option-tile-text);
-  font-size: var(--theme-font-size-xs);
-  font-weight: var(--font-weight-bold);
-  letter-spacing: var(--letter-spacing-wide);
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
 }
 .quill-theme-wrapper .location-option:hover {
   background: var(--option-tile-bg-hover);
@@ -637,63 +487,28 @@
 .quill-theme-wrapper .location-option--selected:hover {
   background: var(--theme-primary-solid);
   color: var(--theme-on-primary);
-}
-/* The native radio stays in the page for keyboard and screen-reader use;
-   the toggle it sits in is what the booker sees. */
-.quill-theme-wrapper .location-option__radio {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: 0;
-  opacity: 0;
-  pointer-events: none;
-}
-.quill-theme-wrapper .location-option__icon {
-  flex: none;
-  width: 1rem;
-  height: 1rem;
+  box-shadow: var(--selected-ring);
 }
 .quill-theme-wrapper .location-field__detail {
-  margin: var(--space-2xs) 0 0;
-  font-size: var(--theme-font-size-sm);
   color: var(--text-opacity-subtle);
-}
-.quill-theme-wrapper .location-phone {
-  margin-top: var(--space-xs);
 }
 
 .quill-theme-wrapper .location-phone__label {
-  display: block;
-  margin-bottom: var(--space-3xs);
-  font-size: var(--theme-font-size-sm);
-  font-weight: var(--font-weight-medium);
   color: var(--text-opacity-medium-high);
 }
 
 .quill-theme-wrapper .location-phone__input {
-  width: 100%;
-  max-width: 100%;
   padding: var(--input-padding);
-  border: var(--border-width-thin) solid rgba(255, 255, 255, 0.28);
+  border: var(--border-width-thin) solid var(--input-light-line);
   border-radius: var(--input-border-radius);
-  background: rgba(255, 255, 255, 0.92);
-  color: rgb(15, 23, 42);
-  font-size: var(--theme-font-size-base);
+  background: var(--input-light-surface);
+  color: var(--input-light-ink);
   transition: var(--transition-normal);
-  box-sizing: border-box;
 }
 
 .quill-theme-wrapper .location-phone__input:focus {
-  outline: none;
   background: white;
-  border-color: var(--theme-primary);
   box-shadow: 0 0 0 3px var(--theme-primary-focus);
-}
-
-.quill-theme-wrapper .location-field__error {
-  margin-top: var(--space-3xs);
-  font-size: var(--theme-font-size-sm);
-  color: var(--theme-error-light);
 }
 
 /* ===== Saved venues ===== */
@@ -736,6 +551,7 @@
 .quill-theme-wrapper .location-venue--selected:hover {
   background: var(--theme-primary-solid);
   color: var(--theme-on-primary);
+  box-shadow: var(--selected-ring);
 }
 .quill-theme-wrapper .location-venue__name {
   font-size: var(--theme-font-size-sm);

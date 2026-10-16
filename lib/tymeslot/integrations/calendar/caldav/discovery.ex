@@ -176,6 +176,31 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
     end
   end
 
+  @doc """
+  The addresses the server counts as the connected account's own: the
+  principal's `calendar-user-address-set` (RFC 6638 §2.4.1), the preferred one
+  first. See `XmlHandler.parse_calendar_user_address_set/1`.
+
+  Follows the same principal probe discovery does, against a client that is
+  already connected, so the URL has passed validation once and is not checked
+  again here.
+  """
+  @spec calendar_user_addresses(Base.client()) ::
+          {:ok, [String.t(), ...]} | {:error, Base.error_reason()}
+  def calendar_user_addresses(client) do
+    with {:ok, principal_href} <- probe_current_user_principal(client),
+         {:ok, %Req.Response{body: body}} <-
+           Http.propfind(
+             UrlBuilder.build_calendar_url(client.base_url, principal_href),
+             client.username,
+             client.password,
+             body: XmlHandler.build_propfind_request(properties: [:calendar_user_address_set]),
+             depth: "0"
+           ) do
+      XmlHandler.parse_calendar_user_address_set(body)
+    end
+  end
+
   # Full RFC 4791 discovery chain:
   #   1. PROPFIND a probe URL → current-user-principal href
   #   2. PROPFIND principal URL → calendar-home-set href

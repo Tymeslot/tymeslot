@@ -139,7 +139,7 @@ defmodule TymeslotWeb.Themes.Quill.ScheduleSlotsTest do
 
       assert has_element?(
                view,
-               "button.time-slot-button--hour.time-slot-button--selected[phx-value-hour='#{open}']"
+               "button.slot-list__slot--hour.slot-list__slot--selected[phx-value-hour='#{open}']"
              )
     end
 
@@ -189,7 +189,7 @@ defmodule TymeslotWeb.Themes.Quill.ScheduleSlotsTest do
       assert has_element?(
                view,
                "#slot-hour-panel-#{open} " <>
-                 "button.time-slot-button--selected[phx-value-time='#{chosen}']"
+                 "button.slot-list__slot--selected[phx-value-time='#{chosen}']"
              )
     end
   end
@@ -240,15 +240,15 @@ defmodule TymeslotWeb.Themes.Quill.ScheduleSlotsTest do
     end)
 
     view |> element("button.calendar-day[phx-value-date='#{date}']") |> render_click()
-    wait_until(fn -> has_element?(view, "button.time-slot-button") end)
+    wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
 
     view
   end
 
   # Hour buttons carry no `phx-value-time`, so this is exactly the minute slots.
   defp rendered_times(view) do
-    view |> document() |> Floki.attribute("button.time-slot-button", "phx-value-time")
+    view |> document() |> Floki.attribute("button[data-testid='time-slot']", "phx-value-time")
   end
 
-  defp slot_selector(time), do: "button.time-slot-button[phx-value-time='#{time}']"
+  defp slot_selector(time), do: "button[data-testid='time-slot'][phx-value-time='#{time}']"
 end

@@ -6,26 +6,27 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.Gradien
 
   @doc """
   Renders the gradient picker.
-  Expects assigns: customization, presets, myself
+  Expects assigns: option, customization, presets (the group's gradients as `{id, preset}`, in order), myself
   """
   @spec gradient_picker(map()) :: Phoenix.LiveView.Rendered.t()
   def gradient_picker(assigns) do
     ~H"""
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-      <%= for {gradient_id, gradient} <- @presets.gradients do %>
+      <%= for {gradient_id, gradient} <- @presets do %>
         <button
           type="button"
           class={[
             "group/gradient relative h-32 rounded-token-2xl overflow-hidden border-4 transition-all duration-500",
-            if(@customization.background_value == gradient_id,
+            if(@customization.settings["background_value"] == gradient_id,
               do: "border-turquoise-400 shadow-2xl shadow-turquoise-500/20 scale-[1.02]",
               else: "border-white hover:border-turquoise-200"
             )
           ]}
           style={"background: #{gradient.value}"}
-          phx-click="theme:select_background"
-          phx-value-type="gradient"
-          phx-value-id={gradient_id}
+          phx-click="theme:set_option"
+          phx-value-option={@option}
+          phx-value-field="gradient"
+          phx-value-choice={gradient_id}
           phx-target={@myself}
         >
           <div class="absolute inset-0 bg-black/0 group-hover/gradient:bg-black/10 transition-colors">
@@ -36,7 +37,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.Gradien
             </p>
           </div>
 
-          <%= if @customization.background_value == gradient_id do %>
+          <%= if @customization.settings["background_value"] == gradient_id do %>
             <div class="absolute top-3 right-3 w-6 h-6 bg-turquoise-500 text-white rounded-token-full flex items-center justify-center shadow-lg">
               <.icon name="hero-check" class="w-4 h-4" />
             </div>

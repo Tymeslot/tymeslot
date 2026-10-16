@@ -102,8 +102,11 @@ defmodule TymeslotWeb.BookingHoneypotTest do
     # Submit with honeypot filled
     honeypot_booking_form(view, "http://bot.example")
 
-    # Should show fake success message
-    assert render(view) =~ "Booking submitted successfully"
+    # Looks exactly like a real booking: the confirmation step, no flash
+    html = render(view)
+    assert html =~ "Meeting Confirmed!"
+    assert html =~ "bot@example.com"
+    refute html =~ "submitted successfully"
 
     # Should NOT create a meeting
     assert Repo.aggregate(MeetingSchema, :count, :id) == 0
@@ -118,7 +121,7 @@ defmodule TymeslotWeb.BookingHoneypotTest do
 
     honeypot_booking_form(view, "   ")
 
-    assert render(view) =~ "Booking submitted successfully"
+    assert render(view) =~ "Meeting Confirmed!"
     assert Repo.aggregate(MeetingSchema, :count, :id) == 0
   end
 
@@ -143,6 +146,9 @@ defmodule TymeslotWeb.BookingHoneypotTest do
 
     # Wait for the booking to be processed
     wait_until(fn -> render(view) =~ "Meeting Confirmed!" end)
+
+    # The confirmation step is the feedback: no success toast above it
+    refute render(view) =~ "submitted successfully"
 
     # Should create the meeting
     assert Repo.aggregate(MeetingSchema, :count, :id) == 1

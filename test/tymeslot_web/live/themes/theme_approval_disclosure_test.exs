@@ -15,7 +15,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
   import Mox
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
-  import Tymeslot.ThemeBookingFlowHelpers
+  import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
 
   @moduletag :themes
   @moduletag :bookings
@@ -27,6 +27,8 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.BookingDriver
+  alias TymeslotWeb.ThemeTestMatrix
 
   setup :verify_on_exit!
 
@@ -42,8 +44,6 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
     :ok
   end
 
-  @themes %{"1" => "quill", "2" => "rhythm"}
-
   defp gate(user) do
     [type] = MeetingTypes.get_all_meeting_types(user.id)
 
@@ -52,12 +52,16 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
     |> Repo.update!()
   end
 
-  for {theme_id, theme} <- @themes do
-    describe "#{theme}: a gated meeting type" do
+  for theme <- ThemeTestMatrix.registered() do
+    describe "#{theme.slug}: a gated meeting type" do
       @tag :capture_log
       test "is marked as needing approval before anything is picked", %{conn: conn} do
         %{user: user, profile: profile} =
-          seed_booking_account(unquote(theme_id), "gated-#{unquote(theme)}", "America/New_York")
+          seed_booking_account(
+            unquote(theme.id),
+            "gated-#{unquote(theme.slug)}",
+            "America/New_York"
+          )
 
         gate(user)
 
@@ -70,13 +74,17 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
       @tag :capture_log
       test "says so on the form, and does not call the button \"Book\"", %{conn: conn} do
         %{user: user, profile: profile} =
-          seed_booking_account(unquote(theme_id), "form-#{unquote(theme)}", "America/New_York")
+          seed_booking_account(
+            unquote(theme.id),
+            "form-#{unquote(theme.slug)}",
+            "America/New_York"
+          )
 
         gate(user)
 
         {:ok, view, _html} = live(conn, ~p"/#{profile.username}?timezone=America/New_York")
 
-        advance_to_booking_form(view, unquote(theme))
+        BookingDriver.book(view, until: :attendee)
         html = render(view)
 
         assert html =~ "data-testid=\"approval-notice\""
@@ -91,20 +99,22 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
       @tag :capture_log
       test "does not tell the visitor they are all set", %{conn: conn} do
         %{user: user, profile: profile} =
-          seed_booking_account(unquote(theme_id), "done-#{unquote(theme)}", "America/New_York")
+          seed_booking_account(
+            unquote(theme.id),
+            "done-#{unquote(theme.slug)}",
+            "America/New_York"
+          )
 
         gate(user)
 
         {:ok, view, _html} = live(conn, ~p"/#{profile.username}?timezone=America/New_York")
 
-        email = "held-#{unquote(theme)}@example.com"
+        email = "held-#{unquote(theme.slug)}@example.com"
 
         html =
-          complete_booking_flow(view, unquote(theme), unquote(theme_id), %{
-            name: "Test Attendee",
-            email: email,
-            message: "Hello!"
-          })
+          BookingDriver.book(view,
+            attendee: %{name: "Test Attendee", email: email, message: "Hello!"}
+          )
 
         assert html =~ "Request sent!"
         assert html =~ "Not confirmed yet"
@@ -120,13 +130,13 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
       end
     end
 
-    describe "#{theme}: the payment-processing return page" do
+    describe "#{theme.slug}: the payment-processing return page" do
       @tag :capture_log
       test "does not say the booking is confirmed while it is awaiting approval", %{conn: conn} do
         %{user: user} =
           seed_booking_account(
-            unquote(theme_id),
-            "paid-gated-#{unquote(theme)}",
+            unquote(theme.id),
+            "paid-gated-#{unquote(theme.slug)}",
             "America/New_York"
           )
 
@@ -143,7 +153,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
         {:ok, view, html} =
           live(
             conn,
-            ~p"/themes/#{unquote(theme)}/payment-processing/#{meeting.id}?session_id=cs_TEST"
+            ~p"/themes/#{unquote(theme.slug)}/payment-processing/#{meeting.id}?session_id=cs_TEST"
           )
 
         assert html =~ "Confirming your payment"
@@ -171,24 +181,26 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
       end
     end
 
-    describe "#{theme}: an ordinary meeting type" do
+    describe "#{theme.slug}: an ordinary meeting type" do
       @tag :capture_log
       test "is unchanged and still says the booking is confirmed", %{conn: conn} do
         %{user: user, profile: profile} =
-          seed_booking_account(unquote(theme_id), "plain-#{unquote(theme)}", "America/New_York")
+          seed_booking_account(
+            unquote(theme.id),
+            "plain-#{unquote(theme.slug)}",
+            "America/New_York"
+          )
 
         {:ok, view, _html} = live(conn, ~p"/#{profile.username}?timezone=America/New_York")
 
         refute render(view) =~ "data-testid=\"approval-pill\""
 
-        email = "plain-#{unquote(theme)}@example.com"
+        email = "plain-#{unquote(theme.slug)}@example.com"
 
         html =
-          complete_booking_flow(view, unquote(theme), unquote(theme_id), %{
-            name: "Test Attendee",
-            email: email,
-            message: "Hello!"
-          })
+          BookingDriver.book(view,
+            attendee: %{name: "Test Attendee", email: email, message: "Hello!"}
+          )
 
         refute html =~ "data-testid=\"approval-notice\""
         refute html =~ "Request sent!"

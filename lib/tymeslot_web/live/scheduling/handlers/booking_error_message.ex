@@ -40,7 +40,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
   end
 
   def message(:organizer_required) do
-    dgettext("booking", "Organizer is required for booking")
+    dgettext("booking", "Organiser is required for booking")
   end
 
   def message(:booking_failed) do
@@ -144,6 +144,17 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
     dgettext("booking", "Failed to create appointment. Please try again.")
   end
 
+  @doc """
+  Like `message/1`, but a reason it does not recognise renders `fallback`
+  instead of the booking-specific generic message, for callers outside the
+  booking submission (cancelling, rescheduling) whose generic failure reads
+  differently.
+  """
+  @spec message(atom() | String.t(), String.t()) :: String.t()
+  def message(reason, fallback) when is_binary(reason), do: legacy_message(reason) || fallback
+  def message(:meeting_not_found, _fallback), do: message(:meeting_not_found)
+  def message(_reason, fallback), do: fallback
+
   @notice_hours_regex ~r/^Booking requires at least (\d+) hours (?:in advance|advance notice)$/
   @window_days_regex ~r/^(?:Cannot book more than|Booking cannot be more than) (\d+) days in advance$/
 
@@ -183,6 +194,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
 
   defp legacy_message("Cannot reschedule an expired meeting"),
     do: dgettext("booking", "Cannot reschedule an expired meeting")
+
+  defp legacy_message("Cannot cancel an expired meeting"),
+    do: dgettext("booking", "Cannot cancel an expired meeting")
 
   defp legacy_message("Booking time must be in the future"),
     do: dgettext("booking", "Booking time must be in the future")

@@ -3,8 +3,9 @@ defmodule TymeslotWeb.AdminLive do
   Self-hosted admin control panel. One `live_action` per tab:
 
     * the settings tabs (`:authentication`, `:email`, `:general`) each render
-      the sections `TymeslotWeb.AdminLive.Tabs` assigns them. Their overrides
-      shadow any matching environment variable / application config value.
+      the sections `TymeslotWeb.AdminLive.Tabs` assigns them. A saved value
+      outranks the application config, but not a set environment variable:
+      a setting that variable fixes is shown greyed out.
     * `:users` — list users with counts at the top and
       promote/demote admin actions.
 
@@ -237,6 +238,9 @@ defmodule TymeslotWeb.AdminLive do
       {:error, :would_lock_out} ->
         {:noreply, put_flash(socket, :error, lock_out_message(atom_key, parsed))}
 
+      {:error, {:pinned, _key, env_var}} ->
+        {:noreply, put_flash(socket, :error, Formatters.pinned_reason(env_var))}
+
       {:error, _changeset} ->
         {:noreply,
          put_flash(socket, :error, dgettext("dashboard_admin", "Could not update setting."))}
@@ -280,6 +284,9 @@ defmodule TymeslotWeb.AdminLive do
          )
          |> push_event("ts:setting-saved", %{key: Atom.to_string(key)})
          |> load_data()}
+
+      {:error, {:pinned, _key, env_var}} ->
+        {:noreply, put_flash(socket, :error, Formatters.pinned_reason(env_var))}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, put_flash(socket, :error, changeset_message(changeset, key))}

@@ -88,6 +88,12 @@ defmodule TymeslotWeb.Themes.Core.ContextLayoutTest do
     end
   end
 
+  describe "from_params/2 — unknown theme" do
+    test "ignores a theme id the registry does not know" do
+      assert %Context{theme_id: "1"} = Context.from_params(%{"theme" => "9"}, nil)
+    end
+  end
+
   describe "from_params/2 — to_assigns" do
     test "exposes the layout for the root template under :embed_layout" do
       context = Context.from_params(%{"layout" => "column"})

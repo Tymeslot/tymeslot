@@ -258,7 +258,16 @@ defmodule Tymeslot.Application do
     # Meeting payments can be switched on in the admin settings, which is what
     # makes the Connect webhook secret required.
     _missing = SecretCheck.check()
-    :ok
+
+    # A variable set to a value it does not recognise fixes nothing.
+    AppSettings.warn_unrecognised_env_values()
+
+    # A variable outranks what an admin saved, so an old `.env` line can
+    # silently undo it.
+    AppSettings.warn_pins_overriding_saved_values()
+
+    # A variable fixing a sign-in setting can lock every admin out.
+    AppSettings.warn_if_pins_block_sign_in()
   end
 
   defp validate_config! do

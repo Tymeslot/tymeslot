@@ -14,7 +14,7 @@
    to that reflow. */
 :root {
   /* Typography - Font Family */
-  --theme-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --theme-font-family: var(--font-stack-inter);
 
   /* Typography - Font Size Scale (fluid responsive using clamp()) */
   --theme-font-size-3xs: clamp(0.625rem, 1.0vw, 0.688rem);    /* ~10-11px - tiny labels */
@@ -31,29 +31,19 @@
 
   /* Typography - Line Heights */
   --theme-line-height-tight: 1.1;
-  --theme-line-height-snug: 1.2;
   --theme-line-height-normal: 1.4;
-  --theme-line-height-relaxed: 1.5;
-  --theme-line-height-loose: 1.6;
 
   /* Typography - Font Weights */
   --font-weight-normal: 400;
-  --font-weight-medium: 500;
-  --font-weight-semibold: 600;
-  --font-weight-bold: 700;
 
   /* Typography - Letter Spacing */
-  --letter-spacing-tight: -0.025em;
-  --letter-spacing-normal: 0;
   --letter-spacing-wide: 0.025em;
 
   /* Theme Colors - Primary Palette */
   --theme-primary: #06b6d4;
   --theme-primary-hover: #0891b2;
-  --theme-primary-focus: rgba(6, 182, 212, 0.2);
   --theme-secondary: #14b8a6;
   --theme-accent: #10b981;
-  --theme-accent-dark: #059669;
 
   /* Filled-control ink and surface (WCAG 1.4.3 / 1.4.11).
      A palette colour used as a *surface* needs a foreground that passes on top
@@ -66,19 +56,14 @@
      because borders, focus rings and bright text on the dark card need it
      bright. */
   --theme-on-primary: #0f172a;
-  --theme-primary-solid: var(--theme-primary);
-  --theme-primary-solid-hover: var(--theme-primary-hover);
   --theme-on-accent: #0f172a;
-  --theme-accent-solid: var(--theme-accent);
 
   /* Theme Colors - Status Colors */
   --theme-success: #10b981;
-  --theme-success-dark: #059669;
   --theme-warning: #fbbf24;
   --theme-info: #6366f1;
   --theme-danger: #ef4444;
   --theme-danger-dark: #dc2626;
-  --theme-error: rgba(239, 68, 68, 0.95);
   --theme-error-bg: rgba(254, 226, 226, 0.08);
   --theme-error-border: rgba(239, 68, 68, 0.6);
   --theme-error-border-focus: rgba(239, 68, 68, 0.8);
@@ -86,10 +71,12 @@
 
   /* Theme Colors - Base Colors */
   --theme-background-color: #0f172a;
-  --theme-surface: rgba(30, 41, 59, 0.5);
+  /* The palette's page colour. The server overrides it per organiser; it is
+     what shows behind an image or video background (--theme-background falls
+     back to it). */
+  --theme-canvas: #0f172a;
   --theme-text: #e2e8f0;
   --theme-text-secondary: #94a3b8;
-  --theme-text-muted: #64748b;
 
   /* Theme Colors - Text Opacity Variants */
   --text-opacity-high: rgba(255, 255, 255, 0.95);
@@ -111,11 +98,8 @@
   --surface-intense: rgba(255, 255, 255, 0.2);
 
   /* Dark Surface Overlays (for backgrounds) */
-  --surface-dark-subtle: rgba(0, 0, 0, 0.2);
-  --surface-dark-light: rgba(0, 0, 0, 0.3);
   --surface-dark-medium: rgba(0, 0, 0, 0.4);
   --surface-dark-strong: rgba(0, 0, 0, 0.5);
-  --surface-dark-intense: rgba(0, 0, 0, 0.85);
   --surface-dark-very-intense: rgba(0, 0, 0, 0.9);
 
   /* Border Opacity Levels */
@@ -134,11 +118,6 @@
   --radius-3xl: 2rem;      /* 32px */
   --radius-full: 9999px;   /* pills and circular avatars */
 
-  /* Border Width Scale */
-  --border-width-thin: 1px;
-  --border-width-medium: 2px;
-  --border-width-thick: 3px;
-
   /* Spacing Scale - Fluid Responsive */
   --space-hairline: 0.125rem;                    /* 2px — sub-grid gap, compact calendar cells only */
   --space-3xs: 0.25rem;                          /* 4px */
@@ -152,58 +131,33 @@
   --space-3xl: clamp(2rem, 3.5vw, 2.5rem);       /* 32-40px */
 
   /* Transition Speeds */
-  --transition-fast: 0.15s ease;
-  --transition-normal: 0.2s ease;
   --transition-smooth: 0.3s ease;
-  --transition-slow: 0.4s ease-in-out;
-  --transition-very-slow: 0.6s ease;
-
-  /* Animation Transforms */
-  --animation-slide-distance: 10px;
 
   /* Elevation Shadows - Base Shadows */
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.1);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
   --shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.15);
-  --shadow-2xl: 0 20px 40px rgba(0, 0, 0, 0.1);
 
-  /* Elevation Shadows - Colored Shadows */
-  --shadow-primary-sm: 0 4px 12px rgba(6, 182, 212, 0.3);
-  --shadow-primary-md: 0 6px 20px rgba(6, 182, 212, 0.4);
-  --shadow-primary-lg: 0 12px 32px rgba(6, 182, 212, 0.3);
-  --shadow-success-sm: 0 4px 12px rgba(16, 185, 129, 0.4);
-  --shadow-success-md: 0 6px 20px rgba(16, 185, 129, 0.4);
-  --shadow-danger-sm: 0 4px 12px rgba(239, 68, 68, 0.4);
-  --shadow-danger-md: 0 6px 20px rgba(239, 68, 68, 0.4);
+  /* Coloured-shadow geometry (offset and blur). The colour is mixed from the
+     palette in shared/tokens.css, so a custom palette's shadows follow it. */
+  --shadow-geometry-sm: 0 4px 12px;
+  --shadow-geometry-md: 0 6px 20px;
+  --shadow-geometry-lg: 0 12px 32px;
 
   /* Inset Shadows (highlights) */
   --inset-highlight-subtle: inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  --inset-highlight-medium: inset 0 1px 0 rgba(255, 255, 255, 0.15);
   --inset-highlight-strong: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 
   /* Component-Specific Tokens - Avatars (fluid, scales with container) */
-  --avatar-size-sm: clamp(28px, 4cqi, 32px);
-  --avatar-size-md: clamp(40px, 6cqi, 48px);
   --avatar-size-lg: clamp(96px, 15cqi, 128px);
-  --avatar-size-xl: clamp(128px, 22cqi, 192px);
 
   /* Component-Specific Tokens - Icons */
-  --icon-2xs: 10px;
-  --icon-xs: 12px;
   --icon-sm: 16px;
   --icon-md: 20px;
-  --icon-lg: 24px;
-  --icon-xl: 32px;
-  --icon-2xl: 48px;
-
-  /* Component-Specific Tokens - Flag Dimensions */
-  --flag-height: 14px;
 
   /* Component-Specific Tokens - Touch Targets */
   --min-touch-target: 44px;
-  --min-touch-target-ios: 48px;
 
   /* Component-Specific Tokens - Calendar */
   --calendar-gap: 0.25rem;
@@ -234,7 +188,7 @@
   --seat-neutral: currentColor;
   --seat-neutral-bg: color-mix(in srgb, currentColor 12%, transparent);
   /* A selected slot sits on the primary gradient, whose text colour is
-     --theme-on-primary: the badge takes that colour on a faint wash of it,
+     --theme-on-primary, so the badge takes that colour on a faint wash of it,
      so a custom palette's contrast pair carries over to the badge. */
   --seat-selected: var(--theme-on-primary);
   --seat-selected-bg: color-mix(in srgb, var(--theme-on-primary) 14%, transparent);
@@ -264,7 +218,6 @@
   /* Component-Specific Tokens - Forms */
   --input-border-radius: 0.75rem;
   --input-padding: 0.75rem 1rem;
-  --input-min-height: 44px;
   --textarea-min-height: clamp(60px, 15vh, 120px);
   --textarea-max-height: clamp(200px, 45vh, 400px);
 
@@ -274,13 +227,8 @@
   --step-connector-width: 2rem;
 
   /* Component-Specific Tokens - Dropdowns */
-  --dropdown-width: 300px;
   --dropdown-width-sm: 160px;
   --dropdown-width-md: 180px;
-  --dropdown-max-height: clamp(200px, 50vh, 420px);
-
-  /* Z-Index Scale */
-  --z-dropdown: 50;
 
   /* Component-Specific Tokens - Scrollbar */
   --scrollbar-width: 6px;
@@ -290,7 +238,6 @@
 
   /* Background Gradients */
   --theme-background: linear-gradient(135deg, #1a1b3a 0%, #2d1b69 100%);
-  --theme-background-image: none;
 
   /* Background media veil — a dark layer composited over image/video
      backgrounds so the glass content keeps the contrast it has over the default
@@ -303,7 +250,6 @@
   --glass-blur-sm: 8px;
   --glass-blur-md: 10px;
   --glass-blur-lg: 15px;
-  --glass-opacity: 0.1;
   --glass-border: rgba(255, 255, 255, 0.2);
   --glass-shadow: 0 24px 48px rgba(0, 0, 0, 0.28), 0 8px 16px rgba(0, 0, 0, 0.16);
 
@@ -334,7 +280,109 @@
   --option-tile-border: rgba(255, 255, 255, 0.18);
   --option-tile-border-hover: rgba(255, 255, 255, 0.35);
   --option-tile-text: rgba(255, 255, 255, 0.85);
-  --option-tile-selected-glow: rgba(6, 182, 212, 0.35);
+  --option-tile-selected-glow: var(--theme-primary-glow);
+
+  /* Edge of every selected control. The selected fill is the primary, and a
+     background in the same hue as the primary (an orange image under the
+     Sunset palette) shows through the glass card around it, so the fill alone
+     can vanish into its surroundings. The page's text colour is the one
+     colour the palette guarantees reads on that card. */
+  --selected-ring: inset 0 0 0 var(--border-width-medium) var(--theme-text);
   --option-indicator-idle: rgba(255, 255, 255, 0.45);
   --option-indicator-hover: rgba(255, 255, 255, 0.7);
+  --option-tile-text-hover: white;
+  --option-tile-focus-ring: 0 0 0 3px var(--theme-primary-focus);
+  --option-card-min-height: 3.5rem;
+
+  /* Roles (shared/tokens.css, section 2), as aliases of Quill's own names */
+  --surface-2: var(--surface-very-light);
+  --surface-3: var(--surface-medium);
+  --ink-1: var(--text-opacity-high);
+  --ink-2: var(--text-opacity-medium);
+  --ink-3: var(--text-opacity-subtle);
+  --notice-warning-surface: rgba(251, 191, 36, 0.1);
+  --notice-warning-border: rgba(251, 191, 36, 0.35);
+  --radius-control: var(--input-border-radius);
+  --radius-card: var(--card-border-radius);
+
+  /* Shared status screens (shared/layout.css: awaiting payment, readiness) */
+  --status-surface: rgba(255, 255, 255, 0.08);
+  --status-surface-opaque: linear-gradient(135deg, rgba(20, 20, 35, 0.86) 0%, rgba(15, 15, 25, 0.78) 100%);
+  --status-shadow: 0 1.25rem 2.5rem rgba(0, 0, 0, 0.35);
+  --status-ink-heading: #ffffff;
+  --status-ink: rgba(255, 255, 255, 0.92);
+  --status-ink-soft: rgba(255, 255, 255, 0.85);
+  --status-ink-hint: rgba(255, 255, 255, 0.7);
+
+  /* Meeting pages (modules/meeting-pages.css) */
+  --text-opacity-full: #ffffff;
+  --text-shadow-title: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  /* Approval notice (shared/components/approval-notice.css) */
+  --approval-pill-surface: rgba(251, 191, 36, 0.12);
+  --approval-icon-surface: rgba(251, 191, 36, 0.18);
+  --approval-notice-gap: var(--space-sm);
+  --approval-notice-font-size: var(--theme-font-size-sm);
+  --approval-notice-ink: var(--text-opacity-medium-high);
+  --approval-notice-max-width: 32rem;
+
+  /* Poll voting page (shared/components/polls.css) */
+  --poll-voting-padding: 0;
+  --poll-panel-surface: rgba(255, 255, 255, 0.08);
+  --poll-input-surface: rgba(255, 255, 255, 0.08);
+  --poll-input-line: rgba(255, 255, 255, 0.18);
+  --poll-input-focus-ring: 0 0 0 3px var(--theme-primary-focus);
+  --poll-row-surface: rgba(255, 255, 255, 0.06);
+  --poll-row-line: rgba(255, 255, 255, 0.14);
+  --poll-option-line: rgba(255, 255, 255, 0.2);
+  --poll-option-selected-surface: var(--theme-primary-focus);
+
+  /* Payment return pages (shared/components/payment-pages.css) */
+  --payment-page-max-width: 42rem;
+  --payment-card-surface: var(--surface-very-light);
+  --payment-card-line: var(--border-light);
+  --payment-card-radius: var(--radius-xl);
+  --payment-heading-ink: var(--text-opacity-high);
+  --payment-body-ink: var(--text-opacity-medium-high);
+  --payment-link-radius: var(--button-radius-sm);
+  --payment-link-weight: var(--font-weight-semibold);
+  --payment-link-transition: var(--transition-smooth);
+
+  /* Booking fields (shared/components/booking-fields.css) */
+  --guest-remove-ink-hover: #ffffff;
+
+  /* Language switcher (shared/components/language-switcher.css) */
+  --lang-switcher-surface: rgba(0, 0, 0, 0.45);
+  --lang-switcher-surface-hover: rgba(0, 0, 0, 0.55);
+  --lang-switcher-panel-surface: rgba(255, 255, 255, 0.95);
+  --lang-switcher-panel-line: rgba(0, 0, 0, 0.1);
+  --lang-switcher-item-line: rgba(0, 0, 0, 0.05);
+  --lang-switcher-item-hover: rgba(59, 130, 246, 0.1);
+  --lang-switcher-item-active: rgba(59, 130, 246, 0.15);
+  --lang-switcher-ink: #ffffff;
+
+  /* Slot list (shared/components/slot-list.css) */
+  --slot-list-grid-gap: var(--space-xs);
+
+  /* Timezone picker (shared/components/timezone-picker.css). The dropdown
+     surface is fixed dark: it must not use --theme-background, which is
+     overridable by per-profile customisations and could produce a light
+     surface where white text becomes invisible. */
+  --dropdown-surface: linear-gradient(135deg, rgba(20, 15, 45, 0.98) 0%, rgba(30, 20, 60, 0.97) 100%);
+
+  /* Text shadows */
+  --text-shadow-input: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --text-shadow-strong: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --text-shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --text-shadow-faint: 0 1px 2px rgba(0, 0, 0, 0.2);
+
+  /* Light form fields (booking form, phone location) */
+  --input-light-surface: rgba(255, 255, 255, 0.92);
+  --input-light-line: rgba(255, 255, 255, 0.28);
+  --input-light-line-hover: rgba(255, 255, 255, 0.45);
+  --input-light-ink: rgb(15, 23, 42);
+  --input-light-placeholder: rgba(15, 23, 42, 0.45);
+  /* The custom-question dropdown's chevron sits on that light field
+     (shared/components/custom-questions.css). */
+  --select-chevron-ink: var(--input-light-ink);
 }

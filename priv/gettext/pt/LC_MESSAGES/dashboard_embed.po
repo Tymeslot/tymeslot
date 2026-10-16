@@ -41,11 +41,6 @@ msgstr "Já liberados: %{domains}"
 msgid "Book a Meeting →"
 msgstr "Agendar uma reunião →"
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
-#, elixir-autogen, elixir-format
-msgid "By default, embedding is disabled to prevent unauthorized use of your booking page. To enable embedding, you must specify the domains you trust."
-msgstr "Por padrão, a incorporação fica desativada para impedir o uso não autorizado da sua página de agendamento. Para ativá-la, você precisa indicar os domínios em que confia."
-
 #: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Code copied to clipboard!"
@@ -363,16 +358,6 @@ msgstr "Digite um domínio e aperte Enter para adicionar. Não inclua %{scheme} 
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
-msgid "For security, %{emphasis} to only specific domains you trust. This prevents your booking page from appearing on unauthorized websites."
-msgstr "Por segurança, %{emphasis} só a domínios específicos em que você confia. Isso impede que sua página de agendamento apareça em sites não autorizados."
-
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
-#, elixir-autogen, elixir-format
-msgid "Need help? See the %{guide} for step-by-step instructions, platform tips, and customization options."
-msgstr "Precisa de ajuda? Veja o %{guide} para instruções passo a passo, dicas por plataforma e opções de personalização."
-
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
-#, elixir-autogen, elixir-format
 msgid "Use %{wildcard} to allow all subdomains"
 msgstr "Use %{wildcard} para liberar todos os subdomínios"
 
@@ -445,3 +430,18 @@ msgstr "Configurações de incorporação"
 #, elixir-autogen, elixir-format
 msgid "Remove %{domain}"
 msgstr "Remover %{domain}"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
+#, elixir-autogen, elixir-format
+msgid "By default, embedding is disabled to prevent unauthorised use of your booking page. To enable embedding, you must specify the domains you trust."
+msgstr "Por padrão, a incorporação fica desativada para impedir o uso não autorizado da sua página de agendamento. Para ativá-la, você precisa indicar os domínios em que confia."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
+#, elixir-autogen, elixir-format
+msgid "For security, %{emphasis} to only specific domains you trust. This prevents your booking page from appearing on unauthorised websites."
+msgstr "Por segurança, %{emphasis} só a domínios específicos em que você confia. Isso impede que sua página de agendamento apareça em sites não autorizados."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
+#, elixir-autogen, elixir-format
+msgid "Need help? See the %{guide} for step-by-step instructions, platform tips, and customisation options."
+msgstr "Precisa de ajuda? Veja o %{guide} para instruções passo a passo, dicas por plataforma e opções de personalização."

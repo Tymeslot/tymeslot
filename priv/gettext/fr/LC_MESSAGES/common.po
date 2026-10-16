@@ -21,11 +21,6 @@ msgstr "Non"
 msgid "Yes"
 msgstr "Oui"
 
-#: lib/tymeslot/custom_fields/answer_renderer.ex
-#, elixir-autogen, elixir-format
-msgid "✓ Acknowledged (%{at})"
-msgstr "✓ Confirmé (%{at})"
-
 #: lib/tymeslot_web/components/core_components/flash.ex
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
@@ -369,3 +364,8 @@ msgstr[1] "Vous pouvez configurer jusqu’à %{count} rappels"
 #, elixir-autogen, elixir-format
 msgid "Loading"
 msgstr "Chargement"
+
+#: lib/tymeslot/custom_fields/answer_renderer.ex
+#, elixir-autogen, elixir-format
+msgid "✓ Acknowledged"
+msgstr "✓ Confirmé"

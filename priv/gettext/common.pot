@@ -21,11 +21,6 @@ msgstr ""
 msgid "Yes"
 msgstr ""
 
-#: lib/tymeslot/custom_fields/answer_renderer.ex
-#, elixir-autogen, elixir-format
-msgid "✓ Acknowledged (%{at})"
-msgstr ""
-
 #: lib/tymeslot_web/components/core_components/flash.ex
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
@@ -368,4 +363,9 @@ msgstr[1] ""
 #: lib/tymeslot_web/components/core_components/feedback.ex
 #, elixir-autogen, elixir-format
 msgid "Loading"
+msgstr ""
+
+#: lib/tymeslot/custom_fields/answer_renderer.ex
+#, elixir-autogen, elixir-format
+msgid "✓ Acknowledged"
 msgstr ""

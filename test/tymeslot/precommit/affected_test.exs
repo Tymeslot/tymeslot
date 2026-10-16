@@ -18,6 +18,7 @@ defmodule Tymeslot.Precommit.AffectedTest do
     {"deps.audit", ~w[deps.audit], :dev},
     {"migrations", ~w[excellent_migrations.check_safety], :dev},
     {"workflows", ~w[actionlint], :dev},
+    {"css tokens", ~w[css.check_tokens], :dev},
     {"xref", ~w[xref graph --label compile-connected --fail-above 27], :dev},
     {"test", ~w[test], :test},
     {"js", ~w[test.js], :dev},
@@ -85,6 +86,7 @@ defmodule Tymeslot.Precommit.AffectedTest do
                {"deps.audit", "mix.exs and mix.lock unchanged"},
                {"migrations", "no migration changed"},
                {"workflows", "no workflow changed"},
+               {"css tokens", "no booking-theme CSS changed"},
                {"js", "no JavaScript changed"}
              ]
     end
@@ -97,6 +99,9 @@ defmodule Tymeslot.Precommit.AffectedTest do
         {"config/runtime.exs", ["sobelow"]},
         {"priv/repo/migrations/20260101000000_add_x.exs", ["migrations"]},
         {".github/workflows/verify.yml", ["workflows"]},
+        {"assets/css/scheduling/themes/quill/modules/base.css", ["css tokens"]},
+        {"scripts/test_css_tokens.sh", ["css tokens"]},
+        {"lib/mix/tasks/css.check_tokens.ex", ["css tokens"]},
         {"assets/js/utility_hooks.js", ["js"]},
         {"assets/js/__tests__/flash_auto_dismiss.test.js", ["js"]},
         {"assets/vendor/topbar.cjs", ["js"]},
@@ -121,6 +126,13 @@ defmodule Tymeslot.Precommit.AffectedTest do
       assert names(Affected.select(@steps, [".gitea/workflows/verify.yml"], index())) == [
                "workflows"
              ]
+    end
+
+    test "a booking-theme CSS diff runs the token check and nothing else" do
+      # Not shared/tokens.css: sobelow's name match ("token") would also run.
+      diff = ["assets/css/scheduling/shared/components/polls.css"]
+
+      assert names(Affected.select(@steps, diff, index())) == ["css tokens"]
     end
 
     test "a JavaScript-only diff runs Vitest and nothing else" do

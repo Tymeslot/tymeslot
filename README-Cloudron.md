@@ -245,7 +245,7 @@ Tymeslot automatically detects and uses Cloudron's built-in addons:
 
 To override the defaults:
 - **Email:** Set `EMAIL_ADAPTER` explicitly (e.g., `EMAIL_ADAPTER=postmark`) to use an external provider instead of Cloudron's relay.
-- **SSO:** Set `ENABLE_OAUTH_AUTH=false` to disable SSO, or set `ENABLE_OAUTH_AUTH=true` with your own `OAUTH_*` variables to use a different IdP.
+- **SSO:** Set `ENABLE_OAUTH_AUTH=false` to disable SSO, or set `ENABLE_OAUTH_AUTH=true` with your own `OAUTH_*` variables to use a different IdP. Either value also locks the SSO switch on the /admin settings page; to keep it adjustable there, leave the variable unset.
 
 If you're happy with Cloudron's built-in email and SSO, you can skip sections 3 (Email Configuration) and the Generic OAuth/OIDC setup below.
 

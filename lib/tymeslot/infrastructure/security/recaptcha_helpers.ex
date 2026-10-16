@@ -26,9 +26,9 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
   @doc """
   Whether signup reCAPTCHA checks are enabled.
 
-  Seeded from `RECAPTCHA_SIGNUP_ENABLED` at boot and overridable at runtime
-  via the admin settings UI (`Tymeslot.AppSettings`). Useful for emergency
-  disables during outages without a redeploy.
+  Fixed by `RECAPTCHA_SIGNUP_ENABLED` when that variable is set; otherwise
+  changeable at runtime from the admin settings UI (`Tymeslot.AppSettings`),
+  which is useful for emergency disables during outages without a redeploy.
 
   This is a *feature flag*; if enabled but keys are missing, signup verification is
   automatically disabled (and logged) so legitimate signups aren't blocked by misconfiguration.
@@ -66,9 +66,9 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
   @doc """
   Whether booking reCAPTCHA checks are enabled.
 
-  Seeded from `RECAPTCHA_BOOKING_ENABLED` at boot and overridable at runtime
-  via the admin settings UI (`Tymeslot.AppSettings`). Useful for emergency
-  disables during outages without a redeploy.
+  Fixed by `RECAPTCHA_BOOKING_ENABLED` when that variable is set; otherwise
+  changeable at runtime from the admin settings UI (`Tymeslot.AppSettings`),
+  which is useful for emergency disables during outages without a redeploy.
 
   This is a *feature flag*; if enabled but keys are missing, booking verification is
   automatically disabled (and logged) so legitimate bookings aren't blocked by misconfiguration.

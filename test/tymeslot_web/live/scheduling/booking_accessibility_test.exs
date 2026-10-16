@@ -22,10 +22,12 @@ defmodule TymeslotWeb.Live.Scheduling.BookingAccessibilityTest do
   import Mox
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
-  import Tymeslot.ThemeBookingFlowHelpers
+  import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
   import TymeslotWeb.AccessibilityAssertions
 
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.BookingDriver
+  alias TymeslotWeb.ThemeTestMatrix
 
   setup :verify_on_exit!
 
@@ -42,7 +44,6 @@ defmodule TymeslotWeb.Live.Scheduling.BookingAccessibilityTest do
     :ok
   end
 
-  @themes [{"1", "quill"}, {"2", "rhythm"}]
   @timezone "America/New_York"
 
   defp mount_booking_page(conn, theme_id, name) do
@@ -65,73 +66,77 @@ defmodule TymeslotWeb.Live.Scheduling.BookingAccessibilityTest do
   defp document(view), do: view |> render() |> Floki.parse_document!()
 
   describe "timezone selector" do
-    for {theme_id, theme} <- @themes do
+    for theme <- ThemeTestMatrix.all() do
       @tag :capture_log
-      test "#{theme}: the trigger's accessible name contains its visible text", %{conn: conn} do
+      test "#{theme.slug}: the trigger's accessible name contains its visible text", %{conn: conn} do
         doc =
           conn
-          |> mount_booking_page(unquote(theme_id), "tz-name-#{unquote(theme)}")
+          |> mount_booking_page(unquote(theme.id), "tz-name-#{unquote(theme.slug)}")
           |> advance_to_schedule_step()
           |> document()
 
-        assert_named_by_visible_text(doc, "button.timezone-trigger", [
+        assert_named_by_visible_text(doc, "button.tz-picker__trigger", [
           "Your timezone",
           "New York"
         ])
       end
 
       @tag :capture_log
-      test "#{theme}: the trigger announces the dialog it opens", %{conn: conn} do
+      test "#{theme.slug}: the trigger announces the dialog it opens", %{conn: conn} do
         doc =
           conn
-          |> mount_booking_page(unquote(theme_id), "tz-popup-#{unquote(theme)}")
+          |> mount_booking_page(unquote(theme.id), "tz-popup-#{unquote(theme.slug)}")
           |> advance_to_schedule_step()
           |> document()
 
-        assert_announces_dialog(doc, "button.timezone-trigger")
+        assert_announces_dialog(doc, "button.tz-picker__trigger")
       end
 
       @tag :capture_log
-      test "#{theme}: the timezone search box has an accessible name", %{conn: conn} do
+      test "#{theme.slug}: the timezone search box has an accessible name", %{conn: conn} do
         view =
           conn
-          |> mount_booking_page(unquote(theme_id), "tz-search-#{unquote(theme)}")
+          |> mount_booking_page(unquote(theme.id), "tz-search-#{unquote(theme.slug)}")
           |> advance_to_schedule_step()
 
-        view |> element("button.timezone-trigger") |> render_click()
+        view |> element("button.tz-picker__trigger") |> render_click()
 
-        assert_input_named(document(view), ".timezone-search")
+        assert_input_named(document(view), ".tz-picker__search")
       end
     end
   end
 
   describe "form labels" do
-    for {theme_id, theme} <- @themes do
+    for theme <- ThemeTestMatrix.all() do
       # The booking form is the step that carries the labels worth checking:
       # name, email, message and any custom questions. The schedule step it
       # used to be checked on renders almost none, so the sweep there passed
       # without ever seeing the form it was written for.
       @tag :capture_log
-      test "#{theme}: no label on the booking form is bound to nothing", %{conn: conn} do
-        view = mount_booking_page(conn, unquote(theme_id), "labels-#{unquote(theme)}")
+      test "#{theme.slug}: no label on the booking form is bound to nothing", %{conn: conn} do
+        view = mount_booking_page(conn, unquote(theme.id), "labels-#{unquote(theme.slug)}")
 
-        advance_to_booking_form(view, unquote(theme))
+        BookingDriver.book(view, until: :attendee)
 
-        assert_no_orphan_labels(document(view), "#{unquote(theme)} booking form")
+        assert_no_orphan_labels(document(view), "#{unquote(theme.slug)} booking form")
       end
     end
   end
 
   describe "background video" do
-    for {theme_id, theme} <- @themes do
+    test "covers at least one theme" do
+      assert Enum.any?(ThemeTestMatrix.all(), & &1.video_background)
+    end
+
+    for theme <- ThemeTestMatrix.all(), theme.video_background do
       @tag :capture_log
-      test "#{theme}: a video background ships a control to stop it", %{conn: conn} do
+      test "#{theme.slug}: a video background ships a control to stop it", %{conn: conn} do
         %{profile: profile} =
-          seed_booking_account(unquote(theme_id), "motion-#{unquote(theme)}", @timezone)
+          seed_booking_account(unquote(theme.id), "motion-#{unquote(theme.slug)}", @timezone)
 
         insert(:theme_customization,
           profile: profile,
-          theme_id: unquote(theme_id),
+          theme_id: unquote(theme.id),
           background_type: "video",
           background_value: "preset:rhythm-default"
         )
@@ -158,15 +163,15 @@ defmodule TymeslotWeb.Live.Scheduling.BookingAccessibilityTest do
       end
 
       @tag :capture_log
-      test "#{theme}: no control is rendered without a video background", %{conn: conn} do
+      test "#{theme.slug}: no control is rendered without a video background", %{conn: conn} do
         %{profile: profile} =
-          seed_booking_account(unquote(theme_id), "nomotion-#{unquote(theme)}", @timezone)
+          seed_booking_account(unquote(theme.id), "nomotion-#{unquote(theme.slug)}", @timezone)
 
         # Rhythm defaults to a video background, so the gradient has to be
         # chosen explicitly to reach the no-video branch.
         insert(:theme_customization,
           profile: profile,
-          theme_id: unquote(theme_id),
+          theme_id: unquote(theme.id),
           background_type: "gradient",
           background_value: "gradient_1"
         )

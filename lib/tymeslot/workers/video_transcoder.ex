@@ -1,8 +1,15 @@
 defmodule Tymeslot.Workers.VideoTranscoder do
   @moduledoc """
-  Oban worker that generates responsive video variants from user-uploaded
-  background videos. Produces desktop (WebM + MP4), mobile, and low-quality
-  variants with faststart for immediate playback.
+  Oban worker that generates responsive video variants from a user-uploaded
+  video: desktop (WebM + MP4), mobile and low-quality variants, with
+  faststart for immediate playback.
+
+  One job per video: its args carry the customisation, the asset field the
+  video was uploaded into (`"background_video_path"`) and its path, and the
+  job is unique per customisation and field, so a theme's second video gets
+  a job of its own while a replacement upload into the same field replaces
+  the pending job's args. The outcome is recorded under the field
+  (`ThemeCustomizationQueries.update_video_processing_status/3`).
   """
 
   use Oban.Worker,
@@ -11,7 +18,7 @@ defmodule Tymeslot.Workers.VideoTranscoder do
     priority: 2,
     unique: [
       fields: [:worker, :args],
-      keys: [:theme_customization_id],
+      keys: [:theme_customization_id, :field],
       states: [:available, :scheduled, :executing, :retryable, :suspended]
     ]
 
@@ -25,9 +32,18 @@ defmodule Tymeslot.Workers.VideoTranscoder do
   @status_completed "completed"
   @status_failed "failed"
 
-  @spec enqueue(pos_integer(), String.t()) :: {:ok, Oban.Job.t()} | {:error, term()}
-  def enqueue(theme_customization_id, video_path) do
-    %{theme_customization_id: theme_customization_id, video_path: video_path}
+  # Jobs queued before videos were tracked per field carry no field: every
+  # one of them was for the background video.
+  @legacy_field "background_video_path"
+
+  @spec enqueue(pos_integer(), atom() | String.t(), String.t()) ::
+          {:ok, Oban.Job.t()} | {:error, term()}
+  def enqueue(theme_customization_id, field, video_path) do
+    %{
+      theme_customization_id: theme_customization_id,
+      field: to_string(field),
+      video_path: video_path
+    }
     |> new(replace: [:args, :scheduled_at])
     |> Oban.insert()
   end
@@ -44,32 +60,39 @@ defmodule Tymeslot.Workers.VideoTranscoder do
 
   @impl Oban.Worker
   def perform(
-        %Oban.Job{args: %{"theme_customization_id" => id, "video_path" => video_path}} = job
+        %Oban.Job{args: %{"theme_customization_id" => id, "video_path" => video_path} = args} =
+          job
       ) do
+    video = {id, Map.get(args, "field", @legacy_field)}
     transcoder = transcoder_impl()
 
     if transcoder.available?() do
-      run_transcoding(id, video_path, transcoder, job)
+      run_transcoding(video, video_path, transcoder, job)
     else
-      update_status(id, @status_failed)
+      update_status(video, @status_failed)
       {:cancel, "ffmpeg not available"}
     end
   end
 
-  defp run_transcoding(id, video_path, transcoder, job) do
+  defp run_transcoding({id, field} = video, video_path, transcoder, job) do
     upload_dir = Application.get_env(:tymeslot, :upload_directory, "uploads")
     source_path = Path.join(upload_dir, video_path)
 
     if path_within_directory?(source_path, upload_dir) do
-      transcode_variants(id, source_path, transcoder, job)
+      transcode_variants(video, source_path, transcoder, job)
     else
-      Logger.error("Path traversal attempt detected", video_path: video_path)
-      update_status(id, @status_failed)
+      Logger.error("Path traversal attempt detected",
+        video_path: video_path,
+        theme_customization_id: id,
+        field: field
+      )
+
+      update_status(video, @status_failed)
       {:error, "Invalid video path"}
     end
   end
 
-  defp transcode_variants(id, source_path, transcoder, job) do
+  defp transcode_variants({id, field} = video, source_path, transcoder, job) do
     base_path = Path.rootname(source_path)
 
     result =
@@ -88,66 +111,67 @@ defmodule Tymeslot.Workers.VideoTranscoder do
 
     case result do
       :ok ->
-        update_status(id, @status_completed)
-        Logger.info("Video transcoding completed", theme_customization_id: id)
+        update_status(video, @status_completed)
+        Logger.info("Video transcoding completed", theme_customization_id: id, field: field)
         :ok
 
       # The source was replaced or removed while this job was queued or running.
-      # Retrying cannot bring the bytes back, and the status is deliberately not
+      # Retrying cannot bring the bytes back, and the state is deliberately not
       # touched: the current video's fate belongs to whichever run owns it now,
       # and marking it `failed` here would report the old video's fate against
       # the new one.
       {:error, :source_missing} ->
         cleanup_variants(base_path)
-        handle_missing_source(id, job)
+        handle_missing_source(video, job)
 
       {:error, reason} ->
         cleanup_variants(base_path)
 
         if job.attempt >= job.max_attempts do
-          update_status(id, @status_failed)
+          update_status(video, @status_failed)
         end
 
-        Logger.error("Video transcoding failed", theme_customization_id: id, reason: reason)
+        Logger.error("Video transcoding failed",
+          theme_customization_id: id,
+          field: field,
+          reason: reason
+        )
+
         {:error, reason}
     end
   end
 
   # A replacement uploaded while this job was executing could not insert a job
-  # of its own: uniqueness matched this row and `replace: [:args]` rewrote its
-  # args instead, which this running process never rereads. Check the row now;
-  # if the path has moved on, snooze so the next run picks the replacement up
-  # rather than letting it die with a cancelled job.
-  defp handle_missing_source(id, %Oban.Job{args: %{"video_path" => ran_path}} = job) do
+  # of its own: uniqueness matched this row and field, and `replace: [:args]`
+  # rewrote its args instead, which this running process never rereads. Check
+  # the job now; if the path has moved on, snooze so the next run picks the
+  # replacement up rather than letting it die with a cancelled job.
+  defp handle_missing_source({id, field}, %Oban.Job{args: %{"video_path" => ran_path}} = job) do
     case Jobs.get_current_args(job) do
       %{"video_path" => current_path} when current_path != ran_path ->
         Logger.info("Video source replaced mid-transcode, rerunning for the replacement",
-          theme_customization_id: id
+          theme_customization_id: id,
+          field: field
         )
 
         {:snooze, 1}
 
       _unchanged_or_gone ->
         Logger.info("Video source no longer present, cancelling transcode",
-          theme_customization_id: id
+          theme_customization_id: id,
+          field: field
         )
 
         {:cancel, @source_gone}
     end
   end
 
-  defp update_status(id, status) do
-    case ThemeCustomizationQueries.update_video_processing_status(id, status) do
-      :ok ->
-        :ok
-
-      {:error, :status_update_failed} ->
-        Logger.warning("Failed to update video processing status",
-          theme_customization_id: id,
-          status: status
-        )
-
-        {:error, :status_update_failed}
+  # A customisation deleted while its video was processing has nothing left
+  # to record the state on.
+  defp update_status({id, field}, status) do
+    case ThemeCustomizationQueries.update_video_processing_status(id, field, status) do
+      {:ok, _customization} -> :ok
+      {:error, :not_found} -> :ok
     end
   end
 

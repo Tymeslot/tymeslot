@@ -9,11 +9,6 @@ msgstr ""
 msgid "We can't show this scheduling page yet"
 msgstr "Configuration du calendrier requise"
 
-#: lib/tymeslot_web/themes/shared/components/error_component.ex
-#, elixir-autogen
-msgid "If you are the organizer, please connect a calendar in your dashboard."
-msgstr "Veuillez d’abord connecter votre calendrier"
-
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "are still associated with this entry"
@@ -412,3 +407,8 @@ msgstr "les réservations de groupe ne peuvent pas exiger de paiement"
 #, elixir-autogen, elixir-format
 msgid "You already have a meeting type with this name"
 msgstr "Vous avez déjà un type de réunion portant ce nom"
+
+#: lib/tymeslot_web/themes/shared/components/error_component.ex
+#, elixir-autogen, elixir-format
+msgid "If you are the organiser, please connect a calendar in your dashboard."
+msgstr "Veuillez d’abord connecter votre calendrier"

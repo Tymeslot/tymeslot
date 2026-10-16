@@ -249,11 +249,6 @@ msgstr "Não foi possível desconectar o Slack"
 msgid "Failed to generate link. Please try again."
 msgstr "Não foi possível gerar o link. Tente novamente."
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram/form_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to initialize integration. Please try again."
-msgstr "Não foi possível iniciar a integração. Tente novamente."
-
 #: lib/tymeslot_web/live/dashboard/automation/slack/state_handlers.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex
 #, elixir-autogen, elixir-format
@@ -838,3 +833,8 @@ msgstr "Erro do Slack: %{error}"
 #, elixir-autogen, elixir-format
 msgid "Delete %{name}"
 msgstr "Excluir %{name}"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram/form_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to initialise integration. Please try again."
+msgstr "Não foi possível iniciar a integração. Tente novamente."
