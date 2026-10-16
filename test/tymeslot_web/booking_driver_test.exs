@@ -371,6 +371,20 @@ defmodule TymeslotWeb.BookingDriverTest do
       assert BookingDriver.choice_move(html, nil, "quick-chat") == :click
     end
 
+    test "does nothing when the type is already chosen in a moment the page has moved past" do
+      choice =
+        ~s(<button data-fact="meeting_type" data-value="quick-chat">Quick Chat</button>)
+
+      html =
+        "<main>" <>
+          ~s(<section data-moment="offer" data-moment-state="done">#{choice}</section>) <>
+          ~s(<section data-moment="when" data-moment-state="current"></section></main>)
+
+      assert BookingDriver.choice_move(html, "quick-chat", "quick-chat") == :chosen
+      assert BookingDriver.choice_move(html, "long-talk", "quick-chat") == :click
+      assert BookingDriver.choice_move(html, nil, "quick-chat") == :click
+    end
+
     test "does nothing when no choice is rendered and the type is already chosen" do
       html = page(offer: "done", ask: "current")
 

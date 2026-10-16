@@ -1,7 +1,8 @@
 defmodule TymeslotWeb.Themes.Folio.Scheduling.Wrapper do
   @moduledoc """
   Folio's wrapper: the shared `ThemeShell` on the scheme's canvas, with no
-  background of its own (the cover belongs to each step's card). Inside it,
+  background of its own (the cover belongs to the masthead at the top of the
+  page). Inside it,
   Folio's page grid (`.booker-page folio-page`, sized to content in an embed
   by its `iframe.css`) holds the content area, which starts with the shell's
   chrome, and the theme extensions as its footer row.
@@ -22,6 +23,11 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Wrapper do
   attr :theme_tokens, :any, default: nil
   attr :locale, :string, default: nil
   attr :current_state, :atom, default: nil
+
+  attr :journey, :any,
+    default: nil,
+    doc: "the page's journey: a continuous page shows the switcher throughout"
+
   attr :language_dropdown_open, :boolean, default: nil
   attr :organizer_user_id, :integer, default: nil
   attr :should_show_branding, :boolean, default: false

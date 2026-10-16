@@ -36,7 +36,10 @@ defmodule TymeslotWeb.BookingDriver do
   overview, where choosing a meeting type is the way on. A page that defaulted the meeting type
   renders no choice: there `choose_meeting_type/2` reads the type the
   booking holds (`:selected_duration`) and does nothing when it is the one
-  asked for.
+  asked for. It does nothing either when that type is already chosen in a
+  moment the page has moved past (a continuous page opened on a reschedule
+  keeps its list of types above the calendar), since choosing it again
+  moves nothing.
 
   `book/2` composes the steps in the order the page asks for them; the other
   functions are the steps, for a test that drives one itself. Reading the
@@ -111,16 +114,27 @@ defmodule TymeslotWeb.BookingDriver do
 
   @doc """
   What `choose_meeting_type/2` does on the page `html`, `chosen` being the
-  meeting type the booking holds (`:selected_duration`): `:click` while the
-  page renders a meeting-type choice; `:chosen` when it renders none and
-  `duration` is the type held; otherwise `{:stuck, reason}`. Public so the
-  driver's tests pin the decision without a page of each kind.
+  meeting type the booking holds (`:selected_duration`): `:chosen` when
+  `duration` is the type held and its choice sits in a moment marked done;
+  `:click` while the page renders a meeting-type choice; `:chosen` when it
+  renders none and `duration` is the type held; otherwise
+  `{:stuck, reason}`. Public so the driver's tests pin the decision without
+  a page of each kind.
   """
   @spec choice_move(String.t(), String.t() | nil, String.t()) ::
           :click | :chosen | {:stuck, String.t()}
   def choice_move(html, chosen, duration) do
+    doc = Floki.parse_document!(html)
+
     cond do
-      html |> Floki.parse_document!() |> Floki.find(@meeting_type) != [] ->
+      chosen == duration and
+          Floki.find(
+            doc,
+            "[data-moment-state='done'] #{@meeting_type}[data-value='#{duration}']"
+          ) != [] ->
+        :chosen
+
+      Floki.find(doc, @meeting_type) != [] ->
         :click
 
       chosen == duration ->

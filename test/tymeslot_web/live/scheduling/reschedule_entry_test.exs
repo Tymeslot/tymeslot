@@ -27,6 +27,7 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
   alias Ecto.Changeset
   alias Tymeslot.Repo
   alias Tymeslot.RescheduleTestSetup
+  alias TymeslotWeb.Themes.Shared.Journey.Progress
   alias TymeslotWeb.ThemeTestMatrix
 
   setup :verify_on_exit!
@@ -237,8 +238,9 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
         # Already chosen, and choosing it is the way on: the overview offers
         # no Next of its own to hold the booker back.
         assert has_element?(view, unquote(theme.selected_duration_selector))
-        assert has_element?(view, "#overview-step")
-        refute has_element?(view, "#overview-step [data-testid='next-step']")
+        offer = moment_for(view, :meeting_type)
+        assert has_element?(view, "##{offer}-step [data-testid='duration-option']")
+        refute has_element?(view, "##{offer}-step [data-testid='next-step']")
       end
 
       @tag :capture_log
@@ -261,8 +263,15 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
 
         view |> element("[data-testid='duration-option']") |> render_click()
 
-        assert has_element?(view, "#schedule-step[data-moment-state='current']")
-        refute has_element?(view, "#overview-step")
+        # Paged, the overview leaves the page; on a continuous page it stays
+        # above the calendar, done.
+        assert has_element?(view, "##{moment_for(view, :slot)}-step[data-moment-state='current']")
+
+        refute has_element?(
+                 view,
+                 "##{moment_for(view, :meeting_type)}-step[data-moment-state='current']"
+               )
+
         assert :sys.get_state(view.pid).socket.assigns.selected_duration == "quick-chat"
       end
     end
@@ -271,5 +280,11 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
   defp use_theme(profile, theme_id) do
     {:ok, profile} = profile |> Changeset.change(%{booking_theme: theme_id}) |> Repo.update()
     profile
+  end
+
+  # The moment that collects `fact`, whatever the journey calls it (the
+  # classic `:overview` and `:schedule`, Folio's `:offer` and `:when`).
+  defp moment_for(view, fact) do
+    Progress.moment_for(:sys.get_state(view.pid).socket.assigns.journey, fact)
   end
 end

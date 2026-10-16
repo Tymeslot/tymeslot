@@ -4,9 +4,9 @@ defmodule TymeslotWeb.Themes.NextDayEndComponentTest do
   @moduledoc """
   The booking and confirmation steps of every shipped theme
   (`ThemeTestMatrix.all/0`; on Paper, the details part of its schedule
-  screen in the booking step's place) name the end of a meeting that runs
-  past midnight, rendered straight from the step's assigns so no schedule
-  is needed.
+  screen in the booking step's place, on Folio its details moment) name
+  the end of a meeting that runs past midnight, rendered straight from the
+  step's assigns so no schedule is needed.
   """
   @moduletag :themes
   @moduletag :bookings
@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Themes.NextDayEndComponentTest do
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
 
+  alias TymeslotWeb.Themes.Folio.Scheduling.Components.YouMoment
   alias TymeslotWeb.Themes.Paper.Scheduling.Details
   alias TymeslotWeb.ThemeTestMatrix
 
@@ -74,6 +75,10 @@ defmodule TymeslotWeb.Themes.NextDayEndComponentTest do
   # what the classic journey's booking step does.
   defp render_step("paper", "BookingComponent", assigns),
     do: render_component(&Details.book/1, Map.put(assigns, :target, nil))
+
+  # Folio asks for the details in its continuous page's last moment.
+  defp render_step("folio", "BookingComponent", assigns),
+    do: render_component(YouMoment, Map.merge(assigns, %{moment: :you, moment_state: :current}))
 
   defp render_step(slug, name, assigns), do: render_component(step(slug, name), assigns)
 

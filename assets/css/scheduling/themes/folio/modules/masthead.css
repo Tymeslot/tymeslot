@@ -139,11 +139,6 @@
   color: var(--theme-text);
 }
 
-.folio-identity__meta {
-  font-size: var(--theme-font-size-sm);
-  color: var(--theme-text-secondary);
-}
-
 /* A narrow card centres the full masthead's portrait, name and headline;
    the bio stays start-aligned for reading. */
 @container scheduling (width < 30rem) {

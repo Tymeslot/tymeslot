@@ -33,6 +33,7 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
   alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.Themes.Shared.Journey.Progress
   alias TymeslotWeb.ThemeTestMatrix
 
   # Each pair is 24 hours apart, and neither zone observes summer time.
@@ -300,7 +301,7 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
 
   defp change_timezone(view, timezone) do
     # The message the schedule step's timezone picker relays for a pick.
-    send(view.pid, {:step_event, :schedule, :change_timezone, timezone})
+    send(view.pid, {:step_event, slot_moment(view), :change_timezone, timezone})
     wait_until(fn -> live_assigns(view).user_timezone == timezone and settled?(view) end)
   end
 
@@ -309,7 +310,7 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
   defp settled?(view) do
     assigns = live_assigns(view)
 
-    assigns.current_state == :schedule and assigns.availability_task_ref == nil and
+    Progress.collecting_now?(assigns, :slot) and assigns.availability_task_ref == nil and
       assigns.availability_status == :loaded and assigns.auto_select_settled == true and
       assigns.loading_slots != true
   end
@@ -329,11 +330,11 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
 
     if shown != wanted do
       arrow = if Date.compare(wanted, shown) == :gt, do: :next_week, else: :prev_week
-      send(view.pid, {:step_event, :schedule, arrow, nil})
+      send(view.pid, {:step_event, slot_moment(view), arrow, nil})
       wait_until(fn -> settled?(view) end)
     end
 
-    send(view.pid, {:step_event, :schedule, :select_date, Date.to_iso8601(date)})
+    send(view.pid, {:step_event, slot_moment(view), :select_date, Date.to_iso8601(date)})
   end
 
   defp assert_selected(view, %Date{} = expected, what) do
@@ -385,4 +386,8 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
   defp today(zone), do: zone |> DateTime.now!() |> DateTime.to_date()
 
   defp live_assigns(view), do: :sys.get_state(view.pid).socket.assigns
+
+  # The moment that picks the day, whatever the journey calls it (the classic
+  # journey's `:schedule`, Folio's `:when`), which the relayed step events name.
+  defp slot_moment(view), do: Progress.moment_for(live_assigns(view).journey, :slot)
 end

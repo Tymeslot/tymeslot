@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingStepParityTest do
   import Tymeslot.BookingTestHelpers
 
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.Themes.Shared.Journey.Progress
   alias TymeslotWeb.ThemeTestMatrix
 
   setup :verify_on_exit!
@@ -45,18 +46,24 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingStepParityTest do
 
       {:ok, view, _html} = live(conn, "/#{profile.username}")
 
-      # The overview is the page's current moment and offers no way on of
-      # its own: the meeting type is it.
-      assert has_element?(view, "#overview-step[data-moment-state='current'] #{@duration_option}")
-      refute has_element?(view, "#overview-step [data-intent='continue']")
+      # The moment offering the meeting types (the classic overview, Folio's
+      # ways to work) is the page's current one and offers no way on of its
+      # own: the meeting type is it.
+      offer = "##{moment_for(view, :meeting_type)}-step"
+      assert has_element?(view, "#{offer}[data-moment-state='current'] #{@duration_option}")
+      refute has_element?(view, "#{offer} [data-intent='continue']")
 
       view |> element(@duration_option) |> render_click()
 
-      refute has_element?(view, "#overview-step")
+      # Paged, the overview leaves the page; on a continuous page it stays
+      # above the calendar, done.
+      refute has_element?(view, "#{offer}[data-moment-state='current']")
+
+      slot = moment_for(view, :slot)
 
       assert has_element?(
                view,
-               "#schedule-step[data-moment='schedule'][data-moment-state='current']"
+               "##{slot}-step[data-moment='#{slot}'][data-moment-state='current']"
              )
     end
 
@@ -112,5 +119,10 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingStepParityTest do
       assert has_element?(view, "form#booking-form input[name='booking[g-recaptcha-response]']")
       assert has_element?(view, ".recaptcha-notice")
     end
+  end
+
+  # The moment that collects `fact`, whatever the journey calls it.
+  defp moment_for(view, fact) do
+    Progress.moment_for(:sys.get_state(view.pid).socket.assigns.journey, fact)
   end
 end

@@ -1,10 +1,10 @@
 defmodule TymeslotWeb.Themes.Folio.MarkupContractTest do
   @moduledoc """
   Where Folio puts the markup contract (`docs/THEME_DEVELOPMENT_GUIDE.md`,
-  §"The markup contract") on each of its booking steps: every day of the
-  month on show is a `date` fact and a padded day of the neighbouring
-  month is not, and the month arrows are the ways to earlier and later
-  days. The steps are reached through their existing test ids, so this
+  §"The markup contract") on each of its moments and the confirmation:
+  every day of the month on show is a `date` fact and a padded day of the
+  neighbouring month is not, and the month arrows are the ways to earlier
+  and later days. The moments are reached through their existing test ids, so this
   holds whatever the contract's own driver does.
   """
   use TymeslotWeb.LiveCase, async: false
@@ -41,7 +41,7 @@ defmodule TymeslotWeb.Themes.Folio.MarkupContractTest do
     :ok
   end
 
-  test "the overview marks each meeting type, which is the way on", %{conn: conn} do
+  test "the ways to work mark each meeting type, with no way on", %{conn: conn} do
     %{profile: profile} = seed_booking_account(@theme_id, "folio-mc-overview", @timezone)
     {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{@timezone}")
     doc = document(view)
@@ -49,11 +49,11 @@ defmodule TymeslotWeb.Themes.Folio.MarkupContractTest do
     assert [_card] =
              Floki.find(
                doc,
-               "[data-testid='duration-option'][data-fact='meeting_type'][data-value='quick-chat']"
+               "#offer-step [data-testid='duration-option'][data-fact='meeting_type'][data-value='quick-chat']"
              )
 
-    assert [_overview] = Floki.find(doc, "#overview-step[data-moment-state='current']")
-    assert Floki.find(doc, "#overview-step [data-intent='continue']") == []
+    assert [_offer] = Floki.find(doc, "#offer-step[data-moment-state='current']")
+    assert Floki.find(doc, "[data-intent='continue']") == []
     assert Floki.find(doc, "[data-intent='back']") == []
   end
 
@@ -74,29 +74,37 @@ defmodule TymeslotWeb.Themes.Folio.MarkupContractTest do
 
     assert [_prev] = Floki.find(doc, "button[phx-click='prev_month'][data-intent='earlier']")
     assert [_next] = Floki.find(doc, "button[phx-click='next_month'][data-intent='later']")
-    assert [_back] = Floki.find(doc, "[data-testid='back-step'][data-intent='back']")
-    assert [_on] = Floki.find(doc, "[data-testid='next-step'][data-intent='continue']")
+    assert Floki.find(doc, "[data-intent='back']") == []
+    assert Floki.find(doc, "[data-intent='continue']") == []
   end
 
-  test "the questions step marks the question and the ways back and on", %{conn: conn} do
+  test "the questions in the details mark the question and the way on", %{conn: conn} do
     %{user: user, profile: profile} =
       seed_booking_account(@theme_id, "folio-mc-questions", @timezone)
 
     ask_question(user)
     doc = conn |> navigate_to_booking_form(profile, nil) |> document()
 
-    assert [_input] = Floki.find(doc, "[data-fact='answer'][data-question='mc-company']")
-    assert [_back] = Floki.find(doc, "button[phx-click='back_step'][data-intent='back']")
-    assert [_on] = Floki.find(doc, "button[phx-click='next_step'][data-intent='continue']")
+    assert [_input] =
+             Floki.find(doc, "#you-step [data-fact='answer'][data-question='mc-company']")
+
+    assert [_on] =
+             Floki.find(doc, "#you-step button[phx-click='next_step'][data-intent='continue']")
+
+    assert Floki.find(doc, "[data-intent='back']") == []
   end
 
-  test "the booking step marks the form, its submit and the way back", %{conn: conn} do
+  test "the details mark the form and its submit", %{conn: conn} do
     %{profile: profile} = seed_booking_account(@theme_id, "folio-mc-booking", @timezone)
     doc = conn |> navigate_to_booking_form(profile, nil) |> document()
 
-    assert [_form] = Floki.find(doc, "form[data-testid='booking-form'][data-fact='attendee']")
-    assert [_submit] = Floki.find(doc, "[data-testid='submit-booking'][data-intent='submit']")
-    assert [_back] = Floki.find(doc, "[data-testid='back-step'][data-intent='back']")
+    assert [_form] =
+             Floki.find(doc, "#you-step form[data-testid='booking-form'][data-fact='attendee']")
+
+    assert [_submit] =
+             Floki.find(doc, "#you-step [data-testid='submit-booking'][data-intent='submit']")
+
+    assert Floki.find(doc, "[data-intent='back']") == []
   end
 
   @tag :capture_log
@@ -118,7 +126,11 @@ defmodule TymeslotWeb.Themes.Folio.MarkupContractTest do
   defp open_schedule(conn, profile) do
     {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{@timezone}")
     view |> element("[data-testid='duration-option']") |> render_click()
-    wait_until(fn -> has_element?(view, "[data-testid='calendar-day']:not([disabled])") end)
+
+    wait_until(fn ->
+      has_element?(view, "#when-step [data-testid='calendar-day']:not([disabled])")
+    end)
+
     view
   end
 

@@ -1,11 +1,14 @@
 defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent do
   @moduledoc """
-  Folio's confirmation step: the slim masthead, the outcome (confirmed,
+  Folio's confirmation step: the full masthead, the outcome (confirmed,
   rescheduled, or a request awaiting the organiser's approval) with its
   badge, for a group type the line saying the booking is one of its spots,
   the meeting's details (with the day it ends on, when that is the next, and
   a note when the address is still to be arranged), the booker's answers,
   and the calendar file and a fresh start.
+
+  On Folio's continuous page it replaces everything below the masthead,
+  which it draws again in full, so the page keeps its top.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -40,22 +43,21 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
       )
 
     ~H"""
-    <section class="folio-card folio-card--confirmation booker-card" data-locale={@locale}>
+    <div class="folio-outcome-page booker-card" data-locale={@locale}>
       <Masthead.masthead
-        variant={:slim}
+        variant={:full}
         theme_tokens={@theme_tokens}
         organizer_profile={@organizer_profile}
         username_context={@username_context}
-        meeting_label={Masthead.meeting_label(assigns)}
       />
 
-      <div class="folio-card__body">
+      <section class="folio-section folio-outcome" data-testid="folio-confirmation">
         <header class="folio-confirmation">
           <span class={["folio-badge", @pending && "folio-badge--pending"]} aria-hidden="true">
             <.icon :if={!@pending} name="hero-check" class="folio-badge__icon" />
             <.icon :if={@pending} name="hero-clock" class="folio-badge__icon" />
           </span>
-          <h1 class="folio-title" data-testid="confirmation-heading">{headline(assigns)}</h1>
+          <h2 class="folio-title" data-testid="confirmation-heading">{headline(assigns)}</h2>
           <p class="folio-lead">{message(assigns)}</p>
         </header>
 
@@ -165,8 +167,8 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
               dgettext("booking", "Changed your mind? Your request email has a link to withdraw it."),
             else: dgettext("booking", "Need to make changes? Check your email for reschedule options")}
         </p>
-      </div>
-    </section>
+      </section>
+    </div>
     """
   end
 

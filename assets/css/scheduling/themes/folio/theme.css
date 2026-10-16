@@ -12,6 +12,7 @@
 @import "./modules/buttons.css";
 @import "./modules/masthead.css";
 @import "./modules/profile-intro.css";
+@import "../../shared/blocks/summary-bar.css";
 @import "./modules/overview.css";
 @import "../../shared/components/approval-notice.css";
 @import "../../shared/components/group-session.css";

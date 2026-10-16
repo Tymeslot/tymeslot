@@ -1,13 +1,13 @@
 defmodule TymeslotWeb.Themes.Folio.Components.Masthead do
   @moduledoc """
-  The top of every Folio card: the cover band, and the organiser's portrait
+  The top of Folio's pages: the cover band, and the organiser's portrait
   overlapping its lower edge with their name beside or below it.
 
-  `:full` (the overview) has the tall band, the large portrait, the name as
-  the page's `h1`, and the headline and bio (the shared `ProfileIntro`);
-  `:slim` (every later step) has a short band, a small portrait, the name as
-  text and one meta line, the meeting and its length. Without an organiser
-  profile (the meeting, poll and payment pages) only the band is drawn.
+  `:full` (the booking page and its confirmation) has the tall band, the
+  large portrait, the name as the page's `h1`, and the headline and bio (the
+  shared `ProfileIntro`); `:slim` has a short band, a small portrait and the
+  name as text. Without an organiser profile (the meeting, poll and payment
+  pages) only the band is drawn.
 
   The cover is the tokens' `media[:cover]`; its crop per preset is CSS
   (`.folio-cover[data-cover="<id>"]` in `masthead.css`). With no cover, the
@@ -18,14 +18,12 @@ defmodule TymeslotWeb.Themes.Folio.Components.Masthead do
   alias Tymeslot.Demo
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations.Tokens
-  alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Components.ProfileIntro
 
   attr :variant, :atom, values: [:full, :slim], default: :slim
   attr :theme_tokens, :any, default: nil, doc: "the page's `%Tokens{}`, or nil"
   attr :organizer_profile, :map, default: nil
   attr :username_context, :string, default: nil
-  attr :meeting_label, :string, default: nil, doc: "the slim variant's line under the name"
 
   @spec masthead(map()) :: Phoenix.LiveView.Rendered.t()
   def masthead(assigns) do
@@ -63,7 +61,6 @@ defmodule TymeslotWeb.Themes.Folio.Components.Masthead do
             <ProfileIntro.headline profile={@organizer_profile} />
           <% else %>
             <p class="folio-identity__name">{@name}</p>
-            <p :if={@meeting_label} class="folio-identity__meta">{@meeting_label}</p>
           <% end %>
         </div>
         <ProfileIntro.bio
@@ -74,20 +71,6 @@ defmodule TymeslotWeb.Themes.Folio.Components.Masthead do
       </div>
     </header>
     """
-  end
-
-  @doc """
-  The slim masthead's meta line: the meeting type's name and its length, or
-  the length alone before a meeting type is resolved.
-  """
-  @spec meeting_label(map()) :: String.t()
-  def meeting_label(assigns) do
-    duration = BookingText.duration_label(assigns)
-
-    case assigns[:meeting_type] do
-      %{name: name} when is_binary(name) and name != "" -> name <> " · " <> duration
-      _no_meeting_type -> duration
-    end
   end
 
   defp cover_media(%Tokens{media: media}), do: media[:cover]

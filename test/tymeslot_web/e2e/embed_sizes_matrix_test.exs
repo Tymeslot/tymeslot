@@ -125,11 +125,15 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     end
   end
 
+  # A walk per theme with a journey of its own (Paper, Folio) at every short
+  # size, each to the details: past ExUnit's default minute.
+  @tag timeout: 180_000
   feature "a theme with a journey of its own keeps its slot and submit reachable on short viewports",
           %{session: session} do
-    # Paper opens the details below the picker, so there is no schedule actions
-    # row or Next to measure: the first time on offer, and after picking it the
-    # details' submit, must instead sit inside the scrollable page.
+    # Paper opens the details below the picker, and Folio below the calendar
+    # on its continuous page, so there is no schedule actions row or Next to
+    # measure: the first time on offer, and after picking it the details'
+    # submit, must instead sit inside the scrollable page.
     {profile, slug} = create_user_with_meeting_type()
     themes = Enum.reject(ThemeTestMatrix.all(), &(&1.journey == :classic))
     assert themes != []
@@ -320,12 +324,17 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
   # of a page that doesn't scroll, so it can't be clicked — a limit of the
   # overview, not of the schedule layout those features guard.
   defp advance_to_schedule(session) do
-    session
-    |> pick_first_duration()
-    |> assert_has(css("[data-fact='date'], [data-fact='time'], [data-fact='slot']", minimum: 1))
+    session =
+      session
+      |> pick_first_duration()
+      |> assert_has(css("[data-fact='date'], [data-fact='time'], [data-fact='slot']", minimum: 1))
+
     # The full two-button row the overflow check is meant to prove: a Back that
-    # never rendered would leave only the primary action to measure.
-    |> assert_has(css("[data-testid='schedule-actions'] [data-testid='back-step']"))
+    # never rendered would leave only the primary action to measure. A
+    # continuous page (Folio) has no actions row and no page to go back to.
+    if has?(session, css(".journey--continuous")),
+      do: session,
+      else: assert_has(session, css("[data-testid='schedule-actions'] [data-testid='back-step']"))
   end
 
   defp pick_first_duration(session) do

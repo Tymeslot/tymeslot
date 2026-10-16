@@ -1,8 +1,8 @@
 defmodule TymeslotWeb.Themes.Folio.FolioThemeTest do
   @moduledoc """
   Folio's own markup through the real booking routes: the full masthead on
-  the overview (cover, portrait, name, headline and bio), the slim one and
-  the month calendar from the schedule step on, the cover following the
+  the overview (cover, portrait, name, headline and bio), the calendar
+  opening below on the same page, the cover following the
   organiser's choice or upload, the page marked light or dark from its
   scheme, and the default pages inside Folio's card. The shared suites
   (`ThemeTestMatrix`) cover the booking flow itself.
@@ -70,7 +70,7 @@ defmodule TymeslotWeb.Themes.Folio.FolioThemeTest do
       view = overview(profile)
 
       assert has_element?(view, "h2", "Ways to work with me")
-      refute has_element?(view, ".folio-meetings-intro .folio-muted")
+      refute has_element?(view, "#offer-step > p.folio-muted")
     end
 
     test "shows the organiser's own instruction when they have written one", %{profile: profile} do
@@ -83,14 +83,15 @@ defmodule TymeslotWeb.Themes.Folio.FolioThemeTest do
 
       view = overview(profile)
 
-      assert has_element?(view, ".folio-meetings-intro .folio-muted", "Choose a session.")
+      assert has_element?(view, "#offer-step > p.folio-muted", "Choose a session.")
     end
 
     test "opens with the cover, the portrait and the organiser's name", %{profile: profile} do
       view = overview(profile)
       default_src = Presets.find_preset_by_id(:cover, "elegant-still-life").src
 
-      assert has_element?(view, ".folio-theme-wrapper .folio-card--overview.booker-card")
+      assert has_element?(view, ".folio-theme-wrapper #masthead-step .folio-masthead--full")
+      assert has_element?(view, ".folio-theme-wrapper #offer-step.booker-card")
 
       assert has_element?(
                view,
@@ -99,7 +100,6 @@ defmodule TymeslotWeb.Themes.Folio.FolioThemeTest do
 
       assert has_element?(view, ".folio-masthead--full img.folio-portrait")
       assert has_element?(view, ".folio-masthead--full h1.folio-identity__name")
-      refute has_element?(view, ".folio-masthead--full .folio-identity__meta")
     end
 
     test "shows the headline and the bio when the organiser has written them", %{
@@ -135,20 +135,18 @@ defmodule TymeslotWeb.Themes.Folio.FolioThemeTest do
       refute has_element?(view, "[data-testid='profile-bio']")
     end
 
-    test "lists each meeting type as a card; choosing one moves on, and back it shows chosen",
+    test "lists each meeting type as a card; choosing one opens the calendar below and marks it",
          %{profile: profile} do
       view = overview(profile)
       card = "[data-testid='duration-option'][data-duration='quick-chat']"
 
       assert has_element?(view, "#{card}", "Quick Chat")
-      refute has_element?(view, "#overview-step [data-testid='next-step']")
+      refute has_element?(view, "#{card}[aria-current]")
+      refute has_element?(view, "[data-testid='next-step']")
 
       view |> element(card) |> render_click()
-      assert has_element?(view, "#schedule-step[data-moment-state='current']")
-      refute has_element?(view, card)
-
-      view |> element("[data-intent='back']") |> render_click()
-      assert has_element?(view, "#{card}[aria-current='true']")
+      assert has_element?(view, "#when-step[data-moment-state='current']")
+      assert has_element?(view, "#offer-step #{card}[aria-current='true']")
     end
   end
 
@@ -203,20 +201,15 @@ defmodule TymeslotWeb.Themes.Folio.FolioThemeTest do
     end
   end
 
-  describe "from the schedule step on" do
-    test "the card starts with the slim masthead and a month calendar", %{profile: profile} do
+  describe "a meeting type's own link" do
+    test "opens the page with that type chosen and the calendar below", %{profile: profile} do
       view = schedule(profile)
 
-      assert has_element?(view, ".folio-card--schedule .folio-masthead--slim")
-      refute has_element?(view, ".folio-masthead--full")
-      assert has_element?(view, ".folio-masthead--slim .folio-identity__meta", "Quick Chat")
-      assert has_element?(view, ".calendar-month-label")
-      assert has_element?(view, "button[phx-click='next_month']")
-
-      assert has_element?(
-               view,
-               "[data-testid='schedule-actions'] [data-testid='next-step'][disabled]"
-             )
+      assert has_element?(view, ".folio-masthead--full")
+      assert has_element?(view, "#offer-step .folio-meeting--chosen", "Quick Chat")
+      assert has_element?(view, "#when-step .calendar-month-label")
+      assert has_element?(view, "#when-step button[phx-click='next_month']")
+      refute has_element?(view, "[data-testid='next-step']")
     end
   end
 
