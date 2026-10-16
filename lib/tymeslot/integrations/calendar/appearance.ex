@@ -90,7 +90,7 @@ defmodule Tymeslot.Integrations.Calendar.Appearance do
   @doc """
   The stored palette key per calendar, for the swatch picker to mark one pressed.
 
-  Distinct from `Tymeslot.CalendarGrid.calendar_colour_classes/1`, which returns
+  Distinct from `Tymeslot.CalendarGrid.calendar_colour_classes/2`, which returns
   the resolved Tailwind classes the grid paints with. The picker compares keys,
   so inverting a class back to its key would be a second copy of the palette
   mapping and a second thing to keep in step.

@@ -10,6 +10,7 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.Availability
   alias Tymeslot.CalendarGrid.BookingEvent
   alias Tymeslot.CalendarGrid.BookingEvents
+  alias Tymeslot.CalendarGrid.CalendarDirectory
   alias Tymeslot.CalendarGrid.EventDeletion
   alias Tymeslot.CalendarGrid.EventEdit
   alias Tymeslot.CalendarGrid.EventMove
@@ -213,23 +214,55 @@ defmodule Tymeslot.CalendarGrid do
   end
 
   @doc """
-  Tailwind classes for the calendars the organiser has given a colour of their
-  own, keyed by `{integration_id, provider_calendar_id}`.
+  Tailwind classes for an account's calendars, keyed by
+  `{integration_id, provider_calendar_id}`. Both calendar surfaces paint from
+  this map, so one calendar never takes two colours.
 
-  Only calendars with an explicit choice appear. Everything else is absent on
-  purpose, so the caller falls through to the integration's colour and then the
-  rotation, rather than this map having to restate either.
+  A calendar the organiser gave a colour keeps it. An account's first synced
+  calendar is otherwise absent, so the caller falls through to the account's
+  colour. Every further calendar of the account takes a rotation class that no
+  account and no chosen calendar uses yet, so two calendars of one account
+  never paint alike while the rotation lasts. Accounts are walked in id order,
+  as the account rotation is, so the result does not depend on the order the
+  integrations are passed in.
   """
-  @spec calendar_colour_classes([CalendarAppearanceSchema.t()]) :: %{
+  @spec calendar_colour_classes([map()], [CalendarAppearanceSchema.t()]) :: %{
           {integer(), String.t()} => String.t()
         }
-  def calendar_colour_classes(appearances) do
-    appearances
-    |> Enum.filter(&Appearance.chosen?/1)
-    |> Map.new(fn appearance ->
-      {{appearance.calendar_integration_id, appearance.provider_calendar_id},
-       EventColour.tailwind_class(appearance.colour)}
-    end)
+  def calendar_colour_classes(integrations, appearances) do
+    chosen =
+      appearances
+      |> Enum.filter(&Appearance.chosen?/1)
+      |> Map.new(fn appearance ->
+        {{appearance.calendar_integration_id, appearance.provider_calendar_id},
+         EventColour.tailwind_class(appearance.colour)}
+      end)
+
+    extras =
+      for integration <- Enum.sort_by(integrations, & &1.id),
+          {entry, index} <- Enum.with_index(CalendarDirectory.synced_entries(integration)),
+          key = {integration.id, entry.id},
+          index > 0 and not Map.has_key?(chosen, key),
+          do: key
+
+    taken =
+      MapSet.new(Map.values(integration_colour_classes(integrations)) ++ Map.values(chosen))
+
+    extras
+    |> Enum.zip(Stream.cycle(spare_rotation_classes(taken)))
+    |> Map.new()
+    |> Map.merge(chosen)
+  end
+
+  # The rotation classes nothing paints with yet, or the whole rotation once
+  # every one is taken.
+  defp spare_rotation_classes(taken) do
+    rotation = Enum.map(1..EventColour.rotation_size(), &EventColour.rotation_class/1)
+
+    case Enum.reject(rotation, &MapSet.member?(taken, &1)) do
+      [] -> rotation
+      spare -> spare
+    end
   end
 
   # A blank colour is treated as no colour, not as an unrecognised one: it can

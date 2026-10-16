@@ -123,7 +123,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.FeedCalendarTest do
     assert searched(user, integration) == ["review@x", "standup@x"]
 
     colours =
-      CalendarGrid.calendar_colour_classes([
+      CalendarGrid.calendar_colour_classes([], [
         %CalendarAppearanceSchema{
           calendar_integration_id: integration.id,
           provider_calendar_id: @default,

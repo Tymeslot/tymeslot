@@ -56,7 +56,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
     appearances = Appearance.list_for_user(user_id)
 
     socket
-    |> assign(:calendar_colors, CalendarGrid.calendar_colour_classes(appearances))
+    |> assign(
+      :calendar_colors,
+      CalendarGrid.calendar_colour_classes(socket.assigns.integrations, appearances)
+    )
     |> assign(:calendar_colour_keys, Appearance.colour_keys(appearances))
     |> assign(:hidden_calendar_keys, Appearance.hidden_keys(appearances))
   end
