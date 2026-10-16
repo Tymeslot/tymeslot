@@ -380,3 +380,20 @@ describe("the busy Wednesday: every visible event stays readable", () => {
     expect(standup.left + standup.width <= dentist.left || dentist.left + dentist.width <= standup.left).toBe(true);
   });
 });
+
+test("layoutColumn measures each title at each width once, however many passes the fold takes", () => {
+  const seen = new Map();
+  const counting = (text, width) => {
+    const key = `${width}|${text}`;
+    seen.set(key, (seen.get(key) ?? 0) + 1);
+    return measureLines(text, width);
+  };
+  // Sixty overlapping events across a working day: the fold takes many passes.
+  const day = Array.from({ length: 60 }, (_, k) => {
+    const s = 480 + ((k * 37) % 540);
+    return ev(`e${String(k).padStart(2, "0")}`, s, s + 30 + ((k * 13) % 120), `Meeting number ${k} with the team`);
+  });
+  const laid = layoutColumn(day, { ...opts(180), measureLines: counting });
+  expect(chips(laid).length).toBeGreaterThan(0);
+  expect([...seen.values()].filter((n) => n > 1)).toEqual([]);
+});

@@ -427,15 +427,31 @@ export function layoutColumn(segments, opts) {
   const minHeight = opts.minHeight ?? 20;
   const floor = Math.min(READABLE, opts.colWidth - 0.5);
   const seg = new Map(segments.map((g) => [g.id, g]));
+  const measureLines = memoised(opts.measureLines);
   const hide = [];
+  let placed = [];
 
-  // Each pass folds one more event, so this ends within segments.length passes.
-  for (;;) {
-    const placed = placeDay(layoutDay(segments, { ...opts, minHeight, hide }), { yOf: opts.yOf, minHeight });
+  // Each pass folds one more event, so a fold settles within segments.length
+  // passes; the cap is a guard should a pass ever fold nothing new, drawing
+  // the last pass rather than hanging the page.
+  for (let pass = 0; pass <= segments.length; pass++) {
+    placed = placeDay(layoutDay(segments, { ...opts, measureLines, minHeight, hide }), { yOf: opts.yOf, minHeight });
     const clashing = unreadable(placed, floor);
     if (!clashing.length) return placed;
     hide.push(foldVictim(clashing.map((id) => seg.get(id)), placed, seg).id);
   }
+  return placed;
+}
+
+// Every pass measures the same titles at the same widths again: measure each
+// (title, width) once per column.
+function memoised(measureLines) {
+  const lines = new Map();
+  return (title, width) => {
+    const key = `${width}\u0000${title}`;
+    if (!lines.has(key)) lines.set(key, measureLines(title, width));
+    return lines.get(key);
+  };
 }
 
 // The ids of events not readable as drawn: too narrow, or with a chip or a
