@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Live.Themes.PaperWeekJourneyTest do
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.BookingDriver.Page
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   @theme_id "3"
@@ -136,6 +137,39 @@ defmodule TymeslotWeb.Live.Themes.PaperWeekJourneyTest do
              :count
            ) == 1,
            "rescheduling through the week view must move the meeting, not book a second one"
+  end
+
+  @chip "[data-testid='paper-change-time']"
+
+  test "Change time points at the pressed slot, and shows only while that week is on screen",
+       %{conn: conn} do
+    %{profile: profile} = seed("paper-week-chip")
+    day = linked_day()
+
+    view = open_week(conn, profile, day)
+    refute has_element?(view, @chip)
+
+    pick(view, day, "10:00 AM")
+
+    assert has_element?(view, @chip)
+    selector = Page.focus_target(view, @chip)
+    assert is_binary(selector)
+    assert has_element?(view, selector)
+
+    # Paging keeps the chosen time, but its slot leaves the page, so the
+    # chip would focus nothing.
+    page_week(view, "next")
+    refute has_element?(view, @chip)
+    assert has_element?(view, "form[data-testid='booking-form']")
+
+    page_week(view, "prev")
+    assert has_element?(view, @chip)
+    assert has_element?(view, Page.focus_target(view, @chip))
+  end
+
+  defp page_week(view, direction) do
+    view |> element("[data-testid='week-grid-#{direction}']") |> render_click()
+    render_async(view)
   end
 
   # Nine days out: inside the host's 30-day window, and never today.

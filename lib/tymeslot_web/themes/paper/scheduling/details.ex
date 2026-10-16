@@ -21,7 +21,10 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
 
   The chosen time carries "Change time", which takes the focus back to that
   time in the picker (the month's selected time, or the week's pressed one),
-  so a visitor on a long screen gets back to the picker in one press.
+  so a visitor on a long screen gets back to the picker in one press. In the
+  week view the chosen time stays chosen while the visitor pages to another
+  week, and its button leaves the page with that week; the chip shows only
+  while the week on screen holds the chosen day, since it would focus nothing.
   """
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -43,13 +46,30 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
+  # The month's selection is cleared by paging, so it is always on screen; a
+  # week's is on screen while the chosen day falls in the week shown.
+  defp time_on_screen?(%{view: "week", selected_date: date, current_week_start: start})
+       when is_binary(date) do
+    case Date.from_iso8601(date) do
+      {:ok, day} ->
+        Date.compare(day, start) != :lt and Date.compare(day, Date.add(start, 6)) != :gt
+
+      _invalid ->
+        false
+    end
+  end
+
+  defp time_on_screen?(%{view: "week"}), do: false
+  defp time_on_screen?(_assigns), do: true
+
   @doc "The details part: the heading, the chosen time, the questions and the form."
   @spec book(map()) :: Phoenix.LiveView.Rendered.t()
   def book(assigns) do
     assigns =
       assign(assigns,
         next_day_end: LocalizationHelpers.booking_next_day_end(assigns),
-        questions: Events.all_questions(assigns)
+        questions: Events.all_questions(assigns),
+        can_change_time: time_on_screen?(assigns)
       )
 
     ~H"""
@@ -68,6 +88,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
           {LocalizationHelpers.format_booking_datetime(@selected_date, @selected_time, @user_timezone)}
         </span>
         <button
+          :if={@can_change_time}
           type="button"
           class="paper-book__change"
           data-testid="paper-change-time"

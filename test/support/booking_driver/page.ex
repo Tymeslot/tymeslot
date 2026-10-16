@@ -25,6 +25,22 @@ defmodule TymeslotWeb.BookingDriver.Page do
   def first_node(view, selector),
     do: view |> render() |> Floki.parse_document!() |> Floki.find(selector) |> List.first()
 
+  @doc """
+  The selector the `JS.focus` command on a control's `phx-click` aims at, so
+  a test can check the control takes the focus somewhere that exists. Nil
+  when the control has no click command, or none that focuses.
+  """
+  @spec focus_target(View.t(), String.t()) :: String.t() | nil
+  def focus_target(view, selector) do
+    with [json | _] <- attribute(view, selector, "phx-click"),
+         {:ok, commands} when is_list(commands) <- Jason.decode(json),
+         [_op, %{"to" => to}] <- Enum.find(commands, &match?(["focus", _], &1)) do
+      to
+    else
+      _other -> nil
+    end
+  end
+
   @doc "The LiveView's assigns."
   @spec assigns(View.t()) :: map()
   def assigns(view), do: :sys.get_state(view.pid).socket.assigns

@@ -1,5 +1,6 @@
 /* The timezone picker (shared/components/timezone-picker.css): an outlined
-   control under the calendar, opening a panel on the card. The trigger's
+   control above the calendar in the month view and in the header in the
+   week view, opening a panel on the card. The trigger's
    content is Paper's (flag, zone name, chevron). */
 
 .paper-timezone {

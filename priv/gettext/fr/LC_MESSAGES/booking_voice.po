@@ -51,4 +51,4 @@ msgstr "Organiser un rendez-vous"
 #, elixir-autogen, elixir-format
 msgctxt "paper"
 msgid "Change time"
-msgstr "Changer l'heure"
+msgstr "Changer l’heure"

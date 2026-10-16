@@ -27,6 +27,7 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias TymeslotWeb.BookingDriver
+  alias TymeslotWeb.BookingDriver.Page
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
   @theme_id "3"
@@ -185,6 +186,12 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
                "[data-testid='paper-book-when'] button[type='button'][data-testid='paper-change-time']",
                "Change time"
              )
+
+      # The button hands the focus to the chosen time, so that element has
+      # to exist once the time is picked.
+      selector = Page.focus_target(view, "[data-testid='paper-change-time']")
+      assert is_binary(selector)
+      assert has_element?(view, selector)
     end
 
     test "shows every question above the form once a time is picked, with no way on", %{
@@ -270,6 +277,46 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
       BookingDriver.answer(view, "p-company", "Acme")
 
       refute has_element?(view, ".paper-question__error")
+    end
+
+    @tag :capture_log
+    test "changing the time after filling the form books the new time and keeps the answers", %{
+      conn: conn,
+      user: user,
+      profile: profile
+    } do
+      ask_questions(user)
+      {:ok, view, _html} = live(conn, ~p"/#{profile.username}?timezone=Etc/UTC")
+      BookingDriver.choose_meeting_type(view, "quick-chat")
+      BookingDriver.continue(view)
+
+      day = Date.utc_today() |> Date.add(2) |> Date.to_iso8601()
+      {^day, first} = BookingDriver.pick_first_slot(view, on: day)
+
+      BookingDriver.answer(view, "p-company", "Acme")
+      BookingDriver.answer(view, "p-team", "Design")
+      BookingDriver.fill_attendee(view, %{name: "Ana Silva", email: "ana-change@example.com"})
+
+      second =
+        view
+        |> Page.attribute("[data-fact='time']", "data-value")
+        |> Enum.find(&(&1 != first))
+
+      assert is_binary(second)
+      BookingDriver.pick_time(view, second)
+
+      assert Page.attribute(view, "[data-fact='time'][aria-pressed='true']", "data-value") ==
+               [second]
+
+      BookingDriver.submit(view)
+
+      meeting = Repo.get_by!(MeetingSchema, attendee_email: "ana-change@example.com")
+      assert meeting.attendee_name == "Ana Silva"
+      assert meeting.custom_field_answers == %{"p-company" => "Acme", "p-team" => "Design"}
+
+      assert DateTime.to_date(meeting.start_time) == Date.from_iso8601!(day)
+      assert Calendar.strftime(meeting.start_time, "%-I:%M %p") == second
+      refute Calendar.strftime(meeting.start_time, "%-I:%M %p") == first
     end
 
     test "Back returns to the meeting types", %{conn: conn, profile: profile} do

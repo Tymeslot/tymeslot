@@ -238,7 +238,6 @@
   --paper-vote-height: 2.25rem;
   --paper-badge-size: 3rem;
   --paper-dot-size: 0.25rem;
-  --paper-progress-height: 0.25rem;
   /* The largest corner a box taller than one line takes, whatever the radius option. */
   --paper-radius-box: 0.75rem;
 }
