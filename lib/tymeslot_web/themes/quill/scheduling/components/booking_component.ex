@@ -30,7 +30,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
-    assigns = assign(assigns, :navigable_steps, Runtime.navigable_steps(assigns))
+    assigns =
+      assign(assigns,
+        navigable_steps: Runtime.navigable_steps(assigns),
+        step_numbers: Runtime.step_numbers(assigns)
+      )
+
     assigns = assign(assigns, :next_day_end, LocalizationHelpers.booking_next_day_end(assigns))
 
     ~H"""
@@ -38,6 +43,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
       <.page_layout
         show_steps={true}
         navigable_steps={@navigable_steps}
+        step_numbers={@step_numbers}
         current_step={3}
         slug={@duration}
         username_context={@username_context}

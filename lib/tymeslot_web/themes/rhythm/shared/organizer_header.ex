@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader do
   attr :organizer_profile, :map, required: true
   attr :meeting_type, :map, default: nil
   attr :selected_duration, :string, default: nil
+  attr :length_minutes, :integer, default: nil
 
   @spec organizer_header_small(map()) :: Phoenix.LiveView.Rendered.t()
   def organizer_header_small(assigns) do
@@ -38,7 +39,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader do
           {Profiles.display_name(@organizer_profile) || ""}
         </div>
         <div class="meeting-duration">
-          {BookingText.duration_label(%{meeting_type: @meeting_type, duration: @selected_duration})}
+          {BookingText.duration_label(%{
+            meeting_type: @meeting_type,
+            duration: @selected_duration,
+            chosen_length_minutes: @length_minutes
+          })}
         </div>
         <GroupSession.hint :if={@meeting_type} meeting_type={@meeting_type} />
       </div>

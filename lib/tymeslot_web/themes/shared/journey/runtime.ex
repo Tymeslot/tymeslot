@@ -218,6 +218,21 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
 
   def navigable_steps(_assigns), do: []
 
+  @doc """
+  The step number of each moment the booking needs, by moment key, for a
+  step indicator whose steps are not the journey's moments one for one (one
+  that shows the length choice under the same step as the meeting type).
+  Empty on a page without a journey, or whose navigator numbers no steps.
+  """
+  @spec step_numbers(map()) :: %{atom() => pos_integer()}
+  def step_numbers(%{journey: %Journey{navigator: navigator} = journey} = assigns) do
+    if Code.ensure_loaded?(navigator) and function_exported?(navigator, :step_numbers, 2),
+      do: navigator.step_numbers(journey, assigns),
+      else: %{}
+  end
+
+  def step_numbers(_assigns), do: %{}
+
   defp navigation?(journey, assigns, moment_key, event) do
     event in [:next_step, :back_step] and moment_key == assigns[:current_state] and
       Journey.moment(journey, moment_key) != nil

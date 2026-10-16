@@ -93,6 +93,13 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Navigators.Paged do
   @impl Navigator
   def can_go_to?(journey, assigns, step), do: target(journey, assigns, step) != nil
 
+  @doc """
+  The step number of each moment this booking needs, by moment key: the
+  numbers `go_to/3` takes. A moment the booking passes over has none.
+  """
+  @spec step_numbers(Journey.t(), map()) :: %{atom() => pos_integer()}
+  def step_numbers(journey, assigns), do: Map.new(numbered_moments(journey, assigns))
+
   # While a checkout is open only the payment webhook moves the booker on
   # (`:paid` to the confirmation, `:expired` to the booking form): a moment
   # behind the wait would take a second submit for the slot it holds.

@@ -19,6 +19,10 @@ defmodule TymeslotWeb.Components.CoreComponents.Layout do
     default: [],
     doc: "the step numbers the step indicator may offer as clickable"
 
+  attr :step_numbers, :map,
+    default: %{},
+    doc: "the journey's step number of each moment (`Journey.Runtime.step_numbers/1`)"
+
   attr :username_context, :string,
     default: nil,
     doc: "optional username shown in the page header for profile context"
@@ -35,6 +39,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Layout do
                 current_step={@current_step}
                 slug={@slug}
                 navigable_steps={@navigable_steps}
+                step_numbers={@step_numbers}
                 username_context={@username_context}
               />
             </div>

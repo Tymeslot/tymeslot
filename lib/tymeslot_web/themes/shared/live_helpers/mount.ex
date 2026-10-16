@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
   }
 
   alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
+  alias TymeslotWeb.Themes.Shared.ChosenLength
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry
   alias TymeslotWeb.Themes.Shared.PathHandlers
@@ -194,6 +195,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
     )
     |> SeatMoveLink.assign_from_url(seat_token)
     |> assign_rescheduling(params)
+    |> ChosenLength.from_params(params)
     |> pin_reschedule_meeting_type()
     |> handle_confirmation_params(params)
     |> SeatMoveLink.leave_if_spent(seat_token)

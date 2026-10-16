@@ -138,6 +138,57 @@ defmodule Tymeslot.Bookings.RescheduleScheduleCheckTest do
       # The meeting's own duration is never changed by a reschedule.
       assert updated.duration == 30
     end
+
+    test "falls back to the primary duration once the host removes the booked length" do
+      %{user: user} =
+        create_bookable_profile(
+          timezone: "Etc/UTC",
+          days: [1, 2, 3, 4, 5],
+          hours: %{is_available: true, start_time: ~T[09:00:00], end_time: ~T[17:00:00]}
+        )
+
+      # A type offering 30 and 45 minutes; the guest booked the 45.
+      meeting_type =
+        insert(:meeting_type, user: user, duration_minutes: 30, extra_lengths_minutes: [45])
+
+      start_time = DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.truncate(:second)
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          meeting_type_id: meeting_type.id,
+          duration: 45,
+          start_time: start_time,
+          end_time: DateTime.add(start_time, 45, :minute)
+        )
+
+      # The host withdraws the 45-minute option. The booked meeting keeps its
+      # length, but the type no longer offers it, so the grid the reschedule is
+      # checked against falls back to the primary 30 minutes.
+      {:ok, _meeting_type} =
+        MeetingTypes.update_meeting_type(meeting_type, %{extra_lengths_minutes: []})
+
+      target_date = next_bookable_weekday(5)
+
+      # 09:30 sits on the 30-minute lattice and off the 45-minute one, so this
+      # only succeeds if the check used the primary duration.
+      new_params = %{
+        date: Date.to_string(target_date),
+        time: "9:30 AM",
+        duration: "45min",
+        user_timezone: "Etc/UTC"
+      }
+
+      assert {:ok, updated} =
+               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+
+      assert updated.start_time.hour == 9
+      assert updated.start_time.minute == 30
+      # The guest keeps the 45 minutes they booked, whatever the type offers now.
+      assert updated.duration == 45
+      assert DateTime.diff(updated.end_time, updated.start_time, :minute) == 45
+    end
   end
 
   describe "duration authority on reschedule" do
