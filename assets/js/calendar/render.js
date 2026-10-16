@@ -87,7 +87,7 @@ function head(days, { strings, nowDay }) {
       const n = dayNumber(iso);
       const label = interpolate(strings.open_day, { date: dateLabel(iso, strings) });
       return (
-        `<button type="button" class="cal-dayhead${iso === nowDay ? " is-today" : ""}" data-goto-day="${iso}" aria-label="${escapeHtml(label)}">` +
+        `<button type="button" class="cal-dayhead${iso === nowDay ? " is-today" : ""}" data-goto-day="${iso}" aria-label="${escapeHtml(label)}"${iso === nowDay ? ' aria-current="date"' : ""}>` +
         `<span class="cal-dayhead-name">${escapeHtml(strings.weekdays[isoWeekday(n) - 1])}</span>` +
         `<span class="cal-dayhead-num">${Number(iso.slice(8, 10))}</span></button>`
       );
@@ -114,7 +114,9 @@ function allDayLane({ bars, more, rows }, days, { strings, now, byId }) {
   }
 
   more.forEach((count, i) => {
-    if (count) html += `<button type="button" class="cal-admore" data-allday-more="${days[i]}" style="grid-column:${i + 2};grid-row:${rows}">+${count}</button>`;
+    if (!count) return;
+    const label = interpolate(strings.allday_more, { count, date: dateLabel(days[i], strings) });
+    html += `<button type="button" class="cal-admore" data-allday-more="${days[i]}" aria-label="${escapeHtml(label)}" style="grid-column:${i + 2};grid-row:${rows}">+${count}</button>`;
   });
 
   return `${html}</div>`;
@@ -135,10 +137,10 @@ function axis({ scale, fold, settings, strings, nowShown, nowMinute }) {
 
   for (let hour = fold ? 8 : 1; hour < 24; hour += 1) {
     if (nowShown && Math.abs(hour * 60 - nowMinute) <= 15) continue;
-    html += `<span class="cal-hour" style="top:${scale.yOf(hour * 60)}px">${escapeHtml(formatHour(hour, tf))}</span>`;
+    html += `<span class="cal-hour" aria-hidden="true" style="top:${scale.yOf(hour * 60)}px">${escapeHtml(formatHour(hour, tf))}</span>`;
   }
 
-  if (nowShown) html += `<span class="cal-now-pill" style="top:${scale.yOf(nowMinute)}px">${escapeHtml(formatMinutes(nowMinute, tf))}</span>`;
+  if (nowShown) html += `<span class="cal-now-pill" aria-hidden="true" style="top:${scale.yOf(nowMinute)}px">${escapeHtml(formatMinutes(nowMinute, tf))}</span>`;
 
   return html;
 }
@@ -153,17 +155,24 @@ function column(iso, events, ctx) {
   const weekday = isoWeekday(dayNumber(iso));
   let html = `<div class="cal-col${weekday > 5 ? " is-weekend" : ""}" data-day="${iso}" style="--cal-col:${colWidth}px">`;
 
-  for (const [from, to] of offHours(settings.working_hours ? settings.working_hours[weekday] : null, scale.firstMinute)) {
+  for (const [from, to] of offHours(settings.working_hours ? (settings.working_hours[weekday] ?? null) : undefined, scale.firstMinute)) {
     html += `<div class="cal-off" style="top:${scale.yOf(from)}px;height:${scale.yOf(to) - scale.yOf(from)}px"></div>`;
   }
 
   let segments = segmentsForDay(events, iso);
   if (fold) {
-    const early = segments.filter((g) => g.e <= NIGHT_END).length;
+    const dayStart = dayNumber(iso) * MINUTES_PER_DAY;
+    const isEarly = (g) => (byId.get(g.id)?.endMin ?? dayStart + g.e) - dayStart <= NIGHT_END;
+    const early = segments.filter(isEarly).length;
     const time = formatMinutes(NIGHT_END, settings.time_format);
-    const label = interpolate(strings.show_early_hours, { time });
-    html += `<button type="button" class="cal-early" data-night-toggle aria-label="${escapeHtml(label)}">${early ? escapeHtml(interpolate(strings.early_hours, { time, count: early })) : ""}</button>`;
-    segments = segments.filter((g) => g.e > NIGHT_END).map((g) => ({ ...g, s: Math.max(g.s, NIGHT_END) }));
+    const action = interpolate(strings.show_early_hours, { time });
+    if (early) {
+      const text = interpolate(strings.early_hours, { time, count: early });
+      html += `<button type="button" class="cal-early" data-night-toggle aria-label="${escapeHtml(`${text}, ${action}`)}">${escapeHtml(text)}</button>`;
+    } else {
+      html += `<span class="cal-early is-empty" aria-hidden="true"></span>`;
+    }
+    segments = segments.filter((g) => !isEarly(g)).map((g) => ({ ...g, s: Math.max(g.s, NIGHT_END) }));
   }
 
   const laid = layoutColumn(segments, {
@@ -180,6 +189,7 @@ function column(iso, events, ctx) {
 }
 
 function offHours(hours, first) {
+  if (hours === undefined) return [];
   if (!hours) return [[first, MINUTES_PER_DAY]];
   const [start, end] = hours;
   const out = [];

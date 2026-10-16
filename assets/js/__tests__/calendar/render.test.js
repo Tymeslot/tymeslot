@@ -10,6 +10,7 @@ const strings = {
   months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
   all_day: "All day",
   more: "more",
+  allday_more: "%{count} more all-day events on %{date}",
   also_here: "Also here: %{titles}",
   shown_as_free: "shown as free",
   ended: "ended",
@@ -116,6 +117,57 @@ describe("renderGrid", () => {
     expect(grid.querySelector('[data-event-id="event-1"]')).toBeNull();
     expect(grid.querySelector('.cal-col[data-day="2026-10-14"] .cal-early').textContent).toBe("Before 07:00: 1");
     expect(grid.querySelector(".cal-night").getAttribute("aria-expanded")).toBe("false");
+  });
+
+  test("a folded column names its count to screen readers; an empty one is not a tab stop", () => {
+    const grid = draw({ events: [timed("event-1", "Gym", "2026-10-14T05:00", "2026-10-14T06:00")] });
+    const early = grid.querySelector('.cal-col[data-day="2026-10-14"] .cal-early');
+    expect(early.tagName).toBe("BUTTON");
+    expect(early.getAttribute("aria-label")).toBe("Before 07:00: 1, Show the hours before 07:00");
+    const empty = grid.querySelector('.cal-col[data-day="2026-10-15"] .cal-early');
+    expect(empty.tagName).toBe("SPAN");
+    expect(empty.getAttribute("aria-hidden")).toBe("true");
+    expect(grid.querySelectorAll("button.cal-early")).toHaveLength(1);
+  });
+
+  test("an event ending before 07:00 is counted even when its segment is padded past it", () => {
+    const grid = draw({ events: [timed("event-1", "Blip", "2026-10-14T06:50", "2026-10-14T06:55")] });
+    expect(grid.querySelector('[data-event-id="event-1"]')).toBeNull();
+    expect(grid.querySelector('.cal-col[data-day="2026-10-14"] .cal-early').textContent).toBe("Before 07:00: 1");
+  });
+
+  test("all-day overflow chips say how many events and on which day", () => {
+    const events = ["a", "b", "c", "d", "e"].map((id) => normaliseEvent({ id, kind: "event", title: id, all_day: true, start: "2026-10-14", end: "2026-10-15", colour: "calendar-tomato", free: false, attention: false }));
+    const grid = draw({ events });
+    const more = grid.querySelector("[data-allday-more]");
+    expect(more.getAttribute("aria-label")).toMatch(/^\d+ more all-day events on Wed 14 Oct$/);
+  });
+
+  test("decorative hour labels and the now pill are hidden from screen readers; today is marked", () => {
+    const grid = draw();
+    expect([...grid.querySelectorAll(".cal-hour, .cal-now-pill")].every((el) => el.getAttribute("aria-hidden") === "true")).toBe(true);
+    expect(grid.querySelector(".cal-night").hasAttribute("aria-hidden")).toBe(false);
+    expect(grid.querySelector('[data-goto-day="2026-10-14"]').getAttribute("aria-current")).toBe("date");
+    expect(grid.querySelector('[data-goto-day="2026-10-13"]').hasAttribute("aria-current")).toBe(false);
+  });
+
+  test("a title cannot break out of an attribute", () => {
+    const grid = draw({ events: [timed("event-1", `'" onmouseover="x`, "2026-10-14T11:00", "2026-10-14T12:00")] });
+    expect(grid.querySelector("[onmouseover]")).toBeNull();
+    expect(grid.querySelector('[data-event-id="event-1"]').getAttribute("aria-label")).toContain(`'" onmouseover="x`);
+  });
+
+  test("the 12h clock shows in the axis and on events", () => {
+    const grid = draw({ nightOpen: true, settings: { ...settings, time_format: "12h" }, events: [timed("event-1", "Lunch", "2026-10-14T13:00", "2026-10-14T14:30")] });
+    const hours = [...grid.querySelectorAll(".cal-hour")].map((el) => el.textContent);
+    expect(hours.some((t) => /1\s?PM/i.test(t))).toBe(true);
+    expect(hours.some((t) => /^13/.test(t))).toBe(false);
+    expect(grid.querySelector('[data-event-id="event-1"]').textContent).toMatch(/1:00\s?PM/i);
+  });
+
+  test("with no working hours at all nothing is shaded; a null day is still shaded whole", () => {
+    expect(draw({ settings: { ...settings, working_hours: undefined } }).querySelectorAll(".cal-off")).toHaveLength(0);
+    expect(draw({ settings: { ...settings, working_hours: { 1: null } } }).querySelectorAll('.cal-col[data-day="2026-10-12"] .cal-off')).toHaveLength(1);
   });
 
   test("opening the night draws early events", () => {

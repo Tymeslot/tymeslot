@@ -37,7 +37,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.NavigationTest do
 
     test "carries every key the renderer reads" do
       keys =
-        ~w(weekdays months all_day more also_here shown_as_free ended waiting_to_sync early_hours show_early_hours fold_early_hours open_day empty_day empty_three_day empty_week loading list_label)a
+        ~w(weekdays months all_day more allday_more also_here shown_as_free ended waiting_to_sync early_hours show_early_hours fold_early_hours open_day empty_day empty_three_day empty_week loading list_label)a
 
       assert keys -- Map.keys(ClientStrings.build("en")) == []
     end
@@ -48,6 +48,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.NavigationTest do
       assert strings.early_hours =~ "%{time}"
       assert strings.early_hours =~ "%{count}"
       assert strings.also_here =~ "%{titles}"
+      assert strings.allday_more =~ "%{count}"
+      assert strings.allday_more =~ "%{date}"
     end
   end
 end

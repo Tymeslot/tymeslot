@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.ClientStrings do
       months: LocaleFormat.get_month_names(locale, :short),
       all_day: dgettext("dashboard_calendar", "All day"),
       more: dgettext("dashboard_calendar", "more"),
+      allday_more: dgettext("dashboard_calendar", "%{count} more all-day events on %{date}"),
       also_here: dgettext("dashboard_calendar", "Also here: %{titles}"),
       shown_as_free: dgettext("dashboard_calendar", "shown as free"),
       ended: dgettext("dashboard_calendar", "ended"),
