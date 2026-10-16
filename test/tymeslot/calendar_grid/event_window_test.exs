@@ -25,15 +25,21 @@ defmodule Tymeslot.CalendarGrid.EventWindowTest do
     )
   end
 
-  defp cached(integration, calendar_id, summary, start_at) do
-    insert(:provider_calendar_event,
-      calendar_integration: integration,
-      provider: "google",
-      provider_calendar_id: calendar_id,
-      summary: summary,
-      start_at: start_at,
-      end_at: DateTime.add(start_at, 60, :minute),
-      all_day: false
+  defp cached(integration, calendar_id, summary, start_at, attrs \\ []) do
+    insert(
+      :provider_calendar_event,
+      Keyword.merge(
+        [
+          calendar_integration: integration,
+          provider: "google",
+          provider_calendar_id: calendar_id,
+          summary: summary,
+          start_at: start_at,
+          end_at: DateTime.add(start_at, 60, :minute),
+          all_day: false
+        ],
+        attrs
+      )
     )
   end
 
@@ -80,6 +86,32 @@ defmodule Tymeslot.CalendarGrid.EventWindowTest do
                ~U[2026-10-19 00:00:00Z]
              ) == []
     end
+
+    test "leaves out a booking whose synced copy sits on a deselected calendar" do
+      user = insert(:user)
+      integration = google_account(user)
+
+      cached(integration, "old", "Intro call", ~U[2026-10-15 10:00:00Z],
+        provider_event_id: "evt-intro"
+      )
+
+      insert(:meeting,
+        organizer_user: user,
+        title: "Intro call",
+        attendee_name: "Anna Kowalski",
+        start_time: ~U[2026-10-15 10:00:00Z],
+        end_time: ~U[2026-10-15 10:30:00Z],
+        status: "confirmed",
+        provider_event_id: "evt-intro"
+      )
+
+      assert EventWindow.list_events(
+               user.id,
+               [integration],
+               ~U[2026-10-12 00:00:00Z],
+               ~U[2026-10-19 00:00:00Z]
+             ) == []
+    end
   end
 
   describe "reject_hidden/3" do
@@ -112,6 +144,18 @@ defmodule Tymeslot.CalendarGrid.EventWindowTest do
     test "runs from local midnight of the first day to midnight after the last" do
       assert EventWindow.utc_range(~D[2027-02-22], ~D[2027-02-28], "Asia/Tokyo") ==
                {~U[2027-02-21 15:00:00Z], ~U[2027-02-28 15:00:00Z]}
+    end
+
+    test "starts a day with no midnight at its first instant" do
+      # Chile moves its clocks forward at 24:00 on the first Saturday of
+      # September, so 6 September 2026 starts at 01:00.
+      assert {~U[2026-09-06 04:00:00Z], _end} =
+               EventWindow.utc_range(~D[2026-09-06], ~D[2026-09-06], "America/Santiago")
+    end
+
+    test "ends on the new offset's midnight across a DST change" do
+      assert EventWindow.utc_range(~D[2026-10-31], ~D[2026-11-02], "America/New_York") ==
+               {~U[2026-10-31 04:00:00Z], ~U[2026-11-03 05:00:00Z]}
     end
   end
 end

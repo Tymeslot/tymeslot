@@ -6,8 +6,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
   require Logger
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.EventWindow
   alias Tymeslot.Integrations.Calendar.Appearance
-  alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings
   alias Tymeslot.Profiles
@@ -77,24 +77,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
     # The window is the viewer's days in the viewer's zone, so a zone that
     # just changed has to be assigned before it is computed.
     socket = assign_timezone(socket)
-    integrations = socket.assigns.integrations
-    integration_ids = Enum.map(integrations, & &1.id)
     {start_dt, end_dt} = range_for_view(socket.assigns)
 
-    cached = CalendarGrid.list_events_for_range(integration_ids, start_dt, end_dt)
-
-    # Dedupe against every cached row, not just the selection-visible ones: a
-    # booking whose synced copy the user has hidden must stay hidden, not
-    # reappear through its projection.
-    booking_events =
-      CalendarGrid.list_booking_events_for_range(
+    # Shared with the redesigned calendar, so the two surfaces load the same
+    # events for the same days (see `EventWindow.list_events/4`).
+    events =
+      EventWindow.list_events(
         socket.assigns.current_user.id,
+        socket.assigns.integrations,
         start_dt,
-        end_dt,
-        cached
+        end_dt
       )
-
-    events = Selection.visible_events(cached, integrations) ++ booking_events
 
     # The group meetings with live seats in the same range, shown locked:
     # their time belongs to the bookers rather than the calendar. Loaded with
@@ -116,7 +109,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
     assigns = socket.assigns
 
     v_events =
-      do_visible_events(
+      EventWindow.reject_hidden(
         assigns.events,
         assigns.hidden_integration_ids,
         Map.get(assigns, :hidden_calendar_keys, MapSet.new())
@@ -172,45 +165,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
     {local_midnight(List.first(days), tz), local_midnight(Date.add(List.last(days), 1), tz)}
   end
 
-  @doc """
-  The UTC instant `date` begins in `tz`. A zone that moves its clocks at
-  midnight has no 00:00 on that date (the day starts at 01:00), or two of
-  them; the day starts at the first instant either way.
-  """
+  @doc "The UTC instant `date` begins in `tz`; see `EventWindow.local_midnight/2`."
   @spec local_midnight(Date.t(), String.t()) :: DateTime.t()
-  def local_midnight(date, tz) do
-    instant =
-      case DateTime.new(date, ~T[00:00:00], tz) do
-        {:ok, midnight} -> midnight
-        {:gap, _before, day_start} -> day_start
-        {:ambiguous, first, _second} -> first
-      end
-
-    DateTime.shift_zone!(instant, "Etc/UTC")
-  end
+  defdelegate local_midnight(date, tz), to: EventWindow
 
   # Private helpers
-
-  # An event is hidden when its whole account is hidden, or when the organiser
-  # has hidden the single calendar it sits in. The two are separate controls
-  # over separate stores, so both are consulted rather than one deriving the
-  # other: hiding an account must not erase the per-calendar choices underneath
-  # it, which the organiser gets back when they show the account again.
-  defp do_visible_events(events, hidden_ids, hidden_keys) do
-    if hidden_ids == [] and MapSet.size(hidden_keys) == 0 do
-      events
-    else
-      Enum.reject(events, &hidden_event?(&1, hidden_ids, hidden_keys))
-    end
-  end
-
-  defp hidden_event?(event, hidden_ids, hidden_keys) do
-    event.calendar_integration_id in hidden_ids or
-      MapSet.member?(
-        hidden_keys,
-        {event.calendar_integration_id, Map.get(event, :provider_calendar_id)}
-      )
-  end
 
   defp visible_days(%{view: :week, date: date} = assigns) do
     ws = PreferenceHelpers.week_start(date, assigns)

@@ -69,9 +69,7 @@ defmodule Tymeslot.CalendarGrid.EventWindow do
       else: Enum.reject(events, &hidden?(&1, hidden_ids, hidden_keys))
   end
 
-  @doc "Whether `event` is hidden by `hidden_ids` or `hidden_keys`."
-  @spec hidden?(map(), [integer()], MapSet.t()) :: boolean()
-  def hidden?(event, hidden_ids, hidden_keys) do
+  defp hidden?(event, hidden_ids, hidden_keys) do
     integration_id = Map.get(event, :calendar_integration_id)
 
     integration_id in hidden_ids or
