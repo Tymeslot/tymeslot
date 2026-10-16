@@ -259,4 +259,15 @@ describe("review regressions", () => {
     const laid = layoutDay(deep, opts(80));
     for (const item of events(laid)) expect(item.width).toBeGreaterThanOrEqual(24);
   });
+
+  test("a short event nested in a host folded behind the chip stays clear of the chip", () => {
+    const segments = [ev("x1", 555, 795, "x"), ev("o1", 585, 825, "1:1"), ev("st", 600, 840, "Standup"), ev("x2", 615, 645, "x"), ev("o2", 630, 645, "1:1")];
+    const laid = place(segments, 80);
+    const visible = events(laid);
+    const ids = new Set(visible.map((item) => item.id));
+    for (const chip of chips(laid)) {
+      for (const item of visible.filter((v) => v.s < chip.e && v.e > chip.s)) expect(item.left).toBeLessThan(chip.left);
+    }
+    for (const item of visible) expect(item.nestIn === null || ids.has(item.nestIn)).toBe(true);
+  });
 });

@@ -62,17 +62,21 @@ export function countLines(text, width, measureWidth) {
   return lines;
 }
 
+// Narrower than this, an event can be neither read nor clicked.
+const MIN_USABLE_WIDTH = 20;
+
 // How many columns fit beside the chip once `width` folds: at least one.
 const foldSlots = (width) => Math.max(1, Math.floor((width - CHIP_WIDTH) / FOLD_COLUMN_WIDTH));
+const foldedWidth = (width) => (width - CHIP_WIDTH) / foldSlots(width);
 
 // Whether `width` split `n` ways folds: only below MIN_EVENT_WIDTH a column,
-// and only when folding widens the columns, unless they would be too thin to
-// read or click either way (under 20px), where the chip at least opens a list.
+// and only when folding widens the columns, unless they would be unusable
+// either way, where the chip at least opens a list.
 const folds = (width, n) =>
-  n > 1 && width / n < MIN_EVENT_WIDTH && ((width - CHIP_WIDTH) / foldSlots(width) > width / n || width / n < 20);
+  n > 1 && width / n < MIN_EVENT_WIDTH && (foldedWidth(width) > width / n || width / n < MIN_USABLE_WIDTH);
 
 // The width of one column of `width` split `n` ways, after any fold.
-const columnWidth = (width, n) => (folds(width, n) ? (width - CHIP_WIDTH) / foldSlots(width) : width / n);
+const columnWidth = (width, n) => (folds(width, n) ? foldedWidth(width) : width / n);
 
 /**
  * Lays out one day's segments ({ id, s, e, title, attention }, minutes from
@@ -138,21 +142,17 @@ export function layoutDay(segments, { colWidth, hourHeight, yOf, measureLines })
   }
 
   const chipZ = 4 + Math.max(0, ...segs.map((g) => g.level));
+  const seg = new Map(segs.map((g) => [g.id, g]));
   const out = [];
   for (const group of groups) {
     // A nested group overlays its host's drawn box, not the host's group,
     // which a later event may have split into columns.
-    const host = group.nested && out.find((item) => !item.chip && item.id === group.members[0].nestIn);
-    if (host) {
-      group.left = nestLeft(host.left, host.width);
-      group.width = host.left + host.width - group.left;
-    }
+    if (group.nested) placeNested(group, out, seg);
     out.push(...layoutGroup(group, chipZ));
   }
 
   // A nested event whose host folded behind a chip nests in a visible event
   // of the host's group instead, or in none.
-  const seg = new Map(segs.map((g) => [g.id, g]));
   for (const item of out) {
     if (item.chip || !item.nestIn || !seg.get(item.nestIn).hidden) continue;
     const other = seg.get(item.nestIn).group.members.find((o) => !o.hidden && o.id !== item.id && overlaps(o, item));
@@ -160,6 +160,29 @@ export function layoutDay(segments, { colWidth, hourHeight, yOf, measureLines })
   }
 
   return out;
+}
+
+// Places a nested group against its host's drawn box. A host folded behind
+// its group's chip hands the nest to a visible event of that group; failing
+// one, the nested group ends at the chip's edge rather than under it.
+function placeNested(group, out, seg) {
+  const first = group.members[0];
+  let host = seg.get(first.nestIn);
+  const hostGroup = host.group;
+  if (host.hidden) {
+    host = hostGroup.members.find((o) => !o.hidden && overlaps(o, first));
+    for (const m of group.members) m.nestIn = host ? host.id : null;
+  }
+
+  const box = host && out.find((item) => !item.chip && item.id === host.id);
+  if (box) {
+    group.left = nestLeft(box.left, box.width);
+    group.width = box.left + box.width - group.left;
+  } else {
+    const edge = hostGroup.left + hostGroup.width - CHIP_WIDTH;
+    group.left = Math.max(hostGroup.left, Math.min(group.left, edge - MIN_EVENT_WIDTH));
+    group.width = Math.max(0, edge - group.left);
+  }
 }
 
 // Where a short event nested in a box at `left`, `width` wide starts: its right
