@@ -11,6 +11,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   alias Tymeslot.Workers.EmailWorkerHandlers.GuestEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails
+  alias Tymeslot.Workers.EmailWorkerHandlers.PlannedSessionEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.PollEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.SeatEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.SeatJobs
@@ -22,7 +23,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   # passes to `Tymeslot.Workers.DeliveryClaims` so that a rescued job does not
   # repeat a send it already made.
   #
-  # The six seat-action keys come from `MeetingScheduler.seat_action/1`
+  # The seven seat-action keys come from `MeetingScheduler.seat_action/1`
   # rather than retyped literals, so this table and the scheduling call sites
   # that produce those same action strings can't drift apart on a typo — see
   # that function's doc for why `:seat_cancellation` and
@@ -46,6 +47,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     "send_reminder_emails" => {MeetingEmails, :handle_reminder_emails},
     MeetingScheduler.seat_action(:seat_reminder) =>
       {GroupMeetingEmails, :handle_seat_reminder_emails},
+    MeetingScheduler.seat_action(:seat_session_moved) =>
+      {GroupMeetingEmails, :handle_seat_session_moved, :with_job_id},
     "send_reschedule_request" => {MeetingEmails, :handle_reschedule_request},
     "send_booking_request_emails" => {BookingApprovalEmails, :handle_booking_request_emails},
     "send_booking_approval_nudge" => {BookingApprovalEmails, :handle_booking_approval_nudge},
@@ -54,6 +57,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
       {BookingApprovalEmails, :handle_reschedule_request_expired},
     "send_poll_deadline_reminders" => {PollEmails, :handle_deadline_reminders, :with_job_id},
     "send_poll_host_nudge" => {PollEmails, :handle_host_nudge, :with_job_id},
+    "send_registration_closed" =>
+      {PlannedSessionEmails, :handle_registration_closed, :with_job_id},
     "send_email_change_confirmations" => {AuthEmails, :handle_email_change_confirmations},
     "send_email_verification" => {AuthEmails, :handle_email_verification},
     "send_password_reset" => {AuthEmails, :handle_password_reset},
@@ -84,6 +89,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     GuestEmails,
     IntegrationEmails,
     MeetingEmails,
+    PlannedSessionEmails,
     PollEmails,
     SeatJobs
   ]

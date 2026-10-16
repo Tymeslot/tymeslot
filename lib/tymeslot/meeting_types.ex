@@ -12,6 +12,7 @@ defmodule Tymeslot.MeetingTypes do
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings
   alias Tymeslot.MeetingTypes.Duration
+  alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.FormMapper
   alias Tymeslot.MeetingTypes.FormValidation
   alias Tymeslot.MeetingTypes.GroupAccess
@@ -19,6 +20,7 @@ defmodule Tymeslot.MeetingTypes do
   alias Tymeslot.MeetingTypes.LocationSelection
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.MeetingTypes.OneOffEvents
   alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Repo
@@ -226,13 +228,17 @@ defmodule Tymeslot.MeetingTypes do
   (which would also silently resurrect defaults a host had deleted on purpose).
 
   A paused group type (`Tymeslot.MeetingTypes.GroupAccess`) is left out, as an
-  inactive one is: it takes no new bookings, so the page must not offer it.
+  inactive one is: it takes no new bookings, so the page must not offer it. So
+  is a fixed-date type with no session left to sign up for
+  (`Tymeslot.MeetingTypes.FixedDates.reject_unbookable/1`).
   """
   @spec get_public_meeting_types(integer()) :: [Ecto.Schema.t()]
   def get_public_meeting_types(user_id) do
     user_id
     |> MeetingTypeQueries.list_public_meeting_types()
     |> GroupAccess.reject_paused()
+    |> FixedDates.reject_unbookable()
+    |> OneOffEvents.order_for_listing()
   end
 
   # The two owner-facing listings above differ only in which query they run;

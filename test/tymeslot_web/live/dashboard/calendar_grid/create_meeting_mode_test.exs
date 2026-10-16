@@ -41,8 +41,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingModeTest do
       assert html =~ "New Meeting"
       assert html =~ ~s(id="create-meeting-guest-name")
       assert html =~ ~s(id="create-meeting-guest-email")
-      # No mode toggle: an event has nowhere to be written.
-      refute html =~ ~s(data-testid="create-mode-meeting")
+      # No event mode: an event has nowhere to be written.
+      refute html =~ ~s(phx-value-mode="event")
     end
 
     test "puts Cancel before Create, as the confirmation dialogs do", %{conn: conn} do
@@ -234,7 +234,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingModeTest do
       html = open_create_form(lv)
 
       assert html =~ "New Meeting"
-      refute html =~ ~s(data-testid="create-mode-meeting")
+      refute html =~ ~s(phx-value-mode="event")
     end
 
     test "the subscription is not offered as somewhere to put the meeting", %{conn: conn} do

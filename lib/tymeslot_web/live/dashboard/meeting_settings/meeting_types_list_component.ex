@@ -14,6 +14,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
   attr :currency, :string, default: "eur"
   attr :venues, :list, default: []
   attr :group_bookings_allowed, :boolean, default: true
+  attr :next_dates, :map, default: %{}, doc: "fixed-date type id => its next open date, or nil"
+  attr :timezone, :string, default: "Etc/UTC"
+  attr :time_format, :string, default: "24h"
   attr :parent_myself, :any, required: true
 
   @spec meeting_types_section(map()) :: Phoenix.LiveView.Rendered.t()
@@ -50,6 +53,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
                 currency={@currency}
                 venues={@venues}
                 group_bookings_allowed={@group_bookings_allowed}
+                next_date={Map.get(@next_dates, type.id, :not_fixed)}
+                timezone={@timezone}
+                time_format={@time_format}
                 myself={@parent_myself}
               />
             </div>

@@ -415,6 +415,11 @@ msgstr "agendamentos em grupo não podem exigir pagamento"
 msgid "You already have a meeting type with this name"
 msgstr "Você já tem um tipo de reunião com este nome"
 
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "fixed dates need group bookings"
+msgstr "datas fixas exigem agendamentos em grupo"
+
 #: lib/tymeslot_web/themes/shared/components/error_component.ex
 #, elixir-autogen, elixir-format
 msgid "If you are the organiser, please connect a calendar in your dashboard."

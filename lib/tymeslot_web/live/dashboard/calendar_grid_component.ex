@@ -375,6 +375,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     do: EventCrud.handle_update_create_locale(params, socket)
 
   @impl Phoenix.LiveComponent
+  def handle_event("update_create_group_event", params, socket),
+    do: EventCrud.handle_update_create_group_event(params, socket)
+
+  @impl Phoenix.LiveComponent
   def handle_event("update_create_title", params, socket),
     do: EventCrud.handle_update_create_title(params, socket)
 

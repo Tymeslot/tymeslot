@@ -59,6 +59,9 @@ defmodule Tymeslot.Emails.EmailScheduler do
               ),
               to: MeetingScheduler
 
+  defdelegate schedule_seat_session_moved(meeting_id, participant_id, from),
+    to: MeetingScheduler
+
   defdelegate schedule_seat_reschedule_request(meeting_id, participant_id, requested_at),
     to: MeetingScheduler
 
@@ -123,6 +126,7 @@ defmodule Tymeslot.Emails.EmailScheduler do
     "send_seat_meeting_cancellation" => ["meeting_id", "participant_id"],
     "send_seat_reminder" => ["meeting_id", "participant_id", "reminder_value", "reminder_unit"],
     "send_seat_reschedule_request" => ["meeting_id", "participant_id"],
+    "send_seat_session_moved" => ["meeting_id", "participant_id", "from"],
     "send_reschedule_request" => ["meeting_id"],
     "send_booking_request_emails" => ["meeting_id"],
     "send_booking_approval_nudge" => ["meeting_id"],
@@ -134,6 +138,7 @@ defmodule Tymeslot.Emails.EmailScheduler do
     "send_signup_attempt_notice" => ["user_id"],
     "send_social_signup_confirmation" => ["email", "provider", "confirm_url_encrypted"],
     "send_poll_deadline_reminders" => ["poll_id"],
+    "send_registration_closed" => ["meeting_id"],
     "send_poll_host_nudge" => ["poll_id", "variant"],
     "send_email_change_verification" => [
       "user_id",

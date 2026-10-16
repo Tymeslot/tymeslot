@@ -37,8 +37,12 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.Recipient
+  alias Tymeslot.Notifications.GuestNotifications
+  alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
   alias Tymeslot.Workers.EmailWorkerHandlers.SeatJobs
 
@@ -139,6 +143,28 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
       "seat reschedule request",
       {:not_cancelled, :live},
       &send_seat_reschedule_request/2
+    )
+  end
+
+  @doc """
+  One live participant's notice that the host moved their planned session
+  (`Tymeslot.Meetings.SessionMove`): the reschedule email with an updated
+  entry for their seat's calendar event, and the same for each of their
+  guests. `"from"` is the previous start, which the email names. Sent only
+  while the session still holds and the seat is still theirs.
+  """
+  @spec handle_seat_session_moved(%{String.t() => term()}, DeliveryClaims.job_id()) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_seat_session_moved(
+        %{"meeting_id" => meeting_id, "participant_id" => participant_id, "from" => from},
+        job_id
+      ) do
+    SeatJobs.with_seat(
+      meeting_id,
+      participant_id,
+      "seat session moved email",
+      {:live_slot, :live},
+      &send_session_moved(&1, &2, from, job_id)
     )
   end
 
@@ -249,6 +275,37 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
     |> Meetings.meeting_as_seen_by(Recipient.from_participant(participant))
     |> Config.email_service_module().send_reschedule_request()
     |> SeatJobs.send_result("reschedule request", seat_metadata(meeting, participant))
+  end
+
+  defp send_session_moved(meeting, participant, from, job_id) do
+    {:ok, previous, _offset} = DateTime.from_iso8601(from)
+    recipient = Recipient.from_participant(participant)
+    details = AppointmentBuilder.from_meeting(meeting, recipient, nil)
+
+    details =
+      Map.merge(details, %{
+        original_start_time: previous,
+        original_start_time_attendee_tz:
+          DateTimeUtils.convert_to_timezone(previous, details.attendee_timezone)
+      })
+
+    email_service = Config.email_service_module()
+
+    result =
+      DeliveryClaims.once(job_id, "session_moved:participant", fn ->
+        email_service.send_reschedule_email_to_attendee(recipient.email, details)
+      end)
+
+    for guest <- GuestQueries.list_for_participant(participant.id) do
+      DeliveryClaims.once(job_id, "session_moved:guest:#{guest.id}", fn ->
+        email_service.send_guest_reschedule(
+          guest.email,
+          GuestNotifications.guest_details(details, guest)
+        )
+      end)
+    end
+
+    SeatJobs.send_result(result, "session moved", seat_metadata(meeting, participant))
   end
 
   defp seat_metadata(meeting, participant),
