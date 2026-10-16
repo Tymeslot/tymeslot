@@ -26,6 +26,7 @@
 @import "./components/cards.css";
 @import "./components/misc.css";
 @import "./components/dashboard.css";
+@import "./components/calendar-surface.css";
 @import "./components/theme-customization.css";
 @import "./components/embed-cards.css";
 @import "./components/onboarding.css";

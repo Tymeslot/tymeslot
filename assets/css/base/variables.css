@@ -317,6 +317,32 @@
   --dropdown-item-danger-text: var(--color-error);
   --dropdown-item-danger-hover-bg: var(--color-error-bg);
   --dropdown-divider: var(--color-border-light);
+
+  /* Calendar surface (components/calendar-surface.css). Event text is each
+     calendar's colour mixed towards --cal-ink, over a light tint of the same
+     colour, which holds contrast above 4.5:1 for every palette colour. Past
+     events use a paler tint with full-contrast text, never opacity. */
+  --cal-surface: #ffffff;
+  --cal-ink: #18181b;
+  --cal-text: var(--color-neutral-900);
+  --cal-text-muted: var(--color-neutral-600);
+  --cal-text-past: var(--color-neutral-700);
+  --cal-line: var(--color-neutral-200);
+  --cal-line-strong: var(--color-neutral-300);
+  --cal-hover: var(--color-neutral-100);
+  --cal-chip: var(--color-neutral-50);
+  --cal-weekend: rgba(244, 244, 245, 0.45);
+  --cal-off-hours: rgba(244, 244, 245, 0.75);
+  --cal-night: var(--color-neutral-100);
+  --cal-skeleton: var(--color-neutral-100);
+  --cal-focus: var(--color-primary-500);
+  --cal-today: var(--color-primary-700);
+  --cal-booking: var(--color-primary-700);
+  --cal-on-booking: #ffffff;
+  --cal-on-check: #ffffff;
+  --cal-now: var(--color-error);
+  --cal-on-now: #ffffff;
+  --cal-warn: var(--color-warning);
 }
 
 /* Dark Mode Overrides */
