@@ -8,6 +8,16 @@ defmodule Tymeslot.Repo.Migrations.AllowExtraHoursOverrides do
   the unique index becomes partial, and the type check admits the new type.
   """
 
+  # Swapping a CHECK constraint means dropping the old one and adding the new
+  # one, which Ecto's constraint helpers cannot express as one step; the
+  # rollback's DELETE is raw by nature. The index is rebuilt in the same
+  # transaction rather than concurrently so the table is never without its
+  # uniqueness rule. Reviewed: the table is small (a row per date a schedule
+  # departs from its weekly hours), and the new check admits every existing
+  # row, since its list is a superset of the old one.
+  # excellent_migrations:safety-assured-for-this-file raw_sql_executed
+  # excellent_migrations:safety-assured-for-this-file index_not_concurrently
+
   def up do
     execute("ALTER TABLE availability_overrides DROP CONSTRAINT override_type_check")
 
