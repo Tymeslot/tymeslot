@@ -34,7 +34,7 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
       view: Atom.to_string(view),
       date: Date.to_iso8601(date),
       range: %{from: Date.to_iso8601(window.first), to: Date.to_iso8601(Date.add(window.last, 1))},
-      now: wall(now, timezone),
+      now: format(local(now, timezone)),
       reset: input.reset,
       settings: input.settings,
       events: Enum.map(input.events, &event(&1, input))
@@ -99,16 +99,34 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
       end: Date.to_iso8601(exclusive_end(event))
     }
 
-  defp timing(%{start_at: %DateTime{} = start_at, end_at: %DateTime{} = end_at}, timezone),
-    do: %{all_day: false, start: wall(start_at, timezone), end: wall(end_at, timezone)}
+  defp timing(%{start_at: %DateTime{} = start_at, end_at: %DateTime{} = end_at}, timezone) do
+    start = local(start_at, timezone)
+    finish = local(end_at, timezone)
 
-  defp wall(datetime, timezone) do
-    local =
+    # When the clocks go back the hour repeats, so an event inside it can end
+    # on the wall clock before it starts, and one shorter than a minute ends
+    # in the minute it starts. Either would draw as no block at all; keep its
+    # real length from the wall-clock start instead.
+    finish =
+      if NaiveDateTime.compare(finish, start) == :gt,
+        do: finish,
+        else: NaiveDateTime.add(start, max(ceil_minutes(start_at, end_at), 1), :minute)
+
+    %{all_day: false, start: format(start), end: format(finish)}
+  end
+
+  defp local(datetime, timezone) do
+    shifted =
       case DateTime.shift_zone(datetime, timezone) do
         {:ok, shifted} -> shifted
         {:error, _reason} -> datetime
       end
 
-    Calendar.strftime(local, "%Y-%m-%dT%H:%M")
+    shifted |> DateTime.to_naive() |> NaiveDateTime.truncate(:second) |> Map.put(:second, 0)
   end
+
+  defp ceil_minutes(start_at, end_at),
+    do: div(DateTime.diff(end_at, start_at, :second) + 59, 60)
+
+  defp format(naive), do: Calendar.strftime(naive, "%Y-%m-%dT%H:%M")
 end

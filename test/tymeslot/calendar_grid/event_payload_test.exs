@@ -65,6 +65,26 @@ defmodule Tymeslot.CalendarGrid.EventPayloadTest do
            }
   end
 
+  test "an event inside the hour the clocks go back keeps its length" do
+    payload =
+      EventPayload.event(
+        timed(start_at: ~U[2026-10-25 00:30:00Z], end_at: ~U[2026-10-25 01:15:00Z]),
+        @context
+      )
+
+    assert {payload.start, payload.end} == {"2026-10-25T02:30", "2026-10-25T03:15"}
+  end
+
+  test "an event shorter than a minute still lasts a minute on the grid" do
+    payload =
+      EventPayload.event(
+        timed(start_at: ~U[2026-10-16 07:30:10Z], end_at: ~U[2026-10-16 07:30:40Z]),
+        @context
+      )
+
+    assert {payload.start, payload.end} == {"2026-10-16T09:30", "2026-10-16T09:31"}
+  end
+
   test "an all-day event carries its dates with the exclusive end it is stored with" do
     event =
       timed(
