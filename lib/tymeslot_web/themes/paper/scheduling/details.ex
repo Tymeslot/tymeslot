@@ -18,6 +18,10 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
   schedule component), which on a phone scrolls the questions and the form
   into view; a deep link to /book never moves the focus on load, as with
   `Journey.Components.moment_heading/1`. No question input takes the focus itself (`autofocus={false}`).
+
+  The chosen time carries "Change time", which takes the focus back to that
+  time in the picker (the month's selected time, or the week's pressed one),
+  so a visitor on a long screen gets back to the picker in one press.
   """
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -63,6 +67,19 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
         <span>
           {LocalizationHelpers.format_booking_datetime(@selected_date, @selected_time, @user_timezone)}
         </span>
+        <button
+          type="button"
+          class="paper-book__change"
+          data-testid="paper-change-time"
+          phx-click={
+            JS.focus(
+              to:
+                "#schedule-step .slot-list__slot--selected, #schedule-step [data-fact='slot'][aria-pressed='true']"
+            )
+          }
+        >
+          {dpgettext("booking_voice", "paper", "Change time")}
+        </button>
       </p>
       <p
         :if={@next_day_end}

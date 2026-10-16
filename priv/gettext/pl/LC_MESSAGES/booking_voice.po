@@ -46,3 +46,9 @@ msgstr "Ten termin został właśnie zarezerwowany. Wybierz inny."
 msgctxt "quill"
 msgid "Arrange a meeting"
 msgstr "Umów spotkanie"
+
+#: lib/tymeslot_web/themes/paper/scheduling/details.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Change time"
+msgstr "Zmień godzinę"

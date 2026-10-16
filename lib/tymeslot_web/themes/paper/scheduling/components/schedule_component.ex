@@ -9,8 +9,9 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   `@theme_tokens.media[:calendar_view]`; no tokens or no setting is a month)
   decides the picker.
 
-  A month (`data-calendar-view="month"`): the month calendar, the chosen day's
-  times (the shared `SlotList`) and the timezone picker. The card lays them
+  A month (`data-calendar-view="month"`): the timezone picker, then the month
+  calendar and the chosen day's times (the shared `SlotList`): the visitor
+  sees the zone before any time. The card lays them
   out by its own width (`schedule.css`): one column, then the details beside
   the picker, then details, calendar and times side by side.
 
@@ -163,6 +164,13 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
         </div>
 
         <div :if={@view == "month"} class="paper-picker">
+          <.timezone
+            timezone={@user_timezone}
+            open={@timezone_dropdown_open}
+            search={@timezone_search}
+            target={@myself}
+          />
+
           <.calendar
             days={@days}
             year={@current_year}
@@ -191,13 +199,6 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
               period_tag="h3"
             />
           </div>
-
-          <.timezone
-            timezone={@user_timezone}
-            open={@timezone_dropdown_open}
-            search={@timezone_search}
-            target={@myself}
-          />
         </div>
       </div>
 

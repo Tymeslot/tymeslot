@@ -46,3 +46,9 @@ msgstr "Ce créneau vient d'être réservé. Choisissez-en un autre."
 msgctxt "quill"
 msgid "Arrange a meeting"
 msgstr "Organiser un rendez-vous"
+
+#: lib/tymeslot_web/themes/paper/scheduling/details.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Change time"
+msgstr "Changer l'heure"

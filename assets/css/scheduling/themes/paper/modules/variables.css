@@ -218,6 +218,9 @@
      seven day columns of a comfortable width (week.css). */
   --paper-card-width-week: 72rem;
   --paper-details-width: 15rem;
+  /* The schedule screen's details part: a reading width for the form on
+     the wide card. */
+  --paper-book-width: 40rem;
   --paper-slots-width: 13rem;
   --paper-slots-max-height: 24rem;
   --paper-avatar-lg: 4rem;

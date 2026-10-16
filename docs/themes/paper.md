@@ -14,7 +14,7 @@ Someone who used Calendly or cal.com, a team that white-labels its page, an orga
 
 ## Look
 
-One flat card on the tone's canvas (neutral, cool or warm), light, dark or following the visitor's system, with one accent colour. The card is 40rem, widening to 64rem for the overview and the month schedule and to 72rem for the week, and lays its panes out by its own width. System font, Inter or IBM Plex Sans; tabular numerals for times. The organiser's logo, when uploaded, sits top-left of every card. It never has a background behind the card: no gradient, image, video or glass.
+One flat card on the tone's canvas (neutral, cool or warm), light, dark or following the visitor's system, with one accent colour. The card is 40rem, widening to 64rem for the overview and the month schedule and to 72rem for the week, and lays its panes out by its own width. System font, Inter or IBM Plex Sans; tabular numerals for times. The organiser's logo, when uploaded, sits top-left of every card. It never has a background behind the card: no gradient, image, video or glass. The timezone sits above the times on every view. On the second screen the details part follows the picker under a hairline rule, aligned under the picker once the card shows the details column beside it, in a reading width of its own: the chosen time with its icon and "Change time", the questions one under another, then the form, a paid type's price above the submit.
 
 ## Options
 

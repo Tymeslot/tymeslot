@@ -179,6 +179,12 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
              )
 
       assert has_element?(view, "[data-testid='paper-book-when']")
+
+      assert has_element?(
+               view,
+               "[data-testid='paper-book-when'] button[type='button'][data-testid='paper-change-time']",
+               "Change time"
+             )
     end
 
     test "shows every question above the form once a time is picked, with no way on", %{

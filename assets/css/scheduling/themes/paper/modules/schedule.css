@@ -1,11 +1,11 @@
 /* Schedule step: the meeting's details and the picker (calendar, times,
    timezone), in the two-pane frame base.css shares with the overview,
    laid out by the card's own width:
-     below 40rem  one column: details, calendar, times, timezone
+     below 40rem  one column: details, timezone, calendar, times
      from 40rem   the details beside the picker, a rule between them
                   (the frame)
      from 52rem   details, calendar and times side by side, the timezone
-                  picker under the calendar, the times scrolling inside */
+                  picker above the calendar and the times, the times scrolling inside */
 
 /* --- Details --- */
 
@@ -44,9 +44,9 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
+    "timezone"
     "calendar"
-    "slots"
-    "timezone";
+    "slots";
   gap: var(--space-lg);
   min-width: 0;
 }
@@ -69,10 +69,10 @@
 @container scheduling (min-width: 52rem) {
   .paper-picker {
     grid-template-columns: minmax(0, 1fr) var(--paper-slots-width);
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto auto;
     grid-template-areas:
-      "calendar slots"
-      "timezone slots";
+      "timezone timezone"
+      "calendar slots";
     align-items: start;
     column-gap: var(--space-lg);
   }

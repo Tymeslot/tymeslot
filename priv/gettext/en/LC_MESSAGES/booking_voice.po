@@ -46,3 +46,9 @@ msgstr ""
 msgctxt "quill"
 msgid "Arrange a meeting"
 msgstr ""
+
+#: lib/tymeslot_web/themes/paper/scheduling/details.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Change time"
+msgstr ""

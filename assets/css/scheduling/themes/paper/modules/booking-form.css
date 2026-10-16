@@ -1,36 +1,8 @@
-/* Booking step: the summary of the chosen time, the shared booking form,
+/* The schedule screen's booking form: the shared booking form,
    the reCAPTCHA notice, and the colours of the shared guest and location
    fields (their structure is shared/components/booking-fields.css,
    imported just before this file, at the same specificity, so these rules
    win the ties). */
-
-/* --- Summary --- */
-
-.paper-summary {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  margin-bottom: var(--space-lg);
-  padding: var(--space-md);
-  border: var(--border-width-thin) solid var(--line-1);
-  border-radius: min(var(--radius-card), var(--paper-radius-box));
-  background: var(--surface-subtle);
-}
-
-.paper-summary__title {
-  margin: 0;
-  color: var(--ink-1);
-  font-size: var(--theme-font-size-md);
-  font-weight: var(--font-weight-semibold);
-}
-
-.paper-summary .paper-facts {
-  color: var(--ink-1);
-}
-
-.paper-booking__title {
-  margin-bottom: var(--space-md);
-}
 
 /* --- The form: one column, name and email side by side once there is room --- */
 

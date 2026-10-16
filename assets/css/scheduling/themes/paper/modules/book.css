@@ -1,0 +1,132 @@
+/* The schedule screen's details part (Paper.Scheduling.Details,
+   section.paper-book): once a time is picked, a heading, the chosen day and
+   time, every question one under another, then the form and its submit. It
+   follows the picker under a hairline rule, in a reading width of its own;
+   once the card shows the details column beside the picker, the part lines
+   up under the picker, so the column stays a sidebar.
+     below 40rem (month) / 59rem (week)  full width
+     from there                           under the picker */
+
+.paper-book {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  max-width: var(--paper-book-width);
+  margin-top: var(--space-xl);
+  padding-top: var(--space-lg);
+  border-top: var(--border-width-thin) solid var(--line-1);
+}
+
+.paper-book__title {
+  margin: 0;
+}
+
+/* The heading takes the focus when the part appears, to bring it into view;
+   a ring there would read as a control. A keyboard user tabbing back to it
+   still sees one. */
+.paper-book__title:focus {
+  outline: none;
+}
+
+.paper-book__title:focus-visible {
+  outline: var(--paper-focus-outline);
+  outline-offset: var(--space-3xs);
+}
+
+.paper-book__when {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  margin: 0;
+  color: var(--ink-1);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.paper-book__when-icon {
+  flex-shrink: 0;
+  width: var(--paper-icon-sm);
+  height: var(--paper-icon-sm);
+  color: var(--ink-2);
+}
+
+/* "Change time": a quiet text button after the chosen time, which takes
+   the focus back to that time in the picker. */
+.paper-book__change {
+  margin-inline-start: var(--space-2xs);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--theme-primary);
+  font: inherit;
+  font-weight: var(--font-weight-medium);
+  text-decoration: underline;
+  text-underline-offset: var(--space-3xs);
+  cursor: pointer;
+}
+
+.paper-book__change:focus-visible {
+  outline: var(--paper-focus-outline);
+  outline-offset: var(--space-3xs);
+}
+
+/* A paid type's price (J5X2), right above the submit, at its end. */
+.paper-book .paper-book__price {
+  align-self: flex-end;
+}
+
+/* The day after, for a meeting that ends past midnight in the visitor's
+   timezone: under the chosen time, quieter. */
+.paper-book__when--end {
+  color: var(--ink-2);
+  font-weight: var(--font-weight-normal);
+}
+
+/* Every question at once, one under another, with more room between
+   questions than inside one; the last one sits a rule's width above the
+   form. */
+.paper-book__questions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  padding-bottom: var(--space-md);
+  border-bottom: var(--border-width-thin) solid var(--line-1);
+}
+
+.paper-question {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.paper-question__label {
+  margin: 0;
+  color: var(--ink-1);
+  font-size: var(--theme-font-size-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--theme-line-height-snug);
+  overflow-wrap: anywhere;
+}
+
+/* The part starts with its own rule, so its action rows draw none, and it
+   is not the bar the week view keeps in sight. */
+.paper-book .paper-actions {
+  position: static;
+  margin-top: var(--space-xs);
+  padding-top: 0;
+  border-top: 0;
+}
+
+@container scheduling (min-width: 40rem) {
+  .paper-card:not(.paper-card--week) .paper-book {
+    margin-inline-start: calc(var(--paper-details-width) + var(--space-lg));
+  }
+}
+
+@container scheduling (min-width: 59rem) {
+  .paper-card--week .paper-book {
+    margin-inline-start: calc(var(--paper-details-width) + var(--space-lg));
+  }
+}

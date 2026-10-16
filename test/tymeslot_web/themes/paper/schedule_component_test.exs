@@ -94,6 +94,13 @@ defmodule TymeslotWeb.Themes.Paper.ScheduleComponentTest do
         assert Floki.find(doc, "[data-testid='paper-selection']") == []
       end
     end
+
+    test "names the timezone before the calendar and the times" do
+      doc = schedule([])
+
+      assert [first | _rest] = Floki.find(doc, ".paper-picker > *")
+      assert List.first(Floki.attribute(first, "class")) =~ "paper-timezone"
+    end
   end
 
   describe "the week view" do

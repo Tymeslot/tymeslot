@@ -1,50 +1,7 @@
-/* Questions step: Paper's part of it (the progress line and bar, the help
-   text, the input's place, the error). The answer controls, yes/no tiles
-   and option cards, are shared (shared/components/custom-questions.css)
-   and drawn with Paper's --option-* tokens. */
-
-.paper-question__progress {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2xs);
-  margin-bottom: var(--space-lg);
-}
-
-.paper-question__count {
-  margin: 0;
-  color: var(--ink-2);
-  font-size: var(--theme-font-size-xs);
-  font-weight: var(--font-weight-medium);
-  letter-spacing: var(--letter-spacing-wide);
-  text-transform: uppercase;
-}
-
-.paper-question__bar {
-  display: block;
-  width: 100%;
-  height: var(--paper-progress-height);
-  overflow: hidden;
-  border: 0;
-  border-radius: var(--radius-full);
-  background: var(--surface-medium);
-  appearance: none;
-  -webkit-appearance: none;
-}
-
-.paper-question__bar::-webkit-progress-bar {
-  border-radius: var(--radius-full);
-  background: var(--surface-medium);
-}
-
-.paper-question__bar::-webkit-progress-value {
-  border-radius: var(--radius-full);
-  background: var(--theme-primary);
-}
-
-.paper-question__bar::-moz-progress-bar {
-  border-radius: var(--radius-full);
-  background: var(--theme-primary);
-}
+/* The schedule screen's questions, all on show above the form: each one's
+   help line, input and error. The answer controls, yes/no tiles and option
+   cards, are shared (shared/components/custom-questions.css) and drawn with
+   Paper's --option-* tokens. */
 
 .paper-question__help {
   margin: 0 0 var(--space-md);

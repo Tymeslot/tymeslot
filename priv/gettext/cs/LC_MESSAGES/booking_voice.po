@@ -46,3 +46,9 @@ msgstr "Tento termín byl právě zarezervován. Vyberte jiný."
 msgctxt "quill"
 msgid "Arrange a meeting"
 msgstr "Domluvit schůzku"
+
+#: lib/tymeslot_web/themes/paper/scheduling/details.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Change time"
+msgstr "Změnit čas"
