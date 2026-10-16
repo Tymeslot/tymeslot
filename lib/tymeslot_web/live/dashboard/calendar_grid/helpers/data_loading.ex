@@ -162,7 +162,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
   @spec range_for_view(map()) :: {DateTime.t(), DateTime.t()}
   def range_for_view(%{user_timezone: tz} = assigns) do
     days = visible_days(assigns)
-    {local_midnight(List.first(days), tz), local_midnight(Date.add(List.last(days), 1), tz)}
+    EventWindow.utc_range(List.first(days), List.last(days), tz)
   end
 
   @doc "The UTC instant `date` begins in `tz`; see `EventWindow.local_midnight/2`."

@@ -7,6 +7,9 @@ defmodule Tymeslot.CalendarGrid.ColourTokens do
   each event, so it needs the token rather than the class. The token is the
   class without its `bg-` prefix, which keeps the palette defined once, in
   `Tymeslot.Integrations.Calendar.EventColour` and `base/variables.css`.
+
+  `"booking"` is the one exception: it is a sentinel the client resolves to
+  its own booking colour, not a `--color-*` token.
   """
 
   alias Tymeslot.CalendarGrid
