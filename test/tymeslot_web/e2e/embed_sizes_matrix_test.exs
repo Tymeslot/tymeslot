@@ -100,11 +100,16 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     end
   end
 
-  feature "schedule actions never overlap the calendar on wide-short viewports (both themes)",
+  feature "schedule actions never overlap the calendar on wide-short viewports (classic journeys)",
           %{session: session} do
     {profile, slug} = create_user_with_meeting_type()
 
-    for theme <- ThemeTestMatrix.all(), {width, height} <- @short_sizes, reduce: session do
+    # The schedule step with its own actions row and Next is the classic
+    # journey's shape; a theme with a journey of its own (Paper's second
+    # screen opens the details below the picker) has neither.
+    themes = Enum.filter(ThemeTestMatrix.all(), &(&1.journey == :classic))
+
+    for theme <- themes, {width, height} <- @short_sizes, reduce: session do
       acc ->
         context = "#{theme.name} schedule #{width}x#{height}"
 

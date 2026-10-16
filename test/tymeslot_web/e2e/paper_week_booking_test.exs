@@ -4,7 +4,9 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
   `week`) in a real browser, where the grid loads its week by itself: on a
   phone, where three days are in view and the rest scroll sideways, and
   framed in an inline embed in the column layout, where all seven days sit
-  side by side under the compact details. The embed is framed through the
+  side by side under the compact details. Picking a time opens the details
+  below the week on the same screen, and the embed's frame grows to show
+  their submit button. The embed is framed through the
   embed token (`?embed=1` with `parent-origin`) on a same-origin host page,
   with the host page's own origin as the parent origin so that the heights
   the frame posts reach it. Each journey ends in the database, at the day
@@ -76,7 +78,7 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
     assert truncated_slots(session) == 0
 
     {date, time} =
-      book(session, "paper-embed@example.com", &assert_posted_height_covers_next/1)
+      book(session, "paper-embed@example.com", &assert_posted_height_covers_submit/1)
 
     assert_booked_at("paper-embed@example.com", date, time)
   end
@@ -126,8 +128,9 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
     |> assert_has(css("[data-testid='paper-week'] [data-testid='week-grid']"))
   end
 
-  # Picks the first free time on screen, checks the actions bar names it,
-  # runs `after_pick` on the schedule step, and books it. Returns the day
+  # Picks the first free time on screen, checks the actions bar names it and
+  # the details open below with no Next, runs `after_pick` there, and books
+  # it. Returns the day
   # and the time the clicked slot carries, `{iso_date, time}`.
   defp book(session, email, after_pick \\ fn _session -> :ok end) do
     slot =
@@ -141,14 +144,23 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
     session =
       session
       |> assert_has(css("[data-testid='paper-selection'] .paper-selection__time"))
-      |> assert_has(css("[data-testid='next-step']:not([disabled])"))
+      |> assert_has(css("[data-testid='paper-book'] [data-testid='booking-form']"))
+
+    refute_has(session, css("[data-testid='next-step']"))
 
     after_pick.(session)
 
     session =
       session
-      |> click(css("[data-testid='next-step']"))
-      |> assert_has(css("[data-testid='booking-form']"))
+      |> click(css("[data-testid='paper-change-time']"))
+      |> execute_script(
+        "return document.activeElement !== null && document.activeElement.matches(\"[data-fact='slot'][aria-pressed='true']\")",
+        [],
+        fn focused -> assert focused, "Change time left the focus off the chosen time" end
+      )
+
+    session =
+      session
       |> fill_in(css("input[name='booking[name]']"), with: "Paper Booker")
       |> fill_in(css("input[name='booking[email]']"), with: email)
       |> execute_script("document.activeElement.blur()")
@@ -222,16 +234,17 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
     )
   end
 
-  # The height the frame last posted to the host page covers Next, so an
-  # embed sized by it shows the button. The host page's listener (installed
+  # The height the frame last posted to the host page covers the form's
+  # submit button, so an embed sized by it shows the button: the frame must
+  # grow when the details open. The host page's listener (installed
   # by `frame/3`) adds #paper-resize-ok while that holds, which
   # `assert_has/2` waits for.
-  defp assert_posted_height_covers_next(session) do
+  defp assert_posted_height_covers_submit(session) do
     bottom =
       script_value(
         session,
         """
-        const rect = document.querySelector("[data-testid='next-step']").getBoundingClientRect();
+        const rect = document.querySelector("[data-testid='submit-booking']").getBoundingClientRect();
         return Math.ceil(rect.bottom + window.scrollY);
         """,
         []
