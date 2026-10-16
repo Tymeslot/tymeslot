@@ -23,8 +23,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.ClientStrings
   alias TymeslotWeb.Dashboard.Calendar.DisplayPreferences
   alias TymeslotWeb.Dashboard.Calendar.Navigation
+  alias TymeslotWeb.Dashboard.Calendar.Rail
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Dashboard.Calendar.Toolbar
+  alias TymeslotWeb.Dashboard.Calendar.Visibility
 
   @menus %{"date" => :date, "display" => :display}
 
@@ -56,10 +58,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         week_start={Period.week_start(@preferences.week_start_day)}
         density={@preferences.density}
         fold_night={@preferences.fold_night}
+        rail_open={@rail_open}
+        hidden_count={@hidden_count}
         target={@myself}
       />
       <div class="flex min-h-0 flex-1">
-        <%!-- Rail --%>
+        <Rail.rail
+          :if={@rail_open}
+          accounts={@accounts}
+          mini_cursor={@mini_cursor}
+          view={@view}
+          days={@days}
+          today={@today}
+          week_start={Period.week_start(@preferences.week_start_day)}
+          locale={@locale}
+          target={@myself}
+        />
         <Canvas.canvas
           view={@view}
           date={@date}
@@ -108,4 +122,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   def handle_event("calendar:toggle_fold_night", _params, socket),
     do: {:noreply, DisplayPreferences.toggle_fold_night(socket)}
+
+  def handle_event("calendar:toggle_rail", _params, socket),
+    do: {:noreply, assign(socket, :rail_open, !socket.assigns.rail_open)}
+
+  def handle_event("calendar:toggle_account", %{"integration-id" => id}, socket),
+    do: {:noreply, Visibility.toggle_account(socket, id)}
+
+  def handle_event(
+        "calendar:toggle_calendar",
+        %{"integration-id" => id, "calendar-id" => calendar_id},
+        socket
+      ),
+      do: {:noreply, Visibility.toggle_calendar(socket, id, calendar_id)}
+
+  def handle_event("calendar:show_all", _params, socket),
+    do: {:noreply, Visibility.show_all(socket)}
 end

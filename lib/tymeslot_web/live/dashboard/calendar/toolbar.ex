@@ -29,6 +29,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
   attr :week_start, :atom, required: true
   attr :density, :string, required: true
   attr :fold_night, :boolean, required: true
+  attr :rail_open, :boolean, required: true
+  attr :hidden_count, :integer, required: true
   attr :target, :any, required: true
 
   @spec toolbar(map()) :: Phoenix.LiveView.Rendered.t()
@@ -40,7 +42,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
       aria-label={dgettext("dashboard_calendar", "Calendar controls")}
       class="flex h-11 shrink-0 items-center gap-2 border-b border-tymeslot-200 bg-white px-3"
     >
-      <%!-- Rail toggle --%>
+      <.icon_button
+        id="calendar-rail-toggle"
+        icon="hero-bars-3"
+        size={:sm}
+        label={dgettext("dashboard_calendar", "Show or hide the calendar list")}
+        aria-controls="calendar-rail"
+        aria-expanded={to_string(@rail_open)}
+        phx-click="calendar:toggle_rail"
+        phx-target={@target}
+        class="hidden md:inline-flex"
+      />
       <.action_button
         id="calendar-today"
         variant={:secondary}
@@ -101,7 +113,35 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
         </:panel>
       </.dropdown>
       <div class="flex-1"></div>
-      <%!-- Hidden calendars chip --%>
+      <%!-- Filters never hide silently: whenever the rail is not showing
+           (collapsed, or always on a phone), hidden calendars show here. --%>
+      <div
+        :if={@hidden_count > 0}
+        id="calendar-filter-chip"
+        class={[
+          "inline-flex items-center gap-1 rounded-token-full border border-amber-300 bg-amber-50 py-0.5 pl-3 pr-1 text-token-xs font-semibold text-amber-900",
+          @rail_open && "md:hidden"
+        ]}
+      >
+        <span>
+          {dngettext(
+            "dashboard_calendar",
+            "%{count} calendar hidden",
+            "%{count} calendars hidden",
+            @hidden_count
+          )}
+        </span>
+        <button
+          type="button"
+          id="calendar-show-all"
+          phx-click="calendar:show_all"
+          phx-target={@target}
+          aria-label={dgettext("dashboard_calendar", "Show all calendars")}
+          class="inline-flex h-6 w-6 items-center justify-center rounded-token-full hover:bg-amber-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-500"
+        >
+          <.icon name="hero-x-mark-mini" class="h-4 w-4" />
+        </button>
+      </div>
       <div
         role="group"
         aria-label={dgettext("dashboard_calendar", "View")}
