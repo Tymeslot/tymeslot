@@ -36,6 +36,7 @@ defmodule TymeslotWeb.DashboardLive do
   alias Tymeslot.Profiles
   alias TymeslotWeb.Components.DashboardLayout
   alias TymeslotWeb.Components.TourOverlay
+  alias TymeslotWeb.Dashboard.AgendaRefresh
   alias TymeslotWeb.Dashboard.AutomationSettingsComponent
   alias TymeslotWeb.Dashboard.CalendarEventHandlers
   alias TymeslotWeb.Dashboard.CalendarGridComponent
@@ -51,13 +52,6 @@ defmodule TymeslotWeb.DashboardLive do
   alias TymeslotWeb.Helpers.PageTitles
 
   require Logger
-
-  # Cadence for the overview agenda's live refresh. Unlike the calendar
-  # grid's query-free `:tick` (which only re-sends `current_time`), this
-  # re-runs `Agenda.day_agenda/2` from the database every 60s to advance
-  # the now-line, drop entries that have ended, and pick up bookings or
-  # calendar events created since the last load.
-  @agenda_tick_ms 60_000
 
   # The standalone calendar/video/payments pages now live as tabs inside the
   # unified integrations hub. Their routes stay defined (deep links, emails and
@@ -169,7 +163,7 @@ defmodule TymeslotWeb.DashboardLive do
         else: socket
 
     socket = if connected?(socket), do: load_dashboard_data(socket), else: socket
-    reschedule_agenda_tick(socket, action)
+    AgendaRefresh.reschedule(socket)
   end
 
   # Which calendar surface the organiser chose, read once per process (the
@@ -201,24 +195,6 @@ defmodule TymeslotWeb.DashboardLive do
   end
 
   defp switch_calendar_surface(socket, false), do: assign(socket, :calendar_redesign, false)
-
-  # Keeps a single agenda-refresh timer alive only while a section that shows
-  # the agenda (overview, calendar's Up-next strip) is open. Cancels any prior
-  # timer first so repeated visits never stack ticks.
-  defp reschedule_agenda_tick(socket, action) when action in [:overview, :calendar] do
-    if ref = socket.assigns[:agenda_tick_ref], do: Process.cancel_timer(ref)
-
-    if connected?(socket) do
-      assign(socket, :agenda_tick_ref, Process.send_after(self(), :agenda_tick, @agenda_tick_ms))
-    else
-      assign(socket, :agenda_tick_ref, nil)
-    end
-  end
-
-  defp reschedule_agenda_tick(socket, _action) do
-    if ref = socket.assigns[:agenda_tick_ref], do: Process.cancel_timer(ref)
-    assign(socket, :agenda_tick_ref, nil)
-  end
 
   @impl Phoenix.LiveView
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
@@ -264,7 +240,10 @@ defmodule TymeslotWeb.DashboardLive do
       <div class={if @live_action == :calendar, do: "flex-1 flex flex-col min-h-0", else: ""}>
         <%= if @live_action == :calendar do %>
           <div
-            :if={OnboardingChecklist.visible?(@current_user, @integration_status)}
+            :if={
+              @calendar_redesign != true and
+                OnboardingChecklist.visible?(@current_user, @integration_status)
+            }
             class="shrink-0 px-3 pt-2 md:px-4"
           >
             <OnboardingChecklist.onboarding_checklist
@@ -476,7 +455,7 @@ defmodule TymeslotWeb.DashboardLive do
     do: CalendarEventHandlers.handle_tick(socket)
 
   def handle_info(:agenda_tick, socket) do
-    {:noreply, socket |> reschedule_agenda_tick(socket.assigns.live_action) |> refresh_agenda()}
+    {:noreply, socket |> AgendaRefresh.reschedule() |> refresh_agenda()}
   end
 
   def handle_info({:calendar_events_updated, _user_id, _changed_uids}, socket),
@@ -568,7 +547,11 @@ defmodule TymeslotWeb.DashboardLive do
            redesign_enabled: enabled
          }) do
       {:ok, _preferences} ->
-        {:noreply, switch_calendar_surface(socket, enabled)}
+        {:noreply,
+         socket
+         |> switch_calendar_surface(enabled)
+         |> load_dashboard_data()
+         |> AgendaRefresh.reschedule()}
 
       {:error, _changeset} ->
         {:noreply,
@@ -611,6 +594,11 @@ defmodule TymeslotWeb.DashboardLive do
   end
 
   @spec load_dashboard_data(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  defp load_dashboard_data(
+         %{assigns: %{live_action: :calendar, calendar_redesign: true}} = socket
+       ),
+       do: socket
+
   defp load_dashboard_data(socket) do
     user = socket.assigns[:current_user]
     action = socket.assigns[:live_action]
@@ -626,11 +614,9 @@ defmodule TymeslotWeb.DashboardLive do
 
   # Rebuilds only the agenda on a tick; a stale timer that fires after the
   # user has navigated elsewhere is a no-op.
-  defp refresh_agenda(%{assigns: %{live_action: action}} = socket)
-       when action in [:overview, :calendar],
-       do: load_dashboard_data(socket)
-
-  defp refresh_agenda(socket), do: socket
+  defp refresh_agenda(socket) do
+    if AgendaRefresh.shown?(socket.assigns), do: load_dashboard_data(socket), else: socket
+  end
 
   # The Up-next strip and the overview agenda run their own query rather than
   # reading the grid's events, so a mutation the grid applies to itself leaves

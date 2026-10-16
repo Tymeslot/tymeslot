@@ -99,13 +99,15 @@ defmodule TymeslotWeb.Components.DashboardLayout do
     <div
       id="dashboard-top-nav"
       data-compact={to_string(@compact)}
-      class={["w-full px-2 sm:px-4", if(@compact, do: "py-1", else: "py-4 sm:py-6")]}
+      class={["w-full px-2 sm:px-4", if(@compact, do: "py-0.5", else: "py-4 sm:py-6")]}
     >
-      <nav class="brand-nav relative" style="z-index: 50;">
+      <%!-- Compact: one 44px row (the touch-target height of its controls)
+           with no padding around it, about 52px in all. --%>
+      <nav class={["brand-nav relative", @compact && "brand-nav-compact"]} style="z-index: 50;">
         <div class="w-full px-1 sm:px-4">
           <div class={[
             "flex items-center justify-between gap-2",
-            if(@compact, do: "h-12", else: "h-16")
+            if(@compact, do: "h-11", else: "h-16")
           ]}>
             <%!-- Left side: Logo and Mobile Menu Button --%>
             <div class="flex items-center space-x-2 sm:space-x-4 sm:-ml-4 flex-1 min-w-0">
@@ -114,7 +116,11 @@ defmodule TymeslotWeb.Components.DashboardLayout do
                 <button
                   id="dashboard-sidebar-toggle"
                   type="button"
-                  class="lg:hidden dashboard-mobile-menu-toggle flex items-center justify-center w-12 h-12 rounded-token-xl bg-tymeslot-50 border-2 border-tymeslot-100 hover:bg-turquoise-50 hover:border-turquoise-100 transition-all shrink-0"
+                  class={[
+                    "lg:hidden dashboard-mobile-menu-toggle flex items-center justify-center",
+                    if(@compact, do: "w-11 h-11", else: "w-12 h-12"),
+                    "rounded-token-xl bg-tymeslot-50 border-2 border-tymeslot-100 hover:bg-turquoise-50 hover:border-turquoise-100 transition-all shrink-0"
+                  ]}
                   phx-click={
                     JS.toggle_class("dashboard-sidebar-open", to: "#dashboard-sidebar")
                     |> JS.toggle_class("hidden", to: "#dashboard-sidebar-overlay")
