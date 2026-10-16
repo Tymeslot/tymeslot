@@ -97,7 +97,7 @@ describe("renderGrid", () => {
     });
     expect(grid.querySelector('[data-event-id="event-1"]').classList.contains("is-free")).toBe(true);
     expect(grid.querySelector('[data-event-id="booking-1"]').classList.contains("is-booking")).toBe(true);
-    expect(grid.querySelector('[data-event-id="booking-1"]').getAttribute("style")).toContain("--cal-ev:var(--cal-booking)");
+    expect(grid.querySelector('[data-event-id="booking-1"]').getAttribute("style")).toContain("--cal-ev:var(--color-booking)");
     expect(grid.querySelector('[data-event-id="event-2"] .cal-ev-dot')).not.toBeNull();
   });
 
@@ -205,6 +205,36 @@ describe("renderGrid", () => {
     const chip = draw({ events: five }).querySelector(".cal-more");
     expect(chip.dataset.more.split(",")).toHaveLength(5);
     expect(chip.getAttribute("aria-label")).toContain("Also here: ");
+  });
+
+  test("the folded night still labels 07:00, where the hours start", () => {
+    const hours = [...draw().querySelectorAll(".cal-hour")].map((el) => el.textContent);
+    expect(hours[0]).toBe("07:00");
+  });
+
+  test("a narrow event's hover lift stays under the column's chip and above its events", () => {
+    const five = ["a", "b", "c", "d", "e"].map((id) => timed(`event-${id}`, `Meeting ${id}`, "2026-10-14T13:00", "2026-10-14T14:00"));
+    const grid = draw({ events: five, width: 1400 });
+    const col = grid.querySelector('.cal-col[data-day="2026-10-14"]');
+    const lift = Number(col.getAttribute("style").match(/--cal-lift:(\d+)/)[1]);
+    const z = (el) => Number(el.getAttribute("style").match(/--z:(\d+)/)[1]);
+    const shown = [...col.querySelectorAll(".cal-ev")];
+    expect(shown.length).toBeGreaterThan(0);
+    expect(lift).toBeLessThan(z(col.querySelector(".cal-more")));
+    expect(shown.filter((el) => z(el) >= lift)).toEqual([]);
+  });
+
+  test("a title needing two lines in an hour keeps both and drops the time rather than being cut", () => {
+    const title = "Quarterly planning with the whole team";
+    const block = draw({ events: [timed("event-1", title, "2026-10-12T14:00", "2026-10-12T15:00")] }).querySelector('[data-event-id="event-1"]');
+    expect(block.getAttribute("style")).toContain("--cal-lines:2");
+    expect(block.querySelector(".cal-ev-time")).toBeNull();
+  });
+
+  test("a one-line title in an hour keeps its time line", () => {
+    const block = draw({ events: [timed("event-1", "Retro", "2026-10-12T14:00", "2026-10-12T15:00")] }).querySelector('[data-event-id="event-1"]');
+    expect(block.querySelector(".cal-ev-time").textContent).toBe("14:00–15:00");
+    expect(block.getAttribute("style")).toContain("--cal-lines:1");
   });
 
   test("compact density uses 38px hours", () => {

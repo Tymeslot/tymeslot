@@ -293,8 +293,11 @@
   cursor: pointer;
 }
 
+/* render.js clamps the title to the lines that fit (--cal-lines), so neither
+   line shrinks to a sliver that cuts through its glyphs. */
 .cal-ev-title {
   display: -webkit-box;
+  flex-shrink: 0;
   overflow: hidden;
   font-weight: 600;
   overflow-wrap: break-word;
@@ -304,13 +307,15 @@
 }
 
 .cal-ev-time {
+  flex-shrink: 0;
   font-size: var(--font-size-2xs);
   font-variant-numeric: tabular-nums;
 }
 
+/* One row: the title gives way (ellipsis) so the start time stays beside it
+   rather than wrapping below the block's bottom edge. */
 .cal-ev.is-short {
-  flex-flow: row wrap;
-  align-content: flex-start;
+  flex-flow: row nowrap;
   align-items: baseline;
   column-gap: 5px;
   padding-block: 1px;
@@ -318,19 +323,28 @@
 
 .cal-ev.is-short .cal-ev-title {
   display: block;
+  flex-shrink: 1;
+  min-width: 0;
   max-width: 100%;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Too short for a full line: the line box is the block's own height. */
+.cal-ev.is-tiny {
+  padding-block: 0;
+  line-height: var(--cal-lh);
 }
 
 .cal-ev.is-narrow {
   padding-inline: 3px;
 }
 
-.cal-ev.is-narrow:hover,
-.cal-ev.is-narrow:focus-visible {
+/* Hover only, and under the column's "+N" chip (--cal-lift, see render.js):
+   a focused block keeps its size, so it never covers its neighbours. */
+.cal-ev.is-narrow:hover {
   left: 1px;
-  z-index: 20;
+  z-index: var(--cal-lift);
   width: calc(var(--cal-col) - 6px);
   box-shadow: var(--shadow-md);
 }
@@ -421,8 +435,13 @@
   background: var(--cal-warn);
 }
 
+.cal-ev:focus-visible {
+  z-index: var(--cal-lift);
+  outline: 2px solid var(--cal-focus);
+  outline-offset: 1px;
+}
+
 .cal-dayhead:focus-visible,
-.cal-ev:focus-visible,
 .cal-more:focus-visible,
 .cal-adbar:focus-visible,
 .cal-admore:focus-visible,

@@ -8,7 +8,7 @@
  * server renders into `data-strings`; nothing here is hard-coded English.
  */
 import { layoutAllDay } from "./allday.js";
-import { countLines, layoutColumn } from "./layout.js";
+import { LINE_HEIGHT, countLines, layoutColumn } from "./layout.js";
 import {
   HOUR_HEIGHT,
   MINUTES_PER_DAY,
@@ -27,6 +27,9 @@ export const AXIS_WIDTH = 56;
 const ALL_DAY_ROW = 22;
 const ALL_DAY_LANES = 3;
 const TOKEN = /^[a-z0-9-]+$/;
+// An event block's border and vertical padding, and the time line under a title.
+const EVENT_CHROME = 8;
+const TIME_LINE = 16;
 const ENTITIES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
 
 export function escapeHtml(value) {
@@ -38,7 +41,6 @@ export function interpolate(template, vars) {
 }
 
 function colour(token) {
-  if (token === "booking") return "var(--cal-booking)";
   return TOKEN.test(token || "") ? `var(--color-${token})` : "var(--color-calendar-fallback)";
 }
 
@@ -135,7 +137,7 @@ function axis({ scale, fold, settings, strings, nowShown, nowMinute }) {
     html += `<button type="button" class="cal-night is-open" data-night-toggle aria-expanded="true" aria-label="${escapeHtml(label)}"></button>`;
   }
 
-  for (let hour = fold ? 8 : 1; hour < 24; hour += 1) {
+  for (let hour = fold ? 7 : 1; hour < 24; hour += 1) {
     if (nowShown && Math.abs(hour * 60 - nowMinute) <= 15) continue;
     html += `<span class="cal-hour" aria-hidden="true" style="top:${scale.yOf(hour * 60)}px">${escapeHtml(formatHour(hour, tf))}</span>`;
   }
@@ -153,7 +155,7 @@ function shortHour(hour, timeFormat) {
 function column(iso, events, ctx) {
   const { scale, fold, colWidth, measureWidth, settings, strings, byId, nowDay, nowMinute, nowShown } = ctx;
   const weekday = isoWeekday(dayNumber(iso));
-  let html = `<div class="cal-col${weekday > 5 ? " is-weekend" : ""}" data-day="${iso}" style="--cal-col:${colWidth}px">`;
+  let html = "";
 
   for (const [from, to] of offHours(settings.working_hours ? (settings.working_hours[weekday] ?? null) : undefined, scale.firstMinute)) {
     html += `<div class="cal-off" style="top:${scale.yOf(from)}px;height:${scale.yOf(to) - scale.yOf(from)}px"></div>`;
@@ -182,10 +184,13 @@ function column(iso, events, ctx) {
     measureLines: (text, w) => countLines(text, w, measureWidth),
   });
 
+  // Layout stacking doubled, so one odd level between the events and the chip
+  // above them is free for a narrow event widened on hover (--cal-lift).
+  const lift = 2 * Math.max(0, ...laid.map((item) => (item.chip ? item.z : item.z + 1))) - 1;
   for (const item of laid) html += item.chip ? chip(item, byId, strings) : eventBlock(item, byId.get(item.id), ctx);
   if (nowShown && iso === nowDay) html += `<div class="cal-now" style="top:${scale.yOf(nowMinute)}px" aria-hidden="true"></div>`;
 
-  return `${html}</div>`;
+  return `<div class="cal-col${weekday > 5 ? " is-weekend" : ""}" data-day="${iso}" style="--cal-col:${colWidth}px;--cal-lift:${lift}">${html}</div>`;
 }
 
 function offHours(hours, first) {
@@ -198,22 +203,40 @@ function offHours(hours, first) {
   return out;
 }
 
-function eventBlock(item, event, { strings, settings, now }) {
+// How many title lines fit, and whether the time line still does. A title
+// that wants more lines than fit above the time line keeps them and drops the
+// time, which the block's position on the axis already tells; nothing is ever
+// drawn taller than the block, so no line is cut through.
+function textFit(item, title, wantsTime, measureWidth) {
+  const inner = item.height - EVENT_CHROME;
+  const cap = item.lineClamp ?? 4;
+  const wanted = Math.min(cap, countLines(title, Math.max(1, item.width - 15), measureWidth));
+  const withTime = Math.max(1, Math.floor((inner - TIME_LINE - (item.timeGap || 0)) / LINE_HEIGHT));
+  const without = Math.max(1, Math.floor(inner / LINE_HEIGHT));
+  if (!wantsTime) return { lines: Math.min(cap, without), time: false };
+  if (wanted <= withTime || without <= withTime) return { lines: Math.min(cap, withTime), time: true };
+  return { lines: Math.min(wanted, without), time: false };
+}
+
+function eventBlock(item, event, { strings, settings, now, measureWidth }) {
   const tf = settings.time_format;
   const short = item.height < 38;
   const past = event.endMin <= now;
   const start = formatMinutes(event.startMin % MINUTES_PER_DAY, tf);
   const range = `${start}–${formatMinutes(event.endMin % MINUTES_PER_DAY, tf)}`;
-  const time = item.hideTime ? "" : short || item.width < 110 ? start : range;
-  const classes = ["cal-ev", short && "is-short", item.width < 92 && "is-narrow", past && "is-past", event.free && "is-free", event.kind === "booking" && "is-booking", event.attention && "is-attention"]
+  const fit = short ? null : textFit(item, event.title, !item.hideTime, measureWidth);
+  const time = item.hideTime || (fit && !fit.time) ? "" : short || item.width < 110 ? start : range;
+  const tiny = short && item.height < LINE_HEIGHT + 4;
+  const classes = ["cal-ev", short && "is-short", tiny && "is-tiny", item.width < 92 && "is-narrow", past && "is-past", event.free && "is-free", event.kind === "booking" && "is-booking", event.attention && "is-attention"]
     .filter(Boolean)
     .join(" ");
   const label = [event.title, dateLabel(isoFromDay(event.startDay), strings), range, event.free && strings.shown_as_free, past && strings.ended, event.attention && strings.waiting_to_sync]
     .filter(Boolean)
     .join(", ");
   const style =
-    `top:${item.top}px;height:${item.height}px;--l:${item.left + 1}px;--w:${Math.max(item.width - 3, 12)}px;--z:${item.z};--cal-ev:${colour(event.colour)}` +
-    (item.lineClamp ? `;--cal-lines:${item.lineClamp}` : "");
+    `top:${item.top}px;height:${item.height}px;--l:${item.left + 1}px;--w:${Math.max(item.width - 3, 12)}px;--z:${2 * item.z};--cal-ev:${colour(event.colour)}` +
+    (fit ? `;--cal-lines:${fit.lines}` : "") +
+    (tiny ? `;--cal-lh:${Math.max(8, Math.floor(item.height - 2))}px` : "");
   const timeHtml = time ? `<span class="cal-ev-time"${item.timeGap ? ` style="margin-top:${Math.round(item.timeGap)}px"` : ""}>${escapeHtml(time)}</span>` : "";
 
   return (
@@ -229,7 +252,7 @@ function chip(item, byId, strings) {
   const label = interpolate(strings.also_here, { titles }) + (item.warn ? `, ${strings.waiting_to_sync}` : "");
   return (
     `<button type="button" class="cal-more${item.warn ? " is-warn" : ""}" data-more="${escapeHtml(item.ids.join(","))}" data-hidden="${escapeHtml(item.hidden.join(","))}" ` +
-    `aria-label="${escapeHtml(label)}" style="top:${item.top}px;height:${item.height}px;--l:${item.left + 1}px;--w:${item.width - 2}px;--z:${item.z}">` +
+    `aria-label="${escapeHtml(label)}" style="top:${item.top}px;height:${item.height}px;--l:${item.left + 1}px;--w:${item.width - 2}px;--z:${2 * item.z}">` +
     `+${item.hidden.length}<small>${escapeHtml(strings.more)}</small>` +
     (item.warn ? `<span class="cal-more-dot" aria-hidden="true"></span>` : "") +
     `</button>`
