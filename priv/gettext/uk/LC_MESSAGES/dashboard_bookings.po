@@ -724,3 +724,13 @@ msgstr "Залишив(-ла) цей слот"
 #, elixir-autogen, elixir-format
 msgid "Cancel meeting"
 msgstr "Скасувати зустріч"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed"
+msgstr "Реєстрацію закрито"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Move a fixed date from its meeting type."
+msgstr "Фіксовану дату переносять у її типі зустрічі."

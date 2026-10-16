@@ -8,11 +8,11 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   import Tymeslot.ChangesetValidators.BookingLimits, only: [validate_booking_limits: 2]
 
   alias Tymeslot.CustomFields.FieldDefinition
+  alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.GroupLocationRule
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.MeetingTypeAttachment
   alias Tymeslot.MeetingTypes.ReminderValidation
-  alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Validation.Constraints
 
   @type t :: %__MODULE__{
@@ -33,6 +33,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           payment_required: boolean(),
           price_cents: integer() | nil,
           max_participants: integer(),
+          fixed_dates: boolean(),
           show_seat_availability: boolean(),
           last_spots_threshold: pos_integer() | nil,
           requires_approval: boolean(),
@@ -70,6 +71,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     field(:payment_required, :boolean, default: false)
     field(:price_cents, :integer)
     field(:max_participants, :integer, default: 1)
+    # See `Tymeslot.MeetingTypes.FixedDates`.
+    field(:fixed_dates, :boolean, default: false)
     field(:show_seat_availability, :boolean, default: true)
     field(:last_spots_threshold, :integer)
 
@@ -176,6 +179,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :payment_required,
       :price_cents,
       :max_participants,
+      :fixed_dates,
       :show_seat_availability,
       :last_spots_threshold,
       :requires_approval,
@@ -205,9 +209,10 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> validate_slug()
     |> validate_video_integration()
     |> validate_calendar_destination()
-    |> validate_reminder_config()
+    |> ReminderValidation.validate_changeset()
     |> validate_payment_fields(opts)
     |> validate_group_rules()
+    |> FixedDates.validate_changeset()
     |> unique_constraint([:user_id, :name],
       error_key: :name,
       message: dgettext_noop("errors", "You already have a meeting type with this name")
@@ -426,61 +431,6 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
         changeset
     end
   end
-
-  defp validate_reminder_config(changeset) do
-    case get_change(changeset, :reminder_config) do
-      nil ->
-        changeset
-
-      reminders when is_list(reminders) ->
-        validate_reminder_list(changeset, reminders)
-
-      _other ->
-        add_error(changeset, :reminder_config, "must be a list of reminder settings")
-    end
-  end
-
-  # The count is checked before the entries, so an oversized list reports that
-  # rather than whichever of its entries happens to be malformed.
-  defp validate_reminder_list(changeset, reminders) do
-    normalized = Enum.map(reminders, &ReminderUtils.normalize_reminder/1)
-
-    result =
-      cond do
-        length(reminders) > ReminderValidation.max_reminders() ->
-          {:error, :too_many}
-
-        Enum.any?(normalized, &match?({:error, _reason}, &1)) ->
-          {:error, :invalid}
-
-        true ->
-          normalized
-          |> Enum.map(fn {:ok, reminder} -> reminder end)
-          |> ReminderValidation.check_policy(
-            ReminderUtils.normalize_reminders(changeset.data.reminder_config)
-          )
-      end
-
-    case result do
-      :ok -> changeset
-      {:error, reason} -> add_reminder_error(changeset, reason)
-    end
-  end
-
-  defp add_reminder_error(changeset, :too_many),
-    do:
-      add_error(changeset, :reminder_config, "cannot have more than %{count} reminders",
-        count: ReminderValidation.max_reminders()
-      )
-
-  defp add_reminder_error(changeset, :invalid),
-    do: add_error(changeset, :reminder_config, "contains invalid reminder settings")
-
-  defp add_reminder_error(changeset, :duplicate),
-    do: add_error(changeset, :reminder_config, "contains duplicate reminders")
-
-  defp add_reminder_error(changeset, :exceeds_max),
-    do: add_error(changeset, :reminder_config, "cannot be set for more than 1 year in advance")
 
   defp validate_payment_fields(changeset, opts) do
     if get_field(changeset, :payment_required) do

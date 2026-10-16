@@ -87,6 +87,34 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   end
 
   @doc """
+  The live sessions a host planned on a fixed-date meeting type
+  (`Tymeslot.Meetings.PlannedSessions`), in start order. With `from`, only
+  those starting at or after it.
+  """
+  @spec list_planned_for_type(integer(), DateTime.t() | nil) :: [Meeting.t()]
+  def list_planned_for_type(meeting_type_id, from \\ nil) when is_integer(meeting_type_id) do
+    Meeting
+    |> MeetingState.where_slot_live()
+    |> where([m], m.planned and m.meeting_type_id == ^meeting_type_id)
+    |> then(fn query -> if from, do: where(query, [m], m.start_time >= ^from), else: query end)
+    |> order_by([m], asc: m.start_time)
+    |> Repo.all()
+  end
+
+  @doc """
+  Sets when registration for a planned session closes (`nil`: at its
+  start). A plain change rather than `MeetingSchema.changeset/2`, which
+  asks for the attendee fields a group meeting does not carry.
+  """
+  @spec set_registration_closes_at(Meeting.t(), DateTime.t() | nil) ::
+          {:ok, Meeting.t()} | {:error, Changeset.t()}
+  def set_registration_closes_at(%Meeting{planned: true} = session, closes_at) do
+    session
+    |> Changeset.change(registration_closes_at: closes_at)
+    |> Repo.update()
+  end
+
+  @doc """
   Sets `capacity` on a meeting type's future, live group meetings
   (`capacity > 1`, start time after `now`), returning how many were updated.
 
@@ -145,7 +173,9 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   A group meeting has live seats while its slot is live
   (`MeetingState.where_slot_live/1`) and at least one participant has not
   cancelled. Its time then belongs to the bookers, so the organiser's
-  provider event must not be moved, deleted or re-attended from the grid.
+  provider event must not be moved, deleted or re-attended from the grid. A
+  session the host planned (`Tymeslot.Meetings.PlannedSessions`) counts from
+  the start, before anyone has booked it: people are being offered its time.
 
   Keyed by `calendar_uid` rather than id because the consumer is the
   calendar grid, which knows provider events, and a Tymeslot booking's
@@ -189,12 +219,13 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
     |> where([meeting: m], m.organizer_user_id == ^user_id and m.capacity > 1)
     |> where(
       [meeting: m],
-      exists(
-        from(p in Participant,
-          where: p.meeting_id == parent_as(:meeting).id and is_nil(p.cancelled_at),
-          select: 1
+      m.planned or
+        exists(
+          from(p in Participant,
+            where: p.meeting_id == parent_as(:meeting).id and is_nil(p.cancelled_at),
+            select: 1
+          )
         )
-      )
     )
   end
 

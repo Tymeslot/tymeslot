@@ -8,7 +8,9 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.ServiceSettings.ComponentView
@@ -19,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     {:ok,
      socket
      |> assign(:meeting_types, [])
+     |> assign(:next_dates, %{})
      |> assign(:show_add_form, false)
      |> assign(:editing_type, nil)
      |> assign(:show_edit_overlay, false)
@@ -65,6 +68,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     socket =
       socket
       |> assign(:meeting_types, data.meeting_types)
+      |> assign(:next_dates, next_dates(data.meeting_types))
       |> refresh_editing_type(data.meeting_types)
       |> assign(:video_integrations, data.video_integrations)
       |> assign(:venues, data.venues)
@@ -72,6 +76,15 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
       |> assign(:payment_currency, host_currency(data.meeting_types, user_id))
 
     {:ok, socket}
+  end
+
+  # For each fixed-date type, the start of its next session open for
+  # registration, or nil: the card says when that is, or that the type is
+  # off the booking page for want of one.
+  defp next_dates(meeting_types) do
+    for type <- meeting_types, FixedDates.enabled?(type), into: %{} do
+      {type.id, with(%{start_time: start} <- PlannedSessions.next_open(type), do: start)}
+    end
   end
 
   # The open editor is handed `editing_type` on every render, and it saves

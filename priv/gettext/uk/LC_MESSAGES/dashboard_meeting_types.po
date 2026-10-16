@@ -338,3 +338,18 @@ msgstr "Видалити тип зустрічі"
 #, elixir-autogen, elixir-format
 msgid "Edit %{name}"
 msgstr "Редагувати %{name}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Next date: %{date}"
+msgstr "Наступна дата: %{date}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "No open dates"
+msgstr "Немає відкритих дат"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Not on your booking page until one of its dates is open for registration. Plan a date, or move a registration close."
+msgstr "Не з’явиться на сторінці бронювання, доки жодна з дат не буде відкрита для реєстрації. Заплануйте дату або перенесіть закриття реєстрації."

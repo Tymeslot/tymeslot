@@ -65,12 +65,20 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
         |> Map.merge(seat_display(params))
         |> maybe_put_custom_fields(params)
         |> maybe_put_locations(params)
+        |> maybe_put_fixed_dates(params)
         |> Map.merge(payment)
         |> unpaid_when_group()
 
       {:ok, attrs}
     end
   end
+
+  # Only a form that renders the fixed-dates toggle posts it, so an absent key
+  # leaves the stored setting alone rather than turning it off.
+  defp maybe_put_fixed_dates(attrs, %{"fixed_dates" => value}),
+    do: Map.put(attrs, :fixed_dates, value == "true")
+
+  defp maybe_put_fixed_dates(attrs, _params), do: attrs
 
   # The booking page's spots display. Only keys the form posted are set, so a
   # caller that does not render these controls cannot reset them by omission.
