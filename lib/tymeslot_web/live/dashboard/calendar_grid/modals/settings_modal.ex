@@ -155,6 +155,30 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
             size={:small}
           />
         </div>
+
+        <%!-- The redesigned calendar, opt-in until it replaces this one.
+             The event goes to DashboardLive, which swaps the component. --%>
+        <div class="flex items-center justify-between gap-4 border-t border-tymeslot-100 pt-4">
+          <div>
+            <p class="text-token-sm font-medium text-tymeslot-700">
+              {dgettext("dashboard_calendar", "New calendar")}
+            </p>
+            <p class="text-token-xs text-tymeslot-500">
+              {dgettext(
+                "dashboard_calendar",
+                "A faster calendar with previews and a clearer week. You can come back here at any time."
+              )}
+            </p>
+          </div>
+          <.action_button
+            id="calendar-try-new"
+            variant={:secondary}
+            size={:sm}
+            phx-click={JS.push("calendar:switch_surface", value: %{enabled: true})}
+          >
+            {dgettext("dashboard_calendar", "Try the new calendar")}
+          </.action_button>
+        </div>
       </div>
     </.modal>
     """

@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Phoenix.LiveView.JS
   alias Tymeslot.CalendarGrid.Period
   alias TymeslotWeb.Dashboard.Calendar.MiniMonth
   alias TymeslotWeb.Dashboard.Calendar.Navigation
@@ -121,7 +122,37 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
           {label}
         </button>
       </div>
-      <%!-- Display options --%>
+      <.dropdown
+        id="calendar-display-options"
+        open={@open_menu == :display}
+        on_toggle="calendar:toggle_menu"
+        on_close="calendar:close_menu"
+        target={@target}
+        trigger_attrs={[{"phx-value-menu", "display"}]}
+        role="dialog"
+        panel_label={dgettext("dashboard_calendar", "Display options")}
+        aria-label={dgettext("dashboard_calendar", "Display options")}
+        trigger_class="icon-button icon-button--neutral icon-button--sm"
+        class="mt-1 w-72 space-y-4 rounded-token-xl bg-white p-4 shadow-lg ring-1 ring-tymeslot-200"
+      >
+        <:trigger>
+          <.icon name="hero-adjustments-horizontal" class="h-4 w-4" />
+        </:trigger>
+        <:panel>
+          <%!-- Display controls --%>
+          <div class="border-t border-tymeslot-100 pt-3">
+            <%!-- No phx-target: DashboardLive swaps the component. --%>
+            <.action_button
+              id="calendar-back-to-old"
+              variant={:ghost}
+              size={:sm}
+              phx-click={JS.push("calendar:switch_surface", value: %{enabled: false})}
+            >
+              {dgettext("dashboard_calendar", "Back to the old calendar")}
+            </.action_button>
+          </div>
+        </:panel>
+      </.dropdown>
     </div>
     """
   end

@@ -187,6 +187,20 @@ defmodule TymeslotWeb.DashboardLive do
 
   defp assign_calendar_redesign(socket), do: socket
 
+  # Swapping to the new surface unmounts the old grid while this process lives
+  # on, exactly as leaving the calendar does, so any writes it still has
+  # queued go to its guardian the same way (see `handle_dashboard_params/2`).
+  defp switch_calendar_surface(socket, true) do
+    WriteGuardian.detach()
+
+    assign(socket,
+      calendar_redesign: true,
+      calendar_left: Map.get(socket.assigns, :calendar_left, 0) + 1
+    )
+  end
+
+  defp switch_calendar_surface(socket, false), do: assign(socket, :calendar_redesign, false)
+
   # Keeps a single agenda-refresh timer alive only while a section that shows
   # the agenda (overview, calendar's Up-next strip) is open. Cancels any prior
   # timer first so repeated visits never stack ticks.
@@ -541,6 +555,26 @@ defmodule TymeslotWeb.DashboardLive do
     case Onboarding.dismiss_dashboard_setup(socket.assigns.current_user) do
       {:ok, user} -> {:noreply, assign(socket, :current_user, user)}
       {:error, _changeset} -> {:noreply, socket}
+    end
+  end
+
+  # Both calendar surfaces offer the switch; it lands here because the
+  # component that rendered the control is the one being replaced.
+  def handle_event("calendar:switch_surface", %{"enabled" => enabled}, socket)
+      when is_boolean(enabled) do
+    case CalendarGrid.save_preferences(socket.assigns.current_user.id, %{
+           redesign_enabled: enabled
+         }) do
+      {:ok, _preferences} ->
+        {:noreply, switch_calendar_surface(socket, enabled)}
+
+      {:error, _changeset} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_calendar", "Couldn't switch calendars. Please try again.")
+         )}
     end
   end
 
