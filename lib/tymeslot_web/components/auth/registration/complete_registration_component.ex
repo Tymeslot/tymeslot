@@ -59,7 +59,6 @@ defmodule TymeslotWeb.Registration.CompleteRegistrationComponent do
       type="text"
       label={dgettext("auth", "Display Name")}
       placeholder={dgettext("auth", "e.g. John Doe")}
-      required
       autofocus
       icon="hero-user"
     />

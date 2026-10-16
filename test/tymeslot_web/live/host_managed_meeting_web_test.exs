@@ -11,7 +11,7 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
   import Mox
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
-  import Tymeslot.ThemeBookingFlowHelpers, only: [seed_booking_account: 3]
+  import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
 
   alias Ecto.Changeset
   alias Tymeslot.EmailServiceMock

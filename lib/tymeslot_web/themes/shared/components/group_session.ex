@@ -15,8 +15,9 @@ defmodule TymeslotWeb.Themes.Shared.Components.GroupSession do
 
   Each renders nothing for a meeting type that is not a group type (or no
   time to move from), so one-to-one pages keep their markup untouched. The
-  markup is theme-neutral, styled by each theme's own `group-session.css`,
-  as `ApprovalNotice` is.
+  markup is theme-neutral, styled by the shared
+  `assets/css/scheduling/shared/components/group-session.css` through each
+  theme's tokens, as `ApprovalNotice` is.
 
   Callers pass the meeting type itself; SaaS demo organisers supply meeting
   types as plain maps, so the limit is read with `Map.get/2`.

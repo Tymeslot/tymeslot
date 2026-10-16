@@ -6,36 +6,32 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.CustomFields.AnswerRenderer
+  alias Tymeslot.Availability.Offer
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
   alias TymeslotWeb.Themes.Shared.BookingLocation
-  alias TymeslotWeb.Themes.Shared.CalendarDownload
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
+  alias TymeslotWeb.Themes.Shared.Components.CustomAnswers
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.LocationField
+  alias TymeslotWeb.Themes.Shared.ConfirmationText
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+  alias TymeslotWeb.Themes.Shared.PathHandlers
+  alias TymeslotWeb.Themes.Shared.StepEvents
 
   @impl Phoenix.LiveComponent
-  def update(assigns, socket) do
-    # Filter out reserved assigns that can't be set directly
-    filtered_assigns = Map.drop(assigns, [:flash, :socket])
-    {:ok, assign(socket, filtered_assigns)}
-  end
+  defdelegate update(assigns, socket), to: StepEvents
 
   @impl Phoenix.LiveComponent
-  def handle_event("schedule_another", _params, socket) do
-    send(self(), {:step_event, :confirmation, :schedule_another, nil})
-    {:noreply, socket}
-  end
+  defdelegate handle_event(event, params, socket), to: StepEvents
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
     assigns = assign(assigns, :next_day_end, LocalizationHelpers.booking_next_day_end(assigns))
 
     ~H"""
-    <div class="scheduling-box" data-locale={@locale}>
+    <div class="scheduling-box booker-card" data-locale={@locale}>
       <div class="slide-container">
         <div class="slide active">
           <div class="slide-content confirmation-slide">
@@ -103,7 +99,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                 <div class="ticket-header">
                   <span class="ticket-label">{dgettext("booking", "Meeting Details")}</span>
                   <span class="ticket-badge">
-                    {if @meeting_type, do: @meeting_type.duration_minutes, else: @duration} min
+                    {dgettext("booking", "%{minutes} min",
+                      minutes: Offer.duration_minutes(@meeting_type, @duration)
+                    )}
                   </span>
                 </div>
 
@@ -194,26 +192,15 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                 </div>
               </div>
 
-              <%= if @custom_fields_snapshot && length(@custom_fields_snapshot) > 0 do %>
-                <section class="custom-answers-section">
-                  <h3 class="custom-answers-heading">{dgettext("booking", "Your answers")}</h3>
-                  <dl class="custom-answers-list">
-                    <%= for d <- @custom_fields_snapshot do %>
-                      <div class="custom-answer-row">
-                        <dt class="custom-answer-label">{d["label"]}</dt>
-                        <dd class="custom-answer-value">
-                          {AnswerRenderer.render(d, @custom_field_answers[d["id"]])}
-                        </dd>
-                      </div>
-                    <% end %>
-                  </dl>
-                </section>
-              <% end %>
+              <CustomAnswers.custom_answers
+                snapshot={@custom_fields_snapshot}
+                answers={@custom_field_answers}
+              />
 
               <div class="confirmation-actions-section">
                 <a
-                  :if={CalendarDownload.href(assigns)}
-                  href={CalendarDownload.href(assigns)}
+                  :if={PathHandlers.calendar_ics_path(assigns)}
+                  href={PathHandlers.calendar_ics_path(assigns)}
                   download
                   class="action-button-primary action-button-secondary calendar-download-button"
                   data-testid="add-to-calendar"
@@ -227,6 +214,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                   phx-click="schedule_another"
                   phx-target={@myself}
                   data-testid="schedule-another"
+                  data-intent="restart"
                   class="action-button-primary"
                 >
                   {dgettext("booking", "Schedule Another Meeting")}
@@ -255,51 +243,26 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   end
 
   # Helper functions
-  defp get_organizer_text(nil), do: ""
-
-  defp get_organizer_text(organizer_profile) do
-    case Profiles.display_name(organizer_profile) do
-      nil -> ""
-      name -> dgettext("booking", "with %{name}", name: name)
-    end
-  end
-
-  # See the Quill component: a held request must not be announced as a
-  # confirmed meeting, heading included. The approval check runs first: a
-  # gated reschedule re-enters the hold (see `Tymeslot.Bookings.Reschedule`),
-  # so `is_rescheduling` must not short-circuit it.
+  # Which status applies is decided in ConfirmationText (a held request must
+  # not be announced as a confirmed meeting); only the wording is Rhythm's.
   defp headline(assigns) do
-    cond do
-      ApprovalDisplay.awaiting_approval?(assigns) -> dgettext("booking", "Request sent!")
-      assigns[:is_rescheduling] -> dgettext("booking", "Successfully Rescheduled!")
-      true -> dgettext("booking", "You're All Set!")
+    case ConfirmationText.status(assigns) do
+      :held -> dgettext("booking", "Request sent!")
+      :rescheduled -> dgettext("booking", "Successfully Rescheduled!")
+      :confirmed -> dgettext("booking", "You're All Set!")
     end
   end
 
   defp confirmation_message(assigns) do
-    if ApprovalDisplay.awaiting_approval?(assigns) do
-      held_confirmation_message(assigns[:name], assigns[:organizer_profile])
-    else
-      dgettext("booking", "%{name}, your meeting %{organizer} is confirmed",
-        name: assigns[:name],
-        organizer: get_organizer_text(assigns[:organizer_profile])
-      )
-    end
-  end
+    case ConfirmationText.status(assigns) do
+      :held ->
+        ConfirmationText.held_message(assigns[:name], assigns[:organizer_profile], :rhythm)
 
-  # See the Quill component for why this cannot reuse the "with %{name}"
-  # fragment: "your request with Jane" is the wrong preposition, and the
-  # fragment's fixed preposition mistranslates in every non-English locale.
-  defp held_confirmation_message(name, organizer_profile) do
-    case Profiles.display_name(organizer_profile) do
-      organizer_name when is_binary(organizer_name) and organizer_name != "" ->
-        dgettext("booking", "%{name}, your request to %{organizer_name} has been sent.",
-          name: name,
-          organizer_name: organizer_name
+      _confirmed_or_rescheduled ->
+        dgettext("booking", "%{name}, your meeting %{organizer} is confirmed",
+          name: assigns[:name],
+          organizer: ConfirmationText.organizer_fragment(assigns[:organizer_profile], :rhythm)
         )
-
-      _no_organizer_name ->
-        dgettext("booking", "%{name}, your request has been sent.", name: name)
     end
   end
 end

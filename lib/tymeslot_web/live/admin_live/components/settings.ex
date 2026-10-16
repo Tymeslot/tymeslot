@@ -9,6 +9,10 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   tag rendered as disabled. Score, email, text, colour, and locale settings
   use a small inline form so admins save one value at a time.
 
+  A setting fixed by an environment variable (`effective.env_var` set) keeps
+  its current value on screen but its control is disabled, and its header
+  names the variable.
+
   Email branding is rendered by its own `email_branding_section/1` rather than
   through the generic loop. Its logo row takes an upload instead of a form
   field, and its accent row needs derived preview data, so routing it through
@@ -52,7 +56,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
       <.info_box variant={:info}>
         {dgettext(
           "dashboard_admin",
-          "Changes here take effect immediately and override the matching environment variables and application configuration (e.g. REGISTRATION_ENABLED, PASSWORD_AUTH_ENABLED) for this install."
+          "Changes here take effect immediately. A setting fixed by an environment variable, such as REGISTRATION_ENABLED, is greyed out and changes only when you edit that variable and restart Tymeslot."
         )}
       </.info_box>
 
@@ -154,13 +158,15 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
     # boolean render its own toggle at 60% opacity - reading as "you cannot
     # click this" on the one control that is the only way back on.
     #
-    # `disabled` is genuine inertness: a dependent setting whose parent is off
-    # has a control that really is unusable until the parent is switched on.
-    # `muted` is merely "this setting is not doing anything at the moment",
-    # which is worth saying in the description but must never be said about a
-    # live control.
-    disabled = parent_disabled?(assigns.key, assigns.effective_values)
-    muted = disabled or own_value_off?(kind, effective)
+    # `disabled` is genuine inertness: a dependent setting whose parent is
+    # off, or a setting an environment variable fixes, has a control that
+    # really is unusable. `muted` is merely "this setting is not doing
+    # anything at the moment", which is worth saying in the description but
+    # must never be said about a live control. A pinned setting is live, so
+    # pinning alone does not mute it.
+    parent_off = parent_disabled?(assigns.key, assigns.effective_values)
+    disabled = parent_off or effective.env_var != nil
+    muted = parent_off or own_value_off?(kind, effective)
 
     assigns =
       assigns
@@ -171,7 +177,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
 
     ~H"""
     <div class="px-8 py-6 flex items-start justify-between gap-6 flex-wrap sm:flex-nowrap">
-      <.row_header key={@key} muted={@muted} />
+      <.row_header key={@key} muted={@muted} pinned_by={@effective.env_var} />
 
       <.setting_control kind={@kind} key={@key} effective={@effective} disabled={@disabled} />
     </div>
@@ -184,20 +190,33 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   # ones.
   attr :key, :atom, required: true
   attr :muted, :boolean, default: false
+  attr :pinned_by, :string, default: nil
 
+  # The pinned note sits outside the muted wrapper so it stays legible on a
+  # pinned setting whose value is off.
   defp row_header(assigns) do
     ~H"""
-    <div class={["flex-1 min-w-0 transition-opacity", @muted && "opacity-60"]}>
-      <h4 class="text-token-lg font-black text-tymeslot-900 tracking-tight">
-        {Formatters.humanise(@key)}
-      </h4>
-      <p class="mt-1 text-token-sm text-tymeslot-600 font-medium leading-relaxed">
-        {Formatters.describe(@key)}
+    <div class="flex-1 min-w-0">
+      <div class={["transition-opacity", @muted && "opacity-60"]}>
+        <h4 class="text-token-lg font-black text-tymeslot-900 tracking-tight">
+          {Formatters.humanise(@key)}
+        </h4>
+        <p class="mt-1 text-token-sm text-tymeslot-600 font-medium leading-relaxed">
+          {Formatters.describe(@key)}
+        </p>
+        <.recommended_chip
+          :if={Formatters.recommended(@key) != nil}
+          value={Formatters.recommended(@key)}
+        />
+      </div>
+      <p
+        :if={@pinned_by}
+        id={"setting-pinned-#{@key}"}
+        class="mt-3 flex items-start gap-1.5 text-token-xs font-bold text-tymeslot-700"
+      >
+        <.icon name="hero-lock-closed-mini" class="w-4 h-4 mt-px shrink-0 text-tymeslot-500" />
+        <span>{Formatters.pinned_reason(@pinned_by)}</span>
       </p>
-      <.recommended_chip
-        :if={Formatters.recommended(@key) != nil}
-        value={Formatters.recommended(@key)}
-      />
     </div>
     """
   end
@@ -214,6 +233,13 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   # so the row should read as disabled/inactive at a glance.
   defp own_value_off?(:boolean, %{value: false}), do: true
   defp own_value_off?(_kind, _effective), do: false
+
+  # A pinned setting's reason outranks the lockout one: removing the
+  # variable is the only way to change it at all.
+  defp tag_lock_reason(_key, _state, %{env_var: var}) when is_binary(var),
+    do: Formatters.pinned_reason(var)
+
+  defp tag_lock_reason(key, state, _effective), do: Formatters.lock_reason(key, state)
 
   attr :kind, :atom, required: true
   attr :key, :atom, required: true
@@ -232,16 +258,16 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
         state="true"
         label={dgettext("dashboard_admin", "Enabled")}
         active={@effective.value == true}
-        locked={true in @effective.locked_states}
-        lock_reason={Formatters.lock_reason(@key, true)}
+        locked={@effective.env_var != nil or true in @effective.locked_states}
+        lock_reason={tag_lock_reason(@key, true, @effective)}
       />
       <.setting_tag
         key={@key}
         state="false"
         label={dgettext("dashboard_admin", "Disabled")}
         active={@effective.value == false}
-        locked={false in @effective.locked_states}
-        lock_reason={Formatters.lock_reason(@key, false)}
+        locked={@effective.env_var != nil or false in @effective.locked_states}
+        lock_reason={tag_lock_reason(@key, false, @effective)}
       />
     </div>
     """

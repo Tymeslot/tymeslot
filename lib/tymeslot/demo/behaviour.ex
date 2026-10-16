@@ -22,7 +22,9 @@ defmodule Tymeslot.Demo.Behaviour do
   @callback get_profile_by_user_id(user_id :: integer()) :: map() | nil
 
   @doc """
-  Checks if a username is a demo username (e.g., demo-theme-1).
+  Whether `username` is one the demo provider serves (e.g. demo-theme-1). No
+  organiser may choose such a username: a real profile under it would have
+  its booking page replaced by demo content.
   """
   @callback demo_username?(username :: String.t() | any()) :: boolean()
 
@@ -153,6 +155,7 @@ defmodule Tymeslot.Demo.Behaviour do
               user_timezone :: String.t(),
               year :: integer(),
               month :: integer(),
+              week_start :: :monday | :sunday,
               organizer_profile :: map(),
               availability_map :: map() | atom() | nil
             ) :: [map()]

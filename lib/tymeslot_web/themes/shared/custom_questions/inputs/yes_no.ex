@@ -35,6 +35,9 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.YesNo do
           phx-click="answer"
           phx-value-value="true"
           phx-target={@myself}
+          data-fact="answer"
+          data-question={@definition["id"]}
+          data-value="true"
         />
         <span class="custom-question-yes-no-icon" aria-hidden="true">
           <svg
@@ -65,6 +68,9 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.YesNo do
           phx-click="answer"
           phx-value-value="false"
           phx-target={@myself}
+          data-fact="answer"
+          data-question={@definition["id"]}
+          data-value="false"
         />
         <span class="custom-question-yes-no-icon" aria-hidden="true">
           <svg

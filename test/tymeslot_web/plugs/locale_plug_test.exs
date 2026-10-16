@@ -589,7 +589,8 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
   end
 
   describe "live_session_data/1" do
-    test "carries the resolved, ambient and path locales to the LiveView session", %{conn: _conn} do
+    test "carries the resolved and ambient locales and the week start to the LiveView session",
+         %{conn: _conn} do
       conn =
         build_conn()
         |> init_test_session(%{})
@@ -601,7 +602,8 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
 
       assert LocalePlug.live_session_data(conn) == %{
                "resolved_locale" => "fr",
-               "ambient_locale" => "de"
+               "ambient_locale" => "de",
+               "visitor_week_start" => "monday"
              }
     end
 

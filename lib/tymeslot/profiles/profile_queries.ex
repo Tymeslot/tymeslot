@@ -61,6 +61,17 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   end
 
   @doc """
+  Updates the organiser's headline and bio.
+  """
+  @spec update_intro(ProfileSchema.t(), map()) ::
+          {:ok, ProfileSchema.t()} | {:error, Ecto.Changeset.t()}
+  def update_intro(%ProfileSchema{} = profile, attrs) do
+    profile
+    |> ProfileSchema.intro_changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
   Gets a profile by user ID.
   Returns {:ok, profile} if found, {:error, :not_found} otherwise.
   """

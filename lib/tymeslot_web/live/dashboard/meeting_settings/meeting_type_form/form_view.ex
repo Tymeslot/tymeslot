@@ -362,7 +362,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             myself={@myself}
           />
 
-          <.limits_section booking_limits={@booking_limits} myself={@myself} />
+          <.limits_section
+            booking_limits={@booking_limits}
+            week_start={@week_start}
+            myself={@myself}
+          />
 
           <.visibility_section type={@type} parent={@parent_myself} />
         </.card>

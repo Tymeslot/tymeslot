@@ -137,7 +137,7 @@ defmodule TymeslotWeb.Dashboard.Availability.BufferBookingJourneyTest do
     end)
 
     view |> element("button.calendar-day[phx-value-date='#{date_str}']") |> render_click()
-    wait_until(fn -> has_element?(view, "button.time-slot-button") end)
+    wait_until(fn -> has_element?(view, ~s([data-testid="time-slot"])) end)
 
     view
   end
@@ -146,13 +146,13 @@ defmodule TymeslotWeb.Dashboard.Availability.BufferBookingJourneyTest do
     view
     |> render()
     |> Floki.parse_document!()
-    |> Floki.attribute("button.time-slot-button", "phx-value-time")
+    |> Floki.attribute(~s([data-testid="time-slot"]), "phx-value-time")
   end
 
   defp time(time), do: Display.format_time_for_display(time)
 
   defp book(view, slot, email) do
-    view |> element("button.time-slot-button[phx-value-time='#{slot}']") |> render_click()
+    view |> element(~s([data-testid="time-slot"][phx-value-time="#{slot}"])) |> render_click()
     view |> element("button[phx-click='next_step']") |> render_click()
 
     view

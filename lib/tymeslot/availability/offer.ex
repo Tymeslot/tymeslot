@@ -2,9 +2,11 @@ defmodule Tymeslot.Availability.Offer do
   @moduledoc """
   The times a public booking page offers.
 
-  Answers the two questions the booking page asks: which times are free on one
-  date (`slots_for_date/3`), and which days in a range have any free time at
-  all (`days_in_range/4`). Both build their rules from `config/4`, which rests
+  Answers the three questions the booking page asks: which times are free on
+  one date (`slots_for_date/3`), which times are free on every day of a range
+  (`slots_for_range/4`, for a week view), and which days in a range have any
+  free time at all (`days_in_range/4`). All three build their rules from
+  `config/4`, which rests
   on `Tymeslot.Availability.Schedules.config/2`, the same rules the booking
   submit re-checks against (`Tymeslot.Bookings.Policy.scheduling_config/2`).
   A time offered here is therefore a time the submit accepts.
@@ -14,7 +16,7 @@ defmodule Tymeslot.Availability.Offer do
   own time, and a full one is dropped (see
   `Tymeslot.Availability.GroupSlots`).
 
-  Both questions are answered against the same busy set: the host's connected
+  Every question is answered against the same busy set: the host's connected
   calendars, merged with the host's own live bookings. The bookings are what
   stop the two paths disagreeing, because the submit refuses from the meetings
   table and would otherwise reject a slot this module had just offered; see
@@ -45,6 +47,11 @@ defmodule Tymeslot.Availability.Offer do
   # are the booker's, up to a timezone offset away; nothing further out can
   # touch a slot inside.
   @busy_window_padding_days Reach.utc_padding_days()
+
+  # The longest range `slots_for_range/4` answers: six weeks, the month grid's
+  # display range. A week view asks for seven days; the bound keeps a caller's
+  # mistake from computing a year of slots.
+  @max_range_days 42
 
   @typedoc """
   What a booking page is showing, and to whom.
@@ -106,6 +113,43 @@ defmodule Tymeslot.Availability.Offer do
       else
         free_slots(request, date, duration)
       end
+    end
+  end
+
+  @doc """
+  The times free on every day of `start_date..end_date` (inclusive) for a
+  meeting of `duration`, as a map of ISO 8601 date strings to that day's
+  slots. Every day of the range is a key; a day with nothing free maps to
+  `[]`.
+
+  Each day's list is exactly what `slots_for_date/3` returns for that day: the
+  days run through the same slot engine with the same rules and the same busy
+  set, but the host's calendar, their booking-limit counts, the meeting being
+  rescheduled and the schedule's overrides and time off are read once for the
+  whole range instead of once per day. A demo page answers each day from the
+  demo provider, as `slots_for_date/3` does.
+
+  Returns `{:error, :invalid_range}` when `end_date` is before `start_date`,
+  `{:error, :range_too_long}` for a range of more than #{@max_range_days} days,
+  and `{:error, reason}` when the organiser's calendar cannot be read.
+  """
+  @spec slots_for_range(request(), Date.t(), Date.t(), String.t() | integer() | nil) ::
+          {:ok, %{String.t() => [term()]}} | {:error, any()}
+  def slots_for_range(request, %Date{} = start_date, %Date{} = end_date, duration) do
+    cond do
+      Date.compare(start_date, end_date) == :gt ->
+        {:error, :invalid_range}
+
+      Date.diff(end_date, start_date) >= @max_range_days ->
+        {:error, :range_too_long}
+
+      demo?(request) ->
+        collect_days(start_date, end_date, fn date ->
+          slots_for_date(request, Date.to_iso8601(date), duration)
+        end)
+
+      true ->
+        free_slots_in_range(request, start_date, end_date, duration)
     end
   end
 
@@ -214,6 +258,83 @@ defmodule Tymeslot.Availability.Offer do
          })}
       end
     end
+  end
+
+  # `free_slots/3` for every day of a range, with everything that does not
+  # depend on the day read once: the calendar (whose fetch covers the whole
+  # booking window whatever date it is given), the proven reschedule meeting,
+  # the booking-limit counts over the range, and the schedule's weekly hours,
+  # overrides and time off for the range and a day either side, which
+  # `Calculate.available_starts/6` then finds already in the config. The busy
+  # set is merged over the range, so each day sees every booking and event
+  # that `free_slots/3` would merge for it alone.
+  defp free_slots_in_range(
+         %{profile: %{user_id: user_id} = profile} = request,
+         start_date,
+         end_date,
+         duration
+       ) do
+    moving = moving_meeting(request)
+
+    with {:ok, events} <-
+           CalendarEvents.get_calendar_events_from_context(
+             start_date,
+             user_id,
+             calendar_context(request)
+           ) do
+      duration_minutes = bounded_duration(duration)
+      meeting_type = request[:meeting_type]
+      limit_checker = limit_checker(request, moving_uid(moving), start_date, end_date)
+
+      config =
+        meeting_type
+        |> Schedules.resolve_for(profile)
+        |> config(meeting_type, limit_checker, duration_minutes)
+
+      config =
+        Calculate.prefetch_schedule_data(
+          config,
+          config.schedule_id,
+          Date.add(start_date, -1),
+          Date.add(end_date, 1)
+        )
+
+      busy = busy_periods(events, user_id, start_date, end_date, moving)
+
+      group_context = %{
+        user_timezone: request.user_timezone,
+        owner_timezone: owner_timezone(profile),
+        events: busy,
+        config: config
+      }
+
+      collect_days(start_date, end_date, fn date ->
+        with {:ok, starts} <-
+               Calculate.available_starts(
+                 date,
+                 duration_minutes,
+                 request.user_timezone,
+                 owner_timezone(profile),
+                 busy,
+                 config
+               ) do
+          {:ok, offered_slots(starts, meeting_type, date, group_context)}
+        end
+      end)
+    end
+  end
+
+  # `day_slots` for every day of the range, keyed by ISO date; the first day
+  # that fails fails the range.
+  defp collect_days(start_date, end_date, day_slots) do
+    start_date
+    |> Date.range(end_date)
+    |> Enum.reduce_while({:ok, %{}}, fn date, {:ok, acc} ->
+      case day_slots.(date) do
+        {:ok, slots} -> {:cont, {:ok, Map.put(acc, Date.to_iso8601(date), slots)}}
+        {:error, _reason} = error -> {:halt, error}
+      end
+    end)
   end
 
   defp free_days(

@@ -1,5 +1,5 @@
 defmodule Tymeslot.Utils.DateTimeUtils.Duration do
-  @moduledoc "Duration parsing and human-readable formatting."
+  @moduledoc "ISO 8601 duration parsing and URL duration slugs."
 
   @doc """
   Parses an ISO 8601 duration string (simplified).
@@ -44,26 +44,6 @@ defmodule Tymeslot.Utils.DateTimeUtils.Duration do
     "#{duration_minutes}min"
   end
 
-  @doc """
-  Formats duration string or integer for display.
-  """
-  @spec format(term()) :: String.t()
-  def format(duration) when is_integer(duration) do
-    format_minutes(duration)
-  end
-
-  def format(duration_string) when is_binary(duration_string) do
-    case Regex.run(~r/^\s*(\d+)\s*(?:-?\s*min(?:utes?)?)?\s*$/i, duration_string) do
-      [_match, minutes_str] ->
-        minutes_str |> String.to_integer() |> format_minutes()
-
-      _result ->
-        "Unknown duration"
-    end
-  end
-
-  def format(_value), do: "Unknown duration"
-
   defp parse_time_duration(duration_str) do
     case Regex.run(~r/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/, duration_str) do
       [_match | captures] ->
@@ -107,20 +87,5 @@ defmodule Tymeslot.Utils.DateTimeUtils.Duration do
 
   defp parse_duration_component(value, multiplier) do
     String.to_integer(value) * multiplier
-  end
-
-  defp format_minutes(1), do: "1 minute"
-  defp format_minutes(minutes) when minutes < 60, do: "#{minutes} minutes"
-  defp format_minutes(60), do: "1 hour"
-  defp format_minutes(90), do: "1.5 hours"
-  defp format_minutes(120), do: "2 hours"
-  defp format_minutes(minutes) when rem(minutes, 60) == 0, do: "#{div(minutes, 60)} hours"
-
-  defp format_minutes(minutes) do
-    hours = div(minutes, 60)
-    mins = rem(minutes, 60)
-    hour_text = "#{hours} hour#{if hours > 1, do: "s", else: ""}"
-    minute_text = "#{mins} minute#{if mins > 1, do: "s", else: ""}"
-    "#{hour_text} #{minute_text}"
   end
 end

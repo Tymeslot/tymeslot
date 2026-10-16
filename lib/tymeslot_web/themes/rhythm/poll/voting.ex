@@ -3,8 +3,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Poll.Voting do
   Rhythm theme rendering of the public poll voting page.
 
   Wraps the shared, theme-neutral `PollVotingComponents` in Rhythm's
-  video-background sliding shell; all styling comes from the theme's `polls.css`
-  module.
+  video-background sliding shell. The styling is shared by every theme, in
+  `assets/css/scheduling/shared/components/polls.css`; Rhythm sets its look
+  through the `--poll-*` tokens in its `variables.css`.
   """
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -12,8 +13,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Poll.Voting do
   alias TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper
   alias TymeslotWeb.Themes.Shared.PollVotingComponents
 
-  attr :theme_customization, :map, required: true
-  attr :custom_css, :string, required: true
+  attr :theme_tokens, :any, required: true
   attr :locale, :string, required: true
   attr :language_dropdown_open, :boolean, required: true
   attr :poll, :map, required: true
@@ -26,13 +26,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Poll.Voting do
   def render(assigns) do
     ~H"""
     <Wrapper.rhythm_wrapper
-      theme_customization={@theme_customization}
-      custom_css={@custom_css}
+      theme_tokens={@theme_tokens}
       locale={@locale}
       language_dropdown_open={@language_dropdown_open}
       show_language_switcher={true}
     >
-      <div class="scheduling-box poll-voting-page rhythm-poll-voting">
+      <div class="scheduling-box booker-card poll-voting-page rhythm-poll-voting">
         <div class="slide-container">
           <div class="slide active">
             <div class="slide-content">

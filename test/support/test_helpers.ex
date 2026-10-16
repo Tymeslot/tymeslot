@@ -122,7 +122,6 @@ defmodule Tymeslot.TestHelpers do
     payment = Keyword.get(opts, :payment, false)
     email = Keyword.get(opts, :email, false)
     availability = Keyword.get(opts, :availability, false)
-    theme = Keyword.get(opts, :theme, false)
     worker = Keyword.get(opts, :worker, false)
 
     quote do
@@ -151,10 +150,6 @@ defmodule Tymeslot.TestHelpers do
 
       if unquote(availability) do
         import Tymeslot.AvailabilityTestHelpers
-      end
-
-      if unquote(theme) do
-        import Tymeslot.ThemeTestHelpers
       end
 
       if unquote(worker) do

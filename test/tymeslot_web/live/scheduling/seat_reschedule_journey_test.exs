@@ -160,10 +160,13 @@ defmodule TymeslotWeb.Live.Scheduling.SeatRescheduleJourneyTest do
       view |> element("[data-testid='schedule-another']") |> render_click()
 
       # The spent token leaves the address bar with the reschedule, so a
-      # reload or a shared link is a fresh booking too.
-      assert_patch(view, "/#{profile.username}?timezone=UTC")
+      # reload or a shared link is a fresh booking too. The link named the
+      # meeting type, so the fresh booking starts on that type's own
+      # schedule step rather than the overview.
+      assert_patch(view, "/#{profile.username}/group-session?timezone=UTC")
+      refute has_element?(view, "[data-testid='seat-move-notice']")
 
-      view = walk_to_booking_form(view, "UTC", "group-session")
+      view = walk_from_schedule_to_booking_form(view, "UTC")
 
       html = submit_booking(view, "Second Booker", "second@example.com")
       refute html =~ "already been cancelled or moved"

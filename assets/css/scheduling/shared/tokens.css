@@ -1,0 +1,135 @@
+/* ==========================================================================
+   Booking-theme token contract
+
+   Imported by every theme.css immediately after the theme's own
+   modules/variables.css. Five kinds of token:
+
+   1. INPUTS. Each theme sets defaults in variables.css; the server's
+      customisation block may override them on :root.
+        --theme-primary  --theme-primary-hover  --theme-secondary
+        --theme-accent   --theme-on-primary     --theme-primary-solid
+        --theme-primary-solid-hover  --theme-on-accent  --theme-accent-solid
+        --theme-text     --theme-text-secondary  --theme-canvas
+        --theme-success  --theme-warning  --theme-danger  --theme-info
+        --shadow-geometry-sm  --shadow-geometry-md  --shadow-geometry-lg
+          (offset and blur only; the colour is mixed below)
+        The three solid tokens default to their plain inputs (kind 5).
+      Rule: inputs are only ever overridden on :root, never on a wrapper
+      element. The derived tokens below are computed on :root, so an input
+      overridden further down the tree changes there while everything derived
+      from it keeps the :root value.
+
+   2. ROLES that every theme defines in variables.css, usually as aliases of
+      its own names:
+        --surface-1/2/3   --ink-1/2/3   --line-1/2
+        --notice-warning  --notice-warning-surface  --notice-warning-border
+        --radius-control  --radius-card
+        (--surface-1, --line-1/2 and --notice-warning default to the
+        aliases in kind 5)
+        --theme-font-family (body text: a var(--font-stack-<id>) from
+          shared/fonts.css); --theme-font-heading is optional and
+          defaults to it, below
+        plus --space-* and --theme-font-size-*.
+      --density is the one role defined here rather than in variables.css:
+        1 on :root below. A theme's spacing may multiply by it
+        (calc(var(--space-md) * var(--density))); a theme with a density
+        option gets its value from the server's block on :root.
+
+   3. SHARED-COMPONENT TOKENS that every theme defines in variables.css, for
+      the values the shared component CSS (shared/components/, layout.css,
+      background-motion.css) needs and the themes set differently. Each
+      shared file lists the tokens it reads in its header.
+
+   4. DERIVED tokens, computed here once from the inputs. Never set them in
+      a theme; set the input instead.
+
+   5. DEFAULTS, on :where(:root) below: tokens whose value does not depend
+      on the theme (border widths, font weights, line heights, motion, the
+      dropdown's layer and height, the flag height, the readiness card's
+      width), relations between
+      tokens (--line-1/2, --surface-1, --notice-warning, the solid pairs,
+      the poll's "yes" ink --poll-yes-ink), the chrome over a background photo or video, and the print rule
+      colour. A theme may set any of them in variables.css; its :root rule
+      outranks the zero-specificity :where(:root) whatever the order.
+
+   Colour literals (rgb, rgba, hsl, hex) belong in variables.css and in this
+   file only; scripts/test_css_tokens.sh enforces it.
+   ========================================================================== */
+
+:root {
+  /* Spacing factor (role 2 above). 1 unless a density option sets it. */
+  --density: 1;
+
+  /* Primary family. With the default #06b6d4 each value equals the literal
+     it replaced: color-mix(in srgb, C p%, transparent) is C at alpha p. */
+  --theme-primary-focus: color-mix(in srgb, var(--theme-primary) 20%, transparent);
+  --theme-primary-tint: color-mix(in srgb, var(--theme-primary) 22%, transparent);
+  --theme-primary-glow: color-mix(in srgb, var(--theme-primary) 35%, transparent);
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--theme-primary) 25%, transparent);
+
+  /* Coloured shadows: theme geometry, palette colour. */
+  --shadow-primary-sm: var(--shadow-geometry-sm) color-mix(in srgb, var(--theme-primary) 30%, transparent);
+  --shadow-primary-md: var(--shadow-geometry-md) color-mix(in srgb, var(--theme-primary) 40%, transparent);
+  --shadow-primary-lg: var(--shadow-geometry-lg) color-mix(in srgb, var(--theme-primary) 30%, transparent);
+
+  --shadow-success-sm: var(--shadow-geometry-sm) color-mix(in srgb, var(--theme-success) 30%, transparent);
+  --shadow-success-md: var(--shadow-geometry-md) color-mix(in srgb, var(--theme-success) 40%, transparent);
+  --shadow-success-lg: var(--shadow-geometry-lg) color-mix(in srgb, var(--theme-success) 30%, transparent);
+
+  --shadow-danger-sm: var(--shadow-geometry-sm) color-mix(in srgb, var(--theme-danger) 30%, transparent);
+  --shadow-danger-md: var(--shadow-geometry-md) color-mix(in srgb, var(--theme-danger) 40%, transparent);
+
+  --shadow-warning-md: var(--shadow-geometry-md) color-mix(in srgb, var(--theme-warning) 40%, transparent);
+  --shadow-warning-lg: var(--shadow-geometry-lg) color-mix(in srgb, var(--theme-warning) 30%, transparent);
+
+  --shadow-info-sm: var(--shadow-geometry-sm) color-mix(in srgb, var(--theme-info) 30%, transparent);
+}
+
+/* Heading family. It defaults to the body family; a theme whose headings
+   differ sets --theme-font-heading in its variables.css to a
+   var(--font-heading-<id>). The zero-specificity :where() lets that :root
+   rule win although this file is imported after it. */
+:where(:root) {
+  --theme-font-heading: var(--theme-font-family);
+
+  /* Defaults (kind 5 above), each the value both shipped themes had. */
+  --border-width-thin: 1px;
+  --border-width-medium: 2px;
+  --border-width-thick: 3px;
+
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --theme-line-height-snug: 1.2;
+  --theme-line-height-relaxed: 1.5;
+
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.2s ease;
+
+  --z-dropdown: 50;
+  --flag-height: 14px;
+  --dropdown-max-height: clamp(200px, 50vh, 420px);
+  --readiness-card-max-width: 32rem;
+
+  --line-1: var(--border-light);
+  --line-2: var(--border-medium);
+  --surface-1: var(--surface-subtle);
+  --notice-warning: var(--theme-warning);
+  /* The preview notice's scrim: it sits on the page background, whatever
+     the organiser chose there (shared/components/preview-notice.css). */
+  --preview-notice-ground: rgb(15 23 42 / 0.85);
+
+  --theme-primary-solid: var(--theme-primary);
+  --theme-primary-solid-hover: var(--theme-primary-hover);
+  --theme-accent-solid: var(--theme-accent);
+
+  --poll-yes-ink: var(--theme-accent);
+
+  --chrome-surface: rgba(0, 0, 0, 0.45);
+  --chrome-surface-hover: rgba(0, 0, 0, 0.65);
+  --chrome-line-hover: rgba(255, 255, 255, 0.3);
+  --chrome-ink: #ffffff;
+  --preview-notice-ground: rgb(15 23 42 / 0.85);
+
+  --print-line: #cccccc;
+}

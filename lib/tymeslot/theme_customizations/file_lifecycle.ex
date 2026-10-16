@@ -1,100 +1,101 @@
 defmodule Tymeslot.ThemeCustomizations.FileLifecycle do
   @moduledoc """
-  Side-effecting cleanup of theme background assets on the filesystem.
+  Side-effecting cleanup of theme assets on the filesystem.
 
-  Orchestrates `Storage` and `Transcoder` to delete stale background images,
-  videos, and their transcoded variants when a customisation is updated,
-  deleted, or has its background replaced. Persistence is handled by the
-  caller — this module only deals with files.
+  Orchestrates `Storage` and `Transcoder` to delete stale uploaded images,
+  captions, videos, and the videos' transcoded variants when a customisation
+  is updated, deleted, or has its background replaced, and removes an upload
+  whose save was refused. Which fields hold stored files, and of which kind, comes from
+  the customisation spec the caller passes (`asset_fields/0`, every option
+  group's `asset_fields/1`), so a group's files are cleaned up without this
+  module knowing the group. Persistence is handled by the caller; this module
+  only deals with files.
   """
 
   require Logger
 
   alias Tymeslot.Media.Transcoder
+  alias Tymeslot.ThemeCustomizations.DataTransform
   alias Tymeslot.ThemeCustomizations.Storage
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
 
-  @type cleanup_entry :: %{
-          optional(:background_image_path) => String.t() | nil,
-          optional(:background_video_path) => String.t() | nil
-        }
-
   @doc """
-  Cleans up old background files that were replaced by an update.
-
-  Compares the customisation's previous image/video paths against the new
-  values supplied in `attrs`; only paths that actually changed are deleted.
-  Replaced videos also have their transcoded variants removed.
+  Deletes the files an update replaced: every asset field of `spec` whose
+  stored path changed between the record before and after the update.
+  Replaced videos also lose their transcoded variants.
   """
-  @spec cleanup_replaced_files(ThemeCustomizationSchema.t(), map()) :: :ok
-  def cleanup_replaced_files(%ThemeCustomizationSchema{} = customization, attrs) do
-    old_image_path = customization.background_image_path
-    old_video_path = customization.background_video_path
-    new_image_path = Map.get(attrs, "background_image_path")
-    new_video_path = Map.get(attrs, "background_video_path")
-
+  @spec cleanup_replaced_files(
+          module(),
+          ThemeCustomizationSchema.t(),
+          ThemeCustomizationSchema.t()
+        ) :: :ok
+  def cleanup_replaced_files(
+        spec,
+        %ThemeCustomizationSchema{} = previous,
+        %ThemeCustomizationSchema{} = updated
+      ) do
     context = %{
-      profile_id: customization.profile_id,
-      theme_id: customization.theme_id,
+      profile_id: previous.profile_id,
+      theme_id: previous.theme_id,
       operation: "theme_update"
     }
 
-    if old_image_path && old_image_path != new_image_path do
-      delete_file(old_image_path, context, "old_image")
-    end
+    Enum.each(spec.asset_fields(), fn {field, kind} ->
+      old_path = setting(previous, field)
 
-    if old_video_path && old_video_path != new_video_path do
-      delete_file(old_video_path, context, "old_video")
-      delete_video_variants(old_video_path, context, "old_video_variant")
-    end
-
-    :ok
+      if old_path && old_path != setting(updated, field) do
+        delete_asset(old_path, kind, context, "old_#{kind}")
+      end
+    end)
   end
 
   @doc """
-  Cleans up all background files associated with a deleted customisation,
-  including transcoded video variants.
+  Deletes every stored file of a deleted customisation, including transcoded
+  video variants.
   """
-  @spec cleanup_all_files(ThemeCustomizationSchema.t()) :: :ok
-  def cleanup_all_files(%ThemeCustomizationSchema{} = customization) do
+  @spec cleanup_all_files(module(), ThemeCustomizationSchema.t()) :: :ok
+  def cleanup_all_files(spec, %ThemeCustomizationSchema{} = customization) do
     context = %{
       profile_id: customization.profile_id,
       theme_id: customization.theme_id,
       operation: "theme_delete"
     }
 
-    if customization.background_image_path do
-      delete_file(customization.background_image_path, context, "image")
-    end
-
-    if customization.background_video_path do
-      delete_file(customization.background_video_path, context, "video")
-      delete_video_variants(customization.background_video_path, context, "video_variant")
-    end
-
-    :ok
+    Enum.each(spec.asset_fields(), fn {field, kind} ->
+      if path = setting(customization, field), do: delete_asset(path, kind, context, "#{kind}")
+    end)
   end
 
   @doc """
-  Legacy cleanup over a customisation-like map: deletes the referenced image
-  and video files (no variant handling).
+  Deletes the file an upload has just stored, when saving it was refused.
+
+  Only that file: its name is the upload's own (`Storage.store_asset/4`), so
+  nothing else can reference it, and a video has no transcoded variants yet
+  because transcoding is queued only after a successful save. Never widen this
+  to "every file the row does not reference": another tab may have just stored
+  a file of its own in the same directory.
   """
-  @spec cleanup_old_backgrounds(cleanup_entry() | ThemeCustomizationSchema.t()) :: :ok
-  def cleanup_old_backgrounds(customization) do
-    context = %{operation: "legacy_cleanup"}
-
-    if image_path = Map.get(customization, :background_image_path) do
-      delete_file(image_path, context, "image")
-    end
-
-    if video_path = Map.get(customization, :background_video_path) do
-      delete_file(video_path, context, "video")
-    end
-
-    :ok
-  end
+  @spec discard_upload(String.t(), map()) :: :ok
+  def discard_upload(relative_path, context),
+    do:
+      delete_file(
+        relative_path,
+        Map.put(context, :operation, "upload_rejected"),
+        "rejected_upload"
+      )
 
   # --- Private helpers ----------------------------------------------------
+
+  defp setting(customization, field),
+    do: Map.get(DataTransform.to_settings(customization), Atom.to_string(field))
+
+  defp delete_asset(path, kind, context, label) when kind in [:image, :captions],
+    do: delete_file(path, context, label)
+
+  defp delete_asset(path, :video, context, label) do
+    delete_file(path, context, label)
+    delete_video_variants(path, context, label <> "_variant")
+  end
 
   defp delete_file(relative_path, context, file_type) do
     relative_path

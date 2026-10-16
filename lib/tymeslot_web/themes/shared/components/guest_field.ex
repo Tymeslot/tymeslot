@@ -8,9 +8,11 @@ defmodule TymeslotWeb.Themes.Shared.Components.GuestField do
   is purely presentational and forwards its events to the booking-step
   component via `phx-target`, which relays them to the LiveView.
 
-  The markup is theme-agnostic and ships no styling of its own — each theme
-  styles the `guest-*` classes in its own `booking-form.css`, scoped to
-  `html.<theme>-theme`, so the field reads as native to that theme.
+  The markup is theme-agnostic and ships no styling of its own. The shared
+  structure of the `guest-*` classes lives in
+  `assets/css/scheduling/shared/components/booking-fields.css`; each theme
+  sets its look through the tokens that file reads, and keeps any rule it
+  treats differently in its own `booking-form.css`.
 
   The add input lives in its own `<form>` (a sibling of the main booking form,
   never nested) so pressing Enter adds a guest instead of submitting the

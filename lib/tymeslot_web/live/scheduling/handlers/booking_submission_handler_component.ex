@@ -97,7 +97,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     # The cheapest gate, checked before validation: a tripped honeypot means
     # nothing else about the submission is worth processing.
     if Honeypot.tripped?(booking_params) do
-      {:honeypot, BookingGuards.handle_honeypot(socket)}
+      {:honeypot, BookingGuards.handle_honeypot(socket, booking_params)}
     else
       case InputProcessor.validate_form(booking_params, BookingConfig.booking_field_spec()) do
         {:ok, sanitized_params} ->
@@ -118,32 +118,15 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     end
   end
 
-  # Handles successful booking creation: processes a successful booking
-  # response and updates the socket with the appropriate success state.
+  # Handles successful booking creation: records the meeting on the socket
+  # for the confirmation step. A real booking puts no flash: the
+  # confirmation step is the feedback, and a toast would cover its heading
+  # on phones and in embeds. A demo booking keeps one, because the
+  # confirmation step says a confirmation email was sent and a demo sends
+  # none.
   @spec handle_booking_success(Phoenix.LiveView.Socket.t(), map(), map()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
   defp handle_booking_success(socket, meeting, validated_data) do
-    success_message =
-      cond do
-        Demo.demo_mode?(socket) and socket.assigns[:is_rescheduling] ->
-          dgettext(
-            "booking",
-            "Demo: Meeting rescheduled successfully! (Using the app, you would receive a confirmation email)"
-          )
-
-        Demo.demo_mode?(socket) ->
-          dgettext(
-            "booking",
-            "Demo: Booking submitted successfully! (Using the app, you would receive a confirmation email)"
-          )
-
-        socket.assigns[:is_rescheduling] ->
-          dgettext("booking", "Meeting rescheduled successfully!")
-
-        true ->
-          dgettext("booking", "Booking submitted successfully!")
-      end
-
     socket =
       socket
       |> assign(:submitting, false)
@@ -155,9 +138,31 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       |> assign(:custom_fields_snapshot, Map.get(validated_data, "custom_fields_snapshot", []))
       |> assign(:custom_field_answers, Map.get(validated_data, "custom_field_answers", %{}))
       |> assign(:guest_emails, socket.assigns[:guest_emails] || [])
-      |> Flash.put_flash(:info, success_message)
+      |> put_demo_flash()
 
     {:ok, socket}
+  end
+
+  defp put_demo_flash(socket) do
+    if Demo.demo_mode?(socket) do
+      Flash.put_flash(socket, :info, demo_success_message(socket.assigns[:is_rescheduling]))
+    else
+      socket
+    end
+  end
+
+  defp demo_success_message(true) do
+    dgettext(
+      "booking",
+      "Demo: Meeting rescheduled successfully! (Using the app, you would receive a confirmation email)"
+    )
+  end
+
+  defp demo_success_message(_not_rescheduling) do
+    dgettext(
+      "booking",
+      "Demo: Booking submitted successfully! (Using the app, you would receive a confirmation email)"
+    )
   end
 
   # A seat on a group meeting is the booker's own booking: its calendar file

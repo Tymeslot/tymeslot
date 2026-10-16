@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.LinkAccessPolicy
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Themes.Catalog
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Components.CoreComponents.Navigation
   alias TymeslotWeb.Endpoint
@@ -32,7 +33,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     integration_status = assigns[:integration_status] || %{}
     base_url = Endpoint.url()
     username = profile.username
-    theme_id = profile.booking_theme || "1"
+    theme_id = profile.booking_theme || Catalog.default_id()
 
     # Check if user is ready for scheduling using cached integration status when available
     is_ready = Map.get(integration_status, :has_calendar, false)

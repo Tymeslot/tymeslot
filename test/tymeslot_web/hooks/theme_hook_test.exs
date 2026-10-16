@@ -37,11 +37,8 @@ defmodule TymeslotWeb.Hooks.ThemeHookTest do
       is_binary(theme)` guard in the hook is a defensive belt-and-
       braces against a state Ecto cannot emit.
 
-    * `socket.private[:theme_id] branch` — no production caller writes
-      `theme_id` into `socket.private`. The branch in `extract_theme_id/2`
-      (`theme_hook.ex:36–37`) reads `socket.private[:theme_id]` but
-      no plug, router, or hook in Core or SaaS ever sets it. The path
-      is unreachable and therefore has no test.
+    * The hook no longer reads `socket.private[:theme_id]`: no plug,
+      router, or hook ever sets it.
   """
 
   use TymeslotWeb.ConnCase, async: true
@@ -52,13 +49,13 @@ defmodule TymeslotWeb.Hooks.ThemeHookTest do
   import Tymeslot.Factory
 
   alias Phoenix.LiveView.Socket
+  alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Hooks.ThemeHook
 
-  defp build_socket(private \\ %{}) do
+  defp build_socket do
     %Socket{
       assigns: %{__changed__: %{}},
-      endpoint: TymeslotWeb.Endpoint,
-      private: private
+      endpoint: TymeslotWeb.Endpoint
     }
   end
 
@@ -88,12 +85,12 @@ defmodule TymeslotWeb.Hooks.ThemeHookTest do
   describe "on_mount/4 — explicit theme precedence" do
     test "explicit theme param wins over profile lookup" do
       user = insert(:user)
-      insert(:profile, user: user, username: "overridden", booking_theme: "2")
+      insert(:profile, user: user, username: "overridden", booking_theme: "1")
 
       assert {:cont, updated_socket} =
                ThemeHook.on_mount(
                  :default,
-                 %{"theme" => "3", "username" => "overridden"},
+                 %{"theme" => "2", "username" => "overridden"},
                  %{},
                  build_socket()
                )
@@ -102,7 +99,7 @@ defmodule TymeslotWeb.Hooks.ThemeHookTest do
       # flipped — the explicit `theme` override is how the theme
       # picker in the dashboard previews non-active themes without
       # mutating the profile.
-      assert updated_socket.assigns.theme_id == "3"
+      assert updated_socket.assigns.theme_id == "2"
     end
 
     test "theme_id query param is used when no theme param is present" do
@@ -112,11 +109,45 @@ defmodule TymeslotWeb.Hooks.ThemeHookTest do
       assert updated_socket.assigns.theme_id == "2"
     end
 
-    test "defaults to theme 1 when neither params nor socket.private carry a theme" do
+    test "defaults to theme 1 when neither the params nor the organiser name a theme" do
       assert {:cont, updated_socket} =
                ThemeHook.on_mount(:default, %{}, %{}, build_socket())
 
       assert updated_socket.assigns.theme_id == "1"
+    end
+  end
+
+  describe "on_mount/4: unknown theme ids" do
+    test "an unknown ?theme= falls through to the organiser's theme" do
+      user = insert(:user)
+      insert(:profile, user: user, username: "rhythm-host", booking_theme: "2")
+
+      assert {:cont, socket} =
+               ThemeHook.on_mount(
+                 :default,
+                 %{"theme" => "9", "username" => "rhythm-host"},
+                 %{},
+                 build_socket()
+               )
+
+      assert socket.assigns.theme_id == "2"
+    end
+
+    test "an unknown ?theme= with no organiser falls back to the default theme" do
+      assert {:cont, socket} =
+               ThemeHook.on_mount(:default, %{"theme" => "9"}, %{}, build_socket())
+
+      assert socket.assigns.theme_id == Catalog.default_id()
+    end
+
+    test "an organiser theme the registry does not know falls back to the default" do
+      user = insert(:user)
+      insert(:profile, user: user, username: "stale-theme", booking_theme: "999")
+
+      assert {:cont, socket} =
+               ThemeHook.on_mount(:default, %{"username" => "stale-theme"}, %{}, build_socket())
+
+      assert socket.assigns.theme_id == "1"
     end
   end
 end

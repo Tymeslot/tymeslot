@@ -106,11 +106,6 @@ msgstr "Помилка автентифікації. Спробуйте ще р�
 msgid "Authentication session mismatch. Please sign in and try again."
 msgstr "Помилка сеансу автентифікації. Увійдіть у систему та спробуйте ще раз."
 
-#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
-#, elixir-autogen, elixir-format
-msgid "Authorization was denied. Please try again."
-msgstr "В авторизації відмовлено. Спробуйте ще раз."
-
 #: lib/tymeslot_web/components/dashboard/integrations/shared/provider_picker_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Back to providers"
@@ -440,3 +435,8 @@ msgstr "Посібник із налаштування"
 #, elixir-autogen, elixir-format
 msgid "Delete %{type} integration"
 msgstr "Видалити інтеграцію %{type}"
+
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
+#, elixir-autogen, elixir-format
+msgid "Authorisation was denied. Please try again."
+msgstr "В авторизації відмовлено. Спробуйте ще раз."

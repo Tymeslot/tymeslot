@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Themes.Shared.ReschedulePin do
   guest who only wants a different time from being shown the host's entire
   catalogue on the way.
 
-  The pin is the *only* meeting-type resolver a reschedule uses. `LiveHelpers`
+  The pin is the *only* meeting-type resolver a reschedule uses. `LiveHelpers.Mount`
   applies it on every `handle_params`, and the schedule and booking entries
   defer to it rather than resolving the slug in the URL. That is what a stale
   or hand-edited link like `/:username/<another-slug>?reschedule_meeting_uid=…`
@@ -125,10 +125,11 @@ defmodule TymeslotWeb.Themes.Shared.ReschedulePin do
   fresh booking, the URL says what the page now is. A page whose URL carries
   no reschedule is left alone.
   """
-  @spec drop_from_url(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  def drop_from_url(socket) do
+  @spec drop_from_url(Phoenix.LiveView.Socket.t(), :overview | :schedule) ::
+          Phoenix.LiveView.Socket.t()
+  def drop_from_url(socket, route \\ :overview) do
     if PathHandlers.reschedule_in_url?(socket),
-      do: push_patch(socket, to: PathHandlers.restart_path(socket)),
+      do: push_patch(socket, to: PathHandlers.restart_path(socket, route)),
       else: socket
   end
 
