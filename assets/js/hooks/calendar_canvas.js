@@ -199,7 +199,12 @@ export const CalendarCanvas = {
   handleClick(e) {
     const target = e.target;
     const event = target.closest("[data-event-id]");
-    if (event) return this.open(event.dataset.eventId, event);
+    if (event) {
+      // Opening one event must not reach LiveView's window-level click-away,
+      // or it would close the preview this click is opening.
+      e.stopPropagation();
+      return this.open(event.dataset.eventId, event);
+    }
 
     const more = target.closest("[data-more]");
     if (more) return this.showList(more.dataset.more.split(",").map((id) => this.cache.events.get(id)).filter(Boolean), more, this.strings.list_label);

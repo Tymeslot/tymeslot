@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.CalendarGrid.ColourTokens
+  alias Tymeslot.CalendarGrid.EventBlocking
   alias Tymeslot.CalendarGrid.EventPayload
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.Attendee
@@ -46,6 +47,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
     {integration, entry} = source(event, context.integrations)
 
     %{
+      id: EventPayload.id(event),
       title: EventPayload.title(event),
       colour: ColourTokens.for_event(event, context.integration_tokens, context.calendar_tokens),
       source: source_label(event, integration, entry),
@@ -74,7 +76,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
       role="dialog"
       aria-labelledby="calendar-preview-title"
       tabindex="-1"
-      phx-click-away="calendar:close_preview"
+      phx-click-away={JS.push("calendar:close_preview", value: %{refocus: false}, target: @target)}
       phx-window-keydown="calendar:close_preview"
       phx-key="escape"
       phx-target={@target}
@@ -167,7 +169,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
 
   defp source_label(_event, integration, %CalendarEntry{name: name})
        when is_binary(name) and name != "",
-       do: "#{name} · #{integration.name}"
+       do:
+         dgettext("dashboard_calendar", "%{calendar} · %{account}",
+           calendar: name,
+           account: integration.name
+         )
 
   defp source_label(_event, integration, _entry), do: integration.name
 
@@ -177,7 +183,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
 
     if first == last,
       do: dgettext("dashboard_calendar", "%{date}, all day", date: first_text),
-      else: "#{first_text} – #{LocaleFormat.format_short_weekday_date(last, context.locale)}"
+      else:
+        dgettext("dashboard_calendar", "%{first} – %{last}",
+          first: first_text,
+          last: LocaleFormat.format_short_weekday_date(last, context.locale)
+        )
   end
 
   defp when_text(%{start_at: %DateTime{} = start_at, end_at: %DateTime{} = end_at}, context) do
@@ -190,31 +200,42 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
     if DateTime.to_date(starts) == DateTime.to_date(ends),
       do: "#{start_day}, #{start_time}–#{end_time}",
       else:
-        "#{start_day}, #{start_time} – " <>
-          "#{LocaleFormat.format_short_weekday_date(DateTime.to_date(ends), context.locale)}, #{end_time}"
+        dgettext("dashboard_calendar", "%{start_day}, %{start_time} – %{end_day}, %{end_time}",
+          start_day: start_day,
+          start_time: start_time,
+          end_day: LocaleFormat.format_short_weekday_date(DateTime.to_date(ends), context.locale),
+          end_time: end_time
+        )
   end
 
   defp relative(%{all_day: true}, _now), do: nil
 
   defp relative(%{start_at: %DateTime{} = start_at, end_at: %DateTime{} = end_at}, now) do
-    minutes = DateTime.diff(start_at, now, :minute)
+    seconds = DateTime.diff(start_at, now, :second)
 
     cond do
-      DateTime.compare(end_at, now) != :gt ->
-        dgettext("dashboard_calendar", "Ended")
-
-      minutes <= 0 ->
-        dgettext("dashboard_calendar", "Happening now")
-
-      minutes < 60 ->
-        dgettext("dashboard_calendar", "in %{count} min", count: minutes)
-
-      minutes < 1440 ->
-        dgettext("dashboard_calendar", "in %{count} h", count: div(minutes, 60))
-
-      true ->
-        dngettext("dashboard_calendar", "in %{count} day", "in %{count} days", div(minutes, 1440))
+      DateTime.compare(end_at, now) != :gt -> dgettext("dashboard_calendar", "Ended")
+      seconds <= 0 -> dgettext("dashboard_calendar", "Happening now")
+      true -> away(max(1, round(seconds / 60)))
     end
+  end
+
+  # Rounded to the nearest unit, so 1 h 59 min reads "in 2 h".
+  defp away(minutes) when minutes < 60,
+    do: dgettext("dashboard_calendar", "in %{count} min", count: minutes)
+
+  defp away(minutes) do
+    hours = round(minutes / 60)
+
+    if hours < 24,
+      do: dgettext("dashboard_calendar", "in %{count} h", count: hours),
+      else:
+        dngettext(
+          "dashboard_calendar",
+          "in %{count} day",
+          "in %{count} days",
+          round(minutes / 1440)
+        )
   end
 
   defp guests(%{kind: :booking, participants: [_first | _rest] = participants}),
@@ -243,25 +264,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
           "dashboard_calendar",
           "%{names} and %{count} more",
           "%{names} and %{count} more",
-          length(rest), names: names)
+          length(rest),
+          names: names
+        )
   end
+
+  defp availability(%{kind: :booking}, _integration, _entry), do: busy()
 
   defp availability(event, integration, entry) do
     cond do
-      Map.get(event, :kind) == :booking ->
-        busy()
-
-      Map.get(event, :transparency) == "transparent" ->
-        free()
-
-      blocking?(integration, entry) ->
-        busy()
-
-      true ->
-        %{
-          label: dgettext("dashboard_calendar", "Busy"),
-          note: dgettext("dashboard_calendar", "This calendar doesn't block bookings")
-        }
+      not EventBlocking.blocks?(event, integration) -> free()
+      blocking?(integration, entry) -> busy()
+      true -> not_blocking()
     end
   end
 
@@ -269,6 +283,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
     do: Blocking.blocks?(integration, entry)
 
   defp blocking?(_integration, _entry), do: true
+
+  defp not_blocking,
+    do: %{
+      label: dgettext("dashboard_calendar", "Busy"),
+      note: dgettext("dashboard_calendar", "This calendar doesn't block bookings")
+    }
 
   defp busy,
     do: %{

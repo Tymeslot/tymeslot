@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesSchema
   alias Tymeslot.Profiles
+  alias TymeslotWeb.Dashboard.Calendar.Preview
 
   @type socket :: Phoenix.LiveView.Socket.t()
 
@@ -162,8 +163,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
         socket.assigns.hidden_calendar_keys
       )
 
-    assign(socket, events: events, events_by_id: Map.new(events, &{EventPayload.id(&1), &1}))
+    socket
+    |> assign(events: events, events_by_id: Map.new(events, &{EventPayload.id(&1), &1}))
+    |> rebuild_preview()
   end
+
+  # An open preview was built from the events as they were: rebuild it from
+  # the reloaded ones, or close it when its event is gone (hidden, deleted,
+  # outside the new window).
+  defp rebuild_preview(%{assigns: %{preview: %{id: id}}} = socket) do
+    case Map.fetch(socket.assigns.events_by_id, id) do
+      {:ok, event} ->
+        assign(socket, :preview, Preview.build(event, Preview.context(socket.assigns)))
+
+      :error ->
+        assign(socket, :preview, nil)
+    end
+  end
+
+  defp rebuild_preview(socket), do: socket
 
   @doc "The days the current view shows."
   @spec days(map()) :: [Date.t()]

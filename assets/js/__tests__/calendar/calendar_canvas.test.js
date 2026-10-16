@@ -114,6 +114,16 @@ test("clicking an event asks the server for its preview", () => {
   expect([name, params]).toEqual(["calendar:open", { id: "event-1" }]);
 });
 
+test("clicking an event does not reach LiveView's click-away", () => {
+  const { el, reply } = mountHook();
+  reply(payload());
+  const reached = vi.fn();
+  document.body.addEventListener("click", reached);
+  el.querySelector('[data-event-id="event-1"]').click();
+  document.body.removeEventListener("click", reached);
+  expect(reached).not.toHaveBeenCalled();
+});
+
 test("Enter on a focused event opens it too", () => {
   const { el, hook, reply } = mountHook();
   reply(payload());

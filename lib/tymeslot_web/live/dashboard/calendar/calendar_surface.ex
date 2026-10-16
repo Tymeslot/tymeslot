@@ -153,6 +153,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
     end
   end
 
-  def handle_event("calendar:close_preview", _params, socket),
-    do: {:noreply, socket |> assign(:preview, nil) |> push_event("calendar:preview-closed", %{})}
+  # Focus goes back to the event chip only for the Close button and Escape;
+  # a click elsewhere (`refocus: "false"` from the click-away) keeps focus
+  # where the organiser put it.
+  def handle_event("calendar:close_preview", params, socket) do
+    socket = assign(socket, :preview, nil)
+
+    if Map.get(params, "refocus") == "false",
+      do: {:noreply, socket},
+      else: {:noreply, push_event(socket, "calendar:preview-closed", %{})}
+  end
 end
