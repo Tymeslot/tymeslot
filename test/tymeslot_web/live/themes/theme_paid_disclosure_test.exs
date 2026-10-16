@@ -79,6 +79,10 @@ defmodule TymeslotWeb.Live.Themes.ThemePaidDisclosureTest do
   end
 
   # The submit's `aria-describedby` and the price element's id, as rendered.
+  # The submit of a gated type: Folio words its own, the rest share one.
+  defp request_label(:folio), do: "Request this time"
+  defp request_label(_shared), do: "Request meeting"
+
   defp described_by(view) do
     view |> element("[data-testid='submit-booking']") |> render() |> attribute("aria-describedby")
   end
@@ -145,7 +149,13 @@ defmodule TymeslotWeb.Live.Themes.ThemePaidDisclosureTest do
       BookingDriver.book(view, until: :attendee)
 
       assert has_element?(view, "[data-testid='submit-price']", price)
-      assert has_element?(view, "[data-testid='submit-booking']", "Request meeting")
+
+      assert has_element?(
+               view,
+               "[data-testid='submit-booking']",
+               request_label(unquote(theme.key))
+             )
+
       assert described_by(view) == price_id(view)
     end
 

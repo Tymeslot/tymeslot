@@ -106,3 +106,27 @@ msgstr "Виберіть час"
 msgctxt "paper"
 msgid "Sending…"
 msgstr "Надсилання…"
+
+#: lib/tymeslot_web/themes/folio/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "Book our session"
+msgstr "Забронювати нашу зустріч"
+
+#: lib/tymeslot_web/themes/folio/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "Request this time"
+msgstr "Запросити цей час"
+
+#: lib/tymeslot_web/themes/folio/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "Someone took that time a moment ago. Here are the nearest ones."
+msgstr "Хтось щойно забрав цей час. Ось найближчий вільний час."
+
+#: lib/tymeslot_web/themes/folio/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "Ways to work with me"
+msgstr "Як зі мною можна працювати"

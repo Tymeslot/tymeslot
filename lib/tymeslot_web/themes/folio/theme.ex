@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Themes.Folio.Theme do
       voice: :personal,
       surface: :editorial_print
     ],
+    voice: TymeslotWeb.Themes.Folio.Voice,
     page_shell: &Pages.page_shell/1
 
   @impl TymeslotWeb.Themes.Core.Behaviour

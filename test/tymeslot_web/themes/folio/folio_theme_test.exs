@@ -65,6 +65,13 @@ defmodule TymeslotWeb.Themes.Folio.FolioThemeTest do
   end
 
   describe "the overview" do
+    test "introduces the meeting types in Folio's own words", %{profile: profile} do
+      view = overview(profile)
+
+      assert has_element?(view, "h2", "Ways to work with me")
+      refute has_element?(view, ".folio-meetings-intro .folio-muted")
+    end
+
     test "opens with the cover, the portrait and the organiser's name", %{profile: profile} do
       view = overview(profile)
       default_src = Presets.find_preset_by_id(:cover, "elegant-still-life").src

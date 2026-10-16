@@ -22,11 +22,11 @@ A scheme (Ivory, Sage, Harbour, Blush, Dusk or Ink, or a custom seed colour), a 
 
 ## Voice
 
-Today Folio shares the booking copy every theme shares, its heading naming the organiser, with its own confirmation headline ("You're All Set!"). Its own voice, **personal**, is the brief below; it lands as Folio's voice module.
+Folio's voice is **personal**, the brief below. Its words for the shared booking lines are in `Folio.Voice`; its own moments' lines (the time prompt, the details, an empty month, the confirmation) follow separately.
 
 - **Tone:** first person, warm, unhurried, like the organiser's own website. Sentences, not labels.
 - **Rules:** "I" and "you"; section headings are phrases; the button says what happens next; no jargon like "slot" or "meeting type".
-- **Lines:** section "Ways to work with me"; time prompt "When suits you?"; details "A little about you"; empty "I'm fully booked this month. Try the next one."; button "Request this time" (approval) or "Book our session"; confirmation "See you on Thursday, Mia"; slot taken "Someone took that time a moment ago. Here are the nearest ones."
+- **Lines:** section "Ways to work with me" (no instruction label); button "Book our session", "Request this time" when the organiser approves each booking, "Continue to payment" for a paid type (the shared line); slot taken "Someone took that time a moment ago. Here are the nearest ones." Words in `Folio.Voice`, context `folio` of `booking_voice`.
 
 ## Axes
 

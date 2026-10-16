@@ -106,3 +106,27 @@ msgstr "Seleziona un orario"
 msgctxt "paper"
 msgid "Sending…"
 msgstr "Invio in corso…"
+
+#: lib/tymeslot_web/themes/folio/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "Book our session"
+msgstr "Prenota la nostra sessione"
+
+#: lib/tymeslot_web/themes/folio/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "Request this time"
+msgstr "Richiedi questo orario"
+
+#: lib/tymeslot_web/themes/folio/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "Someone took that time a moment ago. Here are the nearest ones."
+msgstr "Qualcuno ha appena preso quell'orario. Ecco i più vicini."
+
+#: lib/tymeslot_web/themes/folio/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "Ways to work with me"
+msgstr "Come lavorare con me"

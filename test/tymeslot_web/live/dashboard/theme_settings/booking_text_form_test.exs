@@ -108,6 +108,21 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
       assert saved.booking_greeting == "Hi! I'm Sarah."
     end
 
+    test "seeds the shared instruction on Folio, whose voice gives no instruction label", %{
+      conn: conn,
+      profile: profile
+    } do
+      profile |> change(%{booking_theme: "4"}) |> Repo.update!()
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+
+      toggle(view)
+
+      saved = Repo.reload!(profile)
+      assert saved.booking_text_enabled
+      assert saved.booking_heading == "Ways to work with me"
+      assert saved.booking_instruction == "Pick an option to get started."
+    end
+
     test "switching off resets the wording to the built-in defaults", %{
       conn: conn,
       profile: profile
