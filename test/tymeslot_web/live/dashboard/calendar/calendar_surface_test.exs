@@ -1,0 +1,164 @@
+defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTest do
+  @moduledoc """
+  The redesigned calendar's shell: which surface the switch renders, the
+  one-row toolbar, the URL state, and the event payload the canvas hook
+  draws from.
+  """
+
+  use TymeslotWeb.LiveCase, async: true
+
+  @moduletag :calendar
+  @moduletag :live
+
+  import TymeslotWeb.CalendarSurfaceHelpers
+
+  setup %{conn: conn}, do: owner(conn)
+
+  test "an organiser with the switch on gets the new surface, not the old grid", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    assert has_element?(lv, "#calendar-surface")
+    assert has_element?(lv, "#calendar-canvas[phx-hook='CalendarCanvas'][phx-update='ignore']")
+    refute has_element?(lv, "#calendar-grid")
+  end
+
+  test "first paint is a labelled skeleton until the hook has data", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    assert has_element?(
+             lv,
+             "#calendar-canvas[aria-busy='true'] [role='status'][aria-label='Loading calendar']"
+           )
+  end
+
+  test "opens on this week, titled with its month", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    assert lv |> element("#calendar-period-title") |> render() =~ "October 2026"
+    assert has_element?(lv, "#calendar-view-week[aria-pressed='true']")
+  end
+
+  test "the hook's first request gets this week plus a week either side, in the organiser's wall clock",
+       %{conn: conn, integration: integration} do
+    event(integration, "work", "Design review", ~U[2026-10-14 09:00:00Z])
+    event(integration, "work", "Last week's retro", ~U[2026-10-07 09:00:00Z])
+    event(integration, "work", "Too far", ~U[2026-11-04 09:00:00Z])
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    lv |> element("#calendar-canvas") |> render_hook("calendar:ready", %{})
+
+    assert_reply(lv, %{
+      view: "week",
+      date: "2026-10-14",
+      range: %{from: "2026-10-05", to: "2026-10-26"},
+      reset: true,
+      events: events
+    })
+
+    titles = Enum.map(events, & &1.title)
+    assert "Last week's retro" in titles
+    refute "Too far" in titles
+
+    assert %{start: "2026-10-14T10:00", end: "2026-10-14T11:00", kind: "event"} =
+             Enum.find(events, &(&1.title == "Design review"))
+  end
+
+  test "the payload carries the display settings the grid needs", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    lv |> element("#calendar-canvas") |> render_hook("calendar:ready", %{})
+
+    assert_reply(lv, %{
+      settings: %{
+        week_start: "monday",
+        show_weekends: true,
+        density: "comfortable",
+        fold_night: true,
+        time_format: "24h",
+        working_hours: %{1 => [480, 1080], 6 => nil}
+      }
+    })
+  end
+
+  test "a URL naming a view and date opens on that period", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar?view=day&date=2026-10-20")
+
+    assert has_element?(lv, "#calendar-view-day[aria-pressed='true']")
+    assert lv |> element("#calendar-period-title") |> render() =~ "20 October 2026"
+  end
+
+  test "a URL it cannot read falls back to this week instead of failing", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar?view=fortnight&date=not-a-date")
+
+    assert has_element?(lv, "#calendar-view-week[aria-pressed='true']")
+    assert lv |> element("#calendar-period-title") |> render() =~ "October 2026"
+  end
+
+  test "next patches the URL to the following week and pushes its events",
+       %{conn: conn, integration: integration} do
+    event(integration, "work", "Next week's planning", ~U[2026-10-28 10:00:00Z])
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    lv |> element("#calendar-next") |> render_click()
+
+    assert_patch(lv, "/dashboard/calendar?view=week&date=2026-10-21")
+
+    assert_push_event(lv, "calendar:events", %{
+      date: "2026-10-21",
+      range: %{from: "2026-10-12", to: "2026-11-02"},
+      reset: false,
+      events: events
+    })
+
+    assert Enum.any?(events, &(&1.title == "Next week's planning"))
+  end
+
+  test "previous and Today step back and return", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar?view=three_day&date=2026-11-10")
+
+    lv |> element("#calendar-prev") |> render_click()
+    assert_patch(lv, "/dashboard/calendar?view=three_day&date=2026-11-07")
+
+    lv |> element("#calendar-today") |> render_click()
+    assert_patch(lv, "/dashboard/calendar?view=three_day&date=2026-10-14")
+  end
+
+  test "the view switch keeps the date and changes the view", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar?view=week&date=2026-10-14")
+
+    lv |> element("#calendar-view-three_day") |> render_click()
+
+    assert_patch(lv, "/dashboard/calendar?view=three_day&date=2026-10-14")
+    assert has_element?(lv, "#calendar-view-three_day[aria-pressed='true']")
+  end
+
+  test "the period title opens a date picker that jumps to the chosen day", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    lv |> element("#calendar-date-picker > button") |> render_click()
+
+    lv
+    |> element("#calendar-picker-month button[aria-label='Thursday, 29 October 2026']")
+    |> render_click()
+
+    assert_patch(lv, "/dashboard/calendar?view=week&date=2026-10-29")
+  end
+
+  test "the date picker pages through months", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    lv |> element("#calendar-date-picker > button") |> render_click()
+    lv |> element("#calendar-picker-month button[aria-label='Next month']") |> render_click()
+
+    assert lv |> element("#calendar-picker-month") |> render() =~ "November 2026"
+  end
+
+  test "a day header click in the canvas opens that day", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    lv
+    |> element("#calendar-canvas")
+    |> render_hook("calendar:goto", %{"view" => "day", "date" => "2026-10-15"})
+
+    assert_patch(lv, "/dashboard/calendar?view=day&date=2026-10-15")
+  end
+end

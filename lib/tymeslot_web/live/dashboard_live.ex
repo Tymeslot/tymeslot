@@ -28,6 +28,7 @@ defmodule TymeslotWeb.DashboardLive do
   use TymeslotWeb, :live_view
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.WriteGuardian
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.Meetings
@@ -83,7 +84,10 @@ defmodule TymeslotWeb.DashboardLive do
 
     # `:agenda` defaults nil so the calendar's Up-next strip can be guarded on
     # the dead render, before `load_dashboard_data/1` has run.
-    {:ok, assign(socket, first_dashboard_visit: first_visit?, agenda: nil)}
+    # `:calendar_redesign` stays nil until the calendar is first opened, which
+    # loads the organiser's switch once for the life of this process.
+    {:ok,
+     assign(socket, first_dashboard_visit: first_visit?, agenda: nil, calendar_redesign: nil)}
   end
 
   @impl Phoenix.LiveView
@@ -151,6 +155,8 @@ defmodule TymeslotWeb.DashboardLive do
         socket
       end
 
+    socket = if action == :calendar, do: assign_calendar_redesign(socket), else: socket
+
     socket =
       socket
       |> assign(:page_title, PageTitles.dashboard_title(action))
@@ -165,6 +171,21 @@ defmodule TymeslotWeb.DashboardLive do
     socket = if connected?(socket), do: load_dashboard_data(socket), else: socket
     reschedule_agenda_tick(socket, action)
   end
+
+  # Which calendar surface the organiser chose, read once per process: later
+  # switches go through `handle_event("calendar:switch_surface", ...)`, which
+  # keeps this assign current.
+  defp assign_calendar_redesign(
+         %{assigns: %{calendar_redesign: nil, current_user: %{id: user_id}}} = socket
+       ) do
+    assign(
+      socket,
+      :calendar_redesign,
+      CalendarGrid.get_or_create_preferences(user_id).redesign_enabled
+    )
+  end
+
+  defp assign_calendar_redesign(socket), do: socket
 
   # Keeps a single agenda-refresh timer alive only while a section that shows
   # the agenda (overview, calendar's Up-next strip) is open. Cancels any prior
@@ -193,7 +214,8 @@ defmodule TymeslotWeb.DashboardLive do
         :component_module,
         ComponentDispatch.component_for_action(
           assigns.live_action,
-          assigns[:dashboard_action_components]
+          assigns[:dashboard_action_components],
+          calendar_redesign: assigns[:calendar_redesign] == true
         )
       )
       |> assign(:component_props, ComponentDispatch.props_for_action(assigns))
