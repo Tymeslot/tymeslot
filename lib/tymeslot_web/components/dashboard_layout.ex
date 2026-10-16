@@ -20,6 +20,11 @@ defmodule TymeslotWeb.Components.DashboardLayout do
   attr :automations_allowed, :boolean, default: true
   attr :analytics_allowed, :boolean, default: true
   attr :full_width, :boolean, default: false
+
+  attr :compact_nav, :boolean,
+    default: false,
+    doc: "a slimmer top bar, for sections whose content should take the screen"
+
   attr :sidebar_extensions, :list, default: []
   attr :unseen_announcements, :list, default: []
   slot :inner_block, required: true
@@ -43,7 +48,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
 
       <%!-- Top Navigation --%>
       <div class="shrink-0">
-        <.top_navigation current_user={@current_user} profile={@profile} />
+        <.top_navigation current_user={@current_user} profile={@profile} compact={@compact_nav} />
       </div>
 
       <%!-- Main Layout Area --%>
@@ -86,14 +91,22 @@ defmodule TymeslotWeb.Components.DashboardLayout do
   attr :current_user, :any, required: true
   attr :profile, :any, required: true
   attr :show_sidebar_toggle, :boolean, default: true
+  attr :compact, :boolean, default: false
 
   @spec top_navigation(map()) :: Phoenix.LiveView.Rendered.t()
   def top_navigation(assigns) do
     ~H"""
-    <div class="w-full px-2 sm:px-4 py-4 sm:py-6">
+    <div
+      id="dashboard-top-nav"
+      data-compact={to_string(@compact)}
+      class={["w-full px-2 sm:px-4", if(@compact, do: "py-1", else: "py-4 sm:py-6")]}
+    >
       <nav class="brand-nav relative" style="z-index: 50;">
         <div class="w-full px-1 sm:px-4">
-          <div class="flex items-center justify-between gap-2 h-16">
+          <div class={[
+            "flex items-center justify-between gap-2",
+            if(@compact, do: "h-12", else: "h-16")
+          ]}>
             <%!-- Left side: Logo and Mobile Menu Button --%>
             <div class="flex items-center space-x-2 sm:space-x-4 sm:-ml-4 flex-1 min-w-0">
               <%= if @show_sidebar_toggle do %>
@@ -119,7 +132,9 @@ defmodule TymeslotWeb.Components.DashboardLayout do
               <div class="flex items-center space-x-3 min-w-0">
                 <TymeslotWeb.Components.CoreComponents.Brand.logo
                   mode={:full}
-                  img_class="h-10 sm:h-16 shrink min-w-0"
+                  img_class={
+                    if(@compact, do: "h-8 shrink min-w-0", else: "h-10 sm:h-16 shrink min-w-0")
+                  }
                 />
               </div>
             </div>
@@ -131,6 +146,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
                 id="user-dropdown"
                 current_user={@current_user}
                 profile={@profile}
+                compact={@compact}
               />
             </div>
           </div>

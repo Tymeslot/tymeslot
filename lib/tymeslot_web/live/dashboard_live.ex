@@ -247,6 +247,7 @@ defmodule TymeslotWeb.DashboardLive do
       automations_allowed={@automations_allowed}
       analytics_allowed={@analytics_allowed}
       full_width={@live_action == :calendar}
+      compact_nav={@live_action == :calendar and @calendar_redesign == true}
       sidebar_extensions={@sidebar_extensions}
       unseen_announcements={@unseen_announcements}
     >
@@ -273,7 +274,7 @@ defmodule TymeslotWeb.DashboardLive do
             />
           </div>
           <CalendarUpNextStrip.up_next_strip
-            :if={@agenda && @agenda.next}
+            :if={@agenda && @agenda.next && @calendar_redesign != true}
             entry={@agenda.next}
             timezone={@agenda.timezone}
             time_format={@time_format}
