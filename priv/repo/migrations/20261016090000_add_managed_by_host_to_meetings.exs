@@ -11,6 +11,11 @@ defmodule Tymeslot.Repo.Migrations.AddManagedByHostToMeetings do
 
   def change do
     alter table(:meetings) do
+      # The default keeps every existing meeting with its booker, so it is
+      # load-bearing. Postgres 11+ records a non-volatile default in the
+      # catalogue instead of rewriting the table, so the lock covers a
+      # catalogue update only.
+      # excellent_migrations:safety-assured-for-next-line column_added_with_default
       add :managed_by_host, :boolean, null: false, default: false
     end
   end
