@@ -20,12 +20,20 @@ defmodule Tymeslot.Repo.Migrations.AddConfirmationToPollParticipants do
       add :link_sent_at, :utc_datetime
     end
 
+    # The backfill is the point of the migration: everyone registered under the
+    # old rules counts. One UPDATE over a small table (a row per person on a
+    # poll), run before the application starts.
+    # excellent_migrations:safety-assured-for-next-line raw_sql_executed
     execute("UPDATE poll_participants SET confirmed_at = COALESCE(voted_at, inserted_at)")
   end
 
+  # Dropping the columns is the whole point of the rollback, which only ever
+  # runs deliberately.
   def down do
     alter table(:poll_participants) do
+      # excellent_migrations:safety-assured-for-next-line column_removed
       remove :confirmed_at
+      # excellent_migrations:safety-assured-for-next-line column_removed
       remove :link_sent_at
     end
   end

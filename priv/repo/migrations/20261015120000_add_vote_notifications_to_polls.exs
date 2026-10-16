@@ -13,6 +13,10 @@ defmodule Tymeslot.Repo.Migrations.AddVoteNotificationsToPolls do
 
   def change do
     alter table(:polls) do
+      # The default keeps existing polls quiet, so it is load-bearing. Postgres
+      # 11+ records a non-volatile default in the catalogue instead of
+      # rewriting the table, so the lock covers a catalogue update only.
+      # excellent_migrations:safety-assured-for-next-line column_added_with_default
       add :notify_on_vote, :boolean, null: false, default: false
       add :vote_digest_sent_at, :utc_datetime
     end
