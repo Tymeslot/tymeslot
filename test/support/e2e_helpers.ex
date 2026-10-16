@@ -56,19 +56,31 @@ defmodule TymeslotWeb.E2EHelpers do
   end
 
   @doc """
-  Waits for LiveView to mount by checking for `[data-phx-main]`.
+  Waits for the page's LiveView to connect.
+
+  `[data-phx-main]` alone is not enough: the server renders it into the static
+  HTML, so it is there before the JavaScript bundle has even run. A click in
+  that window reaches a button with no one listening, and one that lands after
+  the bundle has run but before the channel has joined is dropped by the
+  LiveView client (`pushWithReply` answers "no connection" without sending
+  anything). Either way the event never reaches the server and nothing reports
+  it. The client adds `phx-connected` to the root once the join succeeds, so
+  that is what makes the page interactive.
   """
   @spec wait_for_live(Wallaby.Session.t()) :: Wallaby.Session.t()
   def wait_for_live(session) do
-    assert_has(session, css("[data-phx-main]", count: :any, minimum: 1))
+    assert_has(session, css("[data-phx-main].phx-connected", count: :any, minimum: 1))
   end
 
   @doc """
-  Waits for the dashboard to appear after login.
+  Waits for the dashboard to appear after login, with its LiveView connected
+  (see `wait_for_live/1`).
   """
   @spec wait_for_dashboard(Wallaby.Session.t()) :: Wallaby.Session.t()
   def wait_for_dashboard(session) do
-    assert_has(session, css("#dashboard-root"))
+    session
+    |> assert_has(css("#dashboard-root"))
+    |> wait_for_live()
   end
 
   @doc """

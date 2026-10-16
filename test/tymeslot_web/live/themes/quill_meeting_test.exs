@@ -62,6 +62,43 @@ defmodule TymeslotWeb.Live.Themes.QuillMeetingTest do
     end
   end
 
+  describe "meeting page contrast" do
+    test "the cancel page's duration badge uses the contrast tokens", %{
+      conn: conn,
+      profile: profile,
+      meeting: meeting
+    } do
+      {:ok, view, _html} = live(conn, ~p"/#{profile.username}/meeting/#{meeting.uid}/cancel")
+
+      assert has_element?(view, ".meeting-page-duration")
+      refute has_element?(view, ".glass-morphism-card [style]:not([style=\"\"])")
+    end
+
+    test "the reschedule page's duration badge uses the contrast tokens", %{
+      conn: conn,
+      profile: profile,
+      meeting: meeting
+    } do
+      {:ok, view, _html} =
+        live(conn, ~p"/#{profile.username}/meeting/#{meeting.uid}/reschedule")
+
+      assert has_element?(view, ".meeting-page-duration")
+      refute has_element?(view, ".glass-morphism-card [style]:not([style=\"\"])")
+    end
+
+    test "the cancel-confirmed page carries no inline styles", %{
+      conn: conn,
+      profile: profile,
+      meeting: meeting
+    } do
+      {:ok, view, _html} =
+        live(conn, ~p"/#{profile.username}/meeting/#{meeting.uid}/cancel-confirmed")
+
+      assert has_element?(view, ".meeting-page-title")
+      refute has_element?(view, ".glass-morphism-card [style]:not([style=\"\"])")
+    end
+  end
+
   @tag :capture_log
   # The assertions live in the shared ThemeMeetingTestCases helper, which the
   # check cannot see because the helper name does not start with `assert_`.

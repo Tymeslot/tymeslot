@@ -138,7 +138,7 @@ msgstr "Автоматично додавати посилання на онла
 msgid "Back"
 msgstr "Назад"
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#: lib/tymeslot_web/live/onboarding_live/preview_parts.ex
 #, elixir-autogen, elixir-format
 msgid "Book"
 msgstr "Забронювати"
@@ -888,3 +888,18 @@ msgstr "До зустрічі"
 #, elixir-autogen, elixir-format
 msgid "How much free time a new booking needs before and after it."
 msgstr "Скільки вільного часу потрібно до та після нового бронювання."
+
+#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
+#, elixir-autogen, elixir-format
+msgid "Choose by description instead"
+msgstr "Вибрати за описом"
+
+#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
+#, elixir-autogen, elixir-format
+msgid "Show all themes"
+msgstr "Показати всі теми"
+
+#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
+#, elixir-autogen, elixir-format
+msgid "Which of these sounds like you?"
+msgstr "Який із цих описів про вас?"

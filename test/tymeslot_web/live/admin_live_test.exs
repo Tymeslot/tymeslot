@@ -188,12 +188,12 @@ defmodule TymeslotWeb.AdminLiveTest do
       assert html =~ "Recommended: Enabled"
     end
 
-    test "shows an info banner explaining the env-var override behaviour", %{conn: conn} do
+    test "shows an info banner explaining that environment variables take precedence",
+         %{conn: conn} do
       {:ok, _lv, html} = live(conn, ~p"/admin/settings")
 
-      assert html =~ "override the matching environment variables"
-      assert html =~ "REGISTRATION_ENABLED"
-      assert html =~ "PASSWORD_AUTH_ENABLED"
+      assert html =~
+               "A setting fixed by an environment variable, such as REGISTRATION_ENABLED, is greyed out"
     end
 
     test "toggling registration off via the LiveView blocks public sign-ups", %{conn: conn} do

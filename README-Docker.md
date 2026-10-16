@@ -563,8 +563,13 @@ GOOGLE_STATE_SECRET=         # Self-generated random string (required with Googl
 OUTLOOK_CLIENT_ID=           # From Azure AD App Registration (used for both Outlook & Teams)
 OUTLOOK_CLIENT_SECRET=       # From Azure AD App Registration (used for both Outlook & Teams)
 OUTLOOK_STATE_SECRET=        # Self-generated random string (required with Microsoft OAuth)
-ENABLE_GOOGLE_AUTH=false     # Enable Google login/signup
-ENABLE_GITHUB_AUTH=false     # Enable GitHub login/signup
+# Sign-in settings you can also change on the /admin settings page: a variable
+# set here takes precedence, and the admin page shows that setting greyed out.
+# Leave it unset to manage the setting from the admin page instead. Only true
+# or false takes precedence: another value logs a warning at boot and leaves
+# the admin page in charge.
+# ENABLE_GOOGLE_AUTH=true    # Enable Google login/signup
+# ENABLE_GITHUB_AUTH=true    # Enable GitHub login/signup
 ```
 
 ### Error tracking
@@ -719,6 +724,8 @@ docker compose up -d --build
 
 > **Upgrading to a release that strips upload metadata.** Avatars and theme backgrounds no longer keep the location, capture time and camera or phone details that photos and videos often carry. Files uploaded before the update are cleaned automatically, once, in the background on the first start after updating; the log reports `Upload metadata sweep finished` when it is done. To run the clean-up again by hand, for instance after restoring an old copy of the uploads, run it as the app's user so the files keep their owner: `docker exec -u app tymeslot bin/tymeslot eval 'Tymeslot.Release.strip_upload_metadata()'`. It is safe to repeat. QuickTime (`.mov`) videos are no longer accepted as theme backgrounds; a `.mov` background you already have keeps working.
 
+> **Upgrading to a release where environment variables take precedence.** A variable that is set now outranks the /admin settings page, which shows that setting greyed out. Older copies of `.env.example` had `ENABLE_GOOGLE_AUTH=false`, `ENABLE_GITHUB_AUTH=false` and `ENABLE_OAUTH_AUTH=false` uncommented. If your `.env` still has them, Google, GitHub and SSO sign-in stay off whatever you saved in /admin. Delete or comment out those lines, then `docker compose up -d`.
+
 ---
 
 ## Troubleshooting
@@ -842,7 +849,7 @@ Tymeslot supports multiple OAuth providers for authentication and calendar/video
    GOOGLE_CLIENT_ID=<your_google_client_id>
    GOOGLE_CLIENT_SECRET=<your_google_client_secret>
    GOOGLE_STATE_SECRET=$(openssl rand -base64 32 | tr -d '\n')  # Self-generated
-   ENABLE_GOOGLE_AUTH=true  # Optional: Enable Google login/signup
+   ENABLE_GOOGLE_AUTH=true  # Optional: fixes Google sign-in on; omit to manage it from /admin
    ```
 
 ### GitHub OAuth Setup
@@ -864,7 +871,7 @@ Tymeslot supports multiple OAuth providers for authentication and calendar/video
    ```bash
    GITHUB_CLIENT_ID=<your_github_client_id>
    GITHUB_CLIENT_SECRET=<your_github_client_secret>
-   ENABLE_GITHUB_AUTH=true  # Optional: Enable GitHub login/signup
+   ENABLE_GITHUB_AUTH=true  # Optional: fixes GitHub sign-in on; omit to manage it from /admin
    ```
 
 ### Microsoft OAuth Setup (Outlook Calendar & Teams)

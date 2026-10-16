@@ -35,11 +35,11 @@ defmodule TymeslotWeb.OAuthErrorMessagingTest do
   end
 
   describe "VideoOAuthController.google_callback/2 — provider error params" do
-    test "access_denied maps to 'Authorization was denied'", %{conn: conn} do
+    test "access_denied maps to 'Authorisation was denied'", %{conn: conn} do
       conn = get(conn, "/auth/google/video/callback", %{"error" => "access_denied"})
 
       assert redirected_to(conn) == "/dashboard/integrations?tab=video"
-      assert Flash.get(conn.assigns.flash, :error) =~ "Authorization was denied"
+      assert Flash.get(conn.assigns.flash, :error) =~ "Authorisation was denied"
     end
 
     test "invalid params (no code, no error) redirect with 'Invalid authentication response'",

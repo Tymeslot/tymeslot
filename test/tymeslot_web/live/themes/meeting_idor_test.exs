@@ -48,7 +48,7 @@ defmodule TymeslotWeb.Live.Themes.MeetingIdorTest do
       assert {:error, {:redirect, %{to: "/", flash: flash}}} =
                live(conn, ~p"/#{attacker_profile.username}/meeting/#{victim_meeting.uid}/cancel")
 
-      assert flash["error"] =~ "not found"
+      assert flash["error"] =~ "could not be found"
     end
 
     test "allows the legitimate owner to visit their own cancel URL", %{conn: conn} do
@@ -82,7 +82,7 @@ defmodule TymeslotWeb.Live.Themes.MeetingIdorTest do
                  ~p"/#{attacker_profile.username}/meeting/#{victim_meeting.uid}/reschedule"
                )
 
-      assert flash["error"] =~ "not found"
+      assert flash["error"] =~ "could not be found"
     end
 
     test "allows the legitimate owner to visit their own reschedule URL", %{conn: conn} do
@@ -119,7 +119,7 @@ defmodule TymeslotWeb.Live.Themes.MeetingIdorTest do
                  ~p"/#{attacker_profile.username}/meeting/#{victim_meeting.uid}/cancel-confirmed"
                )
 
-      assert flash["error"] =~ "not found"
+      assert flash["error"] =~ "could not be found"
     end
   end
 

@@ -74,6 +74,79 @@ defmodule TymeslotWeb.Components.CoreComponentsInputConstraintsTest do
       refute html =~ "disabled"
     end
 
+    test "render required on a text input, not only as the label's marker" do
+      html =
+        render_component(&Forms.input/1,
+          id: "heading",
+          name: "profile[heading]",
+          label: "Heading",
+          value: "",
+          required: true
+        )
+
+      assert [_control] = html |> Floki.parse_fragment!() |> Floki.find("input#heading[required]")
+    end
+
+    test "render required on a select" do
+      html =
+        render_component(&Forms.input/1,
+          id: "tz",
+          name: "profile[tz]",
+          type: "select",
+          options: [{"UTC", "UTC"}],
+          value: "UTC",
+          required: true
+        )
+
+      assert [_control] = html |> Floki.parse_fragment!() |> Floki.find("select#tz[required]")
+    end
+
+    test "render required on a textarea" do
+      html =
+        render_component(&Forms.input/1,
+          id: "notes",
+          name: "profile[notes]",
+          type: "textarea",
+          value: "",
+          required: true
+        )
+
+      assert [_control] =
+               html |> Floki.parse_fragment!() |> Floki.find("textarea#notes[required]")
+    end
+
+    test "render required on a checkbox" do
+      html =
+        render_component(&Forms.input/1,
+          id: "terms",
+          name: "profile[terms]",
+          type: "checkbox",
+          value: false,
+          required: true
+        )
+
+      doc = Floki.parse_fragment!(html)
+
+      assert [_control] = Floki.find(doc, ~s(input#terms[type="checkbox"][required]))
+
+      # The hidden companion that posts the unchecked value must not be
+      # required: it is not a control anyone can fill in.
+      assert [_hidden] = Floki.find(doc, ~s(input[type="hidden"][name="profile[terms]"]))
+      assert [] = Floki.find(doc, ~s(input[type="hidden"][required]))
+    end
+
+    test "leave no required attribute behind when the field is optional" do
+      html =
+        render_component(&Forms.input/1,
+          name: "profile[heading]",
+          label: "Heading",
+          value: "",
+          required: false
+        )
+
+      refute html =~ "required"
+    end
+
     test "do not displace an aria attribute the component adds for errors" do
       html =
         render_component(&Forms.input/1,

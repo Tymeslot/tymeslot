@@ -34,6 +34,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           price_cents: integer() | nil,
           max_participants: integer(),
           fixed_dates: boolean(),
+          one_off: boolean(),
           show_seat_availability: boolean(),
           last_spots_threshold: pos_integer() | nil,
           requires_approval: boolean(),
@@ -71,8 +72,9 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     field(:payment_required, :boolean, default: false)
     field(:price_cents, :integer)
     field(:max_participants, :integer, default: 1)
-    # See `Tymeslot.MeetingTypes.FixedDates`.
+    # See `Tymeslot.MeetingTypes.FixedDates` and `Tymeslot.MeetingTypes.OneOffEvents`.
     field(:fixed_dates, :boolean, default: false)
+    field(:one_off, :boolean, default: false)
     field(:show_seat_availability, :boolean, default: true)
     field(:last_spots_threshold, :integer)
 
@@ -180,6 +182,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :price_cents,
       :max_participants,
       :fixed_dates,
+      :one_off,
       :show_seat_availability,
       :last_spots_threshold,
       :requires_approval,

@@ -55,6 +55,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InitialState do
       event_writes: WriteQueue.new(),
       deleting_event: false,
       video_integrations: [],
+      venues: [],
       confirm_remove_attendee: nil,
       pending_attendees: [],
       confirm_discard_attendees: false,

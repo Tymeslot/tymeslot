@@ -299,11 +299,6 @@ msgstr "Wpisz ponownie hasło aplikacji, aby połączyć się z innym serwerem."
 msgid "Enter your video meeting URL. Use {{meeting_id}} for unique rooms per meeting"
 msgstr "Wpisz adres URL spotkania wideo. Użyj {{meeting_id}}, aby każde spotkanie miało własny pokój"
 
-#: lib/tymeslot/integrations/video/provider_config.ex
-#, elixir-autogen, elixir-format
-msgid "Enterprise OAuth integration with organizational accounts"
-msgstr "Firmowa integracja OAuth z kontami organizacji"
-
 #: lib/tymeslot_web/components/dashboard/integrations/video/kmeet_config.ex
 #, elixir-autogen, elixir-format
 msgid "Every booking gets its own room, generated automatically."
@@ -1149,3 +1144,8 @@ msgstr "Usuń"
 #, elixir-autogen, elixir-format
 msgid "Delete %{name}"
 msgstr "Usuń %{name}"
+
+#: lib/tymeslot/integrations/video/provider_config.ex
+#, elixir-autogen, elixir-format
+msgid "Enterprise OAuth integration with organisational accounts"
+msgstr "Firmowa integracja OAuth z kontami organizacji"

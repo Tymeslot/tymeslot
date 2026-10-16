@@ -1,18 +1,18 @@
-/* Time Slots Component */
+/* Time Slots Component
+   Rhythm's treatment of the slot list; the shared structure is in
+   shared/components/slot-list.css. */
 
-.time-slots-section {
-  display: flex;
-  flex-direction: column;
+.slot-list {
   flex: 1 1 auto;   /* fill remaining space in .schedule-grid so the grid adapts */
   min-height: 0;    /* allow children to shrink below their intrinsic content */
 }
 
-.time-slots-section-heading {
+.slot-list__heading {
   margin-bottom: var(--space-sm);
   flex-shrink: 0;
 }
 
-.time-slots-grid {
+.slot-list__body {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
@@ -23,16 +23,24 @@
   scroll-behavior: smooth;
 }
 
-/* Note: Scrollbar styling is applied via .scroll-y utility class from base.css */
+/* The period sections sit in one wrapper inside the scroll region, so the
+   column spacing between them lives here rather than on the body. */
+.slot-list__groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
 
-.time-period-section {
+/* Note: the slot list body's scrollbar is styled in base.css, beside .scroll-y */
+
+.slot-list__period {
   display: flex;
   flex-direction: column;
   gap: var(--space-3xs);
   margin-bottom: var(--space-xs);
 }
 
-.time-period-header {
+.slot-list__period-label {
   color: var(--theme-text-secondary);
   margin: 0;
   margin-bottom: var(--space-3xs);
@@ -40,42 +48,37 @@
   border-bottom: var(--border-width-thin) solid var(--border-subtle);
 }
 
-.time-period-slots {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(5rem, 1fr));
-  gap: var(--space-3xs);
+/* A time never breaks over two lines ("09:00" above "AM"). The grid's
+   narrowest column holds an eight-character time such as "09:00 AM" plus the
+   slot's padding and border, so the columns stay equal and every label fits
+   on one line; the font size is set here so `ch` measures the slot's text. */
+.slot-list__grid {
+  font-size: var(--theme-font-size-sm);
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(max(5rem, calc(8ch + 2 * var(--space-2xs) + 2 * var(--border-width-thin))), 1fr)
+  );
 }
 
-.time-slot {
-  padding: var(--space-3xs) var(--space-xs);
+.slot-list__slot {
+  white-space: nowrap;
+  padding: var(--space-3xs) var(--space-2xs);
   background: var(--surface-medium);
   border: var(--border-width-thin) solid var(--border-strong);
   border-radius: var(--radius-sm);
-  color: var(--theme-text);
-  cursor: pointer;
   transition: background var(--transition-smooth), border-color var(--transition-smooth), transform var(--transition-smooth), box-shadow var(--transition-smooth);
-  text-align: center;
   min-height: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   box-shadow: var(--shadow-sm);
   font-size: var(--theme-font-size-xs);
 }
 
-.time-slot:focus-visible {
-  outline: var(--border-width-thick) solid var(--theme-primary);
-  outline-offset: var(--space-3xs);
-}
-
-.time-slot:hover {
+.slot-list__slot:hover {
   background: var(--surface-intense);
   border-color: var(--theme-primary);
-  transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
 
-.time-slot.selected {
+.slot-list__slot.slot-list__slot--selected {
   background: var(--theme-surface);
   border-color: var(--theme-primary);
   box-shadow:
@@ -84,55 +87,12 @@
 }
 
 /* ===== Seat availability (group bookings) ===== */
-/* Group slots stack the time above a spots badge; solo slots (no
-   .has-seats) keep the single-line layout untouched. */
-.time-slot.has-seats {
-  flex-direction: column;
+/* The shared slot-list.css stacks a group time above its spots badge;
+   Rhythm sets it tighter, on a little more padding. */
+.slot-list__slot--seats {
   gap: var(--space-hairline);
   padding-top: var(--space-2xs);
   padding-bottom: var(--space-2xs);
-}
-
-.seat-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0 var(--space-2xs);
-  border-radius: var(--radius-md);
-  font-size: var(--theme-font-size-3xs);
-  font-weight: var(--font-weight-semibold);
-  line-height: 1.6;
-  /* Labels are translated, and some outgrow a narrow slot button: they wrap
-     inside it rather than spill past its edge. */
-  max-width: 100%;
-  text-align: center;
-  overflow-wrap: anywhere;
-}
-
-.seat-badge.seat-green {
-  background: var(--seat-green-bg);
-  color: var(--seat-green);
-}
-
-.seat-badge.seat-amber {
-  background: var(--seat-amber-bg);
-  color: var(--seat-amber);
-}
-
-.seat-badge.seat-red {
-  background: var(--seat-red-bg);
-  color: var(--seat-red);
-}
-
-.seat-badge.seat-neutral {
-  background: var(--seat-neutral-bg);
-  color: var(--seat-neutral);
-}
-
-/* The selected slot's surface differs from the unselected one, and a faint
-   status wash on it is hard to read; the badge takes the primary pair. */
-.time-slot.selected .seat-badge {
-  background: var(--seat-selected-bg);
-  color: var(--seat-selected);
 }
 
 /* ============================================================================
@@ -143,12 +103,12 @@
 
 /* Mobile-equivalent: very narrow container */
 @container scheduling (max-width: 479px) {
-  .time-slots-section {
+  .slot-list {
     margin-top: var(--space-xs);
     overflow: hidden;
   }
 
-  .time-slots-grid {
+  .slot-list__body {
     max-height: var(--time-slots-max-height);
     padding-right: var(--space-2xs);
   }
@@ -158,22 +118,25 @@
    HEIGHT MEDIA QUERIES — at short viewports, stop pinning the grid to a fixed
    pixel height. Let it fill whatever space .schedule-grid has left after the
    calendar section and scroll internally when the slot list is taller than
-   the remaining space. The flex chain (.schedule-grid → .time-slots-section
-   → .time-slots-grid, each with min-height: 0) handles the adaptation.
+   the remaining space. The flex chain
+   (.schedule-grid → .slot-list → .slot-list__body, each with min-height: 0)
+   handles the adaptation.
    ============================================================================ */
 
 @media (max-height: 600px) {
-  .time-slots-grid {
-    max-height: 100%;
+  :where(html:not([data-embedded])) {
+    .slot-list__body {
+      max-height: 100%;
+    }
   }
 }
 
 /* ===== Two-Tier Hour Picker ===== */
-/* No max-height on the minute grid: .time-slots-grid above it already owns the
+/* No max-height on the minute grid: .slot-list__body above it already owns the
    single scroll region for this panel, and a nested one would produce two
    scrollbars at short heights. */
 
-.time-slot--hour {
+.slot-list__slot--hour {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -185,7 +148,7 @@
    made them identical. The minute drawer renders beneath the whole row, not
    beneath the button that opened it, so this state is the only thing tying
    the two together. */
-.time-slot--hour.expanded {
+.slot-list__slot--hour.slot-list__slot--expanded {
   background: var(--surface-intense);
   border-color: var(--theme-primary);
   color: var(--theme-primary);
@@ -195,8 +158,7 @@
 /* A contained drawer rather than a left rule. The rule sat at the row's left
    edge, which is the first hour in the row and not the open one, so it
    pointed at the wrong button whenever the open hour was not first. */
-.time-period-slots--minutes {
-  margin-top: var(--space-xs);
+.slot-list__grid--minutes {
   padding: var(--space-2xs);
   background: var(--surface-subtle);
   border: var(--border-width-thin) solid var(--border-subtle);

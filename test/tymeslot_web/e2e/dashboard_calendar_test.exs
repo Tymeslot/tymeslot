@@ -64,6 +64,41 @@ defmodule TymeslotWeb.E2E.DashboardCalendarTest do
     |> assert_has(css("[data-event-id='#{event.id}']", text: "Renamed In Browser"))
   end
 
+  # The visible all-day chips sit inside the <summary> of the "+N more"
+  # disclosure. A hook that stopped the click's propagation kept it from ever
+  # reaching LiveView's phx-click listener on window, so the chip opened
+  # nothing. The click must be a real browser click: LiveViewTest's
+  # render_click targets the element directly and never propagates.
+  feature "clicking an all-day chip opens its event without toggling the disclosure", %{
+    session: session
+  } do
+    {session, user} = log_in_via_browser(session)
+    integration = Factory.insert(:calendar_integration, user: user, is_active: true)
+    today = Date.utc_today()
+
+    # Three events, so the cell has a "+1 more" disclosure the click could toggle.
+    [first | _others] =
+      for summary <- ["All Day Alpha", "All Day Beta", "All Day Gamma"] do
+        Factory.insert(:provider_calendar_event, %{
+          calendar_integration: integration,
+          summary: summary,
+          start_date: today,
+          end_date: Date.add(today, 1),
+          start_at: DateTime.new!(today, ~T[00:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.add(today, 1), ~T[00:00:00], "Etc/UTC"),
+          all_day: true
+        })
+      end
+
+    session
+    |> visit("/dashboard/calendar")
+    |> wait_for_live()
+    |> click(css("#allday-event-#{first.id}-#{today}"))
+    |> assert_has(css("#event-detail-modal"))
+    |> assert_has(css("#event-title-input"))
+    |> refute_has(css("#calendar-allday-row details[open]"))
+  end
+
   # The grid is the widest thing in the dashboard and demotes to a narrower view
   # on small screens, so it is the most likely place for the shell to be pushed
   # past the viewport.

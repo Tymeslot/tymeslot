@@ -10,6 +10,16 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   Do not use the `field=` shortcut for that UX, because `field.errors` will
   re-add errors from the live changeset and defeat the clear-on-type
   behaviour.
+
+  `required` renders on the control, so the browser blocks an empty submit
+  with its own message before the server sees it. A form that shows its own
+  error messages for empty fields sets `novalidate` on the `<form>`: the
+  attribute still tells assistive technology the field is required, and the
+  empty submission reaches the server, which answers with the app's message.
+  `novalidate` switches off every native constraint on the form, not only
+  `required`: `type="email"` and `type="url"`, `minlength`/`maxlength`,
+  `pattern` and `min`/`max`/`step` all go unchecked too, so the server must
+  validate each of them itself.
   """
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -293,11 +303,9 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   defp disabled_attr(rest, true), do: Map.put(rest, :disabled, true)
   defp disabled_attr(rest, _disabled), do: rest
 
-  # `required` is declared for the label's `*`, so it needs the same threading
-  # as `disabled`. Rendering it switches on native browser validation: a form
-  # that shows its own server-side errors for empty fields must carry
-  # `novalidate`, which keeps the attribute for assistive technology while
-  # leaving the error messages to the app.
+  # `required` is declared for the label's `*`, so it has to be threaded into
+  # `@rest` the same way, or neither the browser nor assistive technology ever
+  # learns the field is required. See the moduledoc for `novalidate`.
   defp required_attr(rest, true), do: Map.put(rest, :required, true)
   defp required_attr(rest, _required), do: rest
 
@@ -338,11 +346,14 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
       <div
         id={@id}
         role="alert"
-        class="mt-2 flex items-center gap-2 text-red-600 font-bold text-sm"
+        class="form-field-error mt-2 flex items-start gap-2 text-red-600 font-bold text-sm"
       >
+        <%!-- Top-aligned and never shrunk, so a message that wraps keeps a
+              full-size icon beside its first line; mt-0.5 centres the 16px
+              icon in that line's 20px. --%>
         <TymeslotWeb.Components.CoreComponents.Icons.icon
           name="hero-exclamation-circle-solid"
-          class="w-4 h-4"
+          class="w-4 h-4 shrink-0 mt-0.5"
         />
         <div class="flex flex-col">
           <%= for error <- @errors do %>

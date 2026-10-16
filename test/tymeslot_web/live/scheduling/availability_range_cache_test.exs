@@ -77,7 +77,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityRangeCacheTest do
     ranges =
       0..3
       |> Enum.map(&shift_month(today, &1))
-      |> Enum.map(fn date -> Calculate.display_range(date.year, date.month) end)
+      |> Enum.map(fn date -> Calculate.display_range(date.year, date.month, :monday) end)
 
     Enum.each(ranges, fn {start_date, end_date} ->
       assert {:ok, map} =
@@ -106,7 +106,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityRangeCacheTest do
     next = shift_month(today, 1)
 
     for date <- [today, next] do
-      {start_date, end_date} = Calculate.display_range(date.year, date.month)
+      {start_date, end_date} = Calculate.display_range(date.year, date.month, :monday)
 
       assert {:error, :all_calendars_unavailable} =
                Offer.days_in_range(request(profile), start_date, end_date, 30)
@@ -127,7 +127,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityRangeCacheTest do
     end)
 
     today = Date.utc_today()
-    {start_date, end_date} = Calculate.display_range(today.year, today.month)
+    {start_date, end_date} = Calculate.display_range(today.year, today.month, :monday)
 
     fetch = fn ->
       Offer.days_in_range(request(profile), start_date, end_date, 30)

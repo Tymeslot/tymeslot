@@ -131,7 +131,7 @@ defmodule TymeslotWeb.Live.MultilingualBookingTest do
       html = view |> element("button[phx-click='toggle_language_dropdown']") |> render_click()
 
       # Verify language switcher is present
-      assert html =~ "language-switcher"
+      assert html =~ "lang-switcher"
 
       supported = Locales.supported_codes()
       refute supported == []
@@ -185,7 +185,7 @@ defmodule TymeslotWeb.Live.MultilingualBookingTest do
       active_locales =
         html
         |> Floki.parse_document!()
-        |> Floki.find("button[phx-click='change_locale'].active")
+        |> Floki.find("button[phx-click='change_locale'].lang-switcher__item--active")
         |> Floki.attribute("phx-value-locale")
 
       assert active_locales == ["de"]

@@ -95,7 +95,7 @@
 .calendar-day--loading {
   opacity: 0.5;
   cursor: wait;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--surface-faint);
 }
 
 /* ===== Fluid Sizing ===== */
@@ -162,26 +162,30 @@
 
 /* Short screens — drop square aspect ratio, reduce vertical padding */
 @media (max-height: 600px) {
-  .calendar-day {
-    aspect-ratio: auto;
-    min-height: auto;
-    padding: var(--space-3xs) var(--space-2xs);
-    gap: var(--space-hairline);
-  }
+  :where(html:not([data-embedded])) {
+    .calendar-day {
+      aspect-ratio: auto;
+      min-height: auto;
+      padding: var(--space-3xs) var(--space-2xs);
+      gap: var(--space-hairline);
+    }
 
-  .calendar-header {
-    margin-bottom: var(--space-3xs);
-  }
+    .calendar-header {
+      margin-bottom: var(--space-3xs);
+    }
 
-  .calendar-grid {
-    gap: var(--space-hairline);
+    .calendar-grid {
+      gap: var(--space-hairline);
+    }
   }
 }
 
 /* Extremely short screens — minimal calendar chrome */
 @media (max-height: 400px) {
-  .calendar-day {
-    padding: var(--space-3xs) var(--space-hairline);
-    border-radius: var(--radius-sm);
+  :where(html:not([data-embedded])) {
+    .calendar-day {
+      padding: var(--space-3xs) var(--space-hairline);
+      border-radius: var(--radius-sm);
+    }
   }
 }

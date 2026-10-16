@@ -58,6 +58,7 @@ msgid "Use lowercase letters, numbers and hyphens. Randomise creates an unguessa
 msgstr "Verwenden Sie Kleinbuchstaben, Ziffern und Bindestriche. „Zufällig erzeugen“ erstellt einen nicht erratbaren Link."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{minutes} min"
 msgstr "%{minutes} Min."
@@ -86,6 +87,7 @@ msgstr "Erstellen Sie Termintypen, um verschiedene Terminoptionen anzubieten"
 
 #: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr "Löschen"
@@ -97,6 +99,7 @@ msgstr "Termintyp löschen"
 
 #: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Edit"
 msgstr "Bearbeiten"
@@ -322,6 +325,7 @@ msgid "Paused"
 msgstr "Pausiert"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Delete %{name}"
 msgstr "%{name} löschen"
@@ -332,9 +336,55 @@ msgid "Delete meeting type"
 msgstr "Termintyp löschen"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Edit %{name}"
 msgstr "%{name} bearbeiten"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking link copied!"
+msgstr "Buchungslink kopiert!"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled"
+msgstr "Abgesagt"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Copy link"
+msgstr "Link kopieren"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Events"
+msgstr "Veranstaltungen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "One-off events created from Quick Add. Each has its own booking link and ends on its own once it is over."
+msgstr "Einmalige Veranstaltungen, angelegt über „Schnell hinzufügen“. Jede hat ihren eigenen Buchungslink und endet von selbst, sobald sie vorbei ist."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Over"
+msgstr "Vorbei"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed"
+msgstr "Anmeldung geschlossen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Registration open"
+msgstr "Anmeldung offen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{count}/%{capacity} seats taken"
+msgstr "%{count}/%{capacity} Plätze belegt"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format

@@ -22,25 +22,25 @@
    slide 1 has the same footprint as the calendar slide instead of a shrunken
    one. As more meeting types are added the box grows in tiers (the :has quantity
    queries below), giving the grid room to tile several across. Scoped to the
-   overview via :has so other steps (which the same .container wraps) keep their
+   overview via :has so other steps (which the same .quill-container wraps) keep their
    own width caps.
 
    At this width the container query that drives tiling (640px) is already met,
    so the single-vs-multi-column switch is gated on card count instead: the grid
    only tiles once a third card appears (see the @container rule below). */
-.container:has(.overview-content-area) {
+.quill-container:has(.overview-content-area) {
   max-width: var(--container-lg);
 }
 
 /* Three or four meeting types: widen enough for the grid to tile a couple of
    columns across. */
-.container:has(.overview-duration-list .duration-card:nth-child(3)) {
+.quill-container:has(.overview-duration-list .duration-card:nth-child(3)) {
   max-width: var(--container-xl);
 }
 
 /* Five or more: grow to full width, tiling as many cards across as fit. Bounded
    at 1536px so it never sprawls edge-to-edge on ultra-wide monitors. */
-.container:has(.overview-duration-list .duration-card:nth-child(5)) {
+.quill-container:has(.overview-duration-list .duration-card:nth-child(5)) {
   max-width: 1536px;
 }
 
@@ -99,10 +99,10 @@
   height: 1.75rem;
 }
 
-/* overview-success-badge-icon: the check inside the badge */
+/* overview-success-badge-icon: the check, drawn in the badge's ink */
 .overview-success-badge-icon {
-  width: 1rem;
-  height: 1rem;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
 }
 
 /* overview-title: left-aligned at compact size, centered at 768px+ */
@@ -145,7 +145,9 @@
 .duration-card--selected {
   background: linear-gradient(135deg, var(--theme-primary-solid) 0%, var(--theme-primary-solid-hover) 100%);
   color: var(--theme-on-primary);
-  box-shadow: 0 10px 30px color-mix(in srgb, var(--theme-primary) 40%, transparent);
+  box-shadow:
+    0 10px 30px color-mix(in srgb, var(--theme-primary) 40%, transparent),
+    var(--selected-ring);
   border: var(--border-width-medium) solid var(--theme-primary);
 }
 
@@ -164,7 +166,7 @@
 }
 
 .duration-card-badge {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--surface-intense);
   color: var(--text-opacity-high);
   backdrop-filter: blur(10px);
 }
@@ -315,10 +317,12 @@
    readers still reach the full description. Tall viewports keep descriptions.
    (The card grid and the wider box apply at every height — see the base rules.) */
 @media (max-height: 600px) {
-  .duration-card-description {
-    max-height: 0;
-    overflow: hidden;
-    opacity: 0;
+  :where(html:not([data-embedded])) {
+    .duration-card-description {
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+    }
   }
 }
 

@@ -1,6 +1,8 @@
 defmodule Tymeslot.BookingTestHelpers do
   @moduledoc """
-  Test helpers for booking flow navigation and common booking test operations.
+  Test helpers for booking flow navigation and common booking test
+  operations. The walks go through `TymeslotWeb.BookingDriver`, which finds a
+  page's controls by the markup contract alone, so they hold on every theme.
   """
 
   import ExUnit.Assertions
@@ -8,27 +10,64 @@ defmodule Tymeslot.BookingTestHelpers do
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
 
-  alias Tymeslot.TestHelpers.Eventually
+  alias TymeslotWeb.BookingDriver
+  alias TymeslotWeb.BookingDriver.Page
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   @endpoint TymeslotWeb.Endpoint
 
-  # Select on `data-testid`, not on CSS classes. Quill and Rhythm agree on the
-  # test ids but not on the classes behind them — Quill's time slots are
-  # `.time-slot-button`, Rhythm's are `.time-slot` — so a class-based walk
-  # silently only ever worked on Quill.
-  @duration_option "button[data-testid='duration-option']"
-  @next_step "button[data-testid='next-step']"
-  @calendar_day "button[data-testid='calendar-day']"
-  @time_slot "button[data-testid='time-slot']"
-  # Quill paginates the date grid by month, Rhythm by week, and neither theme
-  # renders the other's control. Reaching for Quill's unconditionally is what
-  # made every Rhythm walk raise on the last day of a month: the one day where
-  # tomorrow falls outside the range already on screen.
+  # Quill's month arrows and its month label, for the Quill tests that ask
+  # which month its grid shows; a walk moves any picker through the driver.
   @next_month "button[phx-click='next_month']"
   @prev_month "button[phx-click='prev_month']"
   @month_label ".calendar-month-label"
-  @next_week "button[phx-click='next_week']"
+
+  @doc """
+  Inserts a booking-ready organiser: profile, an active 30-minute meeting type,
+  full-week availability, and an active calendar integration (so the page is
+  publicly ready). Returns `%{user: user, profile: profile}`.
+  """
+  @spec seed_booking_account(String.t(), String.t(), String.t()) :: %{
+          user: map(),
+          profile: map()
+        }
+  def seed_booking_account(theme_id, username, timezone) do
+    user = insert(:user)
+
+    profile =
+      insert(:profile,
+        user: user,
+        username: username,
+        booking_theme: theme_id,
+        timezone: timezone
+      )
+
+    schedule =
+      insert(:availability_schedule,
+        profile: profile,
+        is_default: true,
+        advance_booking_days: 30,
+        min_advance_hours: 0,
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0
+      )
+
+    insert(:meeting_type, user: user, duration_minutes: 30, name: "Quick Chat", is_active: true)
+
+    Enum.each(1..7, fn day_of_week ->
+      insert(:weekly_availability,
+        schedule: schedule,
+        day_of_week: day_of_week,
+        is_available: true,
+        start_time: ~T[09:00:00],
+        end_time: ~T[17:00:00]
+      )
+    end)
+
+    insert(:calendar_integration, user: user, is_active: true)
+
+    %{user: user, profile: profile}
+  end
 
   @doc """
   A profile on `theme_id` that `navigate_to_booking_form/3` can book: open
@@ -77,12 +116,11 @@ defmodule Tymeslot.BookingTestHelpers do
   2. Selects the first meeting type
   3. Navigates to date/time selection
   4. Waits for availability to load
-  5. Selects tomorrow's date
-  6. Waits for time slots
-  7. Selects the first available time slot
-  8. Navigates to the booking form
+  5. Selects tomorrow's first free time
+  6. Navigates to the booking form (or to the questions, when the meeting
+     type asks some)
 
-  Returns the LiveView at the booking form step.
+  Returns the LiveView at that step.
 
   ## Examples
 
@@ -99,7 +137,7 @@ defmodule Tymeslot.BookingTestHelpers do
   scheduling page URL.
 
   The reschedule journey needs `reschedule_meeting_uid` present from the first
-  render — `LiveHelpers` reads it out of the params to set `is_rescheduling`,
+  render: `LiveHelpers.Mount` reads it out of the params to set `is_rescheduling`,
   and without it the identical walk silently books a *new* meeting instead of
   moving the existing one.
   """
@@ -122,17 +160,16 @@ defmodule Tymeslot.BookingTestHelpers do
   Another Meeting" returns the same LiveView to the overview step in place, and
   the walk that follows has to start from the view already on screen.
 
-  `duration_slug` names the card to book, defaulting to whichever the overview
-  lists first.
+  `duration_slug` names the meeting type to book, defaulting to whichever the
+  overview lists first (or the type the page chose itself, where it renders
+  no choice). The time is tomorrow's first free one, never today's:
+  today's times may already be past the cutoff.
   """
   @spec walk_to_booking_form(Phoenix.LiveViewTest.View.t(), String.t(), String.t() | nil) ::
           Phoenix.LiveViewTest.View.t()
   def walk_to_booking_form(view, timezone, duration_slug \\ nil) do
-    select_meeting_type(view, duration_slug)
-
-    # Navigate to date/time selection
-    view |> element(@next_step) |> render_click()
-
+    BookingDriver.choose_meeting_type(view, duration_slug || first_meeting_type(view))
+    BookingDriver.continue(view)
     walk_from_schedule_to_booking_form(view, timezone)
   end
 
@@ -146,73 +183,33 @@ defmodule Tymeslot.BookingTestHelpers do
   @spec walk_from_schedule_to_booking_form(Phoenix.LiveViewTest.View.t(), String.t()) ::
           Phoenix.LiveViewTest.View.t()
   def walk_from_schedule_to_booking_form(view, timezone) do
-    # Wait for availability to load and select an available date
-    today = timezone |> DateTime.now!() |> DateTime.to_date()
-    target_date = Date.add(today, 1)
+    tomorrow =
+      timezone |> DateTime.now!() |> DateTime.to_date() |> Date.add(1) |> Date.to_iso8601()
 
-    advance_calendar_to(view, target_date)
-
-    wait_until(fn -> has_element?(view, "#{day_selector(target_date)}:not([disabled])") end)
-
-    view |> element(day_selector(target_date)) |> render_click()
-
-    # Wait for time slots to load
-    wait_until(fn -> has_element?(view, @time_slot) end)
-
-    # Extract and click the first available time slot
-    slot =
-      view
-      |> render()
-      |> Floki.parse_document!()
-      |> Floki.attribute(@time_slot, "phx-value-time")
-      |> List.first() ||
-        flunk("Expected at least one available time slot button after selecting a date")
-
-    view |> element("#{@time_slot}[phx-value-time='#{slot}']") |> render_click()
-
-    # Navigate to the booking form
-    view |> element(@next_step) |> render_click()
+    _picked = BookingDriver.pick_first_slot(view, on: tomorrow)
+    BookingDriver.continue(view)
 
     view
   end
 
-  # Picking by slug rather than by `element(@duration_option)`: an organiser
-  # offering more than one type renders more than one card, and an ambiguous
-  # selector is refused outright rather than resolved to the first match.
-  defp select_meeting_type(view, nil) do
-    slug =
-      view
-      |> render()
-      |> Floki.parse_document!()
-      |> Floki.attribute(@duration_option, "phx-value-duration")
-      |> List.first() ||
-        flunk("Expected at least one meeting type card on the overview step")
-
-    select_meeting_type(view, slug)
-  end
-
-  defp select_meeting_type(view, duration_slug) do
-    view
-    |> element("#{@duration_option}[phx-value-duration='#{duration_slug}']")
-    |> render_click()
+  # A page that chose the meeting type itself (an organiser's only type,
+  # defaulted) renders no choice: the type it holds is the one to book.
+  defp first_meeting_type(view) do
+    case {BookingDriver.meeting_types(view), Page.assigns(view)[:selected_duration]} do
+      {[slug | _rest], _held} -> slug
+      {[], held} when is_binary(held) -> held
+      {[], nil} -> flunk("Expected at least one meeting type card on the overview step")
+    end
   end
 
   @doc """
-  Brings `target_date` into the displayed range, driving whichever control the
-  rendered theme actually offers: Quill's month arrows or Rhythm's week arrows.
+  Brings `target_date` into the displayed range on whichever picker of days
+  the rendered theme offers (Quill's month arrows, Rhythm's week arrows),
+  through the markup contract (`BookingDriver.show_date/2`).
   """
   @spec advance_calendar_to(Phoenix.LiveViewTest.View.t(), Date.t()) :: :ok
-  def advance_calendar_to(view, target_date) do
-    wait_until(fn -> has_element?(view, @calendar_day) end)
-
-    cond do
-      has_element?(view, @next_month) -> show_month(view, target_date, :next)
-      has_element?(view, @next_week) -> advance_week(view, target_date)
-      true -> :ok
-    end
-
-    :ok
-  end
+  def advance_calendar_to(view, %Date{} = target_date),
+    do: BookingDriver.show_date(view, Date.to_iso8601(target_date))
 
   @doc """
   Brings `date`'s month onto Quill's month grid, stepping one month towards
@@ -226,8 +223,8 @@ defmodule Tymeslot.BookingTestHelpers do
   steps forward, and a test about today's own cell steps back to it.
 
   Asserts the month is on screen afterwards, so an overshoot or a step the
-  wrong way fails here, by name, rather than as a five-second `wait_until`
-  timeout further down.
+  wrong way fails here, by name, rather than as a five-second wait timeout
+  further down.
   """
   @spec show_month(Phoenix.LiveViewTest.View.t(), Date.t(), :next | :prev) :: :ok
   def show_month(view, %Date{} = date, direction \\ :next) when direction in [:next, :prev] do
@@ -267,24 +264,5 @@ defmodule Tymeslot.BookingTestHelpers do
       @month_label,
       LocalizationHelpers.get_month_year_display(date.year, date.month)
     )
-  end
-
-  # Rhythm's strip renders exactly the seven days it offers and no padding, so
-  # a missing cell is proof the date sits in a later week.
-  defp advance_week(view, target_date) do
-    day = day_selector(target_date)
-
-    if has_element?(view, day) do
-      :ok
-    else
-      view |> element(@next_week) |> render_click()
-      wait_until(fn -> has_element?(view, day) end)
-    end
-  end
-
-  defp day_selector(date), do: "#{@calendar_day}[phx-value-date='#{Date.to_string(date)}']"
-
-  defp wait_until(fun, timeout \\ 5000) do
-    Eventually.eventually(fun, timeout: timeout, interval: 100)
   end
 end

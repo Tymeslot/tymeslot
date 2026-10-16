@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.TextInput do
     * `phx-change="answer"` keeps the engine's stored answer in step with the
       field (respecting each type's own `phx-debounce`, e.g. short text debounces
       until blur).
-    * `phx-submit="next"` advances on Enter. LiveView flushes any pending
+    * `phx-submit="next_step"` advances on Enter. LiveView flushes any pending
       debounced change before dispatching the submit, so the value the booker
       just typed is committed *before* the wizard validates and advances.
 
@@ -38,8 +38,10 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.TextInput do
     <form
       id={"cq-form-#{@definition["id"]}"}
       phx-change="answer"
-      phx-submit="next"
+      phx-submit="next_step"
       phx-target={@myself}
+      data-fact="answer"
+      data-question={@definition["id"]}
     >
       <.input
         id={"cq-input-#{@definition["id"]}"}

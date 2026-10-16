@@ -4,7 +4,6 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueries do
   """
   import Ecto.Query, warn: false
 
-  alias Ecto.Changeset
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
@@ -66,23 +65,41 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueries do
     Repo.get_by(ProfileSchema, user_id: user_id)
   end
 
-  @doc """
-  Updates the video processing status for a theme customization.
-  Returns :ok on success or if the record doesn't exist,
-  {:error, :status_update_failed} on update failure.
-  """
-  @spec update_video_processing_status(integer(), String.t()) ::
-          :ok | {:error, :status_update_failed}
-  def update_video_processing_status(id, status) do
-    case Repo.get(ThemeCustomizationSchema, id) do
-      nil ->
-        :ok
+  @video_processing_states ~w(pending completed failed)
 
-      record ->
-        case record |> Changeset.change(%{video_processing: status}) |> Repo.update() do
-          {:ok, _updated} -> :ok
-          {:error, _changeset} -> {:error, :status_update_failed}
-        end
+  @doc """
+  Records the processing state of the video in the asset field `field`
+  (`"background_video_path"`) of a theme customisation, leaving every other
+  field's state as it is, and returns the updated customisation. The state
+  is merged into the stored map by the one `UPDATE`, so two transcodes of
+  one customisation finishing together never overwrite each other.
+  `{:error, :not_found}` when the customisation no longer exists.
+  """
+  @spec update_video_processing_status(integer(), String.t(), String.t()) ::
+          {:ok, ThemeCustomizationSchema.t()} | {:error, :not_found}
+  def update_video_processing_status(id, field, status)
+      when is_binary(field) and status in @video_processing_states do
+    query =
+      from(c in ThemeCustomizationSchema,
+        where: c.id == ^id,
+        select: c,
+        update: [
+          set: [
+            video_processing_status:
+              fragment(
+                "? || jsonb_build_object(?::text, ?::text)",
+                c.video_processing_status,
+                ^field,
+                ^status
+              ),
+            updated_at: ^DateTime.utc_now(:second)
+          ]
+        ]
+      )
+
+    case Repo.update_all(query, []) do
+      {1, [customization]} -> {:ok, customization}
+      {0, []} -> {:error, :not_found}
     end
   end
 end

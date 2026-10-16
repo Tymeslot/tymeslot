@@ -299,11 +299,6 @@ msgstr "Digite a senha de app de novo para conectar a outro servidor."
 msgid "Enter your video meeting URL. Use {{meeting_id}} for unique rooms per meeting"
 msgstr "Digite a URL da sua reunião por vídeo. Use {{meeting_id}} para salas únicas por reunião"
 
-#: lib/tymeslot/integrations/video/provider_config.ex
-#, elixir-autogen, elixir-format
-msgid "Enterprise OAuth integration with organizational accounts"
-msgstr "Integração OAuth corporativa com contas organizacionais"
-
 #: lib/tymeslot_web/components/dashboard/integrations/video/kmeet_config.ex
 #, elixir-autogen, elixir-format
 msgid "Every booking gets its own room, generated automatically."
@@ -1149,3 +1144,8 @@ msgstr "Excluir"
 #, elixir-autogen, elixir-format
 msgid "Delete %{name}"
 msgstr "Excluir %{name}"
+
+#: lib/tymeslot/integrations/video/provider_config.ex
+#, elixir-autogen, elixir-format
+msgid "Enterprise OAuth integration with organisational accounts"
+msgstr "Integração OAuth corporativa com contas organizacionais"

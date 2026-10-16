@@ -168,6 +168,15 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       html = render(view)
       assert html =~ "From"
       assert html =~ "Until"
+
+      # Empty required fields reach the server, which answers in the form.
+      assert has_element?(view, "#add-break-form-1[novalidate]")
+
+      # Each label names its control for assistive technology.
+      for field <- ~w(label start end) do
+        assert has_element?(view, "label[for='add-break-#{field}-1']")
+        assert has_element?(view, "#add-break-#{field}-1[name='#{field}']")
+      end
     end
 
     test "hides add break form after cancel", %{conn: conn} do

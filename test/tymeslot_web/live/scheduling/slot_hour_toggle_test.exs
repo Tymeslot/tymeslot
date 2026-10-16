@@ -149,7 +149,7 @@ defmodule TymeslotWeb.Live.Scheduling.SlotHourToggleTest do
         assert assigns(view).expanded_hour == 11
       end
 
-      assert render(view) =~ "time-slot-button"
+      assert render(view) =~ ~s(data-testid="time-slot")
     end
 
     test "a non-binary navigate_to_step leaves the flow untouched and the view alive",
@@ -183,7 +183,7 @@ defmodule TymeslotWeb.Live.Scheduling.SlotHourToggleTest do
 
       assert Process.alive?(view.pid)
       assert assigns(view).expanded_hour == 11
-      assert render(view) =~ "time-slot-button"
+      assert render(view) =~ ~s(data-testid="time-slot")
     end
 
     @tag :capture_log
@@ -197,7 +197,7 @@ defmodule TymeslotWeb.Live.Scheduling.SlotHourToggleTest do
       # Re-selecting the date funnels through a slot reload, which must reset
       # the expansion: the open hour describes a grid that no longer exists.
       view |> element("button.calendar-day[phx-value-date='#{date}']") |> render_click()
-      wait_until(fn -> has_element?(view, "button.time-slot-button") end)
+      wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
 
       assert assigns(view).expanded_hour == nil
     end
@@ -255,7 +255,7 @@ defmodule TymeslotWeb.Live.Scheduling.SlotHourToggleTest do
     end)
 
     view |> element("button.calendar-day[phx-value-date='#{date}']") |> render_click()
-    wait_until(fn -> has_element?(view, "button.time-slot-button") end)
+    wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
 
     %{view: view, date: date}
   end
@@ -269,7 +269,7 @@ defmodule TymeslotWeb.Live.Scheduling.SlotHourToggleTest do
 
     from_minutes =
       document
-      |> Floki.attribute("button.time-slot-button", "phx-value-time")
+      |> Floki.attribute("button[data-testid='time-slot']", "phx-value-time")
       |> Enum.map(&TimeSlots.parse_time_slot(&1).hour)
 
     from_hours =

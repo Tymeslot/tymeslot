@@ -1,0 +1,105 @@
+/* ==========================================================================
+   Flash toast: the Core flash group on a booking page
+
+   Matches Core's flash component (TymeslotWeb.Components.CoreComponents.
+   Flash), which the app layout renders once, as #app-flash-group, on every
+   LiveView page. Its Tailwind classes are the dashboard's (a white card
+   with turquoise and red Core colours), so on a booking page this file
+   restyles it through the theme's tokens instead. It hooks on the ids
+   the group gives each toast (#app-flash-group-<kind>, and
+   #app-flash-group-disconnected, an error) and on the toast's fixed
+   structure (its icon box is the first child of its one inner row), not
+   on classes added to Core's markup: Core's pages and the SaaS marketing
+   pages render the same component. Scoped to .scheduling-app, the class
+   the booking root layout puts on <html>, so the dashboard's toast is
+   untouched.
+
+   The surface is --dropdown-surface, the floating surface every theme
+   defines, over --theme-canvas, so it is opaque even where that surface
+   is slightly translucent: a toast sits over the page's own content, so
+   the translucent card surfaces would leave it unreadable. Each kind tints
+   the border and the icon with its status input, and an error tints the
+   surface too, so it stays error-coloured in every theme.
+
+   The group keeps Core's top right, where it may briefly cover the
+   language switcher. The bottom was tried and is worse: it covers a
+   step's primary action (the pinned actions on a phone, a poll's save
+   button on a wide page), and an inline embed's frame is as tall as its
+   content, so its bottom can lie below the host's fold. On a narrow
+   viewport the toast spans the top between side gutters instead of a
+   fixed 20rem box.
+
+   Reads --dropdown-surface, --theme-canvas, --line-1, --ink-1, --radius-card,
+   --radius-control, --status-shadow, --theme-font-family,
+   --theme-font-size-sm, --theme-primary, --theme-danger, --theme-warning,
+   --border-width-thin, --space-xs and --space-sm.
+   ========================================================================== */
+
+.scheduling-app #app-flash-group [role="alert"] {
+  --flash-tone: var(--theme-primary);
+
+  padding: var(--space-sm);
+  border: var(--border-width-thin) solid color-mix(in srgb, var(--flash-tone) 35%, var(--line-1));
+  border-radius: var(--radius-card);
+  background: var(--theme-canvas);
+  box-shadow: var(--status-shadow);
+  color: var(--ink-1);
+  font-family: var(--theme-font-family);
+  font-size: var(--theme-font-size-sm);
+  isolation: isolate;
+}
+
+/* The surface, laid over the canvas: a theme's --dropdown-surface may be a
+   slightly translucent gradient (Quill's and Rhythm's are 96 to 98% opaque),
+   through which the language switcher showed. It sits in a layer of its
+   own, not in a second background layer, because a background's colour may
+   only be its last layer and a theme's surface may be a plain colour. Core
+   lifts the toast's content above it (its one inner row is z-10). */
+.scheduling-app #app-flash-group [role="alert"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--dropdown-surface);
+}
+
+/* Through the group's id too, to outrank the base rule above. */
+.scheduling-app #app-flash-group #app-flash-group-error,
+.scheduling-app #app-flash-group #app-flash-group-disconnected {
+  --flash-tone: var(--theme-danger);
+}
+
+.scheduling-app #app-flash-group #app-flash-group-error::before,
+.scheduling-app #app-flash-group #app-flash-group-disconnected::before {
+  background:
+    linear-gradient(
+      color-mix(in srgb, var(--flash-tone) 16%, transparent),
+      color-mix(in srgb, var(--flash-tone) 16%, transparent)
+    ),
+    var(--dropdown-surface);
+}
+
+.scheduling-app #app-flash-group #app-flash-group-warning {
+  --flash-tone: var(--theme-warning);
+}
+
+.scheduling-app #app-flash-group [role="alert"] > div > :first-child {
+  border: var(--border-width-thin) solid color-mix(in srgb, var(--flash-tone) 35%, transparent);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--flash-tone) 16%, transparent);
+  box-shadow: none;
+  color: var(--flash-tone);
+}
+
+@media (max-width: 40rem) {
+  .scheduling-app #app-flash-group {
+    top: var(--space-sm);
+    inset-inline: var(--space-sm);
+  }
+
+  .scheduling-app #app-flash-group [role="alert"] {
+    width: auto;
+    padding: var(--space-xs) var(--space-sm);
+  }
+}

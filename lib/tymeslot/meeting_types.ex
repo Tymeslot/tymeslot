@@ -20,6 +20,7 @@ defmodule Tymeslot.MeetingTypes do
   alias Tymeslot.MeetingTypes.LocationSelection
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.MeetingTypes.OneOffEvents
   alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Repo
@@ -237,6 +238,7 @@ defmodule Tymeslot.MeetingTypes do
     |> MeetingTypeQueries.list_public_meeting_types()
     |> GroupAccess.reject_paused()
     |> FixedDates.reject_unbookable()
+    |> OneOffEvents.order_for_listing()
   end
 
   # The two owner-facing listings above differ only in which query they run;

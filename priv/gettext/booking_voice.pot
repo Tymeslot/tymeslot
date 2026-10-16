@@ -1,0 +1,6 @@
+## A theme's own wording of the shared booking lines: one context per
+## theme key (dpgettext("booking_voice", "<theme key>", "...")).
+msgid ""
+msgstr ""
+"Language: \n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"

@@ -195,29 +195,6 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
     end
   end
 
-  describe "format_duration/1" do
-    test "formats duration string" do
-      assert Duration.format("15min") == "15 minutes"
-      assert Duration.format("30min") == "30 minutes"
-      assert Duration.format("60min") == "1 hour"
-      assert Duration.format("90min") == "1.5 hours"
-      assert Duration.format("120min") == "2 hours"
-    end
-
-    test "formats duration integer" do
-      assert Duration.format(15) == "15 minutes"
-      assert Duration.format(30) == "30 minutes"
-      assert Duration.format(60) == "1 hour"
-      assert Duration.format(90) == "1.5 hours"
-      assert Duration.format(120) == "2 hours"
-    end
-
-    test "returns unknown for invalid inputs" do
-      assert Duration.format("invalid") == "Unknown duration"
-      assert Duration.format(nil) == "Unknown duration"
-    end
-  end
-
   describe "group_slots_by_period/1" do
     test "sorts slots within a period chronologically, not lexicographically" do
       # "7:30 AM" lexicographically sorts after "11:30 AM" because "7" > "1",
