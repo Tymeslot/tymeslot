@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   @doc "Advances the clock-tick timer and pushes the current time to the calendar grid."
   @spec handle_tick(Phoenix.LiveView.Socket.t()) :: {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_tick(socket) do
-    if socket.assigns.live_action == :calendar do
+    if grid_on_screen?(socket) do
       Process.send_after(self(), :tick, 60_000)
 
       send_update(CalendarGridComponent,
@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   @spec handle_calendar_events_updated(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_calendar_events_updated(socket) do
-    if socket.assigns.live_action == :calendar do
+    if grid_on_screen?(socket) do
       send_update(CalendarGridComponent,
         id: "calendar",
         action: :events_updated
@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   @spec handle_calendar_sync_complete(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_calendar_sync_complete(socket) do
-    if socket.assigns.live_action == :calendar do
+    if grid_on_screen?(socket) do
       send_update(CalendarGridComponent,
         id: "calendar",
         action: :integration_synced
@@ -80,7 +80,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   @spec handle_reset_calendar_sync(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_reset_calendar_sync(socket) do
-    if socket.assigns.live_action == :calendar do
+    if grid_on_screen?(socket) do
       send_update(CalendarGridComponent,
         id: "calendar",
         action: :refresh_events
@@ -142,17 +142,23 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   end
 
   # A write's result reaches the grid only while it is on screen. Once the
-  # organiser has left the calendar, the LiveView's write guardian drives
+  # organiser has left the calendar or switched to the new surface, the LiveView's write guardian drives
   # the queue (`Tymeslot.CalendarGrid.WriteGuardian.detach/0`) and hears
   # every result itself, and a grid component LiveView has yet to delete
   # would otherwise drive the same queue as well, starting its writes a
   # second time.
   defp to_grid(socket, assigns) do
-    if socket.assigns.live_action == :calendar,
+    if grid_on_screen?(socket),
       do: send_update(CalendarGridComponent, [{:id, "calendar"} | assigns])
 
     :ok
   end
+
+  # The old grid is on screen on the calendar page unless the organiser has
+  # switched to the new surface, whose swap leaves the old grid component
+  # alive on the server until the browser confirms its removal.
+  defp grid_on_screen?(socket),
+    do: socket.assigns.live_action == :calendar and socket.assigns[:calendar_redesign] != true
 
   defp settle_write(socket, write, outcome) do
     to_grid(socket,

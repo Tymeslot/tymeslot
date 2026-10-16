@@ -579,6 +579,8 @@ defmodule TymeslotWeb.DashboardLive do
     end
   end
 
+  def handle_event("calendar:switch_surface", _params, socket), do: {:noreply, socket}
+
   # Private functions
 
   @spec handle_saving_animation(Phoenix.LiveView.Socket.t(), non_neg_integer()) ::
