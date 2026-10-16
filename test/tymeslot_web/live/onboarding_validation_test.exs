@@ -14,11 +14,13 @@ defmodule TymeslotWeb.OnboardingValidationTest do
   @moduletag :onboarding
 
   import Mox
+  import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
   import Tymeslot.AuthTestHelpers
   import TymeslotWeb.OnboardingTestHelpers
 
   alias Tymeslot.Profiles
+  alias Tymeslot.Test.ReservingDemoProvider
 
   setup :verify_on_exit!
 
@@ -289,6 +291,22 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       refute html =~ "Please check your input"
       assert has_element?(view, "#profile-form")
       refute Profiles.get_profile(user.id).username == "admin"
+    end
+
+    test "a username the demo pages serve is refused as reserved", %{conn: conn} do
+      with_config(:tymeslot, demo_provider: ReservingDemoProvider)
+      demo_username = ReservingDemoProvider.reserved_username()
+      {:ok, view, _html, user} = setup_onboarding(conn)
+
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      fill_basic_settings(view, "New User", demo_username)
+
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      assert render(view) =~ "This username is reserved"
+      assert has_element?(view, "#profile-form")
+      refute Profiles.get_profile(user.id).username == demo_username
     end
 
     test "available username proceeds successfully", %{conn: conn} do

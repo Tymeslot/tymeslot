@@ -92,9 +92,55 @@ defmodule CredoChecks.GettextDomainBoundaryTest do
       |> run_check(GettextDomainBoundary)
       |> refute_issues()
     end
+
+    test "dpgettext with a known domain is not flagged" do
+      """
+      defmodule TymeslotWeb.Page do
+        def submit, do: dpgettext("booking_voice", "studio", "book")
+      end
+      """
+      |> to_source_file("lib/tymeslot_web/page.ex")
+      |> run_check(GettextDomainBoundary)
+      |> refute_issues()
+    end
+
+    test "dpngettext with a known domain is not flagged" do
+      """
+      defmodule TymeslotWeb.Page do
+        def slots(n), do: dpngettext("booking", "short", "1 slot", "%{count} slots", n)
+      end
+      """
+      |> to_source_file("lib/tymeslot_web/page.ex")
+      |> run_check(GettextDomainBoundary)
+      |> refute_issues()
+    end
   end
 
   describe "unknown domains are flagged" do
+    # A voice's lines are dpgettext calls: a mistyped domain would otherwise
+    # fall back to English with no error.
+    test "dpgettext with a domain outside the allowlist is flagged" do
+      """
+      defmodule TymeslotWeb.Page do
+        def submit, do: dpgettext("booking_voices", "studio", "book")
+      end
+      """
+      |> to_source_file("lib/tymeslot_web/page.ex")
+      |> run_check(GettextDomainBoundary)
+      |> assert_issue(fn issue -> assert issue.trigger == "booking_voices" end)
+    end
+
+    test "dpngettext with a domain outside the allowlist is flagged" do
+      """
+      defmodule TymeslotWeb.Page do
+        def slots(n), do: dpngettext("bookings", "short", "1 slot", "%{count} slots", n)
+      end
+      """
+      |> to_source_file("lib/tymeslot_web/page.ex")
+      |> run_check(GettextDomainBoundary)
+      |> assert_issue(fn issue -> assert issue.trigger == "bookings" end)
+    end
+
     test "dgettext with a domain outside the allowlist is flagged" do
       """
       defmodule TymeslotWeb.Page do

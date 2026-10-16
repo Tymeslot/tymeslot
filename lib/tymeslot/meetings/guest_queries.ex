@@ -63,6 +63,15 @@ defmodule Tymeslot.Meetings.GuestQueries do
     |> Repo.all()
   end
 
+  @doc "Reads a guest's RSVP status as it stands now; `nil` when the guest is gone."
+  @spec get_status(Guest.t()) :: String.t() | nil
+  def get_status(%Guest{id: id}) do
+    Guest
+    |> where([g], g.id == ^id)
+    |> select([g], g.status)
+    |> Repo.one()
+  end
+
   @doc "Applies an RSVP changeset and persists the guest."
   @spec update_rsvp(Guest.t(), map()) :: {:ok, Guest.t()} | {:error, Changeset.t()}
   def update_rsvp(%Guest{} = guest, attrs) when is_map(attrs) do

@@ -10,9 +10,11 @@ defmodule TymeslotWeb.Themes.Shared.Components.SeatBadge do
   buttons keep the single-line markup.
 
   The level is always named in words ("Filling up"), never by colour alone.
-  The markup is theme-agnostic and ships no styling of its own: each theme
-  styles the `seat-badge`/`seat-*` classes in its own time-slots.css,
-  following the `guest-*` convention.
+  The markup is theme-agnostic and ships no styling of its own: the
+  `seat-badge`/`seat-*` classes are styled in the shared
+  `assets/css/scheduling/shared/components/slot-list.css`, beside the slot
+  button `SlotList` renders them in, and each theme sets the `--seat-*`
+  colours in its own `variables.css`.
   """
 
   use Phoenix.Component

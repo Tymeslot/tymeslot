@@ -138,7 +138,7 @@ msgstr "Odkazy na videohovory se přidají samy"
 msgid "Back"
 msgstr "Zpět"
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#: lib/tymeslot_web/live/onboarding_live/preview_parts.ex
 #, elixir-autogen, elixir-format
 msgid "Book"
 msgstr "Zarezervovat"
@@ -888,3 +888,18 @@ msgstr "Před schůzkou"
 #, elixir-autogen, elixir-format
 msgid "How much free time a new booking needs before and after it."
 msgstr "Kolik volného času potřebuje nová rezervace před sebou a po sobě."
+
+#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
+#, elixir-autogen, elixir-format
+msgid "Choose by description instead"
+msgstr "Vybrat podle popisu"
+
+#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
+#, elixir-autogen, elixir-format
+msgid "Show all themes"
+msgstr "Zobrazit všechny motivy"
+
+#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
+#, elixir-autogen, elixir-format
+msgid "Which of these sounds like you?"
+msgstr "Který z těchto popisů vás vystihuje?"

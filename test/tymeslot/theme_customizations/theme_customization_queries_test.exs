@@ -21,9 +21,9 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueriesTest do
       assert {:ok, customization} = ThemeCustomizationQueries.create(attrs)
       assert customization.profile_id == profile.id
       assert customization.theme_id == "1"
-      assert customization.color_scheme == "default"
-      assert customization.background_type == "gradient"
-      assert customization.background_value == "gradient_1"
+      assert customization.settings["color_scheme"] == "default"
+      assert customization.settings["background_type"] == "gradient"
+      assert customization.settings["background_value"] == "gradient_1"
     end
 
     test "persists gradient and colour backgrounds with their own value formats" do
@@ -47,16 +47,16 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueriesTest do
                  background_value: "#06b6d4"
                })
 
-      assert gradient.background_type == "gradient"
-      assert gradient.background_value == "gradient_1"
-      assert color.background_type == "color"
-      assert color.background_value == "#06b6d4"
+      assert gradient.settings["background_type"] == "gradient"
+      assert gradient.settings["background_value"] == "gradient_1"
+      assert color.settings["background_type"] == "color"
+      assert color.settings["background_value"] == "#06b6d4"
 
       # Both survive the round trip; neither overwrites the other's row.
-      assert %{background_type: "gradient", background_value: "gradient_1"} =
+      assert %{settings: %{"background_type" => "gradient", "background_value" => "gradient_1"}} =
                ThemeCustomizationQueries.get_by_profile_and_theme(profile.id, "1")
 
-      assert %{background_type: "color", background_value: "#06b6d4"} =
+      assert %{settings: %{"background_type" => "color", "background_value" => "#06b6d4"}} =
                ThemeCustomizationQueries.get_by_profile_and_theme(profile.id, "2")
     end
 
@@ -106,7 +106,7 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueriesTest do
       result = ThemeCustomizationQueries.get_by_profile_and_theme(profile.id, "1")
 
       assert result.id == customization.id
-      assert result.color_scheme == "purple"
+      assert result.settings["color_scheme"] == "purple"
     end
 
     test "returns nil when customization does not exist" do
@@ -149,9 +149,9 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueriesTest do
       attrs = %{color_scheme: "purple", background_type: "color", background_value: "#8b5cf6"}
 
       assert {:ok, updated} = ThemeCustomizationQueries.update(customization, attrs)
-      assert updated.color_scheme == "purple"
-      assert updated.background_type == "color"
-      assert updated.background_value == "#8b5cf6"
+      assert updated.settings["color_scheme"] == "purple"
+      assert updated.settings["background_type"] == "color"
+      assert updated.settings["background_value"] == "#8b5cf6"
       assert updated.id == customization.id
     end
 
@@ -179,6 +179,20 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueriesTest do
         )
 
       assert result == nil
+    end
+  end
+
+  describe "update_video_processing_status/3" do
+    test "answers not found for a customisation that no longer exists" do
+      profile = insert(:profile)
+      customization = insert(:theme_customization, profile: profile)
+      Repo.delete!(customization)
+
+      assert ThemeCustomizationQueries.update_video_processing_status(
+               customization.id,
+               "background_video_path",
+               "completed"
+             ) == {:error, :not_found}
     end
   end
 
@@ -213,8 +227,8 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueriesTest do
       }
 
       assert {:ok, customization} = ThemeCustomizationQueries.create(attrs)
-      assert customization.background_type == "gradient"
-      assert customization.background_value == "gradient_1"
+      assert customization.settings["background_type"] == "gradient"
+      assert customization.settings["background_value"] == "gradient_1"
     end
 
     test "rejects invalid gradient preset" do
@@ -244,7 +258,7 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueriesTest do
       }
 
       assert {:ok, customization} = ThemeCustomizationQueries.create(attrs)
-      assert customization.background_value == "#06b6d4"
+      assert customization.settings["background_value"] == "#06b6d4"
     end
 
     test "rejects invalid hex color format" do
@@ -284,7 +298,7 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueriesTest do
       }
 
       assert {:ok, customization} = ThemeCustomizationQueries.create(attrs)
-      assert customization.background_value == "preset:artistic-studio"
+      assert customization.settings["background_value"] == "preset:artistic-studio"
     end
 
     test "accepts uploaded image with image path" do
@@ -300,7 +314,7 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueriesTest do
       }
 
       assert {:ok, customization} = ThemeCustomizationQueries.create(attrs)
-      assert customization.background_image_path == "/uploads/image.jpg"
+      assert customization.settings["background_image_path"] == "/uploads/image.jpg"
     end
 
     test "rejects uploaded image without image path" do
@@ -331,7 +345,7 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueriesTest do
       }
 
       assert {:ok, customization} = ThemeCustomizationQueries.create(attrs)
-      assert customization.background_value == "preset:rhythm-default"
+      assert customization.settings["background_value"] == "preset:rhythm-default"
     end
 
     test "accepts uploaded video with video path" do
@@ -347,7 +361,7 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueriesTest do
       }
 
       assert {:ok, customization} = ThemeCustomizationQueries.create(attrs)
-      assert customization.background_video_path == "/uploads/video.mp4"
+      assert customization.settings["background_video_path"] == "/uploads/video.mp4"
     end
 
     test "rejects uploaded video without video path" do

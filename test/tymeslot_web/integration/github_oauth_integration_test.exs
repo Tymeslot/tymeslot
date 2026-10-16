@@ -68,7 +68,7 @@ defmodule TymeslotWeb.Integration.GitHubOAuthIntegrationTest do
 
       # Assert: User sees appropriate error message
       assert redirected_to(conn, 302)
-      assert Flash.get(conn.assigns.flash, :error) =~ "missing authorization code"
+      assert Flash.get(conn.assigns.flash, :error) =~ "missing authorisation code"
     end
   end
 

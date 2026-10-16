@@ -1,0 +1,134 @@
+/* ==========================================================================
+   Timezone picker: the shared structure
+
+   Matches TymeslotWeb.Themes.Shared.Components.TimezonePicker. The trigger's
+   content is theme markup and stays styled by the theme. Each theme sets
+   --dropdown-surface in its variables.css and keeps its own trigger shape,
+   panel border, shadow and width, and its container and embedded rules, in
+   its own module (Quill timezone.css, Rhythm schedule-header.css), imported
+   right after this file.
+   ========================================================================== */
+
+.tz-picker {
+  position: relative;
+  width: min(100%, 14rem);
+}
+
+/* --- Trigger --- */
+
+.tz-picker__trigger {
+  width: 100%;
+  background: linear-gradient(135deg, var(--surface-medium) 0%, var(--surface-subtle) 100%);
+  border: var(--border-width-thin) solid var(--border-medium);
+  color: var(--theme-text);
+  cursor: pointer;
+}
+
+.tz-picker__trigger:hover {
+  background: linear-gradient(135deg, var(--surface-intense) 0%, var(--surface-medium) 100%);
+}
+
+/* --- Dropdown --- */
+
+.tz-picker__panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: var(--z-dropdown);
+  margin-top: var(--space-2xs);
+  background: var(--dropdown-surface);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--radius-lg);
+  max-height: var(--dropdown-max-height);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Search input --- */
+
+.tz-picker__search-wrapper {
+  padding: var(--space-sm);
+}
+
+.tz-picker__search {
+  width: 100%;
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--surface-medium);
+  border: var(--border-width-thin) solid var(--border-light);
+  border-radius: var(--radius-sm);
+  color: var(--theme-text);
+  transition: border-color var(--transition-normal), background var(--transition-normal);
+}
+
+.tz-picker__search:focus {
+  outline: none;
+  background: var(--surface-medium);
+  border-color: var(--theme-primary);
+}
+
+.tz-picker__search::placeholder {
+  color: var(--theme-text-secondary);
+}
+
+/* --- Options list ---
+   Its scrolling and scrollbar come from the .scroll-y class the markup also
+   carries, styled in each theme's base.css. */
+
+.tz-picker__options {
+  /* Fill the remaining space inside the flex-column .tz-picker__panel. The
+     panel's max-height constrains the total; this element shrinks to fit
+     after the search wrapper takes its natural height. */
+  flex: 1;
+  min-height: 0;
+}
+
+.tz-picker__option {
+  width: 100%;
+  padding: var(--space-sm);
+  background: transparent;
+  border: none;
+  color: var(--theme-text);
+  cursor: pointer;
+  transition: background var(--transition-normal);
+  text-align: left;
+  border-bottom: var(--border-width-thin) solid var(--border-subtle);
+}
+
+.tz-picker__option:hover {
+  background: var(--surface-medium);
+}
+
+.tz-picker__option:last-child {
+  border-bottom: none;
+}
+
+.tz-picker__option-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.tz-picker__option-flag {
+  width: var(--icon-sm);
+  height: var(--flag-height);
+  flex-shrink: 0;
+  border-radius: var(--space-3xs);
+  object-fit: cover;
+}
+
+.tz-picker__option-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+}
+
+.tz-picker__option-label {
+  color: var(--theme-text);
+}
+
+.tz-picker__option-offset {
+  color: var(--theme-text-secondary);
+}

@@ -313,6 +313,35 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   end
 
   @doc """
+  The month grid's column headings, abbreviated and translated, starting on
+  `week_start` (`:monday` or `:sunday`), as
+  `Tymeslot.Availability.Calculate.display_range/3` lays the window out. A
+  translation longer than three characters is cut so it cannot widen its
+  column.
+  """
+  @spec weekday_headings(:monday | :sunday) :: [String.t()]
+  def weekday_headings(week_start) do
+    headings =
+      Enum.map(
+        [
+          dgettext("booking", "Mon"),
+          dgettext("booking", "Tue"),
+          dgettext("booking", "Wed"),
+          dgettext("booking", "Thu"),
+          dgettext("booking", "Fri"),
+          dgettext("booking", "Sat"),
+          dgettext("booking", "Sun")
+        ],
+        &String.slice(&1, 0, 3)
+      )
+
+    case week_start do
+      :monday -> headings
+      :sunday -> [List.last(headings) | Enum.drop(headings, -1)]
+    end
+  end
+
+  @doc """
   Gets short weekday name translated.
   """
   @spec day_name_short(integer()) :: String.t()
@@ -327,6 +356,35 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
       7 -> dgettext("booking", "SUN")
     end
   end
+
+  @doc """
+  The booking window as a phrase for the schedule step's header, in the largest
+  whole unit that fits ("same day only", "3 days in advance", "2 weeks in
+  advance"). `nil` means the organiser never set a window, so the default of
+  90 days applies.
+  """
+  @spec format_advance_booking_days(integer() | nil) :: String.t()
+  def format_advance_booking_days(days) when is_integer(days) and days <= 0,
+    do: dgettext("booking", "same day only")
+
+  def format_advance_booking_days(1), do: dgettext("booking", "1 day in advance")
+
+  def format_advance_booking_days(days) when is_integer(days) and days < 7,
+    do: dgettext("booking", "%{days} days in advance", days: days)
+
+  def format_advance_booking_days(7), do: dgettext("booking", "1 week in advance")
+
+  def format_advance_booking_days(days) when is_integer(days) and days < 30,
+    do: format_weeks_advance(days)
+
+  def format_advance_booking_days(30), do: dgettext("booking", "1 month in advance")
+
+  def format_advance_booking_days(days) when is_integer(days) and days < 365,
+    do: format_months_advance(days)
+
+  def format_advance_booking_days(365), do: dgettext("booking", "1 year in advance")
+  def format_advance_booking_days(days) when is_integer(days), do: format_years_advance(days)
+  def format_advance_booking_days(_arg), do: dgettext("booking", "90 days in advance")
 
   @doc """
   Formats a time on the clock the visitor's language uses.
@@ -380,8 +438,10 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   Gets a display string for a week starting on `week_start`.
 
   Returns "March 2026" when the week falls within a single month,
-  "March - April 2026" when it spans two months in the same year,
-  or "December 2025 - January 2026" when it spans a year boundary.
+  "March – April 2026" when it spans two months in the same year,
+  or "December 2025 – January 2026" when it spans a year boundary: an en
+  dash with a space either side, as `LocaleFormat`'s date ranges join
+  their words.
 
   Months are the standalone form, and only the heading's first letter is
   capitalised: French reads "Septembre – octobre 2026".
@@ -396,7 +456,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
       week_start.year == week_end.year ->
         LocaleFormat.capitalize_first(
-          dgettext("booking", "%{start_month} - %{end_month} %{year}",
+          dgettext("booking", "%{start_month} – %{end_month} %{year}",
             start_month: standalone_month(week_start.month),
             end_month: standalone_month(week_end.month),
             year: week_start.year
@@ -405,7 +465,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
       true ->
         LocaleFormat.capitalize_first(
-          dgettext("booking", "%{start_month} %{start_year} - %{end_month} %{end_year}",
+          dgettext("booking", "%{start_month} %{start_year} – %{end_month} %{end_year}",
             start_month: standalone_month(week_start.month),
             start_year: week_start.year,
             end_month: standalone_month(week_end.month),
@@ -459,4 +519,13 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   end
 
   defp shift_or_keep(dt, _timezone), do: dt
+
+  defp format_weeks_advance(days),
+    do: dgettext("booking", "%{weeks} weeks in advance", weeks: div(days, 7))
+
+  defp format_months_advance(days),
+    do: dgettext("booking", "%{months} months in advance", months: div(days, 30))
+
+  defp format_years_advance(days),
+    do: dgettext("booking", "%{years} years in advance", years: div(days, 365))
 end

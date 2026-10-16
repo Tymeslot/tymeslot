@@ -60,8 +60,10 @@
 
 /* Very short viewports — tighten button padding. */
 @media (max-height: 500px) {
-  .action-button--primary,
-  .action-button--secondary {
-    padding: var(--space-xs) var(--space-sm);
+  :where(html:not([data-embedded])) {
+    .action-button--primary,
+    .action-button--secondary {
+      padding: var(--space-xs) var(--space-sm);
+    }
   }
 }

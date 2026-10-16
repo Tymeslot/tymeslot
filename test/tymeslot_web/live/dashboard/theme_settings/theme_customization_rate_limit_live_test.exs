@@ -23,11 +23,13 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationRateLimitLiveTes
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
       view
-      |> element("button[phx-value-theme='1']", "Customize Style")
+      |> element("button[phx-value-theme='1']", "Customise Style")
       |> render_click()
 
       view
-      |> element("button[phx-click='theme:select_color_scheme'][phx-value-scheme='forest']")
+      |> element(
+        "button[phx-click='theme:set_option'][phx-value-field='scheme'][phx-value-choice='forest']"
+      )
       |> render_click()
 
       # The user should see an error flash, not a silent failure

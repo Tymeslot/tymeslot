@@ -111,6 +111,14 @@ defmodule Tymeslot.Media.ImageMetadata do
   end
 
   @doc """
+  The largest canvas `strip/3` accepts for an image of `extension`, in
+  pixels: WebP's lower bound for `.webp`, the general one for any other.
+  """
+  @spec pixel_limit(String.t()) :: pos_integer()
+  def pixel_limit(".webp"), do: @max_webp_pixels
+  def pixel_limit(_extension), do: @max_pixels
+
+  @doc """
   Whether the image at `path` carries metadata `strip/3` would remove.
 
   For sweeping files already on disk: re-encoding a lossy format costs a

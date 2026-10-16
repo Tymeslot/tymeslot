@@ -129,7 +129,7 @@ defmodule TymeslotWeb.VideoOAuthControllerZoomTest do
         })
 
       assert redirected_to(conn) == "/dashboard/integrations?tab=video"
-      assert Flash.get(conn.assigns.flash, :error) =~ "Authorization was denied"
+      assert Flash.get(conn.assigns.flash, :error) =~ "Authorisation was denied"
     end
 
     test "rejects state signed with a different provider's secret", %{conn: conn} do

@@ -1,0 +1,43 @@
+/* Meeting pages: cancel, reschedule and cancel-confirmed.
+   Replaces the inline style attributes these templates used to carry. The
+   duration badge is a filled surface, so it reads the contrast pair
+   (--theme-primary-solid / --theme-on-primary) rather than white on the raw
+   primary, which fails WCAG 1.4.3 on the default palette (2.43:1). */
+
+.meeting-page-icon--success { color: var(--theme-success); }
+.meeting-page-icon--danger { color: var(--theme-danger); }
+.meeting-page-icon--primary { color: var(--theme-primary); }
+
+.meeting-page-title {
+  color: var(--text-opacity-full);
+  text-shadow: var(--text-shadow-title);
+}
+
+.meeting-page-lead { color: var(--text-opacity-medium-high); }
+.meeting-page-muted { color: var(--text-opacity-medium); }
+.meeting-page-panel-title { color: var(--text-opacity-high); }
+
+/* Compound selector: must beat .glass-morphism-card's own surface. */
+.glass-morphism-card.meeting-page-panel {
+  background: var(--surface-very-light);
+  border: var(--border-width-thin) solid var(--border-light);
+}
+
+.meeting-page-duration {
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+}
+
+.meeting-page-notice {
+  border: var(--border-width-thin) solid transparent;
+}
+
+.meeting-page-notice--success {
+  background: color-mix(in srgb, var(--theme-success) 10%, transparent);
+  border-color: color-mix(in srgb, var(--theme-success) 20%, transparent);
+}
+
+.meeting-page-notice--danger {
+  background: color-mix(in srgb, var(--theme-danger) 10%, transparent);
+  border-color: color-mix(in srgb, var(--theme-danger) 20%, transparent);
+}

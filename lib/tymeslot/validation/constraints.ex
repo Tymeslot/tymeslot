@@ -288,4 +288,14 @@ defmodule Tymeslot.Validation.Constraints do
 
   @spec booking_welcome_line_max_length() :: pos_integer()
   def booking_welcome_line_max_length, do: 80
+
+  # The organiser's introduction, shown by themes that present the organiser:
+  # a headline that fits one line under their name on a phone, and a bio of a
+  # few short paragraphs.
+
+  @spec profile_headline_max_length() :: pos_integer()
+  def profile_headline_max_length, do: 120
+
+  @spec profile_bio_max_length() :: pos_integer()
+  def profile_bio_max_length, do: 1000
 end

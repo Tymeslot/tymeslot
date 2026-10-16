@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.PhoneTest do
 
   test "wraps the input in a form that commits on submit so Enter saves the value" do
     html = render_input(%{"type" => "phone", "label" => "Mobile"})
-    assert html =~ ~s(phx-submit="next")
+    assert html =~ ~s(phx-submit="next_step")
     assert html =~ "<form"
   end
 

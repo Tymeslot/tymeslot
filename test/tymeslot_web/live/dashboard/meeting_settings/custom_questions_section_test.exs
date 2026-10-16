@@ -109,6 +109,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
 
       # The modal should stay open and show the validation error
       assert render(view) =~ "can&#39;t be blank"
+      # A browser would have blocked the empty label instead, but for `novalidate`.
+      assert has_element?(view, "#custom-question-editor-form[novalidate]")
     end
   end
 

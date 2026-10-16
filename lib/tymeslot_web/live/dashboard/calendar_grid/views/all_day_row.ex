@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AllDayRow do
         <div
           :for={event <- @shown}
           id={"allday-event-#{event.id}-#{@day}"}
-          phx-hook="StopClickPropagation"
+          phx-hook="PreventSummaryToggle"
           class={"rounded px-1 text-token-xs font-medium text-white truncate cursor-pointer #{Helpers.color_for_event(@assigns_ref, event)}"}
           {Helpers.open_event_attrs(event, keys: :hook, target: @myself)}
           aria-label={

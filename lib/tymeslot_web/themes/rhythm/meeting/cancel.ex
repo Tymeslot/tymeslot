@@ -10,8 +10,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper
 
-  attr :theme_customization, :map, required: true
-  attr :custom_css, :string, required: true
+  attr :theme_tokens, :any, required: true
   attr :locale, :string, required: true
   attr :language_dropdown_open, :boolean, required: true
   attr :meeting, :map, required: true
@@ -26,13 +25,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
   def render(assigns) do
     ~H"""
     <Wrapper.rhythm_wrapper
-      theme_customization={@theme_customization}
-      custom_css={@custom_css}
+      theme_tokens={@theme_tokens}
       locale={@locale}
       language_dropdown_open={@language_dropdown_open}
       show_language_switcher={true}
     >
-      <div class="scheduling-box">
+      <div class="scheduling-box booker-card">
         <div class="slide-container">
           <div class="slide active">
             <div class="slide-content confirmation-slide">
@@ -99,7 +97,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                 <div class="meeting-ticket">
                   <div class="ticket-header">
                     <span class="ticket-label">{dgettext("booking_manage", "Meeting Details")}</span>
-                    <span class="ticket-badge">{@meeting.duration} min</span>
+                    <span class="ticket-badge">{dgettext("booking_manage", "%{minutes} min",
+                      minutes: @meeting.duration
+                    )}</span>
                   </div>
 
                   <.meeting_detail_rows

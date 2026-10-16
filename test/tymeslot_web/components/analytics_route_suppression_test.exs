@@ -16,7 +16,7 @@ defmodule TymeslotWeb.AnalyticsRouteSuppressionTest do
   @moduletag :analytics
 
   import Tymeslot.Factory
-  import Tymeslot.ThemeBookingFlowHelpers, only: [seed_booking_account: 3]
+  import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
 
   @tracker ~s(data-analytics-src="https://analytics.example.com/script.js")
 

@@ -374,15 +374,35 @@ defmodule Tymeslot.Factory do
     }
   end
 
-  @spec theme_customization_factory() :: Tymeslot.ThemeCustomizations.ThemeCustomizationSchema.t()
-  def theme_customization_factory do
+  @default_theme_settings %{
+    "color_scheme" => "default",
+    "background_type" => "gradient",
+    "background_value" => "gradient_1"
+  }
+  @theme_setting_keys ~w(color_scheme custom_palette_seed background_type background_value
+                         background_image_path background_video_path)a
+
+  # Takes the settings flat, beside the columns, as the changeset's attrs do:
+  # `insert(:theme_customization, background_type: "video")`. A nil setting is
+  # left out of the stored map, as a save leaves it out.
+  @spec theme_customization_factory(map()) ::
+          Tymeslot.ThemeCustomizations.ThemeCustomizationSchema.t()
+  def theme_customization_factory(attrs) do
+    {settings, attrs} = attrs |> Map.new() |> Map.split(@theme_setting_keys)
+
+    settings =
+      for {key, value} <- settings,
+          value != nil,
+          into: @default_theme_settings,
+          do: {Atom.to_string(key), value}
+
     %ThemeCustomizationSchema{
       theme_id: sequence(:theme_id, ["1", "2"]),
-      color_scheme: "default",
-      background_type: "gradient",
-      background_value: "gradient_1",
+      settings: settings,
       profile: build(:profile)
     }
+    |> merge_attributes(attrs)
+    |> evaluate_lazy_attributes()
   end
 
   @spec webhook_factory() :: Tymeslot.Webhooks.WebhookSchema.t()

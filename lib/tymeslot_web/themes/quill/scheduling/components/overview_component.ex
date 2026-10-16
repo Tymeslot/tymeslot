@@ -14,26 +14,15 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+  alias TymeslotWeb.Themes.Shared.StepEvents
   use TymeslotWeb.Components.CoreComponents
   import TymeslotWeb.Components.FlagHelpers
 
   @impl Phoenix.LiveComponent
-  def update(assigns, socket) do
-    filtered_assigns = Map.drop(assigns, [:flash, :socket])
-    {:ok, assign(socket, filtered_assigns)}
-  end
+  defdelegate update(assigns, socket), to: StepEvents
 
   @impl Phoenix.LiveComponent
-  def handle_event("select_duration", %{"duration" => duration}, socket) do
-    send(self(), {:step_event, :overview, :select_duration, duration})
-    {:noreply, assign(socket, :selected_duration, duration)}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("next_step", _params, socket) do
-    send(self(), {:step_event, :overview, :next_step, nil})
-    {:noreply, socket}
-  end
+  defdelegate handle_event(event, params, socket), to: StepEvents
 
   attr :duration, :string, required: true
   attr :title, :string, required: true
@@ -53,6 +42,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
       phx-target={@target}
       data-testid="duration-option"
       data-duration={@duration}
+      data-fact="meeting_type"
+      data-value={@duration}
       class={"duration-card w-full rounded-xl cursor-pointer #{if @selected, do: "duration-card--selected", else: "duration-card--unselected"}"}
     >
       <div class="flex items-center justify-between">
@@ -86,7 +77,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div class="container flex-1" data-locale={@locale}>
+    <div class="container quill-container flex-1" data-locale={@locale}>
       <.page_layout
         show_steps={true}
         current_step={1}
@@ -95,7 +86,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
       >
         <div class="overview-content-area flex items-start justify-center">
           <div class="w-full">
-            <.glass_morphism_card>
+            <.glass_morphism_card class="booker-card">
               <div class="overview-card-body">
                 <div class="overview-layout">
                   <div class="overview-avatar-section">
@@ -126,10 +117,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                          separate thoughts; each starts on its own line, as the
                          Rhythm theme shows them. --%>
                     <p class="overview-description text-glass-primary">
-                      <%= if greeting = BookingText.greeting(@organizer_profile, Profiles.display_name(@organizer_profile)) do %>
+                      <%= if greeting = BookingText.greeting(@organizer_profile, Profiles.display_name(@organizer_profile), :quill) do %>
                         {greeting}<br />
                       <% end %>
-                      {BookingText.instruction(@organizer_profile)}
+                      {BookingText.instruction(@organizer_profile, :quill)}
                     </p>
 
                     <div class="overview-duration-list">
@@ -139,7 +130,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                             {dgettext("booking", "No meeting types available")}
                           </p>
                           <p class="text-sm mt-1">
-                            {dgettext("booking", "Please contact the organizer")}
+                            {dgettext("booking", "Please contact the organiser")}
                           </p>
                         </div>
                       <% else %>
@@ -165,6 +156,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                         phx-click="next_step"
                         phx-target={@myself}
                         data-testid="next-step"
+                        data-intent="continue"
                         disabled={!assigns[:selected_duration]}
                         title={
                           unless assigns[:selected_duration],

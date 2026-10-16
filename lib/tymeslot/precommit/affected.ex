@@ -12,8 +12,9 @@ defmodule Tymeslot.Precommit.Affected do
       nothing relevant moved (gettext and dialyzer skip their own work), and
       xref's input, a new `alias`, `import` or struct reference, is not visible
       from paths alone.
-    * **deps.unlock, deps.audit, sobelow, migrations, workflows and the
-      JavaScript suite** run only when the diff touches the files they read.
+    * **deps.unlock, deps.audit, sobelow, migrations, workflows, css tokens
+      and the JavaScript suite** run only when the diff touches the files
+      they read.
     * **The suite** is narrowed by `Tymeslot.TestAffected.Selection`, the engine
       behind `mix test.affected`, and inherits its rule of widening to the full
       suite rather than guessing.
@@ -45,6 +46,7 @@ defmodule Tymeslot.Precommit.Affected do
   @dep_files ~w[mix.exs mix.lock]
   @workflow_prefixes ~w[.github/workflows/ .gitea/workflows/]
   @migration_prefixes ~w[priv/repo/migrations/ priv/saas_repo/migrations/]
+  @css_prefixes ~w[assets/css/scheduling/ scripts/test_css_tokens.sh lib/mix/tasks/css.check_tokens.ex]
 
   # What Vitest reads: the sources and their tests, and the files that decide
   # which packages and settings it runs with. Stylesheets are not among them.
@@ -71,6 +73,7 @@ defmodule Tymeslot.Precommit.Affected do
     "sobelow" => {:security, "no web, config, auth or upload code changed"},
     "excellent_migrations.check_safety" => {:migrations, "no migration changed"},
     "actionlint" => {:workflows, "no workflow changed"},
+    "css.check_tokens" => {:css, "no booking-theme CSS changed"},
     "test.js" => {:js, "no JavaScript changed"}
   }
 
@@ -187,6 +190,7 @@ defmodule Tymeslot.Precommit.Affected do
   defp touches?(:deps, path), do: path in @dep_files
   defp touches?(:workflows, path), do: String.starts_with?(path, @workflow_prefixes)
   defp touches?(:migrations, path), do: String.starts_with?(path, @migration_prefixes)
+  defp touches?(:css, path), do: String.starts_with?(path, @css_prefixes)
   defp touches?(:js, path), do: String.starts_with?(path, @js_prefixes) or path in @js_files
 
   defp touches?(:security, path),

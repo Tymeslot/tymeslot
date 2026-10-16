@@ -47,6 +47,7 @@ defmodule Tymeslot.Migrations.DirtySeedMigrationTest do
   alias Ecto.Adapters.SQL
   alias Ecto.Adapters.SQL.Sandbox
   alias Ecto.Migrator
+  alias Tymeslot.Test.AdminBootstrapHelpers
   alias Tymeslot.Test.SuiteConfig
 
   @seed_path Path.expand("../../support/migration_dirty_seed.sql", __DIR__)
@@ -113,12 +114,19 @@ defmodule Tymeslot.Migrations.DirtySeedMigrationTest do
 
         assert_availability_rekeyed!(seeded)
         assert_buffers_split!()
+        assert_theme_settings_backfilled!()
       after
         # Always restore clean state for other tests
         reset_database!()
         Migrator.run(Tymeslot.Repo, migrations_path(), :up, all: true)
         # The rebuild commits the jobs migrations enqueue, as at boot.
         SuiteConfig.discard_committed_jobs!()
+
+        # The rebuilt database has no users, so its admin bootstrap is open
+        # again. Close it as `test_helper.exs` did at boot, or every later
+        # sign-up claims the settings row and the concurrency test finds the
+        # install unbootstrapped.
+        AdminBootstrapHelpers.close!()
       end
     end
   end
@@ -312,6 +320,81 @@ defmodule Tymeslot.Migrations.DirtySeedMigrationTest do
              ["seed-user-3@example.com", 15, 15, 15],
              ["seed-user-4@example.com", 500, 120, 120]
            ]
+  end
+
+  # Every seeded theme customisation reached `settings`, each option column
+  # under its own name with the null ones left out (the defaults-only row
+  # keeps just the two NOT NULL defaults, the empty seed stays an empty
+  # string), and the one processing state moved under the background video.
+  defp assert_theme_settings_backfilled! do
+    %{rows: rows} =
+      SQL.query!(
+        Tymeslot.Repo,
+        """
+        SELECT u.email, t.theme_id, t.settings, t.video_processing_status
+        FROM theme_customizations AS t
+        JOIN profiles AS p ON p.id = t.profile_id
+        JOIN users AS u ON u.id = p.user_id
+        WHERE u.email LIKE 'seed-user-%@example.com'
+        ORDER BY u.email, t.theme_id
+        """,
+        []
+      )
+
+    [_quill, [_email, "2", %{"background_video_path" => video_path}, _status] | _rest] = rows
+
+    assert rows == [
+             [
+               "seed-user-1@example.com",
+               "1",
+               %{
+                 "color_scheme" => "custom",
+                 "custom_palette_seed" => "#AB34CD",
+                 "background_type" => "gradient",
+                 "background_value" => "gradient_2"
+               },
+               %{}
+             ],
+             [
+               "seed-user-1@example.com",
+               "2",
+               %{
+                 "color_scheme" => "monochrome",
+                 "background_type" => "video",
+                 "background_value" => "custom",
+                 "background_video_path" => video_path
+               },
+               %{"background_video_path" => "completed"}
+             ],
+             [
+               "seed-user-2@example.com",
+               "1",
+               %{
+                 "color_scheme" => "forest",
+                 "background_type" => "image",
+                 "background_value" => "preset:ocean-sunset"
+               },
+               %{}
+             ],
+             [
+               "seed-user-2@example.com",
+               "2",
+               %{"color_scheme" => "default", "background_type" => "gradient"},
+               %{}
+             ],
+             [
+               "seed-user-3@example.com",
+               "1",
+               %{
+                 "color_scheme" => "ocean",
+                 "custom_palette_seed" => "",
+                 "background_type" => "image"
+               },
+               %{}
+             ]
+           ]
+
+    assert video_path =~ ~r{^\d+/2/backgrounds/clip\.mp4$}
   end
 
   defp count_by_profile!(table) do

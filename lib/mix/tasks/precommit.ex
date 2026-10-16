@@ -110,14 +110,20 @@ defmodule Mix.Tasks.Precommit do
     {"deps.audit", ~w[deps.audit], :dev},
     {"migrations", ~w[excellent_migrations.check_safety], :dev},
     {"workflows", ~w[actionlint], :dev},
+    # The booking-theme CSS rules, colour literals included. Nothing else
+    # checks them: the theme bundles are plain CSS the compiler never sees.
+    {"css tokens", ~w[css.check_tokens], :dev},
     # A ratchet against compile coupling creeping in, not a ban on it. Raised
     # from 25 to 27 for the two video-provider registries that are read at
     # compile time on purpose: `Bookings.Activation` needs its provider list
     # as a literal because it appears in a guard, and the video provider
     # picker fails the build when a provider has no group, mirroring the
     # calendar picker. Both exist because a newly registered provider was
-    # once missed. Lower it again if either goes away.
-    {"xref", ~w[xref graph --label compile-connected --fail-above 27], :dev},
+    # once missed. Lower it again if either goes away. Deriving each theme's
+    # module from its catalogue key took three files off the list; the
+    # registry, built from the catalogue while it compiles, and the
+    # onboarding preview's default theme are on it on purpose.
+    {"xref", ~w[xref graph --label compile-connected --fail-above 26], :dev},
     {"test", ~w[test], :test},
     # Vitest, over the hooks under assets/js. `mix test` never reaches it, so
     # without this step a JavaScript change could pass the whole gate unrun.
