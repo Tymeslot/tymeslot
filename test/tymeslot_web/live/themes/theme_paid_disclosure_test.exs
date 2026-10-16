@@ -78,11 +78,11 @@ defmodule TymeslotWeb.Live.Themes.ThemePaidDisclosureTest do
     Map.put(seeded, :price, price)
   end
 
-  # The submit's `aria-describedby` and the price element's id, as rendered.
   # The submit of a gated type: Folio words its own, the rest share one.
   defp request_label(:folio), do: "Request this time"
   defp request_label(_shared), do: "Request meeting"
 
+  # The submit's `aria-describedby` and the price element's id, as rendered.
   defp described_by(view) do
     view |> element("[data-testid='submit-booking']") |> render() |> attribute("aria-describedby")
   end

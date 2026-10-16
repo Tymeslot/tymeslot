@@ -93,6 +93,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
       assert saved.booking_instruction == "Choose a meeting to start."
     end
 
+    # Pins today's behaviour: the form cannot yet keep a voice's empty line,
+    # so it seeds the shared wording instead. Not the intended end state.
     test "seeds the shared greeting on Paper, whose voice greets nobody", %{
       conn: conn,
       profile: profile
@@ -108,6 +110,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
       assert saved.booking_greeting == "Hi! I'm Sarah."
     end
 
+    # Pins today's behaviour: the form cannot yet keep a voice's empty line,
+    # so it seeds the shared wording instead. Not the intended end state.
     test "seeds the shared instruction on Folio, whose voice gives no instruction label", %{
       conn: conn,
       profile: profile

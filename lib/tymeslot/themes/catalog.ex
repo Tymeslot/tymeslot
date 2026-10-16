@@ -78,7 +78,7 @@ defmodule Tymeslot.Themes.Catalog do
         id: "4",
         key: :folio,
         name: "Folio",
-        heading_style: :named,
+        heading_style: :generic,
         customization_spec: Tymeslot.ThemeCustomizations.FolioSpec,
         status: :active
       }

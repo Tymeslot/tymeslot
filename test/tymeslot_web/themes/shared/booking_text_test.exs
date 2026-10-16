@@ -56,8 +56,6 @@ defmodule TymeslotWeb.Themes.Shared.BookingTextTest do
         heading = BookingText.default_heading(key, "Sam")
 
         case facts.heading_style do
-          # Folio's voice words the heading as a phrase that names nobody.
-          :named when key == :folio -> assert heading == "Ways to work with me"
           :named -> assert heading =~ "Sam"
           :generic -> refute heading =~ "Sam"
         end

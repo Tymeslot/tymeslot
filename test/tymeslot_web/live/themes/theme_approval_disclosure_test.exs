@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias TymeslotWeb.BookingDriver
+  alias TymeslotWeb.Themes.Shared.BookingLabels
   alias TymeslotWeb.ThemeTestMatrix
 
   setup :verify_on_exit!
@@ -93,7 +94,9 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
         # The last thing read before committing must not promise a booking.
         submit = view |> element("[data-testid='submit-booking']") |> render()
         assert submit =~ request_label(unquote(theme.key))
-        refute submit =~ "Book Meeting"
+
+        refute submit =~
+                 BookingLabels.submit_label(false, %{}, "Book Meeting", unquote(theme.key))
       end
 
       @tag :capture_log
@@ -211,12 +214,12 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
     end
   end
 
-  # Each theme's own headline for a held request; the shared one where a
-  # theme keeps it.
   # The submit of a gated type: Folio words its own, the rest share one.
   defp request_label(:folio), do: "Request this time"
   defp request_label(_shared), do: "Request meeting"
 
+  # Each theme's own headline for a held request; the shared one where a
+  # theme keeps it.
   defp held_headline(:paper), do: "Request sent"
   defp held_headline(_shared), do: "Request sent!"
 

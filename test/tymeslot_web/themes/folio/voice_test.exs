@@ -25,9 +25,6 @@ defmodule TymeslotWeb.Themes.Folio.VoiceTest do
   end
 
   test "says the spec's personal lines" do
-    assert Voice.line(FolioVoice, :heading_named, %{name: "Mia Laurent"}, &shared/0) ==
-             "Ways to work with me"
-
     assert Voice.line(FolioVoice, :heading, %{}, &shared/0) == "Ways to work with me"
     assert Voice.line(FolioVoice, :submit, %{}, &shared/0) == "Book our session"
     assert Voice.line(FolioVoice, :submit_request, %{}, &shared/0) == "Request this time"
@@ -41,7 +38,9 @@ defmodule TymeslotWeb.Themes.Folio.VoiceTest do
   end
 
   test "keeps the shared wording for the lines it leaves alone" do
-    for key <- [:greeting, :held_message, :organizer_fragment, :submit_reschedule, :submit_paid] do
+    worded = [:heading, :instruction, :submit, :submit_request, :slot_taken]
+
+    for key <- Voice.keys() -- worded do
       bindings = Map.new(Voice.bindings(key), &{&1, "Mia Laurent"})
 
       assert Voice.line(FolioVoice, key, bindings, &shared/0) == :shared,

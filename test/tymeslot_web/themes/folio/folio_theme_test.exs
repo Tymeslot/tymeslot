@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Themes.Folio.FolioThemeTest do
   import Tymeslot.Factory
   import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
 
+  alias Ecto.Changeset
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
@@ -70,6 +71,19 @@ defmodule TymeslotWeb.Themes.Folio.FolioThemeTest do
 
       assert has_element?(view, "h2", "Ways to work with me")
       refute has_element?(view, ".folio-meetings-intro .folio-muted")
+    end
+
+    test "shows the organiser's own instruction when they have written one", %{profile: profile} do
+      profile
+      |> Changeset.change(%{
+        booking_text_enabled: true,
+        booking_instruction: "Choose a session."
+      })
+      |> Repo.update!()
+
+      view = overview(profile)
+
+      assert has_element?(view, ".folio-meetings-intro .folio-muted", "Choose a session.")
     end
 
     test "opens with the cover, the portrait and the organiser's name", %{profile: profile} do

@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Themes.Folio.Voice do
   @behaviour Voice
 
   @impl Voice
-  def text(key, _bindings) when key in [:heading, :heading_named],
+  def text(:heading, _bindings),
     do: dpgettext("booking_voice", "folio", "Ways to work with me")
 
   # No instruction label. An empty line, not a msgid: nothing to translate.
