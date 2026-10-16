@@ -62,6 +62,7 @@
   --color-warning: #f59e0b;
   --color-error: #ef4444;
   --color-error-bg: #fef2f2;
+  --color-error-strong: #dc2626; /* error red that holds AA contrast under white text */
   --color-info: #3b82f6;
   
   /* Background Colors - Glass Theme */
@@ -340,7 +341,7 @@
   --cal-booking: var(--color-primary-700);
   --cal-on-booking: #ffffff;
   --cal-on-check: #ffffff;
-  --cal-now: var(--color-error);
+  --cal-now: var(--color-error-strong);
   --cal-on-now: #ffffff;
   --cal-warn: var(--color-warning);
 }
