@@ -48,3 +48,20 @@ test("timed events stay out of the lane", () => {
   const meeting = normaliseEvent({ id: "m", title: "Meeting", all_day: false, start: "2026-10-14T09:00", end: "2026-10-14T10:00" });
   expect(layoutAllDay([meeting], week, { maxLanes: 3 })).toEqual({ bars: [], more: [0, 0, 0, 0, 0, 0, 0], rows: 0 });
 });
+
+test("an event that began before the week is cut at the start", () => {
+  const { bars } = layoutAllDay([allDay("trip", "2026-10-09", "2026-10-14")], week, { maxLanes: 3 });
+  expect(bars[0]).toMatchObject({ startIndex: 0, endIndex: 1, cutStart: true, cutEnd: false });
+});
+
+test("an event longer than the week is cut at both ends", () => {
+  const { bars } = layoutAllDay([allDay("leave", "2026-10-09", "2026-10-21")], week, { maxLanes: 3 });
+  expect(bars[0]).toMatchObject({ startIndex: 0, endIndex: 6, cutStart: true, cutEnd: true });
+});
+
+test("with weekends hidden mid-view, a weekend event drops out and a spanning one bridges the gap", () => {
+  const days = ["2026-10-14", "2026-10-15", "2026-10-16", "2026-10-19", "2026-10-20"];
+  expect(layoutAllDay([allDay("sat", "2026-10-17", "2026-10-19")], days, { maxLanes: 3 }).bars).toEqual([]);
+  const { bars } = layoutAllDay([allDay("trip", "2026-10-16", "2026-10-20")], days, { maxLanes: 3 });
+  expect(bars[0]).toMatchObject({ startIndex: 2, endIndex: 3, cutStart: false, cutEnd: false });
+});
