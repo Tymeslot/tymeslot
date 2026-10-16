@@ -10,7 +10,7 @@ Someone who used Calendly or cal.com, a team that white-labels its page, an orga
 
 ## Journey
 
-`Paged`, the classic journey (`steps:`) on one card, with no step indicator: the overview (the organiser's introduction beside the meeting types as one bordered list, each with its length, locations and price), the schedule (a month calendar with the chosen day's times, or a week of free times where one click picks the day and the time together), the questions one at a time when the meeting type has any, the booking form under a quiet summary of the chosen meeting and time, then the confirmation with the details and where they were sent. Nothing is defaulted; the visitor chooses every fact. Paper's next step is two working screens: choose, then schedule, questions and details together on one screen.
+`Navigators.Paged`, two working screens, then the confirmation. The first (`:overview`) lists the meeting types beside the organiser, with Next. The second (`:schedule`) holds the meeting's details, the picker (a month calendar with the day's times, or a week of times, by the `calendar_view` option) and, once a time is picked, the details part below it: the meeting type's questions, all at once, above the form, then where to meet, the form and the submit. There is no Next on the second screen; one submit sends the answers and the details together, and a question the submission refuses shows its error under it. Back goes straight from the second screen to the meeting types. A meeting type's own link opens on the second screen, with no Back. The address follows the facts: `/:username`, `/:username/:slug` once a type is chosen, `/:username/:slug/book` once a time is, `/:username/thank-you` on the confirmation.
 
 ## Look
 

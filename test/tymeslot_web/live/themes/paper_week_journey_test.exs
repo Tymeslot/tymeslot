@@ -2,11 +2,11 @@ defmodule TymeslotWeb.Live.Themes.PaperWeekJourneyTest do
   @moduledoc """
   Paper with its calendar view set to a week, end to end through the real
   booking page: an organiser saves `calendar_view: "week"`, and a booker
-  goes from the overview to the schedule step, picks a time straight from
-  the week, books it and lands on Paper's confirmation with that day and
-  time; and a booker moves an existing meeting through the same week. The
-  grid's `load_week` binding is sent by hand, since LiveViewTest runs no JS
-  bindings.
+  goes from the overview to the schedule screen, picks a time straight from
+  the week, which opens the details below it, books it and lands on Paper's
+  confirmation with that day and time; and a booker moves an existing
+  meeting through the same week. The grid's `load_week` binding is sent by
+  hand, since LiveViewTest runs no JS bindings.
 
   The load-bearing assertions are the meeting in the database, which starts
   at exactly the day and time clicked, and, for a reschedule, the organiser
@@ -176,8 +176,6 @@ defmodule TymeslotWeb.Live.Themes.PaperWeekJourneyTest do
              "[data-testid='paper-selection'] .paper-selection__date",
              LocalizationHelpers.format_full_date_label(day)
            )
-
-    view |> element("[data-testid='next-step']") |> render_click()
 
     assert has_element?(view, "form[data-testid='booking-form']")
   end

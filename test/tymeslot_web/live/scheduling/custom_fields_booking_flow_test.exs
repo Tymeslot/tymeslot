@@ -1,7 +1,11 @@
 defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
   @moduledoc """
   End-to-end integration test for the custom fields booking flow, walked on
-  every theme in `TymeslotWeb.ThemeTestMatrix`.
+  every theme in `TymeslotWeb.ThemeTestMatrix` on the classic journey, one
+  page per step (the wizard of questions, and the bare thank-you address);
+  the regression without custom fields runs on every shipped theme. Paper
+  asks its questions all at once on its schedule screen, and
+  `paper_theme_test.exs` walks them there.
 
   Each theme ships its own questions and confirmation components, and the
   dispatcher routes a booker to whichever theme the organiser picked, so the
@@ -96,7 +100,8 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
     %{profile: profile, user: user}
   end
 
-  for theme <- ThemeTestMatrix.all() do
+  # One page per step: the classic journey's shape (Quill, Rhythm).
+  for theme <- Enum.filter(ThemeTestMatrix.all(), &(&1.journey == :classic)) do
     describe "#{theme.name}: booking flow with custom fields" do
       @describetag theme_id: theme.id
 
@@ -399,33 +404,6 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
       end
     end
 
-    describe "#{theme.name}: booking flow without custom fields (regression)" do
-      @describetag theme_id: theme.id
-
-      setup %{user: user} do
-        mt =
-          insert(:meeting_type,
-            user: user,
-            duration_minutes: 30,
-            name: "No Fields Chat",
-            is_active: true
-          )
-
-        %{meeting_type: mt}
-      end
-
-      @tag :capture_log
-      test "no questions step is rendered when meeting type has no custom fields",
-           %{conn: conn, profile: profile} do
-        # navigate_to_booking_form ends at :booking — no :questions detour.
-        view = navigate_to_booking_form(conn, profile, nil)
-
-        html = render(view)
-        refute html =~ "Question 1 of"
-        assert has_element?(view, @booking_form)
-      end
-    end
-
     describe "#{theme.name}: direct visit to the thank-you page" do
       @describetag theme_id: theme.id
 
@@ -458,6 +436,35 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
           live(conn, "/#{profile.username}/thank-you?timezone=#{profile.timezone}&locale=de")
 
         assert :sys.get_state(view.pid).socket.assigns.name == "Gast"
+      end
+    end
+  end
+
+  for theme <- ThemeTestMatrix.all() do
+    describe "#{theme.name}: booking flow without custom fields (regression)" do
+      @describetag theme_id: theme.id
+
+      setup %{user: user} do
+        mt =
+          insert(:meeting_type,
+            user: user,
+            duration_minutes: 30,
+            name: "No Fields Chat",
+            is_active: true
+          )
+
+        %{meeting_type: mt}
+      end
+
+      @tag :capture_log
+      test "no questions step is rendered when meeting type has no custom fields",
+           %{conn: conn, profile: profile} do
+        # navigate_to_booking_form ends at :booking — no :questions detour.
+        view = navigate_to_booking_form(conn, profile, nil)
+
+        html = render(view)
+        refute html =~ "Question 1 of"
+        assert has_element?(view, @booking_form)
       end
     end
   end

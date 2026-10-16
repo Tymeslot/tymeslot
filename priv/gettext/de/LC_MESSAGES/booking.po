@@ -21,7 +21,6 @@ msgstr "%{count} Stunden"
 msgid "%{count} minutes"
 msgstr "%{count} Minuten"
 
-#: lib/tymeslot_web/themes/paper/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{date} at %{time}"
@@ -200,7 +199,6 @@ msgid "Confirming your payment…"
 msgstr "Zahlung wird bestätigt…"
 
 #: lib/tymeslot_web/themes/folio/scheduling/components/custom_questions_component.ex
-#: lib/tymeslot_web/themes/paper/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex
 #, elixir-autogen, elixir-format
@@ -245,7 +243,7 @@ msgid "Email Address"
 msgstr "E-Mail-Adresse"
 
 #: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
-#: lib/tymeslot_web/themes/paper/scheduling/components/booking_component.ex
+#: lib/tymeslot_web/themes/paper/scheduling/details.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Enter Your Details"
@@ -381,7 +379,6 @@ msgid "No meeting types available"
 msgstr "Keine Termintypen verfügbar"
 
 #: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
-#: lib/tymeslot_web/themes/paper/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "No time selected"
@@ -444,7 +441,6 @@ msgid "Privacy Policy"
 msgstr "Datenschutzerklärung"
 
 #: lib/tymeslot_web/themes/folio/scheduling/components/custom_questions_component.ex
-#: lib/tymeslot_web/themes/paper/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex
 #, elixir-autogen, elixir-format
@@ -628,7 +624,7 @@ msgid "Verifying slot availability and creating your meeting..."
 msgstr "Verfügbarkeit wird geprüft und Termin erstellt…"
 
 #: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
-#: lib/tymeslot_web/themes/paper/scheduling/components/booking_component.ex
+#: lib/tymeslot_web/themes/paper/scheduling/details.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
@@ -706,7 +702,7 @@ msgstr "Ihre Zeitzone"
 msgid "Add any details..."
 msgstr "Weitere Details…"
 
-#: lib/tymeslot_web/themes/paper/scheduling/components/booking_component.ex
+#: lib/tymeslot_web/themes/paper/scheduling/details.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Book Meeting"
@@ -760,9 +756,7 @@ msgstr "Name"
 #: lib/tymeslot_web/themes/folio/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/folio/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/folio/scheduling/components/schedule_component.ex
-#: lib/tymeslot_web/themes/paper/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/overview_component.ex
-#: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex
@@ -1154,8 +1148,6 @@ msgstr "%{organizer} muss diesen Termin noch bestätigen. Wir schreiben Ihnen in
 #: lib/tymeslot_web/themes/folio/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/folio/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/folio/scheduling/components/schedule_component.ex
-#: lib/tymeslot_web/themes/paper/scheduling/components/booking_component.ex
-#: lib/tymeslot_web/themes/paper/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex

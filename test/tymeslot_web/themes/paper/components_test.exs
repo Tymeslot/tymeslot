@@ -36,6 +36,8 @@ defmodule TymeslotWeb.Themes.Paper.ComponentsTest do
           id: "paper-overview",
           locale: "en",
           current_state: :overview,
+          moment: :overview,
+          moment_state: :current,
           organizer_profile: build(:profile, full_name: "Ada Lovelace", username: "ada"),
           username_context: "ada",
           meeting_types: [quick_chat()],

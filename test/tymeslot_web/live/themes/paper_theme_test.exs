@@ -2,11 +2,13 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
   @moduledoc """
   Paper's booking page through the real routes: the overview's list of
   meeting types with their lengths, locations and a paid type's price,
-  choosing one and going on with Next, the logo in
-  the avatar's place, the schedule step's details beside the month
-  calendar, the style block each colour mode writes, and the meeting pages
-  in Paper's card. The shared flow suites book through it as through every
-  theme in `ThemeTestMatrix`.
+  choosing one and going on with Next, the logo in the avatar's place, the
+  schedule screen's details beside the month calendar and, once a time is
+  picked, the questions and the details form below it with one submit, Back
+  to the meeting types, the address following the facts, the style block
+  each colour mode writes, and the meeting pages in Paper's card. The
+  shared flow suites book through it as through every theme in
+  `ThemeTestMatrix`.
   """
   use TymeslotWeb.LiveCase, async: false
 
@@ -18,9 +20,13 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
   import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
 
   alias Ecto.Changeset
+  alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.LocationOption
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.BookingDriver
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
   @theme_id "3"
@@ -63,8 +69,14 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
     |> element("[data-testid='paper-overview'] button[data-testid='next-step']")
     |> render_click()
 
-    assert has_element?(view, "[data-testid='paper-schedule'] .paper-details h1", "Quick Chat")
+    assert has_element?(
+             view,
+             "#schedule-step[data-testid='paper-schedule'] .paper-details h1",
+             "Quick Chat"
+           )
+
     refute has_element?(view, "[data-testid='paper-overview']")
+    refute has_element?(view, "[data-testid='next-step']")
   end
 
   test "each meeting type on the overview names where it is held",
@@ -123,7 +135,7 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
     refute has_element?(view, ".paper-intro img.paper-avatar")
   end
 
-  test "the schedule step puts the meeting's details beside the month calendar",
+  test "the schedule screen puts the meeting's details beside the month calendar",
        %{conn: conn, profile: profile} do
     {:ok, view, _html} = live(conn, ~p"/#{profile.username}/quick-chat")
 
@@ -135,10 +147,285 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
              ".paper-calendar button.calendar-nav-button[phx-click='next_month'][aria-label='Next month']"
            )
 
-    assert has_element?(
-             view,
-             "[data-testid='schedule-actions'] button[data-testid='next-step'][disabled]"
-           )
+    # A type's own link: no Next, and no actions bar (no Back to show).
+    refute has_element?(view, "[data-testid='next-step']")
+    refute has_element?(view, "[data-testid='schedule-actions']")
+  end
+
+  describe "the second screen" do
+    test "opens the details below the picker once a time is picked", %{
+      conn: conn,
+      profile: profile
+    } do
+      {:ok, view, _html} = live(conn, ~p"/#{profile.username}?timezone=Etc/UTC")
+      BookingDriver.choose_meeting_type(view, "quick-chat")
+      BookingDriver.continue(view)
+
+      refute has_element?(view, "[data-testid='paper-book']")
+
+      BookingDriver.pick_first_slot(view,
+        on: Date.utc_today() |> Date.add(2) |> Date.to_iso8601()
+      )
+
+      assert has_element?(view, "#schedule-step[data-testid='paper-schedule']")
+
+      assert has_element?(
+               view,
+               "#schedule-step [data-testid='paper-book'] form[data-fact='attendee']"
+             )
+
+      assert has_element?(
+               view,
+               "[data-testid='paper-book'] [data-testid='submit-booking'][data-intent='submit']"
+             )
+
+      assert has_element?(view, "[data-testid='paper-book-when']")
+    end
+
+    test "shows every question above the form once a time is picked, with no way on", %{
+      conn: conn,
+      user: user,
+      profile: profile
+    } do
+      ask_questions(user)
+
+      {:ok, view, _html} = live(conn, ~p"/#{profile.username}?timezone=Etc/UTC")
+      BookingDriver.choose_meeting_type(view, "quick-chat")
+      BookingDriver.continue(view)
+
+      refute has_element?(view, "[data-fact='answer']")
+
+      BookingDriver.pick_first_slot(view,
+        on: Date.utc_today() |> Date.add(2) |> Date.to_iso8601()
+      )
+
+      assert has_element?(
+               view,
+               "[data-testid='paper-book'] [data-fact='answer'][data-question='p-company']"
+             )
+
+      assert has_element?(
+               view,
+               "[data-testid='paper-book'] [data-fact='answer'][data-question='p-team']"
+             )
+
+      assert has_element?(view, "[data-testid='paper-book'] form[data-fact='attendee']")
+      refute has_element?(view, "[data-testid='paper-book'] [data-intent='continue']")
+    end
+
+    @tag :capture_log
+    test "books the answers given above the form with the one submit", %{
+      conn: conn,
+      user: user,
+      profile: profile
+    } do
+      ask_questions(user)
+      {:ok, view, _html} = live(conn, ~p"/#{profile.username}?timezone=Etc/UTC")
+
+      BookingDriver.book(view,
+        answers: %{"p-team" => "Design", "p-company" => "Acme"},
+        attendee: %{name: "Ana Silva", email: "ana-paper@example.com"}
+      )
+
+      meeting = Repo.get_by!(MeetingSchema, attendee_email: "ana-paper@example.com")
+      assert meeting.custom_field_answers == %{"p-company" => "Acme", "p-team" => "Design"}
+      assert Enum.map(meeting.custom_fields_snapshot, & &1["id"]) == ["p-company", "p-team"]
+    end
+
+    @tag :capture_log
+    test "a submit with a required question unanswered names it and books nothing", %{
+      conn: conn,
+      user: user,
+      profile: profile
+    } do
+      ask_questions(user)
+      {:ok, view, _html} = live(conn, ~p"/#{profile.username}?timezone=Etc/UTC")
+      BookingDriver.choose_meeting_type(view, "quick-chat")
+      BookingDriver.continue(view)
+
+      BookingDriver.pick_first_slot(view,
+        on: Date.utc_today() |> Date.add(2) |> Date.to_iso8601()
+      )
+
+      BookingDriver.submit(view, %{name: "Ana Silva", email: "ana-blank@example.com"})
+
+      assert has_element?(
+               view,
+               "[data-testid='paper-question'][data-index='0'] .paper-question__error"
+             )
+
+      refute has_element?(
+               view,
+               "[data-testid='paper-question'][data-index='1'] .paper-question__error"
+             )
+
+      assert has_element?(view, "[data-testid='paper-book'] form[data-fact='attendee']")
+      refute Repo.get_by(MeetingSchema, attendee_email: "ana-blank@example.com")
+
+      BookingDriver.answer(view, "p-company", "Acme")
+
+      refute has_element?(view, ".paper-question__error")
+    end
+
+    test "Back returns to the meeting types", %{conn: conn, profile: profile} do
+      {:ok, view, _html} = live(conn, ~p"/#{profile.username}")
+      BookingDriver.choose_meeting_type(view, "quick-chat")
+      BookingDriver.continue(view)
+
+      BookingDriver.back(view)
+
+      assert has_element?(view, "[data-testid='paper-overview']")
+    end
+
+    test "Back goes straight to the meeting types from a screen with questions answered", %{
+      conn: conn,
+      user: user,
+      profile: profile
+    } do
+      ask_questions(user)
+      {:ok, view, _html} = live(conn, ~p"/#{profile.username}?timezone=Etc/UTC")
+      BookingDriver.choose_meeting_type(view, "quick-chat")
+      BookingDriver.continue(view)
+
+      BookingDriver.pick_first_slot(view,
+        on: Date.utc_today() |> Date.add(2) |> Date.to_iso8601()
+      )
+
+      view
+      |> form("form[data-fact='answer'][data-question='p-company']", %{"value" => "Acme"})
+      |> render_submit()
+
+      BookingDriver.answer(view, "p-team", "Design")
+      BookingDriver.back(view)
+
+      assert has_element?(view, "[data-testid='paper-overview']")
+    end
+
+    test "the address follows the type and the time", %{conn: conn, profile: profile} do
+      user = profile.username
+      {:ok, view, _html} = live(conn, "/#{user}")
+
+      BookingDriver.choose_meeting_type(view, "quick-chat")
+      assert_patch(view, "/#{user}/quick-chat")
+
+      BookingDriver.continue(view)
+
+      BookingDriver.pick_first_slot(view,
+        on: Date.utc_today() |> Date.add(2) |> Date.to_iso8601()
+      )
+
+      assert_patch(view, "/#{user}/quick-chat/book")
+    end
+
+    test "a link to /book with no day and time opens the schedule screen, with no form", %{
+      conn: conn,
+      profile: profile
+    } do
+      {:ok, view, _html} = live(conn, ~p"/#{profile.username}/quick-chat/book")
+
+      assert has_element?(view, "#schedule-step [data-fact='date']")
+      refute has_element?(view, "form[data-fact='attendee']")
+    end
+
+    test "a meeting type's own link opens on it, with no way back", %{
+      conn: conn,
+      profile: profile
+    } do
+      {:ok, view, _html} = live(conn, ~p"/#{profile.username}/quick-chat")
+
+      assert has_element?(view, "[data-testid='paper-schedule'] [data-fact='date']")
+      refute has_element?(view, "[data-intent='back']")
+    end
+
+    @tag :capture_log
+    test "a required note must be acknowledged, and the confirmation lists the answers", %{
+      conn: conn,
+      user: user,
+      profile: profile
+    } do
+      ask(user, [
+        %{
+          "id" => "p-terms",
+          "type" => "note",
+          "label" => "Terms",
+          "body" => "Please agree to the call recording terms.",
+          "required" => true,
+          "position" => 0
+        }
+      ])
+
+      {:ok, view, _html} = live(conn, ~p"/#{profile.username}?timezone=Etc/UTC")
+      BookingDriver.choose_meeting_type(view, "quick-chat")
+      BookingDriver.continue(view)
+
+      BookingDriver.pick_first_slot(view,
+        on: Date.utc_today() |> Date.add(2) |> Date.to_iso8601()
+      )
+
+      assert has_element?(
+               view,
+               "[data-testid='paper-question']",
+               "Please agree to the call recording terms."
+             )
+
+      BookingDriver.submit(view, %{name: "Ana Silva", email: "ana-note@example.com"})
+
+      assert has_element?(
+               view,
+               "[data-testid='paper-question'][data-index='0'] .paper-question__error"
+             )
+
+      refute Repo.get_by(MeetingSchema, attendee_email: "ana-note@example.com")
+
+      BookingDriver.answer(view, "p-terms", "acknowledge")
+      BookingDriver.submit(view, %{name: "Ana Silva", email: "ana-note@example.com"})
+      wait_until(fn -> has_element?(view, "[data-testid='confirmation-heading']") end)
+
+      assert has_element?(view, ".custom-answers", "Terms")
+
+      meeting = Repo.get_by!(MeetingSchema, attendee_email: "ana-note@example.com")
+      assert %{"confirmed" => true} = meeting.custom_field_answers["p-terms"]
+    end
+
+    @tag :capture_log
+    test "the questions are asked again, blank, after Schedule another", %{
+      conn: conn,
+      user: user,
+      profile: profile
+    } do
+      ask_questions(user)
+      {:ok, view, _html} = live(conn, ~p"/#{profile.username}?timezone=Etc/UTC")
+
+      BookingDriver.book(view,
+        answers: %{"p-company" => "Acme Corp"},
+        attendee: %{name: "Ana Silva", email: "ana-again@example.com"}
+      )
+
+      assert render(view) =~ "Acme Corp"
+
+      BookingDriver.restart(view)
+      BookingDriver.choose_meeting_type(view, "quick-chat")
+      BookingDriver.continue(view)
+
+      BookingDriver.pick_first_slot(view,
+        on: Date.utc_today() |> Date.add(2) |> Date.to_iso8601()
+      )
+
+      assert has_element?(view, "form[data-fact='answer'][data-question='p-company']")
+      refute render(view) =~ "Acme Corp"
+    end
+
+    test "a thank-you address with no booking behind it opens the meeting types", %{
+      conn: conn,
+      profile: profile
+    } do
+      user = profile.username
+
+      assert {:error, {:live_redirect, %{to: to}}} =
+               live(conn, "/#{user}/thank-you?timezone=Etc%2FUTC")
+
+      assert to == "/#{user}?timezone=Etc%2FUTC"
+    end
   end
 
   test "the colour mode decides the page's style block", %{conn: conn, profile: profile} do
@@ -190,5 +477,34 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
 
   test "the dashboard's and the onboarding wizard's pickers offer Paper" do
     assert {"Paper", "3"} in ThemeInfo.theme_options()
+  end
+
+  # Two questions on the organiser's meeting type: a required one first,
+  # then an optional one.
+  defp ask_questions(user) do
+    ask(user, [
+      %{
+        "id" => "p-company",
+        "type" => "short_text",
+        "label" => "Company",
+        "required" => true,
+        "position" => 0
+      },
+      %{
+        "id" => "p-team",
+        "type" => "short_text",
+        "label" => "Team",
+        "required" => false,
+        "position" => 1
+      }
+    ])
+  end
+
+  # The organiser's meeting type asks `questions`.
+  defp ask(user, questions) do
+    meeting_type = Repo.get_by!(MeetingTypeSchema, user_id: user.id)
+
+    {:ok, _meeting_type} =
+      MeetingTypes.update_meeting_type(meeting_type, %{"custom_fields" => questions})
   end
 end

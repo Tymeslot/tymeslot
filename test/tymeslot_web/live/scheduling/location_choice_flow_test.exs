@@ -22,10 +22,12 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
       single location there is nothing to choose, and the meeting keeps its
       location even if the host has replaced that location since.
 
-  Events are driven through the parent LiveView's `{:step_event, :booking, …}`
-  message path, the same path `BookingComponent` uses to relay picker events
-  from the LiveComponent to the root LiveView. `guest_booking_flow_test.exs`
-  covers the equivalent journey for the guest field.
+  Events are driven through the parent LiveView's `{:step_event, step, …}`
+  message path, the same path the step holding the details form uses to relay
+  picker events from the LiveComponent to the root LiveView, under the step
+  on show (`form_event/3`: the booking step on the classic journey, the
+  schedule screen on Paper's). `guest_booking_flow_test.exs` covers the
+  equivalent journey for the guest field.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -148,6 +150,13 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
 
   defp confirmed?(view), do: has_element?(view, "[data-testid='confirmation-heading']")
 
+  # A details-form event, sent under the step on show: the booking step on
+  # the classic journey, the schedule screen that holds the form on Paper's.
+  defp form_event(view, event, data) do
+    step = :sys.get_state(view.pid).socket.assigns.current_state
+    send(view.pid, {:step_event, step, event, data})
+  end
+
   for theme <- ThemeTestMatrix.all() do
     describe "#{theme.name}: a meeting type offering several locations" do
       @describetag theme: theme.id
@@ -182,7 +191,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
       test "choosing an option moves the selection", %{conn: conn, profile: profile} do
         view = navigate_to_booking_form(conn, profile, nil)
 
-        send(view.pid, {:step_event, :booking, :select_location, "loc-call"})
+        form_event(view, :select_location, "loc-call")
         _drain = :sys.get_state(view.pid)
 
         assert :sys.get_state(view.pid).socket.assigns.selected_location_id == "loc-call"
@@ -195,7 +204,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
 
         assert has_element?(view, "[data-testid='location-arranged-note']")
 
-        send(view.pid, {:step_event, :booking, :select_location, "loc-call"})
+        form_event(view, :select_location, "loc-call")
         _drain = :sys.get_state(view.pid)
 
         detail = view |> element("[data-testid='location-detail']") |> render()
@@ -208,7 +217,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
            %{conn: conn, profile: profile} do
         view = navigate_to_booking_form(conn, profile, nil)
 
-        send(view.pid, {:step_event, :booking, :select_location, "loc-forged"})
+        form_event(view, :select_location, "loc-forged")
         _drain = :sys.get_state(view.pid)
 
         assert :sys.get_state(view.pid).socket.assigns.selected_location_id == "loc-office"
@@ -219,7 +228,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
            %{conn: conn, profile: profile} do
         view = navigate_to_booking_form(conn, profile, nil)
 
-        send(view.pid, {:step_event, :booking, :select_location, "loc-call"})
+        form_event(view, :select_location, "loc-call")
         _drain = :sys.get_state(view.pid)
 
         html = submit(view, "nophone@example.com")
@@ -235,8 +244,8 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
            %{conn: conn, profile: profile} do
         view = navigate_to_booking_form(conn, profile, nil)
 
-        send(view.pid, {:step_event, :booking, :select_location, "loc-call"})
-        send(view.pid, {:step_event, :booking, :location_phone, "+1 555 0100"})
+        form_event(view, :select_location, "loc-call")
+        form_event(view, :location_phone, "+1 555 0100")
         _drain = :sys.get_state(view.pid)
 
         html = submit(view, "phone@example.com")
@@ -310,7 +319,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
            %{conn: conn, profile: profile, second: second} do
         view = navigate_to_booking_form(conn, profile, nil)
 
-        send(view.pid, {:step_event, :booking, :select_video_provider, to_string(second.id)})
+        form_event(view, :select_video_provider, to_string(second.id))
         _drain = :sys.get_state(view.pid)
 
         html = submit(view, "teams@example.com")
@@ -350,7 +359,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
            %{conn: conn, profile: profile} do
         view = navigate_to_booking_form(conn, profile, nil)
 
-        send(view.pid, {:step_event, :booking, :select_location, "loc-video"})
+        form_event(view, :select_location, "loc-video")
         _drain = :sys.get_state(view.pid)
 
         refute has_element?(view, "[data-testid='video-provider-field']")
@@ -490,7 +499,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
 
         view = navigate_to_booking_form(conn, profile, nil, reschedule_meeting_uid: meeting.uid)
 
-        send(view.pid, {:step_event, :booking, :select_location, "loc-office"})
+        form_event(view, :select_location, "loc-office")
         _drain = :sys.get_state(view.pid)
 
         moved = submit_reschedule(view, meeting, original_start)
@@ -625,7 +634,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
 
         view = navigate_to_booking_form(conn, profile, nil, reschedule_meeting_uid: meeting.uid)
 
-        send(view.pid, {:step_event, :booking, :select_venue, to_string(berlin.id)})
+        form_event(view, :select_venue, to_string(berlin.id))
         _drain = :sys.get_state(view.pid)
 
         moved = submit_reschedule(view, meeting, ctx.original_start)

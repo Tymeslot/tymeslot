@@ -12,7 +12,7 @@ defmodule Tymeslot.ThemeCustomizations.PaperSpec do
   picks between them, and the accent then replaces the primary family in
   whichever sets remain, fitted to each set's card; the font and radius add
   their variables, and the calendar view and the logo their media (the
-  schedule step reads `media[:calendar_view]`).
+  schedule screen reads `media[:calendar_view]`).
 
   Onboarding offers the accents rather than the tones. The three tones share
   one primary and differ only in their greys, so their swatches would be

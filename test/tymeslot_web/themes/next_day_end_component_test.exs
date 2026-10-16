@@ -3,9 +3,10 @@ defmodule TymeslotWeb.Themes.NextDayEndComponentTest do
 
   @moduledoc """
   The booking and confirmation steps of every shipped theme
-  (`ThemeTestMatrix.all/0`) name the end of a meeting that runs past
-  midnight, rendered straight from the step's assigns so no schedule is
-  needed.
+  (`ThemeTestMatrix.all/0`; on Paper, the details part of its schedule
+  screen in the booking step's place) name the end of a meeting that runs
+  past midnight, rendered straight from the step's assigns so no schedule
+  is needed.
   """
   @moduletag :themes
   @moduletag :bookings
@@ -14,6 +15,7 @@ defmodule TymeslotWeb.Themes.NextDayEndComponentTest do
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
 
+  alias TymeslotWeb.Themes.Paper.Scheduling.Details
   alias TymeslotWeb.ThemeTestMatrix
 
   @note "[data-testid='booking-next-day-end']"
@@ -67,6 +69,14 @@ defmodule TymeslotWeb.Themes.NextDayEndComponentTest do
         name
       ])
 
+  # Paper books on its schedule screen, whose details part (`Details.book/1`,
+  # a function component given the screen's assigns and its target) holds
+  # what the classic journey's booking step does.
+  defp render_step("paper", "BookingComponent", assigns),
+    do: render_component(&Details.book/1, Map.put(assigns, :target, nil))
+
+  defp render_step(slug, name, assigns), do: render_component(step(slug, name), assigns)
+
   for theme <- ThemeTestMatrix.all(),
       {stage, component} <- [booking: "BookingComponent", confirmation: "ConfirmationComponent"] do
     describe "#{theme.name}'s #{stage} step" do
@@ -74,7 +84,7 @@ defmodule TymeslotWeb.Themes.NextDayEndComponentTest do
 
       test "names the end when the meeting runs past midnight" do
         {slug, name} = @component
-        html = render_component(step(slug, name), assigns("11:00 PM", 120))
+        html = render_step(slug, name, assigns("11:00 PM", 120))
 
         assert [note] = html |> Floki.parse_document!() |> Floki.find(@note)
         assert Floki.text(note) =~ "Ends 01:00 AM on Tuesday 15 June"
@@ -82,7 +92,7 @@ defmodule TymeslotWeb.Themes.NextDayEndComponentTest do
 
       test "says nothing for a meeting ending the day it starts" do
         {slug, name} = @component
-        html = render_component(step(slug, name), assigns("10:00 PM", 60))
+        html = render_step(slug, name, assigns("10:00 PM", 60))
 
         assert html |> Floki.parse_document!() |> Floki.find(@note) == []
       end

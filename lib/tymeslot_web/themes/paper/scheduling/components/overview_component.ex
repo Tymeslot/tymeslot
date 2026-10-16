@@ -21,8 +21,9 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
   them once both fit, so the rule stays put going on to the next step.
 
   Choosing a row marks it (`aria-pressed`); Next goes on to the schedule
-  step. The rows keep the test ids the shared suites and the visual harness
-  drive: `duration-option` with `data-duration`, and `next-step`.
+  screen, the journey's second moment. The rows keep the test ids the
+  shared suites and the visual harness drive: `duration-option` with
+  `data-duration`, and `next-step`.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -58,9 +59,12 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
 
     ~H"""
     <section
+      id={"#{@moment}-step"}
       class="paper-card paper-card--wide booker-card"
       data-locale={@locale}
       data-testid="paper-overview"
+      data-moment={@moment}
+      data-moment-state={@moment_state}
     >
       <Components.brand theme_tokens={@theme_tokens} />
 

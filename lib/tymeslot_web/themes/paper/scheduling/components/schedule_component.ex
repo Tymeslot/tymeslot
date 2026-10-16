@@ -1,28 +1,40 @@
 defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   @moduledoc """
-  Paper's schedule step: one card holding the meeting's details and a picker,
-  then Back and Next. The organiser's calendar view option
-  (`Options.CalendarView`, read from `@theme_tokens.media[:calendar_view]`;
-  no tokens or no setting is a month) decides the picker.
+  Paper's schedule screen, the journey's second moment, collecting the slot,
+  the answers and the attendee: one card holding the meeting's details and a
+  picker, the actions bar, and once a time is picked, the details part below
+  (`Paper.Scheduling.Details`: every question at once, then the form, and
+  one submit for both).
+  The organiser's calendar view option (`Options.CalendarView`, read from
+  `@theme_tokens.media[:calendar_view]`; no tokens or no setting is a month)
+  decides the picker.
 
   A month (`data-calendar-view="month"`): the month calendar, the chosen day's
   times (the shared `SlotList`) and the timezone picker. The card lays them
   out by its own width (`schedule.css`): one column, then the details beside
   the picker, then details, calendar and times side by side.
 
-  A week (`paper-card--week`, `data-calendar-view="week"`): the step's
-  heading, the timezone picker and the shared `WeekGrid`
-  (`data-testid="paper-week"`), where one click on a time picks the day and
-  the time together. The card is wider, the details stand beside the week
-  once seven days fit and become a compact row above it before
-  (`week.css`), and the actions bar names the chosen day and time between
-  Back and Next (`data-testid="paper-selection"`, announced politely).
+  A week (`paper-card--week`, `data-calendar-view="week"`): the heading, the
+  timezone picker and the shared `WeekGrid` (`data-testid="paper-week"`),
+  where one click on a time picks the day and the time together. The card is
+  wider, the details stand beside the week once seven days fit and become a
+  compact row above it before (`week.css`), and the actions bar names the
+  chosen day and time (`data-testid="paper-selection"`, announced politely).
 
   For a group type the details say how many people it takes
   (`GroupSession.hint`), and a seat move names the spot it is moving above
-  both views (`GroupSession.seat_move_notice`). The month's times show each
-  time's free seats (`SlotList` with the meeting type); the shared
-  `WeekGrid` shows none yet.
+  both views (`GroupSession.seat_move_notice`, right under the brand). Each
+  time shows its free seats, the month's through `SlotList` and the week's
+  through `WeekGrid`, both given the meeting type.
+
+  There is no Next: picking a time opens the details part. The actions bar
+  (`data-testid="schedule-actions"`) holds the one Back, shown to a visitor
+  who came through the overview, which goes straight to the meeting types.
+  The questions' events (`answer`, `multi_toggle`, each naming its
+  question) go to the shared questions engine (`CustomQuestions.Events`);
+  the `next_step` a question's form sends on Enter is dropped, so the
+  questions never step and Back always leaves; every other event goes to
+  `StepEvents`.
 
   The calendar's buttons carry the class names and test ids the shared
   suites and the visual harness drive: `calendar-day` with `data-date`,
@@ -41,23 +53,36 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Live.Scheduling.CalendarHelpers
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Themes.Paper.Components
+  alias TymeslotWeb.Themes.Paper.Scheduling.Details
   alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.SlotList
   alias TymeslotWeb.Themes.Shared.Components.TimezonePicker
   alias TymeslotWeb.Themes.Shared.Components.WeekGrid
+  alias TymeslotWeb.Themes.Shared.CustomQuestions.Events
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
 
   import TymeslotWeb.Components.FlagHelpers, only: [timezone_flag: 1]
 
+  @question_events ~w(answer multi_toggle)
+
   @impl Phoenix.LiveComponent
   defdelegate update(assigns, socket), to: StepEvents
 
   # Selection is decided by the shared scheduling LiveView, which owns
-  # `selected_date` and `selected_time` and passes them back down.
+  # `selected_date` and `selected_time` and passes them back down; a
+  # question's answer goes through the shared questions engine.
   @impl Phoenix.LiveComponent
-  defdelegate handle_event(event, params, socket), to: StepEvents
+  def handle_event(event, params, socket) when event in @question_events,
+    do: Events.handle_event(event, params, socket)
+
+  # Enter in a question's field submits its form with `next_step`. The
+  # screen has no way on, and stepping the questions would make Back step
+  # back through them instead of leaving, so it is dropped.
+  def handle_event("next_step", _params, socket), do: {:noreply, socket}
+
+  def handle_event(event, params, socket), do: StepEvents.handle_event(event, params, socket)
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
@@ -66,6 +91,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
     assigns =
       assign(assigns,
         view: view,
+        stage: stage(assigns),
+        show_back: assigns[:entered_via_overview] == true,
         chosen: not is_nil(assigns.selected_date) and not is_nil(assigns.selected_time),
         duration_text: BookingText.duration_label(assigns),
         price:
@@ -75,10 +102,13 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
 
     ~H"""
     <section
+      id={"#{@moment}-step"}
       class={["paper-card paper-card--wide booker-card", @view == "week" && "paper-card--week"]}
       data-locale={@locale}
       data-calendar-view={@view}
       data-testid="paper-schedule"
+      data-moment={@moment}
+      data-moment-state={@moment_state}
     >
       <Components.brand theme_tokens={@theme_tokens} />
 
@@ -116,6 +146,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
             landing_week={CalendarHelpers.landing_week(assigns)}
             target={@myself}
             heading_tag="h2"
+            meeting_type={@meeting_type}
           />
         </div>
 
@@ -159,17 +190,19 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
       </div>
 
       <div
-        class={["paper-actions", @entered_via_overview && "paper-actions--split"]}
+        :if={@show_back or @view == "week"}
+        class={["paper-actions", @show_back && "paper-actions--split"]}
         data-testid="schedule-actions"
       >
         <button
-          :if={@entered_via_overview}
+          :if={@show_back}
           type="button"
           class="paper-button paper-button--quiet"
           phx-click="back_step"
           phx-target={@myself}
           data-testid="back-step"
           data-intent="back"
+          disabled={assigns[:submitting]}
         >
           <.icon name="hero-arrow-left-mini" class="paper-button__icon" />
           {dgettext("booking", "Back")}
@@ -191,22 +224,22 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
             <span class="paper-selection__prompt">{dgettext("booking", "Please select a time")}</span>
           <% end %>
         </p>
-        <button
-          type="button"
-          class="paper-button paper-button--primary"
-          phx-click="next_step"
-          phx-target={@myself}
-          data-testid="next-step"
-          data-intent="continue"
-          disabled={not @chosen}
-        >
-          {dgettext("booking", "Next")}
-          <.icon name="hero-arrow-right-mini" class="paper-button__icon" />
-        </button>
       </div>
+
+      <Details.book :if={@stage != :none} {assigns} target={@myself} />
     </section>
     """
   end
+
+  # What follows the picker: nothing until a time is picked; then the
+  # details part (the questions, if any, and the form below them), once the
+  # form exists: the runtime enters the attendee as the time is picked.
+  defp stage(%{selected_date: date, selected_time: time} = assigns)
+       when is_binary(date) and is_binary(time) do
+    if match?(%Phoenix.HTML.Form{}, assigns[:form]), do: :details, else: :none
+  end
+
+  defp stage(_assigns), do: :none
 
   # The organiser's calendar view; no tokens, or none resolved, is a month.
   defp calendar_view(%{media: %{calendar_view: "week"}}), do: "week"

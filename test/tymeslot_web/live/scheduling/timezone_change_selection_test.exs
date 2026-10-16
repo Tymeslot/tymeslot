@@ -128,30 +128,33 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
                         "slots were fetched for #{old_day}, a day dropped by the change"
       end
 
-      test "is picked again after a visit to the booking step and back",
-           %{conn: conn, profile: profile} = ctx do
-        view = open_schedule(conn, "/#{profile.username}/30-minutes", ctx.from)
-        picked = today(ctx.from)
-        assert_selected(view, picked, "the page's own pick")
+      # One page per step: the classic journey's shape (Quill, Rhythm).
+      if theme.journey == :classic do
+        test "is picked again after a visit to the booking step and back",
+             %{conn: conn, profile: profile} = ctx do
+          view = open_schedule(conn, "/#{profile.username}/30-minutes", ctx.from)
+          picked = today(ctx.from)
+          assert_selected(view, picked, "the page's own pick")
 
-        # Coming back, the schedule step reopens on the day as a held one, no
-        # longer the page's: only the new zone's booking window can drop it.
-        [time | _other_times] =
-          view
-          |> render()
-          |> Floki.parse_document!()
-          |> Floki.attribute("button[data-testid='time-slot']", "phx-value-time")
+          # Coming back, the schedule step reopens on the day as a held one, no
+          # longer the page's: only the new zone's booking window can drop it.
+          [time | _other_times] =
+            view
+            |> render()
+            |> Floki.parse_document!()
+            |> Floki.attribute("button[data-testid='time-slot']", "phx-value-time")
 
-        send(view.pid, {:step_event, :schedule, :select_time, time})
-        send(view.pid, {:step_event, :schedule, :next_step, nil})
-        wait_until(fn -> live_assigns(view).current_state == :booking end)
-        send(view.pid, {:step_event, :booking, :back_step, nil})
-        wait_until(fn -> settled?(view) end)
-        assert_selected(view, picked, "the held day back on the schedule step")
+          send(view.pid, {:step_event, :schedule, :select_time, time})
+          send(view.pid, {:step_event, :schedule, :next_step, nil})
+          wait_until(fn -> live_assigns(view).current_state == :booking end)
+          send(view.pid, {:step_event, :booking, :back_step, nil})
+          wait_until(fn -> settled?(view) end)
+          assert_selected(view, picked, "the held day back on the schedule step")
 
-        change_timezone(view, ctx.to)
+          change_timezone(view, ctx.to)
 
-        assert_selected(view, today(ctx.to), "the pick after #{picked} passed in #{ctx.to}")
+          assert_selected(view, today(ctx.to), "the pick after #{picked} passed in #{ctx.to}")
+        end
       end
 
       test "is picked again on every later change of timezone",

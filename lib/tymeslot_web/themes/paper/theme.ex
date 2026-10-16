@@ -1,9 +1,10 @@
 defmodule TymeslotWeb.Themes.Paper.Theme do
   @moduledoc """
-  Paper: a calm, neutral booking page. One card on the tone's canvas with
-  everything a booking needs on one screen, one accent colour, and a light,
-  dark or automatic colour mode. Its meeting, poll and payment pages are the
-  shared defaults (`Shared.DefaultPages`) inside its page shell.
+  Paper: a calm, neutral booking page. One card on the tone's canvas, in two
+  screens: the meeting types, then the time and the details together; one
+  accent colour, and a light, dark or automatic colour mode. Its meeting,
+  poll and payment pages are the shared defaults (`Shared.DefaultPages`)
+  inside its page shell.
   """
   alias TymeslotWeb.Themes.Paper.Pages
 

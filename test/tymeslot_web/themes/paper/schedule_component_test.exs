@@ -1,9 +1,9 @@
 defmodule TymeslotWeb.Themes.Paper.ScheduleComponentTest do
   @moduledoc """
-  Paper's schedule step rendered alone, in each calendar view: the month
+  Paper's schedule screen rendered alone, in each calendar view: the month
   calendar for a month, or no setting at all; the shared week grid, its
   times once the week is in, for a week; and the week's actions bar naming
-  the chosen day and time, with Next held back until there is one.
+  the chosen day and time beside Back, with no Next.
   """
   use ExUnit.Case, async: true
 
@@ -60,7 +60,12 @@ defmodule TymeslotWeb.Themes.Paper.ScheduleComponentTest do
           week_slots: nil,
           week_slots_loading: false,
           week_slots_error: nil,
-          entered_via_overview: true
+          entered_via_overview: true,
+          moment: :schedule,
+          moment_state: :current,
+          engine: nil,
+          form: nil,
+          submitting: false
         },
         Map.new(overrides)
       )
@@ -131,7 +136,7 @@ defmodule TymeslotWeb.Themes.Paper.ScheduleComponentTest do
                Floki.find(doc, "[data-testid='schedule-actions'] [data-testid='back-step']")
     end
 
-    test "asks for a time, and holds Next back, until one is chosen" do
+    test "asks for a time, offers no Next, and shows no details until one is picked" do
       doc =
         schedule(
           theme_tokens: tokens("week"),
@@ -141,10 +146,11 @@ defmodule TymeslotWeb.Themes.Paper.ScheduleComponentTest do
 
       assert text(doc, "[data-testid='paper-selection']") == "Please select a time"
       assert Floki.attribute(doc, "[data-testid='paper-selection']", "aria-live") == ["polite"]
-      assert Floki.attribute(doc, "button[data-testid='next-step']", "disabled") != []
+      assert Floki.find(doc, "[data-testid='next-step']") == []
+      assert Floki.find(doc, "[data-testid='paper-book']") == []
     end
 
-    test "names the chosen day and time between Back and Next, and lets the booker on" do
+    test "names the chosen day and time beside Back" do
       doc =
         schedule(
           theme_tokens: tokens("week"),
@@ -157,7 +163,6 @@ defmodule TymeslotWeb.Themes.Paper.ScheduleComponentTest do
                "Wednesday, 6 March 2030"
 
       assert text(doc, "[data-testid='paper-selection'] .paper-selection__time") == "02:00 PM"
-      assert Floki.attribute(doc, "button[data-testid='next-step']", "disabled") == []
 
       assert Floki.attribute(
                doc,
@@ -170,7 +175,7 @@ defmodule TymeslotWeb.Themes.Paper.ScheduleComponentTest do
         |> Floki.find("[data-testid='schedule-actions'] > *")
         |> Enum.flat_map(&Floki.attribute(&1, "data-testid"))
 
-      assert ids == ["back-step", "paper-selection", "next-step"]
+      assert ids == ["back-step", "paper-selection"]
     end
   end
 end

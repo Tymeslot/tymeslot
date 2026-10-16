@@ -16,11 +16,13 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
     * The "Schedule another" confirmation action resets the guest list.
     * When `allow_guests: false`, the toggle is absent.
 
-  Events are driven through the parent LiveView's `{:step_event, :booking, ...}`
-  message path — the same path that `BookingComponent` uses when it relays
-  guest-field events from the LiveComponent to the root LiveView. This avoids
-  fragility around LiveComponent targeting in tests while exercising exactly
-  the same code paths the browser does.
+  Events are driven through the parent LiveView's `{:step_event, step, ...}`
+  message path, under the step on show (`form_event/3`: the booking step on
+  the classic journey, the schedule screen on Paper's), the same path the
+  step holding the details form uses when it relays guest-field events from
+  the LiveComponent to the root LiveView. This avoids fragility around
+  LiveComponent targeting in tests while exercising exactly the same code
+  paths the browser does.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -89,6 +91,13 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
     %{profile: profile, user: user}
   end
 
+  # A details-form event, sent under the step on show: the booking step on
+  # the classic journey, the schedule screen that holds the form on Paper's.
+  defp form_event(view, event, data) do
+    step = :sys.get_state(view.pid).socket.assigns.current_state
+    send(view.pid, {:step_event, step, event, data})
+  end
+
   for theme <- ThemeTestMatrix.all() do
     describe "#{theme.name}: guest field — allow_guests: true" do
       @describetag theme_id: theme.id
@@ -115,7 +124,7 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
         refute has_element?(view, "[data-testid='guest-input']")
 
         # Send the toggle_guests event (same path as the LiveComponent click).
-        send(view.pid, {:step_event, :booking, :toggle_guests, nil})
+        form_event(view, :toggle_guests, nil)
         _drain = :sys.get_state(view.pid)
 
         # After toggling: the input area replaces the toggle button.
@@ -132,8 +141,8 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
       test "adding a valid guest email adds a chip", %{conn: conn, profile: profile} do
         view = navigate_to_booking_form(conn, profile, nil)
 
-        send(view.pid, {:step_event, :booking, :toggle_guests, nil})
-        send(view.pid, {:step_event, :booking, :add_guest, "guest@example.com"})
+        form_event(view, :toggle_guests, nil)
+        form_event(view, :add_guest, "guest@example.com")
         _drain = :sys.get_state(view.pid)
 
         html = render(view)
@@ -145,9 +154,9 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
       test "adding two guests renders two chips", %{conn: conn, profile: profile} do
         view = navigate_to_booking_form(conn, profile, nil)
 
-        send(view.pid, {:step_event, :booking, :toggle_guests, nil})
-        send(view.pid, {:step_event, :booking, :add_guest, "alpha@example.com"})
-        send(view.pid, {:step_event, :booking, :add_guest, "beta@example.com"})
+        form_event(view, :toggle_guests, nil)
+        form_event(view, :add_guest, "alpha@example.com")
+        form_event(view, :add_guest, "beta@example.com")
         _drain = :sys.get_state(view.pid)
 
         html = render(view)
@@ -159,10 +168,10 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
       test "removing a guest chip removes it from the list", %{conn: conn, profile: profile} do
         view = navigate_to_booking_form(conn, profile, nil)
 
-        send(view.pid, {:step_event, :booking, :toggle_guests, nil})
-        send(view.pid, {:step_event, :booking, :add_guest, "keeper@example.com"})
-        send(view.pid, {:step_event, :booking, :add_guest, "todelete@example.com"})
-        send(view.pid, {:step_event, :booking, :remove_guest, "todelete@example.com"})
+        form_event(view, :toggle_guests, nil)
+        form_event(view, :add_guest, "keeper@example.com")
+        form_event(view, :add_guest, "todelete@example.com")
+        form_event(view, :remove_guest, "todelete@example.com")
         _drain = :sys.get_state(view.pid)
 
         html = render(view)
@@ -174,8 +183,8 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
       test "close button clears guests and collapses the field", %{conn: conn, profile: profile} do
         view = navigate_to_booking_form(conn, profile, nil)
 
-        send(view.pid, {:step_event, :booking, :toggle_guests, nil})
-        send(view.pid, {:step_event, :booking, :add_guest, "willclose@example.com"})
+        form_event(view, :toggle_guests, nil)
+        form_event(view, :add_guest, "willclose@example.com")
         _drain = :sys.get_state(view.pid)
 
         # Open with one guest and a close control present.
@@ -183,7 +192,7 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
         assert render(view) =~ "willclose@example.com"
 
         # Closing resets the list and returns to the collapsed "+ Add guests" CTA.
-        send(view.pid, {:step_event, :booking, :close_guests, nil})
+        form_event(view, :close_guests, nil)
         _drain = :sys.get_state(view.pid)
 
         state = :sys.get_state(view.pid).socket.assigns
@@ -197,9 +206,9 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
       test "duplicate email shows 'already added' error", %{conn: conn, profile: profile} do
         view = navigate_to_booking_form(conn, profile, nil)
 
-        send(view.pid, {:step_event, :booking, :toggle_guests, nil})
-        send(view.pid, {:step_event, :booking, :add_guest, "dupe@example.com"})
-        send(view.pid, {:step_event, :booking, :add_guest, "dupe@example.com"})
+        form_event(view, :toggle_guests, nil)
+        form_event(view, :add_guest, "dupe@example.com")
+        form_event(view, :add_guest, "dupe@example.com")
         _drain = :sys.get_state(view.pid)
 
         html = render(view)
@@ -219,9 +228,9 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
         view = navigate_to_booking_form(conn, profile, nil)
 
         # Seed the form with the booker's email so GuestBooking.primary_email?/2 can match it.
-        send(view.pid, {:step_event, :booking, :validate, %{"email" => "self@example.com"}})
-        send(view.pid, {:step_event, :booking, :toggle_guests, nil})
-        send(view.pid, {:step_event, :booking, :add_guest, "self@example.com"})
+        form_event(view, :validate, %{"email" => "self@example.com"})
+        form_event(view, :toggle_guests, nil)
+        form_event(view, :add_guest, "self@example.com")
         _drain = :sys.get_state(view.pid)
 
         # The apostrophe is HTML-entity-encoded in the rendered output, so
@@ -233,8 +242,8 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
       test "invalid email format shows format error", %{conn: conn, profile: profile} do
         view = navigate_to_booking_form(conn, profile, nil)
 
-        send(view.pid, {:step_event, :booking, :toggle_guests, nil})
-        send(view.pid, {:step_event, :booking, :add_guest, "not-an-email"})
+        form_event(view, :toggle_guests, nil)
+        form_event(view, :add_guest, "not-an-email")
         _drain = :sys.get_state(view.pid)
 
         assert render(view) =~ "Enter a valid email address"
@@ -244,15 +253,15 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
       test "cap error shown when max_guests is reached", %{conn: conn, profile: profile} do
         view = navigate_to_booking_form(conn, profile, nil)
 
-        send(view.pid, {:step_event, :booking, :toggle_guests, nil})
+        form_event(view, :toggle_guests, nil)
 
         # Fill the list to the maximum.
         Enum.each(1..Guests.max_guests(), fn n ->
-          send(view.pid, {:step_event, :booking, :add_guest, "guest#{n}@example.com"})
+          form_event(view, :add_guest, "guest#{n}@example.com")
         end)
 
         # One more should trigger the cap error.
-        send(view.pid, {:step_event, :booking, :add_guest, "overflow@example.com"})
+        form_event(view, :add_guest, "overflow@example.com")
         _drain = :sys.get_state(view.pid)
 
         assert render(view) =~ "You can add up to #{Guests.max_guests()} guests"
@@ -262,9 +271,9 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
       test "guests are persisted on the created meeting", %{conn: conn, profile: profile} do
         view = navigate_to_booking_form(conn, profile, nil)
 
-        send(view.pid, {:step_event, :booking, :toggle_guests, nil})
-        send(view.pid, {:step_event, :booking, :add_guest, "invited1@example.com"})
-        send(view.pid, {:step_event, :booking, :add_guest, "invited2@example.com"})
+        form_event(view, :toggle_guests, nil)
+        form_event(view, :add_guest, "invited1@example.com")
+        form_event(view, :add_guest, "invited2@example.com")
 
         view
         |> form("form[phx-submit='submit']", %{
@@ -302,8 +311,8 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
       test "schedule_another resets the guest list", %{conn: conn, profile: profile} do
         view = navigate_to_booking_form(conn, profile, nil)
 
-        send(view.pid, {:step_event, :booking, :toggle_guests, nil})
-        send(view.pid, {:step_event, :booking, :add_guest, "willbecleared@example.com"})
+        form_event(view, :toggle_guests, nil)
+        form_event(view, :add_guest, "willbecleared@example.com")
 
         view
         |> form("form[phx-submit='submit']", %{
@@ -383,13 +392,13 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
 
         # Capacity 3, empty slot: the booker takes one seat, so at most 2 guests.
         # The counter only renders once the guest field is open.
-        send(view.pid, {:step_event, :booking, :toggle_guests, nil})
+        form_event(view, :toggle_guests, nil)
         _drain = :sys.get_state(view.pid)
         assert render(view) =~ "0/2"
 
-        send(view.pid, {:step_event, :booking, :add_guest, "one@example.com"})
-        send(view.pid, {:step_event, :booking, :add_guest, "two@example.com"})
-        send(view.pid, {:step_event, :booking, :add_guest, "three@example.com"})
+        form_event(view, :add_guest, "one@example.com")
+        form_event(view, :add_guest, "two@example.com")
+        form_event(view, :add_guest, "three@example.com")
         _drain = :sys.get_state(view.pid)
 
         html = render(view)
@@ -405,8 +414,8 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
       } do
         # First booker takes 2 of 3 seats (themselves plus one guest).
         first = navigate_to_booking_form(conn, profile, nil)
-        send(first.pid, {:step_event, :booking, :toggle_guests, nil})
-        send(first.pid, {:step_event, :booking, :add_guest, "plusone@example.com"})
+        form_event(first, :toggle_guests, nil)
+        form_event(first, :add_guest, "plusone@example.com")
 
         first
         |> form("form[phx-submit='submit']", %{
