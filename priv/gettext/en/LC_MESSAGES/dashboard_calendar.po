@@ -378,7 +378,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "%{count} more all-day events on %{date}"
 msgstr ""
 
@@ -415,7 +415,7 @@ msgid "(No title)"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "3 days"
 msgstr ""
 
@@ -425,7 +425,7 @@ msgid "A faster calendar with previews and a clearer week. You can come back her
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "All day"
 msgstr ""
 
@@ -450,7 +450,7 @@ msgid "Busy"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar/calendar_surface.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr ""
 
@@ -557,7 +557,7 @@ msgid "New calendar"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Next day"
 msgstr ""
 
@@ -567,7 +567,7 @@ msgid "Next month"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Next three days"
 msgstr ""
 
@@ -577,7 +577,7 @@ msgid "Next week"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar/rail.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "No calendars connected yet."
 msgstr ""
 
@@ -597,7 +597,7 @@ msgid "Nothing planned this week."
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Previous day"
 msgstr ""
 
@@ -612,7 +612,7 @@ msgid "Previous three days"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Previous week"
 msgstr ""
 
