@@ -24,7 +24,7 @@ defmodule Tymeslot.Auth.AdminBootstrap do
 
   require Logger
 
-  alias Tymeslot.AppSettings.AppSettingsQueries
+  alias Tymeslot.AppSettings.{AppSettingsQueries, Env}
   alias Tymeslot.Auth.{AdminUserQueries, UserSchema}
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Repo
@@ -84,19 +84,40 @@ defmodule Tymeslot.Auth.AdminBootstrap do
   end
 
   @doc """
-  Logs a warning when the database has users but no admins. Surfaced at
-  application start so the operator notices a "stranded" install — typically
-  the result of demoting every admin or restoring a backup from before the
-  is_admin column was populated. Recovery is `mix tymeslot.promote_admin
-  <email>` (or `bin/tymeslot rpc` in production releases).
+  Logs a warning at application start when nobody can administer the
+  install, so the operator notices it is stranded:
+
+    * users exist but none is an admin, typically after demoting every
+      admin or restoring a backup from before the is_admin column was
+      populated. Recovery is `Tymeslot.Release.promote_admin/1`.
+    * the first-user bootstrap has run but no accounts are left, so the next
+      sign-up will not become admin and, with registration closed, nobody
+      can sign up at all. Recovery is `Tymeslot.Release.reopen_registration/0`,
+      or setting `REGISTRATION_ENABLED=true` when that variable fixes the
+      setting, followed by `promote_admin/1`.
   """
   @spec warn_if_orphaned_install() :: :ok
   def warn_if_orphaned_install do
-    if AdminUserQueries.any_user?() and not AdminUserQueries.any_admin?() do
-      Logger.warning(
-        "No admin users exist. Promote one with `mix tymeslot.promote_admin <email>` " <>
-          "or `bin/tymeslot rpc 'Tymeslot.Release.promote_admin(\"<email>\")'`."
-      )
+    cond do
+      AdminUserQueries.any_admin?() ->
+        :ok
+
+      AdminUserQueries.any_user?() ->
+        Logger.warning(
+          "No admin users exist. Promote one with `mix tymeslot.promote_admin <email>` " <>
+            "or `bin/tymeslot rpc 'Tymeslot.Release.promote_admin(\"<email>\")'`."
+        )
+
+      AppSettingsQueries.admin_bootstrapped?() ->
+        Logger.warning(
+          "No accounts exist, and the first account to sign up will not become admin. " <>
+            open_registration_step() <>
+            ", sign up, then promote yourself with " <>
+            "`bin/tymeslot rpc 'Tymeslot.Release.promote_admin(\"<email>\")'`."
+        )
+
+      true ->
+        :ok
     end
 
     :ok
@@ -104,5 +125,17 @@ defmodule Tymeslot.Auth.AdminBootstrap do
     error ->
       Logger.error("Admin bootstrap check failed", reason: LogFormat.reason(error))
       :ok
+  end
+
+  # A variable that fixes registration also refuses the release helper's
+  # write, so the way to open it is the variable itself.
+  defp open_registration_step do
+    case Env.pinned_var(:registration_enabled) do
+      nil ->
+        "Open registration with `bin/tymeslot rpc 'Tymeslot.Release.reopen_registration()'`"
+
+      var ->
+        "#{var} fixes registration, so open it by setting #{var}=true and restarting"
+    end
   end
 end

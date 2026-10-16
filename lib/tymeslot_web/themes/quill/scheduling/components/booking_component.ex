@@ -7,118 +7,37 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Meetings.Approval
-  alias Tymeslot.Utils.DateTimeUtils.Duration
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
-  alias TymeslotWeb.Live.Shared.FormValidationHelpers
   alias TymeslotWeb.Themes.Shared.BookingLabels
   alias TymeslotWeb.Themes.Shared.BookingLocation
+  alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
+  alias TymeslotWeb.Themes.Shared.Components.BookingForm
   alias TymeslotWeb.Themes.Shared.Components.GuestField
   alias TymeslotWeb.Themes.Shared.Components.LocationField
   alias TymeslotWeb.Themes.Shared.GuestBooking
+  alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
-  alias TymeslotWeb.Themes.Shared.SecurityFields
+  alias TymeslotWeb.Themes.Shared.StepEvents
 
   use TymeslotWeb.Components.CoreComponents
 
   @impl Phoenix.LiveComponent
-  def update(assigns, socket) do
-    # Filter out reserved assigns that can't be set directly
-    filtered_assigns = Map.drop(assigns, [:flash, :socket])
-    {:ok, assign(socket, filtered_assigns)}
-  end
+  defdelegate update(assigns, socket), to: StepEvents
 
   @impl Phoenix.LiveComponent
-  def handle_event("validate", %{"booking" => booking_params}, socket) do
-    send(self(), {:step_event, :booking, :validate, booking_params})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("field_blur", %{"field" => field_name}, socket) do
-    send(self(), {:step_event, :booking, :field_blur, field_name})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("submit", %{"booking" => booking_params}, socket) do
-    # Set submitting state immediately for instant UI feedback — but only when
-    # the location picker has an answer the LiveView will accept. An
-    # incomplete one is refused without changing any assign this component
-    # renders, so a flag set here would have nothing to clear it again.
-    socket = assign(socket, :submitting, BookingLocation.complete?(socket.assigns))
-    send(self(), {:step_event, :booking, :submit, booking_params})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("back_step", _params, socket) do
-    send(self(), {:step_event, :booking, :back_step, nil})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("select_location", %{"id" => id}, socket) do
-    send(self(), {:step_event, :booking, :select_location, id})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("select_video_provider", %{"id" => id}, socket) do
-    send(self(), {:step_event, :booking, :select_video_provider, id})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("select_venue", %{"id" => id}, socket) do
-    send(self(), {:step_event, :booking, :select_venue, id})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("location_phone_change", params, socket) do
-    send(self(), {:step_event, :booking, :location_phone, params["location_phone"] || ""})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("toggle_guests", _params, socket) do
-    send(self(), {:step_event, :booking, :toggle_guests, nil})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("close_guests", _params, socket) do
-    send(self(), {:step_event, :booking, :close_guests, nil})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("guest_input_change", params, socket) do
-    send(self(), {:step_event, :booking, :guest_input, params["guest_email"] || ""})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("add_guest", params, socket) do
-    send(self(), {:step_event, :booking, :add_guest, params["guest_email"] || ""})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("remove_guest", %{"email" => email}, socket) do
-    send(self(), {:step_event, :booking, :remove_guest, email})
-    {:noreply, socket}
-  end
+  defdelegate handle_event(event, params, socket), to: StepEvents
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
+    assigns = assign(assigns, :navigable_steps, Runtime.navigable_steps(assigns))
     assigns = assign(assigns, :next_day_end, LocalizationHelpers.booking_next_day_end(assigns))
 
     ~H"""
-    <div class="container flex-1" data-locale={@locale}>
+    <div class="container quill-container flex-1" data-locale={@locale}>
       <.page_layout
         show_steps={true}
+        navigable_steps={@navigable_steps}
         current_step={3}
         slug={@duration}
         username_context={@username_context}
@@ -126,7 +45,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
         <div class="stack">
           <div class="flex-1 flex items-center justify-center px-4 py-4">
             <div class="w-full">
-              <.glass_morphism_card class="booking-form-card">
+              <.glass_morphism_card class="booker-card booking-form-card">
                 <div class="booking-card-body">
                   <h1 class="section-header booking-heading booking-heading-wrapper">
                     {dgettext("booking", "Enter Your Details")}
@@ -135,20 +54,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                   <p class="booking-subtitle text-quill-primary">
                     <%= if @organizer_profile do %>
                       {dgettext("booking", "You're booking a %{duration} meeting with %{name}",
-                        duration:
-                          if(@meeting_type,
-                            do: LocalizationHelpers.format_duration(@meeting_type.duration_minutes),
-                            else: Duration.format(@duration)
-                          ),
+                        duration: BookingText.duration_label(assigns),
                         name: get_organizer_name(@organizer_profile, @username_context)
                       )}
                     <% else %>
                       {dgettext("booking", "You're booking a %{duration} meeting",
-                        duration:
-                          if(@meeting_type,
-                            do: LocalizationHelpers.format_duration(@meeting_type.duration_minutes),
-                            else: Duration.format(@duration)
-                          )
+                        duration: BookingText.duration_label(assigns)
                       )}
                     <% end %>
                   </p>
@@ -189,75 +100,23 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                     venue_choices={BookingLocation.venue_choices(assigns)}
                   />
 
-                  <.form
-                    :let={f}
-                    for={@form}
-                    as={:booking}
-                    phx-change="validate"
-                    phx-submit="submit"
-                    phx-target={@myself}
-                    data-testid="booking-form"
-                    class="space-y-2"
-                    id="booking-form"
-                    {SecurityFields.recaptcha_form_attrs("booking_form", "booking")}
-                    novalidate
-                  >
-                    <.honeypot_field id="booking-website" param_root="booking" />
-
-                    <div class="booking-inline-fields">
-                      <.input
-                        field={f[:name]}
-                        label={dgettext("booking", "Your Name")}
-                        placeholder={dgettext("booking", "John Doe")}
-                        errors={FormValidationHelpers.field_errors(@validation_errors, :name)}
-                        required
-                        phx-debounce="blur"
-                        phx-blur="field_blur"
-                        phx-value-field="name"
-                        phx-target={@myself}
-                      />
-
-                      <.input
-                        field={f[:email]}
-                        label={dgettext("booking", "Email Address")}
-                        type="email"
-                        placeholder={dgettext("booking", "john@example.com")}
-                        errors={FormValidationHelpers.field_errors(@validation_errors, :email)}
-                        required
-                        phx-debounce="blur"
-                        phx-blur="field_blur"
-                        phx-value-field="email"
-                        phx-target={@myself}
-                      />
-                    </div>
-
-                    <.input
-                      field={f[:message]}
-                      type="textarea"
-                      label={dgettext("booking", "Additional Message (Optional)")}
-                      placeholder={dgettext("booking", "Let me know what you'd like to discuss...")}
-                      errors={FormValidationHelpers.field_errors(@validation_errors, :message)}
-                      rows={3}
-                      phx-debounce="blur"
-                      phx-blur="field_blur"
-                      phx-value-field="message"
-                      phx-target={@myself}
-                    />
-
-                    <SecurityFields.recaptcha_token_field id_prefix="booking" param_root="booking" />
-                  </.form>
-
-                  <GuestField.guest_field
-                    :if={guests_allowed?(assigns)}
-                    guest_emails={@guest_emails}
-                    guest_input={@guest_input}
-                    guest_error={@guest_error}
-                    guests_open={@guests_open}
-                    max_guests={@max_guests}
+                  <BookingForm.booking_form
+                    form={@form}
+                    validation_errors={@validation_errors}
                     target={@myself}
-                  />
-
-                  <SecurityFields.recaptcha_notice_block />
+                    class="space-y-2"
+                    contact_class="booking-inline-fields"
+                  >
+                    <GuestField.guest_field
+                      :if={guests_allowed?(assigns)}
+                      guest_emails={@guest_emails}
+                      guest_input={@guest_input}
+                      guest_error={@guest_error}
+                      guests_open={@guests_open}
+                      max_guests={@max_guests}
+                      target={@myself}
+                    />
+                  </BookingForm.booking_form>
 
                   <ApprovalNotice.block
                     :if={Approval.required?(@meeting_type)}
@@ -272,6 +131,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       phx-click="back_step"
                       phx-target={@myself}
                       data-testid="back-step"
+                      data-intent="back"
                       variant={:secondary}
                       disabled={@submitting}
                       class="flex-1"
@@ -287,6 +147,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       loading_text={dgettext("booking", "Verifying...")}
                       disabled={!OrganizerHelpers.form_valid?(@form)}
                       data-testid="submit-booking"
+                      data-intent="submit"
                       class="flex-1"
                       title={get_submit_title(@submitting, @form)}
                     >
@@ -314,7 +175,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
     BookingLabels.submit_label(
       is_rescheduling,
       meeting_type,
-      dgettext("booking", "Book Meeting")
+      dgettext("booking", "Book Meeting"),
+      :quill
     )
   end
 

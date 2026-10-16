@@ -3,7 +3,6 @@ defmodule TymeslotWeb.Live.Shared.LiveHelpers do
   Helper functions for LiveViews.
   These are functions that work with socket assigns, not components.
   """
-  import Phoenix.Component
 
   alias Tymeslot.Security.Security
   alias Tymeslot.Timezones
@@ -11,18 +10,15 @@ defmodule TymeslotWeb.Live.Shared.LiveHelpers do
   # ========== TIMEZONE HELPERS ==========
 
   @doc """
-  Validates and updates timezone on the socket.
+  Validates a timezone and returns it in its canonical spelling (a legacy id
+  such as `Asia/Calcutta` becomes `Asia/Kolkata`), or `:error` when it is not
+  a timezone.
   """
-  @spec update_timezone(Phoenix.LiveView.Socket.t(), String.t()) :: Phoenix.LiveView.Socket.t()
-  def update_timezone(socket, new_timezone) do
-    case Security.validate_timezone(new_timezone) do
-      {:ok, validated} ->
-        # Normalize timezone to ensure consistency
-        normalized_timezone = Timezones.normalize(validated)
-        assign(socket, :user_timezone, normalized_timezone)
-
-      {:error, _reason} ->
-        socket
+  @spec resolve_timezone(term()) :: {:ok, String.t()} | :error
+  def resolve_timezone(timezone) do
+    case Security.validate_timezone(timezone) do
+      {:ok, validated} -> {:ok, Timezones.normalize(validated)}
+      {:error, _reason} -> :error
     end
   end
 

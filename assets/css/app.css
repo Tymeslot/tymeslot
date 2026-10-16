@@ -5,6 +5,11 @@
 @import "./base/typography.css";
 @import "./base/base.css";
 
+/* The booking themes' self-hosted fonts and stacks, so the dashboard's font
+   picker can show each choice in its own face. A face downloads only when
+   something renders in it. */
+@import "./scheduling/shared/fonts.css";
+
 /* Import design token utility classes */
 @import "./design-tokens.css";
 

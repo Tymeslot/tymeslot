@@ -41,11 +41,6 @@ msgstr "Již povoleno: %{domains}"
 msgid "Book a Meeting →"
 msgstr "Zarezervovat schůzku →"
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
-#, elixir-autogen, elixir-format
-msgid "By default, embedding is disabled to prevent unauthorized use of your booking page. To enable embedding, you must specify the domains you trust."
-msgstr "Vkládání je ve výchozím nastavení vypnuté, aby nikdo nemohl vaši rezervační stránku použít neoprávněně. Chcete-li vkládání zapnout, musíte určit domény, kterým důvěřujete."
-
 #: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Code copied to clipboard!"
@@ -363,16 +358,6 @@ msgstr "Zadejte doménu a přidejte ji klávesou Enter. Neuvádějte %{scheme} 
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
-msgid "For security, %{emphasis} to only specific domains you trust. This prevents your booking page from appearing on unauthorized websites."
-msgstr "Z bezpečnostních důvodů %{emphasis} pouze na konkrétní domény, kterým důvěřujete. Zabráníte tak tomu, aby se vaše rezervační stránka objevila na neoprávněných webech."
-
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
-#, elixir-autogen, elixir-format
-msgid "Need help? See the %{guide} for step-by-step instructions, platform tips, and customization options."
-msgstr "Potřebujete pomoct? Podrobný postup, tipy pro jednotlivé platformy a možnosti přizpůsobení najdete zde: %{guide}."
-
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
-#, elixir-autogen, elixir-format
 msgid "Use %{wildcard} to allow all subdomains"
 msgstr "Pomocí %{wildcard} povolíte všechny subdomény"
 
@@ -445,3 +430,18 @@ msgstr "Nastavení vložení"
 #, elixir-autogen, elixir-format
 msgid "Remove %{domain}"
 msgstr "Odebrat %{domain}"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
+#, elixir-autogen, elixir-format
+msgid "By default, embedding is disabled to prevent unauthorised use of your booking page. To enable embedding, you must specify the domains you trust."
+msgstr "Vkládání je ve výchozím nastavení vypnuté, aby nikdo nemohl vaši rezervační stránku použít neoprávněně. Chcete-li vkládání zapnout, musíte určit domény, kterým důvěřujete."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
+#, elixir-autogen, elixir-format
+msgid "For security, %{emphasis} to only specific domains you trust. This prevents your booking page from appearing on unauthorised websites."
+msgstr "Z bezpečnostních důvodů %{emphasis} pouze na konkrétní domény, kterým důvěřujete. Zabráníte tak tomu, aby se vaše rezervační stránka objevila na neoprávněných webech."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
+#, elixir-autogen, elixir-format
+msgid "Need help? See the %{guide} for step-by-step instructions, platform tips, and customisation options."
+msgstr "Potřebujete pomoct? Podrobný postup, tipy pro jednotlivé platformy a možnosti přizpůsobení najdete zde: %{guide}."

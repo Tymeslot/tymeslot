@@ -749,9 +749,10 @@ end
 
 # reCAPTCHA configuration (runtime)
 # Signup and booking protection are configurable and will automatically
-# disable if keys are missing. The flags below seed the application config
-# from the matching env vars; admins can override them at runtime via the
-# admin settings UI (which writes through Tymeslot.AppSettings).
+# disable if keys are missing. The settings below come from the matching env
+# vars. One left unset can be changed at runtime from the admin settings UI
+# (which writes through Tymeslot.AppSettings); one that is set fixes the
+# setting, and the admin UI shows it greyed out.
 
 recaptcha_signup_min_score =
   case Float.parse(System.get_env("RECAPTCHA_SIGNUP_MIN_SCORE", "0.3")) do
@@ -789,6 +790,22 @@ if config_env() != :test do
   config :tymeslot, :recaptcha,
     signup_enabled: System.get_env("RECAPTCHA_SIGNUP_ENABLED", "false") == "true",
     booking_enabled: System.get_env("RECAPTCHA_BOOKING_ENABLED", "false") == "true"
+end
+
+# Admin-editable settings whose environment variable the operator has set.
+# A pinned setting outranks a value saved on the admin settings page, which
+# shows it greyed out and names the variable. Only a value the variable's
+# parse above explicitly recognises pins it; an unrecognised one (say
+# REGISTRATION_ENABLED=1) is logged at boot and leaves the admin page in
+# charge. Not seeded in test, for the same reason as the reCAPTCHA flags
+# above: tests pin settings explicitly.
+if config_env() != :test do
+  {env_pinned_settings, env_unrecognised_settings} =
+    Tymeslot.AppSettings.EnvPins.from_env(System.get_env())
+
+  config :tymeslot,
+    env_pinned_settings: env_pinned_settings,
+    env_unrecognised_settings: env_unrecognised_settings
 end
 
 # Webhook base URL for inbound push notifications from calendar providers.

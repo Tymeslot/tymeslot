@@ -30,6 +30,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.MultiSelect do
         value={opt["key"]}
         selected?={opt["key"] in @selected}
         event="multi_toggle"
+        question={@definition["id"]}
         myself={@myself}
       >
         {opt["label"]}

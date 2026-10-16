@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Dev.EmbedTestController do
   use TymeslotWeb, :controller
 
   alias TymeslotWeb.Endpoint
+  alias TymeslotWeb.Themes.Core.ThemeInfo
 
   @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def index(conn, params) do
@@ -40,7 +41,8 @@ defmodule TymeslotWeb.Dev.EmbedTestController do
     |> render(:index,
       username: params["username"] || "demo",
       base_url: Endpoint.url(),
-      nonce: conn.assigns[:csp_nonce]
+      nonce: conn.assigns[:csp_nonce],
+      themes: ThemeInfo.theme_options()
     )
   end
 end

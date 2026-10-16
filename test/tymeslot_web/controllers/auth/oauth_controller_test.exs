@@ -244,7 +244,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
       assert redirected_to(conn) == "/?auth=login"
 
       assert Flash.get(conn.assigns.flash, :error) =~
-               "Google authentication failed - missing authorization code"
+               "Google authentication failed - missing authorisation code"
     end
 
     test "handles user cancellation gracefully", %{conn: conn} do
@@ -257,7 +257,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
       assert redirected_to(conn) == "/?auth=login"
 
       assert Flash.get(conn.assigns.flash, :error) =~
-               "Google authentication failed - missing authorization code"
+               "Google authentication failed - missing authorisation code"
     end
 
     test "handles rate limited callback", %{conn: conn} do

@@ -4,11 +4,11 @@
  *
  * When the slots region finishes loading, a keyboard/screen-reader user who
  * just activated a calendar day should be carried forward to the "Available
- * Times" heading. The hook must NOT steal focus on the initial page load or
- * while the user is interacting elsewhere — it only moves focus when the
- * currently-focused element is a calendar-day button (Quill's
- * `[data-testid="calendar-day"]` or Rhythm's `.week-day-cell`), and only
- * once per load (the `focusMoved` latch), resetting when the loaded marker
+ * Times" heading (`.slot-list__heading`). The hook must NOT steal focus on
+ * the initial page load or while the user is interacting elsewhere — it only
+ * moves focus when the currently-focused element is a calendar-day button
+ * (Quill's `[data-testid="calendar-day"]` or Rhythm's `.week-day-cell`), and
+ * only once per load (the `focusMoved` latch), resetting when the loaded marker
  * disappears (e.g. the user picks a date with no slots).
  *
  * The auto-scroll observes `childList`/`subtree` mutations under the slots
@@ -26,47 +26,31 @@ function makeHook(el) {
   return Object.assign(Object.create(AutoScrollToSlots), { el });
 }
 
-// Quill's `.time-slots-panel` — heading is `.slots-heading[tabindex="-1"]`;
-// the loaded grid carries `[data-slots-loaded]` only once slots render, set
-// to the selected date (e.g. "2026-09-01"). `loaded` may be `true` (bare
+// The shared slot list (`Shared.Components.SlotList`): `#slots-container`,
+// a `.slot-list__heading[tabindex="-1"]` at the theme's heading level, and,
+// once slots render, a `.slot-list__groups` carrying `data-slots-loaded` set to
+// the selected date (e.g. "2026-09-01"). `loaded` may be `true` (bare
 // attribute), a date string, or falsy (not yet loaded).
-function buildQuillContainer({ loaded } = {}) {
+function buildSlotList({ loaded, headingTag = 'h2' } = {}) {
   const el = document.createElement('div');
-  el.className = 'time-slots-panel';
+  el.className = 'slot-list';
   el.id = 'slots-container';
 
-  const heading = document.createElement('h2');
-  heading.className = 'slots-heading';
+  const heading = document.createElement(headingTag);
+  heading.className = 'slot-list__heading';
   heading.setAttribute('tabindex', '-1');
   el.appendChild(heading);
+
+  const body = document.createElement('div');
+  body.className = 'slot-list__body';
+  el.appendChild(body);
 
   if (loaded) {
-    const grid = document.createElement('div');
-    grid.setAttribute('data-slots-loaded', loaded === true ? '' : loaded);
-    el.appendChild(grid);
+    const groups = document.createElement('div');
+    groups.className = 'slot-list__groups';
+    groups.setAttribute('data-slots-loaded', loaded === true ? '' : loaded);
+    body.appendChild(groups);
   }
-
-  document.body.appendChild(el);
-  return { el, heading };
-}
-
-// Rhythm's `.time-slots-section` — heading is
-// `.time-slots-section-heading[tabindex="-1"]`; the grid always renders and
-// carries `data-slots-loaded`, set to the selected date, only once truthy.
-function buildRhythmContainer({ loaded } = {}) {
-  const el = document.createElement('div');
-  el.className = 'time-slots-section';
-  el.id = 'slots-container';
-
-  const heading = document.createElement('h3');
-  heading.className = 'time-slots-section-heading';
-  heading.setAttribute('tabindex', '-1');
-  el.appendChild(heading);
-
-  const grid = document.createElement('div');
-  grid.className = 'time-slots-grid';
-  if (loaded) grid.setAttribute('data-slots-loaded', loaded === true ? '' : loaded);
-  el.appendChild(grid);
 
   document.body.appendChild(el);
   return { el, heading };
@@ -91,11 +75,11 @@ describe('AutoScrollToSlots.manageFocus', () => {
     document.body.innerHTML = '';
   });
 
-  test('moves focus to the Quill heading when slots load after a calendar-day activation', () => {
+  test('moves focus to the heading when slots load after a calendar-day activation', () => {
     const day = makeCalendarDay();
     day.focus();
 
-    const { el, heading } = buildQuillContainer({ loaded: true });
+    const { el, heading } = buildSlotList({ loaded: true });
     const hook = makeHook(el);
 
     // Drive it the way LiveView does: mount, then let the observer tick fire.
@@ -105,11 +89,11 @@ describe('AutoScrollToSlots.manageFocus', () => {
     expect(document.activeElement).toBe(heading);
   });
 
-  test('moves focus to the Rhythm heading when slots load after a week-day-cell activation', () => {
+  test('moves focus to an h3 heading when slots load after a week-day-cell activation', () => {
     const day = makeWeekDayCell();
     day.focus();
 
-    const { el, heading } = buildRhythmContainer({ loaded: true });
+    const { el, heading } = buildSlotList({ loaded: true, headingTag: 'h3' });
     const hook = makeHook(el);
 
     hook.mounted();
@@ -122,7 +106,7 @@ describe('AutoScrollToSlots.manageFocus', () => {
     const day = makeCalendarDay();
     day.focus();
 
-    const { el, heading } = buildQuillContainer({ loaded: true });
+    const { el, heading } = buildSlotList({ loaded: true });
     const hook = makeHook(el);
 
     hook.manageFocus();
@@ -142,7 +126,7 @@ describe('AutoScrollToSlots.manageFocus', () => {
     document.body.appendChild(other);
     other.focus();
 
-    const { el } = buildQuillContainer({ loaded: true });
+    const { el } = buildSlotList({ loaded: true });
     const hook = makeHook(el);
 
     hook.manageFocus();
@@ -154,7 +138,7 @@ describe('AutoScrollToSlots.manageFocus', () => {
     const day = makeCalendarDay();
     day.focus();
 
-    const { el, heading } = buildQuillContainer({ loaded: false });
+    const { el, heading } = buildSlotList({ loaded: false });
     const hook = makeHook(el);
 
     hook.manageFocus();
@@ -194,7 +178,7 @@ describe('AutoScrollToSlots auto-scroll', () => {
   });
 
   test('picking a new date scrolls once slots are loaded', () => {
-    const { el } = buildQuillContainer({ loaded: false });
+    const { el } = buildSlotList({ loaded: false });
     const hook = makeHook(el);
     hook.mounted();
 
@@ -209,7 +193,7 @@ describe('AutoScrollToSlots auto-scroll', () => {
   });
 
   test('expanding an hour does not scroll — the loaded date is unchanged', () => {
-    const { el } = buildQuillContainer({ loaded: '2026-09-01' });
+    const { el } = buildSlotList({ loaded: '2026-09-01' });
     const hook = makeHook(el);
     hook.mounted();
 
@@ -217,7 +201,7 @@ describe('AutoScrollToSlots auto-scroll', () => {
     // already-loaded grid without touching `data-slots-loaded`.
     const grid = el.querySelector('[data-slots-loaded]');
     const minutesPanel = document.createElement('div');
-    minutesPanel.className = 'time-period-slots--minutes';
+    minutesPanel.className = 'slot-list__grid slot-list__grid--minutes';
     grid.appendChild(minutesPanel);
     hook.handleSlotsUpdate();
     vi.advanceTimersByTime(100);
@@ -234,7 +218,7 @@ describe('AutoScrollToSlots auto-scroll', () => {
   });
 
   test('picking a different date after one is already loaded scrolls again', () => {
-    const { el } = buildQuillContainer({ loaded: '2026-09-01' });
+    const { el } = buildSlotList({ loaded: '2026-09-01' });
     const hook = makeHook(el);
     hook.mounted();
 
@@ -249,7 +233,7 @@ describe('AutoScrollToSlots auto-scroll', () => {
   test('does not scroll when embedded, even for a genuinely new date', () => {
     document.documentElement.setAttribute('data-embedded', 'true');
 
-    const { el } = buildQuillContainer({ loaded: false });
+    const { el } = buildSlotList({ loaded: false });
     const hook = makeHook(el);
     hook.mounted();
 

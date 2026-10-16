@@ -111,6 +111,9 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
 
       view |> element("button", "New poll") |> render_click()
 
+      # Empty required fields reach the server, which answers in the form.
+      assert has_element?(view, "form[id^='poll-create-form-'][novalidate]")
+
       # Two candidate-slot rows.
       view |> element("button", "Add time") |> render_click()
       view |> element("button", "Add time") |> render_click()

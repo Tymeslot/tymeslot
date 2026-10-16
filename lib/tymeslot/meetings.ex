@@ -58,6 +58,12 @@ defmodule Tymeslot.Meetings do
   """
   defdelegate record_guest_rsvp(token, response), to: Guests, as: :record_rsvp
 
+  @doc """
+  Whether a guest can answer yes now: not a guest of a group booking who
+  declined while no seat is free.
+  """
+  defdelegate guest_can_accept?(guest), to: Guests, as: :can_accept?
+
   @doc "Subscribes the caller to guest RSVP updates on a user's meetings."
   defdelegate subscribe_to_guest_rsvp_updates(user_id),
     to: Guests,

@@ -24,9 +24,10 @@ defmodule TymeslotWeb.Themes.Shared.Components.ApprovalNotice do
   — the visitor has already seen the pill by then, and repeating the
   notice on every intermediate step would be noise rather than disclosure.
 
-  Follows the shared-component pattern of `MeetingDetails`: neutral class
-  names here, visual treatment in each theme's own CSS, because the themes are
-  self-contained and share no tokens.
+  Neutral class names here; the styling is shared by every theme, in
+  `assets/css/scheduling/shared/components/approval-notice.css`, and each theme
+  sets its look through the `--approval-*` tokens in its `variables.css`, under
+  the token contract (`shared/tokens.css`).
 
   Callers pass `requires_approval` through `Tymeslot.Meetings.Approval.required?/1`
   rather than reading the field, because SaaS demo organisers supply meeting

@@ -50,13 +50,13 @@ defmodule Tymeslot.Availability.CalculateTest do
 
   describe "get_calendar_days/4" do
     test "returns 42 days for calendar display" do
-      days = Calculate.get_calendar_days("America/New_York", 2025, 6, %{})
+      days = Calculate.get_calendar_days("America/New_York", 2025, 6, :sunday, %{})
 
       assert length(days) == 42
     end
 
     test "each day has required keys" do
-      days = Calculate.get_calendar_days("America/New_York", 2025, 6, %{})
+      days = Calculate.get_calendar_days("America/New_York", 2025, 6, :sunday, %{})
 
       for day <- days do
         assert Map.has_key?(day, :date)
@@ -70,7 +70,7 @@ defmodule Tymeslot.Availability.CalculateTest do
 
     test "marks past dates as not available" do
       # Use a month in the past
-      days = Calculate.get_calendar_days("America/New_York", 2020, 1, %{})
+      days = Calculate.get_calendar_days("America/New_York", 2020, 1, :sunday, %{})
 
       # All days in January 2020 should be past and not available
       january_days = Enum.filter(days, & &1.current_month)
@@ -92,6 +92,7 @@ defmodule Tymeslot.Availability.CalculateTest do
           "America/New_York",
           future_date.year,
           future_date.month,
+          :sunday,
           config
         )
 
@@ -107,7 +108,7 @@ defmodule Tymeslot.Availability.CalculateTest do
     end
 
     test "handles UTC timezone" do
-      days = Calculate.get_calendar_days("Etc/UTC", 2025, 6, %{})
+      days = Calculate.get_calendar_days("Etc/UTC", 2025, 6, :sunday, %{})
 
       # 1 June 2025 is a Sunday, so the six-week grid needs no leading padding
       # and runs 1 June – 12 July.
@@ -122,9 +123,9 @@ defmodule Tymeslot.Availability.CalculateTest do
     end
 
     test "handles different timezones" do
-      days_ny = Calculate.get_calendar_days("America/New_York", 2025, 6, %{})
-      days_london = Calculate.get_calendar_days("Europe/London", 2025, 6, %{})
-      days_tokyo = Calculate.get_calendar_days("Asia/Tokyo", 2025, 6, %{})
+      days_ny = Calculate.get_calendar_days("America/New_York", 2025, 6, :sunday, %{})
+      days_london = Calculate.get_calendar_days("Europe/London", 2025, 6, :sunday, %{})
+      days_tokyo = Calculate.get_calendar_days("Asia/Tokyo", 2025, 6, :sunday, %{})
 
       # The displayed window is derived from the requested year/month alone, so
       # every timezone must render the same dates in the same order.
@@ -146,7 +147,7 @@ defmodule Tymeslot.Availability.CalculateTest do
 
     test "marks today correctly" do
       today = Date.utc_today()
-      days = Calculate.get_calendar_days("Etc/UTC", today.year, today.month, %{})
+      days = Calculate.get_calendar_days("Etc/UTC", today.year, today.month, :sunday, %{})
 
       today_entry =
         Enum.find(days, fn day ->
@@ -162,7 +163,9 @@ defmodule Tymeslot.Availability.CalculateTest do
 
     test "handles loading state in availability_map" do
       today = Date.utc_today()
-      days = Calculate.get_calendar_days("Etc/UTC", today.year, today.month, %{}, :loading)
+
+      days =
+        Calculate.get_calendar_days("Etc/UTC", today.year, today.month, :sunday, %{}, :loading)
 
       # All future days should have loading: true and available: false
       future_days = Enum.filter(days, &(&1.date >= Date.to_string(today)))
@@ -185,7 +188,14 @@ defmodule Tymeslot.Availability.CalculateTest do
       }
 
       days =
-        Calculate.get_calendar_days("Etc/UTC", today.year, today.month, %{}, availability_map)
+        Calculate.get_calendar_days(
+          "Etc/UTC",
+          today.year,
+          today.month,
+          :sunday,
+          %{},
+          availability_map
+        )
 
       today_entry = Enum.find(days, &(&1.date == today_str))
       tomorrow_entry = Enum.find(days, &(&1.date == tomorrow_str))
@@ -210,7 +220,7 @@ defmodule Tymeslot.Availability.CalculateTest do
 
       config = %{fallback_availability_fn: fallback_fn}
 
-      days = Calculate.get_calendar_days("Etc/UTC", today.year, today.month, config)
+      days = Calculate.get_calendar_days("Etc/UTC", today.year, today.month, :sunday, config)
 
       today_entry = Enum.find(days, &(&1.date == today_str))
       tomorrow_entry = Enum.find(days, &(&1.date == tomorrow_str))
@@ -505,6 +515,7 @@ defmodule Tymeslot.Availability.CalculateTest do
             "Etc/UTC",
             next_month.year,
             next_month.month,
+            :sunday,
             %{schedule_id: schedule.id, owner_timezone: "Etc/UTC"}
           )
         end)

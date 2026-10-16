@@ -27,7 +27,8 @@ defmodule TymeslotWeb.GuestRsvpController do
   def confirm(conn, %{"token" => token, "response" => response})
       when is_map_key(@responses, response) do
     with :ok <- RateLimiter.check_guest_rsvp_rate_limit(ClientIP.get(conn)),
-         {:ok, guest} <- Meetings.get_guest_invitation(token) do
+         {:ok, guest} <- Meetings.get_guest_invitation(token),
+         :ok <- check_seat(guest, response) do
       conn
       |> put_layout(html: false)
       |> render(:confirm,
@@ -79,6 +80,13 @@ defmodule TymeslotWeb.GuestRsvpController do
   defp timezone(%{participant: %{timezone: timezone}}) when is_binary(timezone), do: timezone
   defp timezone(%{meeting: meeting}), do: meeting.attendee_timezone
 
+  # A guest of a group booking who declined has given their seat back; the
+  # page offering a yes says straight away when none is free any more.
+  defp check_seat(guest, "accept"),
+    do: if(Meetings.guest_can_accept?(guest), do: :ok, else: {:error, :full})
+
+  defp check_seat(_guest, _response), do: :ok
+
   defp render_error(conn, error) do
     {http_status, template} = error_page(error)
 
@@ -90,5 +98,6 @@ defmodule TymeslotWeb.GuestRsvpController do
 
   defp error_page({:error, :rate_limited, _message}), do: {:too_many_requests, :too_many_requests}
   defp error_page({:error, :meeting_closed}), do: {:gone, :closed}
+  defp error_page({:error, :full}), do: {:conflict, :full}
   defp error_page(_error), do: {:not_found, :invalid}
 end

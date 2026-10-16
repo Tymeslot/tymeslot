@@ -148,7 +148,7 @@ defmodule Tymeslot.Availability.AvailabilityIntegrationTest do
       # Test multiple timezones
       grids =
         for timezone <- ["America/New_York", "Europe/London", "Asia/Tokyo"] do
-          days = Calculate.get_calendar_days(timezone, 2025, 1, config)
+          days = Calculate.get_calendar_days(timezone, 2025, 1, :sunday, config)
 
           assert length(days) == 42
           # January 2025 is wholly in the past in every timezone.

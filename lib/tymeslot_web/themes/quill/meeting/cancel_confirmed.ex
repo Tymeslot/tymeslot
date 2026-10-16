@@ -10,8 +10,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
 
   use TymeslotWeb.Components.CoreComponents
 
-  attr :theme_customization, :map, required: true
-  attr :custom_css, :string, required: true
+  attr :theme_tokens, :any, required: true
   attr :locale, :string, required: true
   attr :language_dropdown_open, :boolean, required: true
 
@@ -22,21 +21,19 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
   def render(assigns) do
     ~H"""
     <Wrapper.quill_wrapper
-      theme_customization={@theme_customization}
-      custom_css={@custom_css}
+      theme_tokens={@theme_tokens}
       locale={@locale}
       language_dropdown_open={@language_dropdown_open}
       show_language_switcher={true}
     >
       <div class="min-h-screen flex items-center justify-center px-4 py-8">
         <div class="w-full max-w-md">
-          <.glass_morphism_card>
+          <.glass_morphism_card class="booker-card">
             <div class="p-8">
               <div class="text-center">
                 <div class="mx-auto mb-4 w-16 h-16">
                   <svg
-                    class="w-16 h-16"
-                    style="color: #10b981;"
+                    class="w-16 h-16 meeting-page-icon--success"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -50,23 +47,16 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
                   </svg>
                 </div>
 
-                <h1
-                  class="text-3xl font-bold mb-2"
-                  style="color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.1);"
-                >
+                <h1 class="text-3xl font-bold mb-2 meeting-page-title">
                   {dgettext("booking_manage", "Meeting Cancelled")}
                 </h1>
-                <p class="text-lg mb-8" style="color: rgba(255,255,255,0.9);">
+                <p class="text-lg mb-8 meeting-page-lead">
                   {dgettext("booking_manage", "Your meeting has been successfully cancelled.")}
                 </p>
 
-                <div
-                  class="mb-8 p-4 rounded-lg flex items-start gap-3"
-                  style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2);"
-                >
+                <div class="mb-8 p-4 rounded-lg flex items-start gap-3 meeting-page-notice meeting-page-notice--success">
                   <svg
-                    class="w-5 h-5 shrink-0 mt-0.5"
-                    style="color: #10b981;"
+                    class="w-5 h-5 shrink-0 mt-0.5 meeting-page-icon--success"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -78,7 +68,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
                       d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                     />
                   </svg>
-                  <div class="text-sm" style="color: rgba(255,255,255,0.85);">
+                  <div class="text-sm meeting-page-muted">
                     <strong>{dgettext(
                       "booking_manage",
                       "Cancellation emails have been sent to all participants."

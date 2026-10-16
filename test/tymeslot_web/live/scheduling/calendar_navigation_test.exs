@@ -4,6 +4,23 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarNavigationTest do
 
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
 
+  describe "month_nav_label/1" do
+    test "names the month calendar's previous and next buttons" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "en")
+
+      assert CalendarNavigation.month_nav_label(:prev) == "Previous month"
+      assert CalendarNavigation.month_nav_label(:next) == "Next month"
+    end
+
+    # The locale is the test process's own, so an async test needs no reset.
+    test "in the visitor's language" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+
+      assert CalendarNavigation.month_nav_label(:prev) == "Vorheriger Monat"
+      assert CalendarNavigation.month_nav_label(:next) == "Nächster Monat"
+    end
+  end
+
   describe "next_month_disabled?/4" do
     test "allows navigation within advance booking window" do
       today = Date.utc_today()

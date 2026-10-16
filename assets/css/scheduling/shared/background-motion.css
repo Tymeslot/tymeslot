@@ -9,6 +9,10 @@
    footer branding row rather than inside it.
    ============================================================================ */
 
+:root {
+  --background-motion-toggle-size: 2.5rem;
+}
+
 .background-motion-toggle {
   position: fixed;
   bottom: var(--space-md);
@@ -17,34 +21,30 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: var(--background-motion-toggle-size);
+  height: var(--background-motion-toggle-size);
   padding: 0;
-  border: var(--border-width-thin) solid var(--border-medium);
+  border: var(--border-width-thin) solid var(--line-2);
   border-radius: var(--radius-full);
-  background: rgba(0, 0, 0, 0.45);
-  /* Literal rather than a token: the two themes carry different token systems
-     and only Quill has a glass-blur scale, so a token here resolves to nothing
-     on Rhythm and silently drops the blur. The control is deliberately
-     identical across themes, so it owns these two values, as it already owns
-     its size and its black translucent ground. */
+  background: var(--chrome-surface);
+  /* The blur stays literal: only Quill has a glass-blur scale, so a token here
+     would resolve to nothing on Rhythm and silently drop the blur. */
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  color: white;
+  color: var(--chrome-ink);
   cursor: pointer;
   transition: var(--transition-normal);
 }
 
 .background-motion-toggle:hover {
-  background: rgba(0, 0, 0, 0.65);
-  /* Literal for the same reason as the blur above: Rhythm names this shade
-     --border-strong, Quill --border-intense, and an unresolved var() here falls
-     back to currentColor, turning the border solid white on hover. */
-  border-color: rgba(255, 255, 255, 0.3);
+  background: var(--chrome-surface-hover);
+  /* Colours come from the theme's --chrome-* tokens (shared/tokens.css), which
+     both themes set to the same values. */
+  border-color: var(--chrome-line-hover);
 }
 
 .background-motion-toggle:focus-visible {
-  outline: var(--border-width-thick) solid white;
+  outline: var(--border-width-thick) solid var(--chrome-ink);
   outline-offset: var(--space-3xs);
 }
 
@@ -58,6 +58,19 @@
 .background-motion-toggle[data-state="playing"] .background-motion-toggle__icon--play,
 .background-motion-toggle[data-state="stopped"] .background-motion-toggle__icon--pause {
   display: none;
+}
+
+/* Below 1024px the booking card runs to within the button's reach of the
+   screen's left edge, so at the end of the page (or at the foot of Quill's
+   viewport-locked schedule step) the button would sit on the last thing
+   there, the Back or Next button, a slot or a form field, with no way to
+   scroll it clear. The page keeps a strip of the button's height free below
+   the content instead, and the footer row sits above it too. The hook sets
+   `hidden` when the video is dropped, which frees the strip. */
+@media (max-width: 1023px) {
+  html:not([data-embedded]) .background-motion-toggle:not([hidden]) ~ .booker-page {
+    padding-bottom: calc(var(--background-motion-toggle-size) + 2 * var(--space-md));
+  }
 }
 
 /* Embeds hide the background video entirely, so the control would pause

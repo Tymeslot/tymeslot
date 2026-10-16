@@ -104,9 +104,23 @@
     }
   }
 
+  // Viewports up to this width show the modal as a full-screen sheet.
+  var MODAL_SHEET_QUERY = '(max-width: 768px)';
+  // Height of the sheet's top bar, which holds the close button.
+  var MODAL_SHEET_BAR = 56;
+
+  function isModalSheet() {
+    return typeof window.matchMedia === 'function' &&
+      window.matchMedia(MODAL_SHEET_QUERY).matches;
+  }
+
   function modalContentMaxHeight() {
-    // 50px headroom top/bottom — matches cal.com's getMaxHeightForModal()
-    // and gives the close button breathing room above the iframe content.
+    // A full-screen sheet gives the booking page everything below its top
+    // bar. Otherwise keep 50px headroom top and bottom (matching cal.com's
+    // getMaxHeightForModal()); the close button sits in the top headroom.
+    if (isModalSheet()) {
+      return Math.max(window.innerHeight - MODAL_SHEET_BAR, 200);
+    }
     return Math.max(window.innerHeight - 100, 200);
   }
 
@@ -357,7 +371,11 @@
     if (document.getElementById('tymeslot-modal-styles')) return;
     const styleEl = document.createElement('style');
     styleEl.id = 'tymeslot-modal-styles';
-    styleEl.textContent = '@media (max-width: 768px) {' +
+    // The close button never sits over the booking page, whose own controls
+    // (the language switcher, in every theme) live in its top corners. On a
+    // wide viewport it floats in the headroom above the modal's top-right
+    // corner; on the full-screen sheet it gets a top bar of its own.
+    styleEl.textContent = '@media ' + MODAL_SHEET_QUERY + ' {' +
       '#tymeslot-modal { padding: 0 !important; }' +
       '#tymeslot-modal [data-tymeslot-container] {' +
         'max-width: 100% !important;' +
@@ -365,6 +383,15 @@
         'height: 100% !important;' +
         'width: 100% !important;' +
         'border-radius: 0 !important;' +
+        'box-sizing: border-box !important;' +
+        'padding-top: ' + MODAL_SHEET_BAR + 'px !important;' +
+      '}' +
+      '#tymeslot-modal [data-tymeslot-frame] { border-radius: 0 !important; }' +
+      '#tymeslot-modal [data-tymeslot-close] {' +
+        'top: 6px !important;' +
+        'right: 8px !important;' +
+        'width: 44px !important;' +
+        'height: 44px !important;' +
       '}' +
     '}';
     document.head.appendChild(styleEl);
@@ -411,7 +438,6 @@
       max-height: calc(100vh - 100px);
       background: transparent;
       border-radius: 16px;
-      overflow: hidden;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
       transform: scale(0.95);
       transition: transform 0.3s ease;
@@ -421,12 +447,13 @@
     closeButton.textContent = '\u00D7';
     closeButton.style.cssText = `
       position: absolute;
-      top: 16px;
-      right: 16px;
+      top: -48px;
+      right: 0;
       width: 40px;
       height: 40px;
+      padding: 0;
       border: none;
-      background: rgba(0, 0, 0, 0.5);
+      background: rgba(255, 255, 255, 0.15);
       color: white;
       font-size: 32px;
       line-height: 1;
@@ -439,13 +466,14 @@
       justify-content: center;
     `;
     closeButton.setAttribute('aria-label', 'Close booking widget');
+    closeButton.setAttribute('data-tymeslot-close', '');
 
     closeButton.onmouseover = function() {
-      this.style.background = 'rgba(0, 0, 0, 0.7)';
+      this.style.background = 'rgba(255, 255, 255, 0.25)';
       this.style.transform = 'scale(1.1)';
     };
     closeButton.onmouseout = function() {
-      this.style.background = 'rgba(0, 0, 0, 0.5)';
+      this.style.background = 'rgba(255, 255, 255, 0.15)';
       this.style.transform = 'scale(1)';
     };
     
@@ -683,6 +711,11 @@
         // content once the iframe reports its size via postMessage.
         var maxH = modalContentMaxHeight();
         wrapper.style.minHeight = '0';
+        // The container no longer clips (the close button sits outside it),
+        // so the frame rounds and clips the iframe itself.
+        wrapper.setAttribute('data-tymeslot-frame', '');
+        wrapper.style.borderRadius = '16px';
+        wrapper.style.overflow = 'hidden';
         wrapper.dataset.constrained = 'true';
         wrapper.dataset.constraintHeight = String(maxH);
 

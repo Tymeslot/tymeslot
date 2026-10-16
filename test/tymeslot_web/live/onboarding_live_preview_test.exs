@@ -211,7 +211,7 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
 
       html =
         view
-        |> element("button[phx-value-scheme='purple']")
+        |> element("button[phx-value-choice='purple']")
         |> render_click()
 
       # Preview is tinted with the purple scheme's primary colour.
@@ -222,22 +222,44 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
       %{customization: customization} =
         ThemeCustomizations.initialize_customization(profile.id, profile.booking_theme)
 
-      assert customization.color_scheme == "purple"
+      assert customization.settings["color_scheme"] == "purple"
       # The colour change must not clobber the seeded video background.
-      assert customization.background_type == "video"
+      assert customization.settings["background_type"] == "video"
+    end
+
+    test "offers Quill's schemes in the order the wizard has always shown", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
+      html = view |> goto_choose_theme() |> render()
+
+      assert Regex.scan(~r/phx-value-choice="([^"]+)"/, html, capture: :all_but_first) ==
+               Enum.map(~w(default turquoise purple sunset ocean forest rose monochrome), &[&1])
     end
   end
 
   describe "video backgrounds" do
-    test "seeds every theme with a random video background once a calendar is connected",
+    test "seeds every theme that can show video with a random video background once a calendar is connected",
          %{conn: conn} do
       {:ok, _view, _html, user} = setup_onboarding_with_calendar(conn)
       {:ok, profile} = Profiles.get_or_create_profile(user.id)
 
-      for {_name, theme_id} <- ThemeInfo.theme_options() do
+      theme_ids = Enum.map(ThemeInfo.theme_options(), fn {_name, id} -> id end)
+
+      {with_video, without_video} =
+        Enum.split_with(theme_ids, &ThemeCustomizations.supports_background?(&1, :video))
+
+      assert with_video != []
+
+      for theme_id <- with_video do
         customization = ThemeCustomizations.get_by_profile_and_theme(profile.id, theme_id)
-        assert customization.background_type == "video"
-        assert String.starts_with?(customization.background_value, "preset:")
+        assert customization.settings["background_type"] == "video"
+        assert String.starts_with?(customization.settings["background_value"], "preset:")
+      end
+
+      for theme_id <- without_video do
+        refute match?(
+                 %{settings: %{"background_type" => "video"}},
+                 ThemeCustomizations.get_by_profile_and_theme(profile.id, theme_id)
+               )
       end
     end
 
@@ -250,24 +272,26 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
     end
 
     test "does not overwrite a pre-existing video background on re-seed", %{conn: _conn} do
-      # Pre-seed a known, deliberate background_value so we can verify it is
-      # never clobbered if ensure_preview_video_backgrounds/2 is called again.
+      # Pre-seed an uploaded video, which no random preset can ever equal, to
+      # verify an existing video background is never replaced when
+      # ensure_preview_video_backgrounds/2 is called again.
       user = insert(:user)
       {:ok, profile} = Profiles.get_or_create_profile(user.id)
 
-      sentinel = "preset:idempotency_sentinel"
+      {:ok, _seeded} =
+        ThemeCustomizations.upsert_theme_customization(profile.id, "1", %{
+          "background_type" => "video",
+          "background_value" => "custom",
+          "background_video_path" => "themes/#{profile.id}/1/videos/mine.mp4"
+        })
 
-      ThemeCustomizations.upsert_theme_customization(profile.id, "1", %{
-        "background_type" => "video",
-        "background_value" => sentinel
-      })
-
-      # Calling the function again must hit the %{background_type: "video"} → :ok
-      # skip branch and leave the sentinel unchanged.
       Onboarding.ensure_preview_video_backgrounds(profile, ["1"])
 
       customization = ThemeCustomizations.get_by_profile_and_theme(profile.id, "1")
-      assert customization.background_value == sentinel
+      assert customization.settings["background_value"] == "custom"
+
+      assert customization.settings["background_video_path"] ==
+               "themes/#{profile.id}/1/videos/mine.mp4"
     end
   end
 
@@ -282,6 +306,92 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
 
       {:ok, profile} = Profiles.get_or_create_profile(user.id)
       assert profile.booking_theme == "2"
+    end
+  end
+
+  describe "theme stories" do
+    test "the theme step opens with the stories and switches to every theme's look and back",
+         %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
+      view = goto_choose_theme(view)
+
+      assert render(view) =~ "Which of these sounds like you?"
+      assert has_element?(view, "[data-testid='theme-story'][phx-value-theme='2']")
+
+      html = view |> element("button[phx-click='show_all_themes']") |> render_click()
+
+      refute html =~ "Which of these sounds like you?"
+      refute has_element?(view, "[data-testid='theme-story']")
+      assert has_element?(view, "button[phx-value-theme='2']")
+
+      html = view |> element("button[phx-click='show_theme_stories']") |> render_click()
+
+      assert html =~ "Which of these sounds like you?"
+    end
+
+    test "choosing a story saves its theme and reshapes the preview", %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding_with_calendar(conn)
+      view = goto_choose_theme(view)
+
+      html =
+        view
+        |> element("[data-testid='theme-story'][phx-value-theme='2']")
+        |> render_click()
+
+      {:ok, profile} = Profiles.get_or_create_profile(user.id)
+      assert profile.booking_theme == "2"
+      # Rhythm's preview has no month grid (see "preview reshapes to the chosen theme").
+      refute html =~ "grid-cols-7"
+
+      assert has_element?(
+               view,
+               "[data-testid='theme-story'][phx-value-theme='2'][aria-pressed='true']"
+             )
+    end
+
+    test "a thumbnail picked from every theme's look saves its theme and stays shown across steps",
+         %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding_with_calendar(conn)
+      view = goto_choose_theme(view)
+
+      view |> element("button[phx-click='show_all_themes']") |> render_click()
+      view |> element("[data-testid='theme-thumbnail'][phx-value-theme='2']") |> render_click()
+
+      {:ok, profile} = Profiles.get_or_create_profile(user.id)
+      assert profile.booking_theme == "2"
+
+      view |> element("button[phx-click='next_step']") |> render_click()
+      refute has_element?(view, "[data-testid='theme-thumbnail']")
+
+      view |> element("button[phx-click='previous_step']") |> render_click()
+
+      assert has_element?(
+               view,
+               "[data-testid='theme-thumbnail'][phx-value-theme='2'][aria-pressed='true']"
+             )
+
+      refute has_element?(view, "[data-testid='theme-story']")
+    end
+
+    test "each picker groups its buttons under the question it asks", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
+      view = goto_choose_theme(view)
+
+      assert has_element?(view, "#theme-story-question", "Which of these sounds like you?")
+
+      assert has_element?(
+               view,
+               "[role='group'][aria-labelledby='theme-story-question'] [data-testid='theme-story']"
+             )
+
+      view |> element("button[phx-click='show_all_themes']") |> render_click()
+
+      assert has_element?(view, "#theme-look-question", "Pick the look and feel")
+
+      assert has_element?(
+               view,
+               "[role='group'][aria-labelledby='theme-look-question'] [data-testid='theme-thumbnail']"
+             )
     end
   end
 

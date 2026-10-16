@@ -6,7 +6,8 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHook do
   via the router's session function), this hook:
   1. Verifies the token signature and expiry
   2. Checks the signed parent origin against the profile's allowed domains
-  3. Sets `socket.assigns.embedded` to `true` on success
+  3. Sets `socket.assigns.embedded` to `true` on success, and
+     `socket.assigns.embed_parent_origin` to the token's signed origin
 
   When no embed token is present (non-embedded pages), the hook passes through.
   """
@@ -54,14 +55,14 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHook do
           # Disconnected (static) render — origin verification is deferred to the
           # WebSocket phase.
           not connected?(socket) ->
-            {:cont, assign(socket, :embedded, true)}
+            {:cont, assign_embedded(socket, parent_origin)}
 
           # Same-origin dashboard preview — skip the third-party allowlist so a
           # freshly created account (no allowed_embed_domains yet) can still see
           # its own live preview instead of being redirected to the
           # embed-unavailable notice.
           preview?(params) ->
-            {:cont, assign(socket, :embedded, true)}
+            {:cont, assign_embedded(socket, parent_origin)}
 
           # On the connected (WebSocket) render, verify the signed parent_origin
           # (set by embed.js at HTTP request time) against the profile's allowed
@@ -71,7 +72,7 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHook do
           true ->
             case verify_embedding(username, parent_origin) do
               :ok ->
-                {:cont, assign(socket, :embedded, true)}
+                {:cont, assign_embedded(socket, parent_origin)}
 
               {:error, reason} ->
                 Logger.warning("Embed auth rejected",
@@ -87,6 +88,13 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHook do
         Logger.warning("Embed auth rejected", reason: reason)
         {:halt, redirect(socket, to: embed_unavailable_path(nil, params))}
     end
+  end
+
+  # The signed parent origin travels with `:embedded` so that a full redirect
+  # the page issues itself (the language switcher) can rebuild the embed URL
+  # from a value the token vouches for rather than from the raw query string.
+  defp assign_embedded(socket, parent_origin) do
+    assign(socket, embedded: true, embed_parent_origin: parent_origin)
   end
 
   # Where a rejected embedded render is sent. This dedicated notice replaces the

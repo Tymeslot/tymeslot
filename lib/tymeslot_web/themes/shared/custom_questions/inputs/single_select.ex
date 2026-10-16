@@ -3,8 +3,14 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelect do
   Single-choice answer.
 
   Renders as a stack of branded option cards when there are five or fewer
-  options, otherwise falls back to the global `<.input type="select">`
-  for compactness.
+  options, otherwise falls back to the global `<.input type="select">` for
+  compactness, inside a form: LiveView's client sends `phx-change` only from
+  an input that has a form, so a bare select would never commit the answer.
+
+  The select is `appearance-none`, so its chevron is drawn by the
+  `custom-question-select` wrapper (`shared/components/custom-questions.css`).
+  The wrapper holds the select alone (the input gets no label and no
+  errors here), so the chevron centres on the select itself.
   """
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -32,6 +38,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelect do
         value={opt["key"]}
         selected?={@value == opt["key"]}
         event="answer"
+        question={@definition["id"]}
         myself={@myself}
       >
         {opt["label"]}
@@ -42,16 +49,26 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelect do
 
   def render(assigns) do
     ~H"""
-    <.input
-      type="select"
-      name="value"
-      value={@value}
-      options={Enum.map(@definition["options"], &{&1["label"], &1["key"]})}
-      prompt={dgettext("booking", "Select…")}
-      aria-label={@definition["label"]}
+    <form
+      id={"cq-form-#{@definition["id"]}"}
       phx-change="answer"
+      phx-submit="next_step"
       phx-target={@myself}
-    />
+      data-fact="answer"
+      data-question={@definition["id"]}
+    >
+      <div class="custom-question-select">
+        <.input
+          id={"cq-input-#{@definition["id"]}"}
+          type="select"
+          name="value"
+          value={@value}
+          options={Enum.map(@definition["options"], &{&1["label"], &1["key"]})}
+          prompt={dgettext("booking", "Select…")}
+          aria-label={@definition["label"]}
+        />
+      </div>
+    </form>
     """
   end
 end

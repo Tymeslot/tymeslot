@@ -20,10 +20,10 @@ defmodule Tymeslot.Meetings.BookingLimitsTest do
     end
   end
 
-  describe "expanded_query_window/3" do
+  describe "expanded_query_window/4" do
     test "covers the full enclosing months and weeks of the range" do
       {from_utc, to_utc} =
-        BookingLimits.expanded_query_window(~D[2026-07-10], ~D[2026-07-20], "Etc/UTC")
+        BookingLimits.expanded_query_window(~D[2026-07-10], ~D[2026-07-20], "Etc/UTC", :monday)
 
       assert from_utc == ~U[2026-07-01 00:00:00Z]
       assert to_utc == ~U[2026-08-01 00:00:00Z]
@@ -33,15 +33,25 @@ defmodule Tymeslot.Meetings.BookingLimitsTest do
       # 01 July 2026 is a Wednesday, so its week starts on Monday 29 June;
       # 31 July is a Friday, so its week ends on Sunday 02 August.
       {from_utc, to_utc} =
-        BookingLimits.expanded_query_window(~D[2026-07-01], ~D[2026-07-31], "Etc/UTC")
+        BookingLimits.expanded_query_window(~D[2026-07-01], ~D[2026-07-31], "Etc/UTC", :monday)
 
       assert from_utc == ~U[2026-06-29 00:00:00Z]
       assert to_utc == ~U[2026-08-03 00:00:00Z]
     end
 
+    test "Sunday weeks reach back to the Sunday and forward to the Saturday" do
+      # 01 July 2026's Sunday-week starts on 28 June; 31 July's ends on
+      # Saturday 01 August.
+      {from_utc, to_utc} =
+        BookingLimits.expanded_query_window(~D[2026-07-01], ~D[2026-07-31], "Etc/UTC", :sunday)
+
+      assert from_utc == ~U[2026-06-28 00:00:00Z]
+      assert to_utc == ~U[2026-08-02 00:00:00Z]
+    end
+
     test "bounds are host-timezone midnights expressed in UTC" do
       {from_utc, _to_utc} =
-        BookingLimits.expanded_query_window(~D[2026-07-10], ~D[2026-07-10], @host_plus12)
+        BookingLimits.expanded_query_window(~D[2026-07-10], ~D[2026-07-10], @host_plus12, :monday)
 
       # The enclosing month is July, whose host midnight (01 July 00:00 at
       # UTC+12) is 30 June 12:00 UTC.
@@ -97,7 +107,7 @@ defmodule Tymeslot.Meetings.BookingLimitsTest do
     defp context(profile_caps, type_caps, rows) do
       meeting_type = type_caps && Map.put(type_caps, :id, 7)
       limits = BookingLimits.limits_for(profile_caps, meeting_type)
-      BookingLimits.build_context(limits, "Etc/UTC", rows)
+      BookingLimits.build_context(limits, "Etc/UTC", :monday, rows)
     end
 
     defp row(dt, type_id \\ 7), do: %{start_time: dt, meeting_type_id: type_id}
@@ -138,6 +148,17 @@ defmodule Tymeslot.Meetings.BookingLimitsTest do
       refute BookingLimits.slot_blocked?(ctx, ~U[2026-07-27 09:00:00Z])
     end
 
+    test "with Sunday weeks the weekly cap blocks Sunday to Saturday" do
+      limits = BookingLimits.limits_for(%{max_bookings_per_week: 1}, nil)
+      # A booking on Wednesday 2026-07-22; its Sunday-week runs 19th to 25th.
+      ctx =
+        BookingLimits.build_context(limits, "Etc/UTC", :sunday, [row(~U[2026-07-22 09:00:00Z])])
+
+      assert BookingLimits.slot_blocked?(ctx, ~U[2026-07-19 15:00:00Z])
+      assert BookingLimits.slot_blocked?(ctx, ~U[2026-07-25 15:00:00Z])
+      refute BookingLimits.slot_blocked?(ctx, ~U[2026-07-26 09:00:00Z])
+    end
+
     test "monthly cap counts bookings anywhere in the host month" do
       ctx = context(%{max_bookings_per_month: 1}, nil, [row(~U[2026-07-02 09:00:00Z])])
 
@@ -150,7 +171,9 @@ defmodule Tymeslot.Meetings.BookingLimitsTest do
 
       # 11:00 UTC is host day 20 July at UTC+12; 13:00 UTC is host day 21 July.
       ctx =
-        BookingLimits.build_context(limits, @host_plus12, [row(~U[2026-07-20 11:00:00Z], nil)])
+        BookingLimits.build_context(limits, @host_plus12, :monday, [
+          row(~U[2026-07-20 11:00:00Z], nil)
+        ])
 
       assert BookingLimits.slot_blocked?(ctx, ~U[2026-07-20 10:00:00Z])
       refute BookingLimits.slot_blocked?(ctx, ~U[2026-07-20 13:00:00Z])

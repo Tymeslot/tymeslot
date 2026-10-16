@@ -1,33 +1,20 @@
-/* iframe.css — Context-driven overrides for iframe embeds.
+/* iframe.css — Quill's own overrides for iframe embeds.
 
-   When the scheduling page is loaded inside an iframe (data-embedded on
-   <html>), the page lets its body grow to natural content height and
-   iframe_embed.js posts that height to the parent on a 50ms loop. The
-   parent iframe element grows AND shrinks to match — so we never set
-   `height: 100%` chains here. Doing so would lock the body to the
-   parent-supplied viewport and defeat the auto-resize.
+   The shell rules every theme shares (body sizing, the booker root sized to
+   content, the footer hidden, the slot scroll region released, full width
+   in the column layout) live in shared/embed.css, imported just before
+   this file. What follows is specific to Quill, starting with its page
+   grid, which is Quill's own markup.
 
    Triggered by the [data-embedded] attribute set by iframe_embed.js. */
 
 /* ---------------------------------------------------------------------------
-   1. Base Reset
+   1. Layout containers — size to content, not viewport
    --------------------------------------------------------------------------- */
-html.quill-theme[data-embedded] {
-  min-height: auto;
-  margin: 0;
-}
-
-html.quill-theme[data-embedded] body.quill-theme {
-  margin: 0;
-  display: flow-root;
-  height: max-content;
-  min-height: 0;
-}
-
-/* ---------------------------------------------------------------------------
-   2. Layout containers — size to content, not viewport
-   --------------------------------------------------------------------------- */
-html.quill-theme[data-embedded] .main-gradient.theme-grid {
+/* The page grid (.booker-page on the theme grid in Quill's wrapper): sized
+   to content. It must stay the first rule after shared/embed.css, where it
+   used to live, so its place in the cascade does not change. */
+html.scheduling-app[data-embedded] .booker-page {
   min-height: auto;
   grid-template-rows: auto;
 }
@@ -41,7 +28,7 @@ html.quill-theme[data-embedded] .glass-morphism-card {
 }
 
 /* Hug the top — no wasted padding when the iframe sizes to content. */
-html.quill-theme[data-embedded] .main-gradient.theme-grid .content-area .container {
+html.quill-theme[data-embedded] .main-gradient.theme-grid .content-area .quill-container {
   margin-top: 0;
   margin-bottom: 0;
 }
@@ -51,42 +38,31 @@ html.quill-theme[data-embedded] .main-gradient.theme-grid .content-area {
 }
 
 /* ---------------------------------------------------------------------------
-   3. Hide Host-Page Chrome
+   2. Hide Host-Page Chrome
    --------------------------------------------------------------------------- */
-html.quill-theme[data-embedded] .footer-gradient {
-  display: none;
-}
-
 /* Hide video/gradient background — reduces load time inside the iframe. */
 html.quill-theme[data-embedded] .video-background {
   display: none;
 }
 
-/* Language switcher — override position:fixed from language-switcher.css ≤640px
-   breakpoint and pull tighter to the corner. */
-html.quill-theme[data-embedded] .language-switcher {
-  position: absolute;
-  top: var(--space-xs);
-  right: var(--space-xs);
+/* Language switcher: pulled tighter to the corner where it floats there
+   (from 641px); below, it keeps its own row (language-switcher.css). */
+@media (min-width: 641px) {
+  html.quill-theme[data-embedded] .lang-switcher {
+    position: absolute;
+    top: var(--space-xs);
+    right: var(--space-xs);
+  }
 }
 
 /* ---------------------------------------------------------------------------
-   4. Time slots — single page-level scroll
-   --------------------------------------------------------------------------- */
-html.quill-theme[data-embedded] .slots-box {
-  max-height: none;
-  overflow-y: visible;
-  height: auto;
-}
-
-/* ---------------------------------------------------------------------------
-   5. Column layout — wide-canvas variant for narrow embed containers
+   3. Column layout — wide-canvas variant for narrow embed containers
    ---------------------------------------------------------------------------
    Designed for WordPress columns and other constrained-width contexts.
    The default glassmorphism card caps at 640px on tablets and 1024-1536px
-   on larger screens — for column layout we drop the cap entirely so the
-   booker fills the available container width. */
-html.quill-theme[data-embed-layout="column"] .glass-morphism-card,
+   on larger screens. shared/embed.css drops the cap on the card itself;
+   here it is dropped on the card's inner wrapper too, so the booker fills
+   the available container width. */
 html.quill-theme[data-embed-layout="column"] .glass-morphism-card > div {
   max-width: 100%;
   width: 100%;

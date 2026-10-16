@@ -124,26 +124,27 @@
   opacity: 1;
 }
 
-/* Active step label — matches step_label_class(step, current) when step == current */
-.quill-theme-wrapper .step-label.text-white.font-bold.drop-shadow-md {
+/* Current step label (step_label_class/2 in step_navigation.ex) */
+.quill-theme-wrapper .step-item-wrapper .step-label.step-label--current {
   color: var(--theme-text);
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  text-shadow: var(--text-shadow-strong);
 }
 
-/* Completed step label — matches text-tymeslot-100 */
-.quill-theme-wrapper .step-label.text-tymeslot-100.drop-shadow-md {
+/* Completed step label. Keeps (0,4,0) so it still beats the
+   `button:hover .step-label` colour below, as it always has. */
+.quill-theme-wrapper .step-item-wrapper .step-label.step-label--completed {
   color: var(--theme-text-secondary);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  text-shadow: var(--text-shadow-soft);
 }
 
 /* Upcoming step label — matches step-label--upcoming */
 .quill-theme-wrapper .step-label.step-label--upcoming {
   color: var(--text-opacity-very-subtle);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  text-shadow: var(--text-shadow-faint);
 }
 
-/* Hover effects for clickable steps */
-.quill-theme-wrapper .step-circle.cursor-pointer:hover {
+/* Hover effect for clickable (completed) steps */
+.quill-theme-wrapper .step-circle.step-circle--clickable:hover {
   transform: scale(1.1);
 }
 
@@ -206,8 +207,10 @@
    an internal scroll. Tall screens (large monitors) keep the progress indicator.
    Specificity raised past the `.flex` utility the wrapper also carries. */
 @media (max-height: 700px) {
-  .quill-theme-wrapper .step-navigation-wrapper {
-    display: none;
+  :where(html:not([data-embedded])) {
+    .quill-theme-wrapper .step-navigation-wrapper {
+      display: none;
+    }
   }
 }
 
@@ -215,24 +218,30 @@
    the calendar gets more room before it must scroll internally. Coordinated with
    the matching 800px gutter/padding tiers in base.css and calendar.css. */
 @media (max-height: 800px) {
-  .step-navigation-wrapper {
-    padding-top: var(--space-2xs);
-    padding-bottom: var(--space-2xs);
+  :where(html:not([data-embedded])) {
+    .step-navigation-wrapper {
+      padding-top: var(--space-2xs);
+      padding-bottom: var(--space-2xs);
+    }
   }
 }
 
 /* Very short viewports — drop the step labels so the band stays compact.
-   Specificity boosted with html.quill-theme to beat the display: block base. */
+   Same specificity as the display: block base, which it follows. */
 @media (max-height: 500px) {
-  html.quill-theme .step-item-wrapper .step-label {
-    display: none;
+  :where(html:not([data-embedded])) {
+    .quill-theme-wrapper .step-item-wrapper .step-label {
+      display: none;
+    }
   }
 }
 
 /* Extremely short / narrow viewports — hide the whole step navigation card. */
 @media (max-height: 400px) {
-  .step-navigation-card {
-    display: none;
+  :where(html:not([data-embedded])) {
+    .step-navigation-card {
+      display: none;
+    }
   }
 }
 

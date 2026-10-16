@@ -15,6 +15,7 @@ defmodule Tymeslot.Availability.BookingLimitsFilteringTest do
   @moduletag :integration
 
   alias Tymeslot.Availability.Calculate
+  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Meetings.BookingLimits.Checker
 
   import Tymeslot.MeetingTestHelpers
@@ -101,6 +102,35 @@ defmodule Tymeslot.Availability.BookingLimitsFilteringTest do
       refute "11:00 AM" in slots
       refute "11:30 AM" in slots
       assert "12:00 PM" in slots
+    end
+  end
+
+  describe "the organiser's first day of the week" do
+    # Sunday is the day the two definitions disagree on: it closes a Monday
+    # week but opens a Sunday one. Checked at booking time, which the
+    # Mon-Fri fallback business hours do not constrain.
+    setup do
+      %{user: user, profile: profile} =
+        create_user_with_profile(%{timezone: "Etc/UTC", max_bookings_per_week: 1})
+
+      monday = future_weekday() |> Date.beginning_of_week(:monday) |> Date.add(7)
+      booking_on(user, monday, ~T[12:00:00])
+      sunday_before = DateTime.new!(Date.add(monday, -1), ~T[12:00:00], "Etc/UTC")
+
+      %{user: user, profile: profile, sunday_before: sunday_before}
+    end
+
+    test "Monday weeks, the default, leave the Sunday before free",
+         %{user: user, profile: profile, sunday_before: sunday_before} do
+      assert :ok = Checker.check_booking_allowed(user.id, profile, nil, sunday_before)
+    end
+
+    test "Sunday weeks count the Sunday before into the booked week",
+         %{user: user, profile: profile, sunday_before: sunday_before} do
+      {:ok, _prefs} = CalendarManagement.save_preferences(user.id, %{week_start_day: "sunday"})
+
+      assert {:error, :booking_limit_reached} =
+               Checker.check_booking_allowed(user.id, profile, nil, sunday_before)
     end
   end
 

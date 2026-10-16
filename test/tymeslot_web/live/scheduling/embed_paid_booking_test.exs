@@ -35,8 +35,10 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
   alias Phoenix.LiveViewTest
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.BookingDriver
 
   setup :verify_on_exit!
 
@@ -192,6 +194,44 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
       assert rendered =~ ~s(data-testid="confirmation-heading")
     end
 
+    # The webhook can repeat a broadcast; after "Schedule another" the page
+    # is a new booking, and the old meeting's payment must not move it.
+    @tag :capture_log
+    test "Schedule another after a paid booking forgets the old meeting's payment",
+         %{conn: conn, profile: profile, meeting_type: meeting_type} do
+      expect(StripeAdapterMock, :create_checkout_session, fn _params, _opts ->
+        {:ok, %{id: "cs_paid_again", url: "https://checkout.stripe.com/cs_paid_again"}}
+      end)
+
+      view = navigate_to_booking_form_embedded(conn, profile, meeting_type)
+
+      view
+      |> form("form[phx-submit='submit']", %{
+        "booking" => %{"name" => "Pay Pat", "email" => "pat@example.com", "message" => ""}
+      })
+      |> render_submit()
+
+      _drain = :sys.get_state(view.pid)
+      meeting_id = :sys.get_state(view.pid).socket.assigns[:awaiting_payment_meeting].id
+      topic = "meeting_payment:#{meeting_id}"
+
+      Phoenix.PubSub.broadcast(Tymeslot.PubSub, topic, :paid)
+      _drain = :sys.get_state(view.pid)
+      assert has_element?(view, "[data-testid='confirmation-heading']")
+
+      BookingDriver.restart(view)
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+      assert assigns.awaiting_payment_meeting == nil
+      refute view.pid in Enum.map(Registry.lookup(Tymeslot.PubSub, topic), &elem(&1, 0))
+
+      Phoenix.PubSub.broadcast(Tymeslot.PubSub, topic, :paid)
+      _drain = :sys.get_state(view.pid)
+
+      refute :sys.get_state(view.pid).socket.assigns.current_state == :confirmation
+      refute has_element?(view, "[data-testid='confirmation-heading']")
+    end
+
     @tag :capture_log
     test "PubSub :expired sends the iframe back to the booking step with a flash",
          %{conn: conn, profile: profile, meeting_type: meeting_type} do
@@ -215,13 +255,132 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
 
       meeting_id = :sys.get_state(view.pid).socket.assigns[:awaiting_payment_meeting].id
 
-      Phoenix.PubSub.broadcast(Tymeslot.PubSub, "meeting_payment:#{meeting_id}", :expired)
+      topic = "meeting_payment:#{meeting_id}"
+      Phoenix.PubSub.broadcast(Tymeslot.PubSub, topic, :expired)
       _drain = :sys.get_state(view.pid)
 
       rendered = render(view)
       assert rendered =~ "Payment was cancelled"
       refute rendered =~ "Complete your payment in the new tab"
       refute rendered =~ ~s(data-testid="confirmation-heading")
+      assert has_element?(view, "form[phx-submit='submit']")
+
+      # The wait is over: the meeting is forgotten and its topic no longer
+      # reaches the page.
+      assert :sys.get_state(view.pid).socket.assigns.awaiting_payment_meeting == nil
+      refute view.pid in Enum.map(Registry.lookup(Tymeslot.PubSub, topic), &elem(&1, 0))
+    end
+
+    # The webhook can repeat an `:expired` broadcast. Once the page has moved
+    # on, here to the confirmation of a paid booking, it must move nothing.
+    @tag :capture_log
+    test "an :expired broadcast after the payment wait has ended changes nothing",
+         %{conn: conn, profile: profile, meeting_type: meeting_type} do
+      expect(StripeAdapterMock, :create_checkout_session, fn _params, _opts ->
+        {:ok, %{id: "cs_late_expiry", url: "https://checkout.stripe.com/cs_late_expiry"}}
+      end)
+
+      view = navigate_to_booking_form_embedded(conn, profile, meeting_type)
+
+      view
+      |> form("form[phx-submit='submit']", %{
+        "booking" => %{"name" => "Late Lou", "email" => "lou@example.com", "message" => ""}
+      })
+      |> render_submit()
+
+      _drain = :sys.get_state(view.pid)
+      meeting_id = :sys.get_state(view.pid).socket.assigns[:awaiting_payment_meeting].id
+
+      Phoenix.PubSub.broadcast(Tymeslot.PubSub, "meeting_payment:#{meeting_id}", :paid)
+      _drain = :sys.get_state(view.pid)
+      assert has_element?(view, "[data-testid='confirmation-heading']")
+
+      # Delivered straight to the process: the guard must hold even for a
+      # message that reaches the page by some other subscription.
+      send(view.pid, :expired)
+      _drain = :sys.get_state(view.pid)
+
+      assert :sys.get_state(view.pid).socket.assigns.current_state == :confirmation
+      assert has_element?(view, "[data-testid='confirmation-heading']")
+      refute render(view) =~ "Payment was cancelled"
+    end
+
+    # While the checkout is open only the webhook moves the booker on: the
+    # booking form behind the step indicator would take a second submit for
+    # a slot this booking already holds.
+    @tag :capture_log
+    test "the step indicator cannot leave the payment wait",
+         %{conn: conn, profile: profile, meeting_type: meeting_type} do
+      expect(StripeAdapterMock, :create_checkout_session, fn _params, _opts ->
+        {:ok, %{id: "cs_wait", url: "https://checkout.stripe.com/cs_wait"}}
+      end)
+
+      view = navigate_to_booking_form_embedded(conn, profile, meeting_type)
+
+      view
+      |> form("form[phx-submit='submit']", %{
+        "booking" => %{
+          "name" => "Wait Wren",
+          "email" => "wren@example.com",
+          "message" => ""
+        }
+      })
+      |> render_submit()
+
+      _drain = :sys.get_state(view.pid)
+      assert has_element?(view, "[data-testid='awaiting-payment']")
+
+      # Nor does the page offer a step a click would not take.
+      refute has_element?(view, "[phx-click='navigate_to_step']")
+
+      for step <- ["3", "2", "1"] do
+        render_hook(view, "navigate_to_step", %{"step" => step})
+
+        assert has_element?(view, "[data-testid='awaiting-payment']")
+        refute has_element?(view, "form[phx-submit='submit']")
+      end
+    end
+
+    # A client may ask for a patch to any URL this LiveView serves, which
+    # runs `handle_params` on the same socket; the wait must survive it and
+    # still end on the webhook.
+    @tag :capture_log
+    test "a URL patch cannot leave the payment wait",
+         %{conn: conn, profile: profile, meeting_type: meeting_type} do
+      expect(StripeAdapterMock, :create_checkout_session, fn _params, _opts ->
+        {:ok, %{id: "cs_patch", url: "https://checkout.stripe.com/cs_patch"}}
+      end)
+
+      view = navigate_to_booking_form_embedded(conn, profile, meeting_type)
+
+      view
+      |> form("form[phx-submit='submit']", %{
+        "booking" => %{
+          "name" => "Patch Piper",
+          "email" => "piper@example.com",
+          "message" => ""
+        }
+      })
+      |> render_submit()
+
+      _drain = :sys.get_state(view.pid)
+      assert has_element?(view, "[data-testid='awaiting-payment']")
+
+      slug = MeetingTypes.effective_slug(meeting_type)
+
+      for path <- ["/#{profile.username}/#{slug}?embed=1", "/#{profile.username}?embed=1"] do
+        render_patch(view, path)
+
+        assert has_element?(view, "[data-testid='awaiting-payment']")
+        refute has_element?(view, "button[phx-click='next_month']")
+        refute has_element?(view, "button[data-testid='duration-option']")
+      end
+
+      meeting_id = :sys.get_state(view.pid).socket.assigns[:awaiting_payment_meeting].id
+      Phoenix.PubSub.broadcast(Tymeslot.PubSub, "meeting_payment:#{meeting_id}", :paid)
+      _drain = :sys.get_state(view.pid)
+
+      assert has_element?(view, "[data-testid='confirmation-heading']")
     end
   end
 
@@ -288,17 +447,17 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
     end)
 
     view |> element("button.calendar-day[phx-value-date='#{date_str}']") |> render_click()
-    wait_until(fn -> has_element?(view, "button.time-slot-button") end)
+    wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
 
     slot =
       view
       |> render()
       |> Floki.parse_document!()
-      |> Floki.attribute("button.time-slot-button", "phx-value-time")
+      |> Floki.attribute("button[data-testid='time-slot']", "phx-value-time")
       |> List.first() ||
         flunk("expected a time slot after selecting a date")
 
-    view |> element("button.time-slot-button[phx-value-time='#{slot}']") |> render_click()
+    view |> element("button[data-testid='time-slot'][phx-value-time='#{slot}']") |> render_click()
     view |> element("button[phx-click='next_step']") |> render_click()
 
     view

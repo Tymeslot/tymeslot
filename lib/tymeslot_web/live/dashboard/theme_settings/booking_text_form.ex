@@ -161,7 +161,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
                 phx-debounce="600"
                 maxlength={Constraints.booking_welcome_line_max_length()}
                 label={dgettext("dashboard_appearance", "Greeting")}
-                placeholder={BookingText.default_greeting(name(@profile))}
+                placeholder={
+                  BookingText.default_greeting(name(@profile), current_theme_key(@profile))
+                }
               />
 
               <.input
@@ -172,7 +174,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
                 phx-debounce="600"
                 maxlength={Constraints.booking_welcome_line_max_length()}
                 label={dgettext("dashboard_appearance", "Instruction")}
-                placeholder={BookingText.default_instruction()}
+                placeholder={BookingText.default_instruction(current_theme_key(@profile))}
               />
 
               <.info_box variant={:info}>
@@ -310,9 +312,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
     do: BookingText.default_heading(current_theme_key(profile), name(profile))
 
   defp default_for(:booking_greeting, profile),
-    do: BookingText.seed_greeting(name(profile))
+    do: BookingText.seed_greeting(name(profile), current_theme_key(profile))
 
-  defp default_for(:booking_instruction, _profile), do: BookingText.default_instruction()
+  defp default_for(:booking_instruction, profile),
+    do: BookingText.default_instruction(current_theme_key(profile))
 
   # Clearing on the way in is what makes a newer edit replace a held one: this
   # attempt supersedes it, and only a throttle puts anything back.

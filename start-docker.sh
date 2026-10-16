@@ -478,8 +478,11 @@ export ALLOW_PRIVATE_IPS_FOR_CALENDAR="${ALLOW_PRIVATE_IPS_FOR_CALENDAR:-false}"
 # which revokes the calendar switch's long-standing cover for it.
 export ALLOW_PRIVATE_IPS_FOR_VIDEO
 export ALLOW_PRIVATE_IPS_FOR_WEBHOOKS="${ALLOW_PRIVATE_IPS_FOR_WEBHOOKS:-false}"
-export ENABLE_GOOGLE_AUTH="${ENABLE_GOOGLE_AUTH:-false}"
-export ENABLE_GITHUB_AUTH="${ENABLE_GITHUB_AUTH:-false}"
+# Passed through only when the operator set them. A default here would pin
+# both sign-in providers off, overriding the admin settings page on every
+# Docker deployment.
+export ENABLE_GOOGLE_AUTH
+export ENABLE_GITHUB_AUTH
 
 if su -p app -c "cd /app && bin/tymeslot eval 'Ecto.Migrator.with_repo(Tymeslot.Repo, &Ecto.Migrator.run(&1, :up, all: true))'"; then
     echo "========================================"
