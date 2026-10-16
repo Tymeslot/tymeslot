@@ -62,12 +62,6 @@ msgstr "Weiteren Termin buchen"
 #: lib/tymeslot_web/themes/paper/scheduling/details.ex
 #, elixir-autogen, elixir-format
 msgctxt "paper"
-msgid "Booking…"
-msgstr "Wird gebucht…"
-
-#: lib/tymeslot_web/themes/paper/scheduling/details.ex
-#, elixir-autogen, elixir-format
-msgctxt "paper"
 msgid "Enter your details"
 msgstr "Ihre Daten eingeben"
 
@@ -106,3 +100,9 @@ msgstr "Datum und Uhrzeit auswählen"
 msgctxt "paper"
 msgid "Select a time"
 msgstr "Uhrzeit auswählen"
+
+#: lib/tymeslot_web/themes/paper/scheduling/details.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Sending…"
+msgstr "Wird gesendet…"

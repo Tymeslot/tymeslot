@@ -171,7 +171,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
             <:before_days>
               <p
                 :if={@week_empty}
-                class="paper-calendar__notice paper-week__empty"
+                class="paper-calendar__notice paper-calendar__notice--empty"
                 role="status"
                 data-testid="paper-week-empty"
               >
@@ -388,7 +388,12 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
         {dgettext("booking", "Calendar is loading slowly")}
       </p>
 
-      <p :if={@empty} class="paper-calendar__notice" role="status" data-testid="paper-month-empty">
+      <p
+        :if={@empty}
+        class="paper-calendar__notice paper-calendar__notice--empty"
+        role="status"
+        data-testid="paper-month-empty"
+      >
         {dpgettext("booking_voice", "paper", "No times available this month")}
       </p>
 

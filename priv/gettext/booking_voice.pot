@@ -56,12 +56,6 @@ msgstr ""
 #: lib/tymeslot_web/themes/paper/scheduling/details.ex
 #, elixir-autogen, elixir-format
 msgctxt "paper"
-msgid "Booking…"
-msgstr ""
-
-#: lib/tymeslot_web/themes/paper/scheduling/details.ex
-#, elixir-autogen, elixir-format
-msgctxt "paper"
 msgid "Enter your details"
 msgstr ""
 
@@ -99,4 +93,10 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgctxt "paper"
 msgid "Select a time"
+msgstr ""
+
+#: lib/tymeslot_web/themes/paper/scheduling/details.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Sending…"
 msgstr ""

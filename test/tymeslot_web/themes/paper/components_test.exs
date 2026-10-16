@@ -238,6 +238,35 @@ defmodule TymeslotWeb.Themes.Paper.ComponentsTest do
     end
   end
 
+  defp confirmation(overrides) do
+    render_component(
+      ConfirmationComponent,
+      Map.merge(
+        %{
+          id: "confirmation-step",
+          locale: "en",
+          duration: "30-minutes",
+          username_context: "hostuser",
+          selected_date: "2026-09-10",
+          selected_time: "10:00",
+          user_timezone: "UTC",
+          email: "guest@example.com",
+          guest_emails: [],
+          name: "Alice",
+          organizer_profile: build(:profile, full_name: "Jane Organizer"),
+          meeting_type: nil,
+          meeting_status: "confirmed",
+          meeting_uid: "abc123",
+          custom_fields_snapshot: [],
+          custom_field_answers: %{},
+          is_rescheduling: false,
+          theme_tokens: nil
+        },
+        Map.new(overrides)
+      )
+    )
+  end
+
   describe "the confirmation" do
     # The badge reads minutes, never the duration slug the flow carries.
     test "without a meeting type, the duration badge shows minutes" do
@@ -265,6 +294,24 @@ defmodule TymeslotWeb.Themes.Paper.ComponentsTest do
 
       assert text(doc(html), ".paper-badge") == "30 min"
       refute html =~ "30-minutes"
+    end
+
+    test "a reschedule is headed 'Meeting rescheduled'" do
+      html = confirmation(is_rescheduling: true)
+
+      assert text(doc(html), "[data-testid='confirmation-heading']") == "Meeting rescheduled"
+    end
+
+    test "a request awaiting approval is headed exactly 'Request sent'" do
+      html = confirmation(meeting_status: "awaiting_approval")
+
+      assert text(doc(html), "[data-testid='confirmation-heading']") == "Request sent"
+    end
+
+    test "the way to another booking reads 'Book another meeting'" do
+      html = confirmation([])
+
+      assert text(doc(html), "[data-testid='schedule-another']") == "Book another meeting"
     end
   end
 end

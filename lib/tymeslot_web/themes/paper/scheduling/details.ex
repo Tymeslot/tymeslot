@@ -238,7 +238,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
               stroke-linecap="round"
             />
           </svg>
-          <span>{dpgettext("booking_voice", "paper", "Booking…")}</span>
+          <span>{dpgettext("booking_voice", "paper", "Sending…")}</span>
         <% else %>
           {BookingLabels.submit_label(
             @is_rescheduling,

@@ -104,6 +104,26 @@ defmodule TymeslotWeb.Themes.Paper.ScheduleComponentTest do
       assert text(doc, "[data-testid='paper-month-empty']") == "No times available this month"
     end
 
+    for status <- [:loading, :error] do
+      test "does not call the month empty while availability is #{status}" do
+        closed =
+          Map.new(Date.range(~D[2030-02-20], ~D[2030-04-10]), &{Date.to_iso8601(&1), false})
+
+        doc = schedule(month_availability_map: closed, availability_status: unquote(status))
+
+        assert Floki.find(doc, "[data-testid='paper-month-empty']") == []
+      end
+    end
+
+    test "does not call the month empty while a day is free" do
+      open = Map.new(Date.range(~D[2030-02-20], ~D[2030-04-10]), &{Date.to_iso8601(&1), true})
+
+      doc = schedule(month_availability_map: open, availability_status: :loaded)
+
+      assert length(Floki.find(doc, "button[data-testid='calendar-day']")) >= 28
+      assert Floki.find(doc, "[data-testid='paper-month-empty']") == []
+    end
+
     test "names the timezone before the calendar and the times" do
       doc = schedule([])
 
@@ -118,6 +138,22 @@ defmodule TymeslotWeb.Themes.Paper.ScheduleComponentTest do
       doc = schedule(theme_tokens: tokens("week"), week_slots: empty)
 
       assert text(doc, "[data-testid='paper-week-empty']") == "No times available this week"
+    end
+
+    for {label, overrides} <- [
+          {"loading", [week_slots_loading: true]},
+          {"failed", [week_slots_error: "Could not load times"]}
+        ] do
+      test "does not call the week empty while it is #{label}" do
+        empty = Map.new(0..6, &{@monday |> Date.add(&1) |> Date.to_iso8601(), []})
+
+        doc =
+          schedule(
+            [theme_tokens: tokens("week"), week_slots: empty] ++ unquote(Macro.escape(overrides))
+          )
+
+        assert Floki.find(doc, "[data-testid='paper-week-empty']") == []
+      end
     end
 
     test "says nothing of the kind while the week has a free time" do
@@ -166,6 +202,34 @@ defmodule TymeslotWeb.Themes.Paper.ScheduleComponentTest do
 
       assert [_back] =
                Floki.find(doc, "[data-testid='schedule-actions'] [data-testid='back-step']")
+    end
+
+    test "words the sending state 'Sending…', which fits a request or a payment too" do
+      doc =
+        schedule(
+          theme_tokens: tokens("week"),
+          week_slots: week_slots(),
+          selected_date: @wednesday,
+          selected_time: "10:00 AM",
+          form: Phoenix.Component.to_form(%{"name" => "", "email" => "", "message" => ""}),
+          is_rescheduling: false,
+          username_context: "ada",
+          validation_errors: %{},
+          guest_emails: [],
+          guest_error: nil,
+          guest_input: "",
+          guests_open: false,
+          max_guests: 0,
+          location_error: nil,
+          location_options: [],
+          location_phone: nil,
+          selected_location_id: nil,
+          selected_venue_id: nil,
+          selected_video_id: nil,
+          submitting: true
+        )
+
+      assert text(doc, "[data-testid='submit-booking']") == "Sending…"
     end
 
     test "asks for a time, offers no Next, and shows no details until one is picked" do

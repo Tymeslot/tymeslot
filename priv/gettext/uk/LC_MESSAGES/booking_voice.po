@@ -62,12 +62,6 @@ msgstr "Забронювати ще одну зустріч"
 #: lib/tymeslot_web/themes/paper/scheduling/details.ex
 #, elixir-autogen, elixir-format
 msgctxt "paper"
-msgid "Booking…"
-msgstr "Бронювання…"
-
-#: lib/tymeslot_web/themes/paper/scheduling/details.ex
-#, elixir-autogen, elixir-format
-msgctxt "paper"
 msgid "Enter your details"
 msgstr "Введіть свої дані"
 
@@ -106,3 +100,9 @@ msgstr "Виберіть дату й час"
 msgctxt "paper"
 msgid "Select a time"
 msgstr "Виберіть час"
+
+#: lib/tymeslot_web/themes/paper/scheduling/details.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Sending…"
+msgstr "Надсилання…"

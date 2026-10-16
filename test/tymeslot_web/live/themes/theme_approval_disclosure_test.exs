@@ -116,7 +116,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
             attendee: %{name: "Test Attendee", email: email, message: "Hello!"}
           )
 
-        assert html =~ held_headline(unquote(theme.key))
+        assert confirmation_heading(html) == held_headline(unquote(theme.key))
         assert html =~ "Not confirmed yet"
         assert html =~ "still has to accept this time"
 
@@ -203,7 +203,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
           )
 
         refute html =~ "data-testid=\"approval-notice\""
-        refute html =~ "Request sent!"
+        refute confirmation_heading(html) == held_headline(unquote(theme.key))
 
         meeting = Repo.get_by!(MeetingSchema, organizer_user_id: user.id, attendee_email: email)
         assert meeting.status == "confirmed"
@@ -215,4 +215,15 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
   # theme keeps it.
   defp held_headline(:paper), do: "Request sent"
   defp held_headline(_shared), do: "Request sent!"
+
+  # The text of the confirmation heading every theme renders.
+  defp confirmation_heading(html) do
+    heading = html |> Floki.parse_fragment!() |> Floki.find("[data-testid=confirmation-heading]")
+
+    assert [_one] = heading
+    # Quill marks a wrapper around its h1 and subtitle; the rest mark the h1.
+    h1 = Floki.find(heading, "h1")
+    node = if h1 == [], do: heading, else: h1
+    node |> Floki.text() |> String.trim()
+  end
 end

@@ -62,12 +62,6 @@ msgstr "Réserver un autre rendez-vous"
 #: lib/tymeslot_web/themes/paper/scheduling/details.ex
 #, elixir-autogen, elixir-format
 msgctxt "paper"
-msgid "Booking…"
-msgstr "Réservation…"
-
-#: lib/tymeslot_web/themes/paper/scheduling/details.ex
-#, elixir-autogen, elixir-format
-msgctxt "paper"
 msgid "Enter your details"
 msgstr "Saisissez vos coordonnées"
 
@@ -106,3 +100,9 @@ msgstr "Sélectionnez une date et une heure"
 msgctxt "paper"
 msgid "Select a time"
 msgstr "Sélectionnez une heure"
+
+#: lib/tymeslot_web/themes/paper/scheduling/details.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Sending…"
+msgstr "Envoi…"

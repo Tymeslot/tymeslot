@@ -80,6 +80,15 @@
   font-size: var(--theme-font-size-xs);
 }
 
+/* An empty month or week is a plain fact, not a warning: the dashed hairline
+   box of the week's empty day, in ink, not amber. */
+.paper-calendar__notice--empty {
+  border-style: dashed;
+  border-color: var(--line-2);
+  background: transparent;
+  color: var(--ink-2);
+}
+
 /* --- The grid --- */
 
 .paper-calendar__weekdays,

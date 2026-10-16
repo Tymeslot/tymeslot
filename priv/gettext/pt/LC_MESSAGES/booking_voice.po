@@ -62,12 +62,6 @@ msgstr "Agendar outra reunião"
 #: lib/tymeslot_web/themes/paper/scheduling/details.ex
 #, elixir-autogen, elixir-format
 msgctxt "paper"
-msgid "Booking…"
-msgstr "Agendando…"
-
-#: lib/tymeslot_web/themes/paper/scheduling/details.ex
-#, elixir-autogen, elixir-format
-msgctxt "paper"
 msgid "Enter your details"
 msgstr "Informe seus dados"
 
@@ -106,3 +100,9 @@ msgstr "Selecione data e horário"
 msgctxt "paper"
 msgid "Select a time"
 msgstr "Selecione um horário"
+
+#: lib/tymeslot_web/themes/paper/scheduling/details.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Sending…"
+msgstr "A enviar…"
