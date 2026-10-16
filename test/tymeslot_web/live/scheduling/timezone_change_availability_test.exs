@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeAvailabilityTest do
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.BookingDriver.Page
 
   @host_zone "Europe/London"
   @booker_zone "Europe/Kyiv"
@@ -71,11 +72,15 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeAvailabilityTest do
       wait_until(fn -> bookable?(view, monday) end)
       assert bookable?(view, tuesday)
 
-      # The selected day stays selected and its times are re-read in London.
-      wait_until(fn -> slot_times(view) == ["12:00 AM", "1:00 AM"] end)
-
-      view |> element(day(monday)) |> render_click()
+      # Tuesday was the first free day, which the page had already landed on,
+      # so clicking it left the calendar where the page put it
+      # (`CalendarHelpers.untouched?/1`): the landing follows the zone and
+      # moves to London's first free day, Monday, with its times read in London.
+      wait_until(fn -> selected_date(view) == Date.to_string(monday) end)
       wait_until(fn -> slot_times(view) == ["10:00 PM", "11:00 PM"] end)
+
+      view |> element(day(tuesday)) |> render_click()
+      wait_until(fn -> slot_times(view) == ["12:00 AM", "1:00 AM"] end)
     end
   end
 
@@ -128,12 +133,15 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeAvailabilityTest do
   # Through the picker the booker uses: open it, search for the city, pick it.
   defp change_timezone(view, zone) do
     view |> element("[phx-click='toggle_timezone_dropdown']") |> render_click()
-    view |> element("input.timezone-search") |> render_keyup(%{"search" => "London"})
+    view |> element("input.tz-picker__search") |> render_keyup(%{"search" => "London"})
 
     view
-    |> element("button.timezone-option[phx-value-timezone='#{zone}']")
+    |> element("button.tz-picker__option[phx-value-timezone='#{zone}']")
     |> render_click()
   end
+
+  # The themes mark the chosen day differently, so read the booking's own.
+  defp selected_date(view), do: Page.assigns(view)[:selected_date]
 
   defp slot_times(view) do
     view

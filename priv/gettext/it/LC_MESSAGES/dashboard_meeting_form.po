@@ -1147,3 +1147,13 @@ msgstr[1] "Il numero compare quando restano %{count} posti o meno."
 #, elixir-autogen, elixir-format
 msgid "Times are marked green, amber or red, labelled \"Plenty left\", \"Filling up\" or \"Almost full\"."
 msgstr "Gli orari sono segnati in verde, giallo o rosso, con le etichette «Molti posti», «Si riempie» o «Quasi pieno»."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_limit_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Weeks start on Monday, as set in Calendar Settings."
+msgstr "Le settimane iniziano di lunedì, come impostato in Impostazioni calendario."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_limit_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Weeks start on Sunday, as set in Calendar Settings."
+msgstr "Le settimane iniziano di domenica, come impostato in Impostazioni calendario."

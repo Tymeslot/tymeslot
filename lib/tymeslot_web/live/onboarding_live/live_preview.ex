@@ -4,30 +4,31 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
 
   Renders a miniature mock of the user's public booking page that updates
   reactively as the onboarding form is filled in. The mock is *theme-aware*:
-  it reshapes itself to resemble the chosen scheduling theme so the picker
-  feels like a real choice rather than a label swap.
+  the card is drawn by the chosen theme's
+  `onboarding_preview/1` (Quill's glassmorphism step band and month grid,
+  Rhythm's compact week strip and slot list), around the identity header
+  this module owns, so the picker feels like a real choice rather than a
+  label swap.
 
-    * **Quill** — glassmorphism. Generous corners, the signature numbered
-      step band, a full month calendar grid and a multi-column slot grid.
-    * **Rhythm** — compact and motion-driven. Tighter corners, a single
-      week strip and a vertical, scrollable list of time slots.
-
-  Per-user colours come from the static colour-scheme preset table and are
-  applied via inline `style`; structural layout is Tailwind utilities. The
-  component is pure — its only external lookup is that preset table.
+  Per-user colours come from the theme's resolved customisation tokens and
+  are applied via inline `style`; structural layout is Tailwind utilities.
+  The component is pure: its only lookup is that resolution, which reads no
+  database.
   """
 
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
   use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
+  import TymeslotWeb.OnboardingLive.PreviewParts, only: [color: 3, divider_style: 1, ring: 2]
 
-  alias Tymeslot.ThemeCustomizations.Presets
-  alias TymeslotWeb.Helpers.LocaleFormat
+  alias Tymeslot.ThemeCustomizations
+  alias Tymeslot.Themes.Catalog
+  alias TymeslotWeb.OnboardingLive.PreviewParts
   alias TymeslotWeb.OnboardingLive.TextHelpers
-  alias TymeslotWeb.Themes.Core.Registry
+  alias TymeslotWeb.Themes.Core.ThemeInfo
 
-  @default_scheme "default"
+  @default_theme_id Catalog.default_id()
 
   @doc """
   Renders the live booking-page preview.
@@ -36,11 +37,15 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   LiveView's assigns and reflect the in-progress onboarding state.
   """
   attr :current_step, :atom, required: true
-  attr :booking_theme, :string, default: "1"
+  attr :booking_theme, :string, default: @default_theme_id
   attr :name, :string, default: ""
   attr :username, :string, default: ""
   attr :avatar_url, :string, default: nil
-  attr :color_scheme, :string, default: @default_scheme
+
+  attr :theme_customization, :any,
+    default: nil,
+    doc: "the chosen theme's customisation; `nil` draws the theme's defaults"
+
   attr :buffer_before_minutes, :integer, default: nil
   attr :buffer_after_minutes, :integer, default: nil
   attr :advance_booking_days, :integer, default: nil
@@ -52,8 +57,8 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   def live_preview(assigns) do
     assigns =
       assigns
-      |> assign(:colors, scheme_colors(assigns.color_scheme))
-      |> assign(:theme, theme_key(assigns.booking_theme))
+      |> assign(:colors, preview_colors(assigns.booking_theme, assigns.theme_customization))
+      |> assign(:theme_module, theme_module(assigns.booking_theme))
       |> assign(:display_name, display_name(assigns.name))
       |> assign(:link_text, link_text(assigns.booking_host, assigns.username))
       |> assign(:caption, caption(assigns))
@@ -63,53 +68,44 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
     ~H"""
     <div class="w-full max-w-sm mx-auto">
       <div class="rounded-token-3xl p-6 shadow-glass-lg" style={backdrop_style(@colors)}>
-        <div class={card_class(@theme)} style={card_style(@colors, highlight?(@current_step, :card))}>
-          <%!-- Avatar + identity --%>
-          <div
-            class="w-16 h-16 rounded-full overflow-hidden bg-white/10"
-            style={avatar_style(@colors, highlight?(@current_step, :avatar))}
-          >
-            <img src={@avatar_url} alt="" class="w-full h-full object-cover" />
-          </div>
-          <p class="font-bold text-token-base text-center" style={text_style(@colors)}>
-            {@display_name}
-          </p>
-          <span
-            class="text-token-xs px-3 py-1 rounded-token-full font-medium"
-            style={link_style(@colors, highlight?(@current_step, :link))}
-          >
-            {@link_text}
-          </span>
+        <PreviewParts.theme_preview
+          theme_module={@theme_module}
+          variant={:card}
+          colors={@colors}
+          slots={@slots}
+          locale={@locale}
+          highlight_card={highlight?(@current_step, :card)}
+          highlight_slots={highlight?(@current_step, :slots)}
+        >
+          <:header>
+            <%!-- Avatar + identity --%>
+            <div
+              class="w-16 h-16 rounded-full overflow-hidden bg-white/10"
+              style={avatar_style(@colors, highlight?(@current_step, :avatar))}
+            >
+              <img src={@avatar_url} alt="" class="w-full h-full object-cover" />
+            </div>
+            <p class="font-bold text-token-base text-center" style={text_style(@colors)}>
+              {@display_name}
+            </p>
+            <span
+              class="text-token-xs px-3 py-1 rounded-token-full font-medium"
+              style={link_style(@colors, highlight?(@current_step, :link))}
+            >
+              {@link_text}
+            </span>
 
-          <div class="w-full h-px my-1" style={divider_style(@colors)} />
+            <div class="w-full h-px my-1" style={divider_style(@colors)} />
 
-          <%!-- Buffer callout: a labelled gap around meetings, never a slot --%>
-          <.buffer_callout
-            :if={@current_step == :buffer_time}
-            colors={@colors}
-            before_minutes={@buffer_before_minutes || 15}
-            after_minutes={@buffer_after_minutes || 15}
-          />
-
-          <%!-- Theme-specific body --%>
-          <.quill_body :if={@theme == :quill} colors={@colors} slots={@slots} step={@current_step} />
-          <.rhythm_body
-            :if={@theme == :rhythm}
-            colors={@colors}
-            slots={@slots}
-            step={@current_step}
-            locale={@locale}
-          />
-
-          <button
-            type="button"
-            class={book_class(@theme)}
-            style={book_style(@colors, @theme)}
-            disabled
-          >
-            {dgettext("onboarding_wizard", "Book")}
-          </button>
-        </div>
+            <%!-- Buffer callout: a labelled gap around meetings, never a slot --%>
+            <.buffer_callout
+              :if={@current_step == :buffer_time}
+              colors={@colors}
+              before_minutes={@buffer_before_minutes || 15}
+              after_minutes={@buffer_after_minutes || 15}
+            />
+          </:header>
+        </PreviewParts.theme_preview>
 
         <p class="mt-4 text-center text-token-xs font-medium" style={caption_style(@colors)}>
           {@caption}
@@ -149,105 +145,8 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   end
 
   # -------------------------------------------------------------------
-  # Theme bodies
+  # Shared buffer piece
   # -------------------------------------------------------------------
-
-  # Quill: numbered step band + month calendar grid + multi-column slot grid.
-  attr :colors, :map, required: true
-  attr :slots, :list, required: true
-  attr :step, :atom, required: true
-
-  defp quill_body(assigns) do
-    ~H"""
-    <div class="w-full flex flex-col gap-3">
-      <%!-- Signature numbered step band --%>
-      <div class="flex items-center justify-center gap-1.5">
-        <span :for={n <- 1..4} class="contents">
-          <span
-            class="w-5 h-5 rounded-full text-token-2xs font-bold inline-flex items-center justify-center"
-            style={step_dot_style(@colors, n == 1)}
-          >
-            {n}
-          </span>
-          <span :if={n < 4} class="w-3 h-px" style={divider_style(@colors)} />
-        </span>
-      </div>
-
-      <%!-- Mini month calendar (7 columns) --%>
-      <div class="grid grid-cols-7 gap-1" style={slots_style(highlight?(@step, :slots))}>
-        <span
-          :for={day <- 0..20}
-          class="aspect-square rounded-token-sm"
-          style={calendar_cell_style(@colors, day)}
-        />
-      </div>
-
-      <%!-- Multi-column slot grid --%>
-      <div class="grid grid-cols-2 gap-1.5" style={slots_style(highlight?(@step, :slots))}>
-        <.slot_chip :for={slot <- @slots} colors={@colors} slot={slot} />
-      </div>
-    </div>
-    """
-  end
-
-  # Rhythm: compact week strip + vertical, scrollable slot list.
-  attr :colors, :map, required: true
-  attr :slots, :list, required: true
-  attr :step, :atom, required: true
-  attr :locale, :string, required: true
-
-  defp rhythm_body(assigns) do
-    ~H"""
-    <div class="w-full flex flex-col gap-2">
-      <%!-- Single week strip --%>
-      <div class="flex justify-between gap-1">
-        <span
-          :for={day <- 0..6}
-          class="grow h-6 rounded-token-md inline-flex items-center justify-center text-token-2xs font-semibold"
-          style={week_cell_style(@colors, day == 2)}
-        >
-          {LocaleFormat.format_weekday_name(day + 1, @locale, :narrow)}
-        </span>
-      </div>
-
-      <%!-- Vertical slot list --%>
-      <div class="flex flex-col gap-1.5" style={slots_style(highlight?(@step, :slots))}>
-        <.slot_row :for={slot <- @slots} colors={@colors} slot={slot} />
-      </div>
-    </div>
-    """
-  end
-
-  # -------------------------------------------------------------------
-  # Shared slot + buffer pieces
-  # -------------------------------------------------------------------
-
-  attr :colors, :map, required: true
-  attr :slot, :map, required: true
-
-  defp slot_chip(assigns) do
-    ~H"""
-    <span
-      class="text-token-xs px-2 py-1.5 rounded-token-md font-medium inline-flex items-center justify-center gap-1"
-      style={slot_style(@colors, @slot.state)}
-    >
-      <.icon :if={@slot.check} name="hero-check-mini" class="w-3 h-3" />
-      {@slot.label}
-    </span>
-    """
-  end
-
-  defp slot_row(assigns) do
-    ~H"""
-    <span
-      class="text-token-xs px-3 py-2 rounded-token-md font-medium w-full inline-flex items-center gap-1.5"
-      style={slot_style(@colors, @slot.state)}
-    >
-      <.icon :if={@slot.check} name="hero-check-mini" class="w-3 h-3" />
-      {@slot.label}
-    </span>
-    """
-  end
 
   attr :colors, :map, required: true
   attr :before_minutes, :integer, required: true
@@ -291,11 +190,8 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   # Theme + slot resolution
   # -------------------------------------------------------------------
 
-  defp theme_key(id) do
-    case Registry.id_to_key(id) do
-      {:ok, key} -> key
-      {:error, :invalid_theme_id} -> Registry.default_theme_key()
-    end
+  defp theme_module(id) do
+    ThemeInfo.get_theme_module(id) || ThemeInfo.get_theme_module(Catalog.default_id())
   end
 
   defp build_slots(assigns) do
@@ -391,26 +287,9 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   # Colour resolution
   # -------------------------------------------------------------------
 
-  defp scheme_colors(id) do
-    schemes = Presets.get_color_schemes()
-    scheme = Map.get(schemes, id) || Map.get(schemes, @default_scheme) || %{}
-    Map.get(scheme, :colors, %{})
+  defp preview_colors(theme_id, customization) do
+    theme_id |> ThemeCustomizations.tokens(customization) |> PreviewParts.colors()
   end
-
-  defp color(colors, key, fallback), do: Map.get(colors, key) || fallback
-
-  # -------------------------------------------------------------------
-  # Theme-shaped class helpers
-  # -------------------------------------------------------------------
-
-  defp card_class(:rhythm), do: "rounded-token-2xl p-5 flex flex-col items-center gap-3"
-  defp card_class(_quill), do: "rounded-token-3xl p-5 flex flex-col items-center gap-3"
-
-  defp book_class(:rhythm),
-    do: "w-full py-2 rounded-token-lg font-semibold text-white text-token-sm mt-1"
-
-  defp book_class(_quill),
-    do: "w-full py-2 rounded-token-xl font-semibold text-white text-token-sm mt-1"
 
   # -------------------------------------------------------------------
   # Inline style builders (dynamic per-user data)
@@ -418,11 +297,6 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
 
   defp backdrop_style(colors) do
     "background: #{color(colors, :background, "#0f172a")};"
-  end
-
-  defp card_style(colors, highlighted?) do
-    "background: #{color(colors, :surface, "#ffffff")};color: #{color(colors, :text, "#0f172a")};" <>
-      ring(highlighted?, colors)
   end
 
   defp avatar_style(colors, highlighted?) do
@@ -436,70 +310,11 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
       ring(highlighted?, colors)
   end
 
-  defp divider_style(colors) do
-    "background: #{color(colors, :text_secondary, "#475569")}26;"
-  end
-
-  defp step_dot_style(colors, true) do
-    "background: #{color(colors, :primary, "#14b8a6")};color: #ffffff;"
-  end
-
-  defp step_dot_style(colors, false) do
-    "background: #{color(colors, :primary, "#14b8a6")}1f;color: #{color(colors, :text_secondary, "#475569")};"
-  end
-
-  # A few cells get the primary tint to read as "available days".
-  defp calendar_cell_style(colors, day) when day in [4, 9, 12, 17] do
-    "background: #{color(colors, :primary, "#14b8a6")};"
-  end
-
-  defp calendar_cell_style(colors, _day) do
-    "background: #{color(colors, :primary, "#14b8a6")}14;"
-  end
-
-  defp week_cell_style(colors, true) do
-    "background: #{color(colors, :primary, "#14b8a6")};color: #ffffff;"
-  end
-
-  defp week_cell_style(colors, false) do
-    "background: #{color(colors, :primary, "#14b8a6")}14;color: #{color(colors, :text_secondary, "#475569")};"
-  end
-
-  defp slots_style(highlighted?) do
-    if highlighted?, do: "opacity: 1;", else: ""
-  end
-
-  defp slot_style(colors, :muted) do
-    "background: #{color(colors, :text_secondary, "#475569")}1f;color: #{color(colors, :text_secondary, "#475569")};opacity: 0.5;"
-  end
-
-  defp slot_style(colors, :filled) do
-    "background: #{color(colors, :primary, "#14b8a6")}26;color: #{color(colors, :primary, "#14b8a6")};"
-  end
-
-  defp slot_style(colors, _state) do
-    "background: #{color(colors, :primary, "#14b8a6")}14;color: #{color(colors, :text, "#0f172a")};"
-  end
-
   defp buffer_style(colors) do
     "background: #{color(colors, :accent, "#f59e0b")}26;color: #{color(colors, :text_secondary, "#475569")};"
   end
 
-  defp book_style(colors, :quill) do
-    "background: linear-gradient(135deg, #{color(colors, :primary, "#14b8a6")}, #{color(colors, :accent, "#f59e0b")});"
-  end
-
-  defp book_style(colors, _rhythm) do
-    "background: #{color(colors, :primary, "#14b8a6")};"
-  end
-
   defp caption_style(colors) do
     "color: #{color(colors, :text, "#e2e8f0")};"
-  end
-
-  defp ring(false, _colors), do: ""
-
-  defp ring(true, colors) do
-    "box-shadow: 0 0 0 3px #{color(colors, :primary, "#14b8a6")};"
   end
 end

@@ -1,0 +1,89 @@
+/* Shared entry for every booking-theme bundle. Each theme's theme.css imports
+   this file first and then lists its own modules.
+
+   Tailwind v4: the framework import must come before every other rule, so it
+   leads the file (the shared layout.css no longer carries @tailwind). */
+@import "tailwindcss";
+
+/* Shared primitives */
+@import "./reset.css";
+@import "./fonts.css";
+@import "./layout.css";
+@import "./utilities.css";
+@import "./brand-tokens.css";
+@import "./background-motion.css";
+
+/* ===========================================================================
+   Tailwind v4 CSS-first configuration
+   ---------------------------------------------------------------------------
+   The standalone v4 CLI cannot load a legacy JS config via @config, so the
+   theme-template needs (LiveView loading variants + content sources) are
+   expressed CSS-first here. The themes are self-contained: they carry their own
+   token system, so none of the core's custom @theme tokens (turquoise / token-*
+   / glass) are needed — the theme TEMPLATES only consume standard utilities, the
+   inline-SVG <.icon> component, and the phx-*-loading variants. Paths are
+   relative to this file.
+   =========================================================================== */
+
+/* Heroicons render as inline SVG via Core's CoreComponents.Heroicons (through
+   <.icon>), so the theme needs no icon plugin and no hero-* safelist.
+   @tailwindcss/forms is not needed either — the theme uses no forms utilities. */
+
+/* LiveView state variants — the theme schedule components use
+   phx-click-loading:animate-pulse; the other two are kept for parity. The block
+   form (with @slot) is required: the inline array form `([".sel&", ".sel &"])`
+   is emitted verbatim as a literal selector by the v4 standalone CLI instead of
+   being expanded, so the rule never matches. The block form below compiles to
+   the v3-equivalent `.phx-click-loading.phx-…, .phx-click-loading .phx-…` pair. */
+@custom-variant phx-click-loading {
+  .phx-click-loading& { @slot; }
+  .phx-click-loading & { @slot; }
+}
+@custom-variant phx-submit-loading {
+  .phx-submit-loading& { @slot; }
+  .phx-submit-loading & { @slot; }
+}
+@custom-variant phx-change-loading {
+  .phx-change-loading& { @slot; }
+  .phx-change-loading & { @slot; }
+}
+
+/* Content sources, relative to this file: the JS, the theme tree, and the
+   web-layer files outside it that a booking page reaches. The rest of the web
+   layer (dashboard, onboarding, admin) is left out, so its utilities never
+   reach a booking page. A file a theme starts to call from outside this list
+   drops its classes silently; `ThemeTailwindSourcesTest` fails when that
+   happens, so add the file here. */
+@source "../../../js";
+@source "../../../../lib/tymeslot_web.ex";
+@source "../../../../lib/tymeslot_web/themes";
+@source "../../../../lib/tymeslot_web/components/background_motion_toggle.ex";
+@source "../../../../lib/tymeslot_web/components/core_components.ex";
+@source "../../../../lib/tymeslot_web/components/core_components";
+@source "../../../../lib/tymeslot_web/components/flag_helpers.ex";
+@source "../../../../lib/tymeslot_web/components/icons";
+@source "../../../../lib/tymeslot_web/components/language_switcher.ex";
+@source "../../../../lib/tymeslot_web/components/layouts.ex";
+@source "../../../../lib/tymeslot_web/components/layouts";
+@source "../../../../lib/tymeslot_web/components/meeting_utils.ex";
+@source "../../../../lib/tymeslot_web/components/payment_helpers.ex";
+@source "../../../../lib/tymeslot_web/components/step_navigation.ex";
+@source "../../../../lib/tymeslot_web/helpers";
+@source "../../../../lib/tymeslot_web/hooks";
+@source "../../../../lib/tymeslot_web/live/meeting_request_live.ex";
+@source "../../../../lib/tymeslot_web/live/meeting_request_live";
+@source "../../../../lib/tymeslot_web/live/onboarding_live/preview_parts.ex";
+@source "../../../../lib/tymeslot_web/live/scheduling";
+@source "../../../../lib/tymeslot_web/live/shared";
+@source "../../../../lib/tymeslot_web/not_found_error.ex";
+
+/* v4 compatibility: restore v3's gray-200 default border colour. */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+  }
+}

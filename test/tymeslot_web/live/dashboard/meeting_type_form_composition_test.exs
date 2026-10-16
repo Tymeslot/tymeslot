@@ -80,6 +80,9 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormCompositionTest do
       |> element("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
       |> render_click()
 
+      # Empty required fields reach the server, which answers in the form.
+      assert has_element?(view, "form[id^='meeting-type-form-'][novalidate]")
+
       # Add a video location on the chosen integration. The editor's save
       # pushes the new list into the form component, which auto-saves it.
       view |> element("button[data-testid='add-location']") |> render_click()

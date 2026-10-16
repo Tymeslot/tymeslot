@@ -10,7 +10,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingLimitFields do
   `phx-debounce`, `phx-target`) go to every input.
 
   The heading above the row is what names the group, so `labelledby` takes its
-  id.
+  id. The weekly cap counts from the host's own first day of the week, so its
+  input says which day that is.
   """
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -21,6 +22,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingLimitFields do
   attr :day, :any, default: nil, doc: "The current cap per day, nil for none"
   attr :week, :any, default: nil, doc: "The current cap per week, nil for none"
   attr :month, :any, default: nil, doc: "The current cap per month, nil for none"
+
+  attr :week_start, :atom,
+    required: true,
+    values: [:monday, :sunday],
+    doc: "The host's first day of the week, which the weekly cap counts from"
+
   attr :as, :string, default: nil, doc: "Nests each input's name under this param key"
   attr :labelledby, :string, default: nil, doc: "The id of the heading that names the group"
   attr :rest, :global, doc: "Attributes for every input (`phx-change`, `phx-target`, …)"
@@ -54,8 +61,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingLimitFields do
           step="1"
           placeholder={dgettext("dashboard_meeting_form", "No limit")}
           class="input"
+          aria-describedby={field == :max_bookings_per_week && "#{@id}-week-start"}
           {@rest}
         />
+        <p
+          :if={field == :max_bookings_per_week}
+          id={"#{@id}-week-start"}
+          class="text-token-xs text-tymeslot-500"
+        >
+          {week_start_hint(@week_start)}
+        </p>
       </div>
     </div>
     """
@@ -68,6 +83,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingLimitFields do
       dgettext("dashboard_meeting_form", "Per month")
     ]
   end
+
+  defp week_start_hint(:monday),
+    do: dgettext("dashboard_meeting_form", "Weeks start on Monday, as set in Calendar Settings.")
+
+  defp week_start_hint(:sunday),
+    do: dgettext("dashboard_meeting_form", "Weeks start on Sunday, as set in Calendar Settings.")
 
   defp input_name(nil, field), do: Atom.to_string(field)
   defp input_name(as, field), do: "#{as}[#{field}]"

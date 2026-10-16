@@ -5,13 +5,13 @@ defmodule Tymeslot.Profiles.Avatars do
   """
 
   alias Tymeslot.Media.ImageMetadata
+  alias Tymeslot.Media.UploadConstraints
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Utils.AvatarUtils
   alias Tymeslot.Utils.MediaValidator
   alias Tymeslot.Utils.UrlBuilder
-  alias TymeslotWeb.Helpers.UploadConstraints
   alias TymeslotWeb.Helpers.UploadHandler
 
   @type profile :: ProfileSchema.t()

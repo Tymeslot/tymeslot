@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponentTest d
       html = render_overview(meeting_types: [])
 
       assert html =~ "No meeting types available"
-      assert html =~ "Please contact the organizer"
+      assert html =~ "Please contact the organiser"
       assert duration_option_count(html) == 0
     end
 
@@ -153,6 +153,20 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponentTest d
 
       refute html =~ "<script>alert(1)</script>"
       assert html =~ "&lt;script&gt;"
+    end
+  end
+
+  describe "avatar badge" do
+    # An emoji needs a colour-emoji font the booker's device may lack, which
+    # draws an empty box; the badge draws its check as an inline icon instead.
+    test "draws its check as an icon, not as a text glyph" do
+      badge =
+        render_overview([])
+        |> Floki.parse_document!()
+        |> Floki.find(".overview-success-badge")
+
+      assert Floki.find(badge, "svg.overview-success-badge-icon") != []
+      assert String.trim(Floki.text(badge)) == ""
     end
   end
 

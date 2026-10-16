@@ -64,4 +64,19 @@ defmodule TymeslotWeb.UploadsStaticEndpointTest do
     assert conn.status == 200
     assert get_resp_header(conn, "x-content-type-options") == ["nosniff"]
   end
+
+  # A <track> plays captions only when they are served as text/vtt.
+  test "serves WebVTT captions as text/vtt with nosniff header", %{
+    conn: conn,
+    test_dir: test_dir,
+    url_segment: segment
+  } do
+    File.write!(Path.join(test_dir, "intro.vtt"), "WEBVTT\n\n00:00.000 --> 00:02.000\nHello\n")
+
+    conn = get(conn, "/uploads/#{segment}/intro.vtt")
+
+    assert conn.status == 200
+    assert get_resp_header(conn, "content-type") == ["text/vtt"]
+    assert get_resp_header(conn, "x-content-type-options") == ["nosniff"]
+  end
 end

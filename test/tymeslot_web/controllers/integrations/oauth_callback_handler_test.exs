@@ -70,14 +70,14 @@ defmodule TymeslotWeb.Integrations.OAuthCallbackHandlerTest do
 
   for {path, failure_path, microsoft?} <- @callbacks do
     consent_message =
-      if microsoft?, do: "requires admin approval", else: "Authorization was denied"
+      if microsoft?, do: "requires admin approval", else: "Authorisation was denied"
 
     describe path do
       test "access_denied says authorisation was denied", %{conn: conn} do
         conn = get(conn, unquote(path), %{"error" => "access_denied"})
 
         assert redirected_to(conn) == unquote(failure_path)
-        assert Flash.get(conn.assigns.flash, :error) =~ "Authorization was denied"
+        assert Flash.get(conn.assigns.flash, :error) =~ "Authorisation was denied"
       end
 
       test "any other provider error says authentication failed", %{conn: conn} do

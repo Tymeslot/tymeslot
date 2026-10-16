@@ -492,6 +492,36 @@ describe('parent origin derivation', () => {
     )
   })
 
+  test('prefers the parent-origin param when the referrer is the booking page itself', () => {
+    // After the language switcher's redirect the framed page is its own
+    // referrer. Posting there would be dropped by a cross-origin parent.
+    runScript({
+      isEmbedded: true,
+      referrer: 'http://localhost/sarah?embed=1',
+      search: '?embed=1&parent-origin=https://embedder.com',
+      scrollHeight: 500
+    })
+
+    expect(window.parent.postMessage).toHaveBeenCalledWith(
+      expect.any(Object),
+      'https://embedder.com'
+    )
+  })
+
+  test('keeps a same-origin referrer when there is no parent-origin param', () => {
+    runScript({
+      isEmbedded: true,
+      referrer: 'http://localhost/dashboard',
+      search: '?embed=1',
+      scrollHeight: 500
+    })
+
+    expect(window.parent.postMessage).toHaveBeenCalledWith(
+      expect.any(Object),
+      'http://localhost'
+    )
+  })
+
   test('warns and disables resize when no parent origin can be determined', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 

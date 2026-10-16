@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
   `/:username?reschedule_meeting_uid=…`. `DispatcherCancelCompositionTest`
   says as much in its own moduledoc: "Reschedule is not exercised here."
 
-  The untested middle is where the bug lives. `LiveHelpers` turns that
+  The untested middle is where the bug lives. `LiveHelpers.Mount` turns that
   query param into `is_rescheduling`, `PathHandlers` has to carry it across
   every step transition, and `BookingSubmissionHandlerComponent` reads it
   back off the socket to choose between `Create` and `Reschedule`. Drop the
@@ -133,7 +133,7 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
 
       rendered = render(view)
 
-      refute rendered =~ "theme-error-retry-button"
+      refute rendered =~ "theme-error-title"
       assert rendered =~ ~s(data-testid="confirmation-heading")
     end
 
@@ -266,6 +266,11 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
       moved_start = Repo.get!(MeetingSchema, meeting.id).start_time
 
       view |> element("[data-testid='schedule-another']") |> render_click()
+
+      # The day and time just booked belong to the finished booking. Kept, the
+      # schedule step would open the next booking's calendar on them.
+      assert %{selected_date: nil, selected_time: nil} =
+               :sys.get_state(view.pid).socket.assigns
 
       cards =
         view

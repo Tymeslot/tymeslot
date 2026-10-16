@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LimitsSection do
   alias TymeslotWeb.Dashboard.MeetingSettings.Components.BookingLimitFields
 
   attr :booking_limits, :map, required: true
+  attr :week_start, :atom, required: true, values: [:monday, :sunday]
   attr :myself, :any, required: true
 
   @spec limits_section(map()) :: Phoenix.LiveView.Rendered.t()
@@ -42,6 +43,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LimitsSection do
           day={@booking_limits["max_bookings_per_day"]}
           week={@booking_limits["max_bookings_per_week"]}
           month={@booking_limits["max_bookings_per_month"]}
+          week_start={@week_start}
           phx-change="update_booking_limits"
           phx-debounce="500"
           phx-target={@myself}

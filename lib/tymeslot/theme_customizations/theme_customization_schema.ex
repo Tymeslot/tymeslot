@@ -1,431 +1,106 @@
 defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationSchema do
   @moduledoc """
   Schema for user theme customizations including color schemes and backgrounds.
+
+  The options a theme offers live in `settings`, a string-keyed map whose keys
+  are the ones the theme's customisation spec declares
+  (`Tymeslot.ThemeCustomizations.Specs.setting_types/1`).
+  `video_processing_status` is a column of its own, outside the spec and
+  outside this changeset: the processing state of each uploaded video, keyed
+  by its asset field (`%{"background_video_path" => "completed"}`), written in
+  place by `ThemeCustomizationQueries.update_video_processing_status/3`. The
+  table's older `video_processing` column is no longer read; a later release
+  drops it.
   """
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Ecto.Changeset
   alias Tymeslot.Profiles.ProfileSchema
+  alias Tymeslot.ThemeCustomizations.Spec
+  alias Tymeslot.ThemeCustomizations.Specs
   alias Tymeslot.Themes.Catalog
 
   @type t :: %__MODULE__{
           id: integer() | nil,
           profile_id: integer() | nil,
           theme_id: String.t() | nil,
-          color_scheme: String.t(),
-          custom_palette_seed: String.t() | nil,
-          background_type: String.t(),
-          background_value: String.t() | nil,
-          background_image_path: String.t() | nil,
-          background_video_path: String.t() | nil,
-          video_processing: String.t() | nil,
+          settings: Spec.settings() | nil,
+          video_processing_status: %{optional(String.t()) => String.t()},
           profile: ProfileSchema.t() | Ecto.Association.NotLoaded.t() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
 
-  @valid_color_schemes ~w[default turquoise purple sunset ocean forest rose monochrome]
-  @hex_color_regex ~r/^#[0-9A-Fa-f]{6}$/
-  @valid_background_types ~w[gradient color image video]
-  @valid_video_processing_states ~w[pending completed failed]
-
   schema "theme_customizations" do
     field(:theme_id, :string)
-    field(:color_scheme, :string, default: "default")
-    field(:custom_palette_seed, :string)
-    field(:background_type, :string, default: "gradient")
-    field(:background_value, :string)
-    field(:background_image_path, :string)
-    field(:background_video_path, :string)
-    field(:video_processing, :string)
+    field(:settings, :map, default: %{})
+    field(:video_processing_status, :map, default: %{})
 
     belongs_to(:profile, ProfileSchema, foreign_key: :profile_id)
 
     timestamps(type: :utc_datetime)
   end
 
-  @doc false
+  @doc """
+  Casts the shared columns and hands the theme's own settings to its
+  customisation spec, which validates them (including whether the theme
+  supports the option at all). `attrs` carries the settings flat, beside the
+  columns (`%{"theme_id" => _, "background_type" => _}`).
+  """
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(theme_customization, attrs) do
     theme_customization
-    |> cast(attrs, [
-      :profile_id,
-      :theme_id,
-      :color_scheme,
-      :custom_palette_seed,
-      :background_type,
-      :background_value,
-      :background_image_path,
-      :background_video_path,
-      :video_processing
-    ])
-    |> validate_required([:profile_id, :theme_id, :background_type])
-    |> validate_theme_id()
-    |> validate_color_scheme_or_seed()
-    |> validate_inclusion(:background_type, @valid_background_types)
-    |> validate_inclusion(:video_processing, @valid_video_processing_states)
-    |> validate_background_value()
-    |> validate_custom_palette_seed()
+    |> cast(attrs, [:profile_id, :theme_id])
+    |> validate_required([:profile_id, :theme_id])
+    |> apply_theme_spec(attrs)
     |> foreign_key_constraint(:profile_id)
     |> unique_constraint([:profile_id, :theme_id])
   end
 
-  @doc """
-  Color scheme definitions with their CSS variables.
-  """
-  @spec color_scheme_definitions() :: map()
-  def color_scheme_definitions do
-    %{
-      "default" => %{
-        name: "Default Turquoise",
-        colors: %{
-          primary: "#06b6d4",
-          primary_hover: "#0891b2",
-          secondary: "#14b8a6",
-          accent: "#10b981",
-          background: "#0f172a",
-          surface: "rgba(30, 41, 59, 0.5)",
-          text: "#e2e8f0",
-          text_secondary: "#94a3b8"
-        }
-      },
-      "turquoise" => %{
-        name: "Arctic Blue",
-        colors: %{
-          primary: "#0284c7",
-          primary_hover: "#0369a1",
-          secondary: "#0ea5e9",
-          accent: "#38bdf8",
-          background: "#0c1426",
-          surface: "rgba(15, 23, 42, 0.6)",
-          text: "#e0f2fe",
-          text_secondary: "#7dd3fc"
-        }
-      },
-      "purple" => %{
-        name: "Purple Dream",
-        colors: %{
-          primary: "#8b5cf6",
-          primary_hover: "#7c3aed",
-          secondary: "#a78bfa",
-          accent: "#c084fc",
-          background: "#1e1b4b",
-          surface: "rgba(46, 38, 84, 0.5)",
-          text: "#ede9fe",
-          text_secondary: "#c4b5fd"
-        }
-      },
-      "sunset" => %{
-        name: "Sunset Glow",
-        colors: %{
-          primary: "#f97316",
-          primary_hover: "#ea580c",
-          secondary: "#fb923c",
-          accent: "#fbbf24",
-          background: "#431407",
-          surface: "rgba(92, 45, 10, 0.5)",
-          text: "#fef3c7",
-          text_secondary: "#fed7aa"
-        }
-      },
-      "ocean" => %{
-        name: "Ocean Breeze",
-        colors: %{
-          primary: "#0ea5e9",
-          primary_hover: "#0284c7",
-          secondary: "#38bdf8",
-          accent: "#7dd3fc",
-          background: "#082f49",
-          surface: "rgba(12, 74, 110, 0.5)",
-          text: "#e0f2fe",
-          text_secondary: "#bae6fd"
-        }
-      },
-      "forest" => %{
-        name: "Forest Green",
-        colors: %{
-          primary: "#10b981",
-          primary_hover: "#059669",
-          secondary: "#34d399",
-          accent: "#6ee7b7",
-          background: "#052e16",
-          surface: "rgba(20, 83, 45, 0.5)",
-          text: "#d1fae5",
-          text_secondary: "#a7f3d0"
-        }
-      },
-      "rose" => %{
-        name: "Rose Gold",
-        colors: %{
-          primary: "#f43f5e",
-          primary_hover: "#e11d48",
-          secondary: "#fb7185",
-          accent: "#fda4af",
-          background: "#4c0519",
-          surface: "rgba(136, 19, 55, 0.5)",
-          text: "#ffe4e6",
-          text_secondary: "#fecdd3"
-        }
-      },
-      "monochrome" => %{
-        name: "Monochrome",
-        colors: %{
-          primary: "#6b7280",
-          primary_hover: "#4b5563",
-          secondary: "#9ca3af",
-          accent: "#d1d5db",
-          background: "#111827",
-          surface: "rgba(31, 41, 55, 0.5)",
-          text: "#f3f4f6",
-          text_secondary: "#d1d5db"
-        }
-      }
-    }
-  end
-
-  @doc """
-  Gradient background definitions (alias for gradient_presets).
-  """
-  @spec gradient_definitions() :: %{
-          optional(String.t()) => %{name: String.t(), value: String.t()}
-        }
-  def gradient_definitions, do: gradient_presets()
-
-  @doc """
-  Gradient background presets.
-  """
-  @spec gradient_presets() :: %{optional(String.t()) => %{name: String.t(), value: String.t()}}
-  def gradient_presets do
-    %{
-      "gradient_1" => %{
-        name: "Aurora",
-        value: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-      },
-      "gradient_2" => %{
-        name: "Ocean",
-        value: "linear-gradient(135deg, #2E3192 0%, #1BFFFF 100%)"
-      },
-      "gradient_3" => %{
-        name: "Sunset",
-        value: "linear-gradient(135deg, #FC466B 0%, #3F5EFB 100%)"
-      },
-      "gradient_4" => %{
-        name: "Forest",
-        value: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)"
-      },
-      "gradient_5" => %{
-        name: "Berry",
-        value: "linear-gradient(135deg, #4e54c8 0%, #8f94fb 100%)"
-      },
-      "gradient_6" => %{
-        name: "Midnight",
-        value: "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)"
-      },
-      "gradient_7" => %{
-        name: "Coral",
-        value: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)"
-      },
-      "gradient_8" => %{
-        name: "Northern Lights",
-        value: "linear-gradient(135deg, #43cea2 0%, #185a9d 100%)"
-      }
-    }
-  end
-
-  @doc """
-  Video background presets for themes.
-  """
-  @spec video_presets() :: map()
-  def video_presets do
-    %{
-      "preset:rhythm-default" => %{
-        name: "Rhythm Default",
-        file: "rhythm-background-desktop.webm",
-        thumbnail: "rhythm-background-thumbnail.jpg",
-        poster: "rhythm-background-poster.jpg",
-        description: "Default Rhythm theme video"
-      },
-      "preset:blue-wave" => %{
-        name: "Blue Wave",
-        file: "blue-wave-desktop.mp4",
-        thumbnail: "blue-wave-thumbnail.jpg",
-        poster: "blue-wave-poster.jpg",
-        description: "Flowing blue wave animation"
-      },
-      "preset:dancing-girl" => %{
-        name: "Dancing Girl",
-        file: "dancing-girl-desktop.mp4",
-        thumbnail: "dancing-girl-thumbnail.jpg",
-        poster: "dancing-girl-poster.jpg",
-        description: "Elegant dancing silhouette"
-      },
-      "preset:leaves" => %{
-        name: "Falling Leaves",
-        file: "leaves-desktop.mp4",
-        thumbnail: "leaves-thumbnail.jpg",
-        poster: "leaves-poster.jpg",
-        description: "Peaceful autumn leaves falling"
-      },
-      "preset:light-green" => %{
-        name: "Light Green",
-        file: "light-green-desktop.mp4",
-        thumbnail: "light-green-thumbnail.jpg",
-        poster: "light-green-poster.jpg",
-        description: "Soothing light green abstract"
-      },
-      "preset:space" => %{
-        name: "Space Journey",
-        file: "space-desktop.mp4",
-        thumbnail: "space-thumbnail.jpg",
-        poster: "space-poster.jpg",
-        description: "Cosmic space exploration"
-      }
-    }
-  end
-
-  @doc """
-  Image background presets for themes.
-  """
-  @spec image_presets() :: map()
-  def image_presets do
-    %{
-      "preset:artistic-studio" => %{
-        name: "Artistic Studio",
-        file: "artistic-studio.webp",
-        thumbnail: "artistic-studio-thumbnail.webp",
-        description: "Creative artistic workspace scene"
-      },
-      "preset:rustic-farmhouse" => %{
-        name: "Rustic Farmhouse",
-        file: "rustic-farmhouse.webp",
-        thumbnail: "rustic-farmhouse-thumbnail.webp",
-        description: "Cozy farmhouse still life with rustic charm"
-      },
-      "preset:space-satellite" => %{
-        name: "Space Satellite",
-        file: "space-satellite.webp",
-        thumbnail: "space-satellite-thumbnail.webp",
-        description: "Modern satellite technology in space"
-      },
-      "preset:elegant-still-life" => %{
-        name: "Elegant Still Life",
-        file: "elegant-still-life.webp",
-        thumbnail: "elegant-still-life-thumbnail.webp",
-        description: "Sophisticated still life composition"
-      },
-      "preset:ocean-sunset" => %{
-        name: "Ocean Sunset",
-        file: "ocean-sunset.webp",
-        thumbnail: "ocean-sunset-thumbnail.webp",
-        description: "Peaceful ocean sunset with surfer silhouette"
-      }
-    }
-  end
-
-  defp validate_background_value(changeset) do
-    background_type = get_field(changeset, :background_type)
-
-    case background_type do
-      "gradient" -> validate_gradient(changeset)
-      "color" -> validate_color(changeset)
-      "image" -> validate_image(changeset)
-      "video" -> validate_video(changeset)
-      _other -> changeset
-    end
-  end
-
-  defp validate_gradient(changeset) do
-    background_value = get_field(changeset, :background_value)
-
-    if background_value && Map.has_key?(gradient_presets(), background_value) do
-      changeset
-    else
-      add_error(changeset, :background_value, "must be a valid gradient preset")
-    end
-  end
-
-  defp validate_color(changeset) do
-    background_value = get_field(changeset, :background_value)
-
-    if background_value && String.match?(background_value, @hex_color_regex) do
-      changeset
-    else
-      add_error(changeset, :background_value, "must be a valid hex color")
-    end
-  end
-
-  # When a custom palette seed is present it is the source of truth for the
-  # colour scheme; `color_scheme` is not constrained.  When no seed is present,
-  # `color_scheme` must be a known preset.
-  defp validate_color_scheme_or_seed(changeset) do
-    seed = get_field(changeset, :custom_palette_seed)
-
-    if is_binary(seed) and seed != "" do
-      changeset
-    else
-      changeset
-      |> validate_required([:color_scheme])
-      |> validate_inclusion(:color_scheme, @valid_color_schemes)
-    end
-  end
-
-  defp validate_custom_palette_seed(changeset) do
-    seed = get_field(changeset, :custom_palette_seed)
-
-    if is_nil(seed) or seed == "" do
-      changeset
-    else
-      if String.match?(seed, @hex_color_regex) do
-        changeset
-      else
-        add_error(changeset, :custom_palette_seed, "must be a valid hex colour")
-      end
-    end
-  end
-
-  defp validate_image(changeset) do
-    background_value = get_field(changeset, :background_value)
-
-    # Preset images don't need an image path
-    if background_value && String.starts_with?(background_value, "preset:") do
-      changeset
-    else
-      # Uploaded images require an image path
-      if get_field(changeset, :background_image_path) do
-        changeset
-      else
-        add_error(changeset, :background_image_path, "is required for uploaded image background")
-      end
-    end
-  end
-
-  defp validate_video(changeset) do
-    background_value = get_field(changeset, :background_value)
-
-    # Preset videos don't need a video path
-    if background_value && String.starts_with?(background_value, "preset:") do
-      changeset
-    else
-      # Uploaded videos require a video path
-      if get_field(changeset, :background_video_path) do
-        changeset
-      else
-        add_error(changeset, :background_video_path, "is required for uploaded video background")
-      end
-    end
-  end
-
-  defp validate_theme_id(changeset) do
+  defp apply_theme_spec(changeset, attrs) do
     case get_field(changeset, :theme_id) do
       nil ->
         changeset
 
       theme_id ->
-        if Catalog.valid_id?(theme_id) do
-          changeset
-        else
-          add_error(changeset, :theme_id, "is not a valid theme")
+        case Catalog.customization_spec(theme_id) do
+          {:ok, spec} -> put_settings(changeset, spec, attrs)
+          {:error, :theme_not_found} -> add_error(changeset, :theme_id, "is not a valid theme")
         end
     end
+  end
+
+  # The spec validates a schemaless changeset over its own settings, starting
+  # from the stored ones as `Specs.settings/2` reads them: the theme's
+  # defaults for what is not stored (a row not yet inserted, or a group the
+  # spec gained since), and a group's defaults in place of settings it no
+  # longer accepts. So only what `attrs` changes is judged, and a stale value
+  # in one group cannot block a save of another. Its errors land on the
+  # parent under the setting's name, and the result replaces `settings`
+  # whole, holding only the keys the spec declares and leaving out the empty
+  # ones.
+  defp put_settings(changeset, spec, attrs) do
+    types = Specs.setting_types(spec)
+    current = Specs.settings(spec, get_field(changeset, :settings) || %{})
+    stored = Map.new(types, fn {key, _type} -> {key, Map.get(current, Atom.to_string(key))} end)
+
+    settings = spec.changeset(Changeset.change({stored, types}), attrs)
+
+    changeset =
+      Enum.reduce(settings.errors, changeset, fn {key, {message, opts}}, acc ->
+        add_error(acc, key, message, opts)
+      end)
+
+    put_change(
+      changeset,
+      :settings,
+      for(
+        {key, value} <- apply_changes(settings),
+        value != nil,
+        into: %{},
+        do: {Atom.to_string(key), value}
+      )
+    )
   end
 end

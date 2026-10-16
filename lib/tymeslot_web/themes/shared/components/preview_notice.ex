@@ -2,10 +2,10 @@ defmodule TymeslotWeb.Themes.Shared.Components.PreviewNotice do
   @moduledoc """
   Tells a visitor that the booking page they are on is in owner-preview mode.
 
-  Rendered by both theme wrappers (`Quill.Scheduling.Wrapper`,
-  `Rhythm.Scheduling.Wrapper`) so it appears on every step of the booking
-  flow, in embedded and standalone rendering alike, whenever
-  `socket.assigns[:owner_preview]` is true.
+  Rendered by `Shared.Components.ThemeShell`, which every theme's wrapper
+  renders, so it appears on every step of the booking flow, in embedded and
+  standalone rendering alike, whenever `socket.assigns[:owner_preview]` is
+  true.
 
   ## Why this exists
 
@@ -21,9 +21,10 @@ defmodule TymeslotWeb.Themes.Shared.Components.PreviewNotice do
   making the preview link harder to copy in the first place
   (`embed_preview.js`'s Link style).
 
-  Neutral class names here, visual treatment in each theme's own CSS module
-  (`preview-notice.css`), following the same split as `ApprovalNotice`:
-  the themes are self-contained and share no tokens.
+  Neutral class names here; the styling is shared by every theme, in
+  `assets/css/scheduling/shared/components/preview-notice.css`, and reads the
+  `--notice-warning` role each theme defines under the token contract
+  (`shared/tokens.css`), following the same split as `ApprovalNotice`.
   """
 
   use Phoenix.Component

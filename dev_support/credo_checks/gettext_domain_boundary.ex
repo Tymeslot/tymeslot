@@ -1,7 +1,8 @@
 defmodule CredoChecks.GettextDomainBoundary do
   @moduledoc """
-  Flags bare `gettext/1,2` and `ngettext/3,4` calls and `dgettext`/`dngettext`
-  calls that target an unknown domain.
+  Flags bare `gettext/1,2` and `ngettext/3,4` calls and
+  `dgettext`/`dngettext`/`dpgettext`/`dpngettext` calls that target an unknown
+  domain.
 
   Every translatable string must declare *where in the app it lives* through an
   explicit gettext domain. Bare `gettext("...")` silently targets the implicit
@@ -44,6 +45,7 @@ defmodule CredoChecks.GettextDomainBoundary do
       # Good — explicit, known domain
       dgettext("booking", "Confirm your booking")
       dngettext("booking", "1 slot", "%{count} slots", count)
+      dpgettext("booking_voice", "studio", "book")
   """
 
   use Credo.Check,
@@ -51,7 +53,7 @@ defmodule CredoChecks.GettextDomainBoundary do
     category: :design,
     param_defaults: [
       domains: ~w(
-        booking booking_manage booking_polls embed errors common
+        booking booking_manage booking_polls booking_voice embed errors common
         emails emails_account emails_booking emails_booking_requests
         emails_integrations emails_polls
         auth account onboarding onboarding_wizard
@@ -80,7 +82,9 @@ defmodule CredoChecks.GettextDomainBoundary do
   alias Credo.SourceFile
 
   @bare_calls [:gettext, :ngettext]
-  @domained_calls [:dgettext, :dngettext]
+  # Each takes the domain as its first argument; the `p` forms add a context
+  # after it.
+  @domained_calls [:dgettext, :dngettext, :dpgettext, :dpngettext]
 
   @doc false
   @impl Credo.Check
@@ -110,7 +114,7 @@ defmodule CredoChecks.GettextDomainBoundary do
     {ast, [issue | issues]}
   end
 
-  # dgettext/dngettext with a string-literal domain — validate against allowlist.
+  # A domained call with a string-literal domain: validate it against the allowlist.
   defp traverse({call, meta, [domain | _rest]} = ast, issues, issue_meta, domains)
        when call in @domained_calls and is_binary(domain) do
     if MapSet.member?(domains, domain) do

@@ -66,7 +66,7 @@
 
 .success-badge-inner--info {
   background: linear-gradient(135deg, var(--theme-info) 0%, var(--theme-info-dark) 100%);
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+  box-shadow: var(--shadow-info-sm);
 }
 
 .success-badge-inner--success {
@@ -113,6 +113,7 @@
 .confirmation-message {
   color: var(--theme-text-secondary);
   margin: 0;
+  text-wrap: balance;
 }
 
 /* Meeting Ticket Card */
@@ -212,7 +213,7 @@
 
 .ticket-footer {
   padding: var(--space-md) var(--space-lg);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-ghost);
   border-top: var(--border-width-thin) solid var(--border-subtle);
   border-radius: 0 0 var(--radius-2xl) var(--radius-2xl);
 }
@@ -241,8 +242,16 @@
   color: var(--theme-accent);
 }
 
+/* The address moves to the next line whole rather than breaking at one of
+   its hyphens; only an address wider than the whole line breaks inside.
+   Contextual alternates are off so Inter does not draw the "x" in "568x320"
+   as a multiplication sign. */
 .email-confirmation strong {
   color: var(--theme-primary);
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-variant-ligatures: no-contextual;
 }
 
 .confirmation-actions-section {
@@ -267,12 +276,12 @@
 .help-text {
   color: var(--theme-text-secondary);
   margin: 0;
+  text-wrap: balance;
 }
 
-/* Add-to-calendar download link — reuses the secondary action-button styling
-   on an <a>, with a leading calendar icon. */
+/* Add-to-calendar download link: the secondary action button on an <a>,
+   with a leading calendar icon. */
 .calendar-download-button {
-  color: var(--theme-text);
   text-decoration: none;
 }
 
@@ -284,13 +293,13 @@
 
 /* Booking Detail Styling */
 .booking-detail-label {
-  color: var(--theme-text-secondary, #94a3b8);
+  color: var(--theme-text-secondary);
   margin: 0;
   margin-bottom: var(--space-3xs);
 }
 
 .booking-detail-value {
-  color: var(--theme-text, #e2e8f0);
+  color: var(--theme-text);
   margin: 0;
 }
 
@@ -381,21 +390,25 @@
    ============================================================================ */
 
 @media (max-height: 600px) {
-  .success-badge {
-    width: 40px;
-    height: 40px;
+  :where(html:not([data-embedded])) {
+    .success-badge {
+      width: 40px;
+      height: 40px;
+    }
   }
 }
 
 @media (max-height: 400px) {
-  .confirmation-container {
-    padding: var(--space-xs);
-    gap: var(--space-xs);
-  }
+  :where(html:not([data-embedded])) {
+    .confirmation-container {
+      padding: var(--space-xs);
+      gap: var(--space-xs);
+    }
 
-  .success-badge {
-    width: 32px;
-    height: 32px;
+    .success-badge {
+      width: 32px;
+      height: 32px;
+    }
   }
 }
 
@@ -429,12 +442,20 @@ html.rhythm-theme[data-embedded] .ticket-header {
   padding: var(--space-xs) var(--space-sm);
 }
 
-/* Ticket body — horizontal row instead of vertical stack */
+/* Ticket body: the entries sit side by side and wrap onto a new line when the
+   card is too narrow for them all. The column gap holds the divider drawn
+   between two entries (see below), and the body clips its overflow so that
+   the divider of an entry starting a line, which falls just outside the
+   padding box, is never painted. */
 html.rhythm-theme[data-embedded] .ticket-body {
   display: flex;
   padding: var(--space-sm);
   flex-direction: row;
-  gap: var(--space-sm);
+  flex-wrap: wrap;
+  column-gap: calc(var(--space-sm) * 2 + var(--border-width-thin));
+  row-gap: var(--space-sm);
+  overflow: hidden;
+  overflow: clip;
 }
 
 /* Hide icon circles to save space */
@@ -468,9 +489,30 @@ html.rhythm-theme[data-embedded] .ticket-sublabel::before {
   content: "· ";
 }
 
-/* Dividers between horizontal ticket items */
-html.rhythm-theme[data-embedded] .ticket-row + .ticket-row {
-  padding-left: var(--space-sm);
+html.rhythm-theme[data-embedded] .ticket-row {
+  position: relative;
+  min-width: 0;
+}
+
+/* A long value (a venue address, a video link) breaks rather than widening
+   its entry past the card; its label keeps its width beside it. */
+html.rhythm-theme[data-embedded] .ticket-value {
+  overflow-wrap: anywhere;
+}
+
+html.rhythm-theme[data-embedded] .ticket-sublabel {
+  flex-shrink: 0;
+}
+
+/* Dividers between ticket items, drawn in the middle of the column gap. An
+   entry that starts a line puts its divider outside the body's padding box,
+   where the body clips it, so a wrapped line never opens with a divider. */
+html.rhythm-theme[data-embedded] .ticket-row + .ticket-row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(-1 * (var(--space-sm) + var(--border-width-thin)));
   border-left: var(--border-width-thin) solid var(--border-subtle);
 }
 
@@ -489,9 +531,43 @@ html.rhythm-theme[data-embedded] .meeting-detail-label::before {
   content: "· ";
 }
 
-html.rhythm-theme[data-embedded] .meeting-detail-row + .meeting-detail-row {
-  padding-left: var(--space-sm);
+html.rhythm-theme[data-embedded] .meeting-detail-row {
+  position: relative;
+  min-width: 0;
+}
+
+html.rhythm-theme[data-embedded] .meeting-detail-value {
+  overflow-wrap: anywhere;
+}
+
+html.rhythm-theme[data-embedded] .meeting-detail-label {
+  flex-shrink: 0;
+}
+
+html.rhythm-theme[data-embedded] .meeting-detail-row + .meeting-detail-row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(-1 * (var(--space-sm) + var(--border-width-thin)));
   border-left: var(--border-width-thin) solid var(--border-subtle);
+}
+
+/* A default-width embed has too little room to set each value and its label
+   on one line across four columns: a date broke over three lines. Below the
+   column layout's width the label goes back beneath its value, and the items
+   stay side by side, wrapping onto further lines as the card narrows. */
+@container scheduling (max-width: 719px) {
+  html.rhythm-theme[data-embedded] .ticket-info,
+  html.rhythm-theme[data-embedded] .meeting-detail-info {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  html.rhythm-theme[data-embedded] .ticket-sublabel::before,
+  html.rhythm-theme[data-embedded] .meeting-detail-label::before {
+    content: none;
+  }
 }
 
 /* Ticket footer — tighter */
@@ -508,7 +584,7 @@ html.rhythm-theme[data-embedded] .confirmation-actions-section {
    CUSTOM FIELD ANSWERS — "Your answers" section on the confirmation step
    ============================================================================ */
 
-.custom-answers-section {
+.custom-answers {
   width: 100%;
   background: var(--surface-subtle);
   border: var(--border-width-thin) solid var(--border-subtle);
@@ -516,7 +592,7 @@ html.rhythm-theme[data-embedded] .confirmation-actions-section {
   padding: var(--space-md) var(--space-lg);
 }
 
-.custom-answers-heading {
+.custom-answers__heading {
   font-size: var(--theme-font-size-xs);
   font-weight: var(--font-weight-medium);
   color: var(--theme-text-secondary);
@@ -525,26 +601,28 @@ html.rhythm-theme[data-embedded] .confirmation-actions-section {
   margin: 0 0 var(--space-sm);
 }
 
-.custom-answers-list {
+.custom-answers__list {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
   margin: 0;
 }
 
-.custom-answer-row {
+/* Two fifths for the question: a third broke a question such as "Are you an
+   existing customer?" over three lines beside a one-word answer. */
+.custom-answers__row {
   display: grid;
-  grid-template-columns: 1fr 2fr;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
   gap: var(--space-sm);
 }
 
-.custom-answer-label {
+.custom-answers__label {
   font-size: var(--theme-font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--theme-text-secondary);
 }
 
-.custom-answer-value {
+.custom-answers__value {
   font-size: var(--theme-font-size-sm);
   font-weight: var(--font-weight-semibold);
   color: var(--theme-text);
@@ -553,22 +631,29 @@ html.rhythm-theme[data-embedded] .confirmation-actions-section {
 
 /* Narrow container — stack label above value */
 @container scheduling (max-width: 479px) {
-  .custom-answers-section {
+  .custom-answers {
     padding: var(--space-sm) var(--space-md);
   }
 
-  .custom-answer-row {
+  .custom-answers__row {
     grid-template-columns: 1fr;
     gap: var(--space-3xs);
   }
 }
 
 /* Embedded — compact variant */
-html.rhythm-theme[data-embedded] .custom-answers-section {
+html.rhythm-theme[data-embedded] .custom-answers {
   padding: var(--space-xs) var(--space-sm);
 }
 
-html.rhythm-theme[data-embedded] .custom-answer-row {
+html.rhythm-theme[data-embedded] .custom-answers__row {
   grid-template-columns: 1fr;
   gap: var(--space-3xs);
+}
+
+/* Held state for the success badge (approval required); compound selectors so
+   the override wins regardless of order. */
+.success-badge-inner.success-badge-inner--pending {
+  background: var(--theme-warning);
+  box-shadow: var(--shadow-warning-lg);
 }

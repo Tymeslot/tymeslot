@@ -1,5 +1,7 @@
 /* Shared Layout Primitives for Scheduling Themes
-   Contains ONLY structural helpers — no colors, typography, or theme-specific styles.
+   Colours come from the theme's --status-* tokens (see shared/tokens.css).
+   The readiness card also reads --radius-card, --readiness-card-max-width
+   (defaulted in tokens.css) and --theme-font-heading.
    Replaces the old variables.css + utilities.css split. */
 
 /* Tailwind CSS is imported by each theme's entry file (theme.css) in v4 —
@@ -40,17 +42,17 @@
   max-width: 32rem;
   padding: 2rem;
   border-radius: var(--radius-xl);
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: var(--status-surface);
+  border: 1px solid var(--line-1);
   text-align: center;
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--status-ink);
 }
 
 .awaiting-payment-icon {
   width: 3rem;
   height: 3rem;
   margin: 0 auto 1.25rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--status-ink-soft);
 }
 
 .awaiting-payment-icon svg {
@@ -59,27 +61,28 @@
 }
 
 .awaiting-payment-heading {
+  font-family: var(--theme-font-heading);
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   margin: 0 0 0.75rem;
-  color: white;
+  color: var(--status-ink-heading);
 }
 
 .awaiting-payment-message {
   font-size: 1rem;
   line-height: 1.5;
   margin: 0 0 1.25rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--status-ink-soft);
 }
 
 .awaiting-payment-fallback {
   font-size: 0.875rem;
   margin: 0;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--status-ink-hint);
 }
 
 .awaiting-payment-fallback a {
-  color: white;
+  color: var(--status-ink-heading);
   text-decoration: underline;
   margin-left: 0.25rem;
 }
@@ -102,23 +105,23 @@
    surface, whereas this replaces it. */
 .readiness-notice-card {
   width: 100%;
-  max-width: 32rem;
+  max-width: var(--readiness-card-max-width);
   padding: 2rem;
-  border-radius: var(--radius-2xl);
-  background: linear-gradient(135deg, rgba(20, 20, 35, 0.86) 0%, rgba(15, 15, 25, 0.78) 100%);
+  border-radius: var(--radius-card);
+  background: var(--status-surface-opaque);
   backdrop-filter: blur(16px) saturate(150%);
   -webkit-backdrop-filter: blur(16px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 1.25rem 2.5rem rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--line-1);
+  box-shadow: var(--status-shadow);
   text-align: center;
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--status-ink);
 }
 
 .readiness-notice-icon {
   width: 3rem;
   height: 3rem;
   margin: 0 auto 1.25rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--status-ink-soft);
 }
 
 .readiness-notice-icon svg {
@@ -127,21 +130,22 @@
 }
 
 .readiness-notice-heading {
+  font-family: var(--theme-font-heading);
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   margin: 0 0 0.75rem;
-  color: white;
+  color: var(--status-ink-heading);
 }
 
 .readiness-notice-message {
   font-size: 1rem;
   line-height: 1.5;
   margin: 0 0 1.25rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--status-ink-soft);
 }
 
 .readiness-notice-hint {
   font-size: 0.875rem;
   margin: 0;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--status-ink-hint);
 }

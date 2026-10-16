@@ -34,7 +34,7 @@
   height: var(--avatar-size-md);
   border-radius: 50%;
   object-fit: cover;
-  border: var(--border-width-medium) solid rgba(255, 255, 255, 0.8);
+  border: var(--border-width-medium) solid var(--avatar-ring);
 }
 
 .organizer-info-small {
@@ -57,6 +57,9 @@
 
 /* ============================================================================
    TIMEZONE SELECTOR
+   The picker's shared structure and --dropdown-surface are in
+   shared/components/timezone-picker.css; this section holds Rhythm's trigger
+   content and treatment.
    ============================================================================ */
 
 .timezone-selector-container {
@@ -73,20 +76,10 @@
   display: none;
 }
 
-.timezone-dropdown-wrapper {
-  position: relative;
-  width: min(100%, 14rem);
-}
-
-.timezone-trigger {
-  width: 100%;
+.tz-picker__trigger {
   padding: var(--space-3xs) var(--space-xs);
-  border: var(--border-width-thin) solid var(--border-medium);
   border-radius: var(--radius-md);
-  background: linear-gradient(135deg, var(--surface-medium) 0%, var(--surface-subtle) 100%);
   backdrop-filter: blur(10px);
-  color: var(--theme-text);
-  cursor: pointer;
   transition: background var(--transition-normal), border-color var(--transition-normal), transform var(--transition-normal);
   display: flex;
   align-items: center;
@@ -96,28 +89,14 @@
   font-size: var(--theme-font-size-3xs);
 }
 
-.timezone-trigger:hover {
-  background: linear-gradient(135deg, var(--surface-intense) 0%, var(--surface-medium) 100%);
+.tz-picker__trigger:hover {
   border-color: var(--theme-primary);
   transform: translateY(-1px);
 }
 
-.timezone-dropdown {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  z-index: var(--z-dropdown);
-  margin-top: var(--space-2xs);
-  background: linear-gradient(135deg, rgba(20, 20, 35, 0.98) 0%, rgba(15, 15, 25, 0.96) 100%);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+.tz-picker__panel {
   border: var(--border-width-thin) solid var(--border-medium);
-  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
-  max-height: var(--dropdown-max-height);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
   width: var(--dropdown-width);
   min-width: var(--dropdown-width);
 }
@@ -150,89 +129,12 @@
   transition: transform var(--transition-normal);
 }
 
-.timezone-trigger:hover .timezone-arrow {
+.tz-picker__trigger:hover .timezone-arrow {
   transform: translateY(1px);
 }
 
-.timezone-search-wrapper {
-  padding: var(--space-sm);
+.tz-picker__search-wrapper {
   border-bottom: var(--border-width-thin) solid var(--border-subtle);
-}
-
-.timezone-search {
-  width: 100%;
-  padding: var(--space-xs) var(--space-sm);
-  background: var(--surface-medium);
-  border: var(--border-width-thin) solid var(--border-light);
-  border-radius: var(--radius-sm);
-  color: var(--theme-text);
-  transition: border-color var(--transition-normal), background var(--transition-normal);
-}
-
-.timezone-search:focus {
-  outline: none;
-  background: var(--surface-medium);
-  border-color: var(--theme-primary);
-}
-
-.timezone-search::placeholder {
-  color: var(--theme-text-secondary);
-}
-
-.timezone-options {
-  flex: 1;
-  min-height: 0;
-}
-
-/* Note: Scrollbar styling is applied via .scroll-y utility class from base.css */
-
-.timezone-option {
-  width: 100%;
-  padding: var(--space-sm);
-  background: transparent;
-  border: none;
-  color: var(--theme-text);
-  cursor: pointer;
-  transition: background var(--transition-normal);
-  text-align: left;
-  border-bottom: var(--border-width-thin) solid var(--border-subtle);
-}
-
-.timezone-option:hover {
-  background: var(--surface-medium);
-}
-
-.timezone-option:last-child {
-  border-bottom: none;
-}
-
-.timezone-option-content {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.timezone-option-flag {
-  width: var(--icon-sm);
-  height: var(--flag-height);
-  flex-shrink: 0;
-  border-radius: var(--space-3xs);
-  object-fit: cover;
-}
-
-.timezone-option-text {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3xs);
-}
-
-.timezone-option-label {
-  color: var(--theme-text);
-}
-
-.timezone-option-offset {
-  color: var(--theme-text-secondary);
 }
 
 /* ============================================================================
@@ -269,7 +171,7 @@
     gap: var(--space-md);
   }
 
-  .timezone-trigger {
+  .tz-picker__trigger {
     min-height: var(--min-touch-target);
   }
 }
@@ -289,7 +191,7 @@ html.rhythm-theme[data-embedded] .schedule-header {
    responsive.css sets position:fixed at ≤767px for standalone mobile, but
    inside an iframe "fixed" is relative to the iframe viewport and pushes the
    dropdown below the navigation buttons instead of overlapping the calendar. */
-html.rhythm-theme[data-embedded] .timezone-dropdown {
+html.rhythm-theme[data-embedded] .tz-picker__panel {
   position: absolute;
   top: 100%;
   right: 0;
@@ -305,7 +207,9 @@ html.rhythm-theme[data-embedded] .timezone-dropdown {
 
 /* Bare minimum for extremely constrained viewports — hide the whole header */
 @media (max-height: 350px) {
-  .schedule-header {
-    display: none;
+  :where(html:not([data-embedded])) {
+    .schedule-header {
+      display: none;
+    }
   }
 }

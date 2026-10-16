@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingLimitFieldsTes
   alias TymeslotWeb.Dashboard.MeetingSettings.Components.BookingLimitFields
 
   defp render_fields(attrs) do
-    assigns = Map.merge(%{as: nil, day: nil, week: nil, month: nil}, attrs)
+    assigns = Map.merge(%{as: nil, day: nil, week: nil, month: nil, week_start: :monday}, attrs)
 
     ~H"""
     <BookingLimitFields.booking_limit_fields
@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingLimitFieldsTes
       day={@day}
       week={@week}
       month={@month}
+      week_start={@week_start}
       phx-change="update_booking_limits"
     />
     """
@@ -46,6 +47,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingLimitFieldsTes
            |> Enum.map(&LazyHTML.text/1)
            |> Enum.map(&String.trim/1) ==
              ["Per day", "Per week", "Per month"]
+  end
+
+  test "the weekly input is described by a note naming the first day of the week" do
+    doc = render_fields(%{week_start: :sunday})
+
+    assert attr_of(doc, "input[aria-describedby]", "name") == ["max_bookings_per_week"]
+
+    assert attr_of(doc, "#limits-max_bookings_per_week", "aria-describedby") == [
+             "limits-week-start"
+           ]
+
+    assert doc |> LazyHTML.query("#limits-week-start") |> LazyHTML.text() =~
+             "Weeks start on Sunday"
   end
 
   test "an empty cap leaves the field empty with the no-limit placeholder" do

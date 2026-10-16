@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Dev.EmbedTestHTML do
   attr :username, :string, required: true
   attr :base_url, :string, required: true
   attr :nonce, :string, default: nil
+  attr :themes, :list, required: true
 
   @spec index(map()) :: Phoenix.LiveView.Rendered.t()
   def index(assigns) do
@@ -69,8 +70,7 @@ defmodule TymeslotWeb.Dev.EmbedTestHTML do
             <label for="theme">Theme</label>
             <select id="theme">
               <option value="">User default</option>
-              <option value="1">Quill (1)</option>
-              <option value="2">Rhythm (2)</option>
+              <option :for={{name, id} <- @themes} value={id}>{name} ({id})</option>
             </select>
           </div>
           <div class="control-group">

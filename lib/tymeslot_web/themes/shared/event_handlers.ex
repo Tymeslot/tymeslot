@@ -1,15 +1,11 @@
 defmodule TymeslotWeb.Themes.Shared.EventHandlers do
   @moduledoc """
-  Shared event handlers for theme scheduling LiveViews.
+  Page-level events a scheduling page handles outside the booking steps: the
+  language switcher and the timezone search box.
   """
-  require Logger
 
   alias Phoenix.LiveView
-  alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
-  alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
-  alias TymeslotWeb.Themes.Shared.BookingTracking
-  alias TymeslotWeb.Themes.Shared.ReschedulePin
+  alias TymeslotWeb.Themes.Shared.LiveHelpers.Tracking
   import Phoenix.Component, only: [assign: 3]
 
   @doc """
@@ -41,76 +37,9 @@ defmodule TymeslotWeb.Themes.Shared.EventHandlers do
     path =
       socket
       |> path_handlers_module.build_path_with_locale(locale)
-      |> BookingTracking.tracking_path(socket.assigns[:tracking])
+      |> Tracking.tracking_path(socket.assigns[:tracking])
 
     {:noreply, LiveView.redirect(socket, external: path)}
-  end
-
-  @spec handle_timezone_change(LiveView.Socket.t(), map(), module()) ::
-          {:noreply, LiveView.Socket.t()}
-  defp handle_timezone_change(socket, data, timezone_handler_module) do
-    case timezone_handler_module.handle_timezone_change(socket, data) do
-      {:ok, updated_socket} ->
-        {:noreply, updated_socket}
-
-      {:error, reason} ->
-        Logger.warning("Timezone change failed", reason: LogFormat.reason(reason))
-        {:noreply, socket}
-    end
-  end
-
-  @doc """
-  Handles overview step events.
-  """
-  @spec handle_overview_events(LiveView.Socket.t(), atom(), any(), map()) ::
-          {:noreply, LiveView.Socket.t()}
-  def handle_overview_events(socket, event, data, callbacks) do
-    case event do
-      :select_duration ->
-        # A pinned reschedule has no choice of type to make, so the payload is
-        # ignored rather than trusted; `ReschedulePin` says why that matters
-        # even though no second card is rendered to click.
-        duration = ReschedulePin.selected_duration(socket, data)
-
-        socket =
-          socket
-          |> assign(:selected_duration, duration)
-          |> assign(:duration, duration)
-          |> callbacks.maybe_assign_meeting_type.(duration)
-          # Trigger availability refresh when duration changes
-          |> AvailabilityHelpers.fetch_month_availability_async()
-
-        {:noreply, socket}
-
-      :next_step ->
-        handle_state_transition(socket, :overview, :schedule, callbacks)
-
-      _other ->
-        {:noreply, socket}
-    end
-  end
-
-  @doc """
-  Handles timezone-related events.
-  """
-  @spec handle_timezone_events(LiveView.Socket.t(), atom(), any(), map()) ::
-          {:noreply, LiveView.Socket.t()}
-  def handle_timezone_events(socket, event, data, callbacks) do
-    case event do
-      :change_timezone ->
-        handle_timezone_change(socket, data, callbacks.timezone_handler_component)
-
-      :search_timezone ->
-        callbacks.handle_timezone_search.(socket, data)
-
-      :toggle_timezone_dropdown ->
-        {:noreply,
-         assign(socket, :timezone_dropdown_open, !socket.assigns[:timezone_dropdown_open])}
-
-      :close_timezone_dropdown ->
-        Process.send_after(self(), :close_dropdown, 150)
-        {:noreply, socket}
-    end
   end
 
   @doc """
@@ -132,23 +61,5 @@ defmodule TymeslotWeb.Themes.Shared.EventHandlers do
       |> assign(:timezone_dropdown_open, true)
 
     {:noreply, socket}
-  end
-
-  @doc """
-  Handles state transitions with validation.
-  """
-  @spec handle_state_transition(LiveView.Socket.t(), atom(), atom(), map()) ::
-          {:noreply, LiveView.Socket.t()}
-  def handle_state_transition(socket, current_state, next_state, callbacks) do
-    case callbacks.validate_state_transition.(socket, current_state, next_state) do
-      :ok ->
-        socket = callbacks.transition_to.(socket, next_state, %{})
-        {:noreply, socket}
-
-      # `reason` is a semantic atom from the step validators; rendering it to
-      # copy is this layer's job, and the booking page is multi-locale.
-      {:error, reason} ->
-        {:noreply, LiveView.put_flash(socket, :error, BookingErrorMessage.message(reason))}
-    end
   end
 end

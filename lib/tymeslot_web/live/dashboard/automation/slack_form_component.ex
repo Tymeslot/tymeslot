@@ -156,11 +156,11 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
 
       <form
         id="slack-form"
+        novalidate
         phx-change="slack_validate"
         phx-submit={submit_event(@mode)}
         phx-target={@parent_component}
         class="space-y-8"
-        novalidate
       >
         <%!-- Details --%>
         <.card

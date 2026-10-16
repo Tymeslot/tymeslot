@@ -19,29 +19,24 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.TimezoneHandlerComponent do
 
   ## Available Functions
 
-  - `handle_timezone_change/2` - Process timezone updates and reload slots
+  - `handle_timezone_change/2` - Process timezone updates
   """
 
   import Phoenix.Component, only: [assign: 3]
-  import TymeslotWeb.Live.Shared.LiveHelpers, only: [update_timezone: 2]
-
-  alias Tymeslot.Timezones
-  alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
+  import TymeslotWeb.Live.Shared.LiveHelpers, only: [resolve_timezone: 1]
 
   @doc """
-  Handles timezone changes, recomputing what the page offers in the new zone.
+  Handles timezone changes.
 
   This function:
   1. Updates the user's timezone
-  2. Clears the selected time
+  2. Clears the selected time and the slots listed for the old zone
   3. Closes the timezone dropdown
-  4. Reloads available slots if a date is selected
-  5. Refetches the month availability when the zone actually changed, since
-     which days are bookable depends on the zone they are read in
 
-  A rejected timezone leaves the socket untouched. The selected date is kept
-  even when it has no times in the new zone: the slot list then shows its
-  empty state, as it does after a calendar sync empties the day.
+  It reloads no slots. Which day stays selected is decided after the zone
+  has changed (`NextAvailable.follow_timezone_change/1`), and the caller
+  reloads the slots of whichever day that is; reloading here would fetch
+  them, synchronously, for a day that may be dropped a moment later.
 
   ## Examples
 
@@ -53,56 +48,36 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.TimezoneHandlerComponent do
   @spec handle_timezone_change(Phoenix.LiveView.Socket.t(), String.t() | map()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
   def handle_timezone_change(socket, data) do
-    requested = data |> extract_timezone() |> Timezones.normalize()
-    previous = socket.assigns.user_timezone
+    previous = socket.assigns[:user_timezone]
 
-    socket = update_timezone(socket, requested)
+    case data |> extract_timezone() |> resolve_timezone() do
+      # The zone already in use, picked again, in any spelling: nothing to redo.
+      {:ok, ^previous} ->
+        {:ok, close_picker(socket)}
 
-    if socket.assigns.user_timezone != requested do
-      {:ok, socket}
-    else
-      socket =
-        socket
-        |> assign(:selected_time, nil)
-        |> assign(:available_slots, [])
-        |> assign(:timezone_dropdown_open, false)
-        |> assign(:timezone_search, "")
-        |> maybe_trigger_slot_reload(requested)
-        |> maybe_refetch_month(previous)
+      # Another zone: the time chosen and the slots listed were the old zone's.
+      {:ok, timezone} ->
+        {:ok,
+         socket
+         |> assign(:user_timezone, timezone)
+         |> assign(:selected_time, nil)
+         |> assign(:available_slots, [])
+         |> close_picker()}
 
-      {:ok, socket}
+      # A zone that failed validation leaves everything as it was.
+      :error ->
+        {:ok, socket}
     end
+  end
+
+  defp close_picker(socket) do
+    socket
+    |> assign(:timezone_dropdown_open, false)
+    |> assign(:timezone_search, "")
   end
 
   defp extract_timezone(data) when is_binary(data), do: data
   defp extract_timezone(%{timezone: tz}) when is_binary(tz), do: tz
   defp extract_timezone(%{"timezone" => tz}) when is_binary(tz), do: tz
   defp extract_timezone(other), do: other
-
-  defp maybe_trigger_slot_reload(socket, new_timezone) do
-    case socket.assigns.selected_date do
-      nil ->
-        socket
-
-      selected_date ->
-        duration = socket.assigns.duration || socket.assigns.selected_duration
-
-        socket
-        |> assign(:loading_slots, true)
-        |> assign(:calendar_error, nil)
-        |> tap(fn _client ->
-          send(self(), {:fetch_available_slots, selected_date, duration, new_timezone})
-        end)
-    end
-  end
-
-  # The month grid's bookable days are computed in the booker's zone, so a
-  # new zone needs a new map. `fetch_month_availability_async/1` cancels the
-  # fetch in flight and replaces its ref, so a result computed for the old
-  # zone that arrives afterwards is discarded rather than painted.
-  defp maybe_refetch_month(%{assigns: %{user_timezone: previous}} = socket, previous),
-    do: socket
-
-  defp maybe_refetch_month(socket, _previous),
-    do: AvailabilityHelpers.fetch_month_availability_async(socket)
 end

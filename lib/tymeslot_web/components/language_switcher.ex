@@ -3,6 +3,9 @@ defmodule TymeslotWeb.Components.LanguageSwitcher do
   Language switcher dropdown component for booking pages.
   Provides a dropdown interface for selecting between available languages,
   with flags and language names displayed for each option.
+
+  Emits theme-neutral class names (`lang-switcher`, `lang-switcher__button`,
+  `__panel`, `__item`, `__item--active`); each theme styles them.
   """
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -13,19 +16,18 @@ defmodule TymeslotWeb.Components.LanguageSwitcher do
   attr :locale, :string, required: true
   attr :locales, :list, required: true
   attr :dropdown_open, :boolean, default: false
-  attr :theme, :string, default: "quill"
 
   @spec language_switcher(map()) :: Phoenix.LiveView.Rendered.t()
   def language_switcher(assigns) do
     ~H"""
-    <div class="language-switcher">
+    <div class="lang-switcher">
       <.dropdown
         id="language-switcher-dropdown"
         open={@dropdown_open}
         on_toggle="toggle_language_dropdown"
         on_close="close_language_dropdown"
-        trigger_class={switcher_button_class(@theme)}
-        class={dropdown_panel_class(@theme)}
+        trigger_class="flex items-center px-4 py-2 rounded-lg text-white text-sm font-medium transition-all duration-200 lang-switcher__button"
+        class="w-48 rounded-lg shadow-xl lang-switcher__panel"
         aria-label={dgettext("common", "Change language")}
       >
         <:trigger>
@@ -45,7 +47,10 @@ defmodule TymeslotWeb.Components.LanguageSwitcher do
               type="button"
               phx-click="change_locale"
               phx-value-locale={locale_data.code}
-              class={dropdown_item_class(@theme, @locale == locale_data.code)}
+              class={[
+                "flex items-center w-full px-4 py-3 text-left text-sm transition-colors lang-switcher__item",
+                @locale == locale_data.code && "lang-switcher__item--active"
+              ]}
               role="menuitem"
             >
               <.locale_flag locale={locale_data.code} class="w-5 h-4" />
@@ -72,40 +77,5 @@ defmodule TymeslotWeb.Components.LanguageSwitcher do
       %{name: name} -> name
       _other -> String.upcase(locale)
     end
-  end
-
-  defp switcher_button_class("quill") do
-    "flex items-center px-4 py-2 rounded-lg text-white text-sm font-medium transition-all duration-200 language-switcher-button-quill"
-  end
-
-  defp switcher_button_class("rhythm") do
-    "flex items-center px-4 py-2 rounded-lg text-white text-sm font-medium transition-all duration-200 language-switcher-button-rhythm"
-  end
-
-  defp switcher_button_class(_arg), do: switcher_button_class("quill")
-
-  defp dropdown_panel_class("quill") do
-    "w-48 rounded-lg shadow-xl language-dropdown-quill"
-  end
-
-  defp dropdown_panel_class("rhythm") do
-    "w-48 rounded-lg shadow-xl language-dropdown-rhythm"
-  end
-
-  defp dropdown_panel_class(_arg), do: dropdown_panel_class("quill")
-
-  defp dropdown_item_class("rhythm", active) do
-    base = "flex items-center w-full px-4 py-3 text-left text-sm transition-colors"
-    active_class = if active, do: "active", else: ""
-    "#{base} language-dropdown-item-rhythm #{active_class}"
-  end
-
-  defp dropdown_item_class(theme, active) do
-    base =
-      "flex items-center w-full px-4 py-3 text-left text-tymeslot-700 text-sm transition-colors"
-
-    theme_class = "language-dropdown-item-#{theme}"
-    active_class = if active, do: "active", else: ""
-    "#{base} #{theme_class} #{active_class}"
   end
 end

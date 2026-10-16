@@ -55,30 +55,39 @@
   // Prefer document.referrer (browser-provided, hard to spoof). Fall back
   // to the parent-origin URL param that embed.js passes explicitly — this
   // covers embedding pages that strip the Referrer header.
+  // A referrer from this page's own origin is only a last resort: after a
+  // navigation the framed page makes itself (the language switcher's
+  // redirect), the browser reports the previous booking page as the referrer,
+  // which says nothing about who frames it. The param the redirect carries
+  // names the embedder; posting to our own origin would be silently dropped.
   // We never broadcast to "*".
-  let targetOrigin = null;
+  let referrerOrigin = null;
   try {
     if (document.referrer) {
       const parsed = new URL(document.referrer);
-      if (parsed.origin !== "null") targetOrigin = parsed.origin;
+      if (parsed.origin !== "null") referrerOrigin = parsed.origin;
     }
   } catch (_) {
     // Malformed referrer — fall through to param check
   }
 
-  if (!targetOrigin) {
-    try {
-      const paramOrigin = params.get("parent-origin");
-      if (paramOrigin) {
-        const parsed = new URL(paramOrigin);
-        if (parsed.origin !== "null" && /^https?:$/.test(parsed.protocol)) {
-          targetOrigin = parsed.origin;
-        }
+  let paramOrigin = null;
+  try {
+    const raw = params.get("parent-origin");
+    if (raw) {
+      const parsed = new URL(raw);
+      if (parsed.origin !== "null" && /^https?:$/.test(parsed.protocol)) {
+        paramOrigin = parsed.origin;
       }
-    } catch (_) {
-      // Malformed param — fall through to the warning below
     }
+  } catch (_) {
+    // Malformed param — fall through to the warning below
   }
+
+  const referrerIsSelf = referrerOrigin === window.location.origin;
+  const targetOrigin = referrerIsSelf
+    ? paramOrigin || referrerOrigin
+    : referrerOrigin || paramOrigin;
 
   if (!targetOrigin) {
     console.warn(
