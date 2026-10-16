@@ -17,20 +17,20 @@ defmodule TymeslotWeb.Themes.Quill.VoiceTest do
     :ok
   end
 
-  defp line(key, bindings \\ %{}), do: Voice.line(QuillVoice, key, bindings, fn -> :shared end)
-
   test "is Quill's voice" do
     assert ThemeInfo.get_voice("1") == QuillVoice
   end
 
   test "words the heading calmly" do
-    assert line(:heading) == "Arrange a meeting"
+    assert Voice.line(QuillVoice, :heading, %{}, fn -> :shared end) == "Arrange a meeting"
   end
 
   test "keeps the shared wording for every other line" do
     for key <- Voice.keys() -- [:heading] do
       bindings = Map.new(Voice.bindings(key), &{&1, "Sarah Rodriguez"})
-      assert line(key, bindings) == :shared, "expected #{key} to keep the shared wording"
+
+      assert Voice.line(QuillVoice, key, bindings, fn -> :shared end) == :shared,
+             "expected #{key} to keep the shared wording"
     end
   end
 
