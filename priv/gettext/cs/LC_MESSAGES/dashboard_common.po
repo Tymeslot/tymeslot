@@ -454,6 +454,7 @@ msgstr "Tento typ schůzky není dostupný"
 msgid "This poll is confirmed. The winning time is highlighted below."
 msgstr "Tato anketa je potvrzena. Vítězný termín je zvýrazněn níže."
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
 #: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "This poll is no longer open."
@@ -748,3 +749,83 @@ msgstr "%{date}, %{time}"
 #, elixir-autogen, elixir-format
 msgid "Cancel this poll"
 msgstr "Zrušit tuto anketu"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} more person asked for a voting link but hasn't voted with it yet."
+msgid_plural "%{count} more people asked for a voting link but haven't voted with it yet."
+msgstr[0] "%{count} další osoba požádala o odkaz k hlasování, ale zatím s ním nehlasovala."
+msgstr[1] "%{count} další osoby požádaly o odkaz k hlasování, ale zatím s ním nehlasovaly."
+msgstr[2] "%{count} dalších osob požádalo o odkaz k hlasování, ale zatím s ním nehlasovalo."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#, elixir-autogen, elixir-format
+msgid "At most one email every 15 minutes, naming who voted, with the current standings."
+msgstr "Nejvýše jeden e-mail za 15 minut, se jmény hlasujících a aktuálním stavem."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "Email me about new votes"
+msgstr "Upozorňovat e-mailem na nové hlasy"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} address was already on the poll."
+msgid_plural "%{count} addresses were already on the poll."
+msgstr[0] "%{count} adresa už v anketě byla."
+msgstr[1] "%{count} adresy už v anketě byly."
+msgstr[2] "%{count} adres už v anketě bylo."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "A poll can have up to %{max} participants."
+msgstr "Anketa může mít nejvýše %{max} účastníků."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't send the invitations. Please try again."
+msgstr "Pozvánky se nepodařilo odeslat. Zkuste to znovu."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Enter at least one email address."
+msgstr "Zadejte alespoň jednu e-mailovou adresu."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation sent to %{count} person."
+msgid_plural "Invitations sent to %{count} people."
+msgstr[0] "Pozvánka odeslána %{count} osobě."
+msgstr[1] "Pozvánky odeslány %{count} osobám."
+msgstr[2] "Pozvánky odeslány %{count} osobám."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Invite by email (optional)"
+msgstr "Pozvat e-mailem (volitelné)"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Not valid email addresses: %{entries}"
+msgstr "Neplatné e-mailové adresy: %{entries}"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "One address per line or separated by commas. Each person gets an email with their own voting link."
+msgstr "Jedna adresa na řádek nebo oddělené čárkami. Každý dostane e-mail s vlastním odkazem k hlasování."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Send invitations"
+msgstr "Odeslat pozvánky"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting for: %{names}"
+msgstr "Čeká se na: %{names}"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "ada@example.com, Grace Hopper <grace@example.com>"
+msgstr "jan.novak@example.com, Jana Nováková <jana@example.com>"

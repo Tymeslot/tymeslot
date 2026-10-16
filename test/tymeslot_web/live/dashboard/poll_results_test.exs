@@ -70,8 +70,21 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
           position: 1
         )
 
-      alice = insert(:poll_participant, poll: poll, name: "Alice", email: "alice@example.com")
-      bob = insert(:poll_participant, poll: poll, name: "Bob", email: "bob@example.com")
+      alice =
+        insert(:poll_participant,
+          poll: poll,
+          name: "Alice",
+          email: "alice@example.com",
+          voted_at: DateTime.utc_now(:second)
+        )
+
+      bob =
+        insert(:poll_participant,
+          poll: poll,
+          name: "Bob",
+          email: "bob@example.com",
+          voted_at: DateTime.utc_now(:second)
+        )
 
       insert(:poll_vote, participant: alice, time_slot: slot1, response: :yes)
       insert(:poll_vote, participant: alice, time_slot: slot2, response: :no)
@@ -504,7 +517,14 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
       refute render(view) =~ "Carol"
 
       # A guest votes: insert the vote, then broadcast as the domain does.
-      carol = insert(:poll_participant, poll: poll, name: "Carol", email: "carol@example.com")
+      carol =
+        insert(:poll_participant,
+          poll: poll,
+          name: "Carol",
+          email: "carol@example.com",
+          voted_at: DateTime.utc_now(:second)
+        )
+
       insert(:poll_vote, participant: carol, time_slot: slot1, response: :yes)
       Polls.broadcast_update(poll.id)
 

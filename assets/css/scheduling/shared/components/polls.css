@@ -91,6 +91,20 @@ html.scheduling-app .poll-identity-form {
   gap: var(--space-md);
 }
 
+/* Shown in place of the form once a voting link was requested */
+html.scheduling-app .poll-link-sent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+html.scheduling-app .poll-link-sent-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  color: var(--theme-accent);
+}
+
 html.scheduling-app .poll-field {
   display: flex;
   flex-direction: column;

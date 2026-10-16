@@ -13,11 +13,6 @@ msgstr ""
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
-msgid "Continue to vote"
-msgstr "Pokračovat k hlasování"
-
-#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
-#, elixir-autogen, elixir-format
 msgid "If need be"
 msgstr "V nouzi"
 
@@ -40,11 +35,6 @@ msgstr "Jednu z vašich odpovědí se nepodařilo rozpoznat. Obnovte prosím st
 #, elixir-autogen, elixir-format
 msgid "Please check your name and email, then try again."
 msgstr "Zkontrolujte prosím své jméno a e-mail a zkuste to znovu."
-
-#: lib/tymeslot_web/themes/core/poll_voting.ex
-#, elixir-autogen, elixir-format
-msgid "Please register before voting."
-msgstr "Před hlasováním se prosím zaregistrujte."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
@@ -111,20 +101,10 @@ msgstr "Hlasování v této anketě bylo ukončeno."
 msgid "Voting has closed. Here are the final responses."
 msgstr "Hlasování bylo ukončeno. Zde jsou konečné odpovědi."
 
-#: lib/tymeslot_web/themes/core/poll_voting.ex
-#, elixir-autogen, elixir-format
-msgid "We couldn't find your registration. Please register again."
-msgstr "Vaši registraci se nepodařilo najít. Zaregistrujte se prosím znovu."
-
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "Yes"
 msgstr "Ano"
-
-#: lib/tymeslot_web/themes/core/poll_voting.ex
-#, elixir-autogen, elixir-format
-msgid "You're registered. Your responses are saved as you vote."
-msgstr "Registrace proběhla. Odpovědi se ukládají průběžně při hlasování."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
@@ -140,3 +120,58 @@ msgstr "Vaše jméno"
 #, elixir-autogen, elixir-format
 msgid "Your responses have been saved."
 msgstr "Vaše odpovědi byly uloženy."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "Email me my voting link"
+msgstr "Poslat odkaz k hlasování"
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "Enter your name and email and we'll send you a personal link to vote with. Voted before? Enter the same email to get your link again."
+msgstr "Zadejte své jméno a e-mail a pošleme vám osobní odkaz k hlasování. Hlasujete znovu? Zadejte stejný e-mail a odkaz vám pošleme znovu."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing there after a few minutes? Check your spam folder."
+msgstr "Ani po několika minutách nic nepřišlo? Zkontrolujte složku se spamem."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Please open the personal voting link we emailed you to vote."
+msgstr "Pro hlasování otevřete osobní odkaz, který jsme vám poslali e-mailem."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "Save your responses to confirm your email address. They count from then on."
+msgstr "Uložením odpovědí potvrdíte svou e-mailovou adresu. Od té chvíle se počítají."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Thanks, your responses count now. We've emailed you a copy with your personal link."
+msgstr "Děkujeme, vaše odpovědi se nyní počítají. E-mailem jsme vám poslali kopii s osobním odkazem."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "This is your personal link. Please don't share it: anyone who has it can change your responses."
+msgstr "Toto je váš osobní odkaz. Nesdílejte ho: kdokoli, kdo ho má, může změnit vaše odpovědi."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "This poll is receiving a lot of requests right now. Please try again later."
+msgstr "Tato anketa nyní dostává velké množství žádostí. Zkuste to prosím později."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "This voting link is no longer valid. Please ask for a new one on the poll's page."
+msgstr "Tento odkaz k hlasování už neplatí. Požádejte o nový na stránce ankety."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "We've sent a personal voting link to %{email}. Open it to vote; your responses count once you save them there."
+msgstr "Na adresu %{email} jsme poslali osobní odkaz k hlasování. Otevřete ho a hlasujte; vaše odpovědi se započítají, jakmile je tam uložíte."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Please enter your name, then save your responses again."
+msgstr "Zadejte své jméno a pak odpovědi uložte znovu."

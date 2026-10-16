@@ -19,6 +19,7 @@ defmodule Tymeslot.Security.SecretsAtRestTest do
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Polls
+  alias Tymeslot.Polls.PollParticipantQueries
   alias Tymeslot.Polls.PollSchema
   alias Tymeslot.Polls.Voting
   alias Tymeslot.Security.Encryption
@@ -103,17 +104,20 @@ defmodule Tymeslot.Security.SecretsAtRestTest do
       assert id == poll.id
     end
 
-    test "a poll participant's link, handed back when they register again" do
+    test "a poll participant's link, emailed again when they ask again" do
       poll = insert(:poll)
       attrs = %{"name" => "Ada", "email" => "ada@example.com"}
 
-      {:ok, participant} = Voting.register_participant(poll, attrs)
+      :ok = Voting.request_link(poll, attrs)
+      participant = PollParticipantQueries.get_by_poll_and_email(poll.id, "ada@example.com")
 
       assert_encrypted_and_hashed("poll_participants", participant.id, "token", participant.token)
       assert Voting.get_participant(poll, participant.token).id == participant.id
 
-      assert {:ok, again} = Voting.register_participant(poll, attrs)
-      assert again.token == participant.token
+      :ok = Voting.request_link(poll, attrs)
+
+      assert PollParticipantQueries.get_by_poll_and_email(poll.id, "ada@example.com").token ==
+               participant.token
     end
 
     test "a guest's RSVP token" do
