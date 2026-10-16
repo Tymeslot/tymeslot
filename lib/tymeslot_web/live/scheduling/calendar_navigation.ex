@@ -1,10 +1,22 @@
 defmodule TymeslotWeb.Live.Scheduling.CalendarNavigation do
   @moduledoc """
   Calendar navigation boundary helpers for the scheduling flow.
-  Pure functions for determining month and week navigation limits.
+  Pure functions for determining month and week navigation limits, and the
+  accessible names of a month calendar's previous and next buttons.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Utils.DateTimeUtils
+
+  @doc """
+  The accessible name of a month calendar's previous (`:prev`) or next
+  (`:next`) button, for a theme whose buttons show a chevron or an arrow
+  rather than words. Pass it as the button's `aria-label`.
+  """
+  @spec month_nav_label(:prev | :next) :: String.t()
+  def month_nav_label(:prev), do: dgettext("booking", "Previous month")
+  def month_nav_label(:next), do: dgettext("booking", "Next month")
 
   @doc """
   Checks if previous month navigation should be disabled.

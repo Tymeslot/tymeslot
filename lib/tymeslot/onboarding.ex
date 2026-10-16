@@ -6,6 +6,7 @@ defmodule Tymeslot.Onboarding do
   alias Tymeslot.Onboarding.OnboardingQueries
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
+  alias Tymeslot.Themes.Catalog
 
   @manual_dashboard_setup_items ~w(theme meeting_types share)
 
@@ -18,7 +19,7 @@ defmodule Tymeslot.Onboarding do
       full_name: nil,
       timezone: Profiles.get_default_timezone(),
       avatar: nil,
-      booking_theme: "1"
+      booking_theme: Catalog.default_id()
     }
   end
 
@@ -138,29 +139,38 @@ defmodule Tymeslot.Onboarding do
   Seeds each booking theme with a video background so the onboarding preview —
   and the published page — shows motion out of the box.
 
-  Picks one random preset for the user and applies it to every theme in
-  `theme_ids` that does not already use a video background. Idempotent: a theme
-  that already has a video background (a returning user, or one who picked their
-  own) is left untouched, so the choice is never overwritten or re-randomised.
+  Picks a random preset for each theme in `theme_ids` from the videos that
+  theme offers, sharing one preset between themes that offer it, and applies
+  it where no video background is set yet (as a choice of the theme's
+  background option, so an uploaded image it replaces is removed with its
+  file). Themes without video are skipped. Idempotent: a theme that already
+  has a video background (a returning user, or one who picked their own) is
+  left untouched, so the choice is never overwritten or re-randomised.
   """
   @spec ensure_preview_video_backgrounds(map(), [String.t()]) :: :ok
   def ensure_preview_video_backgrounds(%{id: profile_id}, theme_ids)
       when is_integer(profile_id) and is_list(theme_ids) do
-    preset = ThemeCustomizations.random_video_preset()
-    Enum.each(theme_ids, &put_video_background_unless_set(profile_id, &1, preset))
+    theme_ids
+    |> Map.new(&{&1, ThemeCustomizations.video_preset_keys(&1)})
+    |> ThemeCustomizations.preview_videos()
+    |> Enum.each(fn {theme_id, preset} ->
+      put_video_background_unless_set(profile_id, theme_id, preset)
+    end)
   end
 
   def ensure_preview_video_backgrounds(_profile, _theme_ids), do: :ok
 
+  # A choice of the background group, as the dashboard makes it: the save
+  # drops any upload the video replaces, and the update deletes its file.
   defp put_video_background_unless_set(profile_id, theme_id, preset) do
     case ThemeCustomizations.get_by_profile_and_theme(profile_id, theme_id) do
-      %{background_type: "video"} ->
+      %{settings: %{"background_type" => "video"}} ->
         :ok
 
       _other ->
-        ThemeCustomizations.upsert_theme_customization(profile_id, theme_id, %{
-          "background_type" => "video",
-          "background_value" => preset
+        ThemeCustomizations.apply_option(profile_id, theme_id, :background, %{
+          "field" => "video",
+          "value" => preset
         })
     end
   end

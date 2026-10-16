@@ -6,7 +6,7 @@ defmodule Tymeslot.Availability.OfferSharedAvailabilityBookedSlotsTest do
   `Tymeslot.Availability.OfferBookedSlotsTest` pins that the host's own
   bookings withdraw their slots whether or not they have reached a calendar. A
   combined link answers for several people, so the same has to hold for each
-  of them, in the day list as well as in the month grid.
+  of them, in the day list, the week view and the month grid.
 
   The named users were covered before the host was:
   `SharedAvailability.busy_times/3` has always added the bookings they host to
@@ -69,6 +69,21 @@ defmodule Tymeslot.Availability.OfferSharedAvailabilityBookedSlotsTest do
     end
   end
 
+  describe "slots_for_range/4 with a named user" do
+    test "a booking on the named user's own page withdraws the slot from the week", context do
+      %{date: date, guest: guest} = context
+      key = Date.to_iso8601(date)
+
+      assert "11:00 AM" in Map.fetch!(range_slots(context, date), key)
+
+      book(guest, date, ~T[11:00:00])
+
+      week = range_slots(context, date)
+      refute "11:00 AM" in Map.fetch!(week, key)
+      assert week[key] == slots(context)
+    end
+  end
+
   describe "days_in_range/4 with a named user" do
     test "a day the named user is booked through is no longer bookable", context do
       %{date: date, guest: guest} = context
@@ -114,6 +129,17 @@ defmodule Tymeslot.Availability.OfferSharedAvailabilityBookedSlotsTest do
       |> Offer.slots_for_date(Date.to_iso8601(context.date), 60)
 
     slots
+  end
+
+  defp range_slots(context, date) do
+    AvailabilityCache.clear_all()
+
+    {:ok, week} =
+      context
+      |> request()
+      |> Offer.slots_for_range(date, Date.add(date, 6), 60)
+
+    week
   end
 
   defp days(context, start_date, end_date) do

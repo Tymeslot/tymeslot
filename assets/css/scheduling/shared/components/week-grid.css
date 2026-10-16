@@ -1,0 +1,203 @@
+/* ==========================================================================
+   Week grid: the shared structure
+
+   Matches TymeslotWeb.Themes.Shared.Components.WeekGrid. It reads only the
+   tokens every theme defines (the token contract in shared/tokens.css and
+   REQUIRED_TOKENS) plus one of its own, which a theme may set in its
+   variables.css:
+
+     --week-grid-gap   the space between days and around the nav
+                       (default var(--space-sm))
+
+   A theme keeps its own surfaces, sizes and states for the grid in a module
+   of its own, imported right after this file.
+
+   The grid is its own container, so it reduces by its own width wherever it
+   sits: seven days side by side, three in view below 40rem, one below 20rem,
+   the rest a sideways scroll that snaps to a day.
+   ========================================================================== */
+
+.week-grid {
+  container-name: week-grid;
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--week-grid-gap, var(--space-sm));
+}
+
+.week-grid__nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.week-grid__range {
+  flex: 1;
+  margin: 0;
+  text-align: center;
+  color: var(--ink-1);
+  font-weight: var(--font-weight-semibold);
+}
+
+.week-grid__nav-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2xs);
+  border: var(--border-width-thin) solid var(--line-1);
+  border-radius: var(--radius-control);
+  background: var(--surface-1);
+  color: var(--ink-1);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.week-grid__nav-button:hover:not(:disabled) {
+  border-color: var(--theme-primary);
+}
+
+.week-grid__nav-button:disabled {
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+
+.week-grid__jump:focus-visible,
+.week-grid__nav-button:focus-visible,
+.week-grid__slot:focus-visible {
+  outline: var(--border-width-thick) solid var(--theme-primary);
+  outline-offset: var(--space-3xs);
+}
+
+.week-grid__nav-icon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+/* A text link, on a row of its own once the nav wraps. */
+.week-grid__jump {
+  flex-basis: 100%;
+  padding: var(--space-2xs) var(--space-xs);
+  border: none;
+  background: none;
+  color: var(--theme-primary);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.week-grid__jump:hover {
+  text-decoration: underline;
+}
+
+.week-grid__days {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: var(--week-grid-gap, var(--space-sm));
+}
+
+.week-grid--loading .week-grid__days {
+  opacity: 0.6;
+}
+
+.week-grid__day {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  min-width: 0;
+}
+
+.week-grid__day-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.week-grid__day-date {
+  color: var(--ink-1);
+  font-size: var(--theme-font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.week-grid__day--today .week-grid__day-name,
+.week-grid__day--today .week-grid__day-date {
+  color: var(--theme-primary);
+}
+
+.week-grid__slots {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.week-grid__slot {
+  width: 100%;
+  padding: var(--space-2xs) var(--space-xs);
+  border: var(--border-width-thin) solid var(--line-1);
+  border-radius: var(--radius-control);
+  background: var(--surface-1);
+  color: var(--ink-1);
+  font-size: var(--theme-font-size-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.week-grid__slot:hover {
+  border-color: var(--theme-primary);
+}
+
+/* Two classes, as the slot list's, so :hover never wins over the selection. */
+.week-grid__slot.week-grid__slot--selected {
+  background: var(--theme-primary-solid);
+  border-color: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+}
+
+.week-grid__empty {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: var(--theme-font-size-xs);
+  text-align: center;
+}
+
+.week-grid__loading,
+.week-grid__error {
+  padding: var(--space-md);
+  color: var(--ink-2);
+  text-align: center;
+}
+
+.week-grid__error {
+  color: var(--theme-danger);
+}
+
+@container week-grid (max-width: 40rem) {
+  .week-grid__days {
+    grid-auto-columns: calc((100% - 2 * var(--week-grid-gap, var(--space-sm))) / 3);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+  }
+
+  .week-grid__day {
+    scroll-snap-align: start;
+  }
+}
+
+@container week-grid (max-width: 20rem) {
+  .week-grid__days {
+    grid-auto-columns: 100%;
+  }
+}

@@ -27,6 +27,7 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
   alias Ecto.Changeset
   alias Tymeslot.Repo
   alias Tymeslot.RescheduleTestSetup
+  alias TymeslotWeb.ThemeTestMatrix
 
   setup :verify_on_exit!
 
@@ -62,7 +63,7 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
       view |> element("button[data-testid='duration-option']") |> render_click()
       view |> element("button[data-testid='next-step']") |> render_click()
 
-      wait_until(fn -> has_element?(view, "button.time-slot-button") end)
+      wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
 
       state = :sys.get_state(view.pid).socket.assigns
 
@@ -76,7 +77,7 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
       assert Floki.find(document, "button.calendar-day--selected") != [],
              "expected the reschedule to open on a day painted as selected"
 
-      assert Floki.attribute(document, "button.time-slot-button", "phx-value-time") != [],
+      assert Floki.attribute(document, "button[data-testid='time-slot']", "phx-value-time") != [],
              "expected that day's times to be listed"
 
       # The hour stays the rescheduler's decision, exactly as for a new booking.
@@ -203,89 +204,73 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
       assert assigns.duration == "pinned-chat"
     end
 
-    @tag :capture_log
-    test "offers the meeting's own type, already selected", %{
-      conn: conn,
-      user: user,
-      profile: profile,
-      meeting: meeting
-    } do
-      second_public_type(user)
+    # Each theme marks the selected card its own way (Rhythm on a wrapper
+    # around the button carrying the testid), so the selector comes from the
+    # matrix: one written for another theme matches nothing and would pass on
+    # a page that pinned nothing.
+    for theme <- ThemeTestMatrix.all() do
+      @tag :capture_log
+      test "#{theme.name}: offers the meeting's own type, already selected", %{
+        conn: conn,
+        user: user,
+        profile: profile,
+        meeting: meeting
+      } do
+        second_public_type(user)
+        profile = use_theme(profile, unquote(theme.id))
 
-      {:ok, view, _html} =
-        live(conn, "/#{profile.username}?timezone=UTC&reschedule_meeting_uid=#{meeting.uid}")
+        {:ok, view, _html} =
+          live(conn, "/#{profile.username}?timezone=UTC&reschedule_meeting_uid=#{meeting.uid}")
 
-      # One card out of the two the organiser offers, and it is the meeting's
-      # own: a reschedule is not a choice of meeting type, so the step confirms
-      # what is being moved rather than asking for something that cannot be
-      # changed.
-      cards =
-        view
-        |> render()
-        |> Floki.parse_document!()
-        |> Floki.find("[data-testid='duration-option']")
+        # One card out of the two the organiser offers, and it is the meeting's
+        # own: a reschedule is not a choice of meeting type, so the step
+        # confirms what is being moved rather than asking for something that
+        # cannot be changed.
+        cards =
+          view
+          |> render()
+          |> Floki.parse_document!()
+          |> Floki.find("[data-testid='duration-option']")
 
-      assert length(cards) == 1
-      assert Floki.attribute(cards, "phx-value-duration") == ["quick-chat"]
+        assert length(cards) == 1
+        assert Floki.attribute(cards, "phx-value-duration") == ["quick-chat"]
 
-      # Already selected, so "next" is one click rather than a forced pick.
-      assert has_element?(view, "[data-testid='duration-option'].duration-card--selected")
-      refute has_element?(view, "[data-testid='next-step'][disabled]")
+        # Already selected, so "next" is one click rather than a forced pick.
+        assert has_element?(view, unquote(theme.selected_duration_selector))
+        refute has_element?(view, "[data-testid='next-step'][disabled]")
+      end
+
+      @tag :capture_log
+      test "#{theme.name}: clicking the pinned card does not deselect it", %{
+        conn: conn,
+        profile: profile,
+        meeting: meeting
+      } do
+        # A theme may deselect the selected card when it is clicked again,
+        # which is how a booker changes their mind there (Rhythm does). On a
+        # pinned reschedule that would disable "next" over a choice that was
+        # never theirs and leave them stuck on the step, so the selection has
+        # to survive the click.
+        profile = use_theme(profile, unquote(theme.id))
+
+        {:ok, view, _html} =
+          live(conn, "/#{profile.username}?timezone=UTC&reschedule_meeting_uid=#{meeting.uid}")
+
+        # Anchored first: without this the refute below passes just as well on
+        # a page that never pinned anything, where the click selects a card.
+        assert has_element?(view, unquote(theme.selected_duration_selector))
+
+        view |> element("[data-testid='duration-option']") |> render_click()
+        render(view)
+
+        assert has_element?(view, unquote(theme.selected_duration_selector))
+        refute has_element?(view, "[data-testid='next-step'][disabled]")
+      end
     end
+  end
 
-    @tag :capture_log
-    test "offers the meeting's own type already selected in Rhythm too", %{
-      conn: conn,
-      user: user,
-      profile: profile,
-      meeting: meeting
-    } do
-      # Rhythm marks the selection on the card's wrapper rather than on the
-      # button carrying the testid, so the Quill assertion above matches
-      # nothing here and would pass on a page that pinned nothing.
-      second_public_type(user)
-      {:ok, profile} = profile |> Changeset.change(%{booking_theme: "2"}) |> Repo.update()
-
-      {:ok, view, _html} =
-        live(conn, "/#{profile.username}?timezone=UTC&reschedule_meeting_uid=#{meeting.uid}")
-
-      cards =
-        view
-        |> render()
-        |> Floki.parse_document!()
-        |> Floki.find("[data-testid='duration-option']")
-
-      assert length(cards) == 1
-      assert Floki.attribute(cards, "phx-value-duration") == ["quick-chat"]
-
-      assert has_element?(view, ".duration-card.selected [data-testid='duration-option']")
-      refute has_element?(view, "[data-testid='next-step'][disabled]")
-    end
-
-    @tag :capture_log
-    test "clicking the pinned card in Rhythm does not deselect it", %{
-      conn: conn,
-      profile: profile,
-      meeting: meeting
-    } do
-      # Rhythm deselects the selected card when it is clicked again, which is
-      # how a booker changes their mind there. On a pinned reschedule that
-      # would disable "next" over a choice that was never theirs and leave
-      # them stuck on the step, so the selection has to survive the click.
-      {:ok, profile} = profile |> Changeset.change(%{booking_theme: "2"}) |> Repo.update()
-
-      {:ok, view, _html} =
-        live(conn, "/#{profile.username}?timezone=UTC&reschedule_meeting_uid=#{meeting.uid}")
-
-      # Anchored first: without this the refute below passes just as well on a
-      # page that never pinned anything, where the click selects a card.
-      assert has_element?(view, ".duration-card.selected [data-testid='duration-option']")
-
-      view |> element("[data-testid='duration-option']") |> render_click()
-      render(view)
-
-      assert has_element?(view, ".duration-card.selected [data-testid='duration-option']")
-      refute has_element?(view, "[data-testid='next-step'][disabled]")
-    end
+  defp use_theme(profile, theme_id) do
+    {:ok, profile} = profile |> Changeset.change(%{booking_theme: theme_id}) |> Repo.update()
+    profile
   end
 end

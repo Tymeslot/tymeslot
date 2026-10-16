@@ -8,7 +8,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ColourP
 
   Pass a unique `id`, the parent LiveComponent's `target`, an `initial_hex`,
   and the `commit_event` to push back to the server when the user releases the
-  pointer / commits the hex / picks via eyedropper.
+  pointer / commits the hex / picks via eyedropper. `commit_params` (for
+  example the option and field) are merged into every commit's payload, so
+  several pickers can share one event.
   """
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
@@ -17,6 +19,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ColourP
   attr :target, :any, required: true, doc: "Phx target for pushEventTo (LiveComponent CID)."
   attr :initial_hex, :string, required: true, doc: "Seed colour, e.g. \"#06b6d4\"."
   attr :commit_event, :string, required: true, doc: "Event name pushed on commit."
+
+  attr :commit_params, :map,
+    default: %{},
+    doc: "Static params merged into every commit (for example the option and field)."
 
   @spec colour_picker_widget(map()) :: Phoenix.LiveView.Rendered.t()
   def colour_picker_widget(assigns) do
@@ -28,6 +34,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ColourP
       phx-update="ignore"
       data-target={@target}
       data-event={@commit_event}
+      data-commit-params={Jason.encode!(@commit_params)}
       data-initial-hex={@initial_hex}
     >
       <div class="flex flex-col items-center gap-4 sm:flex-row sm:items-start">

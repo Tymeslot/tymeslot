@@ -35,6 +35,11 @@ topo_order = false
 sort_commits = "newest"
 
 commit_parsers = [
+  # Internal commits that went out without a "Changelog: skip" footer. A pushed
+  # commit is never reworded, so it is skipped here by its full SHA instead.
+  { sha = "d1fe2f469f8d14024baa77bdb7884f123d57bb99", skip = true },
+  { sha = "4b7a730db9c9633122c0293384cfb7cad64022e0", skip = true },
+  { sha = "c924aa478eca4d9eaa3198ab71185d103ebeec26", skip = true },
   # Skip commits explicitly marked as changelog-internal.
   # git-cliff reconstructs a footer as "token:value" with no space after the
   # separator, so a "^Changelog: skip" pattern (with a space) never matches and

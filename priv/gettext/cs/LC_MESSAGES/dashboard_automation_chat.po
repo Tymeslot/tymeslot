@@ -249,11 +249,6 @@ msgstr "Slack se nepodařilo odpojit."
 msgid "Failed to generate link. Please try again."
 msgstr "Odkaz se nepodařilo vygenerovat. Zkuste to prosím znovu."
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram/form_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to initialize integration. Please try again."
-msgstr "Integraci se nepodařilo inicializovat. Zkuste to prosím znovu."
-
 #: lib/tymeslot_web/live/dashboard/automation/slack/state_handlers.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex
 #, elixir-autogen, elixir-format
@@ -838,3 +833,8 @@ msgstr "Chyba služby Slack: %{error}"
 #, elixir-autogen, elixir-format
 msgid "Delete %{name}"
 msgstr "Smazat %{name}"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram/form_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to initialise integration. Please try again."
+msgstr "Integraci se nepodařilo inicializovat. Zkuste to prosím znovu."

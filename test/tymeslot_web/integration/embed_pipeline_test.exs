@@ -326,4 +326,59 @@ defmodule TymeslotWeb.Integration.EmbedPipelineTest do
       assert response =~ ~s(data-embed-layout="column")
     end
   end
+
+  # `core.js` picks the session-free `/embed-live` socket when `<html>` carries
+  # `data-embed-served`. It must be there exactly when the page was served
+  # without a session cookie, or a top-level embed visit reloads for ever
+  # (marker missing) or an ordinary page loses its session socket (marker
+  # present).
+  describe "the served-as-embed marker" do
+    setup do
+      user = insert(:user)
+
+      insert(:profile,
+        user: user,
+        username: "markeruser",
+        allowed_embed_domains: ["example.com"],
+        booking_theme: "1"
+      )
+
+      insert(:meeting_type, user: user, is_active: true)
+      :ok
+    end
+
+    test "is rendered for an embed request without Sec-Fetch-Dest", %{conn: conn} do
+      html = conn |> get("/markeruser?embed=1") |> html_response(200)
+
+      assert html =~ ~r/<html[^>]*\sdata-embed-served[\s>]/
+    end
+
+    test "is rendered for a framed embed request", %{conn: conn} do
+      html =
+        conn
+        |> put_req_header("sec-fetch-dest", "iframe")
+        |> get("/markeruser?embed=1")
+        |> html_response(200)
+
+      assert html =~ ~r/<html[^>]*\sdata-embed-served[\s>]/
+    end
+
+    test "is absent for an embed URL opened top-level", %{conn: conn} do
+      html =
+        conn
+        |> put_req_header("sec-fetch-dest", "document")
+        |> get("/markeruser?embed=1")
+        |> html_response(200)
+
+      assert html =~ "<html"
+      refute html =~ "data-embed-served"
+    end
+
+    test "is absent for an ordinary page", %{conn: conn} do
+      html = conn |> get("/markeruser") |> html_response(200)
+
+      assert html =~ "<html"
+      refute html =~ "data-embed-served"
+    end
+  end
 end

@@ -139,7 +139,11 @@ defmodule Tymeslot.Test.TagTaxonomy do
       :tld_freshness,
       # Fetches IANA's latest time zone release to check the vendored tz data
       # has not gone stale — run with mix test --only tz_freshness
-      :tz_freshness
+      :tz_freshness,
+      # Fetches the Cloudron App Store package's Dockerfile to check it has not
+      # drifted from Dockerfile.cloudron — run with
+      # mix test --only cloudron_package_freshness
+      :cloudron_package_freshness
     ]
   }
 

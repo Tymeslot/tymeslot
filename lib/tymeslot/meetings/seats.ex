@@ -3,7 +3,9 @@ defmodule Tymeslot.Meetings.Seats do
   Seat arithmetic for group meetings.
 
   A meeting's taken seats are its live participants plus their guests, so a
-  booking with G guest emails consumes `1 + G` seats. Query work is
+  booking with G guest emails consumes `1 + G` seats. A guest who declines
+  gives their seat back (`holds_seat?/1`); answering yes again takes one only
+  while one is free (`Tymeslot.Meetings.Guests.record_rsvp/2`). Query work is
   delegated to `Tymeslot.Meetings.ParticipantQueries`; the arithmetic and
   the traffic-light thresholds live here so availability, booking and the
   themes all share one definition.
@@ -21,13 +23,13 @@ defmodule Tymeslot.Meetings.Seats do
   @amber_threshold 0.5
   @red_threshold 0.2
 
-  @doc "Seats taken on a meeting: live participants plus their guests."
+  @doc "Seats taken on a meeting: live participants plus their guests who hold a seat."
   @spec seats_taken(binary()) :: non_neg_integer()
   def seats_taken(meeting_id), do: ParticipantQueries.count_seats_taken(meeting_id)
 
   @doc """
-  Seats taken from already-loaded participant and guest lists: `length(participants)
-  + length(guests)`.
+  Seats taken from already-loaded participant and guest lists: the
+  participants plus the guests who hold a seat.
 
   For callers that already hold a meeting's preloaded associations (the
   dashboard meeting cards) and would otherwise re-derive this count
@@ -36,7 +38,12 @@ defmodule Tymeslot.Meetings.Seats do
   """
   @spec seats_taken(list(), list()) :: non_neg_integer()
   def seats_taken(participants, guests) when is_list(participants) and is_list(guests),
-    do: length(participants) + length(guests)
+    do: length(participants) + Enum.count(guests, &holds_seat?/1)
+
+  @doc "Whether a guest holds a seat: every guest does, until they decline."
+  @spec holds_seat?(map()) :: boolean()
+  def holds_seat?(%{status: "declined"}), do: false
+  def holds_seat?(_guest), do: true
 
   @doc """
   Seats still free on a meeting, never negative. The organiser may lower

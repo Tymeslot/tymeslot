@@ -25,6 +25,9 @@ url_scheme = System.get_env("URL_SCHEME") || "http"
 # listen port to appear in the URL, which is the default path here.
 url_port = if url_scheme == "https", do: 443, else: port
 
+# One Tailwind watcher per booking-page theme (see theme_stylesheets.exs).
+{theme_stylesheets, _binding} = Code.eval_file("theme_stylesheets.exs", __DIR__)
+
 config :tymeslot, TymeslotWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: port],
   url: [host: host, port: url_port, scheme: url_scheme],
@@ -54,20 +57,25 @@ config :tymeslot, TymeslotWeb.Endpoint,
   # overlay's dev.exs adds to this list rather than replacing it. The corollary
   # is that every key here must stay distinct from the SaaS ones
   # (`esbuild_saas`, `tailwind_saas`, `tailwind_marketing`): a collision
-  # silently drops one side's watcher.
+  # silently drops one side's watcher. The theme watchers are `tailwind_<key>`,
+  # one per theme directory, so a theme key must not be `tymeslot` (Core's own
+  # Tailwind profile), `saas` or `marketing`.
   #
   # `--sourcemap=inline` belongs only here. `embed.js` and the iframe embed are
   # served to third-party sites in production, so their deploy builds stay bare.
-  watchers: [
-    esbuild: {Esbuild, :install_and_run, [:tymeslot, ~w(--sourcemap=inline --watch)]},
-    esbuild_bundles: {Esbuild, :install_and_run, [:bundles, ~w(--sourcemap=inline --watch)]},
-    esbuild_embed: {Esbuild, :install_and_run, [:embed, ~w(--sourcemap=inline --watch)]},
-    esbuild_iframe_embed:
-      {Esbuild, :install_and_run, [:iframe_embed, ~w(--sourcemap=inline --watch)]},
-    tailwind: {Tailwind, :install_and_run, [:tymeslot, ~w(--watch)]},
-    tailwind_quill: {Tailwind, :install_and_run, [:quill, ~w(--watch)]},
-    tailwind_rhythm: {Tailwind, :install_and_run, [:rhythm, ~w(--watch)]}
-  ],
+  watchers:
+    [
+      esbuild: {Esbuild, :install_and_run, [:tymeslot, ~w(--sourcemap=inline --watch)]},
+      esbuild_bundles: {Esbuild, :install_and_run, [:bundles, ~w(--sourcemap=inline --watch)]},
+      esbuild_embed: {Esbuild, :install_and_run, [:embed, ~w(--sourcemap=inline --watch)]},
+      esbuild_iframe_embed:
+        {Esbuild, :install_and_run, [:iframe_embed, ~w(--sourcemap=inline --watch)]},
+      tailwind: {Tailwind, :install_and_run, [:tymeslot, ~w(--watch)]}
+    ] ++
+      for(
+        key <- theme_stylesheets,
+        do: {:"tailwind_#{key}", {Tailwind, :install_and_run, [String.to_atom(key), ~w(--watch)]}}
+      ),
   live_reload: [
     patterns: [
       ~r"priv/static/(?!uploads/).*(js|css|png|jpeg|jpg|gif|svg)$",
@@ -103,7 +111,8 @@ config :phoenix_live_view,
   debug_heex_annotations: true,
   enable_expensive_runtime_checks: true
 
-# Configure the database
+# Configure the database. DEV_DB_POOL_SIZE lowers the pool when several dev
+# servers share one Postgres and would together exceed its max_connections.
 config :tymeslot, Tymeslot.Repo,
   username: "postgres",
   password: "postgres",
@@ -111,7 +120,7 @@ config :tymeslot, Tymeslot.Repo,
   database: "tymeslot_dev#{System.get_env("DB_SUFFIX")}",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
-  pool_size: 80
+  pool_size: String.to_integer(System.get_env("DEV_DB_POOL_SIZE") || "80")
 
 # Configure Oban for development
 # Queue definitions in config.exs are loaded at runtime by application.ex

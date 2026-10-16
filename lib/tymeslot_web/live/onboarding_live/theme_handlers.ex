@@ -1,9 +1,10 @@
 defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
   @moduledoc """
-  Theme, colour-scheme and booking-page-preview handlers for the onboarding flow.
+  Theme, onboarding-choice and booking-page-preview handlers for the onboarding flow.
 
-  Owns the "choose your theme" feature end to end: selecting a booking theme or
-  colour scheme, seeding a random video background once a calendar is connected,
+  Owns the "choose your theme" feature end to end: switching between the theme
+  stories and every theme's look, selecting a booking theme or
+  one of its onboarding choices, seeding a random video background once a calendar is connected,
   and opening/closing the real full-page preview of the user's own booking page.
   It also exposes the theme-state helpers the mount pipeline needs, so every
   theme concern lives in one place rather than leaking into the LiveView.
@@ -16,6 +17,8 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
+  alias Tymeslot.ThemeCustomizations.Spec
+  alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Live.Scheduling.PreviewMode
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
@@ -46,41 +49,45 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
   end
 
   @doc """
-  Applies a colour scheme to the current theme, preserving its other
-  customisation (e.g. the seeded video background).
+  Switches the theme step between the stories (`:stories`, "Which of these
+  sounds like you?") and the visual picker of every theme's look (`:all`).
   """
-  @spec handle_select_color_scheme(String.t(), LiveView.Socket.t()) ::
+  @spec handle_theme_picker(:stories | :all, LiveView.Socket.t()) ::
           {:noreply, LiveView.Socket.t()}
-  def handle_select_color_scheme(scheme_id, socket) do
-    profile = socket.assigns[:profile]
+  def handle_theme_picker(picker, socket) when picker in [:stories, :all],
+    do: {:noreply, Component.assign(socket, :theme_picker, picker)}
 
-    if profile do
-      case ThemeCustomizations.apply_color_scheme_change(
-             profile.id,
-             profile.booking_theme,
-             socket.assigns.theme_customization,
-             scheme_id
-           ) do
-        {:ok, customization} ->
-          {:noreply,
-           socket
-           |> Component.assign(:theme_customization, customization)
-           |> Component.assign(:color_scheme, customization.color_scheme)}
-
-        {:error, _reason} ->
-          {:noreply,
-           LiveView.put_flash(
-             socket,
-             :error,
-             dgettext(
-               "onboarding_wizard",
-               "Could not update the colour scheme. Please try again."
-             )
-           )}
-      end
+  @doc """
+  Applies one of the current theme's onboarding choices (`:onboarding_choices`)
+  through its option group, preserving the theme's other customisation (e.g.
+  the seeded video background). The group and field come from the theme's
+  spec, never from the client.
+  """
+  @spec handle_select_choice(String.t(), LiveView.Socket.t()) :: {:noreply, LiveView.Socket.t()}
+  def handle_select_choice(value, socket) do
+    with %{} = profile <- socket.assigns[:profile],
+         %{group: group, field: field} <- socket.assigns[:onboarding_choices] do
+      profile.id
+      |> ThemeCustomizations.apply_option(profile.booking_theme, group, %{
+        "field" => field,
+        "value" => value
+      })
+      |> choice_result(socket)
     else
-      {:noreply, socket}
+      nil -> {:noreply, socket}
     end
+  end
+
+  defp choice_result({:ok, customization}, socket),
+    do: {:noreply, Component.assign(socket, :theme_customization, customization)}
+
+  defp choice_result({:error, _reason}, socket) do
+    {:noreply,
+     LiveView.put_flash(
+       socket,
+       :error,
+       dgettext("onboarding_wizard", "Could not update the colour scheme. Please try again.")
+     )}
   end
 
   @doc """
@@ -128,17 +135,19 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
   end
 
   @doc """
-  Resolves the initial `{customization, color_scheme}` for a profile (or the
-  neutral default before a profile exists) for the mount pipeline.
+  Resolves the initial `{customization, onboarding_choices}` for a profile
+  (or the default theme's, with no customisation, before a profile exists)
+  for the mount pipeline.
   """
-  @spec initial_theme_state(map() | nil) :: {map() | nil, String.t()}
-  def initial_theme_state(nil), do: {nil, "default"}
+  @spec initial_theme_state(map() | nil) :: {map() | nil, Spec.onboarding_choices()}
+  def initial_theme_state(nil),
+    do: {nil, ThemeCustomizations.onboarding_choices(Catalog.default_id())}
 
   def initial_theme_state(profile) do
     %{customization: customization} =
       ThemeCustomizations.initialize_customization(profile.id, profile.booking_theme)
 
-    {customization, customization.color_scheme}
+    {customization, ThemeCustomizations.onboarding_choices(profile.booking_theme)}
   end
 
   @doc """
@@ -155,12 +164,12 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
   end
 
   defp assign_theme_state(socket, profile) do
-    {customization, color_scheme} = initial_theme_state(profile)
+    {customization, onboarding_choices} = initial_theme_state(profile)
 
     socket
     |> Component.assign(:profile, profile)
     |> Component.assign(:theme_customization, customization)
-    |> Component.assign(:color_scheme, color_scheme)
+    |> Component.assign(:onboarding_choices, onboarding_choices)
   end
 
   # Booking-theme ids offered in onboarding, derived from the theme registry.

@@ -129,6 +129,30 @@ defmodule TymeslotWeb.GuestRsvpHTML do
     """
   end
 
+  @doc """
+  Shown to a guest of a group booking who declined, gave their seat back, and
+  now answers yes while no seat is free.
+  """
+  @spec full(map()) :: Phoenix.LiveView.Rendered.t()
+  def full(assigns) do
+    ~H"""
+    <TokenPage.shell>
+      <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-token-full bg-tymeslot-100 text-tymeslot-500">
+        <.icon name="hero-user-group" class="h-9 w-9" />
+      </div>
+      <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">
+        {dgettext("booking_manage", "This meeting is now fully booked")}
+      </h1>
+      <p class="mt-2 text-token-base text-tymeslot-600">
+        {dgettext(
+          "booking_manage",
+          "Your seat was given to someone else after you declined. Your answer stays as it was; please contact the person who invited you or the meeting host."
+        )}
+      </p>
+    </TokenPage.shell>
+    """
+  end
+
   @doc "Shown when the RSVP token is missing or invalid."
   @spec invalid(map()) :: Phoenix.LiveView.Rendered.t()
   def invalid(assigns) do

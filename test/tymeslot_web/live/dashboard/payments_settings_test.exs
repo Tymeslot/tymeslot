@@ -413,7 +413,9 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       |> render_submit()
 
       # The Stripe refund runs in start_async; await it before asserting.
-      render_async(view)
+      # render_async/2 returns as soon as the task exits, so the budget is
+      # sized for a loaded CI box rather than the 100ms ExUnit default.
+      render_async(view, 5_000)
 
       reloaded = BookingPaymentQueries.get(payment.id)
       assert reloaded.status == "refunded"
@@ -450,7 +452,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       |> render_submit()
 
       # The Stripe refund runs in start_async; await it before asserting.
-      render_async(view)
+      render_async(view, 5_000)
 
       reloaded = BookingPaymentQueries.get(payment.id)
       assert reloaded.status == "partially_refunded"

@@ -452,7 +452,9 @@ defmodule TymeslotWeb.Router do
     end
   end
 
-  # Theme-aware payment return pages (Stripe Checkout success/cancel)
+  # Payment return pages (the Stripe Checkout success and cancel URLs). One
+  # pair of LiveViews serves every theme; the slug selects it. Stripe stores
+  # these URLs on each Checkout Session, so their shape must never change.
   scope "/", TymeslotWeb do
     pipe_through :theme_browser
 
@@ -462,17 +464,11 @@ defmodule TymeslotWeb.Router do
         TymeslotWeb.Hooks.LocaleHook,
         TymeslotWeb.Hooks.ClientInfoHook
       ] do
-      live "/themes/quill/payment-processing/:meeting_id",
-           Themes.Quill.PaymentProcessingLive
+      live "/themes/:theme_slug/payment-processing/:meeting_id",
+           Themes.Shared.PaymentReturnLive.Processing
 
-      live "/themes/quill/payment-cancelled/:meeting_id",
-           Themes.Quill.PaymentCancelledLive
-
-      live "/themes/rhythm/payment-processing/:meeting_id",
-           Themes.Rhythm.PaymentProcessingLive
-
-      live "/themes/rhythm/payment-cancelled/:meeting_id",
-           Themes.Rhythm.PaymentCancelledLive
+      live "/themes/:theme_slug/payment-cancelled/:meeting_id",
+           Themes.Shared.PaymentReturnLive.Cancelled
     end
   end
 

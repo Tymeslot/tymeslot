@@ -2,9 +2,11 @@ defmodule Tymeslot.Availability.Offer do
   @moduledoc """
   The times a public booking page offers.
 
-  Answers the two questions the booking page asks: which times are free on one
-  date (`slots_for_date/3`), and which days in a range have any free time at
-  all (`days_in_range/4`). Both build their rules from `config/4`, which rests
+  Answers the three questions the booking page asks: which times are free on
+  one date (`slots_for_date/3`), which times are free on every day of a range
+  (`slots_for_range/4`, for a week view), and which days in a range have any
+  free time at all (`days_in_range/4`). All three build their rules from
+  `config/4`, which rests
   on `Tymeslot.Availability.Schedules.config/2`, the same rules the booking
   submit re-checks against (`Tymeslot.Bookings.Policy.scheduling_config/2`).
   A time offered here is therefore a time the submit accepts.
@@ -14,7 +16,7 @@ defmodule Tymeslot.Availability.Offer do
   own time, and a full one is dropped (see
   `Tymeslot.Availability.GroupSlots`).
 
-  Both questions are answered against the same busy set: the host's connected
+  Every question is answered against the same busy set: the host's connected
   calendars, merged with the host's own live bookings. The bookings are what
   stop the two paths disagreeing, because the submit refuses from the meetings
   table and would otherwise reject a slot this module had just offered; see
@@ -34,7 +36,6 @@ defmodule Tymeslot.Availability.Offer do
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.SharedAvailability
-  alias Tymeslot.Utils.DateTimeUtils
 
   # A day. The duration can come from a URL slug, which is visitor input, so an
   # unbounded parse would let `/:username/99999/book` hold a multi-day slot.
@@ -47,6 +48,11 @@ defmodule Tymeslot.Availability.Offer do
   # are the booker's, up to a timezone offset away; nothing further out can
   # touch a slot inside.
   @busy_window_padding_days Reach.utc_padding_days()
+
+  # The longest range `slots_for_range/4` answers: six weeks, the month grid's
+  # display range. A week view asks for seven days; the bound keeps a caller's
+  # mistake from computing a year of slots.
+  @max_range_days 42
 
   @typedoc """
   What a booking page is showing, and to whom.
@@ -114,6 +120,43 @@ defmodule Tymeslot.Availability.Offer do
       else
         free_slots(request, date, duration)
       end
+    end
+  end
+
+  @doc """
+  The times free on every day of `start_date..end_date` (inclusive) for a
+  meeting of `duration`, as a map of ISO 8601 date strings to that day's
+  slots. Every day of the range is a key; a day with nothing free maps to
+  `[]`.
+
+  Each day's list is exactly what `slots_for_date/3` returns for that day: the
+  days run through the same slot engine with the same rules and the same busy
+  set, but the host's calendar, their booking-limit counts, the meeting being
+  rescheduled and the schedule's overrides and time off are read once for the
+  whole range instead of once per day. A demo page answers each day from the
+  demo provider, as `slots_for_date/3` does.
+
+  Returns `{:error, :invalid_range}` when `end_date` is before `start_date`,
+  `{:error, :range_too_long}` for a range of more than #{@max_range_days} days,
+  and `{:error, reason}` when the organiser's calendar cannot be read.
+  """
+  @spec slots_for_range(request(), Date.t(), Date.t(), String.t() | integer() | nil) ::
+          {:ok, %{String.t() => [term()]}} | {:error, any()}
+  def slots_for_range(request, %Date{} = start_date, %Date{} = end_date, duration) do
+    cond do
+      Date.compare(start_date, end_date) == :gt ->
+        {:error, :invalid_range}
+
+      Date.diff(end_date, start_date) >= @max_range_days ->
+        {:error, :range_too_long}
+
+      demo?(request) ->
+        collect_days(start_date, end_date, fn date ->
+          slots_for_date(request, Date.to_iso8601(date), duration)
+        end)
+
+      true ->
+        free_slots_in_range(request, start_date, end_date, duration)
     end
   end
 
@@ -243,87 +286,90 @@ defmodule Tymeslot.Availability.Offer do
     end
   end
 
-  # Booking together with other users (`?with=`) answers the calendar grid day
-  # by day from the actual slot lists, because a day is only bookable when the
-  # host's slots and every guest's overlap. It stays off the range cache: that
-  # key knows nothing about the guests, and a combined map must never be served
-  # to the host's plain link or the other way round. The calendar events it
-  # reads are still the cached booking-window fetches, one per user.
+  # Booking together with other users (`?with=`) answers the calendar grid from
+  # the days' actual times (`free_slots_in_range/4`, which `slots_for_range/4`
+  # answers with), because a day is only bookable when the host's times and
+  # every guest's overlap. It stays off the range cache: that key knows nothing
+  # about the guests, and a combined map must never be served to the host's
+  # plain link or the other way round.
   defp shared_days(request, start_date, end_date, duration_minutes) do
-    moving = moving_meeting(request)
-
-    with {:ok, events} <- booking_window_events(request, start_date) do
-      config = shared_config(request, moving, {start_date, end_date}, duration_minutes)
-
-      guests =
-        request
-        |> shared_availability_guests()
-        |> SharedAvailability.prefetch_schedule_data(start_date, end_date)
-
-      today = request.user_timezone |> DateTimeUtils.now_in_timezone() |> DateTime.to_date()
-      last_day = Date.add(today, Calculate.config_policy(config).max_advance_booking_days)
-
-      day = %{
-        request: request,
-        moving: moving,
-        window: {today, last_day},
-        events: busy_periods(events, request.profile.user_id, start_date, end_date, moving),
-        config: config,
-        guests: guests,
-        duration_minutes: duration_minutes
-      }
-
-      Enum.reduce_while(Date.range(start_date, end_date), {:ok, %{}}, fn date, {:ok, acc} ->
-        case shared_day_slots(date, day) do
-          {:ok, slots} -> {:cont, {:ok, Map.put(acc, Date.to_string(date), slots != [])}}
-          {:error, _reason} = error -> {:halt, error}
-        end
-      end)
+    with {:ok, days} <- free_slots_in_range(request, start_date, end_date, duration_minutes) do
+      {:ok, Map.new(days, fn {date, slots} -> {date, slots != []} end)}
     end
   end
 
-  # The host's rules made strict enough for every named user, with the host's
-  # schedule data loaded once for the whole range.
-  defp shared_config(%{profile: profile} = request, moving, {start_date, end_date}, duration) do
-    meeting_type = request[:meeting_type]
-    schedule = Schedules.resolve_for(meeting_type, profile)
+  # `free_slots/3` for every day of a range, with everything that does not
+  # depend on the day read once: the calendar (whose fetch covers the whole
+  # booking window whatever date it is given), the proven reschedule meeting,
+  # the booking-limit counts over the range, and the schedule's weekly hours,
+  # overrides and time off for the range and a day either side, which
+  # `Calculate.available_starts/6` then finds already in the config. The busy
+  # set is merged over the range, so each day sees every booking and event
+  # that `free_slots/3` would merge for it alone.
+  defp free_slots_in_range(
+         %{profile: %{user_id: user_id} = profile} = request,
+         start_date,
+         end_date,
+         duration
+       ) do
+    moving = moving_meeting(request)
 
-    schedule
-    |> config(
-      meeting_type,
-      limit_checker(request, moving_uid(moving), start_date, end_date),
-      duration
-    )
-    |> SharedAvailability.strictest_policy(shared_availability_guests(request))
-    |> Calculate.prefetch_schedule_data(
-      schedule && schedule.id,
-      Date.add(start_date, -1),
-      Date.add(end_date, 1)
-    )
-  end
+    with {:ok, events} <-
+           CalendarEvents.get_calendar_events_from_context(
+             start_date,
+             user_id,
+             calendar_context(request)
+           ) do
+      duration_minutes = bounded_duration(duration)
+      meeting_type = request[:meeting_type]
+      limit_checker = limit_checker(request, moving_uid(moving), start_date, end_date)
 
-  defp shared_day_slots(date, %{window: {today, last_day}} = day) do
-    if Date.compare(date, today) == :lt or Date.compare(date, last_day) == :gt do
-      {:ok, []}
-    else
-      with {:ok, slots} <-
-             Calculate.available_slots(
-               date,
-               day.duration_minutes,
-               day.request.user_timezone,
-               owner_timezone(day.request.profile),
-               day.events,
-               day.config
-             ) do
-        filter_for_guests(
-          slots,
-          date,
-          day.duration_minutes,
-          {day.request, day.moving},
-          day.guests,
-          day.config
+      config =
+        meeting_type
+        |> Schedules.resolve_for(profile)
+        |> config(meeting_type, limit_checker, duration_minutes)
+        |> SharedAvailability.strictest_policy(shared_availability_guests(request))
+
+      config =
+        Calculate.prefetch_schedule_data(
+          config,
+          config.schedule_id,
+          Date.add(start_date, -1),
+          Date.add(end_date, 1)
         )
-      end
+
+      guests = prefetched_guests(request, start_date, end_date)
+      busy = busy_periods(events, user_id, start_date, end_date, moving)
+
+      group_context = %{
+        user_timezone: request.user_timezone,
+        owner_timezone: owner_timezone(profile),
+        events: busy,
+        config: config
+      }
+
+      collect_days(start_date, end_date, fn date ->
+        with {:ok, starts} <-
+               Calculate.available_starts(
+                 date,
+                 duration_minutes,
+                 request.user_timezone,
+                 owner_timezone(profile),
+                 busy,
+                 config
+               ),
+             {:ok, starts} <-
+               filter_for_guests(
+                 starts,
+                 date,
+                 duration_minutes,
+                 {request, moving},
+                 guests,
+                 config
+               ) do
+          {:ok, offered_slots(starts, meeting_type, date, group_context)}
+        end
+      end)
     end
   end
 
@@ -350,6 +396,26 @@ defmodule Tymeslot.Availability.Offer do
   end
 
   defp shared_availability_guests(request), do: request[:shared_availability_guests] || []
+
+  # The named users' schedules, read once for the whole range.
+  defp prefetched_guests(request, start_date, end_date) do
+    request
+    |> shared_availability_guests()
+    |> SharedAvailability.prefetch_schedule_data(start_date, end_date)
+  end
+
+  # `day_slots` for every day of the range, keyed by ISO date; the first day
+  # that fails fails the range.
+  defp collect_days(start_date, end_date, day_slots) do
+    start_date
+    |> Date.range(end_date)
+    |> Enum.reduce_while({:ok, %{}}, fn date, {:ok, acc} ->
+      case day_slots.(date) do
+        {:ok, slots} -> {:cont, {:ok, Map.put(acc, Date.to_iso8601(date), slots)}}
+        {:error, _reason} = error -> {:halt, error}
+      end
+    end)
+  end
 
   defp free_days(
          %{profile: %{user_id: user_id} = profile} = request,

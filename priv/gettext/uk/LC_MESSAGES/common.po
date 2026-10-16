@@ -21,11 +21,6 @@ msgstr "Ні"
 msgid "Yes"
 msgstr "Так"
 
-#: lib/tymeslot/custom_fields/answer_renderer.ex
-#, elixir-autogen, elixir-format
-msgid "✓ Acknowledged (%{at})"
-msgstr "✓ Підтверджено (%{at})"
-
 #: lib/tymeslot_web/components/core_components/flash.ex
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
@@ -374,3 +369,8 @@ msgstr[2] "Ви можете налаштувати до %{count} нагадув
 #, elixir-autogen, elixir-format
 msgid "Loading"
 msgstr "Завантаження"
+
+#: lib/tymeslot/custom_fields/answer_renderer.ex
+#, elixir-autogen, elixir-format
+msgid "✓ Acknowledged"
+msgstr "✓ Підтверджено"

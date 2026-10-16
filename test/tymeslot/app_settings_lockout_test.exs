@@ -11,6 +11,7 @@ defmodule Tymeslot.AppSettingsLockoutTest do
 
   @moduletag :infrastructure
 
+  import ExUnit.CaptureLog
   import Tymeslot.Factory
   import Tymeslot.AppSettingsEnvHelpers
 
@@ -330,6 +331,101 @@ defmodule Tymeslot.AppSettingsLockoutTest do
       values = AppSettings.effective_values()
 
       assert values[:password_auth_enabled].locked_states == []
+    end
+  end
+
+  describe "settings fixed by an environment variable" do
+    test "a pinned PASSWORD_AUTH_ENABLED=false outranks a stored true in the guard" do
+      enable_credentialed_oauth()
+      insert(:user, is_admin: true)
+
+      {:ok, _settings} =
+        AppSettings.update(%{password_auth_enabled: true, oauth_auth_enabled: true})
+
+      # The operator then sets PASSWORD_AUTH_ENABLED=false and restarts.
+      Application.put_env(:tymeslot, :password_auth_enabled, false)
+      pin_setting(:password_auth_enabled, "PASSWORD_AUTH_ENABLED")
+      AppSettings.load!()
+
+      # SSO is now the only way in, so switching it off must be refused.
+      assert {:error, :would_lock_out} = AppSettings.update(%{oauth_auth_enabled: false})
+      assert AppSettings.effective_values()[:oauth_auth_enabled].locked_states == [false]
+    end
+  end
+
+  # The boot-time check: an operator's variables, unlike the admin page, are
+  # not stopped by the guard, so a pin can leave every admin locked out.
+  # The upgrade scenario: password sign-in switched off and OIDC on from the
+  # admin page, then ENABLE_OAUTH_AUTH=false set and the app restarted.
+  defp boot_with_oauth_pinned_off do
+    enable_credentialed_oauth()
+    insert(:user, is_admin: true)
+
+    {:ok, _settings} =
+      AppSettings.update(%{password_auth_enabled: false, oauth_auth_enabled: true})
+
+    Application.put_env(:tymeslot, :social_auth,
+      google_enabled: false,
+      github_enabled: false,
+      oauth_enabled: false
+    )
+
+    pin_setting(:oauth_auth_enabled, "ENABLE_OAUTH_AUTH")
+    AppSettings.load!()
+  end
+
+  describe "pins_blocking_sign_in/0 and warn_if_pins_block_sign_in/0" do
+    test "names the pin when it leaves no sign-in path" do
+      boot_with_oauth_pinned_off()
+
+      assert LockoutPolicy.pins_blocking_sign_in() == [{:oauth_auth_enabled, "ENABLE_OAUTH_AUTH"}]
+    end
+
+    test "logs an error naming the variable and how to recover" do
+      boot_with_oauth_pinned_off()
+
+      log = capture_log([level: :error], fn -> AppSettings.warn_if_pins_block_sign_in() end)
+
+      assert log =~ "No admin can sign in"
+      assert log =~ "ENABLE_OAUTH_AUTH"
+      assert log =~ "then restart"
+    end
+
+    test "names a pinned-on provider that has no credentials" do
+      enable_credentialless_oauth()
+      insert(:user, is_admin: true)
+      Application.put_env(:tymeslot, :password_auth_enabled, false)
+      pin_setting(:oauth_auth_enabled, "ENABLE_OAUTH_AUTH")
+
+      assert LockoutPolicy.pins_blocking_sign_in() == [{:oauth_auth_enabled, "ENABLE_OAUTH_AUTH"}]
+    end
+
+    test "is empty when a pin leaves another path usable" do
+      clamp_sso_disabled()
+      insert(:user, is_admin: true)
+      pin_setting(:oauth_auth_enabled, "ENABLE_OAUTH_AUTH")
+
+      assert LockoutPolicy.pins_blocking_sign_in() == []
+    end
+
+    test "stays quiet about a lockout no pin is involved in" do
+      clamp_sso_disabled()
+      insert(:user, is_admin: true)
+      Application.put_env(:tymeslot, :password_auth_enabled, false)
+      pin_setting(:registration_enabled, "REGISTRATION_ENABLED")
+
+      assert LockoutPolicy.pins_blocking_sign_in() == []
+
+      log = capture_log([level: :error], fn -> AppSettings.warn_if_pins_block_sign_in() end)
+      refute log =~ "No admin can sign in"
+    end
+
+    test "is empty when no admin exists" do
+      clamp_sso_disabled()
+      Application.put_env(:tymeslot, :password_auth_enabled, false)
+      pin_setting(:oauth_auth_enabled, "ENABLE_OAUTH_AUTH")
+
+      assert LockoutPolicy.pins_blocking_sign_in() == []
     end
   end
 end

@@ -71,8 +71,10 @@ body.quill-theme {
    short laptop heights above this. Core owns the banner's grid slot, so the
    responsive hide lives here, not in SaaS. */
 @media (max-height: 500px) {
-  .main-gradient.theme-grid .branding-footer {
-    display: none;
+  :where(html:not([data-embedded])) {
+    .main-gradient.theme-grid .branding-footer {
+      display: none;
+    }
   }
 }
 
@@ -80,14 +82,18 @@ body.quill-theme {
    viewport-bounded schedule card claims the reclaimed height instead of forcing
    a page scroll. Two tiers keep the transition smooth as the window shortens. */
 @media (max-height: 800px) {
-  .main-gradient.theme-grid .content-area {
-    padding-bottom: var(--space-2xl);
+  :where(html:not([data-embedded])) {
+    .main-gradient.theme-grid .content-area {
+      padding-bottom: var(--space-2xl);
+    }
   }
 }
 
 @media (max-height: 640px) {
-  .main-gradient.theme-grid .content-area {
-    padding-bottom: var(--space-md);
+  :where(html:not([data-embedded])) {
+    .main-gradient.theme-grid .content-area {
+      padding-bottom: var(--space-md);
+    }
   }
 }
 
@@ -95,7 +101,7 @@ body.quill-theme {
    so the card feels balanced rather than sinking toward the bottom.
    The bottom padding on content-area steals space from below, shifting
    the auto-margin midpoint upward. */
-.main-gradient.theme-grid .content-area .container {
+.main-gradient.theme-grid .content-area .quill-container {
   flex: initial;
   margin-top: auto;
   margin-bottom: auto;
@@ -140,7 +146,7 @@ body.quill-theme {
 
 /* Stretch the centred container into a full-height column (was margin-auto
    centred + content-sized) so its descendants can flex-fill the row. */
-.main-gradient.theme-grid:has(.calendar-card) .content-area .container {
+.main-gradient.theme-grid:has(.calendar-card) .content-area .quill-container {
   flex: 1 1 auto;
   min-height: 0;
   margin-top: 0;
@@ -152,7 +158,7 @@ body.quill-theme {
 /* page_layout (`flex-1 flex flex-col`) wraps the step-nav + stack. It grows
    already but defaults to `min-height: auto` (min-content), which would refuse to
    shrink below its tall content — so the bound never reaches the card. */
-.main-gradient.theme-grid:has(.calendar-card) .content-area .container > div {
+.main-gradient.theme-grid:has(.calendar-card) .content-area .quill-container > div {
   min-height: 0;
 }
 
@@ -187,14 +193,6 @@ body.quill-theme {
   min-height: 0;
 }
 
-/* Override glass gradient colors with theme colors */
-.theme-1 {
-  --glass-gradient-primary: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
-  --glass-gradient-secondary: linear-gradient(135deg, var(--theme-primary-hover) 0%, var(--theme-secondary) 100%);
-  --color-primary-500: var(--theme-primary);
-  --color-primary-600: var(--theme-primary-hover);
-}
-
 /* Footer styling */
 .footer-gradient {
   padding: var(--space-2xl) var(--space-lg);
@@ -205,8 +203,13 @@ body.quill-theme {
   color: var(--theme-text);
 }
 
-/* Container sizing - flexible and responsive */
-.container {
+/* Step container: the root div of every booking step. It also carries
+   Tailwind's `container` utility, which supplies width: 100% and the
+   breakpoint max-widths. That utility is layered, so each cap set below wins,
+   and its 40rem cap applies only between 640px and 767px, where this file sets
+   none. Style the step container through .quill-container only: a .container
+   rule here would restyle every Tailwind container on the page. */
+.quill-container {
   width: 100%;
   margin: 0 auto;
   padding-left: var(--space-lg);
@@ -226,34 +229,34 @@ body.quill-theme {
 /* ===== Container Breakpoints ===== */
 
 @media (max-width: 640px) {
-  .container {
+  .quill-container {
     padding-left: var(--space-lg);
     padding-right: var(--space-lg);
   }
 }
 
 @media (min-width: 640px) and (max-width: 767px) {
-  .container {
+  .quill-container {
     padding-left: var(--space-xl);
     padding-right: var(--space-xl);
   }
 }
 
 @media (min-width: 768px) {
-  .container {
+  .quill-container {
     padding-left: var(--space-2xl);
     padding-right: var(--space-2xl);
   }
 }
 
 @media (min-width: 768px) and (max-width: 1023px) {
-  .container {
+  .quill-container {
     max-width: none;
   }
 }
 
 @media (min-width: 1024px) {
-  .container {
+  .quill-container {
     padding-left: var(--space-2xl);
     padding-right: var(--space-2xl);
     max-width: 1024px;
@@ -261,13 +264,13 @@ body.quill-theme {
 }
 
 @media (min-width: 1024px) and (max-width: 1279px) {
-  .container {
+  .quill-container {
     max-width: 1024px;
   }
 }
 
 @media (min-width: 1280px) {
-  .container {
+  .quill-container {
     padding-left: var(--space-2xl);
     padding-right: var(--space-2xl);
     max-width: 1280px;
@@ -275,13 +278,13 @@ body.quill-theme {
 }
 
 @media (min-width: 1280px) and (max-width: 1535px) {
-  .container {
+  .quill-container {
     max-width: 1280px;
   }
 }
 
 @media (min-width: 1536px) {
-  .container {
+  .quill-container {
     padding-left: var(--space-2xl);
     padding-right: var(--space-2xl);
     max-width: 1536px;
@@ -292,47 +295,43 @@ body.quill-theme {
 
 /* Medium short screens — reduce vertical padding */
 @media (max-height: 700px) and (min-height: 601px) {
-  .container {
-    padding-top: var(--space-xs);
-    padding-bottom: var(--space-xs);
-  }
+  :where(html:not([data-embedded])) {
+    .quill-container {
+      padding-top: var(--space-xs);
+      padding-bottom: var(--space-xs);
+    }
 
-  .section-header {
-    margin-bottom: var(--space-md);
+    .section-header {
+      margin-bottom: var(--space-md);
+    }
   }
 }
 
 /* Short screens — compact spacing */
 @media (max-height: 600px) {
-  .section-header {
-    font-size: var(--theme-font-size-md);
-    margin-bottom: var(--space-xs);
-  }
+  :where(html:not([data-embedded])) {
+    .section-header {
+      font-size: var(--theme-font-size-md);
+      margin-bottom: var(--space-xs);
+    }
 
-  .content-area {
-    gap: var(--space-xs);
+    .content-area {
+      gap: var(--space-xs);
+    }
   }
 }
 
 /* Extremely short screens — minimal chrome */
 @media (max-height: 400px) {
-  .section-header {
-    font-size: var(--theme-font-size-sm);
-  }
+  :where(html:not([data-embedded])) {
+    .section-header {
+      font-size: var(--theme-font-size-sm);
+    }
 
-  .container {
-    padding-left: var(--space-xs);
-    padding-right: var(--space-xs);
-  }
-}
-
-/* ===== Reduced Motion ===== */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+    .quill-container {
+      padding-left: var(--space-xs);
+      padding-right: var(--space-xs);
+    }
   }
 }
 
@@ -380,7 +379,7 @@ body.quill-theme {
     background: white;
     color: black;
     box-shadow: none;
-    border: var(--border-width-thin) solid #cccccc;
+    border: var(--border-width-thin) solid var(--print-line);
   }
 
   button {

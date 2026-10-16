@@ -102,11 +102,6 @@ msgstr "Uwierzytelnianie nie powiodło się. Spróbuj ponownie."
 msgid "Authentication session mismatch. Please sign in and try again."
 msgstr "Niezgodność sesji uwierzytelniania. Zaloguj się i spróbuj ponownie."
 
-#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
-#, elixir-autogen, elixir-format
-msgid "Authorization was denied. Please try again."
-msgstr "Autoryzacja została odrzucona. Spróbuj ponownie."
-
 #: lib/tymeslot_web/components/dashboard/integrations/shared/provider_picker_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Back to providers"
@@ -436,3 +431,8 @@ msgstr "Przewodnik konfiguracji"
 #, elixir-autogen, elixir-format
 msgid "Delete %{type} integration"
 msgstr "Usuń integrację typu %{type}"
+
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
+#, elixir-autogen, elixir-format
+msgid "Authorisation was denied. Please try again."
+msgstr "Autoryzacja została odrzucona. Spróbuj ponownie."

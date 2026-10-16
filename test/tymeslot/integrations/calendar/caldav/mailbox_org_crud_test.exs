@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.MailboxOrgCrudTest do
     XmlHandler
   }
 
+  alias Tymeslot.CalDAVTestHelpers
   alias Tymeslot.Integrations.Calendar.CreatedEvent
 
   # ---------------------------------------------------------------------------
@@ -318,22 +319,24 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.MailboxOrgCrudTest do
 
   describe "PUT semantics (Open-Xchange returns 201 for both create and update)" do
     test "treats 201 on update as success rather than error" do
-      stub_sequential(
-        fn conn ->
-          assert conn.method == "HEAD"
+      # A write to Open-Xchange first asks the account for its own addresses
+      # (`CalDAV.Scheduling`), so the PROPFINDs are answered whenever they come.
+      ReqTest.stub(:tymeslot_http, fn
+        %{method: "PROPFIND"} = conn ->
+          CalDAVTestHelpers.answer_address_lookup(conn, ["user@mailbox.org"])
 
+        %{method: "HEAD"} = conn ->
           conn
           |> Conn.put_resp_header("etag", "\"2785358-1-1777300818156\"")
           |> Conn.send_resp(200, "")
-        end,
-        fn conn ->
+
+        conn ->
           assert conn.method == "PUT"
           [if_match | _rest] = Conn.get_req_header(conn, "if-match")
           assert if_match == "\"2785358-1-1777300818156\""
           # Open-Xchange returns 201 — not 204 — even for updates.
           Conn.send_resp(conn, 201, "")
-        end
-      )
+      end)
 
       assert :ok =
                Events.update_calendar_event(
@@ -350,11 +353,15 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.MailboxOrgCrudTest do
     end
 
     test "create against the base64-id calendar path uses the server-root URL" do
-      ReqTest.stub(:tymeslot_http, fn conn ->
-        assert conn.method == "PUT"
-        assert conn.request_path == "/caldav/Y2FsOi8vMC8zMg/new-uid.ics"
-        refute String.contains?(conn.request_path, "/caldav/Y2FsOi8vMC8zMg/caldav/")
-        Conn.send_resp(conn, 201, "")
+      ReqTest.stub(:tymeslot_http, fn
+        %{method: "PROPFIND"} = conn ->
+          CalDAVTestHelpers.answer_address_lookup(conn, ["user@mailbox.org"])
+
+        conn ->
+          assert conn.method == "PUT"
+          assert conn.request_path == "/caldav/Y2FsOi8vMC8zMg/new-uid.ics"
+          refute String.contains?(conn.request_path, "/caldav/Y2FsOi8vMC8zMg/caldav/")
+          Conn.send_resp(conn, 201, "")
       end)
 
       assert {:ok, %CreatedEvent{uid: "new-uid"}} =

@@ -77,5 +77,26 @@ if System.get_env("E2E") == "true" do
   Application.put_env(:wallaby, :js_logger, File.open!(console_log_path, [:write, :utf8]))
   IO.puts("E2E browser console: #{console_log_path}")
 
+  # Chrome checks every submitted login against its list of breached
+  # passwords, and the factory's default password is a common one. When the
+  # check flags it, Chrome opens its own warning over the page, the page
+  # loses focus, and WebDriver clicks stop reaching the document for as long
+  # as the warning is up, surviving later `visit/2` calls. Any test that
+  # clicks after `log_in_via_browser/2` then fails at random, depending on
+  # whether the warning has opened yet. Turning the check off keeps the page
+  # focused.
+  chromedriver = Application.get_env(:wallaby, :chromedriver, [])
+
+  capabilities =
+    chromedriver
+    |> Keyword.get_lazy(:capabilities, &Wallaby.Chrome.default_capabilities/0)
+    |> put_in([:chromeOptions, :prefs], %{"profile.password_manager_leak_detection" => false})
+
+  Application.put_env(
+    :wallaby,
+    :chromedriver,
+    Keyword.put(chromedriver, :capabilities, capabilities)
+  )
+
   {:ok, _apps} = Application.ensure_all_started(:wallaby)
 end

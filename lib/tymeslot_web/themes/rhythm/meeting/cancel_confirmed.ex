@@ -8,8 +8,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper
 
-  attr :theme_customization, :map, required: true
-  attr :custom_css, :string, required: true
+  attr :theme_tokens, :any, required: true
   attr :locale, :string, required: true
   attr :language_dropdown_open, :boolean, required: true
 
@@ -20,13 +19,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
   def render(assigns) do
     ~H"""
     <Wrapper.rhythm_wrapper
-      theme_customization={@theme_customization}
-      custom_css={@custom_css}
+      theme_tokens={@theme_tokens}
       locale={@locale}
       language_dropdown_open={@language_dropdown_open}
       show_language_switcher={true}
     >
-      <div class="scheduling-box">
+      <div class="scheduling-box booker-card">
         <div class="slide-container">
           <div class="slide active">
             <div class="slide-content confirmation-slide">

@@ -27,11 +27,13 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
 
   describe "the form" do
     test "offers the customisation, switched off, on the theme page", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, html} = live(conn, ~p"/dashboard/theme")
 
       assert html =~ "Booking Page Text"
       assert html =~ "Use my own wording"
       assert html =~ ~s(aria-checked="false")
+      # A blank required line is reported by the form, not blocked by the browser.
+      assert has_element?(view, "#booking-text-form-form[novalidate]")
     end
 
     test "shows the fields greyed out rather than hidden while switched off", %{conn: conn} do
@@ -69,6 +71,26 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
       assert saved.booking_heading == "Let's Connect!"
       assert saved.booking_greeting == "Hi! I'm Sarah."
       assert saved.booking_instruction == "Pick an option below."
+    end
+
+    test "seeds the current theme's own voice where it has one", %{
+      conn: conn,
+      profile: profile
+    } do
+      # The fixture theme's voice words all three of the form's fields.
+      profile |> change(%{booking_theme: "99"}) |> Repo.update!()
+      {:ok, view, html} = live(conn, ~p"/dashboard/theme")
+
+      assert html =~ ~s(placeholder="Book a time")
+      assert html =~ ~s(placeholder="Hello, Sarah here.")
+      assert html =~ ~s(placeholder="Choose a meeting to start.")
+
+      toggle(view)
+
+      saved = Repo.reload!(profile)
+      assert saved.booking_heading == "Book a time"
+      assert saved.booking_greeting == "Hello, Sarah here."
+      assert saved.booking_instruction == "Choose a meeting to start."
     end
 
     test "switching off resets the wording to the built-in defaults", %{

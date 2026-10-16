@@ -20,7 +20,7 @@
   height: var(--avatar-size-xl);
   border-radius: 50%;
   object-fit: cover;
-  border: var(--border-width-thick) solid rgba(255, 255, 255, 0.8);
+  border: var(--border-width-thick) solid var(--avatar-ring);
 }
 
 .avatar-checkmark {
@@ -35,6 +35,13 @@
   align-items: center;
   justify-content: center;
   color: var(--theme-on-accent);
+}
+
+/* The check, drawn as an icon rather than a text glyph a device's fonts
+   may lack. */
+.avatar-checkmark__icon {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
 }
 
 .organizer-info {
@@ -173,39 +180,45 @@
    ============================================================================ */
 
 @media (max-height: 600px) {
-  .avatar-image {
-    width: var(--avatar-size-lg);
-    height: var(--avatar-size-lg);
-  }
+  :where(html:not([data-embedded])) {
+    .avatar-image {
+      width: var(--avatar-size-lg);
+      height: var(--avatar-size-lg);
+    }
 
-  .organizer-profile {
-    margin-bottom: var(--space-sm);
-    gap: var(--space-sm);
-  }
+    .organizer-profile {
+      margin-bottom: var(--space-sm);
+      gap: var(--space-sm);
+    }
 
-  /* Collapse meeting-type descriptions when vertical space is tight, so more
-     cards fit without scrolling. Visually collapsed only — kept in the DOM and
-     accessibility tree so screen readers still reach the full description. */
-  .duration-description {
-    max-height: 0;
-    overflow: hidden;
-    opacity: 0;
+    /* Collapse meeting-type descriptions when vertical space is tight, so more
+       cards fit without scrolling. Visually collapsed only — kept in the DOM and
+       accessibility tree so screen readers still reach the full description. */
+    .duration-description {
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+    }
   }
 }
 
 @media (max-height: 500px) {
-  .organizer-profile {
-    margin-bottom: 0;
-  }
+  :where(html:not([data-embedded])) {
+    .organizer-profile {
+      margin-bottom: 0;
+    }
 
-  .organizer-greeting {
-    font-size: var(--theme-font-size-xs);
+    .organizer-greeting {
+      font-size: var(--theme-font-size-xs);
+    }
   }
 }
 
 @media (max-height: 400px) {
-  .organizer-profile {
-    display: none;
+  :where(html:not([data-embedded])) {
+    .organizer-profile {
+      display: none;
+    }
   }
 }
 
