@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   alias TymeslotWeb.Themes.Shared.Components.BookingForm
   alias TymeslotWeb.Themes.Shared.Components.GuestField
   alias TymeslotWeb.Themes.Shared.Components.LocationField
+  alias TymeslotWeb.Themes.Shared.Components.SubmitPrice
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
@@ -40,7 +41,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
       data-moment-state={assigns[:moment_state]}
     >
       <div class="slide-container">
-        <div class="slide active">
+        <div class="slide slide--enter active">
           <div class="slide-content booking-slide">
             <div class="schedule-header">
               <OrganizerHeader.organizer_header_small
@@ -130,6 +131,14 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
               organizer_name={organizer_display_name(@organizer_profile, @username_context)}
               payment_required={@meeting_type.payment_required}
               stage={:before}
+            />
+
+            <SubmitPrice.price
+              meeting_type={@meeting_type}
+              currency={@host_currency}
+              locale={@locale}
+              rescheduling={@is_rescheduling}
+              class="booking-submit-price"
             />
 
             <div class="slide-actions horizontal">

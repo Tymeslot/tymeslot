@@ -175,11 +175,6 @@ msgstr "Vous avez une vidéo personnalisée. La sélection d’un préréglage l
 msgid "Glass morphism design with elegant transparency effects and a 4-step booking flow."
 msgstr "Design en verre dépoli avec des effets de transparence élégants et un parcours de réservation en 4 étapes."
 
-#: lib/tymeslot_web/themes/rhythm/theme.ex
-#, elixir-autogen, elixir-format
-msgid "Modern sliding design with video background and a 4-slide booking flow."
-msgstr "Design moderne à glissement avec arrière-plan vidéo et un parcours de réservation en 4 diapositives."
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
 msgid "(your current theme)"
@@ -689,3 +684,8 @@ msgstr "On réserve ma personne, pas un créneau. Avant de choisir une date, on 
 #, elixir-autogen, elixir-format
 msgid "MP4 or WebM. Max %{size} MB."
 msgstr "MP4 ou WebM. %{size} Mo max."
+
+#: lib/tymeslot_web/themes/rhythm/theme.ex
+#, elixir-autogen, elixir-format
+msgid "Modern sliding design: each step slides in over a video background."
+msgstr "Design moderne à glissement : chaque étape glisse sur un arrière-plan vidéo."

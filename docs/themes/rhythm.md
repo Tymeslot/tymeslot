@@ -14,7 +14,7 @@ A creative (a photographer, a musician, a studio, a wellness space) whose bookin
 
 ## Look
 
-A narrow dark glass card over a looping video, compact, the card a fixed viewport box whose own regions scroll. The video is the atmosphere; the card stays small so it never hides it.
+A narrow dark glass card over a looping video, compact, the card a fixed viewport box whose own regions scroll. The video is the atmosphere; the card stays small so it never hides it. Each step slides in as it opens, and not at all under reduced motion.
 
 ## Options
 

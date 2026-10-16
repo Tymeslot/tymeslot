@@ -172,6 +172,14 @@
   color: var(--text-opacity-high);
 }
 
+/* A paid type's price, under its description. */
+.duration-card-price {
+  margin-top: var(--space-2xs);
+  color: var(--theme-text);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
 /* duration-card-description: replaces text-xs sm:text-sm md:text-base */
 .duration-card-description {
   font-size: var(--theme-font-size-xs);

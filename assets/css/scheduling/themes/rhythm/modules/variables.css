@@ -124,6 +124,9 @@
   --box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 var(--border-subtle);
   --slide-transition: opacity var(--transition-slow), transform var(--transition-slow);
 
+  /* How far a step's slide travels as it enters (base.css, rhythm-slide-in). */
+  --slide-enter-offset: 2rem;
+
   /* Component-specific sizing (fluid, scales with container) */
   --avatar-size-sm: clamp(32px, 4cqi, 36px);
   --avatar-size-md: clamp(36px, 5cqi, 40px);

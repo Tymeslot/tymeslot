@@ -139,7 +139,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
             :if={PathHandlers.calendar_ics_path(assigns)}
             href={PathHandlers.calendar_ics_path(assigns)}
             download
-            class="folio-button folio-button--secondary"
+            class="folio-button folio-button--primary"
             data-testid="add-to-calendar"
           >
             <.icon name="hero-calendar-days" class="folio-button__icon" />
@@ -149,7 +149,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
           </a>
           <button
             type="button"
-            class="folio-button folio-button--primary"
+            class="folio-button folio-button--quiet"
             phx-click="schedule_another"
             phx-target={@myself}
             data-testid="schedule-another"

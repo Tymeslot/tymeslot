@@ -255,6 +255,15 @@
   margin-bottom: var(--space-xs);
 }
 
+/* A paid type's price, right above the submit it will be charged after. */
+.booking-submit-price {
+  margin: 0;
+  color: var(--theme-text);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
 /* booking-actions: replaces cluster cluster-xs mt-3 */
 .booking-actions {
   display: flex;

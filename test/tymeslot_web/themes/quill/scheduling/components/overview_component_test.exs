@@ -172,6 +172,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponentTest d
 
   defp render_overview(overrides) do
     base = %{
+      host_currency: nil,
       id: "overview-step",
       locale: "en",
       username_context: "hostuser",

@@ -175,11 +175,6 @@ msgstr "Ви використовуєте власне відео. Вибір ш
 msgid "Glass morphism design with elegant transparency effects and a 4-step booking flow."
 msgstr "Дизайн у стилі гласморфізму з елегантними ефектами прозорості та 4-кроковим процесом бронювання."
 
-#: lib/tymeslot_web/themes/rhythm/theme.ex
-#, elixir-autogen, elixir-format
-msgid "Modern sliding design with video background and a 4-slide booking flow."
-msgstr "Сучасний дизайн зі слайдами, відеофоном та процесом бронювання на 4 слайди."
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
 msgid "(your current theme)"
@@ -689,3 +684,8 @@ msgstr "Люди бронюють мене, а не часовий слот. П�
 #, elixir-autogen, elixir-format
 msgid "MP4 or WebM. Max %{size} MB."
 msgstr "MP4 або WebM. Макс. %{size} МБ."
+
+#: lib/tymeslot_web/themes/rhythm/theme.ex
+#, elixir-autogen, elixir-format
+msgid "Modern sliding design: each step slides in over a video background."
+msgstr "Сучасний дизайн зі слайдами: кожен крок висувається поверх відеофону."

@@ -70,6 +70,11 @@
   white-space: nowrap;
 }
 
+.folio-meeting__price {
+  color: var(--theme-text);
+  font-variant-numeric: tabular-nums;
+}
+
 .folio-meeting__description {
   grid-column: 1 / -1;
   font-size: var(--theme-font-size-base);

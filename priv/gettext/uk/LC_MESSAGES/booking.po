@@ -1601,3 +1601,8 @@ msgstr "Завтра"
 #, elixir-autogen, elixir-format
 msgid "More times"
 msgstr "Інші варіанти часу"
+
+#: lib/tymeslot_web/themes/shared/booking_labels.ex
+#, elixir-autogen, elixir-format
+msgid "Continue to payment"
+msgstr "Перейти до оплати"

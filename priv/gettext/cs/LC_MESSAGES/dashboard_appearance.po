@@ -175,11 +175,6 @@ msgstr "Máte nahrané vlastní video. Výběrem přednastavené možnosti jej o
 msgid "Glass morphism design with elegant transparency effects and a 4-step booking flow."
 msgstr "Skleněný design s elegantními efekty průhlednosti a rezervací ve 4 krocích."
 
-#: lib/tymeslot_web/themes/rhythm/theme.ex
-#, elixir-autogen, elixir-format
-msgid "Modern sliding design with video background and a 4-slide booking flow."
-msgstr "Moderní posuvný design s videem na pozadí a rezervací na 4 snímcích."
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
 msgid "(your current theme)"
@@ -689,3 +684,8 @@ msgstr "Lidé si rezervují mě, ne časový úsek. Než si vyberou datum, měli
 #, elixir-autogen, elixir-format
 msgid "MP4 or WebM. Max %{size} MB."
 msgstr "MP4 nebo WebM. Max. %{size} MB."
+
+#: lib/tymeslot_web/themes/rhythm/theme.ex
+#, elixir-autogen, elixir-format
+msgid "Modern sliding design: each step slides in over a video background."
+msgstr "Moderní posuvný design: každý krok se vysune nad videem na pozadí."

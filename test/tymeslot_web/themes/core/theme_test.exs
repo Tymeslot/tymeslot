@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Themes.Core.ThemeTest.Fixture.Theme do
     description:
       dgettext_noop(
         "dashboard_appearance",
-        "Modern sliding design with video background and a 4-slide booking flow."
+        "Modern sliding design: each step slides in over a video background."
       ),
     story: dgettext_noop("dashboard_appearance", "A theme for the macro's own tests."),
     axes: [
@@ -68,7 +68,7 @@ defmodule TymeslotWeb.Themes.Core.ThemeTest.Overriding.Theme do
     description:
       dgettext_noop(
         "dashboard_appearance",
-        "Modern sliding design with video background and a 4-slide booking flow."
+        "Modern sliding design: each step slides in over a video background."
       ),
     story: dgettext_noop("dashboard_appearance", "A theme for the macro's own tests."),
     axes: [
@@ -148,7 +148,7 @@ defmodule TymeslotWeb.Themes.Core.ThemeTest do
              Gettext.dgettext(
                TymeslotWeb.Gettext,
                "dashboard_appearance",
-               "Modern sliding design with video background and a 4-slide booking flow."
+               "Modern sliding design: each step slides in over a video background."
              )
 
     refute description =~ "Modern sliding design"

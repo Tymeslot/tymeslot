@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Themes.Rhythm.Theme do
   @moduledoc """
-  Rhythm: sliding design over a video background with a 4-slide booking flow.
+  Rhythm: sliding steps over a video background.
   """
 
   use TymeslotWeb.Themes.Core.Theme,
@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Theme do
     description:
       dgettext_noop(
         "dashboard_appearance",
-        "Modern sliding design with video background and a 4-slide booking flow."
+        "Modern sliding design: each step slides in over a video background."
       ),
     story:
       dgettext_noop(

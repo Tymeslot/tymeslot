@@ -294,3 +294,10 @@
 .paper-theme-wrapper .location-field__error {
   color: var(--theme-danger);
 }
+
+.paper-book__price {
+  margin: 0;
+  color: var(--ink-1);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}

@@ -65,6 +65,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.OverviewComponent do
           <ul class="folio-meetings">
             <%= for meeting_type <- @meeting_types do %>
               <% slug = MeetingTypes.effective_slug(meeting_type) %>
+              <% price = BookingText.price_label(meeting_type, @host_currency, @locale) %>
               <li>
                 <button
                   type="button"
@@ -85,6 +86,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.OverviewComponent do
                   <span class="folio-meeting__duration">
                     {LocalizationHelpers.format_duration(meeting_type.duration_minutes)}
                   </span>
+                  <span :if={price} class="folio-meeting__price">{price}</span>
                   <span :if={present?(meeting_type.description)} class="folio-meeting__description">
                     {meeting_type.description}
                   </span>

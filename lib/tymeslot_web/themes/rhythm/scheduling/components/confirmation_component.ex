@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
     ~H"""
     <div class="scheduling-box booker-card" data-locale={@locale}>
       <div class="slide-container">
-        <div class="slide active">
+        <div class="slide slide--enter active">
           <div class="slide-content confirmation-slide">
             <div class="confirmation-container">
               <div class="confirmation-header-section">
@@ -202,7 +202,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                   :if={PathHandlers.calendar_ics_path(assigns)}
                   href={PathHandlers.calendar_ics_path(assigns)}
                   download
-                  class="action-button-primary action-button-secondary calendar-download-button"
+                  class="action-button-primary calendar-download-button"
                   data-testid="add-to-calendar"
                 >
                   <.icon name="hero-calendar-days" class="calendar-download-icon" />
@@ -211,11 +211,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                     else: dgettext("booking", "Add to calendar")}
                 </a>
                 <button
+                  type="button"
                   phx-click="schedule_another"
                   phx-target={@myself}
                   data-testid="schedule-another"
                   data-intent="restart"
-                  class="action-button-primary"
+                  class="confirmation-restart-link"
                 >
                   {dgettext("booking", "Schedule Another Meeting")}
                 </button>

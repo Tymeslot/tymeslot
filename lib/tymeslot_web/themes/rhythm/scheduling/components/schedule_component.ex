@@ -38,7 +38,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
       data-moment-state={assigns[:moment_state]}
     >
       <div class="slide-container">
-        <div class="slide active">
+        <div class="slide slide--enter active">
           <div class="slide-content schedule-slide">
             <GroupSession.seat_move_notice
               from={assigns[:reschedule_seat_from]}

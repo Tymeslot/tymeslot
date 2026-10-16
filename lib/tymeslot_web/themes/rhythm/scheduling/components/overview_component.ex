@@ -83,6 +83,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
               <div class="duration-grid">
                 <%= for meeting_type <- @meeting_types do %>
                   <% slug = MeetingTypes.effective_slug(meeting_type) %>
+                  <% price = BookingText.price_label(meeting_type, @host_currency, @locale) %>
                   <div class={"duration-card #{if @selected_duration == slug, do: "selected", else: ""}"}>
                     <button
                       phx-click="choose_duration"
@@ -105,6 +106,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                         <div class="duration-time">
                           {LocalizationHelpers.format_duration(meeting_type.duration_minutes)}
                         </div>
+                        <div :if={price} class="duration-price">{price}</div>
                         <GroupSession.hint meeting_type={meeting_type} />
                         <div class="duration-description">
                           {meeting_type.description}

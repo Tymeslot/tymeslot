@@ -33,6 +33,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
   alias TymeslotWeb.Themes.Shared.Components.BookingForm
   alias TymeslotWeb.Themes.Shared.Components.GuestField
   alias TymeslotWeb.Themes.Shared.Components.LocationField
+  alias TymeslotWeb.Themes.Shared.Components.SubmitPrice
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Events
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Renderer, as: InputRenderer
   alias TymeslotWeb.Themes.Shared.GuestBooking
@@ -158,6 +159,14 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
       organizer_name={BookingLabels.organizer_display_name(@organizer_profile, @username_context)}
       payment_required={@meeting_type.payment_required}
       stage={:before}
+    />
+
+    <SubmitPrice.price
+      meeting_type={@meeting_type}
+      currency={@host_currency}
+      locale={@locale}
+      rescheduling={@is_rescheduling}
+      class="paper-book__price"
     />
 
     <div class="paper-actions paper-book__actions">

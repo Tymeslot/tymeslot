@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
   attr :title, :string, required: true
   attr :badge, :string, default: nil
   attr :description, :string, required: true
+  attr :price, :string, default: nil
   attr :icon, :string, required: true
   attr :selected, :boolean, default: false
   attr :requires_approval, :boolean, default: false
@@ -63,6 +64,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
           <p class="duration-card-description">
             {@description}
           </p>
+          <p :if={@price} class="duration-card-price">{@price}</p>
           <GroupSession.hint meeting_type={@meeting_type} />
         </div>
         <%= if @icon != "none" do %>
@@ -150,6 +152,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                             title={meeting_type.name}
                             badge={LocalizationHelpers.format_duration(meeting_type.duration_minutes)}
                             description={meeting_type.description}
+                            price={BookingText.price_label(meeting_type, @host_currency, @locale)}
                             icon={meeting_type.icon || "hero-clock"}
                             selected={assigns[:selected_duration] == slug}
                             requires_approval={Approval.required?(meeting_type)}

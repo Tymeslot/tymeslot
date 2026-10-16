@@ -134,6 +134,27 @@ body.rhythm-theme {
   transform: translateX(0);
 }
 
+/* A step's slide enters as it mounts. Only the booking steps after the
+   overview carry slide--enter (the overview is the first paint; the meeting
+   and poll pages share the .slide markup and stay still), and each step's
+   root has an id of its own, so a step change inserts a new slide and this
+   plays. */
+@keyframes rhythm-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--slide-enter-offset));
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.slide--enter.active {
+  animation: rhythm-slide-in var(--transition-slow) both;
+}
+
 .slide-content {
   display: flex;
   flex-direction: column;
@@ -455,6 +476,10 @@ body.rhythm-theme {
 @media (prefers-reduced-motion: reduce) {
   .slide {
     transition: none;
+  }
+
+  .slide--enter.active {
+    animation: none;
   }
 }
 

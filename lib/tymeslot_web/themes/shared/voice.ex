@@ -36,6 +36,7 @@ defmodule TymeslotWeb.Themes.Shared.Voice do
   | `:held_message_named` | `name`, `organizer_name` | "%{name}, your request to %{organizer_name} has been sent." |
   | `:organizer_fragment` | `name` | "with %{name}" |
   | `:submit` | none | the theme's own label for an ordinary booking |
+  | `:submit_paid` | none | "Continue to payment" (a paid meeting type: the checkout follows the submit) |
   | `:submit_request` | none | "Request meeting" |
   | `:submit_request_reschedule` | none | "Request new time" |
   | `:submit_reschedule` | none | "Reschedule Meeting" |
@@ -60,6 +61,7 @@ defmodule TymeslotWeb.Themes.Shared.Voice do
     held_message_named: [:name, :organizer_name],
     organizer_fragment: [:name],
     submit: [],
+    submit_paid: [],
     submit_request: [],
     submit_request_reschedule: [],
     submit_reschedule: [],

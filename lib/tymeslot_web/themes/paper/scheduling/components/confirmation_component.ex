@@ -116,7 +116,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
           :if={@calendar_path}
           href={@calendar_path}
           download
-          class="paper-button paper-button--secondary"
+          class="paper-button paper-button--primary"
           data-testid="add-to-calendar"
         >
           <.icon name="hero-calendar-days" class="paper-button__icon" />
@@ -126,7 +126,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
         </a>
         <button
           type="button"
-          class="paper-button paper-button--primary"
+          class="paper-button paper-button--quiet"
           phx-click="schedule_another"
           phx-target={@myself}
           data-testid="schedule-another"

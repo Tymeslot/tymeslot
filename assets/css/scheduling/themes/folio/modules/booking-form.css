@@ -337,3 +337,9 @@
   font-weight: var(--font-weight-medium);
   color: var(--theme-text-secondary);
 }
+
+.folio-booking__price {
+  margin: 0;
+  color: var(--theme-text);
+  font-variant-numeric: tabular-nums;
+}

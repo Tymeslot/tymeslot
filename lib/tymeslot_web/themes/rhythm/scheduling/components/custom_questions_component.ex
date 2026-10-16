@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
       data-moment-state={assigns[:moment_state]}
     >
       <div class="slide-container">
-        <div class="slide active">
+        <div class="slide slide--enter active">
           <div class="slide-content">
             <%= if @total > 1 do %>
               <div

@@ -113,6 +113,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponentTest 
 
   defp render_overview(overrides) do
     base = %{
+      host_currency: nil,
       id: "overview-step",
       locale: "en",
       username_context: "hostuser",

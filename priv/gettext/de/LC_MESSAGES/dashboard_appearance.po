@@ -175,11 +175,6 @@ msgstr "Sie haben ein benutzerdefiniertes Video. Wenn Sie eine Voreinstellung w�
 msgid "Glass morphism design with elegant transparency effects and a 4-step booking flow."
 msgstr "Glasmorphismus-Design mit eleganten Transparenzeffekten und einem 4-stufigen Buchungsablauf."
 
-#: lib/tymeslot_web/themes/rhythm/theme.ex
-#, elixir-autogen, elixir-format
-msgid "Modern sliding design with video background and a 4-slide booking flow."
-msgstr "Modernes Design mit gleitenden Übergängen, Videohintergrund und einem Buchungsablauf in 4 Slides."
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
 msgid "(your current theme)"
@@ -689,3 +684,8 @@ msgstr "Man bucht mich, nicht einen Termin. Bevor jemand ein Datum wählt, soll 
 #, elixir-autogen, elixir-format
 msgid "MP4 or WebM. Max %{size} MB."
 msgstr "MP4 oder WebM. Max. %{size} MB."
+
+#: lib/tymeslot_web/themes/rhythm/theme.ex
+#, elixir-autogen, elixir-format
+msgid "Modern sliding design: each step slides in over a video background."
+msgstr "Modernes Design mit gleitenden Übergängen: Jeder Schritt gleitet über einem Videohintergrund herein."

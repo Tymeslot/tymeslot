@@ -7,6 +7,15 @@
   height: 100%;
 }
 
+/* A paid type's price, right above the submit it will be charged after. */
+.booking-submit-price {
+  margin: 0;
+  color: var(--theme-text);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
 .slide-actions.horizontal {
   display: flex;
   gap: var(--space-md);
