@@ -122,6 +122,12 @@ export const CalendarCanvas = {
     }
     if (payload.settings) this.settings = payload.settings;
     this.clock = { wall: parseWall(payload.now), at: Date.now() };
+    // An open "+N" list is not torn down by a background payload for the period it
+    // belongs to; the redraw waits for it to close.
+    if (this.list && payload.view === this.view && payload.date === this.date) {
+      this.dirty = true;
+      return;
+    }
     this.render();
   },
 
@@ -295,13 +301,16 @@ export const CalendarCanvas = {
   dropList() {
     document.removeEventListener("pointerdown", this.outside);
     this.list = null;
+    this.dirty = false;
   },
 
   closeList() {
     if (!this.list) return;
     const hadFocus = this.list.contains(document.activeElement);
+    const stale = this.dirty;
     this.list.remove();
     this.dropList();
+    if (stale) this.render();
     if (!hadFocus || !this.listAnchor) return;
     const { name, value } = this.listAnchor;
     const chip = [...this.el.querySelectorAll("[data-more], [data-allday-more]")].find((node) => node.dataset[name] === value);

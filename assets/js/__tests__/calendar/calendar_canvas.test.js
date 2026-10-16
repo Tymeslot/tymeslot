@@ -216,6 +216,20 @@ test("the minute tick leaves an open list and its focus alone", () => {
   }
 });
 
+test("a background payload for the same period leaves an open list; the grid follows once it closes", () => {
+  const { el, reply } = mountHook();
+  reply(payload({ events: fiveAt() }));
+  el.querySelector(".cal-more").click();
+
+  reply(payload({ events: [...fiveAt(), event("event-new", "Brand new", "2026-10-15T09:00", "2026-10-15T10:00")] }));
+  expect(el.querySelector(".cal-list")).not.toBeNull();
+  expect(el.textContent).not.toContain("Brand new");
+
+  el.querySelector(".cal-list").dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  expect(el.querySelector(".cal-list")).toBeNull();
+  expect(el.textContent).toContain("Brand new");
+});
+
 test("a resize redraws only when the width changed, batched per frame", () => {
   const frames = [];
   vi.stubGlobal("requestAnimationFrame", (fn) => frames.push(fn) && frames.length);

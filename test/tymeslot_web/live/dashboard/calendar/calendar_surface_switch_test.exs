@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSwitchTest do
   import TymeslotWeb.CalendarSurfaceHelpers, only: [owner: 1, owner: 2]
 
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
+  alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
   alias TymeslotWeb.Dashboard.CalendarEventHandlers
 
   @write_timeout 5_000
@@ -150,8 +151,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSwitchTest do
 
       for action <- [:events_updated, :integration_synced, :refresh_events] do
         assert_received {:phoenix, :send_update,
-                         {{TymeslotWeb.Dashboard.Calendar.CalendarSurface, "calendar"},
-                          %{action: ^action}}}
+                         {{CalendarSurface, "calendar"}, %{action: ^action}}}
       end
 
       refute_received {:phoenix, :send_update, _update}

@@ -29,6 +29,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.Toolbar
   alias TymeslotWeb.Dashboard.Calendar.Visibility
 
+  @reload_delay 250
+
   @menus %{"date" => :date, "display" => :display}
 
   # The parent's refresh messages (see `CalendarEventHandlers`): a sync
@@ -38,14 +40,39 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   @impl Phoenix.LiveComponent
   def mount(socket), do: {:ok, SurfaceData.defaults(socket)}
 
+  # A sync cycle sends several messages in a burst; they are coalesced into
+  # one reload after `@reload_delay`. What the reload covers is the widest of
+  # the actions asked for: `:events_updated` alone needs only the events.
   @impl Phoenix.LiveComponent
   def update(%{action: action}, %{assigns: %{ready?: true}} = socket)
       when action in @refresh_actions,
-      do: {:ok, SurfaceData.reload(socket)}
+      do: {:ok, schedule_reload(socket, action)}
 
   def update(%{action: action}, socket) when action in @refresh_actions, do: {:ok, socket}
 
+  def update(%{action: :reload}, %{assigns: %{pending_reload: scope}} = socket) do
+    socket = assign(socket, :pending_reload, nil)
+
+    if socket.assigns.ready? and scope,
+      do: {:ok, SurfaceData.reload(socket, scope)},
+      else: {:ok, socket}
+  end
+
   def update(assigns, socket), do: {:ok, socket |> assign(assigns) |> SurfaceData.sync()}
+
+  defp schedule_reload(%{assigns: %{pending_reload: nil}} = socket, action) do
+    send_update_after(__MODULE__, [id: socket.assigns.id, action: :reload], @reload_delay)
+    assign(socket, :pending_reload, scope(action))
+  end
+
+  defp schedule_reload(%{assigns: %{pending_reload: scope}} = socket, action),
+    do: assign(socket, :pending_reload, widest(scope, scope(action)))
+
+  defp scope(:events_updated), do: :events
+  defp scope(_action), do: :full
+
+  defp widest(:full, _scope), do: :full
+  defp widest(_scope, other), do: other
 
   @impl Phoenix.LiveComponent
   def render(assigns) do

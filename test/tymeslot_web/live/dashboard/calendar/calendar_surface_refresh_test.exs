@@ -14,6 +14,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRefreshTest do
 
   alias Tymeslot.Repo
 
+  # Refreshes are batched for 250 ms before they reload.
+  @window 1_000
+
   setup %{conn: conn}, do: owner(conn)
 
   # The first load is handed to the hook in the page itself, so the only
@@ -73,5 +76,88 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRefreshTest do
 
     assert_push_event(lv, "calendar:events", %{reset: true})
     assert has_element?(lv, "#calendar-rail [data-calendar-id='travel']")
+  end
+
+  test "the timer fallback reloads the events too", %{conn: conn, integration: integration} do
+    lv = mounted(conn)
+    event(integration, "work", "Found by the fallback", ~U[2026-10-15 09:00:00Z])
+
+    send(lv.pid, :reset_calendar_sync)
+
+    assert_push_event(lv, "calendar:events", %{reset: true, events: events}, @window)
+    assert Enum.any?(events, &(&1.title == "Found by the fallback"))
+  end
+
+  test "a burst of refreshes is answered with one push", %{
+    conn: conn,
+    user: user,
+    integration: integration
+  } do
+    lv = mounted(conn)
+    event(integration, "work", "Synced once", ~U[2026-10-15 09:00:00Z])
+
+    send(lv.pid, {:calendar_events_updated, user.id, []})
+    send(lv.pid, {:calendar_sync_complete, user.id, integration.id})
+    send(lv.pid, :reset_calendar_sync)
+
+    assert_push_event(lv, "calendar:events", %{reset: true}, @window)
+    refute_push_event(lv, "calendar:events", %{}, @window)
+  end
+
+  test "events alone are reloaded for a change in events, the whole context after a sync", %{
+    conn: conn,
+    user: user,
+    integration: integration
+  } do
+    lv = mounted(conn)
+
+    integration
+    |> Ecto.Changeset.change(
+      calendar_list: [
+        %{"id" => "work", "name" => "Work", "selected" => true},
+        %{"id" => "travel", "name" => "Travel", "selected" => true}
+      ]
+    )
+    |> Repo.update!()
+
+    send(lv.pid, {:calendar_events_updated, user.id, []})
+    assert_push_event(lv, "calendar:events", %{reset: true}, @window)
+    refute has_element?(lv, "#calendar-rail [data-calendar-id='travel']")
+
+    send(lv.pid, {:calendar_events_updated, user.id, []})
+    send(lv.pid, {:calendar_sync_complete, user.id, integration.id})
+    assert_push_event(lv, "calendar:events", %{reset: true}, @window)
+    assert has_element?(lv, "#calendar-rail [data-calendar-id='travel']")
+  end
+
+  describe "an open preview across a reload" do
+    defp open(lv, id),
+      do: lv |> element("#calendar-canvas") |> render_hook("calendar:open", %{"id" => id})
+
+    test "is rebuilt from the new data", %{conn: conn, user: user, integration: integration} do
+      review = event(integration, "work", "Design review", ~U[2026-10-15 09:00:00Z])
+      lv = mounted(conn)
+      open(lv, "event-#{review.id}")
+      assert has_element?(lv, "#calendar-preview-title", "Design review")
+
+      review |> Ecto.Changeset.change(summary: "Design review, moved") |> Repo.update!()
+      send(lv.pid, {:calendar_events_updated, user.id, []})
+      assert_push_event(lv, "calendar:events", %{reset: true}, @window)
+
+      assert has_element?(lv, "#calendar-preview-title", "Design review, moved")
+    end
+
+    test "closes when its event was deleted", %{conn: conn, user: user, integration: integration} do
+      review = event(integration, "work", "Design review", ~U[2026-10-15 09:00:00Z])
+      lv = mounted(conn)
+      open(lv, "event-#{review.id}")
+      assert has_element?(lv, "#calendar-preview")
+
+      Repo.delete!(review)
+      send(lv.pid, {:calendar_events_updated, user.id, []})
+      assert_push_event(lv, "calendar:events", %{reset: true}, @window)
+
+      refute has_element?(lv, "#calendar-preview")
+    end
   end
 end

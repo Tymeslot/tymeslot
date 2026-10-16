@@ -33,6 +33,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   def defaults(socket) do
     assign(socket,
       ready?: false,
+      pending_reload: nil,
       params: %{},
       preferences: %CalendarPreferencesSchema{},
       integrations: [],
@@ -242,9 +243,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   @spec refresh(socket()) :: socket()
   def refresh(socket), do: socket |> assign_accounts() |> filter_events() |> push_events(true)
 
-  @doc "After a sync or an outside change: reload everything and push with a cache reset."
-  @spec reload(socket()) :: socket()
-  def reload(socket), do: socket |> load_context() |> load_window() |> push_events(true)
+  @doc """
+  After a sync or an outside change, push with a cache reset. `:full` reloads
+  the context (calendars, colours, preferences) as well as the events;
+  `:events` reloads the events alone.
+  """
+  @spec reload(socket(), :full | :events) :: socket()
+  def reload(socket, scope \\ :full)
+  def reload(socket, :full), do: socket |> load_context() |> reload(:events)
+  def reload(socket, :events), do: socket |> load_window() |> push_events(true)
 
   @doc """
   Records a saved preference in the assigns. The upsert's return value is not
