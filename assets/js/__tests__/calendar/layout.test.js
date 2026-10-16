@@ -4,7 +4,7 @@
  * at least its first title line uncovered.
  */
 import { describe, expect, test } from "vitest";
-import { CHIP_WIDTH, countLines, layoutDay } from "../../calendar/layout.js";
+import { CHIP_WIDTH, LINE_HEIGHT, PAD_TOP, countLines, layoutDay, placeDay } from "../../calendar/layout.js";
 import { makeScale } from "../../calendar/time.js";
 
 const scale = makeScale(52, false);
@@ -79,5 +79,41 @@ describe("the +N more fold", () => {
 
   test("a wide column shows all five without folding", () => {
     expect(chips(layoutDay(five(), opts(400)))).toEqual([]);
+  });
+});
+
+describe("placeDay, the vertical pass", () => {
+  const place = (segments, colWidth = 200) => placeDay(layoutDay(segments, opts(colWidth)), { yOf: scale.yOf, minHeight: 20 });
+
+  test("turns minutes into top and height", () => {
+    const [item] = place([ev("a", 540, 600)]);
+    expect(item).toMatchObject({ top: 468, height: 50 });
+  });
+
+  test("an overlaying event leaves the earlier title its lines", () => {
+    const laid = place([ev("a", 540, 720, "Workshop"), ev("b", 630, 690, "Lunch")]);
+    const a = laid.find((item) => item.id === "a");
+    const b = laid.find((item) => item.id === "b");
+    expect(b.top - a.top).toBeGreaterThanOrEqual(PAD_TOP + LINE_HEIGHT);
+    expect(a.lineClamp).toBe(4);
+    expect(a.hideTime).toBeUndefined();
+  });
+
+  test("a nested short event starts below its host's first line, and the host's time moves below it", () => {
+    const laid = place([ev("a", 540, 780, "Workshop"), ev("b", 555, 570, "Standup")]);
+    const a = laid.find((item) => item.id === "a");
+    const b = laid.find((item) => item.id === "b");
+    expect(b.top).toBe(a.top + PAD_TOP + LINE_HEIGHT + 3);
+    expect(b.height).toBe(20);
+    expect(a.lineClamp).toBe(1);
+    expect(a.timeGap).toBe(24);
+  });
+
+  test("chips that touch or overlap merge into one", () => {
+    const five = (start) => ["a", "b", "c", "d", "e"].map((id) => ev(`${id}${start}`, start, start + 60));
+    const laid = place([...five(540), ...five(590)]);
+    const merged = laid.filter((item) => item.chip);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].hidden).toHaveLength(6);
   });
 });

@@ -167,3 +167,79 @@ function chooseColumns(members, n, slots) {
 
   return [...urgent, ...rest].slice(0, slots).sort((a, b) => a - b);
 }
+
+/**
+ * The vertical pass: px top and height for each item, chips that touch merged
+ * into one, nested short events pushed below their host's first line, and
+ * each title clamped (`lineClamp`) so nothing drawn above an event covers its
+ * title text. `hideTime` drops the time line where the title needs the room;
+ * `timeGap` moves a host's time line below the short event nested in it.
+ */
+export function placeDay(laid, { yOf, minHeight = 20 }) {
+  const items = laid.map((item) => ({ ...item }));
+  for (const item of items) {
+    item.top = yOf(item.s);
+    item.height = Math.max(minHeight, yOf(item.e) - item.top - 2);
+  }
+
+  const evs = items.filter((item) => !item.chip);
+  const byId = new Map(evs.map((item) => [item.id, item]));
+  const merged = [];
+
+  for (const chip of items.filter((item) => item.chip).sort((a, b) => a.top - b.top)) {
+    chip.height = Math.max(36, chip.height);
+    const last = merged[merged.length - 1];
+    if (last && chip.top < last.top + last.height + 2) {
+      last.ids = [...new Set([...last.ids, ...chip.ids])];
+      last.hidden = [...new Set([...last.hidden, ...chip.hidden])];
+      last.e = Math.max(last.e, chip.e);
+      last.height = Math.max(last.top + last.height, chip.top + chip.height) - last.top;
+      last.warn = last.warn || chip.warn;
+    } else {
+      merged.push(chip);
+    }
+  }
+
+  for (const item of evs) {
+    if (!item.nestIn) continue;
+    const host = byId.get(item.nestIn);
+    const minTop = host.top + PAD_TOP + LINE_HEIGHT + 3;
+    if (item.top < minTop) {
+      const bottom = item.top + item.height;
+      item.top = minTop;
+      item.height = Math.max(minHeight, bottom - item.top);
+    }
+  }
+
+  for (const a of evs) {
+    if (a.height < 38) continue;
+    const covers = [...evs, ...merged].filter(
+      (b) =>
+        b !== a &&
+        (b.chip || b.z > a.z) &&
+        b.left < a.left + a.width - 4 &&
+        b.left + b.width > a.left + 4 &&
+        b.top >= a.top - 1 &&
+        b.top < a.top + a.height,
+    );
+    if (!covers.length) continue;
+
+    const b = covers.reduce((x, y) => (y.top < x.top ? y : x));
+    const free = b.top - a.top;
+    a.lineClamp = Math.max(1, Math.min(4, Math.floor((free - PAD_TOP - 1) / LINE_HEIGHT)));
+    const textEnd = PAD_TOP + a.lineClamp * LINE_HEIGHT + 1;
+
+    if (b.nestIn === a.id && b.top + b.height + 16 < a.top + a.height) {
+      a.timeGap = Math.max(0, b.top + b.height + 2 - a.top - textEnd);
+    } else if (free < textEnd + 14) {
+      a.hideTime = true;
+    }
+  }
+
+  return [...evs, ...merged];
+}
+
+/** layoutDay then placeDay, for one column. */
+export function layoutColumn(segments, opts) {
+  return placeDay(layoutDay(segments, opts), { yOf: opts.yOf, minHeight: opts.minHeight ?? 20 });
+}
