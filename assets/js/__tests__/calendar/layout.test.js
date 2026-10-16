@@ -80,6 +80,17 @@ describe("the +N more fold", () => {
   test("a wide column shows all five without folding", () => {
     expect(chips(layoutDay(five(), opts(400)))).toEqual([]);
   });
+
+  test("folding starts below 56px a column, not at 64px", () => {
+    const three = ["a", "b", "c"].map((id) => ev(id, 540, 600));
+    expect(chips(layoutDay(three, opts(168)))).toEqual([]);
+    expect(chips(layoutDay(three, opts(180)))).toEqual([]);
+    expect(chips(layoutDay(three, opts(165)))).toHaveLength(1);
+  });
+
+  test("once folding, each visible column is at least 64px wide", () => {
+    expect(events(layoutDay(five(), opts(158))).map((item) => item.width)).toEqual([64, 64]);
+  });
 });
 
 describe("placeDay, the vertical pass", () => {
