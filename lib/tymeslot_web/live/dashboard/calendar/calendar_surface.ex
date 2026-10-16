@@ -31,10 +31,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   @menus %{"date" => :date, "display" => :display}
 
+  # The parent's refresh messages (see `CalendarEventHandlers`): a sync
+  # finished, events changed elsewhere, or a refresh fell back on its timer.
+  @refresh_actions [:events_updated, :integration_synced, :refresh_events]
+
   @impl Phoenix.LiveComponent
   def mount(socket), do: {:ok, SurfaceData.defaults(socket)}
 
   @impl Phoenix.LiveComponent
+  def update(%{action: action}, %{assigns: %{ready?: true}} = socket)
+      when action in @refresh_actions,
+      do: {:ok, SurfaceData.reload(socket)}
+
+  def update(%{action: action}, socket) when action in @refresh_actions, do: {:ok, socket}
+
   def update(assigns, socket), do: {:ok, socket |> assign(assigns) |> SurfaceData.sync()}
 
   @impl Phoenix.LiveComponent

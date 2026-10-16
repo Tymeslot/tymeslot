@@ -134,14 +134,35 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSwitchTest do
       new_surface = %{assigns: %{live_action: :calendar, calendar_redesign: true}}
 
       CalendarEventHandlers.handle_tick(new_surface)
-      CalendarEventHandlers.handle_calendar_events_updated(new_surface)
-      CalendarEventHandlers.handle_calendar_sync_complete(new_surface)
-      CalendarEventHandlers.handle_reset_calendar_sync(new_surface)
       CalendarEventHandlers.handle_event_writes_released({1, "uid"}, new_surface)
       CalendarEventHandlers.handle_event_update_result({:ok, write: nil}, new_surface)
 
       refute_received {:phoenix, :send_update, _update}
       refute_received :tick
+    end
+
+    test "refreshes go to the new surface and to nothing else" do
+      new_surface = %{assigns: %{live_action: :calendar, calendar_redesign: true}}
+
+      CalendarEventHandlers.handle_calendar_events_updated(new_surface)
+      CalendarEventHandlers.handle_calendar_sync_complete(new_surface)
+      CalendarEventHandlers.handle_reset_calendar_sync(new_surface)
+
+      for action <- [:events_updated, :integration_synced, :refresh_events] do
+        assert_received {:phoenix, :send_update,
+                         {{TymeslotWeb.Dashboard.Calendar.CalendarSurface, "calendar"},
+                          %{action: ^action}}}
+      end
+
+      refute_received {:phoenix, :send_update, _update}
+    end
+
+    test "refreshes are not sent to the new surface off the calendar page" do
+      elsewhere = %{assigns: %{live_action: :overview, calendar_redesign: true}}
+
+      CalendarEventHandlers.handle_calendar_events_updated(elsewhere)
+
+      refute_received {:phoenix, :send_update, _update}
     end
 
     test "they are sent to it on the old grid" do

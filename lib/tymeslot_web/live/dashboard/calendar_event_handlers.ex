@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Video.RoomCreationError
+  alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.IcsImport
@@ -44,12 +45,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   @spec handle_calendar_events_updated(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_calendar_events_updated(socket) do
-    if grid_on_screen?(socket) do
-      send_update(CalendarGridComponent,
-        id: "calendar",
-        action: :events_updated
-      )
-    end
+    refresh_calendar(socket, :events_updated)
 
     {:noreply, socket}
   end
@@ -58,12 +54,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   @spec handle_calendar_sync_complete(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_calendar_sync_complete(socket) do
-    if grid_on_screen?(socket) do
-      send_update(CalendarGridComponent,
-        id: "calendar",
-        action: :integration_synced
-      )
-    end
+    refresh_calendar(socket, :integration_synced)
 
     {:noreply, socket}
   end
@@ -80,12 +71,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   @spec handle_reset_calendar_sync(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_reset_calendar_sync(socket) do
-    if grid_on_screen?(socket) do
-      send_update(CalendarGridComponent,
-        id: "calendar",
-        action: :refresh_events
-      )
-    end
+    refresh_calendar(socket, :refresh_events)
 
     {:noreply, socket}
   end
@@ -159,6 +145,25 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   # alive on the server until the browser confirms its removal.
   defp grid_on_screen?(socket),
     do: socket.assigns.live_action == :calendar and socket.assigns[:calendar_redesign] != true
+
+  # A sync or an outside change reaches whichever calendar is on screen:
+  # the old grid through its own gate, the new surface only while the
+  # organiser is on the calendar page with it switched on.
+  defp refresh_calendar(socket, action) do
+    cond do
+      grid_on_screen?(socket) ->
+        send_update(CalendarGridComponent, id: "calendar", action: action)
+
+      surface_on_screen?(socket) ->
+        send_update(CalendarSurface, id: "calendar", action: action)
+
+      true ->
+        :ok
+    end
+  end
+
+  defp surface_on_screen?(socket),
+    do: socket.assigns.live_action == :calendar and socket.assigns[:calendar_redesign] == true
 
   defp settle_write(socket, write, outcome) do
     to_grid(socket,
