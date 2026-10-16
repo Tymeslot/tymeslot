@@ -42,3 +42,18 @@ test("eventsForDays returns what overlaps the days, including a multi-day event 
 
   expect(eventsForDays(cache, ["2026-10-12", "2026-10-13"]).map((e) => e.id)).toEqual(["event-1"]);
 });
+
+test("an event that began before the reloaded range and is gone from the server disappears", () => {
+  const trip = { id: "event-9", title: "Trip", all_day: true, start: "2026-10-10", end: "2026-10-14" };
+  let cache = applyPayload(emptyCache(), payload("2026-10-05", "2026-10-12", [trip]));
+  cache = applyPayload(cache, payload("2026-10-12", "2026-10-19", []));
+
+  expect(cache.events.size).toBe(0);
+});
+
+test("back-to-back payloads merge into one loaded range", () => {
+  let cache = applyPayload(emptyCache(), payload("2026-10-05", "2026-10-12", []));
+  cache = applyPayload(cache, payload("2026-10-12", "2026-10-19", []));
+
+  expect(cache.ranges.length).toBe(1);
+});
