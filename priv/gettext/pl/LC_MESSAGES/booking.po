@@ -235,7 +235,6 @@ msgstr "Wczesny ranek"
 msgid "Email Address"
 msgstr "Adres e-mail"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/you_moment.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Enter Your Details"
@@ -361,7 +360,6 @@ msgstr "Chcesz zmienić termin? Sprawdź e-mail z potwierdzeniem."
 msgid "No"
 msgstr "Nie"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/offer_moment.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
@@ -457,7 +455,6 @@ msgstr "So"
 msgid "Saturday"
 msgstr "sobota"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
@@ -486,7 +483,6 @@ msgstr "Szukaj miast, krajów lub stref czasowych…"
 msgid "Select a Date"
 msgstr "Wybierz datę"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/when_moment.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Select a Date & Time"
@@ -515,7 +511,6 @@ msgstr "Wysłano na adres"
 msgid "Service slow"
 msgstr "Usługa działa wolno"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Successfully Rescheduled!"
@@ -636,7 +631,6 @@ msgstr "środa"
 msgid "Yes"
 msgstr "Tak"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "You're All Set!"
@@ -1144,7 +1138,6 @@ msgstr "Płatność otrzymana"
 msgid "Request meeting"
 msgstr "Poproś o spotkanie"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
@@ -1527,7 +1520,6 @@ msgstr "Poprzedni miesiąc"
 msgid "Organiser is required for booking"
 msgstr "Do rezerwacji wymagany jest organizator"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/offer_moment.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex

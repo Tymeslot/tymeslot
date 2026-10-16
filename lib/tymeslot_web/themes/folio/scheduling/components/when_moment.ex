@@ -52,6 +52,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.WhenMoment do
     assigns =
       assign(assigns,
         days: days,
+        month_notice: month_notice(days, assigns),
         prev_month_label: month_label(assigns.current_year, assigns.current_month, -1),
         next_month_label: month_label(assigns.current_year, assigns.current_month, 1)
       )
@@ -70,7 +71,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.WhenMoment do
           focus={assigns[:journey_focus]}
           class="folio-section__title"
         >
-          {dgettext("booking", "Select a Date & Time")}
+          {dpgettext("booking_voice", "folio", "When suits you?")}
         </JourneyComponents.moment_heading>
         <p :if={@booking_window_days} class="folio-muted">
           {dgettext("booking", "Bookings available up to %{advance}",
@@ -153,6 +154,28 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.WhenMoment do
           {dgettext("booking", "Calendar is loading slowly")}
         </p>
 
+        <div
+          :if={@month_notice}
+          class="folio-calendar__notice"
+          role="status"
+          data-testid="folio-month-empty"
+        >
+          <%= if @month_notice == :elsewhere do %>
+            <p>{dpgettext("booking_voice", "folio", "I'm fully booked this month.")}</p>
+            <button
+              type="button"
+              class="folio-button folio-button--quiet"
+              phx-click="first_available_week"
+              phx-target={@myself}
+              data-testid="folio-next-free-day"
+            >
+              {dpgettext("booking_voice", "folio", "Show my next free day")}
+            </button>
+          <% else %>
+            <p>{dpgettext("booking_voice", "folio", "I have no free times at the moment.")}</p>
+          <% end %>
+        </div>
+
         <div class="folio-calendar__weekdays" aria-hidden="true">
           <span
             :for={day <- LocalizationHelpers.weekday_headings(@week_start)}
@@ -222,4 +245,35 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.WhenMoment do
   end
 
   defp month_label(_year, _month, _delta), do: nil
+
+  # What a month with no free day says: nothing while it loads or while a
+  # day of its own can be picked; `:elsewhere` when the page landed on a
+  # free day in another month (the button goes there); `:none_free` when it
+  # landed on none, so no month in the window has one.
+  defp month_notice(days, assigns) do
+    cond do
+      not month_empty?(days, assigns.availability_status) -> nil
+      landed_elsewhere?(assigns) -> :elsewhere
+      true -> :none_free
+    end
+  end
+
+  defp month_empty?(days, status) when status in [:loaded, :error] do
+    own = Enum.filter(days, & &1[:current_month])
+    own != [] and not Enum.any?(own, &(&1[:available] && !&1[:past]))
+  end
+
+  defp month_empty?(_days, _status), do: false
+
+  # The page landed the visitor on a free day (`landing_week/1` is set only
+  # then) in another month than the one on show; `calendar_landing` keeps
+  # the landing's month.
+  defp landed_elsewhere?(
+         %{calendar_landing: %{current_year: year, current_month: month}} = assigns
+       ),
+       do:
+         CalendarHelpers.landing_week(assigns) != nil and
+           {year, month} != {assigns.current_year, assigns.current_month}
+
+  defp landed_elsewhere?(_assigns), do: false
 end

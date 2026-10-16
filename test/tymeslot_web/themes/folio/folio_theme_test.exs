@@ -216,30 +216,47 @@ defmodule TymeslotWeb.Themes.Folio.FolioThemeTest do
   describe "the confirmation" do
     # The details read minutes, never the duration slug the flow carries.
     test "without a meeting type, the duration shows minutes" do
-      html =
-        render_component(ConfirmationComponent, %{
-          id: "confirmation-step",
-          locale: "en",
-          duration: "30-minutes",
-          username_context: "hostuser",
-          selected_date: "2026-09-10",
-          selected_time: "10:00",
-          user_timezone: "UTC",
-          email: "guest@example.com",
-          guest_emails: [],
-          name: "Alice",
-          organizer_profile: build(:profile, full_name: "Jane Organizer"),
-          meeting_type: nil,
-          meeting_status: "confirmed",
-          meeting_uid: "abc123",
-          custom_fields_snapshot: [],
-          custom_field_answers: %{},
-          is_rescheduling: false,
-          theme_tokens: nil
-        })
+      html = confirmation_html(%{})
 
       assert html =~ ~r/<dd>\s*30 min\s*<\/dd>/
       refute html =~ "30-minutes"
+      assert html =~ "See you on Thursday 10 September 2026, Alice"
+    end
+
+    test "with no name to say, the headline ends at the date" do
+      html = confirmation_html(%{name: "  "})
+
+      assert html =~ "See you on Thursday 10 September 2026<"
+      refute html =~ "2026, "
+    end
+
+    defp confirmation_html(overrides) do
+      render_component(
+        ConfirmationComponent,
+        Map.merge(
+          %{
+            id: "confirmation-step",
+            locale: "en",
+            duration: "30-minutes",
+            username_context: "hostuser",
+            selected_date: "2026-09-10",
+            selected_time: "10:00",
+            user_timezone: "UTC",
+            email: "guest@example.com",
+            guest_emails: [],
+            name: "Alice",
+            organizer_profile: build(:profile, full_name: "Jane Organizer"),
+            meeting_type: nil,
+            meeting_status: "confirmed",
+            meeting_uid: "abc123",
+            custom_fields_snapshot: [],
+            custom_field_answers: %{},
+            is_rescheduling: false,
+            theme_tokens: nil
+          },
+          overrides
+        )
+      )
     end
   end
 

@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Live.Themes.FolioJourneyTest do
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias TymeslotWeb.BookingDriver
+  alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   @theme_id "4"
 
@@ -70,6 +71,7 @@ defmodule TymeslotWeb.Live.Themes.FolioJourneyTest do
 
     assert has_element?(view, "#offer-step[data-moment-state='done']")
     assert has_element?(view, "#when-step [data-fact='date']")
+    assert has_element?(view, "#when-step h2", "When suits you?")
 
     # The stylesheet marks the chosen type by this attribute.
     assert has_element?(
@@ -98,10 +100,22 @@ defmodule TymeslotWeb.Live.Themes.FolioJourneyTest do
     assert_patch(view, "/#{profile.username}/quick-chat/book")
 
     assert has_element?(view, "#you-step form[data-fact='attendee']")
+    assert has_element?(view, "#you-step h2", "A little about you")
     assert has_element?(view, "[data-testid='summary-bar-slot']")
 
     BookingDriver.submit(view, %{name: "Mia Laurent", email: "mia@example.com"})
     await(view, "[data-testid='confirmation-heading']")
+
+    date = Date.from_iso8601!(day)
+    weekday = date |> Date.day_of_week() |> LocalizationHelpers.mid_sentence_weekday()
+
+    assert has_element?(
+             view,
+             "[data-testid='confirmation-heading']",
+             "See you on #{weekday} #{LocalizationHelpers.format_date(date)}, Mia"
+           )
+
+    assert has_element?(view, "[data-testid='schedule-another']", "Book another session")
 
     assert has_element?(view, ".folio-masthead--full")
     refute has_element?(view, "#offer-step")
@@ -265,5 +279,34 @@ defmodule TymeslotWeb.Live.Themes.FolioJourneyTest do
     assert has_element?(view, "[data-testid='folio-summary-bar'] [data-testid='summary-bar']")
     refute has_element?(view, "[data-testid='folio-jump-to-offer']")
     refute has_element?(view, "#when-step", "Duration:")
+  end
+
+  test "says there are no free times when no day in the window is free", %{conn: conn} do
+    # Free on no weekday at all, so the page lands on no day.
+    %{profile: profile} = seed_organiser(@theme_id, "folio-full", days: [])
+    {:ok, view, _html} = live(conn, "/#{profile.username}/quick-chat")
+
+    await_availability(view)
+
+    assert has_element?(
+             view,
+             "#when-step [data-testid='folio-month-empty']",
+             "I have no free times at the moment."
+           )
+
+    refute has_element?(view, "[data-testid='folio-next-free-day']")
+  end
+
+  test "says so in its own words when there are no meeting types", %{conn: conn} do
+    %{profile: profile} = seed_organiser(@theme_id, "folio-none", types: [])
+    {:ok, view, _html} = live(conn, "/#{profile.username}")
+
+    assert has_element?(
+             view,
+             "#offer-step .folio-empty",
+             "I'm not taking new bookings at the moment."
+           )
+
+    refute has_element?(view, "#offer-step", "No meeting types available")
   end
 end

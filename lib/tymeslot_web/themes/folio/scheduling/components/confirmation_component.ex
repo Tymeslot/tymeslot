@@ -157,7 +157,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
             data-testid="schedule-another"
             data-intent="restart"
           >
-            {dgettext("booking", "Schedule Another Meeting")}
+            {dpgettext("booking_voice", "folio", "Book another session")}
           </button>
         </div>
 
@@ -173,14 +173,65 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
   end
 
   # Which outcome applies is ConfirmationText's decision (a held request is
-  # never announced as confirmed); only the wording is Folio's.
+  # never announced as confirmed); the words are Folio's, in its personal
+  # voice: the visitor by first name, the meeting by its day and date, so
+  # a session weeks away is never mistaken for this week's.
+  # The held line names nobody: the shared held sentence under it starts
+  # with the visitor's name. With no name to say, the day alone.
   defp headline(assigns) do
-    case ConfirmationText.status(assigns) do
-      :held -> dgettext("booking", "Request sent!")
-      :rescheduled -> dgettext("booking", "Successfully Rescheduled!")
-      :confirmed -> dgettext("booking", "You're All Set!")
+    name = first_name(assigns[:name])
+    weekday = weekday(assigns[:selected_date])
+    date = LocalizationHelpers.format_date(assigns[:selected_date])
+
+    case {ConfirmationText.status(assigns), name} do
+      {:held, _name} ->
+        dpgettext("booking_voice", "folio", "Thank you. I'll reply to your request soon.")
+
+      {:rescheduled, ""} ->
+        dpgettext("booking_voice", "folio", "See you on %{weekday} %{date} instead",
+          weekday: weekday,
+          date: date
+        )
+
+      {:rescheduled, name} ->
+        dpgettext("booking_voice", "folio", "See you on %{weekday} %{date} instead, %{name}",
+          weekday: weekday,
+          date: date,
+          name: name
+        )
+
+      {:confirmed, ""} ->
+        dpgettext("booking_voice", "folio", "See you on %{weekday} %{date}",
+          weekday: weekday,
+          date: date
+        )
+
+      {:confirmed, name} ->
+        dpgettext("booking_voice", "folio", "See you on %{weekday} %{date}, %{name}",
+          weekday: weekday,
+          date: date,
+          name: name
+        )
     end
   end
+
+  defp first_name(name) when is_binary(name) do
+    case String.split(String.trim(name), ~r/\s+/, parts: 2) do
+      [first | _rest] when first != "" -> first
+      _blank -> ""
+    end
+  end
+
+  defp first_name(_no_name), do: ""
+
+  defp weekday(date) when is_binary(date) do
+    case Date.from_iso8601(date) do
+      {:ok, day} -> LocalizationHelpers.mid_sentence_weekday(Date.day_of_week(day))
+      {:error, _invalid} -> date
+    end
+  end
+
+  defp weekday(_no_date), do: ""
 
   defp message(assigns) do
     case ConfirmationText.status(assigns) do

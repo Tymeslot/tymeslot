@@ -239,7 +239,6 @@ msgstr "Madrugada"
 msgid "Email Address"
 msgstr "Endereço de e-mail"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/you_moment.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Enter Your Details"
@@ -365,7 +364,6 @@ msgstr "Precisa remarcar? Confira seu e-mail de confirmação."
 msgid "No"
 msgstr "Não"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/offer_moment.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
@@ -461,7 +459,6 @@ msgstr "Sáb"
 msgid "Saturday"
 msgstr "sábado"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
@@ -490,7 +487,6 @@ msgstr "Busque cidades, países ou fusos horários…"
 msgid "Select a Date"
 msgstr "Escolha uma data"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/when_moment.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Select a Date & Time"
@@ -519,7 +515,6 @@ msgstr "Enviado para"
 msgid "Service slow"
 msgstr "Serviço lento"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Successfully Rescheduled!"
@@ -640,7 +635,6 @@ msgstr "quarta-feira"
 msgid "Yes"
 msgstr "Sim"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "You're All Set!"
@@ -1147,7 +1141,6 @@ msgstr "Pagamento recebido"
 msgid "Request meeting"
 msgstr "Pedir reunião"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
@@ -1525,7 +1518,6 @@ msgstr "Mês anterior"
 msgid "Organiser is required for booking"
 msgstr "É preciso um organizador para agendar"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/offer_moment.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex

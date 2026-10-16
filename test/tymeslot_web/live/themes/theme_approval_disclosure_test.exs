@@ -119,7 +119,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
             attendee: %{name: "Test Attendee", email: email, message: "Hello!"}
           )
 
-        assert confirmation_heading(html) == held_headline(unquote(theme.key))
+        assert confirmation_heading(html) =~ held_headline(unquote(theme.key))
         assert html =~ "Not confirmed yet"
         assert html =~ "still has to accept this time"
 
@@ -206,7 +206,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
           )
 
         refute html =~ "data-testid=\"approval-notice\""
-        refute confirmation_heading(html) == held_headline(unquote(theme.key))
+        refute confirmation_heading(html) =~ held_headline(unquote(theme.key))
 
         meeting = Repo.get_by!(MeetingSchema, organizer_user_id: user.id, attendee_email: email)
         assert meeting.status == "confirmed"
@@ -218,8 +218,9 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
   defp request_label(:folio), do: "Request this time"
   defp request_label(_shared), do: "Request meeting"
 
-  # Each theme's own headline for a held request; the shared one where a
-  # theme keeps it.
+  # Each theme's own headline for a held request (a substring, since
+  # Folio's is a longer sentence); the shared one where a theme keeps it.
+  defp held_headline(:folio), do: "reply to your request soon"
   defp held_headline(:paper), do: "Request sent"
   defp held_headline(_shared), do: "Request sent!"
 

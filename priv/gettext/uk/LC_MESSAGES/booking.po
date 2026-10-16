@@ -239,7 +239,6 @@ msgstr "Ранній ранок"
 msgid "Email Address"
 msgstr "Електронна адреса"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/you_moment.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Enter Your Details"
@@ -365,7 +364,6 @@ msgstr "Потрібно перенести зустріч? Перевірте �
 msgid "No"
 msgstr "Ні"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/offer_moment.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
@@ -461,7 +459,6 @@ msgstr "Сб"
 msgid "Saturday"
 msgstr "Субота"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
@@ -490,7 +487,6 @@ msgstr "Пошук міст, країн або часових поясів…"
 msgid "Select a Date"
 msgstr "Оберіть дату"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/when_moment.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Select a Date & Time"
@@ -519,7 +515,6 @@ msgstr "Надіслано на"
 msgid "Service slow"
 msgstr "Сервіс відповідає повільно"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Successfully Rescheduled!"
@@ -640,7 +635,6 @@ msgstr "Середа"
 msgid "Yes"
 msgstr "Так"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "You're All Set!"
@@ -1149,7 +1143,6 @@ msgstr "Платіж отримано"
 msgid "Request meeting"
 msgstr "Надіслати запит"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
@@ -1532,7 +1525,6 @@ msgstr "Попередній місяць"
 msgid "Organiser is required for booking"
 msgstr "Для бронювання потрібно вказати організатора"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/offer_moment.ex
 #: lib/tymeslot_web/themes/paper/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex

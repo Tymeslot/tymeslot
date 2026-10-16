@@ -130,3 +130,75 @@ msgstr "Qualcuno ha appena preso quell'orario. Ecco i più vicini."
 msgctxt "folio"
 msgid "Ways to work with me"
 msgstr "Come lavorare con me"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/you_moment.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "A little about you"
+msgstr "Qualcosa su di te"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "Book another session"
+msgstr "Prenota un'altra sessione"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/when_moment.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "I have no free times at the moment."
+msgstr "Al momento non ho orari liberi."
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/when_moment.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "I'm fully booked this month."
+msgstr "Questo mese sono al completo."
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/offer_moment.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "I'm not taking new bookings at the moment."
+msgstr "Al momento non accetto nuove prenotazioni."
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "See you on %{weekday} %{date}"
+msgstr "A %{weekday} %{date}"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "See you on %{weekday} %{date} instead"
+msgstr "Allora a %{weekday} %{date}"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "See you on %{weekday} %{date} instead, %{name}"
+msgstr "Allora a %{weekday} %{date}, %{name}"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "See you on %{weekday} %{date}, %{name}"
+msgstr "A %{weekday} %{date}, %{name}"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/when_moment.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "Show my next free day"
+msgstr "Mostra il mio prossimo giorno libero"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "Thank you. I'll reply to your request soon."
+msgstr "Grazie. Risponderò presto alla tua richiesta."
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/when_moment.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "When suits you?"
+msgstr "Quando ti va bene?"

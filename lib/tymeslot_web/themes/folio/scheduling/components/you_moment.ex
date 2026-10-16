@@ -91,7 +91,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.YouMoment do
         focus={assigns[:journey_focus]}
         class="folio-section__title"
       >
-        {dgettext("booking", "Enter Your Details")}
+        {dpgettext("booking_voice", "folio", "A little about you")}
       </JourneyComponents.moment_heading>
       <p class="folio-you__when" data-testid="folio-you-when">
         {LocalizationHelpers.format_booking_datetime(@selected_date, @selected_time, @user_timezone)}

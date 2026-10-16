@@ -73,8 +73,9 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.OfferMoment do
           </div>
         <% @meeting_types == [] -> %>
           <div class="folio-empty">
-            <p class="folio-empty__title">{dgettext("booking", "No meeting types available")}</p>
-            <p class="folio-muted">{dgettext("booking", "Please contact the organiser")}</p>
+            <p class="folio-empty__title">
+              {dpgettext("booking_voice", "folio", "I'm not taking new bookings at the moment.")}
+            </p>
           </div>
         <% true -> %>
           <ul class="folio-meetings">

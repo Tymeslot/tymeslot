@@ -26,7 +26,7 @@ Folio's voice is **personal**, the brief below. Its words for the shared booking
 
 - **Tone:** first person, warm, unhurried, like the organiser's own website. Sentences, not labels.
 - **Rules:** "I" and "you"; section headings are phrases; the button says what happens next; no jargon like "slot" or "meeting type".
-- **Lines:** section "Ways to work with me" (no instruction label); button "Book our session", "Request this time" when the organiser approves each booking, "Continue to payment" for a paid type (the shared line); slot taken "Someone took that time a moment ago. Here are the nearest ones." Words in `Folio.Voice`, context `folio` of `booking_voice`.
+- **Lines:** section "Ways to work with me" (no instruction label; with no meeting types "I'm not taking new bookings at the moment."); time prompt "When suits you?"; a fully booked month "I'm fully booked this month." with "Show my next free day" ("I have no free times at the moment." when none is free); details "A little about you"; button "Book our session", "Request this time" when the organiser approves each booking, "Continue to payment" for a paid type (the shared line); confirmation "See you on Thursday 10 September 2026, Mia" ("See you on Thursday 10 September 2026 instead, Mia" after a move; "Thank you. I'll reply to your request soon." while the organiser decides, above the shared sentence naming the visitor), then "Book another session"; slot taken "Someone took that time a moment ago. Here are the nearest ones." Words in `Folio.Voice` and Folio's moments, context `folio` of `booking_voice`.
 
 ## Axes
 
