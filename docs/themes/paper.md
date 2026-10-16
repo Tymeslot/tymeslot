@@ -26,7 +26,7 @@ Paper speaks in its own voice, **neutral**, which is the brief below. `Paper.Voi
 
 - **Tone:** plain, short, invisible. It never talks about itself or the organiser's personality.
 - **Rules:** imperative labels, no exclamation marks, no greetings, numbers before words.
-- **Lines:** heading "Book a meeting with Ana Silva" (no greeting); type prompt "Select a meeting type"; button "Confirm booking"; slot taken "That time was just booked. Choose another." Words in `Paper.Voice`, context `paper` of `booking_voice`.
+- **Lines:** heading "Book a meeting with Ana Silva" (no greeting); type prompt "Select a meeting type"; time prompt "Select a date and time" (the week's bar: "Select a time"); empty "No times available this week" ("this month" in the month view); details "Enter your details", the chosen time with "Change time"; form "Name", "Email", "Message (optional)"; button "Confirm booking" ("Continue to payment" for a paid type; "Booking…" while it is sent); confirmation "Booking confirmed" ("Request sent" while the organiser decides, "Meeting rescheduled" after a move), then "Book another meeting"; slot taken "That time was just booked. Choose another." Words in `Paper.Voice` and Paper's components, context `paper` of `booking_voice`; the form's labels and the paid button are shared lines.
 
 ## Axes
 

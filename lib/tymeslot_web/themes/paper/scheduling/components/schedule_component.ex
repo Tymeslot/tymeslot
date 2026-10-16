@@ -100,17 +100,22 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   @impl Phoenix.LiveComponent
   def render(assigns) do
     view = calendar_view(assigns.theme_tokens)
+    days = month_days(view, assigns)
 
     assigns =
       assign(assigns,
         view: view,
+        week_empty: week_empty?(assigns),
         stage: stage(assigns),
         show_back: assigns[:entered_via_overview] == true,
         chosen: not is_nil(assigns.selected_date) and not is_nil(assigns.selected_time),
         duration_text: BookingText.duration_label(assigns),
         price:
           BookingText.price_label(assigns.meeting_type, assigns.host_currency, assigns.locale),
-        days: month_days(view, assigns)
+        days: days,
+        month_empty:
+          view == "month" and assigns.availability_status == :loaded and days != [] and
+            not Enum.any?(days, &bookable?/1)
       )
 
     ~H"""
@@ -137,7 +142,9 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
 
         <div :if={@view == "week"} class="paper-week" data-testid="paper-week">
           <div class="paper-week__header">
-            <h2 class="paper-week__title">{dgettext("booking", "Select a Date & Time")}</h2>
+            <h2 class="paper-week__title">
+              {dpgettext("booking_voice", "paper", "Select a date and time")}
+            </h2>
             <.timezone
               timezone={@user_timezone}
               open={@timezone_dropdown_open}
@@ -160,7 +167,18 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
             target={@myself}
             heading_tag="h2"
             meeting_type={@meeting_type}
-          />
+          >
+            <:before_days>
+              <p
+                :if={@week_empty}
+                class="paper-calendar__notice paper-week__empty"
+                role="status"
+                data-testid="paper-week-empty"
+              >
+                {dpgettext("booking_voice", "paper", "No times available this week")}
+              </p>
+            </:before_days>
+          </WeekGrid.week_grid>
         </div>
 
         <div :if={@view == "month"} class="paper-picker">
@@ -179,6 +197,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
             timezone={@user_timezone}
             booking_window_days={@booking_window_days}
             availability_status={@availability_status}
+            empty={@month_empty}
             selected_date={@selected_date}
             target={@myself}
           />
@@ -234,7 +253,11 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
               {LocalizationHelpers.format_slot_label(@selected_time)}
             </span>
           <% else %>
-            <span class="paper-selection__prompt">{dgettext("booking", "Please select a time")}</span>
+            <span class="paper-selection__prompt">{dpgettext(
+              "booking_voice",
+              "paper",
+              "Select a time"
+            )}</span>
           <% end %>
         </p>
       </div>
@@ -273,6 +296,15 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
     )
   end
 
+  # A loaded week with no free time on any day. A week not yet asked for
+  # (nil), loading or failed says nothing of the kind.
+  defp week_empty?(%{week_slots: slots} = assigns) when is_map(slots) and map_size(slots) > 0,
+    do:
+      assigns[:week_slots_loading] != true and is_nil(assigns[:week_slots_error]) and
+        Enum.all?(Map.values(slots), &(&1 == []))
+
+  defp week_empty?(_assigns), do: false
+
   attr :organizer_profile, :map, required: true
   attr :meeting_type, :map, default: nil
   attr :duration_text, :string, required: true
@@ -310,6 +342,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   attr :timezone, :string, required: true
   attr :booking_window_days, :integer, required: true
   attr :availability_status, :any, default: nil
+  attr :empty, :boolean, default: false
   attr :selected_date, :string, default: nil
   attr :target, :any, required: true
 
@@ -317,7 +350,9 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
     ~H"""
     <div class="paper-calendar">
       <div class="paper-calendar__header">
-        <h2 class="paper-calendar__title">{dgettext("booking", "Select a Date & Time")}</h2>
+        <h2 class="paper-calendar__title">
+          {dpgettext("booking_voice", "paper", "Select a date and time")}
+        </h2>
         <div class="paper-calendar__nav">
           <button
             type="button"
@@ -351,6 +386,10 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
 
       <p :if={@availability_status == :error} class="paper-calendar__notice" role="status">
         {dgettext("booking", "Calendar is loading slowly")}
+      </p>
+
+      <p :if={@empty} class="paper-calendar__notice" role="status" data-testid="paper-month-empty">
+        {dpgettext("booking_voice", "paper", "No times available this month")}
       </p>
 
       <div class="paper-calendar__weekdays" aria-hidden="true">

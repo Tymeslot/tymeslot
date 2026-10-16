@@ -52,3 +52,57 @@ msgstr "Fissa un incontro"
 msgctxt "paper"
 msgid "Change time"
 msgstr "Cambia orario"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Book another meeting"
+msgstr "Prenota un altro incontro"
+
+#: lib/tymeslot_web/themes/paper/scheduling/details.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Booking…"
+msgstr "Prenotazione…"
+
+#: lib/tymeslot_web/themes/paper/scheduling/details.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Enter your details"
+msgstr "Inserisci i tuoi dati"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Meeting rescheduled"
+msgstr "Incontro spostato"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "No times available this month"
+msgstr "Nessun orario disponibile questo mese"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "No times available this week"
+msgstr "Nessun orario disponibile questa settimana"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Request sent"
+msgstr "Richiesta inviata"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Select a date and time"
+msgstr "Seleziona data e ora"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Select a time"
+msgstr "Seleziona un orario"

@@ -116,7 +116,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
             attendee: %{name: "Test Attendee", email: email, message: "Hello!"}
           )
 
-        assert html =~ "Request sent!"
+        assert html =~ held_headline(unquote(theme.key))
         assert html =~ "Not confirmed yet"
         assert html =~ "still has to accept this time"
 
@@ -210,4 +210,9 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
       end
     end
   end
+
+  # Each theme's own headline for a held request; the shared one where a
+  # theme keeps it.
+  defp held_headline(:paper), do: "Request sent"
+  defp held_headline(_shared), do: "Request sent!"
 end

@@ -625,11 +625,6 @@ msgstr "Escolha as cores principais da interface da sua página de agendamento."
 msgid "Solid Colour"
 msgstr "Cor sólida"
 
-#: lib/tymeslot_web/themes/paper/theme.ex
-#, elixir-autogen, elixir-format
-msgid "A calm, neutral booking page: everything on one screen, light and dark modes and your own accent colour."
-msgstr "Uma página de agendamento calma e neutra: tudo em uma só tela, modos claro e escuro e a sua própria cor de destaque."
-
 #: lib/tymeslot_web/themes/folio/theme.ex
 #, elixir-autogen, elixir-format
 msgid "An editorial page that introduces you, with a cover image, your portrait, headline and bio, and serif headings."
@@ -689,3 +684,8 @@ msgstr "MP4 ou WebM. Máx. %{size} MB."
 #, elixir-autogen, elixir-format
 msgid "Modern sliding design: each step slides in over a video background."
 msgstr "Design moderno com slides: cada etapa desliza sobre um fundo em vídeo."
+
+#: lib/tymeslot_web/themes/paper/theme.ex
+#, elixir-autogen, elixir-format
+msgid "A calm, neutral booking page: choose a meeting type, then pick a time and book on one screen. Light and dark modes and your own accent colour."
+msgstr "Uma página de agendamento calma e neutra: primeiro o tipo de reunião, depois horário e agendamento em uma só tela. Modos claro e escuro e a sua própria cor de destaque."

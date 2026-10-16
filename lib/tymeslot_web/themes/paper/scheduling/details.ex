@@ -80,7 +80,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
         tabindex="-1"
         phx-mounted={assigns[:focus_details] && JS.focus()}
       >
-        {dgettext("booking", "Enter Your Details")}
+        {dpgettext("booking_voice", "paper", "Enter your details")}
       </h2>
       <p class="paper-book__when" data-testid="paper-book-when">
         <.icon name="hero-calendar" class="paper-book__when-icon" />
@@ -180,6 +180,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
       class="paper-booking-form"
       contact_class="paper-booking-form__contact"
       message_rows={3}
+      labels={BookingForm.short_labels()}
     >
       <GuestField.guest_field
         :if={GuestBooking.guests_allowed?(assigns)}
@@ -237,7 +238,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
               stroke-linecap="round"
             />
           </svg>
-          <span>{dgettext("booking", "Verifying...")}</span>
+          <span>{dpgettext("booking_voice", "paper", "Booking…")}</span>
         <% else %>
           {BookingLabels.submit_label(
             @is_rescheduling,

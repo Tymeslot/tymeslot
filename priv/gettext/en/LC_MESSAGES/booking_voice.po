@@ -52,3 +52,57 @@ msgstr ""
 msgctxt "paper"
 msgid "Change time"
 msgstr ""
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Book another meeting"
+msgstr ""
+
+#: lib/tymeslot_web/themes/paper/scheduling/details.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Booking…"
+msgstr ""
+
+#: lib/tymeslot_web/themes/paper/scheduling/details.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Enter your details"
+msgstr ""
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Meeting rescheduled"
+msgstr ""
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "No times available this month"
+msgstr ""
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "No times available this week"
+msgstr ""
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Request sent"
+msgstr ""
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Select a date and time"
+msgstr ""
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Select a time"
+msgstr ""

@@ -192,6 +192,22 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
       selector = Page.focus_target(view, "[data-testid='paper-change-time']")
       assert selector =~ "selected"
       assert has_element?(view, selector)
+
+      assert has_element?(
+               view,
+               "[data-testid='paper-book'] .paper-book__title",
+               "Enter your details"
+             )
+
+      assert has_element?(view, "[data-testid='paper-book'] label", "Message (optional)")
+
+      refute has_element?(
+               view,
+               "[data-testid='paper-book'] label",
+               "Additional Message (Optional)"
+             )
+
+      refute has_element?(view, "[data-testid='paper-book'] label", "Your Name")
     end
 
     test "shows every question above the form once a time is picked, with no way on", %{

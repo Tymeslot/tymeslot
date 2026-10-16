@@ -7,8 +7,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
   on, when that is the next, and a note when the address is still to be
   arranged), where the
   confirmation went, the guest's answers, and the calendar file and a new
-  booking. Which status applies is `ConfirmationText`'s; only the wording
-  of the headline is Paper's.
+  booking. Which status applies is `ConfirmationText`'s; the wording
+  of the headline and of the fresh start is Paper's own, in its neutral voice.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -132,7 +132,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
           data-testid="schedule-another"
           data-intent="restart"
         >
-          {dgettext("booking", "Schedule Another Meeting")}
+          {dpgettext("booking_voice", "paper", "Book another meeting")}
         </button>
       </div>
 
@@ -147,8 +147,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
 
   defp headline(assigns) do
     case ConfirmationText.status(assigns) do
-      :held -> dgettext("booking", "Request sent!")
-      :rescheduled -> dgettext("booking", "Meeting Rescheduled!")
+      :held -> dpgettext("booking_voice", "paper", "Request sent")
+      :rescheduled -> dpgettext("booking_voice", "paper", "Meeting rescheduled")
       :confirmed -> dgettext("booking", "Booking confirmed")
     end
   end

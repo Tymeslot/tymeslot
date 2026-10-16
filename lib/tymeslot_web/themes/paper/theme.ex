@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Themes.Paper.Theme do
     description:
       dgettext_noop(
         "dashboard_appearance",
-        "A calm, neutral booking page: everything on one screen, light and dark modes and your own accent colour."
+        "A calm, neutral booking page: choose a meeting type, then pick a time and book on one screen. Light and dark modes and your own accent colour."
       ),
     story:
       dgettext_noop(

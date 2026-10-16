@@ -52,3 +52,57 @@ msgstr "Domluvit schůzku"
 msgctxt "paper"
 msgid "Change time"
 msgstr "Změnit čas"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Book another meeting"
+msgstr "Rezervovat další schůzku"
+
+#: lib/tymeslot_web/themes/paper/scheduling/details.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Booking…"
+msgstr "Rezervuje se…"
+
+#: lib/tymeslot_web/themes/paper/scheduling/details.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Enter your details"
+msgstr "Zadejte své údaje"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Meeting rescheduled"
+msgstr "Schůzka přesunuta"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "No times available this month"
+msgstr "Tento měsíc nejsou volné termíny"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "No times available this week"
+msgstr "Tento týden nejsou volné termíny"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Request sent"
+msgstr "Žádost odeslána"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Select a date and time"
+msgstr "Vyberte datum a čas"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Select a time"
+msgstr "Vyberte čas"

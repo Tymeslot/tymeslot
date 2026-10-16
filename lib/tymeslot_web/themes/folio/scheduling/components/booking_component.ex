@@ -110,7 +110,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.BookingComponent do
             class="folio-booking-form"
             contact_class="folio-contact"
             message_rows={4}
-            labels={form_labels()}
+            labels={BookingForm.short_labels()}
           >
             <GuestField.guest_field
               :if={GuestBooking.guests_allowed?(assigns)}
@@ -179,16 +179,5 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.BookingComponent do
       </div>
     </section>
     """
-  end
-
-  defp form_labels do
-    %{
-      name: dgettext("booking", "Name"),
-      name_placeholder: dgettext("booking", "Enter your full name"),
-      email: dgettext("booking", "Email"),
-      email_placeholder: dgettext("booking", "your.email@example.com"),
-      message: dgettext("booking", "Message (optional)"),
-      message_placeholder: dgettext("booking", "Add any details...")
-    }
   end
 end

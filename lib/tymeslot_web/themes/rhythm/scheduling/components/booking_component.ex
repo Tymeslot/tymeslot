@@ -113,7 +113,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
               target={@myself}
               class="booking-form"
               message_rows={4}
-              labels={form_labels()}
+              labels={BookingForm.short_labels()}
             >
               <GuestField.guest_field
                 :if={guests_allowed?(assigns)}
@@ -217,17 +217,5 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
 
   defp organizer_display_name(organizer_profile, username_context) do
     BookingLabels.organizer_display_name(organizer_profile, username_context)
-  end
-
-  # Rhythm's shorter field labels.
-  defp form_labels do
-    %{
-      name: dgettext("booking", "Name"),
-      name_placeholder: dgettext("booking", "Enter your full name"),
-      email: dgettext("booking", "Email"),
-      email_placeholder: dgettext("booking", "your.email@example.com"),
-      message: dgettext("booking", "Message (optional)"),
-      message_placeholder: dgettext("booking", "Add any details...")
-    }
   end
 end

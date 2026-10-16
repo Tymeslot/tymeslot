@@ -625,11 +625,6 @@ msgstr "Wählen Sie die Primärfarben für die Oberfläche Ihrer Buchungsseite."
 msgid "Solid Colour"
 msgstr "Volltonfarbe"
 
-#: lib/tymeslot_web/themes/paper/theme.ex
-#, elixir-autogen, elixir-format
-msgid "A calm, neutral booking page: everything on one screen, light and dark modes and your own accent colour."
-msgstr "Eine ruhige, neutrale Buchungsseite: alles auf einem Bildschirm, heller und dunkler Modus und Ihre eigene Akzentfarbe."
-
 #: lib/tymeslot_web/themes/folio/theme.ex
 #, elixir-autogen, elixir-format
 msgid "An editorial page that introduces you, with a cover image, your portrait, headline and bio, and serif headings."
@@ -689,3 +684,8 @@ msgstr "MP4 oder WebM. Max. %{size} MB."
 #, elixir-autogen, elixir-format
 msgid "Modern sliding design: each step slides in over a video background."
 msgstr "Modernes Design mit gleitenden Übergängen: Jeder Schritt gleitet über einem Videohintergrund herein."
+
+#: lib/tymeslot_web/themes/paper/theme.ex
+#, elixir-autogen, elixir-format
+msgid "A calm, neutral booking page: choose a meeting type, then pick a time and book on one screen. Light and dark modes and your own accent colour."
+msgstr "Eine ruhige, neutrale Buchungsseite: zuerst die Terminart, dann Uhrzeit und Buchung auf einem Bildschirm. Heller und dunkler Modus und Ihre eigene Akzentfarbe."

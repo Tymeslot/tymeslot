@@ -625,11 +625,6 @@ msgstr "Vyberte hlavní barvy rozhraní své rezervační stránky."
 msgid "Solid Colour"
 msgstr "Jednolitá barva"
 
-#: lib/tymeslot_web/themes/paper/theme.ex
-#, elixir-autogen, elixir-format
-msgid "A calm, neutral booking page: everything on one screen, light and dark modes and your own accent colour."
-msgstr "Klidná, neutrální rezervační stránka: vše na jedné obrazovce, světlý a tmavý režim a vlastní barva zvýraznění."
-
 #: lib/tymeslot_web/themes/folio/theme.ex
 #, elixir-autogen, elixir-format
 msgid "An editorial page that introduces you, with a cover image, your portrait, headline and bio, and serif headings."
@@ -689,3 +684,8 @@ msgstr "MP4 nebo WebM. Max. %{size} MB."
 #, elixir-autogen, elixir-format
 msgid "Modern sliding design: each step slides in over a video background."
 msgstr "Moderní posuvný design: každý krok se vysune nad videem na pozadí."
+
+#: lib/tymeslot_web/themes/paper/theme.ex
+#, elixir-autogen, elixir-format
+msgid "A calm, neutral booking page: choose a meeting type, then pick a time and book on one screen. Light and dark modes and your own accent colour."
+msgstr "Klidná, neutrální rezervační stránka: nejdřív typ schůzky, pak čas a rezervace na jedné obrazovce. Světlý a tmavý režim a vlastní barva zvýraznění."

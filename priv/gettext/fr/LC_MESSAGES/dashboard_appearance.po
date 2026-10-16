@@ -625,11 +625,6 @@ msgstr "Choisissez les couleurs principales de l’interface de votre page de r�
 msgid "Solid Colour"
 msgstr "Couleur unie"
 
-#: lib/tymeslot_web/themes/paper/theme.ex
-#, elixir-autogen, elixir-format
-msgid "A calm, neutral booking page: everything on one screen, light and dark modes and your own accent colour."
-msgstr "Une page de réservation sobre et neutre : tout sur un seul écran, modes clair et sombre et votre propre couleur d’accent."
-
 #: lib/tymeslot_web/themes/folio/theme.ex
 #, elixir-autogen, elixir-format
 msgid "An editorial page that introduces you, with a cover image, your portrait, headline and bio, and serif headings."
@@ -689,3 +684,8 @@ msgstr "MP4 ou WebM. %{size} Mo max."
 #, elixir-autogen, elixir-format
 msgid "Modern sliding design: each step slides in over a video background."
 msgstr "Design moderne à glissement : chaque étape glisse sur un arrière-plan vidéo."
+
+#: lib/tymeslot_web/themes/paper/theme.ex
+#, elixir-autogen, elixir-format
+msgid "A calm, neutral booking page: choose a meeting type, then pick a time and book on one screen. Light and dark modes and your own accent colour."
+msgstr "Une page de réservation sobre et neutre : d’abord le type de rendez-vous, puis l’heure et la réservation sur un seul écran. Modes clair et sombre et votre propre couleur d’accent."

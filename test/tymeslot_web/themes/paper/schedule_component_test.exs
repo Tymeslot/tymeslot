@@ -95,6 +95,15 @@ defmodule TymeslotWeb.Themes.Paper.ScheduleComponentTest do
       end
     end
 
+    test "says so under its heading when no day of the month is free" do
+      closed =
+        Map.new(Date.range(~D[2030-02-20], ~D[2030-04-10]), &{Date.to_iso8601(&1), false})
+
+      doc = schedule(month_availability_map: closed, availability_status: :loaded)
+
+      assert text(doc, "[data-testid='paper-month-empty']") == "No times available this month"
+    end
+
     test "names the timezone before the calendar and the times" do
       doc = schedule([])
 
@@ -104,6 +113,19 @@ defmodule TymeslotWeb.Themes.Paper.ScheduleComponentTest do
   end
 
   describe "the week view" do
+    test "says so above the days when the whole week has no free time" do
+      empty = Map.new(0..6, &{@monday |> Date.add(&1) |> Date.to_iso8601(), []})
+      doc = schedule(theme_tokens: tokens("week"), week_slots: empty)
+
+      assert text(doc, "[data-testid='paper-week-empty']") == "No times available this week"
+    end
+
+    test "says nothing of the kind while the week has a free time" do
+      doc = schedule(theme_tokens: tokens("week"), week_slots: week_slots())
+
+      assert Floki.find(doc, "[data-testid='paper-week-empty']") == []
+    end
+
     test "renders the week grid with its times, and no month calendar" do
       doc = schedule(theme_tokens: tokens("week"), week_slots: week_slots())
 
@@ -111,7 +133,10 @@ defmodule TymeslotWeb.Themes.Paper.ScheduleComponentTest do
                Floki.find(doc, "section.paper-card.paper-card--week[data-calendar-view='week']")
 
       assert [_week] = Floki.find(doc, "[data-testid='paper-week'] [data-testid='week-grid']")
-      assert text(doc, "[data-testid='paper-week'] .paper-week__title") == "Select a Date & Time"
+
+      assert text(doc, "[data-testid='paper-week'] .paper-week__title") ==
+               "Select a date and time"
+
       assert [_picker] = Floki.find(doc, "[data-testid='paper-week'] .paper-timezone .tz-picker")
 
       assert Floki.attribute(doc, "[data-testid='week-slot']", "data-time") ==
@@ -151,7 +176,7 @@ defmodule TymeslotWeb.Themes.Paper.ScheduleComponentTest do
           selected_date: @wednesday
         )
 
-      assert text(doc, "[data-testid='paper-selection']") == "Please select a time"
+      assert text(doc, "[data-testid='paper-selection']") == "Select a time"
       assert Floki.attribute(doc, "[data-testid='paper-selection']", "aria-live") == ["polite"]
       assert Floki.find(doc, "[data-testid='next-step']") == []
       assert Floki.find(doc, "[data-testid='paper-book']") == []

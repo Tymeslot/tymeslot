@@ -128,6 +128,23 @@ defmodule TymeslotWeb.Themes.Shared.Components.BookingForm do
     }
   end
 
+  @doc """
+  The short labels and placeholders, in sentence case: "Name", "Email",
+  "Message (optional)". For a theme whose voice wants plainer words than
+  `default_labels/0`; pass them as `labels`.
+  """
+  @spec short_labels() :: %{atom() => String.t()}
+  def short_labels do
+    %{
+      name: dgettext("booking", "Name"),
+      name_placeholder: dgettext("booking", "Enter your full name"),
+      email: dgettext("booking", "Email"),
+      email_placeholder: dgettext("booking", "your.email@example.com"),
+      message: dgettext("booking", "Message (optional)"),
+      message_placeholder: dgettext("booking", "Add any details...")
+    }
+  end
+
   attr :f, Phoenix.HTML.Form, required: true
   attr :labels, :map, required: true
   attr :validation_errors, :any, required: true

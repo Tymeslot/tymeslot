@@ -72,7 +72,7 @@ defmodule TymeslotWeb.Live.Themes.PaperWeekJourneyTest do
 
     assert has_element?(view, "[data-testid='paper-schedule'][data-calendar-view='week']")
     refute has_element?(view, "[data-testid='calendar-day']")
-    assert has_element?(view, "[data-testid='paper-selection']", "Please select a time")
+    assert has_element?(view, "[data-testid='paper-selection']", "Select a time")
 
     pick(view, day, "10:00 AM")
     submit(view, "paper-week@example.com")

@@ -625,11 +625,6 @@ msgstr "Виберіть основні кольори для інтерфейс
 msgid "Solid Colour"
 msgstr "Суцільний колір"
 
-#: lib/tymeslot_web/themes/paper/theme.ex
-#, elixir-autogen, elixir-format
-msgid "A calm, neutral booking page: everything on one screen, light and dark modes and your own accent colour."
-msgstr "Спокійна нейтральна сторінка бронювання: усе на одному екрані, світлий і темний режими та власний колір акценту."
-
 #: lib/tymeslot_web/themes/folio/theme.ex
 #, elixir-autogen, elixir-format
 msgid "An editorial page that introduces you, with a cover image, your portrait, headline and bio, and serif headings."
@@ -689,3 +684,8 @@ msgstr "MP4 або WebM. Макс. %{size} МБ."
 #, elixir-autogen, elixir-format
 msgid "Modern sliding design: each step slides in over a video background."
 msgstr "Сучасний дизайн зі слайдами: кожен крок висувається поверх відеофону."
+
+#: lib/tymeslot_web/themes/paper/theme.ex
+#, elixir-autogen, elixir-format
+msgid "A calm, neutral booking page: choose a meeting type, then pick a time and book on one screen. Light and dark modes and your own accent colour."
+msgstr "Спокійна нейтральна сторінка бронювання: спершу тип зустрічі, потім час і бронювання на одному екрані. Світлий і темний режими та власний колір акценту."
