@@ -104,6 +104,8 @@ describe("formatting matches the server's TimeFormat", () => {
     expect(formatMinutes(0, "12h")).toBe("12:00 AM");
     expect(formatHour(12, "12h")).toBe("12 PM");
     expect(formatHour(7, "12h")).toBe("7 AM");
+    expect(formatHour(24, "12h")).toBe("12 AM");
+    expect(formatMinutes(570.4, "24h")).toBe("09:30");
   });
 });
 

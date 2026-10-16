@@ -77,6 +77,7 @@ export function makeScale(hourHeight, foldNight) {
 }
 
 export function formatMinutes(minute, timeFormat) {
+  minute = Math.round(minute);
   const h = Math.floor(minute / 60) % 24;
   const m = minute % 60;
   if (timeFormat === "12h") return `${h % 12 === 0 ? 12 : h % 12}:${pad(m)} ${h < 12 ? "AM" : "PM"}`;
@@ -84,6 +85,7 @@ export function formatMinutes(minute, timeFormat) {
 }
 
 export function formatHour(hour, timeFormat) {
+  hour %= 24;
   if (timeFormat === "12h") return `${hour % 12 === 0 ? 12 : hour % 12} ${hour < 12 ? "AM" : "PM"}`;
   return `${pad(hour)}:00`;
 }
@@ -114,7 +116,8 @@ export function normaliseEvent(raw) {
 
 /**
  * The part of each timed event that falls on `iso`, as minutes from that
- * day's midnight. A zero-length event gets fifteen minutes so it can be seen.
+ * day's midnight. Every segment is drawn at least fifteen minutes tall so it
+ * can be seen and clicked, ending by midnight at the latest.
  */
 export function segmentsForDay(events, iso) {
   const start = dayNumber(iso) * MINUTES_PER_DAY;
